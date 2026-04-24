@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -954,5 +955,501 @@ func TestAnnouncementMutationsReturnNotFound(t *testing.T) {
 	deleteResp := decodeResponse[struct{}](t, deleteRR)
 	if deleteResp.Code != 10300 || deleteResp.Message != "公告不存在" {
 		t.Fatalf("unexpected delete response: %#v", deleteResp)
+	}
+}
+
+// RBAC Roles CRUD
+
+func TestListRolesReturnsRoleList(t *testing.T) {
+	handler := newTestHandler()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+
+	createReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"TestRole","description":"test"}`)), "admin", true)
+	createReq.Header.Set("Idempotency-Key", "listrole001abcd1234abcd1234abcd12")
+	createRR := httptest.NewRecorder()
+	handler.CreateRole(createRR, createReq)
+	createResp := decodeResponse[AdminRoleItem](t, createRR)
+	if createResp.Code != 0 || createResp.Data == nil {
+		t.Fatalf("unexpected create response: %#v", createResp)
+	}
+
+	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/list", strings.NewReader(`{}`)), "admin", true)
+	listRR := httptest.NewRecorder()
+	handler.ListRoles(listRR, listReq)
+	listResp := decodeResponse[AdminRoleList](t, listRR)
+	if listResp.Code != 0 || listResp.Data == nil || len(listResp.Data.Items) == 0 {
+		t.Fatalf("unexpected list response: %#v", listResp)
+	}
+	found := false
+	for _, role := range listResp.Data.Items {
+		if role.RoleID == createResp.Data.RoleID && role.Name == "TestRole" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected created role in list, got %#v", listResp.Data.Items)
+	}
+}
+
+func TestUpdateRoleUpdatesNameAndDescription(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+
+	createReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"OldName","description":"old desc"}`)), "admin", true)
+	createReq.Header.Set("Idempotency-Key", "updrole001abcd1234abcd1234abcd12")
+	createRR := httptest.NewRecorder()
+	handler.CreateRole(createRR, createReq)
+	createResp := decodeResponse[AdminRoleItem](t, createRR)
+	if createResp.Code != 0 || createResp.Data == nil {
+		t.Fatalf("unexpected create response: %#v", createResp)
+	}
+	roleID := createResp.Data.RoleID
+
+	newName := "NewName"
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/update", strings.NewReader(`{"role_id":"`+roleID+`","name":"`+newName+`","description":"new desc"}`)), "admin", true)
+	updateRR := httptest.NewRecorder()
+	handler.UpdateRole(updateRR, updateReq)
+	updateResp := decodeResponse[struct{}](t, updateRR)
+	if updateResp.Code != 0 {
+		t.Fatalf("unexpected update response: %#v", updateResp)
+	}
+
+	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/list", strings.NewReader(`{}`)), "admin", true)
+	listRR := httptest.NewRecorder()
+	handler.ListRoles(listRR, listReq)
+	listResp := decodeResponse[AdminRoleList](t, listRR)
+	var updated AdminRoleItem
+	for _, role := range listResp.Data.Items {
+		if role.RoleID == roleID {
+			updated = role
+			break
+		}
+	}
+	if updated.Name != "NewName" || updated.Description != "new desc" {
+		t.Fatalf("unexpected updated role: %#v", updated)
+	}
+
+	foundAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionRoleUpdate && entry.TargetID == roleID {
+			foundAudit = true
+			if entry.Details["role_name"] != "NewName" {
+				t.Fatalf("unexpected audit role_name: %#v", entry.Details)
+			}
+			break
+		}
+	}
+	if !foundAudit {
+		t.Fatalf("expected role.update audit log, got %#v", store.auditLogs)
+	}
+}
+
+func TestUpdateRoleReturnsNotFoundForMissingRole(t *testing.T) {
+	handler := newTestHandler()
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/update", strings.NewReader(`{"role_id":"missing_role"}`)), "admin", true)
+	updateRR := httptest.NewRecorder()
+	handler.UpdateRole(updateRR, updateReq)
+	updateResp := decodeResponse[struct{}](t, updateRR)
+	if updateResp.Code != 10300 || updateResp.Message != "角色不存在" {
+		t.Fatalf("unexpected update response: %#v", updateResp)
+	}
+}
+
+func TestUpdateRoleRejectsEmptyRoleID(t *testing.T) {
+	handler := newTestHandler()
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/update", strings.NewReader(`{"role_id":""}`)), "admin", true)
+	updateRR := httptest.NewRecorder()
+	handler.UpdateRole(updateRR, updateReq)
+	updateResp := decodeResponse[struct{}](t, updateRR)
+	if updateResp.Code != 10000 || updateResp.Message != "参数错误" {
+		t.Fatalf("unexpected update response: %#v", updateResp)
+	}
+}
+
+func TestDeleteRoleDeletesExistingRole(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+
+	createReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"ToDelete"}`)), "admin", true)
+	createReq.Header.Set("Idempotency-Key", "delrole001abcd1234abcd1234abcd12")
+	createRR := httptest.NewRecorder()
+	handler.CreateRole(createRR, createReq)
+	createResp := decodeResponse[AdminRoleItem](t, createRR)
+	if createResp.Code != 0 || createResp.Data == nil {
+		t.Fatalf("unexpected create response: %#v", createResp)
+	}
+	roleID := createResp.Data.RoleID
+
+	deleteReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/delete", strings.NewReader(`{"role_id":"`+roleID+`"}`)), "admin", true)
+	deleteRR := httptest.NewRecorder()
+	handler.DeleteRole(deleteRR, deleteReq)
+	deleteResp := decodeResponse[struct{}](t, deleteRR)
+	if deleteResp.Code != 0 {
+		t.Fatalf("unexpected delete response: %#v", deleteResp)
+	}
+
+	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/list", strings.NewReader(`{}`)), "admin", true)
+	listRR := httptest.NewRecorder()
+	handler.ListRoles(listRR, listReq)
+	listResp := decodeResponse[AdminRoleList](t, listRR)
+	for _, role := range listResp.Data.Items {
+		if role.RoleID == roleID {
+			t.Fatalf("expected role to be deleted, found: %#v", role)
+		}
+	}
+
+	foundAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionRoleDelete && entry.TargetID == roleID {
+			foundAudit = true
+			if entry.Details["role_name"] != "ToDelete" {
+				t.Fatalf("unexpected audit role_name: %#v", entry.Details)
+			}
+			break
+		}
+	}
+	if !foundAudit {
+		t.Fatalf("expected role.delete audit log, got %#v", store.auditLogs)
+	}
+}
+
+func TestDeleteRoleReturnsNotFoundForMissingRole(t *testing.T) {
+	handler := newTestHandler()
+	deleteReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/delete", strings.NewReader(`{"role_id":"missing_role"}`)), "admin", true)
+	deleteRR := httptest.NewRecorder()
+	handler.DeleteRole(deleteRR, deleteReq)
+	deleteResp := decodeResponse[struct{}](t, deleteRR)
+	if deleteResp.Code != 10300 || deleteResp.Message != "角色不存在" {
+		t.Fatalf("unexpected delete response: %#v", deleteResp)
+	}
+}
+
+func TestSetRolePermissionsSetsPermissions(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+
+	createReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"PermRole"}`)), "admin", true)
+	createReq.Header.Set("Idempotency-Key", "setperm001abcd1234abcd1234abcd12")
+	createRR := httptest.NewRecorder()
+	handler.CreateRole(createRR, createReq)
+	createResp := decodeResponse[AdminRoleItem](t, createRR)
+	if createResp.Code != 0 || createResp.Data == nil {
+		t.Fatalf("unexpected create response: %#v", createResp)
+	}
+	roleID := createResp.Data.RoleID
+
+	setReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/set_permissions", strings.NewReader(`{"role_id":"`+roleID+`","permission_keys":["admin.users.read","admin.users.write"]}`)), "admin", true)
+	setRR := httptest.NewRecorder()
+	handler.SetRolePermissions(setRR, setReq)
+	setResp := decodeResponse[struct{}](t, setRR)
+	if setResp.Code != 0 {
+		t.Fatalf("unexpected set response: %#v", setResp)
+	}
+
+	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/list", strings.NewReader(`{}`)), "admin", true)
+	listRR := httptest.NewRecorder()
+	handler.ListRoles(listRR, listReq)
+	listResp := decodeResponse[AdminRoleList](t, listRR)
+	var updated AdminRoleItem
+	for _, role := range listResp.Data.Items {
+		if role.RoleID == roleID {
+			updated = role
+			break
+		}
+	}
+	if len(updated.Permissions) != 2 {
+		t.Fatalf("expected 2 permissions, got %#v", updated.Permissions)
+	}
+
+	foundAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionRoleSetPermissions && entry.TargetID == roleID {
+			foundAudit = true
+			perms, ok := entry.Details["permissions"].([]string)
+			if !ok || len(perms) != 2 {
+				t.Fatalf("unexpected audit permissions: %#v", entry.Details)
+			}
+			break
+		}
+	}
+	if !foundAudit {
+		t.Fatalf("expected role.set_permissions audit log, got %#v", store.auditLogs)
+	}
+}
+
+func TestSetRolePermissionsReturnsNotFoundForMissingRole(t *testing.T) {
+	handler := newTestHandler()
+	setReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/set_permissions", strings.NewReader(`{"role_id":"missing_role","permission_keys":["admin.users.read"]}`)), "admin", true)
+	setRR := httptest.NewRecorder()
+	handler.SetRolePermissions(setRR, setReq)
+	setResp := decodeResponse[struct{}](t, setRR)
+	if setResp.Code != 10300 || setResp.Message != "角色不存在" {
+		t.Fatalf("unexpected set response: %#v", setResp)
+	}
+}
+
+func TestSetRolePermissionsRejectsEmptyRoleID(t *testing.T) {
+	handler := newTestHandler()
+	setReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/set_permissions", strings.NewReader(`{"role_id":"","permission_keys":["admin.users.read"]}`)), "admin", true)
+	setRR := httptest.NewRecorder()
+	handler.SetRolePermissions(setRR, setReq)
+	setResp := decodeResponse[struct{}](t, setRR)
+	if setResp.Code != 10000 || setResp.Message != "参数错误" {
+		t.Fatalf("unexpected set response: %#v", setResp)
+	}
+}
+
+// RBAC Admins revoke
+
+func TestRevokeAdminRevokesExistingAdmin(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+
+	createRoleReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"RevokeTestRole"}`)), "admin", true)
+	createRoleReq.Header.Set("Idempotency-Key", "revk001abcd1234abcd1234abcd1234abcdabcd")
+	createRoleRR := httptest.NewRecorder()
+	handler.CreateRole(createRoleRR, createRoleReq)
+	createdRole := decodeResponse[AdminRoleItem](t, createRoleRR)
+	if createdRole.Code != 0 || createdRole.Data == nil {
+		t.Fatalf("unexpected create role response: %#v", createdRole)
+	}
+
+	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/grant", strings.NewReader(`{"user_id":"user_to_revoke","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
+	grantReq.Header.Set("Idempotency-Key", "revk002abcd1234abcd1234abcd1234abcdabcd")
+	grantRR := httptest.NewRecorder()
+	handler.GrantAdmin(grantRR, grantReq)
+	grantResp := decodeResponse[struct{}](t, grantRR)
+	if grantResp.Code != 0 {
+		t.Fatalf("unexpected grant response: %#v", grantResp)
+	}
+
+	revokeReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/revoke", strings.NewReader(`{"user_id":"user_to_revoke"}`)), "admin", true)
+	revokeRR := httptest.NewRecorder()
+	handler.RevokeAdmin(revokeRR, revokeReq)
+	revokeResp := decodeResponse[struct{}](t, revokeRR)
+	if revokeResp.Code != 0 {
+		t.Fatalf("unexpected revoke response: %#v", revokeResp)
+	}
+
+	foundAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionAdminRevoke && entry.TargetID == "user_to_revoke" {
+			foundAudit = true
+			break
+		}
+	}
+	if !foundAudit {
+		t.Fatalf("expected admin.revoke audit log, got %#v", store.auditLogs)
+	}
+}
+
+func TestRevokeAdminReturnsNotFoundForMissingAdmin(t *testing.T) {
+	handler := newTestHandler()
+	revokeReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/revoke", strings.NewReader(`{"user_id":"nonexistent_user"}`)), "admin", true)
+	revokeRR := httptest.NewRecorder()
+	handler.RevokeAdmin(revokeRR, revokeReq)
+	revokeResp := decodeResponse[struct{}](t, revokeRR)
+	if revokeResp.Code != 10300 || revokeResp.Message != "管理员不存在" {
+		t.Fatalf("unexpected revoke response: %#v", revokeResp)
+	}
+}
+
+// Audit logs
+
+func TestListAuditLogsReturnsLogs(t *testing.T) {
+	handler, _ := newTestHandlerWithStore()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+
+	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/list", strings.NewReader(`{"pagination":{"limit":10}}`)), "admin", true)
+	listRR := httptest.NewRecorder()
+	handler.ListAuditLogs(listRR, listReq)
+	listResp := decodeResponse[PaginatedAuditLogs](t, listRR)
+	if listResp.Code != 0 || listResp.Data == nil {
+		t.Fatalf("unexpected list response: %#v", listResp)
+	}
+	if len(listResp.Data.Items) == 0 {
+		t.Fatalf("expected at least one audit log from previous tests, got none")
+	}
+}
+
+func TestListAuditLogsWithFilter(t *testing.T) {
+	handler, _ := newTestHandlerWithStore()
+
+	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/list", strings.NewReader(`{"action":"role.create","pagination":{"limit":10}}`)), "admin", true)
+	listRR := httptest.NewRecorder()
+	handler.ListAuditLogs(listRR, listReq)
+	listResp := decodeResponse[PaginatedAuditLogs](t, listRR)
+	if listResp.Code != 0 {
+		t.Fatalf("unexpected list response: %#v", listResp)
+	}
+}
+
+func TestOpenAuditLogReturnsLog(t *testing.T) {
+	handler, _ := newTestHandlerWithStore()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+
+	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/list", strings.NewReader(`{"pagination":{"limit":10}}`)), "admin", true)
+	listRR := httptest.NewRecorder()
+	handler.ListAuditLogs(listRR, listReq)
+	listResp := decodeResponse[PaginatedAuditLogs](t, listRR)
+	if listResp.Code != 0 || listResp.Data == nil || len(listResp.Data.Items) == 0 {
+		t.Fatalf("expected audit logs, got %#v", listResp)
+	}
+	logID := listResp.Data.Items[0].LogID
+
+	openReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/open_the_door", strings.NewReader(`{"log_id":"`+logID+`"}`)), "admin", true)
+	openRR := httptest.NewRecorder()
+	handler.OpenAuditLog(openRR, openReq)
+	openResp := decodeResponse[AuditLogItem](t, openRR)
+	if openResp.Code != 0 || openResp.Data == nil || openResp.Data.LogID != logID {
+		t.Fatalf("unexpected open response: %#v", openResp)
+	}
+}
+
+func TestOpenAuditLogReturnsNotFoundForMissingLog(t *testing.T) {
+	handler := newTestHandler()
+	openReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/open_the_door", strings.NewReader(`{"log_id":"missing_log_id"}`)), "admin", true)
+	openRR := httptest.NewRecorder()
+	handler.OpenAuditLog(openRR, openReq)
+	openResp := decodeResponse[AuditLogItem](t, openRR)
+	if openResp.Code != 10300 || openResp.Message != "审计日志不存在" {
+		t.Fatalf("unexpected open response: %#v", openResp)
+	}
+}
+
+// App Config updates
+
+func TestUpdateUploadConfigSucceeds(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	newSize := 10 * 1024 * 1024
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_upload", strings.NewReader(`{"upload":{"image_max_size":`+fmt.Sprintf("%d", newSize)+`}}`)), "admin", true)
+	updateRR := httptest.NewRecorder()
+	handler.UpdateUpload(updateRR, updateReq)
+	updateResp := decodeResponse[struct{}](t, updateRR)
+	if updateResp.Code != 0 {
+		t.Fatalf("unexpected update response: %#v", updateResp)
+	}
+
+	foundAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "upload" {
+			foundAudit = true
+			break
+		}
+	}
+	if !foundAudit {
+		t.Fatalf("expected config.update audit log for upload, got %#v", store.auditLogs)
+	}
+}
+
+func TestUpdateUploadConfigRejectsNonPositiveValue(t *testing.T) {
+	handler := newTestHandler()
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_upload", strings.NewReader(`{"upload":{"image_max_size":0}}`)), "admin", true)
+	updateRR := httptest.NewRecorder()
+	handler.UpdateUpload(updateRR, updateReq)
+	updateResp := decodeResponse[struct{}](t, updateRR)
+	if updateResp.Code != 10000 || updateResp.Message != "参数错误" {
+		t.Fatalf("unexpected update response: %#v", updateResp)
+	}
+}
+
+func TestUpdateDefaultsSucceeds(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	locationName := "Shanghai"
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_defaults", strings.NewReader(`{"default_location":{"location_name":"`+locationName+`"}}`)), "admin", true)
+	updateRR := httptest.NewRecorder()
+	handler.UpdateDefaults(updateRR, updateReq)
+	updateResp := decodeResponse[struct{}](t, updateRR)
+	if updateResp.Code != 0 {
+		t.Fatalf("unexpected update response: %#v", updateResp)
+	}
+
+	foundAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "defaults" {
+			foundAudit = true
+			break
+		}
+	}
+	if !foundAudit {
+		t.Fatalf("expected config.update audit log for defaults, got %#v", store.auditLogs)
+	}
+}
+
+func TestUpdateResponseDefaultsSucceeds(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_response_defaults", strings.NewReader(`{"response_defaults":{"hot_moments_count":20}}`)), "admin", true)
+	updateRR := httptest.NewRecorder()
+	handler.UpdateResponseDefaults(updateRR, updateReq)
+	updateResp := decodeResponse[struct{}](t, updateRR)
+	if updateResp.Code != 0 {
+		t.Fatalf("unexpected update response: %#v", updateResp)
+	}
+
+	foundAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "response_defaults" {
+			foundAudit = true
+			break
+		}
+	}
+	if !foundAudit {
+		t.Fatalf("expected config.update audit log for response_defaults, got %#v", store.auditLogs)
+	}
+}
+
+func TestUpdateLimitsSucceeds(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_limits", strings.NewReader(`{"limits":{"max_group_members":500}}`)), "admin", true)
+	updateRR := httptest.NewRecorder()
+	handler.UpdateLimits(updateRR, updateReq)
+	updateResp := decodeResponse[struct{}](t, updateRR)
+	if updateResp.Code != 0 {
+		t.Fatalf("unexpected update response: %#v", updateResp)
+	}
+
+	foundAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "limits" {
+			foundAudit = true
+			break
+		}
+	}
+	if !foundAudit {
+		t.Fatalf("expected config.update audit log for limits, got %#v", store.auditLogs)
+	}
+}
+
+func TestUpdateContactSucceeds(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_contact", strings.NewReader(`{"support_email":"support@example.com","official_website":"https://example.com"}`)), "admin", true)
+	updateRR := httptest.NewRecorder()
+	handler.UpdateContact(updateRR, updateReq)
+	updateResp := decodeResponse[struct{}](t, updateRR)
+	if updateResp.Code != 0 {
+		t.Fatalf("unexpected update response: %#v", updateResp)
+	}
+
+	foundAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "contact" {
+			foundAudit = true
+			break
+		}
+	}
+	if !foundAudit {
+		t.Fatalf("expected config.update audit log for contact, got %#v", store.auditLogs)
+	}
+}
+
+func TestUpdateContactRejectsInvalidEmail(t *testing.T) {
+	handler := newTestHandler()
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_contact", strings.NewReader(`{"support_email":"not-an-email"}`)), "admin", true)
+	updateRR := httptest.NewRecorder()
+	handler.UpdateContact(updateRR, updateReq)
+	updateResp := decodeResponse[struct{}](t, updateRR)
+	if updateResp.Code != 10000 || updateResp.Message != "参数错误" {
+		t.Fatalf("unexpected update response: %#v", updateResp)
 	}
 }

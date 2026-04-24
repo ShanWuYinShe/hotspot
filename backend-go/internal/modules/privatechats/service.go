@@ -139,6 +139,11 @@ func (s *Service) UpdateSettings(ctx context.Context, req UpdatePrivateChatSetti
 
 func (s *Service) Delete(ctx context.Context, targetUserID string) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if _, ok, err := s.users.OpenTheDoor(ctx, targetUserID); err != nil {
+		return err
+	} else if !ok {
+		return users.ErrUserNotFound
+	}
 	now := time.Now().UTC()
 	return s.repo.DeleteForUser(ctx, principal.UserID, targetUserID, &now)
 }

@@ -6,10 +6,12 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	systemmodule "hotspot/backend-go/internal/modules/system"
 )
 
 type notificationErrorRepo struct {
@@ -122,6 +124,77 @@ func TestNotificationHandlerValidatesListRequest(t *testing.T) {
 	badCursorRR := httptest.NewRecorder()
 	handler.List(badCursorRR, badCursorReq)
 	assertNotificationCode(t, badCursorRR, 10000)
+}
+
+func TestUnreadCountReturnsByTypeBreakdown(t *testing.T) {
+	svc := NewService()
+	handler := NewHandler(svc)
+
+	// Insert notifications of each type category
+	_ = svc.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "", "")
+	_ = svc.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "charlie", "nickname": "Charlie"}, "", "")
+	_ = svc.AppendMomentLiked(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "m1", nil)
+	_ = svc.AppendGroupInviteReceived(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "grp1", "Group One", "inv1", nil)
+	_ = svc.AppendSystemAnnouncement(context.Background(), []string{"user_alice"}, systemmodule.SystemAnnouncementItem{AnnouncementID: "ann1", Title: "Test", Content: "Test content", Severity: systemmodule.AnnouncementSeverityInfo})
+
+	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/unread_count", strings.NewReader(`{}`)))
+	rr := httptest.NewRecorder()
+	handler.UnreadCount(rr, req)
+
+	var resp struct {
+		Code int               `json:"code"`
+		Data UnreadCountResult `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %#v", resp)
+	}
+	if resp.Data.Total != 5 {
+		t.Fatalf("expected total 5, got %d", resp.Data.Total)
+	}
+	if resp.Data.ByType["social"] != 2 {
+		t.Fatalf("expected by_type.social=2, got %d", resp.Data.ByType["social"])
+	}
+	if resp.Data.ByType["interaction"] != 1 {
+		t.Fatalf("expected by_type.interaction=1, got %d", resp.Data.ByType["interaction"])
+	}
+	if resp.Data.ByType["group"] != 1 {
+		t.Fatalf("expected by_type.group=1, got %d", resp.Data.ByType["group"])
+	}
+	if resp.Data.ByType["system"] != 1 {
+		t.Fatalf("expected by_type.system=1, got %d", resp.Data.ByType["system"])
+	}
+}
+
+func TestMarkAsReadRejectsEmptyArray(t *testing.T) {
+	handler := NewHandler(NewService())
+
+	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_as_read", strings.NewReader(`{"notification_ids":[]}`)))
+	rr := httptest.NewRecorder()
+	handler.MarkAsRead(rr, req)
+	assertNotificationCode(t, rr, 10000)
+}
+
+func TestMarkAsReadRejectsTooManyIDs(t *testing.T) {
+	handler := NewHandler(NewService())
+
+	var b strings.Builder
+	b.WriteString(`{"notification_ids":[`)
+	for i := 0; i < 101; i++ {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		b.WriteString(`"id_`)
+		b.WriteString(strconv.Itoa(i))
+		b.WriteString(`"`)
+	}
+	b.WriteString(`]}`)
+	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_as_read", strings.NewReader(b.String())))
+	rr := httptest.NewRecorder()
+	handler.MarkAsRead(rr, req)
+	assertNotificationCode(t, rr, 10000)
 }
 
 func assertNotificationCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {

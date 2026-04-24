@@ -566,6 +566,44 @@ func TestListSupportsPaginationCursor(t *testing.T) {
 	}
 }
 
+func TestOpenTheDoorReturns10300OnNotFound(t *testing.T) {
+	notFoundUserReader := &privateChatUserReader{item: users.UserItem{}, ok: false, err: users.ErrUserNotFound}
+	chatHandler := NewHandler(
+		NewServiceWithDeps(
+			NewInMemoryRepository(),
+			&privateChatMessageReader{},
+			notFoundUserReader,
+		),
+		appconfig.NewStaticSource(config.Load()),
+	)
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+
+	openReq := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"target_user_id":"nonexistent_user"}`))
+	openReq = openReq.WithContext(ctx)
+	openRR := httptest.NewRecorder()
+	chatHandler.OpenTheDoor(openRR, openReq)
+	assertPrivateChatCode(t, openRR, 10300)
+}
+
+func TestPrivateChatDeleteReturns10300OnNotFound(t *testing.T) {
+	notFoundUserReader := &privateChatUserReader{item: users.UserItem{}, ok: false, err: users.ErrUserNotFound}
+	chatHandler := NewHandler(
+		NewServiceWithDeps(
+			NewInMemoryRepository(),
+			&privateChatMessageReader{},
+			notFoundUserReader,
+		),
+		appconfig.NewStaticSource(config.Load()),
+	)
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+
+	deleteReq := httptest.NewRequest(http.MethodPost, "/me/delete", strings.NewReader(`{"target_user_id":"nonexistent_user"}`))
+	deleteReq = deleteReq.WithContext(ctx)
+	deleteRR := httptest.NewRecorder()
+	chatHandler.Delete(deleteRR, deleteReq)
+	assertPrivateChatCode(t, deleteRR, 10300)
+}
+
 func assertPrivateChatCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
 	t.Helper()
 	var resp struct {

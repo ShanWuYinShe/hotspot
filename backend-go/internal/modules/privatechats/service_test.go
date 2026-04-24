@@ -242,7 +242,8 @@ func TestServiceUpdateSettingsPropagatesError(t *testing.T) {
 
 func TestServiceDeleteHappyPath(t *testing.T) {
 	repo := &stubChatRepo{}
-	svc := NewServiceWithDeps(repo, &stubMsgReadService{}, &stubChatUserReader{})
+	usr := &stubChatUserReader{item: defaultUserItem(), found: true}
+	svc := NewServiceWithDeps(repo, &stubMsgReadService{}, usr)
 	err := svc.Delete(chatCtx("u1"), "u2")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

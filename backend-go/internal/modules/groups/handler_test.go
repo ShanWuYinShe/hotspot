@@ -17,6 +17,8 @@ import (
 )
 
 type groupErrorRepo struct {
+	getResult             GroupItem
+	getFound              bool
 	createErr             error
 	getErr                error
 	searchErr             error
@@ -43,7 +45,7 @@ func (r *groupErrorRepo) Create(context.Context, string, CreateGroupRequest) (Gr
 	return GroupItem{}, r.createErr
 }
 func (r *groupErrorRepo) Get(context.Context, string) (GroupItem, bool, error) {
-	return GroupItem{}, false, r.getErr
+	return r.getResult, r.getFound, r.getErr
 }
 func (r *groupErrorRepo) Search(context.Context, SearchGroupsRequest) (PaginatedGroups, error) {
 	return PaginatedGroups{}, r.searchErr
@@ -543,4 +545,613 @@ func (c *groupRecordingChecker) MayExist(context.Context, resourceguard.Resource
 func (c *groupRecordingChecker) Record(_ context.Context, kind resourceguard.ResourceKind, id string) error {
 	c.recorded = append(c.recorded, string(kind)+":"+id)
 	return nil
+}
+
+// --- Members ---
+
+func TestListMembersHandlerReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/list", strings.NewReader(`{"group_id":"g1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.ListMembers(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+		Data struct {
+			Items []GroupMemberItem `json:"items"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestListMembersHandlerMapsGroupNotFound(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	req := httptest.NewRequest(http.MethodPost, "/members/list", strings.NewReader(`{"group_id":"missing"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.ListMembers(rr, req)
+	assertGroupCode(t, rr, 10300)
+}
+
+func TestListMembersHandlerValidation(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "missing group_id", body: `{}`},
+		{name: "invalid json", body: `{`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/members/list", strings.NewReader(tc.body))
+			rr := httptest.NewRecorder()
+			handler.ListMembers(rr, req)
+			assertGroupCode(t, rr, 10000)
+		})
+	}
+}
+
+func TestSearchMembersHandlerReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/search", strings.NewReader(`{"group_id":"g1","keyword":"alice"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.SearchMembers(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestSearchMembersHandlerValidation(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "missing group_id", body: `{"keyword":"alice"}`},
+		{name: "missing keyword", body: `{"group_id":"g1"}`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/members/search", strings.NewReader(tc.body))
+			rr := httptest.NewRecorder()
+			handler.SearchMembers(rr, req)
+			assertGroupCode(t, rr, 10000)
+		})
+	}
+}
+
+func TestUnmuteMemberHandlerMapsAccessRestricted(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/unmute", strings.NewReader(`{"group_id":"g1","user_id":"u2"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.UnmuteMember(rr, req)
+	assertGroupCode(t, rr, 10200)
+}
+
+func TestUnmuteMemberHandlerValidation(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "missing group_id", body: `{"user_id":"u2"}`},
+		{name: "missing user_id", body: `{"group_id":"g1"}`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/members/unmute", strings.NewReader(tc.body))
+			rr := httptest.NewRecorder()
+			handler.UnmuteMember(rr, req)
+			assertGroupCode(t, rr, 10000)
+		})
+	}
+}
+
+func TestBanMemberHandlerReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/ban", strings.NewReader(`{"group_id":"g1","user_id":"u2"}`))
+	req.Header.Set("Idempotency-Key", "banmember123456789012345678901234")
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.BanMember(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestBanMemberHandlerMapsAccessRestricted(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/ban", strings.NewReader(`{"group_id":"g1","user_id":"u2"}`))
+	req.Header.Set("Idempotency-Key", "banmember-restricted-123456789012345")
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.BanMember(rr, req)
+	assertGroupCode(t, rr, 10200)
+}
+
+func TestBanMemberHandlerCannotBanSelf(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/ban", strings.NewReader(`{"group_id":"g1","user_id":"user_alice"}`))
+	req.Header.Set("Idempotency-Key", "ban-self-1234567890123456789012345678")
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.BanMember(rr, req)
+	assertGroupCode(t, rr, 10200)
+}
+
+func TestUnbanMemberHandlerReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/unban", strings.NewReader(`{"group_id":"g1","user_id":"u2"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.UnbanMember(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestUnbanMemberHandlerMapsGroupNotFound(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	req := httptest.NewRequest(http.MethodPost, "/members/unban", strings.NewReader(`{"group_id":"missing","user_id":"u2"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.UnbanMember(rr, req)
+	assertGroupCode(t, rr, 10300)
+}
+
+func TestListBannedMembersHandlerReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/list_banned", strings.NewReader(`{"group_id":"g1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.ListBannedMembers(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestListBannedMembersHandlerMapsAccessRestricted(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/list_banned", strings.NewReader(`{"group_id":"g1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.ListBannedMembers(rr, req)
+	assertGroupCode(t, rr, 10200)
+}
+
+func TestListSentInvitesHandlerReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/invites/list", strings.NewReader(`{"group_id":"g1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.ListSentInvites(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestListSentInvitesHandlerMapsAccessRestricted(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/invites/list", strings.NewReader(`{"group_id":"g1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.ListSentInvites(rr, req)
+	assertGroupCode(t, rr, 10200)
+}
+
+func TestRevokeInviteHandlerReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/invites/revoke", strings.NewReader(`{"group_id":"g1","invite_id":"inv1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.RevokeInvite(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestRevokeInviteHandlerMapsGroupNotFound(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	req := httptest.NewRequest(http.MethodPost, "/members/invites/revoke", strings.NewReader(`{"group_id":"missing","invite_id":"inv1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.RevokeInvite(rr, req)
+	assertGroupCode(t, rr, 10300)
+}
+
+// --- Announcements ---
+
+func TestCreateAnnouncementHandlerReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/announcements/create", strings.NewReader(`{"group_id":"g1","title":"Notice","content":"Hello"}`))
+	req.Header.Set("Idempotency-Key", "create-ann-123456789012345678901234")
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.CreateAnnouncement(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestCreateAnnouncementHandlerMapsAccessRestricted(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/announcements/create", strings.NewReader(`{"group_id":"g1","title":"Notice","content":"Hello"}`))
+	req.Header.Set("Idempotency-Key", "create-ann-restricted-123456789012345")
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.CreateAnnouncement(rr, req)
+	assertGroupCode(t, rr, 10200)
+}
+
+func TestCreateAnnouncementHandlerValidation(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "missing group_id", body: `{"title":"Notice","content":"Hello"}`},
+		{name: "missing title", body: `{"group_id":"g1","content":"Hello"}`},
+		{name: "missing content", body: `{"group_id":"g1","title":"Notice"}`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/announcements/create", strings.NewReader(tc.body))
+			req.Header.Set("Idempotency-Key", fmt.Sprintf("ann-val-%d-123456789012345678901234", len(tc.name)))
+			rr := httptest.NewRecorder()
+			handler.CreateAnnouncement(rr, req)
+			assertGroupCode(t, rr, 10000)
+		})
+	}
+}
+
+func TestListAnnouncementsHandlerReturnsSuccess(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	req := httptest.NewRequest(http.MethodPost, "/announcements/list", strings.NewReader(`{"group_id":"g1"}`))
+	rr := httptest.NewRecorder()
+	handler.ListAnnouncements(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestListAnnouncementsHandlerMapsGroupNotFound(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{listAnnouncementsErr: ErrGroupNotFound}))
+	req := httptest.NewRequest(http.MethodPost, "/announcements/list", strings.NewReader(`{"group_id":"missing"}`))
+	rr := httptest.NewRecorder()
+	handler.ListAnnouncements(rr, req)
+	assertGroupCode(t, rr, 10300)
+}
+
+func TestListAnnouncementsHandlerValidation(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "missing group_id", body: `{}`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/announcements/list", strings.NewReader(tc.body))
+			rr := httptest.NewRecorder()
+			handler.ListAnnouncements(rr, req)
+			assertGroupCode(t, rr, 10000)
+		})
+	}
+}
+
+func TestUpdateAnnouncementHandlerReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/announcements/update", strings.NewReader(`{"group_id":"g1","announcement_id":"ann1","title":"Updated"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.UpdateAnnouncement(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestUpdateAnnouncementHandlerMapsAccessRestricted(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/announcements/update", strings.NewReader(`{"group_id":"g1","announcement_id":"ann1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.UpdateAnnouncement(rr, req)
+	assertGroupCode(t, rr, 10200)
+}
+
+func TestUpdateAnnouncementHandlerValidation(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "missing group_id", body: `{"announcement_id":"ann1"}`},
+		{name: "missing announcement_id", body: `{"group_id":"g1"}`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/announcements/update", strings.NewReader(tc.body))
+			rr := httptest.NewRecorder()
+			handler.UpdateAnnouncement(rr, req)
+			assertGroupCode(t, rr, 10000)
+		})
+	}
+}
+
+func TestDeleteAnnouncementHandlerReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/announcements/delete", strings.NewReader(`{"group_id":"g1","announcement_id":"ann1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.DeleteAnnouncement(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestDeleteAnnouncementHandlerMapsGroupNotFound(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{deleteAnnouncementErr: ErrGroupNotFound}))
+	req := httptest.NewRequest(http.MethodPost, "/announcements/delete", strings.NewReader(`{"group_id":"missing","announcement_id":"ann1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.DeleteAnnouncement(rr, req)
+	assertGroupCode(t, rr, 10300)
+}
+
+func TestDeleteAnnouncementHandlerValidation(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "missing group_id", body: `{"announcement_id":"ann1"}`},
+		{name: "missing announcement_id", body: `{"group_id":"g1"}`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/announcements/delete", strings.NewReader(tc.body))
+			rr := httptest.NewRecorder()
+			handler.DeleteAnnouncement(rr, req)
+			assertGroupCode(t, rr, 10000)
+		})
+	}
+}
+
+// --- Me ---
+
+func TestListMyGroupsHandlerReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}}},
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.ListMyGroups(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestListMyGroupsHandlerMapsServiceError(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{listMyGroupsErr: errors.New("boom")}))
+	req := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.ListMyGroups(rr, req)
+	assertGroupCode(t, rr, 10600)
+}
+
+func TestJoinGroupHandlerReturnsSuccess(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	created, err := NewServiceWithRepo(repo).Create(ctx, CreateGroupRequest{Name: "Open Group", JoinMethod: GroupJoinMethodOpen, Location: Location{LocationName: "Here"}})
+	if err != nil {
+		t.Fatalf("create group: %v", err)
+	}
+
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/me/join", strings.NewReader(`{"group_id":"`+created.Group.GroupID+`"}`))
+	req.Header.Set("Idempotency-Key", "join-group-123456789012345678901234")
+	req = req.WithContext(platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"}))
+	rr := httptest.NewRecorder()
+	handler.JoinGroup(rr, req)
+
+	var resp struct {
+		Code int            `json:"code"`
+		Data JoinGroupResult `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+	if resp.Data.Status != JoinGroupStatusJoined {
+		t.Fatalf("expected joined status, got %s", resp.Data.Status)
+	}
+}
+
+func TestJoinGroupHandlerMapsGroupNotFound(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	req := httptest.NewRequest(http.MethodPost, "/me/join", strings.NewReader(`{"group_id":"missing"}`))
+	req.Header.Set("Idempotency-Key", "join-missing-123456789012345678901234")
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.JoinGroup(rr, req)
+	assertGroupCode(t, rr, 10300)
+}
+
+func TestJoinGroupHandlerValidation(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "missing group_id", body: `{}`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/me/join", strings.NewReader(tc.body))
+			req.Header.Set("Idempotency-Key", fmt.Sprintf("join-val-%d-123456789012345678901234", len(tc.name)))
+			rr := httptest.NewRecorder()
+			handler.JoinGroup(rr, req)
+			assertGroupCode(t, rr, 10000)
+		})
+	}
 }
