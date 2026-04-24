@@ -207,7 +207,7 @@ func TestShareGetReturnsFullShareDetailShape(t *testing.T) {
 	getRR := httptest.NewRecorder()
 	handler.Get(getRR, getReq)
 	var getResp struct {
-		Code int         `json:"code"`
+		Code int `json:"code"`
 		Data struct {
 			Share struct {
 				ShareID   string `json:"share_id"`

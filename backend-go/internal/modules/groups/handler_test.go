@@ -1113,7 +1113,7 @@ func TestJoinGroupHandlerReturnsSuccess(t *testing.T) {
 	handler.JoinGroup(rr, req)
 
 	var resp struct {
-		Code int            `json:"code"`
+		Code int             `json:"code"`
 		Data JoinGroupResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {

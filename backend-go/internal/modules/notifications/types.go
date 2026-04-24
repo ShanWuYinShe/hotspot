@@ -27,9 +27,16 @@ type PaginatedNotifications struct {
 	NextCursor string             `json:"next_cursor,omitempty"`
 }
 
+type UnreadCountByType struct {
+	Social      int `json:"social"`
+	Interaction int `json:"interaction"`
+	Group       int `json:"group"`
+	System      int `json:"system"`
+}
+
 type UnreadCountResult struct {
-	Total  int            `json:"total"`
-	ByType map[string]int `json:"by_type"`
+	Total  int              `json:"total"`
+	ByType UnreadCountByType `json:"by_type"`
 }
 
 type PaginationParams struct {

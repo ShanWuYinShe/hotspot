@@ -59,6 +59,7 @@ type ReportItem struct {
 	Description string           `json:"description,omitempty"`
 	Status      ReportStatus     `json:"status"`
 	CreatedAt   string           `json:"created_at"`
+	HandledAt   string           `json:"handled_at,omitempty"`
 }
 
 type PaginatedReports struct {

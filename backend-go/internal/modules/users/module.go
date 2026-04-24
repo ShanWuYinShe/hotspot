@@ -4,8 +4,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"hotspot/backend-go/internal/modules/notifications"
-	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/appconfig"
+	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/ratelimit"

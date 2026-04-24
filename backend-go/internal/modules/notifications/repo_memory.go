@@ -75,13 +75,22 @@ func (r *InMemoryRepository) List(_ context.Context, userID string, req Notifica
 func (r *InMemoryRepository) UnreadCount(_ context.Context, userID string) (UnreadCountResult, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	result := UnreadCountResult{ByType: map[string]int{"social": 0, "interaction": 0, "group": 0, "system": 0}}
+	result := UnreadCountResult{ByType: UnreadCountByType{}}
 	for _, item := range r.items[userID] {
 		if item.IsRead {
 			continue
 		}
 		result.Total++
-		result.ByType[bucket(item.Type)]++
+		switch bucket(item.Type) {
+		case "social":
+			result.ByType.Social++
+		case "interaction":
+			result.ByType.Interaction++
+		case "group":
+			result.ByType.Group++
+		case "system":
+			result.ByType.System++
+		}
 	}
 	return result, nil
 }

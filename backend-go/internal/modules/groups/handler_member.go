@@ -90,7 +90,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
 	var req SetMemberRoleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.UserID == "" || req.Role == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.UserID == "" || req.Role == "" || (req.Role != GroupRoleAdmin && req.Role != GroupRoleMember) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}

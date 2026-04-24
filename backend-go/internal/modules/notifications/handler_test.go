@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	platformauth "hotspot/backend-go/internal/platform/auth"
 	systemmodule "hotspot/backend-go/internal/modules/system"
+	platformauth "hotspot/backend-go/internal/platform/auth"
 )
 
 type notificationErrorRepo struct {
@@ -154,17 +154,17 @@ func TestUnreadCountReturnsByTypeBreakdown(t *testing.T) {
 	if resp.Data.Total != 5 {
 		t.Fatalf("expected total 5, got %d", resp.Data.Total)
 	}
-	if resp.Data.ByType["social"] != 2 {
-		t.Fatalf("expected by_type.social=2, got %d", resp.Data.ByType["social"])
+	if resp.Data.ByType.Social != 2 {
+		t.Fatalf("expected by_type.social=2, got %d", resp.Data.ByType.Social)
 	}
-	if resp.Data.ByType["interaction"] != 1 {
-		t.Fatalf("expected by_type.interaction=1, got %d", resp.Data.ByType["interaction"])
+	if resp.Data.ByType.Interaction != 1 {
+		t.Fatalf("expected by_type.interaction=1, got %d", resp.Data.ByType.Interaction)
 	}
-	if resp.Data.ByType["group"] != 1 {
-		t.Fatalf("expected by_type.group=1, got %d", resp.Data.ByType["group"])
+	if resp.Data.ByType.Group != 1 {
+		t.Fatalf("expected by_type.group=1, got %d", resp.Data.ByType.Group)
 	}
-	if resp.Data.ByType["system"] != 1 {
-		t.Fatalf("expected by_type.system=1, got %d", resp.Data.ByType["system"])
+	if resp.Data.ByType.System != 1 {
+		t.Fatalf("expected by_type.system=1, got %d", resp.Data.ByType.System)
 	}
 }
 

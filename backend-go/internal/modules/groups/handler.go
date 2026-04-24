@@ -368,7 +368,7 @@ func (h *Handler) LeaveGroup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err == ErrAccessRestricted {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "群主需先转让群主身份"))
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "群主需先转让群主身份"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))

@@ -222,7 +222,7 @@ func TestPostgresRepositoryListSupportsFilterPaginationAndUnreadCount(t *testing
 	}
 
 	count, err := repo.UnreadCount(context.Background(), "user_alice")
-	if err != nil || count.Total != 2 || count.ByType["system"] != 1 || count.ByType["social"] != 1 {
+	if err != nil || count.Total != 2 || count.ByType.System != 1 || count.ByType.Social != 1 {
 		t.Fatalf("unexpected unread count: %#v err=%v", count, err)
 	}
 
@@ -230,7 +230,7 @@ func TestPostgresRepositoryListSupportsFilterPaginationAndUnreadCount(t *testing
 		t.Fatalf("mark as read: %v", err)
 	}
 	count, err = repo.UnreadCount(context.Background(), "user_alice")
-	if err != nil || count.Total != 1 || count.ByType["system"] != 0 {
+	if err != nil || count.Total != 1 || count.ByType.System != 0 {
 		t.Fatalf("unexpected unread count after mark: %#v err=%v", count, err)
 	}
 
@@ -256,7 +256,7 @@ func TestPostgresRepositoryAppendWritesAndAffectsUnreadCount(t *testing.T) {
 		t.Fatalf("unexpected list after append: %#v err=%v", list, err)
 	}
 	count, err := repo.UnreadCount(context.Background(), "user_alice")
-	if err != nil || count.Total != 1 || count.ByType["social"] != 1 {
+	if err != nil || count.Total != 1 || count.ByType.Social != 1 {
 		t.Fatalf("unexpected unread count after append: %#v err=%v", count, err)
 	}
 }

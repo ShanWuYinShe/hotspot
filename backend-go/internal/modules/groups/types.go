@@ -61,6 +61,7 @@ type GroupItem struct {
 	HasPassword    bool             `json:"has_password"`
 	Location       RelativeLocation `json:"location"`
 	MyState        *MyGroupState    `json:"my_state,omitempty"`
+	FriendsInGroup int              `json:"friends_in_group,omitempty"`
 	JoinMethod     GroupJoinMethod  `json:"join_method,omitempty"`
 	IsSearchable   bool             `json:"is_searchable,omitempty"`
 	MaxMembers     int              `json:"max_members,omitempty"`
@@ -274,10 +275,9 @@ type GroupAnnouncementItem struct {
 	GroupID        string    `json:"group_id"`
 	Title          string    `json:"title"`
 	Content        string    `json:"content"`
-	IsPinned       bool      `json:"is_pinned"`
+	CreatedBy      UserInfo  `json:"created_by"`
 	CreatedAt      string    `json:"created_at"`
-	UpdatedAt      *string   `json:"updated_at,omitempty"`
-	CreatedBy      *UserInfo `json:"created_by,omitempty"`
+	IsPinned       bool      `json:"is_pinned"`
 }
 
 type GroupAnnouncementsRequest struct {

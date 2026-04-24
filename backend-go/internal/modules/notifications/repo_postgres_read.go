@@ -71,7 +71,7 @@ func (r *PostgresRepository) UnreadCount(ctx context.Context, userID string) (Un
 		return UnreadCountResult{}, err
 	}
 	defer rows.Close()
-	result := UnreadCountResult{ByType: map[string]int{"social": 0, "interaction": 0, "group": 0, "system": 0}}
+	result := UnreadCountResult{ByType: UnreadCountByType{}}
 	for rows.Next() {
 		var notificationType, countText string
 		if err := rows.Scan(&notificationType, &countText); err != nil {
@@ -82,7 +82,16 @@ func (r *PostgresRepository) UnreadCount(ctx context.Context, userID string) (Un
 			return UnreadCountResult{}, err
 		}
 		result.Total += count
-		result.ByType[bucket(notificationType)] += count
+		switch bucket(notificationType) {
+		case "social":
+			result.ByType.Social += count
+		case "interaction":
+			result.ByType.Interaction += count
+		case "group":
+			result.ByType.Group += count
+		case "system":
+			result.ByType.System += count
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return UnreadCountResult{}, err
