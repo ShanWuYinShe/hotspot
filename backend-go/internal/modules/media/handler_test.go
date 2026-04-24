@@ -169,6 +169,41 @@ func TestMediaHandlerReturns10600OnServerErrors(t *testing.T) {
 	assertMediaCode(t, completeRR, 10600)
 }
 
+func TestBatchPresignRejectsMoreThan9Files(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepoAndProvider(NewInMemoryRepository(), &mediaStubProvider{
+		presignResp: PresignedUpload{UploadID: "upload_1", UploadURL: "https://storage.example.com/upload", ExpiresAt: "2026-03-30T00:00:00Z"},
+	}))
+	files := make([]string, 10)
+	for i := 0; i < 10; i++ {
+		files[i] = `{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}`
+	}
+	reqBody := `{"files":[` + strings.Join(files, ",") + `]}`
+	req := mediaAuthedRequest(http.MethodPost, "/batch_presign_upload", reqBody)
+	rr := httptest.NewRecorder()
+	handler.BatchPresignUpload(rr, req)
+	assertMediaCode(t, rr, 10000)
+}
+
+func TestBatchPresignReturns10600OnServiceError(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepoAndProvider(NewInMemoryRepository(), &mediaStubProvider{
+		presignErr: errors.New("internal provider error"),
+	}))
+	req := mediaAuthedRequest(http.MethodPost, "/batch_presign_upload", `{"files":[{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}]}`)
+	rr := httptest.NewRecorder()
+	handler.BatchPresignUpload(rr, req)
+	assertMediaCode(t, rr, 10600)
+}
+
+func TestPresignRejectsInvalidCategory(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepoAndProvider(NewInMemoryRepository(), &mediaStubProvider{
+		presignResp: PresignedUpload{UploadID: "upload_1", UploadURL: "https://storage.example.com/upload", ExpiresAt: "2026-03-30T00:00:00Z"},
+	}))
+	req := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"unknown_category"}`)
+	rr := httptest.NewRecorder()
+	handler.PresignUpload(rr, req)
+	assertMediaCode(t, rr, 10000)
+}
+
 func assertMediaCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
 	t.Helper()
 	var resp struct {

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
@@ -142,6 +143,128 @@ func TestShareHandlerReturns10600OnServiceError(t *testing.T) {
 	revokeRR := httptest.NewRecorder()
 	handler.Revoke(revokeRR, revokeReq)
 	assertCode(t, revokeRR, 10600)
+}
+
+func TestShareCreateRequiresIdempotencyKey(t *testing.T) {
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	handler := NewHandler(NewService())
+	req := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"share_type":"user","payload":{"shared_user_id":"user_bob"}}`)))
+	// No Idempotency-Key header set
+	rr := httptest.NewRecorder()
+	handler.Create(rr, req)
+	assertCode(t, rr, 10000)
+}
+
+func TestShareGetExpiredReturns10300(t *testing.T) {
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	svc := NewService()
+	handler := NewHandler(svc)
+
+	// Create a share with expires_in_seconds = 1 (will expire in 1 second)
+	createReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"share_type":"user","payload":{"shared_user_id":"user_bob"},"expires_in_seconds":1}`)))
+	createReq.Header.Set("Idempotency-Key", "expi_test_create_once_00000000000")
+	createRR := httptest.NewRecorder()
+	handler.Create(createRR, createReq)
+	var createResp struct {
+		Code int          `json:"code"`
+		Data ShareCreated `json:"data"`
+	}
+	_ = json.NewDecoder(createRR.Body).Decode(&createResp)
+	if createResp.Code != 0 {
+		t.Fatalf("create failed: %#v", createResp)
+	}
+
+	// Wait for the share to expire (1 second + buffer)
+	time.Sleep(2 * time.Second)
+
+	// Get the expired share — should return 10300
+	getReq := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"`+createResp.Data.ShareCode+`"}`))
+	getRR := httptest.NewRecorder()
+	handler.Get(getRR, getReq)
+	assertCode(t, getRR, 10300)
+}
+
+func TestShareGetReturnsFullShareDetailShape(t *testing.T) {
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	handler := NewHandler(NewService())
+
+	// Create a share
+	createReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"share_type":"user","payload":{"shared_user_id":"user_bob"}}`)))
+	createReq.Header.Set("Idempotency-Key", "detail_shape_create_once_00000000")
+	createRR := httptest.NewRecorder()
+	handler.Create(createRR, createReq)
+	var createResp struct {
+		Code int          `json:"code"`
+		Data ShareCreated `json:"data"`
+	}
+	_ = json.NewDecoder(createRR.Body).Decode(&createResp)
+	if createResp.Code != 0 {
+		t.Fatalf("create failed: %#v", createResp)
+	}
+
+	// Get the share and verify all required fields are present
+	getReq := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"`+createResp.Data.ShareCode+`"}`))
+	getRR := httptest.NewRecorder()
+	handler.Get(getRR, getReq)
+	var getResp struct {
+		Code int         `json:"code"`
+		Data struct {
+			Share struct {
+				ShareID   string `json:"share_id"`
+				ShareCode string `json:"share_code"`
+				ShareType string `json:"share_type"`
+				Creator   struct {
+					UserID string `json:"user_id"`
+				} `json:"creator"`
+				CreatedAt string `json:"created_at"`
+			} `json:"share"`
+			Payload map[string]any `json:"payload"`
+		} `json:"data"`
+	}
+	_ = json.NewDecoder(getRR.Body).Decode(&getResp)
+	if getResp.Code != 0 {
+		t.Fatalf("get failed: %#v", getResp)
+	}
+	if getResp.Data.Share.ShareID == "" || getResp.Data.Share.ShareCode == "" || getResp.Data.Share.ShareType == "" || getResp.Data.Share.Creator.UserID == "" || getResp.Data.Share.CreatedAt == "" {
+		t.Fatalf("missing required fields in share detail: %#v", getResp.Data.Share)
+	}
+	if getResp.Data.Payload == nil {
+		t.Fatalf("payload is missing in share detail response")
+	}
+}
+
+func TestShareMeListRequiresAuth(t *testing.T) {
+	handler := NewHandler(NewService())
+	// Request without principal — List handler delegates to service which checks for auth
+	req := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+	handler.List(rr, req)
+	assertCode(t, rr, 10000)
+}
+
+func TestShareCodeValidationRejectsInvalidChars(t *testing.T) {
+	handler := NewHandler(NewService())
+
+	for _, code := range []string{"abc", "ABCDEFGHJKLMN", "ABC0EFGHJKLM", "ABCOEFGHJKLM"} {
+		getRR := httptest.NewRecorder()
+		handler.Get(getRR, httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"`+code+`"}`)))
+		var resp struct{ Code int }
+		_ = json.NewDecoder(getRR.Body).Decode(&resp)
+		if resp.Code != 10000 {
+			t.Fatalf("code %q: expected 10000, got %d", code, resp.Code)
+		}
+	}
+
+	// "abcdefghjklm" is lowercase 12-char — it passes length check (12 chars)
+	// and normalizeShareCode uppercases it, so validShareCode() sees "ABCDEFGHJKLM"
+	// which is a valid code. We verify this by checking it does NOT return 10000.
+	getRR := httptest.NewRecorder()
+	handler.Get(getRR, httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"abcdefghjklm"}`)))
+	var resp struct{ Code int }
+	_ = json.NewDecoder(getRR.Body).Decode(&resp)
+	if resp.Code == 10000 {
+		t.Fatalf("lowercase 12-char code got 10000 — normalizeShareCode should have uppercased it")
+	}
 }
 
 func assertCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {

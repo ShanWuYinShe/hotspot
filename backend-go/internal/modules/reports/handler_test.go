@@ -120,6 +120,58 @@ func TestCreateReportRejectsSelfAndDuplicateReport(t *testing.T) {
 	assertReportCode(t, dupRR2, 10400)
 }
 
+func TestCreateReportRequiresIdempotencyKey(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"target_type":"moment","target_id":"moment_1","reason":"spam"}`))
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.Create(rr, req)
+	assertReportCode(t, rr, 10000)
+}
+
+func TestCreateReportReturns10300OnTargetNotFound(t *testing.T) {
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"target_type":"moment","target_id":"moment_nonexistent","reason":"spam"}`))
+	req.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.Create(rr, req)
+	assertReportCode(t, rr, 10300)
+}
+
+func TestReportsMeListFiltersByStatus(t *testing.T) {
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+
+	repo.mu.Lock()
+	repo.reports["user_alice"] = []ReportItem{
+		{ReportID: "r1", TargetType: ReportTargetTypeMoment, TargetID: "m1", Reason: ReportReasonSpam, Status: ReportStatusPending},
+		{ReportID: "r2", TargetType: ReportTargetTypeMoment, TargetID: "m2", Reason: ReportReasonSpam, Status: ReportStatusResolved},
+	}
+	repo.mu.Unlock()
+
+	listReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"status":"pending"}`))
+	listReq = listReq.WithContext(ctx)
+	listRR := httptest.NewRecorder()
+	handler.List(listRR, listReq)
+	var resp struct {
+		Code int              `json:"code"`
+		Data PaginatedReports `json:"data"`
+	}
+	if err := json.NewDecoder(listRR.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 || len(resp.Data.Items) != 1 || resp.Data.Items[0].ReportID != "r1" {
+		t.Fatalf("expected 1 pending report (r1), got %#v", resp)
+	}
+}
+
 func assertReportCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
 	t.Helper()
 	var resp struct {
