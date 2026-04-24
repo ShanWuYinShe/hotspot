@@ -1,0 +1,361 @@
+package users
+
+import (
+	"context"
+	"strings"
+	"time"
+
+	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/realtime"
+)
+
+func (s *Service) Follow(ctx context.Context, targetUserID string, source FollowSource, sourceMomentID string) error {
+	startedAt := time.Now()
+	observability.L().Info("users.follow started", "target_user_id", targetUserID)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
+	if targetUserID == principal.UserID {
+		return ErrConflict
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
+		return err
+	}
+	settings, ok, err := s.repo.GetSettings(ctx, targetUserID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		settings = defaultSettings()
+	}
+	if !settings.AllowFollow {
+		return ErrPermissionDenied
+	}
+	if err := s.repo.Follow(ctx, principal.UserID, targetUserID, source, sourceMomentID); err != nil {
+		observability.L().Error("users.follow failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return err
+	}
+	actor := map[string]any{"user_id": principal.UserID, "nickname": principal.UserID}
+	followedAt := time.Now().UTC().Format(time.RFC3339)
+	sourceValue := strings.TrimSpace(string(source))
+	sourceMomentID = strings.TrimSpace(sourceMomentID)
+	if sourceValue != string(FollowSourceMoment) {
+		sourceMomentID = ""
+	}
+	if s.notifications != nil {
+		if err := s.notifications.AppendNewFollower(ctx, targetUserID, actor, sourceValue, sourceMomentID); err != nil {
+			observability.L().Error("users.follow notification append failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			return err
+		}
+	}
+	newFollowerPayload := map[string]any{"actor": actor, "followed_at": followedAt}
+	if sourceValue != "" {
+		newFollowerPayload["source"] = sourceValue
+	}
+	if sourceMomentID != "" {
+		newFollowerPayload["source_moment_id"] = sourceMomentID
+	}
+	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "NewFollower", Payload: newFollowerPayload})
+	relation, err := s.repo.Relationship(ctx, targetUserID, principal.UserID)
+	if err != nil {
+		observability.L().Error("users.follow relationship check failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return err
+	}
+	if relation.IsFollowing {
+		mutualAt := time.Now().UTC().Format(time.RFC3339)
+		if s.notifications != nil {
+			if err := s.notifications.AppendMutualFollow(ctx, principal.UserID, actor); err != nil {
+				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", principal.UserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+				return err
+			}
+			if err := s.notifications.AppendMutualFollow(ctx, targetUserID, actor); err != nil {
+				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+				return err
+			}
+		}
+		mutualPayload := map[string]any{"actor": actor, "mutual_at": mutualAt}
+		realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: "MutualFollow", Payload: mutualPayload})
+		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "MutualFollow", Payload: mutualPayload})
+	}
+	observability.L().Info("users.follow completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return nil
+}
+
+func (s *Service) Unfollow(ctx context.Context, targetUserID string) error {
+	startedAt := time.Now()
+	observability.L().Info("users.unfollow started", "target_user_id", targetUserID)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
+	if targetUserID == principal.UserID {
+		return ErrConflict
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
+		return err
+	}
+	if err := s.repo.Unfollow(ctx, principal.UserID, targetUserID); err != nil {
+		observability.L().Error("users.unfollow failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return err
+	}
+	observability.L().Info("users.unfollow completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return nil
+}
+
+func (s *Service) Block(ctx context.Context, targetUserID, reason string) error {
+	startedAt := time.Now()
+	observability.L().Info("users.block started", "target_user_id", targetUserID)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
+	if targetUserID == principal.UserID {
+		return ErrConflict
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
+		return err
+	}
+	if err := s.repo.Block(ctx, principal.UserID, targetUserID, reason); err != nil {
+		observability.L().Error("users.block failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return err
+	}
+	observability.L().Info("users.block completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return nil
+}
+
+func (s *Service) Unblock(ctx context.Context, targetUserID string) error {
+	startedAt := time.Now()
+	observability.L().Info("users.unblock started", "target_user_id", targetUserID)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
+	if targetUserID == principal.UserID {
+		return ErrConflict
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
+		return err
+	}
+	if err := s.repo.Unblock(ctx, principal.UserID, targetUserID); err != nil {
+		observability.L().Error("users.unblock failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return err
+	}
+	observability.L().Info("users.unblock completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return nil
+}
+
+func (s *Service) SetRemark(ctx context.Context, targetUserID, remark string) error {
+	startedAt := time.Now()
+	observability.L().Info("users.set_remark started", "target_user_id", targetUserID)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
+		return err
+	}
+	relation, err := s.repo.Relationship(ctx, principal.UserID, targetUserID)
+	if err != nil {
+		return err
+	}
+	if !relation.IsFollowing {
+		return ErrConflict
+	}
+	if err := s.repo.SetRemark(ctx, principal.UserID, targetUserID, remark); err != nil {
+		observability.L().Error("users.set_remark failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return err
+	}
+	observability.L().Info("users.set_remark completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return nil
+}
+
+func (s *Service) ListBlocked(ctx context.Context, req MyBlockedRequest) (PaginatedBlockedUsers, error) {
+	startedAt := time.Now()
+	observability.L().Info("users.list_blocked started")
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return PaginatedBlockedUsers{}, err
+	}
+	limit, cursor := normalizePagination(req.Pagination)
+	items, err := s.repo.ListBlocked(ctx, principal.UserID, limit, cursor)
+	if err != nil {
+		observability.L().Error("users.list_blocked failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return PaginatedBlockedUsers{}, err
+	}
+	observability.L().Info("users.list_blocked completed", "count", len(items.Items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return items, nil
+}
+
+func (s *Service) buildSocialContext(ctx context.Context, viewerUserID string, targetProfile MyProfile) (*SocialContext, error) {
+	viewerProfile, ok, err := s.repo.GetProfile(ctx, viewerUserID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		viewerProfile = s.defaultProfile(ctx, viewerUserID)
+	}
+	mutualFriends, err := collectMutualFriends(ctx, s.repo, viewerUserID, targetProfile.UserID)
+	if err != nil {
+		return nil, err
+	}
+	context := &SocialContext{MutualFriendsCount: len(mutualFriends)}
+	if len(mutualFriends) > 0 {
+		preview := make([]UserInfo, 0, minInt(len(mutualFriends), 3))
+		for _, friend := range mutualFriends {
+			preview = append(preview, friend.User)
+			if len(preview) == 3 {
+				break
+			}
+		}
+		context.MutualFriendsPreview = preview
+	}
+	targetSettings, ok, err := s.repo.GetSettings(ctx, targetProfile.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		targetSettings = defaultSettings()
+	}
+	if targetSettings.GroupsVisible {
+		commonGroupsCount, err := s.repo.CommonGroupCount(ctx, viewerUserID, targetProfile.UserID)
+		if err != nil {
+			return nil, err
+		}
+		context.CommonGroupsCount = &commonGroupsCount
+	}
+	commonTags := intersectTags(viewerProfile.Tags, targetProfile.Tags)
+	if len(commonTags) > 0 {
+		context.CommonTags = commonTags
+	}
+	return context, nil
+}
+
+func collectMutualFriends(ctx context.Context, repo Repository, viewerUserID, targetUserID string) ([]FriendItem, error) {
+	viewerFriends, err := collectFriendsByUser(ctx, repo, viewerUserID)
+	if err != nil {
+		return nil, err
+	}
+	targetFriends, err := collectFriendsByUser(ctx, repo, targetUserID)
+	if err != nil {
+		return nil, err
+	}
+	targetSet := make(map[string]struct{}, len(targetFriends))
+	for _, item := range targetFriends {
+		targetSet[item.User.UserID] = struct{}{}
+	}
+	mutual := make([]FriendItem, 0)
+	for _, item := range viewerFriends {
+		if _, ok := targetSet[item.User.UserID]; ok {
+			mutual = append(mutual, item)
+		}
+	}
+	return mutual, nil
+}
+
+func collectFriendsByUser(ctx context.Context, repo Repository, userID string) ([]FriendItem, error) {
+	items := make([]FriendItem, 0)
+	cursor := ""
+	for {
+		page, err := repo.ListFriends(ctx, userID, 100, cursor)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, page.Items...)
+		if page.NextCursor == "" {
+			break
+		}
+		cursor = page.NextCursor
+	}
+	return items, nil
+}
+
+func intersectTags(left, right []string) []string {
+	if len(left) == 0 || len(right) == 0 {
+		return nil
+	}
+	seen := make(map[string]string, len(left))
+	for _, item := range left {
+		key := strings.ToLower(item)
+		if _, ok := seen[key]; !ok {
+			seen[key] = item
+		}
+	}
+	common := make([]string, 0)
+	added := make(map[string]struct{})
+	for _, item := range right {
+		key := strings.ToLower(item)
+		original, ok := seen[key]
+		if !ok {
+			continue
+		}
+		if _, dup := added[key]; dup {
+			continue
+		}
+		common = append(common, original)
+		added[key] = struct{}{}
+	}
+	return common
+}
+
+func minInt(a, b int) int {
+	if a <= b {
+		return a
+	}
+	return b
+}
+
+func applyPresenceVisibilityToFriends(ctx context.Context, repo Repository, items []FriendItem) {
+	for i := range items {
+		if !isPresenceVisible(ctx, repo, items[i].User.UserID) {
+			items[i].PresenceStatus = nil
+			items[i].LastOnline = nil
+		}
+	}
+}
+
+func applyPresenceVisibilityToFollowing(ctx context.Context, repo Repository, items []FollowingItem) {
+	for i := range items {
+		if !isPresenceVisible(ctx, repo, items[i].User.UserID) {
+			items[i].PresenceStatus = nil
+			items[i].LastOnline = nil
+		}
+	}
+}
+
+func applyPresenceVisibilityToFollowers(ctx context.Context, repo Repository, items []FollowerItem) {
+	for i := range items {
+		if !isPresenceVisible(ctx, repo, items[i].User.UserID) {
+			items[i].PresenceStatus = nil
+			items[i].LastOnline = nil
+		}
+	}
+}
+
+func isPresenceVisible(ctx context.Context, repo Repository, userID string) bool {
+	settings, ok, err := repo.GetSettings(ctx, userID)
+	if err != nil {
+		return true
+	}
+	if !ok {
+		settings = defaultSettings()
+	}
+	return settings.PresenceVisible
+}
+
+func ensureSocialListsVisible(ctx context.Context, repo Repository, userID string, isSelf bool) error {
+	if isSelf {
+		return nil
+	}
+	settings, ok, err := repo.GetSettings(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		settings = defaultSettings()
+	}
+	if !settings.SocialListsVisible {
+		return ErrPermissionDenied
+	}
+	return nil
+}
