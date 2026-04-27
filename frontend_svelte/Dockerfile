@@ -1,11 +1,11 @@
-FROM oven/bun:1 AS builder
+FROM oven/bun:1.3-alpine AS builder
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 COPY . .
 RUN bun run build
 
-FROM node:22-alpine
+FROM node:22-alpine3.22
 WORKDIR /app
 COPY --from=builder /app/build .
 COPY --from=builder /app/node_modules ./node_modules
