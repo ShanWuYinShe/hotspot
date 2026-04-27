@@ -68,7 +68,7 @@ func (r *PostgresRepository) historySince(ctx context.Context, userID, targetUse
 		return PaginatedMessages{}, err
 	}
 	chatKey := conversationKey(userID, targetUserID)
-	cursorSentAtValue := ""
+	var cursorSentAtValue any
 	if !cursorSentAt.IsZero() {
 		cursorSentAtValue = cursorSentAt.Format(time.RFC3339Nano)
 	}

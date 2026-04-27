@@ -27,7 +27,7 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 	if err != nil {
 		return PaginatedGroupMessages{}, err
 	}
-	cursorSentAtValue := ""
+	var cursorSentAtValue any
 	if !cursorSentAt.IsZero() {
 		cursorSentAtValue = cursorSentAt.Format(time.RFC3339Nano)
 	}

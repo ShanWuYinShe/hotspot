@@ -175,8 +175,8 @@ func (b *shareBackendStub) Query(_ context.Context, query string, args ...any) (
 		return &persistence.InMemoryRows{}, nil
 	}
 	userID := args[0].(string)
-	shareType := args[1].(string)
-	cursorCreatedAt := args[2].(string)
+	shareType, _ := args[1].(string)
+	cursorCreatedAt, _ := args[2].(string)
 	cursorShareID := args[3].(string)
 	records := make([]shareStubRecord, 0)
 	for _, record := range b.shares {

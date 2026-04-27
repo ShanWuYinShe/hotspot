@@ -23,7 +23,7 @@ const (
 	FROM group_messages gm
 	LEFT JOIN users sender ON sender.user_id = gm.sender_user_id
 	WHERE gm.group_id = $1
-	  AND ($2 = '' OR gm.sent_at < $2::timestamptz OR (gm.sent_at = $2::timestamptz AND gm.message_id < $3))
+	  AND ($2 IS NULL OR gm.sent_at < $2 OR (gm.sent_at = $2 AND gm.message_id < $3))
 	ORDER BY gm.sent_at DESC, gm.message_id DESC
 	LIMIT $4`
 

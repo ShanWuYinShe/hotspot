@@ -235,7 +235,7 @@ func (b *privateMessageBackendStub) Query(_ context.Context, query string, args 
 		chatKey := args[0].(string)
 		readerUserID := args[1].(string)
 		readStateUserID := args[2].(string)
-		cursorSentAt := args[3].(string)
+		cursorSentAt, _ := args[3].(string)
 		cursorMessageID := args[4].(string)
 		limit := args[5].(int)
 		records := append([]privateMessageStubRecord(nil), b.items[chatKey]...)

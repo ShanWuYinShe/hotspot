@@ -45,7 +45,7 @@ const (
 		LEFT JOIN private_chat_read_state prs
 		  ON prs.chat_key = pm.chat_key AND prs.user_id = $3
 		WHERE pm.chat_key = $1
-		  AND ($4 = '' OR pm.sent_at < $4::timestamptz OR (pm.sent_at = $4::timestamptz AND pm.message_id < $5))
+		  AND ($4 IS NULL OR pm.sent_at < $4 OR (pm.sent_at = $4 AND pm.message_id < $5))
 		ORDER BY pm.sent_at DESC, pm.message_id DESC
 		LIMIT $6`
 

@@ -74,13 +74,17 @@ func (r *PostgresRepository) List(ctx context.Context, query listSharesQuery) (P
 	if err != nil {
 		return PaginatedShares{}, err
 	}
-	cursorCreatedAt := ""
+	var cursorCreatedAt any
 	cursorShareID := ""
 	if cursor != nil {
 		cursorCreatedAt = cursor.CreatedAt
 		cursorShareID = cursor.ShareID
 	}
-	rows, err := queryable.Query(ctx, queryListShares, query.CreatorUserID, query.ShareType, cursorCreatedAt, cursorShareID, query.Limit+1)
+	var shareType any = query.ShareType
+	if query.ShareType == "" {
+		shareType = nil
+	}
+	rows, err := queryable.Query(ctx, queryListShares, query.CreatorUserID, shareType, cursorCreatedAt, cursorShareID, query.Limit+1)
 	if err != nil {
 		return PaginatedShares{}, err
 	}
