@@ -82,11 +82,11 @@ func TestLoadCarriesS3PublicEndpointSettings(t *testing.T) {
 		}
 	}()
 
-	_ = os.Setenv("S3_PUBLIC_ENDPOINT", "http://localhost:9000")
+	_ = os.Setenv("S3_PUBLIC_ENDPOINT", "http://localhost:8333")
 	_ = os.Setenv("S3_PUBLIC_FORCE_PATH_STYLE", "false")
 
 	cfg := Load()
-	if cfg.S3PublicEndpoint != "http://localhost:9000" {
+	if cfg.S3PublicEndpoint != "http://localhost:8333" {
 		t.Fatalf("unexpected s3 public endpoint: %q", cfg.S3PublicEndpoint)
 	}
 	if cfg.S3PublicForcePathStyle {

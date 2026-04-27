@@ -32,7 +32,7 @@ func TestNewModuleRequiresS3Configuration(t *testing.T) {
 
 func TestNewModuleAcceptsS3CompatibleConfiguration(t *testing.T) {
 	module := NewModule(config.Config{
-		S3Endpoint:       "http://minio:9000",
+		S3Endpoint:       "http://seaweedfs:8333",
 		S3Bucket:         "hotspot",
 		S3Region:         "us-east-1",
 		S3AccessKey:      "minioadmin",

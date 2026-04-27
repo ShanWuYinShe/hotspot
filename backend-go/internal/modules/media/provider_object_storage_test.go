@@ -347,7 +347,7 @@ func TestPresignURLVirtualHostedStyle(t *testing.T) {
 
 func TestPresignURLPathStyle(t *testing.T) {
 	provider := NewObjectStorageProvider(config.Config{
-		S3Endpoint:       "http://minio:9000",
+		S3Endpoint:       "http://seaweedfs:8333",
 		S3Region:         "us-east-1",
 		S3Bucket:         "hotspot",
 		S3AccessKey:      "access-key",
@@ -371,8 +371,8 @@ func TestPresignURLPathStyle(t *testing.T) {
 
 func TestPresignURLUsesPublicEndpointForClientFacingURL(t *testing.T) {
 	provider := NewObjectStorageProvider(config.Config{
-		S3Endpoint:             "http://minio:9000",
-		S3PublicEndpoint:       "http://localhost:9000",
+		S3Endpoint:             "http://seaweedfs:8333",
+		S3PublicEndpoint:       "http://localhost:8333",
 		S3Region:               "us-east-1",
 		S3Bucket:               "hotspot",
 		S3AccessKey:            "access-key",
@@ -393,8 +393,8 @@ func TestPresignURLUsesPublicEndpointForClientFacingURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse presigned url: %v", err)
 	}
-	if parsed.Host != "localhost:9000" {
-		t.Fatalf("expected client-facing host localhost:9000, got %q", parsed.Host)
+	if parsed.Host != "localhost:8333" {
+		t.Fatalf("expected client-facing host localhost:8333, got %q", parsed.Host)
 	}
 	if !strings.HasPrefix(parsed.Path, "/hotspot/uploads/") {
 		t.Fatalf("expected path to start with /hotspot/uploads/, got %q", parsed.Path)
@@ -407,7 +407,7 @@ func TestPresignURLUsesPublicEndpointForClientFacingURL(t *testing.T) {
 func TestPresignURLPathStyleAutoDetect(t *testing.T) {
 	t.Run("localhost endpoint auto-detects path style", func(t *testing.T) {
 		provider := NewObjectStorageProvider(config.Config{
-			S3Endpoint:       "http://localhost:9000",
+			S3Endpoint:       "http://localhost:8333",
 			S3Region:         "us-east-1",
 			S3Bucket:         "hotspot",
 			S3AccessKey:      "access-key",
@@ -430,7 +430,7 @@ func TestPresignURLPathStyleAutoDetect(t *testing.T) {
 
 	t.Run("IP address with port auto-detects path style", func(t *testing.T) {
 		provider := NewObjectStorageProvider(config.Config{
-			S3Endpoint:       "http://192.168.1.1:9000",
+			S3Endpoint:       "http://192.168.1.1:8333",
 			S3Region:         "us-east-1",
 			S3Bucket:         "hotspot",
 			S3AccessKey:      "access-key",

@@ -136,7 +136,7 @@ func TestAppRouterServesWSV1(t *testing.T) {
 	cfg := config.Config{
 		AppEnv:           "test",
 		LogLevel:         "info",
-		S3Endpoint:       "http://localhost:9000",
+		S3Endpoint:       "http://localhost:8333",
 		S3Region:         "us-east-1",
 		S3Bucket:         "hotspot-media",
 		S3AccessKey:      "test-access-key",

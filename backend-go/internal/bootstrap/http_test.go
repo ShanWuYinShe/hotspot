@@ -13,7 +13,7 @@ import (
 
 func TestNewHTTPRouterMountsSystemRoutes(t *testing.T) {
 	cfg := config.Config{
-		S3Endpoint:       "http://minio:9000",
+		S3Endpoint:       "http://seaweedfs:8333",
 		S3Bucket:         "hotspot",
 		S3Region:         "us-east-1",
 		S3AccessKey:      "minioadmin",
