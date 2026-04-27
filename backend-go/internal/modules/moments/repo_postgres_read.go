@@ -2,8 +2,11 @@ package moments
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"hotspot/backend-go/internal/platform/persistence"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -36,7 +39,7 @@ func (r *PostgresRepository) Get(ctx context.Context, momentID string) (MomentIt
 	return item, true, nil
 }
 
-func (r *PostgresRepository) ListMine(ctx context.Context, userID string) (PaginatedMoments, error) {
+func (r *PostgresRepository) ListMine(ctx context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return PaginatedMoments{}, persistence.ErrNotImplemented
 	}
@@ -44,13 +47,19 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string) (Pagin
 	if !ok {
 		return PaginatedMoments{}, persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, queryListMyMoments, userID)
+	limit = normalizeMomentInteractionLimit(limit)
+	cursorAt, cursorMomentID, err := decodeMomentMineCursor(cursor)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	rows, err := queryable.Query(ctx, queryListMyMoments, userID, cursorAt, cursorMomentID, limit+1)
 	if err != nil {
 		return PaginatedMoments{}, err
 	}
 	defer rows.Close()
-	items := []MomentItem{}
-	momentIDs := make([]string, 0)
+	items := make([]MomentItem, 0, limit+1)
+	momentIDs := make([]string, 0, limit+1)
+	cursors := make([]string, 0, limit+1)
 	for rows.Next() {
 		item, err := scanMomentRow(rows)
 		if err != nil {
@@ -58,6 +67,22 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string) (Pagin
 		}
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
+		cursors = append(cursors, encodeMomentMineCursor(item.CreatedAt, item.MomentID))
+		if len(items) == limit+1 {
+			tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs[:limit])
+			if err != nil {
+				return PaginatedMoments{}, err
+			}
+			mentionsByMomentID, err := loadMomentMentions(ctx, queryable, momentIDs[:limit])
+			if err != nil {
+				return PaginatedMoments{}, err
+			}
+			for i := 0; i < limit; i++ {
+				items[i].Tags = tagsByMomentID[items[i].MomentID]
+				items[i].Mentions = mentionsByMomentID[items[i].MomentID]
+			}
+			return PaginatedMoments{Items: items[:limit], NextCursor: cursors[limit-1]}, nil
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedMoments{}, err
@@ -75,6 +100,33 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string) (Pagin
 		items[i].Mentions = mentionsByMomentID[items[i].MomentID]
 	}
 	return PaginatedMoments{Items: items}, nil
+}
+
+func encodeMomentMineCursor(createdAt, momentID string) string {
+	blob, err := json.Marshal(momentInteractionCursor{At: createdAt, ID: momentID})
+	if err != nil {
+		return ""
+	}
+	return base64.RawURLEncoding.EncodeToString(blob)
+}
+
+func decodeMomentMineCursor(cursor string) (any, string, error) {
+	if cursor == "" {
+		return nil, "", nil
+	}
+	blob, err := base64.RawURLEncoding.DecodeString(cursor)
+	if err != nil {
+		return nil, "", ErrInvalidCursor
+	}
+	var decoded momentInteractionCursor
+	if err := json.Unmarshal(blob, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
+		return nil, "", ErrInvalidCursor
+	}
+	parsedAt, err := time.Parse(time.RFC3339, decoded.At)
+	if err != nil {
+		return nil, "", ErrInvalidCursor
+	}
+	return parsedAt.UTC(), decoded.ID, nil
 }
 
 func (r *PostgresRepository) Exists(ctx context.Context, momentID string) (bool, error) {

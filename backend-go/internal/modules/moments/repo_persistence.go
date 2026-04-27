@@ -20,8 +20,8 @@ func (r *PersistenceRepository) Get(ctx context.Context, momentID string) (Momen
 	return r.impl.Get(ctx, momentID)
 }
 
-func (r *PersistenceRepository) ListMine(ctx context.Context, userID string) (PaginatedMoments, error) {
-	return r.impl.ListMine(ctx, userID)
+func (r *PersistenceRepository) ListMine(ctx context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
+	return r.impl.ListMine(ctx, userID, limit, cursor)
 }
 
 func (r *PersistenceRepository) Exists(ctx context.Context, momentID string) (bool, error) {

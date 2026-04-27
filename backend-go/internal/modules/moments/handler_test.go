@@ -180,7 +180,7 @@ func TestCreateCommentDoesNotIncrementMomentCountWhenCounterFails(t *testing.T) 
 	if createCommentResp.Code != 10600 {
 		t.Fatalf("expected code 10600, got %#v", createCommentResp)
 	}
-	commentsList, err := commentRepo.List(context.Background(), createdMoment.MomentID)
+	commentsList, err := commentRepo.List(context.Background(), createdMoment.MomentID, 20, "")
 	if err != nil {
 		t.Fatalf("list comments: %v", err)
 	}
@@ -246,7 +246,7 @@ func TestLikeMomentSendsRealtimeAndNotificationToAuthor(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
 	notificationRepo := notifications.NewInMemoryRepository()
-	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo))
+	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo), nil)
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	ctxBob := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"})
 	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}})
@@ -285,7 +285,7 @@ func TestLikeMomentSkipsSelfNotification(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
 	notificationRepo := notifications.NewInMemoryRepository()
-	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo))
+	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo), nil)
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}})
 	if err != nil {
@@ -313,7 +313,7 @@ func TestLikeMomentDeduplicatesRepeatedLike(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
 	notificationRepo := notifications.NewInMemoryRepository()
-	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo))
+	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo), nil)
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	ctxBob := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"})
 	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}})
@@ -345,7 +345,7 @@ func TestCreateMomentSendsMentionNotificationsAndRealtime(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
 	notificationRepo := notifications.NewInMemoryRepository()
-	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo))
+	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo), nil)
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	bobSink := &sinkCapture{}
 	hub.RegisterUser("user_bob", "sess_bob", bobSink)
@@ -380,7 +380,7 @@ func TestUpdateMomentReplacesMentionNotificationsAndState(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
 	notificationRepo := notifications.NewInMemoryRepository()
-	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo))
+	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo), nil)
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	bobSink := &sinkCapture{}
 	carolSink := &sinkCapture{}

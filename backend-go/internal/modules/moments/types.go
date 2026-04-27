@@ -127,6 +127,10 @@ type PaginatedLikes struct {
 	NextCursor string     `json:"next_cursor,omitempty"`
 }
 
+type MyMomentsRequest struct {
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
 type MyFavoritesRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }

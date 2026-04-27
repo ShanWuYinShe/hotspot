@@ -48,7 +48,7 @@ func (r *stubMomentRepo) Update(_ context.Context, _ string, _ EditMomentRequest
 	return r.updateErr
 }
 func (r *stubMomentRepo) Delete(_ context.Context, _ string) error { return r.deleteErr }
-func (r *stubMomentRepo) ListMine(_ context.Context, _ string) (PaginatedMoments, error) {
+func (r *stubMomentRepo) ListMine(_ context.Context, _ string, _ int, _ string) (PaginatedMoments, error) {
 	return PaginatedMoments{}, nil
 }
 func (r *stubMomentRepo) Exists(_ context.Context, _ string) (bool, error) {
@@ -215,7 +215,7 @@ func TestServiceLikeIdempotent(t *testing.T) {
 }
 
 func TestServiceUnlikeDelegates(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{})
+	svc := NewServiceWithRepo(&stubMomentRepo{exists: true})
 	err := svc.Unlike(momentCtx("u1"), "m1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -248,7 +248,7 @@ func TestServiceFavoriteHappyPath(t *testing.T) {
 }
 
 func TestServiceUnfavoriteDelegates(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{})
+	svc := NewServiceWithRepo(&stubMomentRepo{exists: true})
 	err := svc.Unfavorite(momentCtx("u1"), "m1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

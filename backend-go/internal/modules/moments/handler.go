@@ -69,12 +69,13 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
-	if err := httpx.RequireEmptyObject(r); err != nil {
-		logBusinessError(r, "ListMine", err.Code, err.Message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+	var req MyMomentsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		logBusinessError(r, "ListMine", 10000, "参数错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	list, err := h.service.ListMine(r.Context())
+	list, err := h.service.ListMine(r.Context(), req)
 	if err != nil {
 		logServerError(r, "ListMine", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -192,6 +193,11 @@ func (h *Handler) Unlike(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.Unlike(r.Context(), req.MomentID); err != nil {
+		if err == ErrMomentNotFound {
+			logBusinessError(r, "Unlike", 10300, "瞬间不存在")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
+			return
+		}
 		logServerError(r, "Unlike", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
@@ -227,6 +233,11 @@ func (h *Handler) Unfavorite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.Unfavorite(r.Context(), req.MomentID); err != nil {
+		if err == ErrMomentNotFound {
+			logBusinessError(r, "Unfavorite", 10300, "瞬间不存在")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
+			return
+		}
 		logServerError(r, "Unfavorite", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return

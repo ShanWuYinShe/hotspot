@@ -56,16 +56,39 @@ func (r *InMemoryRepository) Get(_ context.Context, momentID string) (MomentItem
 	return item, ok, nil
 }
 
-func (r *InMemoryRepository) ListMine(_ context.Context, userID string) (PaginatedMoments, error) {
+func (r *InMemoryRepository) ListMine(_ context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
 	ids := append([]string(nil), r.byUser[userID]...)
 	sort.Slice(ids, func(i, j int) bool { return ids[i] > ids[j] })
-	items := make([]MomentItem, 0, len(ids))
-	for _, id := range ids {
+	startIdx := 0
+	if cursor != "" {
+		for i, id := range ids {
+			if id == cursor {
+				startIdx = i + 1
+				break
+			}
+		}
+	}
+	endIdx := startIdx + limit
+	if endIdx > len(ids) {
+		endIdx = len(ids)
+	}
+	items := make([]MomentItem, 0, limit)
+	for _, id := range ids[startIdx:endIdx] {
 		items = append(items, r.moments[id])
 	}
-	return PaginatedMoments{Items: items}, nil
+	result := PaginatedMoments{Items: items}
+	if endIdx < len(ids) && len(items) > 0 {
+		result.NextCursor = items[len(items)-1].MomentID
+	}
+	return result, nil
 }
 
 func (r *InMemoryRepository) Exists(_ context.Context, momentID string) (bool, error) {

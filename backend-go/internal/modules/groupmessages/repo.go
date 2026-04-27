@@ -6,6 +6,7 @@ type MessageEventMeta struct {
 	GroupID   string
 	MessageID string
 	SentAt    string
+	Content   string
 }
 
 type Repository interface {

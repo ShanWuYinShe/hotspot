@@ -62,7 +62,7 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 	if err := queryable.Exec(ctx, queryUpdatePrivateMessage, req.MessageID, req.Content); err != nil {
 		return MessageEventMeta{}, err
 	}
-	return MessageEventMeta{TargetUserID: otherUserID(meta.ChatKey, userID), MessageID: req.MessageID, SentAt: meta.SentAt}, nil
+	return MessageEventMeta{TargetUserID: otherUserID(meta.ChatKey, userID), MessageID: req.MessageID, SentAt: meta.SentAt, Content: req.Content}, nil
 }
 func (r *PostgresRepository) Recall(ctx context.Context, userID string, req RecallPrivateMessageRequest) (MessageEventMeta, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {

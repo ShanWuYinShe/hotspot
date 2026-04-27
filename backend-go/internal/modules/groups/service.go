@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/platform/actor"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/observability"
@@ -20,6 +21,7 @@ const (
 type Service struct {
 	repo          Repository
 	notifications groupNotificationWriter
+	users         actor.Provider
 }
 
 type groupNotificationWriter interface {
@@ -30,15 +32,15 @@ type groupNotificationWriter interface {
 }
 
 func NewService() *Service {
-	return NewServiceWithDeps(NewInMemoryRepository(), notifications.NewService())
+	return NewServiceWithDeps(NewInMemoryRepository(), notifications.NewService(), nil)
 }
 
 func NewServiceWithRepo(repo Repository) *Service {
-	return NewServiceWithDeps(repo, notifications.NewService())
+	return NewServiceWithDeps(repo, notifications.NewService(), nil)
 }
 
-func NewServiceWithDeps(repo Repository, notificationWriter groupNotificationWriter) *Service {
-	return &Service{repo: repo, notifications: notificationWriter}
+func NewServiceWithDeps(repo Repository, notificationWriter groupNotificationWriter, actorProvider actor.Provider) *Service {
+	return &Service{repo: repo, notifications: notificationWriter, users: actorProvider}
 }
 
 func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem, error) {
@@ -108,6 +110,14 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) error {
 		observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
+	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+		Type: "GroupUpdated",
+		Payload: map[string]any{
+			"group_id":   req.GroupID,
+			"updated_by": s.resolveUserInfo(ctx, principal.UserID),
+			"updated_at": time.Now().UTC().Format(time.RFC3339),
+		},
+	})
 	observability.L().Info("groups.update completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
@@ -267,6 +277,16 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnounc
 		observability.L().Error("groups.create_announcement failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return GroupAnnouncementItem{}, err
 	}
+	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+		Type: "GroupAnnouncementCreated",
+		Payload: map[string]any{
+			"group_id":        req.GroupID,
+			"announcement_id": item.AnnouncementID,
+			"title":           item.Title,
+			"created_by":      s.resolveUserInfo(ctx, principal.UserID),
+			"created_at":      item.CreatedAt,
+		},
+	})
 	observability.L().Info("groups.create_announcement completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return item, nil
 }
@@ -341,7 +361,18 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 	if group.MyState.Role == GroupRoleOwner {
 		return ErrAccessRestricted
 	}
-	return s.repo.LeaveGroup(ctx, principal.UserID, req.GroupID)
+	if err := s.repo.LeaveGroup(ctx, principal.UserID, req.GroupID); err != nil {
+		return err
+	}
+	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+		Type: "GroupMemberLeft",
+		Payload: map[string]any{
+			"group_id": req.GroupID,
+			"user":     s.resolveUserInfo(ctx, principal.UserID),
+			"left_at":  time.Now().UTC().Format(time.RFC3339),
+		},
+	})
+	return nil
 }
 
 func (s *Service) ListMyApplications(ctx context.Context, req MyApplicationsRequest) ([]GroupApplicationItem, string, error) {
@@ -368,8 +399,22 @@ func groupUserInfo(user UserInfo) map[string]any {
 	return payload
 }
 
+func (s *Service) resolveUserInfo(ctx context.Context, userID string) map[string]any {
+	if s.users != nil {
+		info, err := s.users.GetActorInfo(ctx, userID)
+		if err == nil {
+			actor := map[string]any{"user_id": info.UserID, "nickname": info.Nickname}
+			if info.AvatarURL != "" {
+				actor["avatar_url"] = info.AvatarURL
+			}
+			return actor
+		}
+	}
+	return groupUserInfo(UserInfo{UserID: userID, Nickname: userID})
+}
+
 func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem, inviterUserID string, req InviteMemberRequest, invitation Invitation) {
-	actor := groupUserInfo(UserInfo{UserID: inviterUserID, Nickname: inviterUserID})
+	actor := s.resolveUserInfo(ctx, inviterUserID)
 	if s.notifications != nil {
 		_ = s.notifications.AppendGroupInviteReceived(ctx, req.UserID, actor, group.Group.GroupID, group.Group.Name, invitation.InviteID, req.Message)
 	}
@@ -391,7 +436,7 @@ func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem
 }
 
 func (s *Service) notifyGroupInviteAccepted(ctx context.Context, invite GroupInviteItem, userID string) {
-	user := groupUserInfo(UserInfo{UserID: userID, Nickname: userID})
+	user := s.resolveUserInfo(ctx, userID)
 	if s.notifications != nil {
 		_ = s.notifications.AppendGroupInviteAccepted(ctx, invite.Inviter.UserID, invite.Group.GroupID, invite.Group.Name, invite.InviteID, user)
 	}
@@ -404,7 +449,7 @@ func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group Grou
 	if application == nil {
 		return
 	}
-	applicant := groupUserInfo(UserInfo{UserID: applicantUserID, Nickname: applicantUserID})
+	applicant := s.resolveUserInfo(ctx, applicantUserID)
 	admins, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, nil, 1000, "")
 	if err != nil {
 		return

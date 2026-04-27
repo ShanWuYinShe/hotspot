@@ -5,6 +5,7 @@ import (
 
 	"hotspot/backend-go/internal/modules/comments"
 	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/platform/actor"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -17,11 +18,11 @@ type Module struct {
 	commentsHandler *comments.Handler
 }
 
-func NewModule(factory *persistence.Factory) *Module {
+func NewModule(factory *persistence.Factory, actorProvider actor.Provider) *Module {
 	momentRepo := NewPersistenceRepository(factory)
 	notificationService := notifications.NewServiceWithRepo(notifications.NewPersistenceRepository(factory))
-	momentService := NewServiceWithDeps(momentRepo, notificationService)
-	commentService := comments.NewServiceWithDeps(comments.NewPersistenceRepository(factory), momentService, notificationService)
+	momentService := NewServiceWithDeps(momentRepo, notificationService, actorProvider)
+	commentService := comments.NewServiceWithDeps(comments.NewPersistenceRepository(factory), momentService, notificationService, actorProvider)
 	return &Module{
 		momentsHandler:  NewHandler(momentService),
 		commentsHandler: comments.NewHandler(commentService),

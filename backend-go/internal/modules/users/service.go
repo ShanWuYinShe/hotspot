@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"hotspot/backend-go/internal/platform/actor"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
@@ -90,10 +91,16 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateProfileRequest)
 		observability.L().Error("users.update_my_profile failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{
-		Type:    "UserProfileUpdated",
-		Payload: map[string]any{"user_id": principal.UserID},
-	})
+	now := time.Now().UTC().Format(time.RFC3339)
+	event := realtime.Event{
+		Type: "UserProfileUpdated",
+		Payload: map[string]any{
+			"user_id":    principal.UserID,
+			"updated_at": now,
+		},
+	}
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
+	realtime.DefaultHub().BroadcastToUserSubscribers(principal.UserID, event)
 	observability.L().Info("users.update_my_profile completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
@@ -232,10 +239,16 @@ func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest)
 		observability.L().Error("users.update_location failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{
-		Type:    "UserProfileUpdated",
-		Payload: map[string]any{"user_id": principal.UserID},
-	})
+	now := time.Now().UTC().Format(time.RFC3339)
+	event := realtime.Event{
+		Type: "UserProfileUpdated",
+		Payload: map[string]any{
+			"user_id":    principal.UserID,
+			"updated_at": now,
+		},
+	}
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
+	realtime.DefaultHub().BroadcastToUserSubscribers(principal.UserID, event)
 	observability.L().Info("users.update_location completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
@@ -288,6 +301,17 @@ func (s *Service) DeleteAccount(ctx context.Context, req DeleteAccountRequest) e
 	}
 	observability.L().Info("users.delete_account completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
+}
+
+func (s *Service) GetActorInfo(ctx context.Context, userID string) (actor.Info, error) {
+	profile, ok, err := s.repo.GetProfile(ctx, userID)
+	if err != nil {
+		return actor.Info{UserID: userID, Nickname: userID}, err
+	}
+	if !ok {
+		return actor.Info{UserID: userID, Nickname: userID}, nil
+	}
+	return actor.Info{UserID: profile.UserID, Nickname: profile.Nickname, AvatarURL: profile.AvatarURL}, nil
 }
 
 func requirePrincipal(ctx context.Context) (platformauth.Principal, error) {

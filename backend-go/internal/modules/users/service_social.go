@@ -36,7 +36,7 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 		observability.L().Error("users.follow failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
-	actor := map[string]any{"user_id": principal.UserID, "nickname": principal.UserID}
+	actor := s.buildFollowActor(ctx, principal.UserID)
 	followedAt := time.Now().UTC().Format(time.RFC3339)
 	sourceValue := strings.TrimSpace(string(source))
 	sourceMomentID = strings.TrimSpace(sourceMomentID)
@@ -358,4 +358,16 @@ func ensureSocialListsVisible(ctx context.Context, repo Repository, userID strin
 		return ErrPermissionDenied
 	}
 	return nil
+}
+
+func (s *Service) buildFollowActor(ctx context.Context, userID string) map[string]any {
+	profile, ok, err := s.repo.GetProfile(ctx, userID)
+	if err != nil || !ok {
+		return map[string]any{"user_id": userID, "nickname": userID}
+	}
+	actor := map[string]any{"user_id": profile.UserID, "nickname": profile.Nickname}
+	if profile.AvatarURL != "" {
+		actor["avatar_url"] = profile.AvatarURL
+	}
+	return actor
 }

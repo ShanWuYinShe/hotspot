@@ -7,6 +7,7 @@ import (
 
 	"hotspot/backend-go/internal/modules/comments"
 	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/platform/actor"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -16,6 +17,7 @@ import (
 type Service struct {
 	repo          Repository
 	notifications momentNotificationWriter
+	users         actor.Provider
 }
 
 type momentNotificationWriter interface {
@@ -24,15 +26,15 @@ type momentNotificationWriter interface {
 }
 
 func NewService() *Service {
-	return NewServiceWithDeps(NewInMemoryRepository(), notifications.NewService())
+	return NewServiceWithDeps(NewInMemoryRepository(), notifications.NewService(), nil)
 }
 
 func NewServiceWithRepo(repo Repository) *Service {
-	return NewServiceWithDeps(repo, notifications.NewService())
+	return NewServiceWithDeps(repo, notifications.NewService(), nil)
 }
 
-func NewServiceWithDeps(repo Repository, notificationWriter momentNotificationWriter) *Service {
-	return &Service{repo: repo, notifications: notificationWriter}
+func NewServiceWithDeps(repo Repository, notificationWriter momentNotificationWriter, actorProvider actor.Provider) *Service {
+	return &Service{repo: repo, notifications: notificationWriter, users: actorProvider}
 }
 
 func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (MomentItem, error) {
@@ -65,9 +67,20 @@ func (s *Service) NotificationContext(ctx context.Context, momentID string) (com
 	}, true, nil
 }
 
-func (s *Service) ListMine(ctx context.Context) (PaginatedMoments, error) {
+func (s *Service) ListMine(ctx context.Context, req MyMomentsRequest) (PaginatedMoments, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.ListMine(ctx, principal.UserID)
+	limit := 20
+	cursor := ""
+	if req.Pagination != nil {
+		if req.Pagination.Limit > 0 {
+			limit = req.Pagination.Limit
+		}
+		if limit > 100 {
+			limit = 100
+		}
+		cursor = req.Pagination.Cursor
+	}
+	return s.repo.ListMine(ctx, principal.UserID, limit, cursor)
 }
 
 func (s *Service) Exists(ctx context.Context, momentID string) (bool, error) {
@@ -168,7 +181,11 @@ func (s *Service) Like(ctx context.Context, momentID string) error {
 	if !ok || strings.TrimSpace(momentContext.UserID) == "" || momentContext.UserID == principal.UserID {
 		return nil
 	}
-	actor := buildMomentActor(principal.UserID)
+	actor, err := s.buildMomentActor(ctx, principal.UserID)
+	if err != nil {
+		observability.L().Error("moments.like build actor failed", "error", err, "user_id", principal.UserID)
+		actor = fallbackActor(principal.UserID)
+	}
 	momentSummary := cloneMomentSummary(momentContext.Summary, momentID)
 	if s.notifications != nil {
 		if err := s.notifications.AppendMomentLiked(ctx, momentContext.UserID, actor, momentID, momentSummary); err != nil {
@@ -186,6 +203,14 @@ func (s *Service) Like(ctx context.Context, momentID string) error {
 
 func (s *Service) Unlike(ctx context.Context, momentID string) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	exists, err := s.repo.Exists(ctx, momentID)
+	if err != nil {
+		observability.L().Error("moments.unlike failed", "error", err, "moment_id", momentID)
+		return err
+	}
+	if !exists {
+		return ErrMomentNotFound
+	}
 	return s.repo.Unlike(ctx, principal.UserID, momentID)
 }
 
@@ -204,6 +229,14 @@ func (s *Service) Favorite(ctx context.Context, momentID string) error {
 
 func (s *Service) Unfavorite(ctx context.Context, momentID string) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	exists, err := s.repo.Exists(ctx, momentID)
+	if err != nil {
+		observability.L().Error("moments.unfavorite failed", "error", err, "moment_id", momentID)
+		return err
+	}
+	if !exists {
+		return ErrMomentNotFound
+	}
 	return s.repo.Unfavorite(ctx, principal.UserID, momentID)
 }
 
@@ -238,9 +271,28 @@ func (s *Service) ListFavorites(ctx context.Context, req MyFavoritesRequest) (Pa
 	return s.repo.ListFavorites(ctx, principal.UserID, limit, cursor)
 }
 
-func buildMomentActor(userID string) map[string]any {
+func (s *Service) buildMomentActor(ctx context.Context, userID string) (map[string]any, error) {
+	if s.users != nil {
+		info, err := s.users.GetActorInfo(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+		return actorFromInfo(info), nil
+	}
+	return fallbackActor(userID), nil
+}
+
+func fallbackActor(userID string) map[string]any {
 	userID = strings.TrimSpace(userID)
 	return map[string]any{"user_id": userID, "nickname": userID}
+}
+
+func actorFromInfo(info actor.Info) map[string]any {
+	actor := map[string]any{"user_id": info.UserID, "nickname": info.Nickname}
+	if info.AvatarURL != "" {
+		actor["avatar_url"] = info.AvatarURL
+	}
+	return actor
 }
 
 func cloneMomentSummary(summary map[string]any, momentID string) map[string]any {
@@ -267,7 +319,11 @@ func (s *Service) notifyMomentMentions(ctx context.Context, actorUserID string, 
 		return
 	}
 	momentSummary := cloneMomentSummary(map[string]any{"moment_id": item.MomentID, "description_preview": summarizeMomentDescription(item.Description)}, item.MomentID)
-	actor := buildMomentActor(actorUserID)
+	actor, err := s.buildMomentActor(ctx, actorUserID)
+	if err != nil {
+		observability.L().Error("moments.mentions build actor failed", "error", err, "user_id", actorUserID)
+		actor = fallbackActor(actorUserID)
+	}
 	for _, mentionedUserID := range normalizeMomentMentions(item.Mentions) {
 		if mentionedUserID == actorUserID {
 			continue

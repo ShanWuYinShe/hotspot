@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/platform/actor"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -15,10 +16,10 @@ type Module struct {
 	handler *Handler
 }
 
-func NewModule(factory *persistence.Factory) *Module {
+func NewModule(factory *persistence.Factory, actorProvider actor.Provider) *Module {
 	repo := NewPersistenceRepository(factory)
 	notificationService := notifications.NewServiceWithRepo(notifications.NewPersistenceRepository(factory))
-	return &Module{handler: NewHandler(NewServiceWithDeps(repo, notificationService))}
+	return &Module{handler: NewHandler(NewServiceWithDeps(repo, notificationService, actorProvider))}
 }
 
 func (m *Module) Mount(r chi.Router) {

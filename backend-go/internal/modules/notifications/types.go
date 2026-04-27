@@ -35,7 +35,7 @@ type UnreadCountByType struct {
 }
 
 type UnreadCountResult struct {
-	Total  int              `json:"total"`
+	Total  int               `json:"total"`
 	ByType UnreadCountByType `json:"by_type"`
 }
 

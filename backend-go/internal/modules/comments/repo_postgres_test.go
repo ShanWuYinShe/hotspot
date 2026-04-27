@@ -117,13 +117,38 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 	switch query {
 	case queryListComments:
 		momentID := args[0].(string)
+		cursor := backendCommentCursor{}
+		if args[1] != nil {
+			cursor.likedAt = args[1].(interface{ Format(string) string }).Format("2006-01-02T15:04:05Z07:00")
+			cursor.commentID = args[2].(string)
+		}
+		limit := args[3].(int)
 		items := append([]CommentItem(nil), b.comments[momentID]...)
+		filtered := items[:0]
+		for _, item := range items {
+			if item.ParentID == "" {
+				filtered = append(filtered, item)
+			}
+		}
+		items = filtered
 		sort.Slice(items, func(i, j int) bool {
 			if items[i].CreatedAt == items[j].CreatedAt {
 				return items[i].CommentID > items[j].CommentID
 			}
 			return items[i].CreatedAt > items[j].CreatedAt
 		})
+		if cursor.commentID != "" {
+			after := items[:0]
+			for _, item := range items {
+				if item.CreatedAt < cursor.likedAt || (item.CreatedAt == cursor.likedAt && item.CommentID < cursor.commentID) {
+					after = append(after, item)
+				}
+			}
+			items = after
+		}
+		if len(items) > limit {
+			items = items[:limit]
+		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
 			rows = append(rows, []any{item.CommentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount})
@@ -186,15 +211,15 @@ func TestPostgresRepositoryWritesAndReadsQueryableDB(t *testing.T) {
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
-	created, err := repo.Create(context.Background(), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "nice", ParentID: "comment_0"})
+	created, err := repo.Create(context.Background(), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "nice"})
 	if err != nil || created.CommentID == "" || created.Content != "nice" {
 		t.Fatalf("unexpected created comment: %#v err=%v", created, err)
 	}
 	if created.ParentID != "" || len(created.Mentions) != 0 {
 		t.Fatalf("postgres create should not return non-persisted fields: %#v", created)
 	}
-	list, err := repo.List(context.Background(), "moment_1")
-	if err != nil || len(list.Items) != 1 || list.Items[0].CommentID != created.CommentID || list.Items[0].ParentID != "comment_0" {
+	list, err := repo.List(context.Background(), "moment_1", 20, "")
+	if err != nil || len(list.Items) != 1 || list.Items[0].CommentID != created.CommentID {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
 	}
 }

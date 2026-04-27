@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -26,10 +27,11 @@ type groupMembershipAuthorizer interface {
 }
 
 type Handler struct {
-	auth      *platformauth.Service
-	users     userPresenceAuthorizer
-	userRepo  userRelationAuthorizer
-	groupRepo groupMembershipAuthorizer
+	auth           *platformauth.Service
+	users          userPresenceAuthorizer
+	userRepo       userRelationAuthorizer
+	groupRepo      groupMembershipAuthorizer
+	typingThrottle sync.Map
 }
 
 func NewHandler(auth *platformauth.Service, userService userPresenceAuthorizer, userRepo userRelationAuthorizer, groupRepo groupMembershipAuthorizer) *Handler {
@@ -66,7 +68,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	principalCtx := platformauth.WithPrincipal(ctx, principal)
-	_ = conn.SetReadDeadline(time.Time{})
+	_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 
 	sink := &socketSink{conn: conn}
 	if DefaultHub().RegisterUser(principal.UserID, principal.SessionID, sink) {
@@ -94,6 +96,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err := conn.ReadJSON(&msg); err != nil {
 			return
 		}
+		_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 		switch msg.Type {
 		case "Ping":
 			_ = sink.Send(Event{Type: "Pong", Payload: PingPayload{}})
@@ -142,6 +145,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				_ = sink.Send(Event{Type: "Error", Payload: ErrorPayload{Code: 20400, Message: "无权限", Severity: "warning", Retryable: false}})
 				continue
 			}
+			typingKey := fmt.Sprintf("typing:%s:%s", principal.UserID, payload.TargetUserID)
+			if last, ok := h.typingThrottle.Load(typingKey); ok {
+				if time.Since(last.(time.Time)) < 3*time.Second {
+					continue
+				}
+			}
+			h.typingThrottle.Store(typingKey, time.Now())
 			DefaultHub().BroadcastToUser(payload.TargetUserID, Event{Type: "PrivateUserTyping", Payload: map[string]any{"user_id": principal.UserID, "target_user_id": payload.TargetUserID, "is_typing": payload.IsTyping}})
 			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: "PrivateUserTyping", Payload: map[string]any{"user_id": principal.UserID, "target_user_id": payload.TargetUserID, "is_typing": payload.IsTyping}})
 		case "GroupTyping":
@@ -152,6 +162,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				_ = sink.Send(Event{Type: "Error", Payload: ErrorPayload{Code: 20400, Message: "无权限", Severity: "warning", Retryable: false}})
 				continue
 			}
+			typingKey := fmt.Sprintf("typing:%s:%s", principal.UserID, payload.GroupID)
+			if last, ok := h.typingThrottle.Load(typingKey); ok {
+				if time.Since(last.(time.Time)) < 3*time.Second {
+					continue
+				}
+			}
+			h.typingThrottle.Store(typingKey, time.Now())
 			DefaultHub().BroadcastToGroup(payload.GroupID, Event{Type: "GroupUserTyping", Payload: map[string]any{"user_id": principal.UserID, "group_id": payload.GroupID, "is_typing": payload.IsTyping}})
 		case "Auth":
 			_ = sink.Send(Event{Type: "Error", Payload: ErrorPayload{Code: 20000, Message: "重复鉴权", Severity: "warning", Retryable: false}})

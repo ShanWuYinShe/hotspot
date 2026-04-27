@@ -181,7 +181,7 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 			msgs[i].Content = req.Content
 			msgs[i].EditedAt = time.Now().UTC().Format("2006-01-02T15:04:05.000000000Z")
 			r.messages[key] = msgs
-			return MessageEventMeta{TargetUserID: otherUserID(key, userID), MessageID: req.MessageID, SentAt: msgs[i].SentAt}, nil
+			return MessageEventMeta{TargetUserID: otherUserID(key, userID), MessageID: req.MessageID, SentAt: msgs[i].SentAt, Content: req.Content}, nil
 		}
 	}
 	return MessageEventMeta{}, ErrMessageNotFound

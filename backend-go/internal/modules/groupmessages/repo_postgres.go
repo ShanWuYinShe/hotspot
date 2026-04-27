@@ -60,7 +60,7 @@ func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageR
 	if err := queryable.Exec(ctx, queryUpdateGroupMessage, req.MessageID, req.Content); err != nil {
 		return MessageEventMeta{}, err
 	}
-	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: sentAt}, nil
+	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: sentAt, Content: req.Content}, nil
 }
 
 func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageRequest) (MessageEventMeta, error) {

@@ -37,7 +37,7 @@ func (r *stubCommentRepo) Create(_ context.Context, _ string, _ CreateCommentReq
 	return r.created, r.createErr
 }
 func (r *stubCommentRepo) Delete(_ context.Context, _ string) error { return r.deleteErr }
-func (r *stubCommentRepo) List(_ context.Context, _ string) (PaginatedComments, error) {
+func (r *stubCommentRepo) List(_ context.Context, _ string, _ int, _ string) (PaginatedComments, error) {
 	return r.listResult, r.listErr
 }
 func (r *stubCommentRepo) Get(_ context.Context, _ string) (CommentItem, bool, error) {
@@ -107,7 +107,7 @@ func (s *stubNotifWriter) AppendMentioned(_ context.Context, _ string, _ map[str
 // --- helpers ---
 
 func newTestHandler(repo *stubCommentRepo, moments *stubMomentProvider) *Handler {
-	svc := NewServiceWithDeps(repo, moments, &stubNotifWriter{})
+	svc := NewServiceWithDeps(repo, moments, &stubNotifWriter{}, nil)
 	return NewHandler(svc)
 }
 

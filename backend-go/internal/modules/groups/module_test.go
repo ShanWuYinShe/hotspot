@@ -9,7 +9,7 @@ import (
 
 func TestGroupsModuleMountsSpecListBannedRoute(t *testing.T) {
 	router := chi.NewRouter()
-	NewModule(nil).Mount(router)
+	NewModule(nil, nil).Mount(router)
 
 	var hasSpecRoute bool
 	var hasLegacyRoute bool

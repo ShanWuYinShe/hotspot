@@ -31,7 +31,8 @@ type CreateCommentRequest struct {
 }
 
 type ListCommentsRequest struct {
-	MomentID string `json:"moment_id"`
+	MomentID   string            `json:"moment_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
 type PaginatedComments struct {

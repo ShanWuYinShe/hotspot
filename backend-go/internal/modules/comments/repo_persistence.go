@@ -20,8 +20,8 @@ func (r *PersistenceRepository) Delete(ctx context.Context, commentID string) er
 	return r.impl.Delete(ctx, commentID)
 }
 
-func (r *PersistenceRepository) List(ctx context.Context, momentID string) (PaginatedComments, error) {
-	return r.impl.List(ctx, momentID)
+func (r *PersistenceRepository) List(ctx context.Context, momentID string, limit int, cursor string) (PaginatedComments, error) {
+	return r.impl.List(ctx, momentID, limit, cursor)
 }
 
 func (r *PersistenceRepository) Get(ctx context.Context, commentID string) (CommentItem, bool, error) {

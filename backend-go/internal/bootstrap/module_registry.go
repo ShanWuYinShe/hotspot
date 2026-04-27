@@ -26,21 +26,22 @@ import (
 func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.Module {
 	sharedAppConfig := appconfig.NewPersistenceSource(cfg, factory)
 	ratelimit.SetSource(sharedAppConfig)
+	usersModule := users.NewModule(factory, sharedAppConfig)
 	return []modulekit.Module{
 		admin.NewModule(factory, sharedAppConfig),
 		auth.NewModule(cfg, factory, sharedAppConfig),
 		feed.NewModule(factory, sharedAppConfig),
 		groupmessages.NewModule(factory),
-		groups.NewModule(factory),
+		groups.NewModule(factory, usersModule.Service),
 		mapmodule.NewModule(factory),
 		media.NewModule(cfg, factory),
-		moments.NewModule(factory),
+		moments.NewModule(factory, usersModule.Service),
 		notifications.NewModule(factory),
 		privatechats.NewModule(factory, sharedAppConfig),
 		reports.NewModule(factory),
 		search.NewModule(factory, sharedAppConfig),
 		share.NewModule(factory),
 		system.NewModule(factory, sharedAppConfig),
-		users.NewModule(factory, sharedAppConfig),
+		usersModule,
 	}
 }

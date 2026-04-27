@@ -285,7 +285,7 @@ func TestJoinApprovalSendsApplicationNotification(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	notificationRepo := notifications.NewInMemoryRepository()
 	repo := NewInMemoryRepository()
-	service := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo))
+	service := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo), nil)
 	ownerCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_owner"})
 	joinMethod := GroupJoinMethodApproval
 	created, err := service.Create(ownerCtx, CreateGroupRequest{Name: "Approval Group", JoinMethod: joinMethod, Location: Location{LocationName: "Somewhere"}})
@@ -320,7 +320,7 @@ func TestInviteAndAcceptFlowSendsNotifications(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	notificationRepo := notifications.NewInMemoryRepository()
 	repo := NewInMemoryRepository()
-	service := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo))
+	service := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo), nil)
 	ownerCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_owner"})
 	created, err := service.Create(ownerCtx, CreateGroupRequest{Name: "Invite Group", Location: Location{LocationName: "Somewhere"}})
 	if err != nil {
@@ -369,7 +369,7 @@ func TestApproveApplicationSendsAcceptedNotification(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	notificationRepo := notifications.NewInMemoryRepository()
 	repo := NewInMemoryRepository()
-	service := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo))
+	service := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo), nil)
 	ownerCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_owner"})
 	joinMethod := GroupJoinMethodApproval
 	created, err := service.Create(ownerCtx, CreateGroupRequest{Name: "Approval Group", JoinMethod: joinMethod, Location: Location{LocationName: "Somewhere"}})

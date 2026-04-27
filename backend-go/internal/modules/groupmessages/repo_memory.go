@@ -113,7 +113,7 @@ func (r *InMemoryRepository) Update(_ context.Context, req UpdateGroupMessageReq
 	msg.Content = req.Content
 	msg.EditedAt = time.Now().UTC().Format(time.RFC3339Nano)
 	r.items[groupID][index] = *msg
-	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: msg.SentAt}, nil
+	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: msg.SentAt, Content: req.Content}, nil
 }
 
 func (r *InMemoryRepository) Recall(_ context.Context, req RecallGroupMessageRequest) (MessageEventMeta, error) {

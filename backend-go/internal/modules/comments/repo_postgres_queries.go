@@ -13,7 +13,10 @@ WHERE comment_id = $1`
 SELECT comment_id, user_id, COALESCE(parent_id, ''), content, created_at, likes_count, replies_count
 FROM comments
 WHERE moment_id = $1
-ORDER BY created_at DESC, comment_id DESC`
+  AND parent_id IS NULL
+  AND ($2::timestamptz IS NULL OR (created_at, comment_id) < ($2::timestamptz, $3))
+ORDER BY created_at DESC, comment_id DESC
+LIMIT $4`
 
 	queryGetComment = `
 SELECT comment_id, moment_id, user_id, COALESCE(parent_id, ''), content, created_at, likes_count, replies_count

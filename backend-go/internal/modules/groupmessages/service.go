@@ -2,6 +2,7 @@ package groupmessages
 
 import (
 	"context"
+	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
@@ -18,7 +19,29 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 		observability.L().Error("groupmessages.send failed", "error", err, "group_id", req.GroupID)
 		return MessageSent{}, err
 	}
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{Type: "GroupMessageNew", Payload: map[string]any{"message_id": msg.MessageID, "sent_at": msg.SentAt, "group_id": req.GroupID}})
+	payload := map[string]any{
+		"message_id": msg.MessageID,
+		"group_id":   req.GroupID,
+		"sender":     map[string]any{"user_id": req.SenderUserID},
+		"type":       req.Type,
+		"sent_at":    msg.SentAt,
+	}
+	if req.Content != "" {
+		payload["content"] = req.Content
+	}
+	if req.ShareCode != "" {
+		payload["share_code"] = req.ShareCode
+	}
+	if len(req.Mentions) > 0 {
+		payload["mentions"] = req.Mentions
+	}
+	if req.ReplyToMessageID != "" {
+		payload["reply_to_message_id"] = req.ReplyToMessageID
+	}
+	if req.FileID != "" {
+		payload["file_id"] = req.FileID
+	}
+	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{Type: "GroupMessageNew", Payload: payload})
 	return msg, nil
 }
 func (s *Service) History(ctx context.Context, groupID string, pagination *PaginationParams) (PaginatedGroupMessages, error) {
@@ -31,7 +54,12 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupMessageRequest) err
 		observability.L().Error("groupmessages.update failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: "GroupMessageEdited", Payload: map[string]any{"group_id": meta.GroupID, "message_id": meta.MessageID}})
+	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: "GroupMessageEdited", Payload: map[string]any{
+		"group_id":   meta.GroupID,
+		"message_id": meta.MessageID,
+		"content":    meta.Content,
+		"edited_at":  time.Now().UTC().Format(time.RFC3339),
+	}})
 	return nil
 }
 
@@ -41,7 +69,12 @@ func (s *Service) Recall(ctx context.Context, req RecallGroupMessageRequest) err
 		observability.L().Error("groupmessages.recall failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: "GroupMessageRecalled", Payload: map[string]any{"group_id": meta.GroupID, "message_id": meta.MessageID}})
+	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: "GroupMessageRecalled", Payload: map[string]any{
+		"group_id":    meta.GroupID,
+		"message_id":  meta.MessageID,
+		"recalled_by": map[string]any{"user_id": req.UserID},
+		"recalled_at": time.Now().UTC().Format(time.RFC3339),
+	}})
 	return nil
 }
 

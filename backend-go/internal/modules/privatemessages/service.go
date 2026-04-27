@@ -76,7 +76,28 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 		observability.L().Error("privatemessages.send failed", "error", err, "target_user_id", req.TargetUserID)
 		return MessageSent{}, err
 	}
-	realtime.DefaultHub().BroadcastToUser(req.TargetUserID, realtime.Event{Type: "PrivateMessageNew", Payload: map[string]any{"message_id": msg.MessageID, "sent_at": msg.SentAt}})
+	payload := map[string]any{
+		"message_id":     msg.MessageID,
+		"target_user_id": req.TargetUserID,
+		"sender":         map[string]any{"user_id": principal.UserID},
+		"type":           req.Type,
+		"sent_at":        msg.SentAt,
+	}
+	if req.Content != "" {
+		payload["content"] = req.Content
+	}
+	if req.ShareCode != "" {
+		payload["share_code"] = req.ShareCode
+	}
+	if req.ReplyToMessageID != "" {
+		payload["reply_to_message_id"] = req.ReplyToMessageID
+	}
+	if req.FileID != "" {
+		payload["file_id"] = req.FileID
+	}
+	event := realtime.Event{Type: "PrivateMessageNew", Payload: payload}
+	realtime.DefaultHub().BroadcastToUser(req.TargetUserID, event)
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
 	return msg, nil
 }
 
@@ -107,7 +128,13 @@ func (s *Service) Update(ctx context.Context, req UpdatePrivateMessageRequest) e
 		observability.L().Error("privatemessages.update failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
-	event := realtime.Event{Type: "PrivateMessageEdited", Payload: map[string]any{"message_id": req.MessageID, "target_user_id": meta.TargetUserID}}
+	now := time.Now().UTC().Format(time.RFC3339)
+	event := realtime.Event{Type: "PrivateMessageEdited", Payload: map[string]any{
+		"message_id":     req.MessageID,
+		"target_user_id": meta.TargetUserID,
+		"content":        meta.Content,
+		"edited_at":      now,
+	}}
 	realtime.DefaultHub().BroadcastToUser(meta.TargetUserID, event)
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
 	return nil
@@ -120,7 +147,13 @@ func (s *Service) Recall(ctx context.Context, req RecallPrivateMessageRequest) e
 		observability.L().Error("privatemessages.recall failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
-	event := realtime.Event{Type: "PrivateMessageRecalled", Payload: map[string]any{"message_id": req.MessageID, "target_user_id": meta.TargetUserID}}
+	now := time.Now().UTC().Format(time.RFC3339)
+	event := realtime.Event{Type: "PrivateMessageRecalled", Payload: map[string]any{
+		"message_id":     req.MessageID,
+		"target_user_id": meta.TargetUserID,
+		"recalled_by":    map[string]any{"user_id": principal.UserID},
+		"recalled_at":    now,
+	}}
 	realtime.DefaultHub().BroadcastToUser(meta.TargetUserID, event)
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
 	return nil
@@ -133,7 +166,12 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadReq
 		observability.L().Error("privatemessages.mark_as_read failed", "error", err, "target_user_id", req.TargetUserID, "up_to_message_id", req.UpToMessageID)
 		return err
 	}
-	event := realtime.Event{Type: "PrivateMessageRead", Payload: map[string]any{"target_user_id": meta.TargetUserID, "message_id": meta.MessageID, "read_at": time.Now().UTC().Format(time.RFC3339Nano)}}
+	event := realtime.Event{Type: "PrivateMessageRead", Payload: map[string]any{
+		"target_user_id":   meta.TargetUserID,
+		"up_to_message_id": meta.MessageID,
+		"reader_id":        principal.UserID,
+		"read_at":          time.Now().UTC().Format(time.RFC3339Nano),
+	}}
 	realtime.DefaultHub().BroadcastToUser(meta.TargetUserID, event)
 	if principal.UserID != meta.TargetUserID {
 		realtime.DefaultHub().BroadcastToUser(principal.UserID, event)

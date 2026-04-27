@@ -95,11 +95,38 @@ func (r *InMemoryRepository) Delete(_ context.Context, commentID string) error {
 	return nil
 }
 
-func (r *InMemoryRepository) List(_ context.Context, momentID string) (PaginatedComments, error) {
+func (r *InMemoryRepository) List(_ context.Context, momentID string, limit int, cursor string) (PaginatedComments, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	items := append([]CommentItem(nil), r.comments[momentID]...)
-	sort.Slice(items, func(i, j int) bool { return items[i].CommentID > items[j].CommentID })
+	var items []CommentItem
+	for _, item := range r.comments[momentID] {
+		if item.ParentID == "" {
+			items = append(items, item)
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].CreatedAt == items[j].CreatedAt {
+			return items[i].CommentID > items[j].CommentID
+		}
+		return items[i].CreatedAt > items[j].CreatedAt
+	})
+	if cursor != "" {
+		for i, item := range items {
+			if item.CommentID == cursor {
+				items = items[i+1:]
+				break
+			}
+		}
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	if len(items) > limit {
+		return PaginatedComments{Items: items[:limit], NextCursor: items[limit-1].CommentID}, nil
+	}
 	return PaginatedComments{Items: items}, nil
 }
 

@@ -271,13 +271,13 @@ type CreateGroupAnnouncementRequest struct {
 }
 
 type GroupAnnouncementItem struct {
-	AnnouncementID string    `json:"announcement_id"`
-	GroupID        string    `json:"group_id"`
-	Title          string    `json:"title"`
-	Content        string    `json:"content"`
-	CreatedBy      UserInfo  `json:"created_by"`
-	CreatedAt      string    `json:"created_at"`
-	IsPinned       bool      `json:"is_pinned"`
+	AnnouncementID string   `json:"announcement_id"`
+	GroupID        string   `json:"group_id"`
+	Title          string   `json:"title"`
+	Content        string   `json:"content"`
+	CreatedBy      UserInfo `json:"created_by"`
+	CreatedAt      string   `json:"created_at"`
+	IsPinned       bool     `json:"is_pinned"`
 }
 
 type GroupAnnouncementsRequest struct {

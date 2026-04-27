@@ -62,7 +62,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, commentID string) error
 	return queryable.Exec(ctx, queryDeleteComment, commentID)
 }
 
-func (r *PostgresRepository) List(ctx context.Context, momentID string) (PaginatedComments, error) {
+func (r *PostgresRepository) List(ctx context.Context, momentID string, limit int, cursor string) (PaginatedComments, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return PaginatedComments{}, persistence.ErrNotImplemented
 	}
@@ -70,12 +70,17 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string) (Paginat
 	if !ok {
 		return PaginatedComments{}, persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, queryListComments, momentID)
+	limit = normalizeCommentLimit(limit)
+	cursorCreatedAt, cursorCommentID, err := decodeCommentCursor(cursor)
+	if err != nil {
+		return PaginatedComments{}, err
+	}
+	rows, err := queryable.Query(ctx, queryListComments, momentID, cursorCreatedAt, cursorCommentID, limit+1)
 	if err != nil {
 		return PaginatedComments{}, err
 	}
 	defer rows.Close()
-	items := []CommentItem{}
+	items := make([]CommentItem, 0, limit+1)
 	for rows.Next() {
 		var item CommentItem
 		var userID, parentID, createdAt string
@@ -90,6 +95,9 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string) (Paginat
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedComments{}, err
+	}
+	if len(items) > limit {
+		return PaginatedComments{Items: items[:limit], NextCursor: encodeCommentCursor(items[limit-1].CreatedAt, items[limit-1].CommentID)}, nil
 	}
 	return PaginatedComments{Items: items}, nil
 }

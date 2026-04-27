@@ -472,7 +472,7 @@ func TestPostgresRepositoryReadsQueryableDB(t *testing.T) {
 	if err != nil || !exists {
 		t.Fatalf("unexpected exists result: exists=%v err=%v", exists, err)
 	}
-	list, err := repo.ListMine(context.Background(), "user_alice")
+	list, err := repo.ListMine(context.Background(), "user_alice", 20, "")
 	if err != nil || len(list.Items) != 1 || list.Items[0].MomentID != "moment_1" {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
 	}
@@ -506,7 +506,7 @@ func TestPostgresRepositoryWritesQueryableDB(t *testing.T) {
 	if len(opened.Mentions) != 2 || opened.Mentions[0] != "user_bob" || opened.Mentions[1] != "user_charlie" {
 		t.Fatalf("unexpected opened mentions: %#v", opened.Mentions)
 	}
-	list, err := repo.ListMine(context.Background(), "user_alice")
+	list, err := repo.ListMine(context.Background(), "user_alice", 20, "")
 	if err != nil || len(list.Items) != 1 || list.Items[0].MomentID != created.MomentID || list.Items[0].CommentsCount != 1 {
 		t.Fatalf("unexpected list after write: %#v err=%v", list, err)
 	}

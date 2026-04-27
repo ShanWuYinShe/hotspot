@@ -43,7 +43,7 @@ func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplic
 		return err
 	}
 	s.notifyGroupApplicationAccepted(ctx, group, application)
-	realtime.DefaultHub().BroadcastToGroup(group.Group.GroupID, realtime.Event{Type: "GroupMemberJoined", Payload: map[string]any{"group_id": group.Group.GroupID, "user": groupUserInfo(application.Applicant), "role": string(GroupRoleMember), "member_count": group.Group.MembersCount + 1, "joined_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToGroup(group.Group.GroupID, realtime.Event{Type: "GroupMemberJoined", Payload: map[string]any{"group_id": group.Group.GroupID, "user": s.resolveUserInfo(ctx, application.Applicant.UserID), "role": string(GroupRoleMember), "member_count": group.Group.MembersCount + 1, "joined_at": time.Now().UTC().Format(time.RFC3339)}})
 	return nil
 }
 
@@ -94,7 +94,22 @@ func (s *Service) MuteMember(ctx context.Context, req MuteMemberRequest) error {
 		return ErrAccessRestricted
 	}
 	_ = principal
-	return s.repo.MuteMember(ctx, principal.UserID, req)
+	if err := s.repo.MuteMember(ctx, principal.UserID, req); err != nil {
+		return err
+	}
+	event := realtime.Event{
+		Type: "GroupMemberMuted",
+		Payload: map[string]any{
+			"group_id":         req.GroupID,
+			"user":             s.resolveUserInfo(ctx, req.UserID),
+			"muted_by":         s.resolveUserInfo(ctx, principal.UserID),
+			"duration_minutes": req.DurationMinutes,
+			"muted_at":         time.Now().UTC().Format(time.RFC3339),
+		},
+	}
+	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
+	realtime.DefaultHub().BroadcastToUser(req.UserID, event)
+	return nil
 }
 
 func (s *Service) UnmuteMember(ctx context.Context, req UnmuteMemberRequest) error {
@@ -110,7 +125,21 @@ func (s *Service) UnmuteMember(ctx context.Context, req UnmuteMemberRequest) err
 		return ErrAccessRestricted
 	}
 	_ = principal
-	return s.repo.UnmuteMember(ctx, principal.UserID, req)
+	if err := s.repo.UnmuteMember(ctx, principal.UserID, req); err != nil {
+		return err
+	}
+	event := realtime.Event{
+		Type: "GroupMemberUnmuted",
+		Payload: map[string]any{
+			"group_id":   req.GroupID,
+			"user":       s.resolveUserInfo(ctx, req.UserID),
+			"unmuted_by": s.resolveUserInfo(ctx, principal.UserID),
+			"unmuted_at": time.Now().UTC().Format(time.RFC3339),
+		},
+	}
+	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
+	realtime.DefaultHub().BroadcastToUser(req.UserID, event)
+	return nil
 }
 
 func (s *Service) BanMember(ctx context.Context, req BanMemberRequest) error {
@@ -129,7 +158,21 @@ func (s *Service) BanMember(ctx context.Context, req BanMemberRequest) error {
 		return ErrAccessRestricted
 	}
 	_ = principal
-	return s.repo.BanMember(ctx, principal.UserID, req)
+	if err := s.repo.BanMember(ctx, principal.UserID, req); err != nil {
+		return err
+	}
+	event := realtime.Event{
+		Type: "GroupMemberBanned",
+		Payload: map[string]any{
+			"group_id":  req.GroupID,
+			"user":      s.resolveUserInfo(ctx, req.UserID),
+			"banned_by": s.resolveUserInfo(ctx, principal.UserID),
+			"banned_at": time.Now().UTC().Format(time.RFC3339),
+		},
+	}
+	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
+	realtime.DefaultHub().BroadcastToUser(req.UserID, event)
+	return nil
 }
 
 func (s *Service) UnbanMember(ctx context.Context, req UnbanMemberRequest) error {
@@ -187,7 +230,26 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 		return ErrAccessRestricted
 	}
 	_ = principal
-	return s.repo.RemoveMember(ctx, principal.UserID, req)
+	if err := s.repo.RemoveMember(ctx, principal.UserID, req); err != nil {
+		return err
+	}
+	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+		Type: "GroupMemberRemoved",
+		Payload: map[string]any{
+			"group_id":   req.GroupID,
+			"user":       s.resolveUserInfo(ctx, req.UserID),
+			"removed_by": s.resolveUserInfo(ctx, principal.UserID),
+			"removed_at": time.Now().UTC().Format(time.RFC3339),
+		},
+	})
+	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{
+		Type: "GroupMemberRemoved",
+		Payload: map[string]any{
+			"group_id":   req.GroupID,
+			"removed_at": time.Now().UTC().Format(time.RFC3339),
+		},
+	})
+	return nil
 }
 
 func (s *Service) TransferOwnership(ctx context.Context, req TransferOwnershipRequest) error {

@@ -18,6 +18,7 @@ type MessageEventMeta struct {
 	TargetUserID string
 	MessageID    string
 	SentAt       string
+	Content      string
 }
 
 type Repository interface {

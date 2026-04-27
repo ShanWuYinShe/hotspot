@@ -55,7 +55,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	list, err := h.service.List(r.Context(), req.MomentID)
+	list, err := h.service.List(r.Context(), req)
 	if err != nil {
 		if errors.Is(err, ErrMomentNotFound) {
 			logBusinessError(r, "List", 10300, "瞬间不存在")

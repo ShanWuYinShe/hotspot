@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/platform/actor"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -20,6 +21,7 @@ type Service struct {
 	repo          Repository
 	moments       MomentProvider
 	notifications commentNotificationWriter
+	users         actor.Provider
 }
 
 type commentNotificationWriter interface {
@@ -30,11 +32,11 @@ type commentNotificationWriter interface {
 }
 
 func NewService(repo Repository, moments MomentProvider) *Service {
-	return NewServiceWithDeps(repo, moments, notifications.NewService())
+	return NewServiceWithDeps(repo, moments, notifications.NewService(), nil)
 }
 
-func NewServiceWithDeps(repo Repository, moments MomentProvider, notificationWriter commentNotificationWriter) *Service {
-	return &Service{repo: repo, moments: moments, notifications: notificationWriter}
+func NewServiceWithDeps(repo Repository, moments MomentProvider, notificationWriter commentNotificationWriter, actorProvider actor.Provider) *Service {
+	return &Service{repo: repo, moments: moments, notifications: notificationWriter, users: actorProvider}
 }
 
 func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (CommentItem, error) {
@@ -82,11 +84,22 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 	return item, nil
 }
 
-func (s *Service) List(ctx context.Context, momentID string) (PaginatedComments, error) {
-	if err := s.ensureMomentExists(ctx, momentID); err != nil {
+func (s *Service) List(ctx context.Context, req ListCommentsRequest) (PaginatedComments, error) {
+	if err := s.ensureMomentExists(ctx, req.MomentID); err != nil {
 		return PaginatedComments{}, err
 	}
-	return s.repo.List(ctx, momentID)
+	limit := 20
+	cursor := ""
+	if req.Pagination != nil {
+		if req.Pagination.Limit > 0 {
+			limit = req.Pagination.Limit
+		}
+		if limit > 100 {
+			limit = 100
+		}
+		cursor = req.Pagination.Cursor
+	}
+	return s.repo.List(ctx, req.MomentID, limit, cursor)
 }
 
 func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
@@ -154,7 +167,11 @@ func (s *Service) Like(ctx context.Context, req LikeCommentRequest) error {
 	if !ok {
 		return nil
 	}
-	actor := buildCommentActor(CommentItem{User: UserInfo{UserID: principal.UserID, Nickname: principal.UserID}}, principal.UserID)
+	actor, actorErr := s.buildActorForUser(ctx, principal.UserID)
+	if actorErr != nil {
+		observability.L().Error("comments.like build actor failed", "error", actorErr, "user_id", principal.UserID)
+		actor = buildCommentActor(CommentItem{User: UserInfo{UserID: principal.UserID, Nickname: principal.UserID}}, principal.UserID)
+	}
 	momentSummary := notificationMomentSummary(momentContext, comment.MomentID)
 	commentPreview := summarizeCommentText(comment.Content, "")
 	if s.notifications != nil {
@@ -389,4 +406,15 @@ func (s *Service) ensureMomentExists(ctx context.Context, momentID string) error
 		return ErrMomentNotFound
 	}
 	return nil
+}
+
+func (s *Service) buildActorForUser(ctx context.Context, userID string) (map[string]any, error) {
+	if s.users == nil {
+		return nil, nil
+	}
+	info, err := s.users.GetActorInfo(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"user_id": info.UserID, "nickname": info.Nickname, "avatar_url": info.AvatarURL}, nil
 }
