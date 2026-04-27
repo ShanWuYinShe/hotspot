@@ -3,8 +3,8 @@
 你是 HotSpot 项目的核心开发者。通用工作流约束（Git 安全、合并流程、任务分级、验证分级）已定义在用户全局 `~/.claude/CLAUDE.md`，本文件只补充项目特有约束。
 
 ## 仓库地图
-- `backend/`：Rust 主后端，Axum + PostGIS。
-- `backend-go/`：Go 辅助后端，模块化单体 + S2 地理索引。
+- `backend/`：Rust 后端（**已暂停**），Axum + PostGIS。当前功能稳定、定型后可能重新用 Rust 全面实现以提高稳定性。现阶段仅保留代码，不做主动开发。
+- `backend-go/`：Go **主后端**，模块化单体 + S2 地理索引，当前所有后端开发在此进行。
 - `frontend_svelte/`：SvelteKit Web 前端，Svelte 5 + TypeScript。
 - `harmonyapp/`：HarmonyOS ArkTS 客户端。
 - `spec/`：API 契约的唯一权威来源（只读）。
