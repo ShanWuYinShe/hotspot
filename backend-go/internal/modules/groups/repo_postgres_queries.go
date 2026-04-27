@@ -138,4 +138,80 @@ WHERE invite_id = $1`
 	queryDeleteGroup = `
 DELETE FROM groups
 WHERE group_id = $1`
+
+	queryInsertGroupAnnouncement = `
+INSERT INTO group_announcements (announcement_id, group_id, title, content, created_by_user_id, is_pinned, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)`
+
+	queryListGroupAnnouncements = `
+SELECT announcement_id, group_id, title, content, created_by_user_id, is_pinned, created_at
+FROM group_announcements
+WHERE group_id = $1 AND deleted_at IS NULL
+ORDER BY is_pinned DESC, created_at DESC, announcement_id DESC`
+
+	queryUpdateGroupAnnouncement = `
+UPDATE group_announcements
+SET title = COALESCE($2, title),
+    content = COALESCE($3, content),
+    is_pinned = COALESCE($4, is_pinned),
+    updated_at = $5
+WHERE announcement_id = $1 AND deleted_at IS NULL`
+
+	queryDeleteGroupAnnouncement = `
+UPDATE group_announcements
+SET deleted_at = $2
+WHERE announcement_id = $1 AND deleted_at IS NULL`
+
+	queryUpdateGroupMemberSettings = `
+UPDATE group_members
+SET is_muted = COALESCE($3, is_muted),
+    is_pinned = COALESCE($4, is_pinned)
+WHERE group_id = $1 AND user_id = $2`
+
+	queryDeleteGroupMember = `
+DELETE FROM group_members
+WHERE group_id = $1 AND user_id = $2`
+
+	queryUpdateGroupMemberRole = `
+UPDATE group_members
+SET role = $3
+WHERE group_id = $1 AND user_id = $2`
+
+	queryMuteGroupMember = `
+UPDATE group_members
+SET is_muted = TRUE, muted_until = $3
+WHERE group_id = $1 AND user_id = $2`
+
+	queryUnmuteGroupMember = `
+UPDATE group_members
+SET is_muted = FALSE, muted_until = NULL
+WHERE group_id = $1 AND user_id = $2`
+
+	queryInsertGroupBan = `
+INSERT INTO group_bans (group_id, user_id, banned_by_user_id, reason, banned_at)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (group_id, user_id) DO UPDATE SET banned_by_user_id = $3, reason = $4, banned_at = $5`
+
+	queryDeleteGroupBan = `
+DELETE FROM group_bans
+WHERE group_id = $1 AND user_id = $2`
+
+	queryListGroupBans = `
+SELECT gb.user_id, gb.banned_at, gb.reason, gb.banned_by_user_id
+FROM group_bans gb
+WHERE gb.group_id = $1
+ORDER BY gb.banned_at DESC, gb.user_id ASC`
+
+	queryUpdateGroupOwner = `
+UPDATE groups
+SET owner_id = $2
+WHERE group_id = $1`
+
+	querySearchGroupMembers = `
+SELECT gm.user_id, gm.role, gm.joined_at
+FROM group_members gm
+LEFT JOIN users u ON u.user_id = gm.user_id
+WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)
+  AND ($3 = '' OR gm.user_id ILIKE '%' || $3 || '%' OR u.nickname ILIKE '%' || $3 || '%')
+ORDER BY gm.joined_at ASC, gm.user_id ASC`
 )

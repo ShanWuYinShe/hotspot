@@ -143,17 +143,39 @@ func (r *PostgresRepository) ListMembers(ctx context.Context, groupID string, ro
 }
 
 func (r *PostgresRepository) SearchMembers(ctx context.Context, groupID string, keyword string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
-	items, _, err := r.ListMembers(ctx, groupID, role, limit, cursor)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	roleValue := ""
+	if role != nil {
+		roleValue = string(*role)
+	}
+	rows, err := queryable.Query(ctx, querySearchGroupMembers, groupID, roleValue, keyword)
 	if err != nil {
 		return nil, "", err
 	}
-	filtered := make([]GroupMemberItem, 0, len(items))
-	for _, item := range items {
-		if keyword == "" || item.User.UserID == keyword || item.User.Nickname == keyword {
-			filtered = append(filtered, item)
+	defer rows.Close()
+	items := make([]GroupMemberItem, 0)
+	for rows.Next() {
+		var item GroupMemberItem
+		var roleText string
+		var joinedAt time.Time
+		if err := rows.Scan(&item.User.UserID, &roleText, &joinedAt); err != nil {
+			return nil, "", err
 		}
+		item.User.Nickname = item.User.UserID
+		item.Role = GroupRole(roleText)
+		item.JoinedAt = joinedAt.UTC().Format(time.RFC3339)
+		items = append(items, item)
 	}
-	return filtered, "", nil
+	if err := rows.Err(); err != nil {
+		return nil, "", err
+	}
+	return items, "", nil
 }
 
 func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, limit int, cursor string) ([]GroupItem, string, error) {
@@ -253,19 +275,87 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 }
 
 func (r *PostgresRepository) CreateAnnouncement(ctx context.Context, creatorID string, req CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
-	return GroupAnnouncementItem{}, persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return GroupAnnouncementItem{}, persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return GroupAnnouncementItem{}, persistence.ErrNotImplemented
+	}
+	now := time.Now().UTC()
+	announcementID := fmt.Sprintf("announce_%d", now.UnixNano())
+	isPinned := false
+	if req.IsPinned != nil {
+		isPinned = *req.IsPinned
+	}
+	if err := queryable.Exec(ctx, queryInsertGroupAnnouncement, announcementID, req.GroupID, req.Title, req.Content, creatorID, isPinned, now); err != nil {
+		return GroupAnnouncementItem{}, err
+	}
+	return GroupAnnouncementItem{
+		AnnouncementID: announcementID,
+		GroupID:        req.GroupID,
+		Title:          req.Title,
+		Content:        req.Content,
+		CreatedBy:      UserInfo{UserID: creatorID, Nickname: creatorID},
+		CreatedAt:      now.Format(time.RFC3339),
+		IsPinned:       isPinned,
+	}, nil
 }
 
 func (r *PostgresRepository) ListAnnouncements(ctx context.Context, groupID string) ([]GroupAnnouncementItem, error) {
-	return nil, persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return nil, persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	rows, err := queryable.Query(ctx, queryListGroupAnnouncements, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]GroupAnnouncementItem, 0)
+	for rows.Next() {
+		var item GroupAnnouncementItem
+		var createdByUserID string
+		var createdAt time.Time
+		var isPinned bool
+		if err := rows.Scan(&item.AnnouncementID, &item.GroupID, &item.Title, &item.Content, &createdByUserID, &isPinned, &createdAt); err != nil {
+			return nil, err
+		}
+		item.CreatedBy = UserInfo{UserID: createdByUserID, Nickname: createdByUserID}
+		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+		item.IsPinned = isPinned
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 func (r *PostgresRepository) UpdateAnnouncement(ctx context.Context, groupID string, req UpdateGroupAnnouncementRequest) error {
-	return persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	now := time.Now().UTC()
+	return queryable.Exec(ctx, queryUpdateGroupAnnouncement, req.AnnouncementID, nilOrString(derefStringPtr(req.Title)), nilOrString(derefStringPtr(req.Content)), req.IsPinned, now)
 }
 
 func (r *PostgresRepository) DeleteAnnouncement(ctx context.Context, groupID string, announcementID string) error {
-	return persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryDeleteGroupAnnouncement, announcementID, time.Now().UTC())
 }
 
 func (r *PostgresRepository) ListApplications(ctx context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
@@ -347,11 +437,25 @@ func (r *PostgresRepository) RejectApplication(ctx context.Context, applicationI
 }
 
 func (r *PostgresRepository) UpdateMySettings(ctx context.Context, userID string, req UpdateGroupMySettingsRequest) error {
-	return persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryUpdateGroupMemberSettings, req.GroupID, userID, req.IsMuted, req.IsPinned)
 }
 
 func (r *PostgresRepository) LeaveGroup(ctx context.Context, userID string, groupID string) error {
-	return persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryDeleteGroupMember, groupID, userID)
 }
 
 func (r *PostgresRepository) ListMyApplications(ctx context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
@@ -571,35 +675,128 @@ func (r *PostgresRepository) RevokeInvite(ctx context.Context, groupID string, i
 }
 
 func (r *PostgresRepository) SetMemberRole(ctx context.Context, userID string, req SetMemberRoleRequest) error {
-	return persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryUpdateGroupMemberRole, req.GroupID, req.UserID, string(req.Role))
 }
 
 func (r *PostgresRepository) MuteMember(ctx context.Context, userID string, req MuteMemberRequest) error {
-	return persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	mutedUntil := time.Now().UTC().Add(time.Duration(req.DurationMinutes) * time.Minute)
+	return queryable.Exec(ctx, queryMuteGroupMember, req.GroupID, req.UserID, mutedUntil)
 }
 
 func (r *PostgresRepository) UnmuteMember(ctx context.Context, userID string, req UnmuteMemberRequest) error {
-	return persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryUnmuteGroupMember, req.GroupID, req.UserID)
 }
 
 func (r *PostgresRepository) BanMember(ctx context.Context, userID string, req BanMemberRequest) error {
-	return persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	now := time.Now().UTC()
+	if err := queryable.Exec(ctx, queryInsertGroupBan, req.GroupID, req.UserID, userID, nullableStringPtr(req.Reason), now); err != nil {
+		return err
+	}
+	_ = queryable.Exec(ctx, queryDeleteGroupMember, req.GroupID, req.UserID)
+	return nil
 }
 
 func (r *PostgresRepository) UnbanMember(ctx context.Context, userID string, req UnbanMemberRequest) error {
-	return persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryDeleteGroupBan, req.GroupID, req.UserID)
 }
 
 func (r *PostgresRepository) ListBannedMembers(ctx context.Context, groupID string, limit int, cursor string) ([]BannedMemberItem, string, error) {
-	return nil, "", persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	rows, err := queryable.Query(ctx, queryListGroupBans, groupID)
+	if err != nil {
+		return nil, "", err
+	}
+	defer rows.Close()
+	items := make([]BannedMemberItem, 0)
+	for rows.Next() {
+		var item BannedMemberItem
+		var bannedAt time.Time
+		var reason *string
+		var bannedByUserID *string
+		if err := rows.Scan(&item.User.UserID, &bannedAt, &reason, &bannedByUserID); err != nil {
+			return nil, "", err
+		}
+		item.User.Nickname = item.User.UserID
+		item.BannedAt = bannedAt.UTC().Format(time.RFC3339)
+		item.Reason = reason
+		if bannedByUserID != nil && *bannedByUserID != "" {
+			item.BannedBy = &UserInfo{UserID: *bannedByUserID, Nickname: *bannedByUserID}
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, "", err
+	}
+	return items, "", nil
 }
 
 func (r *PostgresRepository) RemoveMember(ctx context.Context, userID string, req RemoveMemberRequest) error {
-	return persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryDeleteGroupMember, req.GroupID, req.UserID)
 }
 
 func (r *PostgresRepository) TransferOwnership(ctx context.Context, userID string, req TransferOwnershipRequest) error {
-	return persistence.ErrNotImplemented
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	if err := queryable.Exec(ctx, queryUpdateGroupMemberRole, req.GroupID, userID, string(GroupRoleAdmin)); err != nil {
+		return err
+	}
+	if err := queryable.Exec(ctx, queryUpdateGroupMemberRole, req.GroupID, req.NewOwnerID, string(GroupRoleOwner)); err != nil {
+		return err
+	}
+	return queryable.Exec(ctx, queryUpdateGroupOwner, req.GroupID, req.NewOwnerID)
 }
 
 func nilOrString(s string) *string {
@@ -644,6 +841,13 @@ func nilOrStrings(values []string) []string {
 		return nil
 	}
 	return values
+}
+
+func derefStringPtr(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
 }
 
 func (r *PostgresRepository) loadApplication(ctx context.Context, applicationID string) (GroupApplicationItem, error) {

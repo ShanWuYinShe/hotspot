@@ -27,6 +27,7 @@ type MessageSent struct {
 }
 type SendGroupMessageRequest struct {
 	GroupID          string   `json:"group_id"`
+	SenderUserID     string   `json:"-"`
 	Type             string   `json:"type"`
 	Content          string   `json:"content,omitempty"`
 	FileID           string   `json:"file_id,omitempty"`
@@ -79,11 +80,13 @@ type PaginatedGroupMessages struct {
 // 新增请求类型
 type UpdateGroupMessageRequest struct {
 	MessageID string `json:"message_id"`
+	UserID    string `json:"-"`
 	Content   string `json:"content"`
 }
 
 type RecallGroupMessageRequest struct {
 	MessageID string `json:"message_id"`
+	UserID    string `json:"-"`
 }
 
 type MarkGroupMessagesReadRequest struct {

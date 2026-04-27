@@ -26,7 +26,11 @@ func (r *PostgresRepository) Send(ctx context.Context, req SendGroupMessageReque
 	}
 	now := time.Now().UTC()
 	messageID := fmt.Sprintf("gm_%d", now.UnixNano())
-	if err := queryable.Exec(ctx, queryInsertGroupMessage, messageID, req.GroupID, nil, req.Type, req.Content, now.Format(time.RFC3339)); err != nil {
+	var senderID interface{}
+	if req.SenderUserID != "" {
+		senderID = req.SenderUserID
+	}
+	if err := queryable.Exec(ctx, queryInsertGroupMessage, messageID, req.GroupID, senderID, req.Type, req.Content, now.Format(time.RFC3339)); err != nil {
 		return MessageSent{}, err
 	}
 	return MessageSent{MessageID: messageID, SentAt: now.Format(time.RFC3339)}, nil
@@ -40,9 +44,18 @@ func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageR
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
-	groupID, sentAt, err := r.lookupMessageMeta(ctx, req.MessageID)
+	groupID, senderUserID, msgType, isRecalled, sentAt, err := r.lookupMessageMetaFull(ctx, req.MessageID)
 	if err != nil {
 		return MessageEventMeta{}, err
+	}
+	if isRecalled {
+		return MessageEventMeta{}, ErrMessageRecalled
+	}
+	if msgType != "text" {
+		return MessageEventMeta{}, ErrMessageNotEditable
+	}
+	if req.UserID != "" && senderUserID != "" && req.UserID != senderUserID {
+		return MessageEventMeta{}, ErrPermissionDenied
 	}
 	if err := queryable.Exec(ctx, queryUpdateGroupMessage, req.MessageID, req.Content); err != nil {
 		return MessageEventMeta{}, err
@@ -58,9 +71,19 @@ func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageR
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
-	groupID, sentAt, err := r.lookupMessageMeta(ctx, req.MessageID)
+	groupID, senderUserID, _, isRecalled, sentAt, err := r.lookupMessageMetaFull(ctx, req.MessageID)
 	if err != nil {
 		return MessageEventMeta{}, err
+	}
+	if isRecalled {
+		return MessageEventMeta{}, ErrMessageRecalled
+	}
+	if req.UserID != "" && senderUserID != "" && req.UserID != senderUserID {
+		return MessageEventMeta{}, ErrPermissionDenied
+	}
+	sentTime, parseErr := time.Parse(time.RFC3339Nano, sentAt)
+	if parseErr == nil && time.Since(sentTime) > 2*time.Minute {
+		return MessageEventMeta{}, ErrMessageRecallWindow
 	}
 	if err := queryable.Exec(ctx, queryRecallGroupMessage, req.MessageID); err != nil {
 		return MessageEventMeta{}, err
@@ -98,15 +121,19 @@ func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) err
 	return queryable.Exec(ctx, queryMarkAllGroupMessagesRead, userID)
 }
 
-func (r *PostgresRepository) lookupMessageMeta(ctx context.Context, messageID string) (string, string, error) {
+func (r *PostgresRepository) lookupMessageMetaFull(ctx context.Context, messageID string) (groupID, senderUserID, msgType string, isRecalled bool, sentAt string, err error) {
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return "", "", persistence.ErrNotImplemented
+		return "", "", "", false, "", persistence.ErrNotImplemented
 	}
-	var groupID string
-	var sentAt string
-	if err := queryable.QueryRow(ctx, "SELECT group_id, TO_CHAR(sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') FROM group_messages WHERE message_id = $1", messageID).Scan(&groupID, &sentAt); err != nil {
-		return "", "", ErrMessageNotFound
+	var recalled bool
+	var rawSenderID *string
+	if err := queryable.QueryRow(ctx, "SELECT group_id, COALESCE(sender_user_id, ''), type, is_recalled, TO_CHAR(sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') FROM group_messages WHERE message_id = $1", messageID).Scan(&groupID, &rawSenderID, &msgType, &recalled, &sentAt); err != nil {
+		return "", "", "", false, "", ErrMessageNotFound
 	}
-	return groupID, sentAt, nil
+	senderUserID = ""
+	if rawSenderID != nil {
+		senderUserID = *rawSenderID
+	}
+	return groupID, senderUserID, msgType, recalled, sentAt, nil
 }

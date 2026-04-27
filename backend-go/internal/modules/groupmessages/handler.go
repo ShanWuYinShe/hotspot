@@ -2,6 +2,7 @@ package groupmessages
 
 import (
 	"errors"
+	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/observability"
@@ -37,6 +38,8 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
+	principal, _ := platformauth.PrincipalFromContext(r.Context())
+	req.SenderUserID = principal.UserID
 	idempotency.ReplayOrStore(w, r, "group_messages/send", func() httpx.ApiResponse[MessageSent] {
 		msg, err := h.service.Send(r.Context(), req)
 		if err != nil {
@@ -79,6 +82,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
+	principal, _ := platformauth.PrincipalFromContext(r.Context())
+	req.UserID = principal.UserID
 	if err := h.service.Update(r.Context(), req); err != nil {
 		switch {
 		case errors.Is(err, ErrMessageNotFound):
@@ -114,6 +119,8 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
+	principal, _ := platformauth.PrincipalFromContext(r.Context())
+	req.UserID = principal.UserID
 	if err := h.service.Recall(r.Context(), req); err != nil {
 		switch {
 		case errors.Is(err, ErrMessageNotFound):
