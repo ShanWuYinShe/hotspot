@@ -10,7 +10,6 @@ export const POST: RequestHandler = async ({ request, url }) => {
 		if (response) {
 			return response;
 		}
-		return json({ code: 40400, message: 'No mock handler' }, { status: 404 });
 	}
 
 	const backendUrl = env.BACKEND_URL || 'http://backend:8081';

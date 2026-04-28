@@ -23,7 +23,7 @@ services:
       - "9333:9333"  # Master + S3 API
       - "8333:8333"  # S3 gateway
     volumes:
-      - seaweedfs_data:/seaweedfs/data
+      - ./.local/seaweedfs-data:/seaweedfs/data
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9333/dir/heartbeat || exit 1"]
       interval: 5s

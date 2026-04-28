@@ -847,7 +847,7 @@ async function handleApi(path: string, body: Record<string, unknown>): Promise<R
 			return ok({});
 
 		default:
-			return err(40400, `No mock for ${path}`, 404);
+			return null;
 	}
 }
 
