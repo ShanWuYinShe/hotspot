@@ -19,4 +19,5 @@ type Repository interface {
 	Unfavorite(context.Context, string, string) error
 	ListLikes(context.Context, string, int, string) ([]LikeItem, string, error)
 	ListFavorites(context.Context, string, int, string) (PaginatedMoments, error)
+	LoadMyState(context.Context, string, string) *MyMomentState
 }

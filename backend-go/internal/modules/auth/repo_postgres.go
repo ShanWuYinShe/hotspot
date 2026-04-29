@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
@@ -33,7 +34,8 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 		return Account{}, err
 	}
 	now := params.Defaults.CreatedAt.UTC()
-	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "normal", params.LoginID, params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
+	s2CellID := geo.LeafCellID(geo.Point{Latitude: params.Defaults.Latitude, Longitude: params.Defaults.Longitude})
+	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "normal", params.LoginID, params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
 		return Account{}, err
 	}
 	if err := queryable.Exec(ctx, queryInsertAuthAccount, params.LoginID, userID, hashed, now, now); err != nil {
@@ -62,7 +64,8 @@ func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams
 		return Account{}, err
 	}
 	now := params.Defaults.CreatedAt.UTC()
-	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "temp", "", params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
+	s2CellID := geo.LeafCellID(geo.Point{Latitude: params.Defaults.Latitude, Longitude: params.Defaults.Longitude})
+	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "temp", "", params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
 		return Account{}, err
 	}
 	if err := queryable.Exec(ctx, queryUpsertUserSettings, userID); err != nil {

@@ -162,12 +162,14 @@ func (s *Service) BanMember(ctx context.Context, req BanMemberRequest) error {
 		return err
 	}
 	event := realtime.Event{
-		Type: "GroupMemberBanned",
+		Type: "GroupMemberRemoved",
 		Payload: map[string]any{
 			"group_id":  req.GroupID,
 			"user":      s.resolveUserInfo(ctx, req.UserID),
-			"banned_by": s.resolveUserInfo(ctx, principal.UserID),
-			"banned_at": time.Now().UTC().Format(time.RFC3339),
+			"removed_by": s.resolveUserInfo(ctx, principal.UserID),
+			"reason":       "banned",
+			"removed_at":   time.Now().UTC().Format(time.RFC3339),
+			"member_count": group.Group.MembersCount,
 		},
 	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
@@ -236,17 +238,21 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: "GroupMemberRemoved",
 		Payload: map[string]any{
-			"group_id":   req.GroupID,
-			"user":       s.resolveUserInfo(ctx, req.UserID),
-			"removed_by": s.resolveUserInfo(ctx, principal.UserID),
-			"removed_at": time.Now().UTC().Format(time.RFC3339),
+			"group_id":     req.GroupID,
+			"user":         s.resolveUserInfo(ctx, req.UserID),
+			"removed_by":   s.resolveUserInfo(ctx, principal.UserID),
+			"reason":       "kicked",
+			"removed_at":   time.Now().UTC().Format(time.RFC3339),
+			"member_count": group.Group.MembersCount,
 		},
 	})
 	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{
 		Type: "GroupMemberRemoved",
 		Payload: map[string]any{
-			"group_id":   req.GroupID,
-			"removed_at": time.Now().UTC().Format(time.RFC3339),
+			"group_id":     req.GroupID,
+			"reason":       "kicked",
+			"removed_at":   time.Now().UTC().Format(time.RFC3339),
+			"member_count": group.Group.MembersCount,
 		},
 	})
 	return nil

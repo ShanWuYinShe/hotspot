@@ -11,8 +11,8 @@ import (
 
 type Module struct{ handler *Handler }
 
-func NewModule(factory *persistence.Factory) *Module {
-	return &Module{handler: NewHandler(NewServiceWithRepo(NewPersistenceRepository(factory)))}
+func NewModule(factory *persistence.Factory, users userReader) *Module {
+	return &Module{handler: NewHandler(NewServiceWithRepoAndUsers(NewPersistenceRepository(factory), users))}
 }
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/group_messages", func(gr chi.Router) {

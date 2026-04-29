@@ -75,3 +75,7 @@ func (r *PersistenceRepository) ListLikes(ctx context.Context, momentID string, 
 func (r *PersistenceRepository) ListFavorites(ctx context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
 	return r.impl.ListFavorites(ctx, userID, limit, cursor)
 }
+
+func (r *PersistenceRepository) LoadMyState(ctx context.Context, momentID, userID string) *MyMomentState {
+	return r.impl.LoadMyState(ctx, momentID, userID)
+}

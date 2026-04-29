@@ -79,7 +79,7 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 	payload := map[string]any{
 		"message_id":     msg.MessageID,
 		"target_user_id": req.TargetUserID,
-		"sender":         map[string]any{"user_id": principal.UserID},
+		"sender":         s.resolveUserInfo(ctx, principal.UserID),
 		"type":           req.Type,
 		"sent_at":        msg.SentAt,
 	}
@@ -90,10 +90,14 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 		payload["share_code"] = req.ShareCode
 	}
 	if req.ReplyToMessageID != "" {
-		payload["reply_to_message_id"] = req.ReplyToMessageID
+		if replyTo := s.buildReplyTo(ctx, req.ReplyToMessageID); replyTo != nil {
+			payload["reply_to"] = replyTo
+		}
 	}
 	if req.FileID != "" {
-		payload["file_id"] = req.FileID
+		if media := s.buildMedia(ctx, req.FileID); media != nil {
+			payload["media"] = media
+		}
 	}
 	event := realtime.Event{Type: "PrivateMessageNew", Payload: payload}
 	realtime.DefaultHub().BroadcastToUser(req.TargetUserID, event)
@@ -151,7 +155,7 @@ func (s *Service) Recall(ctx context.Context, req RecallPrivateMessageRequest) e
 	event := realtime.Event{Type: "PrivateMessageRecalled", Payload: map[string]any{
 		"message_id":     req.MessageID,
 		"target_user_id": meta.TargetUserID,
-		"recalled_by":    map[string]any{"user_id": principal.UserID},
+		"recalled_by":    s.resolveUserInfo(ctx, principal.UserID),
 		"recalled_at":    now,
 	}}
 	realtime.DefaultHub().BroadcastToUser(meta.TargetUserID, event)
@@ -218,4 +222,33 @@ func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string
 		}
 	}
 	return nil
+}
+
+func (s *Service) resolveUserInfo(ctx context.Context, userID string) map[string]any {
+	info := map[string]any{"user_id": userID}
+	if s.users != nil {
+		if item, ok, err := s.users.OpenTheDoor(ctx, userID); err == nil && ok {
+			info["nickname"] = item.User.Nickname
+			if item.User.AvatarURL != "" {
+				info["avatar_url"] = item.User.AvatarURL
+			}
+		}
+	}
+	return info
+}
+
+func (s *Service) buildReplyTo(ctx context.Context, messageID string) map[string]any {
+	info, ok, err := s.repo.GetMessageForReply(ctx, messageID)
+	if err != nil || !ok {
+		return nil
+	}
+	return info
+}
+
+func (s *Service) buildMedia(ctx context.Context, fileID string) map[string]any {
+	info, ok, err := s.repo.GetMediaForMessage(ctx, fileID)
+	if err != nil || !ok {
+		return nil
+	}
+	return info
 }

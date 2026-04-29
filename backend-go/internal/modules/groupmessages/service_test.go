@@ -39,6 +39,17 @@ func (r *stubRepo) MarkAsRead(_ context.Context, _ string, _ MarkGroupMessagesRe
 func (r *stubRepo) MarkAllRead(_ context.Context, _ string) error {
 	return r.markAllReadErr
 }
+func (r *stubRepo) GetMessageForReply(_ context.Context, _ string) (map[string]any, bool, error) {
+	return nil, false, nil
+}
+
+func (r *stubRepo) GetMediaForMessage(_ context.Context, _ string) (map[string]any, bool, error) {
+	return nil, false, nil
+}
+
+func (r *stubRepo) IsMember(_ context.Context, _ string, _ string) (bool, error) {
+	return true, nil
+}
 
 func gmAuthCtx(userID string) context.Context {
 	return platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: userID})
@@ -47,7 +58,7 @@ func gmAuthCtx(userID string) context.Context {
 func TestServiceSendDelegatesToRepo(t *testing.T) {
 	repo := &stubRepo{sendResult: MessageSent{MessageID: "gm1", SentAt: "2025-01-01T00:00:00Z"}}
 	service := NewServiceWithRepo(repo)
-	result, err := service.Send(context.Background(), SendGroupMessageRequest{GroupID: "g1", Type: "text", Content: "hello"})
+	result, err := service.Send(gmAuthCtx("u1"), SendGroupMessageRequest{GroupID: "g1", Type: "text", Content: "hello", SenderUserID: "u1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -67,7 +78,7 @@ func TestServiceSendPropagatesError(t *testing.T) {
 func TestServiceHistoryDelegatesToRepo(t *testing.T) {
 	repo := &stubRepo{historyResult: PaginatedGroupMessages{Items: []GroupMessageItem{{MessageID: "gm1"}}}}
 	service := NewServiceWithRepo(repo)
-	result, err := service.History(context.Background(), "g1", nil)
+	result, err := service.History(gmAuthCtx("u1"), "g1", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

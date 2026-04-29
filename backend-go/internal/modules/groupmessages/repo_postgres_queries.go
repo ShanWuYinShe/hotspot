@@ -72,6 +72,9 @@ const (
 	WHERE group_message_read_state.last_read_sent_at IS NULL
 	   OR group_message_read_state.last_read_sent_at <= EXCLUDED.last_read_sent_at`
 
+	queryCheckGroupMembership = `
+SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2`
+
 	queryMarkAllGroupMessagesRead = `
 	INSERT INTO group_message_read_state (group_id, user_id, last_read_message_id, last_read_sent_at, updated_at)
 	SELECT members.group_id, members.user_id, latest.message_id, latest.sent_at, NOW()
@@ -90,4 +93,14 @@ const (
 	    updated_at = NOW()
 	WHERE group_message_read_state.last_read_sent_at IS NULL
 	   OR group_message_read_state.last_read_sent_at <= EXCLUDED.last_read_sent_at`
+
+	queryGetGroupMessageForReply = `
+		SELECT gm.sender_user_id,
+		       COALESCE(u.nickname, gm.sender_user_id),
+		       COALESCE(gm.content, ''),
+		       COALESCE(gm.share_code, '')
+		FROM group_messages gm
+		LEFT JOIN users u ON u.user_id = gm.sender_user_id
+		WHERE gm.message_id = $1`
+
 )

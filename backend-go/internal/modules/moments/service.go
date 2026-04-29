@@ -50,7 +50,22 @@ func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (MomentIt
 }
 
 func (s *Service) OpenTheDoor(ctx context.Context, momentID string) (MomentItem, bool, error) {
-	return s.repo.Get(ctx, momentID)
+	item, ok, err := s.repo.Get(ctx, momentID)
+	if err != nil || !ok {
+		return MomentItem{}, false, err
+	}
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	isOwner := principal.UserID != "" && item.User.UserID == principal.UserID
+	if item.PrivacyLevel == "private" && !isOwner {
+		return MomentItem{}, false, nil
+	}
+	if !isOwner {
+		item.PrivacyLevel = ""
+	}
+	if principal.UserID != "" {
+		item.MyState = s.repo.LoadMyState(ctx, momentID, principal.UserID)
+	}
+	return item, true, nil
 }
 
 func (s *Service) NotificationContext(ctx context.Context, momentID string) (comments.MomentNotificationContext, bool, error) {

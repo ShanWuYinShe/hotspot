@@ -154,6 +154,48 @@ func stringOrNil(value string) any {
 	return value
 }
 
+func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID string) (map[string]any, bool, error) {
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil, false, persistence.ErrNotImplemented
+	}
+	var senderUserID, nickname, content, shareCode string
+	err := queryable.QueryRow(ctx, queryGetPrivateMessageForReply, messageID).Scan(&senderUserID, &nickname, &content, &shareCode)
+	if err != nil {
+		return nil, false, nil
+	}
+	result := map[string]any{
+		"message_id": messageID,
+		"user_id":    senderUserID,
+		"nickname":   nickname,
+		"content":    content,
+	}
+	if shareCode != "" {
+		result["share_code"] = shareCode
+	}
+	return result, true, nil
+}
+
+func (r *PostgresRepository) GetMediaForMessage(ctx context.Context, fileID string) (map[string]any, bool, error) {
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil, false, persistence.ErrNotImplemented
+	}
+	var fileIDFound, storageKey, fileName, mimeType string
+	var fileSize int
+	err := queryable.QueryRow(ctx, queryGetMediaFileForMessage, fileID).Scan(&fileIDFound, &storageKey, &fileName, &fileSize, &mimeType)
+	if err != nil {
+		return nil, false, nil
+	}
+	result := map[string]any{
+		"url":       storageKey,
+		"file_name": fileName,
+		"file_size": fileSize,
+		"mime_type": mimeType,
+	}
+	return result, true, nil
+}
+
 func orderedUsers(a, b string) (string, string) {
 	if a < b {
 		return a, b

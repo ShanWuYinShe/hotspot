@@ -31,7 +31,7 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 		admin.NewModule(factory, sharedAppConfig),
 		auth.NewModule(cfg, factory, sharedAppConfig),
 		feed.NewModule(factory, sharedAppConfig),
-		groupmessages.NewModule(factory),
+		groupmessages.NewModule(factory, usersModule.Service),
 		groups.NewModule(factory, usersModule.Service),
 		mapmodule.NewModule(factory),
 		media.NewModule(cfg, factory),

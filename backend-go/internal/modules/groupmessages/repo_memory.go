@@ -190,9 +190,21 @@ func (r *InMemoryRepository) MarkAllRead(_ context.Context, _ string) error {
 	return nil
 }
 
+func (r *InMemoryRepository) IsMember(_ context.Context, _ string, _ string) (bool, error) {
+	return true, nil
+}
+
 func (r *InMemoryRepository) markMessageRead(groupID, messageID string) {
 	if r.readCount[groupID] == nil {
 		r.readCount[groupID] = make(map[string]int)
 	}
 	r.readCount[groupID][messageID]++
+}
+
+func (r *InMemoryRepository) GetMessageForReply(_ context.Context, _ string) (map[string]any, bool, error) {
+	return nil, false, nil
+}
+
+func (r *InMemoryRepository) GetMediaForMessage(_ context.Context, _ string) (map[string]any, bool, error) {
+	return nil, false, nil
 }

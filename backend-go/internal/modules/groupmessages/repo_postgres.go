@@ -137,3 +137,52 @@ func (r *PostgresRepository) lookupMessageMetaFull(ctx context.Context, messageI
 	}
 	return groupID, senderUserID, msgType, recalled, sentAt, nil
 }
+
+func (r *PostgresRepository) IsMember(ctx context.Context, groupID, userID string) (bool, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return false, persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return false, persistence.ErrNotImplemented
+	}
+	var v int
+	if err := queryable.QueryRow(ctx, queryCheckGroupMembership, groupID, userID).Scan(&v); err != nil {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID string) (map[string]any, bool, error) {
+	queryable, ok := r.getQueryable()
+	if !ok {
+		return nil, false, persistence.ErrNotImplemented
+	}
+	var senderUserID, nickname, content, shareCode string
+	err := queryable.QueryRow(ctx, queryGetGroupMessageForReply, messageID).Scan(&senderUserID, &nickname, &content, &shareCode)
+	if err != nil {
+		return nil, false, nil
+	}
+	result := map[string]any{
+		"message_id": messageID,
+		"user_id":    senderUserID,
+		"nickname":   nickname,
+		"content":    content,
+	}
+	if shareCode != "" {
+		result["share_code"] = shareCode
+	}
+	return result, true, nil
+}
+
+func (r *PostgresRepository) getQueryable() (persistence.QueryableDB, bool) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return nil, false
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	return queryable, ok
+}
+
+func (r *PostgresRepository) GetMediaForMessage(ctx context.Context, fileID string) (map[string]any, bool, error) {
+	return nil, false, nil
+}

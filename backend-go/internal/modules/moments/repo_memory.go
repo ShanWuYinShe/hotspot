@@ -331,6 +331,23 @@ func (r *InMemoryRepository) ListLikes(_ context.Context, momentID string, limit
 	return items, "", nil
 }
 
+func (r *InMemoryRepository) LoadMyState(_ context.Context, momentID, userID string) *MyMomentState {
+	if userID == "" {
+		return nil
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	isLiked := false
+	if userLikes, ok := r.likes[momentID]; ok {
+		_, isLiked = userLikes[userID]
+	}
+	isFavorited := false
+	if userFavs, ok := r.favorites[userID]; ok {
+		isFavorited = userFavs[momentID]
+	}
+	return &MyMomentState{IsLiked: isLiked, IsFavorited: isFavorited}
+}
+
 func (r *InMemoryRepository) ListFavorites(_ context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

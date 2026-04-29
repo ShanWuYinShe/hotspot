@@ -136,6 +136,11 @@ UPDATE moments
 SET likes_count = GREATEST(likes_count - 1, 0)
 WHERE moment_id = $1`
 
+	queryCheckMomentFavorite = `
+SELECT 1
+FROM moment_favorites
+WHERE user_id = $1 AND moment_id = $2`
+
 	queryInsertMomentFavorite = `
 INSERT INTO moment_favorites (user_id, moment_id, favorited_at)
 VALUES ($1, $2, $3)

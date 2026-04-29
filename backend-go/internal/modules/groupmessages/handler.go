@@ -43,6 +43,10 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 	idempotency.ReplayOrStore(w, r, "group_messages/send", func() httpx.ApiResponse[MessageSent] {
 		msg, err := h.service.Send(r.Context(), req)
 		if err != nil {
+			if errors.Is(err, ErrNotGroupMember) {
+				logBusinessError(r, "Send", 10400, "不是群组成员")
+				return httpx.ApiResponse[MessageSent]{Code: 10400, Message: "不是群组成员"}
+			}
 			logServerError(r, "Send", err)
 			return httpx.ApiResponse[MessageSent]{Code: 10600, Message: "服务暂时不可用"}
 		}
@@ -63,6 +67,11 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 	}
 	history, err := h.service.History(r.Context(), req.GroupID, req.Pagination)
 	if err != nil {
+		if errors.Is(err, ErrNotGroupMember) {
+			logBusinessError(r, "History", 10400, "不是群组成员")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "不是群组成员"))
+			return
+		}
 		logServerError(r, "History", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return

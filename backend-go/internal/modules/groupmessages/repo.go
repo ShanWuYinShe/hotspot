@@ -17,4 +17,7 @@ type Repository interface {
 	Recall(context.Context, RecallGroupMessageRequest) (MessageEventMeta, error)
 	MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error
 	MarkAllRead(context.Context, string) error
+	IsMember(context.Context, string, string) (bool, error)
+	GetMessageForReply(context.Context, string) (map[string]any, bool, error)
+	GetMediaForMessage(context.Context, string) (map[string]any, bool, error)
 }

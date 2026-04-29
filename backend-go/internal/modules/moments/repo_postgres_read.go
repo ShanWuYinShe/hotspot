@@ -129,6 +129,27 @@ func decodeMomentMineCursor(cursor string) (any, string, error) {
 	return parsedAt.UTC(), decoded.ID, nil
 }
 
+func (r *PostgresRepository) LoadMyState(ctx context.Context, momentID, userID string) *MyMomentState {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" || userID == "" {
+		return nil
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil
+	}
+	var liked int
+	isLiked := false
+	if err := queryable.QueryRow(ctx, queryGetMomentLike, momentID, userID).Scan(&liked); err == nil {
+		isLiked = true
+	}
+	var favorited int
+	isFavorited := false
+	if err := queryable.QueryRow(ctx, queryCheckMomentFavorite, userID, momentID).Scan(&favorited); err == nil {
+		isFavorited = true
+	}
+	return &MyMomentState{IsLiked: isLiked, IsFavorited: isFavorited}
+}
+
 func (r *PostgresRepository) Exists(ctx context.Context, momentID string) (bool, error) {
 	_, ok, err := r.Get(ctx, momentID)
 	return ok, err

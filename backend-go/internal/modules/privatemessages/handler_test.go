@@ -54,6 +54,12 @@ func (r *privateMessageErrorRepo) MarkAsRead(context.Context, string, MarkPrivat
 func (r *privateMessageErrorRepo) MarkAllRead(context.Context, string) error {
 	return r.markAllErr
 }
+func (r *privateMessageErrorRepo) GetMessageForReply(context.Context, string) (map[string]any, bool, error) {
+	return nil, false, nil
+}
+func (r *privateMessageErrorRepo) GetMediaForMessage(context.Context, string) (map[string]any, bool, error) {
+	return nil, false, nil
+}
 
 type privateMessageUserStub struct {
 	item     users.UserItem

@@ -76,7 +76,7 @@ services:
 
   # ── Gateway (Nginx) ──────────────────────────────────────────
   nginx:
-    image: nginx:1.30.0-alpine3.22
+    image: nginx:stable-alpine
     depends_on:
       backend:
         condition: service_healthy

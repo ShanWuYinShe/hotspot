@@ -24,8 +24,10 @@ type stubGroupMessageRepo struct {
 	updateErr  error
 	recallMeta MessageEventMeta
 	recallErr  error
-	markReadFn func(context.Context, string, MarkGroupMessagesReadRequest) error
-	markAllErr error
+	markReadFn  func(context.Context, string, MarkGroupMessagesReadRequest) error
+	markAllErr  error
+	isMemberVal bool
+	isMemberErr error
 }
 
 func (r *stubGroupMessageRepo) Send(_ context.Context, _ SendGroupMessageRequest) (MessageSent, error) {
@@ -45,6 +47,20 @@ func (r *stubGroupMessageRepo) MarkAsRead(ctx context.Context, userID string, re
 		return r.markReadFn(ctx, userID, req)
 	}
 	return nil
+}
+func (r *stubGroupMessageRepo) GetMediaForMessage(_ context.Context, _ string) (map[string]any, bool, error) {
+	return nil, false, nil
+}
+
+func (r *stubGroupMessageRepo) GetMessageForReply(_ context.Context, _ string) (map[string]any, bool, error) {
+	return nil, false, nil
+}
+
+func (r *stubGroupMessageRepo) IsMember(_ context.Context, _ string, _ string) (bool, error) {
+	if !r.isMemberVal && r.isMemberErr == nil {
+		return true, nil
+	}
+	return r.isMemberVal, r.isMemberErr
 }
 func (r *stubGroupMessageRepo) MarkAllRead(_ context.Context, _ string) error {
 	return r.markAllErr

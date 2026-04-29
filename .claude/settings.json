@@ -4,8 +4,6 @@
   "autoMemoryEnabled": true,
   "respectGitignore": true,
   "permissions": {
-    "defaultMode": "auto",
-    "allow": ["Bash(go *)"],
-    "deny": []
+    "defaultMode": "auto"
   }
 }

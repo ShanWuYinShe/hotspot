@@ -127,4 +127,21 @@ const (
 		       TO_CHAR(sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
 		FROM private_messages
 		WHERE message_id = $1`
+	queryGetPrivateMessageForReply = `
+		SELECT pm.sender_user_id,
+		       COALESCE(u.nickname, pm.sender_user_id),
+		       COALESCE(pm.content, ''),
+		       COALESCE(pm.share_code, '')
+		FROM private_messages pm
+		LEFT JOIN users u ON u.user_id = pm.sender_user_id
+		WHERE pm.message_id = $1`
+
+	queryGetMediaFileForMessage = `
+		SELECT file_id,
+		       storage_key,
+		       COALESCE(file_name, ''),
+		       declared_file_size,
+		       declared_mime_type
+		FROM media_upload_sessions
+		WHERE file_id = $1 AND status = 'completed'`
 )
