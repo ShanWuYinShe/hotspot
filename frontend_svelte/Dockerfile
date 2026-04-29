@@ -2,6 +2,8 @@ FROM oven/bun:1.3-alpine AS builder
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
+ARG VITE_AMAP_KEY
+ENV VITE_AMAP_KEY=$VITE_AMAP_KEY
 COPY . .
 RUN bun run build
 
