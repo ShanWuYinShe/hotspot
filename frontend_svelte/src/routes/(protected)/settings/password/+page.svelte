@@ -2,11 +2,7 @@
 	import { authService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import { validateField } from '$lib/utils/form-validation';
 	import type { FieldRule } from '$lib/utils/form-validation';
@@ -95,58 +91,63 @@
 		backLabel="返回设置"
 	/>
 
-	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
-		<CardHeader>
-			<CardTitle class="text-base">账户安全</CardTitle>
-		</CardHeader>
-		<CardContent class="space-y-4 pt-0">
-			<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4">
+	<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<p style="font-size: 14px; font-weight: 600; color: var(--neu-text); margin-bottom: 16px;">账户安全</p>
+
+		<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4">
 			<div class="space-y-2">
-				<Label for="old-password">当前密码</Label>
-				<Input
+				<label for="old-password" style="font-size: 13px; color: var(--neu-text-muted);">当前密码</label>
+				<input
 					id="old-password"
 					type="password"
 					bind:value={oldPassword}
 					onblur={() => markTouched('oldPassword')}
-					class="h-11 rounded-2xl border-border/60 bg-background/70 {oldPasswordError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+					class="w-full rounded-[18px] px-4 py-2.5 outline-none"
+					style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {oldPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
 				/>
 				{#if oldPasswordError}
-					<p class="text-xs text-destructive">{oldPasswordError}</p>
+					<p style="font-size: 12px; color: var(--neu-error);">{oldPasswordError}</p>
 				{/if}
 			</div>
 			<div class="space-y-2">
-				<Label for="new-password">新密码</Label>
-				<Input
+				<label for="new-password" style="font-size: 13px; color: var(--neu-text-muted);">新密码</label>
+				<input
 					id="new-password"
 					type="password"
 					bind:value={newPassword}
 					onblur={() => markTouched('newPassword')}
-					class="h-11 rounded-2xl border-border/60 bg-background/70 {newPasswordError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+					class="w-full rounded-[18px] px-4 py-2.5 outline-none"
+					style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {newPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
 				/>
 				{#if newPasswordError}
-					<p class="text-xs text-destructive">{newPasswordError}</p>
+					<p style="font-size: 12px; color: var(--neu-error);">{newPasswordError}</p>
 				{/if}
 			</div>
 			<div class="space-y-2">
-				<Label for="confirm-password">确认新密码</Label>
-				<Input
+				<label for="confirm-password" style="font-size: 13px; color: var(--neu-text-muted);">确认新密码</label>
+				<input
 					id="confirm-password"
 					type="password"
 					bind:value={confirmPassword}
 					onblur={() => markTouched('confirmPassword')}
-					class="h-11 rounded-2xl border-border/60 bg-background/70 {confirmPasswordError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+					class="w-full rounded-[18px] px-4 py-2.5 outline-none"
+					style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {confirmPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
 				/>
 				{#if confirmPasswordError}
-					<p class="text-xs text-destructive">{confirmPasswordError}</p>
+					<p style="font-size: 12px; color: var(--neu-error);">{confirmPasswordError}</p>
 				{/if}
 			</div>
-			<Button type="submit" class="h-11 w-full rounded-2xl" disabled={isSaving}>
+			<button
+				type="submit"
+				class="flex h-11 w-full items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+				style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+				disabled={isSaving}
+			>
 				{#if isSaving}
-					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+					<Loader2 size={16} class="mr-2 animate-spin" />
 				{/if}
 				保存修改
-			</Button>
-			</form>
-		</CardContent>
-	</Card>
+			</button>
+		</form>
+	</div>
 </div>

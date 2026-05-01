@@ -34,22 +34,16 @@
 	{disabled}
 	{id}
 	class={cn(
-		'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 transition-all duration-200',
-		'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/40 focus-visible:ring-offset-2',
+		'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-all duration-200',
+		'focus-visible:outline-none',
 		'disabled:cursor-not-allowed disabled:opacity-50',
-		checked
-			? 'border-primary bg-primary shadow-[2px_2px_0px_theme(colors.primary)]'
-			: 'border-muted-foreground/30 bg-muted shadow-[2px_2px_0px_theme(colors.muted-foreground/0.2)]',
 		className
 	)}
+	style="border: 2px solid {checked ? 'var(--neu-accent-primary)' : 'var(--neu-border)'}; background: {checked ? 'var(--neu-accent-primary)' : 'var(--neu-bg)'}; box-shadow: {checked ? '0 2px 8px var(--neu-glow)' : 'inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light)'};"
 	onclick={toggle}
 >
 	<span
-		class={cn(
-			'pointer-events-none block h-5 w-5 rounded-full border-2 shadow-sm transition-transform duration-200',
-			checked
-				? 'translate-x-5 border-primary-foreground bg-primary-foreground'
-				: 'translate-x-0.5 border-muted-foreground/30 bg-background'
-		)}
+		class="pointer-events-none block h-5 w-5 rounded-full transition-transform duration-200"
+		style="transform: translateX({checked ? '20px' : '2px'}); background: {checked ? 'var(--neu-active-text)' : 'var(--neu-bg)'}; box-shadow: {checked ? '0 1px 4px rgba(0,0,0,0.15)' : '2px 2px 4px var(--neu-shadow-dark), -2px -2px 4px var(--neu-shadow-light)'};"
 	></span>
 </button>

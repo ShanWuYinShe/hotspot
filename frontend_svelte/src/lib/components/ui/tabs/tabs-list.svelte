@@ -13,9 +13,10 @@
 
 <TabsPrimitive.List
 	class={cn(
-		'inline-flex min-h-10 items-center justify-center gap-1 rounded-[1.1rem] bg-muted/55 p-1 text-muted-foreground shadow-sm shadow-black/5 dark:shadow-black/15',
+		'inline-flex min-h-10 items-center justify-center gap-1 p-1',
 		className
 	)}
+	style="border-radius: 18px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 	{...restProps}
 >
 	{#if children}

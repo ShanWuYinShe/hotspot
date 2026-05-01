@@ -13,18 +13,25 @@
 	let { title, description, actions, backHref, backLabel = '返回' }: Props = $props();
 </script>
 
-<div class="rounded-[1.4rem] border border-border/60 bg-linear-to-br from-background via-card/90 to-muted/30 p-4 shadow-sm sm:rounded-3xl sm:p-5">
+<div
+	class="rounded-[22px] p-4 sm:p-5"
+	style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+>
 	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
 		<div class="min-w-0">
 			{#if backHref}
-				<a href={backHref} class="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
-					<ChevronLeft class="h-4 w-4" />
+				<a
+					href={backHref}
+					class="mb-3 inline-flex items-center gap-1.5 outline-none"
+					style="font-size: 13px; color: var(--neu-text-muted);"
+				>
+					<ChevronLeft size={16} strokeWidth={1.5} />
 					<span>{backLabel}</span>
 				</a>
 			{/if}
-			<h1 class="truncate text-[1.35rem] font-bold tracking-tight sm:text-2xl">{title}</h1>
+			<h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">{title}</h1>
 			{#if description}
-				<p class="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
+				<p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 4px; line-height: 1.6;">{description}</p>
 			{/if}
 		</div>
 		{#if actions}

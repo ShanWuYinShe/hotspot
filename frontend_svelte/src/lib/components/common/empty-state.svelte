@@ -1,28 +1,13 @@
 <script lang="ts">
-	/**
-	 * 通用空状态组件
-	 * 
-	 * 用于显示列表为空时的统一UI组件
-	 * 支持自定义图标、文案和操作按钮
-	 */
-	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
 	import type { ComponentType, Snippet } from 'svelte';
 
 	interface Props {
-		/** 图标组件 */
 		icon: ComponentType;
-		/** 标题 */
 		title: string;
-		/** 描述文字 */
 		description?: string;
-		/** 操作按钮文字 */
 		actionText?: string;
-		/** 操作按钮点击事件 */
 		onAction?: () => void;
-		/** 自定义CSS类 */
 		class?: string;
-		/** 自定义内容（通常用于按钮） */
 		children?: Snippet;
 	}
 
@@ -37,18 +22,28 @@
 	}: Props = $props();
 </script>
 
-<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md {className}">
-	<CardContent class="flex flex-col items-center justify-center py-16 text-center">
-		<Icon class="mb-4 h-12 w-12 text-muted-foreground/50" />
-		<h3 class="mb-2 text-lg font-medium">{title}</h3>
-		{#if description}
-			<p class="mb-4 text-sm text-muted-foreground">{description}</p>
-		{/if}
-		{#if actionText && onAction}
-			<Button variant="outline" onclick={onAction}>
-				{actionText}
-			</Button>
-		{/if}
-		{@render children?.()}
-	</CardContent>
-</Card>
+<div
+	class="flex flex-col items-center justify-center rounded-[22px] py-16 text-center {className}"
+	style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+>
+	<div
+		class="mb-4 flex items-center justify-center rounded-full"
+		style="width: 56px; height: 56px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+	>
+		<Icon size={24} strokeWidth={1.5} color="var(--neu-text-muted)" />
+	</div>
+	<p style="font-size: 16px; font-weight: 500; color: var(--neu-text);">{title}</p>
+	{#if description}
+		<p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 6px; max-width: 260px;">{description}</p>
+	{/if}
+	{#if actionText && onAction}
+		<button
+			class="mt-5 rounded-full px-5 py-2 outline-none"
+			style="font-size: 13px; font-weight: 500; background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+			onclick={onAction}
+		>
+			{actionText}
+		</button>
+	{/if}
+	{@render children?.()}
+</div>

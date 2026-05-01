@@ -4,11 +4,8 @@
 	import { usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent } from '$lib/components/ui/card';
-	import PageHeader from '$lib/components/layout/page-header.svelte';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Skeleton } from '$lib/components/ui/skeleton';
+	import EmptyState from '$lib/components/common/empty-state.svelte';
+	import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
 	import type { FriendItem } from '$lib/types/api';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import Users from 'lucide-svelte/icons/users';
@@ -60,72 +57,71 @@
 	<title>好友 - HotSpot</title>
 </svelte:head>
 
-<div class="space-y-6">
-	<PageHeader title="好友" description="你们的互相关注列表">
-		{#snippet actions()}
-			<Button
-				variant="outline"
-				size="sm"
+<div class="flex flex-col">
+	<!-- Sticky header -->
+	<div
+		class="sticky top-0 z-10 px-5 pt-3 pb-3"
+		style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+	>
+		<div class="flex items-center justify-between">
+			<div>
+				<h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">好友</h1>
+				<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">你们的互相关注列表</p>
+			</div>
+			<button
+				class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+				style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text-muted);"
 				onclick={() => loadFriends(true)}
 				disabled={isLoading}
 			>
-				<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+				<RefreshCw size={13} class={isLoading ? 'animate-spin' : ''} />
 				刷新
-			</Button>
-		{/snippet}
-	</PageHeader>
-
-	{#if isLoading}
-		<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-			{#each Array(6) as _, i (i)}
-				<Card>
-					<CardContent class="flex items-center gap-3 p-4">
-						<Skeleton class="h-12 w-12 rounded-full" />
-						<div class="flex-1 space-y-2">
-							<Skeleton class="h-4 w-24" />
-							<Skeleton class="h-3 w-32" />
-						</div>
-					</CardContent>
-				</Card>
-			{/each}
+			</button>
 		</div>
-	{:else if friends.length === 0}
-		<Card>
-			<CardContent class="flex flex-col items-center justify-center py-12">
-				<Users class="mb-4 h-10 w-10 text-muted-foreground" />
-				<p class="text-muted-foreground">暂无好友</p>
-			</CardContent>
-		</Card>
-	{:else}
-		<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-			{#each friends as friend (friend.user.user_id)}
-				<a href="/users/{friend.user.user_id}">
-					<Card class="cursor-pointer rounded-2xl border border-border/60 bg-card/80 shadow-sm transition-shadow hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-black/30">
-						<CardContent class="flex items-center gap-3 p-4">
-							<Avatar class="h-12 w-12">
-								<AvatarImage src={friend.user.avatar_url} alt={friend.user.nickname} />
-								<AvatarFallback>{friend.user.nickname.slice(0, 2)}</AvatarFallback>
-							</Avatar>
+	</div>
+
+	<div class="flex flex-col px-4 pt-4 pb-6 gap-4">
+		{#if isLoading}
+			<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+				{#each Array(6) as _, i (i)}
+					<div class="flex items-center gap-3 rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="rounded-full" style="width: 48px; height: 48px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
+						<div class="flex-1 space-y-2">
+							<div style="width: 96px; height: 16px; border-radius: 8px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
+							<div style="width: 128px; height: 12px; border-radius: 6px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{:else if friends.length === 0}
+			<EmptyState icon={Users} title="暂无好友" />
+		{:else}
+			<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+				{#each friends as friend (friend.user.user_id)}
+					<a href="/users/{friend.user.user_id}" class="block" style="text-decoration: none;">
+						<div class="flex items-center gap-3 rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<div class="overflow-hidden rounded-full shrink-0" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">
+								{#if friend.user.avatar_url}
+									<img src={friend.user.avatar_url} alt={friend.user.nickname} class="h-full w-full object-cover" />
+								{:else}
+									<div class="flex h-full w-full items-center justify-center" style="background: var(--neu-bg); font-size: 14px; color: var(--neu-text-muted);">{friend.user.nickname.slice(0, 2)}</div>
+								{/if}
+							</div>
 							<div class="min-w-0">
-								<p class="truncate font-medium">{friend.user.nickname}</p>
-								<p class="text-xs text-muted-foreground">
+								<p class="truncate" style="font-size: 14px; font-weight: 500; color: var(--neu-text);">{friend.user.nickname}</p>
+								<p style="font-size: 12px; color: var(--neu-text-muted);">
 									{friend.remark ? `备注：${friend.remark}` : '互相关注'}
 								</p>
 							</div>
-						</CardContent>
-					</Card>
-				</a>
-			{/each}
-		</div>
-		{#if hasMore}
-			<div class="flex justify-center pt-4">
-				<Button variant="outline" onclick={() => loadFriends(false)} disabled={isLoadingMore}>
-					{#if isLoadingMore}
-						<RefreshCw class="mr-2 h-4 w-4 animate-spin" />
-					{/if}
-					加载更多
-				</Button>
+						</div>
+					</a>
+				{/each}
 			</div>
+			<LoadMoreButton
+				loading={isLoadingMore}
+				hasMore={hasMore}
+				onLoadMore={() => loadFriends(false)}
+			/>
 		{/if}
-	{/if}
+	</div>
 </div>

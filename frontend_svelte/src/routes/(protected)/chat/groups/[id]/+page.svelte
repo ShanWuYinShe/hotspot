@@ -15,10 +15,6 @@
 	import { createReconnectTracker, mergeMessagesByIdAndSentAt, resolveLatestVisibleMessageId } from '$lib/hooks/use-chat-realtime-sync';
 	import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
 	import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
-	import { Button } from '$lib/components/ui/button';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { Badge } from '$lib/components/ui/badge';
 	import type { GroupItem, GroupMessageItem } from '$lib/types/api';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Send from 'lucide-svelte/icons/send';
@@ -163,13 +159,13 @@
 			if (!isMounted) return;
 			if (isSuccess(response) && response.data) {
 				const newMessages = response.data.items.reverse();
-				
+
 				const scrollHeight = scrollContainer?.scrollHeight || 0;
 				const scrollTop = scrollContainer?.scrollTop || 0;
-				
+
 				if (loadMore) {
 					messages = [...newMessages, ...messages];
-					
+
 					// 加载历史消息后保持滚动位置
 					await tick();
 					if (scrollContainer) {
@@ -319,27 +315,27 @@
 
 	function shouldShowAvatar(index: number): boolean {
 		if (index === messages.length - 1) return true;
-		
+
 		const current = messages[index]!;
 		const next = messages[index + 1]!;
-		
+
 		if (isSelf(current) !== isSelf(next)) return true;
 		if (current.sender?.user_id !== next.sender?.user_id) return true;
-		
+
 		const timeDiff = new Date(next.sent_at).getTime() - new Date(current.sent_at).getTime();
 		return timeDiff > 60000; // 1分钟
 	}
 
 	function shouldShowName(index: number): boolean {
 		if (index === 0) return true;
-		
+
 		const current = messages[index]!;
 		const prev = messages[index - 1]!;
-		
+
 		if (isSelf(current)) return false;
 		if (isSelf(prev) !== isSelf(current)) return true;
 		if (prev.sender?.user_id !== current.sender?.user_id) return true;
-		
+
 		const timeDiff = new Date(current.sent_at).getTime() - new Date(prev.sent_at).getTime();
 		return timeDiff > 60000;
 	}
@@ -355,7 +351,7 @@
 
 	function handleScroll() {
 		if (!scrollContainer) return;
-		
+
 		const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
 		const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
 		showScrollButton = !isNearBottom;
@@ -559,7 +555,7 @@
 			connected,
 			websocketStore.lastDisconnectDurationMs
 		);
-		
+
 		if (!connected) {
 			// 连接断开，重置订阅状态
 			if (wsSubscription.state.isSubscribed) {
@@ -599,56 +595,67 @@
 	<title>{group?.group.name ?? '群聊'} - HotSpot</title>
 </svelte:head>
 
-<!-- 聊天容器 - 保留侧边栏布局 -->
-<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-xl border border-border/50 bg-card shadow-lg">
+<!-- 聊天容器 - Neumorphic 风格 -->
+<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[22px]" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 	<!-- Header -->
-	<header class="flex h-16 shrink-0 items-center gap-3 border-b border-border/50 bg-card/80 px-4 backdrop-blur-sm">
-		<Button variant="ghost" size="icon" class="h-9 w-9" onclick={handleBackClick} aria-label="返回">
-			<ArrowLeft class="h-5 w-5" />
-		</Button>
-		
+	<header class="flex h-16 shrink-0 items-center gap-3 px-4" style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);">
+		<button
+			class="flex items-center justify-center rounded-full outline-none"
+			style="width: 36px; height: 36px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+			onclick={handleBackClick}
+			aria-label="返回"
+		>
+			<ArrowLeft size={18} color="var(--neu-text)" />
+		</button>
+
 		{#if isLoading}
-			<Skeleton class="h-10 w-10 rounded-full" />
-			<Skeleton class="h-5 w-32" />
+			<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
+			<div style="width: 128px; height: 20px; border-radius: 8px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
 		{:else if group}
-			<a 
-				href="/groups/{groupId}" 
+			<a
+				href="/groups/{groupId}"
 				class="flex flex-1 items-center gap-3 overflow-hidden transition-opacity hover:opacity-80"
 			>
-				<Avatar class="h-10 w-10 shrink-0">
-					<AvatarImage src={group.group.avatar_url} alt={group.group.name} />
-					<AvatarFallback>
-						<Users class="h-5 w-5" />
-					</AvatarFallback>
-				</Avatar>
+				<div class="overflow-hidden rounded-full shrink-0" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
+					{#if group.group.avatar_url}
+						<img src={group.group.avatar_url} alt={group.group.name} class="h-full w-full object-cover" />
+					{:else}
+						<div class="flex h-full w-full items-center justify-center" style="background: var(--neu-bg);"><Users size={18} color="var(--neu-text-muted)" /></div>
+					{/if}
+				</div>
 				<div class="flex-1 overflow-hidden">
-					<div class="truncate font-semibold">{group.group.name}</div>
-					<div class="truncate text-xs text-muted-foreground">
+					<div class="truncate" style="font-weight: 600; font-size: 15px; color: var(--neu-text);">{group.group.name}</div>
+					<div class="truncate" style="font-size: 11px; color: var(--neu-text-muted);">
 						{group.group.members_count} 位成员
 					</div>
 				</div>
 			</a>
 		{/if}
-		
-		<Button variant="ghost" size="icon" class="h-9 w-9 shrink-0" aria-label="更多选项">
-			<MoreVertical class="h-5 w-5" />
-		</Button>
+
+		<button
+			class="flex items-center justify-center rounded-full outline-none shrink-0"
+			style="width: 36px; height: 36px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+			aria-label="更多选项"
+		>
+			<MoreVertical size={18} color="var(--neu-text)" />
+		</button>
 	</header>
 
 	<!-- Messages Container -->
-	<div 
+	<div
 		bind:this={scrollContainer}
 		onscroll={handleScroll}
-		class="relative flex-1 overflow-y-auto overscroll-contain bg-muted/20"
+		class="relative flex-1 overflow-y-auto overscroll-contain"
+		style="background: var(--neu-bg);"
 	>
 		{#if isLoading}
 			<div class="space-y-4 p-4">
 				{#each Array(8) as _, i (i)}
 					<div class="flex gap-3">
-						<Skeleton class="h-10 w-10 shrink-0 rounded-full" />
+						<div class="shrink-0 rounded-full" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
 						<div class="flex-1 space-y-2">
-							<Skeleton class="h-3 w-24" />
-							<Skeleton class="h-16 w-full max-w-xs rounded-2xl" />
+							<div style="width: 96px; height: 12px; border-radius: 6px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
+							<div class="max-w-xs rounded-[18px]" style="width: 100%; height: 64px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
 						</div>
 					</div>
 				{/each}
@@ -656,45 +663,44 @@
 		{:else}
 			{#if hasMore && messages.length > 0 && !isLoadingMore}
 				<div class="flex justify-center py-3">
-					<Button
-						variant="ghost"
-						size="sm"
-						class="text-xs"
+					<button
+						class="rounded-full px-4 py-1.5 text-xs outline-none"
+						style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
 						onclick={() => loadMessages(true)}
 					>
 						加载更多消息
-					</Button>
+					</button>
 				</div>
 			{/if}
-			
+
 			{#if isLoadingMore}
 				<div class="flex justify-center py-3">
-					<Loader2 class="h-5 w-5 animate-spin text-muted-foreground" />
+					<Loader2 class="h-5 w-5 animate-spin" color="var(--neu-text-muted)" />
 				</div>
 			{/if}
 
 			{#if messages.length === 0}
 				<div class="flex h-full items-center justify-center p-8">
 					<div class="text-center">
-						<div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-							<MessageCircle class="h-8 w-8 text-muted-foreground" />
+						<div class="mb-4 inline-flex items-center justify-center rounded-full" style="width: 64px; height: 64px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<MessageCircle size={28} color="var(--neu-text-muted)" strokeWidth={1.5} />
 						</div>
-						<h3 class="mb-1 font-medium">还没有消息</h3>
-						<p class="text-sm text-muted-foreground">发送第一条消息开始聊天</p>
+						<p style="font-weight: 500; font-size: 15px; color: var(--neu-text); margin-bottom: 4px;">还没有消息</p>
+						<p style="font-size: 13px; color: var(--neu-text-muted);">发送第一条消息开始聊天</p>
 					</div>
 				</div>
 			{:else}
 				<div class="space-y-1 px-4 py-2">
 					{#each messages as message, index (message.message_id)}
-						{@const showDateDivider = index === 0 || 
+						{@const showDateDivider = index === 0 ||
 							new Date(message.sent_at).toDateString() !== new Date(messages[index - 1]!.sent_at).toDateString()}
 						{@const showAvatar = shouldShowAvatar(index)}
 						{@const showName = shouldShowName(index)}
 						{@const isMe = isSelf(message)}
-						
+
 						{#if showDateDivider}
 							<div class="flex justify-center py-4">
-								<span class="rounded-2xl bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground">
+								<span class="rounded-full px-3 py-1" style="font-size: 11px; font-weight: 500; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 									{formatDateDivider(message.sent_at)}
 								</span>
 							</div>
@@ -702,9 +708,9 @@
 
 						{#if isSystemMessage(message)}
 							<div class="flex justify-center py-2">
-								<Badge variant="secondary" class="rounded-2xl bg-muted/50 px-3 py-1 text-xs font-normal">
+								<span class="rounded-full px-3 py-1" style="font-size: 12px; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 									{message.content}
-								</Badge>
+								</span>
 							</div>
 						{:else}
 							<div
@@ -715,76 +721,74 @@
 									<div class="w-10 shrink-0">
 										{#if showAvatar}
 											<a href="/users/{message.sender?.user_id}">
-												<Avatar class="h-10 w-10 transition-opacity hover:opacity-80">
-													<AvatarImage
-														src={message.sender?.avatar_url}
-														alt={message.sender?.nickname}
-													/>
-													<AvatarFallback class="text-xs">
-														{(message.sender?.nickname || '用户').slice(0, 2)}
-													</AvatarFallback>
-												</Avatar>
+												<div class="overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
+													{#if message.sender?.avatar_url}
+														<img src={message.sender.avatar_url} alt={message.sender?.nickname} class="h-full w-full object-cover" />
+													{:else}
+														<div class="flex h-full w-full items-center justify-center" style="background: var(--neu-bg); font-size: 12px; color: var(--neu-text-muted);">
+															{(message.sender?.nickname || '用户').slice(0, 2)}
+														</div>
+													{/if}
+												</div>
 											</a>
 										{/if}
 									</div>
 								{/if}
-								
+
 								<div class="flex max-w-[70%] flex-col gap-0.5 {isMe ? 'items-end' : 'items-start'}">
 									{#if !isMe && showName}
-										<span class="px-3 text-xs font-medium text-muted-foreground">
+										<span class="px-3" style="font-size: 12px; font-weight: 500; color: var(--neu-text-muted);">
 											{message.sender?.nickname}
 										</span>
 									{/if}
-									
+
 									<div
-										class="relative rounded-2xl shadow-sm {isMe
-											? 'bg-primary text-primary-foreground border border-primary/30'
-											: 'bg-card text-card-foreground border border-border/50'} 
-											{message.type === 'image' ? 'p-1' : 'px-4 py-2.5'}"
+										class="relative {message.type === 'image' ? 'p-1' : 'px-4 py-2.5'}"
+										style="{isMe
+											? 'background: var(--neu-accent-primary); color: var(--neu-active-text); border-radius: 18px 18px 4px 18px;'
+											: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); border-radius: 18px 18px 18px 4px; color: var(--neu-text);'}"
 									>
 										{#if message.recalled_at != null}
-											<p class="text-sm italic opacity-70">消息已撤回</p>
+											<p style="font-size: 13px; font-style: italic; opacity: 0.7;">消息已撤回</p>
 										{:else if message.type === 'text'}
-											<p class="whitespace-pre-wrap wrap-break-word text-sm leading-relaxed">
+											<p class="whitespace-pre-wrap wrap-break-word" style="font-size: 14px; line-height: 1.5;">
 												{message.content}
 											</p>
-						{:else if message.type === 'image' && message.media}
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon"
-								class="block overflow-hidden rounded-xl border-none bg-transparent p-0 shadow-none transition-opacity hover:opacity-90"
-								onclick={() => openImagePreview(message.media!.url)}
-								aria-label="查看图片"
-							>
-								<img
-									src={message.media.url}
-									alt="图片"
-									class="max-h-[300px] max-w-[250px] object-cover"
-								/>
-							</Button>
+										{:else if message.type === 'image' && message.media}
+											<button
+												type="button"
+												class="block overflow-hidden rounded-[12px] border-none bg-transparent p-0 shadow-none outline-none"
+												onclick={() => openImagePreview(message.media!.url)}
+												aria-label="查看图片"
+											>
+												<img
+													src={message.media.url}
+													alt="图片"
+													class="max-h-[300px] max-w-[250px] object-cover"
+												/>
+											</button>
 										{:else if message.type === 'share' && message.share_code}
-											<div class="flex items-center gap-2 text-sm">
-												<MapPin class="h-4 w-4 shrink-0" />
+											<div class="flex items-center gap-2" style="font-size: 13px;">
+												<MapPin size={14} style="flex-shrink: 0;" color="var(--neu-text-muted)" />
 												<div>
-													<p class="font-medium">分享消息</p>
+													<p style="font-weight: 500;">分享消息</p>
 													{#if message.share_code}
-														<a href="/share/{message.share_code}" class="text-xs opacity-80 hover:underline">
+														<a href="/share/{message.share_code}" style="font-size: 12px; opacity: 0.8; color: var(--neu-accent-primary);">
 															查看分享内容
 														</a>
 													{/if}
 												</div>
 											</div>
 										{:else}
-											<p class="text-sm opacity-70">[{message.type}]</p>
+											<p style="font-size: 13px; opacity: 0.7;">[{message.type}]</p>
 										{/if}
 									</div>
-									
+
 									{#if showAvatar}
-										<span class="px-3 text-[10px] text-muted-foreground/60">
-											{new Date(message.sent_at).toLocaleTimeString('zh-CN', { 
-												hour: '2-digit', 
-												minute: '2-digit' 
+										<span class="px-3" style="font-size: 10px; color: var(--neu-text-muted); opacity: 0.6;">
+											{new Date(message.sent_at).toLocaleTimeString('zh-CN', {
+												hour: '2-digit',
+												minute: '2-digit'
 											})}
 										</span>
 									{/if}
@@ -798,31 +802,30 @@
 
 		<!-- Scroll to Bottom Button -->
 		{#if showScrollButton}
-			<Button
-				variant="default"
-				size="icon"
-				class="fixed bottom-24 right-6 z-10 h-10 w-10 rounded-2xl bg-primary text-primary-foreground shadow-lg transition-all hover:scale-110"
+			<button
+				class="fixed bottom-24 right-6 z-10 flex items-center justify-center rounded-full outline-none"
+				style="width: 40px; height: 40px; background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);"
 				onclick={() => scrollToBottom(true)}
 				aria-label="滚动到底部"
 			>
-				<ChevronDown class="h-5 w-5" />
-			</Button>
+				<ChevronDown size={20} />
+			</button>
 		{/if}
 	</div>
 
 	<!-- Input Area -->
-	<div class="shrink-0 border-t border-border/50 bg-card/80 p-4 backdrop-blur-sm">
+	<div class="shrink-0 p-4" style="background-color: var(--neu-bg); border-top: 1px solid var(--neu-border);">
 		{#if groupTypingUserIds.length > 0}
 			<div class="mb-2 px-1">
-				<p class="text-xs text-muted-foreground">
+				<p style="font-size: 12px; color: var(--neu-text-muted);">
 					{buildGroupTypingHintText()}
 				</p>
 			</div>
 		{/if}
 
 		{#if !wsSubscription.state.isSubscribed && !isLoading}
-			<div class="rounded-2xl bg-yellow-500/10 border border-yellow-500/30 px-4 py-3 text-center mb-3">
-				<p class="text-sm text-yellow-700 dark:text-yellow-300 flex items-center justify-center gap-2">
+			<div class="rounded-[16px] px-4 py-3 text-center mb-3" style="border: 1px solid var(--neu-warning-border); background: var(--neu-warning-border);">
+				<p class="flex items-center justify-center gap-2" style="font-size: 13px; color: var(--neu-text-muted);">
 					<Loader2 class="h-4 w-4 animate-spin" />
 					{#if wsSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
 						实时消息连接中（不影响发送）
@@ -832,14 +835,14 @@
 				</p>
 			</div>
 		{/if}
-		
+
 		{#if !group?.my_state?.is_joined}
-			<div class="rounded-2xl bg-muted/50 px-4 py-3 text-center">
-				<p class="text-sm text-muted-foreground">你还不是群成员，无法发送消息</p>
+			<div class="rounded-[16px] px-4 py-3 text-center" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<p style="font-size: 13px; color: var(--neu-text-muted);">你还不是群成员，无法发送消息</p>
 			</div>
 		{:else if group?.my_state?.is_muted}
-			<div class="rounded-2xl bg-muted/50 px-4 py-3 text-center">
-				<p class="text-sm text-muted-foreground">你已被禁言，无法发送消息</p>
+			<div class="rounded-[16px] px-4 py-3 text-center" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<p style="font-size: 13px; color: var(--neu-text-muted);">你已被禁言，无法发送消息</p>
 			</div>
 		{:else}
 			<div class="flex items-end gap-2">
@@ -850,7 +853,8 @@
 					bind:value={messageText}
 					rows={1}
 					maxlength={MESSAGE_CONTENT_MAX}
-					class="max-h-32 min-h-[42px] flex w-full resize-none rounded-3xl border border-muted-foreground/20 bg-muted/30 px-4 py-2.5 text-[15px] shadow-sm shadow-black/5 dark:shadow-black/20 transition-colors placeholder:text-muted-foreground/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+					class="max-h-32 min-h-[42px] flex w-full resize-none rounded-[20px] px-4 py-2.5 text-[15px] outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+					style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"
 					disabled={isSending}
 					oninput={() => {
 						eventHandlers.sendGroupTyping(groupId, messageText.trim().length > 0);
@@ -862,9 +866,9 @@
 						}
 					}}
 				></textarea>
-				<Button
-					size="icon"
-					class="h-[42px] w-[42px] shrink-0 rounded-2xl transition-transform active:scale-95"
+				<button
+					class="flex shrink-0 items-center justify-center rounded-full outline-none"
+					style="width: 42px; height: 42px; background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);"
 					onclick={sendMessage}
 					onmousedown={(e) => e.preventDefault()}
 					disabled={!messageText.trim() || isSending}
@@ -873,9 +877,9 @@
 					{#if isSending}
 						<Loader2 class="h-5 w-5 animate-spin" />
 					{:else}
-						<Send class="h-5 w-5" />
+						<Send size={20} />
 					{/if}
-				</Button>
+				</button>
 			</div>
 		{/if}
 	</div>
@@ -883,27 +887,27 @@
 
 <!-- Image Preview Modal -->
 {#if selectedImage}
-	<div 
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center p-4"
+		style="background: rgba(0,0,0,0.9);"
 		onclick={closeImagePreview}
 		role="button"
 		tabindex="0"
 		onkeydown={(e) => e.key === 'Escape' && closeImagePreview()}
 	>
-		<Button
+		<button
 			type="button"
-			variant="ghost"
-			size="icon"
-			class="absolute right-4 top-4 rounded-2xl bg-white/10 p-2 text-white backdrop-blur transition-colors hover:bg-white/20"
+			class="absolute right-4 top-4 flex items-center justify-center rounded-full outline-none"
+			style="width: 40px; height: 40px; background: rgba(255,255,255,0.1); color: white;"
 			onclick={closeImagePreview}
 			aria-label="关闭图片预览"
 		>
-			<X class="h-6 w-6" />
-		</Button>
+			<X size={24} />
+		</button>
 		<img
 			src={selectedImage}
 			alt="预览"
-			class="max-h-full max-w-full rounded-lg object-contain"
+			class="max-h-full max-w-full rounded-[12px] object-contain"
 			onclick={(e) => e.stopPropagation()}
 			role="presentation"
 		/>

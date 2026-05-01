@@ -5,10 +5,6 @@
 	import { t } from '$lib/i18n';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import Eye from 'lucide-svelte/icons/eye';
 	import EyeOff from 'lucide-svelte/icons/eye-off';
@@ -224,19 +220,27 @@
 	}
 </script>
 
-<Tabs bind:value={currentTab} class="mt-4">
-	<TabsList class="grid w-full grid-cols-3 rounded-3xl bg-background/75 p-1.5 ring-1 ring-border/60">
-		<TabsTrigger value="login" class="rounded-2xl">{t('auth.login')}</TabsTrigger>
-		<TabsTrigger value="register" class="rounded-2xl">{t('auth.register')}</TabsTrigger>
-		<TabsTrigger value="guest" class="rounded-2xl">{t('auth.guest')}</TabsTrigger>
-	</TabsList>
+<div class="mt-4">
+	<!-- Tab bar -->
+	<div class="grid w-full grid-cols-3 rounded-[22px] p-1.5" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		{#each [{ value: 'login', label: t('auth.login') }, { value: 'register', label: t('auth.register') }, { value: 'guest', label: t('auth.guest') }] as tab (tab.value)}
+			<button
+				type="button"
+				class="relative rounded-[18px] px-3 py-2 outline-none transition-all"
+				style="background: {currentTab === tab.value ? 'var(--neu-accent-primary)' : 'transparent'}; color: {currentTab === tab.value ? 'var(--neu-active-text)' : 'var(--neu-text-muted)'}; font-size: 13px; font-weight: {currentTab === tab.value ? 600 : 400}; box-shadow: {currentTab === tab.value ? '0 2px 8px var(--neu-glow)' : 'none'};"
+				onclick={() => (currentTab = tab.value)}
+			>
+				{tab.label}
+			</button>
+		{/each}
+	</div>
 
 	<div class="min-h-[400px]">
-		<TabsContent value="login">
-			<form onsubmit={(e) => { e.preventDefault(); handleLogin(); }} class="space-y-4 pt-4 animate-in fade-in-0 duration-200">
+		{#if currentTab === 'login'}
+			<form onsubmit={(e) => { e.preventDefault(); handleLogin(); }} class="space-y-4 pt-4">
 				<div class="space-y-2">
-					<Label for="auth-login-id">{t('auth.account')}</Label>
-					<Input
+					<label for="auth-login-id" style="font-size: 12px; color: var(--neu-text);">{t('auth.account')}</label>
+					<input
 						id="auth-login-id"
 						type="text"
 						placeholder={t('auth.phoneOrEmail')}
@@ -244,16 +248,17 @@
 						bind:value={loginId}
 						disabled={isLoading}
 						onblur={() => markTouched('loginId')}
-						class="h-11 rounded-2xl border-border/60 bg-background/70 {loginIdError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {loginIdError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					/>
 					{#if loginIdError}
-						<p class="text-xs text-destructive">{loginIdError}</p>
+						<p style="font-size: 12px; color: var(--neu-error);">{loginIdError}</p>
 					{/if}
 				</div>
 				<div class="space-y-2">
-					<Label for="auth-login-password">{t('auth.password')}</Label>
+					<label for="auth-login-password" style="font-size: 12px; color: var(--neu-text);">{t('auth.password')}</label>
 					<div class="relative">
-						<Input
+						<input
 							id="auth-login-password"
 							type={showPassword ? 'text' : 'password'}
 							placeholder={t('auth.enterPassword')}
@@ -261,41 +266,39 @@
 							bind:value={password}
 							disabled={isLoading}
 							onblur={() => markTouched('password')}
-							class="h-11 rounded-2xl border-border/60 bg-background/70 {passwordError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+							class="rounded-[14px] px-4 py-2.5 outline-none w-full pr-10"
+							style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {passwordError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 						/>
-						<Button
+						<button
 							type="button"
-							variant="ghost"
-							size="icon"
-							class="absolute right-1 top-1 h-9 w-9 rounded-xl px-0"
+							class="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-[12px] outline-none"
+							style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 							onclick={() => (showPassword = !showPassword)}
 							aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
 						>
 							{#if showPassword}
-								<EyeOff class="h-4 w-4" />
+								<EyeOff style="width: 16px; height: 16px; color: var(--neu-text);" />
 							{:else}
-								<Eye class="h-4 w-4" />
+								<Eye style="width: 16px; height: 16px; color: var(--neu-text);" />
 							{/if}
-						</Button>
+						</button>
 					</div>
 					{#if passwordError}
-						<p class="text-xs text-destructive">{passwordError}</p>
+						<p style="font-size: 12px; color: var(--neu-error);">{passwordError}</p>
 					{/if}
 				</div>
-				<Button type="submit" class="h-11 w-full rounded-2xl" disabled={isLoading}>
+				<button type="submit" class="rounded-full px-5 py-2.5 outline-none w-full" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 14px; box-shadow: 0 3px 10px var(--neu-glow);" disabled={isLoading}>
 					{#if isLoading}
-						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+						<Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
 					{/if}
 					{t('auth.login')}
-				</Button>
+				</button>
 			</form>
-		</TabsContent>
-
-		<TabsContent value="register">
-			<form onsubmit={(e) => { e.preventDefault(); handleRegister(); }} class="space-y-4 pt-4 animate-in fade-in-0 duration-200">
+		{:else if currentTab === 'register'}
+			<form onsubmit={(e) => { e.preventDefault(); handleRegister(); }} class="space-y-4 pt-4">
 				<div class="space-y-2">
-					<Label for="auth-register-nickname">{t('auth.nickname')}</Label>
-					<Input
+					<label for="auth-register-nickname" style="font-size: 12px; color: var(--neu-text);">{t('auth.nickname')}</label>
+					<input
 						id="auth-register-nickname"
 						type="text"
 						placeholder={t('auth.giveYourselfAName')}
@@ -303,15 +306,16 @@
 						bind:value={nickname}
 						disabled={isLoading}
 						onblur={() => markTouched('nickname')}
-						class="h-11 rounded-2xl border-border/60 bg-background/70 {nicknameError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {nicknameError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					/>
 					{#if nicknameError}
-						<p class="text-xs text-destructive">{nicknameError}</p>
+						<p style="font-size: 12px; color: var(--neu-error);">{nicknameError}</p>
 					{/if}
 				</div>
 				<div class="space-y-2">
-					<Label for="auth-register-id">{t('auth.account')}</Label>
-					<Input
+					<label for="auth-register-id" style="font-size: 12px; color: var(--neu-text);">{t('auth.account')}</label>
+					<input
 						id="auth-register-id"
 						type="text"
 						placeholder={t('auth.phoneOrEmail')}
@@ -319,15 +323,16 @@
 						bind:value={loginId}
 						disabled={isLoading}
 						onblur={() => markTouched('loginId')}
-						class="h-11 rounded-2xl border-border/60 bg-background/70 {loginIdError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {loginIdError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					/>
 					{#if loginIdError}
-						<p class="text-xs text-destructive">{loginIdError}</p>
+						<p style="font-size: 12px; color: var(--neu-error);">{loginIdError}</p>
 					{/if}
 				</div>
 				<div class="space-y-2">
-					<Label for="auth-register-password">{t('auth.password')}</Label>
-					<Input
+					<label for="auth-register-password" style="font-size: 12px; color: var(--neu-text);">{t('auth.password')}</label>
+					<input
 						id="auth-register-password"
 						type="password"
 						placeholder={t('auth.atLeast8Chars')}
@@ -335,15 +340,16 @@
 						bind:value={password}
 						disabled={isLoading}
 						onblur={() => markTouched('password')}
-						class="h-11 rounded-2xl border-border/60 bg-background/70 {passwordError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {passwordError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					/>
 					{#if passwordError}
-						<p class="text-xs text-destructive">{passwordError}</p>
+						<p style="font-size: 12px; color: var(--neu-error);">{passwordError}</p>
 					{/if}
 				</div>
 				<div class="space-y-2">
-					<Label for="auth-register-confirm">{t('auth.confirmPassword')}</Label>
-					<Input
+					<label for="auth-register-confirm" style="font-size: 12px; color: var(--neu-text);">{t('auth.confirmPassword')}</label>
+					<input
 						id="auth-register-confirm"
 						type="password"
 						placeholder={t('auth.enterPasswordAgain')}
@@ -351,29 +357,28 @@
 						bind:value={confirmPassword}
 						disabled={isLoading}
 						onblur={() => markTouched('confirmPassword')}
-						class="h-11 rounded-2xl border-border/60 bg-background/70 {confirmPasswordError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {confirmPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					/>
 					{#if confirmPasswordError}
-						<p class="text-xs text-destructive">{confirmPasswordError}</p>
+						<p style="font-size: 12px; color: var(--neu-error);">{confirmPasswordError}</p>
 					{/if}
 				</div>
-				<Button type="submit" class="h-11 w-full rounded-2xl" disabled={isLoading}>
+				<button type="submit" class="rounded-full px-5 py-2.5 outline-none w-full" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 14px; box-shadow: 0 3px 10px var(--neu-glow);" disabled={isLoading}>
 					{#if isLoading}
-						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+						<Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
 					{/if}
 					{t('auth.register')}
-				</Button>
+				</button>
 			</form>
-		</TabsContent>
-
-		<TabsContent value="guest">
-			<form onsubmit={(e) => { e.preventDefault(); handleGuestLogin(); }} class="space-y-4 pt-4 animate-in fade-in-0 duration-200">
-				<div class="rounded-2xl border border-border/50 bg-background/65 p-3 text-sm text-muted-foreground">
+		{:else if currentTab === 'guest'}
+			<form onsubmit={(e) => { e.preventDefault(); handleGuestLogin(); }} class="space-y-4 pt-4">
+				<div class="rounded-[22px] p-3" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text-muted);">
 					{t('auth.guestModeHint')}
 				</div>
 				<div class="space-y-2">
-					<Label for="auth-guest-nickname">{t('auth.nickname')}</Label>
-					<Input
+					<label for="auth-guest-nickname" style="font-size: 12px; color: var(--neu-text);">{t('auth.nickname')}</label>
+					<input
 						id="auth-guest-nickname"
 						type="text"
 						placeholder={t('auth.giveYourselfAName')}
@@ -381,19 +386,20 @@
 						bind:value={guestNickname}
 						disabled={isLoading}
 						onblur={() => markTouched('guestNickname')}
-						class="h-11 rounded-2xl border-border/60 bg-background/70 {guestNicknameError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {guestNicknameError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					/>
 					{#if guestNicknameError}
-						<p class="text-xs text-destructive">{guestNicknameError}</p>
+						<p style="font-size: 12px; color: var(--neu-error);">{guestNicknameError}</p>
 					{/if}
 				</div>
-				<Button type="submit" class="h-11 w-full rounded-2xl" disabled={isLoading}>
+				<button type="submit" class="rounded-full px-5 py-2.5 outline-none w-full" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 14px; box-shadow: 0 3px 10px var(--neu-glow);" disabled={isLoading}>
 					{#if isLoading}
-						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+						<Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
 					{/if}
 					{t('auth.guestLogin')}
-				</Button>
+				</button>
 			</form>
-		</TabsContent>
+		{/if}
 	</div>
-</Tabs>
+</div>

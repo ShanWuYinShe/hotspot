@@ -15,15 +15,10 @@
 <AvatarPrimitive.Root
 	class={cn(
 		'relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full',
-		'ring-[3px] ring-primary/20 dark:ring-primary/50',
-		'shadow-sm shadow-black/10',
-		'dark:shadow-md dark:shadow-black/30',
 		'transition-all duration-200',
-		glow && 'hover:ring-4 hover:ring-primary/40 dark:hover:ring-primary/70',
-		glow && 'hover:shadow-lg hover:shadow-primary/20',
-		glow && 'dark:hover:shadow-xl dark:hover:shadow-primary/40',
 		className
 	)}
+	style="border: 2px solid var(--neu-border); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light);"
 	{...restProps}
 >
 	{#if children}

@@ -6,30 +6,24 @@
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { notificationStore } from '$lib/stores/notification.svelte';
 	import { messageStore } from '$lib/stores/message.svelte';
-	import { RippleButton } from '$lib/components/ui/interactive';
-	import Home from 'lucide-svelte/icons/house';
+	import MapPin from 'lucide-svelte/icons/map-pin';
 	import Compass from 'lucide-svelte/icons/compass';
 	import MessageCircle from 'lucide-svelte/icons/message-circle';
 	import User from 'lucide-svelte/icons/user';
 	import Plus from 'lucide-svelte/icons/plus';
 
-	interface Props {}
-
-	let {}: Props = $props();
-
-	const navItems = $derived([
-		{ href: '/', label: t('nav.nearby'), icon: Home },
+	const navItems = [
+		{ href: '/', label: t('nav.nearby'), icon: MapPin },
 		{ href: '/moments/nearby', label: t('nav.discover'), icon: Compass },
 		{ href: '/chat', label: t('nav.messagesTab'), icon: MessageCircle, requiresAuth: true },
 		{ href: '/profile', label: t('nav.me'), icon: User, requiresAuth: true },
-	]);
+	];
 
 	const currentPath = $derived(page.url.pathname);
 
 	function isActive(href: string) {
-		if (href === '/') {
-			return currentPath === '/';
-		}
+		if (href === '/') return currentPath === '/';
+		if (href === '/profile') return currentPath === '/profile' || currentPath === '/settings';
 		return currentPath === href || currentPath.startsWith(`${href}/`);
 	}
 
@@ -45,51 +39,63 @@
 	const profileBadge = $derived(authStore.isAuthenticated ? notificationStore.unreadCount : 0);
 </script>
 
-<nav class="mobile-bottom-nav md:hidden" aria-label="Mobile navigation">
-	<div class="mx-auto flex max-w-md items-end justify-between gap-1 px-3 pt-2">
+<nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+	<div class="flex items-center justify-between px-3" style="padding-top: 6px; padding-bottom: max(18px, env(safe-area-inset-bottom, 18px));">
 		{#each navItems.slice(0, 2) as item (item.href)}
-			<RippleButton
-				variant="ghost"
-				size="icon"
-				class="mobile-bottom-nav__item"
+			<button
+				class="mobile-bottom-nav__tab {isActive(item.href) ? 'active' : ''}"
 				onclick={() => navigate(item)}
+				aria-label={item.label}
 			>
-				<div class="mobile-bottom-nav__inner">
-					<item.icon class="h-5 w-5 {isActive(item.href) ? 'text-primary' : 'text-muted-foreground'}" />
-					<span class="mobile-bottom-nav__label {isActive(item.href) ? 'text-primary' : 'text-muted-foreground'}">{item.label}</span>
-				</div>
-			</RippleButton>
+				<span class="mobile-bottom-nav__tab-icon">
+					<item.icon
+						size={21}
+						strokeWidth={isActive(item.href) ? 2 : 1.5}
+						color={isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}
+					/>
+				</span>
+				<span class="mobile-bottom-nav__tab-label" style="color: {isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}">
+					{item.label}
+				</span>
+				<span class="mobile-bottom-nav__tab-indicator"></span>
+			</button>
 		{/each}
 
-		<RippleButton
-			variant="icon"
-			size="icon"
-			class="mobile-bottom-nav__create"
-			onclick={() => uiStore.openCreateSheet()}
-			aria-label={t('nav.publish')}
-		>
-			<Plus class="h-5 w-5" />
-		</RippleButton>
+		<!-- Center FAB -->
+		<div class="flex flex-col items-center" style="width: 60px;">
+			<button
+				class="mobile-bottom-nav__fab"
+				style="background: var(--neu-accent-primary); box-shadow: 0 6px 18px var(--neu-glow), 0 2px 4px var(--neu-shadow-dark);"
+				onclick={() => uiStore.openCreateSheet()}
+				aria-label={t('nav.publish')}
+			>
+				<Plus size={19} strokeWidth={2.2} color="var(--neu-active-text)" />
+			</button>
+		</div>
 
 		{#each navItems.slice(2) as item (item.href)}
-			<RippleButton
-				variant="ghost"
-				size="icon"
-				class="mobile-bottom-nav__item"
+			<button
+				class="mobile-bottom-nav__tab {isActive(item.href) ? 'active' : ''}"
 				onclick={() => navigate(item)}
+				aria-label={item.label}
 			>
-				<div class="mobile-bottom-nav__inner">
-					<div class="relative">
-						<item.icon class="h-5 w-5 {isActive(item.href) ? 'text-primary' : 'text-muted-foreground'}" />
-						{#if item.href === '/chat' && messageBadge > 0}
-							<span class="mobile-bottom-nav__badge">{messageBadge > 99 ? '99+' : messageBadge}</span>
-						{:else if item.href === '/profile' && profileBadge > 0}
-							<span class="mobile-bottom-nav__badge">{profileBadge > 99 ? '99+' : profileBadge}</span>
-						{/if}
-					</div>
-					<span class="mobile-bottom-nav__label {isActive(item.href) ? 'text-primary' : 'text-muted-foreground'}">{item.label}</span>
-				</div>
-			</RippleButton>
+				<span class="mobile-bottom-nav__tab-icon" style="position: relative;">
+					<item.icon
+						size={21}
+						strokeWidth={isActive(item.href) ? 2 : 1.5}
+						color={isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}
+					/>
+					{#if item.href === '/chat' && messageBadge > 0}
+						<span class="mobile-bottom-nav__badge">{messageBadge > 99 ? '99+' : messageBadge}</span>
+					{:else if item.href === '/profile' && profileBadge > 0}
+						<span class="mobile-bottom-nav__badge">{profileBadge > 99 ? '99+' : profileBadge}</span>
+					{/if}
+				</span>
+				<span class="mobile-bottom-nav__tab-label" style="color: {isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}">
+					{item.label}
+				</span>
+				<span class="mobile-bottom-nav__tab-indicator"></span>
+			</button>
 		{/each}
 	</div>
 </nav>

@@ -9,11 +9,6 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Card, CardContent } from '$lib/components/ui/card';
-	import PageHeader from '$lib/components/layout/page-header.svelte';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import MomentCard from '$lib/components/moments/moment-card.svelte';
 	import UserCard from '$lib/components/common/user-card.svelte';
 	import GroupCard from '$lib/components/common/group-card.svelte';
@@ -263,25 +258,35 @@
 </svelte:head>
 
 <div class="space-y-4 sm:space-y-5">
-	<PageHeader title={t('searchPage.title')} description={t('searchPage.description')} />
+	<!-- Sticky header -->
+	<div
+		class="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
+		style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+	>
+		<div>
+			<h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">{t('searchPage.title')}</h1>
+			<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">{t('searchPage.description')}</p>
+		</div>
+		<button
+			class="flex items-center gap-2 rounded-full px-4 py-2 font-medium outline-none"
+			style="box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+			onclick={() => goto(nearbyMomentsUrl)}
+		>
+			<Compass size={16} />
+			{t('searchPage.nearbyExplore')}
+		</button>
+	</div>
 
 	<AnchorSummaryCard
 		label={t('searchPage.anchorLabel')}
 		description={t('searchPage.anchorDescription', { radius: mapAnchorStore.radius })}
 		subtle
-	>
-		{#snippet actions()}
-			<div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-				<Button variant="outline" size="sm" class="gap-2" onclick={() => goto(nearbyMomentsUrl)}>
-					<Compass class="h-4 w-4" />
-					{t('searchPage.nearbyExplore')}
-				</Button>
-			</div>
-		{/snippet}
-	</AnchorSummaryCard>
+	/>
 
+	<!-- Search form -->
 	<form
-		class="rounded-[1.35rem] border border-border/60 bg-card/90 p-3 shadow-sm backdrop-blur-sm sm:rounded-3xl sm:backdrop-blur-md"
+		class="rounded-[22px] p-3"
+		style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		onsubmit={(event) => {
 			event.preventDefault();
 			handleSearch();
@@ -289,217 +294,245 @@
 	>
 		<div class="flex flex-col gap-2.5 sm:flex-row sm:items-center">
 			<div class="relative flex-1">
-				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-				<Input
+				<Search size={16} style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--neu-text-muted);" />
+				<input
 					type="text"
 					placeholder={t('searchPage.placeholder')}
-					class="h-10.5 rounded-[1rem] border-border/60 bg-background/75 pl-9 pr-9 sm:h-11 sm:rounded-2xl"
+					class="w-full rounded-full py-2.5 pl-9 pr-9 outline-none"
+					style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
 					autocomplete="off"
 					bind:value={keywordInput}
 				/>
 				{#if keywordInput}
-					<Button
+					<button
 						type="button"
-						variant="ghost"
-						size="icon"
-						class="absolute right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-none bg-transparent text-muted-foreground shadow-none hover:text-foreground"
+						class="absolute right-3 top-1/2 flex items-center justify-center rounded-full outline-none"
+						style="width: 24px; height: 24px; transform: translateY(-50%); background: transparent; color: var(--neu-text-muted);"
 						onclick={clearSearch}
 						aria-label={t('searchPage.clear')}
 					>
-						<X class="h-3 w-3" />
-					</Button>
+						<X size={12} />
+					</button>
 				{/if}
 			</div>
-			<Button
+			<button
 				type="submit"
-				class="h-10.5 rounded-[1rem] border border-border/60 bg-background/75 px-4.5 text-foreground hover:bg-accent/70 sm:h-11 sm:min-w-28 sm:rounded-2xl sm:px-5"
+				class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
+				style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
 				disabled={!keywordInput.trim()}
 			>
-				<Search class="h-4 w-4" />
+				<Search size={16} />
 				{t('searchPage.submit')}
-			</Button>
+			</button>
 		</div>
 	</form>
 
 	{#if activeTerm}
-		<Card class="rounded-[1.35rem] border border-border/60 bg-card/90 shadow-sm backdrop-blur-sm sm:rounded-3xl sm:backdrop-blur-md">
-			<CardContent class="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+		<!-- Result summary card -->
+		<div
+			class="rounded-[22px] p-4"
+			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		>
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div class="min-w-0 space-y-1">
-					<div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+					<div class="flex flex-wrap items-center gap-2" style="font-size: 14px; color: var(--neu-text-muted);">
 						{#if activeMode === 'tag'}
-							<span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
-								<Hash class="h-3.5 w-3.5" />
+							<span
+								class="inline-flex items-center gap-1 rounded-full px-2.5 py-1"
+								style="font-weight: 500; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							>
+								<Hash size={14} />
 								{t('searchPage.tagMode')}
 							</span>
 						{:else}
-							<span class="inline-flex items-center rounded-full bg-muted px-2.5 py-1 font-medium text-foreground">
+							<span
+								class="inline-flex items-center rounded-full px-2.5 py-1"
+								style="font-weight: 500; color: var(--neu-text); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							>
 								{t('searchPage.keywordMode')}
 							</span>
 						{/if}
 						<span>{t('searchPage.range', { radius: mapAnchorStore.radius })}</span>
 					</div>
-					<div class="truncate text-lg font-semibold">{t('searchPage.resultTitle', { term: activeLabel })}</div>
+					<div class="truncate" style="font-size: 18px; font-weight: 600; color: var(--neu-text);">{t('searchPage.resultTitle', { term: activeLabel })}</div>
 				</div>
-				<div class="grid grid-cols-3 gap-2 text-center text-sm sm:min-w-72">
-					<div class="rounded-2xl bg-muted/70 px-3 py-2">
-						<div class="font-semibold text-foreground">{users.length}</div>
-						<div class="text-xs text-muted-foreground">用户</div>
+				<div class="grid grid-cols-3 gap-2 text-center sm:min-w-72">
+					<div
+						class="rounded-[14px] px-3 py-2"
+						style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					>
+						<div style="font-weight: 600; color: var(--neu-text);">{users.length}</div>
+						<div style="font-size: 12px; color: var(--neu-text-muted);">用户</div>
 					</div>
-					<div class="rounded-2xl bg-muted/70 px-3 py-2">
-						<div class="font-semibold text-foreground">{moments.length}</div>
-						<div class="text-xs text-muted-foreground">瞬间</div>
+					<div
+						class="rounded-[14px] px-3 py-2"
+						style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					>
+						<div style="font-weight: 600; color: var(--neu-text);">{moments.length}</div>
+						<div style="font-size: 12px; color: var(--neu-text-muted);">瞬间</div>
 					</div>
-					<div class="rounded-2xl bg-muted/70 px-3 py-2">
-						<div class="font-semibold text-foreground">{groups.length}</div>
-						<div class="text-xs text-muted-foreground">群组</div>
+					<div
+						class="rounded-[14px] px-3 py-2"
+						style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					>
+						<div style="font-weight: 600; color: var(--neu-text);">{groups.length}</div>
+						<div style="font-size: 12px; color: var(--neu-text-muted);">群组</div>
 					</div>
 				</div>
-			</CardContent>
-		</Card>
+			</div>
+		</div>
 
-		<Tabs value={currentTab} onValueChange={handleTabChange}>
-			<TabsList class="h-auto flex-wrap gap-1.5 rounded-[1.35rem] bg-card/85 p-1.25 shadow-sm shadow-black/5 ring-1 ring-border/50 backdrop-blur-sm dark:shadow-black/20 sm:rounded-3xl sm:p-1.5">
-				<TabsTrigger value="users" class="gap-2 rounded-2xl">
-					<Users class="h-4 w-4" />
-					用户 ({users.length})
-				</TabsTrigger>
-				<TabsTrigger value="moments" class="gap-2 rounded-2xl">
-					<Image class="h-4 w-4" />
-					瞬间 ({moments.length})
-				</TabsTrigger>
-				<TabsTrigger value="groups" class="gap-2 rounded-2xl">
-					<UsersRound class="h-4 w-4" />
-					群组 ({groups.length})
-				</TabsTrigger>
-			</TabsList>
+		<!-- Tab bar -->
+		<div class="flex gap-2">
+			{#each [
+				{ value: 'users', label: `用户 (${users.length})`, icon: Users },
+				{ value: 'moments', label: `瞬间 (${moments.length})`, icon: Image },
+				{ value: 'groups', label: `群组 (${groups.length})`, icon: UsersRound }
+			] as tab (tab.value)}
+				<button
+					class="flex items-center gap-2 rounded-full px-4 py-2 font-medium outline-none transition-all"
+					style={currentTab === tab.value
+						? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);'
+						: 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+					onclick={() => handleTabChange(tab.value)}
+				>
+					<tab.icon size={16} />
+					<span style="font-size: 13px;">{tab.label}</span>
+				</button>
+			{/each}
+		</div>
 
-			<TabsContent value="users" class="mt-6">
-				{#if isLoading}
-					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
-						{#each Array(6) as _, i (i)}
-							<MasonryLayoutItem>
-								<div class="h-48 animate-pulse rounded-2xl bg-muted"></div>
-							</MasonryLayoutItem>
-						{/each}
-					</MasonryLayout>
-				{:else if searchError && !hasAnyResults}
-					<EmptyState
-						icon={AlertTriangle}
-						title="搜索失败"
-						description={searchError}
-						actionText="重试"
-						onAction={retryActiveSearch}
-					/>
-				{:else if users.length === 0}
-					<EmptyState
-						icon={Users}
-						title="未找到相关用户"
-						description={`换个关键词，或调整 “${activeLabel}” 的搜索方式后再试试。`}
-					/>
-				{:else}
-					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
-						{#each users as user (user.user.user_id)}
-							<MasonryLayoutItem>
-								<UserCard
-									{user}
-									showBio
-									showTags
-									showDistance
-									variant="square"
-									class="border-border/60 bg-card/95 shadow-md shadow-black/5 dark:shadow-black/30"
-								/>
-							</MasonryLayoutItem>
-						{/each}
-					</MasonryLayout>
-				{/if}
-			</TabsContent>
+		<!-- Tab content: Users -->
+		{#if currentTab === 'users'}
+			{#if isLoading}
+				<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
+					{#each Array(6) as _, i (i)}
+						<MasonryLayoutItem>
+							<div class="h-48 animate-pulse rounded-[22px]" style="background: var(--neu-border);"></div>
+						</MasonryLayoutItem>
+					{/each}
+				</MasonryLayout>
+			{:else if searchError && !hasAnyResults}
+				<EmptyState
+					icon={AlertTriangle}
+					title="搜索失败"
+					description={searchError}
+					actionText="重试"
+					onAction={retryActiveSearch}
+				/>
+			{:else if users.length === 0}
+				<EmptyState
+					icon={Users}
+					title="未找到相关用户"
+					description={`换个关键词，或调整 "${activeLabel}" 的搜索方式后再试试。`}
+				/>
+			{:else}
+				<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
+					{#each users as user (user.user.user_id)}
+						<MasonryLayoutItem>
+							<UserCard
+								{user}
+								showBio
+								showTags
+								showDistance
+								variant="square"
+								class="var(--neu-border) var(--neu-bg)"
+							/>
+						</MasonryLayoutItem>
+					{/each}
+				</MasonryLayout>
+			{/if}
+		{/if}
 
-			<TabsContent value="moments" class="mt-6">
-				{#if isLoading}
-					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={20}>
-						{#each Array(6) as _, i (i)}
-							<MasonryLayoutItem>
-								<div class="h-64 animate-pulse rounded-2xl bg-muted"></div>
-							</MasonryLayoutItem>
-						{/each}
-					</MasonryLayout>
-				{:else if searchError && !hasAnyResults}
-					<EmptyState
-						icon={AlertTriangle}
-						title="搜索失败"
-						description={searchError}
-						actionText="重试"
-						onAction={retryActiveSearch}
-					/>
-				{:else if moments.length === 0}
-					<EmptyState
-						icon={Image}
-						title="未找到相关瞬间"
-						description={`当前没有与 “${activeLabel}” 匹配的动态内容。`}
-					/>
-				{:else}
-					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={20}>
-						{#each moments as moment (moment.moment_id)}
-							<MasonryLayoutItem>
-								<MomentCard
-									{moment}
-									class="border-border/60 bg-card/95 shadow-md shadow-black/5 dark:shadow-black/30"
-								/>
-							</MasonryLayoutItem>
-						{/each}
-					</MasonryLayout>
-				{/if}
-			</TabsContent>
+		<!-- Tab content: Moments -->
+		{#if currentTab === 'moments'}
+			{#if isLoading}
+				<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={20}>
+					{#each Array(6) as _, i (i)}
+						<MasonryLayoutItem>
+							<div class="h-64 animate-pulse rounded-[22px]" style="background: var(--neu-border);"></div>
+						</MasonryLayoutItem>
+					{/each}
+				</MasonryLayout>
+			{:else if searchError && !hasAnyResults}
+				<EmptyState
+					icon={AlertTriangle}
+					title="搜索失败"
+					description={searchError}
+					actionText="重试"
+					onAction={retryActiveSearch}
+				/>
+			{:else if moments.length === 0}
+				<EmptyState
+					icon={Image}
+					title="未找到相关瞬间"
+					description={`当前没有与 "${activeLabel}" 匹配的动态内容。`}
+				/>
+			{:else}
+				<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={20}>
+					{#each moments as moment (moment.moment_id)}
+						<MasonryLayoutItem>
+							<MomentCard
+								{moment}
+								class="var(--neu-border) var(--neu-bg)"
+							/>
+						</MasonryLayoutItem>
+					{/each}
+				</MasonryLayout>
+			{/if}
+		{/if}
 
-			<TabsContent value="groups" class="mt-6">
-				{#if isLoading}
-					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
-						{#each Array(6) as _, i (i)}
-							<MasonryLayoutItem>
-								<div class="h-52 animate-pulse rounded-2xl bg-muted"></div>
-							</MasonryLayoutItem>
-						{/each}
-					</MasonryLayout>
-				{:else if searchError && !hasAnyResults}
-					<EmptyState
-						icon={AlertTriangle}
-						title="搜索失败"
-						description={searchError}
-						actionText="重试"
-						onAction={retryActiveSearch}
-					/>
-				{:else if groups.length === 0}
-					<EmptyState
-						icon={UsersRound}
-						title="未找到相关群组"
-						description={`附近暂时没有与 “${activeLabel}” 相关的群组。`}
-					/>
-				{:else}
-					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
-						{#each groups as group (group.group.group_id)}
-							<MasonryLayoutItem>
-								<GroupCard
-									{group}
-									showMembers
-									showDistance
-									variant="square"
-									class="border-border/60 bg-card/95 shadow-md shadow-black/5 dark:shadow-black/30"
-								/>
-							</MasonryLayoutItem>
-						{/each}
-					</MasonryLayout>
-				{/if}
-			</TabsContent>
-		</Tabs>
+		<!-- Tab content: Groups -->
+		{#if currentTab === 'groups'}
+			{#if isLoading}
+				<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
+					{#each Array(6) as _, i (i)}
+						<MasonryLayoutItem>
+							<div class="h-52 animate-pulse rounded-[22px]" style="background: var(--neu-border);"></div>
+						</MasonryLayoutItem>
+					{/each}
+				</MasonryLayout>
+			{:else if searchError && !hasAnyResults}
+				<EmptyState
+					icon={AlertTriangle}
+					title="搜索失败"
+					description={searchError}
+					actionText="重试"
+					onAction={retryActiveSearch}
+				/>
+			{:else if groups.length === 0}
+				<EmptyState
+					icon={UsersRound}
+					title="未找到相关群组"
+					description={`附近暂时没有与 "${activeLabel}" 相关的群组。`}
+				/>
+			{:else}
+				<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
+					{#each groups as group (group.group.group_id)}
+						<MasonryLayoutItem>
+							<GroupCard
+								{group}
+								showMembers
+								showDistance
+								variant="square"
+								class="var(--neu-border) var(--neu-bg)"
+							/>
+						</MasonryLayoutItem>
+					{/each}
+				</MasonryLayout>
+			{/if}
+		{/if}
 	{:else}
-		<Card class="rounded-3xl border border-border/60 bg-linear-to-br from-primary/5 via-background to-primary/10 shadow-sm">
-			<CardContent class="flex flex-col items-center justify-center gap-3 py-12 text-center">
-				<Search class="h-12 w-12 text-muted-foreground" />
-				<div class="space-y-1">
-					<p class="font-medium">输入关键词开始搜索</p>
-					<p class="text-sm text-muted-foreground">支持关键词搜索，也可以从标签链接直接进入对应结果页。</p>
-				</div>
-			</CardContent>
-		</Card>
+		<!-- Empty search state -->
+		<div
+			class="flex flex-col items-center justify-center gap-3 rounded-[22px] py-12 text-center"
+			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		>
+			<Search size={48} color="var(--neu-text-muted)" />
+			<div class="space-y-1">
+				<p style="font-weight: 500; color: var(--neu-text);">输入关键词开始搜索</p>
+				<p style="font-size: 14px; color: var(--neu-text-muted);">支持关键词搜索，也可以从标签链接直接进入对应结果页。</p>
+			</div>
+		</div>
 	{/if}
 </div>

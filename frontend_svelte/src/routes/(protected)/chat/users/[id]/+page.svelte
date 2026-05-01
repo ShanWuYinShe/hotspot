@@ -16,16 +16,12 @@
 	import { createReconnectTracker, mergeMessagesByIdAndSentAt, resolveLatestVisibleMessageId } from '$lib/hooks/use-chat-realtime-sync';
 	import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
 	import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
-	import { Button } from '$lib/components/ui/button';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import {
 		DropdownMenu,
 		DropdownMenuContent,
 		DropdownMenuItem,
 		DropdownMenuTrigger
 	} from '$lib/components/ui/dropdown-menu';
-	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { ScrollArea } from '$lib/components/ui/scroll-area';
 	import type { PrivateMessageItem, UserInfo } from '$lib/types/api';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Trash2 from 'lucide-svelte/icons/trash-2';
@@ -333,7 +329,7 @@
 			connected,
 			websocketStore.lastDisconnectDurationMs
 		);
-		
+
 		if (!connected) {
 			// 连接断开，重置订阅状态
 			if (wsSubscription.state.isSubscribed) {
@@ -372,32 +368,45 @@
 	<title>与 {otherUser?.nickname ?? '用户'} 的对话 - HotSpot</title>
 </svelte:head>
 
-<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-xl border border-border/50 bg-card shadow-lg">
+<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[22px]" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 	<!-- Header -->
-	<div class="flex h-16 items-center gap-3 border-b border-border/50 bg-card/80 px-4 backdrop-blur-sm">
-		<Button variant="ghost" size="icon" onclick={handleBackClick} aria-label="返回">
-			<ArrowLeft class="h-5 w-5" />
-		</Button>
+	<div class="flex h-16 items-center gap-3 px-4" style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);">
+		<button
+			class="flex items-center justify-center rounded-full outline-none"
+			style="width: 36px; height: 36px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+			onclick={handleBackClick}
+			aria-label="返回"
+		>
+			<ArrowLeft size={18} color="var(--neu-text)" />
+		</button>
+
 		{#if isLoading}
-			<Skeleton class="h-10 w-10 rounded-full" />
-			<Skeleton class="h-5 w-24" />
+			<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
+			<div style="width: 96px; height: 20px; border-radius: 8px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
 		{:else if otherUser}
 			<a href="/users/{userId}" class="flex items-center gap-3">
-				<Avatar class="h-10 w-10">
-					<AvatarImage src={otherUser.avatar_url} alt={otherUser.nickname} />
-					<AvatarFallback>{(otherUser.nickname || '用户').slice(0, 2)}</AvatarFallback>
-				</Avatar>
-				<span class="font-medium">{otherUser.nickname}</span>
+				<div class="overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
+					{#if otherUser.avatar_url}
+						<img src={otherUser.avatar_url} alt={otherUser.nickname} class="h-full w-full object-cover" />
+					{:else}
+						<div class="flex h-full w-full items-center justify-center" style="background: var(--neu-bg); font-size: 14px; color: var(--neu-text-muted);">{(otherUser.nickname || '用户').slice(0, 2)}</div>
+					{/if}
+				</div>
+				<span style="font-weight: 500; font-size: 15px; color: var(--neu-text);">{otherUser.nickname}</span>
 			</a>
 		{:else}
-			<span class="text-sm text-muted-foreground">用户不存在或加载失败</span>
+			<span style="font-size: 13px; color: var(--neu-text-muted);">用户不存在或加载失败</span>
 		{/if}
 		<div class="ml-auto">
 			<DropdownMenu>
 				<DropdownMenuTrigger>
-					<Button variant="ghost" size="icon" aria-label="更多选项">
-						<MoreVertical class="h-5 w-5" />
-					</Button>
+					<button
+						class="flex items-center justify-center rounded-full outline-none"
+						style="width: 36px; height: 36px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+						aria-label="更多选项"
+					>
+						<MoreVertical size={18} color="var(--neu-text)" />
+					</button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" class="w-44">
 					<DropdownMenuItem onclick={deleteChat} disabled={isDeletingChat} class="text-destructive">
@@ -415,23 +424,23 @@
 	</div>
 
 	<!-- Messages -->
-	<ScrollArea class="flex-1 bg-muted/20 py-4">
+	<div class="flex-1 overflow-y-auto py-4" style="background: var(--neu-bg);">
 		{#if isLoading}
 			<div class="space-y-4 px-4">
 				{#each Array(5) as _, i (i)}
 					<div class="flex {i % 2 === 0 ? '' : 'justify-end'}">
 						<div class="flex max-w-[70%] gap-2">
 							{#if i % 2 === 0}
-								<Skeleton class="h-8 w-8 rounded-full" />
+								<div class="shrink-0 rounded-full" style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
 							{/if}
-							<Skeleton class="h-16 w-48 rounded-lg" />
+							<div class="rounded-[18px]" style="width: 192px; height: 64px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
 						</div>
 					</div>
 				{/each}
 			</div>
 		{:else if messages.length === 0}
 			<div class="flex h-full items-center justify-center">
-				<p class="text-muted-foreground">开始聊天吧</p>
+				<p style="font-size: 14px; color: var(--neu-text-muted);">开始聊天吧</p>
 			</div>
 		{:else}
 			<div class="space-y-3 px-4">
@@ -442,25 +451,26 @@
 					>
 						<div class="flex max-w-[70%] flex-col gap-1">
 							<div
-								class="rounded-2xl px-4 py-2.5 {isSelf(message)
-									? 'bg-primary text-primary-foreground shadow-md shadow-primary/20 border border-primary/30'
-									: 'bg-card text-card-foreground shadow-md border border-border/50'}"
+								class="px-4 py-2.5"
+								style="{isSelf(message)
+									? 'background: var(--neu-accent-primary); color: var(--neu-active-text); border-radius: 18px 18px 4px 18px;'
+									: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); border-radius: 18px 18px 18px 4px; color: var(--neu-text);'}"
 							>
 								{#if message.recalled_at != null}
-									<p class="text-sm italic opacity-70">消息已撤回</p>
+									<p style="font-size: 14px; font-style: italic; opacity: 0.7;">消息已撤回</p>
 								{:else if message.type === 'text'}
-									<p class="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+									<p class="whitespace-pre-wrap" style="font-size: 14px; line-height: 1.5;">{message.content}</p>
 								{:else if message.type === 'image' && message.media}
 									<img
 										src={message.media.url}
 										alt="图片"
-										class="max-w-[250px] rounded-lg"
+										class="max-w-[250px] rounded-[12px]"
 									/>
 								{:else}
-									<p class="text-sm">[{message.type}]</p>
+									<p style="font-size: 14px;">[{message.type}]</p>
 								{/if}
 							</div>
-							<p class="px-2 text-xs text-muted-foreground {isSelf(message) ? 'text-right' : ''}">
+							<p class="px-2 {isSelf(message) ? 'text-right' : ''}" style="font-size: 11px; color: var(--neu-text-muted);">
 								{formatTime(message.sent_at)}
 							</p>
 						</div>
@@ -468,18 +478,18 @@
 				{/each}
 			</div>
 		{/if}
-	</ScrollArea>
+	</div>
 
 	<!-- Input -->
-	<div class="border-t border-border/50 bg-card/80 pt-4 px-4 pb-4 backdrop-blur-sm">
+	<div class="px-4 pt-4 pb-4" style="background-color: var(--neu-bg); border-top: 1px solid var(--neu-border);">
 		{#if !websocketStore.isConnected && !isLoading}
-			<div class="flex items-center justify-center gap-1.5 mb-2 text-xs text-muted-foreground">
+			<div class="flex items-center justify-center gap-1.5 mb-2" style="font-size: 12px; color: var(--neu-text-muted);">
 				<Loader2 class="h-3 w-3 animate-spin" />
 				<span>实时消息连接中…</span>
 			</div>
 		{/if}
 		{#if websocketStore.isConnected && !wsSubscription.state.isSubscribed && !isLoading}
-			<div class="flex items-center justify-center gap-1.5 mb-2 text-xs text-muted-foreground">
+			<div class="flex items-center justify-center gap-1.5 mb-2" style="font-size: 12px; color: var(--neu-text-muted);">
 				<Loader2 class="h-3 w-3 animate-spin" />
 				<span>
 					{#if wsSubscription.state.isAttemptingSubscribe}
@@ -492,7 +502,7 @@
 		{/if}
 
 		{#if isOtherUserTyping}
-			<div class="mb-2 text-xs text-muted-foreground">
+			<div class="mb-2" style="font-size: 12px; color: var(--neu-text-muted);">
 				{otherUser?.nickname ?? '对方'} 正在输入...
 			</div>
 		{/if}
@@ -505,7 +515,8 @@
 				bind:value={messageText}
 				rows={1}
 				maxlength={MESSAGE_CONTENT_MAX}
-				class="min-h-[40px] flex w-full resize-none rounded-md border border-input bg-background/80 px-3 py-2 text-base shadow-sm shadow-black/5 dark:shadow-black/20 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+				class="min-h-[40px] flex w-full resize-none rounded-[20px] px-3 py-2 text-base outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+				style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"
 				disabled={isSending}
 				oninput={handleInput}
 				onkeydown={(e) => {
@@ -515,8 +526,9 @@
 					}
 				}}
 			></textarea>
-			<Button
-				size="icon"
+			<button
+				class="flex shrink-0 items-center justify-center rounded-full outline-none"
+				style="width: 40px; height: 40px; background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);"
 				onclick={sendMessage}
 				onmousedown={(e) => e.preventDefault()}
 				disabled={!messageText.trim() || isSending}
@@ -525,9 +537,9 @@
 				{#if isSending}
 					<Loader2 class="h-5 w-5 animate-spin" />
 				{:else}
-					<Send class="h-5 w-5" />
+					<Send size={20} />
 				{/if}
-			</Button>
+			</button>
 		</div>
 	</div>
 </div>

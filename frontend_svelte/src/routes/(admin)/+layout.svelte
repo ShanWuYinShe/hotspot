@@ -8,7 +8,7 @@
 	import { adminPermissionsStore } from '$lib/stores/admin-permissions.svelte';
 	import { cn } from '$lib/utils';
 	import Navbar from '$lib/components/common/navbar.svelte';
-	import { Button } from '$lib/components/ui/button';
+	import { NeuButton } from '$lib/components/ui/neu-button';
 	import Users from 'lucide-svelte/icons/users';
 	import UsersRound from 'lucide-svelte/icons/users-round';
 	import Megaphone from 'lucide-svelte/icons/megaphone';
@@ -56,25 +56,26 @@
 </script>
 
 {#if authStore.isAuthenticated && adminPermissionsStore.isAdmin}
-	<div class="min-h-screen bg-background">
+	<div class="min-h-screen" style="background: var(--page-bg);">
 		<Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
 
-		<div class="app-shell-frame flex bg-muted/30">
+		<div class="app-shell-frame flex">
 			<!-- Admin sidebar -->
-			<aside class="hidden w-64 shrink-0 bg-sidebar text-sidebar-foreground md:block">
+			<aside class="hidden w-64 shrink-0 md:block" style="background: var(--neu-bg); border-right: 1px solid var(--neu-border);">
 				<nav class="space-y-1 p-4">
-					<h2 class="mb-4 px-3 text-lg font-semibold">{t('nav.adminPanel')}</h2>
+					<h2 class="mb-4 px-3" style="font-size: 18px; font-weight: 600; color: var(--neu-text);">{t('nav.adminPanel')}</h2>
 					{#each adminNavItems as item (item.href)}
 						<a
 							href={item.href}
 							class={cn(
-								'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+								'flex items-center gap-3 rounded-[18px] px-3 py-2.5 text-sm font-medium transition-all duration-200',
 								isActive(item.href)
-									? 'bg-primary text-primary-foreground'
-									: 'hover:bg-accent hover:text-accent-foreground'
+									? 'neu-pressed'
+									: 'hover:opacity-70'
 							)}
+							style={isActive(item.href) ? 'color: var(--neu-accent-primary);' : 'color: var(--neu-text-muted);'}
 						>
-							<item.icon class="h-5 w-5" />
+							<item.icon size={18} strokeWidth={1.75} />
 							{item.label}
 						</a>
 					{/each}
@@ -83,32 +84,33 @@
 
 			<!-- Mobile sidebar overlay -->
 			{#if sidebarOpen}
-				<Button
+				<button
 					type="button"
-					variant="ghost"
-					size="icon"
-					class="fixed inset-0 z-40 h-full w-full cursor-pointer bg-black/50 p-0 md:hidden border-none shadow-none"
+					class="fixed inset-0 z-40 h-full w-full cursor-pointer border-none p-0 md:hidden"
+					style="background: rgba(0,0,0,0.5);"
 					onclick={closeSidebar}
 					onkeydown={(e) => e.key === 'Escape' && closeSidebar()}
 					aria-label={t('nav.closeSidebar')}
 				/>
-				<aside 
-					class="app-mobile-sidebar fixed left-0 z-50 w-64 bg-sidebar text-sidebar-foreground md:hidden"
+				<aside
+					class="app-mobile-sidebar fixed left-0 z-50 w-64 md:hidden"
+					style="background: var(--neu-bg); border-right: 1px solid var(--neu-border);"
 				>
 					<nav class="space-y-1 p-4" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));">
-						<h2 class="mb-4 px-3 text-lg font-semibold">{t('nav.adminPanel')}</h2>
+						<h2 class="mb-4 px-3" style="font-size: 18px; font-weight: 600; color: var(--neu-text);">{t('nav.adminPanel')}</h2>
 						{#each adminNavItems as item (item.href)}
 							<a
 								href={item.href}
 								class={cn(
-									'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+									'flex items-center gap-3 rounded-[18px] px-3 py-2.5 text-sm font-medium transition-all duration-200',
 									isActive(item.href)
-										? 'bg-primary text-primary-foreground'
-										: 'hover:bg-accent hover:text-accent-foreground'
+										? 'neu-pressed'
+										: 'hover:opacity-70'
 								)}
+								style={isActive(item.href) ? 'color: var(--neu-accent-primary);' : 'color: var(--neu-text-muted);'}
 								onclick={closeSidebar}
 							>
-								<item.icon class="h-5 w-5" />
+								<item.icon size={18} strokeWidth={1.75} />
 								{item.label}
 							</a>
 						{/each}
@@ -117,7 +119,7 @@
 			{/if}
 
 			<!-- Main content -->
-			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md">
+			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-[32px] md:p-6">
 				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					{@render children()}
 				</div>
@@ -126,55 +128,55 @@
 	</div>
 {:else if authStore.isAuthenticated && adminPermissionsStore.isLoading}
 	<!-- 管理员权限验证中 -->
-	<div class="min-h-screen bg-background">
+	<div class="min-h-screen" style="background: var(--page-bg);">
 		<Navbar onMenuClick={() => {}} />
-		<div class="flex min-h-[calc(100dvh-var(--topbar-height-mobile))] items-center justify-center bg-muted/30 sm:min-h-[calc(100dvh-var(--topbar-height-desktop))]">
-			<div class="flex flex-col items-center gap-3 text-muted-foreground">
-				<div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
-				<p class="text-sm">{t('admin.checkingPermissions')}</p>
+		<div class="flex min-h-[calc(100dvh-var(--topbar-height-mobile))] items-center justify-center sm:min-h-[calc(100dvh-var(--topbar-height-desktop))]">
+			<div class="flex flex-col items-center gap-3">
+				<div class="h-8 w-8 animate-spin rounded-full" style="border: 4px solid var(--neu-border); border-top-color: var(--neu-accent-primary);"></div>
+				<p style="font-size: 13px; color: var(--neu-text-muted);">{t('admin.checkingPermissions')}</p>
 			</div>
 		</div>
 	</div>
 {:else if authStore.isAuthenticated && adminPermissionsStore.isForbidden}
 	<!-- 已登录但非管理员 -->
-	<div class="min-h-screen bg-background">
+	<div class="min-h-screen" style="background: var(--page-bg);">
 		<Navbar onMenuClick={() => {}} />
-		<div class="app-shell-frame flex bg-muted/30">
-			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md">
+		<div class="app-shell-frame flex">
+			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-[32px] md:p-6">
 				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
-						<div class="mb-4 rounded-3xl bg-destructive/10 p-6">
-							<Shield class="h-10 w-10 text-destructive" />
+						<div class="mb-4 flex items-center justify-center rounded-full" style="width: 56px; height: 56px; background: rgba(215, 91, 91, 0.1);">
+							<Shield size={24} strokeWidth={1.5} style="color: var(--neu-error);" />
 						</div>
-						<h2 class="mb-2 text-xl font-semibold">{t('admin.accessDenied')}</h2>
-						<p class="mb-6 text-muted-foreground">{t('admin.accessDeniedDescription')}</p>
-						<Button class="rounded-2xl px-8" onclick={() => goto('/')}>
+						<h2 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">{t('admin.accessDenied')}</h2>
+						<p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 8px;">{t('admin.accessDeniedDescription')}</p>
+						<NeuButton class="mt-6" onclick={() => goto('/')}>
 							{t('common.backHome')}
-						</Button>
+						</NeuButton>
 					</div>
 				</div>
 			</main>
 		</div>
 	</div>
 {:else if authStore.isAuthenticated && adminPermissionsStore.isError}
-	<div class="min-h-screen bg-background">
+	<div class="min-h-screen" style="background: var(--page-bg);">
 		<Navbar onMenuClick={() => {}} />
-		<div class="app-shell-frame flex bg-muted/30">
-			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md">
+		<div class="app-shell-frame flex">
+			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-[32px] md:p-6">
 				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
-						<div class="mb-4 rounded-3xl bg-muted p-6">
-							<Shield class="h-10 w-10 text-muted-foreground" />
+						<div class="mb-4 flex items-center justify-center rounded-full" style="width: 56px; height: 56px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<Shield size={24} strokeWidth={1.5} style="color: var(--neu-text-muted);" />
 						</div>
-						<h2 class="mb-2 text-xl font-semibold">{t('admin.permissionCheckFailed')}</h2>
-						<p class="mb-6 text-muted-foreground">{t('admin.permissionCheckFailedDescription')}</p>
-						<div class="flex gap-3">
-							<Button variant="outline" class="rounded-2xl px-8" onclick={() => adminPermissionsStore.refresh()}>
+						<h2 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">{t('admin.permissionCheckFailed')}</h2>
+						<p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 8px;">{t('admin.permissionCheckFailedDescription')}</p>
+						<div class="mt-6 flex gap-3">
+							<NeuButton variant="flat" onclick={() => adminPermissionsStore.refresh()}>
 								{t('common.retry')}
-							</Button>
-							<Button class="rounded-2xl px-8" onclick={() => goto('/')}>
+							</NeuButton>
+							<NeuButton onclick={() => goto('/')}>
 								{t('common.backHome')}
-							</Button>
+							</NeuButton>
 						</div>
 					</div>
 				</div>
@@ -183,31 +185,31 @@
 	</div>
 {:else if authStore.isRestoring}
 	<!-- 登录态恢复中 -->
-	<div class="min-h-screen bg-background">
+	<div class="min-h-screen" style="background: var(--page-bg);">
 		<Navbar onMenuClick={() => {}} />
-		<div class="flex min-h-[calc(100dvh-var(--topbar-height-mobile))] items-center justify-center bg-muted/30 sm:min-h-[calc(100dvh-var(--topbar-height-desktop))]">
-			<div class="flex flex-col items-center gap-3 text-muted-foreground">
-				<div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
-				<p class="text-sm">{t('auth.restoringSession')}</p>
+		<div class="flex min-h-[calc(100dvh-var(--topbar-height-mobile))] items-center justify-center sm:min-h-[calc(100dvh-var(--topbar-height-desktop))]">
+			<div class="flex flex-col items-center gap-3">
+				<div class="h-8 w-8 animate-spin rounded-full" style="border: 4px solid var(--neu-border); border-top-color: var(--neu-accent-primary);"></div>
+				<p style="font-size: 13px; color: var(--neu-text-muted);">{t('auth.restoringSession')}</p>
 			</div>
 		</div>
 	</div>
 {:else}
 	<!-- 未登录 -->
-	<div class="min-h-screen bg-background">
+	<div class="min-h-screen" style="background: var(--page-bg);">
 		<Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
-		<div class="app-shell-frame flex bg-muted/30">
-			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md">
+		<div class="app-shell-frame flex">
+			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-[32px] md:p-6">
 				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
-						<div class="mb-4 rounded-3xl bg-muted p-6">
-							<Shield class="h-10 w-10 text-muted-foreground" />
+						<div class="mb-4 flex items-center justify-center rounded-full" style="width: 56px; height: 56px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<Shield size={24} strokeWidth={1.5} style="color: var(--neu-text-muted);" />
 						</div>
-						<h2 class="mb-2 text-xl font-semibold">{t('auth.loginRequired')}</h2>
-						<p class="mb-6 text-muted-foreground">{t('admin.loginRequiredDescription')}</p>
-						<Button class="rounded-2xl px-8" onclick={handleLoginClick}>
+						<h2 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">{t('auth.loginRequired')}</h2>
+						<p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 8px;">{t('admin.loginRequiredDescription')}</p>
+						<NeuButton class="mt-6" onclick={handleLoginClick}>
 							{t('common.loginNow')}
-						</Button>
+						</NeuButton>
 					</div>
 				</div>
 			</main>

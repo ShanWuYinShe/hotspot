@@ -1,10 +1,4 @@
 <script lang="ts">
-	/**
-	 * 通用群组卡片组件
-	 * 
-	 * 用于显示群组信息的统一UI组件
-	 * 支持多种显示模式和自定义选项
-	 */
 	import { dev } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.svelte';
@@ -13,10 +7,6 @@
 	import { isSuccess } from '$lib/api/client';
 	import { groupsService, reportsService } from '$lib/api/services';
 	import { formatDistance } from '$lib/utils/format';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Card, CardContent, CardFooter } from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
 	import {
 		DropdownMenu,
 		DropdownMenuContent,
@@ -33,24 +23,17 @@
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import Share2 from 'lucide-svelte/icons/share-2';
 	import Flag from 'lucide-svelte/icons/flag';
+	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 	import type { GroupItem, GroupInfo } from '$lib/types/api';
 
 	interface Props {
-		/** 群组数据 */
 		group: GroupItem | GroupInfo;
-		/** 是否显示距离 */
 		showDistance?: boolean;
-		/** 是否显示成员数 */
 		showMembers?: boolean;
-		/** 是否显示未读消息 */
 		showUnread?: boolean;
-		/** 是否显示操作菜单 */
 		showMenu?: boolean;
-		/** 链接地址（默认跳转到群组详情） */
 		href?: string;
-		/** 自定义CSS类 */
 		class?: string;
-		/** 卡片变体 */
 		variant?: 'default' | 'compact' | 'square';
 	}
 
@@ -65,31 +48,23 @@
 		variant = 'default'
 	}: Props = $props();
 
-	// Extract GroupInfo from either GroupItem or GroupInfo
 	const groupInfo = $derived('group' in group ? group.group : group);
-	
-	// 计算实际链接
 	const actualHref = $derived(href ?? `/groups/${groupInfo.group_id}`);
 
-	// 获取距离信息（单位：米）
 	const distance = $derived.by(() => {
 		if (!showDistance || !('location' in group)) return null;
 		const loc = group.location as { distance?: number };
 		return loc?.distance ?? null;
 	});
 
-	// 获取未读数
 	const unreadCount = $derived.by(() => {
 		if (!showUnread) return 0;
 		const groupWithState = group as { my_state?: { unread_count?: number } };
-		if (groupWithState.my_state?.unread_count != null) {
-			return groupWithState.my_state.unread_count;
-		}
+		if (groupWithState.my_state?.unread_count != null) return groupWithState.my_state.unread_count;
 		const groupWithUnread = group as { unread_count?: number };
 		return groupWithUnread.unread_count ?? 0;
 	});
 
-	// 获取是否私密
 	const isPrivate = $derived('has_password' in group ? group.has_password : false);
 	let joinedOverride = $state<boolean | null>(null);
 	let isJoining = $state(false);
@@ -102,341 +77,296 @@
 
 	function isInteractiveTarget(target: EventTarget | null): boolean {
 		return target instanceof HTMLElement
-			? Boolean(
-				target.closest(
-					'button, a, input, select, textarea, summary, [role="button"], [role="menuitem"], [data-card-action]'
-				)
-			)
+			? Boolean(target.closest('button, a, input, select, textarea, summary, [role="button"], [role="menuitem"], [data-card-action]'))
 			: false;
 	}
 
 	function handleCardClick(event: MouseEvent) {
-		if (event.defaultPrevented || isInteractiveTarget(event.target)) {
-			return;
-		}
-
+		if (event.defaultPrevented || isInteractiveTarget(event.target)) return;
 		goto(actualHref);
 	}
 
 	function handleCardKeydown(event: KeyboardEvent) {
-		if (event.defaultPrevented || isInteractiveTarget(event.target)) {
-			return;
-		}
-
-		if (event.key === 'Enter' || event.key === ' ') {
-			event.preventDefault();
-			goto(actualHref);
-		}
+		if (event.defaultPrevented || isInteractiveTarget(event.target)) return;
+		if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); goto(actualHref); }
 	}
 
-	// 菜单操作处理函数
-	function handleViewDetail(e: MouseEvent) {
-		e.preventDefault();
-		e.stopPropagation();
-		goto(actualHref);
-	}
+	function handleViewDetail(e: MouseEvent) { e.preventDefault(); e.stopPropagation(); goto(actualHref); }
 
 	async function handleJoinGroup(e: MouseEvent) {
-		e.preventDefault();
-		e.stopPropagation();
-		if (!authStore.isAuthenticated) {
-			uiStore.openLoginModal();
-			return;
-		}
+		e.preventDefault(); e.stopPropagation();
+		if (!authStore.isAuthenticated) { uiStore.openLoginModal(); return; }
 		if (isJoining) return;
-		if (isJoined) {
-			await goto(`/chat/groups/${groupInfo.group_id}`);
-			return;
-		}
-
+		if (isJoined) { await goto(`/chat/groups/${groupInfo.group_id}`); return; }
 		isJoining = true;
 		try {
 			const response = await groupsService.join({ group_id: groupInfo.group_id });
-			if (!isSuccess(response)) {
-				toast.error(response.message || '加入群组失败');
-				return;
-			}
-
-			if (response.data?.status === 'pending_approval') {
-				toast.info('已提交入群申请，等待管理员审核');
-				return;
-			}
-
+			if (!isSuccess(response)) { toast.error(response.message || '加入群组失败'); return; }
+			if (response.data?.status === 'pending_approval') { toast.info('已提交入群申请，等待管理员审核'); return; }
 			joinedOverride = true;
 			toast.success('加入群组成功');
 			await goto(`/chat/groups/${groupInfo.group_id}`);
-		} catch {
-			toast.error('加入群组失败');
-		} finally {
-			isJoining = false;
-		}
+		} catch { toast.error('加入群组失败'); }
+		finally { isJoining = false; }
 	}
 
 	async function handleShare(e: MouseEvent) {
-		e.preventDefault();
-		e.stopPropagation();
-		const shareData = {
-			title: `${groupInfo.name} - HotSpot`,
-			text: `加入 ${groupInfo.name} 群组`,
-			url: `${window.location.origin}/groups/${groupInfo.group_id}`
-		};
-
+		e.preventDefault(); e.stopPropagation();
+		const shareData = { title: `${groupInfo.name} - HotSpot`, text: `加入 ${groupInfo.name} 群组`, url: `${window.location.origin}/groups/${groupInfo.group_id}` };
 		if (navigator.share) {
-			try {
-				await navigator.share(shareData);
-			} catch (err) {
-				if ((err as Error).name !== 'AbortError') {
-					if (dev) console.error('分享失败:', err);
-				}
-			}
-		} else {
-			// 降级：复制链接
-			await navigator.clipboard.writeText(shareData.url);
-			toast.success('链接已复制到剪贴板');
-		}
+			try { await navigator.share(shareData); } catch (err) { if ((err as Error).name !== 'AbortError' && dev) console.error('分享失败:', err); }
+		} else { await navigator.clipboard.writeText(shareData.url); toast.success('链接已复制到剪贴板'); }
 	}
 
 	async function handleReport(e: MouseEvent) {
-		e.preventDefault();
-		e.stopPropagation();
-		if (!authStore.isAuthenticated) {
-			uiStore.openLoginModal();
-			return;
-		}
+		e.preventDefault(); e.stopPropagation();
+		if (!authStore.isAuthenticated) { uiStore.openLoginModal(); return; }
 		if (isReporting) return;
 		isReporting = true;
 		try {
-			const response = await reportsService.create({
-				target_type: 'group',
-				target_id: groupInfo.group_id,
-				reason: 'other'
-			});
-			if (!isSuccess(response)) {
-				toast.error(response.message || '举报提交失败');
-				return;
-			}
+			const response = await reportsService.create({ target_type: 'group', target_id: groupInfo.group_id, reason: 'other' });
+			if (!isSuccess(response)) { toast.error(response.message || '举报提交失败'); return; }
 			toast.success('举报已提交，我们会尽快处理');
-		} catch {
-			toast.error('举报提交失败');
-		} finally {
-			isReporting = false;
-		}
+		} catch { toast.error('举报提交失败'); }
+		finally { isReporting = false; }
 	}
 </script>
 
-<div class="group block animate-bounce-in">
-	<Card
-		variant="secondary"
-		glow="soft"
-		interactive
-		tabindex={0}
-		role="link"
-		onclick={handleCardClick}
-		onkeydown={handleCardKeydown}
-		class="group/card flex h-full flex-col overflow-hidden {className}"
-	>
-		<CardContent class="flex flex-1 flex-col p-4.5 sm:p-5">
-			{#if variant === 'square'}
-				<!-- 方块模式：强调群组信息，同时让卡片高度随内容自适应 -->
-				<div class="flex flex-1 flex-col gap-3">
-					<div
-						class="relative overflow-hidden rounded-[1.1rem] border border-border/40 bg-linear-to-br from-secondary/12 via-primary/8 to-muted/25 p-3 sm:rounded-2xl sm:p-3.5"
-					>
-						<div class="pointer-events-none absolute inset-0 bg-linear-to-t from-black/5 to-transparent dark:from-white/5"></div>
-
-						<div class="relative flex items-start justify-between gap-3">
-							<div class="flex min-w-0 items-center gap-2.5">
-								<div class="relative shrink-0">
-									<Avatar glow class="size-11 sm:size-12">
-										<AvatarImage src={groupInfo.avatar_url} alt={groupInfo.name} />
-										<AvatarFallback class="bg-linear-to-br from-secondary/25 to-primary/25 text-primary font-bold text-sm">
-											{groupInfo.name.slice(0, 2)}
-										</AvatarFallback>
-									</Avatar>
-									{#if unreadCount > 0}
-										<Badge
-											variant="accent"
-											class="absolute -top-1 -right-1 size-5 rounded-xl p-0 flex items-center justify-center text-[9px]"
-										>
-											{unreadCount > 99 ? '99+' : unreadCount}
-										</Badge>
-									{/if}
+<div
+	class="cursor-pointer overflow-hidden rounded-[22px] transition-shadow {className}"
+	style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+	tabindex={0}
+	role="link"
+	onclick={handleCardClick}
+	onkeydown={handleCardKeydown}
+>
+	{#if variant === 'square'}
+		<!-- Square: info-dense card -->
+		<div class="p-4">
+			<div
+				class="rounded-[18px] p-3"
+				style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			>
+				<div class="flex items-start justify-between gap-3">
+					<div class="flex min-w-0 items-center gap-2.5">
+						<div class="relative flex-shrink-0">
+							{#if groupInfo.avatar_url}
+								<div class="overflow-hidden rounded-full" style="width: 44px; height: 44px; border: 1.5px solid var(--neu-border);">
+									<img src={groupInfo.avatar_url} alt={groupInfo.name} class="h-full w-full object-cover" />
 								</div>
-
-								<div class="min-w-0 flex-1">
-									<div class="flex items-center gap-1">
-										<h3 class="truncate text-sm font-semibold">{groupInfo.name}</h3>
-										{#if isPrivate}
-											<Lock class="size-3 shrink-0 text-muted-foreground" />
-										{/if}
-									</div>
-									<div class="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-										{#if showMembers}
-											<span class="flex items-center gap-0.5">
-												<Users class="size-3" />
-												{groupInfo.members_count}人
-											</span>
-										{/if}
-									</div>
-								</div>
-							</div>
-
-							{#if distance}
-								<div
-									class="flex shrink-0 items-center gap-1 rounded-2xl bg-background/70 px-2 py-1 text-[10px] text-muted-foreground"
-								>
-									<MapPin class="size-3" />
-									{formatDistance(distance)}
-								</div>
-							{/if}
-						</div>
-
-						{#if 'description' in group}
-							{@const groupWithDesc = group as { description?: string }}
-							{#if groupWithDesc.description}
-								{@const desc = groupWithDesc.description}
-								<p
-									class="relative mt-3 text-sm leading-relaxed text-muted-foreground"
-									style="display: -webkit-box; -webkit-line-clamp: {desc.length > 120 ? 4 : desc.length > 60 ? 3 : 2}; -webkit-box-orient: vertical; overflow: hidden;"
-								>
-									{desc}
-								</p>
 							{:else}
-								<p class="relative mt-3 text-xs italic text-muted-foreground/60">
-									群主很懒，还没有添加群组描述
-								</p>
+								<div
+									class="flex items-center justify-center rounded-full"
+									style="width: 44px; height: 44px; background: var(--neu-fallback-bg); border: 1.5px solid var(--neu-border);"
+								>
+									<span style="font-size: 16px; font-weight: 600; color: var(--neu-fallback-text);">{groupInfo.name.charAt(0)}</span>
+								</div>
 							{/if}
-						{/if}
-					</div>
-
-					{#if 'tags' in group}
-						{@const groupWithTags = group as { tags?: string[] }}
-						{#if groupWithTags.tags && groupWithTags.tags.length > 0}
-							<div class="flex flex-wrap gap-1.5">
-								{#each groupWithTags.tags.slice(0, 5) as tag (tag)}
-									<Badge variant="secondary" class="rounded-2xl border border-border/50 bg-muted/50 px-2 py-0.5 text-[10px]">
-										#{tag}
-									</Badge>
-								{/each}
+							{#if unreadCount > 0}
+								<div
+									class="absolute -top-1 -right-1 flex items-center justify-center rounded-full"
+									style="width: 18px; height: 18px; background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 9px; font-weight: 600; box-shadow: 0 2px 6px var(--neu-glow);"
+								>
+									{unreadCount > 99 ? '99+' : unreadCount}
+								</div>
+							{/if}
+						</div>
+						<div class="min-w-0 flex-1">
+							<div class="flex items-center gap-1">
+								<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">{groupInfo.name}</p>
+								{#if isPrivate}
+									<Lock size={12} strokeWidth={1.5} color="var(--neu-text-muted)" />
+								{/if}
 							</div>
-						{/if}
-					{/if}
-				</div>
-			{:else}
-				<!-- 默认模式：水平布局 -->
-				<div class="flex items-center gap-4">
-					<!-- 群组头像（发光） -->
-					<div class="relative shrink-0">
-						<Avatar
-							glow
-							class="h-14 w-14"
-						>
-							<AvatarImage src={groupInfo.avatar_url} alt={groupInfo.name} />
-							<AvatarFallback class="bg-linear-to-br from-secondary/20 to-primary/20 text-primary font-bold text-base">
-								{groupInfo.name.slice(0, 2)}
-							</AvatarFallback>
-						</Avatar>
-					</div>
-					
-					<!-- 群组信息 -->
-					<div class="flex-1 min-w-0">
-						<div class="flex items-center gap-2">
-							<h3 class="font-bold text-foreground truncate">{groupInfo.name}</h3>
-							{#if isPrivate}
-								<Lock class="h-4 w-4 text-muted-foreground shrink-0" />
-							{/if}
-						</div>
-						
-						<div class="flex items-center gap-3 mt-1">
 							{#if showMembers}
-								<span class="flex items-center gap-1 text-xs text-muted-foreground">
-									<Users class="h-3.5 w-3.5" />
-									{groupInfo.members_count}人
-								</span>
-							{/if}
-							
-							{#if distance}
-								<Badge variant="accent" class="text-[10px] px-2 py-0.5">
-									<MapPin class="h-3 w-3" />
-									{formatDistance(distance)}
-								</Badge>
+								<div class="mt-0.5 flex items-center gap-0.5">
+									<Users size={11} strokeWidth={1.5} color="var(--neu-text-muted)" />
+									<span style="font-size: 11px; color: var(--neu-text-muted);">{groupInfo.members_count}人</span>
+								</div>
 							{/if}
 						</div>
 					</div>
-					
-					<!-- 未读消息（脉冲发光） -->
-					{#if unreadCount > 0}
-						<Badge 
-							variant="accent" 
-							class="shrink-0 h-7 w-7 rounded-xl p-0 flex items-center justify-center"
-						>
-							{unreadCount > 99 ? '99+' : unreadCount}
-						</Badge>
+					{#if distance}
+						<div class="flex flex-shrink-0 items-center gap-0.5">
+							<MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+							<span style="font-size: 10px; color: var(--neu-accent-primary);">{formatDistance(distance)}</span>
+						</div>
 					{/if}
 				</div>
-			{/if}
-		</CardContent>
 
-		<!-- 操作按钮区域 -->
-		<CardFooter class="border-t border-border/40 bg-muted/8 p-2.5 md:bg-muted/5 md:transition-colors md:group-hover/card:bg-muted/20">
-			<div class="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-				<Button
-					variant="ghost"
-					size="sm"
-					data-card-action
-					class="justify-start sm:justify-center"
-					onclick={handleJoinGroup}
-					disabled={isJoining}
-				>
-					{#if isJoining}
-						<Loader2 class="h-4 w-4 animate-spin" />
+				{#if 'description' in group}
+					{@const groupWithDesc = group as { description?: string }}
+					{#if groupWithDesc.description}
+						{@const desc = groupWithDesc.description}
+						<p class="mt-3 line-clamp-3" style="font-size: 12px; color: var(--neu-text-muted); line-height: 1.5;">{desc}</p>
 					{:else}
-						<UserPlus class="h-4 w-4" />
+						<p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 10px;">群主很懒，还没有添加群组描述</p>
 					{/if}
-					<span class="font-medium text-xs">
-						{#if isJoining}
-							加入中
-						{:else if isJoined}
-							进入群聊
-						{:else}
-							加入群组
-						{/if}
-					</span>
-				</Button>
-				{#if showMenu}
-					<DropdownMenu>
-						<DropdownMenuTrigger>
-							<Button
-								variant="ghost"
-								size="icon"
-								data-card-action
-								onclick={(e: MouseEvent) => {
-									e.preventDefault();
-									e.stopPropagation();
-								}}
-								aria-label="更多操作"
-							>
-								<MoreVertical class="h-4 w-4" />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end" class="w-48">
-							<DropdownMenuItem onclick={handleViewDetail}>
-								<Info class="mr-2 h-4 w-4" />
-								<span>查看详情</span>
-							</DropdownMenuItem>
-							<DropdownMenuItem onclick={handleShare}>
-								<Share2 class="mr-2 h-4 w-4" />
-								<span>分享</span>
-							</DropdownMenuItem>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem onclick={handleReport} class="text-destructive">
-								<Flag class="mr-2 h-4 w-4" />
-								<span>举报</span>
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
 				{/if}
 			</div>
-		</CardFooter>
-	</Card>
+
+			{#if 'tags' in group}
+				{@const groupWithTags = group as { tags?: string[] }}
+				{#if groupWithTags.tags && groupWithTags.tags.length > 0}
+					<div class="mt-3 flex flex-wrap gap-1.5">
+						{#each groupWithTags.tags.slice(0, 5) as tag (tag)}
+							<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">#{tag}</span>
+						{/each}
+					</div>
+				{/if}
+			{/if}
+		</div>
+	{:else if variant === 'compact'}
+		<!-- Compact: horizontal list row -->
+		<div class="flex items-center gap-3 p-3.5">
+			<div class="flex-shrink-0">
+				{#if groupInfo.avatar_url}
+					<div class="overflow-hidden rounded-full" style="width: 44px; height: 44px; border: 1.5px solid var(--neu-border);">
+						<img src={groupInfo.avatar_url} alt={groupInfo.name} class="h-full w-full object-cover" />
+					</div>
+				{:else}
+					<div
+						class="flex items-center justify-center rounded-full"
+						style="width: 44px; height: 44px; background: var(--neu-fallback-bg); border: 1.5px solid var(--neu-border);"
+					>
+						<span style="font-size: 16px; font-weight: 600; color: var(--neu-fallback-text);">{groupInfo.name.charAt(0)}</span>
+					</div>
+				{/if}
+			</div>
+			<div class="min-w-0 flex-1">
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-1">
+						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">{groupInfo.name}</p>
+						{#if isPrivate}
+							<Lock size={12} strokeWidth={1.5} color="var(--neu-text-muted)" />
+						{/if}
+					</div>
+					{#if distance}
+						<div class="flex items-center gap-0.5">
+							<MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+							<span style="font-size: 10px; color: var(--neu-accent-primary);">{formatDistance(distance)}</span>
+						</div>
+					{/if}
+				</div>
+				{#if showMembers}
+					<div class="mt-0.5 flex items-center gap-0.5">
+						<Users size={11} strokeWidth={1.5} color="var(--neu-text-muted)" />
+						<span style="font-size: 11px; color: var(--neu-text-muted);">{groupInfo.members_count}人</span>
+					</div>
+				{/if}
+			</div>
+			{#if unreadCount > 0}
+				<div
+					class="flex flex-shrink-0 items-center justify-center rounded-full"
+					style="width: 20px; height: 20px; background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 11px; font-weight: 600; box-shadow: 0 2px 6px var(--neu-glow);"
+				>
+					{unreadCount > 99 ? '99+' : unreadCount}
+				</div>
+			{:else}
+				<ChevronRight size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
+			{/if}
+		</div>
+	{:else}
+		<!-- Default: horizontal with actions -->
+		<div class="p-4">
+			<div class="flex items-center gap-3.5">
+				<div class="flex-shrink-0">
+					{#if groupInfo.avatar_url}
+						<div class="overflow-hidden rounded-full" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">
+							<img src={groupInfo.avatar_url} alt={groupInfo.name} class="h-full w-full object-cover" />
+						</div>
+					{:else}
+						<div
+							class="flex items-center justify-center rounded-full"
+							style="width: 48px; height: 48px; background: var(--neu-fallback-bg); border: 1.5px solid var(--neu-border);"
+						>
+							<span style="font-size: 18px; font-weight: 600; color: var(--neu-fallback-text);">{groupInfo.name.charAt(0)}</span>
+						</div>
+					{/if}
+				</div>
+				<div class="min-w-0 flex-1">
+					<div class="flex items-center gap-1">
+						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">{groupInfo.name}</p>
+						{#if isPrivate}
+							<Lock size={12} strokeWidth={1.5} color="var(--neu-text-muted)" />
+						{/if}
+					</div>
+					<div class="mt-0.5 flex items-center gap-2">
+						{#if showMembers}
+							<div class="flex items-center gap-0.5">
+								<Users size={11} strokeWidth={1.5} color="var(--neu-text-muted)" />
+								<span style="font-size: 11px; color: var(--neu-text-muted);">{groupInfo.members_count}人</span>
+							</div>
+						{/if}
+						{#if distance}
+							<div class="flex items-center gap-0.5">
+								<MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+								<span style="font-size: 10px; color: var(--neu-accent-primary);">{formatDistance(distance)}</span>
+							</div>
+						{/if}
+					</div>
+				</div>
+				{#if unreadCount > 0}
+					<div
+						class="flex flex-shrink-0 items-center justify-center rounded-full"
+						style="width: 22px; height: 22px; background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 11px; font-weight: 600; box-shadow: 0 2px 6px var(--neu-glow);"
+					>
+						{unreadCount > 99 ? '99+' : unreadCount}
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
+
+	<!-- Action buttons -->
+	<div style="border-top: 1px solid var(--neu-border);" class="px-4 py-2.5">
+		<div class="flex items-center justify-between">
+			<button
+				data-card-action
+				class="flex items-center gap-1.5 py-1 outline-none"
+				style="color: {isJoined ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};"
+				onclick={handleJoinGroup}
+				disabled={isJoining}
+			>
+				{#if isJoining}
+					<Loader2 size={15} strokeWidth={1.5} class="animate-spin" />
+				{:else}
+					<UserPlus size={15} strokeWidth={1.5} />
+				{/if}
+				<span style="font-size: 12px;">
+					{#if isJoining}加入中{:else if isJoined}进入群聊{:else}加入群组{/if}
+				</span>
+			</button>
+			{#if showMenu}
+				<DropdownMenu>
+					<DropdownMenuTrigger>
+						<button
+							data-card-action
+							class="flex items-center justify-center rounded-full outline-none"
+							style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							onclick={(e: MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
+							aria-label="更多操作"
+						>
+							<MoreVertical size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+						</button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end" class="w-48">
+						<DropdownMenuItem onclick={handleViewDetail}>
+							<Info class="mr-2 h-4 w-4" />
+							<span>查看详情</span>
+						</DropdownMenuItem>
+						<DropdownMenuItem onclick={handleShare}>
+							<Share2 class="mr-2 h-4 w-4" />
+							<span>分享</span>
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem onclick={handleReport} class="text-destructive">
+							<Flag class="mr-2 h-4 w-4" />
+							<span>举报</span>
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			{/if}
+		</div>
+	</div>
 </div>

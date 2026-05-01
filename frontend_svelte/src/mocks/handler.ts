@@ -164,7 +164,7 @@ const MOCK_SESSIONS = [
 	}
 ];
 
-async function handleApi(path: string, body: Record<string, unknown>): Promise<Response> {
+async function handleApi(path: string, body: Record<string, unknown>): Promise<Response | null> {
 	switch (path) {
 		// ---- System ----
 		case '/api/v1/system/get_client_config':

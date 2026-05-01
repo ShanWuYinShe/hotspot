@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
 	import MapPin from 'lucide-svelte/icons/map-pin';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
-	import { cn } from '$lib/utils';
 	import type { Snippet } from 'svelte';
+
 	interface AnchorSummaryCardProps {
 		label?: string;
 		description?: string | null;
@@ -17,7 +15,7 @@
 	let {
 		label = '当前锚点',
 		description = null,
-		subtle = false,
+		subtle: _subtle = false,
 		onAdjust,
 		overrideName = null,
 		actions
@@ -26,18 +24,16 @@
 	const displayName = $derived(overrideName ?? mapAnchorStore.displayName);
 </script>
 
-<Card
-	class={cn(
-		'rounded-[1.35rem] border border-border/60 bg-card/85 shadow-sm backdrop-blur-sm sm:rounded-3xl sm:backdrop-blur-md',
-		subtle && 'bg-linear-to-r from-background via-card/90 to-primary/8'
-	)}
+<div
+	class="rounded-[22px] p-4"
+	style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 >
-	<CardContent class="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4">
-		<div class="min-w-0 space-y-1">
-			<div class="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
-			<div class="truncate text-sm font-semibold text-foreground sm:text-base">{displayName || '未设置锚点'}</div>
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+		<div class="min-w-0">
+			<p class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);">{label}</p>
+			<p style="font-size: 14px; font-weight: 600; color: var(--neu-text); margin-top: 4px;">{displayName || '未设置锚点'}</p>
 			{#if description}
-				<div class="text-xs leading-5 text-muted-foreground">{description}</div>
+				<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px; line-height: 1.5;">{description}</p>
 			{/if}
 		</div>
 
@@ -46,10 +42,14 @@
 				{@render actions()}
 			</div>
 		{:else if onAdjust}
-		<Button variant="outline" size="sm" class="h-10 gap-2 rounded-2xl border-border/60 bg-background/70" onclick={onAdjust}>
-				<MapPin class="h-4 w-4" />
+			<button
+				class="flex items-center gap-2 rounded-full px-4 py-2 outline-none"
+				style="background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
+				onclick={onAdjust}
+			>
+				<MapPin size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 				调整位置
-			</Button>
+			</button>
 		{/if}
-	</CardContent>
-</Card>
+	</div>
+</div>

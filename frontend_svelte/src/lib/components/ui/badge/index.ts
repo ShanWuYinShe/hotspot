@@ -31,7 +31,7 @@ export const badgeVariants = tv({
 			accent: cn(
 				'bg-accent/10 border-accent/30',
 				'dark:bg-accent/20 dark:border-accent/70',
-				'text-accent dark:text-white',
+				'text-accent dark:neu-active-text',
 				'hover:bg-accent/20 hover:border-accent/40',
 				'dark:hover:bg-accent/30 dark:hover:border-accent/80'
 			),

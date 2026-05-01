@@ -8,7 +8,7 @@ import Title from './card-title.svelte';
 import { tv, type VariantProps } from 'tailwind-variants';
 
 export const cardVariants = tv({
-	base: 'rounded-[1.75rem] border border-border/80 bg-card/95 backdrop-blur-xl transition-all duration-180 ease-[cubic-bezier(0.4,0,0.2,1)] text-card-foreground shadow-[10px_10px_22px_var(--shadow-dark),-10px_-10px_22px_var(--shadow-light)]',
+	base: 'rounded-[24px] border border-border/80 bg-card/95 backdrop-blur-xl transition-all duration-200 text-card-foreground shadow-[8px_8px_20px_var(--neu-shadow-dark),-8px_-8px_20px_var(--neu-shadow-light)]',
 	variants: {
 		variant: {
 			default: 'border-border/80 bg-card/95',
@@ -23,7 +23,7 @@ export const cardVariants = tv({
 			strong: 'ring-2 ring-primary/16 hover:ring-primary/24'
 		},
 		interactive: {
-			true: 'cursor-pointer select-none hover:shadow-[12px_12px_26px_var(--shadow-dark),-12px_-12px_26px_var(--shadow-light)] active:shadow-[inset_6px_6px_14px_var(--shadow-dark),inset_-6px_-6px_14px_var(--shadow-light)]',
+			true: 'cursor-pointer select-none hover:shadow-[10px_10px_24px_var(--neu-shadow-dark),-10px_-10px_24px_var(--neu-shadow-light)] active:shadow-[inset_6px_6px_12px_var(--neu-shadow-dark),inset_-6px_-6px_12px_var(--neu-shadow-light)]',
 			false: ''
 		}
 	},

@@ -4,10 +4,6 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { MapPin, Share2, UsersRound } from 'lucide-svelte';
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import PageHeader from '$lib/components/layout/page-header.svelte';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import type {
 		ShareDetail,
 		LocationSharePayload,
@@ -78,101 +74,134 @@
 
 <div class="container mx-auto max-w-4xl px-4 py-8">
 	{#if !share}
-		<Card class="border-destructive/50">
-			<CardHeader>
-				<CardTitle class="text-destructive">无法加载分享</CardTitle>
-				<CardDescription>{data.error || '此分享不存在或已被删除'}</CardDescription>
-			</CardHeader>
-			<CardContent>
-				<Button variant="outline" onclick={() => goto('/')}>返回首页</Button>
-			</CardContent>
-		</Card>
+		<div
+			class="rounded-[22px] p-6"
+			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		>
+			<h2 style="font-size: 18px; font-weight: 600; color: var(--neu-error);">无法加载分享</h2>
+			<p style="font-size: 14px; color: var(--neu-text-muted); margin-top: 8px;">{data.error || '此分享不存在或已被删除'}</p>
+			<button
+				class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none"
+				style="box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+				onclick={() => goto('/')}
+			>
+				返回首页
+			</button>
+		</div>
 	{:else if share.share.share_type === 'location'}
 		{@const payload = share.payload as LocationSharePayload}
-		<Card class="overflow-hidden">
-			<div class="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
-				<PageHeader title={payload.shared_location.location_name}>
-					{#snippet actions()}
-						<div class="flex items-center gap-3">
-							<Avatar class="h-8 w-8">
-								<AvatarImage src={share.share.creator.avatar_url} alt={share.share.creator.nickname} />
-								<AvatarFallback>{share.share.creator.nickname.slice(0, 2)}</AvatarFallback>
-							</Avatar>
-							<span class="text-sm text-muted-foreground">
-								<span class="font-medium text-foreground">{share.share.creator.nickname}</span> 分享了此位置
-							</span>
-						</div>
-					{/snippet}
-				</PageHeader>
+		<div
+			class="overflow-hidden rounded-[22px]"
+			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		>
+			<!-- Header with creator info -->
+			<div class="flex items-center justify-between p-6" style="border-bottom: 1px solid var(--neu-border);">
+				<div>
+					<h2 style="font-size: 20px; font-weight: 700; color: var(--neu-text);">{payload.shared_location.location_name}</h2>
+				</div>
+				<div class="flex items-center gap-3">
+					<div class="overflow-hidden rounded-full" style="width: 32px; height: 32px; border: 1.5px solid var(--neu-border);">
+						<img src={share.share.creator.avatar_url} alt={share.share.creator.nickname} class="h-full w-full object-cover" />
+					</div>
+					<span style="font-size: 13px; color: var(--neu-text-muted);">
+						<span style="font-weight: 500; color: var(--neu-text);">{share.share.creator.nickname}</span> 分享了此位置
+					</span>
+				</div>
 			</div>
 
-			<CardContent class="space-y-6 p-6">
-				<!-- 主要操作按钮 -->
-				<Button
-					class="w-full h-14 text-base font-semibold"
+			<div class="space-y-6 p-6">
+				<!-- Primary action button -->
+				<button
+					class="flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-semibold outline-none"
+					style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
 					onclick={handleApply}
 				>
-					<MapPin class="mr-2 h-5 w-5" />
+					<MapPin size={20} />
 					设为浏览锚点
-				</Button>
+				</button>
 
-				<!-- 说明卡片 -->
-				<div class="rounded-lg bg-primary/10 p-4 space-y-3">
-					<p class="font-medium flex items-center gap-2">
-						<UsersRound class="h-4 w-4" />
+				<!-- Info card -->
+				<div
+					class="rounded-[18px] p-4"
+					style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				>
+					<p class="flex items-center gap-2" style="font-weight: 500; font-size: 14px; color: var(--neu-text);">
+						<UsersRound size={16} />
 						设置后你将看到
 					</p>
-					<ul class="space-y-2 text-sm text-muted-foreground">
+					<ul class="mt-3 space-y-2" style="font-size: 13px; color: var(--neu-text-muted);">
 						<li class="flex items-start gap-2">
-							<span class="text-primary">•</span>
+							<span style="color: var(--neu-accent-primary);">•</span>
 							<span>这个区域附近的人</span>
 						</li>
 						<li class="flex items-start gap-2">
-							<span class="text-primary">•</span>
+							<span style="color: var(--neu-accent-primary);">•</span>
 							<span>这个区域的附近群组和活跃社区</span>
 						</li>
 						<li class="flex items-start gap-2">
-							<span class="text-primary">•</span>
+							<span style="color: var(--neu-accent-primary);">•</span>
 							<span>这个区域的最新动态和精彩内容</span>
 						</li>
 					</ul>
 				</div>
 
-				<!-- 位置信息（仅展示名称，不展示经纬度） -->
-				<div class="space-y-2">
-					<h3 class="text-sm font-medium text-muted-foreground">位置说明</h3>
-					<div class="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-						以「{payload.shared_location.location_name}」为中心区域进行浏览和推荐。
+				<!-- Location note -->
+				<div>
+					<p class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 8px;">位置说明</p>
+					<div
+						class="rounded-[14px] p-3"
+						style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					>
+						<p style="font-size: 12px; color: var(--neu-text-muted);">以「{payload.shared_location.location_name}」为中心区域进行浏览和推荐。</p>
 					</div>
 				</div>
 
-				<!-- 次要操作 -->
+				<!-- Secondary actions -->
 				<div class="flex items-center gap-2">
-					<Button variant="outline" size="sm" class="flex-1" onclick={copyShareLink}>
-						<Share2 class="mr-2 h-4 w-4" />
+					<button
+						class="flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 font-medium outline-none"
+						style="box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+						onclick={copyShareLink}
+					>
+						<Share2 size={16} />
 						分享给朋友
-					</Button>
-					<Button variant="ghost" size="sm" onclick={() => goto('/')}>
+					</button>
+					<button
+						class="rounded-full px-5 py-2.5 font-medium outline-none"
+						style="color: var(--neu-text-muted); background: transparent;"
+						onclick={() => goto('/')}
+					>
 						返回首页
-					</Button>
+					</button>
 				</div>
-			</CardContent>
-		</Card>
+			</div>
+		</div>
 	{:else}
-		<!-- 其他类型的分享（用户/群组/瞬间） -->
-		<Card>
-			<CardHeader>
-				<CardTitle>分享内容</CardTitle>
-				<CardDescription>
-					分享类型：{share.share.share_type === 'user' ? '用户' : share.share.share_type === 'group' ? '群组' : '瞬间'}
-				</CardDescription>
-			</CardHeader>
-			<CardContent class="space-y-4">
-				<Button class="w-full" onclick={handleApply}>
+		<!-- Other share types (user/group/moment) -->
+		<div
+			class="rounded-[22px] p-6"
+			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		>
+			<h2 style="font-size: 18px; font-weight: 600; color: var(--neu-text);">分享内容</h2>
+			<p style="font-size: 14px; color: var(--neu-text-muted); margin-top: 8px;">
+				分享类型：{share.share.share_type === 'user' ? '用户' : share.share.share_type === 'group' ? '群组' : '瞬间'}
+			</p>
+			<div class="mt-4 space-y-3">
+				<button
+					class="w-full rounded-full py-3 font-medium outline-none"
+					style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+					onclick={handleApply}
+				>
 					前去查看
-				</Button>
-				<Button variant="outline" onclick={() => goto('/')}>返回首页</Button>
-			</CardContent>
-		</Card>
+				</button>
+				<button
+					class="w-full rounded-full py-3 font-medium outline-none"
+					style="box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+					onclick={() => goto('/')}
+				>
+					返回首页
+				</button>
+			</div>
+		</div>
 	{/if}
 </div>

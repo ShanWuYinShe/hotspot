@@ -5,9 +5,6 @@
 	import type { NotificationType } from '$lib/types/api';
 	import { notificationStore } from '$lib/stores/notification.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
-	import { Switch } from '$lib/components/ui/switch';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import Bell from 'lucide-svelte/icons/bell';
 	import CheckCheck from 'lucide-svelte/icons/check-check';
@@ -121,85 +118,107 @@
 <div class="mx-auto max-w-3xl space-y-5">
 	<PageHeader title="通知设置" description="管理通知偏好、未读状态和通知中心入口" backHref="/settings" backLabel="返回设置" />
 
-	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
-		<CardHeader>
-			<CardTitle class="flex items-center gap-2 text-base">
-				<Bell class="h-5 w-5 text-muted-foreground" />
-				通知状态
-			</CardTitle>
-			<CardDescription>
-				快速查看当前未读情况，并进入通知中心处理通知。
-			</CardDescription>
-		</CardHeader>
-		<CardContent class="space-y-4 pt-0">
-			<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-4">
-				<div>
-					<p class="font-medium">当前未读通知</p>
-					<p class="text-sm text-muted-foreground">未读数量会和通知下拉、通知列表保持一致</p>
-				</div>
-				<div class="text-2xl font-semibold tabular-nums">{notificationStore.unreadCount}</div>
+	<!-- Notification Status Card -->
+	<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="mb-4 flex items-center gap-2">
+			<div class="flex items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<Bell size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 			</div>
-
-			<div class="flex flex-col gap-3 sm:flex-row">
-				<Button class="h-11 flex-1 rounded-2xl" onclick={() => goto('/notifications')}>
-					<ExternalLink class="mr-2 h-4 w-4" />
-					进入通知中心
-				</Button>
-				<Button
-					variant="outline"
-					class="h-11 flex-1 rounded-2xl"
-					onclick={markAllRead}
-					disabled={isMarkingAllRead || notificationStore.unreadCount === 0}
-				>
-					{#if isMarkingAllRead}
-						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-					{:else}
-						<CheckCheck class="mr-2 h-4 w-4" />
-					{/if}
-					全部标记为已读
-				</Button>
+			<div>
+				<p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">通知状态</p>
+				<p style="font-size: 12px; color: var(--neu-text-muted);">快速查看当前未读情况，并进入通知中心处理通知。</p>
 			</div>
-		</CardContent>
-	</Card>
+		</div>
 
-	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
-		<CardHeader>
-			<CardTitle class="text-base">偏好说明</CardTitle>
-			<CardDescription>
-				当前仓库尚未接入服务端通知偏好协议，所以这里先用本地持久化保存一个与 NotificationType 对齐的偏好模型。
-			</CardDescription>
-		</CardHeader>
-		<CardContent class="pt-0">
-			<p class="rounded-2xl border border-border/50 bg-background/65 px-4 py-3 text-sm text-muted-foreground">
+		<div class="flex items-center justify-between rounded-[18px] px-4 py-4" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<div>
+				<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">当前未读通知</p>
+				<p style="font-size: 12px; color: var(--neu-text-muted);">未读数量会和通知下拉、通知列表保持一致</p>
+			</div>
+			<div style="font-size: 24px; font-weight: 600; color: var(--neu-accent-primary);" class="tabular-nums">{notificationStore.unreadCount}</div>
+		</div>
+
+		<div class="mt-4 flex flex-col gap-3 sm:flex-row">
+			<button
+				class="flex h-11 flex-1 items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90"
+				style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+				onclick={() => goto('/notifications')}
+			>
+				<ExternalLink size={16} class="mr-2" />
+				进入通知中心
+			</button>
+			<button
+				class="flex h-11 flex-1 items-center justify-center rounded-[18px] text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+				style="background: var(--neu-bg); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"
+				onclick={markAllRead}
+				disabled={isMarkingAllRead || notificationStore.unreadCount === 0}
+			>
+				{#if isMarkingAllRead}
+					<Loader2 size={16} class="mr-2 animate-spin" />
+				{:else}
+					<CheckCheck size={16} class="mr-2" />
+				{/if}
+				全部标记为已读
+			</button>
+		</div>
+	</div>
+
+	<!-- Preference Explanation Card -->
+	<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="mb-3">
+			<p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">偏好说明</p>
+			<p style="font-size: 12px; color: var(--neu-text-muted);">当前仓库尚未接入服务端通知偏好协议，所以这里先用本地持久化保存一个与 NotificationType 对齐的偏好模型。</p>
+		</div>
+		<div class="rounded-[18px] px-4 py-3" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<p style="font-size: 13px; color: var(--neu-text-muted); line-height: 1.6;">
 				这些开关用于保留你在当前浏览器的通知偏好，并已按真实 NotificationType 存储，后续若接入服务端协议，可直接映射到服务端字段。真正收到的通知仍以服务端与 WebSocket 推送为准。
 			</p>
-		</CardContent>
-	</Card>
+		</div>
+	</div>
 
-	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
-		<CardHeader>
-			<CardTitle class="text-base">当前浏览器通知偏好</CardTitle>
-			<CardDescription>
-				本页设置仅保存在当前浏览器，用于保留你的本地通知偏好；不会影响其他设备。
-			</CardDescription>
-		</CardHeader>
-		<CardContent class="space-y-4 pt-0">
+	<!-- Notification Preferences Card -->
+	<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="mb-4">
+			<p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">当前浏览器通知偏好</p>
+			<p style="font-size: 12px; color: var(--neu-text-muted);">本页设置仅保存在当前浏览器，用于保留你的本地通知偏好；不会影响其他设备。</p>
+		</div>
+
+		<div class="space-y-3">
 			{#each preferenceItems as item (item.key)}
-				<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3.5">
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<div>
-						<p class="font-medium">{item.title}</p>
-						<p class="text-sm text-muted-foreground">{item.description}</p>
+						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">{item.title}</p>
+						<p style="font-size: 12px; color: var(--neu-text-muted);">{item.description}</p>
 					</div>
-					<Switch checked={isGroupEnabled(item.key)} onchange={(checked: boolean) => togglePreference(item.key, checked)} />
+					<button
+						type="button"
+						role="switch"
+						aria-checked={isGroupEnabled(item.key)}
+						class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
+						style={isGroupEnabled(item.key)
+							? 'background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);'
+							: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+						onclick={() => togglePreference(item.key, !isGroupEnabled(item.key))}
+					>
+						<span
+							class="block h-5 w-5 rounded-full transition-transform"
+							style="background: {isGroupEnabled(item.key) ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({isGroupEnabled(item.key) ? '22px' : '4px'}); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"
+						></span>
+					</button>
 				</div>
 			{/each}
+		</div>
 
-			<Button class="h-11 w-full rounded-2xl" onclick={savePreferences} disabled={isSaving}>
-				{#if isSaving}
-					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-				{/if}
-				保存通知偏好
-			</Button>
-		</CardContent>
-	</Card>
+		<button
+			class="mt-4 flex h-11 w-full items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+			style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+			onclick={savePreferences}
+			disabled={isSaving}
+		>
+			{#if isSaving}
+				<Loader2 size={16} class="mr-2 animate-spin" />
+			{/if}
+			保存通知偏好
+		</button>
+	</div>
 </div>

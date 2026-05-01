@@ -3,7 +3,6 @@
 	import { feedService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import type { TagItem } from '$lib/types/api';
-	import { Badge } from '$lib/components/ui/badge';
 	import Hash from 'lucide-svelte/icons/hash';
 
 	interface Props {
@@ -19,7 +18,7 @@
 		const version = ++loadVersion;
 		try {
 			const response = await feedService.getTrending();
-			if (version !== loadVersion) return; // 丢弃过期响应
+			if (version !== loadVersion) return;
 			if (isSuccess(response) && response.data) {
 				tags = response.data.trending_tags ?? [];
 			}
@@ -36,25 +35,22 @@
 </script>
 
 {#if tags.length > 0}
-	<section class="space-y-4 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md">
-		<div class="flex items-center gap-2 px-1">
-			<div class="rounded-xl border border-border/50 bg-primary/10 p-2 text-primary">
-				<Hash class="h-4 w-4" />
-			</div>
-			<h2 class="text-lg font-semibold tracking-tight">热门话题</h2>
+	<div>
+		<div class="mb-2 flex items-center gap-1.5">
+			<Hash size={13} color="var(--neu-accent-primary)" />
+			<p class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);">热门话题</p>
 		</div>
-		<div class="flex flex-wrap gap-2">
+		<div class="flex flex-wrap gap-1.5">
 			{#each tags as tag (tag.name)}
-				<a href="/search?tag={encodeURIComponent(tag.name)}" class="group">
-					<Badge
-						variant="secondary"
-						class="cursor-pointer rounded-2xl border border-border/50 bg-background/65 px-3 py-1.5 text-sm transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
-					>
-						#{tag.name}
-						<span class="ml-1.5 text-xs opacity-50 group-hover:opacity-100">{tag.usage_count}</span>
-					</Badge>
+				<a
+					href="/search?tag={encodeURIComponent(tag.name)}"
+					class="rounded-full px-3 py-1 text-xs transition-colors"
+					style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+				>
+					#{tag.name}
+					<span style="opacity: 0.5;">{tag.usage_count}</span>
 				</a>
 			{/each}
 		</div>
-	</section>
+	</div>
 {/if}

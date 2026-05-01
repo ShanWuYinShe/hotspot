@@ -4,14 +4,9 @@
 	import { usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
-	import { Label } from '$lib/components/ui/label';
-	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { Switch } from '$lib/components/ui/switch';
-	import type { PrivacyLevel, PrivateChatPermission, UserSettings } from '$lib/types/api';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
+	import type { PrivacyLevel, PrivateChatPermission, UserSettings } from '$lib/types/api';
 
 	let settings = $state<UserSettings | null>(null);
 	let isLoading = $state(true);
@@ -91,73 +86,135 @@
 	/>
 
 	{#if isLoading}
-		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
-			<CardContent class="space-y-4 p-6">
+		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<div class="space-y-4">
 				{#each Array(5) as _, i (i)}
-					<Skeleton class="h-11 w-full rounded-2xl" />
+					<div class="h-11 w-full rounded-[18px]" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"></div>
 				{/each}
-			</CardContent>
-		</Card>
+			</div>
+		</div>
 	{:else}
-		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
-			<CardHeader>
-				<CardTitle class="text-base">基础可见性</CardTitle>
-				<CardDescription>控制大部分信息默认可见范围</CardDescription>
-			</CardHeader>
-			<CardContent class="space-y-4 pt-0">
-				<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
-					<Label for="privacy-level">隐私级别</Label>
+		<!-- Basic Visibility Card -->
+		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<p style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-bottom: 4px;">基础可见性</p>
+			<p style="font-size: 12px; color: var(--neu-text-muted); margin-bottom: 16px;">控制大部分信息默认可见范围</p>
+
+			<div class="space-y-3">
+				<div class="rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<label for="privacy-level" style="font-size: 13px; color: var(--neu-text-muted); display: block; margin-bottom: 8px;">隐私级别</label>
 					<select
 						id="privacy-level"
-						class="h-11 w-full rounded-2xl border border-input bg-background px-3 text-sm"
+						class="w-full rounded-[18px] px-4 py-2.5 outline-none"
+						style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg); color: var(--neu-text);"
 						bind:value={privacyLevel}
 					>
 						<option value="public">公开</option>
 						<option value="private">仅自己</option>
 					</select>
 				</div>
-				<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3.5">
-					<div>
-						<p class="font-medium">位置可见</p>
-						<p class="text-sm text-muted-foreground">允许展示你的地理位置</p>
-					</div>
-					<Switch bind:checked={locationVisible} />
-				</div>
-				<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3.5">
-					<div>
-						<p class="font-medium">在线状态可见</p>
-						<p class="text-sm text-muted-foreground">允许显示在线/离线状态</p>
-					</div>
-					<Switch bind:checked={presenceVisible} />
-				</div>
-				<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3.5">
-					<div>
-						<p class="font-medium">好友/关注/粉丝列表可见</p>
-						<p class="text-sm text-muted-foreground">控制你的社交列表是否对他人可见</p>
-					</div>
-					<Switch bind:checked={socialListsVisible} />
-				</div>
-			</CardContent>
-		</Card>
 
-		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
-			<CardHeader>
-				<CardTitle class="text-base">社交与私聊</CardTitle>
-				<CardDescription>管理关注与私聊权限</CardDescription>
-			</CardHeader>
-			<CardContent class="space-y-4 pt-0">
-				<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3.5">
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<div>
-						<p class="font-medium">允许关注</p>
-						<p class="text-sm text-muted-foreground">关闭后他人关注需审批</p>
+						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">位置可见</p>
+						<p style="font-size: 12px; color: var(--neu-text-muted);">允许展示你的地理位置</p>
 					</div>
-					<Switch bind:checked={allowFollow} />
+					<button
+						type="button"
+						role="switch"
+						aria-checked={locationVisible}
+						class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
+						style={locationVisible
+							? 'background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);'
+							: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+						onclick={() => locationVisible = !locationVisible}
+					>
+						<span
+							class="block h-5 w-5 rounded-full transition-transform"
+							style="background: {locationVisible ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({locationVisible ? '22px' : '4px'}); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"
+						></span>
+					</button>
 				</div>
-				<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
-					<Label for="private-chat">私聊权限</Label>
+
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div>
+						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">在线状态可见</p>
+						<p style="font-size: 12px; color: var(--neu-text-muted);">允许显示在线/离线状态</p>
+					</div>
+					<button
+						type="button"
+						role="switch"
+						aria-checked={presenceVisible}
+						class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
+						style={presenceVisible
+							? 'background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);'
+							: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+						onclick={() => presenceVisible = !presenceVisible}
+					>
+						<span
+							class="block h-5 w-5 rounded-full transition-transform"
+							style="background: {presenceVisible ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({presenceVisible ? '22px' : '4px'}); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"
+						></span>
+					</button>
+				</div>
+
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div>
+						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">好友/关注/粉丝列表可见</p>
+						<p style="font-size: 12px; color: var(--neu-text-muted);">控制你的社交列表是否对他人可见</p>
+					</div>
+					<button
+						type="button"
+						role="switch"
+						aria-checked={socialListsVisible}
+						class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
+						style={socialListsVisible
+							? 'background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);'
+							: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+						onclick={() => socialListsVisible = !socialListsVisible}
+					>
+						<span
+							class="block h-5 w-5 rounded-full transition-transform"
+							style="background: {socialListsVisible ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({socialListsVisible ? '22px' : '4px'}); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"
+						></span>
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Social & Chat Card -->
+		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<p style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-bottom: 4px;">社交与私聊</p>
+			<p style="font-size: 12px; color: var(--neu-text-muted); margin-bottom: 16px;">管理关注与私聊权限</p>
+
+			<div class="space-y-3">
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div>
+						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">允许关注</p>
+						<p style="font-size: 12px; color: var(--neu-text-muted);">关闭后他人关注需审批</p>
+					</div>
+					<button
+						type="button"
+						role="switch"
+						aria-checked={allowFollow}
+						class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
+						style={allowFollow
+							? 'background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);'
+							: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+						onclick={() => allowFollow = !allowFollow}
+					>
+						<span
+							class="block h-5 w-5 rounded-full transition-transform"
+							style="background: {allowFollow ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({allowFollow ? '22px' : '4px'}); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"
+						></span>
+					</button>
+				</div>
+
+				<div class="rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<label for="private-chat" style="font-size: 13px; color: var(--neu-text-muted); display: block; margin-bottom: 8px;">私聊权限</label>
 					<select
 						id="private-chat"
-						class="h-11 w-full rounded-2xl border border-input bg-background px-3 text-sm"
+						class="w-full rounded-[18px] px-4 py-2.5 outline-none"
+						style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg); color: var(--neu-text);"
 						bind:value={allowPrivateChat}
 					>
 						<option value="everyone">所有人可私聊</option>
@@ -165,37 +222,71 @@
 						<option value="nobody">不允许私聊</option>
 					</select>
 				</div>
-			</CardContent>
-		</Card>
+			</div>
+		</div>
 
-		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
-			<CardHeader>
-				<CardTitle class="text-base">搜索与发现</CardTitle>
-				<CardDescription>控制你在搜索/附近中的展示</CardDescription>
-			</CardHeader>
-			<CardContent class="space-y-4 pt-0">
-				<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3.5">
-					<div>
-						<p class="font-medium">允许被搜索</p>
-						<p class="text-sm text-muted-foreground">关闭后不会出现在搜索结果</p>
-					</div>
-					<Switch bind:checked={searchable} />
-				</div>
-				<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3.5">
-					<div>
-						<p class="font-medium">附近可见</p>
-						<p class="text-sm text-muted-foreground">允许出现在附近的人</p>
-					</div>
-					<Switch bind:checked={locationSearchable} />
-				</div>
-			</CardContent>
-		</Card>
+		<!-- Search & Discovery Card -->
+		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<p style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-bottom: 4px;">搜索与发现</p>
+			<p style="font-size: 12px; color: var(--neu-text-muted); margin-bottom: 16px;">控制你在搜索/附近中的展示</p>
 
-		<Button class="h-11 w-full rounded-2xl" onclick={saveSettings} disabled={isSaving}>
+			<div class="space-y-3">
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div>
+						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">允许被搜索</p>
+						<p style="font-size: 12px; color: var(--neu-text-muted);">关闭后不会出现在搜索结果</p>
+					</div>
+					<button
+						type="button"
+						role="switch"
+						aria-checked={searchable}
+						class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
+						style={searchable
+							? 'background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);'
+							: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+						onclick={() => searchable = !searchable}
+					>
+						<span
+							class="block h-5 w-5 rounded-full transition-transform"
+							style="background: {searchable ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({searchable ? '22px' : '4px'}); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"
+						></span>
+					</button>
+				</div>
+
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div>
+						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">附近可见</p>
+						<p style="font-size: 12px; color: var(--neu-text-muted);">允许出现在附近的人</p>
+					</div>
+					<button
+						type="button"
+						role="switch"
+						aria-checked={locationSearchable}
+						class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
+						style={locationSearchable
+							? 'background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);'
+							: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+						onclick={() => locationSearchable = !locationSearchable}
+					>
+						<span
+							class="block h-5 w-5 rounded-full transition-transform"
+							style="background: {locationSearchable ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({locationSearchable ? '22px' : '4px'}); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"
+						></span>
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<button
+			class="flex h-11 w-full items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+			style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+			onclick={saveSettings}
+			disabled={isSaving}
+		>
 			{#if isSaving}
-				<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+				<Loader2 size={16} class="mr-2 animate-spin" />
 			{/if}
 			保存设置
-		</Button>
+		</button>
 	{/if}
 </div>

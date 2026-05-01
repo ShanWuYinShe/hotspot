@@ -5,9 +5,7 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import type { UserItem } from '$lib/types/api';
-	import UserCard from '$lib/components/common/user-card.svelte';
-	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
-	import Users from 'lucide-svelte/icons/users';
+	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 
 	interface Props {
 		refreshTrigger?: number;
@@ -18,6 +16,12 @@
 	let users = $state.raw<UserItem[]>([]);
 	let loading = $state(false);
 	let loadVersion = 0;
+
+	function formatDistance(meters?: number): string {
+		if (meters == null) return '';
+		if (meters < 1000) return `${Math.round(meters)}m`;
+		return `${(meters / 1000).toFixed(1)}km`;
+	}
 
 	async function loadUsers() {
 		const version = ++loadVersion;
@@ -31,7 +35,7 @@
 				},
 				pagination: { limit: 6 }
 			});
-			if (version !== loadVersion) return; // 丢弃过期响应
+			if (version !== loadVersion) return;
 			if (isSuccess(response) && response.data) {
 				const currentUserId = authStore.currentUserId;
 				const items = response.data.items ?? [];
@@ -49,55 +53,61 @@
 
 	$effect(() => {
 		refreshTrigger;
-		mapAnchorStore.anchor.updatedAt; // Dependency
+		mapAnchorStore.anchor.updatedAt;
 		loadUsers();
 	});
 </script>
 
-{#if loading}
-	<section class="space-y-4 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md">
-		<div class="flex items-center justify-between">
-			<div class="flex items-center gap-2 px-1">
-				<div class="rounded-xl border border-border/50 bg-primary/10 p-2 text-primary">
-					<Users class="h-4 w-4" />
-				</div>
-				<h2 class="text-lg font-semibold tracking-tight">推荐用户</h2>
-			</div>
-		</div>
-		<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
-			{#each Array(6) as _, i (i)}
-				<div class="mb-3 break-inside-avoid">
-					<ListSkeleton type="user" count={1} layout="list" />
-				</div>
-			{/each}
-		</div>
-	</section>
-{:else if users.length > 0}
-	<section class="space-y-4 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md">
-		<div class="flex items-center justify-between">
-			<div class="flex items-center gap-2 px-1">
-				<div class="rounded-xl border border-border/50 bg-primary/10 p-2 text-primary">
-					<Users class="h-4 w-4" />
-				</div>
-				<h2 class="text-lg font-semibold tracking-tight">推荐用户</h2>
-			</div>
-			<a href="/users/nearby" class="text-sm font-medium text-muted-foreground hover:underline">
-				查看更多
+{#if users.length > 0 || loading}
+	<div>
+		<div class="mb-3 flex items-center justify-between">
+			<p class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);">推荐用户</p>
+			<a href="/users/nearby" class="flex items-center gap-0.5 outline-none" style="color: var(--neu-accent-primary);">
+				<span style="font-size: 12px;">查看更多</span>
+				<ChevronRight size={13} strokeWidth={1.5} />
 			</a>
 		</div>
-		<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
-			{#each users as user (user.user.user_id)}
-				<div class="mb-3 break-inside-avoid">
-					<UserCard
-						{user}
-						showDistance
-						showBio
-						showTags
-						variant="square"
-						class="border-border/60 bg-card/95 shadow-md shadow-black/5 dark:shadow-black/30"
-					/>
-				</div>
-			{/each}
-		</div>
-	</section>
+		{#if loading}
+			<div class="flex flex-col gap-2.5">
+				{#each Array(3) as _}
+					<div class="flex items-center gap-3.5 rounded-[18px] px-4 py-3" style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-border);"></div>
+						<div class="flex-1">
+							<div class="mb-1 rounded" style="width: 60px; height: 12px; background: var(--neu-border);"></div>
+							<div class="rounded" style="width: 80px; height: 10px; background: var(--neu-border);"></div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{:else}
+			<div class="flex flex-col gap-2.5">
+				{#each users as user (user.user.user_id)}
+					<a
+						href="/users/{user.user.user_id}"
+						class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-shadow"
+						style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					>
+						<div class="relative flex-shrink-0">
+							<div class="overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
+								<img src={user.user.avatar_url || ''} alt={user.user.nickname} class="h-full w-full object-cover" />
+							</div>
+							{#if user.presence_status === 'online'}
+								<span class="absolute bottom-0 right-0 rounded-full" style="width: 9px; height: 9px; background: var(--neu-success); border: 2px solid var(--neu-bg);"></span>
+							{/if}
+						</div>
+						<div class="min-w-0 flex-1">
+							<p style="font-size: 13px; color: var(--neu-text);">{user.user.nickname}</p>
+							<p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">
+								{#if user.tags && user.tags.length > 0}{user.tags[0]}{/if}
+							</p>
+						</div>
+						{#if user.location?.distance != null}
+							<span style="font-size: 12px; color: var(--neu-accent-primary);">{formatDistance(user.location.distance)}</span>
+						{/if}
+						<ChevronRight size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+					</a>
+				{/each}
+			</div>
+		{/if}
+	</div>
 {/if}

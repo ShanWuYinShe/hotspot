@@ -3,9 +3,6 @@
 	import { shareService } from '$lib/api/services';
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { formatDateTime, formatRelativeTime } from '$lib/utils/format';
-	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
@@ -91,25 +88,26 @@
 <div class="mx-auto max-w-4xl space-y-5">
 	<PageHeader title="我的分享" description="查看你创建过的分享，并管理其可访问状态" backHref="/settings" backLabel="返回设置">
 		{#snippet actions()}
-			<Button
-				variant="outline"
-				size="sm"
-				class="rounded-2xl border-border/60 bg-background/70"
+			<button
+				class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
+				style="background: var(--neu-bg); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"
 				onclick={() => loadShares(true)}
 				disabled={pagination.loading}
 			>
-				<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
+				<RefreshCw size={14} class="mr-2 {pagination.loading ? 'animate-spin' : ''}" />
 				刷新
-			</Button>
+			</button>
 		{/snippet}
 	</PageHeader>
 
+	<!-- Type filter pills -->
 	<div class="flex flex-wrap gap-2">
 		{#each shareTypeOptions as option (option.value)}
-			<Button
-				variant={activeType === option.value ? 'default' : 'outline'}
-				size="sm"
-				class="rounded-full"
+			<button
+				class="rounded-full px-4 py-1.5 text-sm transition-all disabled:opacity-50"
+				style={activeType === option.value
+					? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 8px var(--neu-glow);'
+					: 'background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);'}
 				disabled={pagination.loading}
 				onclick={async () => {
 					if (pagination.loading || activeType === option.value) return;
@@ -118,7 +116,7 @@
 				}}
 			>
 				{option.label}
-			</Button>
+			</button>
 		{/each}
 	</div>
 
@@ -141,70 +139,70 @@
 	{:else}
 		<div class="space-y-3">
 			{#each pagination.items as item (item.share_id)}
-				<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
-					<CardContent class="space-y-4 p-4 sm:p-5">
-						<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-							<div class="min-w-0 flex-1 space-y-2">
-								<div class="flex flex-wrap items-center gap-2">
-									<Badge class={`rounded-full border ${SHARE_TYPE_BADGE_CLASS[item.share_type]}`}>
-										{SHARE_TYPE_LABEL[item.share_type]}
-									</Badge>
-									{#if item.is_revoked}
-										<Badge variant="outline" class="rounded-full border-destructive/30 text-destructive">
-											已撤销
-										</Badge>
-									{:else}
-										<Badge variant="outline" class="rounded-full">
-											可访问
-										</Badge>
-									{/if}
-								</div>
-								<div>
-									<h2 class="truncate text-base font-semibold text-foreground">{getShareTitle(item)}</h2>
-									<p class="mt-1 text-sm text-muted-foreground">{getShareSubtitle(item)}</p>
-								</div>
+				<div class="rounded-[22px] p-4 sm:p-5" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+						<div class="min-w-0 flex-1 space-y-2">
+							<div class="flex flex-wrap items-center gap-2">
+								<span class={`inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-medium ${SHARE_TYPE_BADGE_CLASS[item.share_type]}`}>
+									{SHARE_TYPE_LABEL[item.share_type]}
+								</span>
+								{#if item.is_revoked}
+									<span class="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium" style="border: 1px solid var(--neu-error-border); color: var(--neu-error);">
+										已撤销
+									</span>
+								{:else}
+									<span class="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-accent-primary);">
+										可访问
+									</span>
+								{/if}
 							</div>
-							<div class="flex shrink-0 flex-wrap gap-2">
-								<a href={getShareHref(item)} target="_blank" rel="noreferrer">
-									<Button variant="outline" size="sm" class="rounded-2xl border-border/60 bg-background/70">
-										<ExternalLink class="mr-2 h-4 w-4" />
-										查看
-									</Button>
-								</a>
-								<Button
-									variant="outline"
-									size="sm"
-									class="rounded-2xl border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-									onclick={() => revokeShare(item)}
-									disabled={item.is_revoked || revokingShareId === item.share_id}
+							<div>
+								<h2 style="font-size: 15px; font-weight: 600; color: var(--neu-text);" class="truncate">{getShareTitle(item)}</h2>
+								<p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 4px;">{getShareSubtitle(item)}</p>
+							</div>
+						</div>
+						<div class="flex shrink-0 flex-wrap gap-2">
+							<a href={getShareHref(item)} target="_blank" rel="noreferrer">
+								<button
+									class="flex items-center rounded-[18px] px-4 py-2 text-sm transition-opacity hover:opacity-80"
+									style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"
 								>
-									{#if revokingShareId === item.share_id}
-										<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-									{:else}
-										<Ban class="mr-2 h-4 w-4" />
-									{/if}
-									撤销
-								</Button>
-							</div>
+									<ExternalLink size={14} class="mr-2" />
+									查看
+								</button>
+							</a>
+							<button
+								class="flex items-center rounded-[18px] px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
+								style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-error-border); color: var(--neu-error);"
+								onclick={() => revokeShare(item)}
+								disabled={item.is_revoked || revokingShareId === item.share_id}
+							>
+								{#if revokingShareId === item.share_id}
+									<Loader2 size={14} class="mr-2 animate-spin" />
+								{:else}
+									<Ban size={14} class="mr-2" />
+								{/if}
+								撤销
+							</button>
 						</div>
+					</div>
 
-						<div class="grid gap-3 rounded-2xl border border-border/50 bg-background/60 px-4 py-3 text-sm sm:grid-cols-3">
-							<div>
-								<p class="text-xs text-muted-foreground">创建时间</p>
-								<p class="mt-1 font-medium">{formatRelativeTime(item.created_at)}</p>
-								<p class="mt-1 text-xs text-muted-foreground">{formatDateTime(item.created_at)}</p>
-							</div>
-							<div>
-								<p class="text-xs text-muted-foreground">分享码</p>
-								<p class="mt-1 font-mono text-sm font-medium uppercase tracking-[0.12em]">{item.share_code}</p>
-							</div>
-							<div>
-								<p class="text-xs text-muted-foreground">有效期</p>
-								<p class="mt-1 font-medium">{item.expires_at ? formatDateTime(item.expires_at) : '长期有效'}</p>
-							</div>
+					<div class="mt-4 grid gap-3 rounded-[18px] px-4 py-3 text-sm sm:grid-cols-3" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div>
+							<p style="font-size: 11px; color: var(--neu-text-muted);">创建时间</p>
+							<p style="font-size: 13px; font-weight: 500; color: var(--neu-text); margin-top: 4px;">{formatRelativeTime(item.created_at)}</p>
+							<p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 2px;">{formatDateTime(item.created_at)}</p>
 						</div>
-					</CardContent>
-				</Card>
+						<div>
+							<p style="font-size: 11px; color: var(--neu-text-muted);">分享码</p>
+							<p style="font-size: 13px; font-weight: 500; font-family: monospace; text-transform: uppercase; letter-spacing: 0.12em; color: var(--neu-text); margin-top: 4px;">{item.share_code}</p>
+						</div>
+						<div>
+							<p style="font-size: 11px; color: var(--neu-text-muted);">有效期</p>
+							<p style="font-size: 13px; font-weight: 500; color: var(--neu-text); margin-top: 4px;">{item.expires_at ? formatDateTime(item.expires_at) : '长期有效'}</p>
+						</div>
+					</div>
+				</div>
 			{/each}
 		</div>
 

@@ -18,17 +18,12 @@
 		{align}
 		class={cn(
 			'z-50 min-w-32 overflow-hidden',
-			'rounded-2xl p-2',
-			'border-2 border-primary/20',
-			'bg-white/95 dark:bg-card/90',
-			'backdrop-blur-xl',
-			'text-popover-foreground',
-			'shadow-xl shadow-black/15',
-			'dark:shadow-2xl dark:shadow-black/30',
+			'p-2',
 			'data-[state=open]:animate-bounce-in',
 			'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
 			className
 		)}
+		style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border); border-radius: 18px; color: var(--neu-text);"
 		{...restProps}
 	>
 		{#if children}

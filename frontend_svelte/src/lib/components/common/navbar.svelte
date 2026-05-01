@@ -5,10 +5,8 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { adminPermissionsStore } from '$lib/stores/admin-permissions.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { RippleButton } from '$lib/components/ui/interactive';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import ThemeToggle from './theme-toggle.svelte';
 	import SearchModal from './search-modal.svelte';
 	import NotificationDropdown from './notification-dropdown.svelte';
@@ -30,16 +28,9 @@
 	let { onMenuClick, showMenu = true }: Props = $props();
 	let showSearchModal = $state(false);
 
-	function closeTopbarModals() {
-		showSearchModal = false;
-	}
+	function closeTopbarModals() { showSearchModal = false; }
+	function openSearchModal() { closeTopbarModals(); showSearchModal = true; }
 
-	function openSearchModal() {
-		closeTopbarModals();
-		showSearchModal = true;
-	}
-
-	// 监听快捷键（Cmd/Ctrl + K 打开搜索）
 	onMount(() => {
 		const handleKeydown = (event: KeyboardEvent) => {
 			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -47,43 +38,25 @@
 				openSearchModal();
 			}
 		};
-
 		window.addEventListener('keydown', handleKeydown);
 		return () => window.removeEventListener('keydown', handleKeydown);
 	});
 
-
-	function handleLogout() {
-		authStore.logout();
-		goto('/');
-	}
-
-	function handleAuthEntry() {
-		uiStore.openLoginModal();
-	}
-
+	function handleLogout() { authStore.logout(); goto('/'); }
+	function handleAuthEntry() { uiStore.openLoginModal(); }
 	function openCreateMoment() {
-		if (!authStore.isAuthenticated) {
-			uiStore.openLoginModal();
-			return;
-		}
-		closeTopbarModals();
-		uiStore.openCreateMoment();
+		if (!authStore.isAuthenticated) { uiStore.openLoginModal(); return; }
+		closeTopbarModals(); uiStore.openCreateMoment();
 	}
-
 	function openCreateGroup() {
-		if (!authStore.isAuthenticated) {
-			uiStore.openLoginModal();
-			return;
-		}
-		closeTopbarModals();
-		uiStore.openCreateGroup();
+		if (!authStore.isAuthenticated) { uiStore.openLoginModal(); return; }
+		closeTopbarModals(); uiStore.openCreateGroup();
 	}
 </script>
 
 <header
-	class="sticky top-0 z-50 w-full border-b border-border/50 bg-background/88 shadow-sm shadow-black/5 dark:shadow-black/20 backdrop-blur supports-backdrop-filter:bg-background/70"
-	style="padding-top: env(safe-area-inset-top, 0px);"
+	class="sticky top-0 z-50 w-full"
+	style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border); padding-top: env(safe-area-inset-top, 0px);"
 >
 	<div class="mx-auto flex h-13 w-full items-center gap-1.5 px-3 sm:h-16 sm:gap-3 sm:px-4 md:px-6">
 		{#if showMenu}
@@ -100,11 +73,14 @@
 		{/if}
 
 		<!-- Logo -->
-		<a href="/" class="flex shrink-0 items-center gap-2 rounded-xl px-1.5 py-1 transition-all hover:bg-accent/60 sm:px-2">
-			<div class="flex h-8 w-8 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20 sm:h-9 sm:w-9">
-				<img src="/logo_32.png" alt="HotSpot" class="h-5 w-5 rounded-md sm:h-6 sm:w-6" />
+		<a href="/" class="flex shrink-0 items-center gap-2 rounded-[12px] px-1.5 py-1 transition-all sm:px-2">
+			<div
+				class="flex items-center justify-center rounded-[12px]"
+				style="width: 34px; height: 34px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			>
+				<img src="/logo_32.png" alt="HotSpot" class="h-5 w-5 rounded-[8px] sm:h-5 sm:w-5" />
 			</div>
-			<span class="hidden text-lg font-bold sm:inline-block bg-linear-to-r from-primary to-primary/60 bg-clip-text text-transparent">HotSpot</span>
+			<span class="hidden text-lg font-bold sm:inline-block" style="color: var(--neu-accent-primary);">HotSpot</span>
 		</a>
 
 		<!-- Right side -->
@@ -160,21 +136,24 @@
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>
 						{#snippet child({ props })}
-							<button {...props} class="inline-flex items-center justify-center rounded-2xl p-0.5 transition-colors hover:bg-accent sm:p-1">
-								<Avatar class="h-8 w-8 ring-2 ring-primary/20">
-									<AvatarImage src={authStore.currentAccount?.avatar_url} />
-									<AvatarFallback class="bg-primary/10 text-primary text-xs">
-										{authStore.currentAccount?.nickname?.slice(0, 2) ?? 'U'}
-									</AvatarFallback>
-								</Avatar>
+							<button {...props} class="inline-flex items-center justify-center rounded-full p-0.5 outline-none sm:p-1">
+								<div class="overflow-hidden rounded-full" style="width: 32px; height: 32px; border: 2px solid var(--neu-accent-primary);">
+									{#if authStore.currentAccount?.avatar_url}
+										<img src={authStore.currentAccount.avatar_url} alt="" class="h-full w-full object-cover" />
+									{:else}
+										<div class="flex h-full w-full items-center justify-center" style="background: var(--neu-fallback-bg);">
+											<span style="font-size: 12px; font-weight: 600; color: var(--neu-fallback-text);">{authStore.currentAccount?.nickname?.slice(0, 2) ?? 'U'}</span>
+										</div>
+									{/if}
+								</div>
 							</button>
 						{/snippet}
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content class="w-56" align="end">
 						<DropdownMenu.Label>
 							<div class="flex flex-col space-y-1">
-								<p class="text-sm font-medium">{authStore.currentAccount?.nickname}</p>
-								<p class="text-xs text-muted-foreground">ID: {authStore.currentUserId}</p>
+								<p style="font-size: 13px; font-weight: 500; color: var(--neu-text);">{authStore.currentAccount?.nickname}</p>
+								<p style="font-size: 11px; color: var(--neu-text-muted);">ID: {authStore.currentUserId}</p>
 							</div>
 						</DropdownMenu.Label>
 						<DropdownMenu.Separator />
@@ -207,7 +186,7 @@
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item>
 							{#snippet child({ props })}
-								<button {...props} class="flex w-full items-center text-destructive" onclick={handleLogout}>
+								<button {...props} class="flex w-full items-center" onclick={handleLogout}>
 									<LogOut class="mr-2 h-4 w-4" />
 									{t('nav.logout')}
 								</button>
@@ -216,7 +195,6 @@
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			{:else}
-				<!-- 未登录：移动端显示图标，桌面端显示文字 -->
 				<RippleButton
 					variant="icon"
 					size="icon"
@@ -227,9 +205,13 @@
 				>
 					<User class="h-4 w-4" />
 				</RippleButton>
-				<Button size="sm" class="hidden rounded-2xl sm:inline-flex" onclick={handleAuthEntry}>
+				<button
+					class="hidden rounded-full px-4 py-1.5 outline-none sm:inline-flex"
+					style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 12px; font-weight: 500; box-shadow: 0 3px 10px var(--neu-glow);"
+					onclick={handleAuthEntry}
+				>
 					{t('nav.loginRegister')}
-				</Button>
+				</button>
 			{/if}
 		</div>
 	</div>

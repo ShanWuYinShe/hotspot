@@ -7,9 +7,6 @@
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { getLocale, t } from '$lib/i18n';
 	import type { NotificationItem, NotificationPayload } from '$lib/types/api';
-	import { Button } from '$lib/components/ui/button';
-	import { Card } from '$lib/components/ui/card';
-	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import {
 		formatNotificationTimestamp,
@@ -198,127 +195,96 @@
 	<title>{t('notificationsPage.title')} - HotSpot</title>
 </svelte:head>
 
-<div class="space-y-6">
-	<PageHeader title={t('notificationsPage.title')}>
-		{#snippet actions()}
+<div class="flex flex-col">
+	<!-- Sticky header -->
+	<div
+		class="sticky top-0 z-10 px-5 pt-3 pb-3"
+		style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+	>
+		<div class="flex items-center justify-between">
+			<div>
+				<h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">{t('notificationsPage.title')}</h1>
+				{#if notificationStore.unreadCount > 0}
+					<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">{notificationStore.unreadCount} 条未读</p>
+				{/if}
+			</div>
 			{#if notificationStore.unreadCount > 0}
-				<Button variant="outline" size="sm" onclick={markAllRead}>
-					<CheckCheck class="mr-2 h-4 w-4" />
-					{t('notificationDropdown.markAllRead')}
-				</Button>
-			{/if}
-		{/snippet}
-	</PageHeader>
-
-	{#if pagination.loading}
-		<div class="flex justify-center py-12">
-			<Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
-		</div>
-	{:else if pagination.error}
-		<div class="space-y-4">
-			<EmptyState icon={Bell} title={t('notificationsPage.loadFailed')} />
-			<div class="flex justify-center">
-				<Button variant="outline" onclick={() => loadNotifications(true)}>
-					<Loader2 class="mr-2 h-4 w-4" />
-					重试
-				</Button>
-			</div>
-		</div>
-	{:else if pagination.items.length === 0}
-		<EmptyState icon={Bell} title={t('notificationsPage.emptyTitle')} />
-	{:else}
-		<div class="space-y-2">
-			{#each pagination.items as item (item.notification_id)}
-				{@const locale = getLocale()}
-				{@const Icon = getNotificationIcon(item.type)}
-				<Card class="overflow-hidden transition-colors hover:bg-accent/50">
-					<div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:gap-4">
-						<Button
-							type="button"
-							variant="ghost"
-							class="h-auto w-full justify-start rounded-2xl p-0 text-left hover:bg-transparent sm:flex-1"
-							onclick={() => handleNotificationClick(item)}
-						>
-							<div class="flex w-full items-start gap-4">
-								<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-muted">
-									<Icon class="h-5 w-5" />
-								</div>
-								<div class="min-w-0 flex-1">
-									<div class="flex items-start justify-between gap-2">
-										<div>
-											<span class="font-medium">{getNotificationTitle(item, locale)}</span>
-											<span class="text-muted-foreground">
-												{getNotificationContent(item, locale)}
-											</span>
-										</div>
-										{#if !item.is_read}
-											<div class="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary"></div>
-										{/if}
-									</div>
-									<p class="mt-1 text-xs text-muted-foreground">
-										{formatNotificationTimestamp(item.created_at, locale)}
-									</p>
-								</div>
-							</div>
-						</Button>
-						{#if canHandleGroupInvite(item)}
-							<div class="flex flex-wrap gap-2 sm:mt-0 sm:shrink-0">
-								<Button
-									type="button"
-									size="sm"
-									disabled={isProcessing(item.notification_id)}
-									onclick={() => handleInviteAction(item, 'accept')}
-								>
-									{t('common.accept')}
-								</Button>
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									disabled={isProcessing(item.notification_id)}
-									onclick={() => handleInviteAction(item, 'reject')}
-								>
-									{t('common.reject')}
-								</Button>
-							</div>
-						{:else if canHandleGroupApplication(item)}
-							<div class="flex flex-wrap gap-2 sm:mt-0 sm:shrink-0">
-								<Button
-									type="button"
-									size="sm"
-									disabled={isProcessing(item.notification_id)}
-									onclick={() => handleApplicationAction(item, 'approve')}
-								>
-									{t('common.approve')}
-								</Button>
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									disabled={isProcessing(item.notification_id)}
-									onclick={() => handleApplicationAction(item, 'reject')}
-								>
-									{t('common.reject')}
-								</Button>
-							</div>
-						{/if}
-					</div>
-				</Card>
-			{/each}
-		</div>
-		{#if pagination.hasMore}
-			<div class="flex justify-center pt-4">
-				<Button
-					variant="outline"
-					disabled={pagination.loadingMore}
-					onclick={() => loadNotifications(false)}
+				<button
+					class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+					style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); font-size: 12px; color: var(--neu-accent-primary);"
+					onclick={markAllRead}
 				>
-					{#if pagination.loadingMore}
-						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-					{/if}
-					{t('common.loadMore')}
-				</Button>
+					<CheckCheck size={13} strokeWidth={2} />
+					{t('notificationDropdown.markAllRead')}
+				</button>
+			{/if}
+		</div>
+	</div>
+
+	<div class="flex flex-col px-3 pt-2 pb-4">
+		{#if pagination.loading}
+			<div class="flex justify-center py-12">
+				<Loader2 class="h-8 w-8 animate-spin" color="var(--neu-text-muted)" />
 			</div>
+		{:else if pagination.error}
+			<EmptyState icon={Bell} title={t('notificationsPage.loadFailed')} />
+			<div class="flex justify-center pt-2">
+				<button
+					class="rounded-full px-5 py-2 outline-none"
+					style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); font-size: 13px;"
+					onclick={() => loadNotifications(true)}
+				>{t('common.retry')}</button>
+			</div>
+		{:else if pagination.items.length === 0}
+			<EmptyState icon={Bell} title={t('notificationsPage.emptyTitle')} />
+		{:else}
+			<div class="space-y-2">
+				{#each pagination.items as item (item.notification_id)}
+					{@const locale = getLocale()}
+					{@const Icon = getNotificationIcon(item.type)}
+					<div
+						class="flex items-start gap-3 rounded-[18px] px-4 py-3"
+						style="background: var(--neu-bg); border: 1px solid var(--neu-border); {item.is_read ? '' : 'box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);'}"
+					>
+						<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<Icon size={15} strokeWidth={1.5} />
+						</div>
+						<div class="min-w-0 flex-1">
+							<button class="w-full text-left outline-none" onclick={() => handleNotificationClick(item)}>
+								<div class="flex items-start justify-between gap-2">
+									<div>
+										<span style="font-size: 13px; color: var(--neu-text); font-weight: {item.is_read ? 400 : 500};">{getNotificationTitle(item, locale)}</span>
+										<span style="font-size: 13px; color: var(--neu-text-muted);">{getNotificationContent(item, locale)}</span>
+									</div>
+									{#if !item.is_read}
+										<div class="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full" style="background: var(--neu-accent-primary);"></div>
+									{/if}
+								</div>
+								<p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 2px;">{formatNotificationTimestamp(item.created_at, locale)}</p>
+							</button>
+							{#if canHandleGroupInvite(item)}
+								<div class="mt-2 flex gap-2">
+									<button class="rounded-full px-3 py-1 text-xs outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 6px var(--neu-glow);" disabled={isProcessing(item.notification_id)} onclick={() => handleInviteAction(item, 'accept')}>{t('common.accept')}</button>
+									<button class="rounded-full px-3 py-1 text-xs outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" disabled={isProcessing(item.notification_id)} onclick={() => handleInviteAction(item, 'reject')}>{t('common.reject')}</button>
+								</div>
+							{:else if canHandleGroupApplication(item)}
+								<div class="mt-2 flex gap-2">
+									<button class="rounded-full px-3 py-1 text-xs outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 6px var(--neu-glow);" disabled={isProcessing(item.notification_id)} onclick={() => handleApplicationAction(item, 'approve')}>{t('common.approve')}</button>
+									<button class="rounded-full px-3 py-1 text-xs outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" disabled={isProcessing(item.notification_id)} onclick={() => handleApplicationAction(item, 'reject')}>{t('common.reject')}</button>
+								</div>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
+			{#if pagination.hasMore}
+				<div class="flex justify-center pt-4">
+					<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); font-size: 13px;" disabled={pagination.loadingMore} onclick={() => loadNotifications(false)}>
+						{#if pagination.loadingMore}<Loader2 class="mr-2 inline h-4 w-4 animate-spin" />{/if}
+						{t('common.loadMore')}
+					</button>
+				</div>
+			{/if}
 		{/if}
-	{/if}
+	</div>
 </div>

@@ -9,4 +9,4 @@
 	let { class: className, ...restProps }: Props = $props();
 </script>
 
-<div class={cn('animate-pulse rounded-md bg-primary/10', className)} {...restProps}></div>
+<div class={cn('animate-pulse', className)} style="background: var(--neu-border); border-radius: 12px;" {...restProps}></div>

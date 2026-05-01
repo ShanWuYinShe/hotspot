@@ -7,8 +7,6 @@
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { useLocationAwareLoad } from '$lib/hooks/use-location-aware-load.svelte';
 	import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
-	import PageHeader from '$lib/components/layout/page-header.svelte';
-	import { Button } from '$lib/components/ui/button';
 	import UserCard from '$lib/components/common/user-card.svelte';
 	import MasonryLayout from '$lib/components/common/masonry-layout.svelte';
 	import MasonryLayoutItem from '$lib/components/common/masonry-layout-item.svelte';
@@ -72,17 +70,33 @@
 </svelte:head>
 
 <div class="container mx-auto max-w-7xl space-y-4 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-6 lg:px-8">
-	<PageHeader title="附近的人" description="基于当前浏览位置，按距离排序展示可互动用户。">
-		{#snippet actions()}
-			<Button variant="ghost" size="icon" onclick={handleBack} aria-label="返回">
-				<ArrowLeft class="h-5 w-5" />
-			</Button>
-			<div class="inline-flex shrink-0 items-center gap-1 rounded-2xl border border-border/50 bg-muted/70 px-3 py-1.5 text-xs text-muted-foreground">
-				<MapPin class="h-3.5 w-3.5" />
-				<span class="max-w-48 truncate">{mapAnchorStore.displayName}</span>
+	<!-- Sticky header -->
+	<div
+		class="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
+		style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+	>
+		<div>
+			<h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">附近的人</h1>
+			<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">基于当前浏览位置，按距离排序展示可互动用户。</p>
+		</div>
+		<div class="flex items-center gap-2">
+			<button
+				class="flex items-center justify-center rounded-full outline-none"
+				style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				onclick={handleBack}
+				aria-label="返回"
+			>
+				<ArrowLeft size={18} color="var(--neu-text)" />
+			</button>
+			<div
+				class="flex items-center gap-1.5 rounded-full py-1.5 px-3.5"
+				style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			>
+				<MapPin size={12} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+				<span style="font-size: 11px; color: var(--neu-text-muted); max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{mapAnchorStore.displayName}</span>
 			</div>
-		{/snippet}
-	</PageHeader>
+		</div>
+	</div>
 
 	<AnchorSummaryCard
 		label="附近发现锚点"
@@ -94,7 +108,7 @@
 		<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
 			{#each Array(6) as _, i (i)}
 				<MasonryLayoutItem>
-					<div class="animate-pulse rounded-2xl bg-muted" style="height: {180 + (i % 3) * 30}px"></div>
+					<div class="animate-pulse rounded-[22px]" style="height: {180 + (i % 3) * 30}px; background: var(--neu-border);"></div>
 				</MasonryLayoutItem>
 			{/each}
 		</MasonryLayout>
@@ -124,7 +138,7 @@
 						showTags
 						showOnlineStatus
 						variant="square"
-						class="overflow-hidden border-border/60 bg-card/95 shadow-md shadow-black/5 dark:shadow-black/30"
+						class="overflow-hidden"
 					/>
 				</MasonryLayoutItem>
 			{/each}

@@ -15,10 +15,10 @@ export const SHARE_TYPE_LABEL: Record<ShareType, string> = {
 };
 
 export const SHARE_TYPE_BADGE_CLASS: Record<ShareType, string> = {
-	user: 'bg-blue-50 text-blue-700 border-blue-200',
-	group: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-	moment: 'bg-orange-50 text-orange-700 border-orange-200',
-	location: 'bg-violet-50 text-violet-700 border-violet-200'
+	user: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+	group: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800',
+	moment: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800',
+	location: 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800'
 };
 
 export const REPORT_REASON_LABEL: Record<ReportReason, string> = {
@@ -49,10 +49,10 @@ export const REPORT_STATUS_LABEL: Record<ReportStatus, string> = {
 };
 
 export const REPORT_STATUS_BADGE_CLASS: Record<ReportStatus, string> = {
-	pending: 'border-amber-200 bg-amber-50 text-amber-700',
-	reviewing: 'border-blue-200 bg-blue-50 text-blue-700',
-	resolved: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-	dismissed: 'border-slate-200 bg-slate-100 text-slate-700'
+	pending: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+	reviewing: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+	resolved: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+	dismissed: 'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300'
 };
 
 export const REPORT_STATUS_BADGE_VARIANT: Record<ReportStatus, BadgeVariant> = {

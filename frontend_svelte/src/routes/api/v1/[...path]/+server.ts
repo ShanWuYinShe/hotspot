@@ -1,5 +1,4 @@
 import { dev } from '$app/environment';
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { handleMockRequest } from '$lib/../mocks/handler';
 import { env } from '$env/dynamic/private';
@@ -12,7 +11,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 		}
 	}
 
-	const backendUrl = env.BACKEND_URL || 'http://backend:8081';
+	const backendUrl = env['BACKEND_URL'] || 'http://backend:8081';
 	const target = new URL(url.pathname + url.search, backendUrl);
 	const headers = new Headers(request.headers);
 	headers.delete('host');

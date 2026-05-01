@@ -3,47 +3,45 @@
 	import { THEME_FAMILY_OPTIONS, themeStore, type ThemeFamily } from '$lib/stores/theme.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { t } from '$lib/i18n';
-	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import ThemeToggle from '$lib/components/common/theme-toggle.svelte';
 	import User from 'lucide-svelte/icons/user';
 	import Bell from 'lucide-svelte/icons/bell';
 	import Shield from 'lucide-svelte/icons/shield';
 	import Lock from 'lucide-svelte/icons/lock';
-	import Palette from 'lucide-svelte/icons/palette';
 	import LogOut from 'lucide-svelte/icons/log-out';
 	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 	import Share2 from 'lucide-svelte/icons/share-2';
 	import ShieldAlert from 'lucide-svelte/icons/shield-alert';
+	import Palette from 'lucide-svelte/icons/palette';
+	import Check from 'lucide-svelte/icons/check';
 
 	const settingsSections = [
 		{
 			title: '账户',
 			items: [
-				{ icon: User, label: '个人资料', href: '/profile', description: '修改头像、昵称、简介' },
-				{ icon: Lock, label: '修改密码', href: '/settings/password', description: '更改登录密码' },
-				{ icon: Shield, label: '会话管理', href: '/settings/sessions', description: '管理登录设备' }
+				{ icon: User, label: '个人资料', href: '/profile', description: '修改头像、昵称、简介', color: 'var(--neu-accent-primary)' },
+				{ icon: Lock, label: '修改密码', href: '/settings/password', description: '更改登录密码', color: 'var(--neu-warning)' },
+				{ icon: Shield, label: '会话管理', href: '/settings/sessions', description: '管理登录设备', color: 'var(--neu-accent-primary)' }
 			]
 		},
 		{
 			title: '隐私',
 			items: [
-				{ icon: Shield, label: '隐私设置', href: '/settings/privacy', description: '谁可以看到你的信息' }
+				{ icon: Shield, label: '隐私设置', href: '/settings/privacy', description: '谁可以看到你的信息', color: 'var(--neu-fallback-text)' }
 			]
 		},
 		{
 			title: '通知',
 			items: [
-				{ icon: Bell, label: '通知设置', href: '/settings/notifications', description: '管理推送通知' }
+				{ icon: Bell, label: '通知设置', href: '/settings/notifications', description: '管理推送通知', color: 'var(--neu-accent-primary)' }
 			]
 		},
 		{
 			title: '记录与分享',
 			items: [
-				{ icon: Share2, label: '我的分享', href: '/settings/shares', description: '查看并撤销已创建分享' },
-				{ icon: ShieldAlert, label: '我的举报记录', href: '/settings/reports', description: '跟踪举报处理进度' }
+				{ icon: Share2, label: '我的分享', href: '/settings/shares', description: '查看并撤销已创建分享', color: 'var(--neu-success)' },
+				{ icon: ShieldAlert, label: '我的举报记录', href: '/settings/reports', description: '跟踪举报处理进度', color: 'var(--neu-accent-primary)' }
 			]
 		}
 	];
@@ -64,92 +62,134 @@
 	<title>设置 - HotSpot</title>
 </svelte:head>
 
-<div class="mx-auto max-w-3xl space-y-5">
-	<PageHeader
-		title="设置"
-		description="统一管理账户、安全、隐私、分享记录与举报进度"
-	/>
+<div class="mx-auto max-w-3xl">
+	<!-- Header -->
+	<div class="mb-5 px-5 pt-3">
+		<h1 style="font-size: 22px; color: var(--neu-text);">设置</h1>
+		<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">管理账户、安全、隐私与外观</p>
+	</div>
 
-	{#each settingsSections as section (section.title)}
-		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
-			<CardHeader>
-				<CardTitle class="text-lg">{section.title}</CardTitle>
-			</CardHeader>
-			<CardContent class="space-y-2 p-4 pt-0">
-				{#each section.items as item (item.href)}
+	<div class="space-y-3 px-5 pb-6">
+		{#each settingsSections as section (section.title)}
+			<!-- Section label -->
+			<p class="px-1" style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-top: 8px;">
+				{section.title}
+			</p>
+			<!-- Section card -->
+			<div
+				class="overflow-hidden rounded-[22px]"
+				style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			>
+				{#each section.items as item, i (item.href)}
+					{#if i > 0}
+						<div class="mx-4" style="height: 1px; background: var(--neu-border);"></div>
+					{/if}
 					<a
 						href={item.href}
-						class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-4 transition-all hover:border-primary/25 hover:bg-accent/45"
+						class="flex items-center gap-3.5 px-4 py-3.5 transition-colors"
 					>
-						<div class="flex items-center gap-4">
-							<div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-								<item.icon class="h-5 w-5" />
-							</div>
-							<div>
-								<p class="font-medium">{item.label}</p>
-								<p class="text-sm text-muted-foreground">{item.description}</p>
-							</div>
+						<div
+							class="flex flex-shrink-0 items-center justify-center rounded-full"
+							style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						>
+							<item.icon size={15} strokeWidth={1.5} color={item.color} />
 						</div>
-						<ChevronRight class="h-5 w-5 text-muted-foreground" />
+						<div class="min-w-0 flex-1">
+							<p style="font-size: 14px; color: var(--neu-text);">{item.label}</p>
+							<p style="font-size: 12px; color: var(--neu-text-muted);">{item.description}</p>
+						</div>
+						<ChevronRight size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
 					</a>
 				{/each}
-			</CardContent>
-		</Card>
-	{/each}
+			</div>
+		{/each}
 
-	<!-- 外观 -->
-	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
-		<CardHeader>
-			<CardTitle class="text-lg">外观</CardTitle>
-		</CardHeader>
-		<CardContent class="space-y-3 pt-0">
-			<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-4">
-				<div class="flex items-center gap-4">
-					<div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-						<Palette class="h-5 w-5" />
+		<!-- Appearance -->
+		<p class="px-1" style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-top: 8px;">外观</p>
+		<div
+			class="overflow-hidden rounded-[22px]"
+			style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		>
+			<!-- Dark mode toggle -->
+			<div class="flex items-center justify-between px-4 py-3.5">
+				<div class="flex items-center gap-3.5">
+					<div
+						class="flex flex-shrink-0 items-center justify-center rounded-full"
+						style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					>
+						<Palette size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 					</div>
 					<div>
-						<p class="font-medium">{t('sidebar.toggleTheme')}</p>
-						<p class="text-sm text-muted-foreground">{t('sidebar.systemMode')} / {t('sidebar.light')} / {t('sidebar.dark')}</p>
+						<p style="font-size: 14px; color: var(--neu-text);">{t('sidebar.toggleTheme')}</p>
+						<p style="font-size: 12px; color: var(--neu-text-muted);">{t('sidebar.systemMode')} / {t('sidebar.light')} / {t('sidebar.dark')}</p>
 					</div>
 				</div>
 				<ThemeToggle />
 			</div>
 
-			<div class="grid gap-3 md:grid-cols-3">
+			<div class="mx-4" style="height: 1px; background: var(--neu-border);"></div>
+
+			<!-- Theme family picker -->
+			<div class="grid grid-cols-3 gap-3 p-4">
 				{#each THEME_FAMILY_OPTIONS as option (option.family)}
 					<button
 						type="button"
-						class="rounded-3xl border px-4 py-4 text-left transition-all {currentThemeFamily === option.family ? 'border-primary bg-primary/8 shadow-md' : 'border-border/50 bg-background/65 hover:border-primary/25'}"
+						class="relative rounded-[18px] px-3 py-3 text-left transition-all"
+						style={currentThemeFamily === option.family
+							? 'background: var(--neu-accent-primary); box-shadow: 0 4px 14px var(--neu-glow);'
+							: 'background: var(--neu-bg); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
 						onclick={() => setThemeFamily(option.family)}
 					>
-						<div class="mb-3 flex items-center justify-between">
-							<p class="font-semibold">{t(option.labelKey)}</p>
-							{#if currentThemeFamily === option.family}
-								<span class="rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">{t('sidebar.currentTheme')}</span>
-							{/if}
-						</div>
-						<p class="text-sm text-muted-foreground">{t(option.descriptionKey)}</p>
+						<p
+							style="font-size: 13px; font-weight: 600; color: {currentThemeFamily === option.family ? 'white' : 'var(--neu-text)'};"
+						>
+							{t(option.labelKey)}
+						</p>
+						<p
+							style="font-size: 11px; margin-top: 2px; color: {currentThemeFamily === option.family ? 'rgba(255,255,255,0.8)' : 'var(--neu-text-muted)'};"
+						>
+							{t(option.descriptionKey)}
+						</p>
+						{#if currentThemeFamily === option.family}
+							<div class="absolute right-2 top-2">
+								<Check size={14} color="var(--neu-active-text)" />
+							</div>
+						{/if}
 					</button>
 				{/each}
 			</div>
-		</CardContent>
-	</Card>
+		</div>
 
-	<!-- 危险操作 -->
-	<Card class="rounded-3xl border border-destructive/25 bg-card/80 shadow-sm backdrop-blur-md">
-		<CardHeader>
-			<CardTitle class="text-lg text-destructive">危险操作</CardTitle>
-		</CardHeader>
-		<CardContent class="space-y-4">
-			<Button variant="outline" class="h-11 w-full justify-start rounded-2xl border-border/60 bg-background/70" onclick={handleLogout}>
-				<LogOut class="mr-2 h-4 w-4" />
-				退出登录
-			</Button>
-			<Button variant="outline" class="h-11 w-full justify-start rounded-2xl border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground">
-				<Trash2 class="mr-2 h-4 w-4" />
-				删除账户
-			</Button>
-		</CardContent>
-	</Card>
+		<!-- Danger zone -->
+		<p class="px-1" style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-top: 8px;">危险操作</p>
+		<div
+			class="overflow-hidden rounded-[22px]"
+			style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		>
+			<button
+				class="flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors"
+				onclick={handleLogout}
+			>
+				<div
+					class="flex flex-shrink-0 items-center justify-center rounded-full"
+					style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				>
+					<LogOut size={15} strokeWidth={1.5} color="var(--neu-error)" />
+				</div>
+				<span style="font-size: 14px; color: var(--neu-error);">退出登录</span>
+			</button>
+			<div class="mx-4" style="height: 1px; background: var(--neu-border);"></div>
+			<button
+				class="flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors"
+			>
+				<div
+					class="flex flex-shrink-0 items-center justify-center rounded-full"
+					style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				>
+					<Trash2 size={15} strokeWidth={1.5} color="var(--neu-error)" />
+				</div>
+				<span style="font-size: 14px; color: var(--neu-error);">删除账户</span>
+			</button>
+		</div>
+	</div>
 </div>

@@ -62,19 +62,15 @@
 		onCloseAutoFocus={handleCloseAutoFocus}
 		class={cn(
 			'fixed left-[50%] top-[50%] z-50',
-				'grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4',
-			'rounded-3xl border-2 border-primary/20',
-			'bg-white/95 dark:bg-card/90',
-			'backdrop-blur-xl',
+			'grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4',
 			'p-6',
-				'select-none shadow-2xl shadow-black/20',
-			'dark:shadow-2xl dark:shadow-black/40',
-			'ring-4 ring-primary/10',
+			'select-none',
 			'duration-300',
 			'data-[state=open]:animate-bounce-in',
 			'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
 			className
 		)}
+		style="background: var(--neu-bg); box-shadow: 8px 8px 18px var(--neu-shadow-dark), -8px -8px 18px var(--neu-shadow-light); border: 1px solid var(--neu-border); border-radius: 22px; color: var(--neu-text);"
 		{...restProps}
 	>
 		{#if children}
@@ -82,9 +78,10 @@
 		{/if}
 		{#if !hideClose}
 			<DialogPrimitive.Close
-				class="absolute right-4 top-4 rounded-2xl h-9 w-9 inline-flex items-center justify-center border-2 border-transparent opacity-70 transition-all hover:opacity-100 hover:bg-muted/50 hover:border-primary/20 focus:outline-none focus:ring-4 focus:ring-primary/40 focus:ring-offset-2 disabled:pointer-events-none cursor-pointer"
+				class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-[18px] outline-none transition-opacity cursor-pointer"
+				style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); opacity: 0.7;"
 			>
-				<X class="h-4 w-4" />
+				<X size={16} color="var(--neu-text-muted)" />
 				<span class="sr-only">Close</span>
 			</DialogPrimitive.Close>
 		{/if}

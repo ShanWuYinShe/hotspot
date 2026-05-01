@@ -11,7 +11,11 @@
 	let { class: className, children, ...restProps }: Props = $props();
 </script>
 
-<DialogPrimitive.Description class={cn('text-sm text-muted-foreground', className)} {...restProps}>
+<DialogPrimitive.Description
+	class={cn('text-sm', className)}
+	style="color: var(--neu-text-muted);"
+	{...restProps}
+>
 	{#if children}
 		{@render children()}
 	{/if}

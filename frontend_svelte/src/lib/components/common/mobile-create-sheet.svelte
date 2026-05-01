@@ -1,6 +1,5 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog';
-	import { RippleButton } from '$lib/components/ui/interactive';
 	import { t } from '$lib/i18n';
 	import Image from 'lucide-svelte/icons/image';
 	import UsersRound from 'lucide-svelte/icons/users-round';
@@ -22,43 +21,50 @@
 
 <Dialog.Root open={uiStore.showCreateSheet} onOpenChange={(open) => open ? uiStore.openCreateSheet() : uiStore.closeCreateSheet()}>
 	<Dialog.Content
-		class="left-1/2 top-auto bottom-0 w-[calc(100%-1rem)] max-w-sm translate-x-[-50%] translate-y-0 rounded-t-[2rem] rounded-b-none border border-border/80 bg-card/96 px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-5 shadow-[0_-18px_40px_rgba(74,64,54,0.18)] ring-0 dark:shadow-[0_-18px_44px_rgba(0,0,0,0.45)]"
+		class="left-1/2 top-auto bottom-0 w-[calc(100%-1rem)] max-w-sm translate-x-[-50%] translate-y-0 rounded-t-[22px] rounded-b-none px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-5"
+		style="background: var(--neu-bg); border: 1px solid var(--neu-border); border-bottom: none; box-shadow: 0 -10px 30px var(--neu-shadow-dark);"
 		hideClose
 	>
-		<div class="mx-auto mb-4 h-1.5 w-12 rounded-full bg-muted-foreground/20"></div>
-		<div class="mb-5 space-y-1 text-center">
-			<h2 class="text-lg font-semibold text-foreground">{t('nav.createSheetTitle')}</h2>
-			<p class="text-sm text-muted-foreground">{t('nav.createSheetDescription')}</p>
+		<div class="mx-auto mb-4 h-1.5 w-12 rounded-full" style="background: var(--neu-border);"></div>
+		<div class="mb-5 text-center">
+			<h2 style="font-size: 17px; font-weight: 600; color: var(--neu-text);">{t('nav.createSheetTitle')}</h2>
+			<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 4px;">{t('nav.createSheetDescription')}</p>
 		</div>
 
 		<div class="grid gap-3">
-			<RippleButton
-				variant="default"
-				class="h-16 justify-start rounded-[1.5rem] border border-border/80 bg-card px-4 shadow-[6px_6px_16px_var(--shadow-dark),-6px_-6px_16px_var(--shadow-light)]"
+			<button
+				class="flex h-16 items-center gap-3 rounded-[18px] px-4 text-left outline-none"
+				style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				onclick={handleCreateMoment}
 			>
-				<div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-					<Image class="h-5 w-5" />
+				<div
+					class="flex items-center justify-center rounded-full"
+					style="width: 38px; height: 38px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				>
+					<Image size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 				</div>
-				<div class="flex flex-col items-start">
-					<span class="text-sm font-semibold text-foreground">{t('nav.postMoment')}</span>
-					<span class="text-xs text-muted-foreground">{t('nav.createMomentHint')}</span>
+				<div>
+					<p style="font-size: 13px; font-weight: 600; color: var(--neu-text);">{t('nav.postMoment')}</p>
+					<p style="font-size: 11px; color: var(--neu-text-muted);">{t('nav.createMomentHint')}</p>
 				</div>
-			</RippleButton>
+			</button>
 
-			<RippleButton
-				variant="default"
-				class="h-16 justify-start rounded-[1.5rem] border border-border/80 bg-card px-4 shadow-[6px_6px_16px_var(--shadow-dark),-6px_-6px_16px_var(--shadow-light)]"
+			<button
+				class="flex h-16 items-center gap-3 rounded-[18px] px-4 text-left outline-none"
+				style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				onclick={handleCreateGroup}
 			>
-				<div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-					<UsersRound class="h-5 w-5" />
+				<div
+					class="flex items-center justify-center rounded-full"
+					style="width: 38px; height: 38px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				>
+					<UsersRound size={16} strokeWidth={1.5} color="var(--neu-fallback-text)" />
 				</div>
-				<div class="flex flex-col items-start">
-					<span class="text-sm font-semibold text-foreground">{t('nav.createGroup')}</span>
-					<span class="text-xs text-muted-foreground">{t('nav.createGroupHint')}</span>
+				<div>
+					<p style="font-size: 13px; font-weight: 600; color: var(--neu-text);">{t('nav.createGroup')}</p>
+					<p style="font-size: 11px; color: var(--neu-text-muted);">{t('nav.createGroupHint')}</p>
 				</div>
-			</RippleButton>
+			</button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

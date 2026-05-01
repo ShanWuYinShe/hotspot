@@ -11,10 +11,11 @@
 
 <SeparatorPrimitive.Root
 	class={cn(
-		'shrink-0 bg-border',
+		'shrink-0',
 		orientation === 'horizontal' ? 'h-[1px] w-full' : 'h-full w-[1px]',
 		className
 	)}
+	style="background: var(--neu-border);"
 	{orientation}
 	{decorative}
 	{...restProps}

@@ -4,9 +4,7 @@
 	import { isSuccess } from '$lib/api/client';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import type { GroupItem } from '$lib/types/api';
-	import GroupCard from '$lib/components/common/group-card.svelte';
-	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
-	import Users from 'lucide-svelte/icons/users';
+	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 
 	interface Props {
 		refreshTrigger?: number;
@@ -30,7 +28,7 @@
 				},
 				pagination: { limit: 6 }
 			});
-			if (version !== loadVersion) return; // 丢弃过期响应
+			if (version !== loadVersion) return;
 			if (isSuccess(response) && response.data) {
 				groups = response.data.items ?? [];
 			}
@@ -44,54 +42,56 @@
 
 	$effect(() => {
 		refreshTrigger;
-		mapAnchorStore.anchor.updatedAt; // Dependency
+		mapAnchorStore.anchor.updatedAt;
 		loadGroups();
 	});
 </script>
 
-{#if loading}
-	<section class="space-y-4 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md">
-		<div class="flex items-center justify-between">
-			<div class="flex items-center gap-2 px-1">
-				<div class="rounded-xl border border-border/50 bg-primary/10 p-2 text-primary">
-					<Users class="h-4 w-4" />
-				</div>
-				<h2 class="text-lg font-semibold tracking-tight">推荐群组</h2>
-			</div>
-		</div>
-		<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
-			{#each Array(6) as _, i (i)}
-				<div class="mb-3 break-inside-avoid">
-					<ListSkeleton type="group" count={1} layout="list" />
-				</div>
-			{/each}
-		</div>
-	</section>
-{:else if groups.length > 0}
-	<section class="space-y-4 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md">
-		<div class="flex items-center justify-between">
-			<div class="flex items-center gap-2 px-1">
-				<div class="rounded-xl border border-border/50 bg-primary/10 p-2 text-primary">
-					<Users class="h-4 w-4" />
-				</div>
-				<h2 class="text-lg font-semibold tracking-tight">推荐群组</h2>
-			</div>
-			<a href="/groups/nearby" class="text-sm font-medium text-muted-foreground hover:underline">
-				查看更多
+{#if groups.length > 0 || loading}
+	<div>
+		<div class="mb-3 flex items-center justify-between">
+			<p class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);">推荐群组</p>
+			<a href="/groups/nearby" class="flex items-center gap-0.5 outline-none" style="color: var(--neu-accent-primary);">
+				<span style="font-size: 12px;">查看更多</span>
+				<ChevronRight size={13} strokeWidth={1.5} />
 			</a>
 		</div>
-		<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
-			{#each groups as group (group.group.group_id)}
-				<div class="mb-3 break-inside-avoid">
-					<GroupCard
-						{group}
-						showDistance
-						showMembers
-						variant="square"
-						class="border-border/60 bg-card/95 shadow-md shadow-black/5 dark:shadow-black/30"
-					/>
-				</div>
-			{/each}
-		</div>
-	</section>
+		{#if loading}
+			<div class="flex flex-col gap-2.5">
+				{#each Array(3) as _}
+					<div class="flex items-center gap-3 rounded-[18px] px-4 py-3" style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="rounded-[12px]" style="width: 36px; height: 36px; background: var(--neu-border);"></div>
+						<div class="flex-1">
+							<div class="mb-1 rounded" style="width: 80px; height: 12px; background: var(--neu-border);"></div>
+							<div class="rounded" style="width: 60px; height: 10px; background: var(--neu-border);"></div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{:else}
+			<div class="flex flex-col gap-2.5">
+				{#each groups as group (group.group.group_id)}
+					<a
+						href="/groups/{group.group.group_id}"
+						class="flex items-center gap-3 rounded-[18px] px-4 py-3 transition-shadow"
+						style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					>
+						<div class="flex flex-shrink-0 items-center justify-center rounded-[12px]" style="width: 36px; height: 36px; background: var(--neu-fallback-bg);">
+							<span style="font-size: 14px; font-weight: 600; color: var(--neu-fallback-text);">
+								{group.group.name?.charAt(0) ?? 'G'}
+							</span>
+						</div>
+						<div class="min-w-0 flex-1">
+							<p style="font-size: 13px; color: var(--neu-text);">{group.group.name}</p>
+							<p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">
+								{group.group.members_count ?? 0}人
+								{#if group.location?.distance != null}· {Math.round(group.location.distance)}m{/if}
+							</p>
+						</div>
+						<ChevronRight size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+					</a>
+				{/each}
+			</div>
+		{/if}
+	</div>
 {/if}

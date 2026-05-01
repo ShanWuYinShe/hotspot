@@ -10,12 +10,6 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { goto } from '$app/navigation';
 	import { dismissActiveKeyboardFocus, useKeyboardFocus } from '$lib/attachments';
-	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardHeader } from '$lib/components/ui/card';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Textarea } from '$lib/components/ui/textarea';
-	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { Badge } from '$lib/components/ui/badge';
 	import type { MomentItem, CommentItem } from '$lib/types/api';
 	import Heart from 'lucide-svelte/icons/heart';
 	import MessageCircle from 'lucide-svelte/icons/message-circle';
@@ -211,59 +205,75 @@
 
 <div class="mx-auto max-w-2xl space-y-6">
 	<!-- Header -->
-	<div class="flex items-center gap-4">
-		<Button variant="ghost" size="icon" onclick={handleBackClick} aria-label="返回">
-			<ArrowLeft class="h-5 w-5" />
-		</Button>
-		<h1 class="text-xl font-bold">瞬间详情</h1>
+	<div
+		class="sticky top-0 z-10 flex items-center gap-4 px-4 py-3"
+		style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+	>
+		<button
+			class="flex items-center justify-center rounded-full outline-none"
+			style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			onclick={handleBackClick}
+			aria-label="返回"
+		>
+			<ArrowLeft size={18} color="var(--neu-text)" />
+		</button>
+		<h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">瞬间详情</h1>
 		{#if isOwner}
 			<div class="ml-auto">
-				<Button variant="ghost" size="icon" onclick={() => (showEditModal = true)} aria-label="编辑">
-					<Pencil class="h-4 w-4" />
-				</Button>
+				<button
+					class="flex items-center justify-center rounded-full outline-none"
+					style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					onclick={() => (showEditModal = true)}
+					aria-label="编辑"
+				>
+					<Pencil size={16} color="var(--neu-text-muted)" />
+				</button>
 			</div>
 		{/if}
 	</div>
 
 	{#if isLoading}
-		<Card>
-			<CardContent class="space-y-4 p-6">
-				<div class="flex items-center gap-3">
-					<Skeleton class="h-12 w-12 rounded-full" />
-					<div class="space-y-2">
-						<Skeleton class="h-4 w-24" />
-						<Skeleton class="h-3 w-16" />
+		<div
+			class="rounded-[22px] p-6 space-y-4"
+			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		>
+			<div class="flex items-center gap-3">
+				<div class="rounded-full" style="width: 48px; height: 48px; background: var(--neu-border);"></div>
+				<div class="space-y-2">
+					<div class="rounded" style="width: 96px; height: 14px; background: var(--neu-border);"></div>
+					<div class="rounded" style="width: 64px; height: 12px; background: var(--neu-border);"></div>
+				</div>
+			</div>
+			<div class="rounded" style="width: 100%; height: 80px; background: var(--neu-border);"></div>
+			<div class="rounded" style="width: 100%; height: 256px; background: var(--neu-border);"></div>
+		</div>
+	{:else if moment}
+		<div
+			class="rounded-[22px] p-6"
+			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		>
+			<!-- Author -->
+			<a href="/users/{moment.user.user_id}" class="flex items-center gap-3">
+				<div class="overflow-hidden rounded-full" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">
+					<img src={moment.user.avatar_url} alt={moment.user.nickname} class="h-full w-full object-cover" />
+				</div>
+				<div>
+					<p style="font-weight: 500; font-size: 15px; color: var(--neu-text);">{moment.user.nickname}</p>
+					<div class="flex items-center gap-2" style="font-size: 13px; color: var(--neu-text-muted);">
+						<span>{formatTime(moment.created_at)}</span>
+						{#if moment.location}
+							<span class="flex items-center gap-0.5">
+								<MapPin size={12} />
+								{moment.location.location_name}
+							</span>
+						{/if}
 					</div>
 				</div>
-				<Skeleton class="h-20 w-full" />
-				<Skeleton class="h-64 w-full" />
-			</CardContent>
-		</Card>
-	{:else if moment}
-		<Card>
-			<CardHeader>
-				<a href="/users/{moment.user.user_id}" class="flex items-center gap-3">
-					<Avatar class="h-12 w-12">
-						<AvatarImage src={moment.user.avatar_url} alt={moment.user.nickname} />
-						<AvatarFallback>{moment.user.nickname.slice(0, 2)}</AvatarFallback>
-					</Avatar>
-					<div>
-						<p class="font-medium hover:underline">{moment.user.nickname}</p>
-						<div class="flex items-center gap-2 text-sm text-muted-foreground">
-							<span>{formatTime(moment.created_at)}</span>
-							{#if moment.location}
-								<span class="flex items-center gap-0.5">
-									<MapPin class="h-3 w-3" />
-									{moment.location.location_name}
-								</span>
-							{/if}
-						</div>
-					</div>
-				</a>
-			</CardHeader>
+			</a>
 
-			<CardContent class="space-y-4">
-				<p class="whitespace-pre-wrap">{moment.description}</p>
+			<!-- Content -->
+			<div class="mt-4 space-y-4">
+				<p class="whitespace-pre-wrap" style="color: var(--neu-text);">{moment.description}</p>
 
 				{#if moment.images && moment.images.length > 0}
 					<div class="grid gap-2 {moment.images.length === 1 ? '' : 'grid-cols-2'}">
@@ -271,7 +281,7 @@
 							<img
 								src={image.url}
 								alt="图片 {i + 1}"
-								class="w-full rounded-lg"
+								class="w-full rounded-[14px]"
 								loading="lazy"
 							/>
 						{/each}
@@ -281,150 +291,170 @@
 				{#if moment.tags && moment.tags.length > 0}
 					<div class="flex flex-wrap gap-2">
 						{#each moment.tags as tag (tag)}
-							<Badge variant="secondary">#{tag}</Badge>
+							<span
+								class="rounded-full px-2.5 py-1"
+								style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							>
+								#{tag}
+							</span>
 						{/each}
 					</div>
 				{/if}
+			</div>
 
-				<!-- Actions -->
-				<div class="flex items-center justify-between border-t pt-4">
-					<div class="flex gap-2">
-						<Button
-							variant="ghost"
-							size="sm"
-							class="gap-1.5 {isLiked ? 'text-red-500' : ''}"
-							onclick={handleLike}
-						>
-							<Heart class="h-4 w-4 {isLiked ? 'fill-current' : ''}" />
-							{likesCount}
-						</Button>
-						<Button variant="ghost" size="sm" class="gap-1.5">
-							<MessageCircle class="h-4 w-4" />
-							{commentsCount}
-						</Button>
-					</div>
-					<div class="flex gap-2">
-						<Button
-							variant="ghost"
-							size="sm"
-							class={isFavorited ? 'text-yellow-500' : ''}
-							onclick={handleFavorite}
-						>
-							<Bookmark class="h-4 w-4 {isFavorited ? 'fill-current' : ''}" />
-						</Button>
-						<Button variant="ghost" size="sm">
-							<Share2 class="h-4 w-4" />
-						</Button>
-					</div>
+			<!-- Actions -->
+			<div class="mt-4 flex items-center justify-between" style="border-top: 1px solid var(--neu-border); padding-top: 16px;">
+				<div class="flex gap-2">
+					<button
+						class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+						style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: {isLiked ? 'var(--neu-error)' : 'var(--neu-text-muted)'};"
+						onclick={handleLike}
+					>
+						<Heart size={16} class={isLiked ? 'fill-current' : ''} />
+						<span style="font-size: 13px;">{likesCount}</span>
+					</button>
+					<button
+						class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+						style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+					>
+						<MessageCircle size={16} />
+						<span style="font-size: 13px;">{commentsCount}</span>
+					</button>
 				</div>
-			</CardContent>
-		</Card>
+				<div class="flex gap-2">
+					<button
+						class="flex items-center justify-center rounded-full outline-none"
+						style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: {isFavorited ? 'var(--neu-warning)' : 'var(--neu-text-muted)'};"
+						onclick={handleFavorite}
+					>
+						<Bookmark size={16} class={isFavorited ? 'fill-current' : ''} />
+					</button>
+					<button
+						class="flex items-center justify-center rounded-full outline-none"
+						style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+					>
+						<Share2 size={16} />
+					</button>
+				</div>
+			</div>
+		</div>
 
 		<!-- Comment input -->
 		{#if authStore.isAuthenticated}
-			<Card>
-				<CardContent class="p-4">
-					<div class="flex gap-3">
-						<Avatar class="h-10 w-10">
-							<AvatarImage src={authStore.currentAccount?.avatar_url} />
-							<AvatarFallback>
-								{authStore.currentAccount?.nickname?.slice(0, 2) ?? 'U'}
-							</AvatarFallback>
-						</Avatar>
-						<div class="flex-1">
-							<Textarea
-								{@attach useKeyboardFocus()}
-								placeholder="写下你的评论..."
-								bind:value={commentText}
-								rows={2}
-								disabled={isSubmitting}
-							/>
-							<div class="mt-2 flex justify-end">
-								<Button
-									size="sm"
-									onclick={submitComment}
-									disabled={!commentText.trim() || isSubmitting}
-								>
-									{#if isSubmitting}
-										<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-									{:else}
-										<Send class="mr-2 h-4 w-4" />
-									{/if}
-									发送
-								</Button>
-							</div>
+			<div
+				class="rounded-[22px] p-4"
+				style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			>
+				<div class="flex gap-3">
+					<div class="overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
+						<img src={authStore.currentAccount?.avatar_url || ''} alt="" class="h-full w-full object-cover" />
+					</div>
+					<div class="flex-1">
+						<textarea
+							{@attach useKeyboardFocus()}
+							placeholder="写下你的评论..."
+							bind:value={commentText}
+							rows={2}
+							disabled={isSubmitting}
+							class="w-full resize-none rounded-[14px] p-3 outline-none"
+							style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
+						></textarea>
+						<div class="mt-2 flex justify-end">
+							<button
+								class="flex items-center gap-2 rounded-full px-4 py-2 font-medium outline-none"
+								style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);"
+								onclick={submitComment}
+								disabled={!commentText.trim() || isSubmitting}
+							>
+								{#if isSubmitting}
+									<Loader2 size={14} class="animate-spin" />
+								{:else}
+									<Send size={14} />
+								{/if}
+								发送
+							</button>
 						</div>
 					</div>
-				</CardContent>
-			</Card>
+				</div>
+			</div>
 		{/if}
 
 		<!-- Comments -->
-		<Card>
-			<CardHeader>
-				<h2 class="text-lg font-semibold">评论 ({commentsCount})</h2>
-			</CardHeader>
-			<CardContent>
-				{#if isLoadingComments}
-					<div class="space-y-4">
-						{#each Array(3) as _, i (i)}
-							<div class="flex gap-3">
-								<Skeleton class="h-10 w-10 rounded-full" />
-								<div class="flex-1 space-y-2">
-									<Skeleton class="h-4 w-24" />
-									<Skeleton class="h-4 w-full" />
-								</div>
+		<div
+			class="rounded-[22px] p-6"
+			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		>
+			<h2 style="font-size: 16px; font-weight: 600; color: var(--neu-text); margin-bottom: 16px;">评论 ({commentsCount})</h2>
+
+			{#if isLoadingComments}
+				<div class="space-y-4">
+					{#each Array(3) as _, i (i)}
+						<div class="flex gap-3">
+							<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-border);"></div>
+							<div class="flex-1 space-y-2">
+								<div class="rounded" style="width: 96px; height: 14px; background: var(--neu-border);"></div>
+								<div class="rounded" style="width: 100%; height: 14px; background: var(--neu-border);"></div>
 							</div>
-						{/each}
-					</div>
-				{:else if commentsError}
-					<div class="flex flex-col items-center gap-3 py-8 text-center">
-						<p class="text-sm text-muted-foreground">加载评论失败</p>
-						<Button variant="outline" size="sm" onclick={() => {
+						</div>
+					{/each}
+				</div>
+			{:else if commentsError}
+				<div class="flex flex-col items-center gap-3 py-8 text-center">
+					<p style="font-size: 14px; color: var(--neu-text-muted);">加载评论失败</p>
+					<button
+						class="rounded-full px-4 py-2 font-medium outline-none"
+						style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+						onclick={() => {
 							const v = ++loadVersion;
 							isLoadingComments = true;
 							commentsError = false;
 							loadComments(momentId, v);
-						}}>重试</Button>
-					</div>
-				{:else if comments.length === 0}
-					<p class="py-8 text-center text-muted-foreground">暂无评论</p>
-				{:else}
-					<div class="space-y-4">
-						{#each comments as comment (comment.comment_id)}
-							<div class="flex gap-3">
-								<a href="/users/{comment.user.user_id}">
-									<Avatar class="h-10 w-10">
-										<AvatarImage src={comment.user.avatar_url} alt={comment.user.nickname} />
-										<AvatarFallback>{comment.user.nickname.slice(0, 2)}</AvatarFallback>
-									</Avatar>
-								</a>
-								<div class="flex-1">
-									<div class="flex items-center gap-2">
-										<a href="/users/{comment.user.user_id}" class="font-medium hover:underline">
-											{comment.user.nickname}
-										</a>
-										<span class="text-xs text-muted-foreground">
-											{formatTime(comment.created_at)}
-										</span>
-									</div>
-									<p class="mt-1 whitespace-pre-wrap text-sm">{comment.content}</p>
+						}}
+					>
+						重试
+					</button>
+				</div>
+			{:else if comments.length === 0}
+				<p class="py-8 text-center" style="color: var(--neu-text-muted);">暂无评论</p>
+			{:else}
+				<div class="space-y-4">
+					{#each comments as comment (comment.comment_id)}
+						<div class="flex gap-3">
+							<a href="/users/{comment.user.user_id}">
+								<div class="overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
+									<img src={comment.user.avatar_url} alt={comment.user.nickname} class="h-full w-full object-cover" />
 								</div>
+							</a>
+							<div class="flex-1">
+								<div class="flex items-center gap-2">
+									<a href="/users/{comment.user.user_id}" style="font-weight: 500; font-size: 14px; color: var(--neu-text);">
+										{comment.user.nickname}
+									</a>
+									<span style="font-size: 12px; color: var(--neu-text-muted);">
+										{formatTime(comment.created_at)}
+									</span>
+								</div>
+								<p class="mt-1 whitespace-pre-wrap" style="font-size: 14px; color: var(--neu-text);">{comment.content}</p>
 							</div>
-						{/each}
-					</div>
-				{/if}
-			</CardContent>
-		</Card>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</div>
 	{:else}
-		<Card>
-			<CardContent class="py-12 text-center">
-				<p class="text-muted-foreground">瞬间不存在或已被删除</p>
-				<Button variant="outline" class="mt-4" onclick={() => goto('/')}>
-					返回首页
-				</Button>
-			</CardContent>
-		</Card>
+		<div
+			class="rounded-[22px] py-12 text-center"
+			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		>
+			<p style="color: var(--neu-text-muted);">瞬间不存在或已被删除</p>
+			<button
+				class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none"
+				style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+				onclick={() => goto('/')}
+			>
+				返回首页
+			</button>
+		</div>
 	{/if}
 
 	{#if isOwner && moment}

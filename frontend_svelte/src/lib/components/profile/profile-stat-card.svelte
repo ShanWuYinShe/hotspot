@@ -11,9 +11,10 @@
 
 <button
 	type="button"
-	class={`rounded-2xl border border-border/60 bg-background/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-black/30 ${className}`}
+	class="rounded-[18px] p-4 text-left outline-none transition-shadow {className}"
+	style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 	{...rest}
 >
-	<div class="text-2xl font-bold">{value}</div>
-	<div class="text-sm text-muted-foreground">{label}</div>
+	<p style="font-size: 22px; font-weight: 700; color: var(--neu-text);">{value}</p>
+	<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">{label}</p>
 </button>

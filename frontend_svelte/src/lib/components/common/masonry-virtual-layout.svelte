@@ -346,13 +346,13 @@
 	
 	{#if isLoading}
 		<div class="flex items-center justify-center py-8">
-			<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-			<span class="ml-3 text-muted-foreground">加载中...</span>
+			<div class="animate-spin rounded-full h-8 w-8 border-b-2" style="border-color: var(--neu-accent-primary);"></div>
+			<span class="ml-3" style="font-size: 13px; color: var(--neu-text-muted);">加载中...</span>
 		</div>
 	{/if}
 	
 	{#if !hasMore && items.length > 0}
-		<div class="flex items-center justify-center py-8 text-muted-foreground text-sm">
+		<div class="flex items-center justify-center py-8" style="font-size: 13px; color: var(--neu-text-muted);">
 			没有更多了
 		</div>
 	{/if}

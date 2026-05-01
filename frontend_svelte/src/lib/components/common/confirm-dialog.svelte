@@ -7,7 +7,6 @@
 		DialogHeader,
 		DialogTitle
 	} from '$lib/components/ui/dialog';
-	import { Button } from '$lib/components/ui/button';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 
 	interface Props {
@@ -46,25 +45,31 @@
 </script>
 
 <Dialog bind:open>
-	<DialogContent class="sm:max-w-md">
+	<DialogContent class="sm:max-w-md rounded-[22px]" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);">
 		<DialogHeader>
 			<DialogTitle>{title}</DialogTitle>
 			<DialogDescription>{description}</DialogDescription>
 		</DialogHeader>
 		<DialogFooter class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-			<Button variant="outline" onclick={handleCancel} disabled={loading}>
+			<button
+				class="rounded-full px-5 py-2 outline-none"
+				style="background: var(--neu-bg); color: var(--neu-text); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;"
+				onclick={handleCancel}
+				disabled={loading}
+			>
 				{cancelText}
-			</Button>
-			<Button
-				variant={variant === 'destructive' ? 'destructive' : 'default'}
+			</button>
+			<button
+				class="rounded-full px-5 py-2 outline-none"
+				style="background: {variant === 'destructive' ? 'var(--neu-error)' : 'var(--neu-accent-primary)'}; color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px {variant === 'destructive' ? 'var(--neu-error-border)' : 'var(--neu-glow)'};"
 				onclick={handleConfirm}
 				disabled={loading}
 			>
 				{#if loading}
-					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+					<Loader2 size={14} strokeWidth={1.5} class="animate-spin" style="display: inline; vertical-align: middle; margin-right: 6px;" />
 				{/if}
 				{confirmText}
-			</Button>
+			</button>
 		</DialogFooter>
 	</DialogContent>
 </Dialog>

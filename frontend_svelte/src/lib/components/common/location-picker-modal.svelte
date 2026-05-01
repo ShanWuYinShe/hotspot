@@ -192,7 +192,7 @@
         }
         const prefersCoarsePointer =
             window.matchMedia("(pointer: coarse)").matches;
-        const prefersHover = window.matchMedia("(hover: hover)").matches;
+        const prefersHover = window.matchMedia("( hover)").matches;
         if (prefersCoarsePointer && !prefersHover) {
             return GESTURE_HINT_TOUCH;
         }
@@ -614,7 +614,7 @@
     }
 
     function getItemBadgeClass(_item: RenderItem) {
-        return "bg-slate-100 text-slate-700";
+        return "";
     }
 
     function buildOverlapPreviewDescription(items: RenderItem[]) {
@@ -1823,33 +1823,31 @@
 <div bind:this={modalRoot}>
     <Dialog.Root bind:open onOpenChange={handleDialogOpenChange}>
         <Dialog.Content
-            class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${
-                isFullscreen
-                    ? "sm:h-screen sm:max-h-screen sm:w-screen sm:max-w-none sm:rounded-none sm:border-0 sm:bg-background sm:p-4"
-                    : "sm:h-[88vh] sm:w-[92vw] sm:max-w-6xl lg:max-w-7xl sm:rounded-3xl sm:border sm:border-border/60 sm:bg-card/95 sm:p-6"
-            }`}
+            class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${ isFullscreen ? "sm:h-screen sm:max-h-screen sm:w-screen sm:max-w-none sm:rounded-none sm:border-0 sm:p-4" : "sm:h-[88vh] sm:w-[92vw] sm:max-w-6xl lg:max-w-7xl sm:rounded-[22px] sm:backdrop-blur sm:p-6" }`}
+            style={isFullscreen ? "background: var(--neu-bg);" : "background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"}
             hideClose
         >
             <!-- 移动端轻量工具栏 -->
             <div
-                class="border-b border-border/50 bg-background/94 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm sm:hidden"
+                class="border-b px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm sm:hidden"
+                style="background: var(--neu-bg); border-color: var(--neu-border);"
             >
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                        <p class="text-[11px] font-medium uppercase tracking-[0.16em]">
                             {mapModeLabel}
                         </p>
-                        <p class="mt-1 truncate text-base font-semibold text-foreground">
+                        <p class="mt-1 truncate text-base font-semibold">
                             {modalTitle}
                         </p>
-                        <p class="mt-1 text-xs text-muted-foreground">
+                        <p class="mt-1 text-xs">
                             拖动地图后确认中心点
                         </p>
                     </div>
                     <Button
                         variant="ghost"
                         size="sm"
-                        class="h-9 w-9 shrink-0 rounded-full border border-border/60 bg-background/80 p-0"
+                        class="h-9 w-9 shrink-0 rounded-full p-0"
                         onclick={handleClose}
                     >
                         <span class="sr-only">关闭</span>
@@ -1880,7 +1878,8 @@
             </div>
             <!-- 左侧：地图容器 -->
             <div
-                class="relative flex-1 overflow-hidden sm:rounded-3xl sm:border sm:border-border/60"
+                class="relative flex-1 overflow-hidden sm:rounded-[22px]"
+                style="border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
             >
                 <div
                     class="h-full w-full touch-pan-x touch-pan-y"
@@ -1896,7 +1895,8 @@
                             data-location-filter-trigger="true"
                             size="icon"
                             variant="ghost"
-                            class="h-11 w-11 rounded-[20px] border border-white/60 bg-white/78 text-foreground shadow-[0_14px_28px_rgba(15,23,42,0.14)] backdrop-blur hover:bg-white/90 active:bg-white dark:border-border/60 dark:bg-card/90 dark:shadow-[0_14px_28px_rgba(0,0,0,0.4)] dark:hover:bg-card dark:active:bg-card"
+                            class="h-11 w-11 rounded-[22px] backdrop-blur"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                             onclick={toggleFilterPanel}
                             aria-label="筛选地图内容"
                         >
@@ -1912,7 +1912,8 @@
                         <Button
                             size="icon"
                             variant="ghost"
-                            class="h-11 w-11 rounded-[20px] border border-slate-300/70 bg-white/95 text-foreground shadow-[0_16px_30px_rgba(15,23,42,0.26)] transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/95 dark:shadow-[0_16px_30px_rgba(0,0,0,0.5)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
+                            class="h-11 w-11 rounded-[22px] transition"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                             onclick={handleUseCurrentLocation}
                             disabled={isLocating}
                             aria-label="定位到当前位置"
@@ -1921,7 +1922,8 @@
                                 <Loader2 class="h-4 w-4 animate-spin" />
                             {:else}
                                 <LocateFixed
-                                    class="h-6 w-6 text-blue-600 dark:text-blue-400"
+                                    class="h-6 w-6"
+                                    style="color: var(--neu-accent-primary);"
                                 />
                             {/if}
                         </Button>
@@ -1929,7 +1931,8 @@
                             <Button
                                 size="icon"
                                 variant="ghost"
-                                class="h-11 w-11 rounded-[20px] border border-slate-300/70 bg-white/95 text-foreground shadow-[0_16px_30px_rgba(15,23,42,0.26)] transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/95 dark:shadow-[0_16px_30px_rgba(0,0,0,0.5)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
+                                class="h-11 w-11 rounded-[22px] transition"
+                                style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                                 onclick={handleBackToBrowseAnchor}
                                 aria-label="回到浏览锚点位置"
                             >
@@ -1943,7 +1946,8 @@
                         <Button
                             size="icon"
                             variant="ghost"
-                            class="h-11 w-11 rounded-[20px] border border-slate-300/70 bg-white/95 text-foreground shadow-[0_16px_30px_rgba(15,23,42,0.26)] transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/95 dark:shadow-[0_16px_30px_rgba(0,0,0,0.5)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
+                            class="h-11 w-11 rounded-[22px] transition"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                             onclick={() => {
                                 if (!map) return;
                                 const currentZoom = map.getZoom?.() ?? 14;
@@ -1956,7 +1960,8 @@
                         <Button
                             size="icon"
                             variant="ghost"
-                            class="h-11 w-11 rounded-[20px] border border-slate-300/70 bg-white/95 text-foreground shadow-[0_16px_30px_rgba(15,23,42,0.26)] transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/95 dark:shadow-[0_16px_30px_rgba(0,0,0,0.5)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
+                            class="h-11 w-11 rounded-[22px] transition"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                             onclick={() => {
                                 if (!map) return;
                                 const currentZoom = map.getZoom?.() ?? 14;
@@ -1974,14 +1979,14 @@
                 {#if showFilterPanel}
                     <div
                         bind:this={filterPanelElement}
-                        class="absolute right-4 top-16 z-30 hidden w-40 select-none overflow-hidden rounded-3xl border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)] sm:block"
+                        class="absolute right-4 top-16 z-30 hidden w-40 select-none overflow-hidden rounded-[22px] p-2 backdrop-blur-md sm:block"
+                        style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                     >
                         <button
-                            class={`flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-medium transition ${
-                                showUsers
-                                    ? "border border-blue-500/80 bg-blue-50 text-blue-900 shadow-sm"
-                                    : "border border-white/70 bg-white/90 text-slate-400 hover:border-slate-200 hover:bg-slate-50"
-                            }`}
+                            class={`flex w-full items-center justify-between rounded-[18px] px-3 py-2.5 text-left text-sm font-medium transition`}
+                            style={showUsers
+                                ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
+                                : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"}
                             onclick={() => toggleRenderFilter("user")}
                         >
                             <span class="flex items-center gap-2">
@@ -1993,15 +1998,15 @@
                                 <span>用户</span>
                             </span>
                             <span
-                                class={`h-2.5 w-2.5 rounded-full ${showUsers ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-600"}`}
+                                class="h-2.5 w-2.5 rounded-full"
+                                style={showUsers ? "background: var(--neu-accent-primary);" : "background: var(--neu-border);"}
                             ></span>
                         </button>
                         <button
-                            class={`mt-1 flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-medium transition ${
-                                showGroups
-                                    ? "border border-emerald-500/80 bg-emerald-50 text-emerald-900 shadow-sm"
-                                    : "border border-white/70 bg-white/90 text-slate-400 hover:border-slate-200 hover:bg-slate-50"
-                            }`}
+                            class={`mt-1 flex w-full items-center justify-between rounded-[18px] px-3 py-2.5 text-left text-sm font-medium transition`}
+                            style={showGroups
+                                ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
+                                : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"}
                             onclick={() => toggleRenderFilter("group")}
                         >
                             <span class="flex items-center gap-2">
@@ -2013,15 +2018,15 @@
                                 <span>群组</span>
                             </span>
                             <span
-                                class={`h-2.5 w-2.5 rounded-full ${showGroups ? "bg-emerald-600" : "bg-slate-300 dark:bg-slate-600"}`}
+                                class="h-2.5 w-2.5 rounded-full"
+                                style={showGroups ? "background: var(--neu-accent-primary);" : "background: var(--neu-border);"}
                             ></span>
                         </button>
                         <button
-                            class={`mt-1 flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-medium transition ${
-                                showMoments
-                                    ? "border border-orange-500/80 bg-orange-50 text-orange-900 shadow-sm"
-                                    : "border border-white/70 bg-white/90 text-slate-400 hover:border-slate-200 hover:bg-slate-50"
-                            }`}
+                            class={`mt-1 flex w-full items-center justify-between rounded-[18px] px-3 py-2.5 text-left text-sm font-medium transition`}
+                            style={showMoments
+                                ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
+                                : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"}
                             onclick={() => toggleRenderFilter("moment")}
                         >
                             <span class="flex items-center gap-2">
@@ -2033,11 +2038,12 @@
                                 <span>动态</span>
                             </span>
                             <span
-                                class={`h-2.5 w-2.5 rounded-full ${showMoments ? "bg-orange-500" : "bg-slate-300 dark:bg-slate-600"}`}
+                                class="h-2.5 w-2.5 rounded-full"
+                                style={showMoments ? "background: var(--neu-accent-primary);" : "background: var(--neu-border);"}
                             ></span>
                         </button>
                         <div
-                            class="px-3 pb-1 pt-2 text-[11px] text-muted-foreground"
+                            class="px-3 pb-1 pt-2 text-[11px]"
                         >
                             已启用 {activeFilterCount} 项筛选
                         </div>
@@ -2050,18 +2056,21 @@
                     >
                         {#if placementHintVisible}
                             <div
-                                class="rounded-2xl border border-border/60 bg-card/95 px-4 py-1.5 text-sm font-medium text-foreground shadow-lg"
+                                class="rounded-[18px] px-4 py-1.5 text-sm font-medium backdrop-blur-sm"
+                                style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); color: var(--neu-text);"
                             >
                                 {placementHintMessage}
                             </div>
                         {:else if gestureHintVisible}
                             <div
-                                class="pointer-events-auto inline-flex items-center gap-3 rounded-2xl border border-dashed border-primary/40 bg-card/90 px-4 py-1.5 text-xs text-muted-foreground shadow"
+                                class="pointer-events-auto inline-flex items-center gap-3 rounded-[18px] border border-dashed px-4 py-1.5 text-xs backdrop-blur-sm"
+                                style="border-color: var(--neu-text-muted); background: var(--neu-bg); color: var(--neu-text-muted);"
                             >
                                 <span>{gestureHintMessage}</span>
                                 <button
                                     type="button"
-                                    class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10"
+                                    class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                                    style="color: var(--neu-text-muted);"
                                     onclick={dismissGestureHintPermanently}
                                 >
                                     <XIcon class="h-3 w-3" />
@@ -2074,11 +2083,11 @@
 
                 {#if !isMapAvailable}
                     <div
-                        class="absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+                        class="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-sm"
                     >
                         <div class="text-center space-y-3">
                             <p class="font-medium">地图未配置</p>
-                            <p class="text-sm text-muted-foreground">
+                            <p class="text-sm">
                                 请设置 VITE_AMAP_KEY
                             </p>
                             <Button
@@ -2094,9 +2103,9 @@
 
                 {#if isLoadingMap}
                     <div
-                        class="absolute inset-0 z-20 flex items-center justify-center bg-background/70 backdrop-blur-sm"
+                        class="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-sm"
                     >
-                        <Loader2 class="h-8 w-8 animate-spin text-primary" />
+                        <Loader2 class="h-8 w-8 animate-spin" />
                     </div>
                 {/if}
 
@@ -2107,7 +2116,8 @@
                     <Button
                         size="icon"
                         variant="ghost"
-                        class="h-11 w-11 rounded-full border border-border/60 bg-background/88 text-foreground shadow-[0_12px_24px_rgba(15,23,42,0.18)] backdrop-blur-sm transition hover:border-primary/60 hover:text-primary dark:shadow-[0_12px_24px_rgba(0,0,0,0.36)]"
+                        class="h-11 w-11 rounded-full backdrop-blur-sm transition"
+                        style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                         onclick={handleUseCurrentLocation}
                         disabled={isLocating}
                         aria-label="使用当前位置"
@@ -2116,7 +2126,8 @@
                             <Loader2 class="h-5 w-5 animate-spin" />
                         {:else}
                             <LocateFixed
-                                class="h-7 w-7 text-blue-600 dark:text-blue-400"
+                                class="h-7 w-7"
+                                style="color: var(--neu-accent-primary);"
                             />
                         {/if}
                     </Button>
@@ -2124,7 +2135,8 @@
                         <Button
                             size="icon"
                             variant="ghost"
-                            class="h-11 w-11 rounded-full border border-border/60 bg-background/88 text-foreground shadow-[0_12px_24px_rgba(15,23,42,0.18)] backdrop-blur-sm transition hover:border-primary/60 hover:text-primary dark:shadow-[0_12px_24px_rgba(0,0,0,0.36)]"
+                            class="h-11 w-11 rounded-full backdrop-blur-sm transition"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                             onclick={handleBackToBrowseAnchor}
                             aria-label="回到浏览锚点位置"
                         >
@@ -2142,26 +2154,29 @@
                         class="absolute bottom-6 left-4 right-auto z-30 hidden w-100 select-none sm:block"
                     >
                         <div
-                            class="overflow-hidden rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)]"
+                            class="overflow-hidden rounded-[28px] backdrop-blur-md"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                         >
                             <div
-                                class="flex items-start justify-between gap-3 border-b border-border/50 px-4 py-3"
+                                class="flex items-start justify-between gap-3 border-b px-4 py-3"
+                                style="border-color: var(--neu-border);"
                             >
                                 <div class="min-w-0">
                                     <p
-                                        class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70"
+                                        class="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                                        style="color: var(--neu-text-muted);"
                                     >
                                         {clusterPreview.kind === "overlap_group"
                                             ? "同点内容预览"
                                             : "聚合内容预览"}
                                     </p>
                                     <p
-                                        class="truncate text-base font-bold text-foreground"
+                                        class="truncate text-base font-bold"
                                     >
                                         {clusterPreview.title}
                                     </p>
                                     <p
-                                        class="mt-1 text-xs text-muted-foreground"
+                                        class="mt-1 text-xs"
                                     >
                                         {clusterPreview.description}
                                     </p>
@@ -2169,7 +2184,8 @@
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    class="h-9 w-9 shrink-0 rounded-2xl border border-border/60 bg-white/70 p-0 shadow-sm dark:bg-card/80"
+                                    class="h-9 w-9 shrink-0 rounded-[18px] p-0"
+                                    style="background: var(--neu-bg);"
                                     onclick={closeClusterPreview}
                                 >
                                     <X class="h-4 w-4" />
@@ -2183,7 +2199,8 @@
                                 >
                                     {#each clusterPreview.items as previewItem (`preview_${previewItem.location.latitude}_${previewItem.location.longitude}_${previewItem.total_count}`)}
                                         <button
-                                            class="flex w-full items-start gap-3 rounded-2xl border border-border/50 bg-white/78 px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/25 hover:bg-white dark:bg-card/78 dark:hover:bg-card"
+                                            class="flex w-full items-start gap-3 rounded-[18px] px-3 py-3 text-left transition hover:-translate-y-0.5"
+                                            style="background: var(--neu-bg); border: 1px solid var(--neu-border);"
                                             onclick={() =>
                                                 focusPreviewEntity(previewItem)}
                                         >
@@ -2194,12 +2211,12 @@
                                             </div>
                                             <div class="min-w-0 flex-1">
 								<p
-									class="truncate text-sm font-semibold text-foreground"
+									class="truncate text-sm font-semibold"
 								>
 									聚合区域
 								</p>
                                                 <p
-                                                    class="mt-1 line-clamp-2 text-xs text-muted-foreground"
+                                                    class="mt-1 line-clamp-2 text-xs"
                                                 >
                                                     {previewItem.total_count} 个内容
                                                 </p>
@@ -2209,24 +2226,25 @@
                                 </div>
                             {:else}
                                 <div
-                                    class="px-4 py-4 text-sm text-muted-foreground"
+                                    class="px-4 py-4 text-sm"
                                 >
                                     当前层级只有聚合摘要，继续放大后才能看到具体对象列表。
                                 </div>
                             {/if}
 
                             <div
-                                class="flex gap-2 border-t border-border/50 px-4 py-3"
+                                class="flex gap-2 border-t px-4 py-3"
+                                style="border-color: var(--neu-border);"
                             >
                                 <Button
                                     variant="outline"
-                                    class="h-10 flex-1 rounded-2xl"
+                                    class="h-10 flex-1 rounded-[18px]"
                                     onclick={closeClusterPreview}
                                 >
                                     稍后再看
                                 </Button>
                                 <Button
-                                    class="h-10 flex-1 rounded-2xl"
+                                    class="h-10 flex-1 rounded-[18px]"
                                     onclick={zoomToClusterPreview}
                                 >
                                     {clusterPreview.kind === "overlap_group"
@@ -2243,19 +2261,21 @@
                         class="absolute bottom-6 left-1/2 right-auto z-30 hidden w-[420px] -translate-x-1/2 select-none sm:block"
                     >
                         <div
-                            class="overflow-hidden rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)]"
+                            class="overflow-hidden rounded-[28px] backdrop-blur-md"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                         >
                             <div
-                                class="flex items-start justify-between gap-3 border-b border-border/50 px-4 py-3"
+                                class="flex items-start justify-between gap-3 border-b px-4 py-3"
+                                style="border-color: var(--neu-border);"
                             >
                                 <div class="min-w-0">
                                     <p
-                                        class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70"
+                                        class="text-[11px] font-semibold uppercase tracking-[0.16em]" style="color: var(--neu-text-muted);"
                                     >
                                         地图对象详情
                                     </p>
                                     <p
-                                        class="truncate text-base font-bold text-foreground"
+                                        class="truncate text-base font-bold"
                                     >
                                         {hotspotPreviewItems.length === 1
                                             ? (hotspotPreviewItems[0]?.title ??
@@ -2266,7 +2286,8 @@
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    class="h-9 w-9 shrink-0 rounded-2xl border border-border/60 bg-white/70 p-0 shadow-sm dark:bg-card/80"
+                                    class="h-9 w-9 shrink-0 rounded-[18px] p-0"
+                                    style="background: var(--neu-bg);"
                                     onclick={() => {
                                         hotspotPreviewItems = [];
                                         isBottomSheetExpanded = false;
@@ -2282,7 +2303,8 @@
                             >
                                 {#each hotspotPreviewItems as item (item.object_type + "_" + item.object_id)}
                                     <button
-                                        class="flex w-full items-start gap-3 rounded-2xl border border-border/50 bg-white/78 px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/25 hover:bg-white dark:bg-card/78 dark:hover:bg-card"
+                                        class="flex w-full items-start gap-3 rounded-[18px] px-3 py-3 text-left transition hover:-translate-y-0.5"
+                                        style="background: var(--neu-bg); border: 1px solid var(--neu-border);"
                                         onclick={() => {
                                             hotspotPreviewItems = [];
                                             if (item.object_type === "user") {
@@ -2306,18 +2328,7 @@
                                     >
                                         <div
                                             class="rounded-full px-2 py-1 text-[11px] font-semibold"
-                                            class:text-blue-700={item.object_type ===
-                                                "user"}
-                                            class:bg-blue-50={item.object_type ===
-                                                "user"}
-                                            class:text-emerald-700={item.object_type ===
-                                                "group"}
-                                            class:bg-emerald-50={item.object_type ===
-                                                "group"}
-                                            class:text-orange-700={item.object_type ===
-                                                "moment"}
-                                            class:bg-orange-50={item.object_type ===
-                                                "moment"}
+                                            style="background: var(--neu-bg); color: var(--neu-accent-primary); border: 1px solid var(--neu-border);"
                                         >
                                             {item.object_type === "user"
                                                 ? "用户"
@@ -2327,13 +2338,13 @@
                                         </div>
                                         <div class="min-w-0 flex-1">
                                             <p
-                                                class="truncate text-sm font-semibold text-foreground"
+                                                class="truncate text-sm font-semibold"
                                             >
                                                 {item.title ?? ""}
                                             </p>
                                             {#if item.subtitle}
                                                 <p
-                                                    class="mt-1 line-clamp-2 text-xs text-muted-foreground"
+                                                    class="mt-1 line-clamp-2 text-xs"
                                                 >
                                                     {item.subtitle}
                                                 </p>
@@ -2355,11 +2366,12 @@
                         : 'calc(100% - 116px)'})"
                 >
                     <div
-                        class="rounded-t-[28px] border border-border/60 bg-background/96 shadow-[0_-16px_36px_rgba(15,23,42,0.14)] backdrop-blur-md dark:bg-card/96 dark:shadow-[0_-16px_36px_rgba(0,0,0,0.34)]"
+                        class="rounded-t-[28px] backdrop-blur-md"
+                        style="background: var(--neu-bg); border-top: 1px solid var(--neu-border); box-shadow: 0 -4px 10px var(--neu-shadow-dark);"
                     >
                         <!-- 展开/收起手柄 -->
                         <button
-                            class="flex w-full flex-col items-center gap-1 px-4 py-3 active:bg-muted/50"
+                            class="flex w-full flex-col items-center gap-1 px-4 py-3 "
                             onclick={() =>
                                 (isBottomSheetExpanded =
                                     !isBottomSheetExpanded)}
@@ -2369,17 +2381,18 @@
                                 : "展开位置面板"}
                         >
                             <div
-                                class="h-1 w-12 rounded-full bg-muted-foreground/20"
+                                class="h-1 w-12 rounded-full"
+                                style="background: var(--neu-border);"
                             ></div>
-                            <div class="flex items-center gap-2 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground/90 uppercase">
+                            <div class="flex items-center gap-2 text-[11px] font-semibold tracking-[0.08em] /90 uppercase">
                                 <span>{isBottomSheetExpanded ? "收起面板" : "展开面板"}</span>
                                 {#if isBottomSheetExpanded}
                                     <ChevronDown
-                                        class="h-4 w-4 text-muted-foreground"
+                                        class="h-4 w-4"
                                     />
                                 {:else}
                                     <ChevronUp
-                                        class="h-4 w-4 text-muted-foreground"
+                                        class="h-4 w-4"
                                     />
                                 {/if}
                             </div>
@@ -2397,21 +2410,21 @@
                                 />
 
                                 {#if showSearch}
-                                    <div class="overflow-hidden rounded-[28px] border border-border/60 bg-card/92 shadow-lg backdrop-blur-md">
-                                        <div class="border-b border-border/50 px-4 py-3">
+                                    <div class="overflow-hidden rounded-[28px] backdrop-blur-md" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);">
+                                        <div class="border-b px-4 py-3" style="border-color: var(--neu-border);">
                                             <div class="flex items-start justify-between gap-3">
                                                 <div>
-                                                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70">
+                                                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em]" style="color: var(--neu-text-muted);">
                                                         地点搜索
                                                     </p>
-                                                    <p class="mt-2 text-sm font-semibold text-foreground">
+                                                    <p class="mt-2 text-sm font-semibold">
                                                         搜索地标、商圈或街道名，结果会直接落到地图中心。
                                                     </p>
                                                 </div>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    class="h-9 w-9 shrink-0 rounded-2xl border border-border/60 bg-background/75 p-0"
+                                                    class="h-9 w-9 shrink-0 rounded-[18px] p-0"
                                                     onclick={toggleSearch}
                                                 >
                                                     <X class="h-4 w-4" />
@@ -2420,15 +2433,15 @@
                                             </div>
                                         </div>
                                         <div class="space-y-3 px-4 py-3">
-                                            <div class="flex h-12 items-center gap-2 rounded-2xl border border-border/60 bg-background/80 px-3 shadow-sm">
-                                                <Search class="h-4 w-4 shrink-0 text-muted-foreground" />
+                                            <div class="flex h-12 items-center gap-2 rounded-[18px] px-3" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);">
+                                                <Search class="h-4 w-4 shrink-0" />
                                                 <input
                                                     {@attach useKeyboardFocus()}
                                                     type="text"
                                                     bind:this={searchInput}
                                                     bind:value={searchText}
                                                     placeholder="搜索地点名称、街道或商圈"
-                                                    class="flex-1 select-text bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                                                    class="flex-1 select-text bg-transparent text-sm outline-none placeholder:"
                                                     oninput={() => {
                                                         if (searchDebounceTimer)
                                                             clearTimeout(searchDebounceTimer);
@@ -2456,10 +2469,10 @@
                                                     }}
                                                 />
                                                 {#if isSearching}
-                                                    <Loader2 class="h-4 w-4 shrink-0 animate-spin text-primary" />
+                                                    <Loader2 class="h-4 w-4 shrink-0 animate-spin" />
                                                 {:else if searchText.length > 0}
                                                     <button
-                                                        class="shrink-0 text-muted-foreground hover:text-foreground"
+                                                        class="shrink-0"
                                                         onclick={() => {
                                                             if (searchDebounceTimer)
                                                                 clearTimeout(
@@ -2482,17 +2495,17 @@
                                                 <div class="max-h-[38dvh] space-y-2 overflow-y-auto">
                                                     {#each searchResults as result (`sheet_${result.latitude}_${result.longitude}`)}
                                                         <button
-                                                            class="flex w-full items-start gap-3 rounded-2xl border border-border/50 bg-background/70 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-background"
+                                                            class="flex w-full items-start gap-3 rounded-[18px] px-4 py-3 text-left transition-all hover:-translate-y-0.5"
                                                             onclick={() => selectSearchResult(result)}
                                                         >
-                                                            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
-                                                                <MapPin class="h-4 w-4 text-primary" />
+                                                            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px]">
+                                                                <MapPin class="h-4 w-4" />
                                                             </div>
                                                             <div class="min-w-0 flex-1">
                                                                 <div class="truncate text-sm font-medium">
                                                                     {result.name}
                                                                 </div>
-                                                                <div class="mt-1 text-xs text-muted-foreground">
+                                                                <div class="mt-1 text-xs">
                                                                     {result.address ||
                                                                         "未提供详细地址"}
                                                                 </div>
@@ -2503,12 +2516,12 @@
                                             {:else if searchText.trim().length === 0 && anchorHistory.length > 0}
                                                 <div class="space-y-2">
                                                     <div class="flex items-center justify-between px-1">
-                                                        <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                                        <div class="flex items-center gap-1.5 text-xs font-medium">
                                                             <Clock class="h-3.5 w-3.5" />
                                                             <span>最近使用</span>
                                                         </div>
                                                         <button
-                                                            class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                                                            class="flex items-center gap-1 text-xs"
                                                             onclick={handleClearHistory}
                                                         >
                                                             <Trash2 class="h-3 w-3" />
@@ -2518,20 +2531,20 @@
                                                     <div class="max-h-[32dvh] space-y-2 overflow-y-auto">
                                                         {#each anchorHistory as item (item.timestamp)}
                                                             <button
-                                                                class="flex w-full items-center gap-3 rounded-2xl border border-border/50 bg-background/70 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-background"
+                                                                class="flex w-full items-center gap-3 rounded-[18px] px-4 py-3 text-left transition-all hover:-translate-y-0.5"
                                                                 onclick={() => {
                                                                     selectHistoryItem(item);
                                                                     showSearch = false;
                                                                 }}
                                                             >
-                                                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-muted">
-                                                                    <Clock class="h-4 w-4 text-muted-foreground" />
+                                                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px]">
+                                                                    <Clock class="h-4 w-4" />
                                                                 </div>
                                                                 <div class="min-w-0 flex-1">
                                                                     <div class="truncate text-sm font-medium">
                                                                         {item.locationName}
                                                                     </div>
-                                                                    <div class="mt-1 text-[11px] text-muted-foreground">
+                                                                    <div class="mt-1 text-[11px]">
                                                                         一键回到这个位置继续浏览
                                                                     </div>
                                                                 </div>
@@ -2540,11 +2553,11 @@
                                                     </div>
                                                 </div>
                                             {:else if searchText.trim().length > 0 && !isSearching}
-                                                <div class="rounded-2xl border border-dashed border-border/70 bg-background/60 px-4 py-6 text-center shadow-sm">
-                                                    <p class="text-sm font-semibold text-foreground">
+                                                <div class="rounded-[18px] border border-dashed px-4 py-6 text-center">
+                                                    <p class="text-sm font-semibold">
                                                         没有找到匹配地点
                                                     </p>
-                                                    <p class="mt-1 text-xs text-muted-foreground">
+                                                    <p class="mt-1 text-xs">
                                                         换个关键词试试，或者直接拖动地图到目标区域。
                                                     </p>
                                                 </div>
@@ -2554,20 +2567,20 @@
                                 {/if}
 
                                 {#if showFilterPanel}
-                                    <div class="overflow-hidden rounded-[28px] border border-border/60 bg-card/92 p-3 shadow-lg backdrop-blur-md">
+                                    <div class="overflow-hidden rounded-[28px] p-3 backdrop-blur-md" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);">
                                         <div class="mb-2 flex items-center justify-between px-1">
                                             <div>
-                                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70">
+                                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em]" style="color: var(--neu-text-muted);">
                                                     地图内容筛选
                                                 </p>
-                                                <p class="mt-1 text-xs text-muted-foreground">
+                                                <p class="mt-1 text-xs">
                                                     已启用 {activeFilterCount} 项筛选
                                                 </p>
                                             </div>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                class="h-9 w-9 rounded-2xl border border-border/60 bg-background/75 p-0"
+                                                class="h-9 w-9 rounded-[18px] p-0"
                                                 onclick={toggleFilterPanel}
                                             >
                                                 <X class="h-4 w-4" />
@@ -2576,71 +2589,69 @@
                                         </div>
                                         <div class="space-y-2">
                                             <button
-                                                class={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-medium transition ${
-                                                    showUsers
-                                                        ? "border border-blue-500/80 bg-blue-50 text-blue-900 shadow-sm"
-                                                        : "border border-border/60 bg-background/70 text-muted-foreground"
-                                                }`}
+                                                class={`flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left text-sm font-medium transition`}
+                                                style={showUsers
+                                                    ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
+                                                    : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"}
                                                 onclick={() => toggleRenderFilter("user")}
                                             >
                                                 <span class="flex items-center gap-2">
                                                     <img src="/map/marker_user.svg" alt="用户标记" class="h-8 w-auto" />
                                                     <span>用户</span>
                                                 </span>
-                                                <span class={`h-2.5 w-2.5 rounded-full ${showUsers ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-600"}`}></span>
+                                                <span class="h-2.5 w-2.5 rounded-full" style={showUsers ? "background: var(--neu-accent-primary);" : "background: var(--neu-border);"}></span>
                                             </button>
                                             <button
-                                                class={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-medium transition ${
-                                                    showGroups
-                                                        ? "border border-emerald-500/80 bg-emerald-50 text-emerald-900 shadow-sm"
-                                                        : "border border-border/60 bg-background/70 text-muted-foreground"
-                                                }`}
+                                                class={`flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left text-sm font-medium transition`}
+                                                style={showGroups
+                                                    ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
+                                                    : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"}
                                                 onclick={() => toggleRenderFilter("group")}
                                             >
                                                 <span class="flex items-center gap-2">
                                                     <img src="/map/marker_group.svg" alt="群组标记" class="h-8 w-auto" />
                                                     <span>群组</span>
                                                 </span>
-                                                <span class={`h-2.5 w-2.5 rounded-full ${showGroups ? "bg-emerald-600" : "bg-slate-300 dark:bg-slate-600"}`}></span>
+                                                <span class="h-2.5 w-2.5 rounded-full" style={showGroups ? "background: var(--neu-accent-primary);" : "background: var(--neu-border);"}></span>
                                             </button>
                                             <button
-                                                class={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-medium transition ${
-                                                    showMoments
-                                                        ? "border border-orange-500/80 bg-orange-50 text-orange-900 shadow-sm"
-                                                        : "border border-border/60 bg-background/70 text-muted-foreground"
-                                                }`}
+                                                class={`flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left text-sm font-medium transition`}
+                                                style={showMoments
+                                                    ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
+                                                    : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"}
                                                 onclick={() => toggleRenderFilter("moment")}
                                             >
                                                 <span class="flex items-center gap-2">
                                                     <img src="/map/marker_moment.svg" alt="动态标记" class="h-8 w-auto" />
                                                     <span>动态</span>
                                                 </span>
-                                                <span class={`h-2.5 w-2.5 rounded-full ${showMoments ? "bg-orange-500" : "bg-slate-300 dark:bg-slate-600"}`}></span>
+                                                <span class="h-2.5 w-2.5 rounded-full" style={showMoments ? "background: var(--neu-accent-primary);" : "background: var(--neu-border);"}></span>
                                             </button>
                                         </div>
                                     </div>
                                 {/if}
 
                                 {#if clusterPreview}
-                                    <div class="overflow-hidden rounded-[28px] border border-border/60 bg-card/92 shadow-lg backdrop-blur-md">
-                                        <div class="flex items-start justify-between gap-3 border-b border-border/50 px-4 py-3">
+                                    <div class="overflow-hidden rounded-[28px] backdrop-blur-md" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);">
+                                        <div class="flex items-start justify-between gap-3 border-b px-4 py-3"
+                                                style="border-color: var(--neu-border);">
                                             <div class="min-w-0">
-                                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70">
+                                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em]" style="color: var(--neu-text-muted);">
                                                     {clusterPreview.kind === "overlap_group"
                                                         ? "同点内容预览"
                                                         : "聚合内容预览"}
                                                 </p>
-                                                <p class="truncate text-base font-bold text-foreground">
+                                                <p class="truncate text-base font-bold">
                                                     {clusterPreview.title}
                                                 </p>
-                                                <p class="mt-1 text-xs text-muted-foreground">
+                                                <p class="mt-1 text-xs">
                                                     {clusterPreview.description}
                                                 </p>
                                             </div>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                class="h-9 w-9 shrink-0 rounded-2xl border border-border/60 bg-background/75 p-0"
+                                                class="h-9 w-9 shrink-0 rounded-[18px] p-0"
                                                 onclick={closeClusterPreview}
                                             >
                                                 <X class="h-4 w-4" />
@@ -2651,17 +2662,17 @@
                                             <div class="max-h-[32dvh] space-y-2 overflow-y-auto px-3 py-3">
                                                 {#each clusterPreview.items as previewItem (`sheet_preview_${previewItem.location.latitude}_${previewItem.location.longitude}_${previewItem.total_count}`)}
                                                     <button
-                                                        class="flex w-full items-start gap-3 rounded-2xl border border-border/50 bg-background/70 px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/25 hover:bg-background"
+                                                        class="flex w-full items-start gap-3 rounded-[18px] px-3 py-3 text-left transition hover:-translate-y-0.5"
                                                         onclick={() => focusPreviewEntity(previewItem)}
                                                     >
                                                         <div class={`rounded-full px-2 py-1 text-[11px] font-semibold ${getItemBadgeClass(previewItem)}`}>
                                                             {getItemTypeLabel(previewItem)}
                                                         </div>
                                                         <div class="min-w-0 flex-1">
-                                                            <p class="truncate text-sm font-semibold text-foreground">
+                                                            <p class="truncate text-sm font-semibold">
                                                                 聚合区域
                                                             </p>
-                                                            <p class="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                                                            <p class="mt-1 line-clamp-2 text-xs">
                                                                 {previewItem.total_count} 个内容
                                                             </p>
                                                         </div>
@@ -2669,20 +2680,21 @@
                                                 {/each}
                                             </div>
                                         {:else}
-                                            <div class="px-4 py-4 text-sm text-muted-foreground">
+                                            <div class="px-4 py-4 text-sm">
                                                 当前层级只有聚合摘要，继续放大后才能看到具体对象列表。
                                             </div>
                                         {/if}
-                                        <div class="flex gap-2 border-t border-border/50 px-4 py-3">
+                                        <div class="flex gap-2 border-t px-4 py-3"
+                                                style="border-color: var(--neu-border);">
                                             <Button
                                                 variant="outline"
-                                                class="h-10 flex-1 rounded-2xl"
+                                                class="h-10 flex-1 rounded-[18px]"
                                                 onclick={closeClusterPreview}
                                             >
                                                 稍后再看
                                             </Button>
                                             <Button
-                                                class="h-10 flex-1 rounded-2xl"
+                                                class="h-10 flex-1 rounded-[18px]"
                                                 onclick={zoomToClusterPreview}
                                             >
                                                 {clusterPreview.kind === "overlap_group"
@@ -2694,13 +2706,14 @@
                                 {/if}
 
                                 {#if hotspotPreviewItems.length > 0}
-                                    <div class="overflow-hidden rounded-[28px] border border-border/60 bg-card/92 shadow-lg backdrop-blur-md">
-                                        <div class="flex items-start justify-between gap-3 border-b border-border/50 px-4 py-3">
+                                    <div class="overflow-hidden rounded-[28px] backdrop-blur-md" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);">
+                                        <div class="flex items-start justify-between gap-3 border-b px-4 py-3"
+                                                    style="border-color: var(--neu-border);">
                                             <div class="min-w-0">
-                                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70">
+                                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em]" style="color: var(--neu-text-muted);">
                                                     地图对象详情
                                                 </p>
-                                                <p class="truncate text-base font-bold text-foreground">
+                                                <p class="truncate text-base font-bold">
                                                     {hotspotPreviewItems.length === 1
                                                         ? (hotspotPreviewItems[0]?.title ??
                                                           "")
@@ -2710,7 +2723,7 @@
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                class="h-9 w-9 shrink-0 rounded-2xl border border-border/60 bg-background/75 p-0"
+                                                class="h-9 w-9 shrink-0 rounded-[18px] p-0"
                                                 onclick={() => {
                                                     hotspotPreviewItems = [];
                                                     isBottomSheetExpanded = false;
@@ -2723,7 +2736,7 @@
                                         <div class="max-h-[32dvh] space-y-2 overflow-y-auto px-3 py-3">
                                             {#each hotspotPreviewItems as item (item.object_type + "_" + item.object_id)}
                                                 <button
-                                                    class="flex w-full items-start gap-3 rounded-2xl border border-border/50 bg-background/70 px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/25 hover:bg-background"
+                                                    class="flex w-full items-start gap-3 rounded-[18px] px-3 py-3 text-left transition hover:-translate-y-0.5"
                                                     onclick={() => {
                                                         hotspotPreviewItems = [];
                                                         if (item.object_type === "user") {
@@ -2741,18 +2754,7 @@
                                                 >
                                                     <div
                                                         class="rounded-full px-2 py-1 text-[11px] font-semibold"
-                                                        class:text-blue-700={item.object_type ===
-                                                            "user"}
-                                                        class:bg-blue-50={item.object_type ===
-                                                            "user"}
-                                                        class:text-emerald-700={item.object_type ===
-                                                            "group"}
-                                                        class:bg-emerald-50={item.object_type ===
-                                                            "group"}
-                                                        class:text-orange-700={item.object_type ===
-                                                            "moment"}
-                                                        class:bg-orange-50={item.object_type ===
-                                                            "moment"}
+                                                        style="background: var(--neu-bg); color: var(--neu-accent-primary); border: 1px solid var(--neu-border);"
                                                     >
                                                         {item.object_type === "user"
                                                             ? "用户"
@@ -2761,11 +2763,11 @@
                                                               : "动态"}
                                                     </div>
                                                     <div class="min-w-0 flex-1">
-                                                        <p class="truncate text-sm font-semibold text-foreground">
+                                                        <p class="truncate text-sm font-semibold">
                                                             {item.title ?? ""}
                                                         </p>
                                                         {#if item.subtitle}
-                                                            <p class="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                                                            <p class="mt-1 line-clamp-2 text-xs">
                                                                 {item.subtitle}
                                                             </p>
                                                         {/if}
@@ -2778,7 +2780,8 @@
                             </div>
 
                             <div
-                                class="sticky bottom-0 space-y-2 border-t border-border/40 bg-[linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,0.94)_18%,rgba(255,255,255,0.98)_100%)] pb-4 pt-3 backdrop-blur-sm dark:bg-[linear-gradient(180deg,rgba(24,24,30,0),rgba(24,24,30,0.94)_18%,rgba(24,24,30,0.98)_100%)]"
+                                class="sticky bottom-0 space-y-2 border-t pb-4 pt-3 backdrop-blur-sm"
+                                style="background: var(--neu-bg); border-color: var(--neu-border);"
                             >
                                 <Button
                                     class="h-12 w-full gap-2 text-base font-semibold"
@@ -2809,12 +2812,13 @@
 
             <!-- 右侧：桌面信息栏（标题 / 搜索 / 历史 / 确认） -->
             <div
-                class="hidden h-full w-[320px] shrink-0 select-none flex-col gap-4 overflow-hidden rounded-3xl border border-border/60 bg-card/95 p-4 shadow-lg sm:flex lg:w-90"
+                class="hidden h-full w-[320px] shrink-0 select-none flex-col gap-4 overflow-hidden rounded-[22px] p-4 sm:flex lg:w-90"
+                style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
             >
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
                         <p
-                            class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70"
+                            class="text-[11px] font-semibold uppercase tracking-[0.16em]" style="color: var(--neu-text-muted);"
                         >
                             {mapModeLabel}
                         </p>
@@ -2826,7 +2830,7 @@
                         <Button
                             variant="ghost"
                             size="icon"
-                            class="h-9 w-9 rounded-2xl border border-border/60 bg-background/80 p-0 shadow-sm"
+                            class="h-9 w-9 rounded-[18px] p-0"
                             onclick={() => (isFullscreen = !isFullscreen)}
                             aria-pressed={isFullscreen}
                             aria-label={isFullscreen ? "退出全屏" : "进入全屏"}
@@ -2845,10 +2849,11 @@
                 <!-- 搜索与结果（桌面端常驻在信息栏中） -->
                 <div class="space-y-2">
                     <div
-                        class="flex h-12 items-center gap-2 rounded-2xl border border-border/60 bg-background/80 px-3 text-sm shadow-sm"
+                        class="flex h-12 items-center gap-2 rounded-[18px] px-3 text-sm"
+                        style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
                     >
                         <Search
-                            class="h-4 w-4 shrink-0 text-muted-foreground"
+                            class="h-4 w-4 shrink-0"
                         />
                         <input
                             {@attach useKeyboardFocus()}
@@ -2856,7 +2861,7 @@
                             bind:this={searchInput}
                             bind:value={searchText}
                             placeholder="搜索地点、地标或坐标"
-                            class="flex-1 select-text bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                            class="flex-1 select-text bg-transparent text-sm outline-none placeholder:"
                             oninput={() => {
                                 if (searchDebounceTimer)
                                     clearTimeout(searchDebounceTimer);
@@ -2883,11 +2888,11 @@
                         />
                         {#if isSearching}
                             <Loader2
-                                class="h-4 w-4 shrink-0 animate-spin text-primary"
+                                class="h-4 w-4 shrink-0 animate-spin"
                             />
                         {:else if searchText.length > 0}
                             <button
-                                class="shrink-0 text-muted-foreground hover:text-foreground"
+                                class="shrink-0"
                                 onclick={() => {
                                     if (searchDebounceTimer)
                                         clearTimeout(searchDebounceTimer);
@@ -2908,20 +2913,20 @@
                         {#if searchResults.length > 0}
                             {#each searchResults as result (`desktop_${result.latitude}_${result.longitude}`)}
                                 <button
-                                    class="flex w-full items-start gap-3 rounded-2xl border border-border/50 bg-card/80 px-3 py-2 text-left text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-card"
+                                    class="flex w-full items-start gap-3 rounded-[18px] px-3 py-2 text-left text-xs transition-all hover:-translate-y-0.5"
                                     onclick={() => selectSearchResult(result)}
                                 >
                                     <div
-                                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-primary/10"
+                                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[18px]"
                                     >
-                                        <MapPin class="h-4 w-4 text-primary" />
+                                        <MapPin class="h-4 w-4" />
                                     </div>
                                     <div class="min-w-0 flex-1">
                                         <p class="truncate text-sm font-medium">
                                             {result.name}
                                         </p>
                                         <p
-                                            class="mt-0.5 text-[11px] text-muted-foreground"
+                                            class="mt-0.5 text-[11px]"
                                         >
                                             {result.address || "未提供详细地址"}
                                         </p>
@@ -2933,13 +2938,13 @@
                                 class="flex items-center justify-between px-1 pb-1"
                             >
                                 <div
-                                    class="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"
+                                    class="flex items-center gap-1.5 text-[11px] font-medium"
                                 >
                                     <Clock class="h-3.5 w-3.5" />
                                     <span>最近使用</span>
                                 </div>
                                 <button
-                                    class="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                                    class="flex items-center gap-1 text-[11px]"
                                     onclick={handleClearHistory}
                                 >
                                     <Trash2 class="h-3 w-3" />
@@ -2948,14 +2953,14 @@
                             </div>
                             {#each anchorHistory as item (item.timestamp)}
                                 <button
-                                    class="flex w-full items-center gap-3 rounded-2xl border border-border/50 bg-card/80 px-3 py-2 text-left text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-card"
+                                    class="flex w-full items-center gap-3 rounded-[18px] px-3 py-2 text-left text-xs transition-all hover:-translate-y-0.5"
                                     onclick={() => selectHistoryItem(item)}
                                 >
                                     <div
-                                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-muted"
+                                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[18px]"
                                     >
                                         <Clock
-                                            class="h-4 w-4 text-muted-foreground"
+                                            class="h-4 w-4"
                                         />
                                     </div>
                                     <div class="min-w-0 flex-1">
@@ -2963,7 +2968,7 @@
                                             {item.locationName}
                                         </p>
                                         <p
-                                            class="mt-0.5 text-[11px] text-muted-foreground"
+                                            class="mt-0.5 text-[11px]"
                                         >
                                             一键回到该位置继续浏览
                                         </p>
@@ -2972,7 +2977,7 @@
                             {/each}
                         {:else if searchText.trim().length > 0 && !isSearching}
                             <div
-                                class="rounded-2xl border border-dashed border-border/70 bg-background/60 px-3 py-4 text-[11px] text-muted-foreground"
+                                class="rounded-[18px] border border-dashed px-3 py-4 text-[11px]"
                             >
                                 没有找到匹配地点，换个关键词试试，或者直接拖动地图到目标区域。
                             </div>
@@ -2981,9 +2986,10 @@
                 </div>
 
                 <!-- 当前位置摘要与操作 -->
-                <div class="mt-auto space-y-3 border-t border-border/60 pt-3">
-                    <div class="space-y-1 text-xs text-muted-foreground">
-                        <p class="font-medium text-foreground">当前选中</p>
+                <div class="mt-auto space-y-3 border-t pt-3"
+                    style="border-color: var(--neu-border);">
+                    <div class="space-y-1 text-xs">
+                        <p class="font-medium">当前选中</p>
                         <p class="truncate text-sm font-semibold">
                             {locationName || "拖动地图选择位置"}
                         </p>

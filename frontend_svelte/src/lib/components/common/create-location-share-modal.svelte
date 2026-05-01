@@ -10,9 +10,6 @@
 		DialogTitle,
 		DialogDescription
 	} from '$lib/components/ui/dialog';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { Input } from '$lib/components/ui/input';
 
 	interface Props {
 		open?: boolean;
@@ -92,38 +89,38 @@
 </script>
 
 <Dialog bind:open onOpenChange={(newOpen) => !newOpen && handleClose()}>
-	<DialogContent class="max-w-lg rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md">
+	<DialogContent class="max-w-lg rounded-[22px]" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);">
 		{#if !shareCode}
 			<!-- 创建表单 -->
 			<DialogHeader>
 				<DialogTitle class="flex items-center gap-3">
-					<div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/50 bg-primary/10 text-primary">
-						<Share2 class="h-5 w-5" />
+					<div class="flex items-center justify-center rounded-full" style="width: 40px; height: 40px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<Share2 style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
 					</div>
-					<div>分享此位置</div>
+					<div style="color: var(--neu-text);">分享此位置</div>
 				</DialogTitle>
-				<DialogDescription>生成分享链接，让朋友快速定位到这个区域</DialogDescription>
+				<DialogDescription style="color: var(--neu-text-muted);">生成分享链接，让朋友快速定位到这个区域</DialogDescription>
 			</DialogHeader>
 
 			<div class="mt-4 space-y-4">
-				<!-- 位置信息展示（仅展示名称，不展示经纬度） -->
-				<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
-					<div class="flex items-center gap-2 font-medium">
-						<MapPin class="h-5 w-5 text-primary" />
+				<!-- 位置信息展示 -->
+				<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="flex items-center gap-2" style="font-weight: 500; color: var(--neu-text);">
+						<MapPin style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
 						{locationName}
 					</div>
-					<div class="text-xs text-muted-foreground">
+					<div style="font-size: 12px; color: var(--neu-text-muted);">
 						接收者将看到以此位置为中心的内容推荐。
 					</div>
 				</div>
 
 				<!-- 说明 -->
-				<div class="space-y-2 rounded-2xl border border-primary/25 bg-primary/10 p-4 text-sm">
-					<p class="font-medium text-primary flex items-center gap-2">
-						<UsersRound class="h-4 w-4" />
+				<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid rgba(0,0,0,0.05); font-size: 13px;">
+					<p class="flex items-center gap-2" style="font-weight: 500; color: var(--neu-accent-primary);">
+						<UsersRound style="width: 16px; height: 16px;" />
 						接收者可以
 					</p>
-					<ul class="space-y-1.5 text-muted-foreground">
+					<ul class="space-y-1.5" style="color: var(--neu-text-muted);">
 						<li>• 一键设置浏览锚点到这个位置</li>
 						<li>• 查看附近的人、群组和动态</li>
 						<li>• 开始探索这个区域的社交圈</li>
@@ -131,51 +128,52 @@
 				</div>
 
 				<!-- 操作按钮 -->
-				<Button class="h-11 w-full rounded-2xl" onclick={handleSubmit} disabled={isSubmitting}>
+				<button class="rounded-full px-5 py-2.5 outline-none w-full" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleSubmit} disabled={isSubmitting}>
 					{#if isSubmitting}
-						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+						<Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
 						生成中...
 					{:else}
-						<Share2 class="mr-2 h-4 w-4" />
+						<Share2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
 						生成分享链接
 					{/if}
-				</Button>
+				</button>
 			</div>
 		{:else}
 			<!-- 分享成功结果 -->
 			<DialogHeader>
-				<DialogTitle class="flex items-center gap-3 text-emerald-600">
-					<div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-500/40 dark:bg-emerald-500/15">
-						<Check class="h-5 w-5" />
+				<DialogTitle class="flex items-center gap-3" style="color: var(--neu-success);">
+					<div class="flex items-center justify-center rounded-full" style="width: 40px; height: 40px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<Check style="width: 20px; height: 20px; color: var(--neu-success);" />
 					</div>
 					<div>分享链接已生成！</div>
 				</DialogTitle>
-				<DialogDescription>复制链接发送给朋友</DialogDescription>
+				<DialogDescription style="color: var(--neu-text-muted);">复制链接发送给朋友</DialogDescription>
 			</DialogHeader>
 
 			<div class="mt-4 space-y-4">
 				<!-- 分享链接 -->
-				<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
-					<Label class="text-sm text-muted-foreground">分享链接</Label>
+				<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<label style="font-size: 12px; color: var(--neu-text-muted);">分享链接</label>
 					<div class="flex gap-2">
-						<Input
+						<input
 							value={shareUrl ?? ''}
 							readonly
-							class="h-11 flex-1 rounded-2xl border-border/60 bg-background/75 font-mono text-sm"
+							class="rounded-[14px] px-4 py-2.5 outline-none flex-1"
+							style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 12px; font-family: monospace;"
 						/>
-						<Button variant="outline" class="h-11 rounded-2xl border-border/60 bg-background/70" onclick={copyToClipboard}>
+						<button class="rounded-[14px] px-3 py-2.5 outline-none flex items-center justify-center" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);" onclick={copyToClipboard}>
 							{#if isCopied}
-								<Check class="h-4 w-4" />
+								<Check style="width: 16px; height: 16px; color: var(--neu-success);" />
 							{:else}
-								<Copy class="h-4 w-4" />
+								<Copy style="width: 16px; height: 16px;" />
 							{/if}
-						</Button>
+						</button>
 					</div>
 				</div>
 
-				<Button class="h-11 w-full rounded-2xl" onclick={handleClose}>
+				<button class="rounded-full px-5 py-2.5 outline-none w-full" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleClose}>
 					完成
-				</Button>
+				</button>
 			</div>
 		{/if}
 	</DialogContent>

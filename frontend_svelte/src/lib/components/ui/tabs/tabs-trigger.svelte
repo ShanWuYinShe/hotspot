@@ -14,18 +14,16 @@
 <TabsPrimitive.Trigger
 	class={cn(
 		'inline-flex items-center justify-center whitespace-nowrap',
-		'rounded-[0.95rem] px-3.5 py-1.5 sm:px-4',
-		'border border-transparent',
+		'px-3.5 py-1.5 sm:px-4',
 		'text-sm font-medium leading-5',
-		'transition-colors duration-200',
-		'cursor-pointer',
-		'hover:bg-primary/10 hover:text-primary',
-		'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+		'transition-all duration-200',
+		'cursor-pointer outline-none',
 		'disabled:pointer-events-none disabled:opacity-50',
-		'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground',
-		'data-[state=active]:shadow-sm',
+		'data-[state=active]:neu-active-text',
 		className
 	)}
+	style="border-radius: 14px; color: var(--neu-text-muted);"
+	data-state-active-style="background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);"
 	{value}
 	{disabled}
 	{...restProps}

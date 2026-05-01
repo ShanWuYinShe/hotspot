@@ -22,18 +22,22 @@
 		}
 	}}
 >
-	<Dialog.Content class="sm:max-w-md rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md">
-		<Dialog.Header>
-			<Dialog.Title class="flex items-center gap-3">
-				<div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/50 bg-primary/10 text-primary">
-					<MapPin class="h-5 w-5" />
-				</div>
-				<div>{t('auth.welcome')}</div>
-			</Dialog.Title>
-			<Dialog.Description>
-				{t('auth.loginSubtitle')}
-			</Dialog.Description>
-		</Dialog.Header>
+	<Dialog.Content
+		class="rounded-[22px] border px-5 py-6"
+		style="background: var(--neu-bg); border-color: var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); max-width: 28rem;"
+	>
+		<div class="mb-5 flex items-center gap-3">
+			<div
+				class="flex items-center justify-center rounded-full"
+				style="width: 40px; height: 40px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			>
+				<MapPin size={18} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+			</div>
+			<div>
+				<h2 style="font-size: 18px; font-weight: 600; color: var(--neu-text);">{t('auth.welcome')}</h2>
+				<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">{t('auth.loginSubtitle')}</p>
+			</div>
+		</div>
 
 		<AuthFormContent onSuccess={handleSuccess} />
 	</Dialog.Content>

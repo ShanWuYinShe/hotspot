@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { mode, setMode } from 'mode-watcher';
-	import { Button } from '$lib/components/ui/button';
 	import { THEME_FAMILY_OPTIONS, themeStore, type ThemeFamily } from '$lib/stores/theme.svelte';
 	import { t } from '$lib/i18n';
 	import Sun from 'lucide-svelte/icons/sun';
@@ -17,26 +16,34 @@
 
 	function getThemeFamilyLabel(themeFamily: ThemeFamily) {
 		const option = THEME_FAMILY_OPTIONS.find((item) => item.family === themeFamily);
-		return option ? t(option.labelKey) : t('sidebar.defaultClean');
+		return option ? t(option.labelKey) : t('sidebar.forest');
 	}
 
 	function toggleThemeFamily() {
 		const currentIndex = themeFamilyCycle.indexOf(currentFamily);
-		const nextFamily = themeFamilyCycle[(currentIndex + 1) % themeFamilyCycle.length] ?? 'default_clean';
+		const nextFamily = themeFamilyCycle[(currentIndex + 1) % themeFamilyCycle.length] ?? 'forest';
 		themeStore.setThemeFamily(nextFamily);
 	}
 </script>
 
 <div class="flex items-center gap-2">
-	<Button variant="ghost" size="icon" onclick={toggleThemeMode} aria-label={t('sidebar.toggleTheme')}>
+	<button
+		class="flex items-center justify-center rounded-full outline-none"
+		style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		onclick={toggleThemeMode}
+		aria-label={t('sidebar.toggleTheme')}
+	>
 		{#if currentMode === 'dark'}
-			<Sun class="h-5 w-5" />
+			<Sun size={16} strokeWidth={1.5} color="var(--neu-text)" />
 		{:else}
-			<Moon class="h-5 w-5" />
+			<Moon size={16} strokeWidth={1.5} color="var(--neu-text)" />
 		{/if}
-		<span class="sr-only">{t('sidebar.toggleTheme')}</span>
-	</Button>
-	<Button variant="outline" size="sm" class="rounded-[1rem] px-3" onclick={toggleThemeFamily}>
+	</button>
+	<button
+		class="rounded-full px-3 py-1.5 outline-none"
+		style="font-size: 11px; font-weight: 500; background: var(--neu-bg); color: var(--neu-text); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		onclick={toggleThemeFamily}
+	>
 		{getThemeFamilyLabel(currentFamily)}
-	</Button>
+	</button>
 </div>

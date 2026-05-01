@@ -5,11 +5,6 @@
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { formatDateTime } from '$lib/utils/format';
-	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent } from '$lib/components/ui/card';
-	import PageHeader from '$lib/components/layout/page-header.svelte';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Badge } from '$lib/components/ui/badge';
 	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import CreateGroupModal from '$lib/components/common/create-group-modal.svelte';
@@ -159,177 +154,194 @@
 	<title>我的群组 - HotSpot</title>
 </svelte:head>
 
-<div class="space-y-5">
-	<PageHeader title="我的群组" description="管理已加入群组、邀请与申请">
-		{#snippet actions()}
+<div class="flex flex-col">
+	<!-- Sticky header -->
+	<div
+		class="sticky top-0 z-10 px-5 pt-3 pb-3"
+		style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+	>
+		<div class="flex items-center justify-between">
+			<div>
+				<h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">我的群组</h1>
+				<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">管理已加入群组、邀请与申请</p>
+			</div>
 			<div class="flex gap-2">
-				<Button
-					variant="outline"
-					size="sm"
-					class="h-10 rounded-2xl border-border/60 bg-background/70"
+				<button
+					class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+					style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text-muted);"
 					onclick={loadGroups}
 					disabled={isLoading}
 				>
-					<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+					<RefreshCw size={13} class={isLoading ? 'animate-spin' : ''} />
 					刷新
-				</Button>
-				<Button size="sm" class="h-10 rounded-2xl" onclick={() => (showCreateGroup = true)}>
-					<Plus class="mr-2 h-4 w-4" />
+				</button>
+				<button
+					class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+					style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 12px; box-shadow: 0 2px 8px var(--neu-glow);"
+					onclick={() => (showCreateGroup = true)}
+				>
+					<Plus size={13} />
 					创建群组
-				</Button>
+				</button>
 			</div>
-		{/snippet}
-	</PageHeader>
+		</div>
+	</div>
 
-	{#if isLoading}
-		<ListSkeleton type="group" count={6} layout="grid" />
-	{:else if groups.length === 0}
-		<EmptyState 
-			icon={Users} 
-			title="还没有加入群组" 
-			description="去探索或创建一个群组吧"
-		>
-			<div class="mt-4 flex gap-3">
-				<a href="/groups/nearby">
-					<Button variant="outline">发现附近群组</Button>
-				</a>
-				<Button onclick={() => (showCreateGroup = true)}>创建群组</Button>
-			</div>
-		</EmptyState>
-	{:else}
-		<div class="columns-1 gap-4 sm:columns-2 xl:columns-3">
-			{#each groups as group (group.group.group_id)}
-				<div class="mb-4 break-inside-avoid">
-					<a href="/groups/{group.group.group_id}">
-						<Card class="cursor-pointer rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md transition-shadow hover:shadow-md">
-							<CardContent class="flex items-center gap-4 p-4">
-								<Avatar class="h-12 w-12">
-									<AvatarImage src={group.group.avatar_url} alt={group.group.name} />
-									<AvatarFallback>{group.group.name.slice(0, 2)}</AvatarFallback>
-								</Avatar>
+	<div class="flex flex-col px-4 pt-4 pb-6 gap-5">
+		{#if isLoading}
+			<ListSkeleton type="group" count={6} layout="grid" />
+		{:else if groups.length === 0}
+			<EmptyState
+				icon={Users}
+				title="还没有加入群组"
+				description="去探索或创建一个群组吧"
+			>
+				<div class="mt-4 flex gap-3">
+					<a href="/groups/nearby" class="rounded-full px-4 py-2 text-sm" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text); text-decoration: none;">发现附近群组</a>
+					<button class="rounded-full px-4 py-2 text-sm" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 8px var(--neu-glow);" onclick={() => (showCreateGroup = true)}>创建群组</button>
+				</div>
+			</EmptyState>
+		{:else}
+			<div class="columns-1 gap-4 sm:columns-2 xl:columns-3">
+				{#each groups as group (group.group.group_id)}
+					<div class="mb-4 break-inside-avoid">
+						<a href="/groups/{group.group.group_id}" style="text-decoration: none;">
+							<div class="flex items-center gap-4 rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+								<div class="overflow-hidden rounded-full shrink-0" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">
+									{#if group.group.avatar_url}
+										<img src={group.group.avatar_url} alt={group.group.name} class="h-full w-full object-cover" />
+									{:else}
+										<div class="flex h-full w-full items-center justify-center" style="background: var(--neu-bg); font-size: 14px; color: var(--neu-text-muted);">{group.group.name.slice(0, 2)}</div>
+									{/if}
+								</div>
 								<div class="min-w-0 flex-1">
 									<div class="flex items-center justify-between">
-										<p class="truncate font-medium">{group.group.name}</p>
-							{#if (group.my_state?.unread_count ?? 0) > 0}
-								<Badge variant="destructive">
-									{(group.my_state?.unread_count ?? 0) > 99 ? '99+' : (group.my_state?.unread_count ?? 0)}
-								</Badge>
-							{/if}
+										<p class="truncate" style="font-size: 14px; font-weight: 500; color: var(--neu-text);">{group.group.name}</p>
+										{#if (group.my_state?.unread_count ?? 0) > 0}
+											<div class="flex items-center justify-center rounded-full" style="width: 20px; height: 20px; background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--neu-glow);">
+												{(group.my_state?.unread_count ?? 0) > 99 ? '99+' : (group.my_state?.unread_count ?? 0)}
+											</div>
+										{/if}
 									</div>
-									<p class="text-sm text-muted-foreground">
+									<p style="font-size: 13px; color: var(--neu-text-muted);">
 										{group.group.members_count} 成员
 									</p>
 								</div>
-							</CardContent>
-						</Card>
-					</a>
-				</div>
-			{/each}
-		</div>
-	{/if}
-
-	<div class="grid gap-4 lg:grid-cols-2">
-		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
-			<CardContent class="space-y-3 p-4">
-				<div class="flex items-center justify-between">
-					<div class="flex items-center gap-2">
-						<Inbox class="h-4 w-4 text-muted-foreground" />
-						<p class="text-sm font-semibold">收到的群邀请</p>
+							</div>
+						</a>
 					</div>
-					<Button variant="outline" size="sm" class="rounded-2xl border-border/60 bg-background/70" onclick={loadInvites} disabled={invitesLoading}>
+				{/each}
+			</div>
+		{/if}
+
+		<!-- Invites & Applications -->
+		<div class="grid gap-4 lg:grid-cols-2">
+			<!-- Invites -->
+			<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex items-center justify-between mb-3">
+					<div class="flex items-center gap-2">
+						<div class="flex items-center justify-center rounded-full" style="width: 28px; height: 28px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<Inbox size={12} color="var(--neu-text-muted)" strokeWidth={1.5} />
+						</div>
+						<span style="font-size: 14px; font-weight: 600; color: var(--neu-text);">收到的群邀请</span>
+					</div>
+					<button
+						class="rounded-full px-3 py-1 text-xs outline-none"
+						style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+						onclick={loadInvites}
+						disabled={invitesLoading}
+					>
 						刷新
-					</Button>
+					</button>
 				</div>
 				{#if invitesLoading && invites.length === 0}
-					<p class="text-sm text-muted-foreground">加载中...</p>
+					<p style="font-size: 13px; color: var(--neu-text-muted);">加载中...</p>
 				{:else if invites.length === 0}
-					<p class="text-sm text-muted-foreground">暂无待处理邀请</p>
+					<p style="font-size: 13px; color: var(--neu-text-muted);">暂无待处理邀请</p>
 				{:else}
 					<div class="space-y-2">
 						{#each invites as invite (invite.invite_id)}
-							<div class="rounded-2xl border border-border/60 bg-background/65 p-3">
-								<p class="text-sm font-medium">{invite.group.name}</p>
-								<p class="mt-1 text-xs text-muted-foreground">
+							<div class="rounded-[14px] p-3" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+								<p style="font-size: 13px; font-weight: 500; color: var(--neu-text);">{invite.group.name}</p>
+								<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 4px;">
 									邀请人：{invite.inviter.nickname}
 								</p>
 								{#if invite.message}
-									<p class="mt-1 text-xs text-muted-foreground">{invite.message}</p>
+									<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">{invite.message}</p>
 								{/if}
 								<div class="mt-2 flex gap-2">
-									<Button
-										size="sm"
-										class="rounded-xl"
+									<button
+										class="rounded-full px-3 py-1 text-xs outline-none"
+										style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 6px var(--neu-glow);"
 										disabled={isInviteProcessing(invite.invite_id)}
 										onclick={() => handleInvite(invite, 'accept')}
 									>
 										接受
-									</Button>
-									<Button
-										variant="outline"
-										size="sm"
-										class="rounded-xl border-border/60 bg-background/70"
+									</button>
+									<button
+										class="rounded-full px-3 py-1 text-xs outline-none"
+										style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 										disabled={isInviteProcessing(invite.invite_id)}
 										onclick={() => handleInvite(invite, 'reject')}
 									>
 										拒绝
-									</Button>
+									</button>
 								</div>
 							</div>
 						{/each}
 					</div>
 				{/if}
-			</CardContent>
-		</Card>
+			</div>
 
-		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
-			<CardContent class="space-y-3 p-4">
-				<div class="flex items-center justify-between">
+			<!-- Applications -->
+			<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex items-center justify-between mb-3">
 					<div class="flex items-center gap-2">
-						<CheckCircle2 class="h-4 w-4 text-muted-foreground" />
-						<p class="text-sm font-semibold">我的入群申请</p>
+						<div class="flex items-center justify-center rounded-full" style="width: 28px; height: 28px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<CheckCircle2 size={12} color="var(--neu-text-muted)" strokeWidth={1.5} />
+						</div>
+						<span style="font-size: 14px; font-weight: 600; color: var(--neu-text);">我的入群申请</span>
 					</div>
-					<Button
-						variant="outline"
-						size="sm"
-						class="rounded-2xl border-border/60 bg-background/70"
+					<button
+						class="rounded-full px-3 py-1 text-xs outline-none"
+						style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
 						onclick={loadApplications}
 						disabled={applicationsLoading}
 					>
 						刷新
-					</Button>
+					</button>
 				</div>
 				{#if applicationsLoading && applications.length === 0}
-					<p class="text-sm text-muted-foreground">加载中...</p>
+					<p style="font-size: 13px; color: var(--neu-text-muted);">加载中...</p>
 				{:else if applications.length === 0}
-					<p class="text-sm text-muted-foreground">暂无待处理申请</p>
+					<p style="font-size: 13px; color: var(--neu-text-muted);">暂无待处理申请</p>
 				{:else}
 					<div class="space-y-2">
 						{#each applications as application (application.application_id)}
-							<div class="rounded-2xl border border-border/60 bg-background/65 p-3">
-								<p class="text-sm font-medium">群组申请</p>
+							<div class="rounded-[14px] p-3" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+								<p style="font-size: 13px; font-weight: 500; color: var(--neu-text);">群组申请</p>
 								{#if application.message}
-									<p class="mt-1 text-xs text-muted-foreground">{application.message}</p>
+									<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 4px;">{application.message}</p>
 								{/if}
-								<p class="mt-1 text-xs text-muted-foreground">
+								<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">
 									申请时间：{formatDateTime(application.created_at)}
 								</p>
 								<div class="mt-2 flex gap-2">
-									<Button
-										variant="outline"
-										size="sm"
-										class="rounded-xl border-border/60 bg-background/70"
+									<button
+										class="rounded-full px-3 py-1 text-xs outline-none"
+										style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 										disabled={isApplicationProcessing(application.application_id)}
 										onclick={() => handleCancelApplication(application)}
 									>
 										取消申请
-									</Button>
+									</button>
 								</div>
 							</div>
 						{/each}
 					</div>
 				{/if}
-			</CardContent>
-		</Card>
+			</div>
+		</div>
 	</div>
 </div>
 

@@ -1,10 +1,5 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Textarea } from '$lib/components/ui/textarea';
-	import { Label } from '$lib/components/ui/label';
-	import { Badge } from '$lib/components/ui/badge';
 	import { groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { showApiError } from '$lib/utils/api-error';
@@ -229,76 +224,83 @@
 </script>
 
 <Dialog.Root bind:open onOpenChange={(value) => { open = value; onOpenChange?.(value); }}>
-	<Dialog.Content class="flex max-h-[85vh] flex-col rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md sm:max-w-2xl">
+	<Dialog.Content class="flex max-h-[85vh] flex-col rounded-[22px] sm:max-w-2xl" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);">
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-3">
-				<div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/50 bg-primary/10">
-					<UsersRound class="h-5 w-5 text-primary" />
+				<div class="flex items-center justify-center rounded-full" style="width: 40px; height: 40px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<UsersRound style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
 				</div>
 				<div>
-					<div>创建群组</div>
-					<div class="text-sm font-normal text-muted-foreground">邀请伙伴一起交流</div>
+					<div style="color: var(--neu-text); font-weight: 600;">创建群组</div>
+					<div style="font-size: 13px; font-weight: 400; color: var(--neu-text-muted);">邀请伙伴一起交流</div>
 				</div>
 			</Dialog.Title>
 		</Dialog.Header>
 
 		<div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
-			<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
-				<Label for="group-name">群组名称</Label>
-				<Input
+			<!-- 群组名称 -->
+			<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<label for="group-name" style="font-size: 12px; color: var(--neu-text);">群组名称</label>
+				<input
 					id="group-name"
-					class="h-11 rounded-2xl border-border/60 bg-background/75 {nameError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+					class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {nameError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					placeholder="例如：城市漫步俱乐部"
 					bind:value={name}
 					onblur={() => markTouched('name')}
 				/>
 				<div class="flex items-center justify-between">
 					{#if nameError}
-						<p class="text-xs text-destructive">{nameError}</p>
+						<p style="font-size: 12px; color: var(--neu-error);">{nameError}</p>
 					{:else}
 						<span></span>
 					{/if}
-					<span class="text-xs text-muted-foreground">{name.length}/{GROUP_NAME_MAX}</span>
+					<span style="font-size: 12px; color: var(--neu-text-muted);">{name.length}/{GROUP_NAME_MAX}</span>
 				</div>
 			</div>
 
-			<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
-				<Label for="group-desc">群组介绍</Label>
-				<Textarea
+			<!-- 群组介绍 -->
+			<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<label for="group-desc" style="font-size: 12px; color: var(--neu-text);">群组介绍</label>
+				<textarea
 					id="group-desc"
 					placeholder="简单描述群组用途与氛围"
-					class="min-h-[100px] rounded-2xl border-border/60 bg-background/75 {groupDescriptionError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+					class="rounded-[14px] px-4 py-2.5 outline-none w-full resize-none"
+					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {groupDescriptionError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px; min-height: 100px;"
 					bind:value={description}
 					onblur={() => markTouched('description')}
-				/>
+				></textarea>
 				<div class="flex items-center justify-between">
 					{#if groupDescriptionError}
-						<p class="text-xs text-destructive">{groupDescriptionError}</p>
+						<p style="font-size: 12px; color: var(--neu-error);">{groupDescriptionError}</p>
 					{:else}
 						<span></span>
 					{/if}
-					<span class="text-xs text-muted-foreground">{description.length}/{GROUP_DESCRIPTION_MAX}</span>
+					<span style="font-size: 12px; color: var(--neu-text-muted);">{description.length}/{GROUP_DESCRIPTION_MAX}</span>
 				</div>
 			</div>
 
-			<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
-				<Label for="group-tags">群组标签</Label>
-				<Input id="group-tags" class="h-11 rounded-2xl border-border/60 bg-background/75" placeholder="兴趣、城市、活动" bind:value={tagsInput} />
+			<!-- 群组标签 -->
+			<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<label for="group-tags" style="font-size: 12px; color: var(--neu-text);">群组标签</label>
+				<input id="group-tags" class="rounded-[14px] px-4 py-2.5 outline-none w-full" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;" placeholder="兴趣、城市、活动" bind:value={tagsInput} />
 				{#if tags.length > 0}
 					<div class="flex flex-wrap gap-2">
 						{#each tags as tag (tag)}
-							<Badge variant="secondary" class="rounded-2xl text-xs">#{tag}</Badge>
+							<span class="rounded-full px-2.5 py-0.5" style="font-size: 11px; background: var(--neu-accent-primary); color: var(--neu-active-text);">#{tag}</span>
 						{/each}
 					</div>
 				{/if}
 			</div>
 
-			<div class="grid gap-4 rounded-2xl border border-border/50 bg-background/65 p-4 sm:grid-cols-2">
+			<!-- 加入方式 & 口令 -->
+			<div class="grid gap-4 rounded-[22px] p-4 sm:grid-cols-2" style="background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 				<div class="space-y-2">
-					<Label for="join-method">加入方式</Label>
+					<label for="join-method" style="font-size: 12px; color: var(--neu-text);">加入方式</label>
 					<select
 						id="join-method"
-						class="h-11 w-full rounded-2xl border border-border/60 bg-background/75 px-3 text-sm"
+						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;"
 						bind:value={joinMethod}
 					>
 						<option value="open">自由加入</option>
@@ -307,27 +309,30 @@
 					</select>
 				</div>
 				<div class="space-y-2">
-					<Label for="group-password">入群口令 (可选)</Label>
-					<Input
+					<label for="group-password" style="font-size: 12px; color: var(--neu-text);">入群口令 (可选)</label>
+					<input
 						id="group-password"
-						class="h-11 rounded-2xl border-border/60 bg-background/75 {groupPasswordError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {groupPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 						type="password"
 						placeholder="设置后需口令加入"
 						bind:value={password}
 						onblur={() => markTouched('password')}
 					/>
 					{#if groupPasswordError}
-						<p class="text-xs text-destructive">{groupPasswordError}</p>
+						<p style="font-size: 12px; color: var(--neu-error);">{groupPasswordError}</p>
 					{/if}
 				</div>
 			</div>
 
-			<div class="grid gap-4 rounded-2xl border border-border/50 bg-background/65 p-4 sm:grid-cols-2">
+			<!-- 最大成员数 & 搜索 -->
+			<div class="grid gap-4 rounded-[22px] p-4 sm:grid-cols-2" style="background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 				<div class="space-y-2">
-					<Label for="max-members">最大成员数 (可选)</Label>
-					<Input
+					<label for="max-members" style="font-size: 12px; color: var(--neu-text);">最大成员数 (可选)</label>
+					<input
 						id="max-members"
-						class="h-11 rounded-2xl border-border/60 bg-background/75 {maxMembersError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {maxMembersError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 						type="number"
 						min="2"
 						max="2000"
@@ -336,10 +341,10 @@
 						onblur={() => markTouched('maxMembers')}
 					/>
 					{#if maxMembersError}
-						<p class="text-xs text-destructive">{maxMembersError}</p>
+						<p style="font-size: 12px; color: var(--neu-error);">{maxMembersError}</p>
 					{/if}
 				</div>
-				<div class="flex items-center justify-between rounded-2xl border border-border/60 bg-background/75 px-3 py-2 text-sm">
+				<div class="flex items-center justify-between rounded-[14px] px-4 py-2.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);">
 					<span>允许被搜索</span>
 					<input type="checkbox" class="h-4 w-4" bind:checked={isSearchable} />
 				</div>
@@ -353,16 +358,16 @@
 			/>
 		</div>
 
-		<Dialog.Footer class="pt-2">
-			<Button variant="outline" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={() => { open = false; onOpenChange?.(false); }}>
+		<Dialog.Footer class="pt-2 flex gap-3 justify-end">
+			<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;" onclick={() => { open = false; onOpenChange?.(false); }}>
 				取消
-			</Button>
-			<Button class="h-10 rounded-2xl" onclick={handleSubmit} disabled={isSubmitting}>
+			</button>
+			<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleSubmit} disabled={isSubmitting}>
 				{#if isSubmitting}
-					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+					<Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
 				{/if}
 				创建群组
-			</Button>
+			</button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

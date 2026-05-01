@@ -4,13 +4,6 @@
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import PageHeader from '$lib/components/layout/page-header.svelte';
-	import { Input } from '$lib/components/ui/input';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Skeleton } from '$lib/components/ui/skeleton';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import type { UserItem } from '$lib/types/api';
 	import Search from 'lucide-svelte/icons/search';
@@ -21,8 +14,6 @@
 	import Eye from 'lucide-svelte/icons/eye';
 	import Shield from 'lucide-svelte/icons/shield';
 	import Users from 'lucide-svelte/icons/users';
-
-	// ============ 分页 ============
 
 	type AdminUserItem = UserItem & { status: 'normal' | 'banned' };
 
@@ -43,56 +34,31 @@
 		);
 	}
 
-	$effect(() => {
-		if (pagination.error) toast.error(pagination.error);
-	});
-
-	// ============ 操作 ============
+	$effect(() => { if (pagination.error) toast.error(pagination.error); });
 
 	async function handleBan(userId: string) {
 		try {
 			const response = await adminUsersService.ban({ user_id: userId, reason: '违规操作' });
 			if (isSuccess(response)) {
-				pagination.updateItem((u) =>
-					u.user.user_id === userId ? { ...u, status: 'banned' as const } : null
-				);
+				pagination.updateItem((u) => u.user.user_id === userId ? { ...u, status: 'banned' as const } : null);
 				toast.success('已封禁');
-			} else {
-				toast.error(response.message || '操作失败');
-			}
-		} catch {
-			toast.error('操作失败');
-		}
+			} else { toast.error(response.message || '操作失败'); }
+		} catch { toast.error('操作失败'); }
 	}
 
 	async function handleUnban(userId: string) {
 		try {
 			const response = await adminUsersService.unban({ user_id: userId });
 			if (isSuccess(response)) {
-				pagination.updateItem((u) =>
-					u.user.user_id === userId ? { ...u, status: 'normal' as const } : null
-				);
+				pagination.updateItem((u) => u.user.user_id === userId ? { ...u, status: 'normal' as const } : null);
 				toast.success('已解封');
-			} else {
-				toast.error(response.message || '操作失败');
-			}
-		} catch {
-			toast.error('操作失败');
-		}
+			} else { toast.error(response.message || '操作失败'); }
+		} catch { toast.error('操作失败'); }
 	}
 
-	// ============ 常量 ============
+	const STATUS_TEXT: Record<string, string> = { normal: '正常', banned: '已封禁' };
 
-	type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
-
-	const USER_STATUS_BADGE: Record<string, { variant: BadgeVariant; text: string }> = {
-		normal: { variant: 'default', text: '正常' },
-		banned: { variant: 'destructive', text: '已封禁' }
-	};
-
-	onMount(() => {
-		loadUsers();
-	});
+	onMount(() => { loadUsers(); });
 </script>
 
 <svelte:head>
@@ -100,101 +66,83 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<PageHeader title="用户管理">
-		{#snippet actions()}
-			<Button
-				variant="outline"
-				size="sm"
-				onclick={() => loadUsers()}
-				disabled={pagination.loading}
-			>
-				<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
-				刷新
-			</Button>
-		{/snippet}
-	</PageHeader>
+	<div class="flex items-center justify-between">
+		<h1 style="font-size: 22px; font-weight: 600; color: var(--neu-text);">用户管理</h1>
+		<button class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);" onclick={() => loadUsers()} disabled={pagination.loading}>
+			<RefreshCw size={14} strokeWidth={1.5} class={pagination.loading ? 'animate-spin' : ''} />
+			刷新
+		</button>
+	</div>
 
 	<!-- Search -->
 	<div class="flex gap-2">
-		<div class="relative flex-1">
-			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-			<Input
-				type="search"
-				placeholder="搜索昵称..."
-				class="pl-9"
-				autocomplete="off"
-				bind:value={nickname}
-				onkeydown={(e) => e.key === 'Enter' && loadUsers()}
-			/>
+		<div class="relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
+			<input type="search" placeholder="搜索昵称..." class="flex-1 bg-transparent outline-none" style="font-size: 13px; color: var(--neu-text);" autocomplete="off" bind:value={nickname} onkeydown={(e) => e.key === 'Enter' && loadUsers()} />
 		</div>
-		<Button onclick={() => loadUsers()}>搜索</Button>
+		<button class="rounded-full px-4 py-2.5 outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={() => loadUsers()}>搜索</button>
 	</div>
 
 	<!-- Users table -->
-	<Card>
-		<CardHeader>
-			<CardTitle class="flex items-center gap-2">
-				<Users class="h-5 w-5" />
-				用户列表
-			</CardTitle>
-		</CardHeader>
-		<CardContent>
+	<div class="rounded-[22px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="flex items-center gap-2 px-4 py-3" style="border-bottom: 1px solid var(--neu-border);">
+			<Users size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+			<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">用户列表</span>
+		</div>
+		<div class="p-4">
 			{#if pagination.loading && pagination.items.length === 0}
-				<div class="space-y-4">
+				<div class="space-y-3">
 					{#each Array(5) as _, i (i)}
 						<div class="flex items-center gap-4">
-							<Skeleton class="h-10 w-10 rounded-full" />
+							<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-border);"></div>
 							<div class="flex-1 space-y-2">
-								<Skeleton class="h-4 w-32" />
-								<Skeleton class="h-3 w-24" />
+								<div class="rounded" style="height: 12px; width: 120px; background: var(--neu-border);"></div>
+								<div class="rounded" style="height: 10px; width: 80px; background: var(--neu-border);"></div>
 							</div>
-							<Skeleton class="h-6 w-16" />
 						</div>
 					{/each}
 				</div>
 			{:else if pagination.items.length === 0}
-				<div class="py-8 text-center text-muted-foreground">暂无用户数据</div>
+				<p class="py-8 text-center" style="font-size: 13px; color: var(--neu-text-muted);">暂无用户数据</p>
 			{:else}
-				<div class="divide-y">
+				<div class="space-y-2">
 					{#each pagination.items as user (user.user.user_id)}
-						{@const badge = USER_STATUS_BADGE[user.status] ?? { variant: 'outline' as const, text: user.status }}
-						<div class="flex items-center gap-4 py-4">
-							<Avatar class="h-10 w-10">
-								<AvatarImage src={user.user.avatar_url} alt={user.user.nickname} />
-								<AvatarFallback>{user.user.nickname.slice(0, 2)}</AvatarFallback>
-							</Avatar>
-							<div class="min-w-0 flex-1">
-								<div class="flex items-center gap-2">
-									<p class="font-medium">{user.user.nickname}</p>
-								</div>
-								<div class="flex items-center gap-3 text-xs text-muted-foreground">
-									<span>ID: {user.user.user_id}</span>
-								</div>
+						<div class="flex items-center gap-3 rounded-[18px] p-3" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<div class="flex-shrink-0 overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
+								{#if user.user.avatar_url}
+									<img src={user.user.avatar_url} alt={user.user.nickname} class="h-full w-full object-cover" />
+								{:else}
+									<div class="flex h-full w-full items-center justify-center" style="background: var(--neu-fallback-bg);">
+										<span style="font-size: 14px; font-weight: 600; color: var(--neu-fallback-text);">{user.user.nickname.slice(0, 2)}</span>
+									</div>
+								{/if}
 							</div>
-							<Badge variant={badge.variant}>
-								{badge.text}
-							</Badge>
+							<div class="min-w-0 flex-1">
+								<span style="font-size: 13px; font-weight: 500; color: var(--neu-text);">{user.user.nickname}</span>
+								<p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">ID: {user.user.user_id}</p>
+							</div>
+							<span class="rounded-full px-2 py-0.5" style="font-size: 10px; font-weight: 500; {user.status === 'banned' ? 'background: var(--neu-error); color: var(--neu-active-text);' : 'background: var(--neu-accent-primary); color: var(--neu-active-text);'}">{STATUS_TEXT[user.status] ?? user.status}</span>
 							<DropdownMenu.Root>
 								<DropdownMenu.Trigger>
 									{#snippet child({ props })}
-										<Button variant="ghost" size="icon" aria-label="更多操作" {...props}>
-											<MoreVertical class="h-4 w-4" />
-										</Button>
+										<button class="flex items-center justify-center rounded-full outline-none" style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);" aria-label="更多操作" {...props}>
+											<MoreVertical size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+										</button>
 									{/snippet}
 								</DropdownMenu.Trigger>
 								<DropdownMenu.Content align="end">
 									<DropdownMenu.Item>
 										{#snippet child({ props })}
-											<a href="/users/{user.user.user_id}" {...props}>
-												<Eye class="mr-2 h-4 w-4" />
+											<a href="/users/{user.user.user_id}" style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--neu-text);" {...props}>
+												<Eye size={14} strokeWidth={1.5} />
 												查看详情
 											</a>
 										{/snippet}
 									</DropdownMenu.Item>
 									<DropdownMenu.Item>
 										{#snippet child({ props })}
-											<a href="/admin/users/{user.user.user_id}/roles" {...props}>
-												<Shield class="mr-2 h-4 w-4" />
+											<a href="/admin/users/{user.user.user_id}/roles" style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--neu-text);" {...props}>
+												<Shield size={14} strokeWidth={1.5} />
 												管理角色
 											</a>
 										{/snippet}
@@ -203,8 +151,8 @@
 									{#if user.status === 'banned'}
 										<DropdownMenu.Item>
 											{#snippet child({ props })}
-												<button {...props} onclick={() => handleUnban(user.user.user_id)}>
-													<UserX class="mr-2 h-4 w-4" />
+												<button style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--neu-text);" {...props} onclick={() => handleUnban(user.user.user_id)}>
+													<UserX size={14} strokeWidth={1.5} />
 													解除封禁
 												</button>
 											{/snippet}
@@ -212,8 +160,8 @@
 									{:else}
 										<DropdownMenu.Item class="text-destructive">
 											{#snippet child({ props })}
-												<button {...props} onclick={() => handleBan(user.user.user_id)}>
-													<Ban class="mr-2 h-4 w-4" />
+												<button style="display: flex; align-items: center; gap: 6px; font-size: 13px;" {...props} onclick={() => handleBan(user.user.user_id)}>
+													<Ban size={14} strokeWidth={1.5} />
 													封禁用户
 												</button>
 											{/snippet}
@@ -224,13 +172,10 @@
 						</div>
 					{/each}
 				</div>
-
-			{#if pagination.hasMore}
-				<Button variant="outline" class="mt-4 w-full" onclick={() => loadUsers(false)}>
-					加载更多
-				</Button>
+				{#if pagination.hasMore}
+					<button class="mt-4 w-full rounded-full py-2.5 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);" onclick={() => loadUsers(false)}>加载更多</button>
+				{/if}
 			{/if}
-			{/if}
-		</CardContent>
-	</Card>
+		</div>
+	</div>
 </div>

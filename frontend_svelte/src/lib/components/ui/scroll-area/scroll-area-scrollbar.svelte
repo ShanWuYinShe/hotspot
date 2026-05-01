@@ -20,6 +20,7 @@
 	{...restProps}
 >
 	<ScrollAreaPrimitive.Thumb
-		class={cn('relative flex-1 rounded-full bg-border', orientation === 'vertical' && 'flex-1')}
+		class={cn('relative flex-1 rounded-full', orientation === 'vertical' && 'flex-1')}
+		style="background: var(--neu-border);"
 	/>
 </ScrollAreaPrimitive.Scrollbar>

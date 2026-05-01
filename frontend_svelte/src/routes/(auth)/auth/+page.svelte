@@ -27,13 +27,13 @@
 </svelte:head>
 
 <div class="flex min-h-screen items-center justify-center px-4 py-10">
-	<div class="w-full max-w-md rounded-3xl border border-border/60 bg-card/95 p-8 shadow-xl backdrop-blur-md">
+	<div class="w-full max-w-md rounded-[22px] p-8" style="background: var(--neu-bg); box-shadow: 10px 10px 24px var(--neu-shadow-dark), -10px -10px 24px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 		<div class="mb-6 text-center">
-			<div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-border/50 bg-primary/10 text-primary">
-				<Shield class="h-6 w-6" />
+			<div class="mx-auto mb-4 flex items-center justify-center rounded-full" style="width: 48px; height: 48px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<Shield size={22} color="var(--neu-accent-primary)" />
 			</div>
-			<h1 class="mb-2 text-2xl font-semibold">登录后继续</h1>
-			<p class="text-sm text-muted-foreground">使用你的账号、注册新账号或继续访客体验</p>
+			<h1 style="font-size: 22px; font-weight: 600; color: var(--neu-text);">登录后继续</h1>
+			<p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 6px;">使用你的账号、注册新账号或继续访客体验</p>
 		</div>
 
 		<AuthFormContent onSuccess={handleSuccess} />
