@@ -19,7 +19,7 @@
 	{#each Array(count) as _, i (i)}
 		<div
 			class="rounded-[22px] p-5"
-			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			{#if type === 'user'}
 				<div class="flex items-center gap-3.5">

@@ -76,7 +76,7 @@
 	{#if !share}
 		<div
 			class="rounded-[22px] p-6"
-			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<h2 style="font-size: 18px; font-weight: 600; color: var(--neu-error);">无法加载分享</h2>
 			<p style="font-size: 14px; color: var(--neu-text-muted); margin-top: 8px;">{data.error || '此分享不存在或已被删除'}</p>
@@ -92,7 +92,7 @@
 		{@const payload = share.payload as LocationSharePayload}
 		<div
 			class="overflow-hidden rounded-[22px]"
-			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<!-- Header with creator info -->
 			<div class="flex items-center justify-between p-6" style="border-bottom: 1px solid var(--neu-border);">
@@ -180,7 +180,7 @@
 		<!-- Other share types (user/group/moment) -->
 		<div
 			class="rounded-[22px] p-6"
-			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<h2 style="font-size: 18px; font-weight: 600; color: var(--neu-text);">分享内容</h2>
 			<p style="font-size: 14px; color: var(--neu-text-muted); margin-top: 8px;">

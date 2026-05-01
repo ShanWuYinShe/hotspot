@@ -244,7 +244,7 @@
 					{@const Icon = getNotificationIcon(item.type)}
 					<div
 						class="flex items-start gap-3 rounded-[18px] px-4 py-3"
-						style="background: var(--neu-bg); border: 1px solid var(--neu-border); {item.is_read ? '' : 'box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);'}"
+						style="background: var(--neu-bg); border: 1px solid var(--neu-border); {item.is_read ? '' : 'box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);'}"
 					>
 						<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 							<Icon size={15} strokeWidth={1.5} />

@@ -90,7 +90,7 @@
 			<div class="columns-1 gap-4 sm:columns-2 xl:columns-3">
 				{#each pagination.items as moment (moment.moment_id)}
 					<div class="mb-4 break-inside-avoid">
-						<div class="rounded-[22px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="rounded-[22px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 							<a href="/moments/{moment.moment_id}" class="block p-4" style="text-decoration: none;">
 								<p class="line-clamp-3 whitespace-pre-wrap" style="font-size: 14px; color: var(--neu-text);">{moment.description}</p>
 								{#if moment.images && moment.images.length > 0}

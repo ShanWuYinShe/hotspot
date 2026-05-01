@@ -109,7 +109,7 @@
 
 	<div class="grid gap-6 lg:grid-cols-2">
 		<!-- Roles -->
-		<div class="rounded-[22px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[22px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 			<div class="flex items-center gap-2 px-4 py-3" style="border-bottom: 1px solid var(--neu-border);">
 				<Shield size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 				<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">角色列表</span>
@@ -164,7 +164,7 @@
 		</div>
 
 		<!-- Permissions -->
-		<div class="rounded-[22px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[22px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 			<div class="flex items-center gap-2 px-4 py-3" style="border-bottom: 1px solid var(--neu-border);">
 				<Key size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 				<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">权限列表</span>

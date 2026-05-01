@@ -141,7 +141,7 @@
 
 <div
 	class="cursor-pointer overflow-hidden rounded-[22px] transition-shadow {className}"
-	style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+	style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 	tabindex={0}
 	role="link"
 	onclick={handleCardClick}

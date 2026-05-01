@@ -275,7 +275,7 @@
 				<!-- Search suggestions -->
 				<div
 					class="rounded-[18px] p-4"
-					style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				>
 					{#if isSuggesting}
 						<div class="space-y-2">
@@ -384,7 +384,7 @@
 					<!-- Recent searches -->
 					<div
 						class="rounded-[18px] p-4"
-						style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 					>
 						<div class="flex items-center justify-between mb-3">
 							<div class="flex items-center gap-1.5">
@@ -431,7 +431,7 @@
 					<!-- Trending tags -->
 					<div
 						class="rounded-[18px] p-4"
-						style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 					>
 						<div class="flex items-center gap-1.5 mb-3">
 							<TrendingUp size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />

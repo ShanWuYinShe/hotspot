@@ -29,7 +29,7 @@
 <div class="flex items-center gap-2">
 	<button
 		class="flex items-center justify-center rounded-full outline-none"
-		style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		onclick={toggleThemeMode}
 		aria-label={t('sidebar.toggleTheme')}
 	>

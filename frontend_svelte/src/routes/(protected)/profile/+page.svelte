@@ -129,7 +129,7 @@
 {#if profile}
 	<div class="mx-auto max-w-4xl space-y-5 pb-8 px-4 pt-4">
 		<!-- 个人资料卡片 -->
-		<div class="rounded-[22px] p-6" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[22px] p-6" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 			<div class="flex flex-col gap-6 sm:flex-row sm:items-start">
 				<!-- 头像 -->
 				<div class="relative shrink-0">
@@ -255,7 +255,7 @@
 		</div>
 
 		<!-- 详细信息 -->
-		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 			<div class="flex items-center gap-2 mb-4">
 				<div class="flex items-center justify-center rounded-full" style="width: 32px; height: 32px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<User size={14} color="var(--neu-accent-primary)" strokeWidth={1.5} />
@@ -315,7 +315,7 @@
 		</div>
 
 		<!-- 数据统计 -->
-		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 			<p style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 12px;">数据概览</p>
 			<div class="grid gap-3 grid-cols-2 md:grid-cols-4">
 				<a href="/moments" class="block rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
@@ -369,7 +369,7 @@
 		</div>
 
 		<!-- 快捷操作 -->
-		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 			<p style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 12px;">快捷操作</p>
 			<div class="space-y-2">
 				<a href="/settings" class="block" style="text-decoration: none;">

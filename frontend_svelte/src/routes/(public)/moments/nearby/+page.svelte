@@ -131,7 +131,7 @@
 		<div class="flex flex-col gap-4 px-5 pt-3 pb-6">
 			{#if pagination.loading}
 				{#each Array(4) as _}
-					<div class="rounded-[22px]" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="rounded-[22px]" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 						<div class="rounded-t-[22px]" style="height: 140px; background: var(--neu-border);"></div>
 						<div class="p-4">
 							<div class="mb-2 rounded" style="width: 80%; height: 12px; background: var(--neu-border);"></div>
@@ -174,7 +174,7 @@
 					<button onclick={handleBack} class="outline-none" aria-label="返回">
 						<ArrowLeft size={18} color="var(--neu-text-muted)" />
 					</button>
-					<h1 style="font-size: 22px; font-weight: 600; color: var(--neu-text);">{t('discover.title')}</h1>
+					<h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">{t('discover.title')}</h1>
 				</div>
 				<span style="font-size: 12px; color: var(--neu-text-muted);">
 					{pagination.items.length} {t('discover.results')}
@@ -220,7 +220,7 @@
 			{#if pagination.loading}
 				<div class="grid grid-cols-3 gap-4">
 					{#each Array(6) as _}
-						<div class="rounded-[22px]" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="rounded-[22px]" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 							<div class="rounded-t-[22px]" style="height: 120px; background: var(--neu-border);"></div>
 							<div class="p-4">
 								<div class="mb-2 rounded" style="width: 80%; height: 12px; background: var(--neu-border);"></div>

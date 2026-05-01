@@ -899,7 +899,7 @@
 	{#if !group}
 		<div
 			class="rounded-[22px] p-6"
-			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<div class="flex flex-col items-center gap-4">
 				<p style="color: var(--neu-text-muted);">
@@ -911,7 +911,7 @@
 		<!-- Group profile card -->
 		<div
 			class="rounded-[22px] p-6"
-			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<div class="space-y-6">
 				<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -1049,7 +1049,7 @@
 			<div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
 				<div
 					class="rounded-[22px] p-5"
-					style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				>
 					<h3 class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 12px;">群组说明</h3>
 					<p style="font-size: 14px; color: var(--neu-text-muted);">
@@ -1070,7 +1070,7 @@
 				</div>
 				<div
 					class="rounded-[22px] p-5"
-					style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				>
 					<h3 class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 12px;">加入须知</h3>
 					<div class="space-y-2" style="font-size: 14px; color: var(--neu-text-muted);">
@@ -1124,7 +1124,7 @@
 			{#if !authStore.isAuthenticated}
 				<div
 					class="flex flex-col items-center gap-3 rounded-[22px] py-10"
-					style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				>
 					<p style="font-size: 14px; color: var(--neu-text-muted);">登录后查看群公告</p>
 					<button
@@ -1138,7 +1138,7 @@
 			{:else if !group.my_state?.is_joined}
 				<div
 					class="flex flex-col items-center gap-3 rounded-[22px] py-10"
-					style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				>
 					<p style="font-size: 14px; color: var(--neu-text-muted);">加入群组后可查看公告</p>
 					<button
@@ -1186,7 +1186,7 @@
 						{#each Array(3) as _, i (i)}
 							<div
 								class="rounded-[22px] p-4 space-y-2"
-								style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+								style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 							>
 								<div class="rounded" style="width: 160px; height: 14px; background: var(--neu-border);"></div>
 								<div class="rounded" style="width: 100%; height: 14px; background: var(--neu-border);"></div>
@@ -1197,7 +1197,7 @@
 				{:else if announcementsPagination.items.length === 0}
 					<div
 						class="rounded-[22px] py-10 text-center"
-						style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 					>
 						<p style="font-size: 14px; color: var(--neu-text-muted);">暂无公告</p>
 					</div>
@@ -1206,7 +1206,7 @@
 						{#each announcementsPagination.items as announcement (announcement.announcement_id)}
 							<div
 								class="rounded-[22px] p-4"
-								style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+								style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 							>
 								<div class="flex items-start justify-between gap-3">
 									<div class="space-y-2">
@@ -1254,12 +1254,12 @@
 		<!-- Tab: Members (abbreviated for neumorphic style) -->
 		{#if currentTab === 'members'}
 			{#if !authStore.isAuthenticated}
-				<div class="flex flex-col items-center gap-3 rounded-[22px] py-10" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex flex-col items-center gap-3 rounded-[22px] py-10" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<p style="font-size: 14px; color: var(--neu-text-muted);">登录后查看成员</p>
 					<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => uiStore.openLoginModal()}>去登录</button>
 				</div>
 			{:else if !group.my_state?.is_joined}
-				<div class="flex flex-col items-center gap-3 rounded-[22px] py-10" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex flex-col items-center gap-3 rounded-[22px] py-10" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<p style="font-size: 14px; color: var(--neu-text-muted);">加入群组后可查看成员</p>
 					<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={openJoinDialog}>申请加入</button>
 				</div>
@@ -1282,7 +1282,7 @@
 					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
 						{#each Array(6) as _, i (i)}
 							<div class="mb-3 break-inside-avoid">
-								<div class="flex items-center gap-3 rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+								<div class="flex items-center gap-3 rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 									<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-border);"></div>
 									<div class="flex-1 space-y-2">
 										<div class="rounded" style="width: 96px; height: 12px; background: var(--neu-border);"></div>
@@ -1293,14 +1293,14 @@
 						{/each}
 					</div>
 				{:else if membersPagination.items.length === 0}
-					<div class="rounded-[22px] py-10 text-center" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="rounded-[22px] py-10 text-center" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 						<p style="font-size: 14px; color: var(--neu-text-muted);">暂无成员</p>
 					</div>
 				{:else}
 					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
 						{#each membersPagination.items as member (member.user.user_id)}
 							<div class="mb-3 break-inside-avoid">
-								<div class="flex items-center gap-3 rounded-[22px] p-4 transition-all" style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+								<div class="flex items-center gap-3 rounded-[22px] p-4 transition-all" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 									<a href="/users/{member.user.user_id}" class="flex min-w-0 flex-1 items-center gap-3">
 										<div class="overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
 											<img src={member.user.avatar_url} alt={member.user.nickname} class="h-full w-full object-cover" />
@@ -1372,7 +1372,7 @@
 				{#if applicationsPagination.loading && applicationsPagination.items.length === 0}
 					<div class="space-y-3">
 						{#each Array(3) as _, i (i)}
-							<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 								<div class="rounded" style="width: 128px; height: 14px; background: var(--neu-border);"></div>
 								<div class="rounded" style="width: 100%; height: 14px; background: var(--neu-border);"></div>
 								<div class="rounded" style="width: 144px; height: 12px; background: var(--neu-border);"></div>
@@ -1380,13 +1380,13 @@
 						{/each}
 					</div>
 				{:else if applicationsPagination.items.length === 0}
-					<div class="rounded-[22px] py-10 text-center" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="rounded-[22px] py-10 text-center" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 						<p style="font-size: 14px; color: var(--neu-text-muted);">暂无待处理申请</p>
 					</div>
 				{:else}
 					<div class="space-y-3">
 						{#each applicationsPagination.items as application (application.application_id)}
-							<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 								<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 									<div class="min-w-0 space-y-1">
 										<div class="flex items-center gap-2">

@@ -65,7 +65,7 @@
 		<div class="flex flex-col items-center" style="width: 60px;">
 			<button
 				class="mobile-bottom-nav__fab"
-				style="background: var(--neu-accent-primary); box-shadow: 0 6px 18px var(--neu-glow), 0 2px 4px var(--neu-shadow-dark);"
+				style="background: var(--neu-accent-primary); box-shadow: 0 6px 22px var(--neu-glow), 0 2px 6px rgba(0,0,0,0.20);"
 				onclick={() => uiStore.openCreateSheet()}
 				aria-label={t('nav.publish')}
 			>

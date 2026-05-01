@@ -596,7 +596,7 @@
 </svelte:head>
 
 <!-- 聊天容器 - Neumorphic 风格 -->
-<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[22px]" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[22px]" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 	<!-- Header -->
 	<header class="flex h-16 shrink-0 items-center gap-3 px-4" style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);">
 		<button
@@ -609,8 +609,8 @@
 		</button>
 
 		{#if isLoading}
-			<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
-			<div style="width: 128px; height: 20px; border-radius: 8px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
+			<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
+			<div style="width: 128px; height: 20px; border-radius: 8px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
 		{:else if group}
 			<a
 				href="/groups/{groupId}"
@@ -652,10 +652,10 @@
 			<div class="space-y-4 p-4">
 				{#each Array(8) as _, i (i)}
 					<div class="flex gap-3">
-						<div class="shrink-0 rounded-full" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
+						<div class="shrink-0 rounded-full" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
 						<div class="flex-1 space-y-2">
-							<div style="width: 96px; height: 12px; border-radius: 6px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
-							<div class="max-w-xs rounded-[18px]" style="width: 100%; height: 64px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
+							<div style="width: 96px; height: 12px; border-radius: 6px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
+							<div class="max-w-xs rounded-[18px]" style="width: 100%; height: 64px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
 						</div>
 					</div>
 				{/each}

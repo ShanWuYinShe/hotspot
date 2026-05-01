@@ -71,7 +71,7 @@
 			</div>
 		{:else}
 			<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-				<div class="rounded-[22px] p-4 flex items-center gap-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="rounded-[22px] p-4 flex items-center gap-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<div class="flex items-center justify-center rounded-full" style="width: 40px; height: 40px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 						<Bell size={18} color="var(--neu-accent-primary)" strokeWidth={1.5} />
 					</div>
@@ -80,7 +80,7 @@
 						<p style="font-size: 11px; color: var(--neu-text-muted);">{t('dashboard.unreadNotifications')}</p>
 					</div>
 				</div>
-				<div class="rounded-[22px] p-4 flex items-center gap-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="rounded-[22px] p-4 flex items-center gap-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<div class="flex items-center justify-center rounded-full" style="width: 40px; height: 40px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 						<Heart size={18} color="var(--neu-accent-primary)" strokeWidth={1.5} />
 					</div>
@@ -89,7 +89,7 @@
 						<p style="font-size: 11px; color: var(--neu-text-muted);">{t('dashboard.followers')}</p>
 					</div>
 				</div>
-				<div class="rounded-[22px] p-4 flex items-center gap-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="rounded-[22px] p-4 flex items-center gap-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<div class="flex items-center justify-center rounded-full" style="width: 40px; height: 40px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 						<Users size={18} color="var(--neu-accent-primary)" strokeWidth={1.5} />
 					</div>
@@ -104,7 +104,7 @@
 		<!-- Quick Access -->
 		<p style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); text-transform: uppercase; font-weight: 600;">{t('dashboard.quickAccess')}</p>
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-			<a href="/moments" class="block rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
+			<a href="/moments" class="block rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
 				<div class="flex items-center justify-between mb-3">
 					<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">{t('dashboard.myMoments')}</span>
 					<div class="flex items-center justify-center rounded-full" style="width: 28px; height: 28px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
@@ -114,7 +114,7 @@
 				<p style="font-size: 12px; color: var(--neu-text-muted);">{t('dashboard.viewAndManageMoments')}</p>
 			</a>
 
-			<a href="/groups" class="block rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
+			<a href="/groups" class="block rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
 				<div class="flex items-center justify-between mb-3">
 					<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">{t('dashboard.myGroups')}</span>
 					<div class="flex items-center justify-center rounded-full" style="width: 28px; height: 28px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
@@ -124,7 +124,7 @@
 				<p style="font-size: 12px; color: var(--neu-text-muted);">{t('dashboard.viewJoinedGroups')}</p>
 			</a>
 
-			<a href="/chat" class="block rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
+			<a href="/chat" class="block rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
 				<div class="flex items-center justify-between mb-3">
 					<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">{t('dashboard.messages')}</span>
 					<div class="flex items-center justify-center rounded-full" style="width: 28px; height: 28px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
@@ -134,7 +134,7 @@
 				<p style="font-size: 12px; color: var(--neu-text-muted);">{t('dashboard.viewMessages')}</p>
 			</a>
 
-			<a href="/users/nearby" class="block rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
+			<a href="/users/nearby" class="block rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
 				<div class="flex items-center justify-between mb-3">
 					<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">{t('dashboard.nearby')}</span>
 					<div class="flex items-center justify-center rounded-full" style="width: 28px; height: 28px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">

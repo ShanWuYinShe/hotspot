@@ -48,7 +48,7 @@
 	] as stat}
 		<div
 			class="flex flex-col items-center justify-center rounded-[18px] py-3.5"
-			style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<stat.icon size={16} strokeWidth={1.75} color={stat.color} />
 			{#if loading}

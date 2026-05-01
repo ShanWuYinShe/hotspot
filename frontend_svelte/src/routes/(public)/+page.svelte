@@ -305,7 +305,7 @@
 				] as feat}
 					<div
 						class="flex flex-col items-center justify-center rounded-[20px]"
-						style="aspect-ratio: 1.2; background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="aspect-ratio: 1.2; background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 					>
 						<div class="flex items-center justify-center rounded-[14px]" style="width: 36px; height: 36px; background: var(--neu-fallback-bg);">
 							<feat.icon size={17} strokeWidth={1.75} color={feat.color} />
@@ -357,7 +357,7 @@
 				] as stat}
 					<div
 						class="flex flex-col items-center justify-center rounded-[18px] py-3"
-						style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 					>
 						<stat.icon size={16} strokeWidth={1.75} color={stat.color} />
 						<span style="font-size: 10px; color: var(--neu-text-muted); margin-top: 4px;">{stat.label}</span>
@@ -398,7 +398,7 @@
 				<div class="mb-5 flex flex-col gap-2.5">
 					{#if loadingNearby}
 						{#each Array(3) as _}
-							<div class="flex items-center gap-3.5 rounded-[22px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<div class="flex items-center gap-3.5 rounded-[22px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 								<div class="rounded-full" style="width: 44px; height: 44px; background: var(--neu-border);"></div>
 								<div class="flex-1">
 									<div class="mb-1.5 rounded" style="width: 60px; height: 12px; background: var(--neu-border);"></div>
@@ -410,7 +410,7 @@
 						{#each nearbyUsers.slice(0, 5) as user (user.user.user_id)}
 							<div
 								class="flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5"
-								style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+								style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 								onclick={() => void goto(`/users/${user.user.user_id}`)}
 							>
 								<div class="relative flex-shrink-0">
@@ -443,7 +443,7 @@
 										class="rounded-full px-3.5 py-1 outline-none transition-all"
 										style={user.relation?.is_following
 											? 'box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
-											: 'box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
+											: 'box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
 										onclick={(e) => { e.stopPropagation(); handleFollowToggle(user); }}
 									>
 										{user.relation?.is_following ? t('common.following') : t('common.follow')}
@@ -466,7 +466,7 @@
 			{#if feed.loading}
 				<div class="flex flex-col gap-3">
 					{#each Array(3) as _}
-						<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 							<div class="flex items-center gap-3">
 								<div class="rounded-full" style="width: 36px; height: 36px; background: var(--neu-border);"></div>
 								<div class="flex-1">
@@ -566,7 +566,7 @@
 					<div class="mb-5 flex flex-col gap-3">
 						{#if loadingNearby}
 							{#each Array(4) as _}
-								<div class="flex items-center gap-3.5 rounded-[22px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+								<div class="flex items-center gap-3.5 rounded-[22px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 									<div class="rounded-full" style="width: 44px; height: 44px; background: var(--neu-border);"></div>
 									<div class="flex-1">
 										<div class="mb-1.5 rounded" style="width: 60px; height: 12px; background: var(--neu-border);"></div>
@@ -578,7 +578,7 @@
 							{#each nearbyUsers as user (user.user.user_id)}
 								<div
 									class="flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5"
-									style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+									style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 									onclick={() => void goto(`/users/${user.user.user_id}`)}
 								>
 									<div class="relative flex-shrink-0">
@@ -611,7 +611,7 @@
 											class="rounded-full px-3.5 py-1 outline-none transition-all"
 											style={user.relation?.is_following
 												? 'box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
-												: 'box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
+												: 'box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
 											onclick={(e) => { e.stopPropagation(); handleFollowToggle(user); }}
 										>
 											{user.relation?.is_following ? t('common.following') : t('common.follow')}
@@ -634,7 +634,7 @@
 				{#if feed.loading}
 					<div class="flex flex-col gap-3">
 						{#each Array(4) as _}
-							<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 								<div class="flex items-center gap-3">
 									<div class="rounded-full" style="width: 36px; height: 36px; background: var(--neu-border);"></div>
 									<div class="flex-1">

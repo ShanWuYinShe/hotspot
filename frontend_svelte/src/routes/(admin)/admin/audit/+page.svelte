@@ -74,7 +74,7 @@
 	</div>
 
 	<!-- Audit logs -->
-	<div class="rounded-[22px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+	<div class="rounded-[22px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 		<div class="flex items-center gap-2 px-4 py-3" style="border-bottom: 1px solid var(--neu-border);">
 			<FileText size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 			<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">操作日志</span>

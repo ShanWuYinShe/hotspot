@@ -35,7 +35,7 @@
 		'cursor-pointer',
 		className
 	)}
-	style="background: {variant === 'ghost' ? 'transparent' : 'var(--neu-bg)'}; color: var(--neu-text); border: 1px solid {variant === 'ghost' ? 'transparent' : 'var(--neu-border)'}; box-shadow: {variant === 'ghost' ? 'none' : variant === 'primary' ? '6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light), 0 4px 12px var(--neu-glow)' : '6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)'}; {variant === 'primary' ? 'color: var(--neu-active-text);' : ''}"
+	style="background: {variant === 'ghost' ? 'transparent' : 'var(--neu-bg)'}; color: var(--neu-text); border: 1px solid {variant === 'ghost' ? 'transparent' : 'var(--neu-border)'}; box-shadow: {variant === 'ghost' ? 'none' : variant === 'primary' ? '8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light), 0 4px 16px var(--neu-glow)' : '8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light)'}; {variant === 'primary' ? 'color: var(--neu-active-text);' : ''}"
 	{@attach feedbackAction}
 	{...restProps}
 >

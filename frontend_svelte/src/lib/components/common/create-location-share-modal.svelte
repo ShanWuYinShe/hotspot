@@ -104,7 +104,7 @@
 
 			<div class="mt-4 space-y-4">
 				<!-- 位置信息展示 -->
-				<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<div class="flex items-center gap-2" style="font-weight: 500; color: var(--neu-text);">
 						<MapPin style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
 						{locationName}
@@ -152,7 +152,7 @@
 
 			<div class="mt-4 space-y-4">
 				<!-- 分享链接 -->
-				<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<label style="font-size: 12px; color: var(--neu-text-muted);">分享链接</label>
 					<div class="flex gap-2">
 						<input

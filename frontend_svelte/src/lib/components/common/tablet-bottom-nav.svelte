@@ -80,7 +80,7 @@
 		<div class="flex shrink-0 items-center justify-center" style="width: 64px;">
 			<button
 				class="flex items-center justify-center rounded-full outline-none select-none"
-				style="width: 48px; height: 48px; background: var(--neu-accent-primary); box-shadow: 0 6px 20px var(--neu-glow); transition: background 0.22s, box-shadow 0.22s;"
+				style="width: 48px; height: 48px; background: var(--neu-accent-primary); box-shadow: 0 6px 22px var(--neu-glow), 0 2px 6px rgba(0,0,0,0.20); transition: background 0.22s, box-shadow 0.22s;"
 				onclick={() => uiStore.openCreateSheet()}
 				aria-label={t('nav.publish')}
 			>
@@ -106,14 +106,14 @@
 					{#if item.href === '/chat' && messageBadge > 0}
 						<span
 							class="absolute flex items-center justify-center rounded-full"
-							style="top: -6px; right: -8px; height: 18px; min-width: 18px; padding: 0 5px; background: var(--neu-error); color: var(--neu-active-text); font-size: 10px; font-weight: 700; line-height: 18px;"
+							style="top: -4px; right: -6px; height: 20px; min-width: 20px; padding: 0 6px; background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 11px; font-weight: 600; line-height: 20px;"
 						>
 							{messageBadge > 99 ? '99+' : messageBadge}
 						</span>
 					{:else if item.href === '/profile' && profileBadge > 0}
 						<span
 							class="absolute flex items-center justify-center rounded-full"
-							style="top: -6px; right: -8px; height: 18px; min-width: 18px; padding: 0 5px; background: var(--neu-error); color: var(--neu-active-text); font-size: 10px; font-weight: 700; line-height: 18px;"
+							style="top: -4px; right: -6px; height: 20px; min-width: 20px; padding: 0 6px; background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 11px; font-weight: 600; line-height: 20px;"
 						>
 							{profileBadge > 99 ? '99+' : profileBadge}
 						</span>

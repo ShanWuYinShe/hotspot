@@ -235,7 +235,7 @@
 	{#if isLoading}
 		<div
 			class="rounded-[22px] p-6 space-y-4"
-			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<div class="flex items-center gap-3">
 				<div class="rounded-full" style="width: 48px; height: 48px; background: var(--neu-border);"></div>
@@ -250,7 +250,7 @@
 	{:else if moment}
 		<div
 			class="rounded-[22px] p-6"
-			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<!-- Author -->
 			<a href="/users/{moment.user.user_id}" class="flex items-center gap-3">
@@ -343,7 +343,7 @@
 		{#if authStore.isAuthenticated}
 			<div
 				class="rounded-[22px] p-4"
-				style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 			>
 				<div class="flex gap-3">
 					<div class="overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
@@ -382,7 +382,7 @@
 		<!-- Comments -->
 		<div
 			class="rounded-[22px] p-6"
-			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<h2 style="font-size: 16px; font-weight: 600; color: var(--neu-text); margin-bottom: 16px;">评论 ({commentsCount})</h2>
 
@@ -444,7 +444,7 @@
 	{:else}
 		<div
 			class="rounded-[22px] py-12 text-center"
-			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<p style="color: var(--neu-text-muted);">瞬间不存在或已被删除</p>
 			<button

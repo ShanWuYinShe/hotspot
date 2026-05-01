@@ -199,7 +199,7 @@
 	{#if !user}
 		<div
 			class="rounded-[22px] p-6"
-			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<div class="flex flex-col items-center gap-4">
 				<p style="color: var(--neu-text-muted);">
@@ -210,7 +210,7 @@
 	{:else}
 		<div
 			class="rounded-[22px] p-6"
-			style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<div class="space-y-6">
 				<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -329,7 +329,7 @@
 					{#each Array(3) as _, i (i)}
 						<div
 							class="rounded-[22px] p-4 space-y-3"
-							style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 						>
 							<div class="rounded" style="width: 100%; height: 14px; background: var(--neu-border);"></div>
 							<div class="rounded" style="width: 75%; height: 14px; background: var(--neu-border);"></div>
@@ -340,7 +340,7 @@
 			{:else if momentsPagination.items.length === 0}
 				<div
 					class="flex flex-col items-center justify-center rounded-[22px] py-12"
-					style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				>
 					<Image size={40} color="var(--neu-text-muted)" />
 					<p style="margin-top: 16px; color: var(--neu-text-muted);">TA 还没有发布瞬间</p>
@@ -378,7 +378,7 @@
 					{#each Array(5) as _, i (i)}
 						<div
 							class="flex items-center gap-4 rounded-[22px] p-4"
-							style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 						>
 							<div class="rounded-full" style="width: 48px; height: 48px; background: var(--neu-border);"></div>
 							<div class="flex-1 space-y-2">
@@ -391,7 +391,7 @@
 			{:else if followersPagination.items.length === 0}
 				<div
 					class="flex flex-col items-center justify-center rounded-[22px] py-12"
-					style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				>
 					<Users size={40} color="var(--neu-text-muted)" />
 					<p style="margin-top: 16px; color: var(--neu-text-muted);">暂无粉丝</p>
@@ -402,7 +402,7 @@
 						<a href="/users/{follower.user.user_id}">
 							<div
 								class="flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all"
-								style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+								style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 							>
 								<div class="overflow-hidden rounded-full" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">
 									<img src={follower.user.avatar_url} alt={follower.user.nickname} class="h-full w-full object-cover" />
@@ -440,7 +440,7 @@
 					{#each Array(5) as _, i (i)}
 						<div
 							class="flex items-center gap-4 rounded-[22px] p-4"
-							style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 						>
 							<div class="rounded-full" style="width: 48px; height: 48px; background: var(--neu-border);"></div>
 							<div class="flex-1 space-y-2">
@@ -453,7 +453,7 @@
 			{:else if followingPagination.items.length === 0}
 				<div
 					class="flex flex-col items-center justify-center rounded-[22px] py-12"
-					style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				>
 					<Users size={40} color="var(--neu-text-muted)" />
 					<p style="margin-top: 16px; color: var(--neu-text-muted);">暂无关注</p>
@@ -464,7 +464,7 @@
 						<a href="/users/{follow.user.user_id}">
 							<div
 								class="flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all"
-								style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+								style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 							>
 								<div class="overflow-hidden rounded-full" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">
 									<img src={follow.user.avatar_url} alt={follow.user.nickname} class="h-full w-full object-cover" />

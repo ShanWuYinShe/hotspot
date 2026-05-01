@@ -70,7 +70,7 @@
 		{#if loading}
 			<div class="flex flex-col gap-2.5">
 				{#each Array(3) as _}
-					<div class="flex items-center gap-3.5 rounded-[18px] px-4 py-3" style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="flex items-center gap-3.5 rounded-[18px] px-4 py-3" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 						<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-border);"></div>
 						<div class="flex-1">
 							<div class="mb-1 rounded" style="width: 60px; height: 12px; background: var(--neu-border);"></div>
@@ -85,7 +85,7 @@
 					<a
 						href="/users/{user.user.user_id}"
 						class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-shadow"
-						style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 					>
 						<div class="relative flex-shrink-0">
 							<div class="overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">

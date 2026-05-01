@@ -59,7 +59,7 @@
 						<h2 class="mb-2 text-xl font-semibold" style="color: var(--neu-text);">{t('auth.loginRequired')}</h2>
 						<p class="mb-6" style="color: var(--neu-text-muted);">{t('auth.loginRequiredDescription')}</p>
 						<button
-							class="rounded-[28px] px-8 py-3.5 font-medium transition-all"
+							class="rounded-[22px] px-8 py-3.5 font-medium transition-all"
 							style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);"
 							onclick={() => uiStore.openLoginModalWithRedirect({})}
 						>
@@ -96,7 +96,7 @@
 					<h2 class="mb-2 text-xl font-semibold" style="color: var(--neu-text);">{t('auth.loginRequired')}</h2>
 					<p class="mb-6" style="color: var(--neu-text-muted);">{t('auth.loginRequiredDescription')}</p>
 					<button
-						class="rounded-[28px] px-8 py-3.5 font-medium transition-all"
+						class="rounded-[22px] px-8 py-3.5 font-medium transition-all"
 						style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);"
 						onclick={() => uiStore.openLoginModalWithRedirect({})}
 					>
@@ -187,7 +187,7 @@
 							<h2 class="mb-2 text-xl font-semibold" style="color: var(--neu-text);">{t('auth.loginRequired')}</h2>
 							<p class="mb-6" style="color: var(--neu-text-muted);">{t('auth.loginRequiredDescription')}</p>
 							<button
-								class="rounded-[28px] px-8 py-3.5 font-medium"
+								class="rounded-[22px] px-8 py-3.5 font-medium"
 								style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);"
 								onclick={() => uiStore.openLoginModalWithRedirect({})}
 							>

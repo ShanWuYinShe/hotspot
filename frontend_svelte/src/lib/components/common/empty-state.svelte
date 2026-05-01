@@ -24,7 +24,7 @@
 
 <div
 	class="flex flex-col items-center justify-center rounded-[22px] py-16 text-center {className}"
-	style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+	style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 >
 	<div
 		class="mb-4 flex items-center justify-center rounded-full"

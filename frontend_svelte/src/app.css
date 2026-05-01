@@ -661,13 +661,13 @@
 
 	.mobile-bottom-nav__badge {
 		position: absolute;
-		top: -3px;
-		right: -3px;
-		min-width: 15px;
-		height: 15px;
-		padding: 0 3px;
-		font-size: 8px;
-		font-weight: 700;
+		top: -4px;
+		right: -6px;
+		min-width: 20px;
+		height: 20px;
+		padding: 0 6px;
+		font-size: 11px;
+		font-weight: 600;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -675,7 +675,7 @@
 		background: var(--neu-accent-primary);
 		color: var(--neu-active-text);
 		box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-		border: 1.5px solid var(--neu-bg);
+		border: 2px solid var(--neu-bg);
 		pointer-events: none;
 	}
 
@@ -761,7 +761,7 @@
 	.masonry-item { position: absolute; box-sizing: border-box; }
 }
 
-t/* Utility: accent-active text color (replaces text-white on accent backgrounds) */
-t.neu-active-text { color: var(--neu-active-text) !important; }
-t/* Tablet bottom nav glass morphism tokens */
-t.neu-glass-bg { background: var(--neu-glass-bg); }
+/* Utility: accent-active text color (replaces text-white on accent backgrounds) */
+.neu-active-text { color: var(--neu-active-text) !important; }
+/* Tablet bottom nav glass morphism tokens */
+.neu-glass-bg { background: var(--neu-glass-bg); }

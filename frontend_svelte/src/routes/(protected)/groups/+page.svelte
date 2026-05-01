@@ -206,7 +206,7 @@
 				{#each groups as group (group.group.group_id)}
 					<div class="mb-4 break-inside-avoid">
 						<a href="/groups/{group.group.group_id}" style="text-decoration: none;">
-							<div class="flex items-center gap-4 rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<div class="flex items-center gap-4 rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 								<div class="overflow-hidden rounded-full shrink-0" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">
 									{#if group.group.avatar_url}
 										<img src={group.group.avatar_url} alt={group.group.name} class="h-full w-full object-cover" />
@@ -237,7 +237,7 @@
 		<!-- Invites & Applications -->
 		<div class="grid gap-4 lg:grid-cols-2">
 			<!-- Invites -->
-			<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 				<div class="flex items-center justify-between mb-3">
 					<div class="flex items-center gap-2">
 						<div class="flex items-center justify-center rounded-full" style="width: 28px; height: 28px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
@@ -294,7 +294,7 @@
 			</div>
 
 			<!-- Applications -->
-			<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 				<div class="flex items-center justify-between mb-3">
 					<div class="flex items-center gap-2">
 						<div class="flex items-center justify-center rounded-full" style="width: 28px; height: 28px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">

@@ -84,11 +84,11 @@
 		{#if isLoading}
 			<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 				{#each Array(6) as _, i (i)}
-					<div class="flex items-center gap-3 rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
-						<div class="rounded-full" style="width: 48px; height: 48px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
+					<div class="flex items-center gap-3 rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="rounded-full" style="width: 48px; height: 48px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
 						<div class="flex-1 space-y-2">
-							<div style="width: 96px; height: 16px; border-radius: 8px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
-							<div style="width: 128px; height: 12px; border-radius: 6px; background: var(--neu-bg); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"></div>
+							<div style="width: 96px; height: 16px; border-radius: 8px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
+							<div style="width: 128px; height: 12px; border-radius: 6px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
 						</div>
 					</div>
 				{/each}
@@ -99,7 +99,7 @@
 			<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 				{#each friends as friend (friend.user.user_id)}
 					<a href="/users/{friend.user.user_id}" class="block" style="text-decoration: none;">
-						<div class="flex items-center gap-3 rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="flex items-center gap-3 rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 							<div class="overflow-hidden rounded-full shrink-0" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">
 								{#if friend.user.avatar_url}
 									<img src={friend.user.avatar_url} alt={friend.user.nickname} class="h-full w-full object-cover" />

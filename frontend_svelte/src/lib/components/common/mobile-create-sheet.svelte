@@ -34,7 +34,7 @@
 		<div class="grid gap-3">
 			<button
 				class="flex h-16 items-center gap-3 rounded-[18px] px-4 text-left outline-none"
-				style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				onclick={handleCreateMoment}
 			>
 				<div
@@ -51,7 +51,7 @@
 
 			<button
 				class="flex h-16 items-center gap-3 rounded-[18px] px-4 text-left outline-none"
-				style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				onclick={handleCreateGroup}
 			>
 				<div

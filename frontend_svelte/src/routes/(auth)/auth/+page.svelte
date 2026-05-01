@@ -32,7 +32,7 @@
 			<div class="mx-auto mb-4 flex items-center justify-center rounded-full" style="width: 48px; height: 48px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 				<Shield size={22} color="var(--neu-accent-primary)" />
 			</div>
-			<h1 style="font-size: 22px; font-weight: 600; color: var(--neu-text);">登录后继续</h1>
+			<h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">登录后继续</h1>
 			<p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 6px;">使用你的账号、注册新账号或继续访客体验</p>
 		</div>
 

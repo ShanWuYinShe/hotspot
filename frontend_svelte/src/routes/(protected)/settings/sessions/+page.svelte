@@ -107,7 +107,7 @@
 	{#if isLoading}
 		<div class="space-y-3">
 			{#each Array(4) as _, i (i)}
-				<div class="flex items-center gap-4 rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex items-center gap-4 rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<div class="h-12 w-12 rounded-[12px]" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"></div>
 					<div class="flex-1 space-y-2">
 						<div class="h-4 w-48 rounded-[12px]" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"></div>
@@ -117,7 +117,7 @@
 			{/each}
 		</div>
 	{:else if sessions.length === 0}
-		<div class="flex flex-col items-center justify-center rounded-[22px] py-12" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="flex flex-col items-center justify-center rounded-[22px] py-12" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 			<div class="flex items-center justify-center rounded-full mb-4" style="width: 48px; height: 48px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 				<Shield size={20} color="var(--neu-text-muted)" />
 			</div>
@@ -126,7 +126,7 @@
 	{:else}
 		<div class="space-y-3">
 			{#each sessions as session (session.session_id)}
-				<div class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<div class="flex items-center gap-3 min-w-0">
 						<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 							<Smartphone size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
