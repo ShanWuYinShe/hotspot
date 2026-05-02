@@ -140,7 +140,7 @@
 </script>
 
 <div
-	class="cursor-pointer overflow-hidden rounded-[22px] transition-shadow {className}"
+	class="cursor-pointer overflow-hidden rounded-[24px] transition-shadow {className}"
 	style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 	tabindex={0}
 	role="link"
@@ -161,7 +161,7 @@
 								<img src={userInfo.avatar_url || ''} alt={userInfo.nickname} class="h-full w-full object-cover" />
 							</div>
 							{#if isOnline}
-								<span class="absolute bottom-0 right-0 rounded-full" style="width: 10px; height: 10px; background: var(--neu-success); border: 2px solid var(--neu-bg);"></span>
+								<span class="absolute bottom-0 right-0 rounded-full" style="width: 11px; height: 11px; background: var(--neu-success); border: 2px solid var(--neu-bg);"></span>
 							{/if}
 						</div>
 						<div class="min-w-0 flex-1">
@@ -202,7 +202,7 @@
 					<img src={userInfo.avatar_url || ''} alt={userInfo.nickname} class="h-full w-full object-cover" />
 				</div>
 				{#if isOnline}
-					<span class="absolute bottom-0 right-0 rounded-full" style="width: 10px; height: 10px; background: var(--neu-success); border: 2px solid var(--neu-bg);"></span>
+					<span class="absolute bottom-0 right-0 rounded-full" style="width: 11px; height: 11px; background: var(--neu-success); border: 2px solid var(--neu-bg);"></span>
 				{/if}
 			</div>
 			<div class="min-w-0 flex-1">
@@ -226,11 +226,11 @@
 		<div class="p-4">
 			<div class="flex items-center gap-4">
 				<div class="relative flex-shrink-0">
-					<div class="overflow-hidden rounded-full" style="width: 56px; height: 56px; border: 1.5px solid var(--neu-border);">
+					<div class="overflow-hidden rounded-full" style="width: 52px; height: 52px; border: 1.5px solid var(--neu-border);">
 						<img src={userInfo.avatar_url || ''} alt={userInfo.nickname} class="h-full w-full object-cover" />
 					</div>
 					{#if isOnline}
-						<span class="absolute bottom-0 right-0 rounded-full" style="width: 12px; height: 12px; background: var(--neu-success); border: 2px solid var(--neu-bg);"></span>
+						<span class="absolute bottom-0 right-0 rounded-full" style="width: 11px; height: 11px; background: var(--neu-success); border: 2px solid var(--neu-bg);"></span>
 					{/if}
 				</div>
 				<div class="min-w-0 flex-1">
@@ -263,7 +263,7 @@
 						<img src={userInfo.avatar_url || ''} alt={userInfo.nickname} class="h-full w-full object-cover" />
 					</div>
 					{#if isOnline}
-						<span class="absolute bottom-0 right-0 rounded-full" style="width: 10px; height: 10px; background: var(--neu-success); border: 2px solid var(--neu-bg);"></span>
+						<span class="absolute bottom-0 right-0 rounded-full" style="width: 11px; height: 11px; background: var(--neu-success); border: 2px solid var(--neu-bg);"></span>
 					{/if}
 				</div>
 				<div class="min-w-0 flex-1">

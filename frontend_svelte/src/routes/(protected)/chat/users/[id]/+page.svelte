@@ -368,7 +368,7 @@
 	<title>与 {otherUser?.nickname ?? '用户'} 的对话 - HotSpot</title>
 </svelte:head>
 
-<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[22px]" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[24px]" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 	<!-- Header -->
 	<div class="flex h-16 items-center gap-3 px-4" style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);">
 		<button

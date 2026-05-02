@@ -276,14 +276,14 @@
 				<p style="font-size: 14px; color: var(--neu-text-muted); margin-top: 8px; max-width: 320px;">{t('home.heroDescription')}</p>
 				<div class="mt-6 flex gap-3">
 					<button
-						class="rounded-full px-6 py-2.5 font-medium"
+						class="rounded-[22px] px-6 py-3.5 font-medium"
 						style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
 						onclick={handleGetStarted}
 					>
 						{t('home.getStarted')}
 					</button>
 					<button
-						class="rounded-full px-6 py-2.5 font-medium"
+						class="rounded-[22px] px-6 py-3.5 font-medium"
 						style="box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 						onclick={handleExplore}
 					>
@@ -304,7 +304,7 @@
 					{ icon: Star, label: t('nav.me'), color: 'var(--neu-warning)' },
 				] as feat}
 					<div
-						class="flex flex-col items-center justify-center rounded-[20px]"
+						class="flex flex-col items-center justify-center rounded-[24px]"
 						style="aspect-ratio: 1.2; background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 					>
 						<div class="flex items-center justify-center rounded-[14px]" style="width: 36px; height: 36px; background: var(--neu-fallback-bg);">
@@ -356,7 +356,7 @@
 					{ icon: Star, label: '在线', color: 'var(--neu-success)' },
 				] as stat}
 					<div
-						class="flex flex-col items-center justify-center rounded-[18px] py-3"
+						class="flex flex-col items-center justify-center rounded-[18px] py-[14px]"
 						style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 					>
 						<stat.icon size={16} strokeWidth={1.75} color={stat.color} />
@@ -376,7 +376,7 @@
 						{#each trendingTags.slice(0, 8) as tag (tag.name)}
 							<a
 								href="/search?tag={encodeURIComponent(tag.name)}"
-								class="rounded-full px-3 py-1 text-xs transition-colors"
+								class="rounded-full px-3.5 py-1.5 text-xs transition-colors"
 								style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
 							>
 								#{tag.name}
@@ -398,7 +398,7 @@
 				<div class="mb-5 flex flex-col gap-2.5">
 					{#if loadingNearby}
 						{#each Array(3) as _}
-							<div class="flex items-center gap-3.5 rounded-[22px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<div class="flex items-center gap-3.5 rounded-[24px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 								<div class="rounded-full" style="width: 44px; height: 44px; background: var(--neu-border);"></div>
 								<div class="flex-1">
 									<div class="mb-1.5 rounded" style="width: 60px; height: 12px; background: var(--neu-border);"></div>
@@ -409,7 +409,7 @@
 					{:else}
 						{#each nearbyUsers.slice(0, 5) as user (user.user.user_id)}
 							<div
-								class="flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5"
+								class="flex cursor-pointer items-center gap-3.5 rounded-[24px] px-4 py-3.5"
 								style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 								onclick={() => void goto(`/users/${user.user.user_id}`)}
 							>
@@ -440,7 +440,7 @@
 										<span style="font-size: 12px; color: var(--neu-accent-primary);">{formatDistance(user.location.distance)}</span>
 									{/if}
 									<button
-										class="rounded-full px-3.5 py-1 outline-none transition-all"
+										class="rounded-full px-3.5 py-1.5 outline-none transition-all"
 										style={user.relation?.is_following
 											? 'box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
 											: 'box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
@@ -466,7 +466,7 @@
 			{#if feed.loading}
 				<div class="flex flex-col gap-3">
 					{#each Array(3) as _}
-						<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 							<div class="flex items-center gap-3">
 								<div class="rounded-full" style="width: 36px; height: 36px; background: var(--neu-border);"></div>
 								<div class="flex-1">
@@ -566,7 +566,7 @@
 					<div class="mb-5 flex flex-col gap-3">
 						{#if loadingNearby}
 							{#each Array(4) as _}
-								<div class="flex items-center gap-3.5 rounded-[22px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+								<div class="flex items-center gap-3.5 rounded-[24px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 									<div class="rounded-full" style="width: 44px; height: 44px; background: var(--neu-border);"></div>
 									<div class="flex-1">
 										<div class="mb-1.5 rounded" style="width: 60px; height: 12px; background: var(--neu-border);"></div>
@@ -577,7 +577,7 @@
 						{:else}
 							{#each nearbyUsers as user (user.user.user_id)}
 								<div
-									class="flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5"
+									class="flex cursor-pointer items-center gap-3.5 rounded-[24px] px-4 py-3.5"
 									style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 									onclick={() => void goto(`/users/${user.user.user_id}`)}
 								>
@@ -608,7 +608,7 @@
 											<span style="font-size: 12px; color: var(--neu-accent-primary);">{formatDistance(user.location.distance)}</span>
 										{/if}
 										<button
-											class="rounded-full px-3.5 py-1 outline-none transition-all"
+											class="rounded-full px-3.5 py-1.5 outline-none transition-all"
 											style={user.relation?.is_following
 												? 'box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
 												: 'box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
@@ -634,7 +634,7 @@
 				{#if feed.loading}
 					<div class="flex flex-col gap-3">
 						{#each Array(4) as _}
-							<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<div class="rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 								<div class="flex items-center gap-3">
 									<div class="rounded-full" style="width: 36px; height: 36px; background: var(--neu-border);"></div>
 									<div class="flex-1">

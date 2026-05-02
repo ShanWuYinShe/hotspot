@@ -161,7 +161,7 @@
 
 	<!-- Announcements list -->
 	<div
-		class="rounded-[22px] p-5"
+		class="rounded-[24px] p-5"
 		style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 	>
 		<!-- Section header -->

@@ -173,7 +173,7 @@
 								<img src={chat.other_user.avatar_url || ''} alt={chat.other_user.nickname} class="h-full w-full object-cover" />
 							</div>
 							{#if isOnline}
-								<span class="absolute bottom-0 right-0 rounded-full" style="width: 10px; height: 10px; background: var(--neu-success); border: 2px solid var(--neu-bg);"></span>
+								<span class="absolute bottom-0 right-0 rounded-full" style="width: 11px; height: 11px; background: var(--neu-success); border: 2px solid var(--neu-bg);"></span>
 							{/if}
 						</div>
 						<div class="min-w-0 flex-1">

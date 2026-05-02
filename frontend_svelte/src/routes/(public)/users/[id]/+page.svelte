@@ -198,7 +198,7 @@
 
 	{#if !user}
 		<div
-			class="rounded-[22px] p-6"
+			class="rounded-[24px] p-6"
 			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<div class="flex flex-col items-center gap-4">
@@ -209,7 +209,7 @@
 		</div>
 	{:else}
 		<div
-			class="rounded-[22px] p-6"
+			class="rounded-[24px] p-6"
 			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<div class="space-y-6">
@@ -328,7 +328,7 @@
 				<div class="space-y-4">
 					{#each Array(3) as _, i (i)}
 						<div
-							class="rounded-[22px] p-4 space-y-3"
+							class="rounded-[24px] p-4 space-y-3"
 							style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 						>
 							<div class="rounded" style="width: 100%; height: 14px; background: var(--neu-border);"></div>
@@ -339,7 +339,7 @@
 				</div>
 			{:else if momentsPagination.items.length === 0}
 				<div
-					class="flex flex-col items-center justify-center rounded-[22px] py-12"
+					class="flex flex-col items-center justify-center rounded-[24px] py-12"
 					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				>
 					<Image size={40} color="var(--neu-text-muted)" />
@@ -377,7 +377,7 @@
 				<div class="space-y-2">
 					{#each Array(5) as _, i (i)}
 						<div
-							class="flex items-center gap-4 rounded-[22px] p-4"
+							class="flex items-center gap-4 rounded-[24px] p-4"
 							style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 						>
 							<div class="rounded-full" style="width: 48px; height: 48px; background: var(--neu-border);"></div>
@@ -390,7 +390,7 @@
 				</div>
 			{:else if followersPagination.items.length === 0}
 				<div
-					class="flex flex-col items-center justify-center rounded-[22px] py-12"
+					class="flex flex-col items-center justify-center rounded-[24px] py-12"
 					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				>
 					<Users size={40} color="var(--neu-text-muted)" />
@@ -401,7 +401,7 @@
 					{#each followersPagination.items as follower (follower.user.user_id)}
 						<a href="/users/{follower.user.user_id}">
 							<div
-								class="flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all"
+								class="flex cursor-pointer items-center gap-3 rounded-[24px] p-4 transition-all"
 								style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 							>
 								<div class="overflow-hidden rounded-full" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">
@@ -439,7 +439,7 @@
 				<div class="space-y-2">
 					{#each Array(5) as _, i (i)}
 						<div
-							class="flex items-center gap-4 rounded-[22px] p-4"
+							class="flex items-center gap-4 rounded-[24px] p-4"
 							style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 						>
 							<div class="rounded-full" style="width: 48px; height: 48px; background: var(--neu-border);"></div>
@@ -452,7 +452,7 @@
 				</div>
 			{:else if followingPagination.items.length === 0}
 				<div
-					class="flex flex-col items-center justify-center rounded-[22px] py-12"
+					class="flex flex-col items-center justify-center rounded-[24px] py-12"
 					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				>
 					<Users size={40} color="var(--neu-text-muted)" />
@@ -463,7 +463,7 @@
 					{#each followingPagination.items as follow (follow.user.user_id)}
 						<a href="/users/{follow.user.user_id}">
 							<div
-								class="flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all"
+								class="flex cursor-pointer items-center gap-3 rounded-[24px] p-4 transition-all"
 								style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 							>
 								<div class="overflow-hidden rounded-full" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">

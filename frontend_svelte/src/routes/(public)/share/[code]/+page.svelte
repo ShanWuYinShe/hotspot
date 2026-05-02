@@ -75,7 +75,7 @@
 <div class="container mx-auto max-w-4xl px-4 py-8">
 	{#if !share}
 		<div
-			class="rounded-[22px] p-6"
+			class="rounded-[24px] p-6"
 			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<h2 style="font-size: 18px; font-weight: 600; color: var(--neu-error);">无法加载分享</h2>
@@ -91,7 +91,7 @@
 	{:else if share.share.share_type === 'location'}
 		{@const payload = share.payload as LocationSharePayload}
 		<div
-			class="overflow-hidden rounded-[22px]"
+			class="overflow-hidden rounded-[24px]"
 			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<!-- Header with creator info -->
@@ -179,7 +179,7 @@
 	{:else}
 		<!-- Other share types (user/group/moment) -->
 		<div
-			class="rounded-[22px] p-6"
+			class="rounded-[24px] p-6"
 			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<h2 style="font-size: 18px; font-weight: 600; color: var(--neu-text);">分享内容</h2>

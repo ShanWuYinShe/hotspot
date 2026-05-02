@@ -1823,7 +1823,7 @@
 <div bind:this={modalRoot}>
     <Dialog.Root bind:open onOpenChange={handleDialogOpenChange}>
         <Dialog.Content
-            class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${ isFullscreen ? "sm:h-screen sm:max-h-screen sm:w-screen sm:max-w-none sm:rounded-none sm:border-0 sm:p-4" : "sm:h-[88vh] sm:w-[92vw] sm:max-w-6xl lg:max-w-7xl sm:rounded-[22px] sm:backdrop-blur sm:p-6" }`}
+            class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${ isFullscreen ? "sm:h-screen sm:max-h-screen sm:w-screen sm:max-w-none sm:rounded-none sm:border-0 sm:p-4" : "sm:h-[88vh] sm:w-[92vw] sm:max-w-6xl lg:max-w-7xl sm:rounded-[24px] sm:backdrop-blur sm:p-6" }`}
             style={isFullscreen ? "background: var(--neu-bg);" : "background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"}
             hideClose
         >
@@ -1878,7 +1878,7 @@
             </div>
             <!-- 左侧：地图容器 -->
             <div
-                class="relative flex-1 overflow-hidden sm:rounded-[22px]"
+                class="relative flex-1 overflow-hidden sm:rounded-[24px]"
                 style="border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
             >
                 <div
@@ -1895,7 +1895,7 @@
                             data-location-filter-trigger="true"
                             size="icon"
                             variant="ghost"
-                            class="h-11 w-11 rounded-[22px] backdrop-blur"
+                            class="h-11 w-11 rounded-[12px] backdrop-blur"
                             style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                             onclick={toggleFilterPanel}
                             aria-label="筛选地图内容"
@@ -1912,7 +1912,7 @@
                         <Button
                             size="icon"
                             variant="ghost"
-                            class="h-11 w-11 rounded-[22px] transition"
+                            class="h-11 w-11 rounded-[12px] transition"
                             style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                             onclick={handleUseCurrentLocation}
                             disabled={isLocating}
@@ -1931,7 +1931,7 @@
                             <Button
                                 size="icon"
                                 variant="ghost"
-                                class="h-11 w-11 rounded-[22px] transition"
+                                class="h-11 w-11 rounded-[12px] transition"
                                 style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                                 onclick={handleBackToBrowseAnchor}
                                 aria-label="回到浏览锚点位置"
@@ -1946,7 +1946,7 @@
                         <Button
                             size="icon"
                             variant="ghost"
-                            class="h-11 w-11 rounded-[22px] transition"
+                            class="h-11 w-11 rounded-[12px] transition"
                             style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                             onclick={() => {
                                 if (!map) return;
@@ -1960,7 +1960,7 @@
                         <Button
                             size="icon"
                             variant="ghost"
-                            class="h-11 w-11 rounded-[22px] transition"
+                            class="h-11 w-11 rounded-[12px] transition"
                             style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                             onclick={() => {
                                 if (!map) return;
@@ -1979,7 +1979,7 @@
                 {#if showFilterPanel}
                     <div
                         bind:this={filterPanelElement}
-                        class="absolute right-4 top-16 z-30 hidden w-40 select-none overflow-hidden rounded-[22px] p-2 backdrop-blur-md sm:block"
+                        class="absolute right-4 top-16 z-30 hidden w-40 select-none overflow-hidden rounded-[24px] p-2 backdrop-blur-md sm:block"
                         style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
                     >
                         <button
@@ -2812,7 +2812,7 @@
 
             <!-- 右侧：桌面信息栏（标题 / 搜索 / 历史 / 确认） -->
             <div
-                class="hidden h-full w-[320px] shrink-0 select-none flex-col gap-4 overflow-hidden rounded-[22px] p-4 sm:flex lg:w-90"
+                class="hidden h-full w-[320px] shrink-0 select-none flex-col gap-4 overflow-hidden rounded-[24px] p-4 sm:flex lg:w-90"
                 style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
             >
                 <div class="flex items-start justify-between gap-3">

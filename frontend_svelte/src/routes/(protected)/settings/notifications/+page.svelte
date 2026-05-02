@@ -119,7 +119,7 @@
 	<PageHeader title="通知设置" description="管理通知偏好、未读状态和通知中心入口" backHref="/settings" backLabel="返回设置" />
 
 	<!-- Notification Status Card -->
-	<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+	<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 		<div class="mb-4 flex items-center gap-2">
 			<div class="flex items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 				<Bell size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
@@ -164,7 +164,7 @@
 	</div>
 
 	<!-- Preference Explanation Card -->
-	<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+	<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 		<div class="mb-3">
 			<p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">偏好说明</p>
 			<p style="font-size: 12px; color: var(--neu-text-muted);">当前仓库尚未接入服务端通知偏好协议，所以这里先用本地持久化保存一个与 NotificationType 对齐的偏好模型。</p>
@@ -177,7 +177,7 @@
 	</div>
 
 	<!-- Notification Preferences Card -->
-	<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+	<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 		<div class="mb-4">
 			<p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">当前浏览器通知偏好</p>
 			<p style="font-size: 12px; color: var(--neu-text-muted);">本页设置仅保存在当前浏览器，用于保留你的本地通知偏好；不会影响其他设备。</p>

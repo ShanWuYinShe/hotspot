@@ -89,7 +89,7 @@
 </script>
 
 <Dialog bind:open onOpenChange={(newOpen) => !newOpen && handleClose()}>
-	<DialogContent class="max-w-lg rounded-[22px]" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);">
+	<DialogContent class="max-w-lg rounded-[24px]" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);">
 		{#if !shareCode}
 			<!-- 创建表单 -->
 			<DialogHeader>
@@ -104,7 +104,7 @@
 
 			<div class="mt-4 space-y-4">
 				<!-- 位置信息展示 -->
-				<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="rounded-[24px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<div class="flex items-center gap-2" style="font-weight: 500; color: var(--neu-text);">
 						<MapPin style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
 						{locationName}
@@ -115,7 +115,7 @@
 				</div>
 
 				<!-- 说明 -->
-				<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid rgba(0,0,0,0.05); font-size: 13px;">
+				<div class="rounded-[24px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid rgba(0,0,0,0.05); font-size: 13px;">
 					<p class="flex items-center gap-2" style="font-weight: 500; color: var(--neu-accent-primary);">
 						<UsersRound style="width: 16px; height: 16px;" />
 						接收者可以
@@ -152,7 +152,7 @@
 
 			<div class="mt-4 space-y-4">
 				<!-- 分享链接 -->
-				<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="rounded-[24px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<label style="font-size: 12px; color: var(--neu-text-muted);">分享链接</label>
 					<div class="flex gap-2">
 						<input

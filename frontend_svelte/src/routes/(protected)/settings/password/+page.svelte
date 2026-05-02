@@ -91,7 +91,7 @@
 		backLabel="返回设置"
 	/>
 
-	<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+	<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 		<p style="font-size: 14px; font-weight: 600; color: var(--neu-text); margin-bottom: 16px;">账户安全</p>
 
 		<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4">

@@ -224,7 +224,7 @@
 </script>
 
 <Dialog.Root bind:open onOpenChange={(value) => { open = value; onOpenChange?.(value); }}>
-	<Dialog.Content class="flex max-h-[85vh] flex-col rounded-[22px] sm:max-w-2xl" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);">
+	<Dialog.Content class="flex max-h-[85vh] flex-col rounded-[24px] sm:max-w-2xl" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);">
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-3">
 				<div class="flex items-center justify-center rounded-full" style="width: 40px; height: 40px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
@@ -239,7 +239,7 @@
 
 		<div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
 			<!-- 群组名称 -->
-			<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<div class="rounded-[24px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 				<label for="group-name" style="font-size: 12px; color: var(--neu-text);">群组名称</label>
 				<input
 					id="group-name"
@@ -260,7 +260,7 @@
 			</div>
 
 			<!-- 群组介绍 -->
-			<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<div class="rounded-[24px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 				<label for="group-desc" style="font-size: 12px; color: var(--neu-text);">群组介绍</label>
 				<textarea
 					id="group-desc"
@@ -281,7 +281,7 @@
 			</div>
 
 			<!-- 群组标签 -->
-			<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<div class="rounded-[24px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 				<label for="group-tags" style="font-size: 12px; color: var(--neu-text);">群组标签</label>
 				<input id="group-tags" class="rounded-[14px] px-4 py-2.5 outline-none w-full" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;" placeholder="兴趣、城市、活动" bind:value={tagsInput} />
 				{#if tags.length > 0}
@@ -294,7 +294,7 @@
 			</div>
 
 			<!-- 加入方式 & 口令 -->
-			<div class="grid gap-4 rounded-[22px] p-4 sm:grid-cols-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<div class="grid gap-4 rounded-[24px] p-4 sm:grid-cols-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 				<div class="space-y-2">
 					<label for="join-method" style="font-size: 12px; color: var(--neu-text);">加入方式</label>
 					<select
@@ -326,7 +326,7 @@
 			</div>
 
 			<!-- 最大成员数 & 搜索 -->
-			<div class="grid gap-4 rounded-[22px] p-4 sm:grid-cols-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<div class="grid gap-4 rounded-[24px] p-4 sm:grid-cols-2" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 				<div class="space-y-2">
 					<label for="max-members" style="font-size: 12px; color: var(--neu-text);">最大成员数 (可选)</label>
 					<input

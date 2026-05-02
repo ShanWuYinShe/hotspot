@@ -23,7 +23,7 @@
 	}}
 >
 	<Dialog.Content
-		class="rounded-[22px] border px-5 py-6"
+		class="rounded-[24px] border px-5 py-6"
 		style="background: var(--neu-bg); border-color: var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); max-width: 28rem;"
 	>
 		<div class="mb-5 flex items-center gap-3">

@@ -285,7 +285,7 @@
 
 	<!-- Search form -->
 	<form
-		class="rounded-[22px] p-3"
+		class="rounded-[24px] p-3"
 		style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		onsubmit={(event) => {
 			event.preventDefault();
@@ -330,7 +330,7 @@
 	{#if activeTerm}
 		<!-- Result summary card -->
 		<div
-			class="rounded-[22px] p-4"
+			class="rounded-[24px] p-4"
 			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -408,7 +408,7 @@
 				<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
 					{#each Array(6) as _, i (i)}
 						<MasonryLayoutItem>
-							<div class="h-48 animate-pulse rounded-[22px]" style="background: var(--neu-border);"></div>
+							<div class="h-48 animate-pulse rounded-[24px]" style="background: var(--neu-border);"></div>
 						</MasonryLayoutItem>
 					{/each}
 				</MasonryLayout>
@@ -450,7 +450,7 @@
 				<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={20}>
 					{#each Array(6) as _, i (i)}
 						<MasonryLayoutItem>
-							<div class="h-64 animate-pulse rounded-[22px]" style="background: var(--neu-border);"></div>
+							<div class="h-64 animate-pulse rounded-[24px]" style="background: var(--neu-border);"></div>
 						</MasonryLayoutItem>
 					{/each}
 				</MasonryLayout>
@@ -488,7 +488,7 @@
 				<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
 					{#each Array(6) as _, i (i)}
 						<MasonryLayoutItem>
-							<div class="h-52 animate-pulse rounded-[22px]" style="background: var(--neu-border);"></div>
+							<div class="h-52 animate-pulse rounded-[24px]" style="background: var(--neu-border);"></div>
 						</MasonryLayoutItem>
 					{/each}
 				</MasonryLayout>
@@ -525,7 +525,7 @@
 	{:else}
 		<!-- Empty search state -->
 		<div
-			class="flex flex-col items-center justify-center gap-3 rounded-[22px] py-12 text-center"
+			class="flex flex-col items-center justify-center gap-3 rounded-[24px] py-12 text-center"
 			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<Search size={48} color="var(--neu-text-muted)" />

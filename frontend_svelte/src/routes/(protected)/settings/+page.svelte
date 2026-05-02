@@ -77,7 +77,7 @@
 			</p>
 			<!-- Section card -->
 			<div
-				class="overflow-hidden rounded-[22px]"
+				class="overflow-hidden rounded-[24px]"
 				style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 			>
 				{#each section.items as item, i (item.href)}
@@ -107,7 +107,7 @@
 		<!-- Appearance -->
 		<p class="px-1" style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-top: 8px;">外观</p>
 		<div
-			class="overflow-hidden rounded-[22px]"
+			class="overflow-hidden rounded-[24px]"
 			style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<!-- Dark mode toggle -->
@@ -163,7 +163,7 @@
 		<!-- Danger zone -->
 		<p class="px-1" style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-top: 8px;">危险操作</p>
 		<div
-			class="overflow-hidden rounded-[22px]"
+			class="overflow-hidden rounded-[24px]"
 			style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<button

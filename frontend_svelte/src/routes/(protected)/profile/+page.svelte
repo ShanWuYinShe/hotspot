@@ -129,11 +129,11 @@
 {#if profile}
 	<div class="mx-auto max-w-4xl space-y-5 pb-8 px-4 pt-4">
 		<!-- 个人资料卡片 -->
-		<div class="rounded-[22px] p-6" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[24px] p-6" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 			<div class="flex flex-col gap-6 sm:flex-row sm:items-start">
 				<!-- 头像 -->
 				<div class="relative shrink-0">
-					<div class="overflow-hidden rounded-full" style="width: 96px; height: 96px; border: 3px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);">
+					<div class="overflow-hidden rounded-full" style="width: 96px; height: 96px; border: 1.5px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);">
 						{#if profile.avatar_url}
 							<img src={profile.avatar_url} alt={profile.nickname} class="h-full w-full object-cover" />
 						{:else}
@@ -149,7 +149,7 @@
 						<Camera size={14} />
 					</button>
 					{#if profile.presence_status === 'online'}
-						<span class="absolute bottom-1 right-1 rounded-full" style="width: 14px; height: 14px; background: var(--neu-success); border: 2px solid var(--neu-bg);"></span>
+						<span class="absolute bottom-1 right-1 rounded-full" style="width: 11px; height: 11px; background: var(--neu-success); border: 2px solid var(--neu-bg);"></span>
 					{/if}
 				</div>
 
@@ -161,7 +161,7 @@
 						</div>
 						{#if !isEditing}
 							<button
-								class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+								class="flex items-center gap-1.5 rounded-[22px] px-4 py-[6px] outline-none"
 								style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text);"
 								onclick={() => isEditing = true}
 							>
@@ -178,7 +178,7 @@
 					{#if profile.tags && profile.tags.length > 0 && !isEditing}
 						<div class="mt-3 flex flex-wrap gap-2">
 							{#each profile.tags as tag (tag)}
-								<span class="rounded-full px-3 py-1" style="font-size: 12px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">#{tag}</span>
+								<span class="rounded-full px-3.5 py-1.5" style="font-size: 12px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">#{tag}</span>
 							{/each}
 						</div>
 					{/if}
@@ -227,7 +227,7 @@
 
 					<div class="flex gap-3 pt-2">
 						<button
-							class="flex-1 flex items-center justify-center gap-1.5 rounded-full px-4 py-2.5 outline-none"
+							class="flex-1 flex items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none"
 							style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 14px; box-shadow: 0 2px 8px var(--neu-glow);"
 							onclick={saveProfile}
 							disabled={isSaving}
@@ -241,7 +241,7 @@
 							{/if}
 						</button>
 						<button
-							class="flex-1 flex items-center justify-center gap-1.5 rounded-full px-4 py-2.5 outline-none"
+							class="flex-1 flex items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none"
 							style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
 							onclick={cancelEdit}
 							disabled={isSaving}
@@ -255,7 +255,7 @@
 		</div>
 
 		<!-- 详细信息 -->
-		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 			<div class="flex items-center gap-2 mb-4">
 				<div class="flex items-center justify-center rounded-full" style="width: 32px; height: 32px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<User size={14} color="var(--neu-accent-primary)" strokeWidth={1.5} />
@@ -315,10 +315,10 @@
 		</div>
 
 		<!-- 数据统计 -->
-		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 			<p style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 12px;">数据概览</p>
 			<div class="grid gap-3 grid-cols-2 md:grid-cols-4">
-				<a href="/moments" class="block rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
+				<a href="/moments" class="block rounded-[18px] p-[14px]" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
 					<div class="flex items-center gap-3">
 						<div class="flex items-center justify-center rounded-full" style="width: 32px; height: 32px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 							<Image size={14} color="var(--neu-accent-primary)" strokeWidth={1.5} />
@@ -330,7 +330,7 @@
 					</div>
 				</a>
 
-				<a href="/followers" class="block rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
+				<a href="/followers" class="block rounded-[18px] p-[14px]" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
 					<div class="flex items-center gap-3">
 						<div class="flex items-center justify-center rounded-full" style="width: 32px; height: 32px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 							<Heart size={14} color="var(--neu-accent-primary)" strokeWidth={1.5} />
@@ -342,7 +342,7 @@
 					</div>
 				</a>
 
-				<a href="/follows" class="block rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
+				<a href="/follows" class="block rounded-[18px] p-[14px]" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;">
 					<div class="flex items-center gap-3">
 						<div class="flex items-center justify-center rounded-full" style="width: 32px; height: 32px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 							<Users size={14} color="var(--neu-accent-primary)" strokeWidth={1.5} />
@@ -354,7 +354,7 @@
 					</div>
 				</a>
 
-				<div class="rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="rounded-[18px] p-[14px]" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 					<div class="flex items-center gap-3">
 						<div class="flex items-center justify-center rounded-full" style="width: 32px; height: 32px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 							<MessageSquare size={14} color="var(--neu-accent-primary)" strokeWidth={1.5} />
@@ -369,7 +369,7 @@
 		</div>
 
 		<!-- 快捷操作 -->
-		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 			<p style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 12px;">快捷操作</p>
 			<div class="space-y-2">
 				<a href="/settings" class="block" style="text-decoration: none;">
@@ -408,7 +408,7 @@
 		<p style="font-size: 16px; font-weight: 500; color: var(--neu-text); margin-bottom: 8px;">加载个人资料失败</p>
 		<p style="font-size: 14px; color: var(--neu-text-muted); margin-bottom: 16px;">{data.error ?? '无法获取个人资料，请稍后重试'}</p>
 		<button
-			class="rounded-full px-5 py-2 outline-none"
+			class="rounded-[22px] px-5 py-3.5 outline-none"
 			style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); font-size: 14px;"
 			onclick={() => location.reload()}
 		>
