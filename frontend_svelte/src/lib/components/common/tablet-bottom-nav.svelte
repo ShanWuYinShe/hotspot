@@ -38,9 +38,16 @@
 	const messageBadge = $derived(authStore.isAuthenticated ? messageStore.totalUnreadCount : 0);
 	const profileBadge = $derived(authStore.isAuthenticated ? notificationStore.unreadCount : 0);
 
+	const HIDDEN_ROUTES = ['/settings', '/location', '/notifications', '/profile/edit', '/search', '/nearby'];
+	const HIDDEN_PREFIXES = ['/messages/', '/user/', '/post/', '/events/'];
 
+	function isSubPage(): boolean {
+		return HIDDEN_ROUTES.some(r => currentPath === r || currentPath.startsWith(r + '/'))
+			|| HIDDEN_PREFIXES.some(p => currentPath.startsWith(p));
+	}
 </script>
 
+{#if !isSubPage()}
 <div
 	class="flex w-full shrink-0 justify-center"
 	style="padding: 8px 16px; padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px); background: transparent;"
@@ -70,9 +77,9 @@
 				</span>
 				{#if isActive(item.href)}
 					<span
-						style="position: absolute; bottom: 0; width: 24px; height: 2.5px; border-radius: 2px; background: var(--neu-accent-primary); transform-origin: center;"
+						style="position: absolute; bottom: 0; width: 22px; height: 2.5px; border-radius: 2px; background: var(--neu-accent-primary); transform-origin: center;"
 					></span>
-				{/if}
+			{/if}
 			</button>
 		{/each}
 
@@ -117,7 +124,7 @@
 						>
 							{profileBadge > 99 ? '99+' : profileBadge}
 						</span>
-					{/if}
+				{/if}
 				</span>
 				<span
 					style="font-size: 10px; line-height: 1; color: {isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}; font-weight: {isActive(item.href) ? 600 : 400}; transition: color 0.22s ease; letter-spacing: 0.01em;"
@@ -126,10 +133,11 @@
 				</span>
 				{#if isActive(item.href)}
 					<span
-						style="position: absolute; bottom: 0; width: 24px; height: 2.5px; border-radius: 2px; background: var(--neu-accent-primary); transform-origin: center;"
+						style="position: absolute; bottom: 0; width: 22px; height: 2.5px; border-radius: 2px; background: var(--neu-accent-primary); transform-origin: center;"
 					></span>
-				{/if}
+			{/if}
 			</button>
 		{/each}
 	</div>
 </div>
+{/if}

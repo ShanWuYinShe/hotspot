@@ -25,7 +25,7 @@
 	<Dialog.Content
 		class={isMobileOrTablet
 			? 'left-1/2 top-auto bottom-0 w-[calc(100%-1rem)] max-w-sm translate-x-[-50%] translate-y-0 rounded-t-[24px] rounded-b-none px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-5'
-			: 'max-w-sm rounded-[24px] px-5 pt-5 pb-5'}
+			: 'max-w-[480px] rounded-[24px] px-5 pt-5 pb-5'}
 		style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 0 -10px 30px var(--neu-shadow-dark);"
 		hideClose
 	>
