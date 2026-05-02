@@ -141,12 +141,12 @@
 						onclick={() => setThemeFamily(option.family)}
 					>
 						<p
-							style="font-size: 13px; font-weight: 600; color: {currentThemeFamily === option.family ? 'white' : 'var(--neu-text)'};"
+							style="font-size: 13px; font-weight: 600; color: {currentThemeFamily === option.family ? 'var(--neu-active-text)' : 'var(--neu-text)'};"
 						>
 							{t(option.labelKey)}
 						</p>
 						<p
-							style="font-size: 11px; margin-top: 2px; color: {currentThemeFamily === option.family ? 'rgba(255,255,255,0.8)' : 'var(--neu-text-muted)'};"
+							style="font-size: 11px; margin-top: 2px; color: {currentThemeFamily === option.family ? 'var(--neu-active-text)' : 'var(--neu-text-muted)'};"
 						>
 							{t(option.descriptionKey)}
 						</p>
