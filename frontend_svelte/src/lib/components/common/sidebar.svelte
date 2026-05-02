@@ -64,7 +64,7 @@
 </script>
 
 <!-- Figma Make DesktopLayout Sidebar — 192px fixed -->
-<aside class="flex flex-shrink-0 flex-col" style="width: 192px;">
+<aside class="flex flex-shrink-0 flex-col" style="width: 192px; background: var(--neu-bg); border-radius: 24px; border: 1px solid var(--neu-border);">
 	<!-- Scrollable nav region -->
 	<div class="flex flex-1 flex-col overflow-y-auto no-scrollbar min-h-0" style="padding: 8px;">
 		<!-- Section 1: Discovery nav -->
