@@ -85,12 +85,12 @@
 						{item.label}
 					</span>
 					{#if authStore.isAuthenticated && item.href === '/notifications' && notificationStore.unreadCount > 0}
-						<span class="ml-auto flex items-center justify-center rounded-full neu-active-text" style="min-width: 18px; height: 18px; font-size: 10px; font-weight: 700; background: var(--neu-accent-primary);">
+						<span class="ml-auto flex items-center justify-center rounded-full neu-active-text" style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--neu-accent-primary);">
 							{notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount}
 						</span>
 					{/if}
 					{#if authStore.isAuthenticated && item.href === '/chat' && messageStore.totalUnreadCount > 0}
-						<span class="ml-auto flex items-center justify-center rounded-full neu-active-text" style="min-width: 18px; height: 18px; font-size: 10px; font-weight: 700; background: var(--neu-accent-primary);">
+						<span class="ml-auto flex items-center justify-center rounded-full neu-active-text" style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--neu-accent-primary);">
 							{messageStore.totalUnreadCount > 99 ? '99+' : messageStore.totalUnreadCount}
 						</span>
 					{/if}
@@ -127,12 +127,12 @@
 						{item.label}
 					</span>
 					{#if authStore.isAuthenticated && item.href === '/notifications' && notificationStore.unreadCount > 0}
-						<span class="ml-auto flex items-center justify-center rounded-full neu-active-text" style="min-width: 18px; height: 18px; font-size: 10px; font-weight: 700; background: var(--neu-accent-primary);">
+						<span class="ml-auto flex items-center justify-center rounded-full neu-active-text" style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--neu-accent-primary);">
 							{notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount}
 						</span>
 					{/if}
 					{#if authStore.isAuthenticated && item.href === '/chat' && messageStore.totalUnreadCount > 0}
-						<span class="ml-auto flex items-center justify-center rounded-full neu-active-text" style="min-width: 18px; height: 18px; font-size: 10px; font-weight: 700; background: var(--neu-accent-primary);">
+						<span class="ml-auto flex items-center justify-center rounded-full neu-active-text" style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--neu-accent-primary);">
 							{messageStore.totalUnreadCount > 99 ? '99+' : messageStore.totalUnreadCount}
 						</span>
 					{/if}

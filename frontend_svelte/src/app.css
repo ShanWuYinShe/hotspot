@@ -689,8 +689,7 @@
 		height: var(--desktop-header-height);
 		background-color: var(--neu-bg);
 		border-bottom: 1px solid var(--neu-border);
-		box-shadow: 0 4px 12px var(--neu-shadow-dark);
-		transition: background-color 0.5s, border-color 0.5s, box-shadow 0.5s;
+		transition: background-color 0.5s, border-color 0.5s;
 	}
 
 	.desktop-header__btn {
@@ -752,8 +751,7 @@
 		border: 1px solid var(--neu-border);
 		box-shadow:
 			8px 8px 20px var(--neu-shadow-dark),
-			-8px -8px 20px var(--neu-shadow-light),
-			0 2px 6px rgba(0,0,0,0.06);
+			-8px -8px 20px var(--neu-shadow-light);
 		transition: background-color 0.5s, border-color 0.5s;
 	}
 

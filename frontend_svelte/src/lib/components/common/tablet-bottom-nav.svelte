@@ -43,11 +43,11 @@
 
 <div
 	class="flex w-full shrink-0 justify-center"
-	style="padding: 8px 24px; padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px); background: transparent;"
+	style="padding: 8px 16px; padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px); background: transparent;"
 >
 	<div
 		class="flex items-center"
-		style="width: 100%; max-width: 480px; border-radius: 36px; background: var(--neu-glass-bg); backdrop-filter: blur(28px) saturate(1.8); -webkit-backdrop-filter: blur(28px) saturate(1.8); box-shadow: var(--neu-glass-shadow); border: 1px solid var(--neu-glass-border); padding: 6px 12px; gap: 4px;"
+		style="width: 100%; max-width: 480px; border-radius: 32px; background: var(--neu-glass-bg); backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8); box-shadow: var(--neu-glass-shadow); border: 1px solid var(--neu-glass-border); padding: 6px 8px; gap: 4px;"
 	>
 		{#each navItems.slice(0, 2) as item (item.href)}
 			<button
