@@ -26,6 +26,7 @@
 		label: string;
 		icon: typeof Home;
 		requiresAuth?: boolean;
+		exact?: boolean;
 	}
 
 	const mainNavItems: NavItem[] = [
@@ -38,8 +39,8 @@
 	const personalNavItems: NavItem[] = [
 		{ href: '/chat', label: t('sidebar.messages'), icon: MessageCircle, requiresAuth: true },
 		{ href: '/notifications', label: t('sidebar.notifications'), icon: Bell, requiresAuth: true },
-		{ href: '/moments', label: t('sidebar.myMoments'), icon: Image, requiresAuth: true },
-		{ href: '/groups', label: t('sidebar.myGroups'), icon: UsersRound, requiresAuth: true },
+		{ href: '/moments', label: t('sidebar.myMoments'), icon: Image, requiresAuth: true, exact: true },
+		{ href: '/groups', label: t('sidebar.myGroups'), icon: UsersRound, requiresAuth: true, exact: true },
 		{ href: '/friends', label: t('sidebar.friends'), icon: Heart, requiresAuth: true },
 		{ href: '/follows', label: t('sidebar.following'), icon: UserCheck, requiresAuth: true },
 		{ href: '/followers', label: t('sidebar.followers'), icon: UserPlus, requiresAuth: true },
@@ -47,9 +48,10 @@
 
 	const currentPathname = $derived(page.url.pathname);
 
-	function isActive(href: string): boolean {
-		if (href === '/') return currentPathname === '/';
-		return currentPathname === href || currentPathname.startsWith(`${href}/`);
+	function isActive(item: NavItem): boolean {
+		if (item.href === '/') return currentPathname === '/';
+		if (item.exact) return currentPathname === item.href;
+		return currentPathname === item.href || currentPathname.startsWith(`${item.href}/`);
 	}
 
 	function handleNavClick(item: NavItem) {
@@ -71,15 +73,15 @@
 		<div class="flex flex-col" style="gap: 2px;">
 			{#each mainNavItems as item (item.href)}
 				<button
-					class="desktop-sidebar__nav-item {isActive(item.href) ? 'active' : ''}"
+					class="desktop-sidebar__nav-item {isActive(item) ? 'active' : ''}"
 					onclick={() => handleNavClick(item)}
 				>
 					<item.icon
 						size={16}
-						strokeWidth={isActive(item.href) ? 2 : 1.5}
-						color={isActive(item.href) ? 'var(--neu-active-text)' : 'var(--neu-text-muted)'}
+						strokeWidth={isActive(item) ? 2 : 1.5}
+						color={isActive(item) ? 'var(--neu-active-text)' : 'var(--neu-text-muted)'}
 					/>
-					<span class="text-sm" class:font-medium={isActive(item.href)}>
+					<span class="text-sm" class:font-medium={isActive(item)}>
 						{item.label}
 					</span>
 					{#if authStore.isAuthenticated && item.href === '/notifications' && notificationStore.unreadCount > 0}
@@ -113,15 +115,15 @@
 		<div class="flex flex-col" style="gap: 2px;">
 			{#each personalNavItems as item (item.href)}
 				<button
-					class="desktop-sidebar__nav-item {isActive(item.href) ? 'active' : ''}"
+					class="desktop-sidebar__nav-item {isActive(item) ? 'active' : ''}"
 					onclick={() => handleNavClick(item)}
 				>
 					<item.icon
 						size={16}
-						strokeWidth={isActive(item.href) ? 2 : 1.5}
-						color={isActive(item.href) ? 'var(--neu-active-text)' : 'var(--neu-text-muted)'}
+						strokeWidth={isActive(item) ? 2 : 1.5}
+						color={isActive(item) ? 'var(--neu-active-text)' : 'var(--neu-text-muted)'}
 					/>
-					<span class="text-sm" class:font-medium={isActive(item.href)}>
+					<span class="text-sm" class:font-medium={isActive(item)}>
 						{item.label}
 					</span>
 					{#if authStore.isAuthenticated && item.href === '/notifications' && notificationStore.unreadCount > 0}
@@ -147,15 +149,15 @@
 		{#if authStore.isAuthenticated && adminPermissionsStore.isAdmin}
 			<div class="mt-4">
 				<button
-					class="desktop-sidebar__nav-item {isActive('/admin') ? 'active' : ''}"
+					class="desktop-sidebar__nav-item {currentPathname.startsWith('/admin') ? 'active' : ''}"
 					onclick={() => void goto('/admin')}
 				>
 					<Shield
 						size={16}
-						strokeWidth={isActive('/admin') ? 2 : 1.5}
-						color={isActive('/admin') ? 'var(--neu-active-text)' : 'var(--neu-text-muted)'}
+						strokeWidth={currentPathname.startsWith('/admin') ? 2 : 1.5}
+						color={currentPathname.startsWith('/admin') ? 'var(--neu-active-text)' : 'var(--neu-text-muted)'}
 					/>
-					<span class="text-sm" class:font-medium={isActive('/admin')}>
+					<span class="text-sm" class:font-medium={currentPathname.startsWith('/admin')}>
 						{t('sidebar.adminPanel')}
 					</span>
 				</button>

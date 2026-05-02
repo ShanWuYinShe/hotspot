@@ -54,6 +54,7 @@ class UIStore {
 	#showCreateSheet = $state(false);
 	#showCreateMoment = $state(false);
 	#showCreateGroup = $state(false);
+		#showSearchModal = $state(false);
 
 	// ==================== 登录模态框 ====================
 
@@ -65,6 +66,7 @@ class UIStore {
 	showCreateSheet = $derived(this.#showCreateSheet);
 	showCreateMoment = $derived(this.#showCreateMoment);
 	showCreateGroup = $derived(this.#showCreateGroup);
+		showSearchModal = $derived(this.#showSearchModal);
 	
 	/**
 	 * 打开登录模态框
@@ -183,6 +185,13 @@ class UIStore {
 	closeCreateGroup() {
 		this.#showCreateGroup = false;
 	}
+		openSearchModal() {
+			this.#showSearchModal = true;
+		}
+
+		closeSearchModal() {
+			this.#showSearchModal = false;
+		}
 }
 
 export const uiStore = new UIStore();

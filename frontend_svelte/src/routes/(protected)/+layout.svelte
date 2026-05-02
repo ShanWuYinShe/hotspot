@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { t } from '$lib/i18n';
+	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { mode, toggleMode } from 'mode-watcher';
@@ -125,7 +126,7 @@
 
 			<!-- Right actions -->
 			<div class="flex items-center gap-0.5">
-				<button class="desktop-header__btn" aria-label={t('nav.openSearch')} onclick={() => {}}>
+				<button class="desktop-header__btn" aria-label={t('nav.openSearch')} onclick={() => uiStore.openSearchModal()}>
 					<Search size={17} color="var(--neu-text-muted)" />
 				</button>
 				<button class="desktop-header__btn" aria-label={t('sidebar.toggleTheme')} onclick={toggleMode}>
@@ -143,14 +144,14 @@
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--neu-active-text)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
 				</button>
-				<button class="desktop-header__btn" aria-label={t('sidebar.notifications')}>
+				<button class="desktop-header__btn" aria-label={t('sidebar.notifications')} onclick={() => void goto('/notifications')}>
 					<Bell size={17} color="var(--neu-text-muted)" />
 				</button>
-				<button class="desktop-header__btn" aria-label={t('sidebar.settingsLabel')} onclick={() => {}}>
+				<button class="desktop-header__btn" aria-label={t('sidebar.settingsLabel')} onclick={() => void goto('/settings')}>
 					<Settings size={17} color="var(--neu-text-muted)" />
 				</button>
 				{#if authStore.isAuthenticated}
-					<div class="relative ml-1.5 cursor-pointer" style="width: 32px; height: 32px;">
+					<div class="relative ml-1.5 cursor-pointer" style="width: 32px; height: 32px;" onclick={() => void goto('/profile')}>
 						<img
 							src={authStore.currentAccount?.avatar_url || ''}
 							alt="Profile"
