@@ -362,10 +362,10 @@ const EFFECT: MaterialEffectSystem = {
 
 const COMPONENT: ComponentConstants = {
   AVATAR_SIZE: {
-    SMALL: 32,
-    MEDIUM: 48,
-    LARGE: 64,
-    XLARGE: 80,
+    SMALL: 40,
+    MEDIUM: 56,
+    LARGE: 80,
+    XLARGE: 112,
   },
   BUTTON_HEIGHT: 42,
   INPUT_HEIGHT: 42,

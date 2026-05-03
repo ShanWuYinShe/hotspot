@@ -1336,7 +1336,7 @@ export struct GroupDetailPage {
                 SystemAvatar({
                   src: this.editGroupAvatarPreviewUrl,
                   name: this.editGroupName,
-                  avatarSize: 72
+                  avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.LARGE
                 })
               }
               .type(ButtonType.Normal)

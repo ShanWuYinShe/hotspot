@@ -675,7 +675,7 @@ export struct MessagePage {
           SystemAvatar({
             avatarUrl: item.avatarUrl,
             name: item.name,
-            avatarSize: 50,
+            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
             shape: item.type === 'group' ? 'squircle' : 'circle',
             inset: true
           })

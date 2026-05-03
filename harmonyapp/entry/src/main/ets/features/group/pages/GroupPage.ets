@@ -850,7 +850,7 @@ export struct GroupPage {
       SystemAvatar({
         avatarUrl: group.group.avatar_url || '',
         name: group.group.name,
-        avatarSize: 48,
+        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
         shape: 'squircle'
       })
 

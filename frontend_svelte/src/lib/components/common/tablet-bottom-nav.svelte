@@ -89,7 +89,7 @@
 		<div class="flex shrink-0 items-center justify-center" style="width: 64px;">
 			<button
 				class="flex items-center justify-center rounded-full outline-none select-none"
-				style="width: 48px; height: 48px; background: var(--neu-accent-primary); box-shadow: 0 6px 20px var(--neu-glow); transition: background 0.22s, box-shadow 0.22s;"
+				style="width: 48px; height: 48px; background: var(--neu-accent-primary); box-shadow: var(--neu-fab-glow); transition: background 0.22s, box-shadow 0.22s;"
 				onclick={() => uiStore.openCreateSheet()}
 				aria-label={t('nav.publish')}
 			>

@@ -246,7 +246,7 @@ export struct RecommendationPage {
                     SystemAvatar({
                       avatarUrl: user.user?.avatar_url,
                       name: user.user?.nickname ?? '',
-                      avatarSize: 44
+                      avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL
                     })
 
                     Column({ space: 2 }) {

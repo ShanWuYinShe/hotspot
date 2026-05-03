@@ -719,7 +719,7 @@ export struct NearbyPage {
           SystemAvatar({
             avatarUrl: user.user?.avatar_url ?? '',
             name: user.user?.nickname ?? '',
-            avatarSize: 44,
+            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
             shape: 'circle'
           })
 
@@ -991,7 +991,7 @@ export struct NearbyPage {
           SystemAvatar({
             avatarUrl: group.group?.avatar_url ?? '',
             name: group.group?.name ?? '',
-            avatarSize: 48,
+            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
             shape: 'circle'
           })
 

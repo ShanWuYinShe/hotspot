@@ -692,7 +692,7 @@ export struct DiscoverPage {
         SystemAvatar({
           avatarUrl: moment.user?.avatar_url ?? '',
           name: moment.user?.nickname ?? '',
-          avatarSize: 32,
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
           shape: 'circle'
         })
         Text(moment.user?.nickname ?? '')

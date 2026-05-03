@@ -79,6 +79,7 @@
 	--neu-accent: #3D7A55;
 	--neu-accent-primary: #3D7A55;
 	--neu-glow: rgba(61, 122, 85, 0.15);
+		--neu-fab-glow: 0 6px 18px rgba(61,122,85,0.32), 0 2px 4px rgba(0,0,0,0.10);
 	--neu-border: rgba(0, 0, 0, 0.08);
 	--neu-border-pressed: rgba(0, 0, 0, 0.13);
 	--neu-error: #ef4444;
@@ -89,7 +90,7 @@
 	--neu-fallback-bg: rgba(61, 122, 85, 0.1);
 	--neu-fallback-text: #3D7A55;
 	--neu-active-text: #ffffff;
-	--neu-glass-bg: rgba(248,252,249,0.92);
+	--neu-glass-bg: rgba(248,252,249,0.88);
 	--neu-glass-border: rgba(61,122,85,0.15);
 	--neu-glass-shadow: 0 -2px 16px rgba(61,122,85,0.08), 0 8px 24px rgba(61,122,85,0.10);
 
@@ -145,6 +146,7 @@
 	--neu-accent: #52B878;
 	--neu-accent-primary: #52B878;
 	--neu-glow: rgba(82, 184, 120, 0.18);
+		--neu-fab-glow: 0 6px 22px rgba(82,184,120,0.38), 0 2px 6px rgba(0,0,0,0.20);
 	--neu-border: rgba(255, 255, 255, 0.07);
 	--neu-border-pressed: rgba(255, 255, 255, 0.04);
 	--neu-error: #f87171;
@@ -213,6 +215,7 @@
 	--neu-accent: #6366f1;
 	--neu-accent-primary: #6366f1;
 	--neu-glow: rgba(99, 102, 241, 0.32);
+		--neu-fab-glow: 0 6px 18px rgba(99,102,241,0.38), 0 2px 4px rgba(0,0,0,0.10);
 	--neu-border: rgba(99, 102, 241, 0.13);
 	--neu-border-pressed: rgba(99, 102, 241, 0.22);
 	--neu-error: #ef4444;
@@ -223,7 +226,7 @@
 	--neu-fallback-bg: rgba(99, 102, 241, 0.1);
 	--neu-fallback-text: #6366f1;
 	--neu-active-text: #ffffff;
-	--neu-glass-bg: rgba(238,242,255,0.92);
+	--neu-glass-bg: rgba(238,242,255,0.88);
 	--neu-glass-border: rgba(99,102,241,0.13);
 	--neu-glass-shadow: 0 -2px 16px rgba(0,0,0,0.04), 0 8px 24px rgba(99,102,241,0.10);
 
@@ -278,6 +281,7 @@
 	--neu-accent: #818cf8;
 	--neu-accent-primary: #818cf8;
 	--neu-glow: rgba(129, 140, 248, 0.26);
+		--neu-fab-glow: 0 6px 22px rgba(129,140,248,0.42), 0 2px 6px rgba(0,0,0,0.20);
 	--neu-border: rgba(129, 140, 248, 0.13);
 	--neu-border-pressed: rgba(129, 140, 248, 0.22);
 	--neu-error: #f87171;
@@ -346,6 +350,7 @@
 	--neu-accent: #748377;
 	--neu-accent-primary: #D4845A;
 	--neu-glow: rgba(228, 178, 137, 0.6);
+		--neu-fab-glow: 0 6px 18px rgba(212,132,90,0.34), 0 2px 4px rgba(0,0,0,0.10);
 	--neu-border: #F7F5F2;
 	--neu-border-pressed: #DFD9D1;
 	--neu-error: #c0392b;
@@ -356,7 +361,7 @@
 	--neu-fallback-bg: rgba(212, 132, 90, 0.12);
 	--neu-fallback-text: #D4845A;
 	--neu-active-text: #fff8f4;
-	--neu-glass-bg: rgba(234,229,222,0.92);
+	--neu-glass-bg: rgba(234,229,222,0.88);
 	--neu-glass-border: rgba(255,255,255,0.65);
 	--neu-glass-shadow: 0 -2px 16px rgba(0,0,0,0.04), 0 8px 24px rgba(212,132,90,0.10);
 
@@ -411,6 +416,7 @@
 	--neu-accent: #8D94A0;
 	--neu-accent-primary: #E8A87C;
 	--neu-glow: rgba(244, 200, 155, 0.3);
+		--neu-fab-glow: 0 6px 22px rgba(232,168,124,0.36), 0 2px 6px rgba(0,0,0,0.22);
 	--neu-border: #2A2C35;
 	--neu-border-pressed: #15161C;
 	--neu-error: #e06f6f;
@@ -815,6 +821,13 @@
 }
 :is(.dark) .desktop-header__btn:hover {
 	background: rgba(255, 255, 255, 0.07);
+}
+
+/* Tablet glass-bg override (mobile=0.88, tablet=0.92 per Figma Make) */
+@media (min-width: 600px) and (max-width: 1279px) {
+	:root, :root[data-theme-family="forest"]:not(.dark) { --neu-glass-bg: rgba(248,252,249,0.92); }
+	[data-theme-family="vibrant"]:not(.dark) { --neu-glass-bg: rgba(238,242,255,0.92); }
+	[data-theme-family="neu"]:not(.dark) { --neu-glass-bg: rgba(234,229,222,0.92); }
 }
 
 /* Utility: accent-active text color (replaces text-white on accent backgrounds) */

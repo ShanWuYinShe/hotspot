@@ -301,7 +301,7 @@ export struct MomentDetailPage {
         SystemAvatar({
           avatarUrl: moment.user?.avatar_url ?? '',
           name: moment.user?.nickname ?? '未知用户',
-          avatarSize: 44,
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
           userInfo: moment.user
         })
 
