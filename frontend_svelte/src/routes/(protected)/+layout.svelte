@@ -138,7 +138,7 @@
 				</button>
 				<button
 					class="mx-1.5 flex items-center justify-center rounded-full outline-none transition-shadow duration-200"
-					style="width: 32px; height: 32px; background: var(--neu-accent-primary); box-shadow: 0 4px 14px var(--neu-glow), 0 2px 4px var(--neu-shadow-dark);"
+					style="width: 32px; height: 32px; background: var(--neu-accent-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.16);"
 					onclick={() => uiStore.openCreateSheet()}
 					aria-label={t('nav.publish')}
 				>
@@ -159,7 +159,7 @@
 							style="border: 1.5px solid var(--neu-border);"
 						/>
 						{#if notificationStore.unreadCount > 0}
-							<div class="mobile-bottom-nav__badge" style="top: -3px; right: -3px;">
+							<div class="desktop-header__badge" style="top: -3px; right: -3px;">
 								{notificationStore.unreadCount}
 							</div>
 						{/if}

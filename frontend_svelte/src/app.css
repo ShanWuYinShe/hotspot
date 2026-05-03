@@ -89,8 +89,8 @@
 	--neu-fallback-bg: rgba(61, 122, 85, 0.1);
 	--neu-fallback-text: #3D7A55;
 	--neu-active-text: #ffffff;
-	--neu-glass-bg: rgba(248,250,248,0.92);
-	--neu-glass-border: rgba(61,122,85,0.14);
+	--neu-glass-bg: rgba(248,252,249,0.92);
+	--neu-glass-border: rgba(61,122,85,0.15);
 	--neu-glass-shadow: 0 -2px 16px rgba(61,122,85,0.08), 0 8px 24px rgba(61,122,85,0.10);
 
 	--background: var(--page-bg);
@@ -155,8 +155,8 @@
 	--neu-fallback-bg: rgba(82, 184, 120, 0.15);
 	--neu-fallback-text: #52B878;
 	--neu-active-text: #0f1115;
-	--neu-glass-bg: rgba(20,16,40,0.88);
-	--neu-glass-border: rgba(255,255,255,0.08);
+	--neu-glass-bg: rgba(24,28,24,0.90);
+	--neu-glass-border: rgba(82,184,120,0.16);
 	--neu-glass-shadow: 0 -4px 24px rgba(0,0,0,0.40), 0 8px 32px rgba(0,0,0,0.28);
 
 	--background: var(--page-bg);
@@ -223,8 +223,8 @@
 	--neu-fallback-bg: rgba(99, 102, 241, 0.1);
 	--neu-fallback-text: #6366f1;
 	--neu-active-text: #ffffff;
-	--neu-glass-bg: rgba(255,255,255,0.92);
-	--neu-glass-border: rgba(99,102,241,0.12);
+	--neu-glass-bg: rgba(238,242,255,0.92);
+	--neu-glass-border: rgba(99,102,241,0.13);
 	--neu-glass-shadow: 0 -2px 16px rgba(0,0,0,0.04), 0 8px 24px rgba(99,102,241,0.10);
 
 	--background: var(--page-bg);
@@ -288,8 +288,8 @@
 	--neu-fallback-bg: rgba(129, 140, 248, 0.15);
 	--neu-fallback-text: #818cf8;
 	--neu-active-text: #09060f;
-	--neu-glass-bg: rgba(20,16,40,0.88);
-	--neu-glass-border: rgba(255,255,255,0.08);
+	--neu-glass-bg: rgba(20,16,40,0.90);
+	--neu-glass-border: rgba(129,140,248,0.18);
 	--neu-glass-shadow: 0 -4px 24px rgba(0,0,0,0.40), 0 8px 32px rgba(0,0,0,0.28);
 
 	--background: var(--page-bg);
@@ -357,7 +357,7 @@
 	--neu-fallback-text: #D4845A;
 	--neu-active-text: #fff8f4;
 	--neu-glass-bg: rgba(234,229,222,0.92);
-	--neu-glass-border: rgba(212,132,90,0.14);
+	--neu-glass-border: rgba(255,255,255,0.65);
 	--neu-glass-shadow: 0 -2px 16px rgba(0,0,0,0.04), 0 8px 24px rgba(212,132,90,0.10);
 
 	--background: var(--page-bg);
@@ -421,7 +421,7 @@
 	--neu-fallback-bg: rgba(232, 168, 124, 0.15);
 	--neu-fallback-text: #E8A87C;
 	--neu-active-text: #fff8f4;
-	--neu-glass-bg: rgba(20,16,40,0.88);
+	--neu-glass-bg: rgba(26,28,35,0.90);
 	--neu-glass-border: rgba(255,255,255,0.08);
 	--neu-glass-shadow: 0 -4px 24px rgba(0,0,0,0.40), 0 8px 32px rgba(0,0,0,0.28);
 
@@ -532,6 +532,28 @@
 		background-color: var(--neu-bg);
 		box-shadow: 12px 12px 24px var(--neu-shadow-dark), -12px -12px 24px var(--neu-shadow-light);
 		border: 1px solid var(--neu-border);
+	}
+
+	.neu-icon-badge {
+		box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);
+	}
+
+	.neu-input-surface {
+		box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light);
+		border: 1px solid var(--neu-border);
+	}
+	.neu-input-surface:focus-within {
+		box-shadow: inset 5px 5px 10px var(--neu-shadow-dark), inset -5px -5px 10px var(--neu-shadow-light);
+		border-color: var(--neu-border-pressed);
+	}
+
+	.neu-input-base {
+		box-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light);
+		border: 1px solid var(--neu-border);
+	}
+	.neu-input-base:focus {
+		box-shadow: inset 8px 8px 16px var(--neu-shadow-dark), inset -8px -8px 16px var(--neu-shadow-light);
+		border-color: var(--neu-border-pressed);
 	}
 
 	.neu-button-glow {
@@ -688,6 +710,25 @@
 		pointer-events: none;
 	}
 
+	/* Desktop header badge (Figma Make: 15x15, fontSize 8, fontWeight 700) */
+	.desktop-header__badge {
+		position: absolute;
+		min-width: 15px;
+		height: 15px;
+		padding: 0 3px;
+		font-size: 8px;
+		font-weight: 700;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 9999px;
+		background: var(--neu-accent-primary);
+		color: var(--neu-active-text);
+		box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+		border: 1.5px solid var(--page-bg);
+		pointer-events: none;
+	}
+
 	/* Desktop header (Figma Make DesktopLayout) */
 	.desktop-header {
 		flex-shrink: 0;
@@ -740,15 +781,15 @@
 	}
 
 	.desktop-sidebar__nav-item:not(.active):hover {
-		background: var(--neu-bg);
-		box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light);
-		border: 1px solid var(--neu-border);
+		background: rgba(0, 0, 0, 0.06);
+		border-color: transparent;
+		box-shadow: none;
 	}
 
 	.desktop-sidebar__nav-item.active {
 		background: var(--neu-accent-primary);
-		color: var(--neu-active-text);
-		box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light), 0 4px 14px var(--neu-glow);
+		color: #FFF8F4;
+		box-shadow: 0 3px 12px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.12);
 	}
 
 	/* Desktop main content card (Figma Make) */
@@ -767,6 +808,11 @@
 
 	.masonry-container { position: relative; width: 100%; }
 	.masonry-item { position: absolute; box-sizing: border-box; }
+}
+
+/* Dark mode sidebar hover override */
+:is(.dark) .desktop-sidebar__nav-item:not(.active):hover {
+	background: rgba(255, 255, 255, 0.06);
 }
 
 /* Utility: accent-active text color (replaces text-white on accent backgrounds) */

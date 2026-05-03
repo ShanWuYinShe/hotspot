@@ -168,7 +168,7 @@
 	<!-- Location Anchor — pinned to bottom -->
 	<div class="flex-shrink-0 pt-3">
 		<button
-			class="flex w-full items-center gap-3 rounded-[20px] text-left outline-none transition-shadow duration-200"
+			class="flex w-full items-center gap-3 rounded-[16px] text-left outline-none transition-shadow duration-200"
 			style="padding: 10px 12px; background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);"
 			onclick={() => (showLocationPicker = true)}
 		>

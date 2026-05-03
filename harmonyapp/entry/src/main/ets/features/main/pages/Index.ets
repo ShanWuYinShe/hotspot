@@ -765,7 +765,18 @@ struct Index {
    */
   @Builder
   TabBuilderIcon(title: string, targetIndex: number, icon: AppIcon, badgeCount: number = 0) {
-    Column({ space: 5 }) {
+    Stack() {
+      // Active pill indicator (sliding pill behind icon+label)
+      if (this.currentTabIndex === targetIndex) {
+        Row()
+          .width(52)
+          .height(36)
+          .borderRadius(18)
+          .backgroundColor(this.getBrandAccent())
+          .opacity(0.14)
+      }
+
+      // Icon + Label content (on top of pill)
       Column({ space: 5 }) {
         Stack() {
           Row() {
@@ -792,19 +803,14 @@ struct Index {
           }
         }
 
-        Row()
-          .width(this.currentTabIndex === targetIndex ? this.getTabBarVisualStyle().indicatorWidth : 0)
-          .height(this.getTabBarVisualStyle().indicatorHeight)
-          .borderRadius(this.getTabBarVisualStyle().indicatorBorderRadius)
-          .backgroundColor(this.currentTabIndex === targetIndex ? this.getBrandAccent() : Color.Transparent)
+        Text(title)
+          .fontColor(this.currentTabIndex === targetIndex ? this.getBrandAccent() : this.getTabInactiveColor())
+          .fontSize(11)
+          .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Bold : FontWeight.Normal)
       }
-      .alignItems(HorizontalAlign.Center)
-
-      Text(title)
-        .fontColor(this.currentTabIndex === targetIndex ? this.getBrandAccent() : this.getTabInactiveColor())
-        .fontSize(11)
-        .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Bold : FontWeight.Normal)
+      .zIndex(1)
     }
+    .alignContent(Alignment.Center)
     .width('100%')
     .height(this.getTabBarVisualStyle().itemHeight)
     .justifyContent(FlexAlign.Center)
