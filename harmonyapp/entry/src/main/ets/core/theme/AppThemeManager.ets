@@ -152,21 +152,21 @@ const DEFAULT_CLEAN_DARK_VISUALS = buildVisualTokens(
 );
 
 const FIGMA_NEU_THEME_SHAPE: AppThemeShapeTokens = {
-  surfaceCard: DesignConstants.RADIUS.XXL,
-  heroCard: 28,
+  surfaceCard: 24,
+  heroCard: 24,
   compactCard: DesignConstants.RADIUS.XL,
-  input: 20,
+  input: 22,
   button: 22,
   chip: DesignConstants.SHAPE.CHIP,
-  tabBar: 30,
-  previewCard: 28,
-  listItem: 22,
+  tabBar: 28,
+  previewCard: 24,
+  listItem: 24,
   iconTile: 18
 };
 
 const FIGMA_NEU_THEME_METRICS: AppThemeMetricTokens = {
-  cardPadding: DesignConstants.SPACING.XL,
-  heroPadding: DesignConstants.SPACING.XXL,
+  cardPadding: 16,
+  heroPadding: DesignConstants.SPACING.XL,
   metricCardPadding: DesignConstants.SPACING.LG,
   profilePrimaryButtonHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
   profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
@@ -179,8 +179,8 @@ const FIGMA_NEU_THEME_METRICS: AppThemeMetricTokens = {
   actionButtonHeight: 40,
   listItemMinHeight: 72,
   tabBarHeight: 64,
-  createButtonWidth: 54,
-  createButtonHeight: 54,
+  createButtonWidth: 48,
+  createButtonHeight: 48,
   tabBarFloatingMargin: DesignConstants.SPACING.MD,
   chatListRadius: DesignConstants.SHAPE.CARD,
   chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT,
@@ -196,9 +196,9 @@ const FIGMA_NEU_LIGHT_VISUALS = buildVisualTokens(
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.surface),
     haloShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.control),
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.elevated),
-    insetShadow: new AppThemeShadow(10, '#FFFFFFC8', -5, -5),
-    highlightShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.accent),
-    tabActiveGlow: new AppThemeShadow(14, '#D4845A40', 0, 6)
+    insetShadow: new AppThemeShadow(12, '#BFB7AC44', 4, 4),
+    highlightShadow: new AppThemeShadow(10, '#FFFFFFC8', -4, -4),
+    tabActiveGlow: new AppThemeShadow(22, '#D4845A59', 0, 6)
   }
 );
 
@@ -209,9 +209,9 @@ const FIGMA_NEU_DARK_VISUALS = buildVisualTokens(
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.surface),
     haloShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.control),
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.elevated),
-    insetShadow: new AppThemeShadow(12, '#2D313B99', -5, -5),
+    insetShadow: new AppThemeShadow(12, '#282A3199', 4, 4),
     highlightShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.accent),
-    tabActiveGlow: new AppThemeShadow(16, '#D4845A38', 0, 7)
+    tabActiveGlow: new AppThemeShadow(22, '#E8A87C59', 0, 6)
   }
 );
 

@@ -710,7 +710,7 @@ export struct MessagePage {
       .width('100%')
     }
     .constraintSize({ minHeight: AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).minHeight ?? 72 })
-    .padding(22)
+    .padding(16)
     .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 8, bottom: 8 })
     .backgroundColor(this.pressedChatKey === this.getChatKey(item)
       ? this.getSurfaceSubtle()

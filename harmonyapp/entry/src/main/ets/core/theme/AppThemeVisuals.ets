@@ -259,7 +259,7 @@ export class AppThemeVisuals {
       textColor: palette.accentText,
       borderColor: palette.primaryButtonBorderColor,
       borderWidth: 1,
-      shadow: palette.visuals.effects.highlightShadow,
+      shadow: palette.accentShadow,
       borderRadius: Math.max(palette.visuals.shape.button - 2, DesignConstants.RADIUS.XL),
       height: palette.visuals.metrics.profilePrimaryButtonHeight,
       horizontalPadding: palette.visuals.metrics.profilePrimaryButtonHorizontalPadding + DesignConstants.SPACING.XS
@@ -347,7 +347,7 @@ export class AppThemeVisuals {
         backgroundColor: palette.quickActionBackgroundColor,
         borderColor: palette.floatingBorderColor,
         borderWidth: 1,
-        shadow: palette.visuals.effects.highlightShadow,
+        shadow: palette.surfaceShadow,
         borderRadius: palette.visuals.shape.compactCard,
         padding: DesignConstants.SPACING.MD,
         iconSize: 22,
@@ -364,7 +364,7 @@ export class AppThemeVisuals {
         iconWrapperSize: 40,
         titleFontSize: DesignConstants.FONT.SIZE.XL,
         descriptionFontSize: DesignConstants.FONT.SIZE.MD,
-        minHeight: 140
+        minHeight: 120
       }
     };
     AppThemeVisuals.profileVisualCache.set(key, style);
@@ -391,7 +391,7 @@ export class AppThemeVisuals {
       createButtonWidth: palette.visuals.metrics.createButtonWidth,
       createButtonHeight: palette.visuals.metrics.createButtonHeight,
       indicatorWidth: 22,
-      indicatorHeight: 4,
+      indicatorHeight: 2.5,
       indicatorBorderRadius: 2,
       itemHeight: palette.visuals.metrics.tabBarHeight
     };
@@ -465,7 +465,7 @@ export class AppThemeVisuals {
         textColor: palette.accentText,
         borderColor: palette.borderColor,
         borderWidth: 1,
-        shadow: palette.controlShadow,
+        shadow: palette.accentShadow,
         borderRadius: palette.visuals.shape.button,
         height: palette.visuals.metrics.chatSendButtonHeight,
         horizontalPadding: DesignConstants.SPACING.LG

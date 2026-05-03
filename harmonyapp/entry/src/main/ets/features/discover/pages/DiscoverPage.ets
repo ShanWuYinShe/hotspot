@@ -431,7 +431,7 @@ export struct DiscoverPage {
           SystemAvatar({
             avatarUrl: user.user?.avatar_url ?? '',
             name: user.user?.nickname ?? '',
-            avatarSize: 46,
+            avatarSize: 48,
             shape: 'circle'
           })
 
@@ -481,8 +481,8 @@ export struct DiscoverPage {
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }
-        .width(44)
-        .height(44)
+        .width(36)
+        .height(36)
         .justifyContent(FlexAlign.Center)
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)

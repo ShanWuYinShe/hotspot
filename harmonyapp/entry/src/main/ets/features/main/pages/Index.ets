@@ -764,18 +764,33 @@ struct Index {
    * 用于发现、消息、我的等确认可用的系统符号
    */
   @Builder
-  TabBuilderIcon(title: string, targetIndex: number, icon: AppIcon) {
+  TabBuilderIcon(title: string, targetIndex: number, icon: AppIcon, badgeCount: number = 0) {
     Column({ space: 4 }) {
       Column({ space: 5 }) {
-        Row() {
-          Text() {
-              SymbolSpan($r(icon))
-                .fontSize(this.currentTabIndex === targetIndex ? 24 : 22)
-                .fontColor([this.currentTabIndex === targetIndex ? this.getBrandAccent() : this.getTabInactiveColor()])
+        Stack() {
+          Row() {
+            Text() {
+                SymbolSpan($r(icon))
+                  .fontSize(this.currentTabIndex === targetIndex ? 22 : 21)
+                  .fontColor([this.currentTabIndex === targetIndex ? this.getBrandAccent() : this.getTabInactiveColor()])
+            }
+          }
+          .justifyContent(FlexAlign.Center)
+          .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+
+          if (badgeCount > 0) {
+            Text(badgeCount > 99 ? '99+' : `${badgeCount}`)
+              .fontSize(11)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(this.getCurrentThemePalette().accentText)
+              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+              .backgroundColor(this.getBrandAccent())
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .constraintSize({ minWidth: 20, maxHeight: 20 })
+              .textAlign(TextAlign.Center)
+              .position({ x: '60%', y: -2 })
           }
         }
-        .justifyContent(FlexAlign.Center)
-        .padding({ left: 8, right: 8, top: 4, bottom: 4 })
 
         Row()
           .width(this.currentTabIndex === targetIndex ? this.getTabBarVisualStyle().indicatorWidth : 0)
@@ -787,7 +802,7 @@ struct Index {
 
       Text(title)
         .fontColor(this.currentTabIndex === targetIndex ? this.getBrandAccent() : this.getTabInactiveColor())
-        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontSize(10)
         .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Bold : FontWeight.Medium)
     }
     .width('100%')
@@ -805,7 +820,7 @@ struct Index {
       /** 中间「+」发布按钮 Builder */
   @Builder
   CreateTabBuilder() {
-    Column({ space: 4 }) {
+    Column() {
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.ADD))
@@ -823,11 +838,6 @@ struct Index {
         width: this.getTabBarVisualStyle().borderWidth,
         color: this.currentTabIndex === 2 ? this.getBrandAccent() : this.getTabBarVisualStyle().borderColor
       })
-
-      Text('发布')
-        .fontColor(this.currentTabIndex === 2 ? this.getBrandAccent() : this.getTabInactiveColor())
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .fontWeight(this.currentTabIndex === 2 ? FontWeight.Bold : FontWeight.Medium)
     }
     .width('100%')
     .height(this.getTabBarVisualStyle().itemHeight)
@@ -935,7 +945,7 @@ struct Index {
               })
             }
           }
-          .tabBar(this.TabBuilderIcon('消息', 3, AppIcon.MESSAGE))
+          .tabBar(this.TabBuilderIcon('消息', 3, AppIcon.MESSAGE, this.isLoggedIn ? this.unreadCount.total_unread_count : 0))
 
           // 5. 我的
           TabContent() {
@@ -1002,7 +1012,7 @@ struct Index {
                 Text(this.unreadCount.total_unread_count > 99 ? '99+' : `${this.unreadCount.total_unread_count}`)
                   .fontSize(10)
                   .fontWeight(FontWeight.Bold)
-                  .fontColor(Color.White)
+                  .fontColor(this.getCurrentThemePalette().accentText)
                   .padding({ left: 6, right: 6, top: 2, bottom: 2 })
                   .backgroundColor(this.getCurrentThemePalette().accentBackground)
                   .borderRadius(DesignConstants.RADIUS.FULL)
@@ -1047,7 +1057,7 @@ struct Index {
           Column()
             .width('100%')
             .height('100%')
-            .backgroundColor('#66000000')
+            .backgroundColor(this.getCurrentThemePalette().overlayStrong)
             .onClick(() => {
               this.showNotificationCenter = false;
             })

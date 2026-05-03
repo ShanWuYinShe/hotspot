@@ -34,7 +34,7 @@ export struct SurfaceIconButton {
   }
 
   private getShadowColor(): ShadowOptions {
-    return this.kind === 'primary' ? this.getPalette().accentShadow : this.getPalette().controlShadow;
+    return this.kind === 'primary' ? this.getPalette().accentShadow : this.getPalette().surfaceShadow;
   }
 
   private getIconColor(): ResourceColor | Color {

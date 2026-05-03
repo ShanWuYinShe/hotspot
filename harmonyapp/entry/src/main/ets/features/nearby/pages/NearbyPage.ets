@@ -769,8 +769,8 @@ export struct NearbyPage {
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }
-        .width(44)
-        .height(44)
+        .width(36)
+        .height(36)
         .borderRadius(DesignConstants.RADIUS.XL)
         .backgroundColor(this.getSurfaceSubtle())
         .border({ width: 1, color: this.getSurfaceBorder() })
@@ -1027,8 +1027,8 @@ export struct NearbyPage {
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }
-        .width(44)
-        .height(44)
+        .width(36)
+        .height(36)
         .borderRadius(DesignConstants.RADIUS.XL)
         .backgroundColor(this.getSurfaceSubtle())
         .border({ width: 1, color: this.getSurfaceBorder() })

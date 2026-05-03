@@ -64,19 +64,19 @@ class ThemeShadowRegistry {
   };
 
   readonly FIGMA_NEU_LIGHT: ThemeShadows = {
-    surface: new AppThemeShadow(16, '#BFB7AC55', 10, 10),
-    elevated: new AppThemeShadow(22, '#C3BAAE66', 12, 12),
-    accent: new AppThemeShadow(18, '#D4845A52', 0, 10),
-    control: new AppThemeShadow(12, '#FFFFFFCC', -6, -6),
-    tabBar: new AppThemeShadow(18, '#B4AB9E66', 0, -6)
+    surface: new AppThemeShadow(20, '#BFB7AC55', 8, 8),
+    elevated: new AppThemeShadow(28, '#C3BAAE55', 12, 12),
+    accent: new AppThemeShadow(22, '#D4845A40', 0, 8),
+    control: new AppThemeShadow(12, '#FFFFFFBB', -4, -4),
+    tabBar: new AppThemeShadow(18, '#B4AB9E55', 0, -6)
   };
 
   readonly FIGMA_NEU_DARK: ThemeShadows = {
-    surface: new AppThemeShadow(18, '#0F101580', 10, 10),
-    elevated: new AppThemeShadow(24, '#0B0C108F', 12, 12),
-    accent: new AppThemeShadow(20, '#D4845A3D', 0, 10),
-    control: new AppThemeShadow(14, '#2D313BCC', -6, -6),
-    tabBar: new AppThemeShadow(18, '#0B0C1099', 0, -6)
+    surface: new AppThemeShadow(20, '#0C0D1280', 8, 8),
+    elevated: new AppThemeShadow(28, '#0B0C1090', 12, 12),
+    accent: new AppThemeShadow(22, '#E8A87C3D', 0, 8),
+    control: new AppThemeShadow(12, '#282A31BB', -4, -4),
+    tabBar: new AppThemeShadow(18, '#0B0C10AA', 0, -6)
   };
 }
 
@@ -164,13 +164,13 @@ export class ThemeConstants {
     chatBackground: '#DED8D0',
     systemSurfaceBaseColor: '#D0CBC3',
     overlayStrong: '#6B22140F',
-    textPrimary: '#4A4036',
+    textPrimary: '#3D3832',
     textSecondary: '#7A7269',
-    textTertiary: '#9B948A',
+    textTertiary: '#9B9590',
     textOnAccentMuted: '#7F533C',
     iconMuted: '#7A7269',
     buttonSecondaryBackground: '#E6E0D8',
-    buttonSecondaryText: '#4A4036',
+    buttonSecondaryText: '#3D3832',
     primaryButtonBorderColor: '#D4845A',
     inputBackgroundColor: '#EAE5DE',
     quickActionBackgroundColor: '#EAE5DE',
@@ -188,27 +188,27 @@ export class ThemeConstants {
     surfaceBackground: '#1A1C23',
     surfaceSubtle: '#232731',
     surfaceElevated: '#20242D',
-    borderColor: '#2A2C35',
-    floatingBorderColor: '#15161C',
+    borderColor: '#2A2D34',
+    floatingBorderColor: '#22252D',
     sheetBackground: '#1A1C23',
-    accentBackground: '#D4845A',
-    accentText: '#FFF8F4',
+    accentBackground: '#E8A87C',
+    accentText: '#FFFFFF',
     accentMuted: '#35261E',
     chatBackground: '#14161D',
     systemSurfaceBaseColor: '#0F1015',
     overlayStrong: '#A6000000',
-    textPrimary: '#E5E7EB',
-    textSecondary: '#8D94A0',
-    textTertiary: '#666D78',
+    textPrimary: '#E8E4DF',
+    textSecondary: '#7A7670',
+    textTertiary: '#5A5550',
     textOnAccentMuted: '#F3CCB4',
-    iconMuted: '#8D94A0',
+    iconMuted: '#7A7670',
     buttonSecondaryBackground: '#232731',
-    buttonSecondaryText: '#E5E7EB',
-    primaryButtonBorderColor: '#D4845A',
+    buttonSecondaryText: '#E8E4DF',
+    primaryButtonBorderColor: '#E8A87C',
     inputBackgroundColor: '#1A1C23',
     quickActionBackgroundColor: '#1A1C23',
     tabBarBackground: '#1A1C23',
-    tabBarInactive: '#8D94A0',
+    tabBarInactive: '#7A7670',
     tabBarActiveBackground: '#232731',
     isDarkTheme: true
   };

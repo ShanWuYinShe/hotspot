@@ -99,7 +99,7 @@ export struct SettingsSectionCard {
   }
 
   private getCardStyle() {
-    return AppThemeVisuals.getElevatedCardStyle(this.resolvedThemeId);
+    return AppThemeVisuals.getSurfaceCardStyle(this.resolvedThemeId);
   }
 
   build() {
@@ -146,8 +146,8 @@ export struct SettingsEntryRow {
             .fontColor([this.item.accentColor ? this.item.accentColor : this.getPalette().accentBackground])
         }
       }
-      .width(44)
-      .height(44)
+      .width(36)
+      .height(36)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.item.accentColor ? this.getPalette().surfaceSubtle : this.getPalette().surfaceElevated)
       .justifyContent(FlexAlign.Center)

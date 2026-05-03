@@ -92,8 +92,9 @@ export struct SystemCard {
       case CardVariant.ELEVATED:
         return this.getThemeShadow('elevated');
       case CardVariant.GLASS:
-      case CardVariant.GLOW:
         return this.getThemeShadow('elevated');
+      case CardVariant.GLOW:
+        return this.getPalette().accentShadow;
       case CardVariant.DEFAULT:
       case CardVariant.FILLED:
       case CardVariant.OUTLINED:

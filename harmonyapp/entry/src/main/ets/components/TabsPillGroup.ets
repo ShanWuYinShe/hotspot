@@ -66,7 +66,7 @@ export struct TabsPillGroup {
       .height(34)
       .borderRadius(DesignConstants.RADIUS.XL)
       .backgroundColor(isActiveTab ? this.getPalette().accentBackground : Color.Transparent)
-      .shadow(isActiveTab ? this.getPalette().controlShadow : {
+      .shadow(isActiveTab ? this.getPalette().accentShadow : {
         radius: 0,
         color: '#00000000',
         offsetX: 0,
