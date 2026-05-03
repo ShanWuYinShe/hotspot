@@ -757,9 +757,8 @@
 	}
 
 	.desktop-header__btn:hover {
-		background: var(--neu-bg);
-		border-color: var(--neu-border);
-		box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light);
+		background: rgba(0, 0, 0, 0.07);
+		border-color: transparent;
 	}
 
 	/* Desktop sidebar (Figma Make) */
@@ -813,6 +812,9 @@
 /* Dark mode sidebar hover override */
 :is(.dark) .desktop-sidebar__nav-item:not(.active):hover {
 	background: rgba(255, 255, 255, 0.06);
+}
+:is(.dark) .desktop-header__btn:hover {
+	background: rgba(255, 255, 255, 0.07);
 }
 
 /* Utility: accent-active text color (replaces text-white on accent backgrounds) */
