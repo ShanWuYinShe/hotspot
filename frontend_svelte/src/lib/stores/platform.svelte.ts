@@ -26,8 +26,8 @@ class PlatformStore {
 	private update() {
 		const w = window.innerWidth;
 		let p: Platform;
-		if (w >= 1024) p = 'desktop';
-		else if (w >= 640) p = 'tablet';
+		if (w >= 1280) p = 'desktop';
+		else if (w >= 600) p = 'tablet';
 		else p = 'mobile';
 
 		this.platform = p;

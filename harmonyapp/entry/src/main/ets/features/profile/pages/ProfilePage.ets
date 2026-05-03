@@ -1554,7 +1554,7 @@ export struct ProfilePage {
     .type(ButtonType.Normal)
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: 1, color: this.getSurfaceBorder() })
-    .borderRadius(18)
+    .borderRadius(22)
     .shadow(this.getProfileVisualStyle().card.shadow)
     .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .layoutWeight(1)

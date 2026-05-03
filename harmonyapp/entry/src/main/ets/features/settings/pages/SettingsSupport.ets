@@ -608,7 +608,7 @@ export struct RelationshipListSection {
   @Builder
   private buildUserLine(userId: string, nickname: string, meta: string, actionLabel?: string, action?: () => void) {
     Row({ space: DesignConstants.SPACING.MD }) {
-      SystemAvatar({ name: nickname, avatarSize: 42 })
+      SystemAvatar({ name: nickname, avatarSize: 40 })
       Column({ space: 4 }) {
         Text(nickname)
           .fontSize(DesignConstants.FONT.SIZE.MD)

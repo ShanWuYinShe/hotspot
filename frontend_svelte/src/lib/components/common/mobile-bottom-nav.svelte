@@ -40,21 +40,23 @@
 </script>
 
 <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
-	<div class="flex items-center justify-between px-3" style="padding-top: 6px; padding-bottom: max(18px, env(safe-area-inset-bottom, 18px));">
+	<div class="flex items-center justify-between px-2" style="padding-top: 8px; padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));">
 		{#each navItems.slice(0, 2) as item (item.href)}
 			<button
 				class="mobile-bottom-nav__tab {isActive(item.href) ? 'active' : ''}"
 				onclick={() => navigate(item)}
 				aria-label={item.label}
 			>
-				<span class="mobile-bottom-nav__tab-icon">
+				<span class="mobile-bottom-nav__tab-pill"></span>
+				<span class="mobile-bottom-nav__tab-icon" style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;">
 					<item.icon
-						size={21}
-						strokeWidth={isActive(item.href) ? 2 : 1.5}
+						size={24}
+						strokeWidth={isActive(item.href) ? 2.1 : 1.5}
 						color={isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}
+						style="transition: color 0.22s ease;"
 					/>
 				</span>
-				<span class="mobile-bottom-nav__tab-label" style="color: {isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}">
+				<span class="mobile-bottom-nav__tab-label" style="color: {isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}; transition: color 0.22s ease;">
 					{item.label}
 				</span>
 				<span class="mobile-bottom-nav__tab-indicator"></span>
@@ -62,14 +64,14 @@
 		{/each}
 
 		<!-- Center FAB -->
-		<div class="flex flex-col items-center" style="width: 60px;">
+		<div class="flex flex-col items-center" style="width: 68px;">
 			<button
 				class="mobile-bottom-nav__fab"
-				style="background: var(--neu-accent-primary); box-shadow: 0 6px 22px var(--neu-glow), 0 2px 6px rgba(0,0,0,0.20);"
+				style="background: var(--neu-accent-primary); box-shadow: 0 6px 22px var(--neu-glow), 0 2px 6px rgba(0,0,0,0.22); transition: background 0.22s ease, box-shadow 0.22s ease;"
 				onclick={() => uiStore.openCreateSheet()}
 				aria-label={t('nav.publish')}
 			>
-				<Plus size={19} strokeWidth={2.2} color="var(--neu-active-text)" />
+				<Plus size={20} strokeWidth={2.2} color="var(--neu-active-text)" />
 			</button>
 		</div>
 
@@ -79,11 +81,13 @@
 				onclick={() => navigate(item)}
 				aria-label={item.label}
 			>
-				<span class="mobile-bottom-nav__tab-icon" style="position: relative;">
+				<span class="mobile-bottom-nav__tab-pill"></span>
+				<span class="mobile-bottom-nav__tab-icon" style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;">
 					<item.icon
-						size={21}
-						strokeWidth={isActive(item.href) ? 2 : 1.5}
+						size={24}
+						strokeWidth={isActive(item.href) ? 2.1 : 1.5}
 						color={isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}
+						style="transition: color 0.22s ease;"
 					/>
 					{#if item.href === '/chat' && messageBadge > 0}
 						<span class="mobile-bottom-nav__badge">{messageBadge > 99 ? '99+' : messageBadge}</span>
@@ -91,7 +95,7 @@
 						<span class="mobile-bottom-nav__badge">{profileBadge > 99 ? '99+' : profileBadge}</span>
 					{/if}
 				</span>
-				<span class="mobile-bottom-nav__tab-label" style="color: {isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}">
+				<span class="mobile-bottom-nav__tab-label" style="color: {isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}; transition: color 0.22s ease;">
 					{item.label}
 				</span>
 				<span class="mobile-bottom-nav__tab-indicator"></span>

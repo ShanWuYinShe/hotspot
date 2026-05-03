@@ -765,13 +765,13 @@ struct Index {
    */
   @Builder
   TabBuilderIcon(title: string, targetIndex: number, icon: AppIcon, badgeCount: number = 0) {
-    Column({ space: 4 }) {
+    Column({ space: 5 }) {
       Column({ space: 5 }) {
         Stack() {
           Row() {
             Text() {
                 SymbolSpan($r(icon))
-                  .fontSize(this.currentTabIndex === targetIndex ? 22 : 21)
+                  .fontSize(24)
                   .fontColor([this.currentTabIndex === targetIndex ? this.getBrandAccent() : this.getTabInactiveColor()])
             }
           }
@@ -802,8 +802,8 @@ struct Index {
 
       Text(title)
         .fontColor(this.currentTabIndex === targetIndex ? this.getBrandAccent() : this.getTabInactiveColor())
-        .fontSize(10)
-        .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Bold : FontWeight.Medium)
+        .fontSize(11)
+        .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Bold : FontWeight.Normal)
     }
     .width('100%')
     .height(this.getTabBarVisualStyle().itemHeight)
@@ -824,7 +824,7 @@ struct Index {
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.ADD))
-            .fontSize(22)
+            .fontSize(20)
             .fontColor([this.currentTabIndex === 2 ? this.getBrandAccent() : this.getBrandAccentText()])
         }
       }

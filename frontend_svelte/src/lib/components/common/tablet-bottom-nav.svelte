@@ -50,36 +50,38 @@
 {#if !isSubPage()}
 <div
 	class="flex w-full shrink-0 justify-center"
-	style="padding: 8px 16px; padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px); background: transparent;"
+	style="padding: 8px 24px; padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px); background: transparent;"
 >
 	<div
 		class="flex items-center"
-		style="width: 100%; max-width: 480px; border-radius: 32px; background: var(--neu-glass-bg); backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8); box-shadow: var(--neu-glass-shadow); border: 1px solid var(--neu-glass-border); padding: 6px 8px; gap: 4px;"
+		style="width: 100%; max-width: 520px; border-radius: 40px; background: var(--neu-glass-bg); backdrop-filter: blur(28px) saturate(1.8); -webkit-backdrop-filter: blur(28px) saturate(1.8); box-shadow: var(--neu-glass-shadow); border: 1px solid var(--neu-glass-border); padding: 8px 16px; gap: 6px;"
 	>
 		{#each navItems.slice(0, 2) as item (item.href)}
 			<button
 				class="relative flex flex-col items-center justify-center outline-none select-none"
-				style="flex: 1; min-width: 0; padding: 7px 0; gap: 3px;"
+				style="flex: 1; min-width: 0; padding: 9px 0; gap: 5px;"
 				onclick={() => navigate(item)}
 				aria-label={item.label}
 				aria-current={isActive(item.href) ? 'page' : undefined}
 			>
-				<item.icon
-					size={22}
-					strokeWidth={isActive(item.href) ? 2.0 : 1.5}
-					color={isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}
-					style="transition: color 0.22s ease;"
-				/>
+				{#if isActive(item.href)}
+					<span
+						style="position: absolute; inset: 4px 6px; border-radius: 20px; background: var(--neu-accent-primary); opacity: 0.14; transition: background 0.22s;"
+					></span>
+				{/if}
+				<span style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;">
+					<item.icon
+						size={24}
+						strokeWidth={isActive(item.href) ? 2.1 : 1.5}
+						color={isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}
+						style="transition: color 0.22s ease;"
+					/>
+				</span>
 				<span
-					style="font-size: 10px; line-height: 1; color: {isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}; font-weight: {isActive(item.href) ? 600 : 400}; transition: color 0.22s ease; letter-spacing: 0.01em;"
+					style="font-size: 11px; line-height: 1; color: {isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}; font-weight: {isActive(item.href) ? 600 : 400}; transition: color 0.22s ease; letter-spacing: 0.02em; position: relative; z-index: 1;"
 				>
 					{item.label}
 				</span>
-				{#if isActive(item.href)}
-					<span
-						style="position: absolute; bottom: 0; width: 22px; height: 2.5px; border-radius: 2px; background: var(--neu-accent-primary); transform-origin: center;"
-					></span>
-			{/if}
 			</button>
 		{/each}
 
@@ -87,7 +89,7 @@
 		<div class="flex shrink-0 items-center justify-center" style="width: 64px;">
 			<button
 				class="flex items-center justify-center rounded-full outline-none select-none"
-				style="width: 48px; height: 48px; background: var(--neu-accent-primary); box-shadow: 0 6px 22px var(--neu-glow), 0 2px 6px rgba(0,0,0,0.20); transition: background 0.22s, box-shadow 0.22s;"
+				style="width: 48px; height: 48px; background: var(--neu-accent-primary); box-shadow: 0 6px 20px var(--neu-glow); transition: background 0.22s, box-shadow 0.22s;"
 				onclick={() => uiStore.openCreateSheet()}
 				aria-label={t('nav.publish')}
 			>
@@ -98,15 +100,20 @@
 		{#each navItems.slice(2) as item (item.href)}
 			<button
 				class="relative flex flex-col items-center justify-center outline-none select-none"
-				style="flex: 1; min-width: 0; padding: 7px 0; gap: 3px;"
+				style="flex: 1; min-width: 0; padding: 9px 0; gap: 5px;"
 				onclick={() => navigate(item)}
 				aria-label={item.label}
 				aria-current={isActive(item.href) ? 'page' : undefined}
 			>
-				<span style="position: relative;">
+				{#if isActive(item.href)}
+					<span
+						style="position: absolute; inset: 4px 6px; border-radius: 20px; background: var(--neu-accent-primary); opacity: 0.14; transition: background 0.22s;"
+					></span>
+				{/if}
+				<span style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;">
 					<item.icon
-						size={22}
-						strokeWidth={isActive(item.href) ? 2.0 : 1.5}
+						size={24}
+						strokeWidth={isActive(item.href) ? 2.1 : 1.5}
 						color={isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}
 						style="transition: color 0.22s ease;"
 					/>
@@ -124,18 +131,13 @@
 						>
 							{profileBadge > 99 ? '99+' : profileBadge}
 						</span>
-				{/if}
+					{/if}
 				</span>
 				<span
-					style="font-size: 10px; line-height: 1; color: {isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}; font-weight: {isActive(item.href) ? 600 : 400}; transition: color 0.22s ease; letter-spacing: 0.01em;"
+					style="font-size: 11px; line-height: 1; color: {isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}; font-weight: {isActive(item.href) ? 600 : 400}; transition: color 0.22s ease; letter-spacing: 0.02em; position: relative; z-index: 1;"
 				>
 					{item.label}
 				</span>
-				{#if isActive(item.href)}
-					<span
-						style="position: absolute; bottom: 0; width: 22px; height: 2.5px; border-radius: 2px; background: var(--neu-accent-primary); transform-origin: center;"
-					></span>
-			{/if}
 			</button>
 		{/each}
 	</div>

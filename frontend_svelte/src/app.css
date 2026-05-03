@@ -591,9 +591,12 @@
 	.mobile-bottom-nav {
 		flex-shrink: 0;
 		width: 100%;
-		background-color: var(--neu-bg);
-		border-top: 1px solid var(--neu-border);
-		transition: background-color 0.5s, border-color 0.5s;
+		background-color: var(--neu-glass-bg);
+		backdrop-filter: blur(24px) saturate(1.8);
+		-webkit-backdrop-filter: blur(24px) saturate(1.8);
+		border-top: 1px solid var(--neu-glass-border);
+		box-shadow: 0 -1px 0 var(--neu-glass-border), 0 -8px 28px var(--neu-shadow-dark);
+		transition: background-color 0.4s, border-color 0.4s;
 	}
 
 	.mobile-bottom-nav__tab {
@@ -602,9 +605,9 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: flex-start;
-		width: 58px;
-		padding: 6px 0 4px;
-		gap: 3px;
+		width: 68px;
+		padding: 10px 0 8px;
+		gap: 5px;
 		outline: none;
 		background: transparent;
 		border: none;
@@ -613,45 +616,51 @@
 	}
 
 	.mobile-bottom-nav__tab.active .mobile-bottom-nav__tab-icon {
-		transform: translateY(-3px);
+		transform: translateY(-1px);
+	}
+
+	.mobile-bottom-nav__tab-pill {
+		position: absolute;
+		top: 6px;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 52px;
+		height: 36px;
+		border-radius: 18px;
+		background: var(--neu-accent-primary);
+		opacity: 0;
+		transition: opacity 0.22s ease;
+		pointer-events: none;
+	}
+
+	.mobile-bottom-nav__tab.active .mobile-bottom-nav__tab-pill {
+		opacity: 0.14;
 	}
 
 	.mobile-bottom-nav__tab-label {
-		font-size: 10px;
+		font-size: 11px;
 		line-height: 1;
-		letter-spacing: 0.01em;
+		letter-spacing: 0.02em;
 		font-weight: 400;
 		transition: color 0.22s ease;
+		position: relative;
+		z-index: 1;
 	}
 
 	.mobile-bottom-nav__tab.active .mobile-bottom-nav__tab-label {
-		font-weight: 500;
+		font-weight: 600;
 	}
 
 	.mobile-bottom-nav__tab-indicator {
-		position: absolute;
-		bottom: 0;
-		width: 22px;
-		height: 2.5px;
-		border-radius: 2px;
-		background: var(--neu-accent-primary);
-		transform-origin: center;
-		transform: scaleX(0.3);
-		opacity: 0;
-		transition: transform 0.22s ease, opacity 0.22s ease;
-	}
-
-	.mobile-bottom-nav__tab.active .mobile-bottom-nav__tab-indicator {
-		transform: scaleX(1);
-		opacity: 1;
+		display: none;
 	}
 
 	.mobile-bottom-nav__fab {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 48px;
-		height: 48px;
+		width: 50px;
+		height: 50px;
 		border-radius: 9999px;
 		border: none;
 		outline: none;
@@ -696,8 +705,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 38px;
-		height: 38px;
+		width: 36px;
+		height: 36px;
 		border-radius: 9999px;
 		border: 1px solid transparent;
 		outline: none;

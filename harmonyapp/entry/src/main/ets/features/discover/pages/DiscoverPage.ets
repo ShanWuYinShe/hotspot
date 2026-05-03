@@ -431,7 +431,7 @@ export struct DiscoverPage {
           SystemAvatar({
             avatarUrl: user.user?.avatar_url ?? '',
             name: user.user?.nickname ?? '',
-            avatarSize: 48,
+            avatarSize: 56,
             shape: 'circle'
           })
 

@@ -77,7 +77,7 @@
 			</p>
 			<!-- Section card -->
 			<div
-				class="overflow-hidden rounded-[24px]"
+				class="overflow-hidden rounded-[22px]"
 				style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 			>
 				{#each section.items as item, i (item.href)}
@@ -86,17 +86,17 @@
 					{/if}
 					<a
 						href={item.href}
-						class="flex items-center gap-3.5 px-4 py-3.5 transition-colors"
+						class="flex items-center gap-3 px-4 py-3.5 transition-colors"
 					>
 						<div
 							class="flex flex-shrink-0 items-center justify-center rounded-full"
-							style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							style="width: 36px; height: 36px; box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 						>
 							<item.icon size={15} strokeWidth={1.5} color={item.color} />
 						</div>
 						<div class="min-w-0 flex-1">
 							<p style="font-size: 14px; color: var(--neu-text);">{item.label}</p>
-							<p style="font-size: 12px; color: var(--neu-text-muted);">{item.description}</p>
+							<p style="font-size: 11px; color: var(--neu-text-muted);">{item.description}</p>
 						</div>
 						<ChevronRight size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
 					</a>
@@ -107,21 +107,21 @@
 		<!-- Appearance -->
 		<p class="px-1" style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-top: 8px;">外观</p>
 		<div
-			class="overflow-hidden rounded-[24px]"
+			class="overflow-hidden rounded-[22px]"
 			style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<!-- Dark mode toggle -->
 			<div class="flex items-center justify-between px-4 py-3.5">
-				<div class="flex items-center gap-3.5">
+				<div class="flex items-center gap-3">
 					<div
 						class="flex flex-shrink-0 items-center justify-center rounded-full"
-						style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="width: 36px; height: 36px; box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 					>
 						<Palette size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 					</div>
 					<div>
 						<p style="font-size: 14px; color: var(--neu-text);">{t('sidebar.toggleTheme')}</p>
-						<p style="font-size: 12px; color: var(--neu-text-muted);">{t('sidebar.systemMode')} / {t('sidebar.light')} / {t('sidebar.dark')}</p>
+						<p style="font-size: 11px; color: var(--neu-text-muted);">{t('sidebar.systemMode')} / {t('sidebar.light')} / {t('sidebar.dark')}</p>
 					</div>
 				</div>
 				<ThemeToggle />
@@ -130,18 +130,18 @@
 			<div class="mx-4" style="height: 1px; background: var(--neu-border);"></div>
 
 			<!-- Theme family picker -->
-			<div class="grid grid-cols-3 gap-3 p-4">
+			<div class="grid grid-cols-3 gap-2.5 p-4">
 				{#each THEME_FAMILY_OPTIONS as option (option.family)}
 					<button
 						type="button"
-						class="relative rounded-[18px] px-3 py-3 text-left transition-all"
+						class="relative rounded-[20px] px-3 py-4 text-left transition-all"
 						style={currentThemeFamily === option.family
 							? 'background: var(--neu-accent-primary); box-shadow: 0 4px 14px var(--neu-glow);'
 							: 'background: var(--neu-bg); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
 						onclick={() => setThemeFamily(option.family)}
 					>
 						<p
-							style="font-size: 13px; font-weight: 600; color: {currentThemeFamily === option.family ? 'var(--neu-active-text)' : 'var(--neu-text)'};"
+							style="font-size: 12px; font-weight: 600; color: {currentThemeFamily === option.family ? 'var(--neu-active-text)' : 'var(--neu-text)'};"
 						>
 							{t(option.labelKey)}
 						</p>
@@ -163,16 +163,16 @@
 		<!-- Danger zone -->
 		<p class="px-1" style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-top: 8px;">危险操作</p>
 		<div
-			class="overflow-hidden rounded-[24px]"
+			class="overflow-hidden rounded-[22px]"
 			style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 		>
 			<button
-				class="flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors"
+				class="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors"
 				onclick={handleLogout}
 			>
 				<div
 					class="flex flex-shrink-0 items-center justify-center rounded-full"
-					style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="width: 36px; height: 36px; box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				>
 					<LogOut size={15} strokeWidth={1.5} color="var(--neu-error)" />
 				</div>
@@ -180,11 +180,11 @@
 			</button>
 			<div class="mx-4" style="height: 1px; background: var(--neu-border);"></div>
 			<button
-				class="flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors"
+				class="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors"
 			>
 				<div
 					class="flex flex-shrink-0 items-center justify-center rounded-full"
-					style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="width: 36px; height: 36px; box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 				>
 					<Trash2 size={15} strokeWidth={1.5} color="var(--neu-error)" />
 				</div>

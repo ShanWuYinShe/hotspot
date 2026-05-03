@@ -77,7 +77,7 @@
 					onclick={() => handleNavClick(item)}
 				>
 					<item.icon
-						size={16}
+						size={18}
 						strokeWidth={isActive(item) ? 2 : 1.5}
 						color={isActive(item) ? 'var(--neu-active-text)' : 'var(--neu-text-muted)'}
 					/>
@@ -119,7 +119,7 @@
 					onclick={() => handleNavClick(item)}
 				>
 					<item.icon
-						size={16}
+						size={18}
 						strokeWidth={isActive(item) ? 2 : 1.5}
 						color={isActive(item) ? 'var(--neu-active-text)' : 'var(--neu-text-muted)'}
 					/>
@@ -153,7 +153,7 @@
 					onclick={() => void goto('/admin')}
 				>
 					<Shield
-						size={16}
+						size={18}
 						strokeWidth={currentPathname.startsWith('/admin') ? 2 : 1.5}
 						color={currentPathname.startsWith('/admin') ? 'var(--neu-active-text)' : 'var(--neu-text-muted)'}
 					/>
