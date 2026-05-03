@@ -98,7 +98,7 @@
 							<p style="font-size: 14px; color: var(--neu-text);">{item.label}</p>
 							<p style="font-size: 11px; color: var(--neu-text-muted);">{item.description}</p>
 						</div>
-						<ChevronRight size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
+						<ChevronRight size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
 					</a>
 				{/each}
 			</div>

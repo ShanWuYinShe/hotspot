@@ -24,13 +24,13 @@
 <Dialog.Root open={uiStore.showCreateSheet} onOpenChange={(open) => open ? uiStore.openCreateSheet() : uiStore.closeCreateSheet()}>
 	<Dialog.Content
 		class={isMobileOrTablet
-			? 'left-1/2 top-auto bottom-0 w-[calc(100%-1rem)] max-w-sm translate-x-[-50%] translate-y-0 rounded-t-[24px] rounded-b-none px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-5'
+			? 'left-1/2 top-auto bottom-0 w-[calc(100%-1rem)] max-w-sm translate-x-[-50%] translate-y-0 rounded-t-[28px] rounded-b-none px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-5'
 			: 'max-w-[480px] rounded-[24px] px-5 pt-5 pb-5'}
 		style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 0 -10px 30px var(--neu-shadow-dark);"
 		hideClose
 	>
 		{#if isMobileOrTablet}
-			<div class="mx-auto mb-4 h-1.5 w-12 rounded-full" style="background: var(--neu-border);"></div>
+			<div class="mx-auto mb-4 h-1 w-9 rounded-full" style="background: var(--neu-border);"></div>
 		{/if}
 		<div class="mb-5 text-center">
 			<h2 style="font-size: 17px; font-weight: 600; color: var(--neu-text);">{t('nav.createSheetTitle')}</h2>

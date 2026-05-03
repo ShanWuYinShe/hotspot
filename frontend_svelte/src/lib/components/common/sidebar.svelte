@@ -107,7 +107,7 @@
 		<div class="my-3" style="height: 1px; background: var(--neu-border);"></div>
 
 		<!-- Section 2 label -->
-		<p class="mb-2 px-3" style="font-size: 10px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--neu-text-muted); opacity: 0.65;">
+		<p class="mb-2 px-3" style="font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--neu-text-muted); opacity: 0.65;">
 			{t('sidebar.personalCenter')}
 		</p>
 
@@ -169,13 +169,13 @@
 	<div class="flex-shrink-0 pt-3">
 		<button
 			class="flex w-full items-center gap-3 rounded-[20px] text-left outline-none transition-shadow duration-200"
-			style="padding: 12px; background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);"
+			style="padding: 10px 12px; background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);"
 			onclick={() => (showLocationPicker = true)}
 		>
 			<!-- Icon circle -->
 			<div
 				class="flex flex-shrink-0 items-center justify-center rounded-full"
-				style="width: 36px; height: 36px; background: var(--neu-accent-primary); box-shadow: 0 8px 18px var(--neu-shadow-dark);"
+				style="width: 34px; height: 34px; background: var(--neu-accent-primary); box-shadow: 0 3px 10px rgba(0,0,0,0.15);"
 			>
 				<Navigation2 size={14} strokeWidth={2} color="var(--neu-active-text)" />
 			</div>

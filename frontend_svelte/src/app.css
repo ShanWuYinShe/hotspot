@@ -516,14 +516,14 @@
 	/* Neumorphic surface utilities (1:1 from Figma Make) */
 	.neu-flat {
 		background-color: var(--neu-bg);
-		box-shadow: 8px 8px 18px var(--neu-shadow-dark), -8px -8px 18px var(--neu-shadow-light);
+		box-shadow: 10px 10px 20px var(--neu-shadow-dark), -10px -10px 20px var(--neu-shadow-light);
 		color: var(--neu-text);
 		border: 1px solid var(--neu-border);
 	}
 
 	.neu-pressed {
 		background-color: var(--neu-bg);
-		box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);
+		box-shadow: inset 8px 8px 16px var(--neu-shadow-dark), inset -8px -8px 16px var(--neu-shadow-light);
 		color: var(--neu-text);
 		border: 1px solid var(--neu-border-pressed);
 	}
@@ -696,7 +696,7 @@
 		padding: 0 20px;
 		gap: 8px;
 		height: var(--desktop-header-height);
-		background-color: var(--neu-bg);
+		background-color: var(--page-bg);
 		border-bottom: 1px solid var(--neu-border);
 		transition: background-color 0.5s, border-color 0.5s;
 	}
@@ -760,7 +760,8 @@
 		border: 1px solid var(--neu-border);
 		box-shadow:
 			8px 8px 20px var(--neu-shadow-dark),
-			-8px -8px 20px var(--neu-shadow-light);
+			-8px -8px 20px var(--neu-shadow-light),
+			0 2px 6px rgba(0,0,0,0.06);
 		transition: background-color 0.5s, border-color 0.5s;
 	}
 
