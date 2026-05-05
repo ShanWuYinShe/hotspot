@@ -1540,8 +1540,8 @@ export struct ProfilePage {
             .fontColor([this.getAccentBackground()])
         }
         Text(value)
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
+          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .fontWeight(FontWeight.Medium)
           .fontColor(this.getPrimaryTextColor())
         Text(label)
           .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -1554,7 +1554,7 @@ export struct ProfilePage {
     .type(ButtonType.Normal)
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: 1, color: this.getSurfaceBorder() })
-    .borderRadius(DesignConstants.RADIUS.XXL)
+    .borderRadius(18)
     .shadow(this.getProfileVisualStyle().card.shadow)
     .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .layoutWeight(1)
@@ -1673,8 +1673,8 @@ export struct ProfilePage {
     }
     .width('100%')
     .padding({
-      left: 16, right: 16,
-      top: 14, bottom: 14
+      left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD
     })
     .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
     .animation({ duration: 100, curve: Curve.EaseOut })

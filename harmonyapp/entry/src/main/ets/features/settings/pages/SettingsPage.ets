@@ -541,8 +541,8 @@ export struct SettingsPage {
     .padding(DesignConstants.SPACING.LG)
     .borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).card.borderRadius)
     .backgroundColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).surfaceBackground : this.getThemeOptionPalette(option).surfaceSubtle)
-    .border({ width: this.isThemeOptionActive(option) ? 2 : 1, color: this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentBackground : this.getThemeOptionPalette(option).borderColor })
-    .shadow(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).elevatedShadow : this.getThemeOptionPalette(option).surfaceShadow)
+    .border({ width: this.isThemeOptionActive(option) ? 1.5 : 1, color: this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentBackground : this.getThemeOptionPalette(option).borderColor })
+    .shadow(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentShadow : this.getThemeOptionPalette(option).surfaceShadow)
     .onClick(() => {
       this.handleThemeChange(option.mode).catch(() => {
         SystemToast.showError('切换主题失败', this.getUIContext());

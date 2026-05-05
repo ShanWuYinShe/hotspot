@@ -25,8 +25,8 @@
 	{/if}
 	<input
 		class={cn(
-			'w-full bg-transparent neu-pressed rounded-2xl py-3 px-4 text-neu outline-none transition-all duration-200',
-			'placeholder:text-neu-muted focus:ring-2 focus:ring-neu-accent/50',
+			'w-full neu-input-base rounded-2xl py-3 px-4 text-neu outline-none transition-all duration-200',
+			'placeholder:text-neu-muted',
 			icon && 'pl-12',
 			className
 		)}

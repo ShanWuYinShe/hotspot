@@ -76,6 +76,7 @@ export interface ThemeTabBarVisualStyle {
   borderWidth: number;
   shadow: ShadowOptions;
   activeGlow: ShadowOptions;
+  fabGlow: ShadowOptions;
   height: number;
   radius: number;
   floatingMargin: number;
@@ -160,7 +161,7 @@ export class AppThemeVisuals {
       backgroundColor: palette.surfaceBackground,
       borderColor: palette.borderColor,
       borderWidth: 1,
-      shadow: palette.surfaceShadow,
+      shadow: palette.elevatedShadow,
       borderRadius: palette.visuals.shape.surfaceCard,
       padding: palette.visuals.metrics.cardPadding
     };
@@ -347,8 +348,8 @@ export class AppThemeVisuals {
         backgroundColor: palette.quickActionBackgroundColor,
         borderColor: palette.floatingBorderColor,
         borderWidth: 1,
-        shadow: palette.surfaceShadow,
-        borderRadius: palette.visuals.shape.compactCard,
+        shadow: palette.elevatedShadow,
+        borderRadius: 18,
         padding: DesignConstants.SPACING.MD,
         iconSize: 22,
         iconWrapperSize: 56,
@@ -385,6 +386,7 @@ export class AppThemeVisuals {
       borderWidth: 1,
       shadow: palette.tabBarShadow,
       activeGlow: palette.visuals.effects.tabActiveGlow,
+      fabGlow: palette.accentShadow,
       height: palette.visuals.metrics.tabBarHeight,
       radius: palette.visuals.shape.tabBar,
       floatingMargin: palette.visuals.metrics.tabBarFloatingMargin,

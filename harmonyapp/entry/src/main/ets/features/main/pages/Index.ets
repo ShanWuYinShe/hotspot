@@ -773,7 +773,7 @@ struct Index {
           .height(36)
           .borderRadius(18)
           .backgroundColor(this.getBrandAccent())
-          .opacity(0.14)
+          .opacity(0.18)
       }
 
       // Icon + Label content (on top of pill)
@@ -806,14 +806,13 @@ struct Index {
         Text(title)
           .fontColor(this.currentTabIndex === targetIndex ? this.getBrandAccent() : this.getTabInactiveColor())
           .fontSize(11)
-          .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Bold : FontWeight.Normal)
+          .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Medium : FontWeight.Normal)
       }
       .zIndex(1)
     }
     .alignContent(Alignment.Center)
     .width('100%')
     .height(this.getTabBarVisualStyle().itemHeight)
-    .justifyContent(FlexAlign.Center)
     .backgroundColor(Color.Transparent)
     .onClick(() => {
       this.handleTabChange(targetIndex);
@@ -839,7 +838,7 @@ struct Index {
       .justifyContent(FlexAlign.Center)
       .backgroundColor(this.currentTabIndex === 2 ? this.getTabBarVisualStyle().activeBackgroundColor : this.getBrandAccent())
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .shadow(this.currentTabIndex === 2 ? this.getTabBarVisualStyle().activeGlow : this.getTabBarVisualStyle().shadow)
+      .shadow(this.currentTabIndex === 2 ? this.getTabBarVisualStyle().activeGlow : this.getTabBarVisualStyle().fabGlow)
       .border({
         width: this.getTabBarVisualStyle().borderWidth,
         color: this.currentTabIndex === 2 ? this.getBrandAccent() : this.getTabBarVisualStyle().borderColor

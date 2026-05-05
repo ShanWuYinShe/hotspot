@@ -8,7 +8,7 @@ import Title from './card-title.svelte';
 import { tv, type VariantProps } from 'tailwind-variants';
 
 export const cardVariants = tv({
-	base: 'rounded-[24px] border border-border/80 bg-card/95 backdrop-blur-xl transition-all duration-200 text-card-foreground shadow-[8px_8px_20px_var(--neu-shadow-dark),-8px_-8px_20px_var(--neu-shadow-light)]',
+	base: 'rounded-[32px] border border-border/80 bg-card/95 backdrop-blur-xl transition-all duration-200 text-card-foreground shadow-[8px_8px_20px_var(--neu-shadow-dark),-8px_-8px_20px_var(--neu-shadow-light)]',
 	variants: {
 		variant: {
 			default: 'border-border/80 bg-card/95',

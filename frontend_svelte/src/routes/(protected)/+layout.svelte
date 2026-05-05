@@ -138,7 +138,7 @@
 				</button>
 				<button
 					class="mx-1.5 flex items-center justify-center rounded-full outline-none transition-shadow duration-200"
-					style="width: 32px; height: 32px; background: var(--neu-accent-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.16);"
+					style="width: 32px; height: 32px; background: var(--neu-accent-primary); box-shadow: 0 4px 12px var(--neu-glow);"
 					onclick={() => uiStore.openCreateSheet()}
 					aria-label={t('nav.publish')}
 				>

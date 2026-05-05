@@ -5,8 +5,8 @@ import { cn } from '$lib/utils';
 export const badgeVariants = tv({
 	base: cn(
 		'inline-flex items-center gap-1.5',
-		'rounded-2xl',
-		'border-2',
+		'rounded-md',
+		'border',
 		'px-3 py-1 text-xs font-semibold',
 		'transition-all duration-200',
 		'shadow-sm shadow-black/10',
@@ -15,11 +15,11 @@ export const badgeVariants = tv({
 	variants: {
 		variant: {
 			default: cn(
-				'bg-primary/10 border-primary/30',
-				'dark:bg-primary/20 dark:border-primary/60',
+				'bg-transparent border-transparent',
+				'dark:bg-transparent dark:border-transparent',
 				'text-primary dark:text-primary-foreground',
-				'hover:bg-primary/20 hover:border-primary/40',
-				'dark:hover:bg-primary/30 dark:hover:border-primary/70'
+				'hover:bg-primary/10 hover:border-primary/30',
+				'dark:hover:bg-primary/20 dark:hover:border-primary/60'
 			),
 			secondary: cn(
 				'bg-secondary/10 border-secondary/30',

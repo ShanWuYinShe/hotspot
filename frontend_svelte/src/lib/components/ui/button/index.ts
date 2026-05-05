@@ -7,8 +7,8 @@ export const buttonVariants = tv({
 	base: cn(
 		'inline-flex items-center justify-center gap-2',
 		'whitespace-nowrap font-semibold',
-		'rounded-[22px] border',
-		'transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]',
+		'rounded-[28px] border',
+		'transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]',
 		'focus-visible:outline-none',
 		'disabled:pointer-events-none disabled:opacity-50',
 		'cursor-pointer',

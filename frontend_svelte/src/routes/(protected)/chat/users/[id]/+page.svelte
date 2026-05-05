@@ -453,13 +453,13 @@
 							<div
 								class="px-4 py-2.5"
 								style="{isSelf(message)
-									? 'background: var(--neu-accent-primary); color: var(--neu-active-text); border-radius: 18px 18px 4px 18px;'
+									? 'background: var(--neu-accent-primary); color: var(--neu-active-text); border-radius: 18px 4px 18px 18px;'
 									: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); border-radius: 18px 18px 18px 4px; color: var(--neu-text);'}"
 							>
 								{#if message.recalled_at != null}
 									<p style="font-size: 14px; font-style: italic; opacity: 0.7;">消息已撤回</p>
 								{:else if message.type === 'text'}
-									<p class="whitespace-pre-wrap" style="font-size: 14px; line-height: 1.5;">{message.content}</p>
+									<p class="whitespace-pre-wrap" style="font-size: 13px; line-height: 1.55;">{message.content}</p>
 								{:else if message.type === 'image' && message.media}
 									<img
 										src={message.media.url}
@@ -515,7 +515,7 @@
 				bind:value={messageText}
 				rows={1}
 				maxlength={MESSAGE_CONTENT_MAX}
-				class="min-h-[40px] flex w-full resize-none rounded-[20px] px-3 py-2 text-base outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+				class="min-h-[38px] flex w-full resize-none rounded-[18px] px-3 py-2 text-base outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
 				style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"
 				disabled={isSending}
 				oninput={handleInput}
@@ -528,7 +528,7 @@
 			></textarea>
 			<button
 				class="flex shrink-0 items-center justify-center rounded-full outline-none"
-				style="width: 40px; height: 40px; background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);"
+				style="width: 36px; height: 36px; {messageText.trim() ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);' : 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}"
 				onclick={sendMessage}
 				onmousedown={(e) => e.preventDefault()}
 				disabled={!messageText.trim() || isSending}

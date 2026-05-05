@@ -28,7 +28,7 @@
 </script>
 
 <div
-	class={cn('rounded-[24px] p-4 transition-all duration-200', variantClass, className)}
+	class={cn('rounded-[32px] p-6 transition-all duration-300', variantClass, className)}
 	{...rest}
 >
 	{#if children}

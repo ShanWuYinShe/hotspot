@@ -161,7 +161,7 @@
 						</div>
 						{#if !isEditing}
 							<button
-								class="flex items-center gap-1.5 rounded-[22px] px-4 py-[6px] outline-none"
+								class="flex items-center gap-1.5 rounded-[16px] px-4 py-[6px] outline-none"
 								style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text);"
 								onclick={() => isEditing = true}
 							>
@@ -172,7 +172,7 @@
 					</div>
 
 					{#if profile.bio && !isEditing}
-						<p style="margin-top: 12px; font-size: 14px; color: var(--neu-text); line-height: 1.6;">{profile.bio}</p>
+						<p style="margin-top: 12px; font-size: 13px; color: var(--neu-text); line-height: 1.7;">{profile.bio}</p>
 					{/if}
 
 					{#if profile.tags && profile.tags.length > 0 && !isEditing}
@@ -325,7 +325,7 @@
 						</div>
 						<div>
 							<p style="font-size: 12px; color: var(--neu-text-muted);">发布瞬间</p>
-							<p style="font-size: 20px; font-weight: 700; color: var(--neu-text);">{profile.stats.moments_count}</p>
+							<p style="font-size: 17px; font-weight: 500; color: var(--neu-text);">{profile.stats.moments_count}</p>
 						</div>
 					</div>
 				</a>
@@ -336,8 +336,8 @@
 							<Heart size={14} color="var(--neu-accent-primary)" strokeWidth={1.5} />
 						</div>
 						<div>
-							<p style="font-size: 12px; color: var(--neu-text-muted);">粉丝数</p>
-							<p style="font-size: 20px; font-weight: 700; color: var(--neu-text);">{profile.stats.followers_count}</p>
+							<p style="font-size: 10px; color: var(--neu-accent-primary); text-transform: uppercase; letter-spacing: 0.10em; opacity: 0.8;">粉丝数</p>
+							<p style="font-size: 17px; font-weight: 500; color: var(--neu-text);">{profile.stats.followers_count}</p>
 						</div>
 					</div>
 				</a>
@@ -348,8 +348,8 @@
 							<Users size={14} color="var(--neu-accent-primary)" strokeWidth={1.5} />
 						</div>
 						<div>
-							<p style="font-size: 12px; color: var(--neu-text-muted);">关注数</p>
-							<p style="font-size: 20px; font-weight: 700; color: var(--neu-text);">{profile.stats.following_count}</p>
+							<p style="font-size: 10px; color: var(--neu-accent-primary); text-transform: uppercase; letter-spacing: 0.10em; opacity: 0.8;">关注数</p>
+							<p style="font-size: 17px; font-weight: 500; color: var(--neu-text);">{profile.stats.following_count}</p>
 						</div>
 					</div>
 				</a>
@@ -360,8 +360,8 @@
 							<MessageSquare size={14} color="var(--neu-accent-primary)" strokeWidth={1.5} />
 						</div>
 						<div>
-							<p style="font-size: 12px; color: var(--neu-text-muted);">好友数</p>
-							<p style="font-size: 20px; font-weight: 700; color: var(--neu-text);">{profile.stats.friends_count}</p>
+							<p style="font-size: 10px; color: var(--neu-accent-primary); text-transform: uppercase; letter-spacing: 0.10em; opacity: 0.8;">好友数</p>
+							<p style="font-size: 17px; font-weight: 500; color: var(--neu-text);">{profile.stats.friends_count}</p>
 						</div>
 					</div>
 				</div>

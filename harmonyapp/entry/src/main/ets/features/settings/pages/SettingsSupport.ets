@@ -142,7 +142,7 @@ export struct SettingsEntryRow {
       Row() {
         Text() {
           SymbolSpan($r(this.item.icon))
-            .fontSize(18)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontColor([this.item.accentColor ? this.item.accentColor : this.getPalette().accentBackground])
         }
       }
@@ -261,7 +261,7 @@ export struct SettingsMetaCard {
 
       if (this.loading) {
         Row({ space: DesignConstants.SPACING.SM }) {
-          LoadingProgress().width(18).height(18).color(this.getPalette().accentBackground)
+          LoadingProgress().width(DesignConstants.SPACING.LG).height(DesignConstants.SPACING.LG).color(this.getPalette().accentBackground)
           Text('正在获取版本信息...')
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().textSecondary)
@@ -376,7 +376,7 @@ export struct AnnouncementSummaryCard {
                 .fontSize(DesignConstants.FONT.SIZE.XS)
                 .fontColor(this.getSeverityColor(item.severity))
                 .backgroundColor(this.getPalette().surfaceSubtle)
-                .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+                .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                 .borderRadius(DesignConstants.RADIUS.FULL)
             }
             .width('100%')
@@ -566,7 +566,7 @@ export struct SessionListSection {
                 .fontSize(DesignConstants.FONT.SIZE.XS)
                 .fontColor(this.getPalette().accentBackground)
                 .backgroundColor(this.getPalette().surfaceSubtle)
-                .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+                .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                 .borderRadius(DesignConstants.RADIUS.FULL)
             }
           }

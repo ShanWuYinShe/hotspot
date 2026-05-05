@@ -48,8 +48,8 @@
 
 <button
 	class={cn(
-		'relative flex items-center justify-center rounded-[22px] transition-all duration-200 outline-none select-none',
-		'text-neu font-medium',
+		'relative flex items-center justify-center rounded-[28px] outline-none select-none',
+		'text-neu font-medium neu-pill-hover hover:-translate-y-0.5 transition-[transform,background-color] duration-200',
 		sizeClass,
 		variantClass,
 		className

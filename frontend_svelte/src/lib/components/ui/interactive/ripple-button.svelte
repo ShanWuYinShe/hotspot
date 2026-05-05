@@ -28,7 +28,7 @@
 	class={cn(
 		'relative inline-flex items-center justify-center gap-2',
 		'whitespace-nowrap font-semibold',
-		'overflow-hidden rounded-[22px]',
+		'overflow-hidden rounded-[28px]',
 		'transition-all duration-180 ease-in-out',
 		'focus-visible:outline-none',
 		'disabled:pointer-events-none disabled:opacity-50',

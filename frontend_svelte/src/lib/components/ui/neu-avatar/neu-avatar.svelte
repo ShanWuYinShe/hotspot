@@ -36,8 +36,8 @@
 
 <div
 	class={cn(
-		'relative flex flex-shrink-0 items-center justify-center rounded-full transition-all duration-300',
-		active ? 'neu-pressed' : 'neu-flat',
+		'relative flex flex-shrink-0 items-center justify-center rounded-full neu-flat transition-all duration-300',
+		active && 'neu-pressed',
 		sizeClass,
 		className
 	)}

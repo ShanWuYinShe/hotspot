@@ -697,7 +697,7 @@ export struct NearbyPage {
             .fontSize(10)
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
-        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
+        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
 
@@ -707,7 +707,7 @@ export struct NearbyPage {
           Text(LocationUtil.formatDistance(user.location.distance))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentThemePalette().accentBackground)
-            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
             .backgroundColor(this.getSurfaceSubtle())
             .borderRadius(DesignConstants.RADIUS.XL)
         }
@@ -725,7 +725,7 @@ export struct NearbyPage {
 
           Column({ space: DesignConstants.SPACING.XS }) {
             Text(user.user?.nickname ?? '')
-              .fontSize(15)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontWeight(FontWeight.Medium)
               .fontColor(this.getCurrentThemePalette().textPrimary)
               .maxLines(1)
@@ -831,7 +831,7 @@ export struct NearbyPage {
             Text(`共同好友 ${formatCount(user.social_context?.mutual_friends_count)}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.getCurrentThemePalette().textSecondary)
-              .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
+              .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
               .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                .backgroundColor(this.getSurfaceSubtle())
                .borderRadius(DesignConstants.RADIUS.XL)
@@ -840,7 +840,7 @@ export struct NearbyPage {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.getCurrentThemePalette().textSecondary)
-              .padding({ left: 7, right: 7, top: 3, bottom: 3 })
+              .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
               .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                .backgroundColor(this.getSurfaceSubtle())
               .borderRadius(DesignConstants.RADIUS.XL)
@@ -854,7 +854,7 @@ export struct NearbyPage {
           (this.isUserFollowing(user.user?.user_id ?? '') ? '已关注' : '关注'))
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(40)
+          .height(AppThemeVisuals.getSecondaryButtonStyle(this.resolvedThemeId).height)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isUserActionPending(user.user?.user_id ?? '') && !this.isUserBlocked(user))
           .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -869,7 +869,7 @@ export struct NearbyPage {
         Button('私聊')
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(40)
+          .height(AppThemeVisuals.getSecondaryButtonStyle(this.resolvedThemeId).height)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isUserBlocked(user))
           .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -968,7 +968,7 @@ export struct NearbyPage {
             .fontSize(10)
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
-        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
+        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
 
@@ -979,7 +979,7 @@ export struct NearbyPage {
           Text(LocationUtil.formatDistance((group.location as RelativeLocation).distance!))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentThemePalette().accentBackground)
-            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
             .backgroundColor(this.getSurfaceSubtle())
             .borderRadius(DesignConstants.RADIUS.XL)
         }
@@ -997,7 +997,7 @@ export struct NearbyPage {
 
           Column({ space: DesignConstants.SPACING.XS }) {
             Text(group.group?.name ?? '')
-              .fontSize(15)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontWeight(FontWeight.Medium)
               .fontColor(this.getCurrentThemePalette().textPrimary)
               .maxLines(1)
@@ -1079,7 +1079,7 @@ export struct NearbyPage {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.getCurrentThemePalette().textSecondary)
-            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
             .backgroundColor(this.getSurfaceSubtle())
             .borderRadius(DesignConstants.RADIUS.XL)
             .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
@@ -1093,7 +1093,7 @@ export struct NearbyPage {
           (this.isGroupJoined(group) ? '进入群聊' : '加入群组'))
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(40)
+          .height(AppThemeVisuals.getSecondaryButtonStyle(this.resolvedThemeId).height)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isGroupActionPending(group.group?.group_id ?? ''))
           .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -1108,7 +1108,7 @@ export struct NearbyPage {
         Button('详情')
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(40)
+          .height(AppThemeVisuals.getSecondaryButtonStyle(this.resolvedThemeId).height)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)

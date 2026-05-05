@@ -28,9 +28,9 @@
 >
 	<div
 		class="mb-4 flex items-center justify-center rounded-full"
-		style="width: 56px; height: 56px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		style="width: 64px; height: 64px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 	>
-		<Icon size={24} strokeWidth={1.5} color="var(--neu-text-muted)" />
+		<Icon size={24} strokeWidth={1.25} color="var(--neu-text-muted)" />
 	</div>
 	<p style="font-size: 16px; font-weight: 500; color: var(--neu-text);">{title}</p>
 	{#if description}

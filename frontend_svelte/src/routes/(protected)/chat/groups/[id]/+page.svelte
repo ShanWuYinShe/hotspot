@@ -751,7 +751,7 @@
 										{#if message.recalled_at != null}
 											<p style="font-size: 13px; font-style: italic; opacity: 0.7;">消息已撤回</p>
 										{:else if message.type === 'text'}
-											<p class="whitespace-pre-wrap wrap-break-word" style="font-size: 14px; line-height: 1.5;">
+											<p class="whitespace-pre-wrap wrap-break-word" style="font-size: 13px; line-height: 1.55;">
 												{message.content}
 											</p>
 										{:else if message.type === 'image' && message.media}
@@ -804,7 +804,7 @@
 		{#if showScrollButton}
 			<button
 				class="fixed bottom-24 right-6 z-10 flex items-center justify-center rounded-full outline-none"
-				style="width: 40px; height: 40px; background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);"
+				style="width: 36px; height: 36px; background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);"
 				onclick={() => scrollToBottom(true)}
 				aria-label="滚动到底部"
 			>
@@ -868,7 +868,7 @@
 				></textarea>
 				<button
 					class="flex shrink-0 items-center justify-center rounded-full outline-none"
-					style="width: 42px; height: 42px; background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);"
+					style="width: 36px; height: 36px; {messageText.trim() ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);' : 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}"
 					onclick={sendMessage}
 					onmousedown={(e) => e.preventDefault()}
 					disabled={!messageText.trim() || isSending}

@@ -246,14 +246,14 @@
 						class="flex items-start gap-3 rounded-[18px] px-4 py-3"
 						style="background: var(--neu-bg); border: 1px solid var(--neu-border); {item.is_read ? '' : 'box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);'}"
 					>
-						<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 44px; height: 44px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 							<Icon size={15} strokeWidth={1.5} />
 						</div>
 						<div class="min-w-0 flex-1">
 							<button class="w-full text-left outline-none" onclick={() => handleNotificationClick(item)}>
 								<div class="flex items-start justify-between gap-2">
 									<div>
-										<span style="font-size: 13px; color: var(--neu-text); font-weight: {item.is_read ? 400 : 500};">{getNotificationTitle(item, locale)}</span>
+										<span class="mr-1.5" style="font-size: 13px; color: var(--neu-text); font-weight: {item.is_read ? 400 : 500};">{getNotificationTitle(item, locale)}</span>
 										<span style="font-size: 13px; color: var(--neu-text-muted);">{getNotificationContent(item, locale)}</span>
 									</div>
 									{#if !item.is_read}

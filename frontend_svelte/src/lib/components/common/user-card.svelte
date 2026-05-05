@@ -140,8 +140,8 @@
 </script>
 
 <div
-	class="cursor-pointer overflow-hidden rounded-[24px] transition-shadow {className}"
-	style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+	class="cursor-pointer overflow-hidden rounded-[22px] transition-shadow {className}"
+	style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 	tabindex={0}
 	role="link"
 	onclick={handleCardClick}
@@ -152,7 +152,7 @@
 		<div class="p-4">
 			<div
 				class="rounded-[18px] p-3"
-				style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="background: var(--neu-bg); box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 			>
 				<div class="flex items-start justify-between gap-3">
 					<div class="flex min-w-0 items-center gap-2.5">

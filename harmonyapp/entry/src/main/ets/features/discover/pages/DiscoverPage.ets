@@ -214,7 +214,7 @@ export struct DiscoverPage {
         Row({ space: DesignConstants.SPACING.SM }) {
           Text() {
             SymbolSpan($r(AppIcon.SEARCH))
-              .fontSize(17)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text('搜索附近的人和群组')
@@ -409,7 +409,7 @@ export struct DiscoverPage {
             .fontSize(10)
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
-        .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
 
@@ -419,7 +419,7 @@ export struct DiscoverPage {
           Text(LocationUtil.formatDistance(user.location.distance))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentThemePalette().accentBackground)
-            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
             .backgroundColor(this.getSurfaceSubtle())
             .borderRadius(DesignConstants.RADIUS.XL)
         }
@@ -437,7 +437,7 @@ export struct DiscoverPage {
 
           Column({ space: DesignConstants.SPACING.XS }) {
             Text(user.user?.nickname ?? '')
-              .fontSize(15)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontWeight(FontWeight.Medium)
               .fontColor(this.getCurrentThemePalette().textPrimary)
               .maxLines(1)
@@ -522,8 +522,8 @@ export struct DiscoverPage {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.getCurrentThemePalette().accentBackground)
-              .padding({ left: 7, right: 7, top: 3, bottom: 3 })
-              .margin({ right: 4, bottom: 4 })
+              .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+              .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
               .backgroundColor(this.getSurfaceSubtle())
               .borderRadius(DesignConstants.RADIUS.XL)
           }, (tag: string) => tag)
@@ -593,7 +593,7 @@ export struct DiscoverPage {
             .fontSize(10)
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
-        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
+        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
 

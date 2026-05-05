@@ -85,8 +85,8 @@
 </script>
 
 <div
-	class="cursor-pointer overflow-hidden rounded-[24px] transition-shadow {className}"
-	style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+	class="cursor-pointer overflow-hidden rounded-[22px] transition-shadow {className}"
+	style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 	onclick={handleCardClick}
 	role="link"
 	tabindex={0}
