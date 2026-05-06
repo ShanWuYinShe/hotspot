@@ -26,18 +26,15 @@
 
 	let user = $state<UserItem | null>(null);
 	let isFollowing = $state(false);
-	$effect(() => {
-		user = data.user;
-		isFollowing = data.user?.relation?.is_following ?? false;
-	});
 	let isActionLoading = $state(false);
 	let currentTab = $state<'moments' | 'followers' | 'following'>('moments');
 
 	// userId 变化时重置子 tab 分页状态并触发首次加载
-	// 注意：上方 data→user 同步 effect 先于此 effect 执行，因此此处 user 已是最新值
 	$effect(() => {
 		userId; // 依赖声明
 		untrack(() => {
+			user = data.user;
+			isFollowing = data.user?.relation?.is_following ?? false;
 			currentTab = 'moments';
 			momentsPagination.reset();
 			followersPagination.reset();

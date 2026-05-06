@@ -39,10 +39,10 @@
 	let tags = $state('');
 	const MAX_TAGS = 10;
 
-	// 同步 data.profile 到本地状态
+	// 同步 data.profile 到本地状态（编辑中不同步表单字段，避免覆盖用户输入）
 	$effect(() => {
 		profile = data.profile;
-		if (data.profile) {
+		if (data.profile && !isEditing) {
 			nickname = data.profile.nickname ?? '';
 			bio = data.profile.bio ?? '';
 			tags = data.profile.tags?.join(', ') ?? '';

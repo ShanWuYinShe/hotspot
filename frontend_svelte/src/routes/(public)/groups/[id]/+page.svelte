@@ -48,7 +48,6 @@
 	const groupId = $derived(data.groupId);
 
 	let groupData = $state<GroupItem | null>(null);
-	$effect(() => { groupData = data.groupData; });
 	const group = $derived(groupData ?? null);
 	let settings = $state<{ join_method?: 'open' | 'approval' | 'invite_only' } | null>(null);
 	let isJoining = $state(false);
@@ -63,6 +62,7 @@
 	$effect(() => {
 		groupId; // 依赖声明
 		untrack(() => {
+			groupData = data.groupData;
 			announcementsLoaded = false;
 			membersLoaded = false;
 			applicationsLoaded = false;
