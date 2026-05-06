@@ -172,7 +172,7 @@
 
 		<!-- Notifications List -->
 		{#if loading}
-			<div class="flex flex-col items-center justify-center py-12">
+			<div class="flex flex-col items-center justify-center py-12" role="status" aria-live="polite">
 				<div class="rounded-full animate-pulse" style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"></div>
 				<p class="mt-3" style="font-size: 13px; color: var(--neu-text-muted);">{t('common.loading')}</p>
 			</div>

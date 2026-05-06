@@ -39,7 +39,7 @@
 {#if hasMore || loading}
 	<div bind:this={viewport} class="flex justify-center py-8 {className}">
 		{#if loading}
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-2" role="status" aria-live="polite">
 				<Loader2 size={18} strokeWidth={1.5} class="animate-spin" color="var(--neu-text-muted)" />
 				<span style="font-size: 13px; color: var(--neu-text-muted);">{t('common.loading')}</span>
 			</div>

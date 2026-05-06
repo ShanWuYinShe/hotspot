@@ -101,10 +101,10 @@
 					<Settings size={17} color="var(--neu-text-muted)" />
 				</button>
 				{#if authStore.isAuthenticated}
-					<div class="relative ml-1.5 cursor-pointer" style="width: 32px; height: 32px;" onclick={() => void goto('/profile')}>
+					<button type="button" class="relative ml-1.5 cursor-pointer" style="width: 32px; height: 32px; padding: 0; border: none; background: none;" aria-label="个人主页" onclick={() => void goto('/profile')}>
 						<img
 							src={authStore.currentAccount?.avatar_url || ''}
-							alt="Profile"
+							alt={authStore.currentAccount?.nickname || "Profile"}
 							class="h-full w-full rounded-full object-cover"
 							style="border: 1.5px solid var(--neu-border);"
 						/>
@@ -113,7 +113,7 @@
 								{notificationStore.unreadCount}
 							</div>
 						{/if}
-					</div>
+					</button>
 				{/if}
 			</div>
 		</header>
