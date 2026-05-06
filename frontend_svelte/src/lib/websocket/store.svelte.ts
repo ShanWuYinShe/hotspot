@@ -780,7 +780,8 @@ class WebSocketStore {
 
 		this.ws = null;
 		this.connectionId = null;
-		// 注意：不在这里释放 connectingLock，因为可能需要重连
+		// 释放连接锁，允许后续重连；无论 closeWebSocket 是否为 true 都需要释放
+		this.connectingLock = false;
 	}
 	
 	/**
