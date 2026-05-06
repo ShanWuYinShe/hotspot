@@ -162,7 +162,7 @@
 	<!-- Announcements list -->
 	<div
 		class="rounded-[24px] p-5"
-		style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 	>
 		<!-- Section header -->
 		<div class="mb-4 flex items-center gap-2">
@@ -175,7 +175,7 @@
 				{#each Array(3) as _, i (i)}
 					<div
 						class="rounded-[18px] p-4"
-						style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border-pressed);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border-pressed);"
 					>
 						<div style="width: 48px; height: 16px; background: var(--neu-border); border-radius: 4px; margin-bottom: 8px;"></div>
 						<div style="width: 100%; height: 12px; background: var(--neu-border); border-radius: 4px; margin-bottom: 6px;"></div>
@@ -191,7 +191,7 @@
 					{@const badge = SEVERITY_BADGE[announcement.severity]}
 					<div
 						class="rounded-[18px] p-4"
-						style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border-pressed);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border-pressed);"
 					>
 						<div class="flex items-start justify-between gap-4">
 							<div class="flex-1">
@@ -214,7 +214,7 @@
 							<button
 								type="button"
 								class="flex items-center justify-center rounded-full outline-none transition-opacity hover:opacity-70"
-								style="width: 36px; height: 36px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+								style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 								onclick={() => requestDelete(announcement.announcement_id)}
 								aria-label="删除公告"
 							>
@@ -243,7 +243,7 @@
 			</div>
 			<div class="space-y-2">
 				<label for="content" style="font-size: 12px; color: var(--neu-text);">内容</label>
-				<textarea id="content" placeholder="公告内容" rows="5" bind:value={content} class="w-full rounded-[14px] px-4 py-2.5 outline-none resize-none" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;"></textarea>
+				<textarea id="content" placeholder="公告内容" rows="5" bind:value={content} class="w-full rounded-[14px] px-4 py-2.5 outline-none resize-none" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"></textarea>
 			</div>
 			<div class="space-y-2">
 				<label style="font-size: 12px; color: var(--neu-text);">级别</label>

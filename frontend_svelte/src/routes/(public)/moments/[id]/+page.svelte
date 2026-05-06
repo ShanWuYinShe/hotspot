@@ -211,7 +211,7 @@
 	>
 		<button
 			class="flex items-center justify-center rounded-full outline-none"
-			style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 			onclick={handleBackClick}
 			aria-label="返回"
 		>
@@ -222,7 +222,7 @@
 			<div class="ml-auto">
 				<button
 					class="flex items-center justify-center rounded-full outline-none"
-					style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 					onclick={() => (showEditModal = true)}
 					aria-label="编辑"
 				>
@@ -235,7 +235,7 @@
 	{#if isLoading}
 		<div
 			class="rounded-[24px] p-6 space-y-4"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<div class="flex items-center gap-3">
 				<div class="rounded-full" style="width: 48px; height: 48px; background: var(--neu-border);"></div>
@@ -250,7 +250,7 @@
 	{:else if moment}
 		<div
 			class="rounded-[24px] p-6"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<!-- Author -->
 			<a href="/users/{moment.user.user_id}" class="flex items-center gap-3">
@@ -293,7 +293,7 @@
 						{#each moment.tags as tag (tag)}
 							<span
 								class="rounded-full px-2.5 py-1"
-								style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+								style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 							>
 								#{tag}
 							</span>
@@ -307,7 +307,7 @@
 				<div class="flex gap-2">
 					<button
 						class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-						style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: {isLiked ? 'var(--neu-error)' : 'var(--neu-text-muted)'};"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: {isLiked ? 'var(--neu-error)' : 'var(--neu-text-muted)'};"
 						onclick={handleLike}
 					>
 						<Heart size={16} class={isLiked ? 'fill-current' : ''} />
@@ -315,7 +315,7 @@
 					</button>
 					<button
 						class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-						style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
 					>
 						<MessageCircle size={16} />
 						<span style="font-size: 13px;">{commentsCount}</span>
@@ -324,14 +324,14 @@
 				<div class="flex gap-2">
 					<button
 						class="flex items-center justify-center rounded-full outline-none"
-						style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: {isFavorited ? 'var(--neu-warning)' : 'var(--neu-text-muted)'};"
+						style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: {isFavorited ? 'var(--neu-warning)' : 'var(--neu-text-muted)'};"
 						onclick={handleFavorite}
 					>
 						<Bookmark size={16} class={isFavorited ? 'fill-current' : ''} />
 					</button>
 					<button
 						class="flex items-center justify-center rounded-full outline-none"
-						style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+						style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
 					>
 						<Share2 size={16} />
 					</button>
@@ -343,7 +343,7 @@
 		{#if authStore.isAuthenticated}
 			<div
 				class="rounded-[24px] p-4"
-				style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 			>
 				<div class="flex gap-3">
 					<div class="overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
@@ -357,7 +357,7 @@
 							rows={2}
 							disabled={isSubmitting}
 							class="w-full resize-none rounded-[14px] p-3 outline-none"
-							style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
+							style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
 						></textarea>
 						<div class="mt-2 flex justify-end">
 							<button
@@ -382,7 +382,7 @@
 		<!-- Comments -->
 		<div
 			class="rounded-[24px] p-6"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<h2 style="font-size: 16px; font-weight: 600; color: var(--neu-text); margin-bottom: 16px;">评论 ({commentsCount})</h2>
 
@@ -403,7 +403,7 @@
 					<p style="font-size: 14px; color: var(--neu-text-muted);">加载评论失败</p>
 					<button
 						class="rounded-full px-4 py-2 font-medium outline-none"
-						style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+						style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 						onclick={() => {
 							const v = ++loadVersion;
 							isLoadingComments = true;
@@ -444,12 +444,12 @@
 	{:else}
 		<div
 			class="rounded-[24px] py-12 text-center"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<p style="color: var(--neu-text-muted);">瞬间不存在或已被删除</p>
 			<button
 				class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none"
-				style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+				style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 				onclick={() => goto('/')}
 			>
 				返回首页

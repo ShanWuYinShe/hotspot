@@ -70,7 +70,7 @@
 			'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
 			className
 		)}
-		style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 18px var(--neu-shadow-light); border: 1px solid var(--neu-border); border-radius: 24px; color: var(--neu-text);"
+		style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border); border-radius: var(--neu-radius-xl); color: var(--neu-text);"
 		{...restProps}
 	>
 		{#if children}
@@ -79,7 +79,7 @@
 		{#if !hideClose}
 			<DialogPrimitive.Close
 				class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-sm outline-none opacity-70 transition-opacity hover:opacity-100 cursor-pointer"
-				style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 			>
 				<X size={16} color="var(--neu-text-muted)" />
 				<span class="sr-only">Close</span>

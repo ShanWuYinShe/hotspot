@@ -90,7 +90,7 @@
 		{#snippet actions()}
 			<button
 				class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-				style="background: var(--neu-bg); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"
+				style="background: var(--neu-bg); box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border); color: var(--neu-text);"
 				onclick={() => loadShares(true)}
 				disabled={pagination.loading}
 			>
@@ -107,7 +107,7 @@
 				class="rounded-full px-4 py-1.5 text-sm transition-all disabled:opacity-50"
 				style={activeType === option.value
 					? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 8px var(--neu-glow);'
-					: 'background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);'}
+					: 'background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);'}
 				disabled={pagination.loading}
 				onclick={async () => {
 					if (pagination.loading || activeType === option.value) return;
@@ -139,7 +139,7 @@
 	{:else}
 		<div class="space-y-3">
 			{#each pagination.items as item (item.share_id)}
-				<div class="rounded-[24px] p-4 sm:p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="rounded-[24px] p-4 sm:p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 					<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 						<div class="min-w-0 flex-1 space-y-2">
 							<div class="flex flex-wrap items-center gap-2">
@@ -151,7 +151,7 @@
 										已撤销
 									</span>
 								{:else}
-									<span class="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-accent-primary);">
+									<span class="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-accent-primary);">
 										可访问
 									</span>
 								{/if}
@@ -165,7 +165,7 @@
 							<a href={getShareHref(item)} target="_blank" rel="noreferrer">
 								<button
 									class="flex items-center rounded-[18px] px-4 py-2 text-sm transition-opacity hover:opacity-80"
-									style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"
+									style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"
 								>
 									<ExternalLink size={14} class="mr-2" />
 									查看
@@ -173,7 +173,7 @@
 							</a>
 							<button
 								class="flex items-center rounded-[18px] px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-								style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-error-border); color: var(--neu-error);"
+								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-error-border); color: var(--neu-error);"
 								onclick={() => revokeShare(item)}
 								disabled={item.is_revoked || revokingShareId === item.share_id}
 							>
@@ -187,7 +187,7 @@
 						</div>
 					</div>
 
-					<div class="mt-4 grid gap-3 rounded-[18px] px-4 py-3 text-sm sm:grid-cols-3" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="mt-4 grid gap-3 rounded-[18px] px-4 py-3 text-sm sm:grid-cols-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 						<div>
 							<p style="font-size: 11px; color: var(--neu-text-muted);">创建时间</p>
 							<p style="font-size: 13px; font-weight: 500; color: var(--neu-text); margin-top: 4px;">{formatRelativeTime(item.created_at)}</p>

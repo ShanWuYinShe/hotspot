@@ -3,6 +3,8 @@
 	import { goto } from '$app/navigation';
 	import { t } from '$lib/i18n';
 	import { withMinimumLoadingTime } from '$lib/utils/loading';
+	import { authStore } from '$lib/stores/auth.svelte';
+	import { uiStore } from '$lib/stores/ui.svelte';
 	import { usersService, momentsService, groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
@@ -22,6 +24,7 @@
 	import UsersRound from 'lucide-svelte/icons/users-round';
 	import Hash from 'lucide-svelte/icons/hash';
 	import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
+	import LogIn from 'lucide-svelte/icons/log-in';
 	import X from 'lucide-svelte/icons/x';
 
 	type SearchMode = 'keyword' | 'tag';
@@ -269,7 +272,7 @@
 		</div>
 		<button
 			class="flex items-center gap-2 rounded-full px-4 py-2 font-medium outline-none"
-			style="box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+			style="box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 			onclick={() => goto(nearbyMomentsUrl)}
 		>
 			<Compass size={16} />
@@ -286,7 +289,7 @@
 	<!-- Search form -->
 	<form
 		class="rounded-[24px] p-3"
-		style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		onsubmit={(event) => {
 			event.preventDefault();
 			handleSearch();
@@ -299,7 +302,7 @@
 					type="text"
 					placeholder={t('searchPage.placeholder')}
 					class="w-full rounded-full py-2.5 pl-9 pr-9 outline-none"
-					style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
 					autocomplete="off"
 					bind:value={keywordInput}
 				/>
@@ -331,7 +334,7 @@
 		<!-- Result summary card -->
 		<div
 			class="rounded-[24px] p-4"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div class="min-w-0 space-y-1">
@@ -339,7 +342,7 @@
 						{#if activeMode === 'tag'}
 							<span
 								class="inline-flex items-center gap-1 rounded-full px-2.5 py-1"
-								style="font-weight: 500; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+								style="font-weight: 500; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 							>
 								<Hash size={14} />
 								{t('searchPage.tagMode')}
@@ -347,7 +350,7 @@
 						{:else}
 							<span
 								class="inline-flex items-center rounded-full px-2.5 py-1"
-								style="font-weight: 500; color: var(--neu-text); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+								style="font-weight: 500; color: var(--neu-text); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 							>
 								{t('searchPage.keywordMode')}
 							</span>
@@ -359,21 +362,21 @@
 				<div class="grid grid-cols-3 gap-2 text-center sm:min-w-72">
 					<div
 						class="rounded-[14px] px-3 py-2"
-						style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 					>
 						<div style="font-weight: 600; color: var(--neu-text);">{users.length}</div>
 						<div style="font-size: 12px; color: var(--neu-text-muted);">用户</div>
 					</div>
 					<div
 						class="rounded-[14px] px-3 py-2"
-						style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 					>
 						<div style="font-weight: 600; color: var(--neu-text);">{moments.length}</div>
 						<div style="font-size: 12px; color: var(--neu-text-muted);">瞬间</div>
 					</div>
 					<div
 						class="rounded-[14px] px-3 py-2"
-						style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 					>
 						<div style="font-weight: 600; color: var(--neu-text);">{groups.length}</div>
 						<div style="font-size: 12px; color: var(--neu-text-muted);">群组</div>
@@ -393,7 +396,7 @@
 					class="flex items-center gap-2 rounded-full px-4 py-2 font-medium outline-none transition-all"
 					style={currentTab === tab.value
 						? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);'
-						: 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+						: 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border);'}
 					onclick={() => handleTabChange(tab.value)}
 				>
 					<tab.icon size={16} />
@@ -413,13 +416,23 @@
 					{/each}
 				</MasonryLayout>
 			{:else if searchError && !hasAnyResults}
-				<EmptyState
-					icon={AlertTriangle}
-					title="搜索失败"
-					description={searchError}
-					actionText="重试"
-					onAction={retryActiveSearch}
-				/>
+				{#if !authStore.isAuthenticated}
+					<EmptyState
+						icon={LogIn}
+						title="登录后查看"
+						description="登录后即可使用完整搜索功能"
+						actionText="立即登录"
+						onAction={() => uiStore.openLoginModalWithRedirect({})}
+					/>
+				{:else}
+					<EmptyState
+						icon={AlertTriangle}
+						title="搜索失败"
+						description={searchError}
+						actionText="重试"
+						onAction={retryActiveSearch}
+					/>
+				{/if}
 			{:else if users.length === 0}
 				<EmptyState
 					icon={Users}
@@ -455,13 +468,23 @@
 					{/each}
 				</MasonryLayout>
 			{:else if searchError && !hasAnyResults}
-				<EmptyState
-					icon={AlertTriangle}
-					title="搜索失败"
-					description={searchError}
-					actionText="重试"
-					onAction={retryActiveSearch}
-				/>
+				{#if !authStore.isAuthenticated}
+					<EmptyState
+						icon={LogIn}
+						title="登录后查看"
+						description="登录后即可使用完整搜索功能"
+						actionText="立即登录"
+						onAction={() => uiStore.openLoginModalWithRedirect({})}
+					/>
+				{:else}
+					<EmptyState
+						icon={AlertTriangle}
+						title="搜索失败"
+						description={searchError}
+						actionText="重试"
+						onAction={retryActiveSearch}
+					/>
+				{/if}
 			{:else if moments.length === 0}
 				<EmptyState
 					icon={Image}
@@ -493,13 +516,23 @@
 					{/each}
 				</MasonryLayout>
 			{:else if searchError && !hasAnyResults}
-				<EmptyState
-					icon={AlertTriangle}
-					title="搜索失败"
-					description={searchError}
-					actionText="重试"
-					onAction={retryActiveSearch}
-				/>
+				{#if !authStore.isAuthenticated}
+					<EmptyState
+						icon={LogIn}
+						title="登录后查看"
+						description="登录后即可使用完整搜索功能"
+						actionText="立即登录"
+						onAction={() => uiStore.openLoginModalWithRedirect({})}
+					/>
+				{:else}
+					<EmptyState
+						icon={AlertTriangle}
+						title="搜索失败"
+						description={searchError}
+						actionText="重试"
+						onAction={retryActiveSearch}
+					/>
+				{/if}
 			{:else if groups.length === 0}
 				<EmptyState
 					icon={UsersRound}
@@ -526,7 +559,7 @@
 		<!-- Empty search state -->
 		<div
 			class="flex flex-col items-center justify-center gap-3 rounded-[24px] py-12 text-center"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<Search size={48} color="var(--neu-text-muted)" />
 			<div class="space-y-1">

@@ -216,13 +216,13 @@
 <Dialog.Root bind:open onOpenChange={setOpenState}>
 	<Dialog.Content
 		class="flex max-h-[85vh] flex-col rounded-[24px] sm:max-w-3xl"
-		style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);"
+		style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg);"
 	>
 		<!-- Header -->
 		<div class="flex items-center gap-3 px-5 pt-5 pb-0">
 			<div
 				class="flex items-center justify-center rounded-full"
-				style="width: 40px; height: 40px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 			>
 				<Search size={18} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 			</div>
@@ -237,7 +237,7 @@
 			<!-- Search bar -->
 			<form
 				class="flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-				style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 				onsubmit={(event) => { event.preventDefault(); handleSearch(); }}
 			>
 				<Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
@@ -275,7 +275,7 @@
 				<!-- Search suggestions -->
 				<div
 					class="rounded-[18px] p-4"
-					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				>
 					{#if isSuggesting}
 						<div class="space-y-2">
@@ -307,14 +307,14 @@
 											<div class="flex items-center gap-1">
 												<button
 													class="rounded-full px-3 py-1 outline-none"
-													style="font-size: 12px; color: var(--neu-text); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+													style="font-size: 12px; color: var(--neu-text); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 													onclick={() => handleSearchNavigate(term)}
 												>
 													{term}
 												</button>
 												<button
 													class="flex items-center justify-center rounded-full outline-none"
-													style="width: 22px; height: 22px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+													style="width: 22px; height: 22px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 													onclick={() => removeRecent(term)}
 													aria-label={getRemoveRecentLabel(term)}
 												>
@@ -337,13 +337,13 @@
 										<button
 											type="button"
 											class="flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left outline-none"
-											style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+											style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 											onclick={() => handleSuggestionClick(item)}
 										>
 											{#if item.type === 'tag'}
 												<div
 													class="flex flex-shrink-0 items-center justify-center rounded-full"
-													style="width: 34px; height: 34px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+													style="width: 34px; height: 34px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 												>
 													<Hash size={14} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 												</div>
@@ -384,7 +384,7 @@
 					<!-- Recent searches -->
 					<div
 						class="rounded-[18px] p-4"
-						style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 					>
 						<div class="flex items-center justify-between mb-3">
 							<div class="flex items-center gap-1.5">
@@ -409,14 +409,14 @@
 									<div class="flex items-center gap-1">
 										<button
 											class="rounded-full px-3 py-1 outline-none"
-											style="font-size: 12px; color: var(--neu-text); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+											style="font-size: 12px; color: var(--neu-text); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 											onclick={() => handleRecentClick(term)}
 										>
 											{term}
 										</button>
 										<button
 											class="flex items-center justify-center rounded-full outline-none"
-											style="width: 22px; height: 22px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+											style="width: 22px; height: 22px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 											onclick={() => removeRecent(term)}
 											aria-label={getRemoveRecentLabel(term)}
 										>
@@ -431,7 +431,7 @@
 					<!-- Trending tags -->
 					<div
 						class="rounded-[18px] p-4"
-						style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 					>
 						<div class="flex items-center gap-1.5 mb-3">
 							<TrendingUp size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
@@ -450,7 +450,7 @@
 								{#each trendingTags as tag (tag.name)}
 									<button
 										class="flex items-center gap-1 rounded-full px-3 py-1 outline-none"
-										style="font-size: 12px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+										style="font-size: 12px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 										onclick={() => handleTagClick(tag.name)}
 										aria-label={t('searchModal.searchHotTag', { name: tag.name })}
 									>

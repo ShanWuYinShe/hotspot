@@ -82,7 +82,7 @@
 			<div class="flex flex-wrap items-center gap-2">
 				<button
 					class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-					style="background: var(--neu-bg); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border); color: var(--neu-text);"
 					onclick={loadSessions}
 					disabled={isLoading}
 				>
@@ -91,7 +91,7 @@
 				</button>
 				<button
 					class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-					style="background: var(--neu-bg); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-error-border); color: var(--neu-error);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-error-border); color: var(--neu-error);"
 					onclick={revokeOthers}
 					disabled={isLoading || isRevokingOthers}
 				>
@@ -107,18 +107,18 @@
 	{#if isLoading}
 		<div class="space-y-3">
 			{#each Array(4) as _, i (i)}
-				<div class="flex items-center gap-4 rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
-					<div class="h-12 w-12 rounded-[12px]" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"></div>
+				<div class="flex items-center gap-4 rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+					<div class="h-12 w-12 rounded-[12px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"></div>
 					<div class="flex-1 space-y-2">
-						<div class="h-4 w-48 rounded-[12px]" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"></div>
-						<div class="h-3 w-64 rounded-[12px]" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"></div>
+						<div class="h-4 w-48 rounded-[12px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"></div>
+						<div class="h-3 w-64 rounded-[12px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"></div>
 					</div>
 				</div>
 			{/each}
 		</div>
 	{:else if sessions.length === 0}
-		<div class="flex flex-col items-center justify-center rounded-[24px] py-12" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
-			<div class="flex items-center justify-center rounded-full mb-4" style="width: 48px; height: 48px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="flex flex-col items-center justify-center rounded-[24px] py-12" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+			<div class="flex items-center justify-center rounded-full mb-4" style="width: 48px; height: 48px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 				<Shield size={20} color="var(--neu-text-muted)" />
 			</div>
 			<p style="font-size: 14px; color: var(--neu-text-muted);">暂无会话记录</p>
@@ -126,9 +126,9 @@
 	{:else}
 		<div class="space-y-3">
 			{#each sessions as session (session.session_id)}
-				<div class="flex flex-col gap-3 rounded-[24px] p-4 sm:flex-row sm:items-center sm:justify-between" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex flex-col gap-3 rounded-[24px] p-4 sm:flex-row sm:items-center sm:justify-between" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 					<div class="flex items-center gap-3 min-w-0">
-						<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 							<Smartphone size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 						</div>
 						<div>
@@ -146,7 +146,7 @@
 					<div>
 						<button
 							class="flex items-center rounded-[18px] px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-							style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid {session.is_current ? 'var(--neu-border)' : 'var(--neu-error-border)'}; color: {session.is_current ? 'var(--neu-text-muted)' : 'var(--neu-error)'};"
+							style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid {session.is_current ? 'var(--neu-border)' : 'var(--neu-error-border)'}; color: {session.is_current ? 'var(--neu-text-muted)' : 'var(--neu-error)'};"
 							disabled={session.is_current || isRevoking === session.session_id}
 							onclick={() => revoke(session.session_id)}
 						>

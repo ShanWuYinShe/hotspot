@@ -16,7 +16,7 @@
 		'inline-flex min-h-10 items-center justify-center gap-1 p-1',
 		className
 	)}
-	style="border-radius: 18px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+	style="border-radius: var(--neu-radius-md); background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 	{...restProps}
 >
 	{#if children}

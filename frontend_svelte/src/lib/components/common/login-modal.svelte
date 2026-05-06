@@ -24,12 +24,12 @@
 >
 	<Dialog.Content
 		class="rounded-[24px] border px-5 py-6"
-		style="background: var(--neu-bg); border-color: var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); max-width: 28rem;"
+		style="background: var(--neu-bg); border-color: var(--neu-border); box-shadow: var(--neu-shadow-lg); max-width: 28rem;"
 	>
 		<div class="mb-5 flex items-center gap-3">
 			<div
 				class="flex items-center justify-center rounded-full"
-				style="width: 40px; height: 40px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 			>
 				<MapPin size={18} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 			</div>

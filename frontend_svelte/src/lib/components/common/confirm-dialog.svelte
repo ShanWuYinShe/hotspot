@@ -45,7 +45,7 @@
 </script>
 
 <Dialog bind:open>
-	<DialogContent class="sm:max-w-md rounded-[24px]" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);">
+	<DialogContent class="sm:max-w-md rounded-[24px]" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg);">
 		<DialogHeader>
 			<DialogTitle>{title}</DialogTitle>
 			<DialogDescription>{description}</DialogDescription>
@@ -53,7 +53,7 @@
 		<DialogFooter class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
 			<button
 				class="rounded-full px-5 py-2 outline-none"
-				style="background: var(--neu-bg); color: var(--neu-text); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;"
+				style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;"
 				onclick={handleCancel}
 				disabled={loading}
 			>

@@ -868,7 +868,7 @@
 	>
 		<button
 			class="flex items-center justify-center rounded-full outline-none"
-			style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 			onclick={() => history.back()}
 			aria-label="返回"
 		>
@@ -883,7 +883,7 @@
 	{#if group && !wsGroupSubscription.state.isSubscribed}
 		<div
 			class="flex items-center gap-2 rounded-[16px] px-4 py-2"
-			style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-warning-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-warning-border);"
 		>
 			<Loader2 size={14} class="animate-spin" style="color: var(--neu-warning);" />
 			<span style="font-size: 14px; color: var(--neu-warning);">
@@ -899,7 +899,7 @@
 	{#if !group}
 		<div
 			class="rounded-[24px] p-6"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<div class="flex flex-col items-center gap-4">
 				<p style="color: var(--neu-text-muted);">
@@ -911,7 +911,7 @@
 		<!-- Group profile card -->
 		<div
 			class="rounded-[24px] p-6"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<div class="space-y-6">
 				<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -934,7 +934,7 @@
 									{#each group.tags as tag (tag)}
 										<span
 											class="rounded-full px-2.5 py-1"
-											style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+											style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 										>
 											#{tag}
 										</span>
@@ -955,14 +955,14 @@
 							</button>
 							<button
 								class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none cursor-default"
-								style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg);"
+								style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg);"
 								disabled
 							>
 								已加入
 							</button>
 							<button
 								class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none"
-								style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+								style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 								onclick={confirmLeave}
 								disabled={isLeaving}
 							>
@@ -988,7 +988,7 @@
 				<div class="grid gap-3 sm:grid-cols-3">
 					<div
 						class="rounded-[18px] p-4 text-left"
-						style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 					>
 						<div class="flex items-center gap-2" style="font-size: 14px; color: var(--neu-text-muted);">
 							<Users size={16} />
@@ -998,7 +998,7 @@
 					</div>
 					<div
 						class="rounded-[18px] p-4 text-left"
-						style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 					>
 						<div class="flex items-center gap-2" style="font-size: 14px; color: var(--neu-text-muted);">
 							<Shield size={16} />
@@ -1010,7 +1010,7 @@
 					</div>
 					<div
 						class="rounded-[18px] p-4 text-left"
-						style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 					>
 						<div class="flex items-center gap-2" style="font-size: 14px; color: var(--neu-text-muted);">
 							<MapPin size={16} />
@@ -1036,7 +1036,7 @@
 					class="rounded-full px-4 py-2 font-medium outline-none transition-all"
 					style={currentTab === tab.value
 						? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);'
-						: 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+						: 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);'}
 					onclick={() => (currentTab = tab.value as 'overview' | 'announcements' | 'members' | 'applications')}
 				>
 					<span style="font-size: 13px;">{tab.label}</span>
@@ -1049,7 +1049,7 @@
 			<div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
 				<div
 					class="rounded-[24px] p-5"
-					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				>
 					<h3 class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 12px;">群组说明</h3>
 					<p style="font-size: 14px; color: var(--neu-text-muted);">
@@ -1060,7 +1060,7 @@
 							{#each group.tags as tag (tag)}
 								<span
 									class="rounded-full px-2.5 py-1"
-									style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+									style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 								>
 									#{tag}
 								</span>
@@ -1070,7 +1070,7 @@
 				</div>
 				<div
 					class="rounded-[24px] p-5"
-					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				>
 					<h3 class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 12px;">加入须知</h3>
 					<div class="space-y-2" style="font-size: 14px; color: var(--neu-text-muted);">
@@ -1093,7 +1093,7 @@
 						{#if !authStore.isAuthenticated}
 							<button
 								class="w-full rounded-full py-2.5 font-medium outline-none"
-								style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+								style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 								onclick={() => uiStore.openLoginModal()}
 							>
 								登录后加入
@@ -1101,7 +1101,7 @@
 						{:else if group.my_state?.is_joined}
 							<div
 								class="rounded-[14px] px-3 py-2 text-center"
-								style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text-muted);"
+								style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text-muted);"
 							>
 								你已加入该群组
 							</div>
@@ -1124,12 +1124,12 @@
 			{#if !authStore.isAuthenticated}
 				<div
 					class="flex flex-col items-center gap-3 rounded-[24px] py-10"
-					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				>
 					<p style="font-size: 14px; color: var(--neu-text-muted);">登录后查看群公告</p>
 					<button
 						class="rounded-full px-5 py-2.5 font-medium outline-none"
-						style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+						style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 						onclick={() => uiStore.openLoginModal()}
 					>
 						去登录
@@ -1138,7 +1138,7 @@
 			{:else if !group.my_state?.is_joined}
 				<div
 					class="flex flex-col items-center gap-3 rounded-[24px] py-10"
-					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				>
 					<p style="font-size: 14px; color: var(--neu-text-muted);">加入群组后可查看公告</p>
 					<button
@@ -1153,7 +1153,7 @@
 				<!-- Announcements toolbar -->
 				<div
 					class="flex flex-col gap-3 rounded-[24px] p-4 sm:flex-row sm:items-center sm:justify-between"
-					style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 				>
 					<div>
 						<p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">群公告</p>
@@ -1162,7 +1162,7 @@
 					<div class="flex flex-wrap gap-2">
 						<button
 							class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none"
-							style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+							style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 							onclick={() => loadAnnouncements(true)}
 							disabled={announcementsPagination.loading}
 						>
@@ -1186,7 +1186,7 @@
 						{#each Array(3) as _, i (i)}
 							<div
 								class="rounded-[24px] p-4 space-y-2"
-								style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 							>
 								<div class="rounded" style="width: 160px; height: 14px; background: var(--neu-border);"></div>
 								<div class="rounded" style="width: 100%; height: 14px; background: var(--neu-border);"></div>
@@ -1197,7 +1197,7 @@
 				{:else if announcementsPagination.items.length === 0}
 					<div
 						class="rounded-[24px] py-10 text-center"
-						style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 					>
 						<p style="font-size: 14px; color: var(--neu-text-muted);">暂无公告</p>
 					</div>
@@ -1206,14 +1206,14 @@
 						{#each announcementsPagination.items as announcement (announcement.announcement_id)}
 							<div
 								class="rounded-[24px] p-4"
-								style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 							>
 								<div class="flex items-start justify-between gap-3">
 									<div class="space-y-2">
 										<div class="flex items-center gap-2">
 											<p style="font-weight: 500; font-size: 15px; color: var(--neu-text);">{announcement.title}</p>
 											{#if announcement.is_pinned}
-												<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">置顶</span>
+												<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">置顶</span>
 											{/if}
 										</div>
 										<p class="whitespace-pre-wrap" style="font-size: 14px; color: var(--neu-text-muted);">{announcement.content}</p>
@@ -1221,7 +1221,7 @@
 									</div>
 									{#if canManageGroup}
 										<DropdownMenu>
-											<DropdownMenuTrigger class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);" aria-label="公告操作">
+											<DropdownMenuTrigger class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" aria-label="公告操作">
 												<MoreHorizontal size={16} />
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align="end" class="w-40">
@@ -1241,7 +1241,7 @@
 					</div>
 					{#if announcementsPagination.hasMore}
 						<div class="flex justify-center pt-2">
-							<button class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadAnnouncements(false)} disabled={announcementsPagination.loadingMore}>
+							<button class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadAnnouncements(false)} disabled={announcementsPagination.loadingMore}>
 								{#if announcementsPagination.loadingMore}<Loader2 size={14} class="animate-spin" />{/if}
 								加载更多
 							</button>
@@ -1254,27 +1254,27 @@
 		<!-- Tab: Members (abbreviated for neumorphic style) -->
 		{#if currentTab === 'members'}
 			{#if !authStore.isAuthenticated}
-				<div class="flex flex-col items-center gap-3 rounded-[24px] py-10" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex flex-col items-center gap-3 rounded-[24px] py-10" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 					<p style="font-size: 14px; color: var(--neu-text-muted);">登录后查看成员</p>
-					<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => uiStore.openLoginModal()}>去登录</button>
+					<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => uiStore.openLoginModal()}>去登录</button>
 				</div>
 			{:else if !group.my_state?.is_joined}
-				<div class="flex flex-col items-center gap-3 rounded-[24px] py-10" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex flex-col items-center gap-3 rounded-[24px] py-10" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 					<p style="font-size: 14px; color: var(--neu-text-muted);">加入群组后可查看成员</p>
 					<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={openJoinDialog}>申请加入</button>
 				</div>
 			{:else}
-				<div class="flex flex-col gap-3 rounded-[24px] p-4 sm:flex-row sm:items-center sm:justify-between" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex flex-col gap-3 rounded-[24px] p-4 sm:flex-row sm:items-center sm:justify-between" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 					<div>
 						<p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">成员列表</p>
 						<p style="margin-top: 4px; font-size: 12px; color: var(--neu-text-muted);">支持群主/管理员进行禁言与角色管理</p>
 					</div>
 					<div class="flex flex-wrap gap-2">
-						<button class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadMembers(true)} disabled={membersPagination.loading}>
+						<button class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadMembers(true)} disabled={membersPagination.loading}>
 							<RefreshCw size={14} />刷新
 						</button>
 						{#if canManageGroup}
-							<span class="rounded-full px-3 py-1" style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">可管理成员</span>
+							<span class="rounded-full px-3 py-1" style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">可管理成员</span>
 						{/if}
 					</div>
 				</div>
@@ -1282,7 +1282,7 @@
 					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
 						{#each Array(6) as _, i (i)}
 							<div class="mb-3 break-inside-avoid">
-								<div class="flex items-center gap-3 rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+								<div class="flex items-center gap-3 rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 									<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-border);"></div>
 									<div class="flex-1 space-y-2">
 										<div class="rounded" style="width: 96px; height: 12px; background: var(--neu-border);"></div>
@@ -1293,14 +1293,14 @@
 						{/each}
 					</div>
 				{:else if membersPagination.items.length === 0}
-					<div class="rounded-[24px] py-10 text-center" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="rounded-[24px] py-10 text-center" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 						<p style="font-size: 14px; color: var(--neu-text-muted);">暂无成员</p>
 					</div>
 				{:else}
 					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
 						{#each membersPagination.items as member (member.user.user_id)}
 							<div class="mb-3 break-inside-avoid">
-								<div class="flex items-center gap-3 rounded-[24px] p-4 transition-all" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+								<div class="flex items-center gap-3 rounded-[24px] p-4 transition-all" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 									<a href="/users/{member.user.user_id}" class="flex min-w-0 flex-1 items-center gap-3">
 										<div class="overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
 											<img src={member.user.avatar_url} alt={member.user.nickname} class="h-full w-full object-cover" />
@@ -1308,7 +1308,7 @@
 										<div class="min-w-0 flex-1">
 											<div class="flex items-center gap-2">
 												<p class="truncate" style="font-weight: 500; font-size: 14px; color: var(--neu-text);">{member.user.nickname}</p>
-												<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">{getRoleLabel(member.role)}</span>
+												<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">{getRoleLabel(member.role)}</span>
 											</div>
 											<p style="font-size: 12px; color: var(--neu-text-muted);">加入于 {formatDateTime(member.joined_at)}</p>
 											{#if member.muted_until}
@@ -1318,11 +1318,11 @@
 									</a>
 									<div class="flex items-center gap-2">
 										{#if member.muted_until}
-											<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">已禁言</span>
+											<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">已禁言</span>
 										{/if}
 										{#if canManageMember(member)}
 											<DropdownMenu>
-												<DropdownMenuTrigger class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);" aria-label="成员操作">
+												<DropdownMenuTrigger class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" aria-label="成员操作">
 													<MoreHorizontal size={16} />
 												</DropdownMenuTrigger>
 												<DropdownMenuContent align="end" class="w-40">
@@ -1347,7 +1347,7 @@
 					</div>
 					{#if membersPagination.hasMore}
 						<div class="flex justify-center pt-2">
-							<button class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadMembers(false)} disabled={membersPagination.loadingMore}>
+							<button class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadMembers(false)} disabled={membersPagination.loadingMore}>
 								{#if membersPagination.loadingMore}<Loader2 size={14} class="animate-spin" />{/if}
 								加载更多
 							</button>
@@ -1360,19 +1360,19 @@
 		<!-- Tab: Applications -->
 		{#if canManageGroup && currentTab === 'applications'}
 			<div class="space-y-4">
-				<div class="flex flex-col gap-3 rounded-[24px] p-4 sm:flex-row sm:items-center sm:justify-between" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex flex-col gap-3 rounded-[24px] p-4 sm:flex-row sm:items-center sm:justify-between" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 					<div>
 						<p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">待处理申请</p>
 						<p style="margin-top: 4px; font-size: 12px; color: var(--neu-text-muted);">仅展示 pending 申请，处理后会自动移出列表</p>
 					</div>
-					<button class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadApplications(true)} disabled={applicationsPagination.loading}>
+					<button class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadApplications(true)} disabled={applicationsPagination.loading}>
 						<RefreshCw size={14} />刷新
 					</button>
 				</div>
 				{#if applicationsPagination.loading && applicationsPagination.items.length === 0}
 					<div class="space-y-3">
 						{#each Array(3) as _, i (i)}
-							<div class="rounded-[24px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<div class="rounded-[24px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 								<div class="rounded" style="width: 128px; height: 14px; background: var(--neu-border);"></div>
 								<div class="rounded" style="width: 100%; height: 14px; background: var(--neu-border);"></div>
 								<div class="rounded" style="width: 144px; height: 12px; background: var(--neu-border);"></div>
@@ -1380,13 +1380,13 @@
 						{/each}
 					</div>
 				{:else if applicationsPagination.items.length === 0}
-					<div class="rounded-[24px] py-10 text-center" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="rounded-[24px] py-10 text-center" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 						<p style="font-size: 14px; color: var(--neu-text-muted);">暂无待处理申请</p>
 					</div>
 				{:else}
 					<div class="space-y-3">
 						{#each applicationsPagination.items as application (application.application_id)}
-							<div class="rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<div class="rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 								<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 									<div class="min-w-0 space-y-1">
 										<div class="flex items-center gap-2">
@@ -1404,7 +1404,7 @@
 										<button class="rounded-full px-4 py-2 font-medium outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow); font-size: 13px;" disabled={isApplicationHandling(application.application_id)} onclick={() => handleApplicationDecision(application, 'approve')}>
 											{isApplicationHandling(application.application_id) ? '处理中...' : '批准'}
 										</button>
-										<button class="rounded-full px-4 py-2 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 13px;" disabled={isApplicationHandling(application.application_id)} onclick={() => handleApplicationDecision(application, 'reject')}>
+										<button class="rounded-full px-4 py-2 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 13px;" disabled={isApplicationHandling(application.application_id)} onclick={() => handleApplicationDecision(application, 'reject')}>
 											拒绝
 										</button>
 									</div>
@@ -1414,7 +1414,7 @@
 					</div>
 					{#if applicationsPagination.hasMore}
 						<div class="flex justify-center pt-2">
-							<button class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadApplications(false)} disabled={applicationsPagination.loadingMore}>
+							<button class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadApplications(false)} disabled={applicationsPagination.loadingMore}>
 								{#if applicationsPagination.loadingMore}<Loader2 size={14} class="animate-spin" />{/if}
 								加载更多
 							</button>
@@ -1438,20 +1438,20 @@
 			</Dialog.Header>
 			<div class="space-y-4 py-4">
 				{#if group?.has_password}
-					<div class="space-y-2 rounded-[18px] p-4" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="space-y-2 rounded-[18px] p-4" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 						<label for="group-password" style="font-size: 13px; font-weight: 500; color: var(--neu-text);">群组密码</label>
-						<input id="group-password" type="password" placeholder="请输入群组密码" bind:value={joinPassword} maxlength={GROUP_PASSWORD_MAX} class="w-full rounded-full py-2.5 px-4 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);" />
+						<input id="group-password" type="password" placeholder="请输入群组密码" bind:value={joinPassword} maxlength={GROUP_PASSWORD_MAX} class="w-full rounded-full py-2.5 px-4 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" />
 					</div>
 				{/if}
 				{#if settings?.join_method === 'approval'}
-					<div class="space-y-2 rounded-[18px] p-4" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="space-y-2 rounded-[18px] p-4" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 						<label for="join-message" style="font-size: 13px; font-weight: 500; color: var(--neu-text);">申请理由</label>
-						<textarea id="join-message" placeholder="简单介绍一下你自己" rows={3} bind:value={joinMessage} maxlength={GROUP_JOIN_MESSAGE_MAX} class="w-full resize-none rounded-[14px] p-3 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"></textarea>
+						<textarea id="join-message" placeholder="简单介绍一下你自己" rows={3} bind:value={joinMessage} maxlength={GROUP_JOIN_MESSAGE_MAX} class="w-full resize-none rounded-[14px] p-3 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"></textarea>
 					</div>
 				{/if}
 			</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showJoinDialog = false)}>取消</button>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showJoinDialog = false)}>取消</button>
 				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={handleJoin} disabled={isJoining}>
 					{#if isJoining}<Loader2 size={14} class="animate-spin" />{/if}
 					确认加入
@@ -1467,26 +1467,26 @@
 				<Dialog.Description>发布给所有成员的重要通知与群规提醒。</Dialog.Description>
 			</Dialog.Header>
 			<div class="space-y-4 py-4">
-				<div class="space-y-2 rounded-[18px] p-4" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="space-y-2 rounded-[18px] p-4" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<label for="announcement-title" style="font-size: 13px; font-weight: 500; color: var(--neu-text);">公告标题</label>
-					<input id="announcement-title" placeholder="输入公告标题" bind:value={announcementTitle} maxlength={ANNOUNCEMENT_TITLE_MAX} class="w-full rounded-full py-2.5 px-4 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);" />
+					<input id="announcement-title" placeholder="输入公告标题" bind:value={announcementTitle} maxlength={ANNOUNCEMENT_TITLE_MAX} class="w-full rounded-full py-2.5 px-4 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" />
 				</div>
-				<div class="space-y-2 rounded-[18px] p-4" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="space-y-2 rounded-[18px] p-4" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<label for="announcement-content" style="font-size: 13px; font-weight: 500; color: var(--neu-text);">公告内容</label>
-					<textarea id="announcement-content" rows={5} placeholder="输入公告内容" bind:value={announcementContent} maxlength={ANNOUNCEMENT_CONTENT_MAX} class="w-full resize-none rounded-[14px] p-3 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"></textarea>
+					<textarea id="announcement-content" rows={5} placeholder="输入公告内容" bind:value={announcementContent} maxlength={ANNOUNCEMENT_CONTENT_MAX} class="w-full resize-none rounded-[14px] p-3 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"></textarea>
 				</div>
-				<div class="flex items-center justify-between rounded-[18px] px-4 py-3" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<div>
 						<p style="font-weight: 500; font-size: 14px; color: var(--neu-text);">置顶公告</p>
 						<p style="font-size: 12px; color: var(--neu-text-muted);">置顶后将优先展示给成员</p>
 					</div>
-					<button class="rounded-full px-4 py-2 font-medium outline-none" style={announcementPinned ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} onclick={() => (announcementPinned = !announcementPinned)}>
+					<button class="rounded-full px-4 py-2 font-medium outline-none" style={announcementPinned ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} onclick={() => (announcementPinned = !announcementPinned)}>
 						{announcementPinned ? '已置顶' : '未置顶'}
 					</button>
 				</div>
 			</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showAnnouncementDialog = false)}>取消</button>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showAnnouncementDialog = false)}>取消</button>
 				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={submitAnnouncement} disabled={announcementSubmitting}>
 					{#if announcementSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
 					{editingAnnouncement ? '保存修改' : '发布公告'}
@@ -1501,9 +1501,9 @@
 				<Dialog.Title>删除公告</Dialog.Title>
 				<Dialog.Description>删除后成员将无法再看到该公告。</Dialog.Description>
 			</Dialog.Header>
-			<div class="rounded-[18px] px-4 py-3" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 14px; color: var(--neu-text-muted);">{announcementToDelete?.title ?? '该公告'}</div>
+			<div class="rounded-[18px] px-4 py-3" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 14px; color: var(--neu-text-muted);">{announcementToDelete?.title ?? '该公告'}</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showAnnouncementDeleteDialog = false)}>取消</button>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showAnnouncementDeleteDialog = false)}>取消</button>
 				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-error); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-error-border);" onclick={handleDeleteAnnouncement}>确认删除</button>
 			</Dialog.Footer>
 		</Dialog.Content>
@@ -1519,16 +1519,16 @@
 				<div style="font-size: 14px; color: var(--neu-text-muted);">成员：{muteTarget?.user.nickname ?? '-'}</div>
 				<div class="grid grid-cols-2 gap-2">
 					{#each mutePresets as preset (preset.value)}
-						<button class="rounded-full py-2 font-medium outline-none" style={Number(muteDurationMinutes) === preset.value ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} onclick={() => (muteDurationMinutes = String(preset.value))}>{preset.label}</button>
+						<button class="rounded-full py-2 font-medium outline-none" style={Number(muteDurationMinutes) === preset.value ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} onclick={() => (muteDurationMinutes = String(preset.value))}>{preset.label}</button>
 					{/each}
 				</div>
 				<div class="space-y-2">
 					<label for="mute-duration" style="font-size: 13px; font-weight: 500; color: var(--neu-text);">自定义时长（分钟）</label>
-					<input id="mute-duration" type="number" min={MUTE_DURATION_MIN} max={MUTE_DURATION_MAX} bind:value={muteDurationMinutes} class="w-full rounded-full py-2.5 px-4 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);" />
+					<input id="mute-duration" type="number" min={MUTE_DURATION_MIN} max={MUTE_DURATION_MAX} bind:value={muteDurationMinutes} class="w-full rounded-full py-2.5 px-4 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" />
 				</div>
 			</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showMuteDialog = false)}>取消</button>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showMuteDialog = false)}>取消</button>
 				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={handleMuteMember} disabled={muteSubmitting}>
 					{#if muteSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
 					确认禁言
@@ -1546,12 +1546,12 @@
 			<div class="space-y-4 py-2">
 				<div style="font-size: 14px; color: var(--neu-text-muted);">成员：{roleTarget?.user.nickname ?? '-'}</div>
 				<div class="grid gap-2 sm:grid-cols-2">
-					<button class="rounded-full py-2.5 font-medium outline-none" style={roleTarget?.role === 'admin' ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} disabled={roleTarget?.role === 'admin' || roleSubmitting} onclick={() => handleSetRole('admin')}>设为管理员</button>
-					<button class="rounded-full py-2.5 font-medium outline-none" style={roleTarget?.role === 'member' ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} disabled={roleTarget?.role === 'member' || roleSubmitting} onclick={() => handleSetRole('member')}>设为成员</button>
+					<button class="rounded-full py-2.5 font-medium outline-none" style={roleTarget?.role === 'admin' ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} disabled={roleTarget?.role === 'admin' || roleSubmitting} onclick={() => handleSetRole('admin')}>设为管理员</button>
+					<button class="rounded-full py-2.5 font-medium outline-none" style={roleTarget?.role === 'member' ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} disabled={roleTarget?.role === 'member' || roleSubmitting} onclick={() => handleSetRole('member')}>设为成员</button>
 				</div>
 			</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showRoleDialog = false)}>取消</button>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showRoleDialog = false)}>取消</button>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
@@ -1562,9 +1562,9 @@
 				<Dialog.Title>移除成员</Dialog.Title>
 				<Dialog.Description>确认将该成员移出群组吗？</Dialog.Description>
 			</Dialog.Header>
-			<div class="rounded-[18px] px-4 py-3" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 14px; color: var(--neu-text-muted);">{removeTarget?.user.nickname ?? '-'}</div>
+			<div class="rounded-[18px] px-4 py-3" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 14px; color: var(--neu-text-muted);">{removeTarget?.user.nickname ?? '-'}</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showRemoveDialog = false)}>取消</button>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showRemoveDialog = false)}>取消</button>
 				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-error); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-error-border);" onclick={handleRemoveMember} disabled={removeSubmitting}>
 					{#if removeSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
 					确认移除
@@ -1579,12 +1579,12 @@
 				<Dialog.Title>退出群组</Dialog.Title>
 				<Dialog.Description>确认要退出该群组吗？退出后将无法查看群组内容。</Dialog.Description>
 			</Dialog.Header>
-			<div class="rounded-[18px] px-4 py-3" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<div class="rounded-[18px] px-4 py-3" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 				<div style="font-size: 14px; font-weight: 500; color: var(--neu-text);">{group?.group.name ?? '群组'}</div>
 				<div style="margin-top: 4px; font-size: 12px; color: var(--neu-text-muted);">{group?.group.members_count ?? 0} 位成员</div>
 			</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showLeaveDialog = false)}>取消</button>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showLeaveDialog = false)}>取消</button>
 				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-error); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-error-border);" onclick={handleLeave} disabled={isLeaving}>
 					{#if isLeaving}<Loader2 size={14} class="animate-spin" />{/if}
 					确认退出

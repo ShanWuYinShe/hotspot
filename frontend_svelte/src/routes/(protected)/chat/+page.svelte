@@ -99,13 +99,13 @@
 			<div class="flex gap-2.5">
 				<button
 					class="flex items-center justify-center rounded-full outline-none"
-					style="width: 38px; height: 38px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="width: 38px; height: 38px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 				>
 					<UserPlus size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
 				</button>
 				<button
 					class="flex items-center justify-center rounded-full outline-none"
-					style="width: 38px; height: 38px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="width: 38px; height: 38px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 				>
 					<Plus size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
 				</button>
@@ -115,7 +115,7 @@
 		<!-- Search bar -->
 		<div
 			class="mb-3 flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-			style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 		>
 			<Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
 			<input

@@ -494,6 +494,48 @@
 	--sidebar-ring: #E8A87C;
 }
 
+	/* ═══════════════════════════════════════════════════════════════════════
+	   Shared design tokens — lazy-resolve to active theme's shadow colors
+	   ═══════════════════════════════════════════════════════════════════════ */
+	:root {
+		/* Shadow presets (adapt via --neu-shadow-dark / --neu-shadow-light) */
+		--neu-shadow-inset: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);
+		--neu-shadow-sm: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);
+		--neu-shadow-md: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light);
+		--neu-shadow-lg: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);
+		--neu-shadow-xl: 10px 10px 20px var(--neu-shadow-dark), -10px -10px 20px var(--neu-shadow-light);
+
+		/* Overlays */
+		--neu-overlay: rgba(0, 0, 0, 0.35);
+		--neu-overlay-strong: rgba(0, 0, 0, 0.9);
+		--neu-overlay-scene: rgba(0, 0, 0, 0.5);
+		--neu-overlay-subtle: rgba(0, 0, 0, 0.05);
+		--neu-overlay-loading: rgba(255, 255, 255, 0.85);
+
+		/* Radius presets */
+		--neu-radius-md: 18px;
+		--neu-radius-lg: 22px;
+		--neu-radius-xl: 24px;
+		--neu-radius-xxl: 32px;
+		--neu-radius-pill: 40px;
+
+		/* Glass */
+		--neu-glass-blur: 28px;
+		--neu-glass-saturate: 1.8;
+
+		/* Switch */
+		--neu-switch-thumb: #FFFFFF;
+		--neu-switch-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+
+		/* Text on media (over images) */
+		--neu-text-on-media: rgba(255, 255, 255, 0.8);
+		--neu-media-border: rgba(255, 255, 255, 0.6);
+
+		/* Surface layers */
+		--neu-surface-glass: rgba(255, 255, 255, 0.1);
+		--neu-error-subtle: rgba(215, 91, 91, 0.1);
+	}
+
 @layer base {
 	* {
 		@apply border-border;

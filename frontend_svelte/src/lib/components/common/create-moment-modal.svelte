@@ -267,10 +267,10 @@
 </script>
 
 <Dialog.Root bind:open onOpenChange={(value) => { open = value; onOpenChange?.(value); }}>
-	<Dialog.Content class="flex max-h-[85vh] flex-col sm:max-w-2xl" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border-radius: 22px;">
+	<Dialog.Content class="flex max-h-[85vh] flex-col sm:max-w-2xl" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg); border-radius: var(--neu-radius-lg);">
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-2">
-				<div class="flex items-center justify-center rounded-full" style="width: 40px; height: 40px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex items-center justify-center rounded-full" style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<Send style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
 				</div>
 				<div>
@@ -288,7 +288,7 @@
 					id="moment-description"
 					placeholder="写点什么吧..."
 					class="rounded-[14px] px-4 py-2.5 outline-none w-full resize-none"
-					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {descriptionError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px; min-height: 120px;"
+					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {descriptionError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px; min-height: 120px;"
 					bind:value={description}
 					onblur={() => markTouched('description')}
 				></textarea>
@@ -309,7 +309,7 @@
 					id="moment-tags"
 					placeholder="用空格或逗号分隔，例如：城市 旅行 生活"
 					class="rounded-[14px] px-4 py-2.5 outline-none w-full"
-					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;"
+					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"
 					bind:value={tagsInput}
 				/>
 				{#if tags.length > 0}
@@ -325,7 +325,7 @@
 			<div class="space-y-2">
 				<label style="font-size: 12px; color: var(--neu-text);">图片</label>
 				<div class="flex flex-wrap items-center gap-2">
-					<label class="inline-flex cursor-pointer items-center gap-2 rounded-[14px] px-4 py-2" style="border: 1px dashed var(--neu-border); font-size: 13px; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light);">
+					<label class="inline-flex cursor-pointer items-center gap-2 rounded-[14px] px-4 py-2" style="border: 1px dashed var(--neu-border); font-size: 13px; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: var(--neu-shadow-md);">
 						<Image style="width: 16px; height: 16px;" />
 						<span>选择图片</span>
 						<input
@@ -346,14 +346,14 @@
 							<div class="group relative overflow-hidden rounded-[12px]" style="border: 1px solid var(--neu-border); background: var(--neu-bg);">
 								<img src={image.previewUrl} alt="预览图" class="h-28 w-full object-cover" />
 								{#if image.isUploading}
-									<div class="absolute inset-0 flex items-center justify-center" style="background: rgba(0,0,0,0.4); font-size: 12px; color: white;">
+									<div class="absolute inset-0 flex items-center justify-center" style="background: var(--neu-overlay); font-size: 12px; color: white;">
 										上传中 {Math.round(image.progress)}%
 									</div>
 								{/if}
 								<button
 									type="button"
 									class="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-									style="background: rgba(255,255,255,0.85);"
+									style="background: var(--neu-overlay-loading);"
 									onclick={() => removeImage(index)}
 								>
 									<X style="width: 14px; height: 14px;" />
@@ -380,7 +380,7 @@
 				<select
 					id="moment-privacy"
 					class="rounded-[14px] px-4 py-2.5 outline-none w-full"
-					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;"
+					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"
 					bind:value={privacy}
 				>
 					<option value="public">公开</option>
@@ -397,7 +397,7 @@
 		</div>
 
 		<Dialog.Footer class="pt-2 flex gap-3 justify-end">
-			<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;" onclick={() => { open = false; onOpenChange?.(false); }}>
+			<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;" onclick={() => { open = false; onOpenChange?.(false); }}>
 				取消
 			</button>
 			<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleSubmit} disabled={isSubmitting || isUploadingImages}>

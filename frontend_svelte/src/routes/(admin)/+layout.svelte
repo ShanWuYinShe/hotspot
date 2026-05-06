@@ -87,7 +87,7 @@
 				<button
 					type="button"
 					class="fixed inset-0 z-40 h-full w-full cursor-pointer border-none p-0 md:hidden"
-					style="background: rgba(0,0,0,0.5);"
+					style="background: var(--neu-overlay-scene);"
 					onclick={closeSidebar}
 					onkeydown={(e) => e.key === 'Escape' && closeSidebar()}
 					aria-label={t('nav.closeSidebar')}
@@ -145,7 +145,7 @@
 			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-[32px] md:p-6">
 				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
-						<div class="mb-4 flex items-center justify-center rounded-full" style="width: 56px; height: 56px; background: rgba(215, 91, 91, 0.1);">
+						<div class="mb-4 flex items-center justify-center rounded-full" style="width: 56px; height: 56px; background: var(--neu-error-subtle);">
 							<Shield size={24} strokeWidth={1.5} style="color: var(--neu-error);" />
 						</div>
 						<h2 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">{t('admin.accessDenied')}</h2>
@@ -165,7 +165,7 @@
 			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-[32px] md:p-6">
 				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
-						<div class="mb-4 flex items-center justify-center rounded-full" style="width: 56px; height: 56px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="mb-4 flex items-center justify-center rounded-full" style="width: 56px; height: 56px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 							<Shield size={24} strokeWidth={1.5} style="color: var(--neu-text-muted);" />
 						</div>
 						<h2 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">{t('admin.permissionCheckFailed')}</h2>
@@ -202,7 +202,7 @@
 			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-[32px] md:p-6">
 				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
-						<div class="mb-4 flex items-center justify-center rounded-full" style="width: 56px; height: 56px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="mb-4 flex items-center justify-center rounded-full" style="width: 56px; height: 56px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 							<Shield size={24} strokeWidth={1.5} style="color: var(--neu-text-muted);" />
 						</div>
 						<h2 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">{t('auth.loginRequired')}</h2>

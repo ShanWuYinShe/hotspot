@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { authStore } from '$lib/stores/auth.svelte';
+	import { uiStore } from '$lib/stores/ui.svelte';
 	import { momentsService } from '$lib/api/services';
 	import { navigateToNearbyBackTarget } from '../../nearby-back';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
@@ -16,6 +17,7 @@
 	import Image from 'lucide-svelte/icons/image';
 	import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+	import LogIn from 'lucide-svelte/icons/log-in';
 	import { t } from '$lib/i18n';
 
 	const TABS = [
@@ -87,7 +89,7 @@
 				</div>
 				<div
 					class="flex items-center gap-1 rounded-full px-2.5 py-1"
-					style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 				>
 					<MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 					<span style="font-size: 10px; color: var(--neu-text-muted);">{mapAnchorStore.displayName}</span>
@@ -97,7 +99,7 @@
 			<!-- Search bar -->
 			<div
 				class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-				style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 			>
 				<Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
 				<input
@@ -132,7 +134,7 @@
 		<div class="flex flex-col gap-4 px-5 pt-3 pb-6">
 			{#if pagination.loading}
 				{#each Array(4) as _}
-					<div class="rounded-[24px]" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="rounded-[24px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 						<div class="rounded-t-[22px]" style="height: 140px; background: var(--neu-border);"></div>
 						<div class="p-4">
 							<div class="mb-2 rounded" style="width: 80%; height: 12px; background: var(--neu-border);"></div>
@@ -141,13 +143,23 @@
 					</div>
 				{/each}
 			{:else if pagination.error}
-				<EmptyState
-					icon={AlertTriangle}
-					title={t('discover.loadFailed')}
-					description={pagination.error}
-					actionText={t('common.retry')}
-					onAction={handleRetry}
-				/>
+				{#if !authStore.isAuthenticated}
+					<EmptyState
+						icon={LogIn}
+						title="登录后查看"
+						description="登录后即可浏览附近的动态"
+						actionText="立即登录"
+						onAction={() => uiStore.openLoginModalWithRedirect({})}
+					/>
+				{:else}
+					<EmptyState
+						icon={AlertTriangle}
+						title={t('discover.loadFailed')}
+						description={pagination.error}
+						actionText={t('common.retry')}
+						onAction={handleRetry}
+					/>
+				{/if}
 			{:else if pagination.items.length === 0 && hasLoadedOnce}
 				<EmptyState icon={Image} title={t('discover.noMoments')} description={t('discover.noMomentsDesc')} />
 			{:else}
@@ -185,7 +197,7 @@
 			<!-- Search bar -->
 			<div
 				class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-				style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 			>
 				<Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
 				<input
@@ -221,7 +233,7 @@
 			{#if pagination.loading}
 				<div class="grid grid-cols-3 gap-4">
 					{#each Array(6) as _}
-						<div class="rounded-[24px]" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="rounded-[24px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 							<div class="rounded-t-[22px]" style="height: 120px; background: var(--neu-border);"></div>
 							<div class="p-4">
 								<div class="mb-2 rounded" style="width: 80%; height: 12px; background: var(--neu-border);"></div>
@@ -231,13 +243,23 @@
 					{/each}
 				</div>
 			{:else if pagination.error}
-				<EmptyState
-					icon={AlertTriangle}
-					title={t('discover.loadFailed')}
-					description={pagination.error}
-					actionText={t('common.retry')}
-					onAction={handleRetry}
-				/>
+				{#if !authStore.isAuthenticated}
+					<EmptyState
+						icon={LogIn}
+						title="登录后查看"
+						description="登录后即可浏览附近的动态"
+						actionText="立即登录"
+						onAction={() => uiStore.openLoginModalWithRedirect({})}
+					/>
+				{:else}
+					<EmptyState
+						icon={AlertTriangle}
+						title={t('discover.loadFailed')}
+						description={pagination.error}
+						actionText={t('common.retry')}
+						onAction={handleRetry}
+					/>
+				{/if}
 			{:else if pagination.items.length === 0 && hasLoadedOnce}
 				<EmptyState icon={Image} title={t('discover.noMoments')} description={t('discover.noMomentsDesc')} />
 			{:else}

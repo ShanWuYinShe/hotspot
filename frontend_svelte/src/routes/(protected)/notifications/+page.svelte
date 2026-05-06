@@ -211,7 +211,7 @@
 			{#if notificationStore.unreadCount > 0}
 				<button
 					class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-					style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); font-size: 12px; color: var(--neu-accent-primary);"
+					style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-md); font-size: 12px; color: var(--neu-accent-primary);"
 					onclick={markAllRead}
 				>
 					<CheckCheck size={13} strokeWidth={2} />
@@ -231,7 +231,7 @@
 			<div class="flex justify-center pt-2">
 				<button
 					class="rounded-full px-5 py-2 outline-none"
-					style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); font-size: 13px;"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); font-size: 13px;"
 					onclick={() => loadNotifications(true)}
 				>{t('common.retry')}</button>
 			</div>
@@ -244,9 +244,9 @@
 					{@const Icon = getNotificationIcon(item.type)}
 					<div
 						class="flex items-start gap-3 rounded-[18px] px-4 py-3"
-						style="background: var(--neu-bg); border: 1px solid var(--neu-border); {item.is_read ? '' : 'box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);'}"
+						style="background: var(--neu-bg); border: 1px solid var(--neu-border); {item.is_read ? '' : 'box-shadow: var(--neu-shadow-lg);'}"
 					>
-						<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 44px; height: 44px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 44px; height: 44px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 							<Icon size={15} strokeWidth={1.5} />
 						</div>
 						<div class="min-w-0 flex-1">
@@ -265,12 +265,12 @@
 							{#if canHandleGroupInvite(item)}
 								<div class="mt-2 flex gap-2">
 									<button class="rounded-full px-3 py-1 text-xs outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 6px var(--neu-glow);" disabled={isProcessing(item.notification_id)} onclick={() => handleInviteAction(item, 'accept')}>{t('common.accept')}</button>
-									<button class="rounded-full px-3 py-1 text-xs outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" disabled={isProcessing(item.notification_id)} onclick={() => handleInviteAction(item, 'reject')}>{t('common.reject')}</button>
+									<button class="rounded-full px-3 py-1 text-xs outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" disabled={isProcessing(item.notification_id)} onclick={() => handleInviteAction(item, 'reject')}>{t('common.reject')}</button>
 								</div>
 							{:else if canHandleGroupApplication(item)}
 								<div class="mt-2 flex gap-2">
 									<button class="rounded-full px-3 py-1 text-xs outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 6px var(--neu-glow);" disabled={isProcessing(item.notification_id)} onclick={() => handleApplicationAction(item, 'approve')}>{t('common.approve')}</button>
-									<button class="rounded-full px-3 py-1 text-xs outline-none" style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" disabled={isProcessing(item.notification_id)} onclick={() => handleApplicationAction(item, 'reject')}>{t('common.reject')}</button>
+									<button class="rounded-full px-3 py-1 text-xs outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" disabled={isProcessing(item.notification_id)} onclick={() => handleApplicationAction(item, 'reject')}>{t('common.reject')}</button>
 								</div>
 							{/if}
 						</div>
@@ -279,7 +279,7 @@
 			</div>
 			{#if pagination.hasMore}
 				<div class="flex justify-center pt-4">
-					<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); font-size: 13px;" disabled={pagination.loadingMore} onclick={() => loadNotifications(false)}>
+					<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); font-size: 13px;" disabled={pagination.loadingMore} onclick={() => loadNotifications(false)}>
 						{#if pagination.loadingMore}<Loader2 class="mr-2 inline h-4 w-4 animate-spin" />{/if}
 						{t('common.loadMore')}
 					</button>

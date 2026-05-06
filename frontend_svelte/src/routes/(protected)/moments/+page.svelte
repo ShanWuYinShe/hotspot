@@ -48,7 +48,7 @@
 			<div class="flex gap-2">
 				<button
 					class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-					style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text-muted);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text-muted);"
 					onclick={() => loadMoments(true)}
 					disabled={pagination.loading}
 				>
@@ -90,7 +90,7 @@
 			<div class="columns-1 gap-4 sm:columns-2 xl:columns-3">
 				{#each pagination.items as moment (moment.moment_id)}
 					<div class="mb-4 break-inside-avoid">
-						<div class="rounded-[24px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="rounded-[24px] overflow-hidden" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 							<a href="/moments/{moment.moment_id}" class="block p-4" style="text-decoration: none;">
 								<p class="line-clamp-3 whitespace-pre-wrap" style="font-size: 14px; color: var(--neu-text);">{moment.description}</p>
 								{#if moment.images && moment.images.length > 0}
@@ -103,7 +103,7 @@
 											/>
 										{/each}
 										{#if moment.images.length > 4}
-											<div class="flex h-20 w-20 items-center justify-center rounded-[12px]" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text-muted);">
+											<div class="flex h-20 w-20 items-center justify-center rounded-[12px]" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text-muted);">
 												+{moment.images.length - 4}
 											</div>
 										{/if}

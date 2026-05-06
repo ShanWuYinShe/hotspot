@@ -184,7 +184,7 @@
 	>
 		<button
 			class="flex items-center justify-center rounded-full outline-none"
-			style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 			onclick={() => history.back()}
 			aria-label="返回"
 		>
@@ -196,7 +196,7 @@
 	{#if !user}
 		<div
 			class="rounded-[24px] p-6"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<div class="flex flex-col items-center gap-4">
 				<p style="color: var(--neu-text-muted);">
@@ -207,7 +207,7 @@
 	{:else}
 		<div
 			class="rounded-[24px] p-6"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<div class="space-y-6">
 				<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -231,7 +231,7 @@
 									{#each user.tags as tag (tag)}
 										<span
 											class="rounded-full px-2.5 py-1"
-											style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+											style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 										>
 											#{tag}
 										</span>
@@ -246,7 +246,7 @@
 							<button
 								class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
 								style={isFollowing
-									? 'box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg);'
+									? 'box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg);'
 									: 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);'}
 								onclick={handleFollow}
 								disabled={isActionLoading}
@@ -263,7 +263,7 @@
 							</button>
 							<button
 								class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
-								style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+								style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 								onclick={() => goto(`/chat/users/${userId}`)}
 							>
 								<MessageCircle size={16} />
@@ -310,7 +310,7 @@
 					class="flex items-center gap-2 rounded-full px-4 py-2 font-medium outline-none transition-all"
 					style={currentTab === tab.value
 						? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);'
-						: 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+						: 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);'}
 					onclick={() => handleTabChange(tab.value)}
 				>
 					<tab.icon size={16} />
@@ -326,7 +326,7 @@
 					{#each Array(3) as _, i (i)}
 						<div
 							class="rounded-[24px] p-4 space-y-3"
-							style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 						>
 							<div class="rounded" style="width: 100%; height: 14px; background: var(--neu-border);"></div>
 							<div class="rounded" style="width: 75%; height: 14px; background: var(--neu-border);"></div>
@@ -337,7 +337,7 @@
 			{:else if momentsPagination.items.length === 0}
 				<div
 					class="flex flex-col items-center justify-center rounded-[24px] py-12"
-					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				>
 					<Image size={40} color="var(--neu-text-muted)" />
 					<p style="margin-top: 16px; color: var(--neu-text-muted);">TA 还没有发布瞬间</p>
@@ -354,7 +354,7 @@
 					<div class="flex justify-center pt-4">
 						<button
 							class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
-							style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+							style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 							onclick={() => loadMoments(false)}
 							disabled={momentsPagination.loadingMore}
 						>
@@ -375,7 +375,7 @@
 					{#each Array(5) as _, i (i)}
 						<div
 							class="flex items-center gap-4 rounded-[24px] p-4"
-							style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 						>
 							<div class="rounded-full" style="width: 48px; height: 48px; background: var(--neu-border);"></div>
 							<div class="flex-1 space-y-2">
@@ -388,7 +388,7 @@
 			{:else if followersPagination.items.length === 0}
 				<div
 					class="flex flex-col items-center justify-center rounded-[24px] py-12"
-					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				>
 					<Users size={40} color="var(--neu-text-muted)" />
 					<p style="margin-top: 16px; color: var(--neu-text-muted);">暂无粉丝</p>
@@ -399,7 +399,7 @@
 						<a href="/users/{follower.user.user_id}">
 							<div
 								class="flex cursor-pointer items-center gap-3 rounded-[24px] p-4 transition-all"
-								style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 							>
 								<div class="overflow-hidden rounded-full" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">
 									<img src={follower.user.avatar_url} alt={follower.user.nickname} class="h-full w-full object-cover" />
@@ -416,7 +416,7 @@
 					<div class="flex justify-center pt-4">
 						<button
 							class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
-							style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+							style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 							onclick={() => loadFollowers(false)}
 							disabled={followersPagination.loadingMore}
 						>
@@ -437,7 +437,7 @@
 					{#each Array(5) as _, i (i)}
 						<div
 							class="flex items-center gap-4 rounded-[24px] p-4"
-							style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 						>
 							<div class="rounded-full" style="width: 48px; height: 48px; background: var(--neu-border);"></div>
 							<div class="flex-1 space-y-2">
@@ -450,7 +450,7 @@
 			{:else if followingPagination.items.length === 0}
 				<div
 					class="flex flex-col items-center justify-center rounded-[24px] py-12"
-					style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				>
 					<Users size={40} color="var(--neu-text-muted)" />
 					<p style="margin-top: 16px; color: var(--neu-text-muted);">暂无关注</p>
@@ -461,7 +461,7 @@
 						<a href="/users/{follow.user.user_id}">
 							<div
 								class="flex cursor-pointer items-center gap-3 rounded-[24px] p-4 transition-all"
-								style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 							>
 								<div class="overflow-hidden rounded-full" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">
 									<img src={follow.user.avatar_url} alt={follow.user.nickname} class="h-full w-full object-cover" />
@@ -478,7 +478,7 @@
 					<div class="flex justify-center pt-4">
 						<button
 							class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
-							style="box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+							style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 							onclick={() => loadFollowing(false)}
 							disabled={followingPagination.loadingMore}
 						>

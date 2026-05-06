@@ -1824,7 +1824,7 @@
     <Dialog.Root bind:open onOpenChange={handleDialogOpenChange}>
         <Dialog.Content
             class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${ isFullscreen ? "sm:h-screen sm:max-h-screen sm:w-screen sm:max-w-none sm:rounded-none sm:border-0 sm:p-4" : "sm:h-[88vh] sm:w-[92vw] sm:max-w-6xl lg:max-w-7xl sm:rounded-[24px] sm:backdrop-blur sm:p-6" }`}
-            style={isFullscreen ? "background: var(--neu-bg);" : "background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"}
+            style={isFullscreen ? "background: var(--neu-bg);" : "background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"}
             hideClose
         >
             <!-- 移动端轻量工具栏 -->
@@ -1879,7 +1879,7 @@
             <!-- 左侧：地图容器 -->
             <div
                 class="relative flex-1 overflow-hidden sm:rounded-[24px]"
-                style="border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
+                style="border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
             >
                 <div
                     class="h-full w-full touch-pan-x touch-pan-y"
@@ -1896,7 +1896,7 @@
                             size="icon"
                             variant="ghost"
                             class="h-11 w-11 rounded-[12px] backdrop-blur"
-                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
                             onclick={toggleFilterPanel}
                             aria-label="筛选地图内容"
                         >
@@ -1913,7 +1913,7 @@
                             size="icon"
                             variant="ghost"
                             class="h-11 w-11 rounded-[12px] transition"
-                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
                             onclick={handleUseCurrentLocation}
                             disabled={isLocating}
                             aria-label="定位到当前位置"
@@ -1932,7 +1932,7 @@
                                 size="icon"
                                 variant="ghost"
                                 class="h-11 w-11 rounded-[12px] transition"
-                                style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
+                                style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
                                 onclick={handleBackToBrowseAnchor}
                                 aria-label="回到浏览锚点位置"
                             >
@@ -1947,7 +1947,7 @@
                             size="icon"
                             variant="ghost"
                             class="h-11 w-11 rounded-[12px] transition"
-                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
                             onclick={() => {
                                 if (!map) return;
                                 const currentZoom = map.getZoom?.() ?? 14;
@@ -1961,7 +1961,7 @@
                             size="icon"
                             variant="ghost"
                             class="h-11 w-11 rounded-[12px] transition"
-                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
                             onclick={() => {
                                 if (!map) return;
                                 const currentZoom = map.getZoom?.() ?? 14;
@@ -1980,13 +1980,13 @@
                     <div
                         bind:this={filterPanelElement}
                         class="absolute right-4 top-16 z-30 hidden w-40 select-none overflow-hidden rounded-[24px] p-2 backdrop-blur-md sm:block"
-                        style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
+                        style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
                     >
                         <button
                             class={`flex w-full items-center justify-between rounded-[18px] px-3 py-2.5 text-left text-sm font-medium transition`}
                             style={showUsers
                                 ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
-                                : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"}
+                                : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted); box-shadow: var(--neu-shadow-sm);"}
                             onclick={() => toggleRenderFilter("user")}
                         >
                             <span class="flex items-center gap-2">
@@ -2006,7 +2006,7 @@
                             class={`mt-1 flex w-full items-center justify-between rounded-[18px] px-3 py-2.5 text-left text-sm font-medium transition`}
                             style={showGroups
                                 ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
-                                : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"}
+                                : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted); box-shadow: var(--neu-shadow-sm);"}
                             onclick={() => toggleRenderFilter("group")}
                         >
                             <span class="flex items-center gap-2">
@@ -2026,7 +2026,7 @@
                             class={`mt-1 flex w-full items-center justify-between rounded-[18px] px-3 py-2.5 text-left text-sm font-medium transition`}
                             style={showMoments
                                 ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
-                                : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"}
+                                : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted); box-shadow: var(--neu-shadow-sm);"}
                             onclick={() => toggleRenderFilter("moment")}
                         >
                             <span class="flex items-center gap-2">
@@ -2057,7 +2057,7 @@
                         {#if placementHintVisible}
                             <div
                                 class="rounded-[18px] px-4 py-1.5 text-sm font-medium backdrop-blur-sm"
-                                style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); color: var(--neu-text);"
+                                style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm); color: var(--neu-text);"
                             >
                                 {placementHintMessage}
                             </div>
@@ -2117,7 +2117,7 @@
                         size="icon"
                         variant="ghost"
                         class="h-11 w-11 rounded-full backdrop-blur-sm transition"
-                        style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
+                        style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
                         onclick={handleUseCurrentLocation}
                         disabled={isLocating}
                         aria-label="使用当前位置"
@@ -2136,7 +2136,7 @@
                             size="icon"
                             variant="ghost"
                             class="h-11 w-11 rounded-full backdrop-blur-sm transition"
-                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
                             onclick={handleBackToBrowseAnchor}
                             aria-label="回到浏览锚点位置"
                         >
@@ -2155,7 +2155,7 @@
                     >
                         <div
                             class="overflow-hidden rounded-[28px] backdrop-blur-md"
-                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
                         >
                             <div
                                 class="flex items-start justify-between gap-3 border-b px-4 py-3"
@@ -2262,7 +2262,7 @@
                     >
                         <div
                             class="overflow-hidden rounded-[28px] backdrop-blur-md"
-                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
+                            style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
                         >
                             <div
                                 class="flex items-start justify-between gap-3 border-b px-4 py-3"
@@ -2813,7 +2813,7 @@
             <!-- 右侧：桌面信息栏（标题 / 搜索 / 历史 / 确认） -->
             <div
                 class="hidden h-full w-[320px] shrink-0 select-none flex-col gap-4 overflow-hidden rounded-[24px] p-4 sm:flex lg:w-90"
-                style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
+                style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
             >
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">

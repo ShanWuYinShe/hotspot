@@ -44,7 +44,7 @@
 			</div>
 			<button
 				class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-				style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text-muted);"
+				style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text-muted);"
 				onclick={() => loadFollowing(true)}
 				disabled={pagination.loading}
 			>

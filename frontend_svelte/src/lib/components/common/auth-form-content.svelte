@@ -222,7 +222,7 @@
 
 <div class="mt-4">
 	<!-- Tab bar -->
-	<div class="grid w-full grid-cols-3 rounded-[24px] p-1.5" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+	<div class="grid w-full grid-cols-3 rounded-[24px] p-1.5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 		{#each [{ value: 'login', label: t('auth.login') }, { value: 'register', label: t('auth.register') }, { value: 'guest', label: t('auth.guest') }] as tab (tab.value)}
 			<button
 				type="button"
@@ -249,7 +249,7 @@
 						disabled={isLoading}
 						onblur={() => markTouched('loginId')}
 						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
-						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {loginIdError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {loginIdError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					/>
 					{#if loginIdError}
 						<p style="font-size: 12px; color: var(--neu-error);">{loginIdError}</p>
@@ -267,12 +267,12 @@
 							disabled={isLoading}
 							onblur={() => markTouched('password')}
 							class="rounded-[14px] px-4 py-2.5 outline-none w-full pr-10"
-							style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {passwordError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
+							style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {passwordError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 						/>
 						<button
 							type="button"
 							class="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-[12px] outline-none"
-							style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 							onclick={() => (showPassword = !showPassword)}
 							aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
 						>
@@ -307,7 +307,7 @@
 						disabled={isLoading}
 						onblur={() => markTouched('nickname')}
 						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
-						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {nicknameError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {nicknameError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					/>
 					{#if nicknameError}
 						<p style="font-size: 12px; color: var(--neu-error);">{nicknameError}</p>
@@ -324,7 +324,7 @@
 						disabled={isLoading}
 						onblur={() => markTouched('loginId')}
 						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
-						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {loginIdError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {loginIdError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					/>
 					{#if loginIdError}
 						<p style="font-size: 12px; color: var(--neu-error);">{loginIdError}</p>
@@ -341,7 +341,7 @@
 						disabled={isLoading}
 						onblur={() => markTouched('password')}
 						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
-						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {passwordError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {passwordError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					/>
 					{#if passwordError}
 						<p style="font-size: 12px; color: var(--neu-error);">{passwordError}</p>
@@ -358,7 +358,7 @@
 						disabled={isLoading}
 						onblur={() => markTouched('confirmPassword')}
 						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
-						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {confirmPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {confirmPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					/>
 					{#if confirmPasswordError}
 						<p style="font-size: 12px; color: var(--neu-error);">{confirmPasswordError}</p>
@@ -373,7 +373,7 @@
 			</form>
 		{:else if currentTab === 'guest'}
 			<form onsubmit={(e) => { e.preventDefault(); handleGuestLogin(); }} class="space-y-4 pt-4">
-				<div class="rounded-[24px] p-3" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text-muted);">
+				<div class="rounded-[24px] p-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text-muted);">
 					{t('auth.guestModeHint')}
 				</div>
 				<div class="space-y-2">
@@ -387,7 +387,7 @@
 						disabled={isLoading}
 						onblur={() => markTouched('guestNickname')}
 						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
-						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {guestNicknameError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
+						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {guestNicknameError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					/>
 					{#if guestNicknameError}
 						<p style="font-size: 12px; color: var(--neu-error);">{guestNicknameError}</p>

@@ -68,7 +68,7 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<h1 style="font-size: 22px; font-weight: 600; color: var(--neu-text);">用户管理</h1>
-		<button class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);" onclick={() => loadUsers()} disabled={pagination.loading}>
+		<button class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);" onclick={() => loadUsers()} disabled={pagination.loading}>
 			<RefreshCw size={14} strokeWidth={1.5} class={pagination.loading ? 'animate-spin' : ''} />
 			刷新
 		</button>
@@ -76,7 +76,7 @@
 
 	<!-- Search -->
 	<div class="flex gap-2">
-		<div class="relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 			<Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
 			<input type="search" placeholder="搜索昵称..." class="flex-1 bg-transparent outline-none" style="font-size: 13px; color: var(--neu-text);" autocomplete="off" bind:value={nickname} onkeydown={(e) => e.key === 'Enter' && loadUsers()} />
 		</div>
@@ -84,7 +84,7 @@
 	</div>
 
 	<!-- Users table -->
-	<div class="rounded-[24px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+	<div class="rounded-[24px] overflow-hidden" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 		<div class="flex items-center gap-2 px-4 py-3" style="border-bottom: 1px solid var(--neu-border);">
 			<Users size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 			<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">用户列表</span>
@@ -107,7 +107,7 @@
 			{:else}
 				<div class="space-y-2">
 					{#each pagination.items as user (user.user.user_id)}
-						<div class="flex items-center gap-3 rounded-[18px] p-3" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="flex items-center gap-3 rounded-[18px] p-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 							<div class="flex-shrink-0 overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
 								{#if user.user.avatar_url}
 									<img src={user.user.avatar_url} alt={user.user.nickname} class="h-full w-full object-cover" />
@@ -125,7 +125,7 @@
 							<DropdownMenu.Root>
 								<DropdownMenu.Trigger>
 									{#snippet child({ props })}
-										<button class="flex items-center justify-center rounded-full outline-none" style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);" aria-label="更多操作" {...props}>
+										<button class="flex items-center justify-center rounded-full outline-none" style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);" aria-label="更多操作" {...props}>
 											<MoreVertical size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
 										</button>
 									{/snippet}
@@ -173,7 +173,7 @@
 					{/each}
 				</div>
 				{#if pagination.hasMore}
-					<button class="mt-4 w-full rounded-full py-2.5 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);" onclick={() => loadUsers(false)}>加载更多</button>
+					<button class="mt-4 w-full rounded-full py-2.5 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);" onclick={() => loadUsers(false)}>加载更多</button>
 				{/if}
 			{/if}
 		</div>

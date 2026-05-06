@@ -96,7 +96,7 @@
 	<div class="flex items-center justify-between">
 		<h1 style="font-size: 22px; font-weight: 600; color: var(--neu-text);">权限管理</h1>
 		<div class="flex gap-2">
-			<button class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);" onclick={loadData} disabled={isLoading}>
+			<button class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);" onclick={loadData} disabled={isLoading}>
 				<RefreshCw size={14} strokeWidth={1.5} class={isLoading ? 'animate-spin' : ''} />
 				刷新
 			</button>
@@ -109,7 +109,7 @@
 
 	<div class="grid gap-6 lg:grid-cols-2">
 		<!-- Roles -->
-		<div class="rounded-[24px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[24px] overflow-hidden" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 			<div class="flex items-center gap-2 px-4 py-3" style="border-bottom: 1px solid var(--neu-border);">
 				<Shield size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 				<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">角色列表</span>
@@ -118,7 +118,7 @@
 				{#if isLoading}
 					<div class="space-y-3">
 						{#each Array(4) as _, i (i)}
-							<div class="rounded-[18px] p-3" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<div class="rounded-[18px] p-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 								<div class="flex items-center gap-3">
 									<div class="rounded" style="width: 36px; height: 36px; background: var(--neu-border);"></div>
 									<div class="flex-1 space-y-1.5">
@@ -134,8 +134,8 @@
 				{:else}
 					<div class="space-y-2">
 						{#each roles as role (role.role_id)}
-							<div class="flex items-center gap-3 rounded-[18px] p-3" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
-								<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+							<div class="flex items-center gap-3 rounded-[18px] p-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
+								<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 									<Shield size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 								</div>
 								<div class="min-w-0 flex-1">
@@ -149,10 +149,10 @@
 									</div>
 								</div>
 								<div class="flex gap-1">
-									<button class="flex items-center justify-center rounded-full outline-none" style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);" onclick={() => openEditRoleDialog(role)} aria-label="编辑角色">
+									<button class="flex items-center justify-center rounded-full outline-none" style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);" onclick={() => openEditRoleDialog(role)} aria-label="编辑角色">
 										<Edit size={13} strokeWidth={1.5} color="var(--neu-text-muted)" />
 									</button>
-									<button class="flex items-center justify-center rounded-full outline-none" style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);" onclick={() => requestDeleteRole(role.role_id)} aria-label="删除角色">
+									<button class="flex items-center justify-center rounded-full outline-none" style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);" onclick={() => requestDeleteRole(role.role_id)} aria-label="删除角色">
 										<Trash2 size={13} strokeWidth={1.5} color="var(--neu-error)" />
 									</button>
 								</div>
@@ -164,7 +164,7 @@
 		</div>
 
 		<!-- Permissions -->
-		<div class="rounded-[24px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[24px] overflow-hidden" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 			<div class="flex items-center gap-2 px-4 py-3" style="border-bottom: 1px solid var(--neu-border);">
 				<Key size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 				<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">权限列表</span>
@@ -188,7 +188,7 @@
 								<p class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 6px;">{category}</p>
 								<div class="space-y-1">
 									{#each perms as perm (perm.key)}
-										<div class="flex items-center gap-2 rounded-[14px] px-2 py-1.5" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+										<div class="flex items-center gap-2 rounded-[14px] px-2 py-1.5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 											<Key size={13} strokeWidth={1.5} color="var(--neu-text-muted)" />
 											<div class="flex-1">
 												<p style="font-size: 12px; font-weight: 500; color: var(--neu-text);">{perm.key}</p>
@@ -210,22 +210,22 @@
 
 <!-- Create/Edit role dialog -->
 <Dialog.Root bind:open={showRoleDialog}>
-	<Dialog.Content class="sm:max-w-lg rounded-[24px]" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);">
+	<Dialog.Content class="sm:max-w-lg rounded-[24px]" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg);">
 		<Dialog.Header>
 			<Dialog.Title>{editingRoleId ? '编辑角色' : '创建角色'}</Dialog.Title>
 		</Dialog.Header>
 		<div class="space-y-4 py-4 px-1">
 			<div>
 				<label for="role-name" style="font-size: 12px; color: var(--neu-text);">角色名称</label>
-				<input id="role-name" placeholder="例如：内容审核员" bind:value={roleName} autocomplete="off" class="mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;" />
+				<input id="role-name" placeholder="例如：内容审核员" bind:value={roleName} autocomplete="off" class="mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;" />
 			</div>
 			<div>
 				<label for="role-desc" style="font-size: 12px; color: var(--neu-text);">角色描述</label>
-				<textarea id="role-desc" placeholder="描述该角色的职责" bind:value={roleDescription} class="mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none resize-none" rows="3" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;"></textarea>
+				<textarea id="role-desc" placeholder="描述该角色的职责" bind:value={roleDescription} class="mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none resize-none" rows="3" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"></textarea>
 			</div>
 			<div>
 				<label style="font-size: 12px; color: var(--neu-text);">分配权限</label>
-				<div class="mt-1.5 max-h-60 space-y-3 overflow-y-auto rounded-[14px] p-3" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="mt-1.5 max-h-60 space-y-3 overflow-y-auto rounded-[14px] p-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					{#each [...groupPermissions(permissions)] as [category, perms] (category)}
 						<div>
 							<p class="uppercase" style="font-size: 10px; letter-spacing: 0.12em; color: var(--neu-text-muted); margin-bottom: 4px;">{category}</p>
@@ -243,7 +243,7 @@
 			</div>
 		</div>
 		<Dialog.Footer>
-			<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;" onclick={closeOverlayDialogs}>取消</button>
+			<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;" onclick={closeOverlayDialogs}>取消</button>
 			<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleSubmitRole} disabled={isSubmitting}>
 				{#if isSubmitting}<Loader2 size={14} strokeWidth={1.5} class="animate-spin" style="display: inline; vertical-align: middle;" />{/if}
 				{editingRoleId ? '保存' : '创建'}

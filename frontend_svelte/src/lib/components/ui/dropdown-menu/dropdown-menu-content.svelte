@@ -23,7 +23,7 @@
 			'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
 			className
 		)}
-		style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border); border-radius: 18px; color: var(--neu-text);"
+		style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border); border-radius: var(--neu-radius-md); color: var(--neu-text);"
 		{...restProps}
 	>
 		{#if children}

@@ -189,7 +189,7 @@
 			{#if displayTags.length > 0}
 				<div class="mt-3 flex flex-wrap gap-1.5">
 					{#each displayTags as tag (tag)}
-						<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">#{tag}</span>
+						<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">#{tag}</span>
 					{/each}
 				</div>
 			{/if}
@@ -249,7 +249,7 @@
 			{#if displayTags.length > 0}
 				<div class="mt-3 flex flex-wrap gap-1.5">
 					{#each displayTags as tag (tag)}
-						<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">#{tag}</span>
+						<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">#{tag}</span>
 					{/each}
 				</div>
 			{/if}
@@ -283,7 +283,7 @@
 			{#if displayTags.length > 0}
 				<div class="mt-2.5 flex flex-wrap gap-1.5">
 					{#each displayTags as tag (tag)}
-						<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">#{tag}</span>
+						<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">#{tag}</span>
 					{/each}
 				</div>
 			{/if}
@@ -324,7 +324,7 @@
 								<button
 									data-card-action
 									class="flex items-center justify-center rounded-full outline-none"
-									style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+									style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 									onclick={(e: MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
 									aria-label="更多操作"
 								>

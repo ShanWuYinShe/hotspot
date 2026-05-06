@@ -44,6 +44,6 @@
 >
 	<span
 		class="pointer-events-none block h-[22px] w-[22px] rounded-full transition-transform duration-200"
-		style="transform: translateX({checked ? '23px' : '2px'}); background: #FFFFFF; box-shadow: {checked ? '0 1px 4px rgba(0,0,0,0.26)' : '2px 2px 4px var(--neu-shadow-dark), -2px -2px 4px var(--neu-shadow-light)'};"
+		style="transform: translateX({checked ? '23px' : '2px'}); background: var(--neu-switch-thumb); box-shadow: {checked ? '0 1px 4px var(--neu-switch-shadow)' : '2px 2px 4px var(--neu-shadow-dark), -2px -2px 4px var(--neu-shadow-light)'};"
 	></span>
 </button>

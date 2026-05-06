@@ -368,12 +368,12 @@
 	<title>与 {otherUser?.nickname ?? '用户'} 的对话 - HotSpot</title>
 </svelte:head>
 
-<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[24px]" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[24px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 	<!-- Header -->
 	<div class="flex h-16 items-center gap-3 px-4" style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);">
 		<button
 			class="flex items-center justify-center rounded-full outline-none"
-			style="width: 36px; height: 36px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+			style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); background: var(--neu-bg);"
 			onclick={handleBackClick}
 			aria-label="返回"
 		>
@@ -381,8 +381,8 @@
 		</button>
 
 		{#if isLoading}
-			<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
-			<div style="width: 96px; height: 20px; border-radius: 8px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
+			<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"></div>
+			<div style="width: 96px; height: 20px; border-radius: 8px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"></div>
 		{:else if otherUser}
 			<a href="/users/{userId}" class="flex items-center gap-3">
 				<div class="overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
@@ -402,7 +402,7 @@
 				<DropdownMenuTrigger>
 					<button
 						class="flex items-center justify-center rounded-full outline-none"
-						style="width: 36px; height: 36px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+						style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); background: var(--neu-bg);"
 						aria-label="更多选项"
 					>
 						<MoreVertical size={18} color="var(--neu-text)" />
@@ -431,9 +431,9 @@
 					<div class="flex {i % 2 === 0 ? '' : 'justify-end'}">
 						<div class="flex max-w-[70%] gap-2">
 							{#if i % 2 === 0}
-								<div class="shrink-0 rounded-full" style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
+								<div class="shrink-0 rounded-full" style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"></div>
 							{/if}
-							<div class="rounded-[18px]" style="width: 192px; height: 64px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
+							<div class="rounded-[18px]" style="width: 192px; height: 64px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"></div>
 						</div>
 					</div>
 				{/each}
@@ -453,8 +453,8 @@
 							<div
 								class="px-4 py-2.5"
 								style="{isSelf(message)
-									? 'background: var(--neu-accent-primary); color: var(--neu-active-text); border-radius: 18px 4px 18px 18px;'
-									: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); border-radius: 18px 18px 18px 4px; color: var(--neu-text);'}"
+									? 'background: var(--neu-accent-primary); color: var(--neu-active-text); border-radius: var(--neu-radius-md) 4px var(--neu-radius-md) var(--neu-radius-md);'
+									: 'background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); border-radius: var(--neu-radius-md) var(--neu-radius-md) var(--neu-radius-md) 4px; color: var(--neu-text);'}"
 							>
 								{#if message.recalled_at != null}
 									<p style="font-size: 14px; font-style: italic; opacity: 0.7;">消息已撤回</p>
@@ -516,7 +516,7 @@
 				rows={1}
 				maxlength={MESSAGE_CONTENT_MAX}
 				class="min-h-[38px] flex w-full resize-none rounded-[18px] px-3 py-2 text-base outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-				style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"
+				style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text);"
 				disabled={isSending}
 				oninput={handleInput}
 				onkeydown={(e) => {

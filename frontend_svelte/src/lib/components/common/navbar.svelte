@@ -76,7 +76,7 @@
 		<a href="/" class="flex shrink-0 items-center gap-2 rounded-[12px] px-1.5 py-1 transition-all sm:px-2">
 			<div
 				class="flex items-center justify-center rounded-[12px]"
-				style="width: 34px; height: 34px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="width: 34px; height: 34px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 			>
 				<img src="/logo_32.png" alt="HotSpot" class="h-5 w-5 rounded-[8px] sm:h-5 sm:w-5" />
 			</div>

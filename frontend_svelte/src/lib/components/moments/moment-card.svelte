@@ -101,7 +101,7 @@
 				class="h-full w-full object-cover"
 				loading="lazy"
 			/>
-			<div class="absolute inset-0" style="background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.35));"></div>
+			<div class="absolute inset-0" style="background: linear-gradient(to bottom, transparent 50%, var(--neu-overlay));"></div>
 			<!-- Tags overlay -->
 			{#if moment.tags && moment.tags.length > 0}
 				<div class="absolute left-2.5 top-2.5">
@@ -120,7 +120,7 @@
 					data-card-action
 					onclick={handleAuthorClick}
 					class="flex-shrink-0 overflow-hidden rounded-full"
-					style="width: 24px; height: 24px; border: 1.5px solid rgba(255,255,255,0.6);"
+					style="width: 24px; height: 24px; border: 1.5px solid var(--neu-media-border);"
 				>
 					<img src={moment.user.avatar_url || ''} alt={moment.user.nickname} class="h-full w-full object-cover" />
 				</a>
@@ -134,8 +134,8 @@
 				</a>
 				{#if moment.location?.distance != null}
 					<div class="ml-auto flex items-center gap-0.5">
-						<MapPin size={9} strokeWidth={1.5} color="rgba(255,255,255,0.8)" />
-						<span style="font-size: 10px; color: rgba(255,255,255,0.8);">{formatDistance(moment.location.distance)}</span>
+						<MapPin size={9} strokeWidth={1.5} color="var(--neu-text-on-media)" />
+						<span style="font-size: 10px; color: var(--neu-text-on-media);">{formatDistance(moment.location.distance)}</span>
 					</div>
 				{/if}
 			</div>

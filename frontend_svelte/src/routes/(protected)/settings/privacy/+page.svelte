@@ -86,26 +86,26 @@
 	/>
 
 	{#if isLoading}
-		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 			<div class="space-y-4">
 				{#each Array(5) as _, i (i)}
-					<div class="h-11 w-full rounded-[18px]" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"></div>
+					<div class="h-11 w-full rounded-[18px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"></div>
 				{/each}
 			</div>
 		</div>
 	{:else}
 		<!-- Basic Visibility Card -->
-		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 			<p style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-bottom: 4px;">基础可见性</p>
 			<p style="font-size: 12px; color: var(--neu-text-muted); margin-bottom: 16px;">控制大部分信息默认可见范围</p>
 
 			<div class="space-y-3">
-				<div class="rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<label for="privacy-level" style="font-size: 13px; color: var(--neu-text-muted); display: block; margin-bottom: 8px;">隐私级别</label>
 					<select
 						id="privacy-level"
 						class="w-full rounded-[18px] px-4 py-2.5 outline-none"
-						style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg); color: var(--neu-text);"
+						style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); background: var(--neu-bg); color: var(--neu-text);"
 						bind:value={privacyLevel}
 					>
 						<option value="public">公开</option>
@@ -113,7 +113,7 @@
 					</select>
 				</div>
 
-				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<div>
 						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">位置可见</p>
 						<p style="font-size: 12px; color: var(--neu-text-muted);">允许展示你的地理位置</p>
@@ -125,17 +125,17 @@
 						class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
 						style={locationVisible
 							? 'background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);'
-							: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+							: 'background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);'}
 						onclick={() => locationVisible = !locationVisible}
 					>
 						<span
 							class="block h-5 w-5 rounded-full transition-transform"
-							style="background: {locationVisible ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({locationVisible ? '22px' : '4px'}); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"
+							style="background: {locationVisible ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({locationVisible ? '22px' : '4px'}); box-shadow: 0 1px 3px var(--neu-switch-shadow);"
 						></span>
 					</button>
 				</div>
 
-				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<div>
 						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">在线状态可见</p>
 						<p style="font-size: 12px; color: var(--neu-text-muted);">允许显示在线/离线状态</p>
@@ -147,17 +147,17 @@
 						class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
 						style={presenceVisible
 							? 'background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);'
-							: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+							: 'background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);'}
 						onclick={() => presenceVisible = !presenceVisible}
 					>
 						<span
 							class="block h-5 w-5 rounded-full transition-transform"
-							style="background: {presenceVisible ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({presenceVisible ? '22px' : '4px'}); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"
+							style="background: {presenceVisible ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({presenceVisible ? '22px' : '4px'}); box-shadow: 0 1px 3px var(--neu-switch-shadow);"
 						></span>
 					</button>
 				</div>
 
-				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<div>
 						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">好友/关注/粉丝列表可见</p>
 						<p style="font-size: 12px; color: var(--neu-text-muted);">控制你的社交列表是否对他人可见</p>
@@ -169,12 +169,12 @@
 						class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
 						style={socialListsVisible
 							? 'background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);'
-							: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+							: 'background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);'}
 						onclick={() => socialListsVisible = !socialListsVisible}
 					>
 						<span
 							class="block h-5 w-5 rounded-full transition-transform"
-							style="background: {socialListsVisible ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({socialListsVisible ? '22px' : '4px'}); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"
+							style="background: {socialListsVisible ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({socialListsVisible ? '22px' : '4px'}); box-shadow: 0 1px 3px var(--neu-switch-shadow);"
 						></span>
 					</button>
 				</div>
@@ -182,12 +182,12 @@
 		</div>
 
 		<!-- Social & Chat Card -->
-		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 			<p style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-bottom: 4px;">社交与私聊</p>
 			<p style="font-size: 12px; color: var(--neu-text-muted); margin-bottom: 16px;">管理关注与私聊权限</p>
 
 			<div class="space-y-3">
-				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<div>
 						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">允许关注</p>
 						<p style="font-size: 12px; color: var(--neu-text-muted);">关闭后他人关注需审批</p>
@@ -199,22 +199,22 @@
 						class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
 						style={allowFollow
 							? 'background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);'
-							: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+							: 'background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);'}
 						onclick={() => allowFollow = !allowFollow}
 					>
 						<span
 							class="block h-5 w-5 rounded-full transition-transform"
-							style="background: {allowFollow ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({allowFollow ? '22px' : '4px'}); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"
+							style="background: {allowFollow ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({allowFollow ? '22px' : '4px'}); box-shadow: 0 1px 3px var(--neu-switch-shadow);"
 						></span>
 					</button>
 				</div>
 
-				<div class="rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="rounded-[18px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<label for="private-chat" style="font-size: 13px; color: var(--neu-text-muted); display: block; margin-bottom: 8px;">私聊权限</label>
 					<select
 						id="private-chat"
 						class="w-full rounded-[18px] px-4 py-2.5 outline-none"
-						style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg); color: var(--neu-text);"
+						style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); background: var(--neu-bg); color: var(--neu-text);"
 						bind:value={allowPrivateChat}
 					>
 						<option value="everyone">所有人可私聊</option>
@@ -226,12 +226,12 @@
 		</div>
 
 		<!-- Search & Discovery Card -->
-		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 			<p style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-bottom: 4px;">搜索与发现</p>
 			<p style="font-size: 12px; color: var(--neu-text-muted); margin-bottom: 16px;">控制你在搜索/附近中的展示</p>
 
 			<div class="space-y-3">
-				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<div>
 						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">允许被搜索</p>
 						<p style="font-size: 12px; color: var(--neu-text-muted);">关闭后不会出现在搜索结果</p>
@@ -243,17 +243,17 @@
 						class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
 						style={searchable
 							? 'background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);'
-							: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+							: 'background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);'}
 						onclick={() => searchable = !searchable}
 					>
 						<span
 							class="block h-5 w-5 rounded-full transition-transform"
-							style="background: {searchable ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({searchable ? '22px' : '4px'}); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"
+							style="background: {searchable ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({searchable ? '22px' : '4px'}); box-shadow: 0 1px 3px var(--neu-switch-shadow);"
 						></span>
 					</button>
 				</div>
 
-				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="flex items-center justify-between rounded-[18px] px-4 py-3.5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<div>
 						<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">附近可见</p>
 						<p style="font-size: 12px; color: var(--neu-text-muted);">允许出现在附近的人</p>
@@ -265,12 +265,12 @@
 						class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
 						style={locationSearchable
 							? 'background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);'
-							: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+							: 'background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);'}
 						onclick={() => locationSearchable = !locationSearchable}
 					>
 						<span
 							class="block h-5 w-5 rounded-full transition-transform"
-							style="background: {locationSearchable ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({locationSearchable ? '22px' : '4px'}); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"
+							style="background: {locationSearchable ? 'white' : 'var(--neu-text-muted)'}; transform: translateX({locationSearchable ? '22px' : '4px'}); box-shadow: 0 1px 3px var(--neu-switch-shadow);"
 						></span>
 					</button>
 				</div>

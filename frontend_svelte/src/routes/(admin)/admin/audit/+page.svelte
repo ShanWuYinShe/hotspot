@@ -43,7 +43,7 @@
 		</div>
 		<button
 			class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-			style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
 			onclick={() => loadLogs()}
 			disabled={pagination.loading}
 		>
@@ -54,7 +54,7 @@
 
 	<!-- Search -->
 	<div class="flex gap-2">
-		<div class="relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+		<div class="relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 			<Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
 			<input
 				type="search"
@@ -74,7 +74,7 @@
 	</div>
 
 	<!-- Audit logs -->
-	<div class="rounded-[24px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+	<div class="rounded-[24px] overflow-hidden" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 		<div class="flex items-center gap-2 px-4 py-3" style="border-bottom: 1px solid var(--neu-border);">
 			<FileText size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 			<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">操作日志</span>
@@ -97,8 +97,8 @@
 			{:else}
 				<div class="space-y-3">
 					{#each pagination.items as log (log.log_id)}
-						<div class="flex items-start gap-3 rounded-[18px] p-3" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
-							<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="flex items-start gap-3 rounded-[18px] p-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
+							<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 								<User size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
 							</div>
 							<div class="min-w-0 flex-1">
@@ -124,7 +124,7 @@
 				{#if pagination.hasMore}
 					<button
 						class="mt-4 w-full rounded-full py-2.5 outline-none"
-						style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
 						onclick={() => loadLogs(false)}
 					>加载更多</button>
 				{/if}

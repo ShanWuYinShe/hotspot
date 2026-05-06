@@ -40,12 +40,12 @@
 		<div class="grid gap-3">
 			<button
 				class="flex h-16 items-center gap-3 rounded-[18px] px-4 text-left outline-none"
-				style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				onclick={handleCreateMoment}
 			>
 				<div
 					class="flex items-center justify-center rounded-full"
-					style="width: 38px; height: 38px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="width: 38px; height: 38px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 				>
 					<Image size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 				</div>
@@ -57,12 +57,12 @@
 
 			<button
 				class="flex h-16 items-center gap-3 rounded-[18px] px-4 text-left outline-none"
-				style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				onclick={handleCreateGroup}
 			>
 				<div
 					class="flex items-center justify-center rounded-full"
-					style="width: 38px; height: 38px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="width: 38px; height: 38px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 				>
 					<UsersRound size={16} strokeWidth={1.5} color="var(--neu-fallback-text)" />
 				</div>

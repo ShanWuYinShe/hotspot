@@ -596,12 +596,12 @@
 </svelte:head>
 
 <!-- 聊天容器 - Neumorphic 风格 -->
-<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[24px]" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[24px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 	<!-- Header -->
 	<header class="flex h-16 shrink-0 items-center gap-3 px-4" style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);">
 		<button
 			class="flex items-center justify-center rounded-full outline-none"
-			style="width: 36px; height: 36px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+			style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); background: var(--neu-bg);"
 			onclick={handleBackClick}
 			aria-label="返回"
 		>
@@ -609,8 +609,8 @@
 		</button>
 
 		{#if isLoading}
-			<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
-			<div style="width: 128px; height: 20px; border-radius: 8px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
+			<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"></div>
+			<div style="width: 128px; height: 20px; border-radius: 8px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"></div>
 		{:else if group}
 			<a
 				href="/groups/{groupId}"
@@ -634,7 +634,7 @@
 
 		<button
 			class="flex items-center justify-center rounded-full outline-none shrink-0"
-			style="width: 36px; height: 36px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+			style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); background: var(--neu-bg);"
 			aria-label="更多选项"
 		>
 			<MoreVertical size={18} color="var(--neu-text)" />
@@ -652,10 +652,10 @@
 			<div class="space-y-4 p-4">
 				{#each Array(8) as _, i (i)}
 					<div class="flex gap-3">
-						<div class="shrink-0 rounded-full" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
+						<div class="shrink-0 rounded-full" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"></div>
 						<div class="flex-1 space-y-2">
-							<div style="width: 96px; height: 12px; border-radius: 6px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
-							<div class="max-w-xs rounded-[18px]" style="width: 100%; height: 64px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
+							<div style="width: 96px; height: 12px; border-radius: 6px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"></div>
+							<div class="max-w-xs rounded-[18px]" style="width: 100%; height: 64px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"></div>
 						</div>
 					</div>
 				{/each}
@@ -665,7 +665,7 @@
 				<div class="flex justify-center py-3">
 					<button
 						class="rounded-full px-4 py-1.5 text-xs outline-none"
-						style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
 						onclick={() => loadMessages(true)}
 					>
 						加载更多消息
@@ -682,7 +682,7 @@
 			{#if messages.length === 0}
 				<div class="flex h-full items-center justify-center p-8">
 					<div class="text-center">
-						<div class="mb-4 inline-flex items-center justify-center rounded-full" style="width: 64px; height: 64px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="mb-4 inline-flex items-center justify-center rounded-full" style="width: 64px; height: 64px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 							<MessageCircle size={28} color="var(--neu-text-muted)" strokeWidth={1.5} />
 						</div>
 						<p style="font-weight: 500; font-size: 15px; color: var(--neu-text); margin-bottom: 4px;">还没有消息</p>
@@ -700,7 +700,7 @@
 
 						{#if showDateDivider}
 							<div class="flex justify-center py-4">
-								<span class="rounded-full px-3 py-1" style="font-size: 11px; font-weight: 500; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+								<span class="rounded-full px-3 py-1" style="font-size: 11px; font-weight: 500; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 									{formatDateDivider(message.sent_at)}
 								</span>
 							</div>
@@ -708,7 +708,7 @@
 
 						{#if isSystemMessage(message)}
 							<div class="flex justify-center py-2">
-								<span class="rounded-full px-3 py-1" style="font-size: 12px; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+								<span class="rounded-full px-3 py-1" style="font-size: 12px; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 									{message.content}
 								</span>
 							</div>
@@ -745,8 +745,8 @@
 									<div
 										class="relative {message.type === 'image' ? 'p-1' : 'px-4 py-2.5'}"
 										style="{isMe
-											? 'background: var(--neu-accent-primary); color: var(--neu-active-text); border-radius: 18px 18px 4px 18px;'
-											: 'background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); border-radius: 18px 18px 18px 4px; color: var(--neu-text);'}"
+											? 'background: var(--neu-accent-primary); color: var(--neu-active-text); border-radius: var(--neu-radius-md) var(--neu-radius-md) 4px var(--neu-radius-md);'
+											: 'background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); border-radius: var(--neu-radius-md) var(--neu-radius-md) var(--neu-radius-md) 4px; color: var(--neu-text);'}"
 									>
 										{#if message.recalled_at != null}
 											<p style="font-size: 13px; font-style: italic; opacity: 0.7;">消息已撤回</p>
@@ -837,11 +837,11 @@
 		{/if}
 
 		{#if !group?.my_state?.is_joined}
-			<div class="rounded-[16px] px-4 py-3 text-center" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<div class="rounded-[16px] px-4 py-3 text-center" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 				<p style="font-size: 13px; color: var(--neu-text-muted);">你还不是群成员，无法发送消息</p>
 			</div>
 		{:else if group?.my_state?.is_muted}
-			<div class="rounded-[16px] px-4 py-3 text-center" style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+			<div class="rounded-[16px] px-4 py-3 text-center" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 				<p style="font-size: 13px; color: var(--neu-text-muted);">你已被禁言，无法发送消息</p>
 			</div>
 		{:else}
@@ -854,7 +854,7 @@
 					rows={1}
 					maxlength={MESSAGE_CONTENT_MAX}
 					class="max-h-32 min-h-[42px] flex w-full resize-none rounded-[20px] px-4 py-2.5 text-[15px] outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-					style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text);"
 					disabled={isSending}
 					oninput={() => {
 						eventHandlers.sendGroupTyping(groupId, messageText.trim().length > 0);
@@ -889,7 +889,7 @@
 {#if selectedImage}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center p-4"
-		style="background: rgba(0,0,0,0.9);"
+		style="background: var(--neu-overlay-strong);"
 		onclick={closeImagePreview}
 		role="button"
 		tabindex="0"
@@ -898,7 +898,7 @@
 		<button
 			type="button"
 			class="absolute right-4 top-4 flex items-center justify-center rounded-full outline-none"
-			style="width: 40px; height: 40px; background: rgba(255,255,255,0.1); color: white;"
+			style="width: 40px; height: 40px; background: var(--neu-surface-glass); color: white;"
 			onclick={closeImagePreview}
 			aria-label="关闭图片预览"
 		>

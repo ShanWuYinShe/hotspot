@@ -90,7 +90,7 @@
 					>
 						<div
 							class="flex flex-shrink-0 items-center justify-center rounded-full"
-							style="width: 36px; height: 36px; box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border);"
 						>
 							<item.icon size={15} strokeWidth={1.5} color={item.color} />
 						</div>
@@ -115,7 +115,7 @@
 				<div class="flex items-center gap-3">
 					<div
 						class="flex flex-shrink-0 items-center justify-center rounded-full"
-						style="width: 36px; height: 36px; box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border);"
 					>
 						<Palette size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 					</div>
@@ -137,7 +137,7 @@
 						class="relative rounded-[20px] px-3 py-4 text-left transition-all"
 						style={currentThemeFamily === option.family
 							? 'background: var(--neu-accent-primary); box-shadow: 0 4px 14px var(--neu-glow);'
-							: 'background: var(--neu-bg); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+							: 'background: var(--neu-bg); box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border);'}
 						onclick={() => setThemeFamily(option.family)}
 					>
 						<p
@@ -172,7 +172,7 @@
 			>
 				<div
 					class="flex flex-shrink-0 items-center justify-center rounded-full"
-					style="width: 36px; height: 36px; box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border);"
 				>
 					<LogOut size={15} strokeWidth={1.5} color="var(--neu-error)" />
 				</div>
@@ -184,7 +184,7 @@
 			>
 				<div
 					class="flex flex-shrink-0 items-center justify-center rounded-full"
-					style="width: 36px; height: 36px; box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border);"
 				>
 					<Trash2 size={15} strokeWidth={1.5} color="var(--neu-error)" />
 				</div>

@@ -76,13 +76,13 @@
 	{#if !share}
 		<div
 			class="rounded-[24px] p-6"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<h2 style="font-size: 18px; font-weight: 600; color: var(--neu-error);">无法加载分享</h2>
 			<p style="font-size: 14px; color: var(--neu-text-muted); margin-top: 8px;">{data.error || '此分享不存在或已被删除'}</p>
 			<button
 				class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none"
-				style="box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+				style="box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 				onclick={() => goto('/')}
 			>
 				返回首页
@@ -92,7 +92,7 @@
 		{@const payload = share.payload as LocationSharePayload}
 		<div
 			class="overflow-hidden rounded-[24px]"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<!-- Header with creator info -->
 			<div class="flex items-center justify-between p-6" style="border-bottom: 1px solid var(--neu-border);">
@@ -123,7 +123,7 @@
 				<!-- Info card -->
 				<div
 					class="rounded-[18px] p-4"
-					style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 				>
 					<p class="flex items-center gap-2" style="font-weight: 500; font-size: 14px; color: var(--neu-text);">
 						<UsersRound size={16} />
@@ -150,7 +150,7 @@
 					<p class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 8px;">位置说明</p>
 					<div
 						class="rounded-[14px] p-3"
-						style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 					>
 						<p style="font-size: 12px; color: var(--neu-text-muted);">以「{payload.shared_location.location_name}」为中心区域进行浏览和推荐。</p>
 					</div>
@@ -160,7 +160,7 @@
 				<div class="flex items-center gap-2">
 					<button
 						class="flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 font-medium outline-none"
-						style="box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+						style="box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 						onclick={copyShareLink}
 					>
 						<Share2 size={16} />
@@ -180,7 +180,7 @@
 		<!-- Other share types (user/group/moment) -->
 		<div
 			class="rounded-[24px] p-6"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<h2 style="font-size: 18px; font-weight: 600; color: var(--neu-text);">分享内容</h2>
 			<p style="font-size: 14px; color: var(--neu-text-muted); margin-top: 8px;">
@@ -196,7 +196,7 @@
 				</button>
 				<button
 					class="w-full rounded-full py-3 font-medium outline-none"
-					style="box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+					style="box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 					onclick={() => goto('/')}
 				>
 					返回首页

@@ -59,7 +59,7 @@
 		{#if loading}
 			<div class="flex flex-col gap-2.5">
 				{#each Array(3) as _}
-					<div class="flex items-center gap-3 rounded-[18px] px-4 py-3" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="flex items-center gap-3 rounded-[18px] px-4 py-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 						<div class="rounded-[12px]" style="width: 36px; height: 36px; background: var(--neu-border);"></div>
 						<div class="flex-1">
 							<div class="mb-1 rounded" style="width: 80px; height: 12px; background: var(--neu-border);"></div>
@@ -74,7 +74,7 @@
 					<a
 						href="/groups/{group.group.group_id}"
 						class="flex items-center gap-3 rounded-[18px] px-4 py-3 transition-shadow"
-						style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 					>
 						<div class="flex flex-shrink-0 items-center justify-center rounded-[12px]" style="width: 36px; height: 36px; background: var(--neu-fallback-bg);">
 							<span style="font-size: 14px; font-weight: 600; color: var(--neu-fallback-text);">

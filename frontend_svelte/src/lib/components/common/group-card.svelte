@@ -145,7 +145,7 @@
 		<div class="p-4">
 			<div
 				class="rounded-[18px] p-3"
-				style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 			>
 				<div class="flex items-start justify-between gap-3">
 					<div class="flex min-w-0 items-center gap-2.5">
@@ -210,7 +210,7 @@
 				{#if groupWithTags.tags && groupWithTags.tags.length > 0}
 					<div class="mt-3 flex flex-wrap gap-1.5">
 						{#each groupWithTags.tags.slice(0, 5) as tag (tag)}
-							<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">#{tag}</span>
+							<span class="rounded-full px-2 py-0.5" style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">#{tag}</span>
 						{/each}
 					</div>
 				{/if}
@@ -343,7 +343,7 @@
 						<button
 							data-card-action
 							class="flex items-center justify-center rounded-full outline-none"
-							style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 							onclick={(e: MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
 							aria-label="更多操作"
 						>

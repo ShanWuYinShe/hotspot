@@ -24,11 +24,11 @@
 
 <div
 	class="flex flex-col items-center justify-center rounded-[24px] py-16 text-center {className}"
-	style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+	style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 >
 	<div
 		class="mb-4 flex items-center justify-center rounded-full"
-		style="width: 64px; height: 64px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+		style="width: 64px; height: 64px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 	>
 		<Icon size={24} strokeWidth={1.25} color="var(--neu-text-muted)" />
 	</div>

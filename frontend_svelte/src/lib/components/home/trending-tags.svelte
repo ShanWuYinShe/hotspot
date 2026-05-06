@@ -45,7 +45,7 @@
 				<a
 					href="/search?tag={encodeURIComponent(tag.name)}"
 					class="rounded-full px-3 py-1 text-xs transition-colors"
-					style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
 				>
 					#{tag.name}
 					<span style="opacity: 0.5;">{tag.usage_count}</span>

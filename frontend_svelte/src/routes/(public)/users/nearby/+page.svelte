@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { authStore } from '$lib/stores/auth.svelte';
+	import { uiStore } from '$lib/stores/ui.svelte';
 	import { usersService } from '$lib/api/services';
 	import { navigateToNearbyBackTarget } from '../../nearby-back';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
@@ -17,6 +18,7 @@
 	import MapPin from 'lucide-svelte/icons/map-pin';
 	import Users from 'lucide-svelte/icons/users';
 	import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
+	import LogIn from 'lucide-svelte/icons/log-in';
 
 	const pagination = usePagination<UserItem>({
 		uniqueKey: (item) => item.user.user_id
@@ -82,7 +84,7 @@
 		<div class="flex items-center gap-2">
 			<button
 				class="flex items-center justify-center rounded-full outline-none"
-				style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 				onclick={handleBack}
 				aria-label="返回"
 			>
@@ -90,7 +92,7 @@
 			</button>
 			<div
 				class="flex items-center gap-1.5 rounded-full py-1.5 px-3.5"
-				style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 			>
 				<MapPin size={12} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 				<span style="font-size: 11px; color: var(--neu-text-muted); max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{mapAnchorStore.displayName}</span>
@@ -113,13 +115,23 @@
 			{/each}
 		</MasonryLayout>
 	{:else if pagination.error}
-		<EmptyState
-			icon={AlertTriangle}
-			title="加载失败"
-			description={pagination.error}
-			actionText="重试"
-			onAction={handleRetry}
-		/>
+		{#if !authStore.isAuthenticated}
+			<EmptyState
+				icon={LogIn}
+				title="登录后查看"
+				description="登录后即可浏览附近的人"
+				actionText="立即登录"
+				onAction={() => uiStore.openLoginModalWithRedirect({})}
+			/>
+		{:else}
+			<EmptyState
+				icon={AlertTriangle}
+				title="加载失败"
+				description={pagination.error}
+				actionText="重试"
+				onAction={handleRetry}
+			/>
+		{/if}
 	{:else if pagination.items.length === 0 && hasLoadedOnce}
 		<EmptyState icon={Users} title="附近暂无其他用户" description="换个浏览位置或稍后再来看看。" />
 	{:else}

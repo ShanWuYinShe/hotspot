@@ -18,7 +18,7 @@
 		'transition-all duration-200',
 		className
 	)}
-	style="border: 2px solid var(--neu-border); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light);"
+	style="border: 2px solid var(--neu-border); box-shadow: var(--neu-shadow-md);"
 	{...restProps}
 >
 	{#if children}

@@ -66,7 +66,7 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<h1 style="font-size: 22px; font-weight: 600; color: var(--neu-text);">举报审核</h1>
-		<button class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);" onclick={() => loadReports()} disabled={pagination.loading}>
+		<button class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);" onclick={() => loadReports()} disabled={pagination.loading}>
 			<RefreshCw size={14} strokeWidth={1.5} class={pagination.loading ? 'animate-spin' : ''} />
 			刷新
 		</button>
@@ -77,14 +77,14 @@
 		{#each [{ value: 'pending', label: '待处理' }, { value: 'resolved', label: '已处理' }, { value: 'dismissed', label: '已驳回' }, { value: 'all', label: '全部' }] as f (f.value)}
 			<button
 				class="rounded-full px-4 py-1.5 outline-none"
-				style="font-size: 12px; font-weight: 500; {statusFilter === f.value ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);' : 'background: var(--neu-bg); color: var(--neu-text); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}"
+				style="font-size: 12px; font-weight: 500; {statusFilter === f.value ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);' : 'background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);'}"
 				onclick={() => (statusFilter = f.value as ReportStatus | 'all')}
 			>{f.label}</button>
 		{/each}
 	</div>
 
 	<!-- Reports list -->
-	<div class="rounded-[24px] overflow-hidden" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+	<div class="rounded-[24px] overflow-hidden" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 		<div class="flex items-center gap-2 px-4 py-3" style="border-bottom: 1px solid var(--neu-border);">
 			<Flag size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 			<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">举报列表</span>
@@ -93,7 +93,7 @@
 			{#if pagination.loading && pagination.items.length === 0}
 				<div class="space-y-3">
 					{#each Array(5) as _, i (i)}
-						<div class="rounded-[18px] p-3" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="rounded-[18px] p-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 							<div class="flex items-center gap-3">
 								<div class="rounded-full" style="width: 36px; height: 36px; background: var(--neu-border);"></div>
 								<div class="flex-1 space-y-2">
@@ -109,10 +109,10 @@
 			{:else}
 				<div class="space-y-3">
 					{#each pagination.items as report (report.report_id)}
-						<div class="rounded-[18px] p-3" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="rounded-[18px] p-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 							<div class="flex items-start justify-between gap-3">
 								<div class="flex items-start gap-3">
-									<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+									<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 										<span style="font-size: 12px; color: var(--neu-text-muted);">?</span>
 									</div>
 									<div>
@@ -136,7 +136,7 @@
 										<DropdownMenu.Root>
 											<DropdownMenu.Trigger>
 												{#snippet child({ props })}
-													<button class="flex items-center justify-center rounded-full outline-none" style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);" aria-label="更多操作" {...props}>
+													<button class="flex items-center justify-center rounded-full outline-none" style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);" aria-label="更多操作" {...props}>
 														<MoreVertical size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
 													</button>
 												{/snippet}
@@ -167,7 +167,7 @@
 					{/each}
 				</div>
 				{#if pagination.hasMore}
-					<button class="mt-4 w-full rounded-full py-2.5 outline-none" style="background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);" onclick={() => loadReports(false)}>加载更多</button>
+					<button class="mt-4 w-full rounded-full py-2.5 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);" onclick={() => loadReports(false)}>加载更多</button>
 				{/if}
 			{/if}
 		</div>

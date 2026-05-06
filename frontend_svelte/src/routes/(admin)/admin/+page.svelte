@@ -22,11 +22,11 @@
 		] as stat}
 			<div
 				class="flex flex-col items-center justify-center rounded-[24px] py-5"
-				style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+				style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 			>
 				<div
 					class="mb-2 flex items-center justify-center rounded-full"
-					style="width: 36px; height: 36px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
 				>
 					<stat.icon size={16} strokeWidth={1.75} style="color: var(--neu-accent-primary);" />
 				</div>
@@ -41,7 +41,7 @@
 		<!-- 快捷操作 -->
 		<div
 			class="rounded-[24px] p-5"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<div class="mb-1" style="font-size: 16px; font-weight: 600; color: var(--neu-text);">快捷操作</div>
 			<div class="mb-4" style="font-size: 12px; color: var(--neu-text-muted);">常用管理功能入口</div>
@@ -54,11 +54,11 @@
 					<a
 						href={action.href}
 						class="flex items-center gap-3 rounded-[18px] p-4 transition-all duration-200"
-						style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border-pressed);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border-pressed);"
 					>
 						<div
 							class="flex items-center justify-center rounded-full"
-							style="width: 36px; height: 36px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+							style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 						>
 							<action.icon size={16} strokeWidth={1.75} style="color: var(--neu-accent-primary);" />
 						</div>
@@ -74,7 +74,7 @@
 		<!-- 系统状态 -->
 		<div
 			class="rounded-[24px] p-5"
-			style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<div class="mb-1" style="font-size: 16px; font-weight: 600; color: var(--neu-text);">系统状态</div>
 			<div class="mb-4" style="font-size: 12px; color: var(--neu-text-muted);">服务运行状态</div>
@@ -83,7 +83,7 @@
 				{#each ['API 服务', '数据库', '缓存服务'] as service}
 					<div
 						class="flex items-center justify-between rounded-[18px] px-4 py-3"
-						style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border-pressed);"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border-pressed);"
 					>
 						<span style="font-size: 14px; color: var(--neu-text);">{service}</span>
 						<div class="flex items-center gap-2">

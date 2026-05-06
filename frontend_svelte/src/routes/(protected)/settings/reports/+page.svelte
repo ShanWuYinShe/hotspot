@@ -68,7 +68,7 @@
 		{#snippet actions()}
 			<button
 				class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-				style="background: var(--neu-bg); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);"
+				style="background: var(--neu-bg); box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border); color: var(--neu-text);"
 				onclick={() => loadReports(true)}
 				disabled={pagination.loading}
 			>
@@ -79,7 +79,7 @@
 	</PageHeader>
 
 	<!-- Filter Card -->
-	<div class="rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+	<div class="rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 		<div class="mb-3">
 			<p style="font-size: 13px; font-weight: 500; color: var(--neu-text);">筛选条件</p>
 			<p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">按状态和目标类型快速定位处理中的举报。</p>
@@ -91,7 +91,7 @@
 						class="rounded-full px-4 py-1.5 text-sm transition-all disabled:opacity-50"
 						style={activeStatus === option.value
 							? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 8px var(--neu-glow);'
-							: 'background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);'}
+							: 'background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);'}
 						disabled={pagination.loading}
 						onclick={async () => {
 							if (pagination.loading || activeStatus === option.value) return;
@@ -109,7 +109,7 @@
 						class="rounded-full px-4 py-1.5 text-sm transition-all disabled:opacity-50"
 						style={activeTargetType === option.value
 							? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 8px var(--neu-glow);'
-							: 'background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text);'}
+							: 'background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);'}
 						disabled={pagination.loading}
 						onclick={async () => {
 							if (pagination.loading || activeTargetType === option.value) return;
@@ -143,11 +143,11 @@
 	{:else}
 		<div class="space-y-3">
 			{#each pagination.items as item (item.report_id)}
-				<div class="rounded-[24px] p-4 sm:p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="rounded-[24px] p-4 sm:p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 					<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 						<div class="min-w-0 flex-1 space-y-2">
 							<div class="flex flex-wrap items-center gap-2">
-								<span class="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);">
+								<span class="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text-muted);">
 									{REPORT_TARGET_TYPE_LABEL[item.target_type]}
 								</span>
 								<span class={`inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-medium ${REPORT_STATUS_BADGE_CLASS[item.status]}`}>
@@ -164,7 +164,7 @@
 						</div>
 					</div>
 
-					<div class="mt-4 grid gap-3 rounded-[18px] px-4 py-3 text-sm sm:grid-cols-2 lg:grid-cols-3" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+					<div class="mt-4 grid gap-3 rounded-[18px] px-4 py-3 text-sm sm:grid-cols-2 lg:grid-cols-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 						<div>
 							<p style="font-size: 11px; color: var(--neu-text-muted);">提交时间</p>
 							<p style="font-size: 13px; font-weight: 500; color: var(--neu-text); margin-top: 4px;">{formatDateTime(item.created_at)}</p>
@@ -180,7 +180,7 @@
 					</div>
 
 					{#if item.description}
-						<div class="mt-3 rounded-[18px] px-4 py-3" style="background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+						<div class="mt-3 rounded-[18px] px-4 py-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 							<p style="font-size: 11px; color: var(--neu-text-muted);">补充说明</p>
 							<p style="font-size: 13px; line-height: 1.6; color: var(--neu-text); margin-top: 4px;">{item.description}</p>
 						</div>

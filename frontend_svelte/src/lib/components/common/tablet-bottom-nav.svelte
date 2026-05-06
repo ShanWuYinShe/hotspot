@@ -54,7 +54,7 @@
 >
 	<div
 		class="flex items-center"
-		style="width: 100%; max-width: 520px; border-radius: 40px; background: var(--neu-glass-bg); backdrop-filter: blur(28px) saturate(1.8); -webkit-backdrop-filter: blur(28px) saturate(1.8); box-shadow: var(--neu-glass-shadow); border: 1px solid var(--neu-glass-border); padding: 8px 16px; gap: 6px;"
+		style="width: 100%; max-width: 520px; border-radius: var(--neu-radius-pill); background: var(--neu-glass-bg); backdrop-filter: blur(var(--neu-glass-blur)) saturate(var(--neu-glass-saturate)); -webkit-backdrop-filter: blur(var(--neu-glass-blur)) saturate(var(--neu-glass-saturate)); box-shadow: var(--neu-glass-shadow); border: 1px solid var(--neu-glass-border); padding: 8px 16px; gap: 6px;"
 	>
 		{#each navItems.slice(0, 2) as item (item.href)}
 			<button

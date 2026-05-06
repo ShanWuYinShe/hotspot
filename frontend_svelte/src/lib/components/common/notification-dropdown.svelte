@@ -121,7 +121,7 @@
 <DropdownMenu.Root bind:open>
 	<DropdownMenu.Trigger>
 		{#snippet child({ props })}
-			<button class="relative flex items-center justify-center rounded-full outline-none" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);" aria-label={t('notificationDropdown.triggerAria')} {...props}>
+			<button class="relative flex items-center justify-center rounded-full outline-none" style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);" aria-label={t('notificationDropdown.triggerAria')} {...props}>
 				{#if notificationStore.unreadCount > 0}
 					{@const TriggerIcon = getNotificationBadgeIcon(notificationStore.unreadCount)}
 					<TriggerIcon style="width: 20px; height: 20px; color: var(--neu-text);" />
@@ -150,7 +150,7 @@
 				{#if notificationStore.unreadCount > 0}
 					<button
 						class="flex items-center justify-center rounded-full outline-none"
-						style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+						style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 						onclick={handleMarkAllRead}
 						title={t('notificationDropdown.markAllRead')}
 						aria-label={t('notificationDropdown.markAllReadAria')}
@@ -160,7 +160,7 @@
 				{/if}
 				<button
 					class="flex items-center justify-center rounded-full outline-none"
-					style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 					onclick={() => { open = false; goto('/settings/notifications'); }}
 					title={t('notificationDropdown.settings')}
 					aria-label={t('notificationDropdown.settings')}
@@ -173,23 +173,23 @@
 		<!-- Notifications List -->
 		{#if loading}
 			<div class="flex flex-col items-center justify-center py-12">
-				<div class="rounded-full animate-pulse" style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);"></div>
+				<div class="rounded-full animate-pulse" style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"></div>
 				<p class="mt-3" style="font-size: 13px; color: var(--neu-text-muted);">{t('common.loading')}</p>
 			</div>
 		{:else if loadFailed}
 			<div class="flex flex-col items-center justify-center py-12 px-4 text-center">
-				<div class="mb-3 flex items-center justify-center rounded-full" style="width: 64px; height: 64px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="mb-3 flex items-center justify-center rounded-full" style="width: 64px; height: 64px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<Bell style="width: 32px; height: 32px; color: var(--neu-text-muted);" />
 				</div>
 				<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">加载通知失败</p>
 				<p style="font-size: 12px; color: var(--neu-text-muted);">请稍后重试</p>
-				<button class="mt-4 rounded-full px-5 py-2 outline-none" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;" onclick={retryLoadRecent}>
+				<button class="mt-4 rounded-full px-5 py-2 outline-none" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;" onclick={retryLoadRecent}>
 					重试
 				</button>
 			</div>
 		{:else if recentNotifications.length === 0}
 			<div class="flex flex-col items-center justify-center py-12">
-				<div class="mb-3 flex items-center justify-center rounded-full" style="width: 64px; height: 64px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="mb-3 flex items-center justify-center rounded-full" style="width: 64px; height: 64px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<Bell style="width: 32px; height: 32px; color: var(--neu-text-muted);" />
 				</div>
 				<p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">{t('notificationDropdown.emptyTitle')}</p>
@@ -207,7 +207,7 @@
 								class="absolute inset-0 flex items-start gap-3 text-left"
 								onclick={() => handleItemClick(item)}
 							>
-								<div class="flex shrink-0 items-center justify-center rounded-full" style="width: 40px; height: 40px; box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+								<div class="flex shrink-0 items-center justify-center rounded-full" style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 									<Icon style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
 								</div>
 								<div class="min-w-0 flex-1 pr-8">
@@ -224,7 +224,7 @@
 								<button
 									type="button"
 									class="absolute right-2 top-2 z-10 flex items-center justify-center rounded-full opacity-0 transition-all group-hover:opacity-100"
-									style="width: 24px; height: 24px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+									style="width: 24px; height: 24px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 									onclick={(e) => handleMarkAsRead(item.notification_id, e)}
 									title={t('notificationDropdown.markAsRead')}
 								>
@@ -240,7 +240,7 @@
 			<div class="p-2" style="border-top: 1px solid var(--neu-border);">
 				<button
 					class="w-full flex items-center justify-center rounded-full px-5 py-2 outline-none"
-					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 13px;"
+					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;"
 					onclick={handleViewAll}
 				>
 					{hasMore

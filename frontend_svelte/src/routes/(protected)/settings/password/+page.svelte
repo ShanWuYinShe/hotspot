@@ -91,7 +91,7 @@
 		backLabel="返回设置"
 	/>
 
-	<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+	<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 		<p style="font-size: 14px; font-weight: 600; color: var(--neu-text); margin-bottom: 16px;">账户安全</p>
 
 		<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4">
@@ -103,7 +103,7 @@
 					bind:value={oldPassword}
 					onblur={() => markTouched('oldPassword')}
 					class="w-full rounded-[18px] px-4 py-2.5 outline-none"
-					style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {oldPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
+					style="box-shadow: var(--neu-shadow-inset); border: 1px solid {oldPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
 				/>
 				{#if oldPasswordError}
 					<p style="font-size: 12px; color: var(--neu-error);">{oldPasswordError}</p>
@@ -117,7 +117,7 @@
 					bind:value={newPassword}
 					onblur={() => markTouched('newPassword')}
 					class="w-full rounded-[18px] px-4 py-2.5 outline-none"
-					style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {newPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
+					style="box-shadow: var(--neu-shadow-inset); border: 1px solid {newPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
 				/>
 				{#if newPasswordError}
 					<p style="font-size: 12px; color: var(--neu-error);">{newPasswordError}</p>
@@ -131,7 +131,7 @@
 					bind:value={confirmPassword}
 					onblur={() => markTouched('confirmPassword')}
 					class="w-full rounded-[18px] px-4 py-2.5 outline-none"
-					style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {confirmPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
+					style="box-shadow: var(--neu-shadow-inset); border: 1px solid {confirmPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
 				/>
 				{#if confirmPasswordError}
 					<p style="font-size: 12px; color: var(--neu-error);">{confirmPasswordError}</p>
