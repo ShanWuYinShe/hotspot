@@ -70,23 +70,28 @@ class SubscriptionManager {
 	private isRestoreInFlight = false;
 	private lastReconcileTrigger: 'subscribe_ack' | 'subscriptions_snapshot' | null = null;
 	private lastReconcileAt = 0;
+	private cleanupFns: (() => void)[] = [];
 
 	constructor() {
 		this.initializeSubscriptionMap(this.desiredSubscriptions);
 		this.initializeSubscriptionMap(this.effectiveSubscriptions);
 
-		// 模块级单例，监听器与应用生命周期一致，无需保存 unsubscribe 引用
-		websocketStore.on('SubscribeAck', (payload) => {
-			this.handleSubscribeAck(payload);
-		});
+		this.cleanupFns.push(
+			websocketStore.on('SubscribeAck', (payload) => {
+				this.handleSubscribeAck(payload);
+			}),
+			websocketStore.on('SubscriptionsSnapshot', (payload) => {
+				this.handleSubscriptionsSnapshot(payload);
+			}),
+			websocketStore.on('ConnectionEstablished', () => {
+				void this.restoreAndReconcileSubscriptions();
+			})
+		);
+	}
 
-		websocketStore.on('SubscriptionsSnapshot', (payload) => {
-			this.handleSubscriptionsSnapshot(payload);
-		});
-
-		websocketStore.on('ConnectionEstablished', () => {
-			void this.restoreAndReconcileSubscriptions();
-		});
+	destroy() {
+		this.cleanupFns.forEach((fn) => fn());
+		this.cleanupFns = [];
 	}
 
 	/** 增量添加订阅 */
@@ -470,6 +475,7 @@ class WebSocketEventHandlers {
 	// 在线状态处理器
 	private userOnlineHandlers = new Set<EventHandler>();
 	private userOfflineHandlers = new Set<EventHandler>();
+	private cleanupFns: (() => void)[] = [];
 
 	private isCurrentUser(userId: string): boolean {
 		return userId === authStore.currentUserId;
@@ -512,11 +518,11 @@ class WebSocketEventHandlers {
 		getMessage: (payload: import('./types').WebSocketEventMap[K]) => string,
 		toastType: 'info' | 'success' | 'warning' | 'error' = 'info'
 	) {
-		websocketStore.on(event, (payload) => {
+		this.cleanupFns.push(websocketStore.on(event, (payload) => {
 			log(`[WS] ${event}:`, payload);
 			toast[toastType](getMessage(payload));
 			this.notificationHandlers.forEach((handler) => handler(payload));
-		});
+		}));
 	}
 
 	/** 注册消息类事件：log + 转发到自定义 handlers */
@@ -524,10 +530,15 @@ class WebSocketEventHandlers {
 		event: K,
 		handlers: Set<EventHandler<import('./types').WebSocketEventMap[K]>>
 	) {
-		websocketStore.on(event, (payload) => {
+		this.cleanupFns.push(websocketStore.on(event, (payload) => {
 			log(`[WS] ${event}:`, payload);
 			handlers.forEach((handler) => handler(payload));
-		});
+		}));
+	}
+
+	destroy() {
+		this.cleanupFns.forEach((fn) => fn());
+		this.cleanupFns = [];
 	}
 
 	/**
@@ -569,47 +580,47 @@ class WebSocketEventHandlers {
 		);
 
 		// 群组邀请响应（条件 toast）
-		websocketStore.on('GroupInviteResponse', (payload) => {
+		this.cleanupFns.push(websocketStore.on('GroupInviteResponse', (payload) => {
 			log('[WS] GroupInviteResponse:', payload);
 			if (payload.status === 'accepted') {
 				toast.success(t('websocket.groupInviteAccepted', { nickname: payload.user.nickname }));
 			}
 			this.notificationHandlers.forEach((handler) => handler(payload));
-		});
+		}));
 
 		// 群组申请响应（条件 toast）
-		websocketStore.on('GroupApplicationResponse', (payload) => {
+		this.cleanupFns.push(websocketStore.on('GroupApplicationResponse', (payload) => {
 			log('[WS] GroupApplicationResponse:', payload);
 			if (payload.status === 'accepted') {
 				toast.success(t('websocket.groupApplicationAccepted', { groupName: payload.group.name }));
 			}
 			this.notificationHandlers.forEach((handler) => handler(payload));
-		});
+		}));
 
 		// 群组成员加入（仅 toast，不转发 notification）
-		websocketStore.on('GroupMemberJoined', (payload: GroupMemberJoinedPayload) => {
+		this.cleanupFns.push(websocketStore.on('GroupMemberJoined', (payload: GroupMemberJoinedPayload) => {
 			log('[WS] GroupMemberJoined:', payload);
 			toast.info(t('websocket.groupMemberJoined', { nickname: payload.user.nickname }));
-		});
+		}));
 
 		// 私聊已读回执（spec: PrivateMessageRead）
-		websocketStore.on('PrivateMessageRead', (payload) => {
+		this.cleanupFns.push(websocketStore.on('PrivateMessageRead', (payload) => {
 			log('[WS] 私聊消息已读:', payload);
-		});
+		}));
 
 		// 订阅状态快照（spec: SubscriptionsSnapshot）
-		websocketStore.on('SubscriptionsSnapshot', (payload) => {
+		this.cleanupFns.push(websocketStore.on('SubscriptionsSnapshot', (payload) => {
 			log('[WS] 订阅状态快照:', payload);
-		});
+		}));
 
 		// 群组成员离开（GroupMemberLeft）
-		websocketStore.on('GroupMemberLeft', (payload: GroupMemberLeftPayload) => {
+		this.cleanupFns.push(websocketStore.on('GroupMemberLeft', (payload: GroupMemberLeftPayload) => {
 			log('[WS] GroupMemberLeft:', payload);
 			toast.info(t('websocket.groupMemberLeft', { nickname: payload.user.nickname }));
-		});
+		}));
 
 		// 群组成员被移除（GroupMemberRemoved）
-		websocketStore.on('GroupMemberRemoved', (payload: GroupMemberRemovedPayload) => {
+		this.cleanupFns.push(websocketStore.on('GroupMemberRemoved', (payload: GroupMemberRemovedPayload) => {
 			log('[WS] GroupMemberRemoved:', payload);
 
 			if (this.isCurrentUser(payload.user.user_id)) {
@@ -619,10 +630,10 @@ class WebSocketEventHandlers {
 				const reasonText = payload.reason === 'banned' ? t('websocket.reasonBanned') : t('websocket.reasonRemoved');
 				toast.info(t('websocket.groupMemberRemoved', { nickname: payload.user.nickname, reason: reasonText }));
 			}
-		});
+		}));
 
 		// 群组成员被禁言（GroupMemberMuted）
-		websocketStore.on('GroupMemberMuted', (payload: GroupMemberMutedPayload) => {
+		this.cleanupFns.push(websocketStore.on('GroupMemberMuted', (payload: GroupMemberMutedPayload) => {
 			log('[WS] GroupMemberMuted:', payload);
 
 			const mutedUntil = formatDateTime(payload.muted_until, getLocale());
@@ -631,10 +642,10 @@ class WebSocketEventHandlers {
 			} else {
 				toast.info(t('websocket.groupMemberMutedUntil', { nickname: payload.user.nickname, time: mutedUntil }));
 			}
-		});
+		}));
 
 		// 群组成员解除禁言（GroupMemberUnmuted）
-		websocketStore.on('GroupMemberUnmuted', (payload: GroupMemberUnmutedPayload) => {
+		this.cleanupFns.push(websocketStore.on('GroupMemberUnmuted', (payload: GroupMemberUnmutedPayload) => {
 			log('[WS] GroupMemberUnmuted:', payload);
 
 			if (this.isCurrentUser(payload.user.user_id)) {
@@ -642,10 +653,10 @@ class WebSocketEventHandlers {
 			} else {
 				toast.info(t('websocket.groupMemberUnmuted', { nickname: payload.user.nickname }));
 			}
-		});
+		}));
 
 		// 群组信息更新（GroupUpdated）
-		websocketStore.on('GroupUpdated', (payload: GroupUpdatedPayload) => {
+		this.cleanupFns.push(websocketStore.on('GroupUpdated', (payload: GroupUpdatedPayload) => {
 			log('[WS] GroupUpdated:', payload);
 
 			const locale = getLocale();
@@ -656,17 +667,17 @@ class WebSocketEventHandlers {
 				const fieldsText = updatedFields.map((f) => fieldLabels[f] || f).join(separator);
 				toast.success(t('websocket.groupUpdated', { fields: fieldsText }));
 			}
-		});
+		}));
 
 		// 群组解散（GroupDismissed，spec 命名）
-		websocketStore.on('GroupDismissed', (payload: GroupDismissedPayload) => {
+		this.cleanupFns.push(websocketStore.on('GroupDismissed', (payload: GroupDismissedPayload) => {
 			log('[WS] GroupDismissed:', payload);
 			toast.warning(t('websocket.groupDismissed'));
 			this.redirectIfViewingGroup(payload.group_id);
-		});
+		}));
 
 		// 系统公告
-		websocketStore.on('SystemAnnouncement', (payload) => {
+		this.cleanupFns.push(websocketStore.on('SystemAnnouncement', (payload) => {
 			log('[WS] 系统公告:', payload);
 			switch (payload.severity) {
 				case 'error':
@@ -679,10 +690,10 @@ class WebSocketEventHandlers {
 					toast.info(payload.title);
 			}
 			this.notificationHandlers.forEach((handler) => handler(payload));
-		});
+		}));
 
 		// 账号被封禁（spec 新增事件）
-		websocketStore.on('AccountBanned', (payload: AccountBannedPayload) => {
+		this.cleanupFns.push(websocketStore.on('AccountBanned', (payload: AccountBannedPayload) => {
 			log('[WS] AccountBanned:', payload);
 
 			const durationText = payload.duration_days === 0
@@ -694,10 +705,10 @@ class WebSocketEventHandlers {
 			websocketStore.disconnect();
 			authStore.logout();
 			void goto('/auth');
-		});
+		}));
 
 		// 在线状态（spec 简化：只有 user_id + 时间戳）
-		websocketStore.on('UserOnline', (payload: UserOnlinePayload) => {
+		this.cleanupFns.push(websocketStore.on('UserOnline', (payload: UserOnlinePayload) => {
 			log('[WS] 用户上线:', payload);
 
 			// 更新 presence store（简化为 online 状态）
@@ -705,9 +716,9 @@ class WebSocketEventHandlers {
 
 			// 调用自定义处理器
 			this.userOnlineHandlers.forEach((handler) => handler(payload));
-		});
+		}));
 
-		websocketStore.on('UserOffline', (payload: UserOfflinePayload) => {
+		this.cleanupFns.push(websocketStore.on('UserOffline', (payload: UserOfflinePayload) => {
 			log('[WS] 用户离线:', payload);
 
 			// 更新 presence store
@@ -715,37 +726,37 @@ class WebSocketEventHandlers {
 
 			// 调用自定义处理器
 			this.userOfflineHandlers.forEach((handler) => handler(payload));
-		});
+		}));
 
 		// 用户资料变更（spec 新增事件）
-		websocketStore.on('UserProfileUpdated', (payload) => {
+		this.cleanupFns.push(websocketStore.on('UserProfileUpdated', (payload) => {
 			log('[WS] 用户资料变更:', payload);
 			// 可用于更新缓存的用户信息
-		});
+		}));
 
 		// 私聊正在输入（spec: PrivateUserTyping）
-		websocketStore.on('PrivateUserTyping', (payload) => {
+		this.cleanupFns.push(websocketStore.on('PrivateUserTyping', (payload) => {
 			log('[WS] 私聊正在输入:', payload);
-		});
+		}));
 
 		// 群聊正在输入（spec: GroupUserTyping）
-		websocketStore.on('GroupUserTyping', (payload) => {
+		this.cleanupFns.push(websocketStore.on('GroupUserTyping', (payload) => {
 			log('[WS] 群聊正在输入:', payload);
-		});
+		}));
 
 		// 多端同步事件（⏳ 延期实现）
-		websocketStore.on('SelfReadSync', (_payload) => {
+		this.cleanupFns.push(websocketStore.on('SelfReadSync', (_payload) => {
 			// ⏳ 延期实现
-		});
-		websocketStore.on('SelfChatSettingsSync', (_payload) => {
+		}));
+		this.cleanupFns.push(websocketStore.on('SelfChatSettingsSync', (_payload) => {
 			// ⏳ 延期实现
-		});
-		websocketStore.on('SelfSettingsUpdated', (_payload) => {
+		}));
+		this.cleanupFns.push(websocketStore.on('SelfSettingsUpdated', (_payload) => {
 			// ⏳ 延期实现
-		});
-		websocketStore.on('SelfRelationSync', (_payload) => {
+		}));
+		this.cleanupFns.push(websocketStore.on('SelfRelationSync', (_payload) => {
 			// ⏳ 延期实现
-		});
+		}));
 	}
 
 	// ============ 添加自定义处理器 ============

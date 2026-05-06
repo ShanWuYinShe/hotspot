@@ -1,3 +1,4 @@
+import { untrack } from 'svelte';
 import { toast } from '$lib/stores/toast.svelte';
 import { isSuccess, type ApiResponse } from '$lib/api/client';
 
@@ -37,8 +38,8 @@ export function useOptimisticToggle<T>(options: OptimisticOptions<T>) {
 	let prevExternalCount = getExternalCount();
 
 	$effect.pre(() => {
-		const extVal = getExternalValue();
-		const extCount = getExternalCount();
+		const extVal = untrack(getExternalValue);
+		const extCount = untrack(getExternalCount);
 
 		if (extVal !== prevExternalValue) {
 			prevExternalValue = extVal;
