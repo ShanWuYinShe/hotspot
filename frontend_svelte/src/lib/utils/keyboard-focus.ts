@@ -98,14 +98,12 @@ function isTextInputElement(node: HTMLElement): boolean {
   return node.isContentEditable;
 }
 
-export function useKeyboardFocus() {
-	return (node: HTMLElement) => {
+export function useKeyboardFocus(): (element: HTMLElement) => void | (() => void) {
+	return (node: HTMLElement): void | (() => void) => {
 		if (!isTextInputElement(node)) {
 			return;
 		}
-
 		registeredInputs.add(node);
-
 		return () => {
 			registeredInputs.delete(node);
 		};

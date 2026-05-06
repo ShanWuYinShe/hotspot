@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { authStore } from '$lib/stores/auth.svelte';
 	import { momentsService } from '$lib/api/services';
 	import { navigateToNearbyBackTarget } from '../../nearby-back';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
@@ -20,7 +21,7 @@
 	const TABS = [
 		{ id: 'hot', label: t('discover.hot') || '热门' },
 		{ id: 'nearby', label: t('discover.nearby') || '附近' },
-		{ id: 'following', label: t('discover.following') || '关注' },
+		...(authStore.isAuthenticated ? [{ id: 'following', label: t('discover.following') || '关注' }] : []),
 	];
 
 	const pagination = usePagination<MomentItem>({
