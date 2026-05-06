@@ -31,6 +31,11 @@ export function useOptimisticToggle<T>(options: OptimisticOptions<T>) {
 	let isOn = $state(getExternalValue());
 	let count = $state(getExternalCount());
 	let isLoading = $state(false);
+	let alive = true;
+
+	$effect(() => {
+		return () => { alive = false; };
+	});
 
 	// 跟踪上一次外部值，仅在外部数据真正变化时同步
 	// （避免乐观更新后被旧的外部值覆盖）
@@ -73,12 +78,13 @@ export function useOptimisticToggle<T>(options: OptimisticOptions<T>) {
 				throw new Error(response.message || 'Operation failed');
 			}
 		} catch (error) {
+			if (!alive) return;
 			// Rollback
 			isOn = previousIsOn;
 			count = previousCount;
 			toast.error(options.errorMessage || (error instanceof Error ? error.message : '操作失败'));
 		} finally {
-			isLoading = false;
+			if (alive) isLoading = false;
 		}
 	}
 

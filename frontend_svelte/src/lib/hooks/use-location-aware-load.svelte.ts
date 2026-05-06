@@ -49,6 +49,8 @@ export function useLocationAwareLoad(
 				clearTimeout(timer);
 				timer = null;
 			}
+			// 重置，以便下次 mount 时走首次加载路径（prevUpdatedAt === undefined）
+			prevUpdatedAt = undefined;
 		};
 	});
 }

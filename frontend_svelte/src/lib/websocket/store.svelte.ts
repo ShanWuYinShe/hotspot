@@ -162,6 +162,17 @@ class WebSocketStore {
 						}
 					});
 				}
+
+				// cleanup：当 isAuthenticated 变为 false 时断开连接
+				return () => {
+					if (authStore.isAuthenticated) return;
+					untrack(() => {
+						const state = this.connectionState;
+						if (state !== 'disconnected' && state !== 'failed') {
+							this.disconnect();
+						}
+					});
+				};
 			});
 		});
 

@@ -537,6 +537,7 @@ class WebSocketEventHandlers {
 	}
 
 	destroy() {
+		this.cancelAllTyping();
 		this.cleanupFns.forEach((fn) => fn());
 		this.cleanupFns = [];
 	}
