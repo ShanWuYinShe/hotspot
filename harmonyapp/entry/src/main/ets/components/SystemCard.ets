@@ -168,6 +168,8 @@ export struct SystemCard {
         }
       }
     })
+    .accessibilityGroup(this.clickable)
+    .accessibilityText(this.clickable ? '卡片' : '')
   }
 }
 
@@ -215,5 +217,7 @@ export struct MasonryCard {
         }
       }
     })
+    .accessibilityGroup(this.clickable)
+    .accessibilityText(this.clickable ? '卡片' : '')
   }
 }

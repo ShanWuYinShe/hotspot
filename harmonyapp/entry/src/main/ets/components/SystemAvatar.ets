@@ -66,6 +66,8 @@ export struct SystemAvatar {
           .borderRadius(this.getBorderRadius())
           .border(this.getBorderOptions())
           .backgroundColor(this.getPalette().surfaceBackground)
+          .alt($r('app.media.foreground'))
+          .accessibilityText(this.name ? `头像：${this.name}` : '用户头像')
           .onError(() => {
             this.imageLoadFailed = true;
           })

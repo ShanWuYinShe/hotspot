@@ -234,6 +234,7 @@ export struct MomentFeedCard {
             .height('100%')
             .objectFit(ImageFit.Cover)
             .borderRadius(DesignConstants.RADIUS.MD)
+            .accessibilityText(`图片 ${imgIndex + 1}，共 ${(this.moment.images ?? []).length} 张`)
         }
         .aspectRatio(1)
         .geometryTransition('moment_img_' + this.moment.moment_id + '_' + imgIndex)
@@ -261,6 +262,7 @@ export struct MomentFeedCard {
         .constraintSize({ maxHeight: 220 })
         .objectFit(ImageFit.Cover)
         .borderRadius(DesignConstants.RADIUS.LG)
+        .accessibilityText('动态图片')
         .onClick(() => this.openMomentDetail(this.moment))
     }
   }

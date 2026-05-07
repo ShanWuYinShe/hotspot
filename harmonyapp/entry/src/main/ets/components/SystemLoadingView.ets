@@ -39,6 +39,7 @@ export struct SystemLoadingView {
             .width(36)
             .height(36)
             .color(this.getPalette().accentBackground)
+            .accessibilityText('正在加载')
         }
       }
 
@@ -59,5 +60,6 @@ export struct SystemLoadingView {
     .justifyContent(FlexAlign.Center)
     .backgroundColor(this.getPalette().pageBackground)
     .padding(DesignConstants.SPACING.XXL)
+    .accessibilityText(this.message)
   }
 }

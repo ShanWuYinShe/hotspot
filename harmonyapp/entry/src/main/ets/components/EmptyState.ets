@@ -67,7 +67,7 @@ export struct LoadingMoreIndicator {
 
   build() {
     Row({ space: DesignConstants.SPACING.SM }) {
-      LoadingProgress().width(20).height(20)
+      LoadingProgress().width(20).height(20).accessibilityText('正在加载')
       Text(this.message)
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor(AppThemeManager.getSafeCurrentPalette().textSecondary)
@@ -75,6 +75,7 @@ export struct LoadingMoreIndicator {
     .width('100%')
     .justifyContent(FlexAlign.Center)
     .padding(DesignConstants.SPACING.MD)
+    .accessibilityText(this.message)
   }
 }
 
@@ -85,7 +86,7 @@ export struct LoadingMoreIndicator {
 @Builder
 export function RefreshIndicator() {
   Row() {
-    LoadingProgress().width(24).height(24)
+    LoadingProgress().width(24).height(24).accessibilityText('正在刷新')
     Text('正在刷新...')
       .fontSize(DesignConstants.FONT.SIZE.MD)
       .margin({ left: DesignConstants.SPACING.SM })
@@ -94,4 +95,5 @@ export function RefreshIndicator() {
   .width('100%')
   .justifyContent(FlexAlign.Center)
   .padding(DesignConstants.SPACING.SM)
+  .accessibilityText('正在刷新')
 }

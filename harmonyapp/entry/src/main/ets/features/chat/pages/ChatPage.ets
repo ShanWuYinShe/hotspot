@@ -1305,6 +1305,7 @@ export struct ChatPage {
                 .shadow(this.getCurrentThemePalette().controlShadow)
                 .border({ width: 1, color: this.getChatTheme().divider })
                 .margin(DesignConstants.SPACING.XS)
+                .accessibilityText('[图片消息]')
             } else {
               Text(msg.content)
                 .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
