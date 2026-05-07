@@ -408,9 +408,10 @@
 						{/each}
 					{:else}
 						{#each nearbyUsers.slice(0, 5) as user (user.user.user_id)}
-							<div
-								class="flex cursor-pointer items-center gap-3.5 rounded-[24px] px-4 py-3.5"
+							<div role="button" tabindex="0"
+								class="flex cursor-pointer items-center gap-3.5 rounded-[24px] px-4 py-3.5 text-left"
 								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+								aria-label={user.user.nickname}
 								onclick={() => void goto(`/users/${user.user.user_id}`)}
 							>
 								<div class="relative flex-shrink-0">
@@ -576,9 +577,10 @@
 							{/each}
 						{:else}
 							{#each nearbyUsers as user (user.user.user_id)}
-								<div
-									class="flex cursor-pointer items-center gap-3.5 rounded-[24px] px-4 py-3.5"
+								<div role="button" tabindex="0"
+									class="flex cursor-pointer items-center gap-3.5 rounded-[24px] px-4 py-3.5 text-left"
 									style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+									aria-label={user.user.nickname}
 									onclick={() => void goto(`/users/${user.user.user_id}`)}
 								>
 									<div class="relative flex-shrink-0">
