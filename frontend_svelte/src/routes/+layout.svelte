@@ -5,8 +5,7 @@
     import { ModeWatcher } from "mode-watcher";
     import { getCurrentLocationLabel, initLocale } from "$lib/i18n";
     import { Toaster } from "$lib/components/ui/sonner";
-    import LoginModal from "$lib/components/common/login-modal.svelte";
-    import MobileCreateSheet from "$lib/components/common/mobile-create-sheet.svelte";
+import MobileCreateSheet from "$lib/components/common/mobile-create-sheet.svelte";
     import SearchModal from "$lib/components/common/search-modal.svelte";
     import CreateMomentModal from "$lib/components/common/create-moment-modal.svelte";
     import CreateGroupModal from "$lib/components/common/create-group-modal.svelte";
@@ -253,7 +252,6 @@
 
 <ModeWatcher />
 <Toaster position="top-center" richColors />
-<LoginModal />
 <MobileCreateSheet />
 <SearchModal open={uiStore.showSearchModal} onOpenChange={(open) => !open && uiStore.closeSearchModal()} />
 <CreateMomentModal open={uiStore.showCreateMoment} onOpenChange={(open) => !open && uiStore.closeCreateMoment()} />

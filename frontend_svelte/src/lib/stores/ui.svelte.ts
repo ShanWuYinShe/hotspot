@@ -48,61 +48,41 @@ export function normalizeRedirectPath(url?: string | null): string | null {
 }
 
 class UIStore {
-	// 登录模态框状态
-	#showLoginModal = $state(false);
-	#loginModalCallback = $state<(() => void) | null>(null);
 	#showCreateSheet = $state(false);
 	#showCreateMoment = $state(false);
 	#showCreateGroup = $state(false);
 		#showSearchModal = $state(false);
 
-	// ==================== 登录模态框 ====================
-
-	/** 是否显示登录模态框 */
-	showLoginModal = $derived(this.#showLoginModal);
-
-	/** 登录成功后的回调函数 */
-	loginModalCallback = $derived(this.#loginModalCallback);
 	showCreateSheet = $derived(this.#showCreateSheet);
 	showCreateMoment = $derived(this.#showCreateMoment);
 	showCreateGroup = $derived(this.#showCreateGroup);
 		showSearchModal = $derived(this.#showSearchModal);
-	
+
 	/**
-	 * 打开登录模态框
-	 * @param callback 登录成功后的回调
+	 * 跳转到登录页面（引导式登录）
+	 * @param callback 登录成功后的回调（不推荐使用，登录后会跳转回来由用户重新操作）
 	 */
-	openLoginModal(callback?: () => void) {
-		this.#showLoginModal = true;
-		this.#loginModalCallback = callback ?? null;
+	openLoginModal(_callback?: () => void) {
+		this.navigateToAuth();
 	}
 
 	openLoginModalWithRedirect(options: { url?: string; onSuccess?: () => void } = {}) {
-		this.saveRedirectUrl(options.url);
-		this.openLoginModal(options.onSuccess);
+		this.navigateToAuth(options.url);
 	}
 
-	saveCurrentRedirectUrl() {
+	private navigateToAuth(redirectUrl?: string) {
 		if (!browser) return;
-		this.saveRedirectUrl(
-			`${window.location.pathname}${window.location.search}${window.location.hash}`
-		);
+		const fallbackUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+		const target = normalizeRedirectPath(redirectUrl ?? fallbackUrl) ?? '/';
+		const authUrl = `/auth?redirect=${encodeURIComponent(target)}`;
+		goto(authUrl);
 	}
-	
-	closeLoginModal() {
-		this.#showLoginModal = false;
-		this.#loginModalCallback = null;
-	}
-	
-	/** 登录成功后执行回调 */
+
+	/** 登录成功后跳转到之前保存的页面 */
 	onLoginSuccess() {
-		const callback = this.#loginModalCallback;
+		if (!browser) return;
 		const redirectUrl = this.hasRedirectUrl() ? this.getAndClearRedirectUrl() : null;
-		this.closeLoginModal();
-		if (callback) {
-			callback();
-		}
-		if (redirectUrl && browser) {
+		if (redirectUrl) {
 			const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
 			if (redirectUrl !== currentUrl) {
 				goto(redirectUrl);

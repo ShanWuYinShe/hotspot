@@ -36,6 +36,10 @@ export struct LoginPromptView {
   @Prop hint: string = '';
   /** 图标（默认锁图标） */
   @Prop icon: AppIcon = AppIcon.PERSON;
+  /** 登录后跳转的页面路由 */
+  @Prop redirectUrl: string = '';
+  /** 登录原因描述（传给 LoginPage） */
+  @Prop loginAction: string = '';
 
   /** 快速体验弹窗状态 */
   @State showQuickStart: boolean = false;
@@ -271,8 +275,8 @@ export struct LoginPromptView {
   private navigateToLogin(): void {
     const loginParams = new LoginRouteParam();
     loginParams.reason = 'action_required';
-    loginParams.action = '查看个人资料';
-    loginParams.redirectUrl = PageNames.PROFILE;
+    loginParams.action = this.loginAction || this.title;
+    loginParams.redirectUrl = this.redirectUrl;
     AppRouter.push(PageNames.LOGIN, loginParams);
   }
 }

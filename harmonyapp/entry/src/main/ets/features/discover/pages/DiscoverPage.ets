@@ -6,7 +6,7 @@
 import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { AppRouter, ChatRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
@@ -40,10 +40,6 @@ class SearchParams {
   keyword: string = '';
 }
 
-class LoginRedirectParams {
-  reason: string = '';
-  action: string = '';
-}
 
 @Preview
 @Component
@@ -862,7 +858,7 @@ export struct DiscoverPage {
   private startPrivateChat(user: UserItem): void {
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再发起私聊', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
+      const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '发起私聊';
       AppRouter.push(PageNames.LOGIN, loginParams);
@@ -881,7 +877,7 @@ export struct DiscoverPage {
   private async reportUser(user: UserItem): Promise<void> {
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再举报', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
+      const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '举报用户';
       AppRouter.push(PageNames.LOGIN, loginParams);

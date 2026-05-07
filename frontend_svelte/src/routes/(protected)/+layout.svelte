@@ -27,7 +27,7 @@
 			!authStore.isAuthenticated &&
 			!authStore.isRestoring
 		) {
-			uiStore.saveCurrentRedirectUrl();
+			uiStore.saveRedirectUrl();
 		}
 	});
 

@@ -1,7 +1,7 @@
 import { KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { ShareListItem, ShareListRequest, ShareType } from '../../../core/types/api';
-import { DefaultConfig } from '../../../constants/AppConstants';
+import { DefaultConfig, PageNames } from '../../../constants/AppConstants';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -229,7 +229,9 @@ export struct MySharesPage {
         LoginPromptView({
           title: '登录后查看我的分享',
           subtitle: '统一管理已生成的分享链接并随时撤销',
-          icon: AppIcon.SHARE
+          icon: AppIcon.SHARE,
+          redirectUrl: PageNames.MY_SHARES,
+          loginAction: '查看我的分享'
         })
           .layoutWeight(1)
       } else if (this.isLoading) {

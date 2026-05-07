@@ -946,7 +946,9 @@ struct Index {
               LoginPromptView({
                 title: '消息功能需要登录',
                 subtitle: '登录后可与好友实时聊天、加入群组讨论',
-                icon: AppIcon.MESSAGE
+                icon: AppIcon.MESSAGE,
+                redirectUrl: PageNames.INDEX,
+                loginAction: '消息功能'
               })
             }
           }

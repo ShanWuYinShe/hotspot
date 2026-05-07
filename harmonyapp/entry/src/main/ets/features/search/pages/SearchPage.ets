@@ -2,7 +2,7 @@ import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN, KEY_CLIENT_C
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
-import { AppRouter, ChatRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ProfileRouteParam, SearchRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam, SearchRouteParam } from '../../../core/router/AppRouter';
 import {
   UserItem, GroupItem, MomentItem, GeoPoint,
   JoinGroupRequest, CreateReportRequest, Relationship,
@@ -33,10 +33,6 @@ import { TimerManager } from '../../../core/utils/TimerManager';
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'SearchPage';
 
-class LoginRedirectParams {
-  reason: string = '';
-  action: string = '';
-}
 
 @Preview
 @Component
@@ -308,44 +304,69 @@ export struct SearchPage {
   build() {
     NavDestination() {
       Column() {
-        Row() {
-          IconButton({
-            icon: AppIcon.BACK,
-            iconSize: IconSize.LARGE,
-            iconColor: this.getCurrentThemePalette().textPrimary,
-            bgColor: Color.Transparent,
-            onButtonClick: () => {
-              AppRouter.pop();
+        // Search header — back button + search input (Figma Make: rounded back btn + neu-input-surface)
+        Row({ space: 12 }) {
+          // Circular back button with neumorphic shadow
+          Button() {
+            Text() {
+              SymbolSpan($r(AppIcon.BACK))
+                .fontSize(15)
+                .fontColor([this.getCurrentThemePalette().textSecondary])
             }
+          }
+          .type(ButtonType.Circle)
+          .width(36)
+          .height(36)
+          .backgroundColor(this.getSurfaceBackground())
+          .shadow({
+            radius: 9,
+            color: this.getCurrentThemePalette().surfaceShadow.color ?? '#00000022',
+            offsetX: 4,
+            offsetY: 4
+          })
+          .border({ width: 1, color: this.getSurfaceBorder() })
+          .onClick(() => {
+            AppRouter.pop();
           })
 
-          TextInput({ placeholder: '搜索用户、群组、瞬间...', text: this.keyword })
-            .layoutWeight(1)
-            .height(42)
-            .backgroundColor(this.getSurfaceSubtle())
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .shadow(this.getCurrentThemePalette().controlShadow)
-            .padding({ left: 16, right: 16 })
-            .margin({ left: 8, right: 8 })
-            .onChange((value) => {
-              this.keyword = value;
-              this.hasSearched = false;
-              this.scheduleSuggest();
-            })
-            .onSubmit(() => {
-              this.doSearch();
-            })
-            .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
-
-          IconButton({
-            icon: AppIcon.SEARCH,
-            iconSize: IconSize.MEDIUM,
-            iconColor: this.getCurrentThemePalette().textPrimary,
-            bgColor: this.getSurfaceSubtle(),
-            onButtonClick: () => {
-              this.doSearch();
+          // Search input with inset neumorphic style
+          Row({ space: 10 }) {
+            Text() {
+              SymbolSpan($r(AppIcon.SEARCH))
+                .fontSize(14)
+                .fontColor([this.getCurrentThemePalette().textSecondary])
             }
+
+            TextInput({ placeholder: '搜索用户、地点、话题…', text: this.keyword })
+              .layoutWeight(1)
+              .height(38)
+              .backgroundColor(Color.Transparent)
+              .fontSize(13)
+              .fontColor(this.getCurrentThemePalette().textPrimary)
+              .border({ width: 0 })
+              .padding(0)
+              .onChange((value) => {
+                this.keyword = value;
+                this.hasSearched = false;
+                this.scheduleSuggest();
+              })
+              .onSubmit(() => {
+                this.doSearch();
+              })
+              .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+          }
+          .layoutWeight(1)
+          .height(38)
+          .borderRadius(18)
+          .padding({ left: 16, right: 16 })
+          .backgroundColor(this.getSurfaceBackground())
+          .shadow({
+            radius: 4,
+            color: this.getCurrentThemePalette().surfaceShadow.color ?? '#00000022',
+            offsetX: 2,
+            offsetY: 2
           })
+          .border({ width: 1, color: this.getSurfaceBorder() })
         }
         .width('100%')
         .padding({
@@ -388,17 +409,17 @@ export struct SearchPage {
             }.tabBar(this.TabBuilder(2, '瞬间'))
           }
           .vertical(false)
-          .barMode(BarMode.Fixed)
+          .barMode(BarMode.Scrollable)
           .barWidth('100%')
-          .barHeight(52)
-          .animationDuration(280)
+          .barHeight(44)
+          .animationDuration(220)
           .onChange((index: number) => {
             this.currentIndex = index;
           })
           .width('100%')
           .layoutWeight(1)
           .backgroundColor(Color.Transparent)
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 12, bottom: 0 })
         }
       }
       .width('100%')
@@ -461,34 +482,32 @@ export struct SearchPage {
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
+    .borderRadius(20)
+    .shadow({ radius: 12, color: this.getCurrentThemePalette().surfaceShadow.color ?? '#00000022', offsetX: 5, offsetY: 5 })
     .border({ width: 1, color: this.getSurfaceBorder() })
     .onClick(() => this.handleSuggestItemTap(item))
   }
 
   @Builder TabBuilder(index: number, name: string) {
-    Row({ space: DesignConstants.SPACING.XS }) {
-      Text(name)
-        .fontColor(this.currentIndex === index ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontWeight(this.currentIndex === index ? FontWeight.Bold : FontWeight.Normal)
-        .lineHeight(20)
-    }
-    .width('100%')
-    .height(36)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(VerticalAlign.Center)
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-    .backgroundColor(this.currentIndex === index ? this.getSurfaceSubtle() : Color.Transparent)
-    .borderRadius(DesignConstants.RADIUS.FULL)
-    .border(this.currentIndex === index ? { width: 1, color: this.getSurfaceBorder() } : { width: 0 })
-    .onClick(() => {
-      if (this.currentIndex !== index) {
-        this.currentIndex = index;
-        this.controller.changeIndex(index);
-      }
-    })
+    Text(name)
+      .fontColor(this.currentIndex === index ? Color.White : this.getCurrentThemePalette().textSecondary)
+      .fontSize(12)
+      .fontWeight(FontWeight.Medium)
+      .padding({ left: 14, right: 14, top: 6, bottom: 6 })
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.currentIndex === index ? this.getCurrentThemePalette().accentBackground : this.getSurfaceBackground())
+      .shadow(this.currentIndex === index
+        ? { radius: 10, color: this.getCurrentThemePalette().accentShadow.color ?? '#00000022', offsetX: 0, offsetY: 3 }
+        : { radius: 6, color: this.getCurrentThemePalette().surfaceShadow.color ?? '#00000022', offsetX: 3, offsetY: 3 })
+      .border(this.currentIndex === index
+        ? { width: 0 }
+        : { width: 1, color: this.getSurfaceBorder() })
+      .onClick(() => {
+        if (this.currentIndex !== index) {
+          this.currentIndex = index;
+          this.controller.changeIndex(index);
+        }
+      })
   }
 
   @Builder
@@ -497,14 +516,16 @@ export struct SearchPage {
       Column({ space: 16 }) {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(48)
+            .fontSize(36)
             .fontColor([this.getCurrentThemePalette().textSecondary])
+            .opacity(0.4)
         }
-        Text('未找到相关结果').fontSize(DesignConstants.FONT.SIZE.LG).fontColor(this.getCurrentThemePalette().textSecondary)
+        Text('未找到相关内容').fontSize(15).fontColor(this.getCurrentThemePalette().textPrimary)
+        Text('尝试其他关键词').fontSize(13).fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
-      List({ space: DesignConstants.SPACING.SM }) {
+      List({ space: 10 }) {
         ForEach(this.userResults, (item: UserItem) => {
           ListItem() {
             this.buildUserItem(item)
@@ -527,10 +548,12 @@ export struct SearchPage {
       Column({ space: 16 }) {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(48)
+            .fontSize(36)
             .fontColor([this.getCurrentThemePalette().textSecondary])
+            .opacity(0.4)
         }
-        Text('未找到相关结果').fontSize(DesignConstants.FONT.SIZE.LG).fontColor(this.getCurrentThemePalette().textSecondary)
+        Text('未找到相关内容').fontSize(15).fontColor(this.getCurrentThemePalette().textPrimary)
+        Text('尝试其他关键词').fontSize(13).fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
@@ -722,8 +745,8 @@ export struct SearchPage {
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
+    .borderRadius(20)
+    .shadow({ radius: 12, color: this.getCurrentThemePalette().surfaceShadow.color ?? '#00000022', offsetX: 5, offsetY: 5 })
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
@@ -822,8 +845,8 @@ export struct SearchPage {
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
+    .borderRadius(20)
+    .shadow({ radius: 12, color: this.getCurrentThemePalette().surfaceShadow.color ?? '#00000022', offsetX: 5, offsetY: 5 })
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
@@ -970,7 +993,7 @@ export struct SearchPage {
   private async joinGroup(group: GroupItem): Promise<void> {
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再加入群组', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
+      const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '加入群组';
       AppRouter.push(PageNames.LOGIN, loginParams);
@@ -1033,7 +1056,7 @@ export struct SearchPage {
   private startPrivateChat(user: UserItem): void {
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再发起私聊', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
+      const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '发起私聊';
       AppRouter.push(PageNames.LOGIN, loginParams);
@@ -1052,7 +1075,7 @@ export struct SearchPage {
   private enterGroupChat(group: GroupItem): void {
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再进入群聊', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
+      const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '进入群聊';
       AppRouter.push(PageNames.LOGIN, loginParams);
@@ -1070,7 +1093,7 @@ export struct SearchPage {
   private async reportUser(user: UserItem): Promise<void> {
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再举报', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
+      const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '举报用户';
       AppRouter.push(PageNames.LOGIN, loginParams);
@@ -1098,7 +1121,7 @@ export struct SearchPage {
   private async reportGroup(group: GroupItem): Promise<void> {
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再举报', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
+      const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '举报群组';
       AppRouter.push(PageNames.LOGIN, loginParams);

@@ -552,7 +552,7 @@ export struct LoginPage {
       }
       return;
     }
-    AppRouter.clear();
+    AppRouter.pop();
   }
 
   private async handleAuthSuccess(authData: AuthData) {

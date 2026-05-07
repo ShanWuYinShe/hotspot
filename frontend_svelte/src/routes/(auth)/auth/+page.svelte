@@ -11,14 +11,18 @@
 	$effect(() => {
 		if (browser && authStore.isAuthenticated) {
 			untrack(() => {
-				const redirect = normalizeRedirectPath(page.url.searchParams.get('redirect')) ?? '/';
-				goto(redirect, { replaceState: true });
+				const redirect = page.url.searchParams.get('redirect');
+				const target = normalizeRedirectPath(redirect) ?? '/';
+				goto(target, { replaceState: true });
 			});
 		}
 	});
 
 	async function handleSuccess() {
 		uiStore.onLoginSuccess();
+		const redirect = page.url.searchParams.get('redirect');
+		const target = normalizeRedirectPath(redirect) ?? '/';
+		goto(target, { replaceState: true });
 	}
 </script>
 

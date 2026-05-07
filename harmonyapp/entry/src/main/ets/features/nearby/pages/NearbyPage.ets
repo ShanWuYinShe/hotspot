@@ -7,7 +7,7 @@
 import { GlobalStateManager, KEY_IS_LOGGED_IN, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { AppRouter, ChatRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint, RelativeLocation,
@@ -48,10 +48,6 @@ class GroupDetailParams {
   groupId: string = '';
 }
 
-class LoginRedirectParams {
-  reason: string = '';
-  action: string = '';
-}
 
 @Preview
 @Component
@@ -1165,7 +1161,7 @@ export struct NearbyPage {
   private async joinGroup(group: GroupItem): Promise<void> {
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再加入群组', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
+      const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '加入群组';
       AppRouter.push(PageNames.LOGIN, loginParams);
@@ -1217,7 +1213,7 @@ export struct NearbyPage {
   private startPrivateChat(user: UserItem): void {
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再发起私聊', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
+      const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '发起私聊';
       AppRouter.push(PageNames.LOGIN, loginParams);
@@ -1236,7 +1232,7 @@ export struct NearbyPage {
   private enterGroupChat(group: GroupItem): void {
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再进入群聊', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
+      const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '进入群聊';
       AppRouter.push(PageNames.LOGIN, loginParams);
@@ -1256,7 +1252,7 @@ export struct NearbyPage {
     if (!userId) return;
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再举报', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
+      const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '举报用户';
       AppRouter.push(PageNames.LOGIN, loginParams);
@@ -1284,7 +1280,7 @@ export struct NearbyPage {
     if (!groupId) return;
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再举报', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
+      const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '举报群组';
       AppRouter.push(PageNames.LOGIN, loginParams);

@@ -47,7 +47,7 @@
 
 	$effect(() => {
 		if (browser && authStore.initialized && !authStore.isAuthenticated && !authStore.isRestoring) {
-			uiStore.saveCurrentRedirectUrl();
+			uiStore.saveRedirectUrl();
 		}
 	});
 	function handleLoginClick() {
