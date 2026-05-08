@@ -367,7 +367,7 @@
 			</div>
 
 			<!-- Map overview card -->
-			<a href="/location" class="mb-5 block overflow-hidden rounded-[22px] transition-transform duration-150 active:scale-[0.97]" style="aspect-ratio: 2.4/1; background: linear-gradient(135deg, var(--neu-bg), var(--neu-fallback-bg)); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border); text-decoration: none;">
+			<a href="/nearby" class="mb-5 block overflow-hidden rounded-[22px] transition-transform duration-150 active:scale-[0.97]" style="aspect-ratio: 2.4/1; background: linear-gradient(135deg, var(--neu-bg), var(--neu-fallback-bg)); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border); text-decoration: none;">
 				<div class="relative flex h-full w-full flex-col justify-between p-4">
 					<div>
 						<div class="mb-1 flex items-center gap-1.5">
