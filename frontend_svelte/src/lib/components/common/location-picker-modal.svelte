@@ -1878,7 +1878,7 @@
             </div>
             <!-- 左侧：地图容器 -->
             <div
-                class="relative flex-1 overflow-hidden sm:rounded-[22px]"
+                class="relative shrink-0 overflow-hidden sm:w-[200px] lg:w-[260px] sm:rounded-[22px]"
                 style="border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
             >
                 <div
@@ -1985,7 +1985,7 @@
                         <button
                             class={`flex w-full items-center justify-between rounded-[18px] px-3 py-2.5 text-left text-sm font-medium transition`}
                             style={showUsers
-                                ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
+                                ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: var(--neu-shadow-sm);"
                                 : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted); box-shadow: var(--neu-shadow-sm);"}
                             onclick={() => toggleRenderFilter("user")}
                         >
@@ -2005,7 +2005,7 @@
                         <button
                             class={`mt-1 flex w-full items-center justify-between rounded-[18px] px-3 py-2.5 text-left text-sm font-medium transition`}
                             style={showGroups
-                                ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
+                                ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: var(--neu-shadow-sm);"
                                 : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted); box-shadow: var(--neu-shadow-sm);"}
                             onclick={() => toggleRenderFilter("group")}
                         >
@@ -2025,7 +2025,7 @@
                         <button
                             class={`mt-1 flex w-full items-center justify-between rounded-[18px] px-3 py-2.5 text-left text-sm font-medium transition`}
                             style={showMoments
-                                ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
+                                ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: var(--neu-shadow-sm);"
                                 : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted); box-shadow: var(--neu-shadow-sm);"}
                             onclick={() => toggleRenderFilter("moment")}
                         >
@@ -2410,7 +2410,7 @@
                                 />
 
                                 {#if showSearch}
-                                    <div class="overflow-hidden rounded-[28px] backdrop-blur-md" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);">
+                                    <div class="overflow-hidden rounded-[28px] backdrop-blur-md" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);">
                                         <div class="border-b px-4 py-3" style="border-color: var(--neu-border);">
                                             <div class="flex items-start justify-between gap-3">
                                                 <div>
@@ -2433,7 +2433,7 @@
                                             </div>
                                         </div>
                                         <div class="space-y-3 px-4 py-3">
-                                            <div class="flex h-12 items-center gap-2 rounded-[18px] px-3" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);">
+                                            <div class="flex h-12 items-center gap-2 rounded-[18px] px-3" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);">
                                                 <Search class="h-4 w-4 shrink-0" />
                                                 <input
                                                     {@attach useKeyboardFocus()}
@@ -2567,7 +2567,7 @@
                                 {/if}
 
                                 {#if showFilterPanel}
-                                    <div class="overflow-hidden rounded-[28px] p-3 backdrop-blur-md" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);">
+                                    <div class="overflow-hidden rounded-[28px] p-3 backdrop-blur-md" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);">
                                         <div class="mb-2 flex items-center justify-between px-1">
                                             <div>
                                                 <p class="text-[11px] font-semibold uppercase tracking-[0.16em]" style="color: var(--neu-text-muted);">
@@ -2591,7 +2591,7 @@
                                             <button
                                                 class={`flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left text-sm font-medium transition`}
                                                 style={showUsers
-                                                    ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
+                                                    ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: var(--neu-shadow-sm);"
                                                     : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"}
                                                 onclick={() => toggleRenderFilter("user")}
                                             >
@@ -2604,7 +2604,7 @@
                                             <button
                                                 class={`flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left text-sm font-medium transition`}
                                                 style={showGroups
-                                                    ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
+                                                    ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: var(--neu-shadow-sm);"
                                                     : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"}
                                                 onclick={() => toggleRenderFilter("group")}
                                             >
@@ -2617,7 +2617,7 @@
                                             <button
                                                 class={`flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left text-sm font-medium transition`}
                                                 style={showMoments
-                                                    ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
+                                                    ? "background: var(--neu-bg); border: 1px solid var(--neu-accent-primary); color: var(--neu-text); box-shadow: var(--neu-shadow-sm);"
                                                     : "background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"}
                                                 onclick={() => toggleRenderFilter("moment")}
                                             >
@@ -2632,7 +2632,7 @@
                                 {/if}
 
                                 {#if clusterPreview}
-                                    <div class="overflow-hidden rounded-[28px] backdrop-blur-md" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);">
+                                    <div class="overflow-hidden rounded-[28px] backdrop-blur-md" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);">
                                         <div class="flex items-start justify-between gap-3 border-b px-4 py-3"
                                                 style="border-color: var(--neu-border);">
                                             <div class="min-w-0">
@@ -2706,7 +2706,7 @@
                                 {/if}
 
                                 {#if hotspotPreviewItems.length > 0}
-                                    <div class="overflow-hidden rounded-[28px] backdrop-blur-md" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);">
+                                    <div class="overflow-hidden rounded-[28px] backdrop-blur-md" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);">
                                         <div class="flex items-start justify-between gap-3 border-b px-4 py-3"
                                                     style="border-color: var(--neu-border);">
                                             <div class="min-w-0">
@@ -2812,17 +2812,15 @@
 
             <!-- 右侧：桌面信息栏（标题 / 搜索 / 历史 / 确认） -->
             <div
-                class="hidden h-full w-[320px] shrink-0 select-none flex-col gap-4 overflow-hidden rounded-[22px] p-4 sm:flex lg:w-90"
+                class="hidden h-full flex-1 select-none flex-col gap-5 overflow-hidden rounded-[22px] p-6 sm:flex"
                 style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
             >
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <p
-                            class="text-[11px] font-semibold uppercase tracking-[0.16em]" style="color: var(--neu-text-muted);"
-                        >
-                            {mapModeLabel}
+                        <p class="text-[11px]" style="color: var(--neu-text-muted);">
+                            {mapModeLabel} <span style="margin: 0 4px;">›</span>
                         </p>
-                        <p class="mt-1 truncate text-base font-bold">
+                        <p class="mt-0.5 truncate text-base font-bold" style="font-size: 18px;">
                             {modalTitle}
                         </p>
                     </div>
@@ -2850,7 +2848,7 @@
                 <div class="space-y-2">
                     <div
                         class="flex h-12 items-center gap-2 rounded-[18px] px-3 text-sm"
-                        style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);"
+                        style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
                     >
                         <Search
                             class="h-4 w-4 shrink-0"
@@ -2988,15 +2986,15 @@
                 <!-- 当前位置摘要与操作 -->
                 <div class="mt-auto space-y-3 border-t pt-3"
                     style="border-color: var(--neu-border);">
-                    <div class="space-y-1 text-xs">
-                        <p class="font-medium">当前选中</p>
-                        <p class="truncate text-sm font-semibold">
+                    <div>
+                        <p class="truncate font-semibold" style="font-size: 14px; color: var(--neu-text);">
                             {locationName || "拖动地图选择位置"}
                         </p>
                     </div>
 
                     <div class="space-y-2">
                         <Button
+                            variant="outline"
                             class="h-11 w-full gap-2 text-sm font-semibold"
                             onclick={handleConfirm}
                             disabled={!locationName}
