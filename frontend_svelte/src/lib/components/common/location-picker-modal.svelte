@@ -1823,7 +1823,7 @@
 <div bind:this={modalRoot}>
     <Dialog.Root bind:open onOpenChange={handleDialogOpenChange}>
         <Dialog.Content
-            class={`flex h-dvh max-h-dvh w-screen flex-col p-0 transition-all duration-200 ease-out sm:flex-row select-none ${ isFullscreen ? "sm:p-4" : "sm:p-4" }`}
+            class={`location-dialog flex flex-col p-0 transition-all duration-200 ease-out select-none sm:flex-row ${isFullscreen ? "is-fullscreen" : ""}`}
             style="background: var(--neu-bg);"
             hideClose
         >
@@ -1878,8 +1878,7 @@
             </div>
             <!-- 左侧：地图容器 -->
             <div
-                class="relative flex-1 overflow-hidden sm:order-2 sm:rounded-[22px]"
-                style="border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
+                class="relative flex-1 overflow-hidden sm:order-2"
             >
                 <div
                     class="h-full w-full touch-pan-x touch-pan-y"
@@ -2812,8 +2811,8 @@
 
             <!-- 右侧：桌面信息栏（标题 / 搜索 / 历史 / 确认） -->
             <div
-                class="hidden h-full w-[340px] shrink-0 select-none flex-col gap-5 overflow-hidden rounded-[22px] p-5 sm:flex sm:order-1"
-                style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
+                class="hidden h-full w-[340px] shrink-0 select-none flex-col gap-5 overflow-hidden p-5 sm:flex sm:order-1"
+                style="background: var(--neu-bg); border-right: 1px solid var(--neu-border);"
             >
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
@@ -3029,6 +3028,44 @@
 />
 
 <style>
+    /* Location dialog: mobile fullscreen, desktop centered large modal */
+    @media (max-width: 639px) {
+        :global(.dialog-responsive-position.location-dialog) {
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            transform: none;
+            width: 100vw;
+            height: 100dvh;
+            max-width: 100%;
+            max-height: 100dvh;
+            border-radius: 0;
+            border: none;
+            box-shadow: none;
+        }
+    }
+    @media (min-width: 640px) {
+        :global(.dialog-responsive-position.location-dialog) {
+            width: 94vw;
+            height: 90vh;
+            max-width: 1400px;
+            max-height: 90vh;
+            overflow: hidden;
+            border: 1px solid var(--neu-border);
+            box-shadow: var(--neu-shadow-lg);
+        }
+        :global(.dialog-responsive-position.location-dialog.is-fullscreen) {
+            width: 100vw;
+            height: 100dvh;
+            max-width: 100vw;
+            max-height: 100dvh;
+            border-radius: 0;
+            border: none;
+            box-shadow: none;
+        }
+    }
+
     :global(.map-render-marker) {
         display: flex;
         min-width: 4.4rem;

@@ -67,6 +67,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_AMAP_KEY: "${VITE_AMAP_KEY:-}"
+        VITE_AMAP_SECURITY_CODE: "${VITE_AMAP_SECURITY_CODE:-}"
     depends_on:
       backend:
         condition: service_healthy
@@ -76,6 +77,7 @@ services:
       ORIGIN: http://localhost:8888
       BACKEND_URL: http://backend:8081
       VITE_AMAP_KEY: "${VITE_AMAP_KEY:-}"
+      VITE_AMAP_SECURITY_CODE: "${VITE_AMAP_SECURITY_CODE:-}"
       VITE_AMAP_SERVICE_HOST: /_AMapService
 
   # ── Gateway (Nginx) ──────────────────────────────────────────

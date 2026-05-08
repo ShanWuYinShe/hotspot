@@ -1,4 +1,5 @@
 const AMAP_KEY = import.meta.env['VITE_AMAP_KEY'];
+const AMAP_SECURITY_CODE = import.meta.env['VITE_AMAP_SECURITY_CODE'];
 const AMAP_SERVICE_HOST = import.meta.env['VITE_AMAP_SERVICE_HOST'] || '/_AMapService';
 const SDK_SCRIPT_ID = 'amap-sdk-script';
 const SDK_LOAD_TIMEOUT_MS = 15000;
@@ -27,7 +28,10 @@ export interface AMapVisibleRegion {
 
 function configureSecurity() {
 	if (securityConfigured || typeof window === 'undefined') return;
-	window._AMapSecurityConfig = { serviceHost: AMAP_SERVICE_HOST };
+	window._AMapSecurityConfig = {
+		serviceHost: AMAP_SERVICE_HOST,
+		...(AMAP_SECURITY_CODE && { securityJsCode: AMAP_SECURITY_CODE }),
+	};
 	securityConfigured = true;
 }
 
