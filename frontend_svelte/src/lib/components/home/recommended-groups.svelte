@@ -51,7 +51,7 @@
 	<div>
 		<div class="mb-3 flex items-center justify-between">
 			<p class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);">推荐群组</p>
-			<a href="/groups/nearby" class="flex items-center gap-0.5 outline-none" style="color: var(--neu-accent-primary);">
+			<a href="/groups/nearby" class="flex items-center gap-0.5 outline-none transition-transform duration-150 active:scale-[0.97]" style="color: var(--neu-accent-primary);">
 				<span style="font-size: 12px;">查看更多</span>
 				<ChevronRight size={13} strokeWidth={1.5} />
 			</a>
@@ -73,7 +73,7 @@
 				{#each groups as group (group.group.group_id)}
 					<a
 						href="/groups/{group.group.group_id}"
-						class="flex items-center gap-3 rounded-[18px] px-4 py-3 transition-shadow"
+						class="flex items-center gap-3 rounded-[18px] px-4 py-3 neu-row-hover transition-transform duration-150 active:scale-[0.98]"
 						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 					>
 						<div class="flex flex-shrink-0 items-center justify-center rounded-[12px]" style="width: 36px; height: 36px; background: var(--neu-fallback-bg);">

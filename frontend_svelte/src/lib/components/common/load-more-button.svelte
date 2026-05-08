@@ -46,7 +46,7 @@
 		{:else}
 			<button
 				type="button"
-				class="flex flex-col items-center gap-1 rounded-full p-0 outline-none transition-transform duration-200 hover:scale-110 active:scale-95"
+				class="flex flex-col items-center gap-1 rounded-full p-0 outline-none transition-transform duration-200 hover:scale-105 active:scale-[0.97]"
 				style="background: transparent; color: var(--neu-text-muted);"
 				onclick={onLoadMore}
 				aria-label={t('common.loadMore')}

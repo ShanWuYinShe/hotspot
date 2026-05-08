@@ -398,7 +398,7 @@
 					{#each followersPagination.items as follower (follower.user.user_id)}
 						<a href="/users/{follower.user.user_id}">
 							<div
-								class="flex cursor-pointer items-center gap-3 rounded-[24px] p-4 transition-all"
+								class="flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all neu-card-hover active:scale-[0.98]"
 								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 							>
 								<div class="overflow-hidden rounded-full" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">
@@ -460,7 +460,7 @@
 					{#each followingPagination.items as follow (follow.user.user_id)}
 						<a href="/users/{follow.user.user_id}">
 							<div
-								class="flex cursor-pointer items-center gap-3 rounded-[24px] p-4 transition-all"
+								class="flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all neu-card-hover active:scale-[0.98]"
 								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 							>
 								<div class="overflow-hidden rounded-full" style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);">

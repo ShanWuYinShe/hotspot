@@ -44,7 +44,7 @@
 			{#each tags as tag (tag.name)}
 				<a
 					href="/search?tag={encodeURIComponent(tag.name)}"
-					class="rounded-full px-3 py-1 text-xs transition-colors"
+					class="rounded-full px-3 py-1 text-xs neu-pill-hover transition-transform duration-150 active:scale-[0.93]"
 					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
 				>
 					#{tag.name}
