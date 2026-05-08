@@ -1823,8 +1823,8 @@
 <div bind:this={modalRoot}>
     <Dialog.Root bind:open onOpenChange={handleDialogOpenChange}>
         <Dialog.Content
-            class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${ isFullscreen ? "sm:h-screen sm:max-h-screen sm:w-screen sm:max-w-none sm:rounded-none sm:border-0 sm:p-4" : "sm:h-[88vh] sm:w-[92vw] sm:max-w-6xl lg:max-w-7xl sm:rounded-[22px] sm:backdrop-blur sm:p-6" }`}
-            style={isFullscreen ? "background: var(--neu-bg);" : "background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"}
+            class={`flex h-dvh max-h-dvh w-screen flex-col p-0 transition-all duration-200 ease-out sm:flex-row select-none ${ isFullscreen ? "sm:p-4" : "sm:p-4" }`}
+            style="background: var(--neu-bg);"
             hideClose
         >
             <!-- 移动端轻量工具栏 -->
@@ -1878,7 +1878,7 @@
             </div>
             <!-- 左侧：地图容器 -->
             <div
-                class="relative shrink-0 overflow-hidden sm:w-[200px] lg:w-[260px] sm:rounded-[22px]"
+                class="relative flex-1 overflow-hidden sm:order-2 sm:rounded-[22px]"
                 style="border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
             >
                 <div
@@ -2812,7 +2812,7 @@
 
             <!-- 右侧：桌面信息栏（标题 / 搜索 / 历史 / 确认） -->
             <div
-                class="hidden h-full flex-1 select-none flex-col gap-5 overflow-hidden rounded-[22px] p-6 sm:flex"
+                class="hidden h-full w-[340px] shrink-0 select-none flex-col gap-5 overflow-hidden rounded-[22px] p-5 sm:flex sm:order-1"
                 style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
             >
                 <div class="flex items-start justify-between gap-3">
