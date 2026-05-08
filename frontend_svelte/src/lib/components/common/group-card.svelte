@@ -133,7 +133,7 @@
 </script>
 
 <div
-	class="cursor-pointer overflow-hidden rounded-[22px] transition-shadow {className}"
+	class="neu-card-hover cursor-pointer overflow-hidden rounded-[22px] outline-none transition-[box-shadow,outline,transform] duration-200 hover:scale-[1.008] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--neu-bg)] {className}"
 	style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 	tabindex={0}
 	role="link"

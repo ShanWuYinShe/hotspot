@@ -2,18 +2,21 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
+import { curves } from '@kit.ArkUI';
 
 export type SurfaceIconButtonKind = 'primary' | 'neutral';
 
 @Component
 export struct SurfaceIconButton {
   @Prop icon: AppIcon = AppIcon.BACK;
-  @Prop kind: SurfaceIconButtonKind = 'neutral';
+  @Prop kind: SurfaceIconButtonKind = 'primary';
   @Prop buttonSize: number = 40;
   @Prop glyphSize: number = 20;
   @Prop disabled: boolean = false;
   onPress?: () => void;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  @State isPressed: boolean = false;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -53,7 +56,7 @@ export struct SurfaceIconButton {
       }
     }
     .type(ButtonType.Normal)
-    .stateEffect(!this.disabled)
+    .stateEffect(false)
     .width(this.buttonSize)
     .height(this.buttonSize)
     .backgroundColor(this.getBackgroundColor())
@@ -62,6 +65,25 @@ export struct SurfaceIconButton {
     .shadow(this.getShadowColor())
     .enabled(!this.disabled)
     .opacity(this.disabled ? DesignConstants.OPACITY.LOADING : 1)
+    .scale(this.isPressed ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+      { x: 1, y: 1 })
+    .animation({
+      curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      )
+    })
+    .onTouch((event: TouchEvent) => {
+      if (this.disabled) {
+        return;
+      }
+      if (event.type === TouchType.Down) {
+        this.isPressed = true;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.isPressed = false;
+      }
+    })
     .onClick(() => {
       if (this.disabled) {
         return;

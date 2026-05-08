@@ -118,16 +118,15 @@ export struct MomentFeedCard {
   }
 
   build() {
-    Column() {
-      SystemCard({
-        variant: CardVariant.DEFAULT,
-        cardPadding: DesignConstants.SPACING.LG,
-        cardBorderRadius: DesignConstants.RADIUS.XXL,
-        cardBorderColor: this.getPalette().borderColor,
-        cardBackgroundColor: this.getPalette().surfaceBackground
-      }) {
-        this.cardContent()
-      }
+    SystemCard({
+      variant: CardVariant.DEFAULT,
+      cardPadding: DesignConstants.SPACING.LG,
+      cardBorderRadius: DesignConstants.RADIUS.XXL,
+      cardBorderColor: this.getPalette().borderColor,
+      cardBackgroundColor: this.getPalette().surfaceBackground,
+      clickable: true
+    }) {
+      this.cardContent()
     }
     .onClick(() => this.openMomentDetail(this.moment))
   }

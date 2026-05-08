@@ -18,6 +18,7 @@ import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { curves } from '@kit.ArkUI';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -54,6 +55,9 @@ export struct LoginPage {
   @State restoreAction: string = '';
   @State restoreTargetId: string = '';
   @State restoreTitle: string = '';
+  @State isBackPressed: boolean = false;
+  @State isLoginBtnPressed: boolean = false;
+  @State isRegisterBtnPressed: boolean = false;
 
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
@@ -148,6 +152,22 @@ export struct LoginPage {
             .width(48)
             .height(48)
             .textAlign(TextAlign.Center)
+            .scale(this.isBackPressed ?
+              { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+              { x: 1, y: 1 })
+            .animation({
+              curve: curves.springMotion(
+                DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+                DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+              )
+            })
+            .onTouch((event: TouchEvent) => {
+              if (event.type === TouchType.Down) {
+                this.isBackPressed = true;
+              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                this.isBackPressed = false;
+              }
+            })
 
             Blank()
           }
@@ -274,7 +294,12 @@ export struct LoginPage {
       .layoutWeight(1)
       .textAlign(TextAlign.Center)
       .shadow(this.loginMode === mode ? this.getCurrentThemePalette().controlShadow : { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 })
-      .animation({ duration: 250, curve: Curve.FastOutSlowIn })
+      .animation({
+        curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,
+          DesignConstants.INTERACTION.SPRING_DAMPING_TAB
+        )
+      })
       .onClick(() => {
         if (mode === 'login') {
           this.loginMode = 'login';
@@ -326,6 +351,22 @@ export struct LoginPage {
         .shadow(this.getCurrentThemePalette().controlShadow)
         .border({ width: 1, color: this.getSurfaceBorder() })
         .enabled(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password))
+        .scale(this.isLoginBtnPressed ?
+          { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON } :
+          { x: 1, y: 1 })
+        .animation({
+          curve: curves.springMotion(
+            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+          )
+        })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.isLoginBtnPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.isLoginBtnPressed = false;
+          }
+        })
         .onClick(() => this.userLogin())
 
       Text('没有账号？切换到「注册」标签')
@@ -402,6 +443,22 @@ export struct LoginPage {
           && this.isValidLoginId(this.registerLoginId)
           && this.isValidPassword(this.registerPassword)
           && this.registerPasswordConfirm === this.registerPassword)
+        .scale(this.isRegisterBtnPressed ?
+          { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON } :
+          { x: 1, y: 1 })
+        .animation({
+          curve: curves.springMotion(
+            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+          )
+        })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.isRegisterBtnPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.isRegisterBtnPressed = false;
+          }
+        })
         .onClick(() => this.userRegister())
 
       Text('已有账号？切换到「登录」标签')

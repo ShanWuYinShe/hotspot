@@ -75,7 +75,7 @@
 		</div>
 		<div class="flex items-center gap-2">
 			<button
-				class="flex items-center justify-center rounded-full outline-none"
+				class="flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 				style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 				onclick={handleBack}
 				aria-label="返回"

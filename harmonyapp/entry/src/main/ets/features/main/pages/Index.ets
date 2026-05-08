@@ -41,6 +41,7 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { curves } from '@kit.ArkUI';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'IndexPage';
@@ -76,6 +77,7 @@ struct Index {
   @State showNotificationCenter: boolean = false;
   @State showPerformanceDetails: boolean = false;
   @State showCreateSheet: boolean = false;
+  @State isCreateTabPressed: boolean = false;
 
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
@@ -774,6 +776,12 @@ struct Index {
           .borderRadius(18)
           .backgroundColor(this.getBrandAccent())
           .opacity(0.18)
+          .animation({
+            curve: curves.springMotion(
+              DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,
+              DesignConstants.INTERACTION.SPRING_DAMPING_TAB
+            )
+          })
       }
 
       // Icon + Label content (on top of pill)
@@ -807,6 +815,12 @@ struct Index {
           .fontColor(this.currentTabIndex === targetIndex ? this.getBrandAccent() : this.getTabInactiveColor())
           .fontSize(11)
           .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Medium : FontWeight.Normal)
+          .animation({
+            curve: curves.springMotion(
+              DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,
+              DesignConstants.INTERACTION.SPRING_DAMPING_TAB
+            )
+          })
       }
       .zIndex(1)
     }
@@ -842,6 +856,22 @@ struct Index {
       .border({
         width: this.getTabBarVisualStyle().borderWidth,
         color: this.currentTabIndex === 2 ? this.getBrandAccent() : this.getTabBarVisualStyle().borderColor
+      })
+      .scale(this.isCreateTabPressed ?
+        { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON } :
+        { x: 1, y: 1 })
+      .animation({
+        curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+        )
+      })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.isCreateTabPressed = true;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.isCreateTabPressed = false;
+        }
       })
     }
     .width('100%')

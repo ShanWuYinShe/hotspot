@@ -44,11 +44,17 @@
 		goto(`/moments/${moment.moment_id}`);
 	}
 
+	let heartBurst = $state(false);
+
 	function handleLike(event: MouseEvent) {
 		event.preventDefault();
 		event.stopPropagation();
 		if (!authStore.isAuthenticated) { uiStore.openLoginModal(likeAction.toggle); return; }
 		likeAction.toggle();
+		if (!likeAction.isOn) {
+			heartBurst = true;
+			setTimeout(() => { heartBurst = false; }, 300);
+		}
 	}
 
 	function handleFavorite(event: MouseEvent) {
@@ -85,7 +91,7 @@
 </script>
 
 <div
-	class="cursor-pointer overflow-hidden rounded-[22px] transition-shadow {className}"
+	class="neu-card-hover cursor-pointer overflow-hidden rounded-[22px] outline-none transition-[box-shadow,outline,transform] duration-200 hover:scale-[1.008] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--neu-bg)] {className}"
 	style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 	onclick={handleCardClick}
 	role="link"
@@ -191,17 +197,17 @@
 		<div class="flex gap-3">
 			<button
 				data-card-action
-				class="flex items-center gap-1.5 py-1 outline-none"
+				class="flex items-center gap-1.5 rounded-full px-1 py-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)]"
 				style="color: {likeAction.isOn ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};"
 				onclick={handleLike}
 				disabled={likeAction.isLoading}
 			>
-				<Heart size={16} strokeWidth={1.5} fill={likeAction.isOn ? 'currentColor' : 'none'} />
+				<Heart size={16} strokeWidth={1.5} fill={likeAction.isOn ? 'currentColor' : 'none'} class={heartBurst ? 'heart-burst' : ''} />
 				<span style="font-size: 12px;">{likeAction.count}</span>
 			</button>
 			<button
 				data-card-action
-				class="flex items-center gap-1.5 py-1 outline-none"
+				class="flex items-center gap-1.5 rounded-full px-1 py-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)]"
 				style="color: var(--neu-text-muted);"
 				onclick={(e) => { e.preventDefault(); e.stopPropagation(); goto(`/moments/${moment.moment_id}`); }}
 			>
@@ -212,7 +218,7 @@
 		<div class="flex gap-3">
 			<button
 				data-card-action
-				class="py-1 outline-none"
+				class="rounded-full p-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)]"
 				style="color: {favoriteAction.isOn ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};"
 				onclick={handleFavorite}
 				disabled={favoriteAction.isLoading}
@@ -221,7 +227,7 @@
 			</button>
 			<button
 				data-card-action
-				class="py-1 outline-none"
+				class="rounded-full p-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)]"
 				style="color: var(--neu-text-muted);"
 				onclick={handleShare}
 			>
@@ -230,3 +236,14 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	:global(.heart-burst) {
+		animation: heartBurst 0.3s ease-out;
+	}
+	@keyframes heartBurst {
+		0% { transform: scale(1); }
+		50% { transform: scale(1.3); }
+		100% { transform: scale(1); }
+	}
+</style>

@@ -29,6 +29,7 @@ import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { TimerManager } from '../../../core/utils/TimerManager';
+import { curves } from '@kit.ArkUI';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'SearchPage';
@@ -502,6 +503,12 @@ export struct SearchPage {
       .border(this.currentIndex === index
         ? { width: 0 }
         : { width: 1, color: this.getSurfaceBorder() })
+      .animation({
+        curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,
+          DesignConstants.INTERACTION.SPRING_DAMPING_TAB
+        )
+      })
       .onClick(() => {
         if (this.currentIndex !== index) {
           this.currentIndex = index;

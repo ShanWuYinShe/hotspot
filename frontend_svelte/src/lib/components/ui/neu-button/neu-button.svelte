@@ -49,7 +49,10 @@
 <button
 	class={cn(
 		'relative flex items-center justify-center rounded-[28px] outline-none select-none',
-		'text-neu font-medium neu-pill-hover hover:-translate-y-0.5 transition-[transform,background-color] duration-200',
+		'neu-pill-hover transition-[transform,box-shadow,background-color] duration-200',
+		'hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]',
+		'focus-visible:ring-[2px] focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]',
+		'disabled:pointer-events-none disabled:opacity-50',
 		sizeClass,
 		variantClass,
 		className

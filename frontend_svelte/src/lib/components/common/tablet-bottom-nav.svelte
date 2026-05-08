@@ -58,7 +58,7 @@
 	>
 		{#each navItems.slice(0, 2) as item (item.href)}
 			<button
-				class="relative flex flex-col items-center justify-center outline-none select-none"
+				class="relative flex flex-col items-center justify-center outline-none select-none transition-transform duration-150 active:scale-95"
 				style="flex: 1; min-width: 0; padding: 9px 0; gap: 5px;"
 				onclick={() => navigate(item)}
 				aria-label={item.label}
@@ -99,7 +99,7 @@
 
 		{#each navItems.slice(2) as item (item.href)}
 			<button
-				class="relative flex flex-col items-center justify-center outline-none select-none"
+				class="relative flex flex-col items-center justify-center outline-none select-none transition-transform duration-150 active:scale-95"
 				style="flex: 1; min-width: 0; padding: 9px 0; gap: 5px;"
 				onclick={() => navigate(item)}
 				aria-label={item.label}

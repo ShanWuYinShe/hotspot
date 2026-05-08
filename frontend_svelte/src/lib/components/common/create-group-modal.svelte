@@ -243,7 +243,7 @@
 				<label for="group-name" style="font-size: 12px; color: var(--neu-text);">群组名称</label>
 				<input
 					id="group-name"
-					class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+					class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
 					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {nameError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 					placeholder="例如：城市漫步俱乐部"
 					bind:value={name}
@@ -265,7 +265,7 @@
 				<textarea
 					id="group-desc"
 					placeholder="简单描述群组用途与氛围"
-					class="rounded-[14px] px-4 py-2.5 outline-none w-full resize-none"
+					class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full resize-none"
 					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {groupDescriptionError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px; min-height: 100px;"
 					bind:value={description}
 					onblur={() => markTouched('description')}
@@ -283,7 +283,7 @@
 			<!-- 群组标签 -->
 			<div class="rounded-[24px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 				<label for="group-tags" style="font-size: 12px; color: var(--neu-text);">群组标签</label>
-				<input id="group-tags" class="rounded-[14px] px-4 py-2.5 outline-none w-full" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;" placeholder="兴趣、城市、活动" bind:value={tagsInput} />
+				<input id="group-tags" class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;" placeholder="兴趣、城市、活动" bind:value={tagsInput} />
 				{#if tags.length > 0}
 					<div class="flex flex-wrap gap-2">
 						{#each tags as tag (tag)}
@@ -299,7 +299,7 @@
 					<label for="join-method" style="font-size: 12px; color: var(--neu-text);">加入方式</label>
 					<select
 						id="join-method"
-						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+						class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
 						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"
 						bind:value={joinMethod}
 					>
@@ -312,7 +312,7 @@
 					<label for="group-password" style="font-size: 12px; color: var(--neu-text);">入群口令 (可选)</label>
 					<input
 						id="group-password"
-						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+						class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
 						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {groupPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 						type="password"
 						placeholder="设置后需口令加入"
@@ -331,7 +331,7 @@
 					<label for="max-members" style="font-size: 12px; color: var(--neu-text);">最大成员数 (可选)</label>
 					<input
 						id="max-members"
-						class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+						class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
 						style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {maxMembersError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px;"
 						type="number"
 						min="2"
@@ -359,10 +359,10 @@
 		</div>
 
 		<Dialog.Footer class="pt-2 flex gap-3 justify-end">
-			<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;" onclick={() => { open = false; onOpenChange?.(false); }}>
+			<button class="rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;" onclick={() => { open = false; onOpenChange?.(false); }}>
 				取消
 			</button>
-			<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleSubmit} disabled={isSubmitting}>
+			<button class="rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleSubmit} disabled={isSubmitting}>
 				{#if isSubmitting}
 					<Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
 				{/if}

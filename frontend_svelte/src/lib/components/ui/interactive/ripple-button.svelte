@@ -30,7 +30,7 @@
 		'whitespace-nowrap font-semibold',
 		'overflow-hidden rounded-[28px]',
 		'transition-all duration-180 ease-in-out',
-		'focus-visible:outline-none',
+		'focus-visible:outline-none focus-visible:ring-[2px] focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]',
 		'disabled:pointer-events-none disabled:opacity-50',
 		'cursor-pointer',
 		className

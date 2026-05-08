@@ -867,7 +867,7 @@
 		style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
 	>
 		<button
-			class="flex items-center justify-center rounded-full outline-none"
+			class="flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 			style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 			onclick={() => history.back()}
 			aria-label="返回"
@@ -947,21 +947,21 @@
 					<div class="flex flex-wrap gap-3">
 						{#if group.my_state?.is_joined}
 							<button
-								class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none"
+								class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 								style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
 								onclick={() => goto(`/chat/groups/${groupId}`)}
 							>
 								进入群聊
 							</button>
 							<button
-								class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none cursor-default"
+								class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] cursor-default"
 								style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg);"
 								disabled
 							>
 								已加入
 							</button>
 							<button
-								class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none"
+								class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 								style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 								onclick={confirmLeave}
 								disabled={isLeaving}
@@ -973,7 +973,7 @@
 							</button>
 						{:else}
 							<button
-								class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none"
+								class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 								style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
 								onclick={openJoinDialog}
 								disabled={settings?.join_method === 'invite_only'}
@@ -1033,7 +1033,7 @@
 				...(canManageGroup ? [{ value: 'applications', label: '申请' }] : [])
 			] as tab (tab.value)}
 				<button
-					class="rounded-full px-4 py-2 font-medium outline-none transition-all"
+					class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] transition-all"
 					style={currentTab === tab.value
 						? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);'
 						: 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);'}
@@ -1092,7 +1092,7 @@
 					<div class="mt-4">
 						{#if !authStore.isAuthenticated}
 							<button
-								class="w-full rounded-full py-2.5 font-medium outline-none"
+								class="w-full rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 								style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 								onclick={() => uiStore.openLoginModal()}
 							>
@@ -1107,7 +1107,7 @@
 							</div>
 						{:else}
 							<button
-								class="w-full rounded-full py-2.5 font-medium outline-none"
+								class="w-full rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 								style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
 								onclick={openJoinDialog}
 							>
@@ -1128,7 +1128,7 @@
 				>
 					<p style="font-size: 14px; color: var(--neu-text-muted);">登录后查看群公告</p>
 					<button
-						class="rounded-full px-5 py-2.5 font-medium outline-none"
+						class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 						style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 						onclick={() => uiStore.openLoginModal()}
 					>
@@ -1142,7 +1142,7 @@
 				>
 					<p style="font-size: 14px; color: var(--neu-text-muted);">加入群组后可查看公告</p>
 					<button
-						class="rounded-full px-5 py-2.5 font-medium outline-none"
+						class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 						style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
 						onclick={openJoinDialog}
 					>
@@ -1161,7 +1161,7 @@
 					</div>
 					<div class="flex flex-wrap gap-2">
 						<button
-							class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none"
+							class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 							style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 							onclick={() => loadAnnouncements(true)}
 							disabled={announcementsPagination.loading}
@@ -1171,7 +1171,7 @@
 						</button>
 						{#if canManageGroup}
 							<button
-								class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none"
+								class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 								style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
 								onclick={() => openAnnouncementDialog()}
 							>
@@ -1221,7 +1221,7 @@
 									</div>
 									{#if canManageGroup}
 										<DropdownMenu>
-											<DropdownMenuTrigger class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" aria-label="公告操作">
+											<DropdownMenuTrigger class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" aria-label="公告操作">
 												<MoreHorizontal size={16} />
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align="end" class="w-40">
@@ -1241,7 +1241,7 @@
 					</div>
 					{#if announcementsPagination.hasMore}
 						<div class="flex justify-center pt-2">
-							<button class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadAnnouncements(false)} disabled={announcementsPagination.loadingMore}>
+							<button class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadAnnouncements(false)} disabled={announcementsPagination.loadingMore}>
 								{#if announcementsPagination.loadingMore}<Loader2 size={14} class="animate-spin" />{/if}
 								加载更多
 							</button>
@@ -1256,12 +1256,12 @@
 			{#if !authStore.isAuthenticated}
 				<div class="flex flex-col items-center gap-3 rounded-[24px] py-10" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 					<p style="font-size: 14px; color: var(--neu-text-muted);">登录后查看成员</p>
-					<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => uiStore.openLoginModal()}>去登录</button>
+					<button class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => uiStore.openLoginModal()}>去登录</button>
 				</div>
 			{:else if !group.my_state?.is_joined}
 				<div class="flex flex-col items-center gap-3 rounded-[24px] py-10" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 					<p style="font-size: 14px; color: var(--neu-text-muted);">加入群组后可查看成员</p>
-					<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={openJoinDialog}>申请加入</button>
+					<button class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={openJoinDialog}>申请加入</button>
 				</div>
 			{:else}
 				<div class="flex flex-col gap-3 rounded-[24px] p-4 sm:flex-row sm:items-center sm:justify-between" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
@@ -1270,7 +1270,7 @@
 						<p style="margin-top: 4px; font-size: 12px; color: var(--neu-text-muted);">支持群主/管理员进行禁言与角色管理</p>
 					</div>
 					<div class="flex flex-wrap gap-2">
-						<button class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadMembers(true)} disabled={membersPagination.loading}>
+						<button class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadMembers(true)} disabled={membersPagination.loading}>
 							<RefreshCw size={14} />刷新
 						</button>
 						{#if canManageGroup}
@@ -1322,7 +1322,7 @@
 										{/if}
 										{#if canManageMember(member)}
 											<DropdownMenu>
-												<DropdownMenuTrigger class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" aria-label="成员操作">
+												<DropdownMenuTrigger class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" aria-label="成员操作">
 													<MoreHorizontal size={16} />
 												</DropdownMenuTrigger>
 												<DropdownMenuContent align="end" class="w-40">
@@ -1347,7 +1347,7 @@
 					</div>
 					{#if membersPagination.hasMore}
 						<div class="flex justify-center pt-2">
-							<button class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadMembers(false)} disabled={membersPagination.loadingMore}>
+							<button class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadMembers(false)} disabled={membersPagination.loadingMore}>
 								{#if membersPagination.loadingMore}<Loader2 size={14} class="animate-spin" />{/if}
 								加载更多
 							</button>
@@ -1365,7 +1365,7 @@
 						<p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">待处理申请</p>
 						<p style="margin-top: 4px; font-size: 12px; color: var(--neu-text-muted);">仅展示 pending 申请，处理后会自动移出列表</p>
 					</div>
-					<button class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadApplications(true)} disabled={applicationsPagination.loading}>
+					<button class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadApplications(true)} disabled={applicationsPagination.loading}>
 						<RefreshCw size={14} />刷新
 					</button>
 				</div>
@@ -1401,10 +1401,10 @@
 										<p style="font-size: 12px; color: var(--neu-text-muted);">申请时间：{formatDateTime(application.created_at)}</p>
 									</div>
 									<div class="flex flex-wrap gap-2">
-										<button class="rounded-full px-4 py-2 font-medium outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow); font-size: 13px;" disabled={isApplicationHandling(application.application_id)} onclick={() => handleApplicationDecision(application, 'approve')}>
+										<button class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow); font-size: 13px;" disabled={isApplicationHandling(application.application_id)} onclick={() => handleApplicationDecision(application, 'approve')}>
 											{isApplicationHandling(application.application_id) ? '处理中...' : '批准'}
 										</button>
-										<button class="rounded-full px-4 py-2 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 13px;" disabled={isApplicationHandling(application.application_id)} onclick={() => handleApplicationDecision(application, 'reject')}>
+										<button class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 13px;" disabled={isApplicationHandling(application.application_id)} onclick={() => handleApplicationDecision(application, 'reject')}>
 											拒绝
 										</button>
 									</div>
@@ -1414,7 +1414,7 @@
 					</div>
 					{#if applicationsPagination.hasMore}
 						<div class="flex justify-center pt-2">
-							<button class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadApplications(false)} disabled={applicationsPagination.loadingMore}>
+							<button class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => loadApplications(false)} disabled={applicationsPagination.loadingMore}>
 								{#if applicationsPagination.loadingMore}<Loader2 size={14} class="animate-spin" />{/if}
 								加载更多
 							</button>
@@ -1440,19 +1440,19 @@
 				{#if group?.has_password}
 					<div class="space-y-2 rounded-[18px] p-4" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 						<label for="group-password" style="font-size: 13px; font-weight: 500; color: var(--neu-text);">群组密码</label>
-						<input id="group-password" type="password" placeholder="请输入群组密码" bind:value={joinPassword} maxlength={GROUP_PASSWORD_MAX} class="w-full rounded-full py-2.5 px-4 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" />
+						<input id="group-password" type="password" placeholder="请输入群组密码" bind:value={joinPassword} maxlength={GROUP_PASSWORD_MAX} class="w-full rounded-full py-2.5 px-4 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" />
 					</div>
 				{/if}
 				{#if settings?.join_method === 'approval'}
 					<div class="space-y-2 rounded-[18px] p-4" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 						<label for="join-message" style="font-size: 13px; font-weight: 500; color: var(--neu-text);">申请理由</label>
-						<textarea id="join-message" placeholder="简单介绍一下你自己" rows={3} bind:value={joinMessage} maxlength={GROUP_JOIN_MESSAGE_MAX} class="w-full resize-none rounded-[14px] p-3 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"></textarea>
+						<textarea id="join-message" placeholder="简单介绍一下你自己" rows={3} bind:value={joinMessage} maxlength={GROUP_JOIN_MESSAGE_MAX} class="w-full resize-none rounded-[14px] p-3 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"></textarea>
 					</div>
 				{/if}
 			</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showJoinDialog = false)}>取消</button>
-				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={handleJoin} disabled={isJoining}>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showJoinDialog = false)}>取消</button>
+				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={handleJoin} disabled={isJoining}>
 					{#if isJoining}<Loader2 size={14} class="animate-spin" />{/if}
 					确认加入
 				</button>
@@ -1469,25 +1469,25 @@
 			<div class="space-y-4 py-4">
 				<div class="space-y-2 rounded-[18px] p-4" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<label for="announcement-title" style="font-size: 13px; font-weight: 500; color: var(--neu-text);">公告标题</label>
-					<input id="announcement-title" placeholder="输入公告标题" bind:value={announcementTitle} maxlength={ANNOUNCEMENT_TITLE_MAX} class="w-full rounded-full py-2.5 px-4 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" />
+					<input id="announcement-title" placeholder="输入公告标题" bind:value={announcementTitle} maxlength={ANNOUNCEMENT_TITLE_MAX} class="w-full rounded-full py-2.5 px-4 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" />
 				</div>
 				<div class="space-y-2 rounded-[18px] p-4" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<label for="announcement-content" style="font-size: 13px; font-weight: 500; color: var(--neu-text);">公告内容</label>
-					<textarea id="announcement-content" rows={5} placeholder="输入公告内容" bind:value={announcementContent} maxlength={ANNOUNCEMENT_CONTENT_MAX} class="w-full resize-none rounded-[14px] p-3 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"></textarea>
+					<textarea id="announcement-content" rows={5} placeholder="输入公告内容" bind:value={announcementContent} maxlength={ANNOUNCEMENT_CONTENT_MAX} class="w-full resize-none rounded-[14px] p-3 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"></textarea>
 				</div>
 				<div class="flex items-center justify-between rounded-[18px] px-4 py-3" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 					<div>
 						<p style="font-weight: 500; font-size: 14px; color: var(--neu-text);">置顶公告</p>
 						<p style="font-size: 12px; color: var(--neu-text-muted);">置顶后将优先展示给成员</p>
 					</div>
-					<button class="rounded-full px-4 py-2 font-medium outline-none" style={announcementPinned ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} onclick={() => (announcementPinned = !announcementPinned)}>
+					<button class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style={announcementPinned ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} onclick={() => (announcementPinned = !announcementPinned)}>
 						{announcementPinned ? '已置顶' : '未置顶'}
 					</button>
 				</div>
 			</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showAnnouncementDialog = false)}>取消</button>
-				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={submitAnnouncement} disabled={announcementSubmitting}>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showAnnouncementDialog = false)}>取消</button>
+				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={submitAnnouncement} disabled={announcementSubmitting}>
 					{#if announcementSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
 					{editingAnnouncement ? '保存修改' : '发布公告'}
 				</button>
@@ -1503,8 +1503,8 @@
 			</Dialog.Header>
 			<div class="rounded-[18px] px-4 py-3" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 14px; color: var(--neu-text-muted);">{announcementToDelete?.title ?? '该公告'}</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showAnnouncementDeleteDialog = false)}>取消</button>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-error); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-error-border);" onclick={handleDeleteAnnouncement}>确认删除</button>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showAnnouncementDeleteDialog = false)}>取消</button>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-error); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-error-border);" onclick={handleDeleteAnnouncement}>确认删除</button>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
@@ -1519,17 +1519,17 @@
 				<div style="font-size: 14px; color: var(--neu-text-muted);">成员：{muteTarget?.user.nickname ?? '-'}</div>
 				<div class="grid grid-cols-2 gap-2">
 					{#each mutePresets as preset (preset.value)}
-						<button class="rounded-full py-2 font-medium outline-none" style={Number(muteDurationMinutes) === preset.value ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} onclick={() => (muteDurationMinutes = String(preset.value))}>{preset.label}</button>
+						<button class="rounded-full py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style={Number(muteDurationMinutes) === preset.value ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} onclick={() => (muteDurationMinutes = String(preset.value))}>{preset.label}</button>
 					{/each}
 				</div>
 				<div class="space-y-2">
 					<label for="mute-duration" style="font-size: 13px; font-weight: 500; color: var(--neu-text);">自定义时长（分钟）</label>
-					<input id="mute-duration" type="number" min={MUTE_DURATION_MIN} max={MUTE_DURATION_MAX} bind:value={muteDurationMinutes} class="w-full rounded-full py-2.5 px-4 outline-none" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" />
+					<input id="mute-duration" type="number" min={MUTE_DURATION_MIN} max={MUTE_DURATION_MAX} bind:value={muteDurationMinutes} class="w-full rounded-full py-2.5 px-4 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);" />
 				</div>
 			</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showMuteDialog = false)}>取消</button>
-				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={handleMuteMember} disabled={muteSubmitting}>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showMuteDialog = false)}>取消</button>
+				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={handleMuteMember} disabled={muteSubmitting}>
 					{#if muteSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
 					确认禁言
 				</button>
@@ -1546,12 +1546,12 @@
 			<div class="space-y-4 py-2">
 				<div style="font-size: 14px; color: var(--neu-text-muted);">成员：{roleTarget?.user.nickname ?? '-'}</div>
 				<div class="grid gap-2 sm:grid-cols-2">
-					<button class="rounded-full py-2.5 font-medium outline-none" style={roleTarget?.role === 'admin' ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} disabled={roleTarget?.role === 'admin' || roleSubmitting} onclick={() => handleSetRole('admin')}>设为管理员</button>
-					<button class="rounded-full py-2.5 font-medium outline-none" style={roleTarget?.role === 'member' ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} disabled={roleTarget?.role === 'member' || roleSubmitting} onclick={() => handleSetRole('member')}>设为成员</button>
+					<button class="rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style={roleTarget?.role === 'admin' ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} disabled={roleTarget?.role === 'admin' || roleSubmitting} onclick={() => handleSetRole('admin')}>设为管理员</button>
+					<button class="rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style={roleTarget?.role === 'member' ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);' : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'} disabled={roleTarget?.role === 'member' || roleSubmitting} onclick={() => handleSetRole('member')}>设为成员</button>
 				</div>
 			</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showRoleDialog = false)}>取消</button>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showRoleDialog = false)}>取消</button>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
@@ -1564,8 +1564,8 @@
 			</Dialog.Header>
 			<div class="rounded-[18px] px-4 py-3" style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 14px; color: var(--neu-text-muted);">{removeTarget?.user.nickname ?? '-'}</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showRemoveDialog = false)}>取消</button>
-				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-error); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-error-border);" onclick={handleRemoveMember} disabled={removeSubmitting}>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showRemoveDialog = false)}>取消</button>
+				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-error); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-error-border);" onclick={handleRemoveMember} disabled={removeSubmitting}>
 					{#if removeSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
 					确认移除
 				</button>
@@ -1584,8 +1584,8 @@
 				<div style="margin-top: 4px; font-size: 12px; color: var(--neu-text-muted);">{group?.group.members_count ?? 0} 位成员</div>
 			</div>
 			<Dialog.Footer>
-				<button class="rounded-full px-5 py-2.5 font-medium outline-none" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showLeaveDialog = false)}>取消</button>
-				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none" style="background: var(--neu-error); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-error-border);" onclick={handleLeave} disabled={isLeaving}>
+				<button class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => (showLeaveDialog = false)}>取消</button>
+				<button class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-error); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-error-border);" onclick={handleLeave} disabled={isLeaving}>
 					{#if isLeaving}<Loader2 size={14} class="animate-spin" />{/if}
 					确认退出
 				</button>

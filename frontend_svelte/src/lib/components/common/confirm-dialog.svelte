@@ -52,7 +52,7 @@
 		</DialogHeader>
 		<DialogFooter class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
 			<button
-				class="rounded-full px-5 py-2 outline-none"
+				class="rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 				style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;"
 				onclick={handleCancel}
 				disabled={loading}
@@ -60,7 +60,7 @@
 				{cancelText}
 			</button>
 			<button
-				class="rounded-full px-5 py-2 outline-none"
+				class="rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 				style="background: {variant === 'destructive' ? 'var(--neu-error)' : 'var(--neu-accent-primary)'}; color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px {variant === 'destructive' ? 'var(--neu-error-border)' : 'var(--neu-glow)'};"
 				onclick={handleConfirm}
 				disabled={loading}

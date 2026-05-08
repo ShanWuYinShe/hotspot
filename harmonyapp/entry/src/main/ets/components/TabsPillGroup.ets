@@ -10,6 +10,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
+import { curves } from '@kit.ArkUI';
 
 export interface TabItem {
   label: string;
@@ -72,7 +73,12 @@ export struct TabsPillGroup {
         offsetX: 0,
         offsetY: 0
       })
-      .animation({ duration: 250, curve: Curve.FastOutSlowIn })
+      .animation({
+        curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,
+          DesignConstants.INTERACTION.SPRING_DAMPING_TAB
+        )
+      })
     }
     .layoutWeight(1)
     .onClick(() => {

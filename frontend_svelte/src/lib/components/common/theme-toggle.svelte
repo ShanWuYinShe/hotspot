@@ -28,7 +28,7 @@
 
 <div class="flex items-center gap-2">
 	<button
-		class="flex items-center justify-center rounded-full outline-none"
+		class="flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:scale-105 active:scale-95"
 		style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 		onclick={toggleThemeMode}
 		aria-label={t('sidebar.toggleTheme')}
@@ -40,7 +40,7 @@
 		{/if}
 	</button>
 	<button
-		class="rounded-full px-3 py-1.5 outline-none"
+		class="rounded-full px-3 py-1.5 outline-none transition-all duration-150 hover:scale-105 active:scale-95"
 		style="font-size: 11px; font-weight: 500; background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 		onclick={toggleThemeFamily}
 	>

@@ -206,7 +206,7 @@
 					<User class="h-4 w-4" />
 				</RippleButton>
 				<button
-					class="hidden rounded-full px-4 py-1.5 outline-none sm:inline-flex"
+					class="hidden rounded-full px-4 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)] sm:inline-flex"
 					style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 12px; font-weight: 500; box-shadow: 0 3px 10px var(--neu-glow);"
 					onclick={handleAuthEntry}
 				>

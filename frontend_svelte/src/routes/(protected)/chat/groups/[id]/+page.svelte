@@ -714,7 +714,7 @@
 							</div>
 						{:else}
 							<div
-								class="group flex gap-3 py-1 {isMe ? 'flex-row-reverse' : ''}"
+								class="group flex gap-3 py-1 {isMe ? 'flex-row-reverse' : ''} {index === messages.length - 1 ? 'chat-msg-enter' : ''}"
 								{@attach observeMessage({ messageId: message.message_id, isSelf: isMe })}
 							>
 								{#if !isMe}

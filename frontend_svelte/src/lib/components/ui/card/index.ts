@@ -23,7 +23,7 @@ export const cardVariants = tv({
 			strong: 'ring-2 ring-primary/16 hover:ring-primary/24'
 		},
 		interactive: {
-			true: 'cursor-pointer select-none hover:shadow-[10px_10px_24px_var(--neu-shadow-dark),-10px_-10px_24px_var(--neu-shadow-light)] active:shadow-[inset_6px_6px_12px_var(--neu-shadow-dark),inset_-6px_-6px_12px_var(--neu-shadow-light)]',
+			true: 'cursor-pointer select-none hover:shadow-[10px_10px_24px_var(--neu-shadow-dark),-10px_-10px_24px_var(--neu-shadow-light)] active:shadow-[inset_6px_6px_12px_var(--neu-shadow-dark),inset_-6px_-6px_12px_var(--neu-shadow-light)] focus-visible:outline-none focus-visible:ring-[2px] focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--neu-bg)]',
 			false: ''
 		}
 	},

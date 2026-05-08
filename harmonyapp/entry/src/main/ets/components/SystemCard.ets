@@ -2,6 +2,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { curves } from '@kit.ArkUI';
 
 /**
  * 卡片样式变体
@@ -135,10 +136,9 @@ export struct SystemCard {
     return this.cardPadding;
   }
 
-  // 获取点击缩放比例
   private getScale(): ScaleOptions {
     if (this.clickable && this.isPressed) {
-      return { x: 0.985, y: 0.985 };
+      return { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD };
     }
     return { x: 1, y: 1 };
   }
@@ -156,8 +156,10 @@ export struct SystemCard {
     .shadow(this.getShadow())
     .scale(this.getScale())
     .animation({
-      duration: DesignConstants.ANIMATION.DURATION_SHORT,
-      curve: Curve.EaseOut
+      curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      )
     })
     .onTouch((event: TouchEvent) => {
       if (this.clickable) {
@@ -206,8 +208,15 @@ export struct MasonryCard {
     .borderRadius(this.cardRadius)
     .shadow(this.getPalette().surfaceShadow)
     .border({ width: 1, color: this.getPalette().borderColor })
-    .scale(this.clickable && this.isPressed ? { x: 0.97, y: 0.97 } : { x: 1, y: 1 })
-    .animation({ duration: 100, curve: Curve.EaseOut })
+    .scale(this.clickable && this.isPressed ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY, y: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY } :
+      { x: 1, y: 1 })
+    .animation({
+      curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      )
+    })
     .onTouch((event: TouchEvent) => {
       if (this.clickable) {
         if (event.type === TouchType.Down) {

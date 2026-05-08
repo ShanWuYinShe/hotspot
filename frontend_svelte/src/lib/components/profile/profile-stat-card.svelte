@@ -11,8 +11,7 @@
 
 <button
 	type="button"
-	class="rounded-[18px] p-4 text-left outline-none transition-shadow {className}"
-	style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+	class="neu-small neu-pill-hover rounded-[18px] p-4 text-left outline-none transition-[box-shadow,transform] duration-200 hover:scale-[1.02] active:scale-[0.97] {className}"
 	{...rest}
 >
 	<p style="font-size: 22px; font-weight: 700; color: var(--neu-text);">{value}</p>

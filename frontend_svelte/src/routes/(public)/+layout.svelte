@@ -40,7 +40,7 @@
 		class="flex h-[100dvh] w-full flex-col overflow-hidden transition-colors duration-500"
 		style="background-color: var(--neu-bg); color: var(--neu-text);"
 	>
-		<main class="mobile-app-main no-scrollbar scroll-smooth">
+		<main class="mobile-app-main no-scrollbar scroll-smooth page-enter">
 			<div class="mobile-shell-content">
 				{@render children()}
 			</div>
@@ -124,7 +124,7 @@
 			<Sidebar />
 
 			<!-- Main content card -->
-			<main class="desktop-main-card">
+			<main class="desktop-main-card page-enter">
 				<div class="h-full overflow-y-auto no-scrollbar">
 					{@render children()}
 				</div>

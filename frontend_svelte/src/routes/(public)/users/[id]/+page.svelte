@@ -183,7 +183,7 @@
 		style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
 	>
 		<button
-			class="flex items-center justify-center rounded-full outline-none"
+			class="flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 			style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 			onclick={() => history.back()}
 			aria-label="返回"
@@ -244,7 +244,7 @@
 					{#if authStore.isAuthenticated && authStore.currentUserId !== userId}
 						<div class="flex flex-wrap gap-3">
 							<button
-								class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
+								class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 								style={isFollowing
 									? 'box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg);'
 									: 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);'}
@@ -262,7 +262,7 @@
 								{/if}
 							</button>
 							<button
-								class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
+								class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 								style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 								onclick={() => goto(`/chat/users/${userId}`)}
 							>
@@ -307,7 +307,7 @@
 				{ value: 'following', label: '关注列表', icon: Users }
 			] as tab (tab.value)}
 				<button
-					class="flex items-center gap-2 rounded-full px-4 py-2 font-medium outline-none transition-all"
+					class="flex items-center gap-2 rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] transition-all"
 					style={currentTab === tab.value
 						? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);'
 						: 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);'}
@@ -353,7 +353,7 @@
 				{#if momentsPagination.hasMore}
 					<div class="flex justify-center pt-4">
 						<button
-							class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
+							class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 							style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 							onclick={() => loadMoments(false)}
 							disabled={momentsPagination.loadingMore}
@@ -415,7 +415,7 @@
 				{#if followersPagination.hasMore}
 					<div class="flex justify-center pt-4">
 						<button
-							class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
+							class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 							style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 							onclick={() => loadFollowers(false)}
 							disabled={followersPagination.loadingMore}
@@ -477,7 +477,7 @@
 				{#if followingPagination.hasMore}
 					<div class="flex justify-center pt-4">
 						<button
-							class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
+							class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
 							style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 							onclick={() => loadFollowing(false)}
 							disabled={followingPagination.loadingMore}

@@ -14,10 +14,10 @@
 <textarea
 	{@attach useKeyboardFocus()}
 	class={cn(
-		'flex min-h-[60px] w-full select-text px-3 py-2 text-base outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
+		'neu-input-base flex min-h-[60px] w-full select-text outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
 		className
 	)}
-	style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); border-radius: var(--neu-radius-lg); color: var(--neu-text);"
+	style="background: var(--neu-bg); border: 1px solid var(--neu-border); border-radius: var(--neu-radius-lg); color: var(--neu-text);"
 	bind:value
 	{...restProps}
 ></textarea>

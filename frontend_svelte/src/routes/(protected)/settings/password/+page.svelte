@@ -102,8 +102,8 @@
 					type="password"
 					bind:value={oldPassword}
 					onblur={() => markTouched('oldPassword')}
-					class="w-full rounded-[18px] px-4 py-2.5 outline-none"
-					style="box-shadow: var(--neu-shadow-inset); border: 1px solid {oldPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
+					class="neu-input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+					style="border: 1px solid {oldPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
 				/>
 				{#if oldPasswordError}
 					<p style="font-size: 12px; color: var(--neu-error);">{oldPasswordError}</p>
@@ -116,8 +116,8 @@
 					type="password"
 					bind:value={newPassword}
 					onblur={() => markTouched('newPassword')}
-					class="w-full rounded-[18px] px-4 py-2.5 outline-none"
-					style="box-shadow: var(--neu-shadow-inset); border: 1px solid {newPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
+					class="neu-input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+					style="border: 1px solid {newPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
 				/>
 				{#if newPasswordError}
 					<p style="font-size: 12px; color: var(--neu-error);">{newPasswordError}</p>
@@ -130,8 +130,8 @@
 					type="password"
 					bind:value={confirmPassword}
 					onblur={() => markTouched('confirmPassword')}
-					class="w-full rounded-[18px] px-4 py-2.5 outline-none"
-					style="box-shadow: var(--neu-shadow-inset); border: 1px solid {confirmPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
+					class="neu-input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+					style="border: 1px solid {confirmPasswordError ? 'var(--neu-error)' : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
 				/>
 				{#if confirmPasswordError}
 					<p style="font-size: 12px; color: var(--neu-error);">{confirmPasswordError}</p>

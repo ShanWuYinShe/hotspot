@@ -13,7 +13,7 @@
 	const is404 = $derived(page.status === 404);
 </script>
 
-<div class="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center">
+<div class="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center error-enter">
 	<div
 		class="flex h-20 w-20 items-center justify-center rounded-[28px]"
 		style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"

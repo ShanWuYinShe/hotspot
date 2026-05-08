@@ -33,8 +33,26 @@
 	let hasLoadedOnce = $state(false);
 	let activeTab = $state('nearby');
 	let searchVal = $state('');
+	let tabIndicator: HTMLDivElement | undefined;
+
+	function updateTabIndicator() {
+		if (!tabIndicator) return;
+		const container = tabIndicator.parentElement;
+		if (!container) return;
+		const activeBtn = container.querySelector('.tab-btn[data-tab-id="' + activeTab + '"]') as HTMLElement;
+		if (!activeBtn) return;
+		tabIndicator.style.left = activeBtn.offsetLeft + 'px';
+		tabIndicator.style.width = activeBtn.offsetWidth * 0.76 + 'px';
+	}
 
 	const returnTarget = $derived(page.url.searchParams.get('from') || '/search');
+
+	$effect(() => {
+		activeTab;
+		if (tabIndicator) {
+			requestAnimationFrame(() => updateTabIndicator());
+		}
+	});
 
 	function getAnchor() {
 		return {
@@ -112,21 +130,22 @@
 			</div>
 
 			<!-- Tabs -->
-			<div class="flex overflow-x-auto no-scrollbar" style="border-bottom: 1px solid var(--neu-border);">
+			<div class="relative flex overflow-x-auto no-scrollbar" style="border-bottom: 1px solid var(--neu-border);">
 				{#each TABS as tab (tab.id)}
 					<button
-						class="relative flex-shrink-0 pb-3 pt-1 outline-none"
+						class="tab-btn relative flex-shrink-0 pb-3 pt-1 outline-none"
 						style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab.id ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}; font-weight: {activeTab === tab.id ? 500 : 400}; font-size: 13px; transition: color 0.2s;"
 						onclick={() => { activeTab = tab.id; }}
+						data-tab-id={tab.id}
 					>
 						{tab.label}
-						{#if activeTab === tab.id}
-							<div
-								style="position: absolute; bottom: -1px; left: 12%; right: 12%; height: 2px; border-radius: 1px; background: var(--neu-accent-primary);"
-							></div>
-						{/if}
 					</button>
 				{/each}
+				<div
+					class="tab-indicator"
+					style="position: absolute; bottom: -1px; height: 2px; border-radius: 1px; background: var(--neu-accent-primary); transition: left 0.28s cubic-bezier(0.22, 1, 0.36, 1), width 0.28s cubic-bezier(0.22, 1, 0.36, 1);"
+					bind:this={tabIndicator}
+				></div>
 			</div>
 		</div>
 
@@ -210,7 +229,7 @@
 			</div>
 
 			<!-- Tabs -->
-			<div class="flex overflow-x-auto no-scrollbar" style="border-bottom: 1px solid var(--neu-border);">
+			<div class="relative flex overflow-x-auto no-scrollbar" style="border-bottom: 1px solid var(--neu-border);">
 				{#each TABS as tab (tab.id)}
 					<button
 						class="relative flex-shrink-0 pb-3 pt-1 outline-none"

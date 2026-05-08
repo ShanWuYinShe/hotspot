@@ -619,15 +619,30 @@
 		box-shadow: inset 5px 5px 10px var(--neu-shadow-dark), inset -5px -5px 10px var(--neu-shadow-light);
 		border-color: var(--neu-border-pressed);
 	}
+	.neu-input-surface:focus-within:focus-visible {
+		box-shadow: inset 5px 5px 10px var(--neu-shadow-dark), inset -5px -5px 10px var(--neu-shadow-light), 0 0 0 2px var(--neu-glow);
+		border-color: var(--neu-accent-primary);
+	}
 
 	.neu-input-base {
 		box-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light);
 		border: 1px solid var(--neu-border);
+		padding: 6px 12px;
+		font-size: 14px;
 		transition: box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease;
+	}
+	.neu-input-base::placeholder {
+		color: var(--neu-text-muted);
+		opacity: 0.6;
 	}
 	.neu-input-base:focus {
 		box-shadow: inset 8px 8px 16px var(--neu-shadow-dark), inset -8px -8px 16px var(--neu-shadow-light);
 		border-color: var(--neu-border-pressed);
+		outline: none;
+	}
+	.neu-input-base:focus-visible {
+		box-shadow: inset 8px 8px 16px var(--neu-shadow-dark), inset -8px -8px 16px var(--neu-shadow-light), 0 0 0 2px var(--neu-glow);
+		border-color: var(--neu-accent-primary);
 	}
 
 	.neu-button-glow {
@@ -652,11 +667,21 @@
 		.neu-card-hover:hover {
 			box-shadow: var(--hover-shadow-card) !important;
 		}
+		.neu-card-hover:focus-visible {
+			box-shadow: var(--hover-shadow-card) !important;
+			outline: 2px solid var(--neu-glow);
+			outline-offset: 2px;
+		}
 		.neu-row-hover {
 			transition: box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 		}
 		.neu-row-hover:hover {
 			box-shadow: var(--hover-shadow-row) !important;
+		}
+		.neu-row-hover:focus-visible {
+			box-shadow: var(--hover-shadow-row) !important;
+			outline: 2px solid var(--neu-glow);
+			outline-offset: 2px;
 		}
 		.neu-circle-hover {
 			transition: box-shadow 0.20s cubic-bezier(0.22, 1, 0.36, 1);
@@ -664,11 +689,21 @@
 		.neu-circle-hover:hover {
 			box-shadow: var(--hover-shadow-btn) !important;
 		}
+		.neu-circle-hover:focus-visible {
+			box-shadow: var(--hover-shadow-btn) !important;
+			outline: 2px solid var(--neu-glow);
+			outline-offset: 2px;
+		}
 		.neu-pill-hover {
 			transition: box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 		}
 		.neu-pill-hover:hover {
 			box-shadow: var(--hover-shadow-pill) !important;
+		}
+		.neu-pill-hover:focus-visible {
+			box-shadow: var(--hover-shadow-pill) !important;
+			outline: 2px solid var(--neu-glow);
+			outline-offset: 2px;
 		}
 	.text-neu-muted { color: var(--neu-text-muted); }
 	.text-neu-accent { color: var(--neu-accent); }
@@ -741,7 +776,13 @@
 		transform: translateY(-1px);
 	}
 
-	.mobile-bottom-nav__tab-pill {
+	.mobile-bottom-nav__tab:focus-visible {
+			outline: 2px solid var(--neu-glow);
+			outline-offset: -2px;
+			border-radius: 12px;
+		}
+
+		.mobile-bottom-nav__tab-pill {
 		position: absolute;
 		top: 6px;
 		left: 50%;
@@ -859,6 +900,10 @@
 	.desktop-header__btn:hover {
 		background: rgba(0, 0, 0, 0.07);
 	}
+	.desktop-header__btn:focus-visible {
+		outline: 2px solid var(--neu-glow);
+		outline-offset: 2px;
+	}
 
 	/* Desktop sidebar (Figma Make) */
 	.desktop-sidebar__nav-item {
@@ -876,6 +921,11 @@
 		background: transparent;
 		font-size: 14px;
 	}
+
+		.desktop-sidebar__nav-item:focus-visible {
+			outline: 2px solid var(--neu-glow);
+			outline-offset: -2px;
+		}
 
 		.desktop-sidebar__nav-item:not(.active):hover {
 			background: transparent;
@@ -920,4 +970,40 @@
 /* Utility: accent-active text color (replaces text-white on accent backgrounds) */
 .neu-active-text { color: var(--neu-active-text) !important; }
 /* Tablet bottom nav glass morphism tokens */
-.neu-glass-bg { background: var(--neu-glass-bg); }
+.neu-glass-bg { background: var(--neu-glass-bg); 
+	/* Page entrance animation */
+	.page-enter {
+		animation: pageEnter 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	@keyframes pageEnter {
+		from { opacity: 0; transform: translateY(10px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+
+	/* Notification item entrance */
+	.notif-enter {
+		animation: notifEnter 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	@keyframes notifEnter {
+		from { opacity: 0; transform: translateX(-12px); }
+		to { opacity: 1; transform: translateX(0); }
+	}
+
+	/* Chat message entrance */
+	.chat-msg-enter {
+		animation: chatMsgEnter 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	@keyframes chatMsgEnter {
+		from { opacity: 0; transform: translateY(8px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+
+	/* Error page entrance */
+	.error-enter {
+		animation: errorEnter 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	@keyframes errorEnter {
+		from { opacity: 0; transform: scale(0.95) translateY(8px); }
+		to { opacity: 1; transform: scale(1) translateY(0); }
+	}
+}

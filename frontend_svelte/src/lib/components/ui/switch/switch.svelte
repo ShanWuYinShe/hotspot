@@ -34,8 +34,9 @@
 	{disabled}
 	{id}
 	class={cn(
-		'relative inline-flex h-[28px] w-[50px] shrink-0 cursor-pointer items-center rounded-full transition-all duration-200',
-		'focus-visible:outline-none',
+		'relative inline-flex h-[28px] w-[50px] shrink-0 cursor-pointer items-center rounded-full',
+		'transition-all duration-200',
+		'focus-visible:outline-none focus-visible:ring-[2px] focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]',
 		'disabled:cursor-not-allowed disabled:opacity-50',
 		className
 	)}

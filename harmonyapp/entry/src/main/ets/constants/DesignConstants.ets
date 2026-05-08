@@ -116,6 +116,26 @@ export interface AnimationSystem {
   CURVE_EMPHASIZED: Curve;
 }
 
+// ==================== 交互反馈系统接口 ====================
+export interface InteractionSystem {
+  /** 卡片按压缩放 */
+  SCALE_PRESSED_CARD: number;
+  /** 瀑布流卡片按压缩放 */
+  SCALE_PRESSED_MASONRY: number;
+  /** 按钮按压缩放 */
+  SCALE_PRESSED_BUTTON: number;
+  /** 图标按钮按压缩放 */
+  SCALE_PRESSED_ICON: number;
+  /** 弹簧动画 response（按压） */
+  SPRING_RESPONSE_PRESS: number;
+  /** 弹簧动画 dampingFraction（按压） */
+  SPRING_DAMPING_PRESS: number;
+  /** 弹簧动画 response（标签切换） */
+  SPRING_RESPONSE_TAB: number;
+  /** 弹簧动画 dampingFraction（标签切换） */
+  SPRING_DAMPING_TAB: number;
+}
+
 // ==================== 透明度系统接口 ====================
 export interface OpacitySystem {
   /** 禁用态 */
@@ -205,6 +225,7 @@ export interface DesignConstantsType {
   SHAPE: ShapeSemanticTokens;
   SHADOW: ShadowSystem;
   ANIMATION: AnimationSystem;
+  INTERACTION: InteractionSystem;
   EFFECT: MaterialEffectSystem;
   COMPONENT: ComponentConstants;
   CHAT: ChatLayoutConstants;
@@ -350,6 +371,18 @@ const ANIMATION: AnimationSystem = {
   CURVE_EMPHASIZED: Curve.FastOutSlowIn,
 };
 
+// ==================== 交互反馈系统 ====================
+const INTERACTION: InteractionSystem = {
+  SCALE_PRESSED_CARD: 0.97,
+  SCALE_PRESSED_MASONRY: 0.96,
+  SCALE_PRESSED_BUTTON: 0.95,
+  SCALE_PRESSED_ICON: 0.92,
+  SPRING_RESPONSE_PRESS: 0.3,
+  SPRING_DAMPING_PRESS: 0.85,
+  SPRING_RESPONSE_TAB: 0.4,
+  SPRING_DAMPING_TAB: 0.75,
+};
+
 // ==================== 组件特定常量 ====================
 const EFFECT: MaterialEffectSystem = {
   BLUR_LIGHT: 12,
@@ -469,6 +502,7 @@ export const DesignConstants: DesignConstantsType = {
   SHAPE,
   SHADOW,
   ANIMATION,
+  INTERACTION,
   EFFECT,
   COMPONENT,
   CHAT,

@@ -306,7 +306,7 @@
 										{#each recentMatches as term (term)}
 											<div class="flex items-center gap-1">
 												<button
-													class="rounded-full px-3 py-1 outline-none"
+													class="rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
 													style="font-size: 12px; color: var(--neu-text); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 													onclick={() => handleSearchNavigate(term)}
 												>
@@ -336,7 +336,7 @@
 										{@const p = getSuggestionPresentation(item)}
 										<button
 											type="button"
-											class="flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left outline-none"
+											class="flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left outline-none hover:bg-[var(--neu-fallback-bg)] transition-colors duration-150"
 											style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 											onclick={() => handleSuggestionClick(item)}
 										>
@@ -408,7 +408,7 @@
 								{#each recentSearches as term (term)}
 									<div class="flex items-center gap-1">
 										<button
-											class="rounded-full px-3 py-1 outline-none"
+											class="rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
 											style="font-size: 12px; color: var(--neu-text); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 											onclick={() => handleRecentClick(term)}
 										>
@@ -449,7 +449,7 @@
 							<div class="flex flex-wrap gap-2">
 								{#each trendingTags as tag (tag.name)}
 									<button
-										class="flex items-center gap-1 rounded-full px-3 py-1 outline-none"
+										class="flex items-center gap-1 rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
 										style="font-size: 12px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 										onclick={() => handleTagClick(tag.name)}
 										aria-label={t('searchModal.searchHotTag', { name: tag.name })}

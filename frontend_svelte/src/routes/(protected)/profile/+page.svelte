@@ -195,8 +195,8 @@
 							id="nickname"
 							bind:value={nickname}
 							placeholder="输入你的昵称"
-							class="w-full rounded-[14px] px-4 py-2.5 outline-none"
-							style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
+							class="neu-input-base w-full rounded-[14px] px-4 py-2.5 outline-none"
+							style="background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
 						/>
 					</div>
 
@@ -219,8 +219,8 @@
 							id="tags"
 							bind:value={tags}
 							placeholder="摄影, 旅行, 美食, 音乐..."
-							class="w-full rounded-[14px] px-4 py-2.5 outline-none"
-							style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
+							class="neu-input-base w-full rounded-[14px] px-4 py-2.5 outline-none"
+							style="background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
 						/>
 						<p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 4px;">用逗号分隔多个标签，最多 5 个</p>
 					</div>

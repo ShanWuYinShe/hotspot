@@ -104,8 +104,8 @@
 					<label for="privacy-level" style="font-size: 13px; color: var(--neu-text-muted); display: block; margin-bottom: 8px;">隐私级别</label>
 					<select
 						id="privacy-level"
-						class="w-full rounded-[18px] px-4 py-2.5 outline-none"
-						style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); background: var(--neu-bg); color: var(--neu-text);"
+						class="neu-input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+						style="border: 1px solid var(--neu-border); background: var(--neu-bg); color: var(--neu-text);"
 						bind:value={privacyLevel}
 					>
 						<option value="public">公开</option>

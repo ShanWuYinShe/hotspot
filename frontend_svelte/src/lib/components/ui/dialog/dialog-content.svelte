@@ -61,16 +61,13 @@
 		bind:ref
 		onCloseAutoFocus={handleCloseAutoFocus}
 		class={cn(
-			'fixed left-[50%] top-[50%] z-50',
-			'grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4',
-			'p-6',
-			'select-none',
-			'duration-200',
-			'data-[state=open]:animate-in data-[state=open]:zoom-in-95 data-[state=open]:fade-in-0',
-			'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
+			'fixed z-50 grid w-full gap-4 p-6 select-none duration-200',
+			'data-[state=open]:animate-in data-[state=open]:fade-in-0',
+			'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+			'dialog-responsive-position',
 			className
 		)}
-		style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border); border-radius: var(--neu-radius-xl); color: var(--neu-text);"
+		style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border); color: var(--neu-text);"
 		{...restProps}
 	>
 		{#if children}
@@ -87,3 +84,60 @@
 		{/if}
 	</DialogPrimitive.Content>
 </DialogPrimitive.Portal>
+
+<style>
+	/* Mobile: slide up from bottom. Desktop: centered zoom */
+	:global(.dialog-responsive-position) {
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%);
+		max-width: 32rem;
+		border-radius: var(--neu-radius-xl, 24px);
+	}
+
+	@media (max-width: 639px) {
+		:global(.dialog-responsive-position) {
+			left: 0;
+			right: 0;
+			top: auto;
+			bottom: 0;
+			transform: none;
+			max-width: 100%;
+			border-bottom-left-radius: 0;
+			border-bottom-right-radius: 0;
+		}
+
+		:global(.dialog-responsive-position[data-state="open"]) {
+			animation: dialogSlideUp 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+		}
+		:global(.dialog-responsive-position[data-state="closed"]) {
+			animation: dialogSlideDown 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+		}
+	}
+
+	@media (min-width: 640px) {
+		:global(.dialog-responsive-position[data-state="open"]) {
+			animation: dialogZoomIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+		}
+		:global(.dialog-responsive-position[data-state="closed"]) {
+			animation: dialogZoomOut 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+		}
+	}
+
+	@keyframes dialogSlideUp {
+		from { transform: translateY(100%); opacity: 0.5; }
+		to { transform: translateY(0); opacity: 1; }
+	}
+	@keyframes dialogSlideDown {
+		from { transform: translateY(0); opacity: 1; }
+		to { transform: translateY(100%); opacity: 0; }
+	}
+	@keyframes dialogZoomIn {
+		from { transform: translate(-50%, -50%) scale(0.95); opacity: 0; }
+		to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+	}
+	@keyframes dialogZoomOut {
+		from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+		to { transform: translate(-50%, -50%) scale(0.95); opacity: 0; }
+	}
+</style>

@@ -128,7 +128,7 @@
 				</div>
 
 				<!-- 操作按钮 -->
-				<button class="rounded-full px-5 py-2.5 outline-none w-full" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleSubmit} disabled={isSubmitting}>
+				<button class="rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleSubmit} disabled={isSubmitting}>
 					{#if isSubmitting}
 						<Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
 						生成中...
@@ -158,10 +158,10 @@
 						<input
 							value={shareUrl ?? ''}
 							readonly
-							class="rounded-[14px] px-4 py-2.5 outline-none flex-1"
+							class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] flex-1"
 							style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 12px; font-family: monospace;"
 						/>
-						<button class="rounded-[14px] px-3 py-2.5 outline-none flex items-center justify-center" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);" onclick={copyToClipboard}>
+						<button class="rounded-[14px] px-3 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] flex items-center justify-center" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);" onclick={copyToClipboard}>
 							{#if isCopied}
 								<Check style="width: 16px; height: 16px; color: var(--neu-success);" />
 							{:else}
@@ -171,7 +171,7 @@
 					</div>
 				</div>
 
-				<button class="rounded-full px-5 py-2.5 outline-none w-full" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleClose}>
+				<button class="rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleClose}>
 					完成
 				</button>
 			</div>

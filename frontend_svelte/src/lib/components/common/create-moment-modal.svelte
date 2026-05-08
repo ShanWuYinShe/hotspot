@@ -287,7 +287,7 @@
 				<textarea
 					id="moment-description"
 					placeholder="写点什么吧..."
-					class="rounded-[14px] px-4 py-2.5 outline-none w-full resize-none"
+					class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full resize-none"
 					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {descriptionError ? 'var(--neu-error)' : 'var(--neu-border)'}; font-size: 13px; min-height: 120px;"
 					bind:value={description}
 					onblur={() => markTouched('description')}
@@ -308,7 +308,7 @@
 				<input
 					id="moment-tags"
 					placeholder="用空格或逗号分隔，例如：城市 旅行 生活"
-					class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+					class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
 					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"
 					bind:value={tagsInput}
 				/>
@@ -379,7 +379,7 @@
 				<label for="moment-privacy" style="font-size: 12px; color: var(--neu-text);">可见范围</label>
 				<select
 					id="moment-privacy"
-					class="rounded-[14px] px-4 py-2.5 outline-none w-full"
+					class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
 					style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"
 					bind:value={privacy}
 				>
@@ -397,10 +397,10 @@
 		</div>
 
 		<Dialog.Footer class="pt-2 flex gap-3 justify-end">
-			<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;" onclick={() => { open = false; onOpenChange?.(false); }}>
+			<button class="rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;" onclick={() => { open = false; onOpenChange?.(false); }}>
 				取消
 			</button>
-			<button class="rounded-full px-5 py-2 outline-none" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleSubmit} disabled={isSubmitting || isUploadingImages}>
+			<button class="rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleSubmit} disabled={isSubmitting || isUploadingImages}>
 				{#if isSubmitting}
 					<Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
 				{/if}

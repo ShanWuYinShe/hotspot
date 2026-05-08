@@ -356,12 +356,12 @@
 							bind:value={commentText}
 							rows={2}
 							disabled={isSubmitting}
-							class="w-full resize-none rounded-[14px] p-3 outline-none"
-							style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
+							class="neu-input-base w-full resize-none rounded-[14px] p-3 outline-none"
+							style="background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
 						></textarea>
 						<div class="mt-2 flex justify-end">
 							<button
-								class="flex items-center gap-2 rounded-full px-4 py-2 font-medium outline-none"
+								class="flex items-center gap-2 rounded-full px-4 py-2 font-medium outline-none transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] focus-visible:ring-[2px] focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]"
 								style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);"
 								onclick={submitComment}
 								disabled={!commentText.trim() || isSubmitting}

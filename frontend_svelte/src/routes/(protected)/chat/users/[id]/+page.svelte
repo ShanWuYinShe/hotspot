@@ -446,7 +446,7 @@
 			<div class="space-y-3 px-4">
 				{#each messages as message (message.message_id)}
 					<div
-						class="flex {isSelf(message) ? 'justify-end' : ''}"
+						class="flex {isSelf(message) ? 'justify-end' : ''} chat-msg-enter"
 						{@attach observeMessage({ messageId: message.message_id, isSelf: isSelf(message) })}
 					>
 						<div class="flex max-w-[70%] flex-col gap-1">

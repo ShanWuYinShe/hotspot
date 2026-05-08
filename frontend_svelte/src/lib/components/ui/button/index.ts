@@ -9,7 +9,7 @@ export const buttonVariants = tv({
 		'whitespace-nowrap font-semibold',
 		'rounded-[28px] border',
 		'transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]',
-		'focus-visible:outline-none',
+		'focus-visible:outline-none focus-visible:ring-[2px] focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]',
 		'disabled:pointer-events-none disabled:opacity-50',
 		'cursor-pointer',
 		'[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0'
