@@ -45,7 +45,7 @@
 </script>
 
 <Dialog bind:open>
-	<DialogContent class="sm:max-w-md rounded-[24px]" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg);">
+	<DialogContent class="sm:max-w-md rounded-[22px]" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg);">
 		<DialogHeader>
 			<DialogTitle>{title}</DialogTitle>
 			<DialogDescription>{description}</DialogDescription>

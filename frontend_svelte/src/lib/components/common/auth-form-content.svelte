@@ -222,7 +222,7 @@
 
 <div class="mt-4">
 	<!-- Tab bar -->
-	<div class="grid w-full grid-cols-3 rounded-[24px] p-1.5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
+	<div class="grid w-full grid-cols-3 rounded-[22px] p-1.5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 		{#each [{ value: 'login', label: t('auth.login') }, { value: 'register', label: t('auth.register') }, { value: 'guest', label: t('auth.guest') }] as tab (tab.value)}
 			<button
 				type="button"
@@ -373,7 +373,7 @@
 			</form>
 		{:else if currentTab === 'guest'}
 			<form onsubmit={(e) => { e.preventDefault(); handleGuestLogin(); }} class="space-y-4 pt-4">
-				<div class="rounded-[24px] p-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text-muted);">
+				<div class="rounded-[22px] p-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text-muted);">
 					{t('auth.guestModeHint')}
 				</div>
 				<div class="space-y-2">

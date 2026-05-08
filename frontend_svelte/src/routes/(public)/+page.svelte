@@ -23,6 +23,7 @@
 	import Star from 'lucide-svelte/icons/star';
 	import TrendingUp from 'lucide-svelte/icons/trending-up';
 	import Hash from 'lucide-svelte/icons/hash';
+	import Navigation from 'lucide-svelte/icons/navigation';
 	import { goto } from '$app/navigation';
 
 	type HomeMode = 'guest' | 'explore' | 'authenticated';
@@ -365,6 +366,28 @@
 				{/each}
 			</div>
 
+			<!-- Map overview card -->
+			<a href="/nearby" class="mb-5 block overflow-hidden rounded-[22px] transition-transform duration-150 active:scale-[0.97]" style="aspect-ratio: 2.4/1; background: linear-gradient(135deg, var(--neu-bg), var(--neu-fallback-bg)); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border); text-decoration: none;">
+				<div class="relative flex h-full w-full flex-col justify-between p-4">
+					<div>
+						<div class="mb-1 flex items-center gap-1.5">
+							<MapPin size={12} strokeWidth={2} color="var(--neu-accent-primary)" />
+							<span style="font-size: 11px; color: var(--neu-text-muted);">{mapAnchorStore.displayName}</span>
+						</div>
+						<p style="font-size: 13px; font-weight: 500; color: var(--neu-text);">探索附近</p>
+					</div>
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-1">
+							<div class="rounded-full" style="width: 8px; height: 8px; background: var(--neu-accent-primary); box-shadow: 0 0 8px var(--neu-glow);"></div>
+							<span style="font-size: 10px; color: var(--neu-text-muted);">{nearbyUsers.length}人在附近</span>
+						</div>
+						<div class="flex items-center justify-center rounded-full" style="width: 28px; height: 28px; background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);">
+							<Navigation size={12} color="var(--neu-active-text)" />
+						</div>
+					</div>
+				</div>
+			</a>
+
 			<!-- Trending tags (compact) -->
 			{#if trendingTags.length > 0}
 				<div class="mb-5">
@@ -467,7 +490,7 @@
 			{#if feed.loading}
 				<div class="flex flex-col gap-3">
 					{#each Array(3) as _}
-						<div class="rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+						<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 							<div class="flex items-center gap-3">
 								<div class="rounded-full" style="width: 36px; height: 36px; background: var(--neu-border);"></div>
 								<div class="flex-1">
@@ -636,7 +659,7 @@
 				{#if feed.loading}
 					<div class="flex flex-col gap-3">
 						{#each Array(4) as _}
-							<div class="rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+							<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 								<div class="flex items-center gap-3">
 									<div class="rounded-full" style="width: 36px; height: 36px; background: var(--neu-border);"></div>
 									<div class="flex-1">

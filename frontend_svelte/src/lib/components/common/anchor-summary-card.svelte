@@ -25,7 +25,7 @@
 </script>
 
 <div
-	class="rounded-[24px] p-4"
+	class="rounded-[22px] p-4"
 	style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 >
 	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

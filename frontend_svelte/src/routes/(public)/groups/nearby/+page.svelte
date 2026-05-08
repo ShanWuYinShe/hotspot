@@ -102,7 +102,7 @@
 		<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
 			{#each Array(6) as _, i (i)}
 				<MasonryLayoutItem>
-					<div class="animate-pulse rounded-[24px]" style="height: {200 + (i % 3) * 28}px; background: var(--neu-border);"></div>
+					<div class="animate-pulse rounded-[22px]" style="height: {200 + (i % 3) * 28}px; background: var(--neu-border);"></div>
 				</MasonryLayoutItem>
 			{/each}
 		</MasonryLayout>

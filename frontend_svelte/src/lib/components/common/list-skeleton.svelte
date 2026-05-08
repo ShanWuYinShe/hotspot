@@ -18,7 +18,7 @@
 <div class="{containerClass} {className}">
 	{#each Array(count) as _, i (i)}
 		<div
-			class="rounded-[24px] p-5"
+			class="rounded-[22px] p-5"
 			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			{#if type === 'user'}

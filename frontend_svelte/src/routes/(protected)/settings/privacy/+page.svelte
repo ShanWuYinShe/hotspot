@@ -86,7 +86,7 @@
 	/>
 
 	{#if isLoading}
-		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 			<div class="space-y-4">
 				{#each Array(5) as _, i (i)}
 					<div class="h-11 w-full rounded-[18px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"></div>
@@ -95,7 +95,7 @@
 		</div>
 	{:else}
 		<!-- Basic Visibility Card -->
-		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 			<p style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-bottom: 4px;">基础可见性</p>
 			<p style="font-size: 12px; color: var(--neu-text-muted); margin-bottom: 16px;">控制大部分信息默认可见范围</p>
 
@@ -182,7 +182,7 @@
 		</div>
 
 		<!-- Social & Chat Card -->
-		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 			<p style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-bottom: 4px;">社交与私聊</p>
 			<p style="font-size: 12px; color: var(--neu-text-muted); margin-bottom: 16px;">管理关注与私聊权限</p>
 
@@ -226,7 +226,7 @@
 		</div>
 
 		<!-- Search & Discovery Card -->
-		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+		<div class="rounded-[22px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 			<p style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-bottom: 4px;">搜索与发现</p>
 			<p style="font-size: 12px; color: var(--neu-text-muted); margin-bottom: 16px;">控制你在搜索/附近中的展示</p>
 

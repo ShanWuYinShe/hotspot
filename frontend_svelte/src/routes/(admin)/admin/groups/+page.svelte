@@ -97,7 +97,7 @@
 	</div>
 
 	<!-- Groups table -->
-	<div class="rounded-[24px] overflow-hidden" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+	<div class="rounded-[22px] overflow-hidden" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 		<div class="flex items-center gap-2 px-4 py-3" style="border-bottom: 1px solid var(--neu-border);">
 			<UsersRound size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
 			<span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">群组列表</span>

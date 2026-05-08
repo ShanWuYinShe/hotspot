@@ -596,7 +596,7 @@
 </svelte:head>
 
 <!-- 聊天容器 - Neumorphic 风格 -->
-<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[24px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[22px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 	<!-- Header -->
 	<header class="flex h-16 shrink-0 items-center gap-3 px-4" style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);">
 		<button

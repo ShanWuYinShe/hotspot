@@ -21,7 +21,7 @@
 			{ icon: FileText, label: '审计日志', value: '--', sub: '今日操作记录' }
 		] as stat}
 			<div
-				class="flex flex-col items-center justify-center rounded-[24px] py-5"
+				class="flex flex-col items-center justify-center rounded-[22px] py-5"
 				style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 			>
 				<div
@@ -40,7 +40,7 @@
 	<div class="grid gap-6 lg:grid-cols-2">
 		<!-- 快捷操作 -->
 		<div
-			class="rounded-[24px] p-5"
+			class="rounded-[22px] p-5"
 			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<div class="mb-1" style="font-size: 16px; font-weight: 600; color: var(--neu-text);">快捷操作</div>
@@ -73,7 +73,7 @@
 
 		<!-- 系统状态 -->
 		<div
-			class="rounded-[24px] p-5"
+			class="rounded-[22px] p-5"
 			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<div class="mb-1" style="font-size: 16px; font-weight: 600; color: var(--neu-text);">系统状态</div>

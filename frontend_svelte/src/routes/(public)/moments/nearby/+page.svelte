@@ -2,7 +2,8 @@
 	import { page } from '$app/state';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
-	import { momentsService } from '$lib/api/services';
+	import { momentsService, feedService } from '$lib/api/services';
+	import { isSuccess } from '$lib/api/client';
 	import { navigateToNearbyBackTarget } from '../../nearby-back';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { platformStore } from '$lib/stores/platform.svelte';
@@ -11,13 +12,14 @@
 	import MomentCard from '$lib/components/moments/moment-card.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
-	import type { MomentItem } from '$lib/types/api';
+	import type { MomentItem, TrendingTagItem } from '$lib/types/api';
 	import Search from 'lucide-svelte/icons/search';
 	import MapPin from 'lucide-svelte/icons/map-pin';
 	import Image from 'lucide-svelte/icons/image';
 	import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import LogIn from 'lucide-svelte/icons/log-in';
+	import TrendingUp from 'lucide-svelte/icons/trending-up';
 	import { t } from '$lib/i18n';
 
 	const TABS = [
@@ -33,6 +35,7 @@
 	let hasLoadedOnce = $state(false);
 	let activeTab = $state('nearby');
 	let searchVal = $state('');
+	let trendingTags = $state.raw<TrendingTagItem[]>([]);
 	let tabIndicator: HTMLDivElement | undefined;
 
 	function updateTabIndicator() {
@@ -82,7 +85,18 @@
 		void loadMoments(true);
 	}
 
+	async function loadTrendingTags() {
+		try {
+			const response = await feedService.getTrending();
+			if (isSuccess(response) && response.data) {
+				trendingTags = response.data.trending_tags ?? [];
+			}
+		} catch { /* ignore */ }
+	}
+
 	useLocationAwareLoad((refresh) => loadMoments(refresh));
+
+	loadTrendingTags();
 </script>
 
 <svelte:head>
@@ -100,7 +114,7 @@
 			<!-- Top bar -->
 			<div class="mb-2.5 flex items-center justify-between">
 				<div class="flex items-center gap-2">
-					<button onclick={handleBack} class="outline-none" aria-label="返回">
+					<button onclick={handleBack} class="outline-none transition-transform duration-150 active:scale-[0.88] rounded-full" aria-label="返回">
 						<ArrowLeft size={18} color="var(--neu-text-muted)" />
 					</button>
 					<h1 style="font-size: 20px; color: var(--neu-text); font-weight: 600;">{t('discover.title')}</h1>
@@ -116,8 +130,8 @@
 
 			<!-- Search bar -->
 			<div
-				class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-				style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+				class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 neu-input-surface"
+				style="border: 1px solid var(--neu-border);"
 			>
 				<Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
 				<input
@@ -133,7 +147,7 @@
 			<div class="relative flex overflow-x-auto no-scrollbar" style="border-bottom: 1px solid var(--neu-border);">
 				{#each TABS as tab (tab.id)}
 					<button
-						class="tab-btn relative flex-shrink-0 pb-3 pt-1 outline-none"
+						class="tab-btn relative flex-shrink-0 pb-3 pt-1 outline-none transition-transform duration-150 active:scale-[0.94]"
 						style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab.id ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}; font-weight: {activeTab === tab.id ? 500 : 400}; font-size: 13px; transition: color 0.2s;"
 						onclick={() => { activeTab = tab.id; }}
 						data-tab-id={tab.id}
@@ -149,11 +163,27 @@
 			</div>
 		</div>
 
+		<!-- Trending tag chips -->
+		{#if trendingTags.length > 0}
+			<div class="flex items-center gap-2 px-5 pt-2 pb-1 overflow-x-auto no-scrollbar">
+				<TrendingUp size={12} color="var(--neu-accent-primary)" strokeWidth={2} class="flex-shrink-0" />
+				{#each trendingTags.slice(0, 10) as tag (tag.name)}
+					<a
+						href="/search?tag={encodeURIComponent(tag.name)}"
+						class="flex-shrink-0 rounded-full px-3 py-1 text-xs neu-pill-hover transition-transform duration-150 active:scale-[0.93]"
+						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+					>
+						#{tag.name}
+					</a>
+				{/each}
+			</div>
+		{/if}
+
 		<!-- Content -->
 		<div class="flex flex-col gap-4 px-5 pt-3 pb-6">
 			{#if pagination.loading}
 				{#each Array(4) as _}
-					<div class="rounded-[24px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+					<div class="rounded-[22px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 						<div class="rounded-t-[22px]" style="height: 140px; background: var(--neu-border);"></div>
 						<div class="p-4">
 							<div class="mb-2 rounded" style="width: 80%; height: 12px; background: var(--neu-border);"></div>
@@ -203,7 +233,7 @@
 		>
 			<div class="mb-3 flex items-baseline justify-between">
 				<div class="flex items-center gap-3">
-					<button onclick={handleBack} class="outline-none" aria-label="返回">
+					<button onclick={handleBack} class="outline-none transition-transform duration-150 active:scale-[0.88] rounded-full" aria-label="返回">
 						<ArrowLeft size={18} color="var(--neu-text-muted)" />
 					</button>
 					<h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">{t('discover.title')}</h1>
@@ -215,8 +245,8 @@
 
 			<!-- Search bar -->
 			<div
-				class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-				style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+				class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 neu-input-surface"
+				style="border: 1px solid var(--neu-border);"
 			>
 				<Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
 				<input
@@ -232,7 +262,7 @@
 			<div class="relative flex overflow-x-auto no-scrollbar" style="border-bottom: 1px solid var(--neu-border);">
 				{#each TABS as tab (tab.id)}
 					<button
-						class="relative flex-shrink-0 pb-3 pt-1 outline-none"
+						class="relative flex-shrink-0 pb-3 pt-1 outline-none transition-transform duration-150 active:scale-[0.94]"
 						style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab.id ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}; font-weight: {activeTab === tab.id ? 500 : 400}; font-size: 13px; transition: color 0.2s;"
 						onclick={() => { activeTab = tab.id; }}
 					>
@@ -252,7 +282,7 @@
 			{#if pagination.loading}
 				<div class="grid grid-cols-3 gap-4">
 					{#each Array(6) as _}
-						<div class="rounded-[24px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+						<div class="rounded-[22px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 							<div class="rounded-t-[22px]" style="height: 120px; background: var(--neu-border);"></div>
 							<div class="p-4">
 								<div class="mb-2 rounded" style="width: 80%; height: 12px; background: var(--neu-border);"></div>

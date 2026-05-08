@@ -1823,7 +1823,7 @@
 <div bind:this={modalRoot}>
     <Dialog.Root bind:open onOpenChange={handleDialogOpenChange}>
         <Dialog.Content
-            class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${ isFullscreen ? "sm:h-screen sm:max-h-screen sm:w-screen sm:max-w-none sm:rounded-none sm:border-0 sm:p-4" : "sm:h-[88vh] sm:w-[92vw] sm:max-w-6xl lg:max-w-7xl sm:rounded-[24px] sm:backdrop-blur sm:p-6" }`}
+            class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${ isFullscreen ? "sm:h-screen sm:max-h-screen sm:w-screen sm:max-w-none sm:rounded-none sm:border-0 sm:p-4" : "sm:h-[88vh] sm:w-[92vw] sm:max-w-6xl lg:max-w-7xl sm:rounded-[22px] sm:backdrop-blur sm:p-6" }`}
             style={isFullscreen ? "background: var(--neu-bg);" : "background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"}
             hideClose
         >
@@ -1878,7 +1878,7 @@
             </div>
             <!-- 左侧：地图容器 -->
             <div
-                class="relative flex-1 overflow-hidden sm:rounded-[24px]"
+                class="relative flex-1 overflow-hidden sm:rounded-[22px]"
                 style="border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
             >
                 <div
@@ -1979,7 +1979,7 @@
                 {#if showFilterPanel}
                     <div
                         bind:this={filterPanelElement}
-                        class="absolute right-4 top-16 z-30 hidden w-40 select-none overflow-hidden rounded-[24px] p-2 backdrop-blur-md sm:block"
+                        class="absolute right-4 top-16 z-30 hidden w-40 select-none overflow-hidden rounded-[22px] p-2 backdrop-blur-md sm:block"
                         style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
                     >
                         <button
@@ -2812,7 +2812,7 @@
 
             <!-- 右侧：桌面信息栏（标题 / 搜索 / 历史 / 确认） -->
             <div
-                class="hidden h-full w-[320px] shrink-0 select-none flex-col gap-4 overflow-hidden rounded-[24px] p-4 sm:flex lg:w-90"
+                class="hidden h-full w-[320px] shrink-0 select-none flex-col gap-4 overflow-hidden rounded-[22px] p-4 sm:flex lg:w-90"
                 style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
             >
                 <div class="flex items-start justify-between gap-3">

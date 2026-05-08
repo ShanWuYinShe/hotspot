@@ -234,7 +234,7 @@
 
 	{#if isLoading}
 		<div
-			class="rounded-[24px] p-6 space-y-4"
+			class="rounded-[22px] p-6 space-y-4"
 			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<div class="flex items-center gap-3">
@@ -249,7 +249,7 @@
 		</div>
 	{:else if moment}
 		<div
-			class="rounded-[24px] p-6"
+			class="rounded-[22px] p-6"
 			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<!-- Author -->
@@ -342,7 +342,7 @@
 		<!-- Comment input -->
 		{#if authStore.isAuthenticated}
 			<div
-				class="rounded-[24px] p-4"
+				class="rounded-[22px] p-4"
 				style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 			>
 				<div class="flex gap-3">
@@ -381,7 +381,7 @@
 
 		<!-- Comments -->
 		<div
-			class="rounded-[24px] p-6"
+			class="rounded-[22px] p-6"
 			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<h2 style="font-size: 16px; font-weight: 600; color: var(--neu-text); margin-bottom: 16px;">评论 ({commentsCount})</h2>
@@ -443,7 +443,7 @@
 		</div>
 	{:else}
 		<div
-			class="rounded-[24px] py-12 text-center"
+			class="rounded-[22px] py-12 text-center"
 			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<p style="color: var(--neu-text-muted);">瞬间不存在或已被删除</p>

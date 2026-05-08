@@ -23,7 +23,7 @@
 </script>
 
 <div
-	class="flex flex-col items-center justify-center rounded-[24px] py-16 text-center {className}"
+	class="flex flex-col items-center justify-center rounded-[22px] py-16 text-center {className}"
 	style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 >
 	<div

@@ -31,7 +31,7 @@
 </svelte:head>
 
 <div class="flex min-h-screen items-center justify-center px-4 py-10">
-	<div class="w-full max-w-md rounded-[24px] p-6" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+	<div class="w-full max-w-md rounded-[22px] p-6" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 		<div class="mb-6 text-center">
 			<div class="mx-auto mb-4 flex items-center justify-center rounded-full" style="width: 48px; height: 48px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 				<Shield size={19} color="var(--neu-accent-primary)" />

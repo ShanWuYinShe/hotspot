@@ -898,7 +898,7 @@
 
 	{#if !group}
 		<div
-			class="rounded-[24px] p-6"
+			class="rounded-[22px] p-6"
 			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<div class="flex flex-col items-center gap-4">
@@ -910,7 +910,7 @@
 	{:else}
 		<!-- Group profile card -->
 		<div
-			class="rounded-[24px] p-6"
+			class="rounded-[22px] p-6"
 			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 		>
 			<div class="space-y-6">
@@ -1048,7 +1048,7 @@
 		{#if currentTab === 'overview'}
 			<div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
 				<div
-					class="rounded-[24px] p-5"
+					class="rounded-[22px] p-5"
 					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				>
 					<h3 class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 12px;">群组说明</h3>
@@ -1069,7 +1069,7 @@
 					{/if}
 				</div>
 				<div
-					class="rounded-[24px] p-5"
+					class="rounded-[22px] p-5"
 					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				>
 					<h3 class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 12px;">加入须知</h3>
@@ -1123,7 +1123,7 @@
 		{#if currentTab === 'announcements'}
 			{#if !authStore.isAuthenticated}
 				<div
-					class="flex flex-col items-center gap-3 rounded-[24px] py-10"
+					class="flex flex-col items-center gap-3 rounded-[22px] py-10"
 					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				>
 					<p style="font-size: 14px; color: var(--neu-text-muted);">登录后查看群公告</p>
@@ -1137,7 +1137,7 @@
 				</div>
 			{:else if !group.my_state?.is_joined}
 				<div
-					class="flex flex-col items-center gap-3 rounded-[24px] py-10"
+					class="flex flex-col items-center gap-3 rounded-[22px] py-10"
 					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 				>
 					<p style="font-size: 14px; color: var(--neu-text-muted);">加入群组后可查看公告</p>
@@ -1152,7 +1152,7 @@
 			{:else}
 				<!-- Announcements toolbar -->
 				<div
-					class="flex flex-col gap-3 rounded-[24px] p-4 sm:flex-row sm:items-center sm:justify-between"
+					class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
 					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 				>
 					<div>
@@ -1185,7 +1185,7 @@
 					<div class="space-y-3">
 						{#each Array(3) as _, i (i)}
 							<div
-								class="rounded-[24px] p-4 space-y-2"
+								class="rounded-[22px] p-4 space-y-2"
 								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 							>
 								<div class="rounded" style="width: 160px; height: 14px; background: var(--neu-border);"></div>
@@ -1196,7 +1196,7 @@
 					</div>
 				{:else if announcementsPagination.items.length === 0}
 					<div
-						class="rounded-[24px] py-10 text-center"
+						class="rounded-[22px] py-10 text-center"
 						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 					>
 						<p style="font-size: 14px; color: var(--neu-text-muted);">暂无公告</p>
@@ -1205,7 +1205,7 @@
 					<div class="space-y-3">
 						{#each announcementsPagination.items as announcement (announcement.announcement_id)}
 							<div
-								class="rounded-[24px] p-4"
+								class="rounded-[22px] p-4"
 								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 							>
 								<div class="flex items-start justify-between gap-3">
@@ -1254,17 +1254,17 @@
 		<!-- Tab: Members (abbreviated for neumorphic style) -->
 		{#if currentTab === 'members'}
 			{#if !authStore.isAuthenticated}
-				<div class="flex flex-col items-center gap-3 rounded-[24px] py-10" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+				<div class="flex flex-col items-center gap-3 rounded-[22px] py-10" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 					<p style="font-size: 14px; color: var(--neu-text-muted);">登录后查看成员</p>
 					<button class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);" onclick={() => uiStore.openLoginModal()}>去登录</button>
 				</div>
 			{:else if !group.my_state?.is_joined}
-				<div class="flex flex-col items-center gap-3 rounded-[24px] py-10" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+				<div class="flex flex-col items-center gap-3 rounded-[22px] py-10" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 					<p style="font-size: 14px; color: var(--neu-text-muted);">加入群组后可查看成员</p>
 					<button class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]" style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);" onclick={openJoinDialog}>申请加入</button>
 				</div>
 			{:else}
-				<div class="flex flex-col gap-3 rounded-[24px] p-4 sm:flex-row sm:items-center sm:justify-between" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
+				<div class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 					<div>
 						<p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">成员列表</p>
 						<p style="margin-top: 4px; font-size: 12px; color: var(--neu-text-muted);">支持群主/管理员进行禁言与角色管理</p>
@@ -1282,7 +1282,7 @@
 					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
 						{#each Array(6) as _, i (i)}
 							<div class="mb-3 break-inside-avoid">
-								<div class="flex items-center gap-3 rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+								<div class="flex items-center gap-3 rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 									<div class="rounded-full" style="width: 40px; height: 40px; background: var(--neu-border);"></div>
 									<div class="flex-1 space-y-2">
 										<div class="rounded" style="width: 96px; height: 12px; background: var(--neu-border);"></div>
@@ -1293,14 +1293,14 @@
 						{/each}
 					</div>
 				{:else if membersPagination.items.length === 0}
-					<div class="rounded-[24px] py-10 text-center" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+					<div class="rounded-[22px] py-10 text-center" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 						<p style="font-size: 14px; color: var(--neu-text-muted);">暂无成员</p>
 					</div>
 				{:else}
 					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
 						{#each membersPagination.items as member (member.user.user_id)}
 							<div class="mb-3 break-inside-avoid">
-								<div class="flex items-center gap-3 rounded-[24px] p-4 transition-all" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+								<div class="flex items-center gap-3 rounded-[22px] p-4 transition-all" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 									<a href="/users/{member.user.user_id}" class="flex min-w-0 flex-1 items-center gap-3">
 										<div class="overflow-hidden rounded-full" style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);">
 											<img src={member.user.avatar_url} alt={member.user.nickname} class="h-full w-full object-cover" />
@@ -1360,7 +1360,7 @@
 		<!-- Tab: Applications -->
 		{#if canManageGroup && currentTab === 'applications'}
 			<div class="space-y-4">
-				<div class="flex flex-col gap-3 rounded-[24px] p-4 sm:flex-row sm:items-center sm:justify-between" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
+				<div class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 					<div>
 						<p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">待处理申请</p>
 						<p style="margin-top: 4px; font-size: 12px; color: var(--neu-text-muted);">仅展示 pending 申请，处理后会自动移出列表</p>
@@ -1372,7 +1372,7 @@
 				{#if applicationsPagination.loading && applicationsPagination.items.length === 0}
 					<div class="space-y-3">
 						{#each Array(3) as _, i (i)}
-							<div class="rounded-[24px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+							<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 								<div class="rounded" style="width: 128px; height: 14px; background: var(--neu-border);"></div>
 								<div class="rounded" style="width: 100%; height: 14px; background: var(--neu-border);"></div>
 								<div class="rounded" style="width: 144px; height: 12px; background: var(--neu-border);"></div>
@@ -1380,13 +1380,13 @@
 						{/each}
 					</div>
 				{:else if applicationsPagination.items.length === 0}
-					<div class="rounded-[24px] py-10 text-center" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+					<div class="rounded-[22px] py-10 text-center" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 						<p style="font-size: 14px; color: var(--neu-text-muted);">暂无待处理申请</p>
 					</div>
 				{:else}
 					<div class="space-y-3">
 						{#each applicationsPagination.items as application (application.application_id)}
-							<div class="rounded-[24px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+							<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 								<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 									<div class="min-w-0 space-y-1">
 										<div class="flex items-center gap-2">
@@ -1428,7 +1428,7 @@
 
 <!-- Dialogs: kept with neumorphic inner styling -->
 	<Dialog.Root bind:open={showJoinDialog}>
-		<Dialog.Content class="sm:max-w-lg rounded-[24px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
+		<Dialog.Content class="sm:max-w-lg rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
 			<Dialog.Header>
 				<Dialog.Title>加入群组</Dialog.Title>
 				<Dialog.Description>
@@ -1461,7 +1461,7 @@
 	</Dialog.Root>
 
 	<Dialog.Root bind:open={showAnnouncementDialog}>
-		<Dialog.Content class="sm:max-w-xl rounded-[24px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
+		<Dialog.Content class="sm:max-w-xl rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
 			<Dialog.Header>
 				<Dialog.Title>{editingAnnouncement ? '编辑公告' : '发布公告'}</Dialog.Title>
 				<Dialog.Description>发布给所有成员的重要通知与群规提醒。</Dialog.Description>
@@ -1496,7 +1496,7 @@
 	</Dialog.Root>
 
 	<Dialog.Root bind:open={showAnnouncementDeleteDialog}>
-		<Dialog.Content class="sm:max-w-md rounded-[24px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
+		<Dialog.Content class="sm:max-w-md rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
 			<Dialog.Header>
 				<Dialog.Title>删除公告</Dialog.Title>
 				<Dialog.Description>删除后成员将无法再看到该公告。</Dialog.Description>
@@ -1510,7 +1510,7 @@
 	</Dialog.Root>
 
 	<Dialog.Root bind:open={showMuteDialog}>
-		<Dialog.Content class="sm:max-w-md rounded-[24px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
+		<Dialog.Content class="sm:max-w-md rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
 			<Dialog.Header>
 				<Dialog.Title>禁言成员</Dialog.Title>
 				<Dialog.Description>被禁言成员仍可浏览，但无法发言。</Dialog.Description>
@@ -1538,7 +1538,7 @@
 	</Dialog.Root>
 
 	<Dialog.Root bind:open={showRoleDialog}>
-		<Dialog.Content class="sm:max-w-md rounded-[24px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
+		<Dialog.Content class="sm:max-w-md rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
 			<Dialog.Header>
 				<Dialog.Title>角色管理</Dialog.Title>
 				<Dialog.Description>群主与管理员可调整成员角色；管理员不可操作管理员或群主。</Dialog.Description>
@@ -1557,7 +1557,7 @@
 	</Dialog.Root>
 
 	<Dialog.Root bind:open={showRemoveDialog}>
-		<Dialog.Content class="sm:max-w-md rounded-[24px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
+		<Dialog.Content class="sm:max-w-md rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
 			<Dialog.Header>
 				<Dialog.Title>移除成员</Dialog.Title>
 				<Dialog.Description>确认将该成员移出群组吗？</Dialog.Description>
@@ -1574,7 +1574,7 @@
 	</Dialog.Root>
 
 	<Dialog.Root bind:open={showLeaveDialog}>
-		<Dialog.Content class="sm:max-w-md rounded-[24px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
+		<Dialog.Content class="sm:max-w-md rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md" style="border-color: var(--neu-border);">
 			<Dialog.Header>
 				<Dialog.Title>退出群组</Dialog.Title>
 				<Dialog.Description>确认要退出该群组吗？退出后将无法查看群组内容。</Dialog.Description>
