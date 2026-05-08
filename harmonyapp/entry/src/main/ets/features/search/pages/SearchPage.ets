@@ -62,6 +62,8 @@ export struct SearchPage {
   private controller: TabsController = new TabsController();
   @State userActionPendingIds: string[] = [];
   @State groupActionPendingIds: string[] = [];
+  @State isBackPressed: boolean = false;
+  @State isRowPressed: boolean = false;
   private isDestroyed: boolean = false;
 
   aboutToAppear(): void {
@@ -326,6 +328,20 @@ export struct SearchPage {
             offsetY: 4
           })
           .border({ width: 1, color: this.getSurfaceBorder() })
+          .scale(this.isBackPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } : { x: 1, y: 1 })
+          .animation({
+            curve: curves.springMotion(
+              DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+              DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+            )
+          })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.isBackPressed = true;
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.isBackPressed = false;
+            }
+          })
           .onClick(() => {
             AppRouter.pop();
           })

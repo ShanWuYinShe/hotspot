@@ -78,6 +78,7 @@ struct Index {
   @State showPerformanceDetails: boolean = false;
   @State showCreateSheet: boolean = false;
   @State isCreateTabPressed: boolean = false;
+  @State isNotifBtnPressed: boolean = false;
 
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
@@ -1041,6 +1042,20 @@ struct Index {
               .borderRadius(DesignConstants.RADIUS.FULL)
               .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
               .shadow(this.getCurrentThemePalette().controlShadow)
+              .scale(this.isNotifBtnPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } : { x: 1, y: 1 })
+              .animation({
+                curve: curves.springMotion(
+                  DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+                  DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+                )
+              })
+              .onTouch((event: TouchEvent) => {
+                if (event.type === TouchType.Down) {
+                  this.isNotifBtnPressed = true;
+                } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                  this.isNotifBtnPressed = false;
+                }
+              })
               .onClick(() => {
                 this.showNotificationCenter = true;
               })

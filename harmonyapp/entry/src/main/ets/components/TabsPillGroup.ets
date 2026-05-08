@@ -23,6 +23,7 @@ export interface TabsPillGroupActions {
 
 @Component
 export struct TabsPillGroup {
+  @State isTabPressed: boolean = false;
   @Prop tabs: TabItem[] = [];
   @Prop activeIndex: number = 0;
   @Prop gap: number = DesignConstants.SPACING.XS;
@@ -81,6 +82,20 @@ export struct TabsPillGroup {
       })
     }
     .layoutWeight(1)
+    .scale(this.isTabPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON } : { x: 1, y: 1 })
+    .animation({
+      curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      )
+    })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.isTabPressed = true;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.isTabPressed = false;
+      }
+    })
     .onClick(() => {
       if (!isActiveTab) {
         this.dispatchChange(index);
