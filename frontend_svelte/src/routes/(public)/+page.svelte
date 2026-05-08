@@ -276,14 +276,14 @@
 				<p style="font-size: 14px; color: var(--neu-text-muted); margin-top: 8px; max-width: 320px;">{t('home.heroDescription')}</p>
 				<div class="mt-6 flex gap-3">
 					<button
-						class="rounded-[22px] px-6 py-3.5 font-medium"
+						class="rounded-[22px] px-6 py-3.5 font-medium transition-transform duration-150 active:scale-[0.95]"
 						style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
 						onclick={handleGetStarted}
 					>
 						{t('home.getStarted')}
 					</button>
 					<button
-						class="rounded-[22px] px-6 py-3.5 font-medium"
+						class="rounded-[22px] px-6 py-3.5 font-medium transition-transform duration-150 active:scale-[0.97]"
 						style="box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
 						onclick={handleExplore}
 					>
@@ -304,7 +304,7 @@
 					{ icon: Star, label: t('nav.me'), color: 'var(--neu-warning)' },
 				] as feat}
 					<div
-						class="flex flex-col items-center justify-center rounded-[24px]"
+						class="flex flex-col items-center justify-center rounded-[22px] neu-card-hover transition-transform duration-150 active:scale-[0.97]"
 						style="aspect-ratio: 1.2; background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 					>
 						<div class="flex items-center justify-center rounded-[14px]" style="width: 36px; height: 36px; background: var(--neu-fallback-bg);">
@@ -337,7 +337,7 @@
 					<span style="font-size: 11px; color: var(--neu-text-muted);">{mapAnchorStore.displayName}</span>
 				</div>
 				<button
-					class="flex items-center justify-center rounded-full outline-none"
+					class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
 					style="width: 28px; height: 28px; background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);"
 					onclick={refreshAll}
 					aria-label={t('common.refresh')}
@@ -356,7 +356,7 @@
 					{ icon: Star, label: '在线', color: 'var(--neu-success)' },
 				] as stat}
 					<div
-						class="flex flex-col items-center justify-center rounded-[18px] py-[14px]"
+						class="flex flex-col items-center justify-center rounded-[18px] py-[14px] transition-transform duration-150 active:scale-[0.97]"
 						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 					>
 						<stat.icon size={16} strokeWidth={1.75} color={stat.color} />
@@ -398,7 +398,7 @@
 				<div class="mb-5 flex flex-col gap-2.5">
 					{#if loadingNearby}
 						{#each Array(3) as _}
-							<div class="flex items-center gap-3.5 rounded-[24px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+							<div class="flex items-center gap-3.5 rounded-[22px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 								<div class="rounded-full" style="width: 44px; height: 44px; background: var(--neu-border);"></div>
 								<div class="flex-1">
 									<div class="mb-1.5 rounded" style="width: 60px; height: 12px; background: var(--neu-border);"></div>
@@ -409,7 +409,7 @@
 					{:else}
 						{#each nearbyUsers.slice(0, 5) as user (user.user.user_id)}
 							<div role="button" tabindex="0"
-								class="flex cursor-pointer items-center gap-3.5 rounded-[24px] px-4 py-3.5 text-left"
+								class="flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5 text-left neu-row-hover transition-transform duration-150 active:scale-[0.97]"
 								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 								aria-label={user.user.nickname}
 								onclick={() => void goto(`/users/${user.user.user_id}`)}
@@ -441,7 +441,7 @@
 										<span style="font-size: 12px; color: var(--neu-accent-primary);">{formatDistance(user.location.distance)}</span>
 									{/if}
 									<button
-										class="rounded-full px-3.5 py-1.5 outline-none transition-all"
+										class="rounded-full px-3.5 py-1.5 outline-none transition-all active:scale-[0.93]"
 										style={user.relation?.is_following
 											? 'box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
 											: 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
@@ -567,7 +567,7 @@
 					<div class="mb-5 flex flex-col gap-3">
 						{#if loadingNearby}
 							{#each Array(4) as _}
-								<div class="flex items-center gap-3.5 rounded-[24px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+								<div class="flex items-center gap-3.5 rounded-[22px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 									<div class="rounded-full" style="width: 44px; height: 44px; background: var(--neu-border);"></div>
 									<div class="flex-1">
 										<div class="mb-1.5 rounded" style="width: 60px; height: 12px; background: var(--neu-border);"></div>
@@ -578,7 +578,7 @@
 						{:else}
 							{#each nearbyUsers as user (user.user.user_id)}
 								<div role="button" tabindex="0"
-									class="flex cursor-pointer items-center gap-3.5 rounded-[24px] px-4 py-3.5 text-left"
+									class="flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5 text-left neu-row-hover transition-transform duration-150 active:scale-[0.97]"
 									style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
 									aria-label={user.user.nickname}
 									onclick={() => void goto(`/users/${user.user.user_id}`)}
@@ -610,7 +610,7 @@
 											<span style="font-size: 12px; color: var(--neu-accent-primary);">{formatDistance(user.location.distance)}</span>
 										{/if}
 										<button
-											class="rounded-full px-3.5 py-1.5 outline-none transition-all"
+											class="rounded-full px-3.5 py-1.5 outline-none transition-all active:scale-[0.93]"
 											style={user.relation?.is_following
 												? 'box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
 												: 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}

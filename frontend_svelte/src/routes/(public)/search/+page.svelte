@@ -283,7 +283,7 @@
 		style="border-bottom: 1px solid var(--neu-border); background-color: var(--neu-bg);"
 	>
 		<button
-			class="flex items-center justify-center rounded-full outline-none flex-shrink-0"
+			class="flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-transform duration-150 active:scale-[0.88]"
 			style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 			onclick={() => history.back()}
 			aria-label="返回"
@@ -308,7 +308,7 @@
 			{#if keywordInput}
 				<button
 					type="button"
-					class="flex-shrink-0 outline-none"
+					class="flex-shrink-0 outline-none transition-transform duration-150 active:scale-[0.85]"
 					onclick={clearSearch}
 					aria-label={t('searchPage.clear')}
 				>
@@ -331,12 +331,12 @@
 								<Clock size={13} style="color: var(--neu-text-muted);" strokeWidth={1.5} />
 								<p class="uppercase" style="font-size: 10px; letter-spacing: 0.12em; color: var(--neu-text-muted);">最近搜索</p>
 							</div>
-							<button class="outline-none" style="font-size: 12px; color: var(--neu-accent-primary);" onclick={clearRecent}>清空</button>
+							<button class="outline-none transition-transform duration-150 active:scale-[0.93]" style="font-size: 12px; color: var(--neu-accent-primary);" onclick={clearRecent}>清空</button>
 						</div>
 						<div class="flex flex-wrap gap-2">
 							{#each recentSearches as r (r)}
 								<button
-									class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full outline-none"
+									class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
 									style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); font-size: 12px; color: var(--neu-text-muted);"
 									onclick={() => searchFor(r)}
 								>
@@ -356,7 +356,7 @@
 					</div>
 					{#each HOT_SEARCHES as h, i (h)}
 						<button
-							class="flex items-center gap-3 w-full py-2.5 outline-none"
+							class="flex items-center gap-3 w-full py-2.5 outline-none transition-transform duration-150 active:scale-[0.98]"
 							style="border-bottom: {i < HOT_SEARCHES.length - 1 ? '1px solid var(--neu-border)' : 'none'};"
 							onclick={() => searchFor(h)}
 						>
@@ -378,7 +378,7 @@
 					<div class="flex flex-wrap gap-2">
 						{#each SUGGESTED_TAGS as tag (tag)}
 							<button
-								class="px-3.5 py-1.5 rounded-full outline-none"
+								class="px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
 								style="background: var(--neu-bg); color: var(--neu-accent-primary); font-size: 12px; box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 								onclick={() => searchTag(tag)}
 							>
@@ -400,7 +400,7 @@
 						{ value: 'groups', label: `群组${groups.length ? ` (${groups.length})` : ''}` }
 					] as tab (tab.value)}
 						<button
-							class="flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none"
+							class="flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.92]"
 							style={currentTab === tab.value
 								? 'background: var(--neu-accent-primary); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--neu-glow);'
 								: 'background: var(--neu-bg); color: var(--neu-text-muted); font-size: 12px; border: 1px solid var(--neu-border); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);'}

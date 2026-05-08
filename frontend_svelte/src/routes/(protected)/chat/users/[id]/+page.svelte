@@ -372,7 +372,7 @@
 	<!-- Header -->
 	<div class="flex h-16 items-center gap-3 px-4" style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);">
 		<button
-			class="flex items-center justify-center rounded-full outline-none"
+			class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
 			style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); background: var(--neu-bg);"
 			onclick={handleBackClick}
 			aria-label="返回"
@@ -401,7 +401,7 @@
 			<DropdownMenu>
 				<DropdownMenuTrigger>
 					<button
-						class="flex items-center justify-center rounded-full outline-none"
+						class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
 						style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); background: var(--neu-bg);"
 						aria-label="更多选项"
 					>
@@ -527,7 +527,7 @@
 				}}
 			></textarea>
 			<button
-				class="flex shrink-0 items-center justify-center rounded-full outline-none"
+				class="flex shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
 				style="width: 36px; height: 36px; {messageText.trim() ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);' : 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}"
 				onclick={sendMessage}
 				onmousedown={(e) => e.preventDefault()}

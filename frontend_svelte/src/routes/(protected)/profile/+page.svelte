@@ -141,7 +141,7 @@
 						{/if}
 					</div>
 					<button
-						class="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"
+						class="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
 						style="width: 32px; height: 32px; background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 8px var(--neu-glow); border: 2px solid var(--neu-bg);"
 						title="更换头像"
 						aria-label="更换头像"
@@ -161,7 +161,7 @@
 						</div>
 						{#if !isEditing}
 							<button
-								class="flex items-center gap-1.5 rounded-[16px] px-4 py-[6px] outline-none"
+								class="flex items-center gap-1.5 rounded-[16px] px-4 py-[6px] outline-none transition-transform duration-150 active:scale-[0.96]"
 								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text);"
 								onclick={() => isEditing = true}
 							>
@@ -227,7 +227,7 @@
 
 					<div class="flex gap-3 pt-2">
 						<button
-							class="flex-1 flex items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none"
+							class="flex-1 flex items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none transition-transform duration-150 active:scale-[0.95]"
 							style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 14px; box-shadow: 0 2px 8px var(--neu-glow);"
 							onclick={saveProfile}
 							disabled={isSaving}
@@ -241,7 +241,7 @@
 							{/if}
 						</button>
 						<button
-							class="flex-1 flex items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none"
+							class="flex-1 flex items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none transition-transform duration-150 active:scale-[0.97]"
 							style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
 							onclick={cancelEdit}
 							disabled={isSaving}
@@ -318,7 +318,7 @@
 		<div class="rounded-[24px] p-5" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
 			<p style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 12px;">数据概览</p>
 			<div class="grid gap-3 grid-cols-2 md:grid-cols-4">
-				<a href="/moments" class="block rounded-[18px] p-[14px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); text-decoration: none;">
+				<a href="/moments" class="block rounded-[18px] p-[14px] transition-transform duration-150 active:scale-[0.97]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); text-decoration: none;">
 					<div class="flex items-center gap-3">
 						<div class="flex items-center justify-center rounded-full" style="width: 32px; height: 32px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 							<Image size={14} color="var(--neu-accent-primary)" strokeWidth={1.5} />
@@ -330,7 +330,7 @@
 					</div>
 				</a>
 
-				<a href="/followers" class="block rounded-[18px] p-[14px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); text-decoration: none;">
+				<a href="/followers" class="block rounded-[18px] p-[14px] transition-transform duration-150 active:scale-[0.97]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); text-decoration: none;">
 					<div class="flex items-center gap-3">
 						<div class="flex items-center justify-center rounded-full" style="width: 32px; height: 32px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 							<Heart size={14} color="var(--neu-accent-primary)" strokeWidth={1.5} />
@@ -342,7 +342,7 @@
 					</div>
 				</a>
 
-				<a href="/follows" class="block rounded-[18px] p-[14px]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); text-decoration: none;">
+				<a href="/follows" class="block rounded-[18px] p-[14px] transition-transform duration-150 active:scale-[0.97]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); text-decoration: none;">
 					<div class="flex items-center gap-3">
 						<div class="flex items-center justify-center rounded-full" style="width: 32px; height: 32px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 							<Users size={14} color="var(--neu-accent-primary)" strokeWidth={1.5} />
@@ -373,7 +373,7 @@
 			<p style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 12px;">快捷操作</p>
 			<div class="space-y-2">
 				<a href="/settings" class="block" style="text-decoration: none;">
-					<div class="flex items-center gap-3 rounded-[14px] px-4 py-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
+					<div class="flex items-center gap-3 rounded-[14px] px-4 py-3 neu-row-hover transition-transform duration-150 active:scale-[0.98]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 						<div class="flex items-center justify-center rounded-full" style="width: 28px; height: 28px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 							<User size={12} color="var(--neu-text-muted)" strokeWidth={1.5} />
 						</div>
@@ -381,7 +381,7 @@
 					</div>
 				</a>
 				<a href="/settings/privacy" class="block" style="text-decoration: none;">
-					<div class="flex items-center gap-3 rounded-[14px] px-4 py-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
+					<div class="flex items-center gap-3 rounded-[14px] px-4 py-3 neu-row-hover transition-transform duration-150 active:scale-[0.98]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 						<div class="flex items-center justify-center rounded-full" style="width: 28px; height: 28px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 							<Shield size={12} color="var(--neu-text-muted)" strokeWidth={1.5} />
 						</div>
@@ -389,7 +389,7 @@
 					</div>
 				</a>
 				<a href="/settings/notifications" class="block" style="text-decoration: none;">
-					<div class="flex items-center gap-3 rounded-[14px] px-4 py-3" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
+					<div class="flex items-center gap-3 rounded-[14px] px-4 py-3 neu-row-hover transition-transform duration-150 active:scale-[0.98]" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
 						<div class="flex items-center justify-center rounded-full" style="width: 28px; height: 28px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
 							<Bell size={12} color="var(--neu-text-muted)" strokeWidth={1.5} />
 						</div>
@@ -408,7 +408,7 @@
 		<p style="font-size: 16px; font-weight: 500; color: var(--neu-text); margin-bottom: 8px;">加载个人资料失败</p>
 		<p style="font-size: 14px; color: var(--neu-text-muted); margin-bottom: 16px;">{data.error ?? '无法获取个人资料，请稍后重试'}</p>
 		<button
-			class="rounded-[22px] px-5 py-3.5 outline-none"
+			class="rounded-[22px] px-5 py-3.5 outline-none transition-transform duration-150 active:scale-[0.97]"
 			style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); font-size: 14px;"
 			onclick={() => location.reload()}
 		>

@@ -98,13 +98,13 @@
 			</div>
 			<div class="flex gap-2.5">
 				<button
-					class="flex items-center justify-center rounded-full outline-none"
+					class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
 					style="width: 38px; height: 38px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 				>
 					<UserPlus size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
 				</button>
 				<button
-					class="flex items-center justify-center rounded-full outline-none"
+					class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
 					style="width: 38px; height: 38px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
 				>
 					<Plus size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
@@ -131,7 +131,7 @@
 		<div class="flex" style="border-bottom: 1px solid var(--neu-border);">
 			{#each [{ id: 'private', label: '私聊' }, { id: 'group', label: '群聊' }] as tab (tab.id)}
 				<button
-					class="relative flex-1 pb-3 pt-1 text-center outline-none"
+					class="relative flex-1 pb-3 pt-1 text-center outline-none transition-transform duration-150 active:scale-[0.94]"
 					style="color: {currentTab === tab.id ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}; font-weight: {currentTab === tab.id ? 500 : 400}; font-size: 13px; transition: color 0.2s;"
 					onclick={() => handleTabChange(tab.id)}
 				>
@@ -166,7 +166,7 @@
 					{@const isOnline = presenceStore.isOnline(chat.other_user.user_id) || chat.presence_status === 'online'}
 					<a
 						href="/chat/users/{chat.other_user.user_id}"
-						class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all"
+						class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all neu-row-hover active:scale-[0.98]"
 					>
 						<div class="relative flex-shrink-0">
 							<div class="overflow-hidden rounded-full" style="width: 44px; height: 44px; border: 1.5px solid var(--neu-border);">
@@ -221,7 +221,7 @@
 				{#each filteredGroupChats as group (group.group.group_id)}
 					<a
 						href="/chat/groups/{group.group.group_id}"
-						class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all"
+						class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all neu-row-hover active:scale-[0.98]"
 					>
 						<div class="flex-shrink-0 overflow-hidden rounded-full" style="width: 44px; height: 44px; border: 1.5px solid var(--neu-border);">
 							{#if group.group.avatar_url}
