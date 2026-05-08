@@ -51,27 +51,35 @@ class UIStore {
 	#showCreateSheet = $state(false);
 	#showCreateMoment = $state(false);
 	#showCreateGroup = $state(false);
-		#showSearchModal = $state(false);
+	#showSearchModal = $state(false);
+	#showAuthPrompt = $state(false);
 
 	showCreateSheet = $derived(this.#showCreateSheet);
 	showCreateMoment = $derived(this.#showCreateMoment);
 	showCreateGroup = $derived(this.#showCreateGroup);
-		showSearchModal = $derived(this.#showSearchModal);
+	showSearchModal = $derived(this.#showSearchModal);
+	showAuthPrompt = $derived(this.#showAuthPrompt);
 
 	/**
-	 * 跳转到登录页面（引导式登录）
-	 * @param callback 登录成功后的回调（不推荐使用，登录后会跳转回来由用户重新操作）
+	 * 显示内联登录提示，用户手动点击后跳转到登录页
 	 */
 	openLoginModal(_callback?: () => void) {
-		this.navigateToAuth();
+		this.#showAuthPrompt = true;
 	}
 
-	openLoginModalWithRedirect(options: { url?: string; onSuccess?: () => void } = {}) {
-		this.navigateToAuth(options.url);
+	openLoginModalWithRedirect(_options: { url?: string; onSuccess?: () => void } = {}) {
+		this.#showAuthPrompt = true;
 	}
 
-	private navigateToAuth(redirectUrl?: string) {
+	/** 关闭内联登录提示 */
+	closeAuthPrompt() {
+		this.#showAuthPrompt = false;
+	}
+
+	/** 手动点击登录按钮后，跳转到登录页 */
+	navigateToAuth(redirectUrl?: string) {
 		if (!browser) return;
+		this.#showAuthPrompt = false;
 		const fallbackUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
 		const target = normalizeRedirectPath(redirectUrl ?? fallbackUrl) ?? '/';
 		const authUrl = `/auth?redirect=${encodeURIComponent(target)}`;

@@ -5,7 +5,8 @@
     import { ModeWatcher } from "mode-watcher";
     import { getCurrentLocationLabel, initLocale } from "$lib/i18n";
     import { Toaster } from "$lib/components/ui/sonner";
-import MobileCreateSheet from "$lib/components/common/mobile-create-sheet.svelte";
+    import MobileCreateSheet from "$lib/components/common/mobile-create-sheet.svelte";
+    import AuthPrompt from "$lib/components/common/auth-prompt.svelte";
     import SearchModal from "$lib/components/common/search-modal.svelte";
     import CreateMomentModal from "$lib/components/common/create-moment-modal.svelte";
     import CreateGroupModal from "$lib/components/common/create-group-modal.svelte";
@@ -257,5 +258,6 @@ import MobileCreateSheet from "$lib/components/common/mobile-create-sheet.svelte
 <CreateMomentModal open={uiStore.showCreateMoment} onOpenChange={(open) => !open && uiStore.closeCreateMoment()} />
 <CreateGroupModal open={uiStore.showCreateGroup} onOpenChange={(open) => !open && uiStore.closeCreateGroup()} />
 <PageLoading />
+<AuthPrompt />
 
 {@render children()}
