@@ -107,13 +107,13 @@
 				class="h-full w-full object-cover"
 				loading="lazy"
 			/>
-			<div class="absolute inset-0" style="background: linear-gradient(to bottom, transparent 50%, var(--neu-overlay));"></div>
+			<div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.44) 100%);"></div>
 			<!-- Tags overlay -->
 			{#if moment.tags && moment.tags.length > 0}
 				<div class="absolute left-2.5 top-2.5">
 					<span
 						class="rounded-full px-2 py-0.5"
-						style="background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow); font-size: 10px; color: var(--neu-active-text);"
+						style="background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow); font-size: 10px; color: white;"
 					>
 						{moment.tags[0]}
 					</span>
@@ -126,7 +126,7 @@
 					data-card-action
 					onclick={handleAuthorClick}
 					class="flex-shrink-0 overflow-hidden rounded-full"
-					style="width: 24px; height: 24px; border: 1.5px solid var(--neu-media-border);"
+					style="width: 22px; height: 22px; border: 1.5px solid rgba(255,255,255,0.65);"
 				>
 					<img src={moment.user.avatar_url || ''} alt={moment.user.nickname} class="h-full w-full object-cover" />
 				</a>
@@ -140,8 +140,8 @@
 				</a>
 				{#if moment.location?.distance != null}
 					<div class="ml-auto flex items-center gap-0.5">
-						<MapPin size={9} strokeWidth={1.5} color="var(--neu-text-on-media)" />
-						<span style="font-size: 10px; color: var(--neu-text-on-media);">{formatDistance(moment.location.distance)}</span>
+						<MapPin size={9} strokeWidth={1.5} style="color: rgba(255,255,255,0.8);" />
+						<span style="font-size: 10px; color: rgba(255,255,255,0.8);">{formatDistance(moment.location.distance)}</span>
 					</div>
 				{/if}
 			</div>
@@ -181,7 +181,7 @@
 			</div>
 		{/if}
 		{#if moment.description}
-			<p class="line-clamp-2" style="font-size: 12px; color: var(--neu-text-muted); line-height: 1.6;">
+			<p class="line-clamp-2" style="font-size: 13px; color: var(--neu-text-muted); line-height: 1.6;">
 				{moment.description}
 			</p>
 		{/if}
@@ -193,7 +193,7 @@
 	</div>
 
 	<!-- Actions -->
-	<div class="flex items-center justify-between px-4 pb-3.5">
+	<div class="flex items-center justify-between px-4 pt-1 pb-3.5">
 		<div class="flex gap-3">
 			<button
 				data-card-action
@@ -202,8 +202,8 @@
 				onclick={handleLike}
 				disabled={likeAction.isLoading}
 			>
-				<Heart size={16} strokeWidth={1.5} fill={likeAction.isOn ? 'currentColor' : 'none'} class={heartBurst ? 'heart-burst' : ''} />
-				<span style="font-size: 12px;">{likeAction.count}</span>
+				<Heart size={15} strokeWidth={1.5} fill={likeAction.isOn ? 'currentColor' : 'none'} class={heartBurst ? 'heart-burst' : ''} />
+				<span style="font-size: 11px;">{likeAction.count}</span>
 			</button>
 			<button
 				data-card-action
@@ -211,8 +211,8 @@
 				style="color: var(--neu-text-muted);"
 				onclick={(e) => { e.preventDefault(); e.stopPropagation(); goto(`/moments/${moment.moment_id}`); }}
 			>
-				<MessageCircle size={16} strokeWidth={1.5} />
-				<span style="font-size: 12px;">{moment.comments_count}</span>
+				<MessageCircle size={15} strokeWidth={1.5} />
+				<span style="font-size: 11px;">{moment.comments_count}</span>
 			</button>
 		</div>
 		<div class="flex gap-3">
@@ -223,7 +223,7 @@
 				onclick={handleFavorite}
 				disabled={favoriteAction.isLoading}
 			>
-				<Bookmark size={16} strokeWidth={1.5} fill={favoriteAction.isOn ? 'currentColor' : 'none'} />
+				<Bookmark size={15} strokeWidth={1.5} fill={favoriteAction.isOn ? 'currentColor' : 'none'} />
 			</button>
 			<button
 				data-card-action
@@ -231,7 +231,7 @@
 				style="color: var(--neu-text-muted);"
 				onclick={handleShare}
 			>
-				<Share2 size={16} strokeWidth={1.5} />
+				<Share2 size={15} strokeWidth={1.5} />
 			</button>
 		</div>
 	</div>
