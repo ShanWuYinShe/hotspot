@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { Dialog as DialogPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
-	import { cn } from '$lib/utils';
+  import { Dialog as DialogPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
+  import { cn } from '$lib/utils';
 
-	interface Props extends WithoutChildrenOrChild<DialogPrimitive.OverlayProps> {
-		class?: string;
-	}
+  interface Props extends WithoutChildrenOrChild<DialogPrimitive.OverlayProps> {
+    class?: string;
+  }
 
-	let { class: className, ...restProps }: Props = $props();
+  let { class: className, ...restProps }: Props = $props();
 </script>
 
 <DialogPrimitive.Overlay
-	class={cn(
-		'fixed inset-0 z-50',
-		'bg-black/50 backdrop-blur-[2px]',
-		'data-[state=open]:animate-in data-[state=open]:fade-in-0',
-		'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
-		className
-	)}
-	{...restProps}
+  class={cn(
+    'fixed inset-0 z-50',
+    'bg-black/50 backdrop-blur-[2px]',
+    'data-[state=open]:animate-in data-[state=open]:fade-in-0',
+    'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+    className
+  )}
+  {...restProps}
 />

@@ -12,6 +12,7 @@ import (
 )
 
 var ErrNotGroupMember = errors.New("groupmessages: not a group member")
+
 type userReader interface {
 	OpenTheDoor(context.Context, string) (users.UserItem, bool, error)
 }
@@ -23,7 +24,9 @@ type Service struct {
 
 func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
 func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo, users: nil} }
-func NewServiceWithRepoAndUsers(repo Repository, users userReader) *Service { return &Service{repo: repo, users: users} }
+func NewServiceWithRepoAndUsers(repo Repository, users userReader) *Service {
+	return &Service{repo: repo, users: users}
+}
 func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (MessageSent, error) {
 	userID := req.SenderUserID
 	if userID == "" {

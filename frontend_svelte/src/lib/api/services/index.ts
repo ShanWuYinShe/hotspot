@@ -46,12 +46,12 @@ export { systemService } from './system';
 
 // 管理员
 export {
-	adminRbacService,
-	adminUsersService,
-	adminGroupsService,
-	adminAnnouncementsService,
-	adminAuditService,
-	adminReportsService,
-	adminTagsService,
-	adminAppConfigService
+  adminRbacService,
+  adminUsersService,
+  adminGroupsService,
+  adminAnnouncementsService,
+  adminAuditService,
+  adminReportsService,
+  adminTagsService,
+  adminAppConfigService
 } from './admin';

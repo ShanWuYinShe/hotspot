@@ -1,180 +1,218 @@
 <script lang="ts">
-	import { shareService } from '$lib/api/services';
-	import { isSuccess } from '$lib/api/client';
-	import { toast } from '$lib/stores/toast.svelte';
-	import { MapPin, Share2, Copy, Check, Loader2, UsersRound } from 'lucide-svelte';
-	import {
-		Dialog,
-		DialogContent,
-		DialogHeader,
-		DialogTitle,
-		DialogDescription
-	} from '$lib/components/ui/dialog';
+  import { shareService } from '$lib/api/services';
+  import { isSuccess } from '$lib/api/client';
+  import { toast } from '$lib/stores/toast.svelte';
+  import { MapPin, Share2, Copy, Check, Loader2, UsersRound } from 'lucide-svelte';
+  import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription
+  } from '$lib/components/ui/dialog';
 
-	interface Props {
-		open?: boolean;
-		latitude: number;
-		longitude: number;
-		locationName: string;
-		onClose?: () => void;
-	}
+  interface Props {
+    open?: boolean;
+    latitude: number;
+    longitude: number;
+    locationName: string;
+    onClose?: () => void;
+  }
 
-	let { open = $bindable(false), latitude, longitude, locationName, onClose }: Props = $props();
+  let { open = $bindable(false), latitude, longitude, locationName, onClose }: Props = $props();
 
-	// 表单数据
-	let isSubmitting = $state(false);
-	let shareCode = $state<string | null>(null);
-	let shareUrl = $state<string | null>(null);
-	let isCopied = $state(false);
+  // 表单数据
+  let isSubmitting = $state(false);
+  let shareCode = $state<string | null>(null);
+  let shareUrl = $state<string | null>(null);
+  let isCopied = $state(false);
 
-	// 复制分享链接
-	async function copyToClipboard() {
-		if (!shareUrl) return;
-		try {
-			await navigator.clipboard.writeText(shareUrl);
-			isCopied = true;
-			toast.success('分享链接已复制到剪贴板');
-			setTimeout(() => {
-				isCopied = false;
-			}, 2000);
-		} catch (err) {
-			toast.error('复制失败，请手动复制');
-		}
-	}
+  // 复制分享链接
+  async function copyToClipboard() {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      isCopied = true;
+      toast.success('分享链接已复制到剪贴板');
+      setTimeout(() => {
+        isCopied = false;
+      }, 2000);
+    } catch (err) {
+      toast.error('复制失败，请手动复制');
+    }
+  }
 
-	// 提交创建分享
-	async function handleSubmit() {
-		isSubmitting = true;
-		try {
-			const response = await shareService.create({
-				share_type: 'location',
-				payload: {
-					shared_location: {
-						point: {
-							latitude,
-							longitude
-						},
-						location_name: locationName
-					}
-				}
-			});
+  // 提交创建分享
+  async function handleSubmit() {
+    isSubmitting = true;
+    try {
+      const response = await shareService.create({
+        share_type: 'location',
+        payload: {
+          shared_location: {
+            point: {
+              latitude,
+              longitude
+            },
+            location_name: locationName
+          }
+        }
+      });
 
-			if (isSuccess(response) && response.data) {
-				const shareCreated = response.data;
-				shareCode = shareCreated.share_code;
-				shareUrl = `${window.location.origin}/share/${shareCreated.share_code}`;
-				toast.success('位置分享创建成功！');
-			} else {
-				toast.error('创建失败', response.message);
-			}
-		} catch (error) {
-			toast.error('网络错误', '请检查网络连接');
-		} finally {
-			isSubmitting = false;
-		}
-	}
+      if (isSuccess(response) && response.data) {
+        const shareCreated = response.data;
+        shareCode = shareCreated.share_code;
+        shareUrl = `${window.location.origin}/share/${shareCreated.share_code}`;
+        toast.success('位置分享创建成功！');
+      } else {
+        toast.error('创建失败', response.message);
+      }
+    } catch (error) {
+      toast.error('网络错误', '请检查网络连接');
+    } finally {
+      isSubmitting = false;
+    }
+  }
 
-	// 关闭并重置
-	function handleClose() {
-		if (!isSubmitting) {
-			// 重置表单
-			shareCode = null;
-			shareUrl = null;
-			isCopied = false;
+  // 关闭并重置
+  function handleClose() {
+    if (!isSubmitting) {
+      // 重置表单
+      shareCode = null;
+      shareUrl = null;
+      isCopied = false;
 
-			open = false;
-			onClose?.();
-		}
-	}
+      open = false;
+      onClose?.();
+    }
+  }
 </script>
 
 <Dialog bind:open onOpenChange={(newOpen) => !newOpen && handleClose()}>
-	<DialogContent class="max-w-lg rounded-[22px]" style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg);">
-		{#if !shareCode}
-			<!-- 创建表单 -->
-			<DialogHeader>
-				<DialogTitle class="flex items-center gap-3">
-					<div class="flex items-center justify-center rounded-full" style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
-						<Share2 style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
-					</div>
-					<div style="color: var(--neu-text);">分享此位置</div>
-				</DialogTitle>
-				<DialogDescription style="color: var(--neu-text-muted);">生成分享链接，让朋友快速定位到这个区域</DialogDescription>
-			</DialogHeader>
+  <DialogContent
+    class="max-w-lg rounded-[22px]"
+    style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg);"
+  >
+    {#if !shareCode}
+      <!-- 创建表单 -->
+      <DialogHeader>
+        <DialogTitle class="flex items-center gap-3">
+          <div
+            class="flex items-center justify-center rounded-full"
+            style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+          >
+            <Share2 style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
+          </div>
+          <div style="color: var(--neu-text);">分享此位置</div>
+        </DialogTitle>
+        <DialogDescription style="color: var(--neu-text-muted);"
+          >生成分享链接，让朋友快速定位到这个区域</DialogDescription
+        >
+      </DialogHeader>
 
-			<div class="mt-4 space-y-4">
-				<!-- 位置信息展示 -->
-				<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
-					<div class="flex items-center gap-2" style="font-weight: 500; color: var(--neu-text);">
-						<MapPin style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
-						{locationName}
-					</div>
-					<div style="font-size: 12px; color: var(--neu-text-muted);">
-						接收者将看到以此位置为中心的内容推荐。
-					</div>
-				</div>
+      <div class="mt-4 space-y-4">
+        <!-- 位置信息展示 -->
+        <div
+          class="rounded-[22px] p-4 space-y-2"
+          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+        >
+          <div class="flex items-center gap-2" style="font-weight: 500; color: var(--neu-text);">
+            <MapPin style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
+            {locationName}
+          </div>
+          <div style="font-size: 12px; color: var(--neu-text-muted);">
+            接收者将看到以此位置为中心的内容推荐。
+          </div>
+        </div>
 
-				<!-- 说明 -->
-				<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-overlay-subtle); font-size: 13px;">
-					<p class="flex items-center gap-2" style="font-weight: 500; color: var(--neu-accent-primary);">
-						<UsersRound style="width: 16px; height: 16px;" />
-						接收者可以
-					</p>
-					<ul class="space-y-1.5" style="color: var(--neu-text-muted);">
-						<li>• 一键设置浏览锚点到这个位置</li>
-						<li>• 查看附近的人、群组和动态</li>
-						<li>• 开始探索这个区域的社交圈</li>
-					</ul>
-				</div>
+        <!-- 说明 -->
+        <div
+          class="rounded-[22px] p-4 space-y-2"
+          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-overlay-subtle); font-size: 13px;"
+        >
+          <p
+            class="flex items-center gap-2"
+            style="font-weight: 500; color: var(--neu-accent-primary);"
+          >
+            <UsersRound style="width: 16px; height: 16px;" />
+            接收者可以
+          </p>
+          <ul class="space-y-1.5" style="color: var(--neu-text-muted);">
+            <li>• 一键设置浏览锚点到这个位置</li>
+            <li>• 查看附近的人、群组和动态</li>
+            <li>• 开始探索这个区域的社交圈</li>
+          </ul>
+        </div>
 
-				<!-- 操作按钮 -->
-				<button class="rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleSubmit} disabled={isSubmitting}>
-					{#if isSubmitting}
-						<Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
-						生成中...
-					{:else}
-						<Share2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
-						生成分享链接
-					{/if}
-				</button>
-			</div>
-		{:else}
-			<!-- 分享成功结果 -->
-			<DialogHeader>
-				<DialogTitle class="flex items-center gap-3" style="color: var(--neu-success);">
-					<div class="flex items-center justify-center rounded-full" style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);">
-						<Check style="width: 20px; height: 20px; color: var(--neu-success);" />
-					</div>
-					<div>分享链接已生成！</div>
-				</DialogTitle>
-				<DialogDescription style="color: var(--neu-text-muted);">复制链接发送给朋友</DialogDescription>
-			</DialogHeader>
+        <!-- 操作按钮 -->
+        <button
+          class="rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
+          style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);"
+          onclick={handleSubmit}
+          disabled={isSubmitting}
+        >
+          {#if isSubmitting}
+            <Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
+            生成中...
+          {:else}
+            <Share2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
+            生成分享链接
+          {/if}
+        </button>
+      </div>
+    {:else}
+      <!-- 分享成功结果 -->
+      <DialogHeader>
+        <DialogTitle class="flex items-center gap-3" style="color: var(--neu-success);">
+          <div
+            class="flex items-center justify-center rounded-full"
+            style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+          >
+            <Check style="width: 20px; height: 20px; color: var(--neu-success);" />
+          </div>
+          <div>分享链接已生成！</div>
+        </DialogTitle>
+        <DialogDescription style="color: var(--neu-text-muted);"
+          >复制链接发送给朋友</DialogDescription
+        >
+      </DialogHeader>
 
-			<div class="mt-4 space-y-4">
-				<!-- 分享链接 -->
-				<div class="rounded-[22px] p-4 space-y-2" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);">
-					<label style="font-size: 12px; color: var(--neu-text-muted);">分享链接</label>
-					<div class="flex gap-2">
-						<input
-							value={shareUrl ?? ''}
-							readonly
-							class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] flex-1"
-							style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 12px; font-family: monospace;"
-						/>
-						<button class="rounded-[14px] px-3 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] flex items-center justify-center" style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);" onclick={copyToClipboard}>
-							{#if isCopied}
-								<Check style="width: 16px; height: 16px; color: var(--neu-success);" />
-							{:else}
-								<Copy style="width: 16px; height: 16px;" />
-							{/if}
-						</button>
-					</div>
-				</div>
+      <div class="mt-4 space-y-4">
+        <!-- 分享链接 -->
+        <div
+          class="rounded-[22px] p-4 space-y-2"
+          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+        >
+          <label style="font-size: 12px; color: var(--neu-text-muted);">分享链接</label>
+          <div class="flex gap-2">
+            <input
+              value={shareUrl ?? ''}
+              readonly
+              class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] flex-1"
+              style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 12px; font-family: monospace;"
+            />
+            <button
+              class="rounded-[14px] px-3 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] flex items-center justify-center"
+              style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+              onclick={copyToClipboard}
+            >
+              {#if isCopied}
+                <Check style="width: 16px; height: 16px; color: var(--neu-success);" />
+              {:else}
+                <Copy style="width: 16px; height: 16px;" />
+              {/if}
+            </button>
+          </div>
+        </div>
 
-				<button class="rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full" style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);" onclick={handleClose}>
-					完成
-				</button>
-			</div>
-		{/if}
-	</DialogContent>
+        <button
+          class="rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
+          style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);"
+          onclick={handleClose}
+        >
+          完成
+        </button>
+      </div>
+    {/if}
+  </DialogContent>
 </Dialog>

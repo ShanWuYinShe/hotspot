@@ -20,9 +20,9 @@ Attachments 是 Svelte 5.29+ 引入的新特性，用于替代传统的 Actions 
 ```svelte
 <script>
   import { autofocus } from '$lib/attachments';
-  
+
   let focusTrigger = $state(0);
-  
+
   function sendMessage() {
     // 发送消息逻辑...
     focusTrigger++; // 触发重新聚焦
@@ -30,17 +30,9 @@ Attachments 是 Svelte 5.29+ 引入的新特性，用于替代传统的 Actions 
 </script>
 
 <!-- 使用 {@attach ...} 语法 -->
-<textarea 
-  {@attach autofocus(focusTrigger)}
-  bind:value={message}
-></textarea>
+<textarea {@attach autofocus(focusTrigger)} bind:value={message}></textarea>
 
-<button 
-  onclick={sendMessage}
-  onmousedown={(e) => e.preventDefault()}
->
-  发送
-</button>
+<button onclick={sendMessage} onmousedown={(e) => e.preventDefault()}> 发送 </button>
 ```
 
 ### 防止按钮抢夺焦点
@@ -48,30 +40,26 @@ Attachments 是 Svelte 5.29+ 引入的新特性，用于替代传统的 Actions 
 在按钮上添加 `onmousedown` 事件并调用 `preventDefault()`：
 
 ```svelte
-<button 
-  onclick={handleClick}
-  onmousedown={(e) => e.preventDefault()}
->
-  点击我
-</button>
+<button onclick={handleClick} onmousedown={(e) => e.preventDefault()}> 点击我 </button>
 ```
 
 **原理**：`onmousedown` 在 `onclick` 之前触发。通过 `preventDefault()` 阻止默认行为，按钮就不会获得焦点。
 
 ## 与 Actions 的区别
 
-| 特性 | Actions (`use:`) | Attachments (`{@attach}`) |
-|------|-----------------|---------------------------|
-| 响应式 | 需手动实现 `update` | 自动响应参数变化 |
-| 生命周期 | `update` + `destroy` | 自动管理 |
-| 语法 | `use:action={param}` | `{@attach attachment(param)}` |
-| 一个元素多个实例 | ❌ | ✅ |
-| 传递给组件 | ❌ | ✅ |
-| Svelte 版本 | < 5.29 | >= 5.29 |
+| 特性             | Actions (`use:`)     | Attachments (`{@attach}`)     |
+| ---------------- | -------------------- | ----------------------------- |
+| 响应式           | 需手动实现 `update`  | 自动响应参数变化              |
+| 生命周期         | `update` + `destroy` | 自动管理                      |
+| 语法             | `use:action={param}` | `{@attach attachment(param)}` |
+| 一个元素多个实例 | ❌                   | ✅                            |
+| 传递给组件       | ❌                   | ✅                            |
+| Svelte 版本      | < 5.29               | >= 5.29                       |
 
 ## 最佳实践
 
 1. **Attachment Factory 模式**：返回一个接收元素的函数
+
    ```typescript
    export function myAttachment(param: string) {
      return (element: HTMLElement) => {
@@ -84,6 +72,7 @@ Attachments 是 Svelte 5.29+ 引入的新特性，用于替代传统的 Actions 
    ```
 
 2. **使用 requestAnimationFrame**：确保焦点操作不被打断
+
    ```typescript
    requestAnimationFrame(() => {
      element.focus();

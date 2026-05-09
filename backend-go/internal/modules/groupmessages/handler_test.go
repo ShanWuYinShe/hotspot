@@ -16,14 +16,14 @@ import (
 // --- stub repo ---
 
 type stubGroupMessageRepo struct {
-	sendResult MessageSent
-	sendErr    error
-	histResult PaginatedGroupMessages
-	histErr    error
-	updateMeta MessageEventMeta
-	updateErr  error
-	recallMeta MessageEventMeta
-	recallErr  error
+	sendResult  MessageSent
+	sendErr     error
+	histResult  PaginatedGroupMessages
+	histErr     error
+	updateMeta  MessageEventMeta
+	updateErr   error
+	recallMeta  MessageEventMeta
+	recallErr   error
 	markReadFn  func(context.Context, string, MarkGroupMessagesReadRequest) error
 	markAllErr  error
 	isMemberVal bool

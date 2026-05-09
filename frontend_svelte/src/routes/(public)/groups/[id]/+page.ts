@@ -9,28 +9,28 @@ import type { PageLoad } from './$types';
 export const ssr = false;
 
 export const load: PageLoad = async ({ params }) => {
-	const groupId = params.id;
+  const groupId = params.id;
 
-	try {
-		const response = await groupsService.getGroup({ group_id: groupId });
-		
-		if (isSuccess(response) && response.data) {
-			return {
-				groupData: response.data,
-				groupId
-			};
-		}
-		
-		return {
-			groupData: null,
-			groupId,
-			error: response.message || '群组不存在'
-		};
-	} catch (error) {
-		return {
-			groupData: null,
-			groupId,
-			error: '加载失败'
-		};
-	}
+  try {
+    const response = await groupsService.getGroup({ group_id: groupId });
+
+    if (isSuccess(response) && response.data) {
+      return {
+        groupData: response.data,
+        groupId
+      };
+    }
+
+    return {
+      groupData: null,
+      groupId,
+      error: response.message || '群组不存在'
+    };
+  } catch (error) {
+    return {
+      groupData: null,
+      groupId,
+      error: '加载失败'
+    };
+  }
 };

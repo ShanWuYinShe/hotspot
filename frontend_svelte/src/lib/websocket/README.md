@@ -20,6 +20,7 @@ websocket/
 WebSocket 在客户端入口 `src/hooks.client.ts` 中初始化：应用加载时 `websocketStore` 已就绪，并会在 `beforeunload` 时调用 `websocketStore.disconnect()` 做清理。连接由 `websocketStore` 内部根据认证状态（`authStore`）自动管理。
 
 **特点**：
+
 - ✅ 应用启动时 WebSocket 模块已加载
 - ✅ 登录时自动连接，登出时自动断开
 - ✅ 无需在组件中手动 connect/disconnect
@@ -186,7 +187,7 @@ subscriptionManager.subscribe('user', allUserIds); // 太多了
 // 监听连接错误
 websocketStore.on('Error', (payload: any) => {
   console.error('WebSocket 错误:', payload);
-  
+
   if (payload.code === 20001) {
     // 鉴权失败，重新登录
     authStore.logout();
@@ -196,14 +197,14 @@ websocketStore.on('Error', (payload: any) => {
 
 ## 规范符合性
 
-| 规范要求 | 实现状态 |
-|---------|---------|
-| 5秒鉴权超时 | ✅ 已实现 |
-| 30秒心跳间隔 | ✅ 已实现 |
+| 规范要求       | 实现状态  |
+| -------------- | --------- |
+| 5秒鉴权超时    | ✅ 已实现 |
+| 30秒心跳间隔   | ✅ 已实现 |
 | 10秒 Pong 超时 | ✅ 已实现 |
-| 指数退避重连 | ✅ 已实现 |
-| 最大重连 5 次 | ✅ 已实现 |
+| 指数退避重连   | ✅ 已实现 |
+| 最大重连 5 次  | ✅ 已实现 |
 | 重连后恢复订阅 | ✅ 已实现 |
-| 所有事件类型 | ✅ 已实现 |
-| 订阅管理 | ✅ 已实现 |
-| 正在输入状态 | ✅ 已实现 |
+| 所有事件类型   | ✅ 已实现 |
+| 订阅管理       | ✅ 已实现 |
+| 正在输入状态   | ✅ 已实现 |

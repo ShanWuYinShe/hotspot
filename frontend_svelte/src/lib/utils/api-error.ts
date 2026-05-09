@@ -6,7 +6,7 @@ import { ApiError, isSuccess } from '$lib/api/client';
  * 成功时返回 null，不触发任何 UI。
  */
 export function toApiError<T>(response: ClientApiResponse<T>): ApiError | null {
-	return isSuccess(response) ? null : new ApiError(response);
+  return isSuccess(response) ? null : new ApiError(response);
 }
 
 /**
@@ -14,11 +14,11 @@ export function toApiError<T>(response: ClientApiResponse<T>): ApiError | null {
  * 调用方可在外层根据 error.code 做分支（如鉴权失败、幂等冲突等）。
  */
 export function showApiError(
-	toast: { error: (msg: string) => void },
-	response: ClientApiResponse<unknown>,
-	fallbackMessage = '操作失败'
+  toast: { error: (msg: string) => void },
+  response: ClientApiResponse<unknown>,
+  fallbackMessage = '操作失败'
 ): void {
-	const error = toApiError(response);
-	if (!error) return;
-	toast.error(error.message || fallbackMessage);
+  const error = toApiError(response);
+  if (!error) return;
+  toast.error(error.message || fallbackMessage);
 }

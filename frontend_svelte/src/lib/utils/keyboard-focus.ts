@@ -99,15 +99,15 @@ function isTextInputElement(node: HTMLElement): boolean {
 }
 
 export function useKeyboardFocus(): (element: HTMLElement) => void | (() => void) {
-	return (node: HTMLElement): void | (() => void) => {
-		if (!isTextInputElement(node)) {
-			return;
-		}
-		registeredInputs.add(node);
-		return () => {
-			registeredInputs.delete(node);
-		};
-	};
+  return (node: HTMLElement): void | (() => void) => {
+    if (!isTextInputElement(node)) {
+      return;
+    }
+    registeredInputs.add(node);
+    return () => {
+      registeredInputs.delete(node);
+    };
+  };
 }
 
 export { KEYBOARD_DISMISS_EVENT };

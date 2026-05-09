@@ -1,468 +1,608 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
-	import { searchService, feedService } from '$lib/api/services';
-	import { isSuccess } from '$lib/api/client';
-	import { t } from '$lib/i18n';
-	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
-	import { authStore } from '$lib/stores/auth.svelte';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import type { SearchSuggestItem, TagItem } from '$lib/types/api';
-	import Search from 'lucide-svelte/icons/search';
-	import Hash from 'lucide-svelte/icons/hash';
-	import Clock from 'lucide-svelte/icons/clock';
-	import TrendingUp from 'lucide-svelte/icons/trending-up';
-	import X from 'lucide-svelte/icons/x';
+  import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
+  import { searchService, feedService } from '$lib/api/services';
+  import { isSuccess } from '$lib/api/client';
+  import { t } from '$lib/i18n';
+  import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
+  import { authStore } from '$lib/stores/auth.svelte';
+  import * as Dialog from '$lib/components/ui/dialog';
+  import type { SearchSuggestItem, TagItem } from '$lib/types/api';
+  import Search from 'lucide-svelte/icons/search';
+  import Hash from 'lucide-svelte/icons/hash';
+  import Clock from 'lucide-svelte/icons/clock';
+  import TrendingUp from 'lucide-svelte/icons/trending-up';
+  import X from 'lucide-svelte/icons/x';
 
-	interface Props {
-		open: boolean;
-		onOpenChange?: (open: boolean) => void;
-	}
+  interface Props {
+    open: boolean;
+    onOpenChange?: (open: boolean) => void;
+  }
 
-	let { open = $bindable(), onOpenChange }: Props = $props();
+  let { open = $bindable(), onOpenChange }: Props = $props();
 
-	let keyword = $state('');
-	let isLoadingTags = $state(false);
-	let isSuggesting = $state(false);
-	let trendingTags = $state.raw<TagItem[]>([]);
-	let hasLoadedTrendingTags = $state(false);
-	let trendingLoadVersion = 0;
-	let suggestions = $state.raw<SearchSuggestItem[]>([]);
-	let recentSearches = $state.raw<string[]>([]);
-	const trimmedKeyword = $derived(keyword.trim());
-	const recentMatches = $derived(
-		trimmedKeyword ? recentSearches.filter((item) => item.includes(trimmedKeyword)).slice(0, 6) : []
-	);
-	const hasSuggestions = $derived(recentMatches.length > 0 || suggestions.length > 0);
-	let suggestTimer: ReturnType<typeof setTimeout> | null = null;
-	let suggestAbortController: AbortController | null = null;
+  let keyword = $state('');
+  let isLoadingTags = $state(false);
+  let isSuggesting = $state(false);
+  let trendingTags = $state.raw<TagItem[]>([]);
+  let hasLoadedTrendingTags = $state(false);
+  let trendingLoadVersion = 0;
+  let suggestions = $state.raw<SearchSuggestItem[]>([]);
+  let recentSearches = $state.raw<string[]>([]);
+  const trimmedKeyword = $derived(keyword.trim());
+  const recentMatches = $derived(
+    trimmedKeyword ? recentSearches.filter((item) => item.includes(trimmedKeyword)).slice(0, 6) : []
+  );
+  const hasSuggestions = $derived(recentMatches.length > 0 || suggestions.length > 0);
+  let suggestTimer: ReturnType<typeof setTimeout> | null = null;
+  let suggestAbortController: AbortController | null = null;
 
-	function getSuggestionKey(item: SearchSuggestItem): string {
-		switch (item.type) {
-			case 'user': return `user_${item.payload.user_id}`;
-			case 'group': return `group_${item.payload.group_id}`;
-			case 'moment': return `moment_${item.payload.moment_id}`;
-			case 'tag': return `tag_${item.payload.name}`;
-		}
-	}
+  function getSuggestionKey(item: SearchSuggestItem): string {
+    switch (item.type) {
+      case 'user':
+        return `user_${item.payload.user_id}`;
+      case 'group':
+        return `group_${item.payload.group_id}`;
+      case 'moment':
+        return `moment_${item.payload.moment_id}`;
+      case 'tag':
+        return `tag_${item.payload.name}`;
+    }
+  }
 
-	const RECENT_KEY = 'hotspot_recent_searches';
+  const RECENT_KEY = 'hotspot_recent_searches';
 
-	function loadRecent() {
-		if (!browser) return;
-		try {
-			const stored = localStorage.getItem(RECENT_KEY);
-			if (stored) {
-				recentSearches = JSON.parse(stored);
-			}
-		} catch {
-			// ignore
-		}
-	}
+  function loadRecent() {
+    if (!browser) return;
+    try {
+      const stored = localStorage.getItem(RECENT_KEY);
+      if (stored) {
+        recentSearches = JSON.parse(stored);
+      }
+    } catch {
+      // ignore
+    }
+  }
 
-	function saveRecent(term: string) {
-		if (!browser) return;
-		const next = [term, ...recentSearches.filter((item) => item !== term)].slice(0, 8);
-		recentSearches = next;
-		try {
-			localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-		} catch {
-			// ignore
-		}
-	}
+  function saveRecent(term: string) {
+    if (!browser) return;
+    const next = [term, ...recentSearches.filter((item) => item !== term)].slice(0, 8);
+    recentSearches = next;
+    try {
+      localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+  }
 
-	function removeRecent(term: string) {
-		if (!browser) return;
-		const next = recentSearches.filter((item) => item !== term);
-		recentSearches = next;
-		try {
-			localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-		} catch {
-			// ignore
-		}
-	}
+  function removeRecent(term: string) {
+    if (!browser) return;
+    const next = recentSearches.filter((item) => item !== term);
+    recentSearches = next;
+    try {
+      localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+  }
 
-	function clearAllRecent() {
-		if (!browser) return;
-		recentSearches = [];
-		try {
-			localStorage.removeItem(RECENT_KEY);
-		} catch {
-			// ignore
-		}
-	}
+  function clearAllRecent() {
+    if (!browser) return;
+    recentSearches = [];
+    try {
+      localStorage.removeItem(RECENT_KEY);
+    } catch {
+      // ignore
+    }
+  }
 
-	function clearSearch() {
-		keyword = '';
-		suggestions = [];
-	}
+  function clearSearch() {
+    keyword = '';
+    suggestions = [];
+  }
 
-	function setOpenState(nextOpen: boolean) {
-		if (open === nextOpen) return;
-		open = nextOpen;
-		onOpenChange?.(nextOpen);
-	}
+  function setOpenState(nextOpen: boolean) {
+    if (open === nextOpen) return;
+    open = nextOpen;
+    onOpenChange?.(nextOpen);
+  }
 
-	function handleSearchNavigate(term?: string) {
-		const next = (term ?? keyword).trim();
-		if (!next) return;
-		saveRecent(next);
-		setOpenState(false);
-		goto(`/search?q=${encodeURIComponent(next)}`);
-	}
+  function handleSearchNavigate(term?: string) {
+    const next = (term ?? keyword).trim();
+    if (!next) return;
+    saveRecent(next);
+    setOpenState(false);
+    goto(`/search?q=${encodeURIComponent(next)}`);
+  }
 
-	function handleSearch() {
-		const term = keyword.trim();
-		if (!term) return;
-		handleSearchNavigate(term);
-	}
+  function handleSearch() {
+    const term = keyword.trim();
+    if (!term) return;
+    handleSearchNavigate(term);
+  }
 
-	async function loadTrendingTags() {
-		if (isLoadingTags || hasLoadedTrendingTags) return;
-		const version = ++trendingLoadVersion;
-		isLoadingTags = true;
-		try {
-			const response = await feedService.getTrending();
-			if (version !== trendingLoadVersion) return;
-			if (isSuccess(response) && response.data) {
-				trendingTags = response.data.trending_tags;
-				hasLoadedTrendingTags = true;
-			}
-		} catch {
-			if (version !== trendingLoadVersion) return;
-		} finally {
-			if (version === trendingLoadVersion) isLoadingTags = false;
-		}
-	}
+  async function loadTrendingTags() {
+    if (isLoadingTags || hasLoadedTrendingTags) return;
+    const version = ++trendingLoadVersion;
+    isLoadingTags = true;
+    try {
+      const response = await feedService.getTrending();
+      if (version !== trendingLoadVersion) return;
+      if (isSuccess(response) && response.data) {
+        trendingTags = response.data.trending_tags;
+        hasLoadedTrendingTags = true;
+      }
+    } catch {
+      if (version !== trendingLoadVersion) return;
+    } finally {
+      if (version === trendingLoadVersion) isLoadingTags = false;
+    }
+  }
 
-	async function loadSuggestions(prefix: string) {
-		if (!prefix) { suggestions = []; return; }
-		suggestAbortController?.abort();
-		const controller = new AbortController();
-		suggestAbortController = controller;
-		isSuggesting = true;
-		try {
-			const response = await searchService.suggest({
-				prefix,
-				reference_point: {
-					latitude: mapAnchorStore.latitude,
-					longitude: mapAnchorStore.longitude
-				}
-			}, { signal: controller.signal });
-			if (controller.signal.aborted) return;
-			const rawItems = isSuccess(response) && response.data ? response.data.items : [];
-			const currentUserId = authStore.currentUserId;
-			suggestions = currentUserId
-				? rawItems.filter((item) => item.type !== 'user' || item.payload.user_id !== currentUserId)
-				: rawItems;
-		} catch {
-			if (!controller.signal.aborted) suggestions = [];
-		} finally {
-			if (!controller.signal.aborted) isSuggesting = false;
-		}
-	}
+  async function loadSuggestions(prefix: string) {
+    if (!prefix) {
+      suggestions = [];
+      return;
+    }
+    suggestAbortController?.abort();
+    const controller = new AbortController();
+    suggestAbortController = controller;
+    isSuggesting = true;
+    try {
+      const response = await searchService.suggest(
+        {
+          prefix,
+          reference_point: {
+            latitude: mapAnchorStore.latitude,
+            longitude: mapAnchorStore.longitude
+          }
+        },
+        { signal: controller.signal }
+      );
+      if (controller.signal.aborted) return;
+      const rawItems = isSuccess(response) && response.data ? response.data.items : [];
+      const currentUserId = authStore.currentUserId;
+      suggestions = currentUserId
+        ? rawItems.filter((item) => item.type !== 'user' || item.payload.user_id !== currentUserId)
+        : rawItems;
+    } catch {
+      if (!controller.signal.aborted) suggestions = [];
+    } finally {
+      if (!controller.signal.aborted) isSuggesting = false;
+    }
+  }
 
-	function handleTagClick(tag: string) { handleSearchNavigate(tag); }
-	function handleRecentClick(term: string) { handleSearchNavigate(term); }
-	function getRemoveRecentLabel(term: string): string { return t('searchModal.removeRecent', { term }); }
-	function closeModal() { setOpenState(false); }
+  function handleTagClick(tag: string) {
+    handleSearchNavigate(tag);
+  }
+  function handleRecentClick(term: string) {
+    handleSearchNavigate(term);
+  }
+  function getRemoveRecentLabel(term: string): string {
+    return t('searchModal.removeRecent', { term });
+  }
+  function closeModal() {
+    setOpenState(false);
+  }
 
-	function handleSuggestionClick(item: SearchSuggestItem) {
-		if (!item?.payload) return;
-		if (item.type === 'tag') {
-			const tag = item.payload.name;
-			if (tag) { saveRecent(tag); closeModal(); goto(`/search?tag=${encodeURIComponent(tag)}`); }
-			return;
-		}
-		closeModal();
-		if (item.type === 'user' && item.payload.user_id) { goto(`/users/${item.payload.user_id}`); return; }
-		if (item.type === 'group' && item.payload.group_id) { goto(`/groups/${item.payload.group_id}`); return; }
-		if (item.type === 'moment' && item.payload.moment_id) { goto(`/moments/${item.payload.moment_id}`); }
-	}
+  function handleSuggestionClick(item: SearchSuggestItem) {
+    if (!item?.payload) return;
+    if (item.type === 'tag') {
+      const tag = item.payload.name;
+      if (tag) {
+        saveRecent(tag);
+        closeModal();
+        goto(`/search?tag=${encodeURIComponent(tag)}`);
+      }
+      return;
+    }
+    closeModal();
+    if (item.type === 'user' && item.payload.user_id) {
+      goto(`/users/${item.payload.user_id}`);
+      return;
+    }
+    if (item.type === 'group' && item.payload.group_id) {
+      goto(`/groups/${item.payload.group_id}`);
+      return;
+    }
+    if (item.type === 'moment' && item.payload.moment_id) {
+      goto(`/moments/${item.payload.moment_id}`);
+    }
+  }
 
-	function getSuggestionPresentation(item: SearchSuggestItem) {
-		const unknown = t('searchModal.unknown');
-		const unknownUser = t('searchModal.unknownUser');
-		const unknownGroup = t('searchModal.unknownGroup');
-		switch (item.type) {
-			case 'tag': return { title: `#${item.payload.name || ''}`, subtitle: t('searchModal.usedCount', { count: item.payload.usage_count || 0 }), badge: t('searchModal.tagBadge'), avatarUrl: null, avatarFallback: null };
-			case 'user': { const name = item.payload.nickname || unknownUser; return { title: name, subtitle: item.payload.bio || null, badge: t('searchModal.userBadge'), avatarUrl: item.payload.avatar_url, avatarFallback: name.slice(0, 2) }; }
-			case 'group': { const name = item.payload.name || unknownGroup; return { title: name, subtitle: item.payload.description || t('searchModal.memberCount', { count: item.payload.members_count || 0 }), badge: t('searchModal.groupBadge'), avatarUrl: item.payload.avatar_url, avatarFallback: name.slice(0, 2) }; }
-			case 'moment': { const authorName = item.payload.author?.nickname || unknownUser; return { title: item.payload.description_preview || t('searchModal.momentFallback'), subtitle: item.payload.author?.nickname ? t('searchModal.fromAuthor', { nickname: item.payload.author.nickname }) : null, badge: t('searchModal.momentBadge'), avatarUrl: item.payload.author?.avatar_url, avatarFallback: authorName.slice(0, 2) }; }
-			default: return { title: unknown, subtitle: null, badge: unknown, avatarUrl: null, avatarFallback: null };
-		}
-	}
+  function getSuggestionPresentation(item: SearchSuggestItem) {
+    const unknown = t('searchModal.unknown');
+    const unknownUser = t('searchModal.unknownUser');
+    const unknownGroup = t('searchModal.unknownGroup');
+    switch (item.type) {
+      case 'tag':
+        return {
+          title: `#${item.payload.name || ''}`,
+          subtitle: t('searchModal.usedCount', { count: item.payload.usage_count || 0 }),
+          badge: t('searchModal.tagBadge'),
+          avatarUrl: null,
+          avatarFallback: null
+        };
+      case 'user': {
+        const name = item.payload.nickname || unknownUser;
+        return {
+          title: name,
+          subtitle: item.payload.bio || null,
+          badge: t('searchModal.userBadge'),
+          avatarUrl: item.payload.avatar_url,
+          avatarFallback: name.slice(0, 2)
+        };
+      }
+      case 'group': {
+        const name = item.payload.name || unknownGroup;
+        return {
+          title: name,
+          subtitle:
+            item.payload.description ||
+            t('searchModal.memberCount', { count: item.payload.members_count || 0 }),
+          badge: t('searchModal.groupBadge'),
+          avatarUrl: item.payload.avatar_url,
+          avatarFallback: name.slice(0, 2)
+        };
+      }
+      case 'moment': {
+        const authorName = item.payload.author?.nickname || unknownUser;
+        return {
+          title: item.payload.description_preview || t('searchModal.momentFallback'),
+          subtitle: item.payload.author?.nickname
+            ? t('searchModal.fromAuthor', { nickname: item.payload.author.nickname })
+            : null,
+          badge: t('searchModal.momentBadge'),
+          avatarUrl: item.payload.author?.avatar_url,
+          avatarFallback: authorName.slice(0, 2)
+        };
+      }
+      default:
+        return {
+          title: unknown,
+          subtitle: null,
+          badge: unknown,
+          avatarUrl: null,
+          avatarFallback: null
+        };
+    }
+  }
 
-	$effect(() => {
-		if (open) { loadRecent(); loadTrendingTags(); }
-		else {
-			keyword = '';
-			suggestions = [];
-			if (suggestTimer) { clearTimeout(suggestTimer); suggestTimer = null; }
-			suggestAbortController?.abort();
-			suggestAbortController = null;
-		}
-	});
+  $effect(() => {
+    if (open) {
+      loadRecent();
+      loadTrendingTags();
+    } else {
+      keyword = '';
+      suggestions = [];
+      if (suggestTimer) {
+        clearTimeout(suggestTimer);
+        suggestTimer = null;
+      }
+      suggestAbortController?.abort();
+      suggestAbortController = null;
+    }
+  });
 
-	$effect(() => {
-		if (!open) return;
-		if (suggestTimer) clearTimeout(suggestTimer);
-		if (!trimmedKeyword) { suggestions = []; return; }
-		suggestTimer = setTimeout(() => { loadSuggestions(trimmedKeyword); }, 250);
-		return () => { if (suggestTimer) { clearTimeout(suggestTimer); suggestTimer = null; } };
-	});
+  $effect(() => {
+    if (!open) return;
+    if (suggestTimer) clearTimeout(suggestTimer);
+    if (!trimmedKeyword) {
+      suggestions = [];
+      return;
+    }
+    suggestTimer = setTimeout(() => {
+      loadSuggestions(trimmedKeyword);
+    }, 250);
+    return () => {
+      if (suggestTimer) {
+        clearTimeout(suggestTimer);
+        suggestTimer = null;
+      }
+    };
+  });
 </script>
 
 <Dialog.Root bind:open onOpenChange={setOpenState}>
-	<Dialog.Content
-		class="flex max-h-[85vh] flex-col rounded-[22px] sm:max-w-3xl"
-		style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg);"
-	>
-		<!-- Header -->
-		<div class="flex items-center gap-3 px-5 pt-5 pb-0">
-			<div
-				class="flex items-center justify-center rounded-full"
-				style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
-			>
-				<Search size={18} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-			</div>
-			<div>
-				<h2 style="font-size: 17px; font-weight: 600; color: var(--neu-text);">{t('searchModal.title')}</h2>
-				<p style="font-size: 12px; color: var(--neu-text-muted);">{t('searchModal.description')}</p>
-			</div>
-		</div>
+  <Dialog.Content
+    class="flex max-h-[85vh] flex-col rounded-[22px] sm:max-w-3xl"
+    style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg);"
+  >
+    <!-- Header -->
+    <div class="flex items-center gap-3 px-5 pt-5 pb-0">
+      <div
+        class="flex items-center justify-center rounded-full"
+        style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+      >
+        <Search size={18} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+      </div>
+      <div>
+        <h2 style="font-size: 17px; font-weight: 600; color: var(--neu-text);">
+          {t('searchModal.title')}
+        </h2>
+        <p style="font-size: 12px; color: var(--neu-text-muted);">{t('searchModal.description')}</p>
+      </div>
+    </div>
 
-		<!-- Body -->
-		<div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
-			<!-- Search bar -->
-			<form
-				class="flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-				style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
-				onsubmit={(event) => { event.preventDefault(); handleSearch(); }}
-			>
-				<Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
-				<input
-					type="text"
-					placeholder={t('searchModal.placeholder')}
-					bind:value={keyword}
-					autocomplete="off"
-					aria-label={t('searchModal.inputAria')}
-					class="flex-1 bg-transparent outline-none"
-					style="font-size: 13px; color: var(--neu-text);"
-				/>
-				{#if keyword}
-					<button
-						type="button"
-						class="flex items-center justify-center outline-none"
-						onclick={clearSearch}
-						aria-label={t('searchModal.clearInput')}
-					>
-						<X size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
-					</button>
-				{/if}
-				<button
-					type="submit"
-					class="flex items-center justify-center rounded-full outline-none"
-					style="width: 36px; height: 36px; background: var(--neu-accent-primary); box-shadow: 0 3px 10px var(--neu-glow);"
-					disabled={!keyword.trim()}
-					aria-label={t('searchModal.submit')}
-				>
-					<Search size={15} strokeWidth={1.5} color="var(--neu-active-text)" />
-				</button>
-			</form>
+    <!-- Body -->
+    <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+      <!-- Search bar -->
+      <form
+        class="flex items-center gap-3 rounded-[18px] px-4 py-2.5"
+        style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+        onsubmit={(event) => {
+          event.preventDefault();
+          handleSearch();
+        }}
+      >
+        <Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
+        <input
+          type="text"
+          placeholder={t('searchModal.placeholder')}
+          bind:value={keyword}
+          autocomplete="off"
+          aria-label={t('searchModal.inputAria')}
+          class="flex-1 bg-transparent outline-none"
+          style="font-size: 13px; color: var(--neu-text);"
+        />
+        {#if keyword}
+          <button
+            type="button"
+            class="flex items-center justify-center outline-none"
+            onclick={clearSearch}
+            aria-label={t('searchModal.clearInput')}
+          >
+            <X size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+          </button>
+        {/if}
+        <button
+          type="submit"
+          class="flex items-center justify-center rounded-full outline-none"
+          style="width: 36px; height: 36px; background: var(--neu-accent-primary); box-shadow: 0 3px 10px var(--neu-glow);"
+          disabled={!keyword.trim()}
+          aria-label={t('searchModal.submit')}
+        >
+          <Search size={15} strokeWidth={1.5} color="var(--neu-active-text)" />
+        </button>
+      </form>
 
-			{#if trimmedKeyword}
-				<!-- Search suggestions -->
-				<div
-					class="rounded-[18px] p-4"
-					style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
-				>
-					{#if isSuggesting}
-						<div class="space-y-2">
-							{#each Array(3) as _, i (i)}
-								<div class="rounded-[14px]" style="height: 32px; background: var(--neu-border);"></div>
-							{/each}
-						</div>
-					{:else if !hasSuggestions}
-						<p style="font-size: 13px; color: var(--neu-text-muted);">{t('searchModal.noSuggestions')}</p>
-					{:else}
-						<div class="space-y-4">
-							{#if recentMatches.length > 0}
-								<div class="space-y-2">
-									<div class="flex items-center justify-between">
-										<div class="flex items-center gap-1.5">
-											<Clock size={12} strokeWidth={1.5} color="var(--neu-text-muted)" />
-											<span style="font-size: 11px; color: var(--neu-text-muted);">{t('searchModal.matchedHistory')}</span>
-										</div>
-										<button
-											class="outline-none"
-											style="font-size: 11px; color: var(--neu-text-muted);"
-											onclick={clearAllRecent}
-										>
-											{t('searchModal.clearAll')}
-										</button>
-									</div>
-									<div class="flex flex-wrap gap-2">
-										{#each recentMatches as term (term)}
-											<div class="flex items-center gap-1">
-												<button
-													class="rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
-													style="font-size: 12px; color: var(--neu-text); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
-													onclick={() => handleSearchNavigate(term)}
-												>
-													{term}
-												</button>
-												<button
-													class="flex items-center justify-center rounded-full outline-none"
-													style="width: 22px; height: 22px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
-													onclick={() => removeRecent(term)}
-													aria-label={getRemoveRecentLabel(term)}
-												>
-													<X size={10} strokeWidth={1.5} color="var(--neu-text-muted)" />
-												</button>
-											</div>
-										{/each}
-									</div>
-								</div>
-							{/if}
+      {#if trimmedKeyword}
+        <!-- Search suggestions -->
+        <div
+          class="rounded-[18px] p-4"
+          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+        >
+          {#if isSuggesting}
+            <div class="space-y-2">
+              {#each Array(3) as _, i (i)}
+                <div
+                  class="rounded-[14px]"
+                  style="height: 32px; background: var(--neu-border);"
+                ></div>
+              {/each}
+            </div>
+          {:else if !hasSuggestions}
+            <p style="font-size: 13px; color: var(--neu-text-muted);">
+              {t('searchModal.noSuggestions')}
+            </p>
+          {:else}
+            <div class="space-y-4">
+              {#if recentMatches.length > 0}
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                      <Clock size={12} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                      <span style="font-size: 11px; color: var(--neu-text-muted);"
+                        >{t('searchModal.matchedHistory')}</span
+                      >
+                    </div>
+                    <button
+                      class="outline-none"
+                      style="font-size: 11px; color: var(--neu-text-muted);"
+                      onclick={clearAllRecent}
+                    >
+                      {t('searchModal.clearAll')}
+                    </button>
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    {#each recentMatches as term (term)}
+                      <div class="flex items-center gap-1">
+                        <button
+                          class="rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
+                          style="font-size: 12px; color: var(--neu-text); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                          onclick={() => handleSearchNavigate(term)}
+                        >
+                          {term}
+                        </button>
+                        <button
+                          class="flex items-center justify-center rounded-full outline-none"
+                          style="width: 22px; height: 22px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                          onclick={() => removeRecent(term)}
+                          aria-label={getRemoveRecentLabel(term)}
+                        >
+                          <X size={10} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                        </button>
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
 
-							{#if suggestions.length > 0}
-								<div class="space-y-1">
-									<div class="flex items-center gap-1.5 mb-2">
-										<TrendingUp size={12} strokeWidth={1.5} color="var(--neu-text-muted)" />
-										<span style="font-size: 11px; color: var(--neu-text-muted);">{t('searchModal.suggestions')}</span>
-									</div>
-									{#each suggestions as item (getSuggestionKey(item))}
-										{@const p = getSuggestionPresentation(item)}
-										<button
-											type="button"
-											class="flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left outline-none hover:bg-[var(--neu-fallback-bg)] transition-colors duration-150"
-											style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
-											onclick={() => handleSuggestionClick(item)}
-										>
-											{#if item.type === 'tag'}
-												<div
-													class="flex flex-shrink-0 items-center justify-center rounded-full"
-													style="width: 34px; height: 34px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
-												>
-													<Hash size={14} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-												</div>
-											{:else}
-												<div class="flex-shrink-0 overflow-hidden rounded-full" style="width: 34px; height: 34px; border: 1.5px solid var(--neu-border);">
-													{#if p.avatarUrl}
-														<img src={p.avatarUrl} alt={p.avatarFallback ?? ''} class="h-full w-full object-cover" />
-													{:else}
-														<div class="flex h-full w-full items-center justify-center" style="background: var(--neu-fallback-bg);">
-															<span style="font-size: 12px; font-weight: 600; color: var(--neu-fallback-text);">{p.avatarFallback ?? '?'}</span>
-														</div>
-													{/if}
-												</div>
-											{/if}
-											<div class="min-w-0 flex-1">
-												<div class="flex items-center gap-2">
-													<span class="truncate" style="font-size: 13px; font-weight: 500; color: var(--neu-text);">{p.title}</span>
-													<span
-														class="flex-shrink-0 rounded-full px-1.5 py-0.5"
-														style="font-size: 9px; font-weight: 500; background: var(--neu-accent-primary); color: var(--neu-active-text);"
-													>{p.badge}</span>
-												</div>
-												{#if p.subtitle}
-													<p class="truncate" style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">{p.subtitle}</p>
-												{/if}
-											</div>
-										</button>
-									{/each}
-								</div>
-							{/if}
-						</div>
-					{/if}
-					<p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 8px;">{t('searchModal.clickSearchIcon')}</p>
-				</div>
-			{:else}
-				<!-- Default: recent + trending -->
-				<div class="grid gap-4 sm:grid-cols-2">
-					<!-- Recent searches -->
-					<div
-						class="rounded-[18px] p-4"
-						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
-					>
-						<div class="flex items-center justify-between mb-3">
-							<div class="flex items-center gap-1.5">
-								<Clock size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
-								<span style="font-size: 13px; font-weight: 500; color: var(--neu-text);">{t('searchModal.recentSearches')}</span>
-							</div>
-							{#if recentSearches.length > 0}
-								<button
-									class="outline-none"
-									style="font-size: 11px; color: var(--neu-text-muted);"
-									onclick={clearAllRecent}
-								>
-									{t('searchModal.clearAll')}
-								</button>
-							{/if}
-						</div>
-						{#if recentSearches.length === 0}
-							<p style="font-size: 12px; color: var(--neu-text-muted);">{t('searchModal.noRecentSearches')}</p>
-						{:else}
-							<div class="flex flex-wrap gap-2">
-								{#each recentSearches as term (term)}
-									<div class="flex items-center gap-1">
-										<button
-											class="rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
-											style="font-size: 12px; color: var(--neu-text); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
-											onclick={() => handleRecentClick(term)}
-										>
-											{term}
-										</button>
-										<button
-											class="flex items-center justify-center rounded-full outline-none"
-											style="width: 22px; height: 22px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
-											onclick={() => removeRecent(term)}
-											aria-label={getRemoveRecentLabel(term)}
-										>
-											<X size={10} strokeWidth={1.5} color="var(--neu-text-muted)" />
-										</button>
-									</div>
-								{/each}
-							</div>
-						{/if}
-					</div>
+              {#if suggestions.length > 0}
+                <div class="space-y-1">
+                  <div class="flex items-center gap-1.5 mb-2">
+                    <TrendingUp size={12} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                    <span style="font-size: 11px; color: var(--neu-text-muted);"
+                      >{t('searchModal.suggestions')}</span
+                    >
+                  </div>
+                  {#each suggestions as item (getSuggestionKey(item))}
+                    {@const p = getSuggestionPresentation(item)}
+                    <button
+                      type="button"
+                      class="flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left outline-none hover:bg-[var(--neu-fallback-bg)] transition-colors duration-150"
+                      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                      onclick={() => handleSuggestionClick(item)}
+                    >
+                      {#if item.type === 'tag'}
+                        <div
+                          class="flex flex-shrink-0 items-center justify-center rounded-full"
+                          style="width: 34px; height: 34px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+                        >
+                          <Hash size={14} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+                        </div>
+                      {:else}
+                        <div
+                          class="flex-shrink-0 overflow-hidden rounded-full"
+                          style="width: 34px; height: 34px; border: 1.5px solid var(--neu-border);"
+                        >
+                          {#if p.avatarUrl}
+                            <img
+                              src={p.avatarUrl}
+                              alt={p.avatarFallback ?? ''}
+                              class="h-full w-full object-cover"
+                            />
+                          {:else}
+                            <div
+                              class="flex h-full w-full items-center justify-center"
+                              style="background: var(--neu-fallback-bg);"
+                            >
+                              <span
+                                style="font-size: 12px; font-weight: 600; color: var(--neu-fallback-text);"
+                                >{p.avatarFallback ?? '?'}</span
+                              >
+                            </div>
+                          {/if}
+                        </div>
+                      {/if}
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                          <span
+                            class="truncate"
+                            style="font-size: 13px; font-weight: 500; color: var(--neu-text);"
+                            >{p.title}</span
+                          >
+                          <span
+                            class="flex-shrink-0 rounded-full px-1.5 py-0.5"
+                            style="font-size: 9px; font-weight: 500; background: var(--neu-accent-primary); color: var(--neu-active-text);"
+                            >{p.badge}</span
+                          >
+                        </div>
+                        {#if p.subtitle}
+                          <p
+                            class="truncate"
+                            style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;"
+                          >
+                            {p.subtitle}
+                          </p>
+                        {/if}
+                      </div>
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/if}
+          <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 8px;">
+            {t('searchModal.clickSearchIcon')}
+          </p>
+        </div>
+      {:else}
+        <!-- Default: recent + trending -->
+        <div class="grid gap-4 sm:grid-cols-2">
+          <!-- Recent searches -->
+          <div
+            class="rounded-[18px] p-4"
+            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          >
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-1.5">
+                <Clock size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                <span style="font-size: 13px; font-weight: 500; color: var(--neu-text);"
+                  >{t('searchModal.recentSearches')}</span
+                >
+              </div>
+              {#if recentSearches.length > 0}
+                <button
+                  class="outline-none"
+                  style="font-size: 11px; color: var(--neu-text-muted);"
+                  onclick={clearAllRecent}
+                >
+                  {t('searchModal.clearAll')}
+                </button>
+              {/if}
+            </div>
+            {#if recentSearches.length === 0}
+              <p style="font-size: 12px; color: var(--neu-text-muted);">
+                {t('searchModal.noRecentSearches')}
+              </p>
+            {:else}
+              <div class="flex flex-wrap gap-2">
+                {#each recentSearches as term (term)}
+                  <div class="flex items-center gap-1">
+                    <button
+                      class="rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
+                      style="font-size: 12px; color: var(--neu-text); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                      onclick={() => handleRecentClick(term)}
+                    >
+                      {term}
+                    </button>
+                    <button
+                      class="flex items-center justify-center rounded-full outline-none"
+                      style="width: 22px; height: 22px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                      onclick={() => removeRecent(term)}
+                      aria-label={getRemoveRecentLabel(term)}
+                    >
+                      <X size={10} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                    </button>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+          </div>
 
-					<!-- Trending tags -->
-					<div
-						class="rounded-[18px] p-4"
-						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
-					>
-						<div class="flex items-center gap-1.5 mb-3">
-							<TrendingUp size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
-							<span style="font-size: 13px; font-weight: 500; color: var(--neu-text);">{t('searchModal.trendingTags')}</span>
-						</div>
-						{#if isLoadingTags}
-							<div class="space-y-2">
-								{#each Array(4) as _, i (i)}
-									<div class="rounded-[14px]" style="height: 28px; background: var(--neu-border);"></div>
-								{/each}
-							</div>
-						{:else if trendingTags.length === 0}
-							<p style="font-size: 12px; color: var(--neu-text-muted);">{t('searchModal.noTrendingTags')}</p>
-						{:else}
-							<div class="flex flex-wrap gap-2">
-								{#each trendingTags as tag (tag.name)}
-									<button
-										class="flex items-center gap-1 rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
-										style="font-size: 12px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
-										onclick={() => handleTagClick(tag.name)}
-										aria-label={t('searchModal.searchHotTag', { name: tag.name })}
-									>
-										<Hash size={11} strokeWidth={1.5} />
-										{tag.name}
-									</button>
-								{/each}
-							</div>
-						{/if}
-					</div>
-				</div>
-			{/if}
-		</div>
-	</Dialog.Content>
+          <!-- Trending tags -->
+          <div
+            class="rounded-[18px] p-4"
+            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          >
+            <div class="flex items-center gap-1.5 mb-3">
+              <TrendingUp size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+              <span style="font-size: 13px; font-weight: 500; color: var(--neu-text);"
+                >{t('searchModal.trendingTags')}</span
+              >
+            </div>
+            {#if isLoadingTags}
+              <div class="space-y-2">
+                {#each Array(4) as _, i (i)}
+                  <div
+                    class="rounded-[14px]"
+                    style="height: 28px; background: var(--neu-border);"
+                  ></div>
+                {/each}
+              </div>
+            {:else if trendingTags.length === 0}
+              <p style="font-size: 12px; color: var(--neu-text-muted);">
+                {t('searchModal.noTrendingTags')}
+              </p>
+            {:else}
+              <div class="flex flex-wrap gap-2">
+                {#each trendingTags as tag (tag.name)}
+                  <button
+                    class="flex items-center gap-1 rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
+                    style="font-size: 12px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                    onclick={() => handleTagClick(tag.name)}
+                    aria-label={t('searchModal.searchHotTag', { name: tag.name })}
+                  >
+                    <Hash size={11} strokeWidth={1.5} />
+                    {tag.name}
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        </div>
+      {/if}
+    </div>
+  </Dialog.Content>
 </Dialog.Root>

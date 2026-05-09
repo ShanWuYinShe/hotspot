@@ -9,28 +9,28 @@ import type { PageLoad } from './$types';
 export const ssr = false;
 
 export const load: PageLoad = async ({ params }) => {
-	const userId = params.id;
+  const userId = params.id;
 
-	try {
-		const response = await usersService.getUser({ user_id: userId });
-		
-		if (isSuccess(response) && response.data) {
-			return {
-				user: response.data,
-				userId
-			};
-		}
-		
-		return {
-			user: null,
-			userId,
-			error: response.message || '用户不存在'
-		};
-	} catch (error) {
-		return {
-			user: null,
-			userId,
-			error: '加载失败'
-		};
-	}
+  try {
+    const response = await usersService.getUser({ user_id: userId });
+
+    if (isSuccess(response) && response.data) {
+      return {
+        user: response.data,
+        userId
+      };
+    }
+
+    return {
+      user: null,
+      userId,
+      error: response.message || '用户不存在'
+    };
+  } catch (error) {
+    return {
+      user: null,
+      userId,
+      error: '加载失败'
+    };
+  }
 };

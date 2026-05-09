@@ -80,7 +80,6 @@ func (r *stubMomentRepo) ListFavorites(_ context.Context, _ string, _ int, _ str
 	return r.favRes, r.favListErr
 }
 
-
 func (r *stubMomentRepo) LoadMyState(ctx context.Context, a, b string) *MyMomentState {
 	return nil
 }

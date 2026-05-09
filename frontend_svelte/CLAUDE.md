@@ -3,6 +3,7 @@
 - 本文件只定义本子项目的技术约束与本地命令；仓库级 workflow、任务分级与验证边界以根 `CLAUDE.md` 为准。
 
 ## 构建 & 测试 & Lint
+
 - `bun check` — 类型检查
 - `bun run build` — 构建
 - `bun test` — 单元测试
@@ -10,6 +11,7 @@
 - `bun run format` — 格式化
 
 ## 约束
+
 - **格式化**：修改代码后必须运行 `bun run format`，具体规则由 `.prettierrc` 定义。
 - **API 路径**：统一从 `endpoints.ts` 引用。
 - **请求封装**：所有请求走 `client.ts` 和 `services/*`。

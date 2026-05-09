@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { DropdownMenu as DropdownMenuPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
-	import { cn } from '$lib/utils';
+  import { DropdownMenu as DropdownMenuPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
+  import { cn } from '$lib/utils';
 
-	interface Props extends WithoutChildrenOrChild<DropdownMenuPrimitive.SeparatorProps> {
-		class?: string;
-	}
+  interface Props extends WithoutChildrenOrChild<DropdownMenuPrimitive.SeparatorProps> {
+    class?: string;
+  }
 
-	let { class: className, ...restProps }: Props = $props();
+  let { class: className, ...restProps }: Props = $props();
 </script>
 
 <DropdownMenuPrimitive.Separator
-	class={cn('-mx-1 my-1 h-px', className)}
-	style="background: var(--neu-border);"
-	{...restProps}
+  class={cn('-mx-1 my-1 h-px', className)}
+  style="background: var(--neu-border);"
+  {...restProps}
 />

@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { Tabs as TabsPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
-	import { cn } from '$lib/utils';
-	import type { Snippet } from 'svelte';
+  import { Tabs as TabsPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
+  import { cn } from '$lib/utils';
+  import type { Snippet } from 'svelte';
 
-	interface Props extends WithoutChildrenOrChild<TabsPrimitive.ContentProps> {
-		children?: Snippet;
-		class?: string;
-	}
+  interface Props extends WithoutChildrenOrChild<TabsPrimitive.ContentProps> {
+    children?: Snippet;
+    class?: string;
+  }
 
-	let { class: className, value, children, ...restProps }: Props = $props();
+  let { class: className, value, children, ...restProps }: Props = $props();
 </script>
 
 <TabsPrimitive.Content
-	class={cn(
-		'mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-		className
-	)}
-	{value}
-	{...restProps}
+  class={cn(
+    'mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+    className
+  )}
+  {value}
+  {...restProps}
 >
-	{#if children}
-		{@render children()}
-	{/if}
+  {#if children}
+    {@render children()}
+  {/if}
 </TabsPrimitive.Content>

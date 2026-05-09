@@ -164,9 +164,9 @@ func (s *Service) BanMember(ctx context.Context, req BanMemberRequest) error {
 	event := realtime.Event{
 		Type: "GroupMemberRemoved",
 		Payload: map[string]any{
-			"group_id":  req.GroupID,
-			"user":      s.resolveUserInfo(ctx, req.UserID),
-			"removed_by": s.resolveUserInfo(ctx, principal.UserID),
+			"group_id":     req.GroupID,
+			"user":         s.resolveUserInfo(ctx, req.UserID),
+			"removed_by":   s.resolveUserInfo(ctx, principal.UserID),
 			"reason":       "banned",
 			"removed_at":   time.Now().UTC().Format(time.RFC3339),
 			"member_count": group.Group.MembersCount,
