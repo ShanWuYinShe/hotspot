@@ -205,6 +205,7 @@ export default class EntryAbility extends UIAbility {
   private async logDeviceInfo(): Promise<void> {
     try {
       const device = deviceInfo.deviceType;
+      AppStorage.setOrCreate<boolean>('isTablet', device === 'tablet');
       const osVersion = deviceInfo.osFullName;
       const brand = deviceInfo.brand;
       const model = deviceInfo.productModel;

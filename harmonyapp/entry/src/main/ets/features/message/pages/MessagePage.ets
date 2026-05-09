@@ -34,7 +34,6 @@ import pasteboard from '@ohos.pasteboard';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF08;
@@ -60,7 +59,8 @@ export struct MessagePage {
   @StorageLink(KEY_LAST_MESSAGE_SYNC_TIME) @Watch('onMessageSync') lastMessageSyncTime: number = 0;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp('isTablet') isTablet: boolean = false;
 
   private chatListDataSource: BasicDataSource<ChatItem> = new BasicDataSource([]);
   private messageCacheService = MessageCacheService.getInstance();
@@ -83,6 +83,29 @@ export struct MessagePage {
   @State isLoadingMore: boolean = false;
   @State deletingChatKeys: string[] = [];
   @State pressedChatKey: string = '';
+  @State searchKeyword: string = '';
+
+  private getOnlineChats(): ChatItem[] {
+    const online: ChatItem[] = [];
+    for (let i = 0; i < this.chatListDataSource.totalCount(); i++) {
+      const item = this.chatListDataSource.getData(i);
+      if (item.type === 'private') {
+        const pci = item.data as PrivateChatItem;
+        if (pci.other_user?.presence_status === 'online') {
+          online.push(item);
+        }
+      }
+    }
+    return online;
+  }
+
+  private getTotalUnread(): number {
+    let count = 0;
+    for (let i = 0; i < this.chatListDataSource.totalCount(); i++) {
+      count += this.chatListDataSource.getData(i).unreadCount;
+    }
+    return count;
+  }
 
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
@@ -104,14 +127,6 @@ export struct MessagePage {
 
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
-  }
-
-  private getSurfaceBackground(): string {
-    return this.getCurrentThemePalette().surfaceBackground;
-  }
-
-  private getSurfaceSubtle(): string {
-    return this.getCurrentThemePalette().surfaceSubtle;
   }
 
   private getSurfaceBorder(): string {
@@ -474,50 +489,39 @@ export struct MessagePage {
 
   build() {
     Column() {
-      // 标题栏 - 扁平风格（白色背景）
+      // 粘性头部：标题 + 未读数 + 操作按钮
       Row() {
-        Text('消息')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .layoutWeight(1)
-          .padding({ left: DesignConstants.SPACING.LG })
-
-        Row({ space: DesignConstants.SPACING.MD }) {
-          // 搜索 - 触感木质拟物：轻微凸起
-          Row() {
-            Text() {
-              SymbolSpan($r(AppIcon.SEARCH))
-                .fontSize(22)
-                .fontColor([this.getCurrentThemePalette().textPrimary])
-            }
+        Column({ space: 2 }) {
+          Text('消息')
+            .fontSize(22)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+          if (this.getTotalUnread() > 0) {
+            Text(`${this.getTotalUnread()} 条未读`)
+              .fontSize(12)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+          } else {
+            Text('全部已读')
+              .fontSize(12)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
           }
-          .width(40)
-          .height(40)
-          .justifyContent(FlexAlign.Center)
-          .alignItems(VerticalAlign.Center)
-          .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.MD)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
-          .onClick(() => {
-            AppRouter.push(PageNames.SEARCH);
-          })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
 
-          // 更多操作 - 触感木质拟物：轻微凸起
+        Row({ space: 10 }) {
           Row() {
             Text() {
               SymbolSpan($r(AppIcon.ADD))
-                .fontSize(22)
-                .fontColor([this.getCurrentThemePalette().textPrimary])
+                .fontSize(16)
+                .fontColor([this.getCurrentThemePalette().textSecondary])
             }
           }
-          .width(40)
-          .height(40)
+          .width(38)
+          .height(38)
           .justifyContent(FlexAlign.Center)
-          .alignItems(VerticalAlign.Center)
-          .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.MD)
+          .borderRadius(19)
+          .backgroundColor(this.getCurrentThemePalette().background)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .bindMenu([
@@ -545,7 +549,6 @@ export struct MessagePage {
                       enableMultiMode: true,
                       enableAlbum: true
                     };
-
                     const result = await scanBarcode.startScanForResult(context, options);
                     if (result.originalValue) {
                       const scanContent: string = result.originalValue;
@@ -564,21 +567,65 @@ export struct MessagePage {
               }
             }
           ])
+
+          Row() {
+            Text() {
+              SymbolSpan($r(AppIcon.SEARCH))
+                .fontSize(16)
+                .fontColor([this.getCurrentThemePalette().textSecondary])
+            }
+          }
+          .width(38)
+          .height(38)
+          .justifyContent(FlexAlign.Center)
+          .borderRadius(19)
+          .backgroundColor(this.getCurrentThemePalette().background)
+          .shadow(this.getCurrentThemePalette().controlShadow)
+          .border({ width: 1, color: this.getSurfaceBorder() })
+          .onClick(() => {
+            AppRouter.push(PageNames.SEARCH);
+          })
         }
-        .padding({ right: DesignConstants.SPACING.LG })
       }
       .width('100%')
-      .alignItems(VerticalAlign.Center)
       .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
         top: this.getHeaderTopPadding(),
-        bottom: DesignConstants.SPACING.SM
+        bottom: 12
       })
       .backgroundColor(Color.Transparent)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
+      // 搜索栏
+      Row({ space: 10 }) {
+        Text() {
+          SymbolSpan($r(AppIcon.SEARCH))
+            .fontSize(15)
+            .fontColor([this.getCurrentThemePalette().textSecondary])
+        }
+        Text('搜索会话…')
+          .fontSize(13)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .height(42)
+      .padding({ left: 16, right: 16 })
+      .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 8 })
+      .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
+      .borderRadius(18)
+      .shadow(this.getCurrentThemePalette().controlShadow)
+      .border({ width: 1, color: this.getSurfaceBorder() })
+      .onClick(() => {
+        AppRouter.push(PageNames.SEARCH);
+      })
+
       // 内容区域
       if (this.isLoading) {
         SystemLoadingView({ message: '收取信件中...' })
+          .layoutWeight(1)
           .transition(
             TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
               .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
@@ -587,6 +634,7 @@ export struct MessagePage {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           EmptyState({ icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadData(true); } })
         }
+        .layoutWeight(1)
         .onRefreshing(() => { this.loadData(true, true); })
         .transition(
           TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
@@ -596,6 +644,7 @@ export struct MessagePage {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           EmptyState({ icon: AppIcon.MESSAGE, message: '暂无消息' })
         }
+        .layoutWeight(1)
         .onRefreshing(() => { this.loadData(true, true); })
         .transition(
           TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
@@ -604,12 +653,35 @@ export struct MessagePage {
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           List() {
+            // 在线头像条
+            if (this.getOnlineChats().length > 0) {
+              ListItem() {
+                this.buildOnlineAvatarsStrip()
+              }
+            }
+
+            // "最近" 标签
+            ListItem() {
+              Text('最近')
+                .fontSize(10)
+                .fontColor(this.getCurrentThemePalette().textSecondary)
+                .textCase(TextCase.UpperCase)
+                .padding({
+                  left: DesignConstants.SPACING.LG,
+                  right: DesignConstants.SPACING.LG,
+                  top: 8,
+                  bottom: 8
+                })
+            }
+
+            // 聊天列表
             LazyForEach(this.chatListDataSource, (item: ChatItem) => {
               ListItem() {
                 this.buildChatItem(item)
               }
               .swipeAction({ end: this.SwipeActionEnd(item) })
             }, (item: ChatItem) => item.id + item.type)
+
             if (this.isLoadingMore) {
               ListItem() {
                 LoadingMoreIndicator()
@@ -618,6 +690,8 @@ export struct MessagePage {
           }
           .width('100%')
           .padding({
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
             bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
           })
           .backgroundColor(Color.Transparent)
@@ -634,7 +708,63 @@ export struct MessagePage {
     }
     .width('100%')
     .height('100%')
+    .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
+  }
+
+  @Builder
+  buildOnlineAvatarsStrip() {
+    Column() {
+      Text('在线')
+        .fontSize(10)
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+        .textCase(TextCase.UpperCase)
+        .padding({ left: DesignConstants.SPACING.LG, bottom: 10 })
+
+      Scroll() {
+        Row({ space: 16 }) {
+          ForEach(this.getOnlineChats(), (chat: ChatItem) => {
+            Column({ space: 6 }) {
+              Stack() {
+                SystemAvatar({
+                  avatarUrl: chat.avatarUrl,
+                  name: chat.name,
+                  avatarSize: 52,
+                  shape: 'circle'
+                })
+                .border({ width: 1.5, color: this.getCurrentThemePalette().accentBackground })
+                .borderRadius(26)
+                .padding(2.5)
+                .backgroundColor(this.getCurrentThemePalette().background)
+                .shadow(this.getCurrentThemePalette().controlShadow)
+
+                Row()
+                  .width(12)
+                  .height(12)
+                  .borderRadius(6)
+                  .backgroundColor('#22c55e')
+                  .border({ width: 2, color: this.getCurrentThemePalette().background })
+                  .position({ x: 38, y: 38 })
+              }
+
+              Text(chat.name)
+                .fontSize(11)
+                .fontColor(this.getCurrentThemePalette().textSecondary)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .constraintSize({ maxWidth: 56 })
+            }
+            .alignItems(HorizontalAlign.Center)
+            .onClick(() => this.enterChat(chat))
+          }, (chat: ChatItem) => chat.id + chat.type)
+        }
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+      }
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+    }
+    .width('100%')
+    .padding({ top: 4, bottom: 4 })
   }
 
   @Builder
@@ -664,60 +794,56 @@ export struct MessagePage {
 
   @Builder
   buildChatItem(item: ChatItem) {
-    Column() {
-      Row() {
-        Badge({
-          count: item.unreadCount,
-          maxCount: 99,
-          position: BadgePosition.RightTop,
-          style: { badgeSize: 16, badgeColor: this.getCurrentThemePalette().accentBackground, fontSize: 10 }
-        }) {
-          SystemAvatar({
-            avatarUrl: item.avatarUrl,
-            name: item.name,
-            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-            shape: item.type === 'group' ? 'squircle' : 'circle',
-            inset: true
-          })
-        }
-        .margin({ right: DesignConstants.SPACING.LG })
+    Row({ space: 14 }) {
+      Badge({
+        count: item.unreadCount,
+        maxCount: 99,
+        position: BadgePosition.RightTop,
+        style: { badgeSize: 20, badgeColor: this.getCurrentThemePalette().accentBackground, fontSize: 10 }
+      }) {
+        SystemAvatar({
+          avatarUrl: item.avatarUrl,
+          name: item.name,
+          avatarSize: 44,
+          shape: item.type === 'group' ? 'squircle' : 'circle',
+          inset: true
+        })
+      }
 
-        Column({ space: 4 }) {
-          Row() {
-            Text(item.name)
-              .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(this.getCurrentThemePalette().textPrimary)
-              .layoutWeight(1)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-            Text(this.formatTime(item.lastTime))
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-          }
-          .width('100%')
-
-          Text(item.lastMessage)
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
+      Column({ space: 2 }) {
+        Row() {
+          Text(item.name)
+            .fontSize(14)
+            .fontWeight(item.unreadCount > 0 ? FontWeight.Medium : FontWeight.Normal)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+            .layoutWeight(1)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .width('100%')
+
+          Text(this.formatTime(item.lastTime))
+            .fontSize(11)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
-        .layoutWeight(1)
+        .width('100%')
+
+        Text(item.lastMessage || '')
+          .fontSize(12)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
       }
-      .width('100%')
+      .layoutWeight(1)
     }
-    .constraintSize({ minHeight: AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).minHeight ?? 72 })
-    .padding(DesignConstants.SPACING.LG)
-    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 8, bottom: 8 })
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .backgroundColor(this.pressedChatKey === this.getChatKey(item)
-      ? this.getSurfaceSubtle()
-      : this.getSurfaceBackground())
-    .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
+      ? this.getCurrentThemePalette().surfaceSubtle
+      : this.getCurrentThemePalette().background)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
+    .margin({ top: 4, bottom: 4 })
     .opacity(this.isChatDeleting(item) ? DesignConstants.OPACITY.LOADING : 1)
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {

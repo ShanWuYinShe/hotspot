@@ -443,6 +443,18 @@ export class AppThemeVisuals {
     return AppThemeVisuals.getPalette(themeId).visuals.effects.haloShadow;
   }
 
+  static getNeuInsetShadow(themeId: string): ShadowOptions {
+    return AppThemeVisuals.getPalette(themeId).visuals.effects.insetShadow;
+  }
+
+  static getNeuHighlightShadow(themeId: string): ShadowOptions {
+    return AppThemeVisuals.getPalette(themeId).visuals.effects.highlightShadow;
+  }
+
+  static getTabActiveGlow(themeId: string): ShadowOptions {
+    return AppThemeVisuals.getPalette(themeId).visuals.effects.tabActiveGlow;
+  }
+
   static getChatVisualStyle(themeId: string): ThemeChatVisualStyle {
     const key = AppThemeVisuals.getThemeKey(themeId);
     const cached = AppThemeVisuals.chatVisualCache.get(key);

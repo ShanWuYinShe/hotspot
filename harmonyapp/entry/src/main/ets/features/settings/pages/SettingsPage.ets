@@ -30,7 +30,7 @@ export struct SettingsPage {
   @StorageLink(KEY_CLIENT_CONFIG) clientConfig: ClientConfig | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink(KEY_THEME_MODE) themeMode: ThemeMode = 'follow_system';
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State systemMeta: ApiVersionMeta | null = null;
   @State systemMetaLoading: boolean = false;
   @State systemMetaError: string = '';

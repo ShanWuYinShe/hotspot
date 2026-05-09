@@ -16,14 +16,12 @@ import {
   BlockRequest, UnblockRequest, CreateReportRequest, Relationship
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
-import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { MomentFeedCard } from '../../../components/MomentFeedCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import { interactionActions } from '../../../core/state/InteractionActions';
-import { LocationBar } from '../../../components/LocationBar';
-import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
+import { EmptyState } from '../../../components/EmptyState';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
@@ -58,11 +56,10 @@ export struct NearbyPage {
   @StorageLink('nearbyDeviceCount') nearbyDeviceCount: number = 0;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
+  @StorageProp('isTablet') isTablet: boolean = false;
 
-  @State currentSubTab: number = 0;
-  private subTabController: TabsController = new TabsController();
   /** 标记 aboutToAppear 是否已完成首次数据加载，避免 @Watch 重复触发 */
   private initialLoadDone: boolean = false;
 
@@ -178,14 +175,9 @@ export struct NearbyPage {
     this.loadNearbyGroups();
   }
 
-  /** 判断当前 tab 是否无数据（用于决定 location 变化时是否需要自动加载） */
+  /** 判断当前是否无数据（用于决定 location 变化时是否需要自动加载） */
   private isCurrentTabEmpty(): boolean {
-    switch (this.currentSubTab) {
-      case 0: return this.moments.length === 0;
-      case 1: return this.users.length === 0;
-      case 2: return this.groups.length === 0;
-      default: return true;
-    }
+    return this.moments.length === 0 && this.users.length === 0 && this.groups.length === 0;
   }
 
   private getReferencePoint(): GeoPoint | null {
@@ -196,17 +188,9 @@ export struct NearbyPage {
   }
 
   private async loadCurrentTabData(refresh: boolean = false): Promise<void> {
-    switch (this.currentSubTab) {
-      case 0:
-        await this.loadNearbyMoments(false, refresh);
-        break;
-      case 1:
-        await this.loadNearbyUsers(false, refresh);
-        break;
-      case 2:
-        await this.loadNearbyGroups(false, refresh);
-        break;
-    }
+    this.loadNearbyMoments(false, refresh);
+    this.loadNearbyUsers(false, refresh);
+    this.loadNearbyGroups(false, refresh);
   }
 
   private getHeaderTopPadding(): number {
@@ -232,43 +216,6 @@ export struct NearbyPage {
 
   private isGroupJoined(group: GroupItem): boolean {
     return group.my_state?.is_joined ?? false;
-  }
-
-  private switchSubTab(index: number): void {
-    if (this.currentSubTab === index) {
-      return;
-    }
-    this.currentSubTab = index;
-    // 在 Tabs 动画开始前预设目标 tab 的 loading 状态，
-    // 避免 Tabs 捕获旧内容（错误/空状态）用于过渡动画
-    this.prepareTabLoading(index);
-    this.subTabController.changeIndex(index);
-    // 兜底触发加载：部分设备上 controller 切换不一定触发 onChange
-    this.loadCurrentTabData(true);
-  }
-
-  /** 为目标 tab 预设 loading 状态（仅当该 tab 无数据或存在错误时） */
-  private prepareTabLoading(index: number): void {
-    switch (index) {
-      case 0:
-        if (this.moments.length === 0 || this.momentsError.length > 0) {
-          this.momentsLoading = true;
-          this.momentsError = '';
-        }
-        break;
-      case 1:
-        if (this.users.length === 0 || this.usersError.length > 0) {
-          this.usersLoading = true;
-          this.usersError = '';
-        }
-        break;
-      case 2:
-        if (this.groups.length === 0 || this.groupsError.length > 0) {
-          this.groupsLoading = true;
-          this.groupsError = '';
-        }
-        break;
-    }
   }
 
   // ==================== 加载附近动态 ====================
@@ -459,40 +406,38 @@ export struct NearbyPage {
   }
 
   build() {
-    Column() {
-      this.buildHeaderSurface()
+    Scroll() {
+      Column() {
+        this.buildHeroBanner()
 
-      Tabs({ controller: this.subTabController }) {
-        TabContent() {
-          this.buildMomentsContent()
+        if (this.users.length > 0) {
+          this.buildNearbyUsersHorizontal()
         }
-        .tabBar(this.HiddenTabBar())
 
-        TabContent() {
-          this.buildUsersContent()
+        if (this.groups.length > 0) {
+          this.buildActivityGrid()
         }
-        .tabBar(this.HiddenTabBar())
 
-        TabContent() {
-          this.buildGroupsContent()
+        if (this.moments.length > 0) {
+          this.buildMomentsSection()
         }
-        .tabBar(this.HiddenTabBar())
+
+        if (this.users.length === 0 && this.groups.length === 0 && this.moments.length === 0) {
+          if (this.momentsLoading || this.usersLoading || this.groupsLoading) {
+            SystemLoadingView({ message: '正在加载附近内容...' })
+          } else if (this.momentsError.length > 0) {
+            EmptyState({ icon: AppIcon.WARNING, message: this.momentsError, actionLabel: '重试', onAction: () => { this.loadNearbyMoments(); this.loadNearbyUsers(); this.loadNearbyGroups(); } })
+          } else {
+            EmptyState({ icon: AppIcon.NEARBY, message: '附近暂无内容\n发布第一条动态吧！' })
+          }
+        }
       }
-      .barMode(BarMode.Fixed)
-      .barHeight(0)
-      .animationDuration(400)
-      .onChange((index: number) => {
-        if (this.currentSubTab === index) {
-          return;
-        }
-        this.prepareTabLoading(index);
-        this.currentSubTab = index;
-        this.loadCurrentTabData(true);
-      })
-      .layoutWeight(1)
+      .width('100%')
+      .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
     }
     .width('100%')
     .height('100%')
+    .scrollBar(BarState.Auto)
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
 
@@ -504,115 +449,322 @@ export struct NearbyPage {
   }
 
   @Builder
-  private buildHeaderSurface() {
-    Column({ space: DesignConstants.SPACING.SM }) {
-      Text('附近内容')
-        .fontSize(DesignConstants.FONT.SIZE.XXL)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(this.getCurrentThemePalette().textPrimary)
+  private buildHeroBanner() {
+    Stack() {
+      Column()
         .width('100%')
-        .textAlign(TextAlign.Start)
+        .height(this.isTablet ? 260 : 200)
+        .borderRadius(28)
+        .linearGradient({
+          direction: GradientDirection.BottomRight,
+          colors: [[this.getCurrentThemePalette().accentBackground, 0.0],
+            [this.getCurrentThemePalette().accentMuted, 0.6],
+            [this.getCurrentThemePalette().surfaceSubtle, 1.0]]
+        })
 
-      Text('统一承载附近动态、用户与群组浏览')
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor(this.getCurrentThemePalette().textSecondary)
-        .width('100%')
-        .textAlign(TextAlign.Start)
-
-      LocationBar({ showSearchButton: true })
-
-      if (this.nearbyDeviceCount > 0) {
-        Row({ space: DesignConstants.SPACING.SM }) {
-          Text() {
-            SymbolSpan($r(AppIcon.DISTRIBUTED))
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor([this.getCurrentThemePalette().accentBackground])
+      Column() {
+        Row() {
+          Column({ space: 4 }) {
+            Text('附近')
+              .fontSize(22)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(Color.White)
+            Row({ space: 6 }) {
+              Text() {
+                SymbolSpan($r(AppIcon.LOCATION))
+                  .fontSize(13)
+                  .fontColor([Color.White])
+              }
+              Text(this.browseAnchor?.locationName ?? this.currentLocation?.locationName ?? '定位中...')
+                .fontSize(13)
+                .fontColor('rgba(255,255,255,0.85)')
+            }
           }
-          Text(`发现 ${this.nearbyDeviceCount} 台附近设备正在使用 GeoTalk`)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
+          .alignItems(HorizontalAlign.Start)
+
+          Blank()
+
+          Column({ space: 2 }) {
+            Text(this.nearbyDeviceCount > 0 ? `${this.nearbyDeviceCount}` : `${this.users.length}`)
+              .fontSize(24)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(Color.White)
+            Text('人附近')
+              .fontSize(10)
+              .fontColor('rgba(255,255,255,0.8)')
+          }
+          .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+          .borderRadius(18)
+          .backgroundColor('rgba(255,255,255,0.18)')
+          .border({ width: 1, color: 'rgba(255,255,255,0.28)' })
         }
         .width('100%')
-        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD,
-          top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-        .backgroundColor(Color.Transparent)
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: 280, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.TOP).animation({ duration: 280, curve: Curve.FastOutSlowIn }))
-        )
-      }
+        .alignItems(VerticalAlign.Top)
 
-      TabsPillGroup({
-        tabs: [
-          { label: '动态', icon: AppIcon.CAMERA },
-          { label: '用户', icon: AppIcon.PERSON },
-          { label: '群组', icon: AppIcon.GROUP }
-        ],
-        activeIndex: this.currentSubTab,
-        gap: DesignConstants.SPACING.XS,
-        actions: {
-          onChange: (index: number) => this.switchSubTab(index)
+        Blank()
+
+        Row({ space: 12 }) {
+          ForEach([
+            { label: '活动中', value: `${this.groups.filter((g: GroupItem) => g.my_state?.is_joined).length}` },
+            { label: '在线', value: `${this.users.filter((u: UserItem) => u.presence_status === 'online').length}` },
+            { label: '动态', value: `${this.moments.length}` }
+          ], (stat: { label: string; value: string }) => {
+            Column({ space: 1 }) {
+              Text(stat.value)
+                .fontSize(16)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(Color.White)
+              Text(stat.label)
+                .fontSize(10)
+                .fontColor('rgba(255,255,255,0.75)')
+            }
+            .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+            .borderRadius(14)
+            .backgroundColor('rgba(255,255,255,0.15)')
+            .layoutWeight(1)
+            .alignItems(HorizontalAlign.Center)
+          }, (stat: { label: string }) => stat.label)
         }
-      })
+        .width('100%')
+      }
+      .width('100%')
+      .height(200)
+      .padding({ left: 20, right: 20, top: 20, bottom: 20 })
+      .borderRadius(28)
     }
     .width('100%')
-    .padding({
-      top: this.getHeaderTopPadding(),
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      bottom: DesignConstants.SPACING.SM
-    })
-    .backgroundColor(Color.Transparent)
-    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+    .margin({ left: 16, right: 16, top: this.getHeaderTopPadding(), bottom: 20 })
+    .alignContent(Alignment.Center)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
   }
 
-  // ==================== 动态内容 ====================
   @Builder
-  buildMomentsContent() {
+  private buildNearbyUsersHorizontal() {
     Column() {
-      if (this.momentsLoading) {
-        SystemLoadingView({ message: '正在加载附近动态...' })
-      } else if (this.momentsError.length > 0 && this.moments.length === 0) {
-        EmptyState({ icon: AppIcon.WARNING, message: this.momentsError, actionLabel: '重试', onAction: () => { this.loadNearbyMoments(); } })
-      } else if (this.moments.length === 0) {
-        EmptyState({ icon: AppIcon.CAMERA, message: '附近暂无动态\n去发布第一条吧！' })
-      } else {
-        Refresh({ refreshing: $$this.momentsRefreshing, builder: RefreshIndicator }) {
-          List({ space: DesignConstants.SPACING.MD }) {
-            LazyForEach(this.momentsDataSource, (moment: MomentItem) => {
-              ListItem() {
+      Row() {
+        Text('附近的人')
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+
+        Blank()
+
+        Row({ space: 4 }) {
+          Text('全部')
+            .fontSize(12)
+            .fontColor(this.getCurrentThemePalette().accentBackground)
+          Text() {
+            SymbolSpan($r(AppIcon.ARROW_RIGHT))
+              .fontSize(13)
+              .fontColor([this.getCurrentThemePalette().accentBackground])
+          }
+        }
+      }
+      .width('100%')
+      .margin({ bottom: 12 })
+
+      Scroll() {
+        Row({ space: 12 }) {
+          ForEach(this.users.slice(0, 10), (user: UserItem) => {
+            this.buildHorizontalUserCard(user)
+          }, (user: UserItem) => user.user?.user_id ?? '')
+        }
+      }
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .width('100%')
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16 })
+    .margin({ bottom: 20 })
+  }
+
+  @Builder
+  private buildHorizontalUserCard(user: UserItem) {
+    Column({ space: 8 }) {
+      Stack() {
+        SystemAvatar({
+          avatarUrl: user.user?.avatar_url ?? '',
+          name: user.user?.nickname ?? '',
+          avatarSize: 66,
+          shape: 'squircle'
+        })
+
+        if (user.presence_status === 'online') {
+          Row()
+            .width(12)
+            .height(12)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor('#22c55e')
+            .border({ width: 2, color: this.getCurrentThemePalette().surfaceBackground })
+            .position({ x: 50, y: 50 })
+        }
+
+        if (user.location?.distance !== undefined && user.location?.distance !== null) {
+          Row() {
+            Text(LocationUtil.formatDistance(user.location.distance))
+              .fontSize(9)
+              .fontColor(Color.White)
+          }
+          .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getCurrentThemePalette().accentBackground)
+          .shadow({ radius: 8, color: this.getCurrentThemePalette().accentShadow.color, offsetX: 0, offsetY: 2 })
+          .position({ x: 10, y: 62 })
+        }
+      }
+      .width(70)
+      .height(76)
+
+      Text(user.user?.nickname ?? '')
+        .fontSize(12)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .constraintSize({ maxWidth: 70 })
+    }
+    .alignItems(HorizontalAlign.Center)
+    .onClick(() => {
+      this.openUserProfile(user);
+    })
+  }
+
+  @Builder
+  private buildActivityGrid() {
+    Column() {
+      Row() {
+        Text('附近群组')
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+
+        Blank()
+
+        Row({ space: 4 }) {
+          Text('查看更多')
+            .fontSize(12)
+            .fontColor(this.getCurrentThemePalette().accentBackground)
+          Text() {
+            SymbolSpan($r(AppIcon.ARROW_RIGHT))
+              .fontSize(13)
+              .fontColor([this.getCurrentThemePalette().accentBackground])
+          }
+        }
+      }
+      .width('100%')
+      .margin({ bottom: 12 })
+
+      Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(12), cross: LengthMetrics.vp(12) } }) {
+        ForEach(this.groups.slice(0, this.isTablet ? 6 : 4), (group: GroupItem) => {
+          this.buildActivityCard(group)
+        }, (group: GroupItem) => group.group?.group_id ?? '')
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16 })
+    .margin({ bottom: 20 })
+  }
+
+  @Builder
+  private buildActivityCard(group: GroupItem) {
+    Column() {
+      Row() {
+        Text() {
+          SymbolSpan($r(AppIcon.GROUP))
+            .fontSize(28)
+            .fontColor([this.getCurrentThemePalette().accentBackground])
+        }
+      }
+      .width('100%')
+      .height(64)
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor(this.getCurrentThemePalette().accentMuted)
+      .borderRadius({ topLeft: 22, topRight: 22 })
+
+      Column({ space: 4 }) {
+        Text(group.group?.name ?? '')
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        Row({ space: 6 }) {
+          Text(`${formatCount(group.group?.members_count)} 人`)
+            .fontSize(11)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+          if (group.location?.distance !== undefined) {
+            Text(LocationUtil.formatDistance(group.location.distance))
+              .fontSize(11)
+              .fontColor(this.getCurrentThemePalette().accentBackground)
+          }
+        }
+      }
+      .padding({ left: 12, right: 12, top: 12, bottom: 12 })
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width(this.isTablet ? 'calc(33.3% - 8vp)' : 'calc(50% - 6vp)')
+    .borderRadius(22)
+    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+    .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
+    .onClick(() => {
+      this.openGroupDetail(group);
+    })
+  }
+
+  @Builder
+  private buildMomentsSection() {
+    Column() {
+      Row() {
+        Text('附近动态')
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+
+        Blank()
+
+        Row({ space: 4 }) {
+          Text('更多')
+            .fontSize(12)
+            .fontColor(this.getCurrentThemePalette().accentBackground)
+          Text() {
+            SymbolSpan($r(AppIcon.ARROW_RIGHT))
+              .fontSize(13)
+              .fontColor([this.getCurrentThemePalette().accentBackground])
+          }
+        }
+      }
+      .width('100%')
+      .margin({ bottom: 12 })
+
+      Column({ space: DesignConstants.SPACING.MD }) {
+        if (this.isTablet) {
+          Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(12), cross: LengthMetrics.vp(12) } }) {
+            ForEach(this.moments.slice(0, 6), (moment: MomentItem) => {
+              Column() {
                 MomentFeedCard({
                   moment: moment,
                   onOpenDetail: (item: MomentItem) => this.openMomentDetail(item)
                 })
               }
+              .width('calc(50% - 6vp)')
             }, (moment: MomentItem) => moment.moment_id)
-            if (this.momentsLoadingMore) {
-              ListItem() {
-                LoadingMoreIndicator()
-              }
-            }
           }
-          .padding({
-            left: DesignConstants.SPACING.LG,
-            right: DesignConstants.SPACING.LG,
-            top: DesignConstants.SPACING.SM,
-            bottom: this.getListBottomPadding()
-          })
-          .width('100%')
-          .scrollBar(BarState.Auto)
-          .onReachEnd(() => { this.loadNearbyMoments(true); })
+        } else {
+          ForEach(this.moments.slice(0, 5), (moment: MomentItem) => {
+            MomentFeedCard({
+              moment: moment,
+              onOpenDetail: (item: MomentItem) => this.openMomentDetail(item)
+            })
+          }, (moment: MomentItem) => moment.moment_id)
         }
-        .layoutWeight(1)
-        .onRefreshing(() => { this.loadNearbyMoments(false, true); })
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-        )
       }
     }
     .width('100%')
-    .height('100%')
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+    .margin({ bottom: this.getListBottomPadding() })
   }
 
   private openMomentDetail(moment: MomentItem): void {
@@ -620,514 +772,6 @@ export struct NearbyPage {
     const params = new MomentDetailRouteParam();
     params.momentId = moment.moment_id;
     AppRouter.push(PageNames.MOMENT_DETAIL, params);
-  }
-
-  // ==================== 用户内容 ====================
-  @Builder
-  buildUsersContent() {
-    Column() {
-      if (this.usersLoading) {
-        SystemLoadingView({ message: '正在加载附近用户...' })
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-          )
-      } else if (this.usersError.length > 0 && this.users.length === 0) {
-        EmptyState({ icon: AppIcon.WARNING, message: this.usersError, actionLabel: '重试', onAction: () => { this.loadNearbyUsers(); } })
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-          )
-      } else if (this.users.length === 0) {
-        EmptyState({ icon: AppIcon.PERSON, message: '附近暂无其他用户' })
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-          )
-      } else {
-        Refresh({ refreshing: $$this.usersRefreshing, builder: RefreshIndicator }) {
-          List() {
-            LazyForEach(this.usersDataSource, (user: UserItem) => {
-              ListItem() {
-                this.buildUserCard(user)
-              }
-            }, (user: UserItem) => user.user?.user_id ?? '')
-            if (this.usersLoadingMore) {
-              ListItem() {
-                LoadingMoreIndicator()
-              }
-            }
-          }
-          .padding({
-            left: DesignConstants.SPACING.LG,
-            right: DesignConstants.SPACING.LG,
-            top: DesignConstants.SPACING.SM,
-            bottom: this.getListBottomPadding()
-          })
-          .scrollBar(BarState.Auto)
-          .onReachEnd(() => { this.loadNearbyUsers(true); })
-        }
-        .layoutWeight(1)
-        .onRefreshing(() => { this.loadNearbyUsers(false, true); })
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-        )
-      }
-    }
-    .width('100%')
-    .height('100%')
-  }
-
-  @Builder
-  buildUserCard(user: UserItem) {
-    Column({ space: DesignConstants.SPACING.SM }) {
-      Row({ space: 6 }) {
-        Row({ space: DesignConstants.SPACING.XS }) {
-          Text() {
-            SymbolSpan($r(AppIcon.LOCATION))
-              .fontSize(10)
-              .fontColor([this.getCurrentThemePalette().accentBackground])
-          }
-          Text('附近用户')
-            .fontSize(10)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-        }
-        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-               .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.RADIUS.XL)
-
-        Blank().layoutWeight(1)
-
-        if (user.location?.distance !== undefined && user.location?.distance !== null) {
-          Text(LocationUtil.formatDistance(user.location.distance))
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getCurrentThemePalette().accentBackground)
-            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-            .backgroundColor(this.getSurfaceSubtle())
-            .borderRadius(DesignConstants.RADIUS.XL)
-        }
-      }
-      .width('100%')
-
-      Row({ space: DesignConstants.SPACING.SM }) {
-        Row({ space: DesignConstants.SPACING.SM }) {
-          SystemAvatar({
-            avatarUrl: user.user?.avatar_url ?? '',
-            name: user.user?.nickname ?? '',
-            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-            shape: 'circle'
-          })
-
-          Column({ space: DesignConstants.SPACING.XS }) {
-            Text(user.user?.nickname ?? '')
-              .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(this.getCurrentThemePalette().textPrimary)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-            Row({ space: DesignConstants.SPACING.XS }) {
-              if (user.presence_status === 'online') {
-                Row()
-                  .width(6)
-                  .height(6)
-                  .borderRadius(DesignConstants.RADIUS.FULL)
-                  .backgroundColor(this.getCurrentThemePalette().accentBackground)
-                Text('在线')
-                  .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(this.getCurrentThemePalette().accentBackground)
-              } else {
-                Row()
-                  .width(6)
-                  .height(6)
-                  .borderRadius(DesignConstants.RADIUS.FULL)
-                  .backgroundColor(this.getCurrentThemePalette().textTertiary)
-                Text('离线')
-                  .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-              }
-            }
-            .alignItems(VerticalAlign.Center)
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-        }
-        .layoutWeight(1)
-        .onClick(() => {
-          this.openUserProfile(user);
-        })
-
-        Row() {
-          Text() {
-            SymbolSpan($r(AppIcon.MORE))
-              .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
-        }
-        .width(36)
-        .height(36)
-        .borderRadius(DesignConstants.RADIUS.XL)
-        .backgroundColor(this.getSurfaceSubtle())
-        .border({ width: 1, color: this.getSurfaceBorder() })
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-        .bindMenu([
-          {
-            value: '私聊',
-            action: () => this.startPrivateChat(user)
-          },
-          {
-            value: this.isUserFollowing(user.user?.user_id ?? '') ? '取消关注' : '关注',
-            action: () => this.followUser(user)
-          },
-          {
-            value: this.isUserBlocked(user) ? '取消拉黑' : '拉黑',
-            action: () => {
-              if (this.isUserBlocked(user)) {
-                this.unblockUser(user);
-              } else {
-                this.blockUser(user);
-              }
-            }
-          },
-          {
-            value: '举报用户',
-            action: () => this.reportUser(user)
-          },
-          {
-            value: '复制用户ID',
-            action: () => this.copyText(user.user?.user_id ?? '', '用户ID已复制')
-          }
-        ])
-      }
-      .width('100%')
-
-      if (user.bio) {
-        Text(user.bio)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(17)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-      } else {
-        Text('这个人很神秘，暂时还没有留下简介')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(17)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-      }
-
-      if ((user.social_context?.mutual_friends_count ?? 0) > 0 || (user.tags && user.tags.length > 0)) {
-        Flex({ wrap: FlexWrap.Wrap }) {
-          if ((user.social_context?.mutual_friends_count ?? 0) > 0) {
-            Text(`共同好友 ${formatCount(user.social_context?.mutual_friends_count)}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-              .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-              .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-               .backgroundColor(this.getSurfaceSubtle())
-               .borderRadius(DesignConstants.RADIUS.XL)
-          }
-           ForEach((user.tags ?? []).slice(0, 2), (tag: string) => {
-            Text(`#${tag}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-              .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-              .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-               .backgroundColor(this.getSurfaceSubtle())
-              .borderRadius(DesignConstants.RADIUS.XL)
-          }, (tag: string) => tag)
-        }
-        .width('100%')
-      }
-
-      Row({ space: DesignConstants.SPACING.SM }) {
-        Button(this.isUserActionPending(user.user?.user_id ?? '') ? '处理中...' :
-          (this.isUserFollowing(user.user?.user_id ?? '') ? '已关注' : '关注'))
-          .type(ButtonType.Capsule)
-          .layoutWeight(1)
-          .height(AppThemeVisuals.getSecondaryButtonStyle(this.resolvedThemeId).height)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .enabled(!this.isUserActionPending(user.user?.user_id ?? '') && !this.isUserBlocked(user))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isUserFollowing(user.user?.user_id ?? '') ? this.getSurfaceSubtle() : this.getAccentBackground())
-          .fontColor(this.isUserFollowing(user.user?.user_id ?? '') ? this.getAccentBackground() : this.getAccentText())
-          .shadow(this.isUserFollowing(user.user?.user_id ?? '') ? { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } : this.getCurrentThemePalette().controlShadow)
-          .border(this.isUserFollowing(user.user?.user_id ?? '') ? { width: 0 } : { width: 1, color: this.getSurfaceBorder() })
-          .opacity(this.isUserActionPending(user.user?.user_id ?? '') || this.isUserBlocked(user) ? DesignConstants.OPACITY.LOADING : 1)
-          .onClick(() => { this.followUser(user); })
-
-        Button('私聊')
-          .type(ButtonType.Capsule)
-          .layoutWeight(1)
-          .height(AppThemeVisuals.getSecondaryButtonStyle(this.resolvedThemeId).height)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .enabled(!this.isUserBlocked(user))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.getSurfaceSubtle())
-          .fontColor(this.getCurrentThemePalette().accentBackground)
-          .border({ width: 1, color: this.getSurfaceBorder() })
-          .opacity(this.isUserBlocked(user) ? DesignConstants.OPACITY.LOADING : 1)
-          .onClick(() => { this.startPrivateChat(user); })
-      }
-      .width('100%')
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-    .padding({
-      left: DesignConstants.SPACING.XL,
-      right: DesignConstants.SPACING.XL,
-      top: DesignConstants.SPACING.LG,
-      bottom: DesignConstants.SPACING.LG
-    })
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(AppThemeVisuals.getElevatedCardStyle(this.resolvedThemeId).borderRadius)
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
-    .border({ width: 1, color: this.getSurfaceBorder() })
-    .margin({ bottom: DesignConstants.SPACING.MD })
-  }
-
-  // ==================== 群组内容 ====================
-  @Builder
-  buildGroupsContent() {
-    Column() {
-      if (this.groupsLoading) {
-        SystemLoadingView({ message: '正在加载附近群组...' })
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-          )
-      } else if (this.groupsError.length > 0 && this.groups.length === 0) {
-        EmptyState({ icon: AppIcon.WARNING, message: this.groupsError, actionLabel: '重试', onAction: () => { this.loadNearbyGroups(); } })
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-          )
-      } else if (this.groups.length === 0) {
-        EmptyState({ icon: AppIcon.GROUP, message: '附近暂无群组' })
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-          )
-      } else {
-        Refresh({ refreshing: $$this.groupsRefreshing, builder: RefreshIndicator }) {
-          List() {
-            LazyForEach(this.groupsDataSource, (group: GroupItem) => {
-              ListItem() {
-                this.buildGroupCard(group)
-              }
-            }, (group: GroupItem) => group.group?.group_id ?? '')
-            if (this.groupsLoadingMore) {
-              ListItem() {
-                LoadingMoreIndicator()
-              }
-            }
-          }
-          .padding({
-            left: DesignConstants.SPACING.LG,
-            right: DesignConstants.SPACING.LG,
-            top: DesignConstants.SPACING.SM,
-            bottom: this.getListBottomPadding()
-          })
-          .scrollBar(BarState.Auto)
-          .onReachEnd(() => { this.loadNearbyGroups(true); })
-        }
-        .layoutWeight(1)
-        .onRefreshing(() => { this.loadNearbyGroups(false, true); })
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-        )
-      }
-    }
-    .width('100%')
-    .height('100%')
-  }
-
-  @Builder
-  buildGroupCard(group: GroupItem) {
-    Column({ space: DesignConstants.SPACING.MD }) {
-      Row({ space: 6 }) {
-        Row({ space: DesignConstants.SPACING.XS }) {
-          Text() {
-            SymbolSpan($r(AppIcon.GROUP))
-              .fontSize(10)
-              .fontColor([this.getCurrentThemePalette().accentBackground])
-          }
-          Text('附近群组')
-            .fontSize(10)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-        }
-        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-        .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.RADIUS.XL)
-
-        Blank().layoutWeight(1)
-
-        if ((group.location as RelativeLocation)?.distance !== undefined &&
-          (group.location as RelativeLocation)?.distance !== null) {
-          Text(LocationUtil.formatDistance((group.location as RelativeLocation).distance!))
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getCurrentThemePalette().accentBackground)
-            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-            .backgroundColor(this.getSurfaceSubtle())
-            .borderRadius(DesignConstants.RADIUS.XL)
-        }
-      }
-      .width('100%')
-
-      Row({ space: DesignConstants.SPACING.SM }) {
-        Row({ space: DesignConstants.SPACING.MD }) {
-          SystemAvatar({
-            avatarUrl: group.group?.avatar_url ?? '',
-            name: group.group?.name ?? '',
-            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
-            shape: 'circle'
-          })
-
-          Column({ space: DesignConstants.SPACING.XS }) {
-            Text(group.group?.name ?? '')
-              .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(this.getCurrentThemePalette().textPrimary)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-            Row({ space: 6 }) {
-              Text(`${formatCount(group.group?.members_count)} 人`)
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor(this.getCurrentThemePalette().textSecondary)
-              if (group.has_password) {
-                Text('需口令')
-                  .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-              }
-            }
-            .alignItems(VerticalAlign.Center)
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-        }
-        .layoutWeight(1)
-
-        Row() {
-          Text() {
-            SymbolSpan($r(AppIcon.MORE))
-              .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
-        }
-        .width(36)
-        .height(36)
-        .borderRadius(DesignConstants.RADIUS.XL)
-        .backgroundColor(this.getSurfaceSubtle())
-        .border({ width: 1, color: this.getSurfaceBorder() })
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-        .bindMenu([
-          {
-            value: '查看详情',
-            action: () => this.openGroupDetail(group)
-          },
-          {
-            value: this.isGroupJoined(group) ? '进入群聊' : '加入群组',
-            action: () => this.joinGroup(group)
-          },
-          {
-            value: '举报群组',
-            action: () => this.reportGroup(group)
-          },
-          {
-            value: '复制群组ID',
-            action: () => this.copyText(group.group?.group_id ?? '', '群组ID已复制')
-          }
-        ])
-      }
-      .width('100%')
-
-      if (group.description) {
-        Text(group.description)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(17)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-      } else {
-        Text('这个群还没有群介绍')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(17)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-      }
-
-      if (group.tags && group.tags.length > 0) {
-        Flex({ wrap: FlexWrap.Wrap }) {
-          ForEach(group.tags.slice(0, 3), (tag: string) => {
-            Text(`#${tag}`)
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-            .backgroundColor(this.getSurfaceSubtle())
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-        }, (tag: string) => tag)
-      }
-      .width('100%')
-      }
-
-      Row({ space: DesignConstants.SPACING.SM }) {
-        Button(this.isGroupActionPending(group.group?.group_id ?? '') ? '处理中...' :
-          (this.isGroupJoined(group) ? '进入群聊' : '加入群组'))
-          .type(ButtonType.Capsule)
-          .layoutWeight(1)
-          .height(AppThemeVisuals.getSecondaryButtonStyle(this.resolvedThemeId).height)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .enabled(!this.isGroupActionPending(group.group?.group_id ?? ''))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isGroupJoined(group) ? this.getSurfaceSubtle() : this.getCurrentThemePalette().accentBackground)
-          .fontColor(this.isGroupJoined(group) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
-          .shadow(this.isGroupJoined(group) ? { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } : this.getCurrentThemePalette().controlShadow)
-          .border(this.isGroupJoined(group) ? { width: 0 } : { width: 1, color: this.getSurfaceBorder() })
-          .opacity(this.isGroupActionPending(group.group?.group_id ?? '') ? DesignConstants.OPACITY.LOADING : 1)
-          .onClick(() => { this.joinGroup(group); })
-
-        Button('详情')
-          .type(ButtonType.Capsule)
-          .layoutWeight(1)
-          .height(AppThemeVisuals.getSecondaryButtonStyle(this.resolvedThemeId).height)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.getSurfaceSubtle())
-          .fontColor(this.getCurrentThemePalette().accentBackground)
-          .border({ width: 1, color: this.getSurfaceBorder() })
-          .onClick(() => { this.openGroupDetail(group); })
-      }
-      .width('100%')
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-    .padding({
-      left: DesignConstants.SPACING.MD,
-      right: DesignConstants.SPACING.MD,
-      top: DesignConstants.SPACING.MD,
-      bottom: DesignConstants.SPACING.MD
-    })
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
-    .border({ width: 1, color: this.getSurfaceBorder() })
-    .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
   // ==================== 操作方法 ====================

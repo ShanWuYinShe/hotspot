@@ -14,7 +14,7 @@ export struct SurfaceIconButton {
   @Prop glyphSize: number = 20;
   @Prop disabled: boolean = false;
   onPress?: () => void;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   @State isPressed: boolean = false;
 

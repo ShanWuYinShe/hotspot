@@ -38,7 +38,7 @@ export struct LoginPage {
   @StorageLink('isLoggedIn') isLoggedIn: boolean = false;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   @State loginId: string = '';
   @State password: string = '';

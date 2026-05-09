@@ -15,7 +15,7 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 @Component
 export struct AnnouncementsPage {
   pathStack: NavPathStack = new NavPathStack();
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State announcements: SystemAnnouncementItem[] = [];
   @State loading: boolean = false;
   @State refreshing: boolean = false;

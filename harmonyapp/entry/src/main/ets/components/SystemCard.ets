@@ -53,15 +53,29 @@ export struct SystemCard {
   @Prop cardBorderColor: ResourceColor | string = '';
 
   @State isPressed: boolean = false;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
+  private isNeuTheme(): boolean {
+    return this.resolvedThemeId.startsWith('figma_neu');
+  }
+
   private getThemeShadow(kind: 'default' | 'elevated'): ShadowConfig {
     const palette = this.getPalette();
     return kind === 'elevated' ? palette.elevatedShadow : palette.surfaceShadow;
+  }
+
+  private getNeuHighlightShadow(): ShadowConfig {
+    const effects = this.getPalette().visuals.effects;
+    return { radius: effects.highlightShadow.radius, color: effects.highlightShadow.color, offsetX: effects.highlightShadow.offsetX, offsetY: effects.highlightShadow.offsetY };
+  }
+
+  private getNeuInsetShadow(): ShadowConfig {
+    const effects = this.getPalette().visuals.effects;
+    return { radius: effects.insetShadow.radius, color: effects.insetShadow.color, offsetX: effects.insetShadow.offsetX, offsetY: effects.insetShadow.offsetY };
   }
 
   private getBackgroundColor(): ResourceColor {
@@ -143,35 +157,81 @@ export struct SystemCard {
     return { x: 1, y: 1 };
   }
 
+  private shouldUseNeuShadow(): boolean {
+    return this.isNeuTheme() && this.showShadow &&
+      (this.variant === CardVariant.DEFAULT || this.variant === CardVariant.ELEVATED ||
+        this.variant === CardVariant.OUTLINED);
+  }
+
   build() {
-    Column() {
-      this.content();
-    }
-    .width('100%')
-    .backgroundColor(this.getBackgroundColor())
-    .backgroundBlurStyle(this.getBlurStyle())
-    .borderRadius(this.getCardRadius())
-    .border(this.getBorder())
-    .padding(this.getCardPadding())
-    .shadow(this.getShadow())
-    .scale(this.getScale())
-    .animation({
-      curve: curves.springMotion(
-        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-      )
-    })
-    .onTouch((event: TouchEvent) => {
-      if (this.clickable) {
-        if (event.type === TouchType.Down) {
-          this.isPressed = true;
-        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-          this.isPressed = false;
+    if (this.shouldUseNeuShadow()) {
+      Stack() {
+        Column()
+          .width('100%')
+          .backgroundColor(this.getBackgroundColor())
+          .borderRadius(this.getCardRadius())
+          .shadow(this.getNeuHighlightShadow())
+
+        Column() {
+          this.content();
         }
+        .width('100%')
+        .backgroundColor(this.getBackgroundColor())
+        .borderRadius(this.getCardRadius())
+        .border(this.getBorder())
+        .padding(this.getCardPadding())
+        .shadow(this.getNeuInsetShadow())
       }
-    })
-    .accessibilityGroup(this.clickable)
-    .accessibilityText(this.clickable ? '卡片' : '')
+      .width('100%')
+      .alignContent(Alignment.TopStart)
+      .scale(this.getScale())
+      .animation({
+        curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+        )
+      })
+      .onTouch((event: TouchEvent) => {
+        if (this.clickable) {
+          if (event.type === TouchType.Down) {
+            this.isPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.isPressed = false;
+          }
+        }
+      })
+      .accessibilityGroup(this.clickable)
+      .accessibilityText(this.clickable ? '卡片' : '')
+    } else {
+      Column() {
+        this.content();
+      }
+      .width('100%')
+      .backgroundColor(this.getBackgroundColor())
+      .backgroundBlurStyle(this.getBlurStyle())
+      .borderRadius(this.getCardRadius())
+      .border(this.getBorder())
+      .padding(this.getCardPadding())
+      .shadow(this.getShadow())
+      .scale(this.getScale())
+      .animation({
+        curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+        )
+      })
+      .onTouch((event: TouchEvent) => {
+        if (this.clickable) {
+          if (event.type === TouchType.Down) {
+            this.isPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.isPressed = false;
+          }
+        }
+      })
+      .accessibilityGroup(this.clickable)
+      .accessibilityText(this.clickable ? '卡片' : '')
+    }
   }
 }
 
@@ -190,43 +250,86 @@ export struct MasonryCard {
   @Prop clickable: boolean = false;
 
   @State isPressed: boolean = false;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
   build() {
-    Column() {
-      if (this.imageContent) {
-        this.imageContent!();
-      }
-      this.content();
-    }
-    .width('100%')
-    .backgroundColor(this.getPalette().surfaceBackground)
-    .borderRadius(this.cardRadius)
-    .shadow(this.getPalette().surfaceShadow)
-    .border({ width: 1, color: this.getPalette().borderColor })
-    .scale(this.clickable && this.isPressed ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY, y: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY } :
-      { x: 1, y: 1 })
-    .animation({
-      curve: curves.springMotion(
-        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-      )
-    })
-    .onTouch((event: TouchEvent) => {
-      if (this.clickable) {
-        if (event.type === TouchType.Down) {
-          this.isPressed = true;
-        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-          this.isPressed = false;
+    if (this.resolvedThemeId.startsWith('figma_neu')) {
+      Stack() {
+        Column()
+          .width('100%')
+          .backgroundColor(this.getPalette().surfaceBackground)
+          .borderRadius(this.cardRadius)
+          .shadow(this.getPalette().visuals.effects.highlightShadow)
+        Column() {
+          if (this.imageContent) {
+            this.imageContent!();
+          }
+          this.content();
         }
+        .width('100%')
+        .backgroundColor(this.getPalette().surfaceBackground)
+        .borderRadius(this.cardRadius)
+        .border({ width: 1, color: this.getPalette().borderColor })
+        .shadow(this.getPalette().visuals.effects.insetShadow)
       }
-    })
-    .accessibilityGroup(this.clickable)
-    .accessibilityText(this.clickable ? '卡片' : '')
+      .width('100%')
+      .alignContent(Alignment.TopStart)
+      .scale(this.clickable && this.isPressed ?
+        { x: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY, y: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY } :
+        { x: 1, y: 1 })
+      .animation({
+        curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+        )
+      })
+      .onTouch((event: TouchEvent) => {
+        if (this.clickable) {
+          if (event.type === TouchType.Down) {
+            this.isPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.isPressed = false;
+          }
+        }
+      })
+      .accessibilityGroup(this.clickable)
+      .accessibilityText(this.clickable ? '卡片' : '')
+    } else {
+      Column() {
+        if (this.imageContent) {
+          this.imageContent!();
+        }
+        this.content();
+      }
+      .width('100%')
+      .backgroundColor(this.getPalette().surfaceBackground)
+      .borderRadius(this.cardRadius)
+      .shadow(this.getPalette().surfaceShadow)
+      .border({ width: 1, color: this.getPalette().borderColor })
+      .scale(this.clickable && this.isPressed ?
+        { x: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY, y: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY } :
+        { x: 1, y: 1 })
+      .animation({
+        curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+        )
+      })
+      .onTouch((event: TouchEvent) => {
+        if (this.clickable) {
+          if (event.type === TouchType.Down) {
+            this.isPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.isPressed = false;
+          }
+        }
+      })
+      .accessibilityGroup(this.clickable)
+      .accessibilityText(this.clickable ? '卡片' : '')
+    }
   }
 }

@@ -130,11 +130,11 @@ const DEFAULT_CLEAN_LIGHT_VISUALS = buildVisualTokens(
   DEFAULT_THEME_METRICS,
   {
     avatarShadow: NO_SHADOW,
-    haloShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.control),
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.elevated),
+    haloShadow: NO_SHADOW,
+    previewShadow: NO_SHADOW,
     insetShadow: NO_SHADOW,
     highlightShadow: NO_SHADOW,
-    tabActiveGlow: NO_SHADOW
+    tabActiveGlow: new AppThemeShadow(12, '#3D7A5526', 0, 4)
   }
 );
 
@@ -143,16 +143,16 @@ const DEFAULT_CLEAN_DARK_VISUALS = buildVisualTokens(
   DEFAULT_THEME_METRICS,
   {
     avatarShadow: NO_SHADOW,
-    haloShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.control),
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.elevated),
+    haloShadow: NO_SHADOW,
+    previewShadow: NO_SHADOW,
     insetShadow: NO_SHADOW,
     highlightShadow: NO_SHADOW,
-    tabActiveGlow: NO_SHADOW
+    tabActiveGlow: new AppThemeShadow(12, '#52B8782E', 0, 4)
   }
 );
 
 const FIGMA_NEU_THEME_SHAPE: AppThemeShapeTokens = {
-  surfaceCard: 24,
+  surfaceCard: 22,
   heroCard: 32,
   compactCard: DesignConstants.RADIUS.XL,
   input: 16,
@@ -160,7 +160,7 @@ const FIGMA_NEU_THEME_SHAPE: AppThemeShapeTokens = {
   chip: DesignConstants.SHAPE.CHIP,
   tabBar: 28,
   previewCard: 24,
-  listItem: 24,
+  listItem: 22,
   iconTile: 18
 };
 
@@ -215,6 +215,70 @@ const FIGMA_NEU_DARK_VISUALS = buildVisualTokens(
   }
 );
 
+const VIBRANT_THEME_SHAPE: AppThemeShapeTokens = {
+  surfaceCard: 22,
+  heroCard: 28,
+  compactCard: DesignConstants.RADIUS.XL,
+  input: 18,
+  button: 28,
+  chip: DesignConstants.SHAPE.CHIP,
+  tabBar: 28,
+  previewCard: 22,
+  listItem: 22,
+  iconTile: DesignConstants.RADIUS.MD
+};
+
+const VIBRANT_THEME_METRICS: AppThemeMetricTokens = {
+  cardPadding: 16,
+  heroPadding: DesignConstants.SPACING.XL,
+  metricCardPadding: DesignConstants.SPACING.LG,
+  profilePrimaryButtonHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
+  profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
+  secondaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
+  profileAvatarSize: 96,
+  profileTitleFontSize: DesignConstants.FONT.SIZE.XL,
+  profileSubtitleFontSize: DesignConstants.FONT.SIZE.LG,
+  profileMetricMinHeight: 164,
+  profileMetricValueFontSize: 22,
+  actionButtonHeight: 40,
+  listItemMinHeight: 72,
+  tabBarHeight: 60,
+  createButtonWidth: 48,
+  createButtonHeight: 48,
+  tabBarFloatingMargin: DesignConstants.SPACING.MD,
+  chatListRadius: DesignConstants.SHAPE.CARD,
+  chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT,
+  previewHeroAvatarSize: 32,
+  previewPrimaryButtonHeight: 18,
+  textureOpacity: 0
+};
+
+const VIBRANT_LIGHT_VISUALS = buildVisualTokens(
+  VIBRANT_THEME_SHAPE,
+  VIBRANT_THEME_METRICS,
+  {
+    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_LIGHT.surface),
+    haloShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_LIGHT.control),
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_LIGHT.elevated),
+    insetShadow: new AppThemeShadow(10, '#635BC81A', 3, 3),
+    highlightShadow: new AppThemeShadow(8, '#FFFFFFC0', -3, -3),
+    tabActiveGlow: new AppThemeShadow(20, '#6366F152', 0, 6)
+  }
+);
+
+const VIBRANT_DARK_VISUALS = buildVisualTokens(
+  VIBRANT_THEME_SHAPE,
+  VIBRANT_THEME_METRICS,
+  {
+    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_DARK.surface),
+    haloShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_DARK.control),
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_DARK.elevated),
+    insetShadow: new AppThemeShadow(10, '#00000080', 3, 3),
+    highlightShadow: new AppThemeShadow(8, '#818CF818', -3, -3),
+    tabActiveGlow: new AppThemeShadow(20, '#818CF842', 0, 6)
+  }
+);
+
 const DEFAULT_CLEAN_LIGHT = buildPalette(
   'default_clean_light',
   '当前默认',
@@ -255,9 +319,30 @@ const FIGMA_NEU_DARK = buildPalette(
   false
 );
 
+const VIBRANT_LIGHT = buildPalette(
+  'vibrant_light',
+  '活力靛蓝',
+  '白底靛蓝强调、带色调单向阴影',
+  ThemeConstants.VIBRANT_LIGHT_COLORS,
+  ThemeConstants.SHADOWS.VIBRANT_LIGHT,
+  VIBRANT_LIGHT_VISUALS,
+  true
+);
+
+const VIBRANT_DARK = buildPalette(
+  'vibrant_dark',
+  '活力靛蓝',
+  '深靛底、明快薰衣草强调',
+  ThemeConstants.VIBRANT_DARK_COLORS,
+  ThemeConstants.SHADOWS.VIBRANT_DARK,
+  VIBRANT_DARK_VISUALS,
+  false
+);
+
 const THEME_OPTIONS: ThemeOptionItem[] = [
   { mode: 'follow_system', label: '跟随系统', description: '自动匹配系统明暗模式' } as ThemeOptionItem,
-  { mode: 'default_clean', label: '当前默认', description: '清爽、中性、稳妥的基础主题' } as ThemeOptionItem,
+  { mode: 'vibrant', label: '活力靛蓝', description: '靛蓝强调、带色调单向阴影' } as ThemeOptionItem,
+  { mode: 'default_clean', label: '清新森林', description: '纯扁平设计、森林绿强调' } as ThemeOptionItem,
   { mode: 'figma_neu', label: '浮雕暖调', description: '柔和压边、暖灰底与立体按钮感' } as ThemeOptionItem
 ];
 
@@ -323,6 +408,10 @@ export class AppThemeManager {
         return FIGMA_NEU_DARK;
       case 'figma_neu_light':
         return FIGMA_NEU_LIGHT;
+      case 'vibrant_dark':
+        return VIBRANT_DARK;
+      case 'vibrant_light':
+        return VIBRANT_LIGHT;
       case 'default_clean_dark':
         return DEFAULT_CLEAN_DARK;
       case 'default_clean_light':
@@ -392,6 +481,8 @@ export class AppThemeManager {
   private static resolveThemeId(themeMode: ThemeMode, isDarkMode: boolean): ResolvedThemeId {
     switch (themeMode) {
       case 'follow_system':
+      case 'vibrant':
+        return isDarkMode ? 'vibrant_dark' : 'vibrant_light';
       case 'default_clean':
         return isDarkMode ? 'default_clean_dark' : 'default_clean_light';
       case 'figma_neu':
@@ -406,6 +497,7 @@ export class AppThemeManager {
       case 'default_clean':
       case 'follow_system':
       case 'figma_neu':
+      case 'vibrant':
         return themeMode;
       default:
         return DEFAULT_THEME_MODE;
@@ -418,6 +510,8 @@ export class AppThemeManager {
       case 'default_clean_light':
       case 'figma_neu_dark':
       case 'figma_neu_light':
+      case 'vibrant_dark':
+      case 'vibrant_light':
         return resolvedThemeId;
       default:
         return DEFAULT_RESOLVED_THEME_ID;

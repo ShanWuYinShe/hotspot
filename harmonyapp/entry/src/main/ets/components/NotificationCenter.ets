@@ -28,7 +28,7 @@ class NotificationFilterOption {
 
 @Component
 export struct NotificationCenter {
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   onClose?: () => void;
   @State private visibleNotifications: NotificationItem[] = [];
   @State private selectedFilter: NotificationFilterKey = 'all';
@@ -330,52 +330,87 @@ export struct NotificationCenter {
     Column({ space: 16 }) {
       // 标题栏
       Row() {
-        Text('通知中心')
-          .fontSize(20)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(this.getPalette().textPrimary)
-          .layoutWeight(1)
-
         Row({ space: 12 }) {
-          SystemIcon({
-            icon: AppIcon.CHECK_ALL,
-            iconSize: 20,
-            onIconClick: () => this.onMarkAllRead()
-          })
-
-          SystemIcon({
-            icon: AppIcon.REFRESH,
-            iconSize: 20,
-            onIconClick: () => this.refreshNotifications()
-          })
-
-          SystemIcon({
-            icon: AppIcon.CLOSE,
-            iconSize: 20,
-            onIconClick: () => {
+          if (this.onClose) {
+            Row() {
+              Text() {
+                SymbolSpan($r(AppIcon.BACK))
+                  .fontSize(15)
+                  .fontColor([this.getPalette().textSecondary])
+              }
+            }
+            .width(36)
+            .height(36)
+            .justifyContent(FlexAlign.Center)
+            .borderRadius(18)
+            .backgroundColor(this.getPalette().background)
+            .shadow(this.getPalette().controlShadow)
+            .border({ width: 1, color: this.getPalette().borderColor })
+            .onClick(() => {
               if (this.onClose) {
                 this.onClose();
               }
+            })
+          }
+
+          Column({ space: 1 }) {
+            Text('通知')
+              .fontSize(20)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(this.getPalette().textPrimary)
+            if (this.getUnreadCount() > 0) {
+              Text(`${this.getUnreadCount()} 条未读`)
+                .fontSize(12)
+                .fontColor(this.getPalette().textSecondary)
             }
-          })
+          }
+        }
+        .layoutWeight(1)
+
+        if (this.getUnreadCount() > 0) {
+          Button('全部已读')
+            .type(ButtonType.Normal)
+            .backgroundColor(this.getPalette().background)
+            .fontColor(this.getPalette().accentBackground)
+            .fontSize(12)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+            .shadow(this.getPalette().controlShadow)
+            .border({ width: 1, color: this.getPalette().borderColor })
+            .onClick(() => this.onMarkAllRead())
         }
       }
       .width('100%')
       .padding({ left: 16, right: 16 })
 
-      // 过滤器
-      Scroll(new Scroller()) {
+      // 过滤器标签
+      Scroll() {
         Row({ space: 8 }) {
           ForEach(this.filterOptions, (filter: NotificationFilterOption) => {
-            Button(filter.label)
-              .type(ButtonType.Normal)
+            Text(filter.label)
+              .fontSize(12)
+              .fontColor(this.selectedFilter === filter.key
+                ? Color.White
+                : this.getPalette().textSecondary)
               .backgroundColor(this.selectedFilter === filter.key
                 ? this.getPalette().accentBackground
-                : this.getPalette().surfaceSubtle)
-              .fontColor(this.selectedFilter === filter.key ? this.getPalette().accentText : this.getPalette().buttonSecondaryText)
-              .fontSize(14)
-              .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-              .borderRadius(DesignConstants.RADIUS.XL)
+                : this.getPalette().background)
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .padding({ left: 14, right: 14, top: 6, bottom: 6 })
+              .shadow(this.selectedFilter === filter.key
+                ? {
+                  radius: 10,
+                  color: this.getPalette().accentShadow.color,
+                  offsetX: 0,
+                  offsetY: 3
+                }
+                : this.getPalette().controlShadow)
+              .border({
+                width: 1,
+                color: this.selectedFilter === filter.key
+                  ? Color.Transparent
+                  : this.getPalette().borderColor
+              })
               .onClick(() => this.onFilterSelected(filter.key as NotificationFilterKey))
           }, (filter: NotificationFilterOption) => filter.key + '_' + (this.selectedFilter === filter.key))
         }
@@ -478,75 +513,77 @@ export struct NotificationCenter {
 
   @Builder
   private buildNotificationItem(notification: NotificationItem) {
-    Row({ space: 12 }) {
+    Row({ space: 14 }) {
+      // 头像 + 类型图标徽章
       Stack() {
-        SystemIcon({
-          icon: this.getNotificationIcon(notification.type),
-          iconSize: 24,
-          iconColor: this.getPalette().accentBackground
-        })
-
-        if (!notification.is_read) {
-          Circle({ width: 6, height: 6 })
-            .fill(this.getPalette().accentBackground)
-            .position({ x: 22, y: 22 })
-        }
-      }
-      .width(32)
-      .height(32)
-
-      Column({ space: 6 }) {
-        Row() {
-          Text(this.buildNotificationTitle(notification))
-            .fontSize(16)
-            .fontWeight(notification.is_read ? FontWeight.Normal : FontWeight.Medium)
-            .fontColor(this.getPalette().textPrimary)
-            .layoutWeight(1)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          Text(this.getFilterLabel(this.mapTypeToCategory(notification.type)))
-            .fontSize(12)
-            .fontColor(this.getPalette().textTertiary)
-            .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-            .backgroundColor(this.getPalette().surfaceSubtle)
-            .borderRadius(DesignConstants.RADIUS.SM)
+        if (notification.payload?.actor?.avatar_url) {
+          Image(notification.payload.actor.avatar_url)
+            .width(44)
+            .height(44)
+            .borderRadius(22)
+            .objectFit(ImageFit.Cover)
+        } else {
+          Row() {
+            Text() {
+              SymbolSpan($r(this.getNotificationIcon(notification.type)))
+                .fontSize(18)
+                .fontColor([this.getTypeColor(notification.type)])
+            }
+          }
+          .width(44)
+          .height(44)
+          .borderRadius(22)
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor(this.getTypeColor(notification.type) + '18')
         }
 
-        Text(this.buildNotificationMessage(notification))
-          .fontSize(14)
-          .fontColor(this.getPalette().textSecondary)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
+        // 类型图标徽章
         Row() {
-          Text(this.formatTimestamp(notification.created_at))
-            .fontSize(12)
-            .fontColor(this.getPalette().textTertiary)
-            .layoutWeight(1)
-
-          if (!notification.is_read) {
-            Button('标记已读')
-              .type(ButtonType.Normal)
-              .backgroundColor(this.getPalette().accentBackground)
-              .fontColor(this.getPalette().accentText)
-              .fontSize(12)
-              .height(32)
-              .borderRadius(DesignConstants.RADIUS.XL)
-              .padding({ left: 12, right: 12 })
-              .onClick(() => this.onMarkRead(notification))
+          Text() {
+            SymbolSpan($r(this.getNotificationIcon(notification.type)))
+              .fontSize(9)
+              .fontColor([Color.White])
           }
         }
+        .width(18)
+        .height(18)
+        .borderRadius(9)
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor(this.getTypeColor(notification.type))
+        .border({ width: 2, color: this.getPalette().pageBackground })
+        .position({ x: 30, y: 30 })
+      }
 
+      // 文本内容
+      Column({ space: 2 }) {
+        Text() {
+          Span(this.buildNotificationTitle(notification))
+            .fontSize(13)
+            .fontColor(this.getPalette().textPrimary)
+            .fontWeight(notification.is_read ? FontWeight.Normal : FontWeight.Medium)
+          Span(' ' + this.buildNotificationMessage(notification))
+            .fontSize(13)
+            .fontColor(this.getPalette().textPrimary)
+        }
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .lineHeight(18)
+
+        Text(this.formatTimestamp(notification.created_at))
+          .fontSize(11)
+          .fontColor(this.getPalette().textSecondary)
+          .margin({ top: 2 })
+
+        // 群组操作按钮
         if (this.canHandleGroupInvite(notification)) {
           Row({ space: 8 }) {
             Button(this.isActionLoading(notification.notification_id) ? '处理中...' : '接受')
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().accentBackground)
               .fontColor(this.getPalette().accentText)
-              .fontSize(12)
-              .height(32)
-              .borderRadius(DesignConstants.RADIUS.XL)
+              .fontSize(11)
+              .height(28)
+              .borderRadius(DesignConstants.RADIUS.FULL)
               .enabled(!this.isActionLoading(notification.notification_id))
               .onClick(() => this.handleGroupInviteAction(notification, 'accept'))
 
@@ -554,24 +591,24 @@ export struct NotificationCenter {
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().surfaceSubtle)
               .fontColor(this.getPalette().textPrimary)
-              .fontSize(12)
-              .height(32)
-              .borderRadius(DesignConstants.RADIUS.XL)
+              .fontSize(11)
+              .height(28)
+              .borderRadius(DesignConstants.RADIUS.FULL)
               .borderWidth(1)
               .borderColor(this.getPalette().borderColor)
               .enabled(!this.isActionLoading(notification.notification_id))
               .onClick(() => this.handleGroupInviteAction(notification, 'reject'))
           }
-          .margin({ top: 8 })
+          .margin({ top: 6 })
         } else if (this.canHandleGroupApplication(notification)) {
           Row({ space: 8 }) {
             Button(this.isActionLoading(notification.notification_id) ? '处理中...' : '批准')
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().accentBackground)
               .fontColor(this.getPalette().accentText)
-              .fontSize(12)
-              .height(32)
-              .borderRadius(DesignConstants.RADIUS.XL)
+              .fontSize(11)
+              .height(28)
+              .borderRadius(DesignConstants.RADIUS.FULL)
               .enabled(!this.isActionLoading(notification.notification_id))
               .onClick(() => this.handleGroupApplicationAction(notification, 'approve'))
 
@@ -579,23 +616,36 @@ export struct NotificationCenter {
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().surfaceSubtle)
               .fontColor(this.getPalette().textPrimary)
-              .fontSize(12)
-              .height(32)
-              .borderRadius(DesignConstants.RADIUS.XL)
+              .fontSize(11)
+              .height(28)
+              .borderRadius(DesignConstants.RADIUS.FULL)
               .borderWidth(1)
               .borderColor(this.getPalette().borderColor)
               .enabled(!this.isActionLoading(notification.notification_id))
               .onClick(() => this.handleGroupApplicationAction(notification, 'reject'))
           }
-          .margin({ top: 8 })
+          .margin({ top: 6 })
         }
       }
       .layoutWeight(1)
+
+      // 未读圆点
+      if (!notification.is_read) {
+        Row()
+          .width(8)
+          .height(8)
+          .borderRadius(4)
+          .backgroundColor(this.getTypeColor(notification.type))
+      }
     }
     .width('100%')
-    .padding(16)
-    .backgroundColor(this.getPalette().surfaceBackground)
-    .borderRadius(DesignConstants.RADIUS.LG)
+    .padding({ left: 12, right: 12, top: 12, bottom: 12 })
+    .backgroundColor(notification.is_read ? Color.Transparent : this.getTypeColor(notification.type) + '07')
+    .borderRadius(18)
+    .border({
+      width: 1,
+      color: notification.is_read ? Color.Transparent : this.getTypeColor(notification.type) + '18'
+    })
     .onClick(() => this.handleNotificationClick(notification))
     .accessibilityGroup(true)
     .accessibilityText(`${notification.is_read ? '' : '未读'}通知：${this.buildNotificationTitle(notification)}。${this.buildNotificationMessage(notification)}`)
@@ -615,6 +665,31 @@ export struct NotificationCenter {
         return '系统';
       default:
         return '全部';
+    }
+  }
+
+  private getUnreadCount(): number {
+    let count = 0;
+    for (const notif of this.visibleNotifications) {
+      if (!notif.is_read) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private getTypeColor(type: string): string {
+    switch (this.mapTypeToCategory(type as NotificationType)) {
+      case 'social':
+        return '#6366f1';
+      case 'interaction':
+        return '#EF4444';
+      case 'group':
+        return '#22c55e';
+      case 'system':
+        return '#F59E0B';
+      default:
+        return '#3B82F6';
     }
   }
 

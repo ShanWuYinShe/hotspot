@@ -27,7 +27,7 @@ const PRIVACY_ITEMS: SettingToggleItem[] = [
 @Component
 export struct PrivacySettingsPage {
   pathStack: NavPathStack = new NavPathStack();
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State settings: UserSettings | null = null;
   @State loading: boolean = false;
 

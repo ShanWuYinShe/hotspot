@@ -17,6 +17,7 @@ import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 @Component
 export struct MomentFeedCard {
   @Prop moment: MomentItem;
+  @Prop variant: string = 'default';
   @Prop imageMode: string = 'preview';
   @Prop showTags: boolean = false;
   @Prop showLocationCard: boolean = false;
@@ -27,7 +28,7 @@ export struct MomentFeedCard {
   onOpenDetail?: (moment: MomentItem) => void;
   onImagePreview?: (momentId: string, images: string[], index: number) => void;
   @StorageLink('interaction_moment_state') private momentStateMap: Record<string, MomentSocialState> = {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -118,16 +119,174 @@ export struct MomentFeedCard {
   }
 
   build() {
-    SystemCard({
-      variant: CardVariant.DEFAULT,
-      cardPadding: DesignConstants.SPACING.LG,
-      cardBorderRadius: DesignConstants.RADIUS.XXL,
-      cardBorderColor: this.getPalette().borderColor,
-      cardBackgroundColor: this.getPalette().surfaceBackground,
-      clickable: true
-    }) {
-      this.cardContent()
+    if (this.variant === 'postCard') {
+      this.buildPostCard()
+    } else {
+      SystemCard({
+        variant: CardVariant.DEFAULT,
+        cardPadding: DesignConstants.SPACING.LG,
+        cardBorderRadius: DesignConstants.RADIUS.XXL,
+        cardBorderColor: this.getPalette().borderColor,
+        cardBackgroundColor: this.getPalette().surfaceBackground,
+        clickable: true
+      }) {
+        this.cardContent()
+      }
+      .onClick(() => this.openMomentDetail(this.moment))
     }
+  }
+
+  @Builder
+  private buildPostCard(): void {
+    Column() {
+      Stack() {
+        if (this.moment.images && this.moment.images.length > 0) {
+          Image(MediaUrlUtil.normalize(this.moment.images[0].url))
+            .width('100%')
+            .aspectRatio(16 / 9)
+            .objectFit(ImageFit.Cover)
+        } else {
+          Column()
+            .width('100%')
+            .aspectRatio(16 / 9)
+            .backgroundColor(this.getPalette().surfaceSubtle)
+        }
+
+        Column()
+          .width('100%')
+          .height('100%')
+          .linearGradient({
+            direction: GradientDirection.Bottom,
+            colors: [['rgba(0,0,0,0.04)', 0], ['rgba(0,0,0,0.44)', 1]]
+          })
+
+        Column() {
+          if (this.moment.tags && this.moment.tags.length > 0) {
+            Text(this.moment.tags[0])
+              .fontSize(10)
+              .fontColor(Color.White)
+              .backgroundColor(this.getPalette().accentBackground)
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+              .shadow({
+                radius: 8,
+                color: this.getPalette().accentShadow.color,
+                offsetX: 0,
+                offsetY: 2
+              })
+          }
+
+          Blank()
+
+          Row({ space: 6 }) {
+            SystemAvatar({
+              avatarUrl: this.moment.user?.avatar_url ?? '',
+              name: this.moment.user?.nickname ?? '',
+              avatarSize: 22,
+              shape: 'circle'
+            })
+
+            Text(this.moment.user?.nickname ?? '')
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(Color.White)
+              .layoutWeight(1)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+            if (this.moment.location?.location_name) {
+              Text() {
+                SymbolSpan($r(AppIcon.LOCATION))
+                  .fontSize(9)
+                  .fontColor([Color.White])
+              }
+              Text(this.moment.location.location_name)
+                .fontSize(10)
+                .fontColor(Color.White)
+                .opacity(0.8)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+            }
+          }
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
+          .padding({ left: 12, right: 12 })
+        }
+        .width('100%')
+        .height('100%')
+        .padding({ left: 0, right: 0, top: 10, bottom: 10 })
+      }
+      .width('100%')
+      .borderRadius({ topLeft: DesignConstants.RADIUS.XXL, topRight: DesignConstants.RADIUS.XXL })
+      .clip(true)
+
+      if (this.moment.description) {
+        Text(this.moment.description)
+          .fontSize(13)
+          .fontColor(this.getPalette().textSecondary)
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .lineHeight(20)
+          .padding({ left: 16, right: 16, top: 12, bottom: 4 })
+          .width('100%')
+      }
+
+      Row() {
+        Row({ space: 14 }) {
+          Row({ space: 4 }) {
+            Text() {
+              SymbolSpan($r(AppIcon.HEART))
+                .fontSize(15)
+                .fontColor([this.getMomentState()?.my_state?.is_liked
+                  ? this.getPalette().accentBackground
+                  : this.getPalette().textSecondary])
+            }
+            .onClick(() => this.onLikeClick(this.moment))
+            Text(this.formatCount(this.getMomentState()?.likes_count ?? this.moment.likes_count))
+              .fontSize(11)
+              .fontColor(this.getPalette().textSecondary)
+          }
+
+          Row({ space: 4 }) {
+            Text() {
+              SymbolSpan($r(AppIcon.MESSAGE))
+                .fontSize(15)
+                .fontColor([this.getPalette().textSecondary])
+            }
+            .onClick(() => this.openMomentDetail(this.moment))
+            Text(this.formatCount(this.getMomentState()?.comments_count ?? this.moment.comments_count))
+              .fontSize(11)
+              .fontColor(this.getPalette().textSecondary)
+          }
+        }
+
+        Row({ space: 12 }) {
+          Text() {
+            SymbolSpan($r(AppIcon.STAR_FILL))
+              .fontSize(15)
+              .fontColor([this.getMomentState()?.my_state?.is_favorited
+                ? this.getPalette().accentBackground
+                : this.getPalette().textSecondary])
+          }
+          .onClick(() => this.onFavoriteClick(this.moment))
+
+          Text() {
+            SymbolSpan($r(AppIcon.SHARE))
+              .fontSize(15)
+              .fontColor([this.getPalette().textSecondary])
+          }
+          .onClick(() => this.shareMoment(this.moment))
+        }
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.SpaceBetween)
+      .padding({ left: 16, right: 16, top: 4, bottom: 14 })
+    }
+    .width('100%')
+    .borderRadius(DesignConstants.RADIUS.XXL)
+    .backgroundColor(this.getPalette().background)
+    .shadow(this.getPalette().elevatedShadow)
+    .border({ width: 1, color: this.getPalette().borderColor })
     .onClick(() => this.openMomentDetail(this.moment))
   }
 

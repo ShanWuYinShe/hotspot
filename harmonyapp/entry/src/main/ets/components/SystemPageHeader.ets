@@ -37,7 +37,7 @@ export struct SystemPageHeader {
   rightAction: IconAction | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @Prop surfaceColor: ResourceColor | null = null;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

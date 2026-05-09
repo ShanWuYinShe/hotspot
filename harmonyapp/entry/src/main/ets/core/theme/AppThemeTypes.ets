@@ -1,10 +1,12 @@
-export type ThemeMode = 'follow_system' | 'default_clean' | 'figma_neu';
+export type ThemeMode = 'follow_system' | 'default_clean' | 'figma_neu' | 'vibrant';
 
 export type ResolvedThemeId =
   | 'default_clean_light'
   | 'default_clean_dark'
   | 'figma_neu_light'
-  | 'figma_neu_dark';
+  | 'figma_neu_dark'
+  | 'vibrant_light'
+  | 'vibrant_dark';
 
 export class AppThemeShadow {
   radius: number;
@@ -125,5 +127,5 @@ export interface ThemeOptionItem {
 export const KEY_THEME_MODE: string = 'themeMode';
 export const KEY_RESOLVED_THEME_ID: string = 'resolvedThemeId';
 
-export const DEFAULT_THEME_MODE: ThemeMode = 'follow_system';
-export const DEFAULT_RESOLVED_THEME_ID: ResolvedThemeId = 'default_clean_light';
+export const DEFAULT_THEME_MODE: ThemeMode = 'vibrant';
+export const DEFAULT_RESOLVED_THEME_ID: ResolvedThemeId = 'vibrant_light';

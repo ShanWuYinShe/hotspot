@@ -310,7 +310,7 @@ const RADIUS: RadiusSystem = {
   MD: 12,
   LG: 16,
   XL: 20,
-  XXL: 24,
+  XXL: 22,
   FULL: 999,
 };
 

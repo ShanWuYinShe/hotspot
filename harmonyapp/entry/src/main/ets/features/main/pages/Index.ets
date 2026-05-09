@@ -68,7 +68,8 @@ struct Index {
   @StorageLink(STORAGE_KEY_VISIBLE_NOTIFICATIONS) visibleNotifications: SmartNotification[] = [];
   @StorageLink(STORAGE_KEY_OPEN_NOTIFICATION_CENTER) @Watch('onNotificationCenterRequested') openNotificationCenter: boolean = false;
   @StorageLink(STORAGE_KEY_OPEN_CREATE_SHEET) @Watch('onCreateSheetRequested') openCreateSheet: boolean = false;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp('isTablet') isTablet: boolean = false;
 
   @State currentTabIndex: number = 0;
   @State previousTabIndex: number = 0;
@@ -775,8 +776,13 @@ struct Index {
           .width(52)
           .height(36)
           .borderRadius(18)
-          .backgroundColor(this.getBrandAccent())
-          .opacity(0.18)
+          .backgroundColor(this.resolvedThemeId.startsWith('figma_neu') ?
+            this.getCurrentThemePalette().tabBarActiveBackground :
+            this.getBrandAccent())
+          .opacity(this.resolvedThemeId.startsWith('figma_neu') ? 1.0 : 0.18)
+          .shadow(this.resolvedThemeId.startsWith('figma_neu') ?
+            this.getTabBarVisualStyle().activeGlow :
+            { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } as ShadowOptions)
           .animation({
             curve: curves.springMotion(
               DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,
@@ -939,6 +945,9 @@ struct Index {
             .width('100%')
             .height(this.getTabBarVisualStyle().height + this.safeAreaBottom)
             .backgroundColor(this.getTabBarBackground())
+            .shadow(this.resolvedThemeId.startsWith('figma_neu') ?
+              this.getTabBarVisualStyle().shadow :
+              { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } as ShadowOptions)
 
           Column() {
         Navigation(this.navPathStack) {
@@ -1018,6 +1027,7 @@ struct Index {
         .width('100%')
         .height('100%')
         .padding({ bottom: this.safeAreaBottom })
+        .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
         }
         .width('100%')
         .height('100%')

@@ -44,7 +44,7 @@ export struct SearchPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_CLIENT_CONFIG) clientConfig: ClientConfig | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
 
   @State currentIndex: number = 0;

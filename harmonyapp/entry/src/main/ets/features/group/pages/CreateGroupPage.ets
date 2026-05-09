@@ -41,7 +41,7 @@ export struct CreateGroupPage {
   @StorageLink(KEY_LOCATION_PICK_RESULT) pickResult: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   
   private stateManager = GlobalStateManager.getInstance();
   @State groupName: string = '';

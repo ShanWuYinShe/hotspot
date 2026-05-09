@@ -48,19 +48,19 @@ export interface ThemeShadows {
 
 class ThemeShadowRegistry {
   readonly DEFAULT_CLEAN_LIGHT: ThemeShadows = {
-    surface: new AppThemeShadow(6, '#00000000', 0, 0),
-    elevated: new AppThemeShadow(8, '#14000000', 0, 3),
-    accent: new AppThemeShadow(0, '#00000000', 0, 0),
+    surface: new AppThemeShadow(0, '#00000000', 0, 0),
+    elevated: new AppThemeShadow(0, '#00000000', 0, 0),
+    accent: new AppThemeShadow(14, '#3D7A5526', 0, 4),
     control: new AppThemeShadow(0, '#00000000', 0, 0),
-    tabBar: new AppThemeShadow(6, '#12000000', 0, -1)
+    tabBar: new AppThemeShadow(0, '#00000000', 0, 0)
   };
 
   readonly DEFAULT_CLEAN_DARK: ThemeShadows = {
-    surface: new AppThemeShadow(8, '#26000000', 0, 3),
-    elevated: new AppThemeShadow(10, '#2A000000', 0, 4),
-    accent: new AppThemeShadow(0, '#00000000', 0, 0),
+    surface: new AppThemeShadow(0, '#00000000', 0, 0),
+    elevated: new AppThemeShadow(0, '#00000000', 0, 0),
+    accent: new AppThemeShadow(14, '#52B8782E', 0, 4),
     control: new AppThemeShadow(0, '#00000000', 0, 0),
-    tabBar: new AppThemeShadow(10, '#26000000', 0, -1)
+    tabBar: new AppThemeShadow(0, '#00000000', 0, 0)
   };
 
   readonly FIGMA_NEU_LIGHT: ThemeShadows = {
@@ -78,72 +78,88 @@ class ThemeShadowRegistry {
     control: new AppThemeShadow(12, '#282A31BB', -4, -4),
     tabBar: new AppThemeShadow(18, '#0B0C10AA', 0, -6)
   };
+
+  readonly VIBRANT_LIGHT: ThemeShadows = {
+    surface: new AppThemeShadow(8, '#635BC81A', 0, 3),
+    elevated: new AppThemeShadow(14, '#635BC830', 0, 6),
+    accent: new AppThemeShadow(22, '#6366F152', 0, 8),
+    control: new AppThemeShadow(4, '#635BC80D', 0, 1),
+    tabBar: new AppThemeShadow(8, '#635BC818', 0, -2)
+  };
+
+  readonly VIBRANT_DARK: ThemeShadows = {
+    surface: new AppThemeShadow(10, '#000000A6', 0, 3),
+    elevated: new AppThemeShadow(16, '#00000080', 0, 5),
+    accent: new AppThemeShadow(22, '#818CF842', 0, 8),
+    control: new AppThemeShadow(4, '#818CF80F', 0, 0),
+    tabBar: new AppThemeShadow(10, '#00000080', 0, -3)
+  };
 }
 
 export class ThemeConstants {
   static readonly DEFAULT_CLEAN_LIGHT_COLORS: ColorConfig = {
-    pageBackground: '#FFFFFF',
-    pageGlow: '#FFF7EC',
-    heroGlow: '#F2F8F2',
-    textureTint: '#FFFFFF14',
+    pageBackground: '#EDEDED',
+    pageGlow: '#F2F4F2',
+    heroGlow: '#E8EDE8',
+    textureTint: '#FFFFFF0A',
     surfaceBackground: '#FFFFFF',
-    surfaceSubtle: '#F3F4F6',
+    surfaceSubtle: '#F0F1F0',
     surfaceElevated: '#FFFFFF',
-    borderColor: '#E5E7EB',
-    floatingBorderColor: '#F6F6F6',
+    borderColor: '#00000014',
+    floatingBorderColor: '#0000000A',
     sheetBackground: '#FFFFFF',
-    accentBackground: '#4A7A57',
+    accentBackground: '#3D7A55',
     accentText: '#FFFFFF',
-    accentMuted: '#E6F1E8',
-    chatBackground: '#F5F6FA',
-    systemSurfaceBaseColor: '#FFFFFF',
+    accentMuted: '#E8F0E9',
+    chatBackground: '#F2F3F2',
+    systemSurfaceBaseColor: '#EDEDED',
     overlayStrong: '#80000000',
-    textPrimary: '#111827',
-    textSecondary: '#6B7280',
-    textTertiary: '#9CA3AF',
-    textOnAccentMuted: '#2F4A35',
-    iconMuted: '#6B7280',
-    buttonSecondaryBackground: '#F3F4F6',
-    buttonSecondaryText: '#111827',
-    primaryButtonBorderColor: '#F6F6F6',
-    inputBackgroundColor: '#F3F4F6',
+    textPrimary: '#1A1A1A',
+    textSecondary: '#8A9190',
+    textTertiary: '#AAB0AF',
+    textOnAccentMuted: '#2D5040',
+    iconMuted: '#8A9190',
+    buttonSecondaryBackground: '#F0F1F0',
+    buttonSecondaryText: '#1A1A1A',
+    primaryButtonBorderColor: '#3D7A55',
+    inputBackgroundColor: '#F0F1F0',
     quickActionBackgroundColor: '#FFFFFF',
     tabBarBackground: '#FFFFFF',
-    tabBarInactive: '#6B7280',
-    tabBarActiveBackground: '#F6F8F7',
+    tabBarInactive: '#8A9190',
+    tabBarActiveBackground: '#F0F2F0',
     isDarkTheme: false
   };
 
   static readonly DEFAULT_CLEAN_DARK_COLORS: ColorConfig = {
-    pageBackground: '#0F1115',
-    pageGlow: '#161A22',
-    heroGlow: '#172023',
-    textureTint: '#FFFFFF08',
-    surfaceBackground: '#171A20',
-    surfaceSubtle: '#222733',
-    surfaceElevated: '#1B1F26',
-    borderColor: '#2D3544',
-    floatingBorderColor: '#263040',
-    sheetBackground: '#171A20',
-    accentBackground: '#6BAF86',
-    accentText: '#0F1115',
-    accentMuted: '#1D3426',
-    chatBackground: '#11131D',
-    systemSurfaceBaseColor: '#0F1115',
+    pageBackground: '#111311',
+    pageGlow: '#171A17',
+    heroGlow: '#1A201A',
+    textureTint: '#FFFFFF06',
+    surfaceBackground: '#1A1C1A',
+    surfaceSubtle: '#242624',
+    surfaceElevated: '#1E201E',
+    borderColor: '#FFFFFF12',
+    floatingBorderColor: '#FFFFFF0D',
+    sheetBackground: '#1A1C1A',
+    accentBackground: '#52B878',
+    accentText: '#FFFFFF',
+    accentMuted: '#1A3020',
+    chatBackground: '#0E100E',
+    systemSurfaceBaseColor: '#111311',
     overlayStrong: '#99000000',
-    textPrimary: '#F9FAFB',
-    textSecondary: '#9CA3AF',
-    textTertiary: '#6B7280',
-    textOnAccentMuted: '#D9F2E0',
-    iconMuted: '#9CA3AF',
-    buttonSecondaryBackground: '#222733',
-    buttonSecondaryText: '#F9FAFB',
-    primaryButtonBorderColor: '#263040',
-    inputBackgroundColor: '#222733',
-    quickActionBackgroundColor: '#0F1115',
-    tabBarBackground: '#0F1115',
-    tabBarInactive: '#9CA3AF',
-    tabBarActiveBackground: '#1D242D',
+    textPrimary: '#E4EAE5',
+    textSecondary: '#8AA096',
+    textTertiary: '#5A6B60',
+    textOnAccentMuted: '#D0F0D5',
+    iconMuted: '#8AA096',
+    buttonSecondaryBackground: '#242624',
+    buttonSecondaryText: '#E4EAE5',
+    primaryButtonBorderColor: '#52B878',
+    inputBackgroundColor: '#242624',
+    quickActionBackgroundColor: '#111311',
+    tabBarBackground: '#1A1C1A',
+    tabBarInactive: '#8AA096',
+    tabBarActiveBackground: '#242624',
     isDarkTheme: true
   };
 
@@ -214,4 +230,70 @@ export class ThemeConstants {
   };
 
   static readonly SHADOWS: ThemeShadowRegistry = new ThemeShadowRegistry();
+
+  static readonly VIBRANT_LIGHT_COLORS: ColorConfig = {
+    pageBackground: '#EEF2FF',
+    pageGlow: '#E8EDFF',
+    heroGlow: '#DDE4FF',
+    textureTint: '#6366f108',
+    surfaceBackground: '#FFFFFF',
+    surfaceSubtle: '#F0F0FF',
+    surfaceElevated: '#FFFFFF',
+    borderColor: '#6366F121',
+    floatingBorderColor: '#6366F114',
+    sheetBackground: '#FFFFFF',
+    accentBackground: '#6366f1',
+    accentText: '#FFFFFF',
+    accentMuted: '#E0E7FF',
+    chatBackground: '#EEF2FF',
+    systemSurfaceBaseColor: '#EEF2FF',
+    overlayStrong: '#80000000',
+    textPrimary: '#1e1b4b',
+    textSecondary: '#5b5792',
+    textTertiary: '#8B87C4',
+    textOnAccentMuted: '#C7D2FE',
+    iconMuted: '#5b5792',
+    buttonSecondaryBackground: '#EEF2FF',
+    buttonSecondaryText: '#1e1b4b',
+    primaryButtonBorderColor: '#6366f1',
+    inputBackgroundColor: '#F5F3FF',
+    quickActionBackgroundColor: '#FFFFFF',
+    tabBarBackground: '#FFFFFF',
+    tabBarInactive: '#5b5792',
+    tabBarActiveBackground: '#EEF2FF',
+    isDarkTheme: false
+  };
+
+  static readonly VIBRANT_DARK_COLORS: ColorConfig = {
+    pageBackground: '#09060F',
+    pageGlow: '#1A1530',
+    heroGlow: '#221B3D',
+    textureTint: '#FFFFFF08',
+    surfaceBackground: '#141028',
+    surfaceSubtle: '#1E1840',
+    surfaceElevated: '#1A1432',
+    borderColor: '#818CF821',
+    floatingBorderColor: '#818CF814',
+    sheetBackground: '#141028',
+    accentBackground: '#818cf8',
+    accentText: '#FFFFFF',
+    accentMuted: '#2D2650',
+    chatBackground: '#0E0B20',
+    systemSurfaceBaseColor: '#09060F',
+    overlayStrong: '#AA000000',
+    textPrimary: '#e8e4ff',
+    textSecondary: '#7a75b0',
+    textTertiary: '#5A5490',
+    textOnAccentMuted: '#C7D2FE',
+    iconMuted: '#7a75b0',
+    buttonSecondaryBackground: '#1E1840',
+    buttonSecondaryText: '#e8e4ff',
+    primaryButtonBorderColor: '#818cf8',
+    inputBackgroundColor: '#1A1432',
+    quickActionBackgroundColor: '#141028',
+    tabBarBackground: '#141028',
+    tabBarInactive: '#7a75b0',
+    tabBarActiveBackground: '#1E1840',
+    isDarkTheme: true
+  };
 }
