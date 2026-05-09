@@ -19,6 +19,7 @@ OHPM=/Applications/DevEco-Studio.app/Contents/tools/ohpm/bin/ohpm
 > **Lint & Format**：DevEco Studio 内置，无独立 CLI。代码检查（ESLint + HarmonyOS 插件）由 IDE 在编辑时自动执行。
 
 ## 约束
+- **格式化**：修改代码后必须通过 DevEco Studio 的代码格式化功能处理，具体规则由 IDE 配置定义。
 - **API 路径**：统一在 `ApiEndpoints.ets` 定义。
 - **HTTP 调用**：通过 `HttpUtil.post()` / `ApiClient` 发起。
 - **响应判断**：业务成功唯一依据 `code === 0`。

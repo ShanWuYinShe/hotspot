@@ -9,6 +9,7 @@
 - `gofmt -w .` — 格式化
 
 ## 约束
+- **格式化**：修改代码后必须运行 `gofmt -w .`，具体规则由 Go 工具链定义。
 - **分层**：Handler → Service → Repository。SQL 仅在 repo 层编写。
 - **存储**：PostgreSQL 为权威存储，Redis 用于热点缓存。
 - **分页**：使用 cursor / keyset，cursor 对上层保持不透明。
