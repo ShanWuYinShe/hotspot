@@ -8,22 +8,20 @@
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import MomentCard from '$lib/components/moments/moment-card.svelte';
 	import DashboardStats from '$lib/components/home/dashboard-stats.svelte';
-	import TrendingTags from '$lib/components/home/trending-tags.svelte';
-	import RecommendedGroups from '$lib/components/home/recommended-groups.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
-	import type { MomentItem, UserItem, TagItem } from '$lib/types/api';
+	import type { MomentItem, UserItem } from '$lib/types/api';
 	import MapPin from 'lucide-svelte/icons/map-pin';
 	import Users from 'lucide-svelte/icons/users';
 	import Compass from 'lucide-svelte/icons/compass';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 	import Sparkles from 'lucide-svelte/icons/sparkles';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
-	import Zap from 'lucide-svelte/icons/zap';
 	import Star from 'lucide-svelte/icons/star';
 	import TrendingUp from 'lucide-svelte/icons/trending-up';
-	import Hash from 'lucide-svelte/icons/hash';
-	import Navigation from 'lucide-svelte/icons/navigation';
+	import Coffee from 'lucide-svelte/icons/coffee';
+	import Music from 'lucide-svelte/icons/music';
+	import Navigation2 from 'lucide-svelte/icons/navigation-2';
 	import { goto } from '$app/navigation';
 
 	type HomeMode = 'guest' | 'explore' | 'authenticated';
@@ -32,7 +30,6 @@
 
 	let refreshTrigger = $state(0);
 	let showExplore = $state(false);
-	let trendingTags = $state.raw<TagItem[]>([]);
 	let lastMode = $state<HomeMode>('guest');
 	let lastAnchorUpdatedAt = $state<number | null>(null);
 	let locationDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -96,7 +93,7 @@
 		try {
 			const response = await feedService.getTrending();
 			if (isSuccess(response) && response.data) {
-				trendingTags = response.data.trending_tags ?? [];
+				// trending tags loaded by TrendingTags component
 			}
 		} catch {
 			// ignore
@@ -184,8 +181,6 @@
 		lastMode = mode;
 		lastAnchorUpdatedAt = null;
 		if (mode === 'guest') {
-			trendingTags = [];
-
 			feed.reset();
 			return;
 		}
@@ -349,79 +344,44 @@
 		</div>
 
 		<div class="flex flex-col px-5 pt-4 pb-6">
-			<!-- Stats row -->
-			<div class="mb-5 grid grid-cols-3 gap-2.5">
-				{#each [
-					{ icon: Users, label: '附近', color: 'var(--neu-accent-primary)' },
-					{ icon: Zap, label: '活动', color: 'var(--neu-warning)' },
-					{ icon: Star, label: '在线', color: 'var(--neu-success)' },
-				] as stat}
-					<div
-						class="flex flex-col items-center justify-center rounded-[18px] py-[14px] transition-transform duration-150 active:scale-[0.97]"
-						style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
-					>
-						<stat.icon size={16} strokeWidth={1.75} color={stat.color} />
-						<span style="font-size: 10px; color: var(--neu-text-muted); margin-top: 4px;">{stat.label}</span>
+			<!-- Map Card (Figma Make HomeMobile) -->
+			<div class="relative mb-5 w-full overflow-hidden rounded-[24px]" style="aspect-ratio: 2.4/1; box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
+				<div class="absolute inset-0" style="background: linear-gradient(135deg, var(--neu-fallback-bg), var(--neu-bg));"></div>
+				<div class="absolute inset-0" style="background: linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.3) 100%);"></div>
+				<div class="absolute inset-0 flex items-center justify-center">
+					<div class="flex items-center justify-center rounded-full" style="width: 44px; height: 44px; background: var(--neu-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1.5px solid rgba(255,255,255,0.35); box-shadow: 0 4px 16px rgba(0,0,0,0.18);">
+						<span class="rounded-full animate-pulse" style="width: 14px; height: 14px; background: var(--neu-accent-primary); box-shadow: 0 0 0 4px var(--neu-glow);"></span>
 					</div>
-				{/each}
+				</div>
+				<div class="absolute bottom-3 right-3 flex flex-col gap-2">
+					{#each [Navigation2, Compass] as Icon}
+						<button
+							class="flex items-center justify-center rounded-xl outline-none"
+							style="width: 34px; height: 34px; background: var(--neu-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.25); box-shadow: 2px 2px 6px rgba(0,0,0,0.15);"
+						>
+							<Icon size={14} strokeWidth={1.5} color="var(--neu-text)" />
+						</button>
+					{/each}
+				</div>
+				<div class="absolute bottom-3 left-3 flex items-center gap-1 rounded-full px-2.5 py-1" style="background: var(--neu-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2);">
+					<span style="font-size: 11px; color: var(--neu-accent-primary); font-weight: 600;">{nearbyUsers.length}</span>
+					<span style="font-size: 10px; color: var(--neu-text-muted);">人附近</span>
+				</div>
 			</div>
-
-			<!-- Map overview card -->
-			<a href="/nearby" class="mb-5 block overflow-hidden rounded-[22px] transition-transform duration-150 active:scale-[0.97]" style="aspect-ratio: 2.4/1; background: linear-gradient(135deg, var(--neu-bg), var(--neu-fallback-bg)); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border); text-decoration: none;">
-				<div class="relative flex h-full w-full flex-col justify-between p-4">
-					<div>
-						<div class="mb-1 flex items-center gap-1.5">
-							<MapPin size={12} strokeWidth={2} color="var(--neu-accent-primary)" />
-							<span style="font-size: 11px; color: var(--neu-text-muted);">{mapAnchorStore.displayName}</span>
-						</div>
-						<p style="font-size: 13px; font-weight: 500; color: var(--neu-text);">探索附近</p>
-					</div>
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-1">
-							<div class="rounded-full" style="width: 8px; height: 8px; background: var(--neu-accent-primary); box-shadow: 0 0 8px var(--neu-glow);"></div>
-							<span style="font-size: 10px; color: var(--neu-text-muted);">{nearbyUsers.length}人在附近</span>
-						</div>
-						<div class="flex items-center justify-center rounded-full" style="width: 28px; height: 28px; background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);">
-							<Navigation size={12} color="var(--neu-active-text)" />
-						</div>
-					</div>
-				</div>
-			</a>
-
-			<!-- Trending tags (compact) -->
-			{#if trendingTags.length > 0}
-				<div class="mb-5">
-					<div class="mb-2 flex items-center gap-2">
-						<Hash size={13} color="var(--neu-accent-primary)" />
-						<span class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);">{t('home.trendingTopics')}</span>
-					</div>
-					<div class="flex flex-wrap gap-1.5">
-						{#each trendingTags.slice(0, 8) as tag (tag.name)}
-							<a
-								href="/search?tag={encodeURIComponent(tag.name)}"
-								class="rounded-full px-3.5 py-1.5 text-xs transition-colors"
-								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
-							>
-								#{tag.name}
-							</a>
-						{/each}
-					</div>
-				</div>
-			{/if}
 
 			<!-- Nearby People -->
 			{#if authStore.isAuthenticated}
-				<div class="mb-2 flex items-center justify-between">
-					<span class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);">{t('sidebar.nearbyPeople')}</span>
-					<a href="/users/nearby" class="flex items-center gap-0.5 outline-none" style="color: var(--neu-accent-primary);">
+				<div class="mb-3 flex items-center justify-between">
+					<span class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);">附近的人</span>
+					<button class="flex items-center gap-0.5 outline-none" style="color: var(--neu-accent-primary);" onclick={() => void goto('/users/nearby')}>
 						<span style="font-size: 12px;">{t('common.viewAll')}</span>
 						<ChevronRight size={13} strokeWidth={1.5} />
-					</a>
+					</button>
 				</div>
 				<div class="mb-5 flex flex-col gap-2.5">
 					{#if loadingNearby}
 						{#each Array(3) as _}
-							<div class="flex items-center gap-3.5 rounded-[22px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+							<div class="flex items-center gap-3.5 rounded-[22px] px-4 py-3.5" style="height: 68px; background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 								<div class="rounded-full" style="width: 44px; height: 44px; background: var(--neu-border);"></div>
 								<div class="flex-1">
 									<div class="mb-1.5 rounded" style="width: 60px; height: 12px; background: var(--neu-border);"></div>
@@ -430,10 +390,10 @@
 							</div>
 						{/each}
 					{:else}
-						{#each nearbyUsers.slice(0, 5) as user (user.user.user_id)}
+						{#each nearbyUsers.slice(0, 3) as user (user.user.user_id)}
 							<div role="button" tabindex="0"
 								class="flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5 text-left neu-row-hover transition-transform duration-150 active:scale-[0.97]"
-								style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+								style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
 								aria-label={user.user.nickname}
 								onclick={() => void goto(`/users/${user.user.user_id}`)}
 							>
@@ -464,10 +424,10 @@
 										<span style="font-size: 12px; color: var(--neu-accent-primary);">{formatDistance(user.location.distance)}</span>
 									{/if}
 									<button
-										class="rounded-full px-3.5 py-1.5 outline-none transition-all active:scale-[0.93]"
+										class="rounded-full px-3.5 py-1 outline-none transition-all active:scale-[0.93]"
 										style={user.relation?.is_following
-											? 'box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
-											: 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
+											? 'box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
+											: 'box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
 										onclick={(e) => { e.stopPropagation(); handleFollowToggle(user); }}
 									>
 										{user.relation?.is_following ? t('common.following') : t('common.follow')}
@@ -478,6 +438,35 @@
 					{/if}
 				</div>
 			{/if}
+
+			<!-- Activities (Figma Make) -->
+			<div class="mb-3 flex items-center justify-between">
+				<span class="uppercase" style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);">附近活动</span>
+				<button class="flex items-center gap-0.5 outline-none" style="color: var(--neu-accent-primary);">
+					<span style="font-size: 12px;">更多</span>
+					<ChevronRight size={13} strokeWidth={1.5} />
+				</button>
+			</div>
+			<div class="mb-5" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%;">
+				{#each [
+					{ icon: Coffee, title: '晨间咖啡会', sub: '12人参加 · 0.3km', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
+					{ icon: Music, title: '街头音乐节', sub: '38人参加 · 0.7km', color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' },
+				] as a}
+					{@const Icon = a.icon}
+					<button
+						class="flex flex-col justify-between rounded-[22px] cursor-pointer neu-card-hover transition-transform duration-150 active:scale-[0.97]"
+						style="aspect-ratio: 1/1; padding: 16px; background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+					>
+						<div class="flex items-center justify-center rounded-[12px]" style="width: 36px; height: 36px; background: {a.bg};">
+							<Icon size={17} strokeWidth={1.75} color={a.color} />
+						</div>
+						<div>
+							<p style="font-size: 13px; color: var(--neu-text);">{a.title}</p>
+							<p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 2px;">{a.sub}</p>
+						</div>
+					</button>
+				{/each}
+			</div>
 
 			<!-- Moments Feed -->
 			<div class="mb-2 flex items-center justify-between">
@@ -490,7 +479,7 @@
 			{#if feed.loading}
 				<div class="flex flex-col gap-3">
 					{#each Array(3) as _}
-						<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);">
+						<div class="rounded-[22px] p-4" style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);">
 							<div class="flex items-center gap-3">
 								<div class="rounded-full" style="width: 36px; height: 36px; background: var(--neu-border);"></div>
 								<div class="flex-1">
@@ -569,11 +558,7 @@
 				<!-- Dashboard Stats -->
 				<DashboardStats {refreshTrigger} />
 
-				<!-- Trending Tags -->
-				<TrendingTags {refreshTrigger} />
 
-				<!-- Recommended Groups -->
-				<RecommendedGroups {refreshTrigger} />
 			</div>
 
 			<!-- Right column — people + feed -->
