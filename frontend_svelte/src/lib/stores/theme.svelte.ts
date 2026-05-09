@@ -33,7 +33,7 @@ export const THEME_FAMILY_OPTIONS: {
 ];
 
 const THEME_FAMILY_STORAGE_KEY = 'hotspot_theme_family';
-const DEFAULT_THEME_FAMILY: ThemeFamily = 'forest';
+const DEFAULT_THEME_FAMILY: ThemeFamily = 'vibrant';
 
 /** Map old theme names to current names */
 const THEME_MIGRATION: Record<string, ThemeFamily> = {

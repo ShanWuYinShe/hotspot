@@ -68,7 +68,6 @@
    Dark:   near-black #1A1C1A canvas, #52B878 green accent
    Shadows zeroed → components render as clean flat shapes.
    ═══════════════════════════════════════════════════════════════════════ */
-:root,
 :root[data-theme-family="forest"] {
 	--neu-bg: #FFFFFF;
 	--page-bg: #EDEDED;
@@ -139,7 +138,6 @@
 	--topbar-height-desktop: 4rem;
 }
 
-:root.dark,
 :root[data-theme-family="forest"].dark {
 	--neu-bg: #1A1C1A;
 	--page-bg: #111311;
@@ -213,6 +211,7 @@
    Light:  white cards on soft lavender canvas, electric indigo accent
    Dark:   deep indigo-black canvas, luminous lavender accent
    ═══════════════════════════════════════════════════════════════════════ */
+:root,
 :root[data-theme-family="vibrant"] {
 	--neu-bg: #FFFFFF;
 	--page-bg: #EEF2FF;
@@ -283,6 +282,8 @@
 	--topbar-height-desktop: 4rem;
 }
 
+:root,
+:root.dark,
 :root[data-theme-family="vibrant"].dark {
 	--neu-bg: #141028;
 	--page-bg: #09060F;
@@ -962,8 +963,8 @@
 
 /* Tablet glass-bg override (mobile=0.88, tablet=0.92 per Figma Make) */
 @media (min-width: 600px) and (max-width: 1279px) {
-	:root, :root[data-theme-family="forest"]:not(.dark) { --neu-glass-bg: rgba(248,252,249,0.92); }
-	[data-theme-family="vibrant"]:not(.dark) { --neu-glass-bg: rgba(238,242,255,0.92); }
+	:root, :root[data-theme-family="vibrant"]:not(.dark) { --neu-glass-bg: rgba(238,242,255,0.92); }
+	[data-theme-family="forest"]:not(.dark) { --neu-glass-bg: rgba(248,252,249,0.92); }
 	[data-theme-family="neu"]:not(.dark) { --neu-glass-bg: rgba(234,229,222,0.92); }
 }
 
