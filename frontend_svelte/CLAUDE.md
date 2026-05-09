@@ -10,8 +10,7 @@
 - `bun run format` — 格式化
 
 ## 约束
-- **缩进**：使用空格缩进（2 空格），禁止 Tab。修改文件后运行 `bun run format` 保持格式化。
-- **格式化**：每次修改后运行 `bun run format`；提交前确保 `bun run format` 通过。禁止手动调整格式。
+- **格式化**：修改代码后必须运行 `bun run format`，具体规则由 `.prettierrc` 定义。
 - **API 路径**：统一从 `endpoints.ts` 引用。
 - **请求封装**：所有请求走 `client.ts` 和 `services/*`。
 - **HTTP 方法**：统一 POST。
