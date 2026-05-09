@@ -125,8 +125,8 @@
     tt<!-- Desktop: two-column layout (260px left + right content) -->
     tt
     <div class="flex flex-col h-full">
-      ttt<!-- Sticky header -->
-      ttt
+      <!-- Sticky header -->
+
       <div
         class="flex-shrink-0 flex items-center justify-between px-6 py-4"
         style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
@@ -152,10 +152,9 @@
             t<Settings size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
           </button>
         </div>
-        ttt
       </div>
-      ttt<!-- Two-column body -->
-      ttt
+      <!-- Two-column body -->
+
       <div class="flex flex-1 min-h-0 overflow-hidden">
         <!-- Left panel (260px) -->
         <div
@@ -175,13 +174,12 @@
               style="width: 96px; height: 96px; padding: 2px; background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1.5px solid var(--neu-border);"
             >
               tt{#if profile.avatar_url}
-                ttt<img
+                <img
                   src={profile.avatar_url}
                   alt={profile.nickname}
                   class="h-full w-full rounded-full object-cover"
                 />
                 tt{:else}
-                ttt
                 <div
                   class="flex h-full w-full items-center justify-center rounded-full"
                   style="font-size: 28px; font-weight: 700; color: var(--neu-text);"
@@ -236,8 +234,8 @@
             t{#each [{ label: '帖子', value: profile.stats.moments_count }, { label: '关注者', value: profile.stats.followers_count }, { label: '足迹', value: profile.stats.friends_count }] as stat}
               tt
               <div class="flex items-center justify-between px-4 py-3">
-                ttt<span style="font-size: 13px; color: var(--neu-text-muted);">{stat.label}</span>
-                ttt<span style="font-size: 17px; color: var(--neu-text);">{stat.value}</span>
+                <span style="font-size: 13px; color: var(--neu-text-muted);">{stat.label}</span>
+                <span style="font-size: 17px; color: var(--neu-text);">{stat.value}</span>
                 tt
               </div>
               t{/each}
@@ -249,11 +247,11 @@
           >
             t{#each [{ icon: Grid3X3, label: '我的瞬间', count: profile.stats.moments_count }, { icon: Users, label: '好友', count: profile.stats.friends_count }] as link}
               tt<a href="'/profile'" class="flex items-center gap-3 px-4 py-2.5 neu-row-hover">
-                ttt<link.icon size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
-                ttt<span class="flex-1" style="font-size: 13px; color: var(--neu-text-muted);"
+                <link.icon size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                <span class="flex-1" style="font-size: 13px; color: var(--neu-text-muted);"
                   >{link.label}</span
                 >
-                ttt<span style="font-size: 12px; color: var(--neu-text-muted);">{link.count}</span>
+                <span style="font-size: 12px; color: var(--neu-text-muted);">{link.count}</span>
                 tt</a
               >
               t{/each}
@@ -273,7 +271,7 @@
                 class="flex items-center justify-center rounded-full"
                 style="width: 72px; height: 72px; box-shadow: 8px 8px 18px var(--neu-shadow-dark), -8px -8px 18px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
               >
-                ttt<Grid3X3
+                <Grid3X3
                   size={28}
                   color="var(--neu-text-muted)"
                   strokeWidth={1.25}
@@ -291,29 +289,24 @@
             t
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
               tt{#each Array(Math.min(profile.stats.moments_count, 9)) as _}
-                ttt
                 <div
                   class="relative cursor-pointer overflow-hidden rounded-[16px]"
                   style="aspect-ratio: 1/1; background: var(--neu-fallback-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
                 >
-                  tttt
                   <div class="flex h-full w-full items-center justify-center">
-                    ttttt<Grid3X3
+                    <Grid3X3
                       size={20}
                       color="var(--neu-text-muted)"
                       strokeWidth={1.25}
                       style="opacity: 0.3;"
                     />
-                    tttt
                   </div>
-                  ttt
                 </div>
                 tt{/each}
               t
             </div>
           {/if}
         </div>
-        ttt
       </div>
       tt
     </div>
