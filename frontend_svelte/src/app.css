@@ -796,18 +796,21 @@
     padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Mobile bottom nav (Figma Make MainLayout) */
+  /* Mobile bottom nav (Figma Make MainLayout — glassmorphic) */
   .mobile-bottom-nav {
     flex-shrink: 0;
     width: 100%;
-    background-color: var(--neu-bg);
-
+    background: var(--neu-glass-bg);
+    backdrop-filter: blur(24px) saturate(1.8);
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+    border-top: 1px solid var(--neu-glass-border);
     box-shadow:
-      0 -4px 20px var(--neu-shadow-dark),
-      0 4px 12px var(--neu-shadow-light);
+      0 -1px 0 var(--neu-glass-border),
+      0 -8px 28px var(--neu-shadow-dark);
     transition:
-      background-color 0.4s,
-      border-color 0.4s;
+      background 0.4s,
+      border-color 0.4s,
+      box-shadow 0.4s;
   }
 
   .mobile-bottom-nav__tab {

@@ -14,7 +14,7 @@
 
   const navItems = [
     { href: '/', label: t('nav.nearby'), icon: MapPin },
-    { href: '/moments/nearby', label: t('nav.discover'), icon: Compass },
+    { href: '/discover', label: t('nav.discover'), icon: Compass },
     { href: '/chat', label: t('nav.messagesTab'), icon: MessageCircle, requiresAuth: true },
     { href: '/profile', label: t('nav.me'), icon: User, requiresAuth: true }
   ];

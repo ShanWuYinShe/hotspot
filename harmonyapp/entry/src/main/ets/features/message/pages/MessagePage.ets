@@ -91,7 +91,7 @@ export struct MessagePage {
       const item = this.chatListDataSource.getData(i);
       if (item.type === 'private') {
         const pci = item.data as PrivateChatItem;
-        if (pci.other_user?.presence_status === 'online') {
+        if (pci.presence_status === 'online') {
           online.push(item);
         }
       }
@@ -521,7 +521,7 @@ export struct MessagePage {
           .height(38)
           .justifyContent(FlexAlign.Center)
           .borderRadius(19)
-          .backgroundColor(this.getCurrentThemePalette().background)
+          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .bindMenu([
@@ -579,7 +579,7 @@ export struct MessagePage {
           .height(38)
           .justifyContent(FlexAlign.Center)
           .borderRadius(19)
-          .backgroundColor(this.getCurrentThemePalette().background)
+          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => {
@@ -735,7 +735,7 @@ export struct MessagePage {
                 .border({ width: 1.5, color: this.getCurrentThemePalette().accentBackground })
                 .borderRadius(26)
                 .padding(2.5)
-                .backgroundColor(this.getCurrentThemePalette().background)
+                .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
                 .shadow(this.getCurrentThemePalette().controlShadow)
 
                 Row()
@@ -743,7 +743,7 @@ export struct MessagePage {
                   .height(12)
                   .borderRadius(6)
                   .backgroundColor('#22c55e')
-                  .border({ width: 2, color: this.getCurrentThemePalette().background })
+                  .border({ width: 2, color: this.getCurrentThemePalette().surfaceBackground })
                   .position({ x: 38, y: 38 })
               }
 
@@ -840,7 +840,7 @@ export struct MessagePage {
     .borderRadius(DesignConstants.RADIUS.XXL)
     .backgroundColor(this.pressedChatKey === this.getChatKey(item)
       ? this.getCurrentThemePalette().surfaceSubtle
-      : this.getCurrentThemePalette().background)
+      : this.getCurrentThemePalette().surfaceBackground)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ top: 4, bottom: 4 })

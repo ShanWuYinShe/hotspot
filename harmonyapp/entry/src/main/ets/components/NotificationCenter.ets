@@ -343,7 +343,7 @@ export struct NotificationCenter {
             .height(36)
             .justifyContent(FlexAlign.Center)
             .borderRadius(18)
-            .backgroundColor(this.getPalette().background)
+            .backgroundColor(this.getPalette().surfaceBackground)
             .shadow(this.getPalette().controlShadow)
             .border({ width: 1, color: this.getPalette().borderColor })
             .onClick(() => {
@@ -370,7 +370,7 @@ export struct NotificationCenter {
         if (this.getUnreadCount() > 0) {
           Button('全部已读')
             .type(ButtonType.Normal)
-            .backgroundColor(this.getPalette().background)
+            .backgroundColor(this.getPalette().surfaceBackground)
             .fontColor(this.getPalette().accentBackground)
             .fontSize(12)
             .borderRadius(DesignConstants.RADIUS.FULL)
@@ -394,7 +394,7 @@ export struct NotificationCenter {
                 : this.getPalette().textSecondary)
               .backgroundColor(this.selectedFilter === filter.key
                 ? this.getPalette().accentBackground
-                : this.getPalette().background)
+                : this.getPalette().surfaceBackground)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .padding({ left: 14, right: 14, top: 6, bottom: 6 })
               .shadow(this.selectedFilter === filter.key

@@ -16,9 +16,10 @@
   interface Props {
     moment: MomentItem;
     class?: string;
+    dense?: boolean;
   }
 
-  let { moment, class: className = '' }: Props = $props();
+  let { moment, class: className = '', dense = false }: Props = $props();
 
   const likeAction = useOptimisticToggle({
     initialValue: () => moment.my_state?.is_liked ?? false,
@@ -171,7 +172,7 @@
   {/if}
 
   <!-- Content -->
-  <div class="px-4 pt-3 pb-2">
+  <div style="padding: {dense ? '10px 14px 6px' : '12px 16px 8px'};">
     {#if !moment.images || moment.images.length === 0}
       <!-- No image: show author info inline -->
       <div class="mb-2 flex items-center gap-2">
@@ -213,7 +214,7 @@
     {#if moment.description}
       <p
         class="line-clamp-2"
-        style="font-size: 13px; color: var(--neu-text-muted); line-height: 1.6;"
+        style="font-size: {dense ? 12 : 13}px; color: var(--neu-text-muted); line-height: 1.6;"
       >
         {moment.description}
       </p>
@@ -229,8 +230,11 @@
   </div>
 
   <!-- Actions -->
-  <div class="flex items-center justify-between px-4 pt-1 pb-3.5">
-    <div class="flex gap-3">
+  <div
+    class="flex items-center justify-between"
+    style="padding: {dense ? '4px 14px 12px' : '4px 16px 14px'};"
+  >
+    <div class="flex gap-3.5">
       <button
         data-card-action
         class="flex items-center gap-1.5 rounded-full px-1 py-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)]"

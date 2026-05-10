@@ -95,50 +95,54 @@
       class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar"
       style="background-color: var(--neu-bg);"
     >
-      {#if authStore.isAuthenticated}
-        {@render children()}
-      {:else if authStore.isRestoring}
-        <div class="flex flex-col items-center justify-center gap-3 py-20">
-          <div
-            class="h-8 w-8 animate-spin rounded-full"
-            style="border: 4px solid var(--neu-border); border-top-color: var(--neu-accent-primary);"
-          ></div>
-          <p style="font-size: 13px; color: var(--neu-text-muted);">{t('auth.restoringSession')}</p>
-        </div>
-      {:else}
-        <div class="flex flex-col items-center justify-center py-20">
-          <div class="mb-4 rounded-[22px] neu-flat p-6">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              style="color: var(--neu-text-muted);"
-            >
-              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 0 0 1 10 0v4" />
-            </svg>
+      <div style="max-width: 720px; margin-left: auto; margin-right: auto; width: 100%;">
+        {#if authStore.isAuthenticated}
+          {@render children()}
+        {:else if authStore.isRestoring}
+          <div class="flex flex-col items-center justify-center gap-3 py-20">
+            <div
+              class="h-8 w-8 animate-spin rounded-full"
+              style="border: 4px solid var(--neu-border); border-top-color: var(--neu-accent-primary);"
+            ></div>
+            <p style="font-size: 13px; color: var(--neu-text-muted);">
+              {t('auth.restoringSession')}
+            </p>
           </div>
-          <h2 class="mb-2 text-xl font-semibold" style="color: var(--neu-text);">
-            {t('auth.loginRequired')}
-          </h2>
-          <p class="mb-6" style="color: var(--neu-text-muted);">
-            {t('auth.loginRequiredDescription')}
-          </p>
-          <button
-            class="rounded-[22px] px-8 py-3.5 font-medium transition-all"
-            style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);"
-            onclick={() => uiStore.openLoginModalWithRedirect({})}
-          >
-            {t('common.loginNow')}
-          </button>
-        </div>
-      {/if}
+        {:else}
+          <div class="flex flex-col items-center justify-center py-20">
+            <div class="mb-4 rounded-[22px] neu-flat p-6">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="color: var(--neu-text-muted);"
+              >
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 0 0 1 10 0v4" />
+              </svg>
+            </div>
+            <h2 class="mb-2 text-xl font-semibold" style="color: var(--neu-text);">
+              {t('auth.loginRequired')}
+            </h2>
+            <p class="mb-6" style="color: var(--neu-text-muted);">
+              {t('auth.loginRequiredDescription')}
+            </p>
+            <button
+              class="rounded-[22px] px-8 py-3.5 font-medium transition-all"
+              style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);"
+              onclick={() => uiStore.openLoginModalWithRedirect({})}
+            >
+              {t('common.loginNow')}
+            </button>
+          </div>
+        {/if}
+      </div>
     </main>
     <TabletBottomNav />
   </div>

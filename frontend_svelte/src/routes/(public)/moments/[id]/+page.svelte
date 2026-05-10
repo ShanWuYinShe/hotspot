@@ -222,7 +222,7 @@
     >
       <ArrowLeft size={18} color="var(--neu-text)" />
     </button>
-    <h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">瞬间详情</h1>
+    <h1 style="font-size: 16px; color: var(--neu-text);">瞬间详情</h1>
     {#if isOwner}
       <div class="ml-auto">
         <button
@@ -270,7 +270,7 @@
       <a href="/users/{moment.user.user_id}" class="flex items-center gap-3">
         <div
           class="overflow-hidden rounded-full"
-          style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);"
+          style="width: 44px; height: 44px; border: 2px solid var(--neu-accent-primary);"
         >
           <img
             src={moment.user.avatar_url}
@@ -304,19 +304,30 @@
         {#if moment.images && moment.images.length > 0}
           <div class="grid gap-2 {moment.images.length === 1 ? '' : 'grid-cols-2'}">
             {#each moment.images as image, i (image.url)}
-              <img
-                src={image.url}
-                alt="图片 {i + 1}"
-                class="w-full rounded-[14px]"
-                loading="lazy"
-              />
+              <div class="relative">
+                <img
+                  src={image.url}
+                  alt="图片 {i + 1}"
+                  class="w-full rounded-[14px]"
+                  style="height: clamp(220px, 38vw, 380px); object-fit: cover;"
+                  loading="lazy"
+                />
+                {#if i === 0 && moment.tags && moment.tags.length > 0}
+                  <div
+                    class="absolute left-3 top-3 rounded-full px-2.5 py-0.5"
+                    style="background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);"
+                  >
+                    <span style="font-size: 10px; color: white;">#{moment.tags[0]}</span>
+                  </div>
+                {/if}
+              </div>
             {/each}
           </div>
         {/if}
 
-        {#if moment.tags && moment.tags.length > 0}
+        {#if moment.tags && moment.tags.length > 1}
           <div class="flex flex-wrap gap-2">
-            {#each moment.tags as tag (tag)}
+            {#each moment.tags.slice(1) as tag (tag)}
               <span
                 class="rounded-full px-2.5 py-1"
                 style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
@@ -336,37 +347,37 @@
         <div class="flex gap-2">
           <button
             class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: {isLiked
-              ? 'var(--neu-error)'
+            style="background: var(--neu-bg); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: {isLiked
+              ? 'var(--neu-accent-primary)'
               : 'var(--neu-text-muted)'};"
             onclick={handleLike}
           >
-            <Heart size={16} class={isLiked ? 'fill-current' : ''} />
+            <Heart size={19} class={isLiked ? 'fill-current' : ''} />
             <span style="font-size: 13px;">{likesCount}</span>
           </button>
           <button
             class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+            style="background: var(--neu-bg); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
           >
-            <MessageCircle size={16} />
+            <MessageCircle size={19} />
             <span style="font-size: 13px;">{commentsCount}</span>
           </button>
         </div>
         <div class="flex gap-2">
           <button
-            class="flex items-center justify-center rounded-full outline-none"
-            style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: {isFavorited
+            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+            style="background: var(--neu-bg); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: {isFavorited
               ? 'var(--neu-warning)'
               : 'var(--neu-text-muted)'};"
             onclick={handleFavorite}
           >
-            <Bookmark size={16} class={isFavorited ? 'fill-current' : ''} />
+            <Bookmark size={19} class={isFavorited ? 'fill-current' : ''} />
           </button>
           <button
-            class="flex items-center justify-center rounded-full outline-none"
-            style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+            style="background: var(--neu-bg); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
           >
-            <Share2 size={16} />
+            <Share2 size={19} />
           </button>
         </div>
       </div>
@@ -378,42 +389,39 @@
         class="rounded-[22px] p-4"
         style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
       >
-        <div class="flex gap-3">
-          <div
-            class="overflow-hidden rounded-full"
-            style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);"
-          >
+        <div class="flex items-center gap-3">
+          <div class="overflow-hidden rounded-full" style="width: 34px; height: 34px;">
             <img
               src={authStore.currentAccount?.avatar_url || ''}
               alt=""
               class="h-full w-full object-cover"
             />
           </div>
-          <div class="flex-1">
-            <textarea
+          <div
+            class="neu-input-surface flex flex-1 items-center"
+            style="height: 38px; border-radius: 9999px;"
+          >
+            <input
+              type="text"
               {@attach useKeyboardFocus()}
               placeholder="写下你的评论..."
               bind:value={commentText}
-              rows={2}
               disabled={isSubmitting}
-              class="neu-input-base w-full resize-none rounded-[14px] p-3 outline-none"
-              style="background: var(--neu-bg); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
-            ></textarea>
-            <div class="mt-2 flex justify-end">
-              <button
-                class="flex items-center gap-2 rounded-full px-4 py-2 font-medium outline-none transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] focus-visible:ring-[2px] focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]"
-                style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);"
-                onclick={submitComment}
-                disabled={!commentText.trim() || isSubmitting}
-              >
-                {#if isSubmitting}
-                  <Loader2 size={14} class="animate-spin" />
-                {:else}
-                  <Send size={14} />
-                {/if}
-                发送
-              </button>
-            </div>
+              class="bg-transparent flex-1 outline-none text-sm"
+              style="color: var(--neu-text);"
+            />
+            <button
+              class="ml-2 mr-1 flex items-center justify-center rounded-full outline-none"
+              style="width: 36px; height: 36px; background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);"
+              onclick={submitComment}
+              disabled={!commentText.trim() || isSubmitting}
+            >
+              {#if isSubmitting}
+                <Loader2 size={14} color="var(--neu-active-text)" class="animate-spin" />
+              {:else}
+                <Send size={14} color="var(--neu-active-text)" />
+              {/if}
+            </button>
           </div>
         </div>
       </div>
@@ -424,9 +432,12 @@
       class="rounded-[22px] p-6"
       style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
     >
-      <h2 style="font-size: 16px; font-weight: 600; color: var(--neu-text); margin-bottom: 16px;">
-        评论 ({commentsCount})
-      </h2>
+      <p
+        class="uppercase"
+        style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 16px;"
+      >
+        评论 · {commentsCount}
+      </p>
 
       {#if isLoadingComments}
         <div class="space-y-4">
@@ -434,7 +445,7 @@
             <div class="flex gap-3">
               <div
                 class="rounded-full"
-                style="width: 40px; height: 40px; background: var(--neu-border);"
+                style="width: 34px; height: 34px; background: var(--neu-border);"
               ></div>
               <div class="flex-1 space-y-2">
                 <div
@@ -472,10 +483,7 @@
           {#each comments as comment (comment.comment_id)}
             <div class="flex gap-3">
               <a href="/users/{comment.user.user_id}">
-                <div
-                  class="overflow-hidden rounded-full"
-                  style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);"
-                >
+                <div class="overflow-hidden rounded-full" style="width: 34px; height: 34px;">
                   <img
                     src={comment.user.avatar_url}
                     alt={comment.user.nickname}

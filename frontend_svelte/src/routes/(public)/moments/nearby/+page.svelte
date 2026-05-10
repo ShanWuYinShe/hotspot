@@ -15,6 +15,7 @@
   import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
   import LogIn from 'lucide-svelte/icons/log-in';
   import TrendingUp from 'lucide-svelte/icons/trending-up';
+  import Sparkles from 'lucide-svelte/icons/sparkles';
   import X from 'lucide-svelte/icons/x';
   import { t } from '$lib/i18n';
 
@@ -61,7 +62,7 @@
   <title>{t('discover.title')} - HotSpot</title>
 </svelte:head>
 
-{#if !platformStore.isDesktop}
+{#if platformStore.isMobile}
   <!-- Mobile Discover — single-column feed, max-width 560px centred -->
   <div class="flex flex-col">
     <!-- Sticky header -->
@@ -78,10 +79,7 @@
       </div>
 
       <!-- Search bar -->
-      <div
-        class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 neu-input-surface"
-        style="border: 1px solid var(--neu-border);"
-      >
+      <div class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 neu-input-surface">
         <Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" class="flex-shrink-0" />
         <input
           type="text"
@@ -214,6 +212,164 @@
       </div>
     </div>
   </div>
+{:else if platformStore.isTablet}
+  <!-- Tablet Discover — 2-column feed, centred, no sidebar -->
+  <div class="flex h-full flex-col">
+    <!-- Sticky header -->
+    <div
+      class="flex-shrink-0 px-6 pt-4 pb-0"
+      style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+    >
+      <!-- Top bar -->
+      <div class="mb-2 flex items-center justify-between">
+        <h1 style="font-size: 24px; color: var(--neu-text);">{t('discover.title')}</h1>
+        <span
+          class="flex items-center gap-1 rounded-full px-3 py-1.5"
+          style="background: var(--neu-accent-primary); font-size: 11px; color: white;"
+        >
+          <Sparkles size={11} color="white" strokeWidth={2} />
+          精选
+        </span>
+      </div>
+
+      <!-- Search bar -->
+      <div
+        class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 neu-input-surface"
+        style="border: 1px solid var(--neu-border);"
+      >
+        <Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" class="flex-shrink-0" />
+        <input
+          type="text"
+          bind:value={searchVal}
+          placeholder="地点、人物、关键词…"
+          class="flex-1 bg-transparent outline-none"
+          style="font-size: 13px; color: var(--neu-text);"
+        />
+        {#if searchVal.length > 0}
+          <button
+            class="flex-shrink-0 outline-none transition-transform duration-150 active:scale-[0.85]"
+            onclick={() => {
+              searchVal = '';
+            }}
+          >
+            <X size={13} color="var(--neu-text-muted)" strokeWidth={2} />
+          </button>
+        {/if}
+      </div>
+
+      <!-- Tab bar -->
+      <div
+        class="relative flex overflow-x-auto no-scrollbar"
+        style="border-bottom: 1px solid var(--neu-border);"
+      >
+        {#each TABS as tab}
+          <button
+            class="relative flex-shrink-0 pb-3 pt-1 outline-none transition-transform duration-150 active:scale-[0.94]"
+            style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab
+              ? 'var(--neu-accent-primary)'
+              : 'var(--neu-text-muted)'}; font-weight: {activeTab === tab
+              ? 500
+              : 400}; font-size: 13px; transition: color 0.2s;"
+            onclick={() => {
+              activeTab = tab;
+            }}
+          >
+            {tab}
+            {#if activeTab === tab}
+              <div
+                style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--neu-accent-primary);"
+              ></div>
+            {/if}
+          </button>
+        {/each}
+      </div>
+    </div>
+
+    <!-- Content — 2-column grid, centred, max 800px -->
+    <div class="flex-1 overflow-y-auto no-scrollbar">
+      <div
+        style="max-width: 800px; margin-left: auto; margin-right: auto; padding: 16px 20px 28px;"
+      >
+        <!-- Tag chips -->
+        <div class="mb-5 flex flex-wrap items-center gap-2">
+          {#each TAGS as tag}
+            <button
+              class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all duration-150 active:scale-[0.93]"
+              style={activeTag === tag
+                ? 'background: var(--neu-accent-primary); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--neu-glow); border: 1px solid transparent;'
+                : 'background: var(--neu-bg); color: var(--neu-text-muted); font-size: 12px; box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+              onclick={() => {
+                activeTag = activeTag === tag ? null : tag;
+              }}
+            >
+              {tag}
+            </button>
+          {/each}
+        </div>
+
+        {#if pagination.loading}
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            {#each Array(4) as _}
+              <div
+                class="rounded-[22px] overflow-hidden"
+                style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+              >
+                <div
+                  class="overflow-hidden rounded-t-[22px]"
+                  style="aspect-ratio: 16/9; background: var(--neu-border);"
+                ></div>
+                <div class="p-3">
+                  <div
+                    class="mb-2 rounded"
+                    style="width: 80%; height: 11px; background: var(--neu-border);"
+                  ></div>
+                  <div
+                    class="rounded"
+                    style="width: 60%; height: 9px; background: var(--neu-border);"
+                  ></div>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {:else if pagination.error}
+          {#if !authStore.isAuthenticated}
+            <EmptyState
+              icon={LogIn}
+              title="登录后查看"
+              description="登录后即可浏览附近的动态"
+              actionText="立即登录"
+              onAction={() => uiStore.openLoginModalWithRedirect({})}
+            />
+          {:else}
+            <EmptyState
+              icon={AlertTriangle}
+              title={t('discover.loadFailed')}
+              description={pagination.error}
+              actionText={t('common.retry')}
+              onAction={handleRetry}
+            />
+          {/if}
+        {:else if pagination.items.length === 0 && hasLoadedOnce}
+          <EmptyState
+            icon={Image}
+            title={t('discover.noMoments')}
+            description={t('discover.noMomentsDesc')}
+          />
+        {:else}
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            {#each pagination.items as moment (moment.moment_id)}
+              <MomentCard {moment} />
+            {/each}
+          </div>
+          <LoadMoreButton
+            loading={pagination.loadingMore}
+            hasMore={pagination.hasMore}
+            onLoadMore={() => loadMoments(false)}
+          />
+        {/if}
+      </div>
+    </div>
+  </div>
 {:else}
   <!-- Desktop Discover — 2-column feed + 220px sidebar -->
   <div class="flex h-full flex-col">
@@ -224,7 +380,7 @@
     >
       <!-- Top bar -->
       <div class="mb-2 flex items-center justify-between">
-        <h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">
+        <h1 style="font-size: 20px; color: var(--neu-text);">
           {t('discover.title')}
         </h1>
         <span style="font-size: 12px; color: var(--neu-text-muted);">
@@ -390,13 +546,15 @@
               热门话题
             </p>
           </div>
-          {#each ['#城市探索', '#周末去哪', '#隐藏咖啡馆', '#街头摄影', '#本地美食'] as tag}
+          {#each ['#城市探索', '#周末去哪', '#隐藏咖啡馆', '#街头摄影', '#本地美食'] as tag, i}
             <button
               class="mb-1 flex w-full items-center justify-between rounded-[12px] px-3 py-2.5 outline-none"
               style="transition: background 0.15s;"
             >
               <span style="font-size: 13px; color: var(--neu-text);">{tag}</span>
-              <span style="font-size: 11px; color: var(--neu-text-muted);">帖</span>
+              <span style="font-size: 11px; color: var(--neu-text-muted);"
+                >{[89, 64, 52, 48, 41][i]}帖</span
+              >
             </button>
           {/each}
         </div>
@@ -413,7 +571,7 @@
             活跃用户
           </p>
           {#if pagination.items.length > 0}
-            {#each pagination.items.slice(0, 4) as item}
+            {#each pagination.items.slice(0, 4) as item, i}
               <div class="mb-3.5 flex items-center gap-2.5">
                 <div
                   class="flex-shrink-0 overflow-hidden rounded-full"
@@ -430,6 +588,9 @@
                 <div class="min-w-0 flex-1">
                   <p class="truncate" style="font-size: 12px; color: var(--neu-text);">
                     {item.user.nickname}
+                  </p>
+                  <p class="truncate" style="font-size: 10px; color: var(--neu-text-muted);">
+                    {['徐州 · 云龙区', '徐州 · 鼓楼区', '徐州 · 泉山区'][i % 3]}
                   </p>
                 </div>
                 <button

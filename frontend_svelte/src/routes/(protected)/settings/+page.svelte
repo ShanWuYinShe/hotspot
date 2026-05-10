@@ -2,19 +2,29 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import { THEME_FAMILY_OPTIONS, themeStore, type ThemeFamily } from '$lib/stores/theme.svelte';
   import { toast } from '$lib/stores/toast.svelte';
-  import { t } from '$lib/i18n';
   import ThemeToggle from '$lib/components/common/theme-toggle.svelte';
   import User from 'lucide-svelte/icons/user';
   import Bell from 'lucide-svelte/icons/bell';
   import Shield from 'lucide-svelte/icons/shield';
   import Lock from 'lucide-svelte/icons/lock';
   import LogOut from 'lucide-svelte/icons/log-out';
-  import Trash2 from 'lucide-svelte/icons/trash-2';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Share2 from 'lucide-svelte/icons/share-2';
   import ShieldAlert from 'lucide-svelte/icons/shield-alert';
   import Palette from 'lucide-svelte/icons/palette';
-  import Check from 'lucide-svelte/icons/check';
+  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+
+  const PREVIEW_ACCENT: Record<ThemeFamily, string> = {
+    vibrant: '#6366f1',
+    forest: '#3D7A55',
+    neu: '#D4845A'
+  };
+
+  const THEME_NAMES: Record<ThemeFamily, string> = {
+    vibrant: '活力',
+    forest: '自然',
+    neu: '质感'
+  };
 
   const settingsSections = [
     {
@@ -88,6 +98,20 @@
     }
   ];
 
+  const notificationItems = [
+    { key: 'like', label: '点赞通知' },
+    { key: 'follow', label: '关注通知' },
+    { key: 'comment', label: '评论通知' },
+    { key: 'nearby', label: '附近动态' }
+  ];
+
+  let notifications = $state<Record<string, boolean>>({
+    like: true,
+    follow: true,
+    comment: true,
+    nearby: false
+  });
+
   const currentThemeFamily = $derived(themeStore.themeFamily);
 
   function handleLogout() {
@@ -105,24 +129,173 @@
 </svelte:head>
 
 <div class="mx-auto max-w-3xl">
-  <!-- Header -->
-  <div class="mb-5 px-5 pt-3">
-    <h1 style="font-size: 22px; color: var(--neu-text);">设置</h1>
-    <p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">
-      管理账户、安全、隐私与外观
-    </p>
+  <!-- Header with back button -->
+  <div
+    class="sticky top-0 z-10 flex items-center gap-3 px-5 py-3"
+    style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+  >
+    <button
+      type="button"
+      class="flex flex-shrink-0 items-center justify-center rounded-full"
+      style="width: 38px; height: 38px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+      onclick={() => history.back()}
+      aria-label="返回"
+    >
+      <ArrowLeft size={16} color="var(--neu-text-muted)" strokeWidth={1.5} />
+    </button>
+    <h1 class="text-[18px] tracking-tight" style="color: var(--neu-text);">设置</h1>
   </div>
 
   <div class="space-y-3 px-5 pb-6">
+    <!-- User card -->
+    {#if authStore.currentAccount}
+      <div
+        class="flex items-center gap-3 rounded-[22px] px-4 py-3.5"
+        style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+      >
+        <div
+          class="flex-shrink-0 overflow-hidden rounded-full"
+          style="width: 50px; height: 50px; padding: 2px; border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-sm);"
+        >
+          {#if authStore.currentAccount.avatar_url}
+            <img
+              src={authStore.currentAccount.avatar_url}
+              alt={authStore.currentAccount.nickname}
+              class="h-full w-full rounded-full object-cover"
+            />
+          {:else}
+            <div
+              class="flex h-full w-full items-center justify-center rounded-full"
+              style="background: var(--neu-accent-primary);"
+            >
+              <User size={20} color="var(--neu-active-text)" />
+            </div>
+          {/if}
+        </div>
+        <div class="min-w-0">
+          <p style="font-size: 15px; color: var(--neu-text); font-weight: 500;">
+            {authStore.currentAccount.nickname || '用户'}
+          </p>
+          <p style="font-size: 11px; color: var(--neu-text-muted);">
+            @{authStore.currentAccount.user_id.slice(0, 8)}
+          </p>
+        </div>
+      </div>
+    {/if}
+
+    <!-- Theme picker (standalone section, matching Figma Make) -->
+    <p
+      class="px-1"
+      style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-top: 8px;"
+    >
+      主题风格
+    </p>
+    <div class="flex gap-2.5">
+      {#each THEME_FAMILY_OPTIONS as option (option.family)}
+        {@const accent = PREVIEW_ACCENT[option.family]}
+        {@const isSelected = currentThemeFamily === option.family}
+        <button
+          type="button"
+          class="relative flex flex-1 flex-col items-center gap-3 rounded-[20px] py-4 text-center transition-all"
+          style="background: var(--neu-bg); {isSelected
+            ? 'box-shadow: 0 0 0 2.5px ' +
+              accent +
+              ', 5px 5px 12px rgba(0,0,0,0.10); border: 1.5px solid ' +
+              accent +
+              ';'
+            : 'box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}"
+          onclick={() => setThemeFamily(option.family)}
+        >
+          <!-- Mini phone frame preview -->
+          <div
+            style="width: 60px; height: 80px; border-radius: 12px; background: var(--neu-bg); border: 1px solid {accent}22; box-shadow: 0 2px 8px rgba(0,0,0,0.12); position: relative; overflow: hidden;"
+          >
+            <div
+              style="position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; height: 20px; background: var(--neu-bg); border-top: 1px solid {accent}30;"
+            >
+              {#each [0, 1, 2] as i (i)}
+                <div
+                  style="width: {i === 1 ? '14px' : '10px'}; height: {i === 1
+                    ? '14px'
+                    : '8px'}; border-radius: {i === 1 ? '7px' : '4px'}; background: {i === 1
+                    ? accent
+                    : `${accent}55`};"
+                ></div>
+              {/each}
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 8px 0 8px;">
+              {#each [80, 60, 70] as w, i (i)}
+                <div
+                  style="width: {w}%; height: 5px; border-radius: 3px; background: {i === 0
+                    ? `${accent}90`
+                    : `${accent}35`};"
+                ></div>
+              {/each}
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+            <span style="font-size: 12px; color: {accent};">{THEME_NAMES[option.family]}</span>
+            <span style="font-size: 10px; text-align: center; line-height: 1.4; color: {accent}99;">
+              {#if option.family === 'vibrant'}霓虹活力{:else if option.family === 'forest'}森林极简{:else}柔和质感{/if}
+            </span>
+          </div>
+          {#if isSelected}
+            <div
+              style="display: flex; align-items: center; justify-content: center; border-radius: 50%; width: 20px; height: 20px; background: {accent};"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#FFFFFF"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+          {/if}
+        </button>
+      {/each}
+    </div>
+
+    <!-- Appearance -->
+    <p
+      class="px-1"
+      style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-top: 8px;"
+    >
+      外观
+    </p>
+    <div
+      class="overflow-hidden rounded-[22px]"
+      style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+    >
+      <div class="flex items-center justify-between px-4 py-3.5">
+        <div class="flex items-center gap-3">
+          <div
+            class="flex flex-shrink-0 items-center justify-center rounded-full"
+            style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border);"
+          >
+            <Palette size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+          </div>
+          <div>
+            <p style="font-size: 14px; color: var(--neu-text);">深色模式</p>
+            <p style="font-size: 11px; color: var(--neu-text-muted);">跟随系统 / 浅色 / 深色</p>
+          </div>
+        </div>
+        <ThemeToggle />
+      </div>
+    </div>
+
     {#each settingsSections as section (section.title)}
-      <!-- Section label -->
       <p
         class="px-1"
         style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-top: 8px;"
       >
         {section.title}
       </p>
-      <!-- Section card -->
       <div
         class="overflow-hidden rounded-[22px]"
         style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
@@ -148,105 +321,61 @@
       </div>
     {/each}
 
-    <!-- Appearance -->
+    <!-- Notification toggles -->
     <p
       class="px-1"
       style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-top: 8px;"
     >
-      外观
+      通知偏好
     </p>
     <div
       class="overflow-hidden rounded-[22px]"
       style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
     >
-      <!-- Dark mode toggle -->
-      <div class="flex items-center justify-between px-4 py-3.5">
-        <div class="flex items-center gap-3">
-          <div
-            class="flex flex-shrink-0 items-center justify-center rounded-full"
-            style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border);"
-          >
-            <Palette size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-          </div>
-          <div>
-            <p style="font-size: 14px; color: var(--neu-text);">{t('sidebar.toggleTheme')}</p>
-            <p style="font-size: 11px; color: var(--neu-text-muted);">
-              {t('sidebar.systemMode')} / {t('sidebar.light')} / {t('sidebar.dark')}
-            </p>
-          </div>
-        </div>
-        <ThemeToggle />
-      </div>
-
-      <div class="mx-4" style="height: 1px; background: var(--neu-border);"></div>
-
-      <!-- Theme family picker -->
-      <div class="grid grid-cols-3 gap-2.5 p-4">
-        {#each THEME_FAMILY_OPTIONS as option (option.family)}
+      {#each notificationItems as item, i (item.key)}
+        {#if i > 0}
+          <div class="mx-4" style="height: 1px; background: var(--neu-border);"></div>
+        {/if}
+        <div class="flex items-center justify-between px-4 py-3.5">
+          <span style="font-size: 14px; color: var(--neu-text);">{item.label}</span>
           <button
             type="button"
-            class="relative rounded-[20px] px-3 py-4 text-left transition-all"
-            style={currentThemeFamily === option.family
-              ? 'background: var(--neu-accent-primary); box-shadow: 0 4px 14px var(--neu-glow);'
-              : 'background: var(--neu-bg); box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border);'}
-            onclick={() => setThemeFamily(option.family)}
+            role="switch"
+            aria-checked={notifications[item.key]}
+            class="relative flex-shrink-0"
+            style="width: 50px; height: 28px; border-radius: 14px; border: none; cursor: pointer; transition: background 0.25s ease; background: {notifications[
+              item.key
+            ]
+              ? 'var(--neu-accent-primary)'
+              : 'rgba(120,120,128,0.22)'};"
+            onclick={() => (notifications[item.key] = !notifications[item.key])}
           >
-            <p
-              style="font-size: 12px; font-weight: 600; color: {currentThemeFamily === option.family
-                ? 'var(--neu-active-text)'
-                : 'var(--neu-text)'};"
-            >
-              {t(option.labelKey)}
-            </p>
-            <p
-              style="font-size: 11px; margin-top: 2px; color: {currentThemeFamily === option.family
-                ? 'var(--neu-active-text)'
-                : 'var(--neu-text-muted)'};"
-            >
-              {t(option.descriptionKey)}
-            </p>
-            {#if currentThemeFamily === option.family}
-              <div class="absolute right-2 top-2">
-                <Check size={14} color="var(--neu-active-text)" />
-              </div>
-            {/if}
+            <span
+              style="position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,0.26); transition: transform 0.25s ease; left: {notifications[
+                item.key
+              ]
+                ? '25px'
+                : '3px'};"
+            ></span>
           </button>
-        {/each}
-      </div>
+        </div>
+      {/each}
     </div>
 
-    <!-- Danger zone -->
-    <p
-      class="px-1"
-      style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--neu-text-muted); margin-top: 8px;"
-    >
-      危险操作
-    </p>
-    <div
-      class="overflow-hidden rounded-[22px]"
-      style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
-    >
+    <!-- Log Out -->
+    <div class="mt-5">
       <button
-        class="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors"
+        class="flex w-full items-center gap-3.5 rounded-[22px] px-4 py-3.5 text-left transition-colors"
+        style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
         onclick={handleLogout}
       >
         <div
           class="flex flex-shrink-0 items-center justify-center rounded-full"
           style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border);"
         >
-          <LogOut size={15} strokeWidth={1.5} color="var(--neu-error)" />
+          <LogOut size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
         </div>
-        <span style="font-size: 14px; color: var(--neu-error);">退出登录</span>
-      </button>
-      <div class="mx-4" style="height: 1px; background: var(--neu-border);"></div>
-      <button class="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors">
-        <div
-          class="flex flex-shrink-0 items-center justify-center rounded-full"
-          style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border);"
-        >
-          <Trash2 size={15} strokeWidth={1.5} color="var(--neu-error)" />
-        </div>
-        <span style="font-size: 14px; color: var(--neu-error);">删除账户</span>
+        <span style="font-size: 14px; color: var(--neu-accent-primary);">退出登录</span>
       </button>
     </div>
   </div>

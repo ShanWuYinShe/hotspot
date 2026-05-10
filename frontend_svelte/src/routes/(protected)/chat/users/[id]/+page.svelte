@@ -31,7 +31,11 @@
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import Send from 'lucide-svelte/icons/send';
   import Loader2 from 'lucide-svelte/icons/loader-2';
-  import MoreVertical from 'lucide-svelte/icons/more-vertical';
+  import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
+  import Phone from 'lucide-svelte/icons/phone';
+  import Video from 'lucide-svelte/icons/video';
+  import Smile from 'lucide-svelte/icons/smile';
+  import CheckCheck from 'lucide-svelte/icons/check-check';
 
   const userId = $derived(page.params.id!);
 
@@ -380,63 +384,81 @@
 >
   <!-- Header -->
   <div
-    class="flex h-16 items-center gap-3 px-4"
+    class="flex h-[60px] items-center gap-3 px-4"
     style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
   >
     <button
-      class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-      style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+      class="flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
+      style="width: 36px; height: 36px; box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
       onclick={handleBackClick}
       aria-label="返回"
     >
-      <ArrowLeft size={18} color="var(--neu-text)" />
+      <ArrowLeft size={15} color="var(--neu-text-muted)" strokeWidth={1.5} />
     </button>
 
     {#if isLoading}
       <div
         class="rounded-full"
-        style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+        style="width: 38px; height: 38px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
       ></div>
       <div
         style="width: 96px; height: 20px; border-radius: 8px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
       ></div>
     {:else if otherUser}
-      <a href="/users/{userId}" class="flex items-center gap-3">
-        <div
-          class="overflow-hidden rounded-full"
-          style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);"
-        >
-          {#if otherUser.avatar_url}
-            <img
-              src={otherUser.avatar_url}
-              alt={otherUser.nickname}
-              class="h-full w-full object-cover"
-            />
-          {:else}
-            <div
-              class="flex h-full w-full items-center justify-center"
-              style="background: var(--neu-bg); font-size: 14px; color: var(--neu-text-muted);"
-            >
-              {(otherUser.nickname || '用户').slice(0, 2)}
-            </div>
-          {/if}
+      <div class="flex items-center gap-3">
+        <div class="relative shrink-0">
+          <div
+            class="overflow-hidden rounded-full"
+            style="width: 38px; height: 38px; border: 1.5px solid var(--neu-border); box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light);"
+          >
+            {#if otherUser.avatar_url}
+              <img
+                src={otherUser.avatar_url}
+                alt={otherUser.nickname}
+                class="h-full w-full object-cover"
+              />
+            {:else}
+              <div
+                class="flex h-full w-full items-center justify-center"
+                style="background: var(--neu-bg); font-size: 14px; color: var(--neu-text-muted);"
+              >
+                {(otherUser.nickname || '用户').slice(0, 2)}
+              </div>
+            {/if}
+          </div>
         </div>
-        <span style="font-weight: 500; font-size: 15px; color: var(--neu-text);"
-          >{otherUser.nickname}</span
-        >
-      </a>
+        <div class="min-w-0">
+          <p class="truncate" style="font-size: 14px; color: var(--neu-text);">
+            {otherUser.nickname}
+          </p>
+        </div>
+      </div>
     {:else}
       <span style="font-size: 13px; color: var(--neu-text-muted);">用户不存在或加载失败</span>
     {/if}
-    <div class="ml-auto">
+    <div class="ml-auto flex gap-1.5">
+      <button
+        class="flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
+        style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+        aria-label="语音通话"
+      >
+        <Phone size={14} color="var(--neu-text-muted)" strokeWidth={1.5} />
+      </button>
+      <button
+        class="flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
+        style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+        aria-label="视频通话"
+      >
+        <Video size={14} color="var(--neu-text-muted)" strokeWidth={1.5} />
+      </button>
       <DropdownMenu>
         <DropdownMenuTrigger>
           <button
-            class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-            style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+            class="flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
+            style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
             aria-label="更多选项"
           >
-            <MoreVertical size={18} color="var(--neu-text)" />
+            <MoreHorizontal size={14} color="var(--neu-text-muted)" strokeWidth={1.5} />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" class="w-44">
@@ -460,7 +482,7 @@
       <div class="space-y-4 px-4">
         {#each Array(5) as _, i (i)}
           <div class="flex {i % 2 === 0 ? '' : 'justify-end'}">
-            <div class="flex max-w-[70%] gap-2">
+            <div class="flex max-w-[76%] gap-2">
               {#if i % 2 === 0}
                 <div
                   class="shrink-0 rounded-full"
@@ -481,35 +503,68 @@
       </div>
     {:else}
       <div class="space-y-3 px-4">
+        <!-- Date pill -->
+        <div class="mb-2 flex justify-center">
+          <span
+            class="rounded-full px-3 py-1"
+            style="font-size: 10px; background: var(--neu-bg); color: var(--neu-text-muted); border: 1px solid var(--neu-border); letter-spacing: 0.05em; opacity: 0.8;"
+          >
+            今天
+          </span>
+        </div>
         {#each messages as message (message.message_id)}
           <div
-            class="flex {isSelf(message) ? 'justify-end' : ''} chat-msg-enter"
+            class="flex {isSelf(message) ? 'justify-end' : 'justify-start'} chat-msg-enter"
             {@attach observeMessage({ messageId: message.message_id, isSelf: isSelf(message) })}
           >
-            <div class="flex max-w-[70%] flex-col gap-1">
-              <div
-                class="px-4 py-2.5"
-                style={isSelf(message)
-                  ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); border-radius: var(--neu-radius-md) 4px var(--neu-radius-md) var(--neu-radius-md);'
-                  : 'background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); border-radius: var(--neu-radius-md) var(--neu-radius-md) var(--neu-radius-md) 4px; color: var(--neu-text);'}
-              >
-                {#if message.recalled_at != null}
-                  <p style="font-size: 14px; font-style: italic; opacity: 0.7;">消息已撤回</p>
-                {:else if message.type === 'text'}
-                  <p class="whitespace-pre-wrap" style="font-size: 13px; line-height: 1.55;">
-                    {message.content}
-                  </p>
-                {:else if message.type === 'image' && message.media}
-                  <img src={message.media.url} alt="图片" class="max-w-[250px] rounded-[12px]" />
-                {:else}
-                  <p style="font-size: 14px;">[{message.type}]</p>
-                {/if}
-              </div>
+            <div
+              style="max-width: 76%; padding: 10px 14px; border-radius: {isSelf(message)
+                ? '18px 4px 18px 18px'
+                : '4px 18px 18px 18px'}; {isSelf(message)
+                ? 'background: var(--neu-accent-primary); box-shadow: 0 4px 14px var(--neu-glow);'
+                : 'background: var(--neu-bg); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}"
+            >
+              {#if message.recalled_at != null}
+                <p
+                  style="font-size: 14px; font-style: italic; opacity: 0.7; color: {isSelf(message)
+                    ? 'white'
+                    : 'var(--neu-text)'};"
+                >
+                  消息已撤回
+                </p>
+              {:else if message.type === 'text'}
+                <p
+                  class="whitespace-pre-wrap"
+                  style="font-size: 13px; line-height: 1.55; color: {isSelf(message)
+                    ? 'white'
+                    : 'var(--neu-text)'};"
+                >
+                  {message.content}
+                </p>
+              {:else if message.type === 'image' && message.media}
+                <img src={message.media.url} alt="图片" class="max-w-[250px] rounded-[12px]" />
+              {:else}
+                <p style="font-size: 14px; color: {isSelf(message) ? 'white' : 'var(--neu-text)'};">
+                  [{message.type}]
+                </p>
+              {/if}
               <p
-                class="px-2 {isSelf(message) ? 'text-right' : ''}"
-                style="font-size: 11px; color: var(--neu-text-muted);"
+                style="font-size: 10px; margin-top: 4px; color: {isSelf(message)
+                  ? 'rgba(255,255,255,0.65)'
+                  : 'var(--neu-text-muted)'}; display: flex; align-items: center; gap: 3px; justify-content: {isSelf(
+                  message
+                )
+                  ? 'flex-end'
+                  : 'flex-start'};"
               >
                 {formatTime(message.sent_at)}
+                {#if isSelf(message) && message.message_id === messages
+                      .filter((m) => isSelf(m))
+                      .at(-1)?.message_id}
+                  <span style="display: inline-flex; width: 12px; height: 12px; opacity: 0.8;"
+                    ><CheckCheck size={12} color="white" strokeWidth={2} /></span
+                  >
+                {/if}
               </p>
             </div>
           </div>
@@ -554,7 +609,14 @@
       </div>
     {/if}
 
-    <div class="flex gap-2">
+    <div class="flex items-center gap-2.5">
+      <button
+        class="flex shrink-0 items-center justify-center rounded-full outline-none active:scale-[0.88]"
+        style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+        aria-label="表情"
+      >
+        <Smile size={15} color="var(--neu-text-muted)" strokeWidth={1.5} />
+      </button>
       <textarea
         {@attach autofocus(shouldFocusInput)}
         {@attach useKeyboardFocus()}
@@ -562,8 +624,8 @@
         bind:value={messageText}
         rows={1}
         maxlength={MESSAGE_CONTENT_MAX}
-        class="min-h-[38px] flex w-full resize-none rounded-[18px] px-3 py-2 text-base outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text);"
+        class="min-h-[38px] flex w-full resize-none rounded-[18px] px-3 py-2 outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        style="font-size: 13px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text);"
         disabled={isSending}
         oninput={handleInput}
         onkeydown={(e) => {

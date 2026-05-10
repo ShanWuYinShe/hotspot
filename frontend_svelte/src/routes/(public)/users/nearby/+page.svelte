@@ -7,26 +7,40 @@
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
   import { useLocationAwareLoad } from '$lib/hooks/use-location-aware-load.svelte';
-  import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
+  import { presenceStore } from '$lib/stores/presence.svelte';
   import UserCard from '$lib/components/common/user-card.svelte';
-  import MasonryLayout from '$lib/components/common/masonry-layout.svelte';
-  import MasonryLayoutItem from '$lib/components/common/masonry-layout-item.svelte';
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
   import type { UserItem } from '$lib/types/api';
   import ArrowLeft from 'lucide-svelte/icons/arrow-left';
-  import MapPin from 'lucide-svelte/icons/map-pin';
+  import MapIcon from 'lucide-svelte/icons/map';
+  import Search from 'lucide-svelte/icons/search';
   import Users from 'lucide-svelte/icons/users';
   import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
   import LogIn from 'lucide-svelte/icons/log-in';
+
+  const SORT_OPTIONS = ['距离', '在线', '共同好友'] as const;
+  const FILTER_TAGS = ['全部', '摄影', '旅行', '美食', '户外', '城市', '咖啡', '音乐', '运动'];
 
   const pagination = usePagination<UserItem>({
     uniqueKey: (item) => item.user.user_id
   });
 
   let hasLoadedOnce = $state(false);
+  let searchText = $state('');
+  let activeSort = $state<string>('距离');
+  let activeTag = $state<string>('全部');
 
   const returnTarget = $derived(page.url.searchParams.get('from') || '/search');
+
+  const onlineCount = $derived(
+    pagination.items.filter((item) => {
+      const uid = item.user.user_id;
+      const pStatus = presenceStore.getStatus(uid);
+      if (pStatus !== 'offline') return presenceStore.isOnline(uid);
+      return item.presence_status === 'online';
+    }).length
+  );
 
   function getAnchor() {
     return {
@@ -68,103 +82,137 @@
   <title>附近的人 - HotSpot</title>
 </svelte:head>
 
-<div class="container mx-auto max-w-7xl space-y-4 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-6 lg:px-8">
+<div>
   <!-- Sticky header -->
   <div
-    class="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
+    class="sticky top-0 z-10 px-5 pt-3 pb-0"
     style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
   >
-    <div>
-      <h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">附近的人</h1>
-      <p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">
-        基于当前浏览位置，按距离排序展示可互动用户。
-      </p>
-    </div>
-    <div class="flex items-center gap-2">
+    <div class="mb-3 flex items-center gap-3">
       <button
         class="flex items-center justify-center rounded-full outline-none"
-        style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+        style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
         onclick={handleBack}
         aria-label="返回"
       >
-        <ArrowLeft size={18} color="var(--neu-text)" />
+        <ArrowLeft size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
       </button>
-      <div
-        class="flex items-center gap-1.5 rounded-full py-1.5 px-3.5"
-        style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
-      >
-        <MapPin size={12} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-        <span
-          style="font-size: 11px; color: var(--neu-text-muted); max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-          >{mapAnchorStore.displayName}</span
-        >
+      <div class="flex-1">
+        <h1 style="font-size: 18px; font-weight: 600; color: var(--neu-text);">附近的人</h1>
+        <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">
+          {onlineCount} 人在线 · {pagination.items.length} 人附近
+        </p>
       </div>
+      <button
+        class="flex items-center justify-center rounded-full outline-none"
+        style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+        aria-label="地图"
+      >
+        <MapIcon size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+      </button>
+    </div>
+
+    <!-- Search -->
+    <div class="neu-input-surface mb-3 flex items-center gap-3 rounded-[18px] px-4 py-2.5">
+      <Search size={14} strokeWidth={1.5} color="var(--neu-text-muted)" class="flex-shrink-0" />
+      <input
+        type="text"
+        bind:value={searchText}
+        placeholder="搜索附近用户"
+        class="flex-1 bg-transparent outline-none"
+        style="font-size: 13px; color: var(--neu-text);"
+      />
+    </div>
+
+    <!-- Sort tabs + Filter tags -->
+    <div class="no-scrollbar mb-3 flex gap-2 overflow-x-auto">
+      {#each SORT_OPTIONS as s (s)}
+        <button
+          class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all"
+          style={activeSort === s
+            ? 'background: var(--neu-accent-primary); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--neu-glow);'
+            : 'background: var(--neu-bg); color: var(--neu-text-muted); font-size: 12px; border: 1px solid var(--neu-border); box-shadow: 2px 2px 6px var(--neu-shadow-dark), -2px -2px 6px var(--neu-shadow-light);'}
+          onclick={() => (activeSort = s)}
+        >
+          {s}
+        </button>
+      {/each}
+      <div style="width: 1px; height: 28px; background: var(--neu-border); margin: auto;"></div>
+      {#each FILTER_TAGS as t (t)}
+        <button
+          class="flex-shrink-0 rounded-full px-3 py-1.5 outline-none transition-all"
+          style={activeTag === t && t !== '全部'
+            ? 'background: rgba(99,102,241,0.12); color: var(--neu-accent-primary); font-size: 12px; border: 1px solid rgba(99,102,241,0.25);'
+            : 'font-size: 12px; color: var(--neu-text-muted); background: transparent;'}
+          onclick={() => (activeTag = t)}
+        >
+          {t}
+        </button>
+      {/each}
     </div>
   </div>
 
-  <AnchorSummaryCard
-    label="附近发现锚点"
-    description={`当前按 ${mapAnchorStore.radius}km 范围加载用户结果`}
-    subtle
-  />
-
-  {#if pagination.loading}
-    <MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
-      {#each Array(6) as _, i (i)}
-        <MasonryLayoutItem>
+  <!-- List -->
+  <div class="w-full px-5 pt-3 pb-6">
+    {#if pagination.loading}
+      <div
+        class="flex flex-col gap-2.5"
+        style="max-width: 640px; margin-left: auto; margin-right: auto;"
+      >
+        {#each Array(6) as _, i (i)}
           <div
             class="animate-pulse rounded-[22px]"
-            style="height: {180 + (i % 3) * 30}px; background: var(--neu-border);"
+            style="height: 72px; background: var(--neu-border);"
           ></div>
-        </MasonryLayoutItem>
-      {/each}
-    </MasonryLayout>
-  {:else if pagination.error}
-    {#if !authStore.isAuthenticated}
+        {/each}
+      </div>
+    {:else if pagination.error}
+      {#if !authStore.isAuthenticated}
+        <EmptyState
+          icon={LogIn}
+          title="登录后查看"
+          description="登录后即可浏览附近的人"
+          actionText="立即登录"
+          onAction={() => uiStore.openLoginModalWithRedirect({})}
+        />
+      {:else}
+        <EmptyState
+          icon={AlertTriangle}
+          title="加载失败"
+          description={pagination.error}
+          actionText="重试"
+          onAction={handleRetry}
+        />
+      {/if}
+    {:else if pagination.items.length === 0 && hasLoadedOnce}
       <EmptyState
-        icon={LogIn}
-        title="登录后查看"
-        description="登录后即可浏览附近的人"
-        actionText="立即登录"
-        onAction={() => uiStore.openLoginModalWithRedirect({})}
+        icon={Users}
+        title="附近暂无其他用户"
+        description="换个浏览位置或稍后再来看看。"
       />
     {:else}
-      <EmptyState
-        icon={AlertTriangle}
-        title="加载失败"
-        description={pagination.error}
-        actionText="重试"
-        onAction={handleRetry}
-      />
-    {/if}
-  {:else if pagination.items.length === 0 && hasLoadedOnce}
-    <EmptyState icon={Users} title="附近暂无其他用户" description="换个浏览位置或稍后再来看看。" />
-  {:else}
-    <MasonryLayout
-      columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }}
-      gap={16}
-      animated={true}
-      animationDelay={50}
-    >
-      {#each pagination.items as user (user.user.user_id)}
-        <MasonryLayoutItem>
+      <div
+        class="flex flex-col gap-2.5"
+        style="max-width: 640px; margin-left: auto; margin-right: auto;"
+      >
+        {#each pagination.items as user (user.user.user_id)}
           <UserCard
             {user}
             showDistance
             showBio
             showTags
             showOnlineStatus
-            variant="square"
+            variant="nearby-row"
             class="overflow-hidden"
           />
-        </MasonryLayoutItem>
-      {/each}
-    </MasonryLayout>
+        {/each}
+      </div>
 
-    <LoadMoreButton
-      loading={pagination.loadingMore}
-      hasMore={pagination.hasMore}
-      onLoadMore={() => loadUsers(false)}
-    />
-  {/if}
+      <LoadMoreButton
+        loading={pagination.loadingMore}
+        hasMore={pagination.hasMore}
+        onLoadMore={() => loadUsers(false)}
+      />
+    {/if}
+  </div>
 </div>

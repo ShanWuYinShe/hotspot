@@ -120,7 +120,7 @@
               {#if user.presence_status === 'online'}
                 <span
                   class="absolute bottom-0 right-0 rounded-full"
-                  style="width: 9px; height: 9px; background: var(--neu-success); border: 2px solid var(--neu-bg);"
+                  style="width: 9px; height: 9px; background: #22c55e; border: 2px solid var(--neu-bg);"
                 ></span>
               {/if}
             </div>

@@ -35,7 +35,7 @@
     showMenu?: boolean;
     href?: string;
     class?: string;
-    variant?: 'default' | 'compact' | 'detailed' | 'square';
+    variant?: 'default' | 'compact' | 'detailed' | 'square' | 'nearby-row';
   }
 
   let {
@@ -198,7 +198,79 @@
   onclick={handleCardClick}
   onkeydown={handleCardKeydown}
 >
-  {#if variant === 'square'}
+  {#if variant === 'nearby-row'}
+    <!-- Nearby row: horizontal row for nearby all page -->
+    <div class="neu-row-hover flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5">
+      <div class="relative flex-shrink-0">
+        <div
+          class="overflow-hidden rounded-full"
+          style="width: 46px; height: 46px; border: 1.5px solid var(--neu-border);"
+        >
+          <img
+            src={userInfo.avatar_url || ''}
+            alt={userInfo.nickname}
+            class="h-full w-full object-cover"
+          />
+        </div>
+        {#if isOnline}
+          <span
+            class="absolute bottom-0 right-0 rounded-full"
+            style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--neu-bg);"
+          ></span>
+        {/if}
+      </div>
+      <div class="min-w-0 flex-1">
+        <p style="font-size: 14px; color: var(--neu-text);">{userInfo.nickname}</p>
+        <div class="mt-0.5 flex items-center gap-1.5">
+          <span style="font-size: 11px; color: {isOnline ? '#22c55e' : 'var(--neu-text-muted)'};">
+            {isOnline ? '在线' : '离线'}
+          </span>
+          {#if distance}
+            <span style="font-size: 10px; color: var(--neu-text-muted); opacity: 0.5;">·</span>
+            <div class="flex items-center gap-0.5">
+              <MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+              <span style="font-size: 12px; color: var(--neu-accent-primary);"
+                >{formatDistance(distance)}</span
+              >
+            </div>
+          {/if}
+          {#if displayTags.length > 0}
+            <span style="font-size: 10px; color: var(--neu-text-muted); opacity: 0.5;">·</span>
+            <span style="font-size: 11px; color: var(--neu-accent-primary); opacity: 0.8;"
+              >#{displayTags[0]}</span
+            >
+          {/if}
+        </div>
+      </div>
+      <div class="flex flex-col items-end gap-2">
+        {#if distance}
+          <div class="flex items-center gap-0.5">
+            <MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+            <span style="font-size: 12px; color: var(--neu-accent-primary);"
+              >{formatDistance(distance)}</span
+            >
+          </div>
+        {/if}
+        {#if !isMe}
+          <button
+            data-card-action
+            class="rounded-full px-3.5 py-1 outline-none transition-all"
+            style={isFollowing
+              ? 'box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border-pressed); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
+              : 'box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
+            onclick={handleFollow}
+            disabled={isFollowPending}
+          >
+            {#if isFollowPending}
+              ...
+            {:else}
+              {isFollowing ? '已关注' : '关注'}
+            {/if}
+          </button>
+        {/if}
+      </div>
+    </div>
+  {:else if variant === 'square'}
     <!-- Square: info-dense card -->
     <div class="p-4">
       <div
@@ -210,7 +282,7 @@
             <div class="relative flex-shrink-0">
               <div
                 class="overflow-hidden rounded-full"
-                style="width: 44px; height: 44px; border: 1.5px solid var(--neu-border);"
+                style="width: 46px; height: 46px; border: 1.5px solid var(--neu-border);"
               >
                 <img
                   src={userInfo.avatar_url || ''}
@@ -221,7 +293,7 @@
               {#if isOnline}
                 <span
                   class="absolute bottom-0 right-0 rounded-full"
-                  style="width: 11px; height: 11px; background: var(--neu-success); border: 2px solid var(--neu-bg);"
+                  style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--neu-bg);"
                 ></span>
               {/if}
             </div>
@@ -230,7 +302,7 @@
                 {userInfo.nickname}
               </p>
               <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">
-                {isOnline ? '在线中' : '最近活跃'}
+                {isOnline ? '在线' : '离线'}
               </p>
             </div>
           </div>
@@ -263,7 +335,7 @@
           {#each displayTags as tag (tag)}
             <span
               class="rounded-full px-2 py-0.5"
-              style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+              style="font-size: 10px; color: var(--neu-accent-primary); background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);"
               >#{tag}</span
             >
           {/each}
@@ -287,7 +359,7 @@
         {#if isOnline}
           <span
             class="absolute bottom-0 right-0 rounded-full"
-            style="width: 11px; height: 11px; background: var(--neu-success); border: 2px solid var(--neu-bg);"
+            style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--neu-bg);"
           ></span>
         {/if}
       </div>
@@ -331,7 +403,7 @@
           {#if isOnline}
             <span
               class="absolute bottom-0 right-0 rounded-full"
-              style="width: 11px; height: 11px; background: var(--neu-success); border: 2px solid var(--neu-bg);"
+              style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--neu-bg);"
             ></span>
           {/if}
         </div>
@@ -359,7 +431,7 @@
           {#each displayTags as tag (tag)}
             <span
               class="rounded-full px-2 py-0.5"
-              style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+              style="font-size: 10px; color: var(--neu-accent-primary); background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);"
               >#{tag}</span
             >
           {/each}
@@ -384,7 +456,7 @@
           {#if isOnline}
             <span
               class="absolute bottom-0 right-0 rounded-full"
-              style="width: 11px; height: 11px; background: var(--neu-success); border: 2px solid var(--neu-bg);"
+              style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--neu-bg);"
             ></span>
           {/if}
         </div>
@@ -416,7 +488,7 @@
           {#each displayTags as tag (tag)}
             <span
               class="rounded-full px-2 py-0.5"
-              style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+              style="font-size: 10px; color: var(--neu-accent-primary); background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);"
               >#{tag}</span
             >
           {/each}
@@ -451,7 +523,7 @@
             {:else}
               <UserPlus size={15} strokeWidth={1.5} />
             {/if}
-            <span style="font-size: 12px;">{isFollowing ? '取消关注' : '关注'}</span>
+            <span style="font-size: 11px;">{isFollowing ? '已关注' : '关注'}</span>
           </button>
           {#if showMenu}
             <DropdownMenu>

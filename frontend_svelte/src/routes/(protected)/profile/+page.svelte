@@ -15,10 +15,29 @@
   import Grid3X3 from 'lucide-svelte/icons/grid-3x3';
   import Bookmark from 'lucide-svelte/icons/bookmark';
   import Check from 'lucide-svelte/icons/check';
-  import X from 'lucide-svelte/icons/x';
+
   import Users from 'lucide-svelte/icons/users';
   import { platformStore } from '$lib/stores/platform.svelte';
   import { goto } from '$app/navigation';
+
+  import User from 'lucide-svelte/icons/user';
+  import FileText from 'lucide-svelte/icons/file-text';
+
+  const TAG_OPTIONS = [
+    '摄影',
+    '旅行',
+    '音乐',
+    '美食',
+    '运动',
+    '阅读',
+    '艺术',
+    '科技',
+    '游戏',
+    '户外',
+    '时尚',
+    '电影'
+  ];
+  const MAX_INTEREST_TAGS = 5;
 
   import type { PageData } from './$types';
 
@@ -26,13 +45,24 @@
 
   let profile = $state<MyProfile | null>(null);
   let isSaving = $state(false);
+  let saved = $state(false);
   let isEditing = $state(false);
   let activeTab = $state<'posts' | 'liked' | 'saved'>('posts');
 
   let nickname = $state('');
   let bio = $state('');
   let tags = $state('');
-  const MAX_TAGS = 10;
+  let selectedInterestTags = $state<Set<string>>(new Set());
+
+  function toggleInterestTag(t: string) {
+    const next = new Set(selectedInterestTags);
+    if (next.has(t)) {
+      next.delete(t);
+    } else if (next.size < MAX_INTEREST_TAGS) {
+      next.add(t);
+    }
+    selectedInterestTags = next;
+  }
 
   $effect(() => {
     profile = data.profile;
@@ -40,6 +70,7 @@
       nickname = data.profile.nickname ?? '';
       bio = data.profile.bio ?? '';
       tags = data.profile.tags?.join(', ') ?? '';
+      selectedInterestTags = new Set(data.profile.tags?.slice(0, MAX_INTEREST_TAGS) ?? []);
     }
   });
 
@@ -52,10 +83,14 @@
   async function saveProfile() {
     const trimmedNickname = nickname.trim();
     const trimmedBio = bio.trim();
-    const parsedTags = tags
-      .split(',')
-      .map((t) => t.trim())
-      .filter((t) => t);
+    const allTags = [
+      ...tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => t),
+      ...Array.from(selectedInterestTags)
+    ];
+    const uniqueTags = [...new Set(allTags)];
 
     if (!trimmedNickname) {
       toast.error('昵称不能为空');
@@ -69,17 +104,13 @@
       toast.error('个人简介不能超过 500 字符');
       return;
     }
-    if (parsedTags.length > MAX_TAGS) {
-      toast.error('标签最多 10 个');
-      return;
-    }
 
     isSaving = true;
     try {
       const response = await usersService.updateMyProfile({
         nickname: trimmedNickname,
         bio: trimmedBio || undefined,
-        tags: parsedTags
+        tags: uniqueTags.length > 0 ? uniqueTags : undefined
       });
 
       if (isSuccess(response)) {
@@ -88,8 +119,11 @@
           profile = profileRes.data;
           authStore.setProfile(profile);
         }
-        toast.success('保存成功');
-        isEditing = false;
+        saved = true;
+        setTimeout(() => {
+          saved = false;
+          isEditing = false;
+        }, 800);
       } else {
         toast.error(response.message || '保存失败');
       }
@@ -122,8 +156,7 @@
 
 {#if profile}
   {#if platformStore.isDesktop}
-    tt<!-- Desktop: two-column layout (260px left + right content) -->
-    tt
+    <!-- Desktop: two-column layout (260px left + right content) -->
     <div class="flex flex-col h-full">
       <!-- Sticky header -->
 
@@ -142,14 +175,14 @@
             class="flex items-center justify-center rounded-full outline-none"
             style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
           >
-            t<Share2 size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
+            <Share2 size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
           </button>
           <button
             class="flex items-center justify-center rounded-full outline-none"
             style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
             onclick={() => void goto('/settings')}
           >
-            t<Settings size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+            <Settings size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
           </button>
         </div>
       </div>
@@ -163,44 +196,39 @@
         >
           <!-- Avatar -->
           <div class="relative mb-4">
-            t
             <div
               class="pointer-events-none absolute inset-0 rounded-full"
-              style="background: var(--neu-glow); filter: blur(20px); transform: scale(1.18); opacity: 0.5;"
+              style="background: var(--neu-glow); filter: blur(20px); transform: scale(1.2); opacity: 0.5;"
             ></div>
-            t
             <div
               class="relative rounded-full"
               style="width: 96px; height: 96px; padding: 2px; background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1.5px solid var(--neu-border);"
             >
-              tt{#if profile.avatar_url}
+              {#if profile.avatar_url}
                 <img
                   src={profile.avatar_url}
                   alt={profile.nickname}
                   class="h-full w-full rounded-full object-cover"
                 />
-                tt{:else}
+              {:else}
                 <div
                   class="flex h-full w-full items-center justify-center rounded-full"
                   style="font-size: 28px; font-weight: 700; color: var(--neu-text);"
                 >
                   {profile.nickname.slice(0, 2)}
                 </div>
-                tt{/if}
-              t
+              {/if}
             </div>
-            t<button
+            <button
               class="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none"
               style="width: 26px; height: 26px; background: var(--neu-accent-primary); border: 2.5px solid var(--neu-bg); box-shadow: 0 2px 8px var(--neu-glow);"
               title="更换头像"
             >
-              tt<Camera size={12} color="white" strokeWidth={2} />
-              t</button
-            >
+              <Camera size={12} color="white" strokeWidth={2} />
+            </button>
           </div>
           <h2 style="font-size: 18px; color: var(--neu-text);">{profile.nickname}</h2>
           {#if profile.bio}
-            t
             <p
               style="font-size: 12px; color: var(--neu-text-muted); text-align: center; padding: 6px 8px; line-height: 1.5;"
             >
@@ -208,13 +236,11 @@
             </p>
           {/if}
           {#if profile.location?.location_name}
-            t
             <div class="flex items-center gap-1 mb-2">
-              tt<MapPin size={11} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-              tt<span style="font-size: 11px; color: var(--neu-text-muted);"
+              <MapPin size={11} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+              <span style="font-size: 11px; color: var(--neu-text-muted);"
                 >{profile.location.location_name}</span
               >
-              t
             </div>
           {/if}
           <!-- Edit button -->
@@ -223,50 +249,44 @@
             style="background: var(--neu-bg); color: var(--neu-text-muted); border: 1px solid var(--neu-border); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); font-size: 13px;"
             onclick={() => (isEditing = !isEditing)}
           >
-            t<Pencil size={13} strokeWidth={1.5} />
-            t编辑资料
+            <Pencil size={13} strokeWidth={1.5} />
+            编辑资料
           </button>
           <!-- Stats card -->
           <div
-            class="w-full rounded-[18px] mb-4"
+            class="w-full overflow-hidden rounded-[18px] mb-4"
             style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
           >
-            t{#each [{ label: '帖子', value: profile.stats.moments_count }, { label: '关注者', value: profile.stats.followers_count }, { label: '足迹', value: profile.stats.friends_count }] as stat}
-              tt
+            {#each [{ label: '帖子', value: profile.stats.moments_count }, { label: '关注者', value: profile.stats.followers_count }, { label: '足迹', value: profile.stats.friends_count }] as stat}
               <div class="flex items-center justify-between px-4 py-3">
                 <span style="font-size: 13px; color: var(--neu-text-muted);">{stat.label}</span>
                 <span style="font-size: 17px; color: var(--neu-text);">{stat.value}</span>
-                tt
               </div>
-              t{/each}
+            {/each}
           </div>
           <!-- Quick links -->
           <div
             class="w-full rounded-[18px]"
             style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
           >
-            t{#each [{ icon: Grid3X3, label: '我的瞬间', count: profile.stats.moments_count }, { icon: Users, label: '好友', count: profile.stats.friends_count }] as link}
-              tt<a href="'/profile'" class="flex items-center gap-3 px-4 py-2.5 neu-row-hover">
+            {#each [{ icon: Grid3X3, label: '我的瞬间', count: profile.stats.moments_count }, { icon: Users, label: '好友', count: profile.stats.friends_count }] as link}
+              <a href="'/profile'" class="flex items-center gap-3 px-4 py-2.5 neu-row-hover">
                 <link.icon size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
                 <span class="flex-1" style="font-size: 13px; color: var(--neu-text-muted);"
                   >{link.label}</span
                 >
                 <span style="font-size: 12px; color: var(--neu-text-muted);">{link.count}</span>
-                tt</a
-              >
-              t{/each}
+              </a>
+            {/each}
           </div>
         </div>
         <!-- Right panel: gallery -->
         <div class="flex-1 overflow-y-auto no-scrollbar px-6 py-5">
           <div class="flex items-center justify-between mb-4">
-            t
             <h3 style="font-size: 16px; color: var(--neu-text);">最近瞬间</h3>
           </div>
           {#if profile.stats.moments_count === 0}
-            t
             <div class="flex flex-col items-center justify-center py-16">
-              tt
               <div
                 class="flex items-center justify-center rounded-full"
                 style="width: 72px; height: 72px; box-shadow: 8px 8px 18px var(--neu-shadow-dark), -8px -8px 18px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
@@ -277,18 +297,14 @@
                   strokeWidth={1.25}
                   style="opacity: 0.5;"
                 />
-                tt
               </div>
-              tt
               <p style="font-size: 14px; color: var(--neu-text-muted); margin-top: 12px;">
                 还没有发布帖子
               </p>
-              t
             </div>
           {:else}
-            t
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-              tt{#each Array(Math.min(profile.stats.moments_count, 9)) as _}
+              {#each Array(Math.min(profile.stats.moments_count, 9)) as _}
                 <div
                   class="relative cursor-pointer overflow-hidden rounded-[16px]"
                   style="aspect-ratio: 1/1; background: var(--neu-fallback-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
@@ -302,15 +318,13 @@
                     />
                   </div>
                 </div>
-                tt{/each}
-              t
+              {/each}
             </div>
           {/if}
         </div>
       </div>
-      tt
     </div>
-    t{:else}
+  {:else}
     <div class="flex flex-col">
       <!-- Sticky header -->
       <div
@@ -407,78 +421,210 @@
         <!-- Edit form (inline, hidden by default) -->
         {#if isEditing}
           <div
-            class="rounded-[22px] p-5 mx-5 mb-4"
-            style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+            class="flex flex-col px-5 pt-4 pb-8 gap-5"
+            style="max-width: 560px; margin-left: auto; margin-right: auto; width: 100%;"
           >
-            <div class="space-y-4">
-              <div>
-                <label
-                  for="nickname"
-                  style="font-size: 12px; font-weight: 500; color: var(--neu-text-muted); display: block; margin-bottom: 6px;"
-                  >昵称 *</label
+            <!-- Banner image -->
+            <div
+              class="relative rounded-[24px] overflow-hidden"
+              style="height: clamp(120px, 18vw, 160px);"
+            >
+              <div
+                class="absolute inset-0"
+                style="background: linear-gradient(135deg, var(--neu-accent-primary), var(--neu-glow)); opacity: 0.3;"
+              ></div>
+              <div
+                class="absolute inset-0"
+                style="background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.5));"
+              ></div>
+              <button
+                class="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
+                style="padding: 6px 12px; background: rgba(0,0,0,0.45); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25); font-size: 12px; color: white;"
+              >
+                <Camera size={13} strokeWidth={1.75} />
+                更换横幅
+              </button>
+            </div>
+
+            <!-- Avatar edit -->
+            <div class="flex items-center gap-4 -mt-8 ml-2">
+              <div class="relative flex-shrink-0">
+                <div
+                  class="rounded-[22px] overflow-hidden"
+                  style="width: 72px; height: 72px; border: 3px solid var(--neu-bg); box-shadow: 0 6px 20px rgba(0,0,0,0.22);"
                 >
+                  {#if profile.avatar_url}
+                    <img src={profile.avatar_url} alt="avatar" class="w-full h-full object-cover" />
+                  {:else}
+                    <div
+                      class="flex h-full w-full items-center justify-center"
+                      style="background: var(--neu-bg); font-size: 20px; color: var(--neu-text);"
+                    >
+                      {nickname.slice(0, 2)}
+                    </div>
+                  {/if}
+                </div>
+                <button
+                  class="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"
+                  style="width: 26px; height: 26px; background: var(--neu-accent-primary); border: 2px solid var(--neu-bg); box-shadow: 0 2px 8px var(--neu-glow);"
+                  title="更换头像"
+                >
+                  <Camera size={12} color="white" strokeWidth={2} />
+                </button>
+              </div>
+              <div>
+                <p style="font-size: 16px; color: var(--neu-text);">{profile.nickname}</p>
+                <p style="font-size: 12px; color: var(--neu-text-muted);">
+                  @{profile.nickname.toLowerCase().replace(/\s+/g, '.')}
+                </p>
+              </div>
+            </div>
+
+            <!-- Name field -->
+            <div class="flex flex-col gap-1.5">
+              <div class="flex items-center gap-1.5">
+                <User
+                  style="width: 13px; height: 13px; color: var(--neu-accent-primary);"
+                  strokeWidth={1.75}
+                />
+                <label
+                  style="font-size: 11px; color: var(--neu-text-muted); text-transform: uppercase; letter-spacing: 0.1em;"
+                  >姓名</label
+                >
+              </div>
+              <div
+                class="px-4 py-3 rounded-[18px]"
+                style="box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+              >
                 <input
                   id="nickname"
                   bind:value={nickname}
-                  placeholder="输入你的昵称"
-                  class="w-full rounded-[14px] px-4 py-2.5 outline-none"
-                  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
+                  placeholder="你的名字"
+                  class="w-full bg-transparent outline-none"
+                  style="color: var(--neu-text); font-size: 14px;"
                 />
               </div>
-              <div>
+            </div>
+
+            <!-- Bio field -->
+            <div class="flex flex-col gap-1.5">
+              <div class="flex items-center gap-1.5">
+                <FileText
+                  style="width: 13px; height: 13px; color: var(--neu-accent-primary);"
+                  strokeWidth={1.75}
+                />
                 <label
-                  for="bio"
-                  style="font-size: 12px; font-weight: 500; color: var(--neu-text-muted); display: block; margin-bottom: 6px;"
+                  style="font-size: 11px; color: var(--neu-text-muted); text-transform: uppercase; letter-spacing: 0.1em;"
                   >个人简介</label
                 >
+              </div>
+              <div
+                class="px-4 py-3 rounded-[18px]"
+                style="box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+              >
                 <textarea
                   id="bio"
                   bind:value={bio}
                   placeholder="介绍一下自己..."
                   rows="3"
-                  class="w-full resize-none rounded-[14px] px-4 py-2.5 outline-none"
-                  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
+                  class="w-full bg-transparent outline-none resize-none"
+                  style="color: var(--neu-text); font-size: 14px; line-height: 1.65;"
                 ></textarea>
+                <div class="flex justify-end mt-1">
+                  <span
+                    style="font-size: 11px; color: {bio.length > 150 * 0.85
+                      ? 'var(--neu-accent-primary)'
+                      : 'var(--neu-text-muted)'};"
+                  >
+                    {bio.length}/150
+                  </span>
+                </div>
               </div>
-              <div>
+            </div>
+
+            <!-- Location field -->
+            {#if profile.location?.location_name}
+              <div class="flex flex-col gap-1.5">
+                <div class="flex items-center gap-1.5">
+                  <MapPin
+                    style="width: 13px; height: 13px; color: var(--neu-accent-primary);"
+                    strokeWidth={1.75}
+                  />
+                  <label
+                    style="font-size: 11px; color: var(--neu-text-muted); text-transform: uppercase; letter-spacing: 0.1em;"
+                    >所在地</label
+                  >
+                </div>
+                <div
+                  class="px-4 py-3 rounded-[18px]"
+                  style="box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+                >
+                  <input
+                    value={profile.location.location_name}
+                    disabled
+                    class="w-full bg-transparent outline-none"
+                    style="color: var(--neu-text-muted); font-size: 14px; opacity: 0.7;"
+                  />
+                </div>
+              </div>
+            {/if}
+
+            <!-- Interest tags -->
+            <div class="flex flex-col gap-2.5">
+              <div class="flex items-center gap-1.5">
                 <label
-                  for="tags"
-                  style="font-size: 12px; font-weight: 500; color: var(--neu-text-muted); display: block; margin-bottom: 6px;"
+                  style="font-size: 11px; color: var(--neu-text-muted); text-transform: uppercase; letter-spacing: 0.1em;"
                   >兴趣标签</label
                 >
-                <input
-                  id="tags"
-                  bind:value={tags}
-                  placeholder="摄影, 旅行, 美食..."
-                  class="w-full rounded-[14px] px-4 py-2.5 outline-none"
-                  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
-                />
-              </div>
-              <div class="flex gap-3 pt-2">
-                <button
-                  class="flex flex-1 items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none transition-transform duration-150 active:scale-[0.95]"
-                  style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 14px; box-shadow: 0 2px 8px var(--neu-glow);"
-                  onclick={saveProfile}
-                  disabled={isSaving}
+                <span style="font-size: 11px; color: var(--neu-text-muted); opacity: 0.6;"
+                  >({selectedInterestTags.size}/{MAX_INTEREST_TAGS})</span
                 >
-                  {#if isSaving}
-                    <Loader2 class="h-4 w-4 animate-spin" />
-                    保存中...
-                  {:else}
-                    <Check size={15} />
-                    保存更改
-                  {/if}
-                </button>
-                <button
-                  class="flex flex-1 items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none transition-transform duration-150 active:scale-[0.97]"
-                  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
-                  onclick={cancelEdit}
-                  disabled={isSaving}
-                >
-                  <X size={15} />
-                  取消
-                </button>
               </div>
+              <div class="flex flex-wrap gap-2">
+                {#each TAG_OPTIONS as t (t)}
+                  {@const active = selectedInterestTags.has(t)}
+                  {@const disabled = !active && selectedInterestTags.size >= MAX_INTEREST_TAGS}
+                  <button
+                    class="px-3.5 py-1.5 rounded-full outline-none transition-all duration-200 active:scale-[0.92]"
+                    style={active
+                      ? 'background: var(--neu-accent-primary); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--neu-glow); border: none;'
+                      : 'background: var(--neu-bg); color: var(--neu-text-muted); font-size: 12px; border: 1px solid var(--neu-border); opacity: {disabled ? 0.4 : 1}; box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);'}
+                    onclick={() => !disabled && toggleInterestTag(t)}
+                    {disabled}
+                  >
+                    #{t}
+                  </button>
+                {/each}
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex gap-3 pt-2">
+              <button
+                class="flex flex-1 items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none transition-all duration-300 active:scale-[0.95]"
+                style={saved
+                  ? 'background: #22c55e; color: white; font-size: 14px; box-shadow: 0 4px 14px rgba(34,197,94,0.35); border: none;'
+                  : 'background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 14px; box-shadow: 0 4px 14px var(--neu-glow); border: none;'}
+                onclick={saveProfile}
+                disabled={isSaving}
+              >
+                {#if saved}
+                  <Check size={14} color="white" strokeWidth={2.5} />
+                {:else if isSaving}
+                  <Loader2 class="h-4 w-4 animate-spin" />
+                  保存中...
+                {:else}
+                  保存
+                {/if}
+              </button>
+              <button
+                class="flex flex-1 items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none transition-transform duration-150 active:scale-[0.97]"
+                style="background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text); font-size: 14px;"
+                onclick={cancelEdit}
+                disabled={isSaving}
+              >
+                取消
+              </button>
             </div>
           </div>
         {/if}
@@ -559,7 +705,9 @@
             </div>
           {:else}
             <div
-              style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%;"
+              style="display: grid; grid-template-columns: repeat({platformStore.isTablet
+                ? 3
+                : 2}, 1fr); gap: 10px; width: 100%;"
             >
               {#each Array(Math.min(profile.stats.moments_count, 6)) as _}
                 <div

@@ -3,19 +3,14 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import { t } from '$lib/i18n';
-  import { feedService, momentsService, usersService } from '$lib/api/services';
+  import { usersService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
-  import { usePagination } from '$lib/hooks/use-pagination.svelte';
-  import MomentCard from '$lib/components/moments/moment-card.svelte';
-  import EmptyState from '$lib/components/common/empty-state.svelte';
-  import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
-  import type { MomentItem, UserItem } from '$lib/types/api';
+  import type { UserItem } from '$lib/types/api';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import Users from 'lucide-svelte/icons/users';
   import Compass from 'lucide-svelte/icons/compass';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Sparkles from 'lucide-svelte/icons/sparkles';
-  import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import Star from 'lucide-svelte/icons/star';
   import TrendingUp from 'lucide-svelte/icons/trending-up';
   import Coffee from 'lucide-svelte/icons/coffee';
@@ -39,11 +34,6 @@
 
   const onlineCount = $derived(nearbyUsers.filter((u) => u.presence_status === 'online').length);
 
-  const feed = usePagination<MomentItem>({
-    uniqueKey: 'moment_id',
-    initialLoading: true
-  });
-
   function getAnchor() {
     return {
       latitude: mapAnchorStore.latitude,
@@ -55,10 +45,6 @@
     if (authStore.isAuthenticated) return 'authenticated';
     if (showExplore) return 'explore';
     return 'guest';
-  }
-
-  function isContentActive() {
-    return getHomeMode() !== 'guest';
   }
 
   function formatDistance(meters?: number): string {
@@ -89,71 +75,20 @@
     }
   }
 
-  async function loadTrendingTags() {
-    try {
-      const response = await feedService.getTrending();
-      if (isSuccess(response) && response.data) {
-        // trending tags loaded by TrendingTags component
-      }
-    } catch {
-      // ignore
-    } finally {
-    }
-  }
-
-  async function loadFeed(refresh = false) {
-    if (!isContentActive()) return;
-
-    await feed.load(async (cursor) => {
-      if (authStore.isAuthenticated) {
-        return await feedService.getMoments({
-          reference_point: getAnchor(),
-          source: 'all',
-          radius: mapAnchorStore.radius * 1000,
-          pagination: { limit: 20, cursor }
-        });
-      }
-
-      return await momentsService.search({
-        radius: mapAnchorStore.radius * 1000,
-        reference_point: getAnchor(),
-        pagination: { limit: 20, cursor }
-      });
-    }, refresh);
-  }
-
   async function refreshHome(
     options: {
-      refreshFeed?: boolean;
       refreshWidgets?: boolean;
-      refreshGuestTrending?: boolean;
     } = {}
   ) {
-    const {
-      refreshFeed = true,
-      refreshWidgets = authStore.isAuthenticated,
-      refreshGuestTrending = showExplore
-    } = options;
+    const { refreshWidgets = authStore.isAuthenticated } = options;
 
     if (refreshWidgets && authStore.isAuthenticated) {
       refreshTrigger++;
     }
 
-    const tasks: Promise<void>[] = [];
-
-    if (refreshGuestTrending && showExplore) {
-      tasks.push(loadTrendingTags());
-    }
-
-    if (refreshFeed && isContentActive()) {
-      tasks.push(loadFeed(true));
-    }
-
     if (refreshWidgets && authStore.isAuthenticated) {
-      tasks.push(loadNearbyUsers());
+      await loadNearbyUsers();
     }
-
-    await Promise.all(tasks);
   }
 
   function refreshAll() {
@@ -164,14 +99,14 @@
     uiStore.openLoginModal(() => {
       showExplore = false;
       if (getHomeMode() === 'authenticated') {
-        void refreshHome({ refreshWidgets: true, refreshGuestTrending: false });
+        void refreshHome({ refreshWidgets: true });
       }
     });
   }
 
   function handleExplore() {
     if (showExplore) {
-      void refreshHome({ refreshWidgets: false, refreshGuestTrending: true });
+      void refreshHome({ refreshWidgets: false });
       return;
     }
     showExplore = true;
@@ -182,14 +117,8 @@
     if (mode === lastMode) return;
     lastMode = mode;
     lastAnchorUpdatedAt = null;
-    if (mode === 'guest') {
-      feed.reset();
-      return;
-    }
-    void refreshHome({
-      refreshWidgets: mode === 'authenticated',
-      refreshGuestTrending: mode === 'explore'
-    });
+    if (mode === 'guest') return;
+    void refreshHome({ refreshWidgets: mode === 'authenticated' });
   });
 
   $effect(() => {
@@ -211,10 +140,7 @@
     lastAnchorUpdatedAt = anchorUpdatedAt;
     if (locationDebounceTimer) clearTimeout(locationDebounceTimer);
     locationDebounceTimer = setTimeout(() => {
-      void refreshHome({
-        refreshWidgets: mode === 'authenticated',
-        refreshGuestTrending: mode === 'explore'
-      });
+      void refreshHome({ refreshWidgets: mode === 'authenticated' });
     }, 500);
     return () => {
       if (locationDebounceTimer) {
@@ -253,7 +179,7 @@
       </div>
       <div
         class="flex cursor-pointer items-center gap-1.5 rounded-full py-1.5 px-3.5"
-        style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+        style="box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
       >
         <MapPin size={12} strokeWidth={1.5} color="var(--neu-accent-primary)" />
         <span style="font-size: 11px; color: var(--neu-text-muted);"
@@ -266,7 +192,7 @@
     <div class="mt-4">
       <div
         class="flex flex-col items-center rounded-[24px] px-6 py-10 text-center"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+        style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
       >
         <div
           class="mb-4 flex items-center justify-center rounded-full"
@@ -313,7 +239,7 @@
         {#each [{ icon: MapPin, label: t('nav.nearby'), color: 'var(--neu-accent-primary)' }, { icon: Compass, label: t('nav.discover'), color: 'var(--neu-fallback-text)' }, { icon: Users, label: t('nav.messagesTab'), color: 'var(--neu-accent-primary)' }, { icon: Star, label: t('nav.me'), color: 'var(--neu-warning)' }] as feat}
           <div
             class="flex flex-col items-center justify-center rounded-[22px] neu-card-hover transition-transform duration-150 active:scale-[0.97]"
-            style="aspect-ratio: 1.2; background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+            style="aspect-ratio: 1.2; background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
           >
             <div
               class="flex items-center justify-center rounded-[14px]"
@@ -329,8 +255,8 @@
       </div>
     </div>
   </div>
-{:else if !platformStore.isDesktop}
-  <!-- Mobile Home (Figma Make HomeMobile) -->
+{:else if platformStore.isTablet}
+  <!-- Tablet Home (Figma Make HomeMobile with maxWidth 680) -->
   <div class="flex flex-col">
     <!-- Sticky header -->
     <div
@@ -343,28 +269,22 @@
           {t('home.discoverNearbyPeopleAndThings')}
         </p>
       </div>
-      <div class="flex items-center gap-2">
-        <div
-          class="flex cursor-pointer items-center gap-1.5 rounded-full py-1.5 px-3.5"
-          style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+      <div
+        class="flex cursor-pointer items-center gap-1.5 rounded-full py-1.5 px-3.5"
+        style="background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+        onclick={() => void goto('/location')}
+      >
+        <MapPin size={12} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+        <span style="font-size: 11px; color: var(--neu-text-muted);"
+          >{mapAnchorStore.displayName}</span
         >
-          <MapPin size={12} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-          <span style="font-size: 11px; color: var(--neu-text-muted);"
-            >{mapAnchorStore.displayName}</span
-          >
-        </div>
-        <button
-          class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
-          style="width: 28px; height: 28px; background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);"
-          onclick={refreshAll}
-          aria-label={t('common.refresh')}
-        >
-          <RefreshCw size={12} color="var(--neu-active-text)" />
-        </button>
       </div>
     </div>
 
-    <div class="flex flex-col px-5 pt-4 pb-6">
+    <div
+      class="flex flex-col px-5 pt-4 pb-6"
+      style="max-width: 680px; margin-left: auto; margin-right: auto; width: 100%;"
+    >
       <!-- Map Card (Figma Make HomeMobile) -->
       <div
         class="relative mb-5 w-full overflow-hidden rounded-[24px]"
@@ -474,7 +394,7 @@
                   {#if user.presence_status === 'online'}
                     <span
                       class="absolute bottom-0 right-0 rounded-full"
-                      style="width: 11px; height: 11px; background: var(--neu-success); border: 2px solid var(--neu-bg);"
+                      style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--neu-bg);"
                     ></span>
                   {/if}
                 </div>
@@ -484,7 +404,7 @@
                     {#if user.presence_status}
                       <span
                         style="font-size: 10px; color: {user.presence_status === 'online'
-                          ? 'var(--neu-success)'
+                          ? '#22c55e'
                           : 'var(--neu-text-muted)'};"
                       >
                         {user.presence_status === 'online'
@@ -511,7 +431,7 @@
                   <button
                     class="rounded-full px-3.5 py-1 outline-none transition-all active:scale-[0.93]"
                     style={user.relation?.is_following
-                      ? 'box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
+                      ? 'box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border-pressed); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
                       : 'box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
                     onclick={(e) => {
                       e.stopPropagation();
@@ -565,79 +485,6 @@
           </button>
         {/each}
       </div>
-
-      <!-- Moments Feed -->
-      <div class="mb-2 flex items-center justify-between">
-        <span
-          class="uppercase"
-          style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
-          >{t('home.recommendedMoments')}</span
-        >
-        <button
-          class="flex items-center gap-0.5 outline-none"
-          style="color: var(--neu-accent-primary);"
-          onclick={refreshAll}
-        >
-          <RefreshCw
-            size={12}
-            class={feed.loading ? 'animate-spin' : ''}
-            color="var(--neu-accent-primary)"
-          />
-        </button>
-      </div>
-
-      {#if feed.loading}
-        <div class="flex flex-col gap-3">
-          {#each Array(3) as _}
-            <div
-              class="rounded-[22px] p-4"
-              style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
-            >
-              <div class="flex items-center gap-3">
-                <div
-                  class="rounded-full"
-                  style="width: 36px; height: 36px; background: var(--neu-border);"
-                ></div>
-                <div class="flex-1">
-                  <div
-                    class="mb-1 rounded"
-                    style="width: 60px; height: 12px; background: var(--neu-border);"
-                  ></div>
-                  <div
-                    class="rounded"
-                    style="width: 100px; height: 10px; background: var(--neu-border);"
-                  ></div>
-                </div>
-              </div>
-            </div>
-          {/each}
-        </div>
-      {:else if feed.error}
-        <EmptyState
-          icon={Compass}
-          title={t('home.loadMomentsFailed')}
-          description={t('home.pleaseCheckNetwork')}
-          actionText={t('common.retry')}
-          onAction={() => loadFeed(true)}
-        />
-      {:else if feed.items.length === 0}
-        <EmptyState
-          icon={Compass}
-          title={t('home.noRecommendations')}
-          description={t('home.noRecommendationsDesc')}
-        />
-      {:else}
-        <div class="flex flex-col gap-3">
-          {#each feed.items as moment (moment.moment_id)}
-            <MomentCard {moment} />
-          {/each}
-        </div>
-        <LoadMoreButton
-          loading={feed.loadingMore}
-          hasMore={feed.hasMore}
-          onLoadMore={() => loadFeed(false)}
-        />
-      {/if}
     </div>
   </div>
 {:else}
@@ -649,7 +496,7 @@
       style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
     >
       <div>
-        <h1 style="font-size: 24px; font-weight: 600; color: var(--neu-text);">
+        <h1 style="font-size: 24px; color: var(--neu-text);">
           {t('nav.nearby')}
         </h1>
         <p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">
@@ -659,7 +506,7 @@
       <div class="flex items-center gap-2">
         <div
           class="flex items-center gap-1.5 rounded-full py-1.5 px-3.5"
-          style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+          style="box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
         >
           <MapPin size={12} strokeWidth={1.5} color="var(--neu-accent-primary)" />
           <span style="font-size: 11px; color: var(--neu-text-muted);"
@@ -732,7 +579,7 @@
 
         <!-- Stats grid (3 cards) -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
-          {#each [{ icon: Users, label: '附近', value: nearbyUsers.length, color: 'var(--neu-accent-primary)' }, { icon: Star, label: '活动', value: 12, color: '#F59E0B' }, { icon: TrendingUp, label: '在线', value: onlineCount, color: 'var(--neu-success)' }] as stat}
+          {#each [{ icon: Users, label: '附近', value: nearbyUsers.length, color: 'var(--neu-accent-primary)' }, { icon: Star, label: '活动', value: 12, color: '#F59E0B' }, { icon: TrendingUp, label: '在线', value: onlineCount, color: '#22c55e' }] as stat}
             <div
               class="flex flex-col items-center justify-center rounded-[18px] py-3.5"
               style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
@@ -756,10 +603,10 @@
         <!-- Activities list -->
         <div>
           <p
-            class="uppercase mb-2.5"
+            class="uppercase mb-3"
             style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
           >
-            热门活动
+            附近活动
           </p>
           <div class="flex flex-col gap-2.5">
             {#each [{ icon: Coffee, title: '晨间咖啡聚会', sub: '周六上午 · 市中心', bg: 'rgba(245,158,11,0.1)', color: '#F59E0B' }, { icon: Music, title: '街头音乐节', sub: '周五晚 · 云龙湖畔', bg: 'rgba(139,92,246,0.1)', color: '#8B5CF6' }, { icon: Sparkles, title: '创意市集', sub: '周末 · 彭城广场', bg: 'rgba(6,182,212,0.1)', color: '#06B6D4' }] as activity}
@@ -775,7 +622,7 @@
                 </div>
                 <div class="flex-1 min-w-0">
                   <p style="font-size: 13px; color: var(--neu-text);">{activity.title}</p>
-                  <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">
+                  <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 2px;">
                     {activity.sub}
                   </p>
                 </div>
@@ -811,7 +658,7 @@
               {#each Array(4) as _}
                 <div
                   class="flex items-center gap-3.5 rounded-[22px] px-4 py-3.5"
-                  style="height: 68px; background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+                  style="height: 68px; background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
                 >
                   <div
                     class="rounded-full"
@@ -835,7 +682,7 @@
                   role="button"
                   tabindex="0"
                   class="flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5 text-left neu-row-hover transition-transform duration-150 active:scale-[0.97]"
-                  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+                  style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
                   aria-label={user.user.nickname}
                   onclick={() => void goto(`/users/${user.user.user_id}`)}
                 >
@@ -853,7 +700,7 @@
                     {#if user.presence_status === 'online'}
                       <span
                         class="absolute bottom-0 right-0 rounded-full"
-                        style="width: 11px; height: 11px; background: var(--neu-success); border: 2px solid var(--neu-bg);"
+                        style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--neu-bg);"
                       ></span>
                     {/if}
                   </div>
@@ -863,7 +710,7 @@
                       {#if user.presence_status}
                         <span
                           style="font-size: 10px; color: {user.presence_status === 'online'
-                            ? 'var(--neu-success)'
+                            ? '#22c55e'
                             : 'var(--neu-text-muted)'};"
                         >
                           {user.presence_status === 'online'
@@ -891,8 +738,8 @@
                     <button
                       class="rounded-full px-3.5 py-1.5 outline-none transition-all active:scale-[0.93]"
                       style={user.relation?.is_following
-                        ? 'box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
-                        : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
+                        ? 'box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border-pressed); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
+                        : 'box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
                       onclick={(e) => {
                         e.stopPropagation();
                         handleFollowToggle(user);
@@ -932,82 +779,6 @@
             >
           </div>
         </div>
-
-        <!-- Moments Feed -->
-        <div class="mb-4 flex items-center justify-between">
-          <p
-            class="uppercase"
-            style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
-          >
-            {t('home.recommendedMoments')}
-          </p>
-          <button
-            class="flex items-center gap-0.5 outline-none"
-            style="color: var(--neu-accent-primary);"
-            onclick={refreshAll}
-          >
-            <RefreshCw
-              size={12}
-              class={feed.loading ? 'animate-spin' : ''}
-              color="var(--neu-accent-primary)"
-            />
-          </button>
-        </div>
-
-        {#if feed.loading}
-          <div class="flex flex-col gap-3">
-            {#each Array(4) as _}
-              <div
-                class="rounded-[22px] p-4"
-                style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
-              >
-                <div class="flex items-center gap-3">
-                  <div
-                    class="rounded-full"
-                    style="width: 36px; height: 36px; background: var(--neu-border);"
-                  ></div>
-                  <div class="flex-1">
-                    <div
-                      class="mb-1 rounded"
-                      style="width: 60px; height: 12px; background: var(--neu-border);"
-                    ></div>
-                    <div
-                      class="rounded"
-                      style="width: 100px; height: 10px; background: var(--neu-border);"
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            {/each}
-          </div>
-        {:else if feed.error}
-          <EmptyState
-            icon={Compass}
-            title={t('home.loadMomentsFailed')}
-            description={t('home.pleaseCheckNetwork')}
-            actionText={t('common.retry')}
-            onAction={() => loadFeed(true)}
-          />
-        {:else if feed.items.length === 0}
-          <EmptyState
-            icon={Compass}
-            title={t('home.noRecommendations')}
-            description={t('home.noRecommendationsDesc')}
-          />
-        {:else}
-          <div class="columns-1 gap-3 sm:columns-2">
-            {#each feed.items as moment (moment.moment_id)}
-              <div class="mb-3 break-inside-avoid">
-                <MomentCard {moment} />
-              </div>
-            {/each}
-          </div>
-          <LoadMoreButton
-            loading={feed.loadingMore}
-            hasMore={feed.hasMore}
-            onLoadMore={() => loadFeed(false)}
-          />
-        {/if}
       </div>
     </div>
   </div>

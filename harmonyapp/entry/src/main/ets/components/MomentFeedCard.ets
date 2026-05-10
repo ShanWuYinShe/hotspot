@@ -122,16 +122,19 @@ export struct MomentFeedCard {
     if (this.variant === 'postCard') {
       this.buildPostCard()
     } else {
-      SystemCard({
-        variant: CardVariant.DEFAULT,
-        cardPadding: DesignConstants.SPACING.LG,
-        cardBorderRadius: DesignConstants.RADIUS.XXL,
-        cardBorderColor: this.getPalette().borderColor,
-        cardBackgroundColor: this.getPalette().surfaceBackground,
-        clickable: true
-      }) {
-        this.cardContent()
+      Column() {
+        SystemCard({
+          variant: CardVariant.DEFAULT,
+          cardPadding: DesignConstants.SPACING.LG,
+          cardBorderRadius: DesignConstants.RADIUS.XXL,
+          cardBorderColor: this.getPalette().borderColor,
+          cardBackgroundColor: this.getPalette().surfaceBackground,
+          clickable: true
+        }) {
+          this.cardContent()
+        }
       }
+      .width('100%')
       .onClick(() => this.openMomentDetail(this.moment))
     }
   }
@@ -284,7 +287,7 @@ export struct MomentFeedCard {
     }
     .width('100%')
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .backgroundColor(this.getPalette().background)
+    .backgroundColor(this.getPalette().surfaceBackground)
     .shadow(this.getPalette().elevatedShadow)
     .border({ width: 1, color: this.getPalette().borderColor })
     .onClick(() => this.openMomentDetail(this.moment))

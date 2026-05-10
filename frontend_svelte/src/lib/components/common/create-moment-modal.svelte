@@ -13,10 +13,13 @@
   import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
   import type { PrivacyLevel, MomentItem } from '$lib/types/api';
   import { untrack } from 'svelte';
-  import Image from 'lucide-svelte/icons/image';
+  import ImagePlus from 'lucide-svelte/icons/image-plus';
   import Loader2 from 'lucide-svelte/icons/loader-2';
   import Send from 'lucide-svelte/icons/send';
   import X from 'lucide-svelte/icons/x';
+  import MapPin from 'lucide-svelte/icons/map-pin';
+  import Smile from 'lucide-svelte/icons/smile';
+  import Hash from 'lucide-svelte/icons/hash';
 
   interface Props {
     open: boolean;
@@ -39,6 +42,8 @@
   const dialogTitle = $derived(isEditMode ? '编辑动态' : '发布动态');
   const dialogSubtitle = $derived(isEditMode ? '修改你的生活瞬间' : '分享你此刻的生活瞬间');
 
+  const VIBE_TAGS = ['日常', '探店', '美食', '旅行', '户外', '城市'];
+
   let description = $state('');
   let tagsInput = $state('');
   let privacy = $state<PrivacyLevel>('public');
@@ -46,6 +51,7 @@
   let isUploadingImages = $state(false);
   let touched = $state<Record<string, boolean>>({});
   let showLocationPicker = $state(false);
+  let selectedVibes = $state<Set<string>>(new Set());
   let selectedImages = $state.raw<
     {
       file: File;
@@ -61,6 +67,8 @@
 
   const tags = $derived(parseTags(tagsInput));
 
+  const canPost = $derived(description.trim().length > 0);
+
   const descriptionRules: FieldRule[] = [
     { required: true, requiredMessage: '请输入动态内容' },
     { maxLength: DESCRIPTION_MAX, maxLengthMessage: `动态内容最多 ${DESCRIPTION_MAX} 字符` }
@@ -68,6 +76,16 @@
   let descriptionError = $derived(
     touched['description'] ? validateField(description, descriptionRules) : undefined
   );
+
+  function toggleVibe(tag: string) {
+    const next = new Set(selectedVibes);
+    if (next.has(tag)) {
+      next.delete(tag);
+    } else {
+      next.add(tag);
+    }
+    selectedVibes = next;
+  }
 
   function markTouched(field: string) {
     touched = { ...touched, [field]: true };
@@ -93,6 +111,7 @@
     const images = untrack(() => selectedImages);
     images.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     selectedImages = [];
+    selectedVibes = new Set();
     if (!isEditMode) {
       selectedLocation = getDefaultSelectedLocation();
     }
@@ -188,6 +207,9 @@
         toast.error('请选择发布位置');
         return;
       }
+
+      const allTags = [...tags, ...Array.from(selectedVibes)];
+
       if (isEditMode && editMoment) {
         const response = await momentsService.update({
           moment_id: editMoment.moment_id,
@@ -200,7 +222,7 @@
             location_name: locationName
           },
           image_file_ids: imageIds.length > 0 ? imageIds : undefined,
-          tags: tags.length > 0 ? tags : undefined,
+          tags: allTags.length > 0 ? allTags : undefined,
           privacy_level: privacy
         });
         if (isSuccess(response)) {
@@ -222,7 +244,7 @@
             location_name: locationName
           },
           image_file_ids: imageIds.length > 0 ? imageIds : undefined,
-          tags: tags.length > 0 ? tags : undefined,
+          tags: allTags.length > 0 ? allTags : undefined,
           privacy_level: privacy
         });
 
@@ -279,151 +301,249 @@
     class="flex max-h-[85vh] flex-col sm:max-w-2xl"
     style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg); border-radius: var(--neu-radius-lg);"
   >
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
+    <!-- Header: drag handle + title + close -->
+    <div class="flex-shrink-0 px-5 pt-4 pb-3" style="border-bottom: 1px solid var(--neu-border);">
+      <div class="flex justify-center mb-4">
         <div
-          class="flex items-center justify-center rounded-full"
-          style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+          class="rounded-full"
+          style="width: 36px; height: 4px; background: var(--neu-border-pressed);"
+        ></div>
+      </div>
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-[20px] tracking-tight" style="color: var(--neu-text);">
+            {dialogTitle}
+          </h1>
+          <p class="text-[12px] mt-0.5" style="color: var(--neu-text-muted);">
+            {dialogSubtitle}
+          </p>
+        </div>
+        <button
+          class="flex items-center justify-center rounded-full outline-none"
+          style="width: 38px; height: 38px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+          onclick={() => {
+            open = false;
+            onOpenChange?.(false);
+          }}
+          aria-label="关闭"
         >
-          <Send style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
+          <X style="width: 16px; height: 16px; color: var(--neu-text-muted);" strokeWidth={1.75} />
+        </button>
+      </div>
+    </div>
+
+    <!-- Scrollable Body -->
+    <div class="flex-1 overflow-y-auto no-scrollbar px-5 py-4 flex flex-col gap-4 min-h-0">
+      <!-- Author Row -->
+      <div class="flex items-center gap-3">
+        <div
+          class="rounded-full overflow-hidden flex-shrink-0"
+          style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);"
+        >
+          <img
+            src={authStore.currentAccount?.avatar_url || ''}
+            alt="You"
+            class="w-full h-full object-cover"
+          />
         </div>
         <div>
-          <div style="color: var(--neu-text); font-weight: 600;">{dialogTitle}</div>
-          <div style="font-size: 13px; font-weight: 400; color: var(--neu-text-muted);">
-            {dialogSubtitle}
+          <p class="text-[13px]" style="color: var(--neu-text);">
+            {authStore.currentAccount?.nickname || '我'}
+          </p>
+          <div class="flex items-center gap-1">
+            <MapPin
+              style="width: 11px; height: 11px; color: var(--neu-accent-primary);"
+              strokeWidth={1.5}
+            />
+            <span class="text-[11px]" style="color: var(--neu-text-muted);">
+              {selectedLocation.locationName || '定位中...'}
+            </span>
           </div>
         </div>
-      </Dialog.Title>
-    </Dialog.Header>
+      </div>
 
-    <div class="flex-1 overflow-y-auto min-h-0 py-4 px-1 space-y-4">
-      <!-- 内容 -->
-      <div class="space-y-2">
-        <label for="moment-description" style="font-size: 12px; color: var(--neu-text);">内容</label
-        >
+      <!-- Text Area -->
+      <div
+        class="rounded-[22px] p-4"
+        style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {descriptionError
+          ? 'var(--neu-error)'
+          : 'var(--neu-border-pressed)'}; min-height: 130px; display: flex; flex-direction: column;"
+      >
         <textarea
           id="moment-description"
           placeholder="写点什么吧..."
-          class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full resize-none"
-          style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {descriptionError
-            ? 'var(--neu-error)'
-            : 'var(--neu-border)'}; font-size: 13px; min-height: 120px;"
+          class="w-full flex-1 bg-transparent outline-none resize-none text-[13px]"
+          style="color: var(--neu-text); min-height: 90px; line-height: 1.6;"
           bind:value={description}
           onblur={() => markTouched('description')}
         ></textarea>
-        <div class="flex items-center justify-between">
-          {#if descriptionError}
-            <p style="font-size: 12px; color: var(--neu-error);">{descriptionError}</p>
-          {:else}
-            <span></span>
-          {/if}
-          <span style="font-size: 12px; color: var(--neu-text-muted);"
-            >{description.length}/{DESCRIPTION_MAX}</span
+        <div class="flex justify-between items-center mt-2">
+          <div class="flex gap-2">
+            <button
+              class="flex items-center justify-center rounded-full outline-none"
+              style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+              aria-label="表情"
+            >
+              <Smile style="width: 15px; height: 15px;" strokeWidth={1.5} />
+            </button>
+            <button
+              class="flex items-center justify-center rounded-full outline-none"
+              style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+              aria-label="标签"
+            >
+              <Hash style="width: 15px; height: 15px;" strokeWidth={1.5} />
+            </button>
+          </div>
+          <span
+            class="text-[11px]"
+            style="color: {description.length > DESCRIPTION_MAX * 0.9
+              ? 'var(--neu-accent-primary)'
+              : 'var(--neu-text-muted)'};"
           >
+            {description.length}/{DESCRIPTION_MAX}
+          </span>
+        </div>
+        {#if descriptionError}
+          <p class="text-[11px] mt-1" style="color: var(--neu-error);">{descriptionError}</p>
+        {/if}
+      </div>
+
+      <!-- Tags input (inline with textarea area) -->
+      {#if tags.length > 0}
+        <div class="flex flex-wrap gap-2">
+          {#each tags as tag (tag)}
+            <span
+              class="rounded-full px-2.5 py-0.5 text-[11px]"
+              style="background: var(--neu-accent-primary); color: var(--neu-active-text);"
+              >#{tag}</span
+            >
+          {/each}
+        </div>
+      {/if}
+
+      <!-- Image Upload -->
+      {#if selectedImages.length > 0}
+        <div class="grid gap-3 sm:grid-cols-3">
+          {#each selectedImages as image, index (image.previewUrl)}
+            <div
+              class="group relative overflow-hidden rounded-[22px]"
+              style="height: 120px; box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+            >
+              <img src={image.previewUrl} alt="预览图" class="w-full h-full object-cover" />
+              {#if image.isUploading}
+                <div
+                  class="absolute inset-0 flex items-center justify-center"
+                  style="background: var(--neu-overlay); font-size: 12px; color: white;"
+                >
+                  上传中 {Math.round(image.progress)}%
+                </div>
+              {/if}
+              <button
+                type="button"
+                class="absolute top-2.5 right-2.5 rounded-full flex items-center justify-center outline-none"
+                style="width: 26px; height: 26px; background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);"
+                onclick={() => removeImage(index)}
+              >
+                <X style="width: 14px; height: 14px; color: white;" strokeWidth={2} />
+              </button>
+            </div>
+          {/each}
+
+          <!-- Add more button -->
+          {#if selectedImages.length < MAX_IMAGES}
+            <label
+              class="flex flex-col items-center justify-center gap-1.5 rounded-[22px] outline-none cursor-pointer"
+              style="height: 120px; box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light); border: 1.5px dashed var(--neu-border-pressed);"
+            >
+              <ImagePlus
+                style="width: 22px; height: 22px; color: var(--neu-text-muted);"
+                strokeWidth={1.25}
+              />
+              <span class="text-[12px]" style="color: var(--neu-text-muted);">添加更多</span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                class="hidden"
+                onchange={handleImageChange}
+              />
+            </label>
+          {/if}
+        </div>
+      {:else}
+        <label
+          class="flex flex-col items-center justify-center gap-1.5 rounded-[22px] outline-none cursor-pointer w-full"
+          style="height: 80px; box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light); border: 1.5px dashed var(--neu-border-pressed);"
+        >
+          <ImagePlus
+            style="width: 22px; height: 22px; color: var(--neu-text-muted);"
+            strokeWidth={1.25}
+          />
+          <span class="text-[12px]" style="color: var(--neu-text-muted);">添加照片</span>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            class="hidden"
+            onchange={handleImageChange}
+            disabled={selectedImages.length >= MAX_IMAGES}
+          />
+        </label>
+      {/if}
+
+      {#if isEditMode && editMoment?.images && editMoment.images.length > 0}
+        <div class="grid gap-3 sm:grid-cols-3">
+          {#each editMoment.images as image (image.thumbnail_url ?? image.url)}
+            <div
+              class="overflow-hidden rounded-[22px]"
+              style="border: 1px solid var(--neu-border); background: var(--neu-bg); height: 120px;"
+            >
+              <img
+                src={image.thumbnail_url ?? image.url}
+                alt="已有图片"
+                class="w-full h-full object-cover"
+                style="opacity: 0.75;"
+              />
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      <!-- Vibe Tags -->
+      <div>
+        <p
+          class="text-[11px] uppercase tracking-widest mb-2.5"
+          style="color: var(--neu-text-muted);"
+        >
+          氛围
+        </p>
+        <div class="flex flex-wrap gap-2">
+          {#each VIBE_TAGS as tag (tag)}
+            {@const active = selectedVibes.has(tag)}
+            <button
+              class="px-4 py-1.5 rounded-full text-[12px] outline-none transition-all duration-200 active:scale-[0.92]"
+              style={active
+                ? 'background: var(--neu-accent-primary); color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid transparent;'
+                : 'background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);'}
+              onclick={() => toggleVibe(tag)}
+            >
+              {tag}
+            </button>
+          {/each}
         </div>
       </div>
 
-      <!-- 标签 -->
-      <div class="space-y-2">
-        <label for="moment-tags" style="font-size: 12px; color: var(--neu-text);">标签</label>
+      <!-- Tags input + Privacy (compact row) -->
+      <div class="flex gap-3">
         <input
-          id="moment-tags"
-          placeholder="用空格或逗号分隔，例如：城市 旅行 生活"
-          class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
-          style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"
+          placeholder="标签（空格分隔）"
+          class="rounded-full px-4 py-2 outline-none flex-1"
+          style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border-pressed); font-size: 12px;"
           bind:value={tagsInput}
         />
-        {#if tags.length > 0}
-          <div class="flex flex-wrap gap-2">
-            {#each tags as tag (tag)}
-              <span
-                class="rounded-full px-2.5 py-0.5"
-                style="font-size: 11px; background: var(--neu-accent-primary); color: var(--neu-active-text);"
-                >#{tag}</span
-              >
-            {/each}
-          </div>
-        {/if}
-      </div>
-
-      <!-- 图片 -->
-      <div class="space-y-2">
-        <label style="font-size: 12px; color: var(--neu-text);">图片</label>
-        <div class="flex flex-wrap items-center gap-2">
-          <label
-            class="inline-flex cursor-pointer items-center gap-2 rounded-[14px] px-4 py-2"
-            style="border: 1px dashed var(--neu-border); font-size: 13px; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: var(--neu-shadow-md);"
-          >
-            <Image style="width: 16px; height: 16px;" />
-            <span>选择图片</span>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              class="hidden"
-              onchange={handleImageChange}
-              disabled={selectedImages.length >= MAX_IMAGES}
-            />
-          </label>
-          <span style="font-size: 12px; color: var(--neu-text-muted);">最多 {MAX_IMAGES} 张</span>
-        </div>
-
-        {#if selectedImages.length > 0}
-          <div class="grid gap-3 sm:grid-cols-3">
-            {#each selectedImages as image, index (image.previewUrl)}
-              <div
-                class="group relative overflow-hidden rounded-[12px]"
-                style="border: 1px solid var(--neu-border); background: var(--neu-bg);"
-              >
-                <img src={image.previewUrl} alt="预览图" class="h-28 w-full object-cover" />
-                {#if image.isUploading}
-                  <div
-                    class="absolute inset-0 flex items-center justify-center"
-                    style="background: var(--neu-overlay); font-size: 12px; color: white;"
-                  >
-                    上传中 {Math.round(image.progress)}%
-                  </div>
-                {/if}
-                <button
-                  type="button"
-                  class="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-                  style="background: var(--neu-overlay-loading);"
-                  onclick={() => removeImage(index)}
-                >
-                  <X style="width: 14px; height: 14px;" />
-                </button>
-              </div>
-            {/each}
-          </div>
-        {/if}
-
-        {#if isEditMode && editMoment?.images && editMoment.images.length > 0}
-          <div class="grid gap-3 sm:grid-cols-3">
-            {#each editMoment.images as image (image.thumbnail_url ?? image.url)}
-              <div
-                class="overflow-hidden rounded-[12px]"
-                style="border: 1px solid var(--neu-border); background: var(--neu-bg);"
-              >
-                <img
-                  src={image.thumbnail_url ?? image.url}
-                  alt="已有图片"
-                  class="h-28 w-full object-cover"
-                  style="opacity: 0.75;"
-                />
-              </div>
-            {/each}
-          </div>
-        {/if}
-      </div>
-
-      <!-- 可见范围 -->
-      <div class="space-y-2">
-        <label for="moment-privacy" style="font-size: 12px; color: var(--neu-text);">可见范围</label
-        >
         <select
-          id="moment-privacy"
-          class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
-          style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"
+          class="rounded-full px-3 py-2 outline-none"
+          style="background: var(--neu-bg); color: var(--neu-text); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 12px;"
           bind:value={privacy}
         >
           <option value="public">公开</option>
@@ -437,31 +557,26 @@
         overrideName={selectedLocation.locationName}
         onAdjust={() => (showLocationPicker = true)}
       />
-    </div>
 
-    <Dialog.Footer class="pt-2 flex gap-3 justify-end">
+      <!-- Post Button -->
       <button
-        class="rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;"
-        onclick={() => {
-          open = false;
-          onOpenChange?.(false);
-        }}
-      >
-        取消
-      </button>
-      <button
-        class="rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);"
+        class="flex items-center justify-center gap-2 w-full py-3.5 rounded-[22px] text-[14px] outline-none transition-all duration-300 active:scale-[0.97]"
+        style={canPost && !isSubmitting
+          ? 'background: var(--neu-accent-primary); color: white; box-shadow: 0 8px 24px rgba(0,0,0,0.18); border: 1px solid transparent;'
+          : 'background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); opacity: 0.6; cursor: not-allowed;'}
         onclick={handleSubmit}
-        disabled={isSubmitting || isUploadingImages}
+        disabled={!canPost || isSubmitting || isUploadingImages}
       >
         {#if isSubmitting}
-          <Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
+          <Loader2 style="width: 16px; height: 16px;" class="inline-block" />
+        {:else}
+          <Send style="width: 16px; height: 16px;" strokeWidth={1.75} />
         {/if}
-        {isEditMode ? '保存' : '发布'}
+        <span>{isEditMode ? '保存' : '发布'}</span>
       </button>
-    </Dialog.Footer>
+
+      <div style="height: 8px;"></div>
+    </div>
   </Dialog.Content>
 </Dialog.Root>
 

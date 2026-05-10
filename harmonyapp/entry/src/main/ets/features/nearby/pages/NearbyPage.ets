@@ -46,6 +46,11 @@ class GroupDetailParams {
   groupId: string = '';
 }
 
+interface StatItem {
+  label: string;
+  value: string;
+}
+
 
 @Preview
 @Component
@@ -456,7 +461,7 @@ export struct NearbyPage {
         .height(this.isTablet ? 260 : 200)
         .borderRadius(28)
         .linearGradient({
-          direction: GradientDirection.BottomRight,
+          direction: GradientDirection.Right,
           colors: [[this.getCurrentThemePalette().accentBackground, 0.0],
             [this.getCurrentThemePalette().accentMuted, 0.6],
             [this.getCurrentThemePalette().surfaceSubtle, 1.0]]
@@ -508,7 +513,7 @@ export struct NearbyPage {
             { label: '活动中', value: `${this.groups.filter((g: GroupItem) => g.my_state?.is_joined).length}` },
             { label: '在线', value: `${this.users.filter((u: UserItem) => u.presence_status === 'online').length}` },
             { label: '动态', value: `${this.moments.length}` }
-          ], (stat: { label: string; value: string }) => {
+          ], (stat: StatItem) => {
             Column({ space: 1 }) {
               Text(stat.value)
                 .fontSize(16)
@@ -523,7 +528,7 @@ export struct NearbyPage {
             .backgroundColor('rgba(255,255,255,0.15)')
             .layoutWeight(1)
             .alignItems(HorizontalAlign.Center)
-          }, (stat: { label: string }) => stat.label)
+          }, (stat: StatItem) => stat.label)
         }
         .width('100%')
       }
@@ -654,9 +659,12 @@ export struct NearbyPage {
       .width('100%')
       .margin({ bottom: 12 })
 
-      Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(12), cross: LengthMetrics.vp(12) } }) {
+      Flex({ wrap: FlexWrap.Wrap }) {
         ForEach(this.groups.slice(0, this.isTablet ? 6 : 4), (group: GroupItem) => {
-          this.buildActivityCard(group)
+          Column() {
+            this.buildActivityCard(group)
+          }
+          .margin({ left: 6, right: 6, top: 6, bottom: 6 })
         }, (group: GroupItem) => group.group?.group_id ?? '')
       }
       .width('100%')
@@ -741,7 +749,7 @@ export struct NearbyPage {
 
       Column({ space: DesignConstants.SPACING.MD }) {
         if (this.isTablet) {
-          Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(12), cross: LengthMetrics.vp(12) } }) {
+          Flex({ wrap: FlexWrap.Wrap }) {
             ForEach(this.moments.slice(0, 6), (moment: MomentItem) => {
               Column() {
                 MomentFeedCard({
@@ -749,7 +757,8 @@ export struct NearbyPage {
                   onOpenDetail: (item: MomentItem) => this.openMomentDetail(item)
                 })
               }
-              .width('calc(50% - 6vp)')
+              .width('calc(50% - 12vp)')
+              .margin({ left: 6, right: 6, top: 6, bottom: 6 })
             }, (moment: MomentItem) => moment.moment_id)
           }
         } else {

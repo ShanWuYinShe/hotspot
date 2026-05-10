@@ -141,7 +141,7 @@ export default {
     greatMoments: '精彩瞬间',
     activeGroups: '活跃群组',
     explore: '探索发现',
-    discoverNearbyPeopleAndThings: '发现附近的精彩人与事',
+    discoverNearbyPeopleAndThings: '发现周边的有趣人和事',
     trendingTopics: '热门话题',
     recommendedMoments: '推荐动态',
     noRecommendations: '暂无推荐',

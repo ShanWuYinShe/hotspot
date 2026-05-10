@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
   import { withMinimumLoadingTime } from '$lib/utils/loading';
   import { formatRelativeTime } from '$lib/utils/format';
   import { privateChatsService, groupsService } from '$lib/api/services';
@@ -83,6 +84,16 @@
       : groupChats
   );
 
+  function isPrivateChatSelected(userId: string): boolean {
+    const path = $page.url.pathname;
+    return path === `/chat/users/${userId}`;
+  }
+
+  function isGroupSelected(groupId: string): boolean {
+    const path = $page.url.pathname;
+    return path === `/chat/groups/${groupId}`;
+  }
+
   onMount(() => {
     loadPrivateChats();
   });
@@ -103,17 +114,22 @@
       <!-- List header -->
       <div class="flex-shrink-0 px-4 pt-4 pb-3" style="border-bottom: 1px solid var(--neu-border);">
         <div class="mb-3 flex items-center justify-between">
-          <h1 style="font-size: 18px; color: var(--neu-text);">消息</h1>
-          <div class="flex gap-2">
+          <div>
+            <h1 style="font-size: 18px; color: var(--neu-text);">消息</h1>
+            <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">
+              {totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}
+            </p>
+          </div>
+          <div class="flex gap-1.5">
             <button
               class="flex items-center justify-center rounded-full outline-none"
-              style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+              style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
             >
               <UserPlus size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
             </button>
             <button
               class="flex items-center justify-center rounded-full outline-none"
-              style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+              style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
             >
               <Plus size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
             </button>
@@ -124,11 +140,11 @@
           class="flex items-center gap-2 rounded-[14px] px-3 py-2"
           style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
         >
-          <Search size={13} strokeWidth={1.5} color="var(--neu-text-muted)" />
+          <Search size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
           <input
             type="text"
             bind:value={searchVal}
-            placeholder="搜索会话…"
+            placeholder="搜索…"
             class="flex-1 bg-transparent outline-none"
             style="font-size: 12px; color: var(--neu-text);"
           />
@@ -146,6 +162,7 @@
           </p>
           <div class="flex gap-3 overflow-x-auto no-scrollbar">
             {#each onlineChats as chat (chat.other_user.user_id)}
+              {@const selected = isPrivateChatSelected(chat.other_user.user_id)}
               <a
                 href="/chat/users/{chat.other_user.user_id}"
                 class="flex flex-col items-center gap-1 flex-shrink-0"
@@ -153,7 +170,9 @@
                 <div class="relative">
                   <div
                     class="overflow-hidden rounded-full"
-                    style="width: 36px; height: 36px; border: 1.5px solid var(--neu-border);"
+                    style="width: 36px; height: 36px; border: {selected
+                      ? '2px solid var(--neu-accent-primary)'
+                      : '1.5px solid var(--neu-border)'};"
                   >
                     <img
                       src={chat.other_user.avatar_url || ''}
@@ -163,7 +182,7 @@
                   </div>
                   <span
                     class="absolute bottom-0 right-0 rounded-full"
-                    style="width: 8px; height: 8px; background: var(--neu-success); border: 1.5px solid var(--neu-bg);"
+                    style="width: 8px; height: 8px; background: #22c55e; border: 1.5px solid var(--neu-bg);"
                   ></span>
                 </div>
                 <span style="font-size: 10px; color: var(--neu-text-muted);"
@@ -217,14 +236,22 @@
               {@const isOnline =
                 presenceStore.isOnline(chat.other_user.user_id) ||
                 chat.presence_status === 'online'}
+              {@const selected = isPrivateChatSelected(chat.other_user.user_id)}
               <a
                 href="/chat/users/{chat.other_user.user_id}"
-                class="flex items-center gap-3 rounded-[14px] px-3 py-2.5 transition-all neu-row-hover"
+                class="flex items-center gap-3.5 cursor-pointer transition-all neu-row-hover"
+                style="padding: 10px 16px; border-radius: 18px; background: {selected
+                  ? 'var(--neu-accent-primary)'
+                  : 'transparent'}; box-shadow: {selected
+                  ? '0 4px 16px var(--neu-glow)'
+                  : 'none'}; transition: background 0.16s ease;"
               >
                 <div class="relative flex-shrink-0">
                   <div
                     class="overflow-hidden rounded-full"
-                    style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);"
+                    style="width: 40px; height: 40px; border: {selected
+                      ? '1.5px solid rgba(255,255,255,0.35)'
+                      : '1.5px solid var(--neu-border)'};"
                   >
                     <img
                       src={chat.other_user.avatar_url || ''}
@@ -235,31 +262,39 @@
                   {#if isOnline}
                     <span
                       class="absolute bottom-0 right-0 rounded-full"
-                      style="width: 8px; height: 8px; background: var(--neu-success); border: 1.5px solid var(--neu-bg);"
+                      style="width: 10px; height: 10px; background: #22c55e; border: 2px solid var(--neu-bg);"
                     ></span>
                   {/if}
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="mb-0.5 flex items-center justify-between">
                     <span
-                      style="font-size: 13px; color: var(--neu-text); font-weight: {chat.unread_count >
-                      0
-                        ? 600
-                        : 400};">{chat.other_user.nickname}</span
+                      style="font-size: 14px; color: {selected
+                        ? 'white'
+                        : 'var(--neu-text)'}; font-weight: {chat.unread_count > 0 ? 600 : 400};"
+                      >{chat.other_user.nickname}</span
                     >
-                    <span style="font-size: 10px; color: var(--neu-text-muted);"
+                    <span
+                      style="font-size: 11px; flex-shrink: 0; color: {selected
+                        ? 'rgba(255,255,255,0.7)'
+                        : 'var(--neu-text-muted)'};"
                       >{formatRelativeTime(chat.last_activity_at)}</span
                     >
                   </div>
-                  <p class="truncate pr-3" style="font-size: 11px; color: var(--neu-text-muted);">
+                  <p
+                    class="truncate pr-4"
+                    style="font-size: 12px; color: {selected
+                      ? 'rgba(255,255,255,0.8)'
+                      : 'var(--neu-text-muted)'};"
+                  >
                     {#if chat.last_message}{chat.last_message.content ||
                         '[媒体消息]'}{:else}暂无消息{/if}
                   </p>
                 </div>
-                {#if chat.unread_count > 0}
+                {#if chat.unread_count > 0 && !selected}
                   <div
                     class="flex flex-shrink-0 items-center justify-center rounded-full"
-                    style="width: 18px; height: 18px; background: var(--neu-accent-primary); color: white; font-size: 10px; font-weight: 600; box-shadow: 0 2px 8px var(--neu-glow);"
+                    style="width: 20px; height: 20px; background: var(--neu-accent-primary); color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--neu-glow);"
                   >
                     {chat.unread_count > 99 ? '99+' : chat.unread_count}
                   </div>
@@ -288,13 +323,21 @@
           {/each}
         {:else}
           {#each filteredGroupChats as group (group.group.group_id)}
+            {@const selected = isGroupSelected(group.group.group_id)}
             <a
               href="/chat/groups/{group.group.group_id}"
-              class="flex items-center gap-3 rounded-[14px] px-3 py-2.5 transition-all neu-row-hover"
+              class="flex items-center gap-3.5 cursor-pointer transition-all neu-row-hover"
+              style="padding: 10px 16px; border-radius: 18px; background: {selected
+                ? 'var(--neu-accent-primary)'
+                : 'transparent'}; box-shadow: {selected
+                ? '0 4px 16px var(--neu-glow)'
+                : 'none'}; transition: background 0.16s ease;"
             >
               <div
                 class="flex-shrink-0 overflow-hidden rounded-full"
-                style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);"
+                style="width: 40px; height: 40px; border: {selected
+                  ? '1.5px solid rgba(255,255,255,0.35)'
+                  : '1.5px solid var(--neu-border)'};"
               >
                 {#if group.group.avatar_url}
                   <img
@@ -313,21 +356,30 @@
               </div>
               <div class="min-w-0 flex-1">
                 <div class="mb-0.5 flex items-center justify-between">
-                  <span style="font-size: 13px; color: var(--neu-text); font-weight: 500;"
-                    >{group.group.name}</span
+                  <span
+                    style="font-size: 14px; font-weight: 500; color: {selected
+                      ? 'white'
+                      : 'var(--neu-text)'};">{group.group.name}</span
                   >
-                  <span style="font-size: 10px; color: var(--neu-text-muted);"
-                    >{group.group.members_count}人</span
+                  <span
+                    style="font-size: 11px; flex-shrink: 0; color: {selected
+                      ? 'rgba(255,255,255,0.7)'
+                      : 'var(--neu-text-muted)'};">{group.group.members_count}人</span
                   >
                 </div>
-                <p style="font-size: 11px; color: var(--neu-text-muted);">
+                <p
+                  class="truncate pr-4"
+                  style="font-size: 12px; color: {selected
+                    ? 'rgba(255,255,255,0.8)'
+                    : 'var(--neu-text-muted)'};"
+                >
                   {formatRelativeTime(group.last_activity_at ?? group.my_state?.joined_at ?? '')}
                 </p>
               </div>
-              {#if (group.my_state?.unread_count ?? 0) > 0}
+              {#if (group.my_state?.unread_count ?? 0) > 0 && !selected}
                 <div
                   class="flex flex-shrink-0 items-center justify-center rounded-full"
-                  style="width: 18px; height: 18px; background: var(--neu-accent-primary); color: white; font-size: 10px; font-weight: 600; box-shadow: 0 2px 8px var(--neu-glow);"
+                  style="width: 20px; height: 20px; background: var(--neu-accent-primary); color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--neu-glow);"
                 >
                   {(group.my_state?.unread_count ?? 0) > 99
                     ? '99+'
@@ -439,7 +491,7 @@
                   </div>
                   <span
                     class="absolute bottom-0.5 right-0.5 rounded-full"
-                    style="width: 12px; height: 12px; background: var(--neu-success); border: 2px solid var(--neu-bg);"
+                    style="width: 12px; height: 12px; background: #22c55e; border: 2px solid var(--neu-bg);"
                   ></span>
                 </div>
                 <span style="font-size: 11px; color: var(--neu-text-muted);"
@@ -532,7 +584,7 @@
                     {#if isOnline}
                       <span
                         class="absolute bottom-0 right-0 rounded-full"
-                        style="width: 10px; height: 10px; background: var(--neu-success); border: 2px solid var(--neu-bg);"
+                        style="width: 10px; height: 10px; background: #22c55e; border: 2px solid var(--neu-bg);"
                       ></span>
                     {/if}
                   </div>

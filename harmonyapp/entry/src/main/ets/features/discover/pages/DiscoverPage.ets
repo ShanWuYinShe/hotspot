@@ -363,7 +363,7 @@ export struct DiscoverPage {
               : this.getCurrentThemePalette().textSecondary)
             .backgroundColor(this.activeTag === tag
               ? this.getCurrentThemePalette().accentBackground
-              : this.getCurrentThemePalette().background)
+              : this.getCurrentThemePalette().surfaceBackground)
             .borderRadius(DesignConstants.RADIUS.FULL)
             .padding({
               left: 14,
