@@ -84,6 +84,7 @@ export struct MessagePage {
   @State deletingChatKeys: string[] = [];
   @State pressedChatKey: string = '';
   @State searchKeyword: string = '';
+  @State chatItems: ChatItem[] = [];
 
   private getOnlineChats(): ChatItem[] {
     const online: ChatItem[] = [];
@@ -161,6 +162,7 @@ export struct MessagePage {
       allChats = this.mergeAndSortChats([], allChats);
 
       this.chatListDataSource.setData(allChats);
+      this.chatItems = allChats;
       this.hasData = allChats.length > 0;
 
       // 仅用户主动下拉刷新时触发振动反馈
@@ -205,6 +207,7 @@ export struct MessagePage {
         return chatItem;
       });
       this.chatListDataSource.setData(chats);
+      this.chatItems = chats;
       this.hasData = true;
       hilog.info(DOMAIN_NUMBER, TAG, `Loaded ${chats.length} chats from cache`);
     }
@@ -315,6 +318,7 @@ export struct MessagePage {
         const existingItems = this.getAllDataFromSource();
         const mergedItems = this.mergeAndSortChats(existingItems, newChats);
         this.chatListDataSource.setData(mergedItems);
+        this.chatItems = mergedItems;
         this.updateCache(mergedItems);
       }
     } catch {
@@ -470,6 +474,7 @@ export struct MessagePage {
       if (index >= 0) {
         this.chatListDataSource.deleteData(index);
       }
+      this.chatItems = this.getAllDataFromSource();
       this.updateCache(this.getAllDataFromSource());
       SystemToast.show('操作成功', this.getUIContext());
     } catch {
@@ -652,50 +657,67 @@ export struct MessagePage {
         )
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          List() {
-            // 在线头像条
-            if (this.getOnlineChats().length > 0) {
-              ListItem() {
+          Scroll() {
+            Column() {
+              // 在线头像条
+              if (this.getOnlineChats().length > 0) {
                 this.buildOnlineAvatarsStrip()
               }
-            }
 
-            // "最近" 标签
-            ListItem() {
+              // "最近" 标签
               Text('最近')
                 .fontSize(10)
                 .fontColor(this.getCurrentThemePalette().textSecondary)
                 .textCase(TextCase.UpperCase)
+                .letterSpacing(1.4)
                 .padding({
                   left: DesignConstants.SPACING.LG,
                   right: DesignConstants.SPACING.LG,
                   top: 8,
-                  bottom: 8
+                  bottom: 10
                 })
-            }
 
-            // 聊天列表
-            LazyForEach(this.chatListDataSource, (item: ChatItem) => {
-              ListItem() {
-                this.buildChatItem(item)
+              // 聊天列表卡片（单个大卡片包裹所有项）
+              Column() {
+                ForEach(this.chatItems, (item: ChatItem, index?: number) => {
+                  Column() {
+                    this.buildChatItem(item)
+                  }
+                  .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+
+                  if ((index ?? 0) < this.chatItems.length - 1) {
+                    Row()
+                      .width('100%')
+                      .height(0.5)
+                      .backgroundColor(this.getSurfaceBorder())
+                      .margin({ left: 16, right: 16 })
+                  }
+                }, (item: ChatItem) => item.id + item.type)
               }
-              .swipeAction({ end: this.SwipeActionEnd(item) })
-            }, (item: ChatItem) => item.id + item.type)
+              .width('100%')
+              .borderRadius(DesignConstants.RADIUS.XXL)
+              .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+              .shadow(this.getCurrentThemePalette().elevatedShadow)
+              .border({ width: 1, color: this.getSurfaceBorder() })
+              .clip(true)
+              .margin({
+                left: DesignConstants.SPACING.LG,
+                right: DesignConstants.SPACING.LG
+              })
 
-            if (this.isLoadingMore) {
-              ListItem() {
+              if (this.isLoadingMore) {
                 LoadingMoreIndicator()
+                  .margin({ top: 12, bottom: 12 })
               }
             }
+            .width('100%')
+            .padding({
+              bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
+            })
           }
           .width('100%')
-          .padding({
-            left: DesignConstants.SPACING.LG,
-            right: DesignConstants.SPACING.LG,
-            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
-          })
-          .backgroundColor(Color.Transparent)
-          .cachedCount(10)
+          .scrollBar(BarState.Auto)
+          .edgeEffect(EdgeEffect.Spring)
           .onReachEnd(() => { this.loadMore(); })
         }
         .layoutWeight(1)
@@ -768,31 +790,6 @@ export struct MessagePage {
   }
 
   @Builder
-  SwipeActionEnd(item: ChatItem) {
-    Row() {
-          Button({ type: ButtonType.Normal, stateEffect: true }) {
-            Column() {
-              Text(this.isChatDeleting(item) ? '处理中...' : '删除')
-            .fontColor(this.getCurrentThemePalette().accentText)
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-        }
-        .width('100%')
-        .height('100%')
-        .justifyContent(FlexAlign.Center)
-      }
-      .backgroundColor(this.getCurrentThemePalette().accentBackground)
-      .width(80)
-      .height('100%')
-      .borderRadius(DesignConstants.RADIUS.MD)
-      .opacity(this.isChatDeleting(item) ? DesignConstants.OPACITY.LOADING : 1)
-      .enabled(!this.isChatDeleting(item))
-      .onClick(() => this.deleteChat(item))
-    }
-    .height('100%')
-    .justifyContent(FlexAlign.End)
-  }
-
-  @Builder
   buildChatItem(item: ChatItem) {
     Row({ space: 14 }) {
       Badge({
@@ -837,13 +834,10 @@ export struct MessagePage {
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-    .borderRadius(DesignConstants.RADIUS.XXL)
+    .borderRadius(18)
     .backgroundColor(this.pressedChatKey === this.getChatKey(item)
       ? this.getCurrentThemePalette().surfaceSubtle
-      : this.getCurrentThemePalette().surfaceBackground)
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
-    .border({ width: 1, color: this.getSurfaceBorder() })
-    .margin({ top: 4, bottom: 4 })
+      : Color.Transparent)
     .opacity(this.isChatDeleting(item) ? DesignConstants.OPACITY.LOADING : 1)
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
@@ -858,5 +852,11 @@ export struct MessagePage {
       }
       this.enterChat(item);
     })
+    .bindMenu([
+      {
+        value: '删除',
+        action: () => { this.deleteChat(item); }
+      }
+    ])
   }
 }
