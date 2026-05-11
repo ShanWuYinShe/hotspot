@@ -486,10 +486,9 @@ export struct NearbyPage {
     Column() {
       Row() {
         Text('附近的人')
-          .fontSize(10)
-          .fontColor(this.getPalette().textTertiary)
-          .textCase(TextCase.UpperCase)
-          .letterSpacing(0.14 * 16)
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.getPalette().textPrimary)
 
         Blank()
 
@@ -510,147 +509,90 @@ export struct NearbyPage {
       .width('100%')
       .margin({ bottom: 12 })
 
-      Column({ space: 10 }) {
-        if (this.usersLoading) {
-          ForEach(['1', '2', '3'], (_: string) => {
-            this.buildUserRowSkeleton()
-          })
-        } else {
-          ForEach(this.users.slice(0, 5), (user: UserItem) => {
-            this.buildNearbyUserRow(user)
-          }, (user: UserItem) => user.user?.user_id ?? '')
+      Scroll() {
+        Row({ space: 12 }) {
+          if (this.usersLoading) {
+            ForEach(['1', '2', '3', '4', '5'], (_: string) => {
+              Column({ space: 6 }) {
+                Row()
+                  .width(66)
+                  .height(66)
+                  .borderRadius(20)
+                  .backgroundColor(this.getPalette().surfaceSubtle)
+              }
+              .alignItems(HorizontalAlign.Center)
+            }, (_: string) => _)
+          } else {
+            ForEach(this.users.slice(0, 8), (user: UserItem) => {
+              Column({ space: 6 }) {
+                Stack() {
+                  SystemAvatar({
+                    avatarUrl: user.user?.avatar_url ?? '',
+                    name: user.user?.nickname ?? '',
+                    avatarSize: 66,
+                    shape: 'circle'
+                  })
+                  .border({ width: 2, color: this.getPalette().borderColor })
+                  .borderRadius(33)
+
+                  if (user.presence_status === 'online') {
+                    Row()
+                      .width(12)
+                      .height(12)
+                      .borderRadius(6)
+                      .backgroundColor('#22c55e')
+                      .border({ width: 2, color: this.getPalette().surfaceBackground })
+                      .position({ x: 50, y: 50 })
+                  }
+
+                  if (user.location?.distance !== undefined && user.location?.distance !== null) {
+                    Row() {
+                      Text(LocationUtil.formatDistance(user.location.distance))
+                        .fontSize(9)
+                        .fontColor(Color.White)
+                    }
+                    .padding({ left: 6, right: 6, top: 1, bottom: 1 })
+                    .borderRadius(DesignConstants.RADIUS.FULL)
+                    .backgroundColor(this.getPalette().accentBackground)
+                    .shadow({
+                      radius: 8,
+                      color: this.getPalette().accentShadow.color,
+                      offsetX: 0,
+                      offsetY: 2
+                    })
+                    .position({ x: '50%', y: 62 })
+                    .translate({ x: '-50%' })
+                  }
+                }
+
+                Text(user.user?.nickname ?? '')
+                  .fontSize(12)
+                  .fontColor(this.getPalette().textPrimary)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .constraintSize({ maxWidth: 70 })
+                  .margin({ top: 4 })
+              }
+              .alignItems(HorizontalAlign.Center)
+              .onClick(() => {
+                const userId = user.user?.user_id;
+                if (userId) {
+                  const params = new ProfileRouteParam();
+                  params.userId = userId;
+                  AppRouter.push(PageNames.PROFILE, params);
+                }
+              })
+            }, (user: UserItem) => user.user?.user_id ?? '')
+          }
         }
       }
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
       .width('100%')
     }
     .width('100%')
     .padding({ left: 16, right: 16 })
     .margin({ bottom: 20 })
-  }
-
-  @Builder
-  private buildNearbyUserRow(user: UserItem) {
-    Row({ space: 14 }) {
-      // 头像 + 在线状态
-      Stack() {
-        SystemAvatar({
-          avatarUrl: user.user?.avatar_url ?? '',
-          name: user.user?.nickname ?? '',
-          avatarSize: 44,
-          shape: 'circle'
-        })
-
-        if (user.presence_status === 'online') {
-          Row()
-            .width(11)
-            .height(11)
-            .borderRadius(5.5)
-            .backgroundColor('#22c55e')
-            .border({ width: 2, color: this.getPalette().surfaceBackground })
-            .position({ x: 33, y: 33 })
-        }
-      }
-
-      // 名称 + 标签
-      Column({ space: 2 }) {
-        Text(user.user?.nickname ?? '')
-          .fontSize(14)
-          .fontColor(this.getPalette().textPrimary)
-
-        Row({ space: 6 }) {
-          if (user.presence_status) {
-            Text(user.presence_status === 'online' ? '在线' : '离线')
-              .fontSize(10)
-              .fontColor(user.presence_status === 'online' ? '#22c55e' : this.getPalette().textTertiary)
-            Text('·')
-              .fontSize(10)
-              .fontColor(this.getPalette().textTertiary)
-              .opacity(0.5)
-          }
-          if (user.tags && user.tags.length > 0) {
-            Text(user.tags[0])
-              .fontSize(10)
-              .fontColor(this.getPalette().accentBackground)
-              .opacity(0.8)
-          }
-        }
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
-
-      // 距离 + 关注按钮
-      Column({ space: 8 }) {
-        if (user.location?.distance !== undefined && user.location?.distance !== null) {
-          Text(LocationUtil.formatDistance(user.location.distance))
-            .fontSize(12)
-            .fontColor(this.getPalette().accentBackground)
-        }
-
-        Button(this.isUserFollowing(user.user?.user_id ?? '') ? '已关注' : '关注')
-          .type(ButtonType.Normal)
-          .fontSize(11)
-          .height(28)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .padding({ left: 14, right: 14 })
-          .fontColor(this.isUserFollowing(user.user?.user_id ?? '')
-            ? this.getPalette().accentBackground
-            : this.getPalette().textTertiary)
-          .backgroundColor(this.getPalette().surfaceBackground)
-          .shadow(this.isUserFollowing(user.user?.user_id ?? '')
-            ? { radius: 3, color: this.getPalette().surfaceShadow.color, offsetX: 3, offsetY: 3 }
-            : this.getPalette().controlShadow)
-          .border({ width: 1, color: this.isUserFollowing(user.user?.user_id ?? '')
-            ? this.getPalette().borderColor
-            : this.getPalette().borderColor })
-          .onClick(() => {
-            if (!this.isLoggedIn) {
-              const loginParams = new LoginRouteParam();
-              loginParams.reason = 'action_required';
-              loginParams.action = '关注用户';
-              AppRouter.push(PageNames.LOGIN, loginParams);
-              return;
-            }
-            this.followUser(user);
-          })
-      }
-      .alignItems(HorizontalAlign.End)
-    }
-    .width('100%')
-    .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-    .borderRadius(22)
-    .shadow(this.getPalette().elevatedShadow)
-    .border({ width: 1, color: this.getPalette().borderColor })
-    .backgroundColor(this.getPalette().surfaceBackground)
-    .onClick(() => this.openUserProfile(user))
-  }
-
-  @Builder
-  private buildUserRowSkeleton() {
-    Row({ space: 14 }) {
-      Row()
-        .width(44)
-        .height(44)
-        .borderRadius(22)
-        .backgroundColor(this.getPalette().surfaceSubtle)
-      Column({ space: 4 }) {
-        Row()
-          .width(60)
-          .height(12)
-          .borderRadius(6)
-          .backgroundColor(this.getPalette().surfaceSubtle)
-        Row()
-          .width(80)
-          .height(10)
-          .borderRadius(5)
-          .backgroundColor(this.getPalette().surfaceSubtle)
-      }
-      .layoutWeight(1)
-    }
-    .width('100%')
-    .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-    .borderRadius(22)
-    .border({ width: 1, color: this.getPalette().borderColor })
-    .backgroundColor(this.getPalette().surfaceBackground)
   }
 
   // ==================== 附近活动 ====================
@@ -660,10 +602,9 @@ export struct NearbyPage {
     Column() {
       Row() {
         Text('附近活动')
-          .fontSize(10)
-          .fontColor(this.getPalette().textTertiary)
-          .textCase(TextCase.UpperCase)
-          .letterSpacing(0.14 * 16)
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.getPalette().textPrimary)
 
         Blank()
 
