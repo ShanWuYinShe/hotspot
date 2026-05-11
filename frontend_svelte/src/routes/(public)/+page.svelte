@@ -488,7 +488,7 @@
     </div>
   </div>
 {:else}
-  <!-- Desktop Home (Figma Make HomeDesktop) -->
+  <!-- Desktop Home (Figma Make HomeDesktop — 3-column) -->
   <div class="flex h-full flex-col">
     <!-- Sticky header -->
     <div
@@ -633,7 +633,7 @@
         </div>
       </div>
 
-      <!-- Right column — people + feed -->
+      <!-- Main content column — people + feed -->
       <div class="flex-1 overflow-y-auto no-scrollbar p-5">
         <!-- Nearby People -->
         {#if authStore.isAuthenticated}
@@ -779,6 +779,94 @@
             >
           </div>
         </div>
+      </div>
+
+      <!-- Right context rail (Figma Make DesktopHome/Nearby v2) -->
+      <div
+        class="flex flex-col gap-4 overflow-y-auto no-scrollbar p-5"
+        style="width: 320px; flex-shrink: 0; border-left: 1px solid var(--neu-border);"
+      >
+        <!-- Location context -->
+        <div>
+          <p
+            class="uppercase mb-3"
+            style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
+          >
+            位置信息
+          </p>
+          <div
+            class="rounded-[18px] p-4"
+            style="background: var(--neu-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+          >
+            <div class="flex items-center gap-2 mb-2">
+              <Navigation2 size={14} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+              <span style="font-size: 13px; color: var(--neu-text); font-weight: 500;"
+                >{mapAnchorStore.displayName}</span
+              >
+            </div>
+            <span style="font-size: 11px; color: var(--neu-text-muted);">
+              半径 {mapAnchorStore.radius}km · {nearbyUsers.length} 人附近
+            </span>
+          </div>
+        </div>
+
+        <!-- Suggested people -->
+        {#if nearbyUsers.length > 0}
+          <div>
+            <div class="mb-3 flex items-center justify-between">
+              <p
+                class="uppercase"
+                style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
+              >
+                推荐关注
+              </p>
+              <a
+                href="/users/nearby"
+                class="flex items-center gap-0.5 outline-none"
+                style="color: var(--neu-accent-primary); font-size: 12px;"
+              >
+                {t('common.viewAll')}
+                <ChevronRight size={13} strokeWidth={1.5} />
+              </a>
+            </div>
+            <div class="flex flex-col gap-2">
+              {#each nearbyUsers.slice(0, 4) as user (user.user.user_id)}
+                <a
+                  href="/users/{user.user.user_id}"
+                  class="flex items-center gap-3 rounded-[14px] px-3 py-2.5 neu-row-hover"
+                  style="background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border); text-decoration: none;"
+                >
+                  <div class="relative flex-shrink-0">
+                    <div
+                      class="overflow-hidden rounded-full"
+                      style="width: 36px; height: 36px; border: 1px solid var(--neu-border);"
+                    >
+                      <img
+                        src={user.user.avatar_url || ''}
+                        alt={user.user.nickname}
+                        class="h-full w-full object-cover"
+                      />
+                    </div>
+                    {#if user.presence_status === 'online'}
+                      <span
+                        class="absolute bottom-0 right-0 rounded-full"
+                        style="width: 9px; height: 9px; background: #22c55e; border: 2px solid var(--neu-bg);"
+                      ></span>
+                    {/if}
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p style="font-size: 12px; color: var(--neu-text);">{user.user.nickname}</p>
+                    {#if user.location?.distance != null}
+                      <span style="font-size: 10px; color: var(--neu-accent-primary);"
+                        >{formatDistance(user.location.distance)}</span
+                      >
+                    {/if}
+                  </div>
+                </a>
+              {/each}
+            </div>
+          </div>
+        {/if}
       </div>
     </div>
   </div>

@@ -77,8 +77,8 @@
   let showLocationPicker = $state(false);
 </script>
 
-<!-- Figma Make DesktopLayout Sidebar — 192px fixed -->
-<aside class="flex flex-shrink-0 flex-col" style="width: 192px;">
+<!-- Figma Make DesktopLayout Sidebar — 240px fixed -->
+<aside class="flex flex-shrink-0 flex-col" style="width: 240px;">
   <!-- Scrollable nav region -->
   <div class="flex flex-1 flex-col overflow-y-auto no-scrollbar min-h-0">
     <!-- Section 1: Discovery nav -->
