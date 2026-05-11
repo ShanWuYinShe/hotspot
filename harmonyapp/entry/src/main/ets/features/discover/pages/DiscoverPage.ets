@@ -6,14 +6,17 @@
 import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { AppRouter, ChatRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import {
-  UserItem, TrendingTagItem, MomentItem, TrendingBundle,
-  SearchUsersRequest, CreateReportRequest, Relationship
+  UserItem, GroupItem, TrendingTagItem, MomentItem, TrendingBundle,
+  SearchUsersRequest, SearchGroupsRequest, CreateReportRequest, Relationship
 } from '../../../core/types/api';
+import { LocationUtil } from '../../../core/location/LocationUtil';
+import { SystemAvatar } from '../../../components/SystemAvatar';
+import { SystemCard, CardVariant } from '../../../components/SystemCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -54,6 +57,7 @@ export struct DiscoverPage {
   @State trendingTags: TrendingTagItem[] = [];
   @State recommendedUsers: UserItem[] = [];
   private recommendedUsersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
+  @State recommendedGroups: GroupItem[] = [];
   @State hotMoments: MomentItem[] = [];
   private hotMomentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
   private interactionStore = InteractionStateStore.getInstance();
@@ -109,7 +113,8 @@ export struct DiscoverPage {
   }
 
   private hasAnyData(): boolean {
-    return this.trendingTags.length > 0 || this.recommendedUsers.length > 0 || this.hotMoments.length > 0;
+    return this.trendingTags.length > 0 || this.recommendedUsers.length > 0 ||
+      this.recommendedGroups.length > 0 || this.hotMoments.length > 0;
   }
 
   private async loadData(refresh: boolean = false): Promise<void> {
@@ -126,8 +131,14 @@ export struct DiscoverPage {
           radius: DefaultConfig.NEARBY_RADIUS,
           pagination: { limit: 10 }
         };
+        const groupsRequest: SearchGroupsRequest = {
+          reference_point: { latitude: refLoc.latitude, longitude: refLoc.longitude },
+          radius: DefaultConfig.NEARBY_RADIUS,
+          sort_by: 'popular',
+          pagination: { limit: 6 }
+        };
         const results = await LoadingUtil.withMinimumTime(() =>
-          Promise.all([trendingPromise, ApiClient.searchUsers(usersRequest)])
+          Promise.all([trendingPromise, ApiClient.searchUsers(usersRequest), ApiClient.searchGroups(groupsRequest)])
         );
         if (this.isDestroyed) return;
         const usersResponse = results[1];
@@ -140,6 +151,10 @@ export struct DiscoverPage {
             ? validUsersAll.filter((u: UserItem) => u.user.user_id !== myId)
             : validUsersAll;
           this.recommendedUsersDataSource.setData(this.recommendedUsers);
+        }
+        const groupsResponse = results[2];
+        if (groupsResponse.code === 0) {
+          this.recommendedGroups = groupsResponse.data?.items ?? [];
         }
         const trendingResponse = results[0];
         if (trendingResponse.code === 0) {
@@ -257,11 +272,39 @@ export struct DiscoverPage {
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           List() {
-            // 标签药片
+            // 标签药片 — 热门话题
             if (this.getAvailableTags().length > 0) {
+              ListItem() {
+                this.buildSectionHeader('热门话题')
+              }
               ListItem() {
                 this.buildTagChipsStrip()
               }
+            }
+
+            // 推荐用户
+            if (this.recommendedUsers.length > 0) {
+              ListItem() {
+                this.buildSectionHeader('推荐用户')
+              }
+              ListItem() {
+                this.buildRecommendedUsersSection()
+              }
+            }
+
+            // 推荐群组
+            if (this.recommendedGroups.length > 0) {
+              ListItem() {
+                this.buildSectionHeader('推荐群组')
+              }
+              ListItem() {
+                this.buildRecommendedGroupsSection()
+              }
+            }
+
+            // 动态流标题
+            ListItem() {
+              this.buildSectionHeader('热门动态')
             }
 
             // 动态卡片列表（PostCard 风格）
@@ -398,9 +441,148 @@ export struct DiscoverPage {
     .padding({
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
-      top: 12,
-      bottom: 12
+      top: 4,
+      bottom: 4
     })
+  }
+
+  // ==================== section 标题 ====================
+  @Builder
+  buildSectionHeader(title: string) {
+    Row() {
+      Text(title)
+        .fontSize(16)
+        .fontWeight(FontWeight.SemiBold)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: 16,
+      bottom: 4
+    })
+  }
+
+  // ==================== 推荐用户横向滚动 ====================
+  @Builder
+  buildRecommendedUsersSection() {
+    SystemCard({
+      cardPadding: DesignConstants.SPACING.MD,
+      variant: CardVariant.OUTLINED
+    }) {
+      Scroll() {
+        Row({ space: 14 }) {
+          ForEach(this.recommendedUsers.slice(0, 10), (user: UserItem) => {
+            this.buildUserCard(user)
+          }, (user: UserItem) => user.user?.user_id ?? '')
+        }
+      }
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+    }
+    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+  }
+
+  @Builder
+  buildUserCard(user: UserItem) {
+    Column({ space: 6 }) {
+      Stack() {
+        SystemAvatar({
+          avatarUrl: user.user?.avatar_url ?? '',
+          name: user.user?.nickname ?? '',
+          avatarSize: 56,
+          shape: 'squircle'
+        })
+
+        if (user.location?.distance !== undefined && user.location?.distance !== null) {
+          Row() {
+            Text(LocationUtil.formatDistance(user.location.distance))
+              .fontSize(9)
+              .fontColor(Color.White)
+          }
+          .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getCurrentThemePalette().accentBackground)
+          .position({ x: 6, y: 50 })
+        }
+      }
+      .width(60)
+      .height(64)
+
+      Text(user.user?.nickname ?? '')
+        .fontSize(11)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .constraintSize({ maxWidth: 60 })
+    }
+    .alignItems(HorizontalAlign.Center)
+    .onClick(() => { this.openUserProfile(user); })
+  }
+
+  // ==================== 推荐群组网格 ====================
+  @Builder
+  buildRecommendedGroupsSection() {
+    SystemCard({
+      cardPadding: DesignConstants.SPACING.MD,
+      variant: CardVariant.OUTLINED
+    }) {
+      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
+        ForEach(this.recommendedGroups.slice(0, 4), (group: GroupItem) => {
+          this.buildGroupCard(group)
+        }, (group: GroupItem) => group.group?.group_id ?? '')
+      }
+      .width('100%')
+    }
+    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+  }
+
+  @Builder
+  buildGroupCard(group: GroupItem) {
+    Column() {
+      Row() {
+        Text() {
+          SymbolSpan($r(AppIcon.GROUP))
+            .fontSize(24)
+            .fontColor([this.getCurrentThemePalette().accentBackground])
+        }
+      }
+      .width('100%')
+      .height(48)
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor(this.getCurrentThemePalette().accentMuted)
+      .borderRadius({ topLeft: 16, topRight: 16 })
+
+      Column({ space: 4 }) {
+        Text(group.group?.name ?? '')
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        Row({ space: 6 }) {
+          Text(`${group.group?.members_count ?? 0} 人`)
+            .fontSize(10)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+          if (group.location?.distance !== undefined) {
+            Text(LocationUtil.formatDistance(group.location.distance))
+              .fontSize(10)
+              .fontColor(this.getCurrentThemePalette().accentBackground)
+          }
+        }
+      }
+      .padding({ left: 10, right: 10, top: 8, bottom: 10 })
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('calc(50% - 6px)')
+    .borderRadius(16)
+    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+    .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+    .shadow(this.getCurrentThemePalette().controlShadow)
+    .margin({ bottom: 8 })
+    .onClick(() => { this.openGroupDetail(group); })
   }
 
   // ==================== 操作 ====================
@@ -486,6 +668,14 @@ export struct DiscoverPage {
     const params = new ProfileRouteParam();
     params.userId = userId;
     AppRouter.push(PageNames.PROFILE, params);
+  }
+
+  private openGroupDetail(group: GroupItem): void {
+    const groupId = group.group?.group_id;
+    if (!groupId) return;
+    const params = new GroupDetailRouteParam();
+    params.groupId = groupId;
+    AppRouter.push(PageNames.GROUP_DETAIL, params);
   }
 
   private startPrivateChat(user: UserItem): void {
