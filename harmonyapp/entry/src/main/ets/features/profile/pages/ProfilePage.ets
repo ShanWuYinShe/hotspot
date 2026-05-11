@@ -46,6 +46,11 @@ interface ProfilePageParams {
   user_id?: string;
 }
 
+interface StatItem {
+  label: string;
+  value: string;
+}
+
 @Preview
 @Component
 export struct ProfilePage {
@@ -1203,72 +1208,257 @@ export struct ProfilePage {
     .scrollBar(BarState.Auto)
   }
 
-  // ==================== 注册用户界面 ====================
+  // ==================== 注册用户界面 (Figma Make ProfileMobile 对齐) ====================
   @Builder
   private buildRegisteredUserView() {
-    List() {
-      ListItem() {
-        if (this.isEditing) {
+    Column() {
+      if (this.isEditing) {
+        Scroll() {
           this.EditFormContent()
-        } else {
-          this.UserInfoContent()
         }
-      }
-      .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-      .shadow(this.getProfileVisualStyle().card.shadow)
-      .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
-      .padding(this.getProfileVisualStyle().card.padding)
-      .margin({ bottom: DesignConstants.SPACING.MD })
+        .layoutWeight(1)
+        .scrollBar(BarState.Auto)
+      } else {
+        Scroll() {
+          Column() {
+            // 头像区 (居中 + 发光 + 编辑按钮)
+            this.buildProfileAvatar()
 
-      ListItem() {
-        this.StatsContent()
-      }
-      .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-      .shadow(this.getProfileVisualStyle().card.shadow)
-      .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
-      .padding(this.getProfileVisualStyle().card.padding)
-      .margin({ bottom: DesignConstants.SPACING.MD })
+            // 简介
+            if (this.currentUser?.bio) {
+              Text(this.currentUser.bio)
+                .fontSize(12)
+                .fontColor(this.getSecondaryTextColor())
+                .textAlign(TextAlign.Center)
+                .lineHeight(20)
+                .margin({ top: 4 })
+            }
 
-      ListItemGroup() {
-        ListItem() {
-          this.MenuItemContent('更新位置', AppIcon.LOCATION, () => this.updateLocation())
-        }
-        .backgroundColor(Color.Transparent)
+            // 所在地
+            if (this.currentUser?.location?.location_name) {
+              Row({ space: 4 }) {
+                Text() {
+                  SymbolSpan($r(AppIcon.LOCATION))
+                    .fontSize(11)
+                    .fontColor([this.getAccentBackground()])
+                }
+                Text(this.currentUser.location.location_name)
+                  .fontSize(11)
+                  .fontColor(this.getSecondaryTextColor())
+              }
+              .margin({ top: 8 })
+            }
 
-        ListItem() {
-          this.MenuItemContent('设置', AppIcon.SETTINGS, () => {
-            AppRouter.push(PageNames.SETTINGS);
-          })
-        }
-        .backgroundColor(Color.Transparent)
+            // 编辑按钮
+            Button() {
+              Row({ space: 6 }) {
+                Text() {
+                  SymbolSpan($r(AppIcon.EDIT))
+                    .fontSize(13)
+                    .fontColor([this.getSecondaryTextColor()])
+                }
+                Text('编辑资料')
+                  .fontSize(13)
+                  .fontColor(this.getSecondaryTextColor())
+              }
+            }
+            .type(ButtonType.Normal)
+            .width('100%')
+            .height(44)
+            .borderRadius(22)
+            .backgroundColor(this.getSurfaceBackground())
+            .border({ width: 1, color: this.getSurfaceBorder() })
+            .shadow(this.getCurrentThemePalette().controlShadow)
+            .margin({ top: 16, bottom: 20 })
+            .onClick(() => this.startEdit())
 
-        if (this.isAdminUser()) {
-          ListItem() {
-            this.MenuItemContent('管理员工具台', AppIcon.SHIELD, () => this.openAdminPanel())
+            // 统计行 (3列: posts/followers/friends)
+            this.buildFigmaStatsRow()
+
+            // 标签栏 (posts/liked/saved) - TODO: 实现切换
+            this.buildFigmaTabBar()
+
+            // 画廊 (3列)
+            this.buildFigmaGallery()
+
+            // 菜单项
+            Column({ space: 0 }) {
+              this.MenuItemContent('更新位置', AppIcon.LOCATION, () => this.updateLocation())
+              this.MenuItemContent('设置', AppIcon.SETTINGS, () => { AppRouter.push(PageNames.SETTINGS); })
+              if (this.isAdminUser()) {
+                this.MenuItemContent('管理员工具台', AppIcon.SHIELD, () => this.openAdminPanel())
+              }
+              this.MenuItemContent('退出登录', AppIcon.CLOSE, () => this.logout())
+            }
+            .backgroundColor(this.getSurfaceBackground())
+            .borderRadius(22)
+            .shadow(this.getCurrentThemePalette().elevatedShadow)
+            .border({ width: 1, color: this.getSurfaceBorder() })
+            .margin({ top: 24, bottom: 24 })
           }
-          .backgroundColor(Color.Transparent)
+          .alignItems(HorizontalAlign.Center)
+          .padding({ left: 20, right: 20, top: 8, bottom: 24 })
         }
-
-        ListItem() {
-          this.MenuItemContent('退出登录', AppIcon.CLOSE, () => this.logout())
-        }
-        .backgroundColor(Color.Transparent)
+        .layoutWeight(1)
+        .scrollBar(BarState.Auto)
       }
-      .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder(), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
-      .backgroundColor(this.getSurfaceBackground())
-      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-      .shadow(this.getProfileVisualStyle().card.shadow)
-      .border({ width: 1, color: this.getSurfaceBorder() })
-      .margin({ bottom: DesignConstants.SPACING.MD })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
+    .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
-    .backgroundBlurStyle(BlurStyle.Thin)
-    .layoutWeight(1)
-    .scrollBar(BarState.Auto)
+  }
+
+  @Builder
+  private buildProfileAvatar() {
+    Column() {
+      Stack({ alignContent: Alignment.BottomEnd }) {
+        // 发光效果
+        Column()
+          .width(96)
+          .height(96)
+          .borderRadius(48)
+          .backgroundColor(this.getCurrentThemePalette().accentShadow.color)
+          .blur(22)
+          .opacity(0.55)
+
+        // 头像
+        SystemAvatar({
+          avatarUrl: this.currentUser?.avatar_url || '',
+          name: this.currentUser?.nickname || '',
+          avatarSize: 96,
+          shape: 'circle'
+        })
+
+        // 相机按钮
+        Button() {
+          Text() {
+            SymbolSpan($r(AppIcon.CAMERA))
+              .fontSize(10)
+              .fontColor([Color.White])
+          }
+        }
+        .type(ButtonType.Normal)
+        .width(26)
+        .height(26)
+        .borderRadius(13)
+        .backgroundColor(this.getAccentBackground())
+        .border({ width: 2.5, color: this.getCurrentThemePalette().pageBackground })
+        .shadow({ radius: 8, color: this.getCurrentThemePalette().accentShadow.color, offsetX: 0, offsetY: 2 })
+        .onClick(() => this.selectAvatarForEdit())
+      }
+      .margin({ top: 20, bottom: 12 })
+
+      Text(this.currentUser?.nickname || '')
+        .fontSize(22)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(this.getPrimaryTextColor())
+    }
+    .alignItems(HorizontalAlign.Center)
+  }
+
+  @Builder
+  private buildFigmaStatsRow() {
+    Row() {
+      ForEach([
+        { label: '帖子', value: formatCount(this.myMomentsCount) },
+        { label: '关注者', value: formatCount(this.myFollowersCount) },
+        { label: '足迹', value: formatCount(this.myGroupsCount) }
+      ] as StatItem[], (stat: StatItem, index: number) => {
+        Row() {
+          if (index > 0) {
+            Column()
+              .width(1)
+              .height(32)
+              .backgroundColor(this.getSurfaceBorder())
+              .margin({ left: 0, right: 0 })
+          }
+          Column({ space: 4 }) {
+            Text(stat.value)
+              .fontSize(24)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(this.getPrimaryTextColor())
+            Text(stat.label)
+              .fontSize(10)
+              .fontColor(this.getAccentBackground())
+              .textCase(TextCase.UpperCase)
+              .letterSpacing(0.10 * 16)
+              .opacity(0.8)
+          }
+        }
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+        .padding({ top: 16, bottom: 16 })
+      }, (stat: StatItem) => stat.label)
+    }
+    .width('100%')
+    .borderRadius(20)
+    .backgroundColor(this.getSurfaceBackground())
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
+    .border({ width: 1, color: this.getSurfaceBorder() })
+    .margin({ bottom: 20 })
+  }
+
+  @Builder
+  private buildFigmaTabBar() {
+    Row() {
+      ForEach(['帖子', '喜欢', '收藏'], (tab: string, index: number) => {
+        if (index > 0) {
+          Column()
+            .width(2)
+            .height(16)
+            .backgroundColor(this.getSurfaceBorder())
+            .margin({ left: 8, right: 8 })
+        }
+        Text(tab)
+          .fontSize(13)
+          .fontColor(index === 0 ? this.getAccentBackground() : this.getSecondaryTextColor())
+          .fontWeight(index === 0 ? FontWeight.Medium : FontWeight.Normal)
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+      })
+    }
+    .width('100%')
+    .padding({ top: 12, bottom: 12 })
+    .border({ width: { top: 1 }, color: this.getSurfaceBorder() })
+    .margin({ bottom: 12 })
+  }
+
+  @Builder
+  private buildFigmaGallery() {
+    if (this.myMomentsCount === 0) {
+      Column({ space: 12 }) {
+        Text() {
+          SymbolSpan($r(AppIcon.EMPTY))
+            .fontSize(22)
+            .fontColor([this.getSecondaryTextColor()])
+        }
+        .opacity(0.5)
+
+        Text('还没有发布帖子')
+          .fontSize(14)
+          .fontColor(this.getSecondaryTextColor())
+      }
+      .width('100%')
+      .height(160)
+      .justifyContent(FlexAlign.Center)
+    } else {
+      Flex({ wrap: FlexWrap.Wrap }) {
+        ForEach(Array.from({ length: Math.min(this.myMomentsCount, 9) }, (_: Object, i: number) => i), (i: number) => {
+          Column() {
+            Column()
+              .width('100%')
+              .aspectRatio(1)
+              .borderRadius(16)
+              .backgroundColor(this.getSurfaceSubtle())
+              .border({ width: 1, color: this.getSurfaceBorder() })
+              .shadow(this.getCurrentThemePalette().controlShadow)
+          }
+          .width('calc(33.33% - 7vp)')
+          .margin({ left: 3.5, right: 3.5, top: 3.5, bottom: 3.5 })
+        })
+      }
+      .width('100%')
+    }
   }
 
   // ==================== 升级表单界面 ====================
