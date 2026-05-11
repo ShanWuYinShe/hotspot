@@ -19,6 +19,7 @@
   } from '$lib/hooks/use-chat-realtime-sync';
   import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
   import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
+  import { platformStore } from '$lib/stores/platform.svelte';
   import type { GroupItem, GroupMessageItem } from '$lib/types/api';
   import ArrowLeft from 'lucide-svelte/icons/arrow-left';
   import Send from 'lucide-svelte/icons/send';
@@ -604,22 +605,26 @@
 
 <!-- 聊天容器 - Neumorphic 风格 -->
 <div
-  class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[22px]"
-  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+  class="flex flex-col overflow-hidden"
+  style="{platformStore.isDesktop
+    ? 'height: 100%;'
+    : 'height: calc(100dvh - 8rem); border-radius: 22px; box-shadow: var(--neu-shadow-lg);'} background: var(--neu-bg); border: 1px solid var(--neu-border);"
 >
   <!-- Header -->
   <header
     class="flex h-16 shrink-0 items-center gap-3 px-4"
     style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
   >
-    <button
-      class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-      style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); background: var(--neu-bg);"
-      onclick={handleBackClick}
-      aria-label="返回"
-    >
-      <ArrowLeft size={18} color="var(--neu-text)" />
-    </button>
+    {#if !platformStore.isDesktop}
+      <button
+        class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+        style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+        onclick={handleBackClick}
+        aria-label="返回"
+      >
+        <ArrowLeft size={18} color="var(--neu-text)" />
+      </button>
+    {/if}
 
     {#if isLoading}
       <div

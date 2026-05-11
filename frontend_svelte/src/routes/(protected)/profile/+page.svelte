@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { usersService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
+  import type { MomentItem } from '$lib/types/api';
   import { authStore } from '$lib/stores/auth.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import type { MyProfile } from '$lib/types/api';
@@ -53,6 +54,7 @@
   let bio = $state('');
   let tags = $state('');
   let selectedInterestTags = $state<Set<string>>(new Set());
+  let galleryMoments = $state<MomentItem[]>([]);
 
   function toggleInterestTag(t: string) {
     const next = new Set(selectedInterestTags);
@@ -77,8 +79,24 @@
   onMount(() => {
     if (profile) {
       authStore.setProfile(profile);
+      loadGallery();
     }
   });
+
+  async function loadGallery() {
+    if (!profile) return;
+    try {
+      const resp = await usersService.getMoments({
+        user_id: profile.user_id,
+        pagination: { limit: 9 }
+      });
+      if (isSuccess(resp) && resp.data) {
+        galleryMoments = resp.data.items ?? [];
+      }
+    } catch (_) {
+      // 静默忽略
+    }
+  }
 
   async function saveProfile() {
     const trimmedNickname = nickname.trim();
@@ -285,7 +303,7 @@
           <div class="flex items-center justify-between mb-4">
             <h3 style="font-size: 16px; color: var(--neu-text);">最近瞬间</h3>
           </div>
-          {#if profile.stats.moments_count === 0}
+          {#if galleryMoments.length === 0}
             <div class="flex flex-col items-center justify-center py-16">
               <div
                 class="flex items-center justify-center rounded-full"
@@ -304,19 +322,44 @@
             </div>
           {:else}
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-              {#each Array(Math.min(profile.stats.moments_count, 9)) as _}
+              {#each galleryMoments as moment}
+                {@const img = moment.images?.[0]}
                 <div
                   class="relative cursor-pointer overflow-hidden rounded-[16px]"
-                  style="aspect-ratio: 1/1; background: var(--neu-fallback-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+                  style="aspect-ratio: 1/1; box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
                 >
-                  <div class="flex h-full w-full items-center justify-center">
-                    <Grid3X3
-                      size={20}
-                      color="var(--neu-text-muted)"
-                      strokeWidth={1.25}
-                      style="opacity: 0.3;"
+                  {#if img}
+                    <img
+                      src={img.thumbnail_url || img.url}
+                      alt={moment.description}
+                      class="h-full w-full object-cover"
                     />
-                  </div>
+                    <div
+                      class="absolute bottom-0 left-0 right-0 flex items-center gap-2 px-2 py-1.5"
+                      style="background: linear-gradient(transparent, rgba(0,0,0,0.5));"
+                    >
+                      <span style="font-size: 10px; color: white;">
+                        <Heart
+                          size={10}
+                          color="white"
+                          style="display: inline; vertical-align: middle;"
+                        />
+                        {moment.likes_count}
+                      </span>
+                    </div>
+                  {:else}
+                    <div
+                      class="flex h-full w-full items-center justify-center"
+                      style="background: var(--neu-fallback-bg);"
+                    >
+                      <Grid3X3
+                        size={20}
+                        color="var(--neu-text-muted)"
+                        strokeWidth={1.25}
+                        style="opacity: 0.3;"
+                      />
+                    </div>
+                  {/if}
                 </div>
               {/each}
             </div>
@@ -680,9 +723,9 @@
           {/each}
         </div>
 
-        <!-- Gallery placeholder (no moments gallery API yet) -->
+        <!-- Gallery -->
         <div class="px-4 pt-3">
-          {#if profile.stats.moments_count === 0}
+          {#if galleryMoments.length === 0}
             <div class="flex flex-col items-center justify-center py-12">
               <div
                 class="flex items-center justify-center rounded-full"
@@ -696,11 +739,7 @@
                 />
               </div>
               <p style="font-size: 14px; color: var(--neu-text-muted); margin-top: 12px;">
-                {activeTab === 'posts'
-                  ? '还没有发布帖子'
-                  : activeTab === 'liked'
-                    ? '还没有喜欢的内容'
-                    : '还没有收藏'}
+                还没有发布帖子
               </p>
             </div>
           {:else}
@@ -709,19 +748,44 @@
                 ? 3
                 : 2}, 1fr); gap: 10px; width: 100%;"
             >
-              {#each Array(Math.min(profile.stats.moments_count, 6)) as _}
+              {#each galleryMoments as moment}
+                {@const img = moment.images?.[0]}
                 <div
                   class="relative cursor-pointer overflow-hidden rounded-[18px]"
-                  style="aspect-ratio: 1/1; background: var(--neu-fallback-bg); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+                  style="aspect-ratio: 1/1; box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
                 >
-                  <div class="flex h-full w-full items-center justify-center">
-                    <Grid3X3
-                      size={20}
-                      color="var(--neu-text-muted)"
-                      strokeWidth={1.25}
-                      style="opacity: 0.3;"
+                  {#if img}
+                    <img
+                      src={img.thumbnail_url || img.url}
+                      alt={moment.description}
+                      class="h-full w-full object-cover"
                     />
-                  </div>
+                    <div
+                      class="absolute bottom-0 left-0 right-0 flex items-center gap-2 px-2 py-1.5"
+                      style="background: linear-gradient(transparent, rgba(0,0,0,0.5));"
+                    >
+                      <span style="font-size: 10px; color: white;">
+                        <Heart
+                          size={10}
+                          color="white"
+                          style="display: inline; vertical-align: middle;"
+                        />
+                        {moment.likes_count}
+                      </span>
+                    </div>
+                  {:else}
+                    <div
+                      class="flex h-full w-full items-center justify-center"
+                      style="background: var(--neu-fallback-bg);"
+                    >
+                      <Grid3X3
+                        size={20}
+                        color="var(--neu-text-muted)"
+                        strokeWidth={1.25}
+                        style="opacity: 0.3;"
+                      />
+                    </div>
+                  {/if}
                 </div>
               {/each}
             </div>

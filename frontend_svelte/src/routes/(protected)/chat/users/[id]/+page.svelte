@@ -20,6 +20,7 @@
   } from '$lib/hooks/use-chat-realtime-sync';
   import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
   import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
+  import { platformStore } from '$lib/stores/platform.svelte';
   import {
     DropdownMenu,
     DropdownMenuContent,
@@ -379,22 +380,26 @@
 </svelte:head>
 
 <div
-  class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-[22px]"
-  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+  class="flex flex-col overflow-hidden"
+  style="{platformStore.isDesktop
+    ? 'height: 100%;'
+    : 'height: calc(100dvh - 8rem); border-radius: 22px; box-shadow: var(--neu-shadow-lg);'} background: var(--neu-bg); border: 1px solid var(--neu-border);"
 >
   <!-- Header -->
   <div
     class="flex h-[60px] items-center gap-3 px-4"
     style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
   >
-    <button
-      class="flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
-      style="width: 36px; height: 36px; box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
-      onclick={handleBackClick}
-      aria-label="返回"
-    >
-      <ArrowLeft size={15} color="var(--neu-text-muted)" strokeWidth={1.5} />
-    </button>
+    {#if !platformStore.isDesktop}
+      <button
+        class="flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
+        style="width: 36px; height: 36px; box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+        onclick={handleBackClick}
+        aria-label="返回"
+      >
+        <ArrowLeft size={15} color="var(--neu-text-muted)" strokeWidth={1.5} />
+      </button>
+    {/if}
 
     {#if isLoading}
       <div
