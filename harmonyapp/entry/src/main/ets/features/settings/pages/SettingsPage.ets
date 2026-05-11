@@ -291,41 +291,9 @@ export struct SettingsPage {
         Refresh({ refreshing: $$this.metaRefreshing, builder: RefreshIndicator }) {
           Scroll() {
             Column({ space: 0 }) {
+              // === Section 1: 外观与主题 ===
               Column() {
-                SettingsSectionCard({ title: '账号与资料' }) {
-                  Column() {
-                    ForEach(this.buildAccountEntries(), (item: SettingsEntryItem) => {
-                      SettingsEntryRow({ item })
-                    }, (item: SettingsEntryItem) => item.title)
-                  }
-                }
-              }
-              .padding(this.getSectionMargin(DesignConstants.SPACING.LG))
-
-              Column() {
-                SettingsSectionCard({ title: '隐私与关系' }) {
-                  Column() {
-                    ForEach(this.buildPrivacyEntries(), (item: SettingsEntryItem) => {
-                      SettingsEntryRow({ item })
-                    }, (item: SettingsEntryItem) => item.title)
-                  }
-                }
-              }
-              .padding(this.getSectionMargin())
-
-              Column() {
-                SettingsSectionCard({ title: '系统与安全' }) {
-                  Column() {
-                    ForEach(this.buildSystemEntries(), (item: SettingsEntryItem) => {
-                      SettingsEntryRow({ item })
-                    }, (item: SettingsEntryItem) => item.title)
-                  }
-                }
-              }
-              .padding(this.getSectionMargin())
-
-              Column() {
-                SettingsSectionCard({ title: '外观与高级' }) {
+                SettingsSectionCard({ title: '外观与主题' }) {
                   Column() {
                     SettingsEntryRow({ item: {
                       icon: AppIcon.STAR_FILL,
@@ -334,6 +302,33 @@ export struct SettingsPage {
                       action: () => { this.showThemeSheet = true; },
                       accentColor: this.getThemePreviewColor()
                     } })
+                  }
+                }
+              }
+              .padding(this.getSectionMargin(DesignConstants.SPACING.LG))
+
+              // === Section 2: 隐私、安全与通知 ===
+              Column() {
+                SettingsSectionCard({ title: '隐私、安全与通知' }) {
+                  Column() {
+                    ForEach(this.buildPrivacyEntries(), (item: SettingsEntryItem) => {
+                      SettingsEntryRow({ item })
+                    }, (item: SettingsEntryItem) => item.title)
+                    ForEach(this.buildSystemEntries(), (item: SettingsEntryItem) => {
+                      SettingsEntryRow({ item })
+                    }, (item: SettingsEntryItem) => item.title)
+                  }
+                }
+              }
+              .padding(this.getSectionMargin())
+
+              // === Section 3: 账号、记录与高级 ===
+              Column() {
+                SettingsSectionCard({ title: '账号、记录与高级' }) {
+                  Column() {
+                    ForEach(this.buildAccountEntries(), (item: SettingsEntryItem) => {
+                      SettingsEntryRow({ item })
+                    }, (item: SettingsEntryItem) => item.title)
                     SettingsEntryRow({ item: {
                       icon: AppIcon.SETTINGS,
                       title: '高级设置',
@@ -345,6 +340,7 @@ export struct SettingsPage {
               }
               .padding(this.getSectionMargin())
 
+              // === Supplementary: 平台状态 ===
               Column() {
                 SettingsSectionCard({ title: '平台状态' }) {
                   SettingsMetaCard({
@@ -361,6 +357,7 @@ export struct SettingsPage {
               }
               .padding(this.getSectionMargin())
 
+              // === Supplementary: 系统公告速览 ===
               Column() {
                 SettingsSectionCard({ title: '系统公告速览' }) {
                   AnnouncementSummaryCard({
@@ -375,6 +372,7 @@ export struct SettingsPage {
               }
               .padding(this.getSectionMargin())
 
+              // === Supplementary: 公开配置与帮助 ===
               Column() {
                 SettingsSectionCard({ title: '公开配置与帮助' }) {
                   SupportConfigCard({ config: this.clientConfig })

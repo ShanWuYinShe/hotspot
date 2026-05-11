@@ -8,7 +8,7 @@ import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/Global
 import { ApiClient } from '../../../core/api/ApiClient';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MessageSyncManager } from '../../../core/state/MessageSyncManager';
-import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest } from '../../../core/types/api';
+import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest, UserOpenTheDoorRequest } from '../../../core/types/api';
 import type {
   ServerEvent,
   PrivateMessageNewEvent,
@@ -22,7 +22,6 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
-import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { MessageCacheService, MessageCacheItem } from '../../../core/database/MessageCacheService';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
@@ -33,6 +32,8 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
+import { common } from '@kit.AbilityKit';
 import { KeyboardAvoidMode as UIContextKeyboardAvoidMode } from '@ohos.arkui.UIContext';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
@@ -96,6 +97,8 @@ export struct ChatPage {
   @State historyNextCursor: string = '';
   @State isLoadingMoreHistory: boolean = false;
   @State showConversationActionsSheet: boolean = false;
+  @State targetAvatar: string = '';
+  @State isMuted: boolean = false;
 
   private chatId: string = '';
   private chatType: 'private_chat' | 'group_chat' = 'private_chat';
@@ -661,6 +664,19 @@ export struct ChatPage {
     }, 100);
   }
 
+  private async pickAttachment(): Promise<void> {
+    try {
+      const context = AppStorage.get<common.UIAbilityContext>('context');
+      if (!context) return;
+      const uris = await MediaServiceManager.selectImages(context, 1);
+      if (uris.length > 0) {
+        SystemToast.show('图片功能开发中', this.getUIContext());
+      }
+    } catch (e) {
+      hilog.info(DOMAIN_NUMBER, TAG, `附件选择取消或失败: ${e}`);
+    }
+  }
+
   private openConversationActions(): void {
     if (this.isInputFocused) {
       this.dismissKeyboardOnOutsideTap();
@@ -920,24 +936,72 @@ export struct ChatPage {
     if (last) {
       this.markAsRead(last.id);
     }
+
+    if (this.chatType === 'private_chat' && this.targetId) {
+      this.loadTargetProfile();
+    }
+  }
+
+  private async loadTargetProfile(): Promise<void> {
+    if (!this.targetId) return;
+    try {
+      const resp = await ApiClient.getUserProfile({ user_id: this.targetId } as UserOpenTheDoorRequest);
+      if (resp.code === 0 && resp.data) {
+        this.targetAvatar = resp.data.user.avatar_url ?? '';
+      }
+    } catch (e) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `加载目标用户头像失败: ${e}`);
+    }
   }
 
   build() {
     NavDestination() {
     Column() {
-      SystemPageHeader({
-        title: this.title,
-        showBackButton: true,
-        onBack: () => {
-          this.handleBackNavigation();
-        },
-        rightAction: {
-          icon: AppIcon.INFO,
-          kind: 'neutral',
-          onClick: () => this.openConversationActions()
-        },
-        surfaceColor: this.getChatTheme().titleBarBg
-      })
+      Row() {
+        Row() {
+          Button() {
+            SymbolSpan($r(AppIcon.BACK))
+              .fontSize(20)
+              .fontColor([this.getCurrentThemePalette().textPrimary])
+          }
+          .type(ButtonType.Circle)
+          .width(36)
+          .height(36)
+          .backgroundColor(Color.Transparent)
+          .onClick(() => this.handleBackNavigation())
+
+          if (this.chatType === 'private_chat' && this.targetAvatar) {
+            SystemAvatar({
+              avatarUrl: this.targetAvatar,
+              name: this.title,
+              avatarSize: 32,
+              shape: 'circle'
+            })
+              .margin({ left: DesignConstants.SPACING.XS })
+          }
+
+          Text(this.title)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
+            .margin({ left: DesignConstants.SPACING.SM })
+        }
+        .layoutWeight(1)
+
+        Button() {
+          SymbolSpan($r(AppIcon.INFO))
+            .fontSize(20)
+            .fontColor([this.getCurrentThemePalette().textSecondary])
+        }
+        .type(ButtonType.Circle)
+        .width(36)
+        .height(36)
+        .backgroundColor(Color.Transparent)
+        .onClick(() => this.openConversationActions())
+      }
         .width('100%')
         .margin({
           bottom: DesignConstants.SPACING.XS
@@ -1097,6 +1161,21 @@ export struct ChatPage {
       }
 
       Row() {
+        Button() {
+          SymbolSpan($r(AppIcon.ADD))
+            .fontSize(22)
+            .fontColor([this.getCurrentThemePalette().textSecondary])
+        }
+        .type(ButtonType.Circle)
+        .width(36)
+        .height(36)
+        .backgroundColor(this.getChatTheme().inputFieldBg)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .shadow(this.getChatVisualStyle().input.shadow)
+        .border({ width: 1, color: this.getChatTheme().inputBorder })
+        .margin({ right: DesignConstants.SPACING.SM })
+        .onClick(() => this.pickAttachment())
+
         TextInput({ text: this.inputText, placeholder: '发送消息...' })
           .layoutWeight(1)
           .maxLength(MESSAGE_CONTENT_MAX)
@@ -1206,6 +1285,36 @@ export struct ChatPage {
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor(this.getCurrentThemePalette().textSecondary)
 
+      Divider().color(this.getSurfaceBorder())
+
+      if (this.chatType === 'private_chat' && this.targetId) {
+        Button('查看个人主页')
+          .type(ButtonType.Normal)
+          .width('100%')
+          .height(44)
+          .backgroundColor(this.getSurfaceSubtle())
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .border({ width: 1, color: this.getSurfaceBorder() })
+          .onClick(() => {
+            this.showConversationActionsSheet = false;
+            AppRouter.push(PageNames.PROFILE, { userId: this.targetId });
+          })
+      }
+
+      Button(this.isMuted ? '取消静音' : '静音通知')
+        .type(ButtonType.Normal)
+        .width('100%')
+        .height(44)
+        .backgroundColor(this.getSurfaceSubtle())
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .border({ width: 1, color: this.getSurfaceBorder() })
+        .onClick(() => {
+          this.isMuted = !this.isMuted;
+          SystemToast.show(this.isMuted ? '已静音' : '已取消静音', this.getUIContext());
+        })
+
       Button('回到最新消息')
         .type(ButtonType.Normal)
         .width('100%')
@@ -1230,6 +1339,21 @@ export struct ChatPage {
         .onClick(() => {
           this.inputText = '';
           this.showConversationActionsSheet = false;
+        })
+
+      Divider().color(this.getSurfaceBorder())
+
+      Button('举报')
+        .type(ButtonType.Normal)
+        .width('100%')
+        .height(44)
+        .backgroundColor(this.getSurfaceSubtle())
+        .fontColor('#E74C3C')
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .border({ width: 1, color: this.getSurfaceBorder() })
+        .onClick(() => {
+          this.showConversationActionsSheet = false;
+          SystemToast.show('举报功能开发中', this.getUIContext());
         })
 
       Button('关闭')
