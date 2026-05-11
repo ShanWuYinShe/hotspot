@@ -54,6 +54,34 @@ export struct NotificationCenter {
   private syncListener: (() => void) | null = null;
   private notificationCreatedListener: ((event: NotificationEvent, notification: SmartNotification, extra?: Object) => void) | null = null;
 
+  private getTimeGroupLabel(isoDate: string): string {
+    const date = new Date(isoDate);
+    if (Number.isNaN(date.getTime())) return '更早';
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterdayStart = todayStart - 86400000;
+    const itemTime = date.getTime();
+    if (itemTime >= todayStart) return '今天';
+    if (itemTime >= yesterdayStart) return '昨天';
+    return '更早';
+  }
+
+  private getGroupedNotifications(): { label: string; items: NotificationItem[] }[] {
+    const groups: { label: string; items: NotificationItem[] }[] = [];
+    const order = ['今天', '昨天', '更早'];
+    for (const notification of this.visibleNotifications) {
+      const label = this.getTimeGroupLabel(notification.created_at);
+      let group = groups.find(g => g.label === label);
+      if (!group) {
+        group = { label, items: [] };
+        groups.push(group);
+      }
+      group.items.push(notification);
+    }
+    groups.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
+    return groups;
+  }
+
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
@@ -480,12 +508,19 @@ export struct NotificationCenter {
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           List({ space: 12 }) {
-            ForEach(this.visibleNotifications, (notification: NotificationItem) => {
-              ListItem() {
-                this.buildNotificationItem(notification)
+            ForEach(this.getGroupedNotifications(), (group: { label: string; items: NotificationItem[] }) => {
+              ListItemGroup({
+                header: this.buildGroupHeader(group.label),
+                space: 8
+              }) {
+                ForEach(group.items, (notification: NotificationItem) => {
+                  ListItem() {
+                    this.buildNotificationItem(notification)
+                  }
+                }, (notification: NotificationItem) =>
+                  notification.notification_id + '_p' + (this.actionLoadingIds.indexOf(notification.notification_id) >= 0))
               }
-            }, (notification: NotificationItem) =>
-              notification.notification_id + '_p' + (this.actionLoadingIds.indexOf(notification.notification_id) >= 0))
+            }, (group: { label: string; items: NotificationItem[] }) => group.label)
 
             if (this.isLoadingMore) {
               ListItem() {
@@ -509,6 +544,15 @@ export struct NotificationCenter {
     .width('100%')
     .height('100%')
     .backgroundColor(this.getPalette().pageBackground)
+  }
+
+  @Builder
+  private buildGroupHeader(label: string) {
+    Text(label)
+      .fontSize(DesignConstants.FONT.SIZE.SM)
+      .fontWeight(FontWeight.Medium)
+      .fontColor(this.getPalette().textSecondary)
+      .padding({ left: 4, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XS })
   }
 
   @Builder
