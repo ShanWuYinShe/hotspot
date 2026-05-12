@@ -12,7 +12,7 @@ import { AppRouter, ChatRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
-import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
+
 import { AuthData, MyProfile, LoginRequest, RegisterRequest } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -509,7 +509,6 @@ export struct LoginPage {
           this.loadingStage = '登录成功，正在初始化...';
           this.loadingProgress = 70;
 
-          PasswordSecurityUtil.clearSensitiveString(this.password);
           await this.handleAuthSuccess(response.data);
           this.loadingProgress = 100;
         } else {
@@ -573,8 +572,6 @@ export struct LoginPage {
           this.loadingStage = '注册成功，正在初始化...';
           this.loadingProgress = 70;
 
-          PasswordSecurityUtil.clearSensitiveString(this.registerPassword);
-          PasswordSecurityUtil.clearSensitiveString(this.registerPasswordConfirm);
           await this.handleAuthSuccess(response.data);
           this.loadingProgress = 100;
         } else {
