@@ -2,6 +2,7 @@
   import { dev } from '$app/environment';
   import { usersService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
+  import { authStore } from '$lib/stores/auth.svelte';
   import type { MyProfile } from '$lib/types/api';
   import Heart from 'lucide-svelte/icons/heart';
   import Users from 'lucide-svelte/icons/users';
@@ -13,11 +14,16 @@
 
   let { refreshTrigger = 0 }: Props = $props();
 
-  let stats = $state<MyProfile['stats'] | null>(null);
+  let stats = $state<MyProfile['stats'] | null>(authStore.profile?.stats ?? null);
   let loading = $state(false);
   let loadVersion = 0;
+  let initialised = false;
 
   async function loadStats() {
+    if (!initialised) {
+      initialised = true;
+      if (stats) return;
+    }
     const version = ++loadVersion;
     loading = true;
     try {
