@@ -15,12 +15,20 @@ func NewInMemoryRepository() *InMemoryRepository {
 }
 
 func (r *InMemoryRepository) Heatmap(_ context.Context, query canvasQuery) (MapHeatCanvas, error) {
-	covering := geo.CoveringTokens(query.Bounds, query.Level, 32)
-	items := make([]MapHeatBucket, 0, len(covering))
-	for i, token := range covering {
-		if i >= 5 {
-			break
-		}
+	// Generate a few cell tokens distributed across bounds for stub data
+	nw := geo.Point{Latitude: query.Bounds.North, Longitude: query.Bounds.West}
+	ne := geo.Point{Latitude: query.Bounds.North, Longitude: query.Bounds.East}
+	sw := geo.Point{Latitude: query.Bounds.South, Longitude: query.Bounds.West}
+	se := geo.Point{Latitude: query.Bounds.South, Longitude: query.Bounds.East}
+	tokens := []string{
+		geo.CellTokenAtLevel(query.Center, query.Level),
+		geo.CellTokenAtLevel(nw, query.Level),
+		geo.CellTokenAtLevel(ne, query.Level),
+		geo.CellTokenAtLevel(sw, query.Level),
+		geo.CellTokenAtLevel(se, query.Level),
+	}
+	items := make([]MapHeatBucket, 0, len(tokens))
+	for _, token := range tokens {
 		items = append(items, MapHeatBucket{
 			CellToken:  token,
 			Level:      query.Level,
