@@ -490,7 +490,7 @@ export class HttpUtil {
       }
 
       // token_optional 端点：若认证失败且本次携带了 Authorization，则匿名降级重试一次
-      if (isAuthErrorCode(resultCode) && hasAuthHeader && isTokenOptionalEndpoint(url) && !omitAuthHeader) {
+      if (!retried && isAuthErrorCode(resultCode) && hasAuthHeader && isTokenOptionalEndpoint(url) && !omitAuthHeader) {
         hilog.info(DOMAIN_NUMBER, TAG, `token_optional 端点认证失败，匿名降级重试: ${url}`);
         return await HttpUtil.request<TResponse, TRequest>(
           url, method, data, true, currentIdempotencyKey,
