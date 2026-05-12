@@ -1,6 +1,11 @@
 /**
  * 通用 BasicDataSource，用于 LazyForEach
  */
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const DOMAIN_NUMBER: number = 0xFF00;
+const TAG: string = 'BasicDataSource';
+
 export class BasicDataSource<T> implements IDataSource {
   private listeners: DataChangeListener[] = [];
   private originDataArray: T[] = [];
@@ -25,7 +30,7 @@ export class BasicDataSource<T> implements IDataSource {
   // 该方法为框架侧调用，为LazyForEach组件向其数据源处添加listener监听
   registerDataChangeListener(listener: DataChangeListener): void {
     if (this.listeners.indexOf(listener) < 0) {
-      console.info('add listener');
+      hilog.debug(DOMAIN_NUMBER, TAG, 'add listener');
       this.listeners.push(listener);
     }
   }
@@ -34,7 +39,7 @@ export class BasicDataSource<T> implements IDataSource {
   unregisterDataChangeListener(listener: DataChangeListener): void {
     const pos = this.listeners.indexOf(listener);
     if (pos >= 0) {
-      console.info('remove listener');
+      hilog.debug(DOMAIN_NUMBER, TAG, 'remove listener');
       this.listeners.splice(pos, 1);
     }
   }
