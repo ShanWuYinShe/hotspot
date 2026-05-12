@@ -273,7 +273,7 @@ export struct DiscoverPage {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           List() {
             // 标签药片 — 热门话题
-            if (this.getAvailableTags().length > 0) {
+            if (this.activeTab === '热门' && this.getAvailableTags().length > 0) {
               ListItem() {
                 this.buildSectionHeader('热门话题')
               }
@@ -283,7 +283,7 @@ export struct DiscoverPage {
             }
 
             // 推荐用户
-            if (this.recommendedUsers.length > 0) {
+            if (this.activeTab === '附近' && this.recommendedUsers.length > 0) {
               ListItem() {
                 this.buildSectionHeader('推荐用户')
               }
@@ -293,7 +293,7 @@ export struct DiscoverPage {
             }
 
             // 推荐群组
-            if (this.recommendedGroups.length > 0) {
+            if (this.activeTab === '附近' && this.recommendedGroups.length > 0) {
               ListItem() {
                 this.buildSectionHeader('推荐群组')
               }
@@ -304,7 +304,7 @@ export struct DiscoverPage {
 
             // 动态流标题
             ListItem() {
-              this.buildSectionHeader('热门动态')
+              this.buildSectionHeader(this.activeTab === '附近' ? '附近动态' : '热门动态')
             }
 
             // 动态卡片列表（PostCard 风格）
@@ -386,8 +386,12 @@ export struct DiscoverPage {
         }
         .padding({ left: 18, right: 18, top: 4, bottom: 12 })
         .onClick(() => {
-          this.activeTab = tab;
-        })
+            if (tab === '活动' || tab === '关注') {
+              SystemToast.show('功能开发中', this.getUIContext());
+              return;
+            }
+            this.activeTab = tab;
+          })
       }, (tab: string) => tab)
     }
     .width('100%')
