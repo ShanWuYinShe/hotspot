@@ -183,6 +183,10 @@ func (r *stubGroupsRepo) TransferOwnership(_ context.Context, _ string, _ Transf
 	return r.transferErr
 }
 
+func (r *stubGroupsRepo) IsMember(_ context.Context, _ string, _ string) (bool, error) {
+	return false, nil
+}
+
 func grpCtx(userID string) context.Context {
 	return platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: userID})
 }

@@ -27,9 +27,6 @@ type jwtAccessClaims struct {
 }
 
 func NewTokenManager(secret string) *TokenManager {
-	if secret == "" {
-		secret = "dev-secret-change-me"
-	}
 	return &TokenManager{secret: []byte(secret)}
 }
 

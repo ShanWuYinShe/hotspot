@@ -37,4 +37,5 @@ type Repository interface {
 	ListBannedMembers(context.Context, string, int, string) ([]BannedMemberItem, string, error)
 	RemoveMember(context.Context, string, RemoveMemberRequest) error
 	TransferOwnership(context.Context, string, TransferOwnershipRequest) error
+	IsMember(context.Context, string, string) (bool, error)
 }

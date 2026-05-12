@@ -147,3 +147,7 @@ func (r *PersistenceRepository) RemoveMember(ctx context.Context, userID string,
 func (r *PersistenceRepository) TransferOwnership(ctx context.Context, userID string, req TransferOwnershipRequest) error {
 	return r.impl.TransferOwnership(ctx, userID, req)
 }
+
+func (r *PersistenceRepository) IsMember(ctx context.Context, groupID string, userID string) (bool, error) {
+	return r.impl.IsMember(ctx, groupID, userID)
+}

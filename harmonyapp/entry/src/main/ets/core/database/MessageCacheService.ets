@@ -104,7 +104,7 @@ export class MessageCacheService {
           avatarUrl: resultSet.getString(resultSet.getColumnIndex('avatar_url')),
           lastMessage: resultSet.getString(resultSet.getColumnIndex('last_message')),
           lastTime: resultSet.getString(resultSet.getColumnIndex('last_time')),
-          unreadCount: resultSet.getDouble(resultSet.getColumnIndex('unread_count')),
+          unreadCount: resultSet.getLong(resultSet.getColumnIndex('unread_count')),
           data: resultSet.getString(resultSet.getColumnIndex('json_data'))
         });
       }

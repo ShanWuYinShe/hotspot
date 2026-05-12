@@ -137,6 +137,9 @@ export class WebSocketUtil {
    * 获取连接状态
    */
   isConnected(): boolean {
-    return this.ws !== null;
+    if (!this.ws) {
+      return false;
+    }
+    return this.ws.readyState === 1;
   }
 }
