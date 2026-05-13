@@ -12,7 +12,8 @@ OHPM=/Applications/DevEco-Studio.app/Contents/tools/ohpm/bin/ohpm
 ```
 
 - `$OHPM install --all --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true` — 安装依赖
-- `$NODE $HVIGORW assembleHap` — 构建 app 包（HAP）
+- `$NODE $HVIGORW --mode project -p product=default assembleApp --analyze=normal --parallel --incremental --daemon` — 编译整个应用
+- `$NODE $HVIGORW assembleHap` — 仅编译 HAP 包（快速检查用）
 - `$NODE $HVIGORW clean` — 清理构建产物
 - `$NODE $HVIGORW collectCoverage` — 测试覆盖率（需要真机或模拟器）
 

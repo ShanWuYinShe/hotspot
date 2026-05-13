@@ -452,7 +452,7 @@ export struct DiscoverPage {
     Row() {
       Text(title)
         .fontSize(16)
-        .fontWeight(FontWeight.SemiBold)
+        .fontWeight(FontWeight.Bold)
         .fontColor(this.getCurrentThemePalette().textPrimary)
     }
     .width('100%')
@@ -467,19 +467,21 @@ export struct DiscoverPage {
   // ==================== 推荐用户横向滚动 ====================
   @Builder
   buildRecommendedUsersSection() {
-    SystemCard({
-      cardPadding: DesignConstants.SPACING.MD,
-      variant: CardVariant.OUTLINED
-    }) {
-      Scroll() {
-        Row({ space: 14 }) {
-          ForEach(this.recommendedUsers.slice(0, 10), (user: UserItem) => {
-            this.buildUserCard(user)
-          }, (user: UserItem) => user.user?.user_id ?? '')
+    Column() {
+      SystemCard({
+        cardPadding: DesignConstants.SPACING.MD,
+        variant: CardVariant.OUTLINED
+      }) {
+        Scroll() {
+          Row({ space: 14 }) {
+            ForEach(this.recommendedUsers.slice(0, 10), (user: UserItem) => {
+              this.buildUserCard(user)
+            }, (user: UserItem) => user.user?.user_id ?? '')
+          }
         }
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
       }
-      .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
     }
     .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
   }
@@ -524,16 +526,18 @@ export struct DiscoverPage {
   // ==================== 推荐群组网格 ====================
   @Builder
   buildRecommendedGroupsSection() {
-    SystemCard({
-      cardPadding: DesignConstants.SPACING.MD,
-      variant: CardVariant.OUTLINED
-    }) {
-      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
-        ForEach(this.recommendedGroups.slice(0, 4), (group: GroupItem) => {
-          this.buildGroupCard(group)
-        }, (group: GroupItem) => group.group?.group_id ?? '')
+    Column() {
+      SystemCard({
+        cardPadding: DesignConstants.SPACING.MD,
+        variant: CardVariant.OUTLINED
+      }) {
+        Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
+          ForEach(this.recommendedGroups.slice(0, 4), (group: GroupItem) => {
+            this.buildGroupCard(group)
+          }, (group: GroupItem) => group.group?.group_id ?? '')
+        }
+        .width('100%')
       }
-      .width('100%')
     }
     .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
   }

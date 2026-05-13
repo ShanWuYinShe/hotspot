@@ -27,7 +27,7 @@ import { MessageCacheService, MessageCacheItem } from '../../../core/database/Me
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
-import { AppRouter, LoginRouteParam, GroupDetailRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, LoginRouteParam, GroupDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
@@ -960,9 +960,11 @@ export struct ChatPage {
       Row() {
         Row() {
           Button() {
-            SymbolSpan($r(AppIcon.BACK))
-              .fontSize(20)
-              .fontColor([this.getCurrentThemePalette().textPrimary])
+            Text() {
+              SymbolSpan($r(AppIcon.BACK))
+                .fontSize(20)
+                .fontColor([this.getCurrentThemePalette().textPrimary])
+            }
           }
           .type(ButtonType.Circle)
           .width(36)
@@ -992,9 +994,11 @@ export struct ChatPage {
         .layoutWeight(1)
 
         Button() {
-          SymbolSpan($r(AppIcon.INFO))
-            .fontSize(20)
-            .fontColor([this.getCurrentThemePalette().textSecondary])
+          Text() {
+            SymbolSpan($r(AppIcon.INFO))
+              .fontSize(20)
+              .fontColor([this.getCurrentThemePalette().textSecondary])
+          }
         }
         .type(ButtonType.Circle)
         .width(36)
@@ -1162,9 +1166,11 @@ export struct ChatPage {
 
       Row() {
         Button() {
-          SymbolSpan($r(AppIcon.ADD))
-            .fontSize(22)
-            .fontColor([this.getCurrentThemePalette().textSecondary])
+          Text() {
+            SymbolSpan($r(AppIcon.ADD))
+              .fontSize(22)
+              .fontColor([this.getCurrentThemePalette().textSecondary])
+          }
         }
         .type(ButtonType.Circle)
         .width(36)
@@ -1298,7 +1304,9 @@ export struct ChatPage {
           .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => {
             this.showConversationActionsSheet = false;
-            AppRouter.push(PageNames.PROFILE, { userId: this.targetId });
+            const profileParam = new ProfileRouteParam();
+            profileParam.userId = this.targetId ?? '';
+            AppRouter.push(PageNames.PROFILE, profileParam);
           })
       }
 

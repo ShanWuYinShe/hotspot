@@ -17,6 +17,11 @@ import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 type NotificationFilterKey = 'all' | 'unread' | 'social' | 'interaction' | 'group' | 'system';
 
+interface GroupedNotification {
+  label: string;
+  items: NotificationItem[];
+}
+
 class NotificationFilterOption {
   key: string = '';
   label: string = '';
@@ -66,14 +71,14 @@ export struct NotificationCenter {
     return '更早';
   }
 
-  private getGroupedNotifications(): { label: string; items: NotificationItem[] }[] {
-    const groups: { label: string; items: NotificationItem[] }[] = [];
+  private getGroupedNotifications(): GroupedNotification[] {
+    const groups: GroupedNotification[] = [];
     const order = ['今天', '昨天', '更早'];
     for (const notification of this.visibleNotifications) {
       const label = this.getTimeGroupLabel(notification.created_at);
       let group = groups.find(g => g.label === label);
       if (!group) {
-        group = { label, items: [] };
+        group = { label: label, items: [] as NotificationItem[] } as GroupedNotification;
         groups.push(group);
       }
       group.items.push(notification);
@@ -508,7 +513,7 @@ export struct NotificationCenter {
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           List({ space: 12 }) {
-            ForEach(this.getGroupedNotifications(), (group: { label: string; items: NotificationItem[] }) => {
+            ForEach(this.getGroupedNotifications(), (group: GroupedNotification) => {
               ListItemGroup({
                 header: this.buildGroupHeader(group.label),
                 space: 8
@@ -520,7 +525,7 @@ export struct NotificationCenter {
                 }, (notification: NotificationItem) =>
                   notification.notification_id + '_p' + (this.actionLoadingIds.indexOf(notification.notification_id) >= 0))
               }
-            }, (group: { label: string; items: NotificationItem[] }) => group.label)
+            }, (group: GroupedNotification) => group.label)
 
             if (this.isLoadingMore) {
               ListItem() {
