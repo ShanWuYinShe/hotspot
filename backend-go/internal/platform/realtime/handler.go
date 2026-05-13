@@ -5,13 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	platformauth "hotspot/backend-go/internal/platform/auth"
-	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/ratelimit"
 )
 
@@ -26,7 +24,6 @@ type userRelationAuthorizer interface {
 
 type groupMembershipAuthorizer interface {
 	ListMembers(context.Context, string, int, string) ([]string, string, error)
-	IsMember(context.Context, string, string) (bool, error)
 }
 
 type Handler struct {
@@ -35,58 +32,13 @@ type Handler struct {
 	userRepo       userRelationAuthorizer
 	groupRepo      groupMembershipAuthorizer
 	typingThrottle sync.Map
-	stopClean      chan struct{}
 }
 
 func NewHandler(auth *platformauth.Service, userService userPresenceAuthorizer, userRepo userRelationAuthorizer, groupRepo groupMembershipAuthorizer) *Handler {
-	h := &Handler{auth: auth, users: userService, userRepo: userRepo, groupRepo: groupRepo, stopClean: make(chan struct{})}
-	go h.cleanThrottle()
-	return h
+	return &Handler{auth: auth, users: userService, userRepo: userRepo, groupRepo: groupRepo}
 }
 
-func (h *Handler) cleanThrottle() {
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-h.stopClean:
-			return
-		case <-ticker.C:
-			cutoff := time.Now().Add(-10 * time.Second)
-			h.typingThrottle.Range(func(key, value any) bool {
-				if t, ok := value.(time.Time); ok && t.Before(cutoff) {
-					h.typingThrottle.Delete(key)
-				}
-				return true
-			})
-		}
-	}
-}
-
-var upgrader = websocket.Upgrader{CheckOrigin: checkOrigin}
-
-func checkOrigin(r *http.Request) bool {
-	cfg := config.Load()
-	if cfg.AppEnv == "test" {
-		return true
-	}
-	origin := r.Header.Get("Origin")
-	if origin == "" {
-		return true
-	}
-	allowed := config.Load().TrustedProxyCIDRs
-	host := strings.ToLower(origin)
-	if strings.HasPrefix(host, "http://localhost") || strings.HasPrefix(host, "http://127.0.0.1") || strings.HasPrefix(host, "https://localhost") || strings.HasPrefix(host, "https://127.0.0.1") {
-		return true
-	}
-	for _, domain := range strings.Split(allowed, ",") {
-		domain = strings.TrimSpace(domain)
-		if domain != "" && strings.Contains(host, domain) {
-			return true
-		}
-	}
-	return false
-}
+var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -313,11 +265,22 @@ func (h *Handler) isGroupMember(ctx context.Context, viewerUserID, groupID strin
 	if viewerUserID == "" || groupID == "" || h.groupRepo == nil {
 		return false
 	}
-	ok, err := h.groupRepo.IsMember(ctx, groupID, viewerUserID)
-	if err != nil {
-		return false
+	cursor := ""
+	for {
+		members, nextCursor, err := h.groupRepo.ListMembers(ctx, groupID, 100, cursor)
+		if err != nil {
+			return false
+		}
+		for _, userID := range members {
+			if userID == viewerUserID {
+				return true
+			}
+		}
+		if nextCursor == "" || nextCursor == cursor {
+			return false
+		}
+		cursor = nextCursor
 	}
-	return ok
 }
 
 func detectPlatform(r *http.Request, clientType string) string {

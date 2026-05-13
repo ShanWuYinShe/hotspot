@@ -98,51 +98,51 @@
 </script>
 
 <!-- List header -->
-<div class="flex-shrink-0 px-4 pt-4 pb-3" style="border-bottom: 1px solid var(--neu-border);">
+<div class="flex-shrink-0 px-4 pt-4 pb-3" style="border-bottom: 1px solid var(--border-theme);">
   <div class="mb-3 flex items-center justify-between">
     <div>
-      <h1 style="font-size: 18px; color: var(--neu-text);">消息</h1>
-      <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">
+      <h1 style="font-size: 18px; color: var(--text-primary);">消息</h1>
+      <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
         {totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}
       </p>
     </div>
     <div class="flex gap-1.5">
       <button
         class="flex items-center justify-center rounded-full outline-none"
-        style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+        style="width: 32px; height: 32px; background: var(--surface-bg); box-shadow: 4px 4px 9px var(--shadow-dark), -4px -4px 9px var(--shadow-light); border: 1px solid var(--border-theme);"
       >
-        <UserPlus size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+        <UserPlus size={14} strokeWidth={1.5} color="var(--text-secondary)" />
       </button>
       <button
         class="flex items-center justify-center rounded-full outline-none"
-        style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+        style="width: 32px; height: 32px; background: var(--surface-bg); box-shadow: 4px 4px 9px var(--shadow-dark), -4px -4px 9px var(--shadow-light); border: 1px solid var(--border-theme);"
       >
-        <Plus size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+        <Plus size={14} strokeWidth={1.5} color="var(--text-secondary)" />
       </button>
     </div>
   </div>
   <!-- Search -->
   <div
     class="flex items-center gap-2 rounded-[14px] px-3 py-2"
-    style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+    style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
   >
-    <Search size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+    <Search size={14} strokeWidth={1.5} color="var(--text-secondary)" />
     <input
       type="text"
       bind:value={searchVal}
       placeholder="搜索…"
       class="flex-1 bg-transparent outline-none"
-      style="font-size: 12px; color: var(--neu-text);"
+      style="font-size: 12px; color: var(--text-primary);"
     />
   </div>
 </div>
 
 <!-- Online strip -->
 {#if onlineChats.length > 0}
-  <div class="flex-shrink-0 px-4 py-2.5" style="border-bottom: 1px solid var(--neu-border);">
+  <div class="flex-shrink-0 px-4 py-2.5" style="border-bottom: 1px solid var(--border-theme);">
     <p
       class="uppercase mb-2"
-      style="font-size: 9px; letter-spacing: 0.12em; color: var(--neu-text-muted);"
+      style="font-size: 9px; letter-spacing: 0.12em; color: var(--text-secondary);"
     >
       在线
     </p>
@@ -157,8 +157,8 @@
             <div
               class="overflow-hidden rounded-full"
               style="width: 36px; height: 36px; border: {selected
-                ? '2px solid var(--neu-accent-primary)'
-                : '1.5px solid var(--neu-border)'};"
+                ? '2px solid var(--brand)'
+                : '1.5px solid var(--border-theme)'};"
             >
               <img
                 src={chat.other_user.avatar_url || ''}
@@ -168,10 +168,10 @@
             </div>
             <span
               class="absolute bottom-0 right-0 rounded-full"
-              style="width: 8px; height: 8px; background: #22c55e; border: 1.5px solid var(--neu-bg);"
+              style="width: 8px; height: 8px; background: #22c55e; border: 1.5px solid var(--surface-bg);"
             ></span>
           </div>
-          <span style="font-size: 10px; color: var(--neu-text-muted);"
+          <span style="font-size: 10px; color: var(--text-secondary);"
             >{chat.other_user.nickname}</span
           >
         </a>
@@ -186,8 +186,8 @@
     <button
       class="rounded-full px-2 py-0.5 outline-none transition-all"
       style={currentTab === tab.id
-        ? 'background: var(--neu-accent-primary); color: white; font-size: 11px; box-shadow: 0 2px 8px var(--neu-glow);'
-        : 'background: var(--neu-bg); color: var(--neu-text-muted); font-size: 11px; border: 1px solid var(--neu-border);'}
+        ? 'background: var(--brand); color: white; font-size: 11px; box-shadow: 0 2px 8px var(--glow);'
+        : 'background: var(--surface-bg); color: var(--text-secondary); font-size: 11px; border: 1px solid var(--border-theme);'}
       onclick={() => handleTabChange(tab.id)}
     >
       {tab.label}
@@ -203,16 +203,16 @@
         <div class="flex items-center gap-3 px-3 py-2.5">
           <div
             class="rounded-full"
-            style="width: 40px; height: 40px; background: var(--neu-border);"
+            style="width: 40px; height: 40px; background: var(--border-theme);"
           ></div>
           <div class="flex-1">
             <div
               class="mb-1 rounded"
-              style="width: 60px; height: 11px; background: var(--neu-border);"
+              style="width: 60px; height: 11px; background: var(--border-theme);"
             ></div>
             <div
               class="rounded"
-              style="width: 100px; height: 9px; background: var(--neu-border);"
+              style="width: 100px; height: 9px; background: var(--border-theme);"
             ></div>
           </div>
         </div>
@@ -224,11 +224,11 @@
         {@const selected = isPrivateChatSelected(chat.other_user.user_id)}
         <a
           href="/chat/users/{chat.other_user.user_id}"
-          class="flex items-center gap-3.5 cursor-pointer transition-all neu-row-hover"
+          class="flex items-center gap-3.5 cursor-pointer transition-all row-hover"
           style="padding: 10px 16px; border-radius: 18px; background: {selected
-            ? 'var(--neu-accent-primary)'
+            ? 'var(--brand)'
             : 'transparent'}; box-shadow: {selected
-            ? '0 4px 16px var(--neu-glow)'
+            ? '0 4px 16px var(--glow)'
             : 'none'}; transition: background 0.16s ease;"
         >
           <div class="relative flex-shrink-0">
@@ -236,7 +236,7 @@
               class="overflow-hidden rounded-full"
               style="width: 40px; height: 40px; border: {selected
                 ? '1.5px solid rgba(255,255,255,0.35)'
-                : '1.5px solid var(--neu-border)'};"
+                : '1.5px solid var(--border-theme)'};"
             >
               <img
                 src={chat.other_user.avatar_url || ''}
@@ -247,7 +247,7 @@
             {#if isOnline}
               <span
                 class="absolute bottom-0 right-0 rounded-full"
-                style="width: 10px; height: 10px; background: #22c55e; border: 2px solid var(--neu-bg);"
+                style="width: 10px; height: 10px; background: #22c55e; border: 2px solid var(--surface-bg);"
               ></span>
             {/if}
           </div>
@@ -256,20 +256,20 @@
               <span
                 style="font-size: 14px; color: {selected
                   ? 'white'
-                  : 'var(--neu-text)'}; font-weight: {chat.unread_count > 0 ? 600 : 400};"
+                  : 'var(--text-primary)'}; font-weight: {chat.unread_count > 0 ? 600 : 400};"
                 >{chat.other_user.nickname}</span
               >
               <span
                 style="font-size: 11px; flex-shrink: 0; color: {selected
                   ? 'rgba(255,255,255,0.7)'
-                  : 'var(--neu-text-muted)'};">{formatRelativeTime(chat.last_activity_at)}</span
+                  : 'var(--text-secondary)'};">{formatRelativeTime(chat.last_activity_at)}</span
               >
             </div>
             <p
               class="truncate pr-4"
               style="font-size: 12px; color: {selected
                 ? 'rgba(255,255,255,0.8)'
-                : 'var(--neu-text-muted)'};"
+                : 'var(--text-secondary)'};"
             >
               {#if chat.last_message}{chat.last_message.content || '[媒体消息]'}{:else}暂无消息{/if}
             </p>
@@ -277,7 +277,7 @@
           {#if chat.unread_count > 0 && !selected}
             <div
               class="flex flex-shrink-0 items-center justify-center rounded-full"
-              style="width: 20px; height: 20px; background: var(--neu-accent-primary); color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--neu-glow);"
+              style="width: 20px; height: 20px; background: var(--brand); color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--glow);"
             >
               {chat.unread_count > 99 ? '99+' : chat.unread_count}
             </div>
@@ -290,16 +290,16 @@
       <div class="flex items-center gap-3 px-3 py-2.5">
         <div
           class="rounded-full"
-          style="width: 40px; height: 40px; background: var(--neu-border);"
+          style="width: 40px; height: 40px; background: var(--border-theme);"
         ></div>
         <div class="flex-1">
           <div
             class="mb-1 rounded"
-            style="width: 70px; height: 11px; background: var(--neu-border);"
+            style="width: 70px; height: 11px; background: var(--border-theme);"
           ></div>
           <div
             class="rounded"
-            style="width: 90px; height: 9px; background: var(--neu-border);"
+            style="width: 90px; height: 9px; background: var(--border-theme);"
           ></div>
         </div>
       </div>
@@ -309,18 +309,18 @@
       {@const selected = isGroupSelected(group.group.group_id)}
       <a
         href="/chat/groups/{group.group.group_id}"
-        class="flex items-center gap-3.5 cursor-pointer transition-all neu-row-hover"
+        class="flex items-center gap-3.5 cursor-pointer transition-all row-hover"
         style="padding: 10px 16px; border-radius: 18px; background: {selected
-          ? 'var(--neu-accent-primary)'
+          ? 'var(--brand)'
           : 'transparent'}; box-shadow: {selected
-          ? '0 4px 16px var(--neu-glow)'
+          ? '0 4px 16px var(--glow)'
           : 'none'}; transition: background 0.16s ease;"
       >
         <div
           class="flex-shrink-0 overflow-hidden rounded-full"
           style="width: 40px; height: 40px; border: {selected
             ? '1.5px solid rgba(255,255,255,0.35)'
-            : '1.5px solid var(--neu-border)'};"
+            : '1.5px solid var(--border-theme)'};"
         >
           {#if group.group.avatar_url}
             <img
@@ -331,9 +331,9 @@
           {:else}
             <div
               class="flex h-full w-full items-center justify-center"
-              style="background: var(--neu-fallback-bg);"
+              style="background: var(--surface-secondary);"
             >
-              <Users size={16} color="var(--neu-fallback-text)" />
+              <Users size={16} color="var(--text-tertiary)" />
             </div>
           {/if}
         </div>
@@ -342,19 +342,19 @@
             <span
               style="font-size: 14px; font-weight: 500; color: {selected
                 ? 'white'
-                : 'var(--neu-text)'};">{group.group.name}</span
+                : 'var(--text-primary)'};">{group.group.name}</span
             >
             <span
               style="font-size: 11px; flex-shrink: 0; color: {selected
                 ? 'rgba(255,255,255,0.7)'
-                : 'var(--neu-text-muted)'};">{group.group.members_count}人</span
+                : 'var(--text-secondary)'};">{group.group.members_count}人</span
             >
           </div>
           <p
             class="truncate pr-4"
             style="font-size: 12px; color: {selected
               ? 'rgba(255,255,255,0.8)'
-              : 'var(--neu-text-muted)'};"
+              : 'var(--text-secondary)'};"
           >
             {formatRelativeTime(group.last_activity_at ?? group.my_state?.joined_at ?? '')}
           </p>
@@ -362,7 +362,7 @@
         {#if (group.my_state?.unread_count ?? 0) > 0 && !selected}
           <div
             class="flex flex-shrink-0 items-center justify-center rounded-full"
-            style="width: 20px; height: 20px; background: var(--neu-accent-primary); color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--neu-glow);"
+            style="width: 20px; height: 20px; background: var(--brand); color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--glow);"
           >
             {(group.my_state?.unread_count ?? 0) > 99 ? '99+' : (group.my_state?.unread_count ?? 0)}
           </div>

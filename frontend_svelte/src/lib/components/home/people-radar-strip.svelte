@@ -1,0 +1,74 @@
+<script lang="ts">
+  import ChevronRight from 'lucide-svelte/icons/chevron-right';
+
+  interface NearbyUser {
+    id: string;
+    avatar_url: string;
+    nickname: string;
+    distance?: string;
+    online?: boolean;
+  }
+
+  interface Props {
+    users?: NearbyUser[];
+    loading?: boolean;
+    onViewAll?: () => void;
+  }
+
+  let { users = [], loading = false, onViewAll }: Props = $props();
+</script>
+
+<div>
+  <div class="flex items-center justify-between mb-3">
+    <span class="eyebrow">附近的人</span>
+    <button
+      class="flex items-center gap-0.5"
+      style="font-size: 12px; color: var(--brand); background: none; border: none; cursor: pointer;"
+      onclick={onViewAll}
+    >
+      更多
+      <ChevronRight size={14} strokeWidth={1.5} />
+    </button>
+  </div>
+
+  <div class="flex gap-3 overflow-x-auto no-scrollbar" style="padding-bottom: 4px;">
+    {#if loading}
+      {#each Array(5) as _}
+        <div class="flex flex-col items-center gap-1.5 flex-shrink-0">
+          <div
+            style="width: 56px; height: 56px; border-radius: 9999px; border: 1.5px solid var(--border-theme); background: var(--border-theme);"
+          ></div>
+        </div>
+      {/each}
+    {:else}
+      {#each users as user (user.id)}
+        <div class="flex flex-col items-center gap-1.5 flex-shrink-0" style="cursor: pointer;">
+          <div style="position: relative; width: 56px; height: 56px;">
+            <img
+              src={user.avatar_url}
+              alt={user.nickname}
+              style="width: 56px; height: 56px; border-radius: 9999px; object-fit: cover; border: 1.5px solid var(--border-theme);"
+            />
+            {#if user.online}
+              <div
+                style="position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; border-radius: 9999px; background: #22c55e; border: 2px solid var(--surface-bg);"
+              ></div>
+            {/if}
+          </div>
+          {#if user.distance}
+            <span style="font-size: 10px; color: var(--brand);">{user.distance}</span>
+          {/if}
+        </div>
+      {/each}
+
+      <!-- More card -->
+      <button
+        class="flex items-center justify-center flex-shrink-0"
+        style="width: 56px; height: 56px; border-radius: 9999px; border: 1.5px dashed var(--border-active); background: transparent; cursor: pointer;"
+        onclick={onViewAll}
+      >
+        <ChevronRight size={18} strokeWidth={1.5} color="var(--text-secondary)" />
+      </button>
+    {/if}
+  </div>
+</div>

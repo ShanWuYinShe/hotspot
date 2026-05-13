@@ -64,7 +64,7 @@
       case 'system_announcement':
         return '#F59E0B';
       default:
-        return 'var(--neu-accent-primary)';
+        return 'var(--brand)';
     }
   }
 
@@ -305,23 +305,23 @@
   <!-- Sticky header -->
   <div
     class="sticky top-0 z-10 px-5 pt-3 pb-3"
-    style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+    style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
         <button
-          class="flex items-center justify-center outline-none transition-transform duration-150 active:scale-[0.93]"
-          style="width: 38px; height: 38px; border-radius: 9999px; box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+          class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
+          style="width: 38px; height: 38px;"
           onclick={() => window.history.back()}
         >
-          <ArrowLeft size={16} strokeWidth={2} color="var(--neu-text)" />
+          <ArrowLeft size={16} strokeWidth={2} color="var(--text-primary)" />
         </button>
         <div>
-          <h1 style="font-size: 18px; font-weight: 600; color: var(--neu-text);">
+          <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
             {t('notificationsPage.title')}
           </h1>
           {#if notificationStore.unreadCount > 0}
-            <p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 1px;">
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 1px;">
               {notificationStore.unreadCount} 条未读
             </p>
           {/if}
@@ -329,8 +329,8 @@
       </div>
       {#if notificationStore.unreadCount > 0}
         <button
-          class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none transition-transform duration-150 active:scale-[0.93]"
-          style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-md); font-size: 12px; color: var(--neu-accent-primary);"
+          class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none transition-transform duration-150 active:scale-[0.93]"
+          style="font-size: 12px; color: var(--brand);"
           onclick={markAllRead}
         >
           <CheckCheck size={13} strokeWidth={2} />
@@ -345,10 +345,11 @@
     {#each Object.entries(filterLabels) as [key, label]}
       <button
         class="flex-shrink-0 outline-none transition-all duration-200"
+        class:surface-flat={activeFilter !== key}
         style="padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 500;
           {activeFilter === key
-          ? 'background: var(--neu-accent-primary); color: white; box-shadow: 0 3px 10px var(--neu-glow); border: none;'
-          : 'background: var(--neu-bg); color: var(--neu-text); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}"
+          ? 'background: var(--brand); color: white; box-shadow: 0 3px 10px var(--glow); border: none;'
+          : 'color: var(--text-primary);'}"
         onclick={() => (activeFilter = key as FilterKey)}
       >
         {label}
@@ -359,14 +360,14 @@
   <div class="flex flex-col px-3 pb-4">
     {#if pagination.loading}
       <div class="flex justify-center py-12">
-        <Loader2 class="h-8 w-8 animate-spin" color="var(--neu-text-muted)" />
+        <Loader2 class="h-8 w-8 animate-spin" color="var(--text-secondary)" />
       </div>
     {:else if pagination.error}
       <EmptyState icon={Bell} title={t('notificationsPage.loadFailed')} />
       <div class="flex justify-center pt-2">
         <button
-          class="rounded-full px-5 py-2 outline-none"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); font-size: 13px;"
+          class="surface-flat rounded-full px-5 py-2 outline-none"
+          style="color: var(--brand); font-size: 13px;"
           onclick={() => loadNotifications(true)}>{t('common.retry')}</button
         >
       </div>
@@ -378,7 +379,7 @@
         {#if unreadGroup.length > 0}
           <p
             class="uppercase mb-2"
-            style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
+            style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
           >
             新消息
           </p>
@@ -392,7 +393,7 @@
               class="flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
               style="background: {`${typeColor}07`};
                 border: 1px solid {`${typeColor}18`};
-                box-shadow: var(--neu-shadow-lg);"
+                box-shadow: var(--shadow-lg);"
             >
               <!-- Avatar with type badge -->
               <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
@@ -400,19 +401,19 @@
                   <img
                     src={avatarUrl}
                     alt=""
-                    style="width: 44px; height: 44px; border-radius: 9999px; object-fit: cover; border: 1px solid var(--neu-border);"
+                    style="width: 44px; height: 44px; border-radius: 9999px; object-fit: cover; border: 1px solid var(--border-theme);"
                   />
                 {:else}
                   <div
-                    class="flex items-center justify-center"
-                    style="width: 44px; height: 44px; border-radius: 9999px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+                    class="input-surface flex items-center justify-center"
+                    style="width: 44px; height: 44px; border-radius: 9999px;"
                   >
-                    <Bell size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                    <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
                   </div>
                 {/if}
                 <div
                   class="absolute flex items-center justify-center"
-                  style="width: 18px; height: 18px; border-radius: 9999px; background: {typeColor}; border: 2px solid var(--neu-bg); bottom: -2px; right: -2px;"
+                  style="width: 18px; height: 18px; border-radius: 9999px; background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"
                 >
                   <TypeIcon size={10} strokeWidth={2} color="white" />
                 </div>
@@ -424,14 +425,14 @@
                   onclick={() => handleNotificationClick(item)}
                 >
                   <div
-                    style="font-size: 13px; color: var(--neu-text); font-weight: 500; line-height: 1.4;"
+                    style="font-size: 13px; color: var(--text-primary); font-weight: 500; line-height: 1.4;"
                   >
                     <span class="mr-1">{getNotificationTitle(item, locale)}</span>
-                    <span style="color: var(--neu-text-muted);"
+                    <span style="color: var(--text-secondary);"
                       >{getNotificationContent(item, locale)}</span
                     >
                   </div>
-                  <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 2px;">
+                  <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
                     {formatNotificationTimestamp(item.created_at, locale)}
                   </p>
                 </button>
@@ -439,14 +440,14 @@
                   <div class="mt-2 flex gap-2">
                     <button
                       class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                      style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 6px var(--neu-glow);"
+                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
                       disabled={isProcessing(item.notification_id)}
                       onclick={() => handleInviteAction(item, 'accept')}
                       >{t('common.accept')}</button
                     >
                     <button
-                      class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                      style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+                      class="surface-flat rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                      style="color: var(--text-secondary);"
                       disabled={isProcessing(item.notification_id)}
                       onclick={() => handleInviteAction(item, 'reject')}
                       >{t('common.reject')}</button
@@ -456,14 +457,14 @@
                   <div class="mt-2 flex gap-2">
                     <button
                       class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                      style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 6px var(--neu-glow);"
+                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
                       disabled={isProcessing(item.notification_id)}
                       onclick={() => handleApplicationAction(item, 'approve')}
                       >{t('common.approve')}</button
                     >
                     <button
-                      class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                      style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+                      class="surface-flat rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                      style="color: var(--text-secondary);"
                       disabled={isProcessing(item.notification_id)}
                       onclick={() => handleApplicationAction(item, 'reject')}
                       >{t('common.reject')}</button
@@ -477,11 +478,11 @@
                   <img
                     src={thumbnailUrl}
                     alt=""
-                    style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 1px solid var(--neu-border);"
+                    style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-theme);"
                   />
                 {/if}
                 <div
-                  style="width: 8px; height: 8px; border-radius: 9999px; background: var(--neu-accent-primary);"
+                  style="width: 8px; height: 8px; border-radius: 9999px; background: var(--brand);"
                 ></div>
               </div>
             </div>
@@ -489,7 +490,7 @@
           {#if readGroup.length > 0}
             <p
               class="uppercase mt-4 mb-2"
-              style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
+              style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
             >
               较早
             </p>
@@ -503,27 +504,26 @@
           {@const avatarUrl = getActorAvatar(item)}
           {@const thumbnailUrl = getPostThumbnail(item)}
           <div
-            class="flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
-            style="background: var(--neu-bg); border: 1px solid var(--neu-border);"
+            class="row-hover flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
           >
             <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
               {#if avatarUrl}
                 <img
                   src={avatarUrl}
                   alt=""
-                  style="width: 44px; height: 44px; border-radius: 9999px; object-fit: cover; border: 1px solid var(--neu-border);"
+                  style="width: 44px; height: 44px; border-radius: 9999px; object-fit: cover; border: 1px solid var(--border-theme);"
                 />
               {:else}
                 <div
                   class="flex items-center justify-center"
-                  style="width: 44px; height: 44px; border-radius: 9999px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+                  style="width: 44px; height: 44px; border-radius: 9999px; background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
                 >
-                  <Bell size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                  <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
                 </div>
               {/if}
               <div
                 class="absolute flex items-center justify-center"
-                style="width: 18px; height: 18px; border-radius: 9999px; background: {typeColor}; border: 2px solid var(--neu-bg); bottom: -2px; right: -2px;"
+                style="width: 18px; height: 18px; border-radius: 9999px; background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"
               >
                 <TypeIcon size={10} strokeWidth={2} color="white" />
               </div>
@@ -535,14 +535,14 @@
                 onclick={() => handleNotificationClick(item)}
               >
                 <div
-                  style="font-size: 13px; color: var(--neu-text); font-weight: 400; line-height: 1.4;"
+                  style="font-size: 13px; color: var(--text-primary); font-weight: 400; line-height: 1.4;"
                 >
                   <span class="mr-1">{getNotificationTitle(item, locale)}</span>
-                  <span style="color: var(--neu-text-muted);"
+                  <span style="color: var(--text-secondary);"
                     >{getNotificationContent(item, locale)}</span
                   >
                 </div>
-                <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 2px;">
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
                   {formatNotificationTimestamp(item.created_at, locale)}
                 </p>
               </button>
@@ -550,13 +550,13 @@
                 <div class="mt-2 flex gap-2">
                   <button
                     class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                    style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 6px var(--neu-glow);"
+                    style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
                     disabled={isProcessing(item.notification_id)}
                     onclick={() => handleInviteAction(item, 'accept')}>{t('common.accept')}</button
                   >
                   <button
                     class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                    style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+                    style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                     disabled={isProcessing(item.notification_id)}
                     onclick={() => handleInviteAction(item, 'reject')}>{t('common.reject')}</button
                   >
@@ -565,14 +565,14 @@
                 <div class="mt-2 flex gap-2">
                   <button
                     class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                    style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 6px var(--neu-glow);"
+                    style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
                     disabled={isProcessing(item.notification_id)}
                     onclick={() => handleApplicationAction(item, 'approve')}
                     >{t('common.approve')}</button
                   >
                   <button
                     class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                    style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+                    style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                     disabled={isProcessing(item.notification_id)}
                     onclick={() => handleApplicationAction(item, 'reject')}
                     >{t('common.reject')}</button
@@ -586,7 +586,7 @@
                 <img
                   src={thumbnailUrl}
                   alt=""
-                  style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 1px solid var(--neu-border);"
+                  style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-theme);"
                 />
               {/if}
             </div>
@@ -596,8 +596,8 @@
       {#if pagination.hasMore}
         <div class="flex justify-center pt-4">
           <button
-            class="rounded-full px-5 py-2 outline-none transition-transform duration-150 active:scale-[0.97]"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); font-size: 13px;"
+            class="surface-flat rounded-full px-5 py-2 outline-none transition-transform duration-150 active:scale-[0.97]"
+            style="color: var(--text-secondary); font-size: 13px;"
             disabled={pagination.loadingMore}
             onclick={() => loadNotifications(false)}
           >

@@ -31,7 +31,7 @@
   <!-- Mobile: full-screen content + edge-to-edge bottom nav -->
   <div
     class="flex h-[100dvh] w-full flex-col overflow-hidden transition-colors duration-500"
-    style="background-color: var(--neu-bg); color: var(--neu-text);"
+    style="background-color: var(--surface-bg); color: var(--text-primary);"
   >
     <main class="mobile-app-main no-scrollbar scroll-smooth page-enter">
       <div class="mobile-shell-content">
@@ -44,11 +44,11 @@
   <!-- Tablet: full-width content + floating glass pill bottom nav -->
   <div
     class="flex h-[100dvh] w-full flex-col overflow-hidden transition-colors duration-500"
-    style="background-color: var(--neu-bg); color: var(--neu-text);"
+    style="background-color: var(--surface-bg); color: var(--text-primary);"
   >
     <main
       class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar"
-      style="background-color: var(--neu-bg);"
+      style="background-color: var(--surface-bg);"
     >
       {@render children()}
     </main>
@@ -58,14 +58,16 @@
   <!-- Desktop: header + sidebar + main card (≥1280px) -->
   <div
     class="flex h-screen w-screen flex-col overflow-hidden transition-colors duration-500"
-    style="background-color: var(--page-bg); color: var(--neu-text);"
+    style="background-color: var(--page-bg); color: var(--text-primary);"
   >
     <!-- Header — 52px -->
     <header class="desktop-header">
       <!-- Logo -->
       <a href="/" class="mr-3 flex cursor-pointer items-center gap-2 select-none">
         <img src="/logo_32.png" alt="HotSpot" class="h-7 w-7 rounded-full object-cover" />
-        <span class="tracking-tight" style="font-size: 17px; color: var(--neu-text);">HotSpot</span>
+        <span class="tracking-tight" style="font-size: 17px; color: var(--text-primary);"
+          >HotSpot</span
+        >
       </a>
 
       <div class="flex-1"></div>
@@ -77,7 +79,7 @@
           aria-label={t('nav.openSearch')}
           onclick={() => uiStore.openSearchModal()}
         >
-          <Search size={17} color="var(--neu-text-muted)" />
+          <Search size={17} color="var(--text-secondary)" />
         </button>
         <button
           class="desktop-header__btn"
@@ -85,14 +87,14 @@
           onclick={toggleMode}
         >
           {#if currentMode === 'dark'}
-            <Sun size={17} color="var(--neu-text-muted)" />
+            <Sun size={17} color="var(--text-secondary)" />
           {:else}
-            <Moon size={17} color="var(--neu-text-muted)" />
+            <Moon size={17} color="var(--text-secondary)" />
           {/if}
         </button>
         <button
           class="mx-1.5 flex items-center justify-center rounded-full outline-none transition-shadow duration-200"
-          style="width: 32px; height: 32px; background: var(--neu-accent-primary); box-shadow: 0 4px 12px var(--neu-glow);"
+          style="width: 32px; height: 32px; background: var(--brand); box-shadow: 0 4px 12px var(--glow);"
           onclick={() => uiStore.openCreateSheet()}
           aria-label={t('nav.publish')}
         >
@@ -102,7 +104,7 @@
             height="15"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="var(--neu-active-text)"
+            stroke="var(--text-on-accent)"
             stroke-width="2.5"
             stroke-linecap="round"
             stroke-linejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg
@@ -113,14 +115,14 @@
           aria-label={t('sidebar.notifications')}
           onclick={() => void goto('/notifications')}
         >
-          <Bell size={17} color="var(--neu-text-muted)" />
+          <Bell size={17} color="var(--text-secondary)" />
         </button>
         <button
           class="desktop-header__btn"
           aria-label={t('sidebar.settingsLabel')}
           onclick={() => void goto('/settings')}
         >
-          <Settings size={17} color="var(--neu-text-muted)" />
+          <Settings size={17} color="var(--text-secondary)" />
         </button>
         {#if authStore.isAuthenticated}
           <button
@@ -134,7 +136,7 @@
               src={authStore.currentAccount?.avatar_url || ''}
               alt={authStore.currentAccount?.nickname || 'Profile'}
               class="h-full w-full rounded-full object-cover"
-              style="border: 1.5px solid var(--neu-border);"
+              style="border: 1.5px solid var(--border-theme);"
             />
             {#if notificationStore.unreadCount > 0}
               <div class="desktop-header__badge" style="top: -3px; right: -3px;">

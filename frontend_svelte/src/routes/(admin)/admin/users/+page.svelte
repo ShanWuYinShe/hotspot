@@ -83,10 +83,10 @@
 
 <div class="space-y-6">
   <div class="flex items-center justify-between">
-    <h1 style="font-size: 22px; font-weight: 600; color: var(--neu-text);">用户管理</h1>
+    <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">用户管理</h1>
     <button
       class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
       onclick={() => loadUsers()}
       disabled={pagination.loading}
     >
@@ -99,14 +99,14 @@
   <div class="flex gap-2">
     <div
       class="relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-      style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+      style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
     >
-      <Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
+      <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" />
       <input
         type="search"
         placeholder="搜索昵称..."
         class="flex-1 bg-transparent outline-none"
-        style="font-size: 13px; color: var(--neu-text);"
+        style="font-size: 13px; color: var(--text-primary);"
         autocomplete="off"
         bind:value={nickname}
         onkeydown={(e) => e.key === 'Enter' && loadUsers()}
@@ -114,7 +114,7 @@
     </div>
     <button
       class="rounded-full px-4 py-2.5 outline-none"
-      style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);"
+      style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
       onclick={() => loadUsers()}>搜索</button
     >
   </div>
@@ -122,14 +122,14 @@
   <!-- Users table -->
   <div
     class="rounded-[22px] overflow-hidden"
-    style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
   >
     <div
       class="flex items-center gap-2 px-4 py-3"
-      style="border-bottom: 1px solid var(--neu-border);"
+      style="border-bottom: 1px solid var(--border-theme);"
     >
-      <Users size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-      <span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">用户列表</span>
+      <Users size={16} strokeWidth={1.5} color="var(--brand)" />
+      <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);">用户列表</span>
     </div>
     <div class="p-4">
       {#if pagination.loading && pagination.items.length === 0}
@@ -138,23 +138,23 @@
             <div class="flex items-center gap-4">
               <div
                 class="rounded-full"
-                style="width: 40px; height: 40px; background: var(--neu-border);"
+                style="width: 40px; height: 40px; background: var(--border-theme);"
               ></div>
               <div class="flex-1 space-y-2">
                 <div
                   class="rounded"
-                  style="height: 12px; width: 120px; background: var(--neu-border);"
+                  style="height: 12px; width: 120px; background: var(--border-theme);"
                 ></div>
                 <div
                   class="rounded"
-                  style="height: 10px; width: 80px; background: var(--neu-border);"
+                  style="height: 10px; width: 80px; background: var(--border-theme);"
                 ></div>
               </div>
             </div>
           {/each}
         </div>
       {:else if pagination.items.length === 0}
-        <p class="py-8 text-center" style="font-size: 13px; color: var(--neu-text-muted);">
+        <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
           暂无用户数据
         </p>
       {:else}
@@ -162,11 +162,11 @@
           {#each pagination.items as user (user.user.user_id)}
             <div
               class="flex items-center gap-3 rounded-[18px] p-3"
-              style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
             >
               <div
                 class="flex-shrink-0 overflow-hidden rounded-full"
-                style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);"
+                style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme);"
               >
                 {#if user.user.avatar_url}
                   <img
@@ -177,28 +177,27 @@
                 {:else}
                   <div
                     class="flex h-full w-full items-center justify-center"
-                    style="background: var(--neu-fallback-bg);"
+                    style="background: var(--surface-secondary);"
                   >
-                    <span
-                      style="font-size: 14px; font-weight: 600; color: var(--neu-fallback-text);"
+                    <span style="font-size: 14px; font-weight: 600; color: var(--text-tertiary);"
                       >{user.user.nickname.slice(0, 2)}</span
                     >
                   </div>
                 {/if}
               </div>
               <div class="min-w-0 flex-1">
-                <span style="font-size: 13px; font-weight: 500; color: var(--neu-text);"
+                <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
                   >{user.user.nickname}</span
                 >
-                <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
                   ID: {user.user.user_id}
                 </p>
               </div>
               <span
                 class="rounded-full px-2 py-0.5"
                 style="font-size: 10px; font-weight: 500; {user.status === 'banned'
-                  ? 'background: var(--neu-error); color: var(--neu-active-text);'
-                  : 'background: var(--neu-accent-primary); color: var(--neu-active-text);'}"
+                  ? 'background: var(--neu-error); color: var(--text-on-accent);'
+                  : 'background: var(--brand); color: var(--text-on-accent);'}"
                 >{STATUS_TEXT[user.status] ?? user.status}</span
               >
               <DropdownMenu.Root>
@@ -206,11 +205,11 @@
                   {#snippet child({ props })}
                     <button
                       class="flex items-center justify-center rounded-full outline-none"
-                      style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                      style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                       aria-label="更多操作"
                       {...props}
                     >
-                      <MoreVertical size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                      <MoreVertical size={14} strokeWidth={1.5} color="var(--text-secondary)" />
                     </button>
                   {/snippet}
                 </DropdownMenu.Trigger>
@@ -219,7 +218,7 @@
                     {#snippet child({ props })}
                       <a
                         href="/users/{user.user.user_id}"
-                        style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--neu-text);"
+                        style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary);"
                         {...props}
                       >
                         <Eye size={14} strokeWidth={1.5} />
@@ -231,7 +230,7 @@
                     {#snippet child({ props })}
                       <a
                         href="/admin/users/{user.user.user_id}/roles"
-                        style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--neu-text);"
+                        style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary);"
                         {...props}
                       >
                         <Shield size={14} strokeWidth={1.5} />
@@ -244,7 +243,7 @@
                     <DropdownMenu.Item>
                       {#snippet child({ props })}
                         <button
-                          style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--neu-text);"
+                          style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary);"
                           {...props}
                           onclick={() => handleUnban(user.user.user_id)}
                         >
@@ -275,7 +274,7 @@
         {#if pagination.hasMore}
           <button
             class="mt-4 w-full rounded-full py-2.5 outline-none"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
             onclick={() => loadUsers(false)}>加载更多</button
           >
         {/if}

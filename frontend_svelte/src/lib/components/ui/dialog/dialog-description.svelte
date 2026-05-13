@@ -13,7 +13,7 @@
 
 <DialogPrimitive.Description
   class={cn('text-sm', className)}
-  style="color: var(--neu-text-muted);"
+  style="color: var(--text-secondary);"
   {...restProps}
 >
   {#if children}

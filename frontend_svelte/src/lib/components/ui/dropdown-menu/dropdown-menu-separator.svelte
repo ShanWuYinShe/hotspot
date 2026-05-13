@@ -11,6 +11,6 @@
 
 <DropdownMenuPrimitive.Separator
   class={cn('-mx-1 my-1 h-px', className)}
-  style="background: var(--neu-border);"
+  style="background: var(--border-theme);"
   {...restProps}
 />

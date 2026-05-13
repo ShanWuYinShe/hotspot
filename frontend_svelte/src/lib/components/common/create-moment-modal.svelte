@@ -299,35 +299,35 @@
 >
   <Dialog.Content
     class="flex max-h-[85vh] flex-col sm:max-w-2xl"
-    style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg); border-radius: var(--neu-radius-lg);"
+    style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-lg); border-radius: var(--radius-lg);"
   >
     <!-- Header: drag handle + title + close -->
-    <div class="flex-shrink-0 px-5 pt-4 pb-3" style="border-bottom: 1px solid var(--neu-border);">
+    <div class="flex-shrink-0 px-5 pt-4 pb-3" style="border-bottom: 1px solid var(--border-theme);">
       <div class="flex justify-center mb-4">
         <div
           class="rounded-full"
-          style="width: 36px; height: 4px; background: var(--neu-border-pressed);"
+          style="width: 36px; height: 4px; background: var(--border-active);"
         ></div>
       </div>
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-[20px] tracking-tight" style="color: var(--neu-text);">
+          <h1 class="text-[20px] tracking-tight" style="color: var(--text-primary);">
             {dialogTitle}
           </h1>
-          <p class="text-[12px] mt-0.5" style="color: var(--neu-text-muted);">
+          <p class="text-[12px] mt-0.5" style="color: var(--text-secondary);">
             {dialogSubtitle}
           </p>
         </div>
         <button
           class="flex items-center justify-center rounded-full outline-none"
-          style="width: 38px; height: 38px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+          style="width: 38px; height: 38px; background: var(--surface-bg); box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light); border: 1px solid var(--border-theme);"
           onclick={() => {
             open = false;
             onOpenChange?.(false);
           }}
           aria-label="关闭"
         >
-          <X style="width: 16px; height: 16px; color: var(--neu-text-muted);" strokeWidth={1.75} />
+          <X style="width: 16px; height: 16px; color: var(--text-secondary);" strokeWidth={1.75} />
         </button>
       </div>
     </div>
@@ -338,7 +338,7 @@
       <div class="flex items-center gap-3">
         <div
           class="rounded-full overflow-hidden flex-shrink-0"
-          style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);"
+          style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);"
         >
           <img
             src={authStore.currentAccount?.avatar_url || ''}
@@ -347,15 +347,12 @@
           />
         </div>
         <div>
-          <p class="text-[13px]" style="color: var(--neu-text);">
+          <p class="text-[13px]" style="color: var(--text-primary);">
             {authStore.currentAccount?.nickname || '我'}
           </p>
           <div class="flex items-center gap-1">
-            <MapPin
-              style="width: 11px; height: 11px; color: var(--neu-accent-primary);"
-              strokeWidth={1.5}
-            />
-            <span class="text-[11px]" style="color: var(--neu-text-muted);">
+            <MapPin style="width: 11px; height: 11px; color: var(--brand);" strokeWidth={1.5} />
+            <span class="text-[11px]" style="color: var(--text-secondary);">
               {selectedLocation.locationName || '定位中...'}
             </span>
           </div>
@@ -365,15 +362,15 @@
       <!-- Text Area -->
       <div
         class="rounded-[22px] p-4"
-        style="box-shadow: inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light); border: 1px solid {descriptionError
-          ? 'var(--neu-error)'
-          : 'var(--neu-border-pressed)'}; min-height: 130px; display: flex; flex-direction: column;"
+        style="box-shadow: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light); border: 1px solid {descriptionError
+          ? 'var(--error)'
+          : 'var(--border-active)'}; min-height: 130px; display: flex; flex-direction: column;"
       >
         <textarea
           id="moment-description"
           placeholder="写点什么吧..."
           class="w-full flex-1 bg-transparent outline-none resize-none text-[13px]"
-          style="color: var(--neu-text); min-height: 90px; line-height: 1.6;"
+          style="color: var(--text-primary); min-height: 90px; line-height: 1.6;"
           bind:value={description}
           onblur={() => markTouched('description')}
         ></textarea>
@@ -381,14 +378,14 @@
           <div class="flex gap-2">
             <button
               class="flex items-center justify-center rounded-full outline-none"
-              style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+              style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary);"
               aria-label="表情"
             >
               <Smile style="width: 15px; height: 15px;" strokeWidth={1.5} />
             </button>
             <button
               class="flex items-center justify-center rounded-full outline-none"
-              style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+              style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary);"
               aria-label="标签"
             >
               <Hash style="width: 15px; height: 15px;" strokeWidth={1.5} />
@@ -397,14 +394,14 @@
           <span
             class="text-[11px]"
             style="color: {description.length > DESCRIPTION_MAX * 0.9
-              ? 'var(--neu-accent-primary)'
-              : 'var(--neu-text-muted)'};"
+              ? 'var(--brand)'
+              : 'var(--text-secondary)'};"
           >
             {description.length}/{DESCRIPTION_MAX}
           </span>
         </div>
         {#if descriptionError}
-          <p class="text-[11px] mt-1" style="color: var(--neu-error);">{descriptionError}</p>
+          <p class="text-[11px] mt-1" style="color: var(--error);">{descriptionError}</p>
         {/if}
       </div>
 
@@ -414,8 +411,7 @@
           {#each tags as tag (tag)}
             <span
               class="rounded-full px-2.5 py-0.5 text-[11px]"
-              style="background: var(--neu-accent-primary); color: var(--neu-active-text);"
-              >#{tag}</span
+              style="background: var(--brand); color: var(--text-on-accent);">#{tag}</span
             >
           {/each}
         </div>
@@ -427,13 +423,13 @@
           {#each selectedImages as image, index (image.previewUrl)}
             <div
               class="group relative overflow-hidden rounded-[22px]"
-              style="height: 120px; box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+              style="height: 120px; box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light); border: 1px solid var(--border-theme);"
             >
               <img src={image.previewUrl} alt="预览图" class="w-full h-full object-cover" />
               {#if image.isUploading}
                 <div
                   class="absolute inset-0 flex items-center justify-center"
-                  style="background: var(--neu-overlay); font-size: 12px; color: white;"
+                  style="background: var(--overlay); font-size: 12px; color: white;"
                 >
                   上传中 {Math.round(image.progress)}%
                 </div>
@@ -453,13 +449,13 @@
           {#if selectedImages.length < MAX_IMAGES}
             <label
               class="flex flex-col items-center justify-center gap-1.5 rounded-[22px] outline-none cursor-pointer"
-              style="height: 120px; box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light); border: 1.5px dashed var(--neu-border-pressed);"
+              style="height: 120px; box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light); border: 1.5px dashed var(--border-active);"
             >
               <ImagePlus
-                style="width: 22px; height: 22px; color: var(--neu-text-muted);"
+                style="width: 22px; height: 22px; color: var(--text-secondary);"
                 strokeWidth={1.25}
               />
-              <span class="text-[12px]" style="color: var(--neu-text-muted);">添加更多</span>
+              <span class="text-[12px]" style="color: var(--text-secondary);">添加更多</span>
               <input
                 type="file"
                 accept="image/*"
@@ -473,13 +469,13 @@
       {:else}
         <label
           class="flex flex-col items-center justify-center gap-1.5 rounded-[22px] outline-none cursor-pointer w-full"
-          style="height: 80px; box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light); border: 1.5px dashed var(--neu-border-pressed);"
+          style="height: 80px; box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light); border: 1.5px dashed var(--border-active);"
         >
           <ImagePlus
-            style="width: 22px; height: 22px; color: var(--neu-text-muted);"
+            style="width: 22px; height: 22px; color: var(--text-secondary);"
             strokeWidth={1.25}
           />
-          <span class="text-[12px]" style="color: var(--neu-text-muted);">添加照片</span>
+          <span class="text-[12px]" style="color: var(--text-secondary);">添加照片</span>
           <input
             type="file"
             accept="image/*"
@@ -496,7 +492,7 @@
           {#each editMoment.images as image (image.thumbnail_url ?? image.url)}
             <div
               class="overflow-hidden rounded-[22px]"
-              style="border: 1px solid var(--neu-border); background: var(--neu-bg); height: 120px;"
+              style="border: 1px solid var(--border-theme); background: var(--surface-bg); height: 120px;"
             >
               <img
                 src={image.thumbnail_url ?? image.url}
@@ -513,7 +509,7 @@
       <div>
         <p
           class="text-[11px] uppercase tracking-widest mb-2.5"
-          style="color: var(--neu-text-muted);"
+          style="color: var(--text-secondary);"
         >
           氛围
         </p>
@@ -523,8 +519,8 @@
             <button
               class="px-4 py-1.5 rounded-full text-[12px] outline-none transition-all duration-200 active:scale-[0.92]"
               style={active
-                ? 'background: var(--neu-accent-primary); color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid transparent;'
-                : 'background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);'}
+                ? 'background: var(--brand); color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid transparent;'
+                : 'background: var(--surface-bg); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
               onclick={() => toggleVibe(tag)}
             >
               {tag}
@@ -538,12 +534,12 @@
         <input
           placeholder="标签（空格分隔）"
           class="rounded-full px-4 py-2 outline-none flex-1"
-          style="background: var(--neu-bg); color: var(--neu-text); box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border-pressed); font-size: 12px;"
+          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-active); font-size: 12px;"
           bind:value={tagsInput}
         />
         <select
           class="rounded-full px-3 py-2 outline-none"
-          style="background: var(--neu-bg); color: var(--neu-text); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border); font-size: 12px;"
+          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); border: 1px solid var(--border-theme); font-size: 12px;"
           bind:value={privacy}
         >
           <option value="public">公开</option>
@@ -562,8 +558,8 @@
       <button
         class="flex items-center justify-center gap-2 w-full py-3.5 rounded-[22px] text-[14px] outline-none transition-all duration-300 active:scale-[0.97]"
         style={canPost && !isSubmitting
-          ? 'background: var(--neu-accent-primary); color: white; box-shadow: 0 8px 24px rgba(0,0,0,0.18); border: 1px solid transparent;'
-          : 'background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); opacity: 0.6; cursor: not-allowed;'}
+          ? 'background: var(--brand); color: white; box-shadow: 0 8px 24px rgba(0,0,0,0.18); border: 1px solid transparent;'
+          : 'background: var(--surface-bg); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary); opacity: 0.6; cursor: not-allowed;'}
         onclick={handleSubmit}
         disabled={!canPost || isSubmitting || isUploadingImages}
       >

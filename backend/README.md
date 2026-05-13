@@ -1,7 +1,4 @@
-# HotSpot Backend (Rust) — 已暂停 / ARCHIVED
-
-> **此项目已暂停开发。** 当前所有后端开发已迁移至 `backend-go/`。
-> 此处仅保留代码作为参考，不做主动开发和维护。
+# HotSpot Backend
 
 基于 Rust 的高性能、分布式社交应用后端服务。
 

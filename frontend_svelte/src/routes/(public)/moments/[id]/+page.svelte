@@ -212,26 +212,26 @@
   <!-- Header -->
   <div
     class="sticky top-0 z-10 flex items-center gap-4 px-4 py-3"
-    style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+    style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     <button
       class="flex items-center justify-center rounded-full outline-none"
-      style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+      style="width: 36px; height: 36px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
       onclick={handleBackClick}
       aria-label="返回"
     >
-      <ArrowLeft size={18} color="var(--neu-text)" />
+      <ArrowLeft size={18} color="var(--text-primary)" />
     </button>
-    <h1 style="font-size: 16px; color: var(--neu-text);">瞬间详情</h1>
+    <h1 style="font-size: 16px; color: var(--text-primary);">瞬间详情</h1>
     {#if isOwner}
       <div class="ml-auto">
         <button
           class="flex items-center justify-center rounded-full outline-none"
-          style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+          style="width: 36px; height: 36px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
           onclick={() => (showEditModal = true)}
           aria-label="编辑"
         >
-          <Pencil size={16} color="var(--neu-text-muted)" />
+          <Pencil size={16} color="var(--text-secondary)" />
         </button>
       </div>
     {/if}
@@ -240,37 +240,43 @@
   {#if isLoading}
     <div
       class="rounded-[22px] p-6 space-y-4"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div class="flex items-center gap-3">
         <div
           class="rounded-full"
-          style="width: 48px; height: 48px; background: var(--neu-border);"
+          style="width: 48px; height: 48px; background: var(--border-theme);"
         ></div>
         <div class="space-y-2">
           <div
             class="rounded"
-            style="width: 96px; height: 14px; background: var(--neu-border);"
+            style="width: 96px; height: 14px; background: var(--border-theme);"
           ></div>
           <div
             class="rounded"
-            style="width: 64px; height: 12px; background: var(--neu-border);"
+            style="width: 64px; height: 12px; background: var(--border-theme);"
           ></div>
         </div>
       </div>
-      <div class="rounded" style="width: 100%; height: 80px; background: var(--neu-border);"></div>
-      <div class="rounded" style="width: 100%; height: 256px; background: var(--neu-border);"></div>
+      <div
+        class="rounded"
+        style="width: 100%; height: 80px; background: var(--border-theme);"
+      ></div>
+      <div
+        class="rounded"
+        style="width: 100%; height: 256px; background: var(--border-theme);"
+      ></div>
     </div>
   {:else if moment}
     <div
       class="rounded-[22px] p-6"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <!-- Author -->
       <a href="/users/{moment.user.user_id}" class="flex items-center gap-3">
         <div
           class="overflow-hidden rounded-full"
-          style="width: 44px; height: 44px; border: 2px solid var(--neu-accent-primary);"
+          style="width: 44px; height: 44px; border: 2px solid var(--brand);"
         >
           <img
             src={moment.user.avatar_url}
@@ -279,12 +285,12 @@
           />
         </div>
         <div>
-          <p style="font-weight: 500; font-size: 15px; color: var(--neu-text);">
+          <p style="font-weight: 500; font-size: 15px; color: var(--text-primary);">
             {moment.user.nickname}
           </p>
           <div
             class="flex items-center gap-2"
-            style="font-size: 13px; color: var(--neu-text-muted);"
+            style="font-size: 13px; color: var(--text-secondary);"
           >
             <span>{formatTime(moment.created_at)}</span>
             {#if moment.location}
@@ -299,7 +305,7 @@
 
       <!-- Content -->
       <div class="mt-4 space-y-4">
-        <p class="whitespace-pre-wrap" style="color: var(--neu-text);">{moment.description}</p>
+        <p class="whitespace-pre-wrap" style="color: var(--text-primary);">{moment.description}</p>
 
         {#if moment.images && moment.images.length > 0}
           <div class="grid gap-2 {moment.images.length === 1 ? '' : 'grid-cols-2'}">
@@ -315,7 +321,7 @@
                 {#if i === 0 && moment.tags && moment.tags.length > 0}
                   <div
                     class="absolute left-3 top-3 rounded-full px-2.5 py-0.5"
-                    style="background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);"
+                    style="background: var(--brand); box-shadow: 0 2px 8px var(--glow);"
                   >
                     <span style="font-size: 10px; color: white;">#{moment.tags[0]}</span>
                   </div>
@@ -330,7 +336,7 @@
             {#each moment.tags.slice(1) as tag (tag)}
               <span
                 class="rounded-full px-2.5 py-1"
-                style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
               >
                 #{tag}
               </span>
@@ -342,22 +348,20 @@
       <!-- Actions -->
       <div
         class="mt-4 flex items-center justify-between"
-        style="border-top: 1px solid var(--neu-border); padding-top: 16px;"
+        style="border-top: 1px solid var(--border-theme); padding-top: 16px;"
       >
         <div class="flex gap-2">
           <button
-            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="background: var(--neu-bg); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: {isLiked
-              ? 'var(--neu-accent-primary)'
-              : 'var(--neu-text-muted)'};"
+            class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+            style="color: {isLiked ? 'var(--brand)' : 'var(--text-secondary)'};"
             onclick={handleLike}
           >
             <Heart size={19} class={isLiked ? 'fill-current' : ''} />
             <span style="font-size: 13px;">{likesCount}</span>
           </button>
           <button
-            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="background: var(--neu-bg); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+            class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+            style="color: var(--text-secondary);"
           >
             <MessageCircle size={19} />
             <span style="font-size: 13px;">{commentsCount}</span>
@@ -365,17 +369,15 @@
         </div>
         <div class="flex gap-2">
           <button
-            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="background: var(--neu-bg); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: {isFavorited
-              ? 'var(--neu-warning)'
-              : 'var(--neu-text-muted)'};"
+            class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+            style="color: {isFavorited ? 'var(--neu-warning)' : 'var(--text-secondary)'};"
             onclick={handleFavorite}
           >
             <Bookmark size={19} class={isFavorited ? 'fill-current' : ''} />
           </button>
           <button
-            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="background: var(--neu-bg); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+            class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+            style="color: var(--text-secondary);"
           >
             <Share2 size={19} />
           </button>
@@ -387,7 +389,7 @@
     {#if authStore.isAuthenticated}
       <div
         class="rounded-[22px] p-4"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <div class="flex items-center gap-3">
           <div class="overflow-hidden rounded-full" style="width: 34px; height: 34px;">
@@ -398,7 +400,7 @@
             />
           </div>
           <div
-            class="neu-input-surface flex flex-1 items-center"
+            class="input-surface flex flex-1 items-center"
             style="height: 38px; border-radius: 9999px;"
           >
             <input
@@ -408,18 +410,18 @@
               bind:value={commentText}
               disabled={isSubmitting}
               class="bg-transparent flex-1 outline-none text-sm"
-              style="color: var(--neu-text);"
+              style="color: var(--text-primary);"
             />
             <button
               class="ml-2 mr-1 flex items-center justify-center rounded-full outline-none"
-              style="width: 36px; height: 36px; background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow);"
+              style="width: 36px; height: 36px; background: var(--brand); box-shadow: 0 2px 8px var(--glow);"
               onclick={submitComment}
               disabled={!commentText.trim() || isSubmitting}
             >
               {#if isSubmitting}
-                <Loader2 size={14} color="var(--neu-active-text)" class="animate-spin" />
+                <Loader2 size={14} color="var(--text-on-accent)" class="animate-spin" />
               {:else}
-                <Send size={14} color="var(--neu-active-text)" />
+                <Send size={14} color="var(--text-on-accent)" />
               {/if}
             </button>
           </div>
@@ -430,11 +432,11 @@
     <!-- Comments -->
     <div
       class="rounded-[22px] p-6"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <p
         class="uppercase"
-        style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 16px;"
+        style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 16px;"
       >
         评论 · {commentsCount}
       </p>
@@ -445,16 +447,16 @@
             <div class="flex gap-3">
               <div
                 class="rounded-full"
-                style="width: 34px; height: 34px; background: var(--neu-border);"
+                style="width: 34px; height: 34px; background: var(--border-theme);"
               ></div>
               <div class="flex-1 space-y-2">
                 <div
                   class="rounded"
-                  style="width: 96px; height: 14px; background: var(--neu-border);"
+                  style="width: 96px; height: 14px; background: var(--border-theme);"
                 ></div>
                 <div
                   class="rounded"
-                  style="width: 100%; height: 14px; background: var(--neu-border);"
+                  style="width: 100%; height: 14px; background: var(--border-theme);"
                 ></div>
               </div>
             </div>
@@ -462,10 +464,10 @@
         </div>
       {:else if commentsError}
         <div class="flex flex-col items-center gap-3 py-8 text-center">
-          <p style="font-size: 14px; color: var(--neu-text-muted);">加载评论失败</p>
+          <p style="font-size: 14px; color: var(--text-secondary);">加载评论失败</p>
           <button
             class="rounded-full px-4 py-2 font-medium outline-none"
-            style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+            style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
             onclick={() => {
               const v = ++loadVersion;
               isLoadingComments = true;
@@ -477,7 +479,7 @@
           </button>
         </div>
       {:else if comments.length === 0}
-        <p class="py-8 text-center" style="color: var(--neu-text-muted);">暂无评论</p>
+        <p class="py-8 text-center" style="color: var(--text-secondary);">暂无评论</p>
       {:else}
         <div class="space-y-4">
           {#each comments as comment (comment.comment_id)}
@@ -495,17 +497,17 @@
                 <div class="flex items-center gap-2">
                   <a
                     href="/users/{comment.user.user_id}"
-                    style="font-weight: 500; font-size: 14px; color: var(--neu-text);"
+                    style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
                   >
                     {comment.user.nickname}
                   </a>
-                  <span style="font-size: 12px; color: var(--neu-text-muted);">
+                  <span style="font-size: 12px; color: var(--text-secondary);">
                     {formatTime(comment.created_at)}
                   </span>
                 </div>
                 <p
                   class="mt-1 whitespace-pre-wrap"
-                  style="font-size: 14px; color: var(--neu-text);"
+                  style="font-size: 14px; color: var(--text-primary);"
                 >
                   {comment.content}
                 </p>
@@ -518,12 +520,12 @@
   {:else}
     <div
       class="rounded-[22px] py-12 text-center"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
-      <p style="color: var(--neu-text-muted);">瞬间不存在或已被删除</p>
+      <p style="color: var(--text-secondary);">瞬间不存在或已被删除</p>
       <button
         class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none"
-        style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => goto('/')}
       >
         返回首页

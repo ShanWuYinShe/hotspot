@@ -165,11 +165,11 @@
 
 <div class="space-y-6">
   <div class="flex items-center justify-between">
-    <h1 style="font-size: 22px; font-weight: 600; color: var(--neu-text);">权限管理</h1>
+    <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">权限管理</h1>
     <div class="flex gap-2">
       <button
         class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
         onclick={loadData}
         disabled={isLoading}
       >
@@ -178,7 +178,7 @@
       </button>
       <button
         class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-        style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);"
+        style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
         onclick={openCreateRoleDialog}
       >
         <Plus size={14} strokeWidth={1.5} />
@@ -191,14 +191,14 @@
     <!-- Roles -->
     <div
       class="rounded-[22px] overflow-hidden"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div
         class="flex items-center gap-2 px-4 py-3"
-        style="border-bottom: 1px solid var(--neu-border);"
+        style="border-bottom: 1px solid var(--border-theme);"
       >
-        <Shield size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-        <span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">角色列表</span>
+        <Shield size={16} strokeWidth={1.5} color="var(--brand)" />
+        <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);">角色列表</span>
       </div>
       <div class="p-4">
         {#if isLoading}
@@ -206,21 +206,21 @@
             {#each Array(4) as _, i (i)}
               <div
                 class="rounded-[18px] p-3"
-                style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
               >
                 <div class="flex items-center gap-3">
                   <div
                     class="rounded"
-                    style="width: 36px; height: 36px; background: var(--neu-border);"
+                    style="width: 36px; height: 36px; background: var(--border-theme);"
                   ></div>
                   <div class="flex-1 space-y-1.5">
                     <div
                       class="rounded"
-                      style="height: 12px; width: 80px; background: var(--neu-border);"
+                      style="height: 12px; width: 80px; background: var(--border-theme);"
                     ></div>
                     <div
                       class="rounded"
-                      style="height: 10px; width: 140px; background: var(--neu-border);"
+                      style="height: 10px; width: 140px; background: var(--border-theme);"
                     ></div>
                   </div>
                 </div>
@@ -228,7 +228,7 @@
             {/each}
           </div>
         {:else if roles.length === 0}
-          <p class="py-8 text-center" style="font-size: 13px; color: var(--neu-text-muted);">
+          <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
             暂无角色
           </p>
         {:else}
@@ -236,26 +236,26 @@
             {#each roles as role (role.role_id)}
               <div
                 class="flex items-center gap-3 rounded-[18px] p-3"
-                style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
               >
                 <div
                   class="flex flex-shrink-0 items-center justify-center rounded-full"
-                  style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+                  style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
                 >
-                  <Shield size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+                  <Shield size={15} strokeWidth={1.5} color="var(--brand)" />
                 </div>
                 <div class="min-w-0 flex-1">
-                  <p style="font-size: 13px; font-weight: 500; color: var(--neu-text);">
+                  <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
                     {role.name}
                   </p>
                   {#if role.description}
-                    <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
                       {role.description}
                     </p>
                   {/if}
                   <div class="flex items-center gap-1 mt-1">
-                    <Key size={11} strokeWidth={1.5} color="var(--neu-text-muted)" />
-                    <span style="font-size: 11px; color: var(--neu-text-muted);"
+                    <Key size={11} strokeWidth={1.5} color="var(--text-secondary)" />
+                    <span style="font-size: 11px; color: var(--text-secondary);"
                       >{role.permissions?.length || 0} 权限</span
                     >
                   </div>
@@ -263,15 +263,15 @@
                 <div class="flex gap-1">
                   <button
                     class="flex items-center justify-center rounded-full outline-none"
-                    style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                    style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                     onclick={() => openEditRoleDialog(role)}
                     aria-label="编辑角色"
                   >
-                    <Edit size={13} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                    <Edit size={13} strokeWidth={1.5} color="var(--text-secondary)" />
                   </button>
                   <button
                     class="flex items-center justify-center rounded-full outline-none"
-                    style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                    style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                     onclick={() => requestDeleteRole(role.role_id)}
                     aria-label="删除角色"
                   >
@@ -288,14 +288,14 @@
     <!-- Permissions -->
     <div
       class="rounded-[22px] overflow-hidden"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div
         class="flex items-center gap-2 px-4 py-3"
-        style="border-bottom: 1px solid var(--neu-border);"
+        style="border-bottom: 1px solid var(--border-theme);"
       >
-        <Key size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-        <span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">权限列表</span>
+        <Key size={16} strokeWidth={1.5} color="var(--brand)" />
+        <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);">权限列表</span>
       </div>
       <div class="p-4">
         {#if isLoading}
@@ -304,17 +304,17 @@
               <div class="flex items-center gap-3">
                 <div
                   class="rounded"
-                  style="width: 14px; height: 14px; background: var(--neu-border);"
+                  style="width: 14px; height: 14px; background: var(--border-theme);"
                 ></div>
                 <div
                   class="rounded"
-                  style="height: 12px; width: 120px; background: var(--neu-border);"
+                  style="height: 12px; width: 120px; background: var(--border-theme);"
                 ></div>
               </div>
             {/each}
           </div>
         {:else if permissions.length === 0}
-          <p class="py-8 text-center" style="font-size: 13px; color: var(--neu-text-muted);">
+          <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
             暂无权限数据
           </p>
         {:else}
@@ -323,7 +323,7 @@
               <div>
                 <p
                   class="uppercase"
-                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 6px;"
+                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 6px;"
                 >
                   {category}
                 </p>
@@ -331,15 +331,15 @@
                   {#each perms as perm (perm.key)}
                     <div
                       class="flex items-center gap-2 rounded-[14px] px-2 py-1.5"
-                      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                     >
-                      <Key size={13} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                      <Key size={13} strokeWidth={1.5} color="var(--text-secondary)" />
                       <div class="flex-1">
-                        <p style="font-size: 12px; font-weight: 500; color: var(--neu-text);">
+                        <p style="font-size: 12px; font-weight: 500; color: var(--text-primary);">
                           {perm.key}
                         </p>
                         {#if perm.description}
-                          <p style="font-size: 11px; color: var(--neu-text-muted);">
+                          <p style="font-size: 11px; color: var(--text-secondary);">
                             {perm.description}
                           </p>
                         {/if}
@@ -360,45 +360,45 @@
 <Dialog.Root bind:open={showRoleDialog}>
   <Dialog.Content
     class="sm:max-w-lg rounded-[22px]"
-    style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg);"
+    style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-lg);"
   >
     <Dialog.Header>
       <Dialog.Title>{editingRoleId ? '编辑角色' : '创建角色'}</Dialog.Title>
     </Dialog.Header>
     <div class="space-y-4 py-4 px-1">
       <div>
-        <label for="role-name" style="font-size: 12px; color: var(--neu-text);">角色名称</label>
+        <label for="role-name" style="font-size: 12px; color: var(--text-primary);">角色名称</label>
         <input
           id="role-name"
           placeholder="例如：内容审核员"
           bind:value={roleName}
           autocomplete="off"
           class="mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
-          style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"
+          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px;"
         />
       </div>
       <div>
-        <label for="role-desc" style="font-size: 12px; color: var(--neu-text);">角色描述</label>
+        <label for="role-desc" style="font-size: 12px; color: var(--text-primary);">角色描述</label>
         <textarea
           id="role-desc"
           placeholder="描述该角色的职责"
           bind:value={roleDescription}
           class="mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none resize-none"
           rows="3"
-          style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"
+          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px;"
         ></textarea>
       </div>
       <div>
-        <label style="font-size: 12px; color: var(--neu-text);">分配权限</label>
+        <label style="font-size: 12px; color: var(--text-primary);">分配权限</label>
         <div
           class="mt-1.5 max-h-60 space-y-3 overflow-y-auto rounded-[14px] p-3"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
         >
           {#each [...groupPermissions(permissions)] as [category, perms] (category)}
             <div>
               <p
                 class="uppercase"
-                style="font-size: 10px; letter-spacing: 0.12em; color: var(--neu-text-muted); margin-bottom: 4px;"
+                style="font-size: 10px; letter-spacing: 0.12em; color: var(--text-secondary); margin-bottom: 4px;"
               >
                 {category}
               </p>
@@ -410,9 +410,9 @@
                       checked={rolePermissions.includes(perm.key)}
                       onchange={() => togglePermission(perm.key)}
                       class="h-4 w-4 rounded"
-                      style="accent-color: var(--neu-accent-primary);"
+                      style="accent-color: var(--brand);"
                     />
-                    <span style="font-size: 12px; color: var(--neu-text);"
+                    <span style="font-size: 12px; color: var(--text-primary);"
                       >{perm.description || perm.key}</span
                     >
                   </label>
@@ -426,12 +426,12 @@
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2 outline-none"
-        style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;"
+        style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px;"
         onclick={closeOverlayDialogs}>取消</button
       >
       <button
         class="rounded-full px-5 py-2 outline-none"
-        style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);"
+        style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
         onclick={handleSubmitRole}
         disabled={isSubmitting}
       >

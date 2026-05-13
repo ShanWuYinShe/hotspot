@@ -1,10 +1,6 @@
 package config
 
-import (
-	"fmt"
-	"os"
-	"sync"
-)
+import "os"
 
 type Config struct {
 	AppName                string
@@ -31,55 +27,31 @@ type Config struct {
 	S3PublicForcePathStyle bool
 }
 
-const devSecret = "dev-secret-change-me"
-
-var (
-	cached Config
-	once   sync.Once
-)
-
-// ResetForTest clears the cached config so Load() will re-read env vars.
-// Only for use in tests.
-func ResetForTest() {
-	once = sync.Once{}
-	cached = Config{}
-}
-
 func Load() Config {
-	once.Do(func() {
-		cfg := Config{
-			AppName:                envOrDefault("APP_NAME", "hotspot-backend-go"),
-			AppEnv:                 envOrDefault("APP_ENV", "production"),
-			LogLevel:               envOrDefault("LOG_LEVEL", "info"),
-			Host:                   envOrDefault("APP_HOST", "0.0.0.0"),
-			Port:                   envOrDefault("APP_PORT", "8081"),
-			PostgresDSN:            os.Getenv("POSTGRES_DSN"),
-			AuthTokenSecret:        envOrDefault("AUTH_TOKEN_SECRET", devSecret),
-			SupportEmail:           envOrDefault("APP_SUPPORT_EMAIL", "support@example.com"),
-			PrivacyPolicyURL:       envOrDefault("APP_PRIVACY_POLICY_URL", ""),
-			TermsOfServiceURL:      envOrDefault("APP_TERMS_OF_SERVICE_URL", ""),
-			OfficialWebsiteURL:     envOrDefault("APP_OFFICIAL_WEBSITE_URL", ""),
-			DefaultUserAvatar:      envOrDefault("APP_DEFAULT_USER_AVATAR_URL", ""),
-			DefaultGroupAvatar:     envOrDefault("APP_DEFAULT_GROUP_AVATAR_URL", ""),
-			TrustedProxyCIDRs:      envOrDefault("TRUSTED_PROXY_CIDRS", ""),
-			S3Endpoint:             envOrDefault("S3_ENDPOINT", ""),
-			S3PublicEndpoint:       envOrDefault("S3_PUBLIC_ENDPOINT", ""),
-			S3Region:               envOrDefault("S3_REGION", "us-east-1"),
-			S3Bucket:               envOrDefault("S3_BUCKET", ""),
-			S3AccessKey:            envOrDefault("S3_ACCESS_KEY", ""),
-			S3SecretKey:            envOrDefault("S3_SECRET_KEY", ""),
-			S3ForcePathStyle:       envBoolOrDefault("S3_FORCE_PATH_STYLE", true),
-			S3PublicForcePathStyle: envBoolOrDefault("S3_PUBLIC_FORCE_PATH_STYLE", true),
-		}
-
-		if cfg.AppEnv != "test" && cfg.AuthTokenSecret == devSecret {
-			_, _ = fmt.Fprintf(os.Stderr, "FATAL: AUTH_TOKEN_SECRET is not set in %s environment. Refusing to start with default secret.\n", cfg.AppEnv)
-			os.Exit(1)
-		}
-
-		cached = cfg
-	})
-	return cached
+	return Config{
+		AppName:                envOrDefault("APP_NAME", "hotspot-backend-go"),
+		AppEnv:                 envOrDefault("APP_ENV", "production"),
+		LogLevel:               envOrDefault("LOG_LEVEL", "info"),
+		Host:                   envOrDefault("APP_HOST", "0.0.0.0"),
+		Port:                   envOrDefault("APP_PORT", "8081"),
+		PostgresDSN:            os.Getenv("POSTGRES_DSN"),
+		AuthTokenSecret:        envOrDefault("AUTH_TOKEN_SECRET", "dev-secret-change-me"),
+		SupportEmail:           envOrDefault("APP_SUPPORT_EMAIL", "support@example.com"),
+		PrivacyPolicyURL:       envOrDefault("APP_PRIVACY_POLICY_URL", ""),
+		TermsOfServiceURL:      envOrDefault("APP_TERMS_OF_SERVICE_URL", ""),
+		OfficialWebsiteURL:     envOrDefault("APP_OFFICIAL_WEBSITE_URL", ""),
+		DefaultUserAvatar:      envOrDefault("APP_DEFAULT_USER_AVATAR_URL", ""),
+		DefaultGroupAvatar:     envOrDefault("APP_DEFAULT_GROUP_AVATAR_URL", ""),
+		TrustedProxyCIDRs:      envOrDefault("TRUSTED_PROXY_CIDRS", ""),
+		S3Endpoint:             envOrDefault("S3_ENDPOINT", ""),
+		S3PublicEndpoint:       envOrDefault("S3_PUBLIC_ENDPOINT", ""),
+		S3Region:               envOrDefault("S3_REGION", "us-east-1"),
+		S3Bucket:               envOrDefault("S3_BUCKET", ""),
+		S3AccessKey:            envOrDefault("S3_ACCESS_KEY", ""),
+		S3SecretKey:            envOrDefault("S3_SECRET_KEY", ""),
+		S3ForcePathStyle:       envBoolOrDefault("S3_FORCE_PATH_STYLE", true),
+		S3PublicForcePathStyle: envBoolOrDefault("S3_PUBLIC_FORCE_PATH_STYLE", true),
+	}
 }
 
 func (c Config) HTTPAddr() string {

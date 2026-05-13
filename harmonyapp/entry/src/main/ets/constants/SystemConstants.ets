@@ -3,11 +3,6 @@
  * 统一管理所有硬编码的配置值和魔法数字
  */
 
-import { hilog } from '@kit.PerformanceAnalysisKit';
-
-const DOMAIN_NUMBER: number = 0xFF00;
-const TAG: string = 'SystemConstants';
-
 /**
  * 缓存配置接口
  */
@@ -662,7 +657,7 @@ export class ConstantValidator {
       
       return true;
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `常量验证失败: ${JSON.stringify(error)}`);
+      console.error('常量验证失败:', error);
       return false;
     }
   }

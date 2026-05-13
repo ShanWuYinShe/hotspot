@@ -18,16 +18,18 @@
 >
   <div
     class="flex h-20 w-20 items-center justify-center rounded-[28px]"
-    style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+    style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
   >
-    <TriangleAlert size={36} color={is404 ? 'var(--neu-text-muted)' : 'var(--neu-error)'} />
+    <TriangleAlert size={36} color={is404 ? 'var(--text-secondary)' : 'var(--neu-error)'} />
   </div>
 
   <div class="space-y-2">
-    <h1 style="font-size: 36px; font-weight: 700; color: var(--neu-text); letter-spacing: -0.02em;">
+    <h1
+      style="font-size: 36px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em;"
+    >
       {page.status}
     </h1>
-    <p style="font-size: 16px; color: var(--neu-text-muted);">
+    <p style="font-size: 16px; color: var(--text-secondary);">
       {#if is404}
         {t('errorPage.notFound')}
       {:else}
@@ -39,7 +41,7 @@
   <div class="flex gap-3">
     <button
       class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
-      style="box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+      style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
       onclick={() => history.back()}
       aria-label={t('errorPage.backAria')}
     >
@@ -48,7 +50,7 @@
     </button>
     <button
       class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
-      style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
       onclick={() => goto('/')}
       aria-label={t('errorPage.homeAria')}
     >

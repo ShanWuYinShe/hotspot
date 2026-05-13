@@ -306,21 +306,21 @@
 <Dialog.Root bind:open onOpenChange={setOpenState}>
   <Dialog.Content
     class="flex max-h-[85vh] flex-col rounded-[22px] sm:max-w-3xl"
-    style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg);"
+    style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-lg);"
   >
     <!-- Header -->
     <div class="flex items-center gap-3 px-5 pt-5 pb-0">
       <div
         class="flex items-center justify-center rounded-full"
-        style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+        style="width: 40px; height: 40px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
       >
-        <Search size={18} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+        <Search size={18} strokeWidth={1.5} color="var(--brand)" />
       </div>
       <div>
-        <h2 style="font-size: 17px; font-weight: 600; color: var(--neu-text);">
+        <h2 style="font-size: 17px; font-weight: 600; color: var(--text-primary);">
           {t('searchModal.title')}
         </h2>
-        <p style="font-size: 12px; color: var(--neu-text-muted);">{t('searchModal.description')}</p>
+        <p style="font-size: 12px; color: var(--text-secondary);">{t('searchModal.description')}</p>
       </div>
     </div>
 
@@ -329,13 +329,13 @@
       <!-- Search bar -->
       <form
         class="flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-        style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+        style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
         onsubmit={(event) => {
           event.preventDefault();
           handleSearch();
         }}
       >
-        <Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
+        <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" />
         <input
           type="text"
           placeholder={t('searchModal.placeholder')}
@@ -343,7 +343,7 @@
           autocomplete="off"
           aria-label={t('searchModal.inputAria')}
           class="flex-1 bg-transparent outline-none"
-          style="font-size: 13px; color: var(--neu-text);"
+          style="font-size: 13px; color: var(--text-primary);"
         />
         {#if keyword}
           <button
@@ -352,17 +352,17 @@
             onclick={clearSearch}
             aria-label={t('searchModal.clearInput')}
           >
-            <X size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+            <X size={14} strokeWidth={1.5} color="var(--text-secondary)" />
           </button>
         {/if}
         <button
           type="submit"
           class="flex items-center justify-center rounded-full outline-none"
-          style="width: 36px; height: 36px; background: var(--neu-accent-primary); box-shadow: 0 3px 10px var(--neu-glow);"
+          style="width: 36px; height: 36px; background: var(--brand); box-shadow: 0 3px 10px var(--glow);"
           disabled={!keyword.trim()}
           aria-label={t('searchModal.submit')}
         >
-          <Search size={15} strokeWidth={1.5} color="var(--neu-active-text)" />
+          <Search size={15} strokeWidth={1.5} color="var(--text-on-accent)" />
         </button>
       </form>
 
@@ -370,19 +370,19 @@
         <!-- Search suggestions -->
         <div
           class="rounded-[18px] p-4"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           {#if isSuggesting}
             <div class="space-y-2">
               {#each Array(3) as _, i (i)}
                 <div
                   class="rounded-[14px]"
-                  style="height: 32px; background: var(--neu-border);"
+                  style="height: 32px; background: var(--border-theme);"
                 ></div>
               {/each}
             </div>
           {:else if !hasSuggestions}
-            <p style="font-size: 13px; color: var(--neu-text-muted);">
+            <p style="font-size: 13px; color: var(--text-secondary);">
               {t('searchModal.noSuggestions')}
             </p>
           {:else}
@@ -391,14 +391,14 @@
                 <div class="space-y-2">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1.5">
-                      <Clock size={12} strokeWidth={1.5} color="var(--neu-text-muted)" />
-                      <span style="font-size: 11px; color: var(--neu-text-muted);"
+                      <Clock size={12} strokeWidth={1.5} color="var(--text-secondary)" />
+                      <span style="font-size: 11px; color: var(--text-secondary);"
                         >{t('searchModal.matchedHistory')}</span
                       >
                     </div>
                     <button
                       class="outline-none"
-                      style="font-size: 11px; color: var(--neu-text-muted);"
+                      style="font-size: 11px; color: var(--text-secondary);"
                       onclick={clearAllRecent}
                     >
                       {t('searchModal.clearAll')}
@@ -409,18 +409,18 @@
                       <div class="flex items-center gap-1">
                         <button
                           class="rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
-                          style="font-size: 12px; color: var(--neu-text); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                          style="font-size: 12px; color: var(--text-primary); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                           onclick={() => handleSearchNavigate(term)}
                         >
                           {term}
                         </button>
                         <button
                           class="flex items-center justify-center rounded-full outline-none"
-                          style="width: 22px; height: 22px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                          style="width: 22px; height: 22px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                           onclick={() => removeRecent(term)}
                           aria-label={getRemoveRecentLabel(term)}
                         >
-                          <X size={10} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                          <X size={10} strokeWidth={1.5} color="var(--text-secondary)" />
                         </button>
                       </div>
                     {/each}
@@ -431,8 +431,8 @@
               {#if suggestions.length > 0}
                 <div class="space-y-1">
                   <div class="flex items-center gap-1.5 mb-2">
-                    <TrendingUp size={12} strokeWidth={1.5} color="var(--neu-text-muted)" />
-                    <span style="font-size: 11px; color: var(--neu-text-muted);"
+                    <TrendingUp size={12} strokeWidth={1.5} color="var(--text-secondary)" />
+                    <span style="font-size: 11px; color: var(--text-secondary);"
                       >{t('searchModal.suggestions')}</span
                     >
                   </div>
@@ -440,21 +440,21 @@
                     {@const p = getSuggestionPresentation(item)}
                     <button
                       type="button"
-                      class="flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left outline-none hover:bg-[var(--neu-fallback-bg)] transition-colors duration-150"
-                      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                      class="flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left outline-none hover:bg-[var(--surface-secondary)] transition-colors duration-150"
+                      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                       onclick={() => handleSuggestionClick(item)}
                     >
                       {#if item.type === 'tag'}
                         <div
                           class="flex flex-shrink-0 items-center justify-center rounded-full"
-                          style="width: 34px; height: 34px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+                          style="width: 34px; height: 34px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
                         >
-                          <Hash size={14} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+                          <Hash size={14} strokeWidth={1.5} color="var(--brand)" />
                         </div>
                       {:else}
                         <div
                           class="flex-shrink-0 overflow-hidden rounded-full"
-                          style="width: 34px; height: 34px; border: 1.5px solid var(--neu-border);"
+                          style="width: 34px; height: 34px; border: 1.5px solid var(--border-theme);"
                         >
                           {#if p.avatarUrl}
                             <img
@@ -465,10 +465,10 @@
                           {:else}
                             <div
                               class="flex h-full w-full items-center justify-center"
-                              style="background: var(--neu-fallback-bg);"
+                              style="background: var(--surface-secondary);"
                             >
                               <span
-                                style="font-size: 12px; font-weight: 600; color: var(--neu-fallback-text);"
+                                style="font-size: 12px; font-weight: 600; color: var(--text-tertiary);"
                                 >{p.avatarFallback ?? '?'}</span
                               >
                             </div>
@@ -479,19 +479,19 @@
                         <div class="flex items-center gap-2">
                           <span
                             class="truncate"
-                            style="font-size: 13px; font-weight: 500; color: var(--neu-text);"
+                            style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
                             >{p.title}</span
                           >
                           <span
                             class="flex-shrink-0 rounded-full px-1.5 py-0.5"
-                            style="font-size: 9px; font-weight: 500; background: var(--neu-accent-primary); color: var(--neu-active-text);"
+                            style="font-size: 9px; font-weight: 500; background: var(--brand); color: var(--text-on-accent);"
                             >{p.badge}</span
                           >
                         </div>
                         {#if p.subtitle}
                           <p
                             class="truncate"
-                            style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;"
+                            style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;"
                           >
                             {p.subtitle}
                           </p>
@@ -503,7 +503,7 @@
               {/if}
             </div>
           {/if}
-          <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 8px;">
+          <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
             {t('searchModal.clickSearchIcon')}
           </p>
         </div>
@@ -513,19 +513,19 @@
           <!-- Recent searches -->
           <div
             class="rounded-[18px] p-4"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-1.5">
-                <Clock size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
-                <span style="font-size: 13px; font-weight: 500; color: var(--neu-text);"
+                <Clock size={14} strokeWidth={1.5} color="var(--text-secondary)" />
+                <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
                   >{t('searchModal.recentSearches')}</span
                 >
               </div>
               {#if recentSearches.length > 0}
                 <button
                   class="outline-none"
-                  style="font-size: 11px; color: var(--neu-text-muted);"
+                  style="font-size: 11px; color: var(--text-secondary);"
                   onclick={clearAllRecent}
                 >
                   {t('searchModal.clearAll')}
@@ -533,7 +533,7 @@
               {/if}
             </div>
             {#if recentSearches.length === 0}
-              <p style="font-size: 12px; color: var(--neu-text-muted);">
+              <p style="font-size: 12px; color: var(--text-secondary);">
                 {t('searchModal.noRecentSearches')}
               </p>
             {:else}
@@ -542,18 +542,18 @@
                   <div class="flex items-center gap-1">
                     <button
                       class="rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
-                      style="font-size: 12px; color: var(--neu-text); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                      style="font-size: 12px; color: var(--text-primary); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                       onclick={() => handleRecentClick(term)}
                     >
                       {term}
                     </button>
                     <button
                       class="flex items-center justify-center rounded-full outline-none"
-                      style="width: 22px; height: 22px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                      style="width: 22px; height: 22px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                       onclick={() => removeRecent(term)}
                       aria-label={getRemoveRecentLabel(term)}
                     >
-                      <X size={10} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                      <X size={10} strokeWidth={1.5} color="var(--text-secondary)" />
                     </button>
                   </div>
                 {/each}
@@ -564,11 +564,11 @@
           <!-- Trending tags -->
           <div
             class="rounded-[18px] p-4"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div class="flex items-center gap-1.5 mb-3">
-              <TrendingUp size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
-              <span style="font-size: 13px; font-weight: 500; color: var(--neu-text);"
+              <TrendingUp size={14} strokeWidth={1.5} color="var(--text-secondary)" />
+              <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
                 >{t('searchModal.trendingTags')}</span
               >
             </div>
@@ -577,12 +577,12 @@
                 {#each Array(4) as _, i (i)}
                   <div
                     class="rounded-[14px]"
-                    style="height: 28px; background: var(--neu-border);"
+                    style="height: 28px; background: var(--border-theme);"
                   ></div>
                 {/each}
               </div>
             {:else if trendingTags.length === 0}
-              <p style="font-size: 12px; color: var(--neu-text-muted);">
+              <p style="font-size: 12px; color: var(--text-secondary);">
                 {t('searchModal.noTrendingTags')}
               </p>
             {:else}
@@ -590,7 +590,7 @@
                 {#each trendingTags as tag (tag.name)}
                   <button
                     class="flex items-center gap-1 rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
-                    style="font-size: 12px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                    style="font-size: 12px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                     onclick={() => handleTagClick(tag.name)}
                     aria-label={t('searchModal.searchHotTag', { name: tag.name })}
                   >

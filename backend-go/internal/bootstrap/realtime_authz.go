@@ -39,7 +39,3 @@ func (a realtimeGroupRepo) ListMembers(ctx context.Context, groupID string, limi
 	}
 	return members, nextCursor, nil
 }
-
-func (a realtimeGroupRepo) IsMember(ctx context.Context, groupID string, userID string) (bool, error) {
-	return a.repo.IsMember(ctx, groupID, userID)
-}

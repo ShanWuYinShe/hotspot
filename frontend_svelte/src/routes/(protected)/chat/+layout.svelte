@@ -16,7 +16,7 @@
     <!-- Left pane: chat list -->
     <div
       class="flex-shrink-0 flex flex-col"
-      style="width: 300px; border-right: 1px solid var(--neu-border);"
+      style="width: 300px; border-right: 1px solid var(--border-theme);"
     >
       <ChatListPanel />
     </div>
@@ -28,18 +28,18 @@
         <div class="flex flex-1 items-center justify-center overflow-hidden">
           <div class="flex flex-col items-center gap-3">
             <div
-              class="flex items-center justify-center rounded-full"
-              style="width: 72px; height: 72px; box-shadow: 8px 8px 18px var(--neu-shadow-dark), -8px -8px 18px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+              class="surface-flat flex items-center justify-center rounded-full"
+              style="width: 72px; height: 72px;"
             >
               <MessageSquareDashed
                 size={28}
                 strokeWidth={1.25}
-                color="var(--neu-text-muted)"
+                color="var(--text-secondary)"
                 style="opacity: 0.5;"
               />
             </div>
-            <p style="font-size: 16px; color: var(--neu-text);">选择一个会话</p>
-            <p style="font-size: 13px; color: var(--neu-text-muted);">
+            <p style="font-size: 16px; color: var(--text-primary);">选择一个会话</p>
+            <p style="font-size: 13px; color: var(--text-secondary);">
               从左侧列表中选择或开始新对话
             </p>
           </div>

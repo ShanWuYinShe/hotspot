@@ -383,38 +383,38 @@
   class="flex flex-col overflow-hidden"
   style="{platformStore.isDesktop
     ? 'height: 100%;'
-    : 'height: calc(100dvh - 8rem); border-radius: 22px; box-shadow: var(--neu-shadow-lg);'} background: var(--neu-bg); border: 1px solid var(--neu-border);"
+    : 'height: calc(100dvh - 8rem); border-radius: 22px; box-shadow: var(--shadow-lg);'} background: var(--surface-bg); border: 1px solid var(--border-theme);"
 >
   <!-- Header -->
   <div
     class="flex h-[60px] items-center gap-3 px-4"
-    style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+    style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     {#if !platformStore.isDesktop}
       <button
-        class="flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
-        style="width: 36px; height: 36px; box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+        class="surface-flat flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
+        style="width: 36px; height: 36px;"
         onclick={handleBackClick}
         aria-label="返回"
       >
-        <ArrowLeft size={15} color="var(--neu-text-muted)" strokeWidth={1.5} />
+        <ArrowLeft size={15} color="var(--text-secondary)" strokeWidth={1.5} />
       </button>
     {/if}
 
     {#if isLoading}
       <div
         class="rounded-full"
-        style="width: 38px; height: 38px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+        style="width: 38px; height: 38px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
       ></div>
       <div
-        style="width: 96px; height: 20px; border-radius: 8px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+        style="width: 96px; height: 20px; border-radius: 8px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
       ></div>
     {:else if otherUser}
       <div class="flex items-center gap-3">
         <div class="relative shrink-0">
           <div
-            class="overflow-hidden rounded-full"
-            style="width: 38px; height: 38px; border: 1.5px solid var(--neu-border); box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light);"
+            class="neu-flat overflow-hidden rounded-full"
+            style="width: 38px; height: 38px; border: 1.5px solid var(--border-theme);"
           >
             {#if otherUser.avatar_url}
               <img
@@ -425,7 +425,7 @@
             {:else}
               <div
                 class="flex h-full w-full items-center justify-center"
-                style="background: var(--neu-bg); font-size: 14px; color: var(--neu-text-muted);"
+                style="background: var(--surface-bg); font-size: 14px; color: var(--text-secondary);"
               >
                 {(otherUser.nickname || '用户').slice(0, 2)}
               </div>
@@ -433,37 +433,37 @@
           </div>
         </div>
         <div class="min-w-0">
-          <p class="truncate" style="font-size: 14px; color: var(--neu-text);">
+          <p class="truncate" style="font-size: 14px; color: var(--text-primary);">
             {otherUser.nickname}
           </p>
         </div>
       </div>
     {:else}
-      <span style="font-size: 13px; color: var(--neu-text-muted);">用户不存在或加载失败</span>
+      <span style="font-size: 13px; color: var(--text-secondary);">用户不存在或加载失败</span>
     {/if}
     <div class="ml-auto flex gap-1.5">
       <button
-        class="flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
-        style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+        class="surface-flat flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
+        style="width: 36px; height: 36px;"
         aria-label="语音通话"
       >
-        <Phone size={14} color="var(--neu-text-muted)" strokeWidth={1.5} />
+        <Phone size={14} color="var(--text-secondary)" strokeWidth={1.5} />
       </button>
       <button
-        class="flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
-        style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+        class="surface-flat flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
+        style="width: 36px; height: 36px;"
         aria-label="视频通话"
       >
-        <Video size={14} color="var(--neu-text-muted)" strokeWidth={1.5} />
+        <Video size={14} color="var(--text-secondary)" strokeWidth={1.5} />
       </button>
       <DropdownMenu>
         <DropdownMenuTrigger>
           <button
-            class="flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
-            style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+            class="surface-flat flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
+            style="width: 36px; height: 36px;"
             aria-label="更多选项"
           >
-            <MoreHorizontal size={14} color="var(--neu-text-muted)" strokeWidth={1.5} />
+            <MoreHorizontal size={14} color="var(--text-secondary)" strokeWidth={1.5} />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" class="w-44">
@@ -482,7 +482,7 @@
   </div>
 
   <!-- Messages -->
-  <div class="flex-1 overflow-y-auto py-4" style="background: var(--neu-bg);">
+  <div class="flex-1 overflow-y-auto py-4" style="background: var(--surface-bg);">
     {#if isLoading}
       <div class="space-y-4 px-4">
         {#each Array(5) as _, i (i)}
@@ -491,12 +491,12 @@
               {#if i % 2 === 0}
                 <div
                   class="shrink-0 rounded-full"
-                  style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+                  style="width: 32px; height: 32px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
                 ></div>
               {/if}
               <div
                 class="rounded-[18px]"
-                style="width: 192px; height: 64px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+                style="width: 192px; height: 64px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
               ></div>
             </div>
           </div>
@@ -504,7 +504,7 @@
       </div>
     {:else if messages.length === 0}
       <div class="flex h-full items-center justify-center">
-        <p style="font-size: 14px; color: var(--neu-text-muted);">开始聊天吧</p>
+        <p style="font-size: 14px; color: var(--text-secondary);">开始聊天吧</p>
       </div>
     {:else}
       <div class="space-y-3 px-4">
@@ -512,7 +512,7 @@
         <div class="mb-2 flex justify-center">
           <span
             class="rounded-full px-3 py-1"
-            style="font-size: 10px; background: var(--neu-bg); color: var(--neu-text-muted); border: 1px solid var(--neu-border); letter-spacing: 0.05em; opacity: 0.8;"
+            style="font-size: 10px; background: var(--surface-bg); color: var(--text-secondary); border: 1px solid var(--border-theme); letter-spacing: 0.05em; opacity: 0.8;"
           >
             今天
           </span>
@@ -523,17 +523,18 @@
             {@attach observeMessage({ messageId: message.message_id, isSelf: isSelf(message) })}
           >
             <div
+              class={isSelf(message) ? '' : 'surface-flat'}
               style="max-width: 76%; padding: 10px 14px; border-radius: {isSelf(message)
                 ? '18px 4px 18px 18px'
                 : '4px 18px 18px 18px'}; {isSelf(message)
-                ? 'background: var(--neu-accent-primary); box-shadow: 0 4px 14px var(--neu-glow);'
-                : 'background: var(--neu-bg); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}"
+                ? 'background: var(--brand); box-shadow: 0 4px 14px var(--glow);'
+                : ''}"
             >
               {#if message.recalled_at != null}
                 <p
                   style="font-size: 14px; font-style: italic; opacity: 0.7; color: {isSelf(message)
                     ? 'white'
-                    : 'var(--neu-text)'};"
+                    : 'var(--text-primary)'};"
                 >
                   消息已撤回
                 </p>
@@ -542,21 +543,25 @@
                   class="whitespace-pre-wrap"
                   style="font-size: 13px; line-height: 1.55; color: {isSelf(message)
                     ? 'white'
-                    : 'var(--neu-text)'};"
+                    : 'var(--text-primary)'};"
                 >
                   {message.content}
                 </p>
               {:else if message.type === 'image' && message.media}
                 <img src={message.media.url} alt="图片" class="max-w-[250px] rounded-[12px]" />
               {:else}
-                <p style="font-size: 14px; color: {isSelf(message) ? 'white' : 'var(--neu-text)'};">
+                <p
+                  style="font-size: 14px; color: {isSelf(message)
+                    ? 'white'
+                    : 'var(--text-primary)'};"
+                >
                   [{message.type}]
                 </p>
               {/if}
               <p
                 style="font-size: 10px; margin-top: 4px; color: {isSelf(message)
                   ? 'rgba(255,255,255,0.65)'
-                  : 'var(--neu-text-muted)'}; display: flex; align-items: center; gap: 3px; justify-content: {isSelf(
+                  : 'var(--text-secondary)'}; display: flex; align-items: center; gap: 3px; justify-content: {isSelf(
                   message
                 )
                   ? 'flex-end'
@@ -581,12 +586,12 @@
   <!-- Input -->
   <div
     class="px-4 pt-4 pb-4"
-    style="background-color: var(--neu-bg); border-top: 1px solid var(--neu-border);"
+    style="background-color: var(--surface-bg); border-top: 1px solid var(--border-theme);"
   >
     {#if !websocketStore.isConnected && !isLoading}
       <div
         class="flex items-center justify-center gap-1.5 mb-2"
-        style="font-size: 12px; color: var(--neu-text-muted);"
+        style="font-size: 12px; color: var(--text-secondary);"
       >
         <Loader2 class="h-3 w-3 animate-spin" />
         <span>实时消息连接中…</span>
@@ -595,7 +600,7 @@
     {#if websocketStore.isConnected && !wsSubscription.state.isSubscribed && !isLoading}
       <div
         class="flex items-center justify-center gap-1.5 mb-2"
-        style="font-size: 12px; color: var(--neu-text-muted);"
+        style="font-size: 12px; color: var(--text-secondary);"
       >
         <Loader2 class="h-3 w-3 animate-spin" />
         <span>
@@ -609,18 +614,18 @@
     {/if}
 
     {#if isOtherUserTyping}
-      <div class="mb-2" style="font-size: 12px; color: var(--neu-text-muted);">
+      <div class="mb-2" style="font-size: 12px; color: var(--text-secondary);">
         {otherUser?.nickname ?? '对方'} 正在输入...
       </div>
     {/if}
 
     <div class="flex items-center gap-2.5">
       <button
-        class="flex shrink-0 items-center justify-center rounded-full outline-none active:scale-[0.88]"
-        style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+        class="surface-flat flex shrink-0 items-center justify-center rounded-full outline-none active:scale-[0.88]"
+        style="width: 36px; height: 36px;"
         aria-label="表情"
       >
-        <Smile size={15} color="var(--neu-text-muted)" strokeWidth={1.5} />
+        <Smile size={15} color="var(--text-secondary)" strokeWidth={1.5} />
       </button>
       <textarea
         {@attach autofocus(shouldFocusInput)}
@@ -630,7 +635,7 @@
         rows={1}
         maxlength={MESSAGE_CONTENT_MAX}
         class="min-h-[38px] flex w-full resize-none rounded-[18px] px-3 py-2 outline-none disabled:cursor-not-allowed disabled:opacity-50"
-        style="font-size: 13px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text);"
+        style="font-size: 13px; background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); color: var(--text-primary);"
         disabled={isSending}
         oninput={handleInput}
         onkeydown={(e) => {
@@ -642,9 +647,10 @@
       ></textarea>
       <button
         class="flex shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
+        class:surface-pressed={!messageText.trim()}
         style="width: 36px; height: 36px; {messageText.trim()
-          ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);'
-          : 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}"
+          ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow);'
+          : 'color: var(--text-secondary);'}"
         onclick={sendMessage}
         onmousedown={(e) => e.preventDefault()}
         disabled={!messageText.trim() || isSending}

@@ -125,7 +125,7 @@
   > = {
     error: { variant: 'destructive', text: '紧急', color: 'var(--neu-error)' },
     warning: { variant: 'default', text: '警告', color: 'var(--neu-warning)' },
-    info: { variant: 'secondary', text: '通知', color: 'var(--neu-accent-primary)' }
+    info: { variant: 'secondary', text: '通知', color: 'var(--brand)' }
   };
 
   onMount(() => {
@@ -165,12 +165,12 @@
   <!-- Announcements list -->
   <div
     class="rounded-[22px] p-5"
-    style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
   >
     <!-- Section header -->
     <div class="mb-4 flex items-center gap-2">
-      <Megaphone size={18} strokeWidth={1.75} style="color: var(--neu-accent-primary);" />
-      <span style="font-size: 16px; font-weight: 600; color: var(--neu-text);">公告列表</span>
+      <Megaphone size={18} strokeWidth={1.75} style="color: var(--brand);" />
+      <span style="font-size: 16px; font-weight: 600; color: var(--text-primary);">公告列表</span>
     </div>
 
     {#if pagination.loading && pagination.items.length === 0}
@@ -178,22 +178,22 @@
         {#each Array(3) as _, i (i)}
           <div
             class="rounded-[18px] p-4"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border-pressed);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-active);"
           >
             <div
-              style="width: 48px; height: 16px; background: var(--neu-border); border-radius: 4px; margin-bottom: 8px;"
+              style="width: 48px; height: 16px; background: var(--border-theme); border-radius: 4px; margin-bottom: 8px;"
             ></div>
             <div
-              style="width: 100%; height: 12px; background: var(--neu-border); border-radius: 4px; margin-bottom: 6px;"
+              style="width: 100%; height: 12px; background: var(--border-theme); border-radius: 4px; margin-bottom: 6px;"
             ></div>
             <div
-              style="width: 75%; height: 12px; background: var(--neu-border); border-radius: 4px;"
+              style="width: 75%; height: 12px; background: var(--border-theme); border-radius: 4px;"
             ></div>
           </div>
         {/each}
       </div>
     {:else if pagination.items.length === 0}
-      <div class="py-8 text-center" style="font-size: 13px; color: var(--neu-text-muted);">
+      <div class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
         暂无公告
       </div>
     {:else}
@@ -202,12 +202,12 @@
           {@const badge = SEVERITY_BADGE[announcement.severity]}
           <div
             class="rounded-[18px] p-4"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border-pressed);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-active);"
           >
             <div class="flex items-start justify-between gap-4">
               <div class="flex-1">
                 <div class="flex items-center gap-2">
-                  <span style="font-size: 15px; font-weight: 600; color: var(--neu-text);"
+                  <span style="font-size: 15px; font-weight: 600; color: var(--text-primary);"
                     >{announcement.title}</span
                   >
                   <span
@@ -219,18 +219,18 @@
                 </div>
                 <p
                   class="mt-2 whitespace-pre-wrap"
-                  style="font-size: 13px; color: var(--neu-text-muted);"
+                  style="font-size: 13px; color: var(--text-secondary);"
                 >
                   {announcement.content}
                 </p>
-                <p class="mt-2" style="font-size: 11px; color: var(--neu-text-muted);">
+                <p class="mt-2" style="font-size: 11px; color: var(--text-secondary);">
                   发布于 {formatDateTime(announcement.created_at)}
                 </p>
               </div>
               <button
                 type="button"
                 class="flex items-center justify-center rounded-full outline-none transition-opacity hover:opacity-70"
-                style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                style="width: 36px; height: 36px; box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                 onclick={() => requestDelete(announcement.announcement_id)}
                 aria-label="删除公告"
               >
@@ -258,24 +258,24 @@
     </Dialog.Header>
     <div class="space-y-4 py-4">
       <div class="space-y-2">
-        <label for="title" style="font-size: 12px; color: var(--neu-text);">标题</label>
+        <label for="title" style="font-size: 12px; color: var(--text-primary);">标题</label>
         <NeuInput id="title" placeholder="公告标题" bind:value={title} autocomplete="off" />
       </div>
       <div class="space-y-2">
-        <label for="content" style="font-size: 12px; color: var(--neu-text);">内容</label>
+        <label for="content" style="font-size: 12px; color: var(--text-primary);">内容</label>
         <textarea
           id="content"
           placeholder="公告内容"
           rows="5"
           bind:value={content}
           class="w-full rounded-[14px] px-4 py-2.5 outline-none resize-none"
-          style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"
+          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px;"
         ></textarea>
       </div>
       <div class="space-y-2">
-        <label style="font-size: 12px; color: var(--neu-text);">级别</label>
+        <label style="font-size: 12px; color: var(--text-primary);">级别</label>
         <div class="flex gap-2">
-          {#each [{ key: 'info', label: '通知', color: 'var(--neu-accent-primary)' }, { key: 'warning', label: '警告', color: 'var(--neu-warning)' }, { key: 'error', label: '紧急', color: 'var(--neu-error)' }] as opt}
+          {#each [{ key: 'info', label: '通知', color: 'var(--brand)' }, { key: 'warning', label: '警告', color: 'var(--neu-warning)' }, { key: 'error', label: '紧急', color: 'var(--neu-error)' }] as opt}
             <NeuButton
               type="button"
               variant={severity === opt.key ? 'pressed' : 'flat'}

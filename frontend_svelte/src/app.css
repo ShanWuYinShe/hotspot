@@ -42,21 +42,17 @@
   --color-glow-accent: var(--glow-accent);
   --color-glow-success: var(--glow-success);
 
-  /* Neumorphic shadow colors */
+  /* Shadow colors */
   --color-shadow-light: var(--shadow-light);
   --color-shadow-dark: var(--shadow-dark);
 
-  /* Neumorphic design tokens */
-  --color-neu-bg: var(--neu-bg);
-  --color-neu-shadow-light: var(--neu-shadow-light);
-  --color-neu-shadow-dark: var(--neu-shadow-dark);
-  --color-neu-text: var(--neu-text);
-  --color-neu-text-muted: var(--neu-text-muted);
-  --color-neu-accent: var(--neu-accent);
-  --color-neu-accent-primary: var(--neu-accent-primary);
-  --color-neu-glow: var(--neu-glow);
-  --color-neu-border: var(--neu-border);
-  --color-neu-border-pressed: var(--neu-border-pressed);
+  /* Semantic theme tokens — resolved per [data-theme-family] */
+  --color-surface-bg: var(--surface-bg);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent: var(--accent);
+  --color-glow: var(--glow);
+  --color-border-theme: var(--border-theme);
   --color-page-bg: var(--page-bg);
 
   --radius: 0.625rem;
@@ -503,43 +499,91 @@
      Shared design tokens — lazy-resolve to active theme's shadow colors
      ═══════════════════════════════════════════════════════════════════════ */
 :root {
-  /* Shadow presets (adapt via --neu-shadow-dark / --neu-shadow-light) */
-  --neu-shadow-inset:
-    inset 6px 6px 12px var(--neu-shadow-dark), inset -6px -6px 12px var(--neu-shadow-light);
-  --neu-shadow-sm: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);
-  --neu-shadow-md: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light);
-  --neu-shadow-lg: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);
-  --neu-shadow-xl: 10px 10px 20px var(--neu-shadow-dark), -10px -10px 20px var(--neu-shadow-light);
+  /* Semantic theme token aliases — resolve from neu-* vars defined per theme */
+  --surface-bg: var(--neu-bg);
+  --surface-secondary: var(--neu-fallback-bg);
+  --text-primary: var(--neu-text);
+  --text-secondary: var(--neu-text-muted);
+  --text-tertiary: var(--neu-fallback-text);
+  --brand: var(--neu-accent-primary);
+  --brand-secondary: var(--neu-accent);
+  --text-on-accent: var(--neu-active-text);
+  --border-theme: var(--neu-border);
+  --border-active: var(--neu-border-pressed);
+  --glow: var(--neu-glow);
+  --shadow-dark: var(--neu-shadow-dark);
+  --shadow-light: var(--neu-shadow-light);
+  --glass-bg: var(--neu-glass-bg);
+  --glass-border: var(--neu-glass-border);
+  --error: var(--neu-error);
+  --error-border: var(--neu-error-border);
+  --warning: var(--neu-warning);
+  --warning-border: var(--neu-warning-border);
+  --success: var(--neu-success);
+  --fab-glow: var(--neu-fab-glow);
+  --glass-shadow: var(--neu-glass-shadow);
+
+  /* Shadow presets (adapt via --shadow-dark / --shadow-light) */
+  --shadow-inset: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light);
+  --shadow-sm: 4px 4px 10px var(--shadow-dark), -4px -4px 10px var(--shadow-light);
+  --shadow-md: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+  --shadow-lg: 8px 8px 20px var(--shadow-dark), -8px -8px 20px var(--shadow-light);
+  --shadow-xl: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
+
+  /* @deprecated — keep old shadow preset names for compatibility */
+  --neu-shadow-inset: var(--shadow-inset);
+  --neu-shadow-sm: var(--shadow-sm);
+  --neu-shadow-md: var(--shadow-md);
+  --neu-shadow-lg: var(--shadow-lg);
+  --neu-shadow-xl: var(--shadow-xl);
 
   /* Overlays */
-  --neu-overlay: rgba(0, 0, 0, 0.35);
-  --neu-overlay-strong: rgba(0, 0, 0, 0.9);
-  --neu-overlay-scene: rgba(0, 0, 0, 0.5);
-  --neu-overlay-subtle: rgba(0, 0, 0, 0.05);
-  --neu-overlay-loading: rgba(255, 255, 255, 0.85);
+  --overlay: rgba(0, 0, 0, 0.35);
+  --overlay-strong: rgba(0, 0, 0, 0.9);
+  --overlay-scene: rgba(0, 0, 0, 0.5);
+  --overlay-subtle: rgba(0, 0, 0, 0.05);
+  --overlay-loading: rgba(255, 255, 255, 0.85);
 
   /* Radius presets */
-  --neu-radius-md: 18px;
-  --neu-radius-lg: 22px;
-  --neu-radius-xl: 24px;
-  --neu-radius-xxl: 32px;
-  --neu-radius-pill: 40px;
+  --radius-md: 18px;
+  --radius-lg: 22px;
+  --radius-xl: 24px;
+  --radius-xxl: 32px;
+  --radius-pill: 40px;
 
   /* Glass */
-  --neu-glass-blur: 28px;
-  --neu-glass-saturate: 1.8;
+  --glass-blur: 28px;
+  --glass-saturate: 1.8;
 
   /* Switch */
-  --neu-switch-thumb: #ffffff;
-  --neu-switch-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  --switch-thumb: #ffffff;
+  --switch-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 
   /* Text on media (over images) */
-  --neu-text-on-media: rgba(255, 255, 255, 0.8);
-  --neu-media-border: rgba(255, 255, 255, 0.6);
+  --text-on-media: rgba(255, 255, 255, 0.8);
+  --media-border: rgba(255, 255, 255, 0.6);
 
   /* Surface layers */
-  --neu-surface-glass: rgba(255, 255, 255, 0.1);
-  --neu-error-subtle: rgba(215, 91, 91, 0.1);
+  --surface-glass: rgba(255, 255, 255, 0.1);
+  --error-subtle: rgba(215, 91, 91, 0.1);
+
+  /* @deprecated — keep old token names for compatibility */
+  --neu-overlay: var(--overlay);
+  --neu-overlay-strong: var(--overlay-strong);
+  --neu-overlay-scene: var(--overlay-scene);
+  --neu-overlay-subtle: var(--overlay-subtle);
+  --neu-surface-glass: var(--surface-glass);
+  --neu-error-subtle: var(--error-subtle);
+  --neu-radius-md: var(--radius-md);
+  --neu-radius-lg: var(--radius-lg);
+  --neu-radius-xl: var(--radius-xl);
+  --neu-radius-xxl: var(--radius-xxl);
+  --neu-radius-pill: var(--radius-pill);
+  --neu-glass-blur: var(--glass-blur);
+  --neu-glass-saturate: var(--glass-saturate);
+  --neu-switch-thumb: var(--switch-thumb);
+  --neu-switch-shadow: var(--switch-shadow);
+  --neu-text-on-media: var(--text-on-media);
 }
 
 @layer base {
@@ -593,167 +637,327 @@
   }
 }
 @layer utilities {
-  /* Neumorphic surface utilities (1:1 from Figma Make) */
+  /* ───────────────────────────────────────────
+     Surface hierarchy
+     semantic names (no theme prefix) + @deprecated neu-* aliases
+     ─────────────────────────────────────────── */
+  .surface-hero,
+  .neu-surface-hero {
+    background-color: var(--surface-bg);
+    border: 1px solid var(--border-theme);
+    box-shadow:
+      8px 8px 18px var(--shadow-dark),
+      -8px -8px 18px var(--shadow-light);
+  }
+  [data-theme-family='forest'] .surface-hero,
+  [data-theme-family='forest'] .neu-surface-hero,
+  [data-theme-family='forest'].dark .surface-hero,
+  [data-theme-family='forest'].dark .neu-surface-hero {
+    box-shadow: 0 0 0 1.5px var(--border-active);
+    border-color: var(--border-active);
+  }
+
+  .surface-flat,
+  .neu-surface-flat {
+    background-color: var(--surface-bg);
+    border: 1px solid var(--border-theme);
+    transition:
+      border-color 0.18s ease,
+      background-color 0.18s ease;
+  }
+  .surface-flat:hover,
+  .neu-surface-flat:hover {
+    border-color: var(--border-active);
+  }
+
+  .surface-ghost,
+  .neu-surface-ghost {
+    background-color: transparent;
+    border: 1px solid transparent;
+    transition:
+      background-color 0.16s ease,
+      border-color 0.16s ease,
+      color 0.16s ease;
+  }
+  .surface-ghost:hover,
+  .neu-surface-ghost:hover {
+    background-color: var(--border-theme);
+  }
+
+  .surface-raised,
+  .neu-surface-raised,
   .neu-flat {
-    background-color: var(--neu-bg);
+    background-color: var(--surface-bg);
     box-shadow:
-      10px 10px 20px var(--neu-shadow-dark),
-      -10px -10px 20px var(--neu-shadow-light);
-    color: var(--neu-text);
-    border: 1px solid var(--neu-border);
+      10px 10px 20px var(--shadow-dark),
+      -10px -10px 20px var(--shadow-light);
+    color: var(--text-primary);
+    border: 1px solid var(--border-theme);
   }
 
+  .surface-pressed,
+  .neu-surface-pressed,
   .neu-pressed {
-    background-color: var(--neu-bg);
+    background-color: var(--surface-bg);
     box-shadow:
-      inset 8px 8px 16px var(--neu-shadow-dark),
-      inset -8px -8px 16px var(--neu-shadow-light);
-    color: var(--neu-text);
-    border: 1px solid var(--neu-border-pressed);
+      inset 8px 8px 16px var(--shadow-dark),
+      inset -8px -8px 16px var(--shadow-light);
+    color: var(--text-primary);
+    border: 1px solid var(--border-active);
   }
 
+  .surface-convex,
+  .neu-surface-convex,
   .neu-convex {
-    background-color: var(--neu-bg);
+    background-color: var(--surface-bg);
     box-shadow:
-      12px 12px 24px var(--neu-shadow-dark),
-      -12px -12px 24px var(--neu-shadow-light);
-    border: 1px solid var(--neu-border);
+      12px 12px 24px var(--shadow-dark),
+      -12px -12px 24px var(--shadow-light);
+    border: 1px solid var(--border-theme);
   }
 
-  .neu-icon-badge {
-    box-shadow:
-      4px 4px 8px var(--neu-shadow-dark),
-      -4px -4px 8px var(--neu-shadow-light);
-  }
-
+  /* Input surfaces */
+  .input-surface,
   .neu-input-surface {
     box-shadow:
-      5px 5px 10px var(--neu-shadow-dark),
-      -5px -5px 10px var(--neu-shadow-light);
-    border: 1px solid var(--neu-border);
+      5px 5px 10px var(--shadow-dark),
+      -5px -5px 10px var(--shadow-light);
+    border: 1px solid var(--border-theme);
     transition:
       box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
       border-color 0.2s ease;
   }
+  .input-surface:focus-within,
   .neu-input-surface:focus-within {
     box-shadow:
-      inset 5px 5px 10px var(--neu-shadow-dark),
-      inset -5px -5px 10px var(--neu-shadow-light);
-    border-color: var(--neu-border-pressed);
+      inset 5px 5px 10px var(--shadow-dark),
+      inset -5px -5px 10px var(--shadow-light);
+    border-color: var(--border-active);
   }
+  .input-surface:focus-within:focus-visible,
   .neu-input-surface:focus-within:focus-visible {
     box-shadow:
-      inset 5px 5px 10px var(--neu-shadow-dark),
-      inset -5px -5px 10px var(--neu-shadow-light),
-      0 0 0 2px var(--neu-glow);
-    border-color: var(--neu-accent-primary);
+      inset 5px 5px 10px var(--shadow-dark),
+      inset -5px -5px 10px var(--shadow-light),
+      0 0 0 2px var(--glow);
+    border-color: var(--brand);
   }
 
+  .input-base,
   .neu-input-base {
     box-shadow:
-      8px 8px 16px var(--neu-shadow-dark),
-      -8px -8px 16px var(--neu-shadow-light);
-    border: 1px solid var(--neu-border);
+      8px 8px 16px var(--shadow-dark),
+      -8px -8px 16px var(--shadow-light);
+    border: 1px solid var(--border-theme);
     padding: 6px 12px;
     font-size: 14px;
     transition:
       box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
       border-color 0.2s ease;
   }
+  .input-base::placeholder,
   .neu-input-base::placeholder {
-    color: var(--neu-text-muted);
+    color: var(--text-secondary);
     opacity: 0.6;
   }
+  .input-base:focus,
   .neu-input-base:focus {
     box-shadow:
-      inset 8px 8px 16px var(--neu-shadow-dark),
-      inset -8px -8px 16px var(--neu-shadow-light);
-    border-color: var(--neu-border-pressed);
+      inset 8px 8px 16px var(--shadow-dark),
+      inset -8px -8px 16px var(--shadow-light);
+    border-color: var(--border-active);
     outline: none;
   }
+  .input-base:focus-visible,
   .neu-input-base:focus-visible {
     box-shadow:
-      inset 8px 8px 16px var(--neu-shadow-dark),
-      inset -8px -8px 16px var(--neu-shadow-light),
-      0 0 0 2px var(--neu-glow);
-    border-color: var(--neu-accent-primary);
+      inset 8px 8px 16px var(--shadow-dark),
+      inset -8px -8px 16px var(--shadow-light),
+      0 0 0 2px var(--glow);
+    border-color: var(--brand);
   }
 
+  /* Button glow */
+  .button-glow,
   .neu-button-glow {
     box-shadow:
-      8px 8px 16px var(--neu-shadow-dark),
-      -8px -8px 16px var(--neu-shadow-light);
+      8px 8px 16px var(--shadow-dark),
+      -8px -8px 16px var(--shadow-light);
   }
-
+  .dark .button-glow,
   .dark .neu-button-glow {
     box-shadow:
-      8px 8px 16px var(--neu-shadow-dark),
-      -8px -8px 16px var(--neu-shadow-light),
-      0 0 20px var(--neu-glow);
+      8px 8px 16px var(--shadow-dark),
+      -8px -8px 16px var(--shadow-light),
+      0 0 20px var(--glow);
   }
 
+  /* Small control */
+  .control-small,
   .neu-small {
-    background-color: var(--neu-bg);
+    background-color: var(--surface-bg);
     box-shadow:
-      5px 5px 10px var(--neu-shadow-dark),
-      -5px -5px 10px var(--neu-shadow-light);
-    color: var(--neu-text);
-    border: 1px solid var(--neu-border);
+      5px 5px 10px var(--shadow-dark),
+      -5px -5px 10px var(--shadow-light);
+    color: var(--text-primary);
+    border: 1px solid var(--border-theme);
+  }
+
+  /* Icon badge */
+  .icon-badge,
+  .neu-icon-badge {
+    box-shadow:
+      4px 4px 8px var(--shadow-dark),
+      -4px -4px 8px var(--shadow-light);
   }
 
   /* Hover shadow utilities */
+  .card-hover,
   .neu-card-hover {
     transition: box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1);
   }
+  .card-hover:hover,
   .neu-card-hover:hover {
     box-shadow: var(--hover-shadow-card) !important;
   }
+  .card-hover:focus-visible,
   .neu-card-hover:focus-visible {
     box-shadow: var(--hover-shadow-card) !important;
-    outline: 2px solid var(--neu-glow);
+    outline: 2px solid var(--glow);
     outline-offset: 2px;
   }
+
+  .row-hover,
   .neu-row-hover {
     transition: box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   }
+  .row-hover:hover,
   .neu-row-hover:hover {
     box-shadow: var(--hover-shadow-row) !important;
   }
+  .row-hover:focus-visible,
   .neu-row-hover:focus-visible {
     box-shadow: var(--hover-shadow-row) !important;
-    outline: 2px solid var(--neu-glow);
+    outline: 2px solid var(--glow);
     outline-offset: 2px;
   }
+
+  .circle-hover,
   .neu-circle-hover {
     transition: box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
+  .circle-hover:hover,
   .neu-circle-hover:hover {
     box-shadow: var(--hover-shadow-btn) !important;
   }
+  .circle-hover:focus-visible,
   .neu-circle-hover:focus-visible {
     box-shadow: var(--hover-shadow-btn) !important;
-    outline: 2px solid var(--neu-glow);
+    outline: 2px solid var(--glow);
     outline-offset: 2px;
   }
+
+  .pill-hover,
   .neu-pill-hover {
     transition: box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1);
   }
+  .pill-hover:hover,
   .neu-pill-hover:hover {
     box-shadow: var(--hover-shadow-pill) !important;
   }
+  .pill-hover:focus-visible,
   .neu-pill-hover:focus-visible {
     box-shadow: var(--hover-shadow-pill) !important;
-    outline: 2px solid var(--neu-glow);
+    outline: 2px solid var(--glow);
     outline-offset: 2px;
   }
+
+  /* Text color utilities */
+  .text-primary,
+  .text-neu {
+    color: var(--text-primary);
+  }
+  .text-secondary,
   .text-neu-muted {
-    color: var(--neu-text-muted);
+    color: var(--text-secondary);
   }
-  .text-neu-accent {
-    color: var(--neu-accent);
-  }
+  .text-brand,
+  .text-accent,
+  .text-neu-accent,
   .text-neu-accent-primary {
-    color: var(--neu-accent-primary);
+    color: var(--brand);
+  }
+  .text-on-accent,
+  .neu-active-text {
+    color: var(--text-on-accent) !important;
+  }
+
+  /* Ambient glow */
+  .ambient-glow,
+  .neu-ambient-glow {
+    position: relative;
+  }
+  .ambient-glow::before,
+  .neu-ambient-glow::before {
+    content: '';
+    position: absolute;
+    inset: -20% -10% auto -10%;
+    height: 70%;
+    background: radial-gradient(ellipse at top, var(--glow) 0%, transparent 65%);
+    opacity: 0.55;
+    pointer-events: none;
+    z-index: 0;
+  }
+  [data-theme-family='forest'] .ambient-glow::before,
+  [data-theme-family='forest'] .neu-ambient-glow::before,
+  [data-theme-family='forest'].dark .ambient-glow::before,
+  [data-theme-family='forest'].dark .neu-ambient-glow::before {
+    opacity: 0.95;
+  }
+  [data-theme-family='vibrant'] .ambient-glow::before,
+  [data-theme-family='vibrant'] .neu-ambient-glow::before {
+    opacity: 0.7;
+  }
+  [data-theme-family='vibrant'].dark .ambient-glow::before,
+  [data-theme-family='vibrant'].dark .neu-ambient-glow::before {
+    opacity: 0.8;
+  }
+  .dark .ambient-glow::before,
+  .dark .neu-ambient-glow::before {
+    opacity: 0.85;
+  }
+  .ambient-glow > *,
+  .neu-ambient-glow > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Soft divider */
+  .divider-soft,
+  .neu-divider-soft {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      var(--border-theme) 20%,
+      var(--border-theme) 80%,
+      transparent 100%
+    );
+  }
+
+  /* Eyebrow label */
+  .eyebrow,
+  .neu-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    opacity: 0.75;
+  }
+
+  .glass-bg,
+  .neu-glass-bg {
+    background: var(--glass-bg);
   }
 
   /* Layout tokens */

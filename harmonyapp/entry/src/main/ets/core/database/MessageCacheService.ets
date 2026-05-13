@@ -92,26 +92,24 @@ export class MessageCacheService {
     try {
       const predicates = new relationalStore.RdbPredicates('chats');
       predicates.orderByDesc('last_time'); // 按时间倒序
-
+      
       const resultSet = await store.query(predicates);
       const items: ChatCacheItem[] = [];
 
-      try {
-        while (resultSet.goToNextRow()) {
-          items.push({
-            id: resultSet.getString(resultSet.getColumnIndex('id')),
-            type: resultSet.getString(resultSet.getColumnIndex('type')) as 'private' | 'group',
-            name: resultSet.getString(resultSet.getColumnIndex('name')),
-            avatarUrl: resultSet.getString(resultSet.getColumnIndex('avatar_url')),
-            lastMessage: resultSet.getString(resultSet.getColumnIndex('last_message')),
-            lastTime: resultSet.getString(resultSet.getColumnIndex('last_time')),
-            unreadCount: resultSet.getLong(resultSet.getColumnIndex('unread_count')),
-            data: resultSet.getString(resultSet.getColumnIndex('json_data'))
-          });
-        }
-      } finally {
-        resultSet.close();
+      while (resultSet.goToNextRow()) {
+        items.push({
+          id: resultSet.getString(resultSet.getColumnIndex('id')),
+          type: resultSet.getString(resultSet.getColumnIndex('type')) as 'private' | 'group',
+          name: resultSet.getString(resultSet.getColumnIndex('name')),
+          avatarUrl: resultSet.getString(resultSet.getColumnIndex('avatar_url')),
+          lastMessage: resultSet.getString(resultSet.getColumnIndex('last_message')),
+          lastTime: resultSet.getString(resultSet.getColumnIndex('last_time')),
+          unreadCount: resultSet.getDouble(resultSet.getColumnIndex('unread_count')),
+          data: resultSet.getString(resultSet.getColumnIndex('json_data'))
+        });
       }
+      
+      resultSet.close();
       return items;
     } catch (err) {
       hilog.error(DOMAIN_NUMBER, TAG, `Get cached chat list failed: ${JSON.stringify(err)}`);
@@ -197,21 +195,19 @@ export class MessageCacheService {
       const resultSet = await store.query(predicates);
       const items: MessageCacheItem[] = [];
 
-      try {
-        while (resultSet.goToNextRow()) {
-          items.push({
-            id: resultSet.getString(resultSet.getColumnIndex('id')),
-            chatId: resultSet.getString(resultSet.getColumnIndex('chat_id')),
-            type: resultSet.getString(resultSet.getColumnIndex('type')),
-            senderId: resultSet.getString(resultSet.getColumnIndex('sender_id')),
-            content: resultSet.getString(resultSet.getColumnIndex('content')),
-            sentAt: resultSet.getString(resultSet.getColumnIndex('sent_at')),
-            data: resultSet.getString(resultSet.getColumnIndex('json_data'))
-          });
-        }
-      } finally {
-        resultSet.close();
+      while (resultSet.goToNextRow()) {
+        items.push({
+          id: resultSet.getString(resultSet.getColumnIndex('id')),
+          chatId: resultSet.getString(resultSet.getColumnIndex('chat_id')),
+          type: resultSet.getString(resultSet.getColumnIndex('type')),
+          senderId: resultSet.getString(resultSet.getColumnIndex('sender_id')),
+          content: resultSet.getString(resultSet.getColumnIndex('content')),
+          sentAt: resultSet.getString(resultSet.getColumnIndex('sent_at')),
+          data: resultSet.getString(resultSet.getColumnIndex('json_data'))
+        });
       }
+      
+      resultSet.close();
       return items;
     } catch (err) {
       hilog.error(DOMAIN_NUMBER, TAG, `Get cached messages failed: ${JSON.stringify(err)}`);

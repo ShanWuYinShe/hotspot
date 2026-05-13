@@ -139,10 +139,10 @@
 
 <div class="space-y-6">
   <div class="flex items-center justify-between">
-    <h1 style="font-size: 22px; font-weight: 600; color: var(--neu-text);">系统配置</h1>
+    <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">系统配置</h1>
     <button
       class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
       onclick={loadConfig}
       disabled={isLoading}
     >
@@ -156,22 +156,22 @@
       {#each Array(3) as _, i (i)}
         <div
           class="rounded-[22px] p-4"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <div class="space-y-3">
             <div
               class="rounded"
-              style="height: 14px; width: 120px; background: var(--neu-border);"
+              style="height: 14px; width: 120px; background: var(--border-theme);"
             ></div>
             {#each Array(3) as _, j (j)}
               <div class="space-y-1.5">
                 <div
                   class="rounded"
-                  style="height: 10px; width: 80px; background: var(--neu-border);"
+                  style="height: 10px; width: 80px; background: var(--border-theme);"
                 ></div>
                 <div
                   class="rounded-[14px]"
-                  style="height: 36px; width: 100%; background: var(--neu-border);"
+                  style="height: 36px; width: 100%; background: var(--border-theme);"
                 ></div>
               </div>
             {/each}
@@ -184,19 +184,21 @@
       <!-- Upload settings -->
       <div
         class="rounded-[22px] overflow-hidden"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <div
           class="flex items-center gap-2 px-4 py-3"
-          style="border-bottom: 1px solid var(--neu-border);"
+          style="border-bottom: 1px solid var(--border-theme);"
         >
-          <FileText size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-          <span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">上传设置</span>
+          <FileText size={16} strokeWidth={1.5} color="var(--brand)" />
+          <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+            >上传设置</span
+          >
         </div>
         <div class="space-y-4 p-4">
           {#each [{ id: 'image-max-size', label: '图片最大大小 (字节)', val: imageMaxSize, placeholder: '5242880' }, { id: 'video-max-size', label: '视频最大大小 (字节)', val: videoMaxSize, placeholder: '52428800' }, { id: 'audio-max-size', label: '音频最大大小 (字节)', val: audioMaxSize, placeholder: '10485760' }, { id: 'file-max-size', label: '文件最大大小 (字节)', val: fileMaxSize, placeholder: '10485760' }] as field (field.id)}
             <div>
-              <label for={field.id} style="font-size: 12px; color: var(--neu-text);"
+              <label for={field.id} style="font-size: 12px; color: var(--text-primary);"
                 >{field.label}</label
               >
               <input
@@ -205,16 +207,16 @@
                 bind:value={field.val}
                 placeholder={field.placeholder}
                 class="mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
-                style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"
+                style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px;"
               />
-              <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 2px;">
+              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
                 当前: {(Number(field.val || 0) / 1024 / 1024).toFixed(1)} MB
               </p>
             </div>
           {/each}
           <button
             class="flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
-            style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);"
+            style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
             onclick={handleSaveUpload}
             disabled={isSaving}
           >
@@ -230,29 +232,31 @@
       <!-- Feature toggles -->
       <div
         class="rounded-[22px] overflow-hidden"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <div
           class="flex items-center gap-2 px-4 py-3"
-          style="border-bottom: 1px solid var(--neu-border);"
+          style="border-bottom: 1px solid var(--border-theme);"
         >
-          <Lock size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-          <span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">功能开关</span>
+          <Lock size={16} strokeWidth={1.5} color="var(--brand)" />
+          <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+            >功能开关</span
+          >
         </div>
         <div class="space-y-3 p-4">
           {#each [{ label: '允许新用户注册', desc: '关闭后新用户无法注册', val: enablePublicRegistration, key: 'reg' }, { label: '允许访客模式', desc: '允许用户以访客身份使用', val: enableGuestLogin, key: 'guest' }, { label: '启用动态功能', desc: '控制是否开放生活瞬间', val: enableMoments, key: 'moments' }, { label: '启用附近的人', desc: '是否展示附近用户', val: enableNearbyPeople, key: 'nearby' }] as toggle (toggle.key)}
             <div class="flex items-center justify-between gap-4">
               <div>
-                <p style="font-size: 13px; color: var(--neu-text);">{toggle.label}</p>
-                <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">
+                <p style="font-size: 13px; color: var(--text-primary);">{toggle.label}</p>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
                   {toggle.desc}
                 </p>
               </div>
               <button
                 class="relative rounded-full outline-none"
                 style="width: 44px; height: 24px; transition: background 0.2s; {toggle.val
-                  ? 'background: var(--neu-accent-primary);'
-                  : 'background: var(--neu-border);'}"
+                  ? 'background: var(--brand);'
+                  : 'background: var(--border-theme);'}"
                 onclick={() => {
                   if (toggle.key === 'reg') enablePublicRegistration = !enablePublicRegistration;
                   else if (toggle.key === 'guest') enableGuestLogin = !enableGuestLogin;
@@ -271,7 +275,7 @@
           {/each}
           <button
             class="flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
-            style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);"
+            style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
             onclick={handleSaveFeatures}
             disabled={isSaving}
           >
@@ -287,32 +291,36 @@
       <!-- Limits -->
       <div
         class="rounded-[22px] overflow-hidden"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <div
           class="flex items-center gap-2 px-4 py-3"
-          style="border-bottom: 1px solid var(--neu-border);"
+          style="border-bottom: 1px solid var(--border-theme);"
         >
-          <Bell size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-          <span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">限制设置</span>
+          <Bell size={16} strokeWidth={1.5} color="var(--brand)" />
+          <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+            >限制设置</span
+          >
         </div>
         <div class="space-y-4 p-4">
           {#each [{ id: 'max-tags', label: '动态最大标签数', val: maxMomentTags, ph: '10' }, { id: 'max-images', label: '动态最大图片数', val: maxMomentImages, ph: '9' }, { id: 'desc-max', label: '动态描述最大长度', val: momentDescriptionMaxLength, ph: '300' }, { id: 'comment-max', label: '评论最大长度', val: commentMaxLength, ph: '200' }, { id: 'group-max', label: '群组最大成员数', val: maxGroupMembers, ph: '500' }, { id: 'radius-max', label: '搜索最大半径 (km)', val: searchRadiusMax, ph: '50' }] as f (f.id)}
             <div>
-              <label for={f.id} style="font-size: 12px; color: var(--neu-text);">{f.label}</label>
+              <label for={f.id} style="font-size: 12px; color: var(--text-primary);"
+                >{f.label}</label
+              >
               <input
                 id={f.id}
                 type="number"
                 bind:value={f.val}
                 placeholder={f.ph}
                 class="mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
-                style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px;"
+                style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px;"
               />
             </div>
           {/each}
           <button
             class="flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
-            style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);"
+            style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
             onclick={handleSaveLimits}
             disabled={isSaving}
           >

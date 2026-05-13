@@ -14,14 +14,14 @@
 
 <div class="relative flex w-full items-center">
   {#if icon}
-    <div class="pointer-events-none absolute left-4 text-neu-muted">
+    <div class="pointer-events-none absolute left-4 text-secondary">
       {@render icon()}
     </div>
   {/if}
   <input
     class={cn(
-      'w-full neu-input-base rounded-2xl py-3 px-4 text-neu outline-none transition-all duration-200',
-      'placeholder:text-neu-muted',
+      'w-full input-base rounded-2xl py-3 px-4 text-neu outline-none transition-all duration-200',
+      'placeholder:text-secondary',
       icon && 'pl-12',
       className
     )}

@@ -67,30 +67,27 @@
   <!-- Sticky header -->
   <div
     class="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
-    style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+    style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     <div>
-      <h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">附近群组</h1>
-      <p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">
+      <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">附近群组</h1>
+      <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
         同城兴趣群组推荐，按距离和活跃度排序展示。
       </p>
     </div>
     <div class="flex items-center gap-2">
       <button
-        class="flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+        class="surface-flat flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+        style="width: 36px; height: 36px;"
         onclick={handleBack}
         aria-label="返回"
       >
-        <ArrowLeft size={18} color="var(--neu-text)" />
+        <ArrowLeft size={18} color="var(--text-primary)" />
       </button>
-      <div
-        class="flex items-center gap-1.5 rounded-full py-1.5 px-3.5"
-        style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
-      >
-        <MapPin size={12} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+      <div class="input-surface flex items-center gap-1.5 rounded-full py-1.5 px-3.5">
+        <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
         <span
-          style="font-size: 11px; color: var(--neu-text-muted); max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+          style="font-size: 11px; color: var(--text-secondary); max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
           >{mapAnchorStore.displayName}</span
         >
       </div>
@@ -109,7 +106,7 @@
         <MasonryLayoutItem>
           <div
             class="animate-pulse rounded-[22px]"
-            style="height: {200 + (i % 3) * 28}px; background: var(--neu-border);"
+            style="height: {200 + (i % 3) * 28}px; background: var(--border-theme);"
           ></div>
         </MasonryLayoutItem>
       {/each}

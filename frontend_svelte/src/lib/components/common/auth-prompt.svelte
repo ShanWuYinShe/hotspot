@@ -68,9 +68,9 @@
     gap: 12px;
     padding: 14px 16px;
     border-radius: 22px;
-    background: var(--neu-bg);
-    border: 1px solid var(--neu-border);
-    box-shadow: var(--neu-shadow-lg);
+    background: var(--surface-bg);
+    border: 1px solid var(--border-theme);
+    box-shadow: var(--shadow-lg);
     animation: slideUp 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
@@ -93,12 +93,12 @@
     align-items: center;
     justify-content: center;
     border-radius: 14px;
-    background: var(--neu-bg);
-    border: 1px solid var(--neu-border);
+    background: var(--surface-bg);
+    border: 1px solid var(--border-theme);
     box-shadow:
-      4px 4px 9px var(--neu-shadow-dark),
-      -4px -4px 9px var(--neu-shadow-light);
-    color: var(--neu-accent-primary);
+      4px 4px 9px var(--shadow-dark),
+      -4px -4px 9px var(--shadow-light);
+    color: var(--brand);
   }
 
   .auth-prompt-content {
@@ -109,12 +109,12 @@
   .auth-prompt-title {
     font-size: 14px;
     font-weight: 600;
-    color: var(--neu-text);
+    color: var(--text-primary);
   }
 
   .auth-prompt-desc {
     font-size: 12px;
-    color: var(--neu-text-muted);
+    color: var(--text-secondary);
     margin-top: 2px;
   }
 
@@ -128,17 +128,17 @@
     height: 34px;
     padding: 0 14px;
     border-radius: 999px;
-    border: 1px solid var(--neu-border);
-    background: var(--neu-bg);
+    border: 1px solid var(--border-theme);
+    background: var(--surface-bg);
     font-size: 13px;
     font-weight: 500;
-    color: var(--neu-text-muted);
+    color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.15s;
   }
 
   .auth-prompt-dismiss:hover {
-    color: var(--neu-text);
+    color: var(--text-primary);
   }
 
   .auth-prompt-login {
@@ -146,11 +146,11 @@
     padding: 0 18px;
     border-radius: 999px;
     border: none;
-    background: var(--neu-accent-primary);
+    background: var(--brand);
     font-size: 13px;
     font-weight: 600;
-    color: var(--neu-active-text);
-    box-shadow: 0 3px 10px var(--neu-glow);
+    color: var(--text-on-accent);
+    box-shadow: 0 3px 10px var(--glow);
     cursor: pointer;
     transition: all 0.15s;
   }

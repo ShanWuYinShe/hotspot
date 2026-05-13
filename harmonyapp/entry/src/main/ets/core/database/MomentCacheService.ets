@@ -85,22 +85,20 @@ export class MomentCacheService {
       const resultSet = await store.query(predicates);
       const items: MomentItem[] = [];
 
-      try {
-        while (resultSet.goToNextRow()) {
-          const jsonData = resultSet.getString(resultSet.getColumnIndex('json_data'));
-          if (jsonData) {
-            try {
-              const moment = JSON.parse(jsonData) as MomentItem;
-              this.normalizeMomentMediaUrls(moment);
-              items.push(moment);
-            } catch (e) {
-              // ignore parse error
-            }
+      while (resultSet.goToNextRow()) {
+        const jsonData = resultSet.getString(resultSet.getColumnIndex('json_data'));
+        if (jsonData) {
+          try {
+            const moment = JSON.parse(jsonData) as MomentItem;
+            this.normalizeMomentMediaUrls(moment);
+            items.push(moment);
+          } catch (e) {
+             // ignore parse error
           }
         }
-      } finally {
-        resultSet.close();
       }
+      
+      resultSet.close();
       return items;
     } catch (err) {
       hilog.error(DOMAIN_NUMBER, TAG, `Get cached moments failed: ${JSON.stringify(err)}`);

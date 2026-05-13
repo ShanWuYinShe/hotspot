@@ -42,7 +42,6 @@ export default class EntryAbility extends UIAbility {
   private isDarkMode: boolean = false;
   private serviceRegistry = ServiceRegistry.getInstance();
   private rdbManager = RdbManager.getInstance();
-  private dbReady: Promise<void> = Promise.resolve();
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(DOMAIN_NUMBER, TAG, 'GeoTalk应用启动 - 启动原因: %{public}s',
@@ -60,8 +59,8 @@ export default class EntryAbility extends UIAbility {
     // 获取设备信息
     this.logDeviceInfo();
     
-    // 初始化数据库（保存 Promise，在页面加载前 await）
-    this.dbReady = this.rdbManager.init(this.context);
+    // 初始化数据库
+    this.rdbManager.init(this.context);
 
     // 初始化锚点历史工具
     AnchorHistoryUtil.init(this.context);
@@ -82,28 +81,16 @@ export default class EntryAbility extends UIAbility {
     // 配置窗口属性
     this.configureWindow(windowStage);
 
-    // 等待数据库初始化完成后再加载页面
-    this.dbReady.then(() => {
-      windowStage.loadContent('features/main/pages/Index')
-        .then(() => {
-          hilog.info(DOMAIN_NUMBER, TAG, '主页面加载成功');
-          this.onPageLoaded();
-        })
-        .catch((err: Error) => {
-          hilog.error(DOMAIN_NUMBER, TAG, '主页面加载失败: %{public}s', err.message);
-        });
-    }).catch((err: Error) => {
-      hilog.error(DOMAIN_NUMBER, TAG, '数据库初始化失败: %{public}s', err.message);
-      // 即使数据库初始化失败也加载页面（缓存功能降级）
-      windowStage.loadContent('features/main/pages/Index')
-        .then(() => {
-          hilog.info(DOMAIN_NUMBER, TAG, '主页面加载成功（数据库未就绪）');
-          this.onPageLoaded();
-        })
-        .catch((err2: Error) => {
-          hilog.error(DOMAIN_NUMBER, TAG, '主页面加载失败: %{public}s', err2.message);
-        });
-    });
+    // 加载主页面
+    windowStage.loadContent('features/main/pages/Index')
+      .then(() => {
+        hilog.info(DOMAIN_NUMBER, TAG, '主页面加载成功');
+        // 页面加载完成后的初始化
+        this.onPageLoaded();
+      })
+      .catch((err: Error) => {
+        hilog.error(DOMAIN_NUMBER, TAG, '主页面加载失败: %{public}s', err.message);
+      });
   }
 
   onWindowStageDestroy(): void {

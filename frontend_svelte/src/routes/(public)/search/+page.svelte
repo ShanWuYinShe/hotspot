@@ -299,31 +299,31 @@
   <title>搜索 - HotSpot</title>
 </svelte:head>
 
-<div class="flex flex-col" style="height: 100%; background-color: var(--neu-bg);">
+<div class="flex flex-col" style="height: 100%; background-color: var(--surface-bg);">
   <!-- Search header — back button + search input -->
   <div
     class="flex-shrink-0 flex items-center gap-3 px-5 py-3"
-    style="border-bottom: 1px solid var(--neu-border); background-color: var(--neu-bg);"
+    style="border-bottom: 1px solid var(--border-theme); background-color: var(--surface-bg);"
   >
     <button
-      class="flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-transform duration-150 active:scale-[0.88]"
-      style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+      class="surface-flat flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-transform duration-150 active:scale-[0.88]"
+      style="width: 36px; height: 36px;"
       onclick={() => history.back()}
       aria-label="返回"
     >
-      <ArrowLeft size={15} style="color: var(--neu-text-muted);" strokeWidth={1.5} />
+      <ArrowLeft size={15} style="color: var(--text-secondary);" strokeWidth={1.5} />
     </button>
 
     <div
-      class="flex-1 flex items-center gap-2.5 px-4 rounded-[18px] neu-input-surface"
+      class="flex-1 flex items-center gap-2.5 px-4 rounded-[18px] input-surface"
       style="height: 38px;"
     >
-      <Search size={14} style="flex-shrink: 0; color: var(--neu-text-muted);" strokeWidth={1.5} />
+      <Search size={14} style="flex-shrink: 0; color: var(--text-secondary);" strokeWidth={1.5} />
       <input
         type="text"
         placeholder="搜索用户、地点、话题…"
         class="flex-1 bg-transparent outline-none"
-        style="font-size: 13px; color: var(--neu-text);"
+        style="font-size: 13px; color: var(--text-primary);"
         autocomplete="off"
         bind:value={keywordInput}
         onkeydown={(e) => {
@@ -337,7 +337,7 @@
           onclick={clearSearch}
           aria-label={t('searchPage.clear')}
         >
-          <X size={13} style="color: var(--neu-text-muted);" strokeWidth={2} />
+          <X size={13} style="color: var(--text-secondary);" strokeWidth={2} />
         </button>
       {/if}
     </div>
@@ -356,25 +356,25 @@
           <div class="mb-5">
             <div class="flex items-center justify-between mb-2.5">
               <div class="flex items-center gap-1.5">
-                <Clock size={13} style="color: var(--neu-text-muted);" strokeWidth={1.5} />
+                <Clock size={13} style="color: var(--text-secondary);" strokeWidth={1.5} />
                 <p
                   class="uppercase"
-                  style="font-size: 10px; letter-spacing: 0.12em; color: var(--neu-text-muted);"
+                  style="font-size: 10px; letter-spacing: 0.12em; color: var(--text-secondary);"
                 >
                   最近搜索
                 </p>
               </div>
               <button
                 class="outline-none transition-transform duration-150 active:scale-[0.93]"
-                style="font-size: 12px; color: var(--neu-accent-primary);"
+                style="font-size: 12px; color: var(--brand);"
                 onclick={clearRecent}>清空</button
               >
             </div>
             <div class="flex flex-wrap gap-2">
               {#each recentSearches as r (r)}
                 <button
-                  class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
-                  style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); font-size: 12px; color: var(--neu-text-muted);"
+                  class="surface-flat flex items-center gap-1.5 px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
+                  style="font-size: 12px; color: var(--text-secondary);"
                   onclick={() => searchFor(r)}
                 >
                   <Clock size={10} strokeWidth={1.5} />
@@ -388,10 +388,10 @@
         <!-- Hot searches -->
         <div class="mb-5">
           <div class="flex items-center gap-1.5 mb-2.5">
-            <TrendingUp size={13} style="color: var(--neu-accent-primary);" strokeWidth={2} />
+            <TrendingUp size={13} style="color: var(--brand);" strokeWidth={2} />
             <p
               class="uppercase"
-              style="font-size: 10px; letter-spacing: 0.12em; color: var(--neu-text-muted);"
+              style="font-size: 10px; letter-spacing: 0.12em; color: var(--text-secondary);"
             >
               热门搜索
             </p>
@@ -400,15 +400,15 @@
             <button
               class="flex items-center gap-3 w-full py-2.5 outline-none transition-transform duration-150 active:scale-[0.98]"
               style="border-bottom: {i < HOT_SEARCHES.length - 1
-                ? '1px solid var(--neu-border)'
+                ? '1px solid var(--border-theme)'
                 : 'none'};"
               onclick={() => searchFor(h)}
             >
               <span
-                style="font-size: 14px; color: var(--neu-accent-primary); font-weight: 700; width: 20px; text-align: center;"
+                style="font-size: 14px; color: var(--brand); font-weight: 700; width: 20px; text-align: center;"
                 >{i + 1}</span
               >
-              <span style="font-size: 14px; color: var(--neu-text);">{h}</span>
+              <span style="font-size: 14px; color: var(--text-primary);">{h}</span>
               {#if i < 3}
                 <span
                   class="ml-auto px-2 py-0.5 rounded-full"
@@ -423,10 +423,10 @@
         <!-- Tag suggestions -->
         <div>
           <div class="flex items-center gap-1.5 mb-2.5">
-            <Hash size={13} style="color: var(--neu-accent-primary);" strokeWidth={2} />
+            <Hash size={13} style="color: var(--brand);" strokeWidth={2} />
             <p
               class="uppercase"
-              style="font-size: 10px; letter-spacing: 0.12em; color: var(--neu-text-muted);"
+              style="font-size: 10px; letter-spacing: 0.12em; color: var(--text-secondary);"
             >
               热门话题
             </p>
@@ -434,8 +434,8 @@
           <div class="flex flex-wrap gap-2">
             {#each SUGGESTED_TAGS as tag (tag)}
               <button
-                class="px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
-                style="background: var(--neu-bg); color: var(--neu-accent-primary); font-size: 12px; box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+                class="surface-flat px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
+                style="color: var(--brand); font-size: 12px;"
                 onclick={() => searchTag(tag)}
               >
                 #{tag}
@@ -452,9 +452,10 @@
           {#each [{ value: 'all', label: '全部' }, { value: 'users', label: `用户${users.length ? ` (${users.length})` : ''}` }, { value: 'moments', label: `动态${moments.length ? ` (${moments.length})` : ''}` }, { value: 'groups', label: `群组${groups.length ? ` (${groups.length})` : ''}` }] as tab (tab.value)}
             <button
               class="flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.92]"
+              class:surface-flat={currentTab !== tab.value}
               style={currentTab === tab.value
-                ? 'background: var(--neu-accent-primary); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--neu-glow);'
-                : 'background: var(--neu-bg); color: var(--neu-text-muted); font-size: 12px; border: 1px solid var(--neu-border); box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);'}
+                ? 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--glow);'
+                : 'color: var(--text-secondary); font-size: 12px;'}
               onclick={() => handleTabChange(tab.value)}
             >
               {tab.label}
@@ -469,11 +470,11 @@
             <div class="flex flex-col items-center justify-center py-16 gap-3">
               <Search
                 size={36}
-                style="color: var(--neu-text-muted); opacity: 0.4;"
+                style="color: var(--text-secondary); opacity: 0.4;"
                 strokeWidth={1.25}
               />
-              <p style="font-size: 15px; color: var(--neu-text);">未找到相关内容</p>
-              <p style="font-size: 13px; color: var(--neu-text-muted);">尝试其他关键词</p>
+              <p style="font-size: 15px; color: var(--text-primary);">未找到相关内容</p>
+              <p style="font-size: 13px; color: var(--text-secondary);">尝试其他关键词</p>
             </div>
           {/if}
 
@@ -483,7 +484,7 @@
               {#if currentTab === 'all' && users.length > 0}
                 <p
                   class="uppercase mb-2.5"
-                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
+                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
                 >
                   用户
                 </p>
@@ -493,7 +494,7 @@
                   {#each Array(3) as _, i (i)}
                     <div
                       class="h-16 animate-pulse rounded-[20px]"
-                      style="background: var(--neu-border);"
+                      style="background: var(--border-theme);"
                     ></div>
                   {/each}
                 {:else}
@@ -511,7 +512,7 @@
               {#if currentTab === 'all' && moments.length > 0}
                 <p
                   class="uppercase mb-2.5"
-                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
+                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
                 >
                   动态
                 </p>
@@ -521,7 +522,7 @@
                   {#each Array(3) as _, i (i)}
                     <div
                       class="h-20 animate-pulse rounded-[20px]"
-                      style="background: var(--neu-border);"
+                      style="background: var(--border-theme);"
                     ></div>
                   {/each}
                 {:else}
@@ -539,7 +540,7 @@
               {#if currentTab === 'all' && groups.length > 0}
                 <p
                   class="uppercase mb-2.5"
-                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
+                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
                 >
                   群组
                 </p>
@@ -549,7 +550,7 @@
                   {#each Array(3) as _, i (i)}
                     <div
                       class="h-16 animate-pulse rounded-[20px]"
-                      style="background: var(--neu-border);"
+                      style="background: var(--border-theme);"
                     ></div>
                   {/each}
                 {:else}

@@ -35,16 +35,16 @@
   <!-- Sticky header -->
   <div
     class="sticky top-0 z-10 px-5 pt-3 pb-3"
-    style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+    style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     <div class="flex items-center justify-between">
       <div>
-        <h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">粉丝</h1>
-        <p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">关注你的用户</p>
+        <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">粉丝</h1>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">关注你的用户</p>
       </div>
       <button
         class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text-muted);"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
         onclick={() => loadFollowers(true)}
         disabled={pagination.loading}
       >

@@ -74,7 +74,7 @@
 
 <header
   class="sticky top-0 z-50 w-full"
-  style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border); padding-top: env(safe-area-inset-top, 0px);"
+  style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme); padding-top: env(safe-area-inset-top, 0px);"
 >
   <div class="mx-auto flex h-13 w-full items-center gap-1.5 px-3 sm:h-16 sm:gap-3 sm:px-4 md:px-6">
     {#if showMenu}
@@ -97,13 +97,12 @@
     >
       <div
         class="flex items-center justify-center rounded-[12px]"
-        style="width: 34px; height: 34px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+        style="width: 34px; height: 34px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
       >
         <img src="/logo_32.png" alt="HotSpot" class="h-5 w-5 rounded-[8px] sm:h-5 sm:w-5" />
       </div>
-      <span
-        class="hidden text-lg font-bold sm:inline-block"
-        style="color: var(--neu-accent-primary);">HotSpot</span
+      <span class="hidden text-lg font-bold sm:inline-block" style="color: var(--brand);"
+        >HotSpot</span
       >
     </a>
 
@@ -160,7 +159,7 @@
               >
                 <div
                   class="overflow-hidden rounded-full"
-                  style="width: 32px; height: 32px; border: 2px solid var(--neu-accent-primary);"
+                  style="width: 32px; height: 32px; border: 2px solid var(--brand);"
                 >
                   {#if authStore.currentAccount?.avatar_url}
                     <img
@@ -171,10 +170,9 @@
                   {:else}
                     <div
                       class="flex h-full w-full items-center justify-center"
-                      style="background: var(--neu-fallback-bg);"
+                      style="background: var(--surface-secondary);"
                     >
-                      <span
-                        style="font-size: 12px; font-weight: 600; color: var(--neu-fallback-text);"
+                      <span style="font-size: 12px; font-weight: 600; color: var(--text-tertiary);"
                         >{authStore.currentAccount?.nickname?.slice(0, 2) ?? 'U'}</span
                       >
                     </div>
@@ -186,10 +184,10 @@
           <DropdownMenu.Content class="w-56" align="end">
             <DropdownMenu.Label>
               <div class="flex flex-col space-y-1">
-                <p style="font-size: 13px; font-weight: 500; color: var(--neu-text);">
+                <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
                   {authStore.currentAccount?.nickname}
                 </p>
-                <p style="font-size: 11px; color: var(--neu-text-muted);">
+                <p style="font-size: 11px; color: var(--text-secondary);">
                   ID: {authStore.currentUserId}
                 </p>
               </div>
@@ -256,8 +254,8 @@
           <User class="h-4 w-4" />
         </RippleButton>
         <button
-          class="hidden rounded-full px-4 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)] sm:inline-flex"
-          style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 12px; font-weight: 500; box-shadow: 0 3px 10px var(--neu-glow);"
+          class="hidden rounded-full px-4 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)] sm:inline-flex"
+          style="background: var(--brand); color: var(--text-on-accent); font-size: 12px; font-weight: 500; box-shadow: 0 3px 10px var(--glow);"
           onclick={handleAuthEntry}
         >
           {t('nav.loginRegister')}

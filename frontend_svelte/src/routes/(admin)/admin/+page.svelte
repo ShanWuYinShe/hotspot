@@ -17,19 +17,22 @@
     {#each [{ icon: Users, label: '用户总数', value: '--', sub: '注册用户数量' }, { icon: UsersRound, label: '群组总数', value: '--', sub: '创建的群组数量' }, { icon: Flag, label: '待处理举报', value: '--', sub: '等待审核的举报' }, { icon: FileText, label: '审计日志', value: '--', sub: '今日操作记录' }] as stat}
       <div
         class="flex flex-col items-center justify-center rounded-[22px] py-5"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <div
           class="mb-2 flex items-center justify-center rounded-full"
-          style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+          style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
         >
-          <stat.icon size={16} strokeWidth={1.75} style="color: var(--neu-accent-primary);" />
+          <stat.icon size={16} strokeWidth={1.75} style="color: var(--brand);" />
         </div>
-        <span style="font-size: 22px; color: var(--neu-text); font-weight: 700;">{stat.value}</span>
-        <span style="font-size: 11px; color: var(--neu-text); font-weight: 500; margin-top: 2px;"
+        <span style="font-size: 22px; color: var(--text-primary); font-weight: 700;"
+          >{stat.value}</span
+        >
+        <span
+          style="font-size: 11px; color: var(--text-primary); font-weight: 500; margin-top: 2px;"
           >{stat.label}</span
         >
-        <span style="font-size: 10px; color: var(--neu-text-muted); margin-top: 2px;"
+        <span style="font-size: 10px; color: var(--text-secondary); margin-top: 2px;"
           >{stat.sub}</span
         >
       </div>
@@ -40,33 +43,33 @@
     <!-- 快捷操作 -->
     <div
       class="rounded-[22px] p-5"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
-      <div class="mb-1" style="font-size: 16px; font-weight: 600; color: var(--neu-text);">
+      <div class="mb-1" style="font-size: 16px; font-weight: 600; color: var(--text-primary);">
         快捷操作
       </div>
-      <div class="mb-4" style="font-size: 12px; color: var(--neu-text-muted);">
+      <div class="mb-4" style="font-size: 12px; color: var(--text-secondary);">
         常用管理功能入口
       </div>
-      <div style="height: 1px; background: var(--neu-border); margin-bottom: 16px;"></div>
+      <div style="height: 1px; background: var(--border-theme); margin-bottom: 16px;"></div>
       <div class="space-y-3">
         {#each [{ href: '/admin/users', icon: Users, title: '用户管理', desc: '搜索、封禁、解封用户' }, { href: '/admin/reports', icon: Flag, title: '举报审核', desc: '处理用户举报' }] as action}
           <a
             href={action.href}
             class="flex items-center gap-3 rounded-[18px] p-4 transition-all duration-200"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border-pressed);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-active);"
           >
             <div
               class="flex items-center justify-center rounded-full"
-              style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+              style="width: 36px; height: 36px; box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
             >
-              <action.icon size={16} strokeWidth={1.75} style="color: var(--neu-accent-primary);" />
+              <action.icon size={16} strokeWidth={1.75} style="color: var(--brand);" />
             </div>
             <div>
-              <p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">
+              <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
                 {action.title}
               </p>
-              <p style="font-size: 12px; color: var(--neu-text-muted);">{action.desc}</p>
+              <p style="font-size: 12px; color: var(--text-secondary);">{action.desc}</p>
             </div>
           </a>
         {/each}
@@ -76,20 +79,20 @@
     <!-- 系统状态 -->
     <div
       class="rounded-[22px] p-5"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
-      <div class="mb-1" style="font-size: 16px; font-weight: 600; color: var(--neu-text);">
+      <div class="mb-1" style="font-size: 16px; font-weight: 600; color: var(--text-primary);">
         系统状态
       </div>
-      <div class="mb-4" style="font-size: 12px; color: var(--neu-text-muted);">服务运行状态</div>
-      <div style="height: 1px; background: var(--neu-border); margin-bottom: 16px;"></div>
+      <div class="mb-4" style="font-size: 12px; color: var(--text-secondary);">服务运行状态</div>
+      <div style="height: 1px; background: var(--border-theme); margin-bottom: 16px;"></div>
       <div class="space-y-4">
         {#each ['API 服务', '数据库', '缓存服务'] as service}
           <div
             class="flex items-center justify-between rounded-[18px] px-4 py-3"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border-pressed);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-active);"
           >
-            <span style="font-size: 14px; color: var(--neu-text);">{service}</span>
+            <span style="font-size: 14px; color: var(--text-primary);">{service}</span>
             <div class="flex items-center gap-2">
               <span
                 style="width: 8px; height: 8px; border-radius: 50%; background: var(--neu-success);"

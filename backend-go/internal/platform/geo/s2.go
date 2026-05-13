@@ -64,9 +64,6 @@ func CellTokenAtLevel(p Point, level int) string {
 	return cellID.ToToken()
 }
 
-// Deprecated: Use SearchCovering + CellCenter or CellTokenAtLevel instead.
-// CoveringTokens has a known level-mismatch issue — a point stored at level N
-// may not be found when searching at a different level.
 func CoveringTokens(b Bounds, level int, maxCells int) []string {
 	rect := s2.RectFromLatLng(s2.LatLngFromDegrees(b.South, b.West))
 	rect = rect.AddPoint(s2.LatLngFromDegrees(b.North, b.East))

@@ -26,22 +26,22 @@
 
 <div
   class="rounded-[22px] p-4"
-  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
 >
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div class="min-w-0">
       <p
         class="uppercase"
-        style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
+        style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
       >
         {label}
       </p>
-      <p style="font-size: 14px; font-weight: 600; color: var(--neu-text); margin-top: 4px;">
+      <p style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-top: 4px;">
         {displayName || '未设置锚点'}
       </p>
       {#if description}
         <p
-          style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px; line-height: 1.5;"
+          style="font-size: 12px; color: var(--text-secondary); margin-top: 2px; line-height: 1.5;"
         >
           {description}
         </p>
@@ -55,10 +55,10 @@
     {:else if onAdjust}
       <button
         class="flex items-center gap-2 rounded-full px-4 py-2 outline-none"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
         onclick={onAdjust}
       >
-        <MapPin size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+        <MapPin size={15} strokeWidth={1.5} color="var(--brand)" />
         调整位置
       </button>
     {/if}

@@ -144,10 +144,6 @@ func (r *groupErrorRepo) TransferOwnership(context.Context, string, TransferOwne
 	return nil
 }
 
-func (r *groupErrorRepo) IsMember(context.Context, string, string) (bool, error) {
-	return false, nil
-}
-
 func TestCreateAndOpenGroup(t *testing.T) {
 	handler := NewHandler(NewService())
 	createReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"name":"Hot Group","location":{"point":{"latitude":1,"longitude":2},"location_name":"Somewhere"}}`))

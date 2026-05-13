@@ -77,10 +77,10 @@
 
 <div class="space-y-6">
   <div class="flex items-center justify-between">
-    <h1 style="font-size: 22px; font-weight: 600; color: var(--neu-text);">群组管理</h1>
+    <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">群组管理</h1>
     <button
       class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
       onclick={() => loadGroups()}
       disabled={pagination.loading}
     >
@@ -93,14 +93,14 @@
   <div class="flex gap-2">
     <div
       class="relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-      style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+      style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
     >
-      <Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
+      <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" />
       <input
         type="search"
         placeholder="搜索群组名称..."
         class="flex-1 bg-transparent outline-none"
-        style="font-size: 13px; color: var(--neu-text);"
+        style="font-size: 13px; color: var(--text-primary);"
         autocomplete="off"
         bind:value={name}
         onkeydown={(e) => e.key === 'Enter' && loadGroups()}
@@ -108,7 +108,7 @@
     </div>
     <button
       class="rounded-full px-4 py-2.5 outline-none"
-      style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);"
+      style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
       onclick={() => loadGroups()}>搜索</button
     >
   </div>
@@ -116,14 +116,14 @@
   <!-- Groups table -->
   <div
     class="rounded-[22px] overflow-hidden"
-    style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
   >
     <div
       class="flex items-center gap-2 px-4 py-3"
-      style="border-bottom: 1px solid var(--neu-border);"
+      style="border-bottom: 1px solid var(--border-theme);"
     >
-      <UsersRound size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-      <span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">群组列表</span>
+      <UsersRound size={16} strokeWidth={1.5} color="var(--brand)" />
+      <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);">群组列表</span>
     </div>
     <div class="p-4">
       {#if pagination.loading && pagination.items.length === 0}
@@ -132,23 +132,23 @@
             <div class="flex items-center gap-4">
               <div
                 class="rounded-full"
-                style="width: 40px; height: 40px; background: var(--neu-border);"
+                style="width: 40px; height: 40px; background: var(--border-theme);"
               ></div>
               <div class="flex-1 space-y-2">
                 <div
                   class="rounded"
-                  style="height: 12px; width: 120px; background: var(--neu-border);"
+                  style="height: 12px; width: 120px; background: var(--border-theme);"
                 ></div>
                 <div
                   class="rounded"
-                  style="height: 10px; width: 80px; background: var(--neu-border);"
+                  style="height: 10px; width: 80px; background: var(--border-theme);"
                 ></div>
               </div>
             </div>
           {/each}
         </div>
       {:else if pagination.items.length === 0}
-        <p class="py-8 text-center" style="font-size: 13px; color: var(--neu-text-muted);">
+        <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
           暂无群组数据
         </p>
       {:else}
@@ -156,11 +156,11 @@
           {#each pagination.items as group (group.group.group_id)}
             <div
               class="flex items-center gap-3 rounded-[18px] p-3"
-              style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
             >
               <div
                 class="flex-shrink-0 overflow-hidden rounded-full"
-                style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);"
+                style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme);"
               >
                 {#if group.group.avatar_url}
                   <img
@@ -171,10 +171,9 @@
                 {:else}
                   <div
                     class="flex h-full w-full items-center justify-center"
-                    style="background: var(--neu-fallback-bg);"
+                    style="background: var(--surface-secondary);"
                   >
-                    <span
-                      style="font-size: 14px; font-weight: 600; color: var(--neu-fallback-text);"
+                    <span style="font-size: 14px; font-weight: 600; color: var(--text-tertiary);"
                       >{group.group.name.slice(0, 2)}</span
                     >
                   </div>
@@ -182,22 +181,22 @@
               </div>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-1">
-                  <span style="font-size: 13px; font-weight: 500; color: var(--neu-text);"
+                  <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
                     >{group.group.name}</span
                   >
                   {#if group.has_password}
-                    <Lock size={12} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                    <Lock size={12} strokeWidth={1.5} color="var(--text-secondary)" />
                   {/if}
                 </div>
                 <div class="flex items-center gap-2 mt-0.5">
                   <div class="flex items-center gap-0.5">
-                    <Users size={11} strokeWidth={1.5} color="var(--neu-text-muted)" />
-                    <span style="font-size: 11px; color: var(--neu-text-muted);"
+                    <Users size={11} strokeWidth={1.5} color="var(--text-secondary)" />
+                    <span style="font-size: 11px; color: var(--text-secondary);"
                       >{group.group.members_count}</span
                     >
                   </div>
                   {#if group.created_at}
-                    <span style="font-size: 11px; color: var(--neu-text-muted);"
+                    <span style="font-size: 11px; color: var(--text-secondary);"
                       >创建: {formatDate(group.created_at)}</span
                     >
                   {/if}
@@ -205,7 +204,7 @@
               </div>
               <span
                 class="rounded-full px-2 py-0.5"
-                style="font-size: 10px; background: var(--neu-accent-primary); color: var(--neu-active-text);"
+                style="font-size: 10px; background: var(--brand); color: var(--text-on-accent);"
                 >正常</span
               >
               <DropdownMenu.Root>
@@ -213,11 +212,11 @@
                   {#snippet child({ props })}
                     <button
                       class="flex items-center justify-center rounded-full outline-none"
-                      style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                      style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                       aria-label="更多操作"
                       {...props}
                     >
-                      <MoreVertical size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                      <MoreVertical size={14} strokeWidth={1.5} color="var(--text-secondary)" />
                     </button>
                   {/snippet}
                 </DropdownMenu.Trigger>
@@ -226,7 +225,7 @@
                     {#snippet child({ props })}
                       <a
                         href="/groups/{group.group.group_id}"
-                        style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--neu-text);"
+                        style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary);"
                         {...props}
                       >
                         <Eye size={14} strokeWidth={1.5} />
@@ -255,7 +254,7 @@
         {#if pagination.hasMore}
           <button
             class="mt-4 w-full rounded-full py-2.5 outline-none"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
             onclick={() => loadGroups(false)}>加载更多</button
           >
         {/if}

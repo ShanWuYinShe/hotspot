@@ -74,10 +74,10 @@
 
 <div class="space-y-6">
   <div class="flex items-center justify-between">
-    <h1 style="font-size: 22px; font-weight: 600; color: var(--neu-text);">举报审核</h1>
+    <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">举报审核</h1>
     <button
       class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
       onclick={() => loadReports()}
       disabled={pagination.loading}
     >
@@ -92,8 +92,8 @@
       <button
         class="rounded-full px-4 py-1.5 outline-none"
         style="font-size: 12px; font-weight: 500; {statusFilter === f.value
-          ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);'
-          : 'background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);'}"
+          ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow);'
+          : 'background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);'}"
         onclick={() => (statusFilter = f.value as ReportStatus | 'all')}>{f.label}</button
       >
     {/each}
@@ -102,14 +102,14 @@
   <!-- Reports list -->
   <div
     class="rounded-[22px] overflow-hidden"
-    style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
   >
     <div
       class="flex items-center gap-2 px-4 py-3"
-      style="border-bottom: 1px solid var(--neu-border);"
+      style="border-bottom: 1px solid var(--border-theme);"
     >
-      <Flag size={16} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-      <span style="font-size: 14px; font-weight: 500; color: var(--neu-text);">举报列表</span>
+      <Flag size={16} strokeWidth={1.5} color="var(--brand)" />
+      <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);">举报列表</span>
     </div>
     <div class="p-4">
       {#if pagination.loading && pagination.items.length === 0}
@@ -117,21 +117,21 @@
           {#each Array(5) as _, i (i)}
             <div
               class="rounded-[18px] p-3"
-              style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
             >
               <div class="flex items-center gap-3">
                 <div
                   class="rounded-full"
-                  style="width: 36px; height: 36px; background: var(--neu-border);"
+                  style="width: 36px; height: 36px; background: var(--border-theme);"
                 ></div>
                 <div class="flex-1 space-y-2">
                   <div
                     class="rounded"
-                    style="height: 12px; width: 120px; background: var(--neu-border);"
+                    style="height: 12px; width: 120px; background: var(--border-theme);"
                   ></div>
                   <div
                     class="rounded"
-                    style="height: 10px; width: 160px; background: var(--neu-border);"
+                    style="height: 10px; width: 160px; background: var(--border-theme);"
                   ></div>
                 </div>
               </div>
@@ -139,7 +139,7 @@
           {/each}
         </div>
       {:else if pagination.items.length === 0}
-        <p class="py-8 text-center" style="font-size: 13px; color: var(--neu-text-muted);">
+        <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
           {statusFilter === 'pending' ? '暂无待处理举报' : '暂无举报记录'}
         </p>
       {:else}
@@ -147,41 +147,41 @@
           {#each pagination.items as report (report.report_id)}
             <div
               class="rounded-[18px] p-3"
-              style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-start gap-3">
                   <div
                     class="flex flex-shrink-0 items-center justify-center rounded-full"
-                    style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+                    style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
                   >
-                    <span style="font-size: 12px; color: var(--neu-text-muted);">?</span>
+                    <span style="font-size: 12px; color: var(--text-secondary);">?</span>
                   </div>
                   <div>
                     <div class="flex items-center gap-1.5">
-                      <span style="font-size: 13px; font-weight: 500; color: var(--neu-text);"
+                      <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
                         >用户举报</span
                       >
-                      <span style="font-size: 12px; color: var(--neu-text-muted);">举报了</span>
+                      <span style="font-size: 12px; color: var(--text-secondary);">举报了</span>
                       <span
                         class="rounded-full px-1.5 py-0.5"
-                        style="font-size: 10px; background: var(--neu-bg); color: var(--neu-text); border: 1px solid var(--neu-border);"
+                        style="font-size: 10px; background: var(--surface-bg); color: var(--text-primary); border: 1px solid var(--border-theme);"
                         >{REPORT_TARGET_TYPE_LABEL[report.target_type] ?? report.target_type}</span
                       >
                     </div>
                     <div class="flex items-center gap-1.5 mt-1">
                       <span
                         class="rounded-full px-1.5 py-0.5"
-                        style="font-size: 10px; background: var(--neu-bg); color: var(--neu-text-muted); border: 1px solid var(--neu-border);"
+                        style="font-size: 10px; background: var(--surface-bg); color: var(--text-secondary); border: 1px solid var(--border-theme);"
                         >{REPORT_REASON_LABEL[report.reason] ?? report.reason}</span
                       >
                       {#if report.description}
-                        <span style="font-size: 12px; color: var(--neu-text-muted);"
+                        <span style="font-size: 12px; color: var(--text-secondary);"
                           >{report.description}</span
                         >
                       {/if}
                     </div>
-                    <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 4px;">
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
                       {formatDateTime(report.created_at)}
                     </p>
                   </div>
@@ -190,10 +190,10 @@
                   <span
                     class="rounded-full px-2 py-0.5"
                     style="font-size: 10px; font-weight: 500; {report.status === 'pending'
-                      ? 'background: var(--neu-warning); color: var(--neu-active-text);'
+                      ? 'background: var(--neu-warning); color: var(--text-on-accent);'
                       : report.status === 'resolved'
-                        ? 'background: var(--neu-success); color: var(--neu-active-text);'
-                        : 'background: var(--neu-border); color: var(--neu-text-muted);'}"
+                        ? 'background: var(--neu-success); color: var(--text-on-accent);'
+                        : 'background: var(--border-theme); color: var(--text-secondary);'}"
                     >{STATUS_TEXT[report.status] ?? report.status}</span
                   >
                   {#if report.status === 'pending'}
@@ -202,14 +202,14 @@
                         {#snippet child({ props })}
                           <button
                             class="flex items-center justify-center rounded-full outline-none"
-                            style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                            style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                             aria-label="更多操作"
                             {...props}
                           >
                             <MoreVertical
                               size={14}
                               strokeWidth={1.5}
-                              color="var(--neu-text-muted)"
+                              color="var(--text-secondary)"
                             />
                           </button>
                         {/snippet}
@@ -250,7 +250,7 @@
         {#if pagination.hasMore}
           <button
             class="mt-4 w-full rounded-full py-2.5 outline-none"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
             onclick={() => loadReports(false)}>加载更多</button
           >
         {/if}

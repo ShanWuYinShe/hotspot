@@ -91,7 +91,7 @@
 <Dialog bind:open onOpenChange={(newOpen) => !newOpen && handleClose()}>
   <DialogContent
     class="max-w-lg rounded-[22px]"
-    style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: var(--neu-shadow-lg);"
+    style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-lg);"
   >
     {#if !shareCode}
       <!-- 创建表单 -->
@@ -99,13 +99,13 @@
         <DialogTitle class="flex items-center gap-3">
           <div
             class="flex items-center justify-center rounded-full"
-            style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+            style="width: 40px; height: 40px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
           >
-            <Share2 style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
+            <Share2 style="width: 20px; height: 20px; color: var(--brand);" />
           </div>
-          <div style="color: var(--neu-text);">分享此位置</div>
+          <div style="color: var(--text-primary);">分享此位置</div>
         </DialogTitle>
-        <DialogDescription style="color: var(--neu-text-muted);"
+        <DialogDescription style="color: var(--text-secondary);"
           >生成分享链接，让朋友快速定位到这个区域</DialogDescription
         >
       </DialogHeader>
@@ -114,13 +114,16 @@
         <!-- 位置信息展示 -->
         <div
           class="rounded-[22px] p-4 space-y-2"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
-          <div class="flex items-center gap-2" style="font-weight: 500; color: var(--neu-text);">
-            <MapPin style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
+          <div
+            class="flex items-center gap-2"
+            style="font-weight: 500; color: var(--text-primary);"
+          >
+            <MapPin style="width: 20px; height: 20px; color: var(--brand);" />
             {locationName}
           </div>
-          <div style="font-size: 12px; color: var(--neu-text-muted);">
+          <div style="font-size: 12px; color: var(--text-secondary);">
             接收者将看到以此位置为中心的内容推荐。
           </div>
         </div>
@@ -128,16 +131,13 @@
         <!-- 说明 -->
         <div
           class="rounded-[22px] p-4 space-y-2"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-overlay-subtle); font-size: 13px;"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--neu-overlay-subtle); font-size: 13px;"
         >
-          <p
-            class="flex items-center gap-2"
-            style="font-weight: 500; color: var(--neu-accent-primary);"
-          >
+          <p class="flex items-center gap-2" style="font-weight: 500; color: var(--brand);">
             <UsersRound style="width: 16px; height: 16px;" />
             接收者可以
           </p>
-          <ul class="space-y-1.5" style="color: var(--neu-text-muted);">
+          <ul class="space-y-1.5" style="color: var(--text-secondary);">
             <li>• 一键设置浏览锚点到这个位置</li>
             <li>• 查看附近的人、群组和动态</li>
             <li>• 开始探索这个区域的社交圈</li>
@@ -147,7 +147,7 @@
         <!-- 操作按钮 -->
         <button
           class="rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
-          style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);"
+          style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
           onclick={handleSubmit}
           disabled={isSubmitting}
         >
@@ -163,16 +163,16 @@
     {:else}
       <!-- 分享成功结果 -->
       <DialogHeader>
-        <DialogTitle class="flex items-center gap-3" style="color: var(--neu-success);">
+        <DialogTitle class="flex items-center gap-3" style="color: var(--success);">
           <div
             class="flex items-center justify-center rounded-full"
-            style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+            style="width: 40px; height: 40px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
           >
-            <Check style="width: 20px; height: 20px; color: var(--neu-success);" />
+            <Check style="width: 20px; height: 20px; color: var(--success);" />
           </div>
           <div>分享链接已生成！</div>
         </DialogTitle>
-        <DialogDescription style="color: var(--neu-text-muted);"
+        <DialogDescription style="color: var(--text-secondary);"
           >复制链接发送给朋友</DialogDescription
         >
       </DialogHeader>
@@ -181,23 +181,23 @@
         <!-- 分享链接 -->
         <div
           class="rounded-[22px] p-4 space-y-2"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
-          <label style="font-size: 12px; color: var(--neu-text-muted);">分享链接</label>
+          <label style="font-size: 12px; color: var(--text-secondary);">分享链接</label>
           <div class="flex gap-2">
             <input
               value={shareUrl ?? ''}
               readonly
               class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] flex-1"
-              style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 12px; font-family: monospace;"
+              style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 12px; font-family: monospace;"
             />
             <button
               class="rounded-[14px] px-3 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] flex items-center justify-center"
-              style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+              style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
               onclick={copyToClipboard}
             >
               {#if isCopied}
-                <Check style="width: 16px; height: 16px; color: var(--neu-success);" />
+                <Check style="width: 16px; height: 16px; color: var(--success);" />
               {:else}
                 <Copy style="width: 16px; height: 16px;" />
               {/if}
@@ -207,7 +207,7 @@
 
         <button
           class="rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
-          style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 13px; box-shadow: 0 3px 10px var(--neu-glow);"
+          style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
           onclick={handleClose}
         >
           完成

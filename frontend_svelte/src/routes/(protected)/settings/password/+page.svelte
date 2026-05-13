@@ -93,9 +93,9 @@
 
   <div
     class="rounded-[22px] p-5"
-    style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
   >
-    <p style="font-size: 14px; font-weight: 600; color: var(--neu-text); margin-bottom: 16px;">
+    <p style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px;">
       账户安全
     </p>
 
@@ -107,7 +107,7 @@
       class="space-y-4"
     >
       <div class="space-y-2">
-        <label for="old-password" style="font-size: 13px; color: var(--neu-text-muted);"
+        <label for="old-password" style="font-size: 13px; color: var(--text-secondary);"
           >当前密码</label
         >
         <input
@@ -115,17 +115,17 @@
           type="password"
           bind:value={oldPassword}
           onblur={() => markTouched('oldPassword')}
-          class="neu-input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+          class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
           style="border: 1px solid {oldPasswordError
             ? 'var(--neu-error)'
-            : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
+            : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
         />
         {#if oldPasswordError}
           <p style="font-size: 12px; color: var(--neu-error);">{oldPasswordError}</p>
         {/if}
       </div>
       <div class="space-y-2">
-        <label for="new-password" style="font-size: 13px; color: var(--neu-text-muted);"
+        <label for="new-password" style="font-size: 13px; color: var(--text-secondary);"
           >新密码</label
         >
         <input
@@ -133,17 +133,17 @@
           type="password"
           bind:value={newPassword}
           onblur={() => markTouched('newPassword')}
-          class="neu-input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+          class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
           style="border: 1px solid {newPasswordError
             ? 'var(--neu-error)'
-            : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
+            : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
         />
         {#if newPasswordError}
           <p style="font-size: 12px; color: var(--neu-error);">{newPasswordError}</p>
         {/if}
       </div>
       <div class="space-y-2">
-        <label for="confirm-password" style="font-size: 13px; color: var(--neu-text-muted);"
+        <label for="confirm-password" style="font-size: 13px; color: var(--text-secondary);"
           >确认新密码</label
         >
         <input
@@ -151,10 +151,10 @@
           type="password"
           bind:value={confirmPassword}
           onblur={() => markTouched('confirmPassword')}
-          class="neu-input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+          class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
           style="border: 1px solid {confirmPasswordError
             ? 'var(--neu-error)'
-            : 'var(--neu-border)'}; background: var(--neu-bg); color: var(--neu-text);"
+            : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
         />
         {#if confirmPasswordError}
           <p style="font-size: 12px; color: var(--neu-error);">{confirmPasswordError}</p>
@@ -163,7 +163,7 @@
       <button
         type="submit"
         class="flex h-11 w-full items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-        style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
         disabled={isSaving}
       >
         {#if isSaving}

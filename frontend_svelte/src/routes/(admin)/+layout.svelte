@@ -63,10 +63,13 @@
       <!-- Admin sidebar -->
       <aside
         class="hidden w-64 shrink-0 md:block"
-        style="background: var(--neu-bg); border-right: 1px solid var(--neu-border);"
+        style="background: var(--surface-bg); border-right: 1px solid var(--border-theme);"
       >
         <nav class="space-y-1 p-4">
-          <h2 class="mb-4 px-3" style="font-size: 18px; font-weight: 600; color: var(--neu-text);">
+          <h2
+            class="mb-4 px-3"
+            style="font-size: 18px; font-weight: 600; color: var(--text-primary);"
+          >
             {t('nav.adminPanel')}
           </h2>
           {#each adminNavItems as item (item.href)}
@@ -76,9 +79,7 @@
                 'flex items-center gap-3 rounded-[18px] px-3 py-2.5 text-sm font-medium transition-all duration-200',
                 isActive(item.href) ? 'neu-pressed' : 'hover:opacity-70'
               )}
-              style={isActive(item.href)
-                ? 'color: var(--neu-accent-primary);'
-                : 'color: var(--neu-text-muted);'}
+              style={isActive(item.href) ? 'color: var(--brand);' : 'color: var(--text-secondary);'}
             >
               <item.icon size={18} strokeWidth={1.75} />
               {item.label}
@@ -99,7 +100,7 @@
         />
         <aside
           class="app-mobile-sidebar fixed left-0 z-50 w-64 md:hidden"
-          style="background: var(--neu-bg); border-right: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); border-right: 1px solid var(--border-theme);"
         >
           <nav
             class="space-y-1 p-4"
@@ -107,7 +108,7 @@
           >
             <h2
               class="mb-4 px-3"
-              style="font-size: 18px; font-weight: 600; color: var(--neu-text);"
+              style="font-size: 18px; font-weight: 600; color: var(--text-primary);"
             >
               {t('nav.adminPanel')}
             </h2>
@@ -119,8 +120,8 @@
                   isActive(item.href) ? 'neu-pressed' : 'hover:opacity-70'
                 )}
                 style={isActive(item.href)
-                  ? 'color: var(--neu-accent-primary);'
-                  : 'color: var(--neu-text-muted);'}
+                  ? 'color: var(--brand);'
+                  : 'color: var(--text-secondary);'}
                 onclick={closeSidebar}
               >
                 <item.icon size={18} strokeWidth={1.75} />
@@ -149,9 +150,9 @@
       <div class="flex flex-col items-center gap-3">
         <div
           class="h-8 w-8 animate-spin rounded-full"
-          style="border: 4px solid var(--neu-border); border-top-color: var(--neu-accent-primary);"
+          style="border: 4px solid var(--border-theme); border-top-color: var(--brand);"
         ></div>
-        <p style="font-size: 13px; color: var(--neu-text-muted);">
+        <p style="font-size: 13px; color: var(--text-secondary);">
           {t('admin.checkingPermissions')}
         </p>
       </div>
@@ -171,10 +172,10 @@
             >
               <Shield size={24} strokeWidth={1.5} style="color: var(--neu-error);" />
             </div>
-            <h2 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">
+            <h2 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">
               {t('admin.accessDenied')}
             </h2>
-            <p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 8px;">
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
               {t('admin.accessDeniedDescription')}
             </p>
             <NeuButton class="mt-6" onclick={() => goto('/')}>
@@ -194,14 +195,14 @@
           <div class="flex flex-col items-center justify-center py-20 text-center">
             <div
               class="mb-4 flex items-center justify-center rounded-full"
-              style="width: 56px; height: 56px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+              style="width: 56px; height: 56px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
             >
-              <Shield size={24} strokeWidth={1.5} style="color: var(--neu-text-muted);" />
+              <Shield size={24} strokeWidth={1.5} style="color: var(--text-secondary);" />
             </div>
-            <h2 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">
+            <h2 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">
               {t('admin.permissionCheckFailed')}
             </h2>
-            <p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 8px;">
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
               {t('admin.permissionCheckFailedDescription')}
             </p>
             <div class="mt-6 flex gap-3">
@@ -227,9 +228,9 @@
       <div class="flex flex-col items-center gap-3">
         <div
           class="h-8 w-8 animate-spin rounded-full"
-          style="border: 4px solid var(--neu-border); border-top-color: var(--neu-accent-primary);"
+          style="border: 4px solid var(--border-theme); border-top-color: var(--brand);"
         ></div>
-        <p style="font-size: 13px; color: var(--neu-text-muted);">{t('auth.restoringSession')}</p>
+        <p style="font-size: 13px; color: var(--text-secondary);">{t('auth.restoringSession')}</p>
       </div>
     </div>
   </div>
@@ -243,14 +244,14 @@
           <div class="flex flex-col items-center justify-center py-20 text-center">
             <div
               class="mb-4 flex items-center justify-center rounded-full"
-              style="width: 56px; height: 56px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+              style="width: 56px; height: 56px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
             >
-              <Shield size={24} strokeWidth={1.5} style="color: var(--neu-text-muted);" />
+              <Shield size={24} strokeWidth={1.5} style="color: var(--text-secondary);" />
             </div>
-            <h2 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">
+            <h2 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">
               {t('auth.loginRequired')}
             </h2>
-            <p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 8px;">
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
               {t('admin.loginRequiredDescription')}
             </p>
             <NeuButton class="mt-6" onclick={handleLoginClick}>

@@ -68,25 +68,25 @@
     <!-- Sticky header -->
     <div
       class="sticky top-0 z-10 px-5 pt-3 pb-0"
-      style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+      style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
       <!-- Top bar: title + content count -->
       <div class="mb-2 flex items-center justify-between">
-        <h1 style="font-size: 22px; color: var(--neu-text);">{t('discover.title')}</h1>
-        <span style="font-size: 12px; color: var(--neu-text-muted);">
+        <h1 style="font-size: 22px; color: var(--text-primary);">{t('discover.title')}</h1>
+        <span style="font-size: 12px; color: var(--text-secondary);">
           {pagination.items.length} 条内容
         </span>
       </div>
 
       <!-- Search bar -->
-      <div class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 neu-input-surface">
-        <Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" class="flex-shrink-0" />
+      <div class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 input-surface">
+        <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
         <input
           type="text"
           bind:value={searchVal}
           placeholder="地点、人物、关键词…"
           class="flex-1 bg-transparent outline-none"
-          style="font-size: 13px; color: var(--neu-text);"
+          style="font-size: 13px; color: var(--text-primary);"
         />
         {#if searchVal.length > 0}
           <button
@@ -95,7 +95,7 @@
               searchVal = '';
             }}
           >
-            <X size={13} color="var(--neu-text-muted)" strokeWidth={2} />
+            <X size={13} color="var(--text-secondary)" strokeWidth={2} />
           </button>
         {/if}
       </div>
@@ -103,14 +103,14 @@
       <!-- Tab bar -->
       <div
         class="relative flex overflow-x-auto no-scrollbar"
-        style="border-bottom: 1px solid var(--neu-border);"
+        style="border-bottom: 1px solid var(--border-theme);"
       >
         {#each TABS as tab}
           <button
             class="tab-btn relative flex-shrink-0 pb-3 pt-1 outline-none transition-transform duration-150 active:scale-[0.94]"
             style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab
-              ? 'var(--neu-accent-primary)'
-              : 'var(--neu-text-muted)'}; font-weight: {activeTab === tab
+              ? 'var(--brand)'
+              : 'var(--text-secondary)'}; font-weight: {activeTab === tab
               ? 500
               : 400}; font-size: 13px; transition: color 0.2s;"
             onclick={() => {
@@ -121,7 +121,7 @@
             {tab}
             {#if activeTab === tab}
               <div
-                style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--neu-accent-primary); transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);"
+                style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--brand); transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);"
               ></div>
             {/if}
           </button>
@@ -139,9 +139,10 @@
         {#each TAGS as tag}
           <button
             class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all duration-150 active:scale-[0.93]"
+            class:surface-flat={activeTag !== tag}
             style={activeTag === tag
-              ? 'background: var(--neu-accent-primary); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--neu-glow); border: 1px solid transparent;'
-              : 'background: var(--neu-bg); color: var(--neu-text-muted); font-size: 12px; box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+              ? 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
+              : 'color: var(--text-secondary); font-size: 12px;'}
             onclick={() => {
               activeTag = activeTag === tag ? null : tag;
             }}
@@ -155,22 +156,19 @@
       <div class="flex flex-col gap-4">
         {#if pagination.loading}
           {#each Array(4) as _}
-            <div
-              class="rounded-[22px] overflow-hidden"
-              style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
-            >
+            <div class="surface-flat rounded-[22px] overflow-hidden">
               <div
                 class="overflow-hidden rounded-t-[22px]"
-                style="aspect-ratio: 16/9; background: var(--neu-border);"
+                style="aspect-ratio: 16/9; background: var(--border-theme);"
               ></div>
               <div class="p-4">
                 <div
                   class="mb-2 rounded"
-                  style="width: 80%; height: 12px; background: var(--neu-border);"
+                  style="width: 80%; height: 12px; background: var(--border-theme);"
                 ></div>
                 <div
                   class="rounded"
-                  style="width: 60%; height: 10px; background: var(--neu-border);"
+                  style="width: 60%; height: 10px; background: var(--border-theme);"
                 ></div>
               </div>
             </div>
@@ -218,14 +216,14 @@
     <!-- Sticky header -->
     <div
       class="flex-shrink-0 px-6 pt-4 pb-0"
-      style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+      style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
       <!-- Top bar -->
       <div class="mb-2 flex items-center justify-between">
-        <h1 style="font-size: 24px; color: var(--neu-text);">{t('discover.title')}</h1>
+        <h1 style="font-size: 24px; color: var(--text-primary);">{t('discover.title')}</h1>
         <span
           class="flex items-center gap-1 rounded-full px-3 py-1.5"
-          style="background: var(--neu-accent-primary); font-size: 11px; color: white;"
+          style="background: var(--brand); font-size: 11px; color: white;"
         >
           <Sparkles size={11} color="white" strokeWidth={2} />
           精选
@@ -234,16 +232,16 @@
 
       <!-- Search bar -->
       <div
-        class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 neu-input-surface"
-        style="border: 1px solid var(--neu-border);"
+        class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 input-surface"
+        style="border: 1px solid var(--border-theme);"
       >
-        <Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" class="flex-shrink-0" />
+        <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
         <input
           type="text"
           bind:value={searchVal}
           placeholder="地点、人物、关键词…"
           class="flex-1 bg-transparent outline-none"
-          style="font-size: 13px; color: var(--neu-text);"
+          style="font-size: 13px; color: var(--text-primary);"
         />
         {#if searchVal.length > 0}
           <button
@@ -252,7 +250,7 @@
               searchVal = '';
             }}
           >
-            <X size={13} color="var(--neu-text-muted)" strokeWidth={2} />
+            <X size={13} color="var(--text-secondary)" strokeWidth={2} />
           </button>
         {/if}
       </div>
@@ -260,14 +258,14 @@
       <!-- Tab bar -->
       <div
         class="relative flex overflow-x-auto no-scrollbar"
-        style="border-bottom: 1px solid var(--neu-border);"
+        style="border-bottom: 1px solid var(--border-theme);"
       >
         {#each TABS as tab}
           <button
             class="relative flex-shrink-0 pb-3 pt-1 outline-none transition-transform duration-150 active:scale-[0.94]"
             style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab
-              ? 'var(--neu-accent-primary)'
-              : 'var(--neu-text-muted)'}; font-weight: {activeTab === tab
+              ? 'var(--brand)'
+              : 'var(--text-secondary)'}; font-weight: {activeTab === tab
               ? 500
               : 400}; font-size: 13px; transition: color 0.2s;"
             onclick={() => {
@@ -277,7 +275,7 @@
             {tab}
             {#if activeTab === tab}
               <div
-                style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--neu-accent-primary);"
+                style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--brand);"
               ></div>
             {/if}
           </button>
@@ -295,9 +293,10 @@
           {#each TAGS as tag}
             <button
               class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all duration-150 active:scale-[0.93]"
+              class:surface-flat={activeTag !== tag}
               style={activeTag === tag
-                ? 'background: var(--neu-accent-primary); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--neu-glow); border: 1px solid transparent;'
-                : 'background: var(--neu-bg); color: var(--neu-text-muted); font-size: 12px; box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+                ? 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
+                : 'color: var(--text-secondary); font-size: 12px;'}
               onclick={() => {
                 activeTag = activeTag === tag ? null : tag;
               }}
@@ -310,22 +309,19 @@
         {#if pagination.loading}
           <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
             {#each Array(4) as _}
-              <div
-                class="rounded-[22px] overflow-hidden"
-                style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
-              >
+              <div class="surface-flat rounded-[22px] overflow-hidden">
                 <div
                   class="overflow-hidden rounded-t-[22px]"
-                  style="aspect-ratio: 16/9; background: var(--neu-border);"
+                  style="aspect-ratio: 16/9; background: var(--border-theme);"
                 ></div>
                 <div class="p-3">
                   <div
                     class="mb-2 rounded"
-                    style="width: 80%; height: 11px; background: var(--neu-border);"
+                    style="width: 80%; height: 11px; background: var(--border-theme);"
                   ></div>
                   <div
                     class="rounded"
-                    style="width: 60%; height: 9px; background: var(--neu-border);"
+                    style="width: 60%; height: 9px; background: var(--border-theme);"
                   ></div>
                 </div>
               </div>
@@ -376,30 +372,30 @@
     <!-- Sticky header -->
     <div
       class="flex-shrink-0 px-6 pt-5 pb-0"
-      style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+      style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
       <!-- Top bar -->
       <div class="mb-2 flex items-center justify-between">
-        <h1 style="font-size: 20px; color: var(--neu-text);">
+        <h1 style="font-size: 20px; color: var(--text-primary);">
           {t('discover.title')}
         </h1>
-        <span style="font-size: 12px; color: var(--neu-text-muted);">
+        <span style="font-size: 12px; color: var(--text-secondary);">
           {pagination.items.length} 条内容
         </span>
       </div>
 
       <!-- Search bar -->
       <div
-        class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 neu-input-surface"
-        style="border: 1px solid var(--neu-border);"
+        class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 input-surface"
+        style="border: 1px solid var(--border-theme);"
       >
-        <Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" class="flex-shrink-0" />
+        <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
         <input
           type="text"
           bind:value={searchVal}
           placeholder="地点、人物、关键词…"
           class="flex-1 bg-transparent outline-none"
-          style="font-size: 13px; color: var(--neu-text);"
+          style="font-size: 13px; color: var(--text-primary);"
         />
         {#if searchVal.length > 0}
           <button
@@ -408,7 +404,7 @@
               searchVal = '';
             }}
           >
-            <X size={13} color="var(--neu-text-muted)" strokeWidth={2} />
+            <X size={13} color="var(--text-secondary)" strokeWidth={2} />
           </button>
         {/if}
       </div>
@@ -416,14 +412,14 @@
       <!-- Tab bar -->
       <div
         class="relative flex overflow-x-auto no-scrollbar"
-        style="border-bottom: 1px solid var(--neu-border);"
+        style="border-bottom: 1px solid var(--border-theme);"
       >
         {#each TABS as tab}
           <button
             class="relative flex-shrink-0 pb-3 pt-1 outline-none transition-transform duration-150 active:scale-[0.94]"
             style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab
-              ? 'var(--neu-accent-primary)'
-              : 'var(--neu-text-muted)'}; font-weight: {activeTab === tab
+              ? 'var(--brand)'
+              : 'var(--text-secondary)'}; font-weight: {activeTab === tab
               ? 500
               : 400}; font-size: 13px; transition: color 0.2s;"
             onclick={() => {
@@ -433,7 +429,7 @@
             {tab}
             {#if activeTab === tab}
               <div
-                style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--neu-accent-primary);"
+                style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--brand);"
               ></div>
             {/if}
           </button>
@@ -451,9 +447,10 @@
             {#each TAGS as tag}
               <button
                 class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all duration-150 active:scale-[0.93]"
+                class:surface-flat={activeTag !== tag}
                 style={activeTag === tag
-                  ? 'background: var(--neu-accent-primary); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--neu-glow); border: 1px solid transparent;'
-                  : 'background: var(--neu-bg); color: var(--neu-text-muted); font-size: 12px; box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+                  ? 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
+                  : 'color: var(--text-secondary); font-size: 12px;'}
                 onclick={() => {
                   activeTag = activeTag === tag ? null : tag;
                 }}
@@ -468,22 +465,19 @@
               style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 800px;"
             >
               {#each Array(6) as _}
-                <div
-                  class="rounded-[22px] overflow-hidden"
-                  style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
-                >
+                <div class="surface-flat rounded-[22px] overflow-hidden">
                   <div
                     class="overflow-hidden rounded-t-[22px]"
-                    style="aspect-ratio: 16/9; background: var(--neu-border);"
+                    style="aspect-ratio: 16/9; background: var(--border-theme);"
                   ></div>
                   <div class="p-3">
                     <div
                       class="mb-2 rounded"
-                      style="width: 80%; height: 11px; background: var(--neu-border);"
+                      style="width: 80%; height: 11px; background: var(--border-theme);"
                     ></div>
                     <div
                       class="rounded"
-                      style="width: 60%; height: 9px; background: var(--neu-border);"
+                      style="width: 60%; height: 9px; background: var(--border-theme);"
                     ></div>
                   </div>
                 </div>
@@ -533,15 +527,15 @@
       <!-- Right sidebar (220px) -->
       <div
         class="flex-shrink-0 overflow-y-auto no-scrollbar"
-        style="width: 220px; border-left: 1px solid var(--neu-border); padding: 20px 16px;"
+        style="width: 220px; border-left: 1px solid var(--border-theme); padding: 20px 16px;"
       >
         <!-- Trending topics -->
         <div class="mb-6">
           <div class="mb-3 flex items-center gap-1.5">
-            <TrendingUp size={13} color="var(--neu-accent-primary)" strokeWidth={2} />
+            <TrendingUp size={13} color="var(--brand)" strokeWidth={2} />
             <p
               class="uppercase"
-              style="font-size: 10px; letter-spacing: 0.12em; color: var(--neu-text-muted);"
+              style="font-size: 10px; letter-spacing: 0.12em; color: var(--text-secondary);"
             >
               热门话题
             </p>
@@ -551,8 +545,8 @@
               class="mb-1 flex w-full items-center justify-between rounded-[12px] px-3 py-2.5 outline-none"
               style="transition: background 0.15s;"
             >
-              <span style="font-size: 13px; color: var(--neu-text);">{tag}</span>
-              <span style="font-size: 11px; color: var(--neu-text-muted);"
+              <span style="font-size: 13px; color: var(--text-primary);">{tag}</span>
+              <span style="font-size: 11px; color: var(--text-secondary);"
                 >{[89, 64, 52, 48, 41][i]}帖</span
               >
             </button>
@@ -560,13 +554,13 @@
         </div>
 
         <!-- Divider -->
-        <div style="height: 1px; background: var(--neu-border); margin-bottom: 20px;"></div>
+        <div style="height: 1px; background: var(--border-theme); margin-bottom: 20px;"></div>
 
         <!-- Active users -->
         <div>
           <p
             class="mb-3 uppercase"
-            style="font-size: 10px; letter-spacing: 0.12em; color: var(--neu-text-muted);"
+            style="font-size: 10px; letter-spacing: 0.12em; color: var(--text-secondary);"
           >
             活跃用户
           </p>
@@ -575,7 +569,7 @@
               <div class="mb-3.5 flex items-center gap-2.5">
                 <div
                   class="flex-shrink-0 overflow-hidden rounded-full"
-                  style="width: 32px; height: 32px; background: var(--neu-border);"
+                  style="width: 32px; height: 32px; background: var(--border-theme);"
                 >
                   {#if item.user.avatar_url}
                     <img
@@ -586,16 +580,16 @@
                   {/if}
                 </div>
                 <div class="min-w-0 flex-1">
-                  <p class="truncate" style="font-size: 12px; color: var(--neu-text);">
+                  <p class="truncate" style="font-size: 12px; color: var(--text-primary);">
                     {item.user.nickname}
                   </p>
-                  <p class="truncate" style="font-size: 10px; color: var(--neu-text-muted);">
+                  <p class="truncate" style="font-size: 10px; color: var(--text-secondary);">
                     {['徐州 · 云龙区', '徐州 · 鼓楼区', '徐州 · 泉山区'][i % 3]}
                   </p>
                 </div>
                 <button
                   class="flex-shrink-0 rounded-full px-2.5 py-1 outline-none"
-                  style="background: var(--neu-accent-primary); font-size: 10px; color: white; box-shadow: 0 2px 6px var(--neu-glow);"
+                  style="background: var(--brand); font-size: 10px; color: white; box-shadow: 0 2px 6px var(--glow);"
                 >
                   关注
                 </button>

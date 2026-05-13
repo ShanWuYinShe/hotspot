@@ -186,10 +186,10 @@
 <div class="mx-auto min-h-screen" style="max-width: 560px;">
   {#if !user}
     <div class="flex flex-col items-center justify-center px-4 py-20">
-      <p style="color: var(--neu-text-muted);">{data.error || '用户不存在'}</p>
+      <p style="color: var(--text-secondary);">{data.error || '用户不存在'}</p>
       <button
         class="mt-4 flex items-center gap-2 rounded-full px-5 py-2 font-medium outline-none"
-        style="background: var(--neu-accent-primary); color: white;"
+        style="background: var(--brand); color: white;"
         onclick={() => history.back()}
       >
         <ArrowLeft size={16} />
@@ -211,7 +211,7 @@
       {:else}
         <div
           class="absolute inset-0"
-          style="background: linear-gradient(135deg, var(--neu-accent-primary), #a855f7);"
+          style="background: linear-gradient(135deg, var(--brand), #a855f7);"
         ></div>
       {/if}
       <!-- Gradient overlay -->
@@ -256,7 +256,7 @@
         <div class="relative">
           <div
             class="overflow-hidden rounded-[22px]"
-            style="width: 76px; height: 76px; border: 3px solid var(--neu-bg); box-shadow: 0 6px 20px rgba(0,0,0,0.22);"
+            style="width: 76px; height: 76px; border: 3px solid var(--surface-bg); box-shadow: 0 6px 20px rgba(0,0,0,0.22);"
           >
             <img
               src={user.user.avatar_url}
@@ -267,7 +267,7 @@
           <!-- Online status dot -->
           <span
             class="absolute bottom-1 right-1 rounded-full"
-            style="width: 12px; height: 12px; background: #22c55e; border: 2px solid var(--neu-bg);"
+            style="width: 12px; height: 12px; background: #22c55e; border: 2px solid var(--surface-bg);"
           ></span>
         </div>
 
@@ -275,18 +275,20 @@
         {#if authStore.isAuthenticated && authStore.currentUserId !== userId}
           <div class="flex gap-2 pb-1">
             <button
-              class="flex items-center gap-1.5 rounded-full px-3.5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-              style="background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); font-size: 12px; color: var(--neu-text-muted);"
+              class="surface-flat flex items-center gap-1.5 rounded-full px-3.5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+              style="font-size: 12px; color: var(--text-secondary);"
               onclick={() => goto(`/chat/users/${userId}`)}
             >
               <MessageCircle size={14} strokeWidth={1.5} />
               私信
             </button>
             <button
-              class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+              class={isFollowing
+                ? 'surface-flat flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]'
+                : 'flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]'}
               style={isFollowing
-                ? 'background: var(--neu-bg); border: 1.5px solid var(--neu-accent-primary); color: var(--neu-accent-primary); font-size: 12px; box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);'
-                : 'background: var(--neu-accent-primary); color: white; font-size: 12px; box-shadow: 0 4px 14px var(--neu-glow); border: 1px solid transparent;'}
+                ? 'border: 1.5px solid var(--brand); color: var(--brand); font-size: 12px;'
+                : 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 4px 14px var(--glow); border: 1px solid transparent;'}
               onclick={handleFollow}
               disabled={isActionLoading}
             >
@@ -305,27 +307,24 @@
       </div>
 
       <!-- Profile card: name / handle / bio / tags -->
-      <div
-        class="rounded-[22px] px-5 py-4"
-        style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
-      >
-        <h2 style="font-size: 20px; color: var(--neu-text);">
+      <div class="surface-flat rounded-[22px] px-5 py-4">
+        <h2 style="font-size: 20px; color: var(--text-primary);">
           {user.user.nickname}
         </h2>
-        <p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 1px;">
+        <p style="font-size: 13px; color: var(--text-secondary); margin-top: 1px;">
           @{user.user.nickname.toLowerCase().replace(/\s+/g, '.')}
         </p>
         {#if user.bio}
           <p
-            style="font-size: 13px; color: var(--neu-text-muted); line-height: 1.65; margin-top: 8px;"
+            style="font-size: 13px; color: var(--text-secondary); line-height: 1.65; margin-top: 8px;"
           >
             {user.bio}
           </p>
         {/if}
         {#if user.location}
           <div class="mt-2 flex items-center gap-1.5">
-            <MapPin size={11} color="var(--neu-accent-primary)" strokeWidth={1.5} />
-            <span style="font-size: 11px; color: var(--neu-text-muted);"
+            <MapPin size={11} color="var(--brand)" strokeWidth={1.5} />
+            <span style="font-size: 11px; color: var(--text-secondary);"
               >{user.location.location_name}</span
             >
           </div>
@@ -335,7 +334,7 @@
             {#each user.tags as tag (tag)}
               <span
                 class="rounded-full px-2.5 py-0.5"
-                style="font-size: 11px; background: rgba(99,102,241,0.10); color: var(--neu-accent-primary); border: 1px solid rgba(99,102,241,0.18);"
+                style="font-size: 11px; background: rgba(99,102,241,0.10); color: var(--brand); border: 1px solid rgba(99,102,241,0.18);"
               >
                 #{tag}
               </span>
@@ -344,29 +343,26 @@
         {/if}
 
         {#if user.social_context?.mutual_friends_count}
-          <p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 8px;">
+          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
             你们有 {user.social_context.mutual_friends_count} 个共同好友
           </p>
         {/if}
       </div>
 
       <!-- Stats as single segmented bar -->
-      <div
-        class="mt-5 flex rounded-[20px] overflow-hidden"
-        style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
-      >
+      <div class="surface-flat mt-5 flex rounded-[20px] overflow-hidden">
         {#each [{ label: '帖子', value: fmtNum(user.stats?.moments_count ?? 0) }, { label: '粉丝', value: fmtNum(user.stats?.followers_count ?? 0) }, { label: '关注', value: fmtNum(user.stats?.following_count ?? 0) }] as stat, i (stat.label)}
           <div class="relative flex flex-1 flex-col items-center py-4">
             {#if i > 0}
               <div
                 class="absolute left-0 top-1/2 -translate-y-1/2"
-                style="width: 1px; height: 28px; background: var(--neu-border);"
+                style="width: 1px; height: 28px; background: var(--border-theme);"
               ></div>
             {/if}
-            <span style="font-size: 22px; color: var(--neu-text);">{stat.value}</span>
+            <span style="font-size: 22px; color: var(--text-primary);">{stat.value}</span>
             <span
               class="mt-1 uppercase"
-              style="font-size: 9px; letter-spacing: 0.1em; color: var(--neu-text-muted);"
+              style="font-size: 9px; letter-spacing: 0.1em; color: var(--text-secondary);"
             >
               {stat.label}
             </span>
@@ -378,15 +374,15 @@
     <!-- Tabs -->
     <div
       class="flex"
-      style="border-bottom: 1px solid var(--neu-border); padding-left: 16px; padding-right: 16px;"
+      style="border-bottom: 1px solid var(--border-theme); padding-left: 16px; padding-right: 16px;"
     >
       {#each [{ id: 'moments' as const, icon: Grid3X3, label: '帖子' }, { id: 'followers' as const, icon: Heart, label: '喜欢' }, { id: 'following' as const, icon: Bookmark, label: '收藏' }] as tab (tab.id)}
         {@const active = currentTab === tab.id}
         <button
           class="relative flex flex-1 items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none transition-all duration-150"
           style="color: {active
-            ? 'var(--neu-accent-primary)'
-            : 'var(--neu-text-muted)'}; font-size: 13px; font-weight: {active ? 500 : 400};"
+            ? 'var(--brand)'
+            : 'var(--text-secondary)'}; font-size: 13px; font-weight: {active ? 500 : 400};"
           onclick={() => handleTabChange(tab.id)}
         >
           <tab.icon size={13} strokeWidth={active ? 2 : 1.5} />
@@ -394,7 +390,7 @@
           {#if active}
             <div
               class="absolute bottom-[-1px]"
-              style="left: 18%; right: 18%; height: 2px; border-radius: 1px; background: var(--neu-accent-primary);"
+              style="left: 18%; right: 18%; height: 2px; border-radius: 1px; background: var(--brand);"
             ></div>
           {/if}
         </button>
@@ -407,15 +403,15 @@
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px;">
           {#each Array(9) as _, i (i)}
             <div
-              style="aspect-ratio: 1; background: var(--neu-border); border-radius: 4px;"
+              style="aspect-ratio: 1; background: var(--border-theme); border-radius: 4px;"
               class="animate-pulse"
             ></div>
           {/each}
         </div>
       {:else if momentsPagination.items.length === 0}
         <div class="flex flex-col items-center justify-center py-12">
-          <Image size={40} color="var(--neu-text-muted)" />
-          <p style="margin-top: 16px; color: var(--neu-text-muted);">TA 还没有发布瞬间</p>
+          <Image size={40} color="var(--text-secondary)" />
+          <p style="margin-top: 16px; color: var(--text-secondary);">TA 还没有发布瞬间</p>
         </div>
       {:else}
         <!-- 3-column gallery grid from moments' images -->
@@ -439,8 +435,8 @@
         {#if momentsPagination.hasMore}
           <div class="flex justify-center pt-4">
             <button
-              class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-              style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+              class="surface-flat flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+              style="color: var(--text-secondary);"
               onclick={() => loadMoments(false)}
               disabled={momentsPagination.loadingMore}
             >
@@ -460,27 +456,26 @@
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px;">
           {#each Array(9) as _, i (i)}
             <div
-              style="aspect-ratio: 1; background: var(--neu-border); border-radius: 4px;"
+              style="aspect-ratio: 1; background: var(--border-theme); border-radius: 4px;"
               class="animate-pulse"
             ></div>
           {/each}
         </div>
       {:else if followersPagination.items.length === 0}
         <div class="flex flex-col items-center justify-center py-12">
-          <Heart size={40} color="var(--neu-text-muted)" />
-          <p style="margin-top: 16px; color: var(--neu-text-muted);">暂无粉丝</p>
+          <Heart size={40} color="var(--text-secondary)" />
+          <p style="margin-top: 16px; color: var(--text-secondary);">暂无粉丝</p>
         </div>
       {:else}
         <div class="grid gap-3 p-4 sm:grid-cols-2">
           {#each followersPagination.items as follower (follower.user.user_id)}
             <a href="/users/{follower.user.user_id}">
               <div
-                class="flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all active:scale-[0.98]"
-                style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+                class="surface-flat flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all active:scale-[0.98]"
               >
                 <div
                   class="overflow-hidden rounded-full"
-                  style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);"
+                  style="width: 48px; height: 48px; border: 1.5px solid var(--border-theme);"
                 >
                   <img
                     src={follower.user.avatar_url}
@@ -491,11 +486,11 @@
                 <div class="min-w-0">
                   <p
                     class="truncate"
-                    style="font-weight: 500; font-size: 14px; color: var(--neu-text);"
+                    style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
                   >
                     {follower.user.nickname}
                   </p>
-                  <p style="font-size: 12px; color: var(--neu-text-muted);">查看主页</p>
+                  <p style="font-size: 12px; color: var(--text-secondary);">查看主页</p>
                 </div>
               </div>
             </a>
@@ -504,8 +499,8 @@
         {#if followersPagination.hasMore}
           <div class="flex justify-center pt-4">
             <button
-              class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-              style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+              class="surface-flat flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+              style="color: var(--text-secondary);"
               onclick={() => loadFollowers(false)}
               disabled={followersPagination.loadingMore}
             >
@@ -525,27 +520,26 @@
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px;">
           {#each Array(9) as _, i (i)}
             <div
-              style="aspect-ratio: 1; background: var(--neu-border); border-radius: 4px;"
+              style="aspect-ratio: 1; background: var(--border-theme); border-radius: 4px;"
               class="animate-pulse"
             ></div>
           {/each}
         </div>
       {:else if followingPagination.items.length === 0}
         <div class="flex flex-col items-center justify-center py-12">
-          <Bookmark size={40} color="var(--neu-text-muted)" />
-          <p style="margin-top: 16px; color: var(--neu-text-muted);">暂无关注</p>
+          <Bookmark size={40} color="var(--text-secondary)" />
+          <p style="margin-top: 16px; color: var(--text-secondary);">暂无关注</p>
         </div>
       {:else}
         <div class="grid gap-3 p-4 sm:grid-cols-2">
           {#each followingPagination.items as follow (follow.user.user_id)}
             <a href="/users/{follow.user.user_id}">
               <div
-                class="flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all active:scale-[0.98]"
-                style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+                class="surface-flat flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all active:scale-[0.98]"
               >
                 <div
                   class="overflow-hidden rounded-full"
-                  style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);"
+                  style="width: 48px; height: 48px; border: 1.5px solid var(--border-theme);"
                 >
                   <img
                     src={follow.user.avatar_url}
@@ -556,11 +550,11 @@
                 <div class="min-w-0">
                   <p
                     class="truncate"
-                    style="font-weight: 500; font-size: 14px; color: var(--neu-text);"
+                    style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
                   >
                     {follow.user.nickname}
                   </p>
-                  <p style="font-size: 12px; color: var(--neu-text-muted);">查看主页</p>
+                  <p style="font-size: 12px; color: var(--text-secondary);">查看主页</p>
                 </div>
               </div>
             </a>
@@ -569,8 +563,8 @@
         {#if followingPagination.hasMore}
           <div class="flex justify-center pt-4">
             <button
-              class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-              style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+              class="surface-flat flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+              style="color: var(--text-secondary);"
               onclick={() => loadFollowing(false)}
               disabled={followingPagination.loadingMore}
             >

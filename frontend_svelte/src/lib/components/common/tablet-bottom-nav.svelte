@@ -63,7 +63,7 @@
   >
     <div
       class="flex items-center"
-      style="width: 100%; max-width: 520px; border-radius: var(--neu-radius-pill); background: var(--neu-glass-bg); backdrop-filter: blur(var(--neu-glass-blur)) saturate(var(--neu-glass-saturate)); -webkit-backdrop-filter: blur(var(--neu-glass-blur)) saturate(var(--neu-glass-saturate)); box-shadow: var(--neu-glass-shadow); border: 1px solid var(--neu-glass-border); padding: 8px 16px; gap: 6px;"
+      style="width: 100%; max-width: 520px; border-radius: var(--radius-pill); background: var(--glass-bg); backdrop-filter: blur(var(--neu-glass-blur)) saturate(var(--neu-glass-saturate)); -webkit-backdrop-filter: blur(var(--neu-glass-blur)) saturate(var(--neu-glass-saturate)); box-shadow: var(--neu-glass-shadow); border: 1px solid var(--glass-border); padding: 8px 16px; gap: 6px;"
     >
       {#each navItems.slice(0, 2) as item (item.href)}
         <button
@@ -75,7 +75,7 @@
         >
           {#if isActive(item.href)}
             <span
-              style="position: absolute; inset: 4px 6px; border-radius: 20px; background: var(--neu-accent-primary); opacity: 0.14; transition: background 0.22s;"
+              style="position: absolute; inset: 4px 6px; border-radius: 20px; background: var(--brand); opacity: 0.14; transition: background 0.22s;"
             ></span>
           {/if}
           <span
@@ -84,14 +84,14 @@
             <item.icon
               size={24}
               strokeWidth={isActive(item.href) ? 2.1 : 1.5}
-              color={isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}
+              color={isActive(item.href) ? 'var(--brand)' : 'var(--text-secondary)'}
               style="transition: color 0.22s ease;"
             />
           </span>
           <span
             style="font-size: 11px; line-height: 1; color: {isActive(item.href)
-              ? 'var(--neu-accent-primary)'
-              : 'var(--neu-text-muted)'}; font-weight: {isActive(item.href)
+              ? 'var(--brand)'
+              : 'var(--text-secondary)'}; font-weight: {isActive(item.href)
               ? 600
               : 400}; transition: color 0.22s ease; letter-spacing: 0.02em; position: relative; z-index: 1;"
           >
@@ -104,11 +104,11 @@
       <div class="flex shrink-0 items-center justify-center" style="width: 64px;">
         <button
           class="flex items-center justify-center rounded-full outline-none select-none"
-          style="width: 48px; height: 48px; background: var(--neu-accent-primary); box-shadow: var(--neu-fab-glow); transition: background 0.22s, box-shadow 0.22s;"
+          style="width: 48px; height: 48px; background: var(--brand); box-shadow: var(--neu-fab-glow); transition: background 0.22s, box-shadow 0.22s;"
           onclick={() => uiStore.openCreateSheet()}
           aria-label={t('nav.publish')}
         >
-          <Plus size={19} strokeWidth={2.2} color="var(--neu-active-text)" />
+          <Plus size={19} strokeWidth={2.2} color="var(--text-on-accent)" />
         </button>
       </div>
 
@@ -122,7 +122,7 @@
         >
           {#if isActive(item.href)}
             <span
-              style="position: absolute; inset: 4px 6px; border-radius: 20px; background: var(--neu-accent-primary); opacity: 0.14; transition: background 0.22s;"
+              style="position: absolute; inset: 4px 6px; border-radius: 20px; background: var(--brand); opacity: 0.14; transition: background 0.22s;"
             ></span>
           {/if}
           <span
@@ -131,20 +131,20 @@
             <item.icon
               size={24}
               strokeWidth={isActive(item.href) ? 2.1 : 1.5}
-              color={isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}
+              color={isActive(item.href) ? 'var(--brand)' : 'var(--text-secondary)'}
               style="transition: color 0.22s ease;"
             />
             {#if item.href === '/chat' && messageBadge > 0}
               <span
                 class="absolute flex items-center justify-center rounded-full"
-                style="top: -4px; right: -6px; height: 20px; min-width: 20px; padding: 0 6px; background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 11px; font-weight: 600; line-height: 20px;"
+                style="top: -4px; right: -6px; height: 20px; min-width: 20px; padding: 0 6px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; line-height: 20px;"
               >
                 {messageBadge > 99 ? '99+' : messageBadge}
               </span>
             {:else if item.href === '/profile' && profileBadge > 0}
               <span
                 class="absolute flex items-center justify-center rounded-full"
-                style="top: -4px; right: -6px; height: 20px; min-width: 20px; padding: 0 6px; background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 11px; font-weight: 600; line-height: 20px;"
+                style="top: -4px; right: -6px; height: 20px; min-width: 20px; padding: 0 6px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; line-height: 20px;"
               >
                 {profileBadge > 99 ? '99+' : profileBadge}
               </span>
@@ -152,8 +152,8 @@
           </span>
           <span
             style="font-size: 11px; line-height: 1; color: {isActive(item.href)
-              ? 'var(--neu-accent-primary)'
-              : 'var(--neu-text-muted)'}; font-weight: {isActive(item.href)
+              ? 'var(--brand)'
+              : 'var(--text-secondary)'}; font-weight: {isActive(item.href)
               ? 600
               : 400}; transition: color 0.22s ease; letter-spacing: 0.02em; position: relative; z-index: 1;"
           >

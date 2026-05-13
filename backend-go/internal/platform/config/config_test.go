@@ -22,7 +22,6 @@ func TestConfigCarriesDatasourceValues(t *testing.T) {
 }
 
 func TestLoadLeavesPostgresDSNEmptyWhenUnset(t *testing.T) {
-	ResetForTest()
 	oldPostgres := os.Getenv("POSTGRES_DSN")
 	oldTrustedProxyCIDRs := os.Getenv("TRUSTED_PROXY_CIDRS")
 	defer func() {
@@ -51,7 +50,6 @@ func TestLoadLeavesPostgresDSNEmptyWhenUnset(t *testing.T) {
 }
 
 func TestLoadCarriesTrustedProxyCIDRs(t *testing.T) {
-	ResetForTest()
 	oldValue := os.Getenv("TRUSTED_PROXY_CIDRS")
 	defer func() {
 		if oldValue == "" {
@@ -69,7 +67,6 @@ func TestLoadCarriesTrustedProxyCIDRs(t *testing.T) {
 }
 
 func TestLoadCarriesS3PublicEndpointSettings(t *testing.T) {
-	ResetForTest()
 	oldEndpoint := os.Getenv("S3_PUBLIC_ENDPOINT")
 	oldForcePathStyle := os.Getenv("S3_PUBLIC_FORCE_PATH_STYLE")
 	defer func() {

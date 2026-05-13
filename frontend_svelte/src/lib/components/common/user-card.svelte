@@ -191,8 +191,8 @@
 </script>
 
 <div
-  class="neu-card-hover cursor-pointer overflow-hidden rounded-[22px] outline-none transition-[box-shadow,outline,transform] duration-200 hover:scale-[1.008] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--neu-bg)] {className}"
-  style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+  class="card-hover cursor-pointer overflow-hidden rounded-[22px] outline-none transition-[box-shadow,outline,transform] duration-200 hover:scale-[1.008] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
+  style="background: var(--surface-bg); box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light); border: 1px solid var(--border-theme);"
   tabindex={0}
   role="link"
   onclick={handleCardClick}
@@ -200,11 +200,11 @@
 >
   {#if variant === 'nearby-row'}
     <!-- Nearby row: horizontal row for nearby all page -->
-    <div class="neu-row-hover flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5">
+    <div class="row-hover flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5">
       <div class="relative flex-shrink-0">
         <div
           class="overflow-hidden rounded-full"
-          style="width: 46px; height: 46px; border: 1.5px solid var(--neu-border);"
+          style="width: 46px; height: 46px; border: 1.5px solid var(--border-theme);"
         >
           <img
             src={userInfo.avatar_url || ''}
@@ -215,28 +215,26 @@
         {#if isOnline}
           <span
             class="absolute bottom-0 right-0 rounded-full"
-            style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--neu-bg);"
+            style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--surface-bg);"
           ></span>
         {/if}
       </div>
       <div class="min-w-0 flex-1">
-        <p style="font-size: 14px; color: var(--neu-text);">{userInfo.nickname}</p>
+        <p style="font-size: 14px; color: var(--text-primary);">{userInfo.nickname}</p>
         <div class="mt-0.5 flex items-center gap-1.5">
-          <span style="font-size: 11px; color: {isOnline ? '#22c55e' : 'var(--neu-text-muted)'};">
+          <span style="font-size: 11px; color: {isOnline ? '#22c55e' : 'var(--text-secondary)'};">
             {isOnline ? '在线' : '离线'}
           </span>
           {#if distance}
-            <span style="font-size: 10px; color: var(--neu-text-muted); opacity: 0.5;">·</span>
+            <span style="font-size: 10px; color: var(--text-secondary); opacity: 0.5;">·</span>
             <div class="flex items-center gap-0.5">
-              <MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-              <span style="font-size: 12px; color: var(--neu-accent-primary);"
-                >{formatDistance(distance)}</span
-              >
+              <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
+              <span style="font-size: 12px; color: var(--brand);">{formatDistance(distance)}</span>
             </div>
           {/if}
           {#if displayTags.length > 0}
-            <span style="font-size: 10px; color: var(--neu-text-muted); opacity: 0.5;">·</span>
-            <span style="font-size: 11px; color: var(--neu-accent-primary); opacity: 0.8;"
+            <span style="font-size: 10px; color: var(--text-secondary); opacity: 0.5;">·</span>
+            <span style="font-size: 11px; color: var(--brand); opacity: 0.8;"
               >#{displayTags[0]}</span
             >
           {/if}
@@ -245,10 +243,8 @@
       <div class="flex flex-col items-end gap-2">
         {#if distance}
           <div class="flex items-center gap-0.5">
-            <MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-            <span style="font-size: 12px; color: var(--neu-accent-primary);"
-              >{formatDistance(distance)}</span
-            >
+            <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
+            <span style="font-size: 12px; color: var(--brand);">{formatDistance(distance)}</span>
           </div>
         {/if}
         {#if !isMe}
@@ -256,8 +252,8 @@
             data-card-action
             class="rounded-full px-3.5 py-1 outline-none transition-all"
             style={isFollowing
-              ? 'box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border-pressed); color: var(--neu-accent-primary); background: var(--neu-bg); font-size: 11px;'
-              : 'box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 11px;'}
+              ? 'box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-active); color: var(--brand); background: var(--surface-bg); font-size: 11px;'
+              : 'box-shadow: 3px 3px 7px var(--shadow-dark), -3px -3px 7px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg); font-size: 11px;'}
             onclick={handleFollow}
             disabled={isFollowPending}
           >
@@ -275,14 +271,14 @@
     <div class="p-4">
       <div
         class="rounded-[18px] p-3"
-        style="background: var(--neu-bg); box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+        style="background: var(--surface-bg); box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-theme);"
       >
         <div class="flex items-start justify-between gap-3">
           <div class="flex min-w-0 items-center gap-2.5">
             <div class="relative flex-shrink-0">
               <div
                 class="overflow-hidden rounded-full"
-                style="width: 46px; height: 46px; border: 1.5px solid var(--neu-border);"
+                style="width: 46px; height: 46px; border: 1.5px solid var(--border-theme);"
               >
                 <img
                   src={userInfo.avatar_url || ''}
@@ -293,25 +289,23 @@
               {#if isOnline}
                 <span
                   class="absolute bottom-0 right-0 rounded-full"
-                  style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--neu-bg);"
+                  style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--surface-bg);"
                 ></span>
               {/if}
             </div>
             <div class="min-w-0 flex-1">
-              <p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">
+              <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
                 {userInfo.nickname}
               </p>
-              <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">
+              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
                 {isOnline ? '在线' : '离线'}
               </p>
             </div>
           </div>
           {#if distance}
             <div class="flex flex-shrink-0 items-center gap-0.5">
-              <MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-              <span style="font-size: 10px; color: var(--neu-accent-primary);"
-                >{formatDistance(distance)}</span
-              >
+              <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
+              <span style="font-size: 10px; color: var(--brand);">{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
@@ -319,12 +313,12 @@
         {#if showBio && 'bio' in user && user.bio}
           <p
             class="mt-3 line-clamp-3"
-            style="font-size: 12px; color: var(--neu-text-muted); line-height: 1.5;"
+            style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;"
           >
             {user.bio}
           </p>
         {:else if showBio}
-          <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 10px;">
+          <p style="font-size: 11px; color: var(--text-secondary); margin-top: 10px;">
             这个人很神秘，暂时还没有留下简介
           </p>
         {/if}
@@ -335,7 +329,7 @@
           {#each displayTags as tag (tag)}
             <span
               class="rounded-full px-2 py-0.5"
-              style="font-size: 10px; color: var(--neu-accent-primary); background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);"
+              style="font-size: 10px; color: var(--brand); background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);"
               >#{tag}</span
             >
           {/each}
@@ -348,7 +342,7 @@
       <div class="relative flex-shrink-0">
         <div
           class="overflow-hidden rounded-full"
-          style="width: 44px; height: 44px; border: 1.5px solid var(--neu-border);"
+          style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
         >
           <img
             src={userInfo.avatar_url || ''}
@@ -359,31 +353,29 @@
         {#if isOnline}
           <span
             class="absolute bottom-0 right-0 rounded-full"
-            style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--neu-bg);"
+            style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--surface-bg);"
           ></span>
         {/if}
       </div>
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between">
-          <p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">
+          <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
             {userInfo.nickname}
           </p>
           {#if distance}
             <div class="flex items-center gap-0.5">
-              <MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-              <span style="font-size: 10px; color: var(--neu-accent-primary);"
-                >{formatDistance(distance)}</span
-              >
+              <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
+              <span style="font-size: 10px; color: var(--brand);">{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
         {#if showBio && 'bio' in user && user.bio}
-          <p class="mt-0.5 truncate" style="font-size: 12px; color: var(--neu-text-muted);">
+          <p class="mt-0.5 truncate" style="font-size: 12px; color: var(--text-secondary);">
             {user.bio}
           </p>
         {/if}
       </div>
-      <ChevronRight size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
+      <ChevronRight size={16} strokeWidth={1.5} color="var(--text-secondary)" />
     </div>
   {:else if variant === 'detailed'}
     <!-- Detailed: vertical with more info -->
@@ -392,7 +384,7 @@
         <div class="relative flex-shrink-0">
           <div
             class="overflow-hidden rounded-full"
-            style="width: 52px; height: 52px; border: 1.5px solid var(--neu-border);"
+            style="width: 52px; height: 52px; border: 1.5px solid var(--border-theme);"
           >
             <img
               src={userInfo.avatar_url || ''}
@@ -403,26 +395,24 @@
           {#if isOnline}
             <span
               class="absolute bottom-0 right-0 rounded-full"
-              style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--neu-bg);"
+              style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--surface-bg);"
             ></span>
           {/if}
         </div>
         <div class="min-w-0 flex-1">
-          <p style="font-size: 16px; font-weight: 600; color: var(--neu-text);">
+          <p style="font-size: 16px; font-weight: 600; color: var(--text-primary);">
             {userInfo.nickname}
           </p>
           {#if distance}
             <div class="mt-1 flex items-center gap-0.5">
-              <MapPin size={12} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-              <span style="font-size: 12px; color: var(--neu-accent-primary);"
-                >{formatDistance(distance)}</span
-              >
+              <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
+              <span style="font-size: 12px; color: var(--brand);">{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
       </div>
       {#if showBio && 'bio' in user && user.bio}
-        <p class="mt-3" style="font-size: 13px; color: var(--neu-text-muted); line-height: 1.5;">
+        <p class="mt-3" style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
           {user.bio}
         </p>
       {/if}
@@ -431,7 +421,7 @@
           {#each displayTags as tag (tag)}
             <span
               class="rounded-full px-2 py-0.5"
-              style="font-size: 10px; color: var(--neu-accent-primary); background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);"
+              style="font-size: 10px; color: var(--brand); background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);"
               >#{tag}</span
             >
           {/each}
@@ -445,7 +435,7 @@
         <div class="relative flex-shrink-0">
           <div
             class="overflow-hidden rounded-full"
-            style="width: 44px; height: 44px; border: 1.5px solid var(--neu-border);"
+            style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
           >
             <img
               src={userInfo.avatar_url || ''}
@@ -456,29 +446,27 @@
           {#if isOnline}
             <span
               class="absolute bottom-0 right-0 rounded-full"
-              style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--neu-bg);"
+              style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--surface-bg);"
             ></span>
           {/if}
         </div>
         <div class="min-w-0 flex-1">
-          <p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">
+          <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
             {userInfo.nickname}
           </p>
           {#if distance}
             <div class="mt-0.5 flex items-center gap-0.5">
-              <MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-              <span style="font-size: 10px; color: var(--neu-accent-primary);"
-                >{formatDistance(distance)}</span
-              >
+              <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
+              <span style="font-size: 10px; color: var(--brand);">{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
-        <ChevronRight size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
+        <ChevronRight size={16} strokeWidth={1.5} color="var(--text-secondary)" />
       </div>
       {#if showBio && 'bio' in user && user.bio}
         <p
           class="mt-2.5 line-clamp-2"
-          style="font-size: 12px; color: var(--neu-text-muted); line-height: 1.5;"
+          style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;"
         >
           {user.bio}
         </p>
@@ -488,7 +476,7 @@
           {#each displayTags as tag (tag)}
             <span
               class="rounded-full px-2 py-0.5"
-              style="font-size: 10px; color: var(--neu-accent-primary); background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);"
+              style="font-size: 10px; color: var(--brand); background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);"
               >#{tag}</span
             >
           {/each}
@@ -499,12 +487,12 @@
 
   <!-- Action buttons -->
   {#if !isMe}
-    <div style="border-top: 1px solid var(--neu-border);" class="px-4 py-2.5">
+    <div style="border-top: 1px solid var(--border-theme);" class="px-4 py-2.5">
       <div class="flex items-center justify-between">
         <button
           data-card-action
           class="flex items-center gap-1.5 py-1 outline-none transition-transform duration-150 active:scale-[0.93]"
-          style="color: var(--neu-text-muted);"
+          style="color: var(--text-secondary);"
           onclick={handleSendMessage}
         >
           <MessageCircle size={15} strokeWidth={1.5} />
@@ -514,7 +502,7 @@
           <button
             data-card-action
             class="flex items-center gap-1.5 py-1 outline-none transition-transform duration-150 active:scale-[0.93]"
-            style="color: {isFollowing ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};"
+            style="color: {isFollowing ? 'var(--brand)' : 'var(--text-secondary)'};"
             onclick={handleFollow}
             disabled={isFollowPending}
           >
@@ -531,14 +519,14 @@
                 <button
                   data-card-action
                   class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.92]"
-                  style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                  style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                   onclick={(e: MouseEvent) => {
                     e.preventDefault();
                     e.stopPropagation();
                   }}
                   aria-label="更多操作"
                 >
-                  <MoreVertical size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                  <MoreVertical size={14} strokeWidth={1.5} color="var(--text-secondary)" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" class="w-48">

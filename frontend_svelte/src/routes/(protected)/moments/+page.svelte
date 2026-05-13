@@ -35,19 +35,19 @@
   <!-- Sticky header -->
   <div
     class="sticky top-0 z-10 px-5 pt-3 pb-3"
-    style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+    style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     <div class="flex items-center justify-between">
       <div>
-        <h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">我的瞬间</h1>
-        <p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">
+        <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">我的瞬间</h1>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
           记录和管理你发布的动态内容
         </p>
       </div>
       <div class="flex gap-2">
         <button
           class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text-muted);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
           onclick={() => loadMoments(true)}
           disabled={pagination.loading}
         >
@@ -56,7 +56,7 @@
         </button>
         <button
           class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-          style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 12px; box-shadow: 0 2px 8px var(--neu-glow);"
+          style="background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 2px 8px var(--glow);"
           onclick={() => (showCreateMoment = true)}
         >
           <Plus size={13} />
@@ -91,7 +91,7 @@
           <div class="mb-4 break-inside-avoid">
             <div
               class="rounded-[22px] overflow-hidden"
-              style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
             >
               <a
                 href="/moments/{moment.moment_id}"
@@ -100,7 +100,7 @@
               >
                 <p
                   class="line-clamp-3 whitespace-pre-wrap"
-                  style="font-size: 14px; color: var(--neu-text);"
+                  style="font-size: 14px; color: var(--text-primary);"
                 >
                   {moment.description}
                 </p>
@@ -116,7 +116,7 @@
                     {#if moment.images.length > 4}
                       <div
                         class="flex h-20 w-20 items-center justify-center rounded-[12px]"
-                        style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text-muted);"
+                        style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-secondary);"
                       >
                         +{moment.images.length - 4}
                       </div>
@@ -125,7 +125,7 @@
                 {/if}
                 <div
                   class="mt-3 flex items-center gap-4"
-                  style="font-size: 12px; color: var(--neu-text-muted);"
+                  style="font-size: 12px; color: var(--text-secondary);"
                 >
                   <span>{moment.likes_count} 点赞</span>
                   <span>{moment.comments_count} 评论</span>

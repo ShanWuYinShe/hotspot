@@ -100,8 +100,8 @@
 </script>
 
 <div
-  class="neu-card-hover cursor-pointer overflow-hidden rounded-[22px] outline-none transition-[box-shadow,outline,transform] duration-200 hover:scale-[1.008] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--neu-bg)] {className}"
-  style="background: var(--neu-bg); box-shadow: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+  class="card-hover cursor-pointer overflow-hidden rounded-[22px] outline-none transition-[box-shadow,outline,transform] duration-200 hover:scale-[1.008] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
+  style="background: var(--surface-bg); box-shadow: 7px 7px 16px var(--shadow-dark), -7px -7px 16px var(--shadow-light); border: 1px solid var(--border-theme);"
   onclick={handleCardClick}
   role="link"
   tabindex={0}
@@ -130,7 +130,7 @@
         <div class="absolute left-2.5 top-2.5">
           <span
             class="rounded-full px-2 py-0.5"
-            style="background: var(--neu-accent-primary); box-shadow: 0 2px 8px var(--neu-glow); font-size: 10px; color: white;"
+            style="background: var(--brand); box-shadow: 0 2px 8px var(--glow); font-size: 10px; color: white;"
           >
             {moment.tags[0]}
           </span>
@@ -181,7 +181,7 @@
           data-card-action
           onclick={handleAuthorClick}
           class="flex-shrink-0 overflow-hidden rounded-full"
-          style="width: 28px; height: 28px; border: 1.5px solid var(--neu-border);"
+          style="width: 28px; height: 28px; border: 1.5px solid var(--border-theme);"
         >
           <img
             src={moment.user.avatar_url || ''}
@@ -194,16 +194,16 @@
             href="/users/{moment.user.user_id}"
             data-card-action
             onclick={handleAuthorClick}
-            style="font-size: 13px; color: var(--neu-text); font-weight: 500;"
+            style="font-size: 13px; color: var(--text-primary); font-weight: 500;"
           >
             {moment.user.nickname}
           </a>
           <div class="flex items-center gap-2" style="margin-top: 1px;">
-            <span style="font-size: 10px; color: var(--neu-text-muted);"
+            <span style="font-size: 10px; color: var(--text-secondary);"
               >{formatRelativeTime(moment.created_at)}</span
             >
             {#if moment.location?.distance != null}
-              <span style="font-size: 10px; color: var(--neu-accent-primary);"
+              <span style="font-size: 10px; color: var(--brand);"
                 >{formatDistance(moment.location.distance)}</span
               >
             {/if}
@@ -214,7 +214,7 @@
     {#if moment.description}
       <p
         class="line-clamp-2"
-        style="font-size: {dense ? 12 : 13}px; color: var(--neu-text-muted); line-height: 1.6;"
+        style="font-size: {dense ? 12 : 13}px; color: var(--text-secondary); line-height: 1.6;"
       >
         {moment.description}
       </p>
@@ -222,7 +222,7 @@
     {#if moment.images && moment.images.length > 0}
       <div
         class="mt-1 flex items-center gap-1"
-        style="font-size: 10px; color: var(--neu-text-muted);"
+        style="font-size: 10px; color: var(--text-secondary);"
       >
         <span>{formatRelativeTime(moment.created_at)}</span>
       </div>
@@ -237,8 +237,8 @@
     <div class="flex gap-3.5">
       <button
         data-card-action
-        class="flex items-center gap-1.5 rounded-full px-1 py-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)]"
-        style="color: {likeAction.isOn ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};"
+        class="flex items-center gap-1.5 rounded-full px-1 py-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--glow)]"
+        style="color: {likeAction.isOn ? 'var(--brand)' : 'var(--text-secondary)'};"
         onclick={handleLike}
         disabled={likeAction.isLoading}
       >
@@ -252,8 +252,8 @@
       </button>
       <button
         data-card-action
-        class="flex items-center gap-1.5 rounded-full px-1 py-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)]"
-        style="color: var(--neu-text-muted);"
+        class="flex items-center gap-1.5 rounded-full px-1 py-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--glow)]"
+        style="color: var(--text-secondary);"
         onclick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -267,10 +267,8 @@
     <div class="flex gap-3">
       <button
         data-card-action
-        class="rounded-full p-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)]"
-        style="color: {favoriteAction.isOn
-          ? 'var(--neu-accent-primary)'
-          : 'var(--neu-text-muted)'};"
+        class="rounded-full p-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--glow)]"
+        style="color: {favoriteAction.isOn ? 'var(--brand)' : 'var(--text-secondary)'};"
         onclick={handleFavorite}
         disabled={favoriteAction.isLoading}
       >
@@ -282,8 +280,8 @@
       </button>
       <button
         data-card-action
-        class="rounded-full p-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)]"
-        style="color: var(--neu-text-muted);"
+        class="rounded-full p-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--glow)]"
+        style="color: var(--text-secondary);"
         onclick={handleShare}
       >
         <Share2 size={15} strokeWidth={1.5} />

@@ -919,15 +919,3 @@ func (r *PostgresRepository) loadInvite(ctx context.Context, inviteID string) (G
 	_ = inviteeUserID
 	return item, nil
 }
-func (r *PostgresRepository) IsMember(ctx context.Context, groupID string, userID string) (bool, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return false, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
-		return false, persistence.ErrNotImplemented
-	}
-	var exists bool
-	err := queryable.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2)`, groupID, userID).Scan(&exists)
-	return exists, err
-}

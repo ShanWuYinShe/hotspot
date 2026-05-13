@@ -68,6 +68,9 @@ func Decode(namespace string, value string, out any) error {
 
 func newBlock(namespace string) (cipher.Block, error) {
 	secret := config.Load().AuthTokenSecret
+	if secret == "" {
+		secret = "dev-secret-change-me"
+	}
 	key := sha256.Sum256([]byte(namespace + ":" + secret))
 	return aes.NewCipher(key[:])
 }

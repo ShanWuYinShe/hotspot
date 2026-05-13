@@ -61,18 +61,18 @@
   <!-- Sticky header -->
   <div
     class="sticky top-0 z-10 px-5 pt-3 pb-3"
-    style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+    style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     <div class="flex items-center justify-between">
       <div>
-        <h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">好友</h1>
-        <p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">
+        <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">好友</h1>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
           你们的互相关注列表
         </p>
       </div>
       <button
         class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text-muted);"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
         onclick={() => loadFriends(true)}
         disabled={isLoading}
       >
@@ -88,18 +88,18 @@
         {#each Array(6) as _, i (i)}
           <div
             class="flex items-center gap-3 rounded-[18px] p-4"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div
               class="rounded-full"
-              style="width: 48px; height: 48px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+              style="width: 48px; height: 48px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
             ></div>
             <div class="flex-1 space-y-2">
               <div
-                style="width: 96px; height: 16px; border-radius: 8px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+                style="width: 96px; height: 16px; border-radius: 8px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
               ></div>
               <div
-                style="width: 128px; height: 12px; border-radius: 6px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+                style="width: 128px; height: 12px; border-radius: 6px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
               ></div>
             </div>
           </div>
@@ -113,11 +113,11 @@
           <a href="/users/{friend.user.user_id}" class="block" style="text-decoration: none;">
             <div
               class="flex items-center gap-3 rounded-[18px] p-4"
-              style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
             >
               <div
                 class="overflow-hidden rounded-full shrink-0"
-                style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);"
+                style="width: 48px; height: 48px; border: 1.5px solid var(--border-theme);"
               >
                 {#if friend.user.avatar_url}
                   <img
@@ -128,7 +128,7 @@
                 {:else}
                   <div
                     class="flex h-full w-full items-center justify-center"
-                    style="background: var(--neu-bg); font-size: 14px; color: var(--neu-text-muted);"
+                    style="background: var(--surface-bg); font-size: 14px; color: var(--text-secondary);"
                   >
                     {friend.user.nickname.slice(0, 2)}
                   </div>
@@ -137,11 +137,11 @@
               <div class="min-w-0">
                 <p
                   class="truncate"
-                  style="font-size: 14px; font-weight: 500; color: var(--neu-text);"
+                  style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
                 >
                   {friend.user.nickname}
                 </p>
-                <p style="font-size: 12px; color: var(--neu-text-muted);">
+                <p style="font-size: 12px; color: var(--text-secondary);">
                   {friend.remark ? `备注：${friend.remark}` : '互相关注'}
                 </p>
               </div>

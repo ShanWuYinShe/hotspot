@@ -15,7 +15,7 @@
 
 <div
   class="rounded-[22px] p-4 sm:p-5"
-  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
 >
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
     <div class="min-w-0">
@@ -23,16 +23,16 @@
         <a
           href={backHref}
           class="mb-3 inline-flex items-center gap-1.5 outline-none"
-          style="font-size: 13px; color: var(--neu-text-muted);"
+          style="font-size: 13px; color: var(--text-secondary);"
         >
           <ChevronLeft size={16} strokeWidth={1.5} />
           <span>{backLabel}</span>
         </a>
       {/if}
-      <h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">{title}</h1>
+      <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">{title}</h1>
       {#if description}
         <p
-          style="font-size: 13px; color: var(--neu-text-muted); margin-top: 4px; line-height: 1.6;"
+          style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.6;"
         >
           {description}
         </p>

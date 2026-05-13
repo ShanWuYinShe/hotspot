@@ -73,7 +73,7 @@
     {#snippet actions()}
       <button
         class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border); color: var(--neu-text);"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-primary);"
         onclick={() => loadReports(true)}
         disabled={pagination.loading}
       >
@@ -86,11 +86,11 @@
   <!-- Filter Card -->
   <div
     class="rounded-[22px] p-4"
-    style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
   >
     <div class="mb-3">
-      <p style="font-size: 13px; font-weight: 500; color: var(--neu-text);">筛选条件</p>
-      <p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">
+      <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">筛选条件</p>
+      <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
         按状态和目标类型快速定位处理中的举报。
       </p>
     </div>
@@ -100,8 +100,8 @@
           <button
             class="rounded-full px-4 py-1.5 text-sm transition-all disabled:opacity-50"
             style={activeStatus === option.value
-              ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 8px var(--neu-glow);'
-              : 'background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);'}
+              ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 8px var(--glow);'
+              : 'background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);'}
             disabled={pagination.loading}
             onclick={async () => {
               if (pagination.loading || activeStatus === option.value) return;
@@ -118,8 +118,8 @@
           <button
             class="rounded-full px-4 py-1.5 text-sm transition-all disabled:opacity-50"
             style={activeTargetType === option.value
-              ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 8px var(--neu-glow);'
-              : 'background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);'}
+              ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 8px var(--glow);'
+              : 'background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);'}
             disabled={pagination.loading}
             onclick={async () => {
               if (pagination.loading || activeTargetType === option.value) return;
@@ -155,14 +155,14 @@
       {#each pagination.items as item (item.report_id)}
         <div
           class="rounded-[22px] p-4 sm:p-5"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0 flex-1 space-y-2">
               <div class="flex flex-wrap items-center gap-2">
                 <span
                   class="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium"
-                  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+                  style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); color: var(--text-secondary);"
                 >
                   {REPORT_TARGET_TYPE_LABEL[item.target_type]}
                 </span>
@@ -173,43 +173,43 @@
                 </span>
               </div>
               <div>
-                <h2 style="font-size: 15px; font-weight: 600; color: var(--neu-text);">
+                <h2 style="font-size: 15px; font-weight: 600; color: var(--text-primary);">
                   {REPORT_REASON_LABEL[item.reason]}
                 </h2>
-                <p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 4px;">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
                   目标 ID：{item.target_id}
                 </p>
               </div>
             </div>
-            <div style="font-size: 13px; color: var(--neu-text-muted);">
+            <div style="font-size: 13px; color: var(--text-secondary);">
               <p>{formatRelativeTime(item.created_at)}</p>
             </div>
           </div>
 
           <div
             class="mt-4 grid gap-3 rounded-[18px] px-4 py-3 text-sm sm:grid-cols-2 lg:grid-cols-3"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
           >
             <div>
-              <p style="font-size: 11px; color: var(--neu-text-muted);">提交时间</p>
+              <p style="font-size: 11px; color: var(--text-secondary);">提交时间</p>
               <p
-                style="font-size: 13px; font-weight: 500; color: var(--neu-text); margin-top: 4px;"
+                style="font-size: 13px; font-weight: 500; color: var(--text-primary); margin-top: 4px;"
               >
                 {formatDateTime(item.created_at)}
               </p>
             </div>
             <div>
-              <p style="font-size: 11px; color: var(--neu-text-muted);">处理时间</p>
+              <p style="font-size: 11px; color: var(--text-secondary);">处理时间</p>
               <p
-                style="font-size: 13px; font-weight: 500; color: var(--neu-text); margin-top: 4px;"
+                style="font-size: 13px; font-weight: 500; color: var(--text-primary); margin-top: 4px;"
               >
                 {item.handled_at ? formatDateTime(item.handled_at) : '尚未处理'}
               </p>
             </div>
             <div>
-              <p style="font-size: 11px; color: var(--neu-text-muted);">举报编号</p>
+              <p style="font-size: 11px; color: var(--text-secondary);">举报编号</p>
               <p
-                style="font-size: 12px; font-weight: 500; font-family: monospace; color: var(--neu-text); margin-top: 4px;"
+                style="font-size: 12px; font-weight: 500; font-family: monospace; color: var(--text-primary); margin-top: 4px;"
               >
                 {item.report_id}
               </p>
@@ -219,11 +219,11 @@
           {#if item.description}
             <div
               class="mt-3 rounded-[18px] px-4 py-3"
-              style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
             >
-              <p style="font-size: 11px; color: var(--neu-text-muted);">补充说明</p>
+              <p style="font-size: 11px; color: var(--text-secondary);">补充说明</p>
               <p
-                style="font-size: 13px; line-height: 1.6; color: var(--neu-text); margin-top: 4px;"
+                style="font-size: 13px; line-height: 1.6; color: var(--text-primary); margin-top: 4px;"
               >
                 {item.description}
               </p>

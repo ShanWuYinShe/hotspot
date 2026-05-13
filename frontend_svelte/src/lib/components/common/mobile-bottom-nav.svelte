@@ -56,17 +56,17 @@
           style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;"
         >
           <item.icon
-            size={24}
+            size={22}
             strokeWidth={isActive(item.href) ? 2.1 : 1.5}
-            color={isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}
+            color={isActive(item.href) ? 'var(--brand)' : 'var(--text-secondary)'}
             style="transition: color 0.22s ease;"
           />
         </span>
         <span
           class="mobile-bottom-nav__tab-label"
           style="color: {isActive(item.href)
-            ? 'var(--neu-accent-primary)'
-            : 'var(--neu-text-muted)'}; transition: color 0.22s ease;"
+            ? 'var(--brand)'
+            : 'var(--text-secondary)'}; transition: color 0.22s ease;"
         >
           {item.label}
         </span>
@@ -78,11 +78,11 @@
     <div class="flex flex-col items-center" style="width: 68px;">
       <button
         class="mobile-bottom-nav__fab"
-        style="background: var(--neu-accent-primary); box-shadow: var(--neu-fab-glow); transition: background 0.22s ease, box-shadow 0.22s ease;"
+        style="background: var(--brand); box-shadow: var(--neu-fab-glow); transition: background 0.22s ease, box-shadow 0.22s ease;"
         onclick={() => uiStore.openCreateSheet()}
         aria-label={t('nav.publish')}
       >
-        <Plus size={20} strokeWidth={2.2} color="var(--neu-active-text)" />
+        <Plus size={20} strokeWidth={2.2} color="var(--text-on-accent)" />
       </button>
     </div>
 
@@ -98,9 +98,9 @@
           style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;"
         >
           <item.icon
-            size={24}
+            size={22}
             strokeWidth={isActive(item.href) ? 2.1 : 1.5}
-            color={isActive(item.href) ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'}
+            color={isActive(item.href) ? 'var(--brand)' : 'var(--text-secondary)'}
             style="transition: color 0.22s ease;"
           />
           {#if item.href === '/chat' && messageBadge > 0}
@@ -112,8 +112,8 @@
         <span
           class="mobile-bottom-nav__tab-label"
           style="color: {isActive(item.href)
-            ? 'var(--neu-accent-primary)'
-            : 'var(--neu-text-muted)'}; transition: color 0.22s ease;"
+            ? 'var(--brand)'
+            : 'var(--text-secondary)'}; transition: color 0.22s ease;"
         >
           {item.label}
         </span>

@@ -77,8 +77,8 @@
   let showLocationPicker = $state(false);
 </script>
 
-<!-- Figma Make DesktopLayout Sidebar — 240px fixed -->
-<aside class="flex flex-shrink-0 flex-col" style="width: 240px;">
+<!-- Figma Make DesktopLayout Sidebar — 192px fixed -->
+<aside class="flex flex-shrink-0 flex-col" style="width: 192px;">
   <!-- Scrollable nav region -->
   <div class="flex flex-1 flex-col overflow-y-auto no-scrollbar min-h-0">
     <!-- Section 1: Discovery nav -->
@@ -89,25 +89,25 @@
           onclick={() => handleNavClick(item)}
         >
           <item.icon
-            size={18}
+            size={17}
             strokeWidth={isActive(item) ? 2 : 1.5}
-            color={isActive(item) ? 'var(--neu-active-text)' : 'var(--neu-text-muted)'}
+            color={isActive(item) ? 'var(--text-on-accent)' : 'var(--text-secondary)'}
           />
           <span class="text-sm" class:font-medium={isActive(item)}>
             {item.label}
           </span>
           {#if authStore.isAuthenticated && item.href === '/notifications' && notificationStore.unreadCount > 0}
             <span
-              class="ml-auto flex items-center justify-center rounded-full neu-active-text"
-              style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--neu-accent-primary);"
+              class="ml-auto flex items-center justify-center rounded-full text-on-accent"
+              style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--brand);"
             >
               {notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount}
             </span>
           {/if}
           {#if authStore.isAuthenticated && item.href === '/chat' && messageStore.totalUnreadCount > 0}
             <span
-              class="ml-auto flex items-center justify-center rounded-full neu-active-text"
-              style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--neu-accent-primary);"
+              class="ml-auto flex items-center justify-center rounded-full text-on-accent"
+              style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--brand);"
             >
               {messageStore.totalUnreadCount > 99 ? '99+' : messageStore.totalUnreadCount}
             </span>
@@ -115,7 +115,7 @@
           {#if !authStore.isAuthenticated && item.requiresAuth}
             <span
               class="ml-auto rounded-full px-2 py-0.5 text-xs"
-              style="background: var(--neu-border); color: var(--neu-text-muted);"
+              style="background: var(--border-theme); color: var(--text-secondary);"
             >
               {t('sidebar.login')}
             </span>
@@ -125,12 +125,12 @@
     </div>
 
     <!-- Divider -->
-    <div class="my-3" style="height: 1px; background: var(--neu-border);"></div>
+    <div class="my-3" style="height: 1px; background: var(--border-theme);"></div>
 
     <!-- Section 2 label -->
     <p
       class="mb-2 px-3"
-      style="font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--neu-text-muted); opacity: 0.65;"
+      style="font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); opacity: 0.65;"
     >
       {t('sidebar.personalCenter')}
     </p>
@@ -143,25 +143,25 @@
           onclick={() => handleNavClick(item)}
         >
           <item.icon
-            size={18}
+            size={17}
             strokeWidth={isActive(item) ? 2 : 1.5}
-            color={isActive(item) ? 'var(--neu-active-text)' : 'var(--neu-text-muted)'}
+            color={isActive(item) ? 'var(--text-on-accent)' : 'var(--text-secondary)'}
           />
           <span class="text-sm" class:font-medium={isActive(item)}>
             {item.label}
           </span>
           {#if authStore.isAuthenticated && item.href === '/notifications' && notificationStore.unreadCount > 0}
             <span
-              class="ml-auto flex items-center justify-center rounded-full neu-active-text"
-              style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--neu-accent-primary);"
+              class="ml-auto flex items-center justify-center rounded-full text-on-accent"
+              style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--brand);"
             >
               {notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount}
             </span>
           {/if}
           {#if authStore.isAuthenticated && item.href === '/chat' && messageStore.totalUnreadCount > 0}
             <span
-              class="ml-auto flex items-center justify-center rounded-full neu-active-text"
-              style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--neu-accent-primary);"
+              class="ml-auto flex items-center justify-center rounded-full text-on-accent"
+              style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--brand);"
             >
               {messageStore.totalUnreadCount > 99 ? '99+' : messageStore.totalUnreadCount}
             </span>
@@ -169,7 +169,7 @@
           {#if !authStore.isAuthenticated && item.requiresAuth}
             <span
               class="ml-auto rounded-full px-2 py-0.5 text-xs"
-              style="background: var(--neu-border); color: var(--neu-text-muted);"
+              style="background: var(--border-theme); color: var(--text-secondary);"
             >
               {t('sidebar.login')}
             </span>
@@ -186,11 +186,11 @@
           onclick={() => void goto('/admin')}
         >
           <Shield
-            size={18}
+            size={17}
             strokeWidth={currentPathname.startsWith('/admin') ? 2 : 1.5}
             color={currentPathname.startsWith('/admin')
-              ? 'var(--neu-active-text)'
-              : 'var(--neu-text-muted)'}
+              ? 'var(--text-on-accent)'
+              : 'var(--text-secondary)'}
           />
           <span class="text-sm" class:font-medium={currentPathname.startsWith('/admin')}>
             {t('sidebar.adminPanel')}
@@ -204,31 +204,31 @@
   <div class="flex-shrink-0 pt-3">
     <button
       class="flex w-full items-center gap-3 rounded-[16px] text-left outline-none transition-shadow duration-200"
-      style="padding: 10px 12px; background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);"
+      style="padding: 10px 12px; background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: 5px 5px 12px var(--shadow-dark), -5px -5px 12px var(--shadow-light);"
       onclick={() => (showLocationPicker = true)}
     >
       <!-- Icon circle -->
       <div
         class="flex flex-shrink-0 items-center justify-center rounded-full"
-        style="width: 34px; height: 34px; background: var(--neu-accent-primary); box-shadow: 0 3px 10px rgba(0,0,0,0.15);"
+        style="width: 34px; height: 34px; background: var(--brand); box-shadow: 0 3px 10px rgba(0,0,0,0.15);"
       >
-        <Navigation2 size={14} strokeWidth={2} color="var(--neu-active-text)" />
+        <Navigation2 size={14} strokeWidth={2} color="var(--text-on-accent)" />
       </div>
       <!-- Text -->
       <div class="min-w-0 flex-1">
         <p
-          style="font-size: 10px; line-height: 1.4; color: var(--neu-text-muted); letter-spacing: 0.06em;"
+          style="font-size: 10px; line-height: 1.4; color: var(--text-secondary); letter-spacing: 0.06em;"
         >
           {t('sidebar.browseAnchor')}
         </p>
-        <p style="font-size: 13px; line-height: 1.4; color: var(--neu-text);">
+        <p style="font-size: 13px; line-height: 1.4; color: var(--text-primary);">
           {mapAnchorStore.displayName}
         </p>
       </div>
       <ChevronRight
         size={14}
         strokeWidth={1.5}
-        color="var(--neu-text-muted)"
+        color="var(--text-secondary)"
         class="flex-shrink-0"
       />
     </button>

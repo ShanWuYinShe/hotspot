@@ -665,7 +665,16 @@ export struct ChatPage {
   }
 
   private async pickAttachment(): Promise<void> {
-    SystemToast.show('图片功能开发中', this.getUIContext());
+    try {
+      const context = AppStorage.get<common.UIAbilityContext>('context');
+      if (!context) return;
+      const uris = await MediaServiceManager.selectImages(context, 1);
+      if (uris.length > 0) {
+        SystemToast.show('图片功能开发中', this.getUIContext());
+      }
+    } catch (e) {
+      hilog.info(DOMAIN_NUMBER, TAG, `附件选择取消或失败: ${e}`);
+    }
   }
 
   private openConversationActions(): void {
@@ -1301,32 +1310,10 @@ export struct ChatPage {
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .border({ width: 1, color: this.getSurfaceBorder() })
-        .onClick(async () => {
-            const newMuted = !this.isMuted;
-            try {
-              if (this.chatType === 'private_chat' && this.targetId) {
-                const resp = await ApiClient.updatePrivateChatSettings({
-                  target_user_id: this.targetId, is_muted: newMuted
-                });
-                if (resp.code !== 0) {
-                  SystemToast.showError('操作失败', this.getUIContext());
-                  return;
-                }
-              } else if (this.chatType === 'group_chat' && this.targetId) {
-                const resp = await ApiClient.updateGroupMySettings({
-                  group_id: this.targetId, is_muted: newMuted
-                });
-                if (resp.code !== 0) {
-                  SystemToast.showError('操作失败', this.getUIContext());
-                  return;
-                }
-              }
-              this.isMuted = newMuted;
-              SystemToast.show(this.isMuted ? '已静音' : '已取消静音', this.getUIContext());
-            } catch (e) {
-              SystemToast.showError('网络错误', this.getUIContext());
-            }
-          })
+        .onClick(() => {
+          this.isMuted = !this.isMuted;
+          SystemToast.show(this.isMuted ? '已静音' : '已取消静音', this.getUIContext());
+        })
 
       Button('回到最新消息')
         .type(ButtonType.Normal)

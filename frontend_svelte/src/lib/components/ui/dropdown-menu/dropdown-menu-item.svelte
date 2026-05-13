@@ -27,9 +27,9 @@
     inset && 'pl-8',
     className
   )}
-  style="border-radius: 14px; color: {hovered ? 'white' : 'var(--neu-text)'}; background: {hovered
-    ? 'var(--neu-accent-primary)'
-    : 'transparent'};"
+  style="border-radius: 14px; color: {hovered
+    ? 'white'
+    : 'var(--text-primary)'}; background: {hovered ? 'var(--brand)' : 'transparent'};"
   onmouseenter={() => (hovered = true)}
   onmouseleave={() => (hovered = false)}
   {disabled}

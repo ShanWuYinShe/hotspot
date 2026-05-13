@@ -186,8 +186,8 @@
 </script>
 
 <div
-  class="neu-card-hover cursor-pointer overflow-hidden rounded-[22px] outline-none transition-[box-shadow,outline,transform] duration-200 hover:scale-[1.008] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--neu-bg)] {className}"
-  style="background: var(--neu-bg); box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+  class="card-hover cursor-pointer overflow-hidden rounded-[22px] outline-none transition-[box-shadow,outline,transform] duration-200 hover:scale-[1.008] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
+  style="background: var(--surface-bg); box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light); border: 1px solid var(--border-theme);"
   tabindex={0}
   role="link"
   onclick={handleCardClick}
@@ -198,7 +198,7 @@
     <div class="p-4">
       <div
         class="rounded-[18px] p-3"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
       >
         <div class="flex items-start justify-between gap-3">
           <div class="flex min-w-0 items-center gap-2.5">
@@ -206,7 +206,7 @@
               {#if groupInfo.avatar_url}
                 <div
                   class="overflow-hidden rounded-full"
-                  style="width: 44px; height: 44px; border: 1.5px solid var(--neu-border);"
+                  style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
                 >
                   <img
                     src={groupInfo.avatar_url}
@@ -217,9 +217,9 @@
               {:else}
                 <div
                   class="flex items-center justify-center rounded-full"
-                  style="width: 44px; height: 44px; background: var(--neu-fallback-bg); border: 1.5px solid var(--neu-border);"
+                  style="width: 44px; height: 44px; background: var(--surface-secondary); border: 1.5px solid var(--border-theme);"
                 >
-                  <span style="font-size: 16px; font-weight: 600; color: var(--neu-fallback-text);"
+                  <span style="font-size: 16px; font-weight: 600; color: var(--text-tertiary);"
                     >{groupInfo.name.charAt(0)}</span
                   >
                 </div>
@@ -227,7 +227,7 @@
               {#if unreadCount > 0}
                 <div
                   class="absolute -top-1 -right-1 flex items-center justify-center rounded-full"
-                  style="width: 18px; height: 18px; background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 9px; font-weight: 600; box-shadow: 0 2px 6px var(--neu-glow);"
+                  style="width: 18px; height: 18px; background: var(--brand); color: var(--text-on-accent); font-size: 9px; font-weight: 600; box-shadow: 0 2px 6px var(--glow);"
                 >
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </div>
@@ -235,17 +235,17 @@
             </div>
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-1">
-                <p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">
+                <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
                   {groupInfo.name}
                 </p>
                 {#if isPrivate}
-                  <Lock size={12} strokeWidth={1.5} color="var(--neu-text-muted)" />
+                  <Lock size={12} strokeWidth={1.5} color="var(--text-secondary)" />
                 {/if}
               </div>
               {#if showMembers}
                 <div class="mt-0.5 flex items-center gap-0.5">
-                  <Users size={11} strokeWidth={1.5} color="var(--neu-text-muted)" />
-                  <span style="font-size: 11px; color: var(--neu-text-muted);"
+                  <Users size={11} strokeWidth={1.5} color="var(--text-secondary)" />
+                  <span style="font-size: 11px; color: var(--text-secondary);"
                     >{groupInfo.members_count}人</span
                   >
                 </div>
@@ -254,10 +254,8 @@
           </div>
           {#if distance}
             <div class="flex flex-shrink-0 items-center gap-0.5">
-              <MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-              <span style="font-size: 10px; color: var(--neu-accent-primary);"
-                >{formatDistance(distance)}</span
-              >
+              <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
+              <span style="font-size: 10px; color: var(--brand);">{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
@@ -268,12 +266,12 @@
             {@const desc = groupWithDesc.description}
             <p
               class="mt-3 line-clamp-3"
-              style="font-size: 12px; color: var(--neu-text-muted); line-height: 1.5;"
+              style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;"
             >
               {desc}
             </p>
           {:else}
-            <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 10px;">
+            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 10px;">
               群主很懒，还没有添加群组描述
             </p>
           {/if}
@@ -287,7 +285,7 @@
             {#each groupWithTags.tags.slice(0, 5) as tag (tag)}
               <span
                 class="rounded-full px-2 py-0.5"
-                style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                style="font-size: 10px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                 >#{tag}</span
               >
             {/each}
@@ -302,7 +300,7 @@
         {#if groupInfo.avatar_url}
           <div
             class="overflow-hidden rounded-full"
-            style="width: 44px; height: 44px; border: 1.5px solid var(--neu-border);"
+            style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
           >
             <img
               src={groupInfo.avatar_url}
@@ -313,9 +311,9 @@
         {:else}
           <div
             class="flex items-center justify-center rounded-full"
-            style="width: 44px; height: 44px; background: var(--neu-fallback-bg); border: 1.5px solid var(--neu-border);"
+            style="width: 44px; height: 44px; background: var(--surface-secondary); border: 1.5px solid var(--border-theme);"
           >
-            <span style="font-size: 16px; font-weight: 600; color: var(--neu-fallback-text);"
+            <span style="font-size: 16px; font-weight: 600; color: var(--text-tertiary);"
               >{groupInfo.name.charAt(0)}</span
             >
           </div>
@@ -324,26 +322,24 @@
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-1">
-            <p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">
+            <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
               {groupInfo.name}
             </p>
             {#if isPrivate}
-              <Lock size={12} strokeWidth={1.5} color="var(--neu-text-muted)" />
+              <Lock size={12} strokeWidth={1.5} color="var(--text-secondary)" />
             {/if}
           </div>
           {#if distance}
             <div class="flex items-center gap-0.5">
-              <MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-              <span style="font-size: 10px; color: var(--neu-accent-primary);"
-                >{formatDistance(distance)}</span
-              >
+              <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
+              <span style="font-size: 10px; color: var(--brand);">{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
         {#if showMembers}
           <div class="mt-0.5 flex items-center gap-0.5">
-            <Users size={11} strokeWidth={1.5} color="var(--neu-text-muted)" />
-            <span style="font-size: 11px; color: var(--neu-text-muted);"
+            <Users size={11} strokeWidth={1.5} color="var(--text-secondary)" />
+            <span style="font-size: 11px; color: var(--text-secondary);"
               >{groupInfo.members_count}人</span
             >
           </div>
@@ -352,12 +348,12 @@
       {#if unreadCount > 0}
         <div
           class="flex flex-shrink-0 items-center justify-center rounded-full"
-          style="width: 20px; height: 20px; background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 11px; font-weight: 600; box-shadow: 0 2px 6px var(--neu-glow);"
+          style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: 0 2px 6px var(--glow);"
         >
           {unreadCount > 99 ? '99+' : unreadCount}
         </div>
       {:else}
-        <ChevronRight size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
+        <ChevronRight size={16} strokeWidth={1.5} color="var(--text-secondary)" />
       {/if}
     </div>
   {:else}
@@ -368,7 +364,7 @@
           {#if groupInfo.avatar_url}
             <div
               class="overflow-hidden rounded-full"
-              style="width: 48px; height: 48px; border: 1.5px solid var(--neu-border);"
+              style="width: 48px; height: 48px; border: 1.5px solid var(--border-theme);"
             >
               <img
                 src={groupInfo.avatar_url}
@@ -379,9 +375,9 @@
           {:else}
             <div
               class="flex items-center justify-center rounded-full"
-              style="width: 48px; height: 48px; background: var(--neu-fallback-bg); border: 1.5px solid var(--neu-border);"
+              style="width: 48px; height: 48px; background: var(--surface-secondary); border: 1.5px solid var(--border-theme);"
             >
-              <span style="font-size: 18px; font-weight: 600; color: var(--neu-fallback-text);"
+              <span style="font-size: 18px; font-weight: 600; color: var(--text-tertiary);"
                 >{groupInfo.name.charAt(0)}</span
               >
             </div>
@@ -389,27 +385,26 @@
         </div>
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-1">
-            <p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">
+            <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
               {groupInfo.name}
             </p>
             {#if isPrivate}
-              <Lock size={12} strokeWidth={1.5} color="var(--neu-text-muted)" />
+              <Lock size={12} strokeWidth={1.5} color="var(--text-secondary)" />
             {/if}
           </div>
           <div class="mt-0.5 flex items-center gap-2">
             {#if showMembers}
               <div class="flex items-center gap-0.5">
-                <Users size={11} strokeWidth={1.5} color="var(--neu-text-muted)" />
-                <span style="font-size: 11px; color: var(--neu-text-muted);"
+                <Users size={11} strokeWidth={1.5} color="var(--text-secondary)" />
+                <span style="font-size: 11px; color: var(--text-secondary);"
                   >{groupInfo.members_count}人</span
                 >
               </div>
             {/if}
             {#if distance}
               <div class="flex items-center gap-0.5">
-                <MapPin size={10} strokeWidth={1.5} color="var(--neu-accent-primary)" />
-                <span style="font-size: 10px; color: var(--neu-accent-primary);"
-                  >{formatDistance(distance)}</span
+                <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
+                <span style="font-size: 10px; color: var(--brand);">{formatDistance(distance)}</span
                 >
               </div>
             {/if}
@@ -418,7 +413,7 @@
         {#if unreadCount > 0}
           <div
             class="flex flex-shrink-0 items-center justify-center rounded-full"
-            style="width: 22px; height: 22px; background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 11px; font-weight: 600; box-shadow: 0 2px 6px var(--neu-glow);"
+            style="width: 22px; height: 22px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: 0 2px 6px var(--glow);"
           >
             {unreadCount > 99 ? '99+' : unreadCount}
           </div>
@@ -428,12 +423,12 @@
   {/if}
 
   <!-- Action buttons -->
-  <div style="border-top: 1px solid var(--neu-border);" class="px-4 py-2.5">
+  <div style="border-top: 1px solid var(--border-theme);" class="px-4 py-2.5">
     <div class="flex items-center justify-between">
       <button
         data-card-action
         class="flex items-center gap-1.5 py-1 outline-none transition-transform duration-150 active:scale-[0.93]"
-        style="color: {isJoined ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};"
+        style="color: {isJoined ? 'var(--brand)' : 'var(--text-secondary)'};"
         onclick={handleJoinGroup}
         disabled={isJoining}
       >
@@ -452,14 +447,14 @@
             <button
               data-card-action
               class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.92]"
-              style="width: 30px; height: 30px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+              style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
               onclick={(e: MouseEvent) => {
                 e.preventDefault();
                 e.stopPropagation();
               }}
               aria-label="更多操作"
             >
-              <MoreVertical size={14} strokeWidth={1.5} color="var(--neu-text-muted)" />
+              <MoreVertical size={14} strokeWidth={1.5} color="var(--text-secondary)" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" class="w-48">

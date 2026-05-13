@@ -871,19 +871,19 @@
   <!-- Sticky header -->
   <div
     class="sticky top-0 z-10 flex items-center gap-4 px-4 py-3"
-    style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+    style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     <button
       class="flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-      style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+      style="width: 36px; height: 36px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
       onclick={() => history.back()}
       aria-label="返回"
     >
-      <ArrowLeft size={18} color="var(--neu-text)" />
+      <ArrowLeft size={18} color="var(--text-primary)" />
     </button>
     <div>
-      <h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">群组详情</h1>
-      <p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">
+      <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">群组详情</h1>
+      <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
         查看群信息、成员与公告管理
       </p>
     </div>
@@ -892,7 +892,7 @@
   {#if group && !wsGroupSubscription.state.isSubscribed}
     <div
       class="flex items-center gap-2 rounded-[16px] px-4 py-2"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-warning-border);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--neu-warning-border);"
     >
       <Loader2 size={14} class="animate-spin" style="color: var(--neu-warning);" />
       <span style="font-size: 14px; color: var(--neu-warning);">
@@ -908,10 +908,10 @@
   {#if !group}
     <div
       class="rounded-[22px] p-6"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div class="flex flex-col items-center gap-4">
-        <p style="color: var(--neu-text-muted);">
+        <p style="color: var(--text-secondary);">
           {data.error || '群组不存在'}
         </p>
       </div>
@@ -920,14 +920,14 @@
     <!-- Group profile card -->
     <div
       class="rounded-[22px] p-6"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div class="space-y-6">
         <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div
               class="overflow-hidden rounded-full"
-              style="width: 96px; height: 96px; border: 2px solid var(--neu-accent-primary); opacity: 0.9;"
+              style="width: 96px; height: 96px; border: 2px solid var(--brand); opacity: 0.9;"
             >
               <img
                 src={group.group.avatar_url}
@@ -937,16 +937,16 @@
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <h2 style="font-size: 24px; font-weight: 700; color: var(--neu-text);">
+                <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary);">
                   {group.group.name}
                 </h2>
                 {#if group.has_password}
-                  <Lock size={16} color="var(--neu-text-muted)" />
+                  <Lock size={16} color="var(--text-secondary)" />
                 {/if}
               </div>
               {#if group.description}
                 <p
-                  style="margin-top: 8px; max-width: 36rem; font-size: 14px; color: var(--neu-text-muted);"
+                  style="margin-top: 8px; max-width: 36rem; font-size: 14px; color: var(--text-secondary);"
                 >
                   {group.description}
                 </p>
@@ -956,7 +956,7 @@
                   {#each group.tags as tag (tag)}
                     <span
                       class="rounded-full px-2.5 py-1"
-                      style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                      style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                     >
                       #{tag}
                     </span>
@@ -970,21 +970,21 @@
             {#if group.my_state?.is_joined}
               <button
                 class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+                style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
                 onclick={() => goto(`/chat/groups/${groupId}`)}
               >
                 进入群聊
               </button>
               <button
                 class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] cursor-default"
-                style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-accent-primary); background: var(--neu-bg);"
+                style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); color: var(--brand); background: var(--surface-bg);"
                 disabled
               >
                 已加入
               </button>
               <button
                 class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                 onclick={confirmLeave}
                 disabled={isLeaving}
               >
@@ -996,7 +996,7 @@
             {:else}
               <button
                 class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+                style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
                 onclick={openJoinDialog}
                 disabled={settings?.join_method === 'invite_only'}
               >
@@ -1010,51 +1010,51 @@
         <div class="grid gap-3 sm:grid-cols-3">
           <div
             class="rounded-[18px] p-4 text-left"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
           >
             <div
               class="flex items-center gap-2"
-              style="font-size: 14px; color: var(--neu-text-muted);"
+              style="font-size: 14px; color: var(--text-secondary);"
             >
               <Users size={16} />
               成员数量
             </div>
             <div
-              style="margin-top: 8px; font-size: 24px; font-weight: 700; color: var(--neu-text);"
+              style="margin-top: 8px; font-size: 24px; font-weight: 700; color: var(--text-primary);"
             >
               {group.group.members_count}
             </div>
           </div>
           <div
             class="rounded-[18px] p-4 text-left"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
           >
             <div
               class="flex items-center gap-2"
-              style="font-size: 14px; color: var(--neu-text-muted);"
+              style="font-size: 14px; color: var(--text-secondary);"
             >
               <Shield size={16} />
               加入方式
             </div>
             <div
-              style="margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--neu-text);"
+              style="margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary);"
             >
               {getJoinMethodLabel(settings?.join_method)}
             </div>
           </div>
           <div
             class="rounded-[18px] p-4 text-left"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
           >
             <div
               class="flex items-center gap-2"
-              style="font-size: 14px; color: var(--neu-text-muted);"
+              style="font-size: 14px; color: var(--text-secondary);"
             >
               <MapPin size={16} />
               群组位置
             </div>
             <div
-              style="margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--neu-text);"
+              style="margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary);"
             >
               {group.location.location_name}
             </div>
@@ -1069,8 +1069,8 @@
         <button
           class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] transition-all"
           style={currentTab === tab.value
-            ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);'
-            : 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);'}
+            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow);'
+            : 'background: var(--surface-bg); color: var(--text-secondary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);'}
           onclick={() =>
             (currentTab = tab.value as 'overview' | 'announcements' | 'members' | 'applications')}
         >
@@ -1084,15 +1084,15 @@
       <div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <div
           class="rounded-[22px] p-5"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <h3
             class="uppercase"
-            style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 12px;"
+            style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 12px;"
           >
             群组说明
           </h3>
-          <p style="font-size: 14px; color: var(--neu-text-muted);">
+          <p style="font-size: 14px; color: var(--text-secondary);">
             {group.description || '暂无群组简介，欢迎加入后一起完善。'}
           </p>
           {#if group.tags && group.tags.length > 0}
@@ -1100,7 +1100,7 @@
               {#each group.tags as tag (tag)}
                 <span
                   class="rounded-full px-2.5 py-1"
-                  style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                  style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                 >
                   #{tag}
                 </span>
@@ -1110,32 +1110,32 @@
         </div>
         <div
           class="rounded-[22px] p-5"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <h3
             class="uppercase"
-            style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted); margin-bottom: 12px;"
+            style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 12px;"
           >
             加入须知
           </h3>
-          <div class="space-y-2" style="font-size: 14px; color: var(--neu-text-muted);">
+          <div class="space-y-2" style="font-size: 14px; color: var(--text-secondary);">
             <div class="flex items-center justify-between">
               <span>加入方式</span>
-              <span style="font-weight: 500; color: var(--neu-text);"
+              <span style="font-weight: 500; color: var(--text-primary);"
                 >{getJoinMethodLabel(settings?.join_method)}</span
               >
             </div>
-            <div style="height: 1px; background: var(--neu-border);"></div>
+            <div style="height: 1px; background: var(--border-theme);"></div>
             <div class="flex items-center justify-between">
               <span>是否需要密码</span>
-              <span style="font-weight: 500; color: var(--neu-text);"
+              <span style="font-weight: 500; color: var(--text-primary);"
                 >{group.has_password ? '需要' : '不需要'}</span
               >
             </div>
-            <div style="height: 1px; background: var(--neu-border);"></div>
+            <div style="height: 1px; background: var(--border-theme);"></div>
             <div class="flex items-center justify-between">
               <span>当前位置</span>
-              <span style="font-weight: 500; color: var(--neu-text);"
+              <span style="font-weight: 500; color: var(--text-primary);"
                 >{group.location.location_name}</span
               >
             </div>
@@ -1144,7 +1144,7 @@
             {#if !authStore.isAuthenticated}
               <button
                 class="w-full rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                 onclick={() => uiStore.openLoginModal()}
               >
                 登录后加入
@@ -1152,14 +1152,14 @@
             {:else if group.my_state?.is_joined}
               <div
                 class="rounded-[14px] px-3 py-2 text-center"
-                style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 12px; color: var(--neu-text-muted);"
+                style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
               >
                 你已加入该群组
               </div>
             {:else}
               <button
                 class="w-full rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+                style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
                 onclick={openJoinDialog}
               >
                 申请加入
@@ -1175,12 +1175,12 @@
       {#if !authStore.isAuthenticated}
         <div
           class="flex flex-col items-center gap-3 rounded-[22px] py-10"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
-          <p style="font-size: 14px; color: var(--neu-text-muted);">登录后查看群公告</p>
+          <p style="font-size: 14px; color: var(--text-secondary);">登录后查看群公告</p>
           <button
             class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+            style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
             onclick={() => uiStore.openLoginModal()}
           >
             去登录
@@ -1189,12 +1189,12 @@
       {:else if !group.my_state?.is_joined}
         <div
           class="flex flex-col items-center gap-3 rounded-[22px] py-10"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
-          <p style="font-size: 14px; color: var(--neu-text-muted);">加入群组后可查看公告</p>
+          <p style="font-size: 14px; color: var(--text-secondary);">加入群组后可查看公告</p>
           <button
             class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+            style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
             onclick={openJoinDialog}
           >
             申请加入
@@ -1204,18 +1204,18 @@
         <!-- Announcements toolbar -->
         <div
           class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
           <div>
-            <p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">群公告</p>
-            <p style="margin-top: 4px; font-size: 12px; color: var(--neu-text-muted);">
+            <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">群公告</p>
+            <p style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
               重要通知与管理提示将展示在这里
             </p>
           </div>
           <div class="flex flex-wrap gap-2">
             <button
               class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-              style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+              style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
               onclick={() => loadAnnouncements(true)}
               disabled={announcementsPagination.loading}
             >
@@ -1225,7 +1225,7 @@
             {#if canManageGroup}
               <button
                 class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+                style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
                 onclick={() => openAnnouncementDialog()}
               >
                 <Plus size={14} />
@@ -1239,19 +1239,19 @@
             {#each Array(3) as _, i (i)}
               <div
                 class="rounded-[22px] p-4 space-y-2"
-                style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
               >
                 <div
                   class="rounded"
-                  style="width: 160px; height: 14px; background: var(--neu-border);"
+                  style="width: 160px; height: 14px; background: var(--border-theme);"
                 ></div>
                 <div
                   class="rounded"
-                  style="width: 100%; height: 14px; background: var(--neu-border);"
+                  style="width: 100%; height: 14px; background: var(--border-theme);"
                 ></div>
                 <div
                   class="rounded"
-                  style="width: 128px; height: 12px; background: var(--neu-border);"
+                  style="width: 128px; height: 12px; background: var(--border-theme);"
                 ></div>
               </div>
             {/each}
@@ -1259,38 +1259,38 @@
         {:else if announcementsPagination.items.length === 0}
           <div
             class="rounded-[22px] py-10 text-center"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
-            <p style="font-size: 14px; color: var(--neu-text-muted);">暂无公告</p>
+            <p style="font-size: 14px; color: var(--text-secondary);">暂无公告</p>
           </div>
         {:else}
           <div class="space-y-3">
             {#each announcementsPagination.items as announcement (announcement.announcement_id)}
               <div
                 class="rounded-[22px] p-4"
-                style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
               >
                 <div class="flex items-start justify-between gap-3">
                   <div class="space-y-2">
                     <div class="flex items-center gap-2">
-                      <p style="font-weight: 500; font-size: 15px; color: var(--neu-text);">
+                      <p style="font-weight: 500; font-size: 15px; color: var(--text-primary);">
                         {announcement.title}
                       </p>
                       {#if announcement.is_pinned}
                         <span
                           class="rounded-full px-2 py-0.5"
-                          style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                          style="font-size: 10px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                           >置顶</span
                         >
                       {/if}
                     </div>
                     <p
                       class="whitespace-pre-wrap"
-                      style="font-size: 14px; color: var(--neu-text-muted);"
+                      style="font-size: 14px; color: var(--text-secondary);"
                     >
                       {announcement.content}
                     </p>
-                    <div style="font-size: 12px; color: var(--neu-text-muted);">
+                    <div style="font-size: 12px; color: var(--text-secondary);">
                       {formatDateTime(announcement.created_at)}
                     </div>
                   </div>
@@ -1298,7 +1298,7 @@
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"
+                        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
                         aria-label="公告操作"
                       >
                         <MoreHorizontal size={16} />
@@ -1325,7 +1325,7 @@
             <div class="flex justify-center pt-2">
               <button
                 class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                 onclick={() => loadAnnouncements(false)}
                 disabled={announcementsPagination.loadingMore}
               >
@@ -1346,42 +1346,42 @@
       {#if !authStore.isAuthenticated}
         <div
           class="flex flex-col items-center gap-3 rounded-[22px] py-10"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
-          <p style="font-size: 14px; color: var(--neu-text-muted);">登录后查看成员</p>
+          <p style="font-size: 14px; color: var(--text-secondary);">登录后查看成员</p>
           <button
             class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+            style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
             onclick={() => uiStore.openLoginModal()}>去登录</button
           >
         </div>
       {:else if !group.my_state?.is_joined}
         <div
           class="flex flex-col items-center gap-3 rounded-[22px] py-10"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
-          <p style="font-size: 14px; color: var(--neu-text-muted);">加入群组后可查看成员</p>
+          <p style="font-size: 14px; color: var(--text-secondary);">加入群组后可查看成员</p>
           <button
             class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+            style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
             onclick={openJoinDialog}>申请加入</button
           >
         </div>
       {:else}
         <div
           class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
           <div>
-            <p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">成员列表</p>
-            <p style="margin-top: 4px; font-size: 12px; color: var(--neu-text-muted);">
+            <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">成员列表</p>
+            <p style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
               支持群主/管理员进行禁言与角色管理
             </p>
           </div>
           <div class="flex flex-wrap gap-2">
             <button
               class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-              style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+              style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
               onclick={() => loadMembers(true)}
               disabled={membersPagination.loading}
             >
@@ -1390,7 +1390,7 @@
             {#if canManageGroup}
               <span
                 class="rounded-full px-3 py-1"
-                style="font-size: 11px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                 >可管理成员</span
               >
             {/if}
@@ -1402,20 +1402,20 @@
               <div class="mb-3 break-inside-avoid">
                 <div
                   class="flex items-center gap-3 rounded-[22px] p-4"
-                  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+                  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
                 >
                   <div
                     class="rounded-full"
-                    style="width: 40px; height: 40px; background: var(--neu-border);"
+                    style="width: 40px; height: 40px; background: var(--border-theme);"
                   ></div>
                   <div class="flex-1 space-y-2">
                     <div
                       class="rounded"
-                      style="width: 96px; height: 12px; background: var(--neu-border);"
+                      style="width: 96px; height: 12px; background: var(--border-theme);"
                     ></div>
                     <div
                       class="rounded"
-                      style="width: 128px; height: 12px; background: var(--neu-border);"
+                      style="width: 128px; height: 12px; background: var(--border-theme);"
                     ></div>
                   </div>
                 </div>
@@ -1425,9 +1425,9 @@
         {:else if membersPagination.items.length === 0}
           <div
             class="rounded-[22px] py-10 text-center"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
-            <p style="font-size: 14px; color: var(--neu-text-muted);">暂无成员</p>
+            <p style="font-size: 14px; color: var(--text-secondary);">暂无成员</p>
           </div>
         {:else}
           <div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
@@ -1435,7 +1435,7 @@
               <div class="mb-3 break-inside-avoid">
                 <div
                   class="flex items-center gap-3 rounded-[22px] p-4 transition-all"
-                  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+                  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
                 >
                   <a
                     href="/users/{member.user.user_id}"
@@ -1443,7 +1443,7 @@
                   >
                     <div
                       class="overflow-hidden rounded-full"
-                      style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);"
+                      style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme);"
                     >
                       <img
                         src={member.user.avatar_url}
@@ -1455,17 +1455,17 @@
                       <div class="flex items-center gap-2">
                         <p
                           class="truncate"
-                          style="font-weight: 500; font-size: 14px; color: var(--neu-text);"
+                          style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
                         >
                           {member.user.nickname}
                         </p>
                         <span
                           class="rounded-full px-2 py-0.5"
-                          style="font-size: 10px; color: var(--neu-accent-primary); background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                          style="font-size: 10px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                           >{getRoleLabel(member.role)}</span
                         >
                       </div>
-                      <p style="font-size: 12px; color: var(--neu-text-muted);">
+                      <p style="font-size: 12px; color: var(--text-secondary);">
                         加入于 {formatDateTime(member.joined_at)}
                       </p>
                       {#if member.muted_until}
@@ -1479,7 +1479,7 @@
                     {#if member.muted_until}
                       <span
                         class="rounded-full px-2 py-0.5"
-                        style="font-size: 10px; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+                        style="font-size: 10px; color: var(--text-secondary); background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
                         >已禁言</span
                       >
                     {/if}
@@ -1487,7 +1487,7 @@
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"
+                          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
                           aria-label="成员操作"
                         >
                           <MoreHorizontal size={16} />
@@ -1536,7 +1536,7 @@
             <div class="flex justify-center pt-2">
               <button
                 class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                 onclick={() => loadMembers(false)}
                 disabled={membersPagination.loadingMore}
               >
@@ -1554,17 +1554,17 @@
       <div class="space-y-4">
         <div
           class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
           <div>
-            <p style="font-size: 14px; font-weight: 600; color: var(--neu-text);">待处理申请</p>
-            <p style="margin-top: 4px; font-size: 12px; color: var(--neu-text-muted);">
+            <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">待处理申请</p>
+            <p style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
               仅展示 pending 申请，处理后会自动移出列表
             </p>
           </div>
           <button
             class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+            style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
             onclick={() => loadApplications(true)}
             disabled={applicationsPagination.loading}
           >
@@ -1576,19 +1576,19 @@
             {#each Array(3) as _, i (i)}
               <div
                 class="rounded-[22px] p-4 space-y-2"
-                style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
               >
                 <div
                   class="rounded"
-                  style="width: 128px; height: 14px; background: var(--neu-border);"
+                  style="width: 128px; height: 14px; background: var(--border-theme);"
                 ></div>
                 <div
                   class="rounded"
-                  style="width: 100%; height: 14px; background: var(--neu-border);"
+                  style="width: 100%; height: 14px; background: var(--border-theme);"
                 ></div>
                 <div
                   class="rounded"
-                  style="width: 144px; height: 12px; background: var(--neu-border);"
+                  style="width: 144px; height: 12px; background: var(--border-theme);"
                 ></div>
               </div>
             {/each}
@@ -1596,23 +1596,23 @@
         {:else if applicationsPagination.items.length === 0}
           <div
             class="rounded-[22px] py-10 text-center"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
-            <p style="font-size: 14px; color: var(--neu-text-muted);">暂无待处理申请</p>
+            <p style="font-size: 14px; color: var(--text-secondary);">暂无待处理申请</p>
           </div>
         {:else}
           <div class="space-y-3">
             {#each applicationsPagination.items as application (application.application_id)}
               <div
                 class="rounded-[22px] p-4"
-                style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
               >
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div class="min-w-0 space-y-1">
                     <div class="flex items-center gap-2">
                       <div
                         class="overflow-hidden rounded-full"
-                        style="width: 32px; height: 32px; border: 1.5px solid var(--neu-border);"
+                        style="width: 32px; height: 32px; border: 1.5px solid var(--border-theme);"
                       >
                         <img
                           src={application.applicant.avatar_url}
@@ -1622,24 +1622,24 @@
                       </div>
                       <p
                         class="truncate"
-                        style="font-size: 14px; font-weight: 500; color: var(--neu-text);"
+                        style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
                       >
                         {application.applicant.nickname}
                       </p>
                     </div>
                     {#if application.message}
-                      <p style="font-size: 14px; color: var(--neu-text-muted);">
+                      <p style="font-size: 14px; color: var(--text-secondary);">
                         {application.message}
                       </p>
                     {/if}
-                    <p style="font-size: 12px; color: var(--neu-text-muted);">
+                    <p style="font-size: 12px; color: var(--text-secondary);">
                       申请时间：{formatDateTime(application.created_at)}
                     </p>
                   </div>
                   <div class="flex flex-wrap gap-2">
                     <button
                       class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                      style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow); font-size: 13px;"
+                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow); font-size: 13px;"
                       disabled={isApplicationHandling(application.application_id)}
                       onclick={() => handleApplicationDecision(application, 'approve')}
                     >
@@ -1647,7 +1647,7 @@
                     </button>
                     <button
                       class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                      style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg); font-size: 13px;"
+                      style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg); font-size: 13px;"
                       disabled={isApplicationHandling(application.application_id)}
                       onclick={() => handleApplicationDecision(application, 'reject')}
                     >
@@ -1662,7 +1662,7 @@
             <div class="flex justify-center pt-2">
               <button
                 class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                 onclick={() => loadApplications(false)}
                 disabled={applicationsPagination.loadingMore}
               >
@@ -1683,8 +1683,8 @@
 <!-- Dialogs: kept with neumorphic inner styling -->
 <Dialog.Root bind:open={showJoinDialog}>
   <Dialog.Content
-    class="sm:max-w-lg rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--neu-border);"
+    class="sm:max-w-lg rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>加入群组</Dialog.Title>
@@ -1699,11 +1699,11 @@
       {#if group?.has_password}
         <div
           class="space-y-2 rounded-[18px] p-4"
-          style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+          style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
         >
           <label
             for="group-password"
-            style="font-size: 13px; font-weight: 500; color: var(--neu-text);">群组密码</label
+            style="font-size: 13px; font-weight: 500; color: var(--text-primary);">群组密码</label
           >
           <input
             id="group-password"
@@ -1712,18 +1712,18 @@
             bind:value={joinPassword}
             maxlength={GROUP_PASSWORD_MAX}
             class="w-full rounded-full py-2.5 px-4 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
           />
         </div>
       {/if}
       {#if settings?.join_method === 'approval'}
         <div
           class="space-y-2 rounded-[18px] p-4"
-          style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+          style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
         >
           <label
             for="join-message"
-            style="font-size: 13px; font-weight: 500; color: var(--neu-text);">申请理由</label
+            style="font-size: 13px; font-weight: 500; color: var(--text-primary);">申请理由</label
           >
           <textarea
             id="join-message"
@@ -1732,7 +1732,7 @@
             bind:value={joinMessage}
             maxlength={GROUP_JOIN_MESSAGE_MAX}
             class="w-full resize-none rounded-[14px] p-3 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
           ></textarea>
         </div>
       {/if}
@@ -1740,12 +1740,12 @@
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showJoinDialog = false)}>取消</button
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
         onclick={handleJoin}
         disabled={isJoining}
       >
@@ -1758,8 +1758,8 @@
 
 <Dialog.Root bind:open={showAnnouncementDialog}>
   <Dialog.Content
-    class="sm:max-w-xl rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--neu-border);"
+    class="sm:max-w-xl rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{editingAnnouncement ? '编辑公告' : '发布公告'}</Dialog.Title>
@@ -1768,11 +1768,11 @@
     <div class="space-y-4 py-4">
       <div
         class="space-y-2 rounded-[18px] p-4"
-        style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+        style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
       >
         <label
           for="announcement-title"
-          style="font-size: 13px; font-weight: 500; color: var(--neu-text);">公告标题</label
+          style="font-size: 13px; font-weight: 500; color: var(--text-primary);">公告标题</label
         >
         <input
           id="announcement-title"
@@ -1780,16 +1780,16 @@
           bind:value={announcementTitle}
           maxlength={ANNOUNCEMENT_TITLE_MAX}
           class="w-full rounded-full py-2.5 px-4 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
         />
       </div>
       <div
         class="space-y-2 rounded-[18px] p-4"
-        style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+        style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
       >
         <label
           for="announcement-content"
-          style="font-size: 13px; font-weight: 500; color: var(--neu-text);">公告内容</label
+          style="font-size: 13px; font-weight: 500; color: var(--text-primary);">公告内容</label
         >
         <textarea
           id="announcement-content"
@@ -1798,22 +1798,22 @@
           bind:value={announcementContent}
           maxlength={ANNOUNCEMENT_CONTENT_MAX}
           class="w-full resize-none rounded-[14px] p-3 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
         ></textarea>
       </div>
       <div
         class="flex items-center justify-between rounded-[18px] px-4 py-3"
-        style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+        style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
       >
         <div>
-          <p style="font-weight: 500; font-size: 14px; color: var(--neu-text);">置顶公告</p>
-          <p style="font-size: 12px; color: var(--neu-text-muted);">置顶后将优先展示给成员</p>
+          <p style="font-weight: 500; font-size: 14px; color: var(--text-primary);">置顶公告</p>
+          <p style="font-size: 12px; color: var(--text-secondary);">置顶后将优先展示给成员</p>
         </div>
         <button
           class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           style={announcementPinned
-            ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);'
-            : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'}
+            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow);'
+            : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           onclick={() => (announcementPinned = !announcementPinned)}
         >
           {announcementPinned ? '已置顶' : '未置顶'}
@@ -1823,12 +1823,12 @@
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showAnnouncementDialog = false)}>取消</button
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
         onclick={submitAnnouncement}
         disabled={announcementSubmitting}
       >
@@ -1841,8 +1841,8 @@
 
 <Dialog.Root bind:open={showAnnouncementDeleteDialog}>
   <Dialog.Content
-    class="sm:max-w-md rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--neu-border);"
+    class="sm:max-w-md rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>删除公告</Dialog.Title>
@@ -1850,19 +1850,19 @@
     </Dialog.Header>
     <div
       class="rounded-[18px] px-4 py-3"
-      style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 14px; color: var(--neu-text-muted);"
+      style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 14px; color: var(--text-secondary);"
     >
       {announcementToDelete?.title ?? '该公告'}
     </div>
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showAnnouncementDeleteDialog = false)}>取消</button
       >
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--neu-error); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-error-border);"
+        style="background: var(--neu-error); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--neu-error-border);"
         onclick={handleDeleteAnnouncement}>确认删除</button
       >
     </Dialog.Footer>
@@ -1871,15 +1871,15 @@
 
 <Dialog.Root bind:open={showMuteDialog}>
   <Dialog.Content
-    class="sm:max-w-md rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--neu-border);"
+    class="sm:max-w-md rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>禁言成员</Dialog.Title>
       <Dialog.Description>被禁言成员仍可浏览，但无法发言。</Dialog.Description>
     </Dialog.Header>
     <div class="space-y-4 py-2">
-      <div style="font-size: 14px; color: var(--neu-text-muted);">
+      <div style="font-size: 14px; color: var(--text-secondary);">
         成员：{muteTarget?.user.nickname ?? '-'}
       </div>
       <div class="grid grid-cols-2 gap-2">
@@ -1887,8 +1887,8 @@
           <button
             class="rounded-full py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
             style={Number(muteDurationMinutes) === preset.value
-              ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);'
-              : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'}
+              ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow);'
+              : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
             onclick={() => (muteDurationMinutes = String(preset.value))}>{preset.label}</button
           >
         {/each}
@@ -1896,7 +1896,7 @@
       <div class="space-y-2">
         <label
           for="mute-duration"
-          style="font-size: 13px; font-weight: 500; color: var(--neu-text);"
+          style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
           >自定义时长（分钟）</label
         >
         <input
@@ -1906,19 +1906,19 @@
           max={MUTE_DURATION_MAX}
           bind:value={muteDurationMinutes}
           class="w-full rounded-full py-2.5 px-4 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
         />
       </div>
     </div>
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showMuteDialog = false)}>取消</button
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
         onclick={handleMuteMember}
         disabled={muteSubmitting}
       >
@@ -1931,8 +1931,8 @@
 
 <Dialog.Root bind:open={showRoleDialog}>
   <Dialog.Content
-    class="sm:max-w-md rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--neu-border);"
+    class="sm:max-w-md rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>角色管理</Dialog.Title>
@@ -1941,23 +1941,23 @@
       >
     </Dialog.Header>
     <div class="space-y-4 py-2">
-      <div style="font-size: 14px; color: var(--neu-text-muted);">
+      <div style="font-size: 14px; color: var(--text-secondary);">
         成员：{roleTarget?.user.nickname ?? '-'}
       </div>
       <div class="grid gap-2 sm:grid-cols-2">
         <button
           class="rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           style={roleTarget?.role === 'admin'
-            ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);'
-            : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'}
+            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow);'
+            : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           disabled={roleTarget?.role === 'admin' || roleSubmitting}
           onclick={() => handleSetRole('admin')}>设为管理员</button
         >
         <button
           class="rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           style={roleTarget?.role === 'member'
-            ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 12px var(--neu-glow);'
-            : 'box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);'}
+            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow);'
+            : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           disabled={roleTarget?.role === 'member' || roleSubmitting}
           onclick={() => handleSetRole('member')}>设为成员</button
         >
@@ -1966,7 +1966,7 @@
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showRoleDialog = false)}>取消</button
       >
     </Dialog.Footer>
@@ -1975,8 +1975,8 @@
 
 <Dialog.Root bind:open={showRemoveDialog}>
   <Dialog.Content
-    class="sm:max-w-md rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--neu-border);"
+    class="sm:max-w-md rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>移除成员</Dialog.Title>
@@ -1984,19 +1984,19 @@
     </Dialog.Header>
     <div
       class="rounded-[18px] px-4 py-3"
-      style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 14px; color: var(--neu-text-muted);"
+      style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 14px; color: var(--text-secondary);"
     >
       {removeTarget?.user.nickname ?? '-'}
     </div>
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showRemoveDialog = false)}>取消</button
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--neu-error); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-error-border);"
+        style="background: var(--neu-error); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--neu-error-border);"
         onclick={handleRemoveMember}
         disabled={removeSubmitting}
       >
@@ -2009,8 +2009,8 @@
 
 <Dialog.Root bind:open={showLeaveDialog}>
   <Dialog.Content
-    class="sm:max-w-md rounded-[22px] border var(--neu-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--neu-border);"
+    class="sm:max-w-md rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>退出群组</Dialog.Title>
@@ -2018,24 +2018,24 @@
     </Dialog.Header>
     <div
       class="rounded-[18px] px-4 py-3"
-      style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+      style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
     >
-      <div style="font-size: 14px; font-weight: 500; color: var(--neu-text);">
+      <div style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
         {group?.group.name ?? '群组'}
       </div>
-      <div style="margin-top: 4px; font-size: 12px; color: var(--neu-text-muted);">
+      <div style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
         {group?.group.members_count ?? 0} 位成员
       </div>
     </div>
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted); background: var(--neu-bg);"
+        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showLeaveDialog = false)}>取消</button
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--neu-error); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-error-border);"
+        style="background: var(--neu-error); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--neu-error-border);"
         onclick={handleLeave}
         disabled={isLeaving}
       >

@@ -33,17 +33,17 @@
 <div class="flex min-h-screen items-center justify-center px-4 py-10">
   <div
     class="w-full max-w-md rounded-[22px] p-6"
-    style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
   >
     <div class="mb-6 text-center">
       <div
         class="mx-auto mb-4 flex items-center justify-center rounded-full"
-        style="width: 48px; height: 48px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+        style="width: 48px; height: 48px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
       >
-        <Shield size={19} color="var(--neu-accent-primary)" />
+        <Shield size={19} color="var(--brand)" />
       </div>
-      <h1 style="font-size: 20px; font-weight: 600; color: var(--neu-text);">登录后继续</h1>
-      <p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 6px;">
+      <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">登录后继续</h1>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">
         使用你的账号、注册新账号或继续访客体验
       </p>
     </div>

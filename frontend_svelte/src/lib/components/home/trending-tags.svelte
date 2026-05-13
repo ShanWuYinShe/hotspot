@@ -37,10 +37,10 @@
 {#if tags.length > 0}
   <div>
     <div class="mb-2 flex items-center gap-1.5">
-      <Hash size={13} color="var(--neu-accent-primary)" />
+      <Hash size={13} color="var(--brand)" />
       <p
         class="uppercase"
-        style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
+        style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
       >
         热门话题
       </p>
@@ -49,8 +49,8 @@
       {#each tags as tag (tag.name)}
         <a
           href="/search?tag={encodeURIComponent(tag.name)}"
-          class="rounded-full px-3 py-1 text-xs neu-pill-hover transition-transform duration-150 active:scale-[0.93]"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+          class="rounded-full px-3 py-1 text-xs pill-hover transition-transform duration-150 active:scale-[0.93]"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary);"
         >
           #{tag.name}
           <span style="opacity: 0.5;">{tag.usage_count}</span>

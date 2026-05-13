@@ -29,19 +29,19 @@
 <div class="flex items-center gap-2">
   <button
     class="flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:scale-105 active:scale-95"
-    style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+    style="width: 36px; height: 36px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
     onclick={toggleThemeMode}
     aria-label={t('sidebar.toggleTheme')}
   >
     {#if currentMode === 'dark'}
-      <Sun size={16} strokeWidth={1.5} color="var(--neu-text)" />
+      <Sun size={16} strokeWidth={1.5} color="var(--text-primary)" />
     {:else}
-      <Moon size={16} strokeWidth={1.5} color="var(--neu-text)" />
+      <Moon size={16} strokeWidth={1.5} color="var(--text-primary)" />
     {/if}
   </button>
   <button
     class="rounded-full px-3 py-1.5 outline-none transition-all duration-150 hover:scale-105 active:scale-95"
-    style="font-size: 11px; font-weight: 500; background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+    style="font-size: 11px; font-weight: 500; background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
     onclick={toggleThemeFamily}
   >
     {getThemeFamilyLabel(currentFamily)}

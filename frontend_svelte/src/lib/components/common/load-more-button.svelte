@@ -38,14 +38,14 @@
   <div bind:this={viewport} class="flex justify-center py-8 {className}">
     {#if loading}
       <div class="flex items-center gap-2" role="status" aria-live="polite">
-        <Loader2 size={18} strokeWidth={1.5} class="animate-spin" color="var(--neu-text-muted)" />
-        <span style="font-size: 13px; color: var(--neu-text-muted);">{t('common.loading')}</span>
+        <Loader2 size={18} strokeWidth={1.5} class="animate-spin" color="var(--text-secondary)" />
+        <span style="font-size: 13px; color: var(--text-secondary);">{t('common.loading')}</span>
       </div>
     {:else}
       <button
         type="button"
         class="flex flex-col items-center gap-1 rounded-full p-0 outline-none transition-transform duration-200 hover:scale-105 active:scale-[0.97]"
-        style="background: transparent; color: var(--neu-text-muted);"
+        style="background: transparent; color: var(--text-secondary);"
         onclick={onLoadMore}
         aria-label={t('common.loadMore')}
       >
@@ -57,7 +57,7 @@
             d="M19 14l-7 7m0 0l-7-7m7 7V3"
           />
         </svg>
-        <span style="font-size: 11px; color: var(--neu-text-muted);"
+        <span style="font-size: 11px; color: var(--text-secondary);"
           >{t('loadMoreIndicator.clickToLoad')}</span
         >
       </button>

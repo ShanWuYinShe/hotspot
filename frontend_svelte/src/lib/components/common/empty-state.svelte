@@ -24,24 +24,24 @@
 
 <div
   class="flex flex-col items-center justify-center rounded-[22px] py-16 text-center {className}"
-  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
 >
   <div
     class="mb-4 flex items-center justify-center rounded-full"
-    style="width: 72px; height: 72px; box-shadow: 8px 8px 18px var(--neu-shadow-dark), -8px -8px 18px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+    style="width: 72px; height: 72px; box-shadow: 8px 8px 18px var(--shadow-dark), -8px -8px 18px var(--shadow-light); border: 1px solid var(--border-theme);"
   >
-    <Icon size={28} strokeWidth={1.25} color="var(--neu-text-muted)" style="opacity: 0.5;" />
+    <Icon size={28} strokeWidth={1.25} color="var(--text-secondary)" style="opacity: 0.5;" />
   </div>
-  <p style="font-size: 16px; font-weight: 500; color: var(--neu-text);">{title}</p>
+  <p style="font-size: 16px; font-weight: 500; color: var(--text-primary);">{title}</p>
   {#if description}
-    <p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 6px; max-width: 260px;">
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; max-width: 260px;">
       {description}
     </p>
   {/if}
   {#if actionText && onAction}
     <button
       class="mt-5 rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-      style="font-size: 13px; font-weight: 500; background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 4px 14px var(--neu-glow);"
+      style="font-size: 13px; font-weight: 500; background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
       onclick={onAction}
     >
       {actionText}

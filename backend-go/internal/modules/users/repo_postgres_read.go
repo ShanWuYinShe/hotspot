@@ -665,6 +665,9 @@ func decodeUserCursor(cursor string) (any, string, error) {
 
 func newUsersCursorBlock() (cipher.Block, error) {
 	secret := config.Load().AuthTokenSecret
+	if secret == "" {
+		secret = "dev-secret-change-me"
+	}
 	key := sha256.Sum256([]byte(secret))
 	return aes.NewCipher(key[:])
 }

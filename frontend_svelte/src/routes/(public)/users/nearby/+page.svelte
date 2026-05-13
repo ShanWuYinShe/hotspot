@@ -86,41 +86,41 @@
   <!-- Sticky header -->
   <div
     class="sticky top-0 z-10 px-5 pt-3 pb-0"
-    style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+    style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     <div class="mb-3 flex items-center gap-3">
       <button
-        class="flex items-center justify-center rounded-full outline-none"
-        style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+        class="surface-flat flex items-center justify-center rounded-full outline-none"
+        style="width: 36px; height: 36px;"
         onclick={handleBack}
         aria-label="返回"
       >
-        <ArrowLeft size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
+        <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
       </button>
       <div class="flex-1">
-        <h1 style="font-size: 18px; font-weight: 600; color: var(--neu-text);">附近的人</h1>
-        <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 1px;">
+        <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">附近的人</h1>
+        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
           {onlineCount} 人在线 · {pagination.items.length} 人附近
         </p>
       </div>
       <button
-        class="flex items-center justify-center rounded-full outline-none"
-        style="width: 36px; height: 36px; background: var(--neu-bg); box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+        class="surface-flat flex items-center justify-center rounded-full outline-none"
+        style="width: 36px; height: 36px;"
         aria-label="地图"
       >
-        <MapIcon size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+        <MapIcon size={15} strokeWidth={1.5} color="var(--brand)" />
       </button>
     </div>
 
     <!-- Search -->
-    <div class="neu-input-surface mb-3 flex items-center gap-3 rounded-[18px] px-4 py-2.5">
-      <Search size={14} strokeWidth={1.5} color="var(--neu-text-muted)" class="flex-shrink-0" />
+    <div class="input-surface mb-3 flex items-center gap-3 rounded-[18px] px-4 py-2.5">
+      <Search size={14} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
       <input
         type="text"
         bind:value={searchText}
         placeholder="搜索附近用户"
         class="flex-1 bg-transparent outline-none"
-        style="font-size: 13px; color: var(--neu-text);"
+        style="font-size: 13px; color: var(--text-primary);"
       />
     </div>
 
@@ -129,21 +129,22 @@
       {#each SORT_OPTIONS as s (s)}
         <button
           class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all"
+          class:surface-flat={activeSort !== s}
           style={activeSort === s
-            ? 'background: var(--neu-accent-primary); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--neu-glow);'
-            : 'background: var(--neu-bg); color: var(--neu-text-muted); font-size: 12px; border: 1px solid var(--neu-border); box-shadow: 2px 2px 6px var(--neu-shadow-dark), -2px -2px 6px var(--neu-shadow-light);'}
+            ? 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--glow);'
+            : 'color: var(--text-secondary); font-size: 12px;'}
           onclick={() => (activeSort = s)}
         >
           {s}
         </button>
       {/each}
-      <div style="width: 1px; height: 28px; background: var(--neu-border); margin: auto;"></div>
+      <div style="width: 1px; height: 28px; background: var(--border-theme); margin: auto;"></div>
       {#each FILTER_TAGS as t (t)}
         <button
           class="flex-shrink-0 rounded-full px-3 py-1.5 outline-none transition-all"
           style={activeTag === t && t !== '全部'
-            ? 'background: rgba(99,102,241,0.12); color: var(--neu-accent-primary); font-size: 12px; border: 1px solid rgba(99,102,241,0.25);'
-            : 'font-size: 12px; color: var(--neu-text-muted); background: transparent;'}
+            ? 'background: rgba(99,102,241,0.12); color: var(--brand); font-size: 12px; border: 1px solid rgba(99,102,241,0.25);'
+            : 'font-size: 12px; color: var(--text-secondary); background: transparent;'}
           onclick={() => (activeTag = t)}
         >
           {t}
@@ -162,7 +163,7 @@
         {#each Array(6) as _, i (i)}
           <div
             class="animate-pulse rounded-[22px]"
-            style="height: 72px; background: var(--neu-border);"
+            style="height: 72px; background: var(--border-theme);"
           ></div>
         {/each}
       </div>

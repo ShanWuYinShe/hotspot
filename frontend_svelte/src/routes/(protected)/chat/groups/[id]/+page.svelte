@@ -608,31 +608,31 @@
   class="flex flex-col overflow-hidden"
   style="{platformStore.isDesktop
     ? 'height: 100%;'
-    : 'height: calc(100dvh - 8rem); border-radius: 22px; box-shadow: var(--neu-shadow-lg);'} background: var(--neu-bg); border: 1px solid var(--neu-border);"
+    : 'height: calc(100dvh - 8rem); border-radius: 22px; box-shadow: var(--shadow-lg);'} background: var(--surface-bg); border: 1px solid var(--border-theme);"
 >
   <!-- Header -->
   <header
     class="flex h-16 shrink-0 items-center gap-3 px-4"
-    style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+    style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     {#if !platformStore.isDesktop}
       <button
         class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-        style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+        style="width: 36px; height: 36px; box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); background: var(--surface-bg);"
         onclick={handleBackClick}
         aria-label="返回"
       >
-        <ArrowLeft size={18} color="var(--neu-text)" />
+        <ArrowLeft size={18} color="var(--text-primary)" />
       </button>
     {/if}
 
     {#if isLoading}
       <div
         class="rounded-full"
-        style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+        style="width: 40px; height: 40px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
       ></div>
       <div
-        style="width: 128px; height: 20px; border-radius: 8px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+        style="width: 128px; height: 20px; border-radius: 8px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
       ></div>
     {:else if group}
       <a
@@ -641,7 +641,7 @@
       >
         <div
           class="overflow-hidden rounded-full shrink-0"
-          style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);"
+          style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme);"
         >
           {#if group.group.avatar_url}
             <img
@@ -652,17 +652,20 @@
           {:else}
             <div
               class="flex h-full w-full items-center justify-center"
-              style="background: var(--neu-bg);"
+              style="background: var(--surface-bg);"
             >
-              <Users size={18} color="var(--neu-text-muted)" />
+              <Users size={18} color="var(--text-secondary)" />
             </div>
           {/if}
         </div>
         <div class="flex-1 overflow-hidden">
-          <div class="truncate" style="font-weight: 600; font-size: 15px; color: var(--neu-text);">
+          <div
+            class="truncate"
+            style="font-weight: 600; font-size: 15px; color: var(--text-primary);"
+          >
             {group.group.name}
           </div>
-          <div class="truncate" style="font-size: 11px; color: var(--neu-text-muted);">
+          <div class="truncate" style="font-size: 11px; color: var(--text-secondary);">
             {group.group.members_count} 位成员
           </div>
         </div>
@@ -671,10 +674,10 @@
 
     <button
       class="flex items-center justify-center rounded-full outline-none shrink-0"
-      style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); background: var(--neu-bg);"
+      style="width: 36px; height: 36px; box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); background: var(--surface-bg);"
       aria-label="更多选项"
     >
-      <MoreVertical size={18} color="var(--neu-text)" />
+      <MoreVertical size={18} color="var(--text-primary)" />
     </button>
   </header>
 
@@ -683,7 +686,7 @@
     bind:this={scrollContainer}
     onscroll={handleScroll}
     class="relative flex-1 overflow-y-auto overscroll-contain"
-    style="background: var(--neu-bg);"
+    style="background: var(--surface-bg);"
   >
     {#if isLoading}
       <div class="space-y-4 p-4">
@@ -691,15 +694,15 @@
           <div class="flex gap-3">
             <div
               class="shrink-0 rounded-full"
-              style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+              style="width: 40px; height: 40px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
             ></div>
             <div class="flex-1 space-y-2">
               <div
-                style="width: 96px; height: 12px; border-radius: 6px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+                style="width: 96px; height: 12px; border-radius: 6px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
               ></div>
               <div
                 class="max-w-xs rounded-[18px]"
-                style="width: 100%; height: 64px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+                style="width: 100%; height: 64px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
               ></div>
             </div>
           </div>
@@ -710,7 +713,7 @@
         <div class="flex justify-center py-3">
           <button
             class="rounded-full px-4 py-1.5 text-xs outline-none"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text-muted);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary);"
             onclick={() => loadMessages(true)}
           >
             加载更多消息
@@ -720,7 +723,7 @@
 
       {#if isLoadingMore}
         <div class="flex justify-center py-3">
-          <Loader2 class="h-5 w-5 animate-spin" color="var(--neu-text-muted)" />
+          <Loader2 class="h-5 w-5 animate-spin" color="var(--text-secondary)" />
         </div>
       {/if}
 
@@ -729,16 +732,16 @@
           <div class="text-center">
             <div
               class="mb-4 inline-flex items-center justify-center rounded-full"
-              style="width: 64px; height: 64px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+              style="width: 64px; height: 64px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
             >
-              <MessageCircle size={28} color="var(--neu-text-muted)" strokeWidth={1.5} />
+              <MessageCircle size={28} color="var(--text-secondary)" strokeWidth={1.5} />
             </div>
             <p
-              style="font-weight: 500; font-size: 15px; color: var(--neu-text); margin-bottom: 4px;"
+              style="font-weight: 500; font-size: 15px; color: var(--text-primary); margin-bottom: 4px;"
             >
               还没有消息
             </p>
-            <p style="font-size: 13px; color: var(--neu-text-muted);">发送第一条消息开始聊天</p>
+            <p style="font-size: 13px; color: var(--text-secondary);">发送第一条消息开始聊天</p>
           </div>
         </div>
       {:else}
@@ -756,7 +759,7 @@
               <div class="flex justify-center py-4">
                 <span
                   class="rounded-full px-3 py-1"
-                  style="font-size: 11px; font-weight: 500; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+                  style="font-size: 11px; font-weight: 500; color: var(--text-secondary); background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
                 >
                   {formatDateDivider(message.sent_at)}
                 </span>
@@ -767,7 +770,7 @@
               <div class="flex justify-center py-2">
                 <span
                   class="rounded-full px-3 py-1"
-                  style="font-size: 12px; color: var(--neu-text-muted); background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+                  style="font-size: 12px; color: var(--text-secondary); background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
                 >
                   {message.content}
                 </span>
@@ -786,7 +789,7 @@
                       <a href="/users/{message.sender?.user_id}">
                         <div
                           class="overflow-hidden rounded-full"
-                          style="width: 40px; height: 40px; border: 1.5px solid var(--neu-border);"
+                          style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme);"
                         >
                           {#if message.sender?.avatar_url}
                             <img
@@ -797,7 +800,7 @@
                           {:else}
                             <div
                               class="flex h-full w-full items-center justify-center"
-                              style="background: var(--neu-bg); font-size: 12px; color: var(--neu-text-muted);"
+                              style="background: var(--surface-bg); font-size: 12px; color: var(--text-secondary);"
                             >
                               {(message.sender?.nickname || '用户').slice(0, 2)}
                             </div>
@@ -812,7 +815,7 @@
                   {#if !isMe && showName}
                     <span
                       class="px-3"
-                      style="font-size: 12px; font-weight: 500; color: var(--neu-text-muted);"
+                      style="font-size: 12px; font-weight: 500; color: var(--text-secondary);"
                     >
                       {message.sender?.nickname}
                     </span>
@@ -821,8 +824,8 @@
                   <div
                     class="relative {message.type === 'image' ? 'p-1' : 'px-4 py-2.5'}"
                     style={isMe
-                      ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); border-radius: var(--neu-radius-md) var(--neu-radius-md) 4px var(--neu-radius-md);'
-                      : 'background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); border-radius: var(--neu-radius-md) var(--neu-radius-md) var(--neu-radius-md) 4px; color: var(--neu-text);'}
+                      ? 'background: var(--brand); color: var(--text-on-accent); border-radius: var(--radius-md) var(--radius-md) 4px var(--radius-md);'
+                      : 'background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 4px; color: var(--text-primary);'}
                   >
                     {#if message.recalled_at != null}
                       <p style="font-size: 13px; font-style: italic; opacity: 0.7;">消息已撤回</p>
@@ -848,13 +851,13 @@
                       </button>
                     {:else if message.type === 'share' && message.share_code}
                       <div class="flex items-center gap-2" style="font-size: 13px;">
-                        <MapPin size={14} style="flex-shrink: 0;" color="var(--neu-text-muted)" />
+                        <MapPin size={14} style="flex-shrink: 0;" color="var(--text-secondary)" />
                         <div>
                           <p style="font-weight: 500;">分享消息</p>
                           {#if message.share_code}
                             <a
                               href="/share/{message.share_code}"
-                              style="font-size: 12px; opacity: 0.8; color: var(--neu-accent-primary);"
+                              style="font-size: 12px; opacity: 0.8; color: var(--brand);"
                             >
                               查看分享内容
                             </a>
@@ -869,7 +872,7 @@
                   {#if showAvatar}
                     <span
                       class="px-3"
-                      style="font-size: 10px; color: var(--neu-text-muted); opacity: 0.6;"
+                      style="font-size: 10px; color: var(--text-secondary); opacity: 0.6;"
                     >
                       {new Date(message.sent_at).toLocaleTimeString('zh-CN', {
                         hour: '2-digit',
@@ -889,7 +892,7 @@
     {#if showScrollButton}
       <button
         class="fixed bottom-24 right-6 z-10 flex items-center justify-center rounded-full outline-none"
-        style="width: 36px; height: 36px; background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);"
+        style="width: 36px; height: 36px; background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow);"
         onclick={() => scrollToBottom(true)}
         aria-label="滚动到底部"
       >
@@ -901,11 +904,11 @@
   <!-- Input Area -->
   <div
     class="shrink-0 p-4"
-    style="background-color: var(--neu-bg); border-top: 1px solid var(--neu-border);"
+    style="background-color: var(--surface-bg); border-top: 1px solid var(--border-theme);"
   >
     {#if groupTypingUserIds.length > 0}
       <div class="mb-2 px-1">
-        <p style="font-size: 12px; color: var(--neu-text-muted);">
+        <p style="font-size: 12px; color: var(--text-secondary);">
           {buildGroupTypingHintText()}
         </p>
       </div>
@@ -918,7 +921,7 @@
       >
         <p
           class="flex items-center justify-center gap-2"
-          style="font-size: 13px; color: var(--neu-text-muted);"
+          style="font-size: 13px; color: var(--text-secondary);"
         >
           <Loader2 class="h-4 w-4 animate-spin" />
           {#if wsSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
@@ -933,16 +936,16 @@
     {#if !group?.my_state?.is_joined}
       <div
         class="rounded-[16px] px-4 py-3 text-center"
-        style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+        style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
       >
-        <p style="font-size: 13px; color: var(--neu-text-muted);">你还不是群成员，无法发送消息</p>
+        <p style="font-size: 13px; color: var(--text-secondary);">你还不是群成员，无法发送消息</p>
       </div>
     {:else if group?.my_state?.is_muted}
       <div
         class="rounded-[16px] px-4 py-3 text-center"
-        style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+        style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
       >
-        <p style="font-size: 13px; color: var(--neu-text-muted);">你已被禁言，无法发送消息</p>
+        <p style="font-size: 13px; color: var(--text-secondary);">你已被禁言，无法发送消息</p>
       </div>
     {:else}
       <div class="flex items-end gap-2">
@@ -954,7 +957,7 @@
           rows={1}
           maxlength={MESSAGE_CONTENT_MAX}
           class="max-h-32 min-h-[42px] flex w-full resize-none rounded-[20px] px-4 py-2.5 text-[15px] outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-text);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); color: var(--text-primary);"
           disabled={isSending}
           oninput={() => {
             eventHandlers.sendGroupTyping(groupId, messageText.trim().length > 0);
@@ -969,8 +972,8 @@
         <button
           class="flex shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
           style="width: 36px; height: 36px; {messageText.trim()
-            ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 3px 10px var(--neu-glow);'
-            : 'background: var(--neu-bg); color: var(--neu-text-muted); box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}"
+            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow);'
+            : 'background: var(--surface-bg); color: var(--text-secondary); border: 1px solid var(--border-theme);'}"
           onclick={sendMessage}
           onmousedown={(e) => e.preventDefault()}
           disabled={!messageText.trim() || isSending}

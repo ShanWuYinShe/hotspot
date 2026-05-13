@@ -763,10 +763,3 @@ func derefString(value *string) string {
 	}
 	return *value
 }
-
-func (r *InMemoryRepository) IsMember(_ context.Context, groupID string, userID string) (bool, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	_, ok := r.members[groupID][userID]
-	return ok, nil
-}

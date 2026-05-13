@@ -30,22 +30,22 @@
     'whitespace-nowrap font-semibold',
     'overflow-hidden rounded-[28px]',
     'transition-all duration-180 ease-in-out',
-    'focus-visible:outline-none focus-visible:ring-[2px] focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]',
+    'focus-visible:outline-none focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]',
     'disabled:pointer-events-none disabled:opacity-50',
     'cursor-pointer',
     className
   )}
   style="background: {variant === 'ghost'
     ? 'transparent'
-    : 'var(--neu-bg)'}; color: var(--neu-text); border: 1px solid {variant === 'ghost'
+    : 'var(--surface-bg)'}; color: var(--text-primary); border: 1px solid {variant === 'ghost'
     ? 'transparent'
-    : 'var(--neu-border)'}; box-shadow: {variant === 'ghost'
+    : 'var(--border-theme)'}; box-shadow: {variant === 'ghost'
     ? 'none'
     : variant === 'primary'
-      ? '8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light), 0 4px 16px var(--neu-glow)'
-      : '8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light)'}; {variant ===
+      ? '8px 8px 20px var(--shadow-dark), -8px -8px 20px var(--shadow-light), 0 4px 16px var(--glow)'
+      : '8px 8px 20px var(--shadow-dark), -8px -8px 20px var(--shadow-light)'}; {variant ===
   'primary'
-    ? 'color: var(--neu-active-text);'
+    ? 'color: var(--text-on-accent);'
     : ''}"
   {@attach feedbackAction}
   {...restProps}

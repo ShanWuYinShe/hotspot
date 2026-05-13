@@ -222,19 +222,19 @@
   <!-- Tab bar -->
   <div
     class="grid w-full grid-cols-3 rounded-[22px] p-1.5"
-    style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+    style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
   >
     {#each [{ value: 'login', label: t('auth.login') }, { value: 'register', label: t('auth.register') }, { value: 'guest', label: t('auth.guest') }] as tab (tab.value)}
       <button
         type="button"
-        class="relative rounded-[18px] px-3 py-2 outline-none transition-all focus-visible:ring-[2px] focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--neu-bg)]"
+        class="relative rounded-[18px] px-3 py-2 outline-none transition-all focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)]"
         style="background: {currentTab === tab.value
-          ? 'var(--neu-accent-primary)'
+          ? 'var(--brand)'
           : 'transparent'}; color: {currentTab === tab.value
-          ? 'var(--neu-active-text)'
-          : 'var(--neu-text-muted)'}; font-size: 13px; font-weight: {currentTab === tab.value
+          ? 'var(--text-on-accent)'
+          : 'var(--text-secondary)'}; font-size: 13px; font-weight: {currentTab === tab.value
           ? 600
-          : 400}; box-shadow: {currentTab === tab.value ? '0 2px 8px var(--neu-glow)' : 'none'};"
+          : 400}; box-shadow: {currentTab === tab.value ? '0 2px 8px var(--glow)' : 'none'};"
         onclick={() => (currentTab = tab.value)}
       >
         {tab.label}
@@ -252,7 +252,7 @@
         class="space-y-4 pt-4"
       >
         <div class="space-y-2">
-          <label for="auth-login-id" style="font-size: 12px; color: var(--neu-text);"
+          <label for="auth-login-id" style="font-size: 12px; color: var(--text-primary);"
             >{t('auth.account')}</label
           >
           <input
@@ -263,17 +263,17 @@
             bind:value={loginId}
             disabled={isLoading}
             onblur={() => markTouched('loginId')}
-            class="neu-input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
-            style="background: var(--neu-bg); color: var(--neu-text); border: 1px solid {loginIdError
-              ? 'var(--neu-error)'
-              : 'var(--neu-border)'}; font-size: 13px;"
+            class="input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
+            style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {loginIdError
+              ? 'var(--error)'
+              : 'var(--border-theme)'}; font-size: 13px;"
           />
           {#if loginIdError}
-            <p style="font-size: 12px; color: var(--neu-error);">{loginIdError}</p>
+            <p style="font-size: 12px; color: var(--error);">{loginIdError}</p>
           {/if}
         </div>
         <div class="space-y-2">
-          <label for="auth-login-password" style="font-size: 12px; color: var(--neu-text);"
+          <label for="auth-login-password" style="font-size: 12px; color: var(--text-primary);"
             >{t('auth.password')}</label
           >
           <div class="relative">
@@ -286,32 +286,32 @@
               disabled={isLoading}
               onblur={() => markTouched('password')}
               class="rounded-[14px] px-4 py-2.5 outline-none w-full pr-10"
-              style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-inset); border: 1px solid {passwordError
-                ? 'var(--neu-error)'
-                : 'var(--neu-border)'}; font-size: 13px;"
+              style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid {passwordError
+                ? 'var(--error)'
+                : 'var(--border-theme)'}; font-size: 13px;"
             />
             <button
               type="button"
-              class="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-[12px] outline-none transition-[transform,box-shadow] duration-150 active:scale-90 focus-visible:ring-[2px] focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--neu-bg)]"
-              style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+              class="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-[12px] outline-none transition-[transform,box-shadow] duration-150 active:scale-90 focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)]"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
               onclick={() => (showPassword = !showPassword)}
               aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
             >
               {#if showPassword}
-                <EyeOff style="width: 16px; height: 16px; color: var(--neu-text);" />
+                <EyeOff style="width: 16px; height: 16px; color: var(--text-primary);" />
               {:else}
-                <Eye style="width: 16px; height: 16px; color: var(--neu-text);" />
+                <Eye style="width: 16px; height: 16px; color: var(--text-primary);" />
               {/if}
             </button>
           </div>
           {#if passwordError}
-            <p style="font-size: 12px; color: var(--neu-error);">{passwordError}</p>
+            <p style="font-size: 12px; color: var(--error);">{passwordError}</p>
           {/if}
         </div>
         <button
           type="submit"
-          class="rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]"
-          style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 14px; box-shadow: 0 3px 10px var(--neu-glow);"
+          class="rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
+          style="background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 3px 10px var(--glow);"
           disabled={isLoading}
         >
           {#if isLoading}
@@ -329,7 +329,7 @@
         class="space-y-4 pt-4"
       >
         <div class="space-y-2">
-          <label for="auth-register-nickname" style="font-size: 12px; color: var(--neu-text);"
+          <label for="auth-register-nickname" style="font-size: 12px; color: var(--text-primary);"
             >{t('auth.nickname')}</label
           >
           <input
@@ -340,17 +340,17 @@
             bind:value={nickname}
             disabled={isLoading}
             onblur={() => markTouched('nickname')}
-            class="neu-input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
-            style="background: var(--neu-bg); color: var(--neu-text); border: 1px solid {nicknameError
-              ? 'var(--neu-error)'
-              : 'var(--neu-border)'}; font-size: 13px;"
+            class="input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
+            style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {nicknameError
+              ? 'var(--error)'
+              : 'var(--border-theme)'}; font-size: 13px;"
           />
           {#if nicknameError}
-            <p style="font-size: 12px; color: var(--neu-error);">{nicknameError}</p>
+            <p style="font-size: 12px; color: var(--error);">{nicknameError}</p>
           {/if}
         </div>
         <div class="space-y-2">
-          <label for="auth-register-id" style="font-size: 12px; color: var(--neu-text);"
+          <label for="auth-register-id" style="font-size: 12px; color: var(--text-primary);"
             >{t('auth.account')}</label
           >
           <input
@@ -361,17 +361,17 @@
             bind:value={loginId}
             disabled={isLoading}
             onblur={() => markTouched('loginId')}
-            class="neu-input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
-            style="background: var(--neu-bg); color: var(--neu-text); border: 1px solid {loginIdError
-              ? 'var(--neu-error)'
-              : 'var(--neu-border)'}; font-size: 13px;"
+            class="input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
+            style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {loginIdError
+              ? 'var(--error)'
+              : 'var(--border-theme)'}; font-size: 13px;"
           />
           {#if loginIdError}
-            <p style="font-size: 12px; color: var(--neu-error);">{loginIdError}</p>
+            <p style="font-size: 12px; color: var(--error);">{loginIdError}</p>
           {/if}
         </div>
         <div class="space-y-2">
-          <label for="auth-register-password" style="font-size: 12px; color: var(--neu-text);"
+          <label for="auth-register-password" style="font-size: 12px; color: var(--text-primary);"
             >{t('auth.password')}</label
           >
           <input
@@ -382,17 +382,17 @@
             bind:value={password}
             disabled={isLoading}
             onblur={() => markTouched('password')}
-            class="neu-input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
-            style="background: var(--neu-bg); color: var(--neu-text); border: 1px solid {passwordError
-              ? 'var(--neu-error)'
-              : 'var(--neu-border)'}; font-size: 13px;"
+            class="input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
+            style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {passwordError
+              ? 'var(--error)'
+              : 'var(--border-theme)'}; font-size: 13px;"
           />
           {#if passwordError}
-            <p style="font-size: 12px; color: var(--neu-error);">{passwordError}</p>
+            <p style="font-size: 12px; color: var(--error);">{passwordError}</p>
           {/if}
         </div>
         <div class="space-y-2">
-          <label for="auth-register-confirm" style="font-size: 12px; color: var(--neu-text);"
+          <label for="auth-register-confirm" style="font-size: 12px; color: var(--text-primary);"
             >{t('auth.confirmPassword')}</label
           >
           <input
@@ -403,19 +403,19 @@
             bind:value={confirmPassword}
             disabled={isLoading}
             onblur={() => markTouched('confirmPassword')}
-            class="neu-input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
-            style="background: var(--neu-bg); color: var(--neu-text); border: 1px solid {confirmPasswordError
-              ? 'var(--neu-error)'
-              : 'var(--neu-border)'}; font-size: 13px;"
+            class="input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
+            style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {confirmPasswordError
+              ? 'var(--error)'
+              : 'var(--border-theme)'}; font-size: 13px;"
           />
           {#if confirmPasswordError}
-            <p style="font-size: 12px; color: var(--neu-error);">{confirmPasswordError}</p>
+            <p style="font-size: 12px; color: var(--error);">{confirmPasswordError}</p>
           {/if}
         </div>
         <button
           type="submit"
-          class="rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]"
-          style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 14px; box-shadow: 0 3px 10px var(--neu-glow);"
+          class="rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
+          style="background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 3px 10px var(--glow);"
           disabled={isLoading}
         >
           {#if isLoading}
@@ -434,12 +434,12 @@
       >
         <div
           class="rounded-[22px] p-3"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); font-size: 13px; color: var(--neu-text-muted);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-secondary);"
         >
           {t('auth.guestModeHint')}
         </div>
         <div class="space-y-2">
-          <label for="auth-guest-nickname" style="font-size: 12px; color: var(--neu-text);"
+          <label for="auth-guest-nickname" style="font-size: 12px; color: var(--text-primary);"
             >{t('auth.nickname')}</label
           >
           <input
@@ -450,19 +450,19 @@
             bind:value={guestNickname}
             disabled={isLoading}
             onblur={() => markTouched('guestNickname')}
-            class="neu-input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
-            style="background: var(--neu-bg); color: var(--neu-text); border: 1px solid {guestNicknameError
-              ? 'var(--neu-error)'
-              : 'var(--neu-border)'}; font-size: 13px;"
+            class="input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
+            style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {guestNicknameError
+              ? 'var(--error)'
+              : 'var(--border-theme)'}; font-size: 13px;"
           />
           {#if guestNicknameError}
-            <p style="font-size: 12px; color: var(--neu-error);">{guestNicknameError}</p>
+            <p style="font-size: 12px; color: var(--error);">{guestNicknameError}</p>
           {/if}
         </div>
         <button
           type="submit"
-          class="rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--neu-glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]"
-          style="background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 14px; box-shadow: 0 3px 10px var(--neu-glow);"
+          class="rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
+          style="background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 3px 10px var(--glow);"
           disabled={isLoading}
         >
           {#if isLoading}

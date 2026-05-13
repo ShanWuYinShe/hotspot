@@ -130,21 +130,21 @@
     {#snippet child({ props })}
       <button
         class="relative flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:scale-105 active:scale-[0.97]"
-        style="width: 40px; height: 40px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+        style="width: 40px; height: 40px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         aria-label={t('notificationDropdown.triggerAria')}
         {...props}
       >
         {#if notificationStore.unreadCount > 0}
           {@const TriggerIcon = getNotificationBadgeIcon(notificationStore.unreadCount)}
-          <TriggerIcon style="width: 20px; height: 20px; color: var(--neu-text);" />
+          <TriggerIcon style="width: 20px; height: 20px; color: var(--text-primary);" />
           <span
             class="absolute flex items-center justify-center rounded-full"
-            style="right: -4px; top: -4px; height: 20px; min-width: 20px; padding: 0 4px; background: var(--neu-error); color: var(--neu-active-text); font-size: 10px; font-weight: 700; border: 2px solid var(--neu-bg);"
+            style="right: -4px; top: -4px; height: 20px; min-width: 20px; padding: 0 4px; background: var(--error); color: var(--text-on-accent); font-size: 10px; font-weight: 700; border: 2px solid var(--surface-bg);"
           >
             {notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount}
           </span>
         {:else}
-          <Bell style="width: 20px; height: 20px; color: var(--neu-text);" />
+          <Bell style="width: 20px; height: 20px; color: var(--text-primary);" />
         {/if}
       </button>
     {/snippet}
@@ -154,16 +154,16 @@
     <!-- Header -->
     <div
       class="flex items-center justify-between px-4 py-3"
-      style="border-bottom: 1px solid var(--neu-border);"
+      style="border-bottom: 1px solid var(--border-theme);"
     >
       <div class="flex items-center gap-2">
-        <h3 style="font-size: 14px; font-weight: 600; color: var(--neu-text);">
+        <h3 style="font-size: 14px; font-weight: 600; color: var(--text-primary);">
           {t('notificationDropdown.title')}
         </h3>
         {#if notificationStore.unreadCount > 0}
           <span
             class="rounded-full"
-            style="height: 20px; padding: 0 8px; font-size: 10px; line-height: 20px; background: var(--neu-accent-primary); color: var(--neu-active-text);"
+            style="height: 20px; padding: 0 8px; font-size: 10px; line-height: 20px; background: var(--brand); color: var(--text-on-accent);"
           >
             {notificationStore.unreadCount}
           </span>
@@ -173,17 +173,17 @@
         {#if notificationStore.unreadCount > 0}
           <button
             class="flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:scale-105 active:scale-[0.97]"
-            style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+            style="width: 32px; height: 32px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
             onclick={handleMarkAllRead}
             title={t('notificationDropdown.markAllRead')}
             aria-label={t('notificationDropdown.markAllReadAria')}
           >
-            <CheckCheck style="width: 16px; height: 16px; color: var(--neu-text);" />
+            <CheckCheck style="width: 16px; height: 16px; color: var(--text-primary);" />
           </button>
         {/if}
         <button
           class="flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:scale-105 active:scale-[0.97]"
-          style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+          style="width: 32px; height: 32px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
           onclick={() => {
             open = false;
             goto('/settings/notifications');
@@ -191,7 +191,7 @@
           title={t('notificationDropdown.settings')}
           aria-label={t('notificationDropdown.settings')}
         >
-          <Settings style="width: 16px; height: 16px; color: var(--neu-text);" />
+          <Settings style="width: 16px; height: 16px; color: var(--text-primary);" />
         </button>
       </div>
     </div>
@@ -201,9 +201,9 @@
       <div class="flex flex-col items-center justify-center py-12" role="status" aria-live="polite">
         <div
           class="rounded-full animate-pulse"
-          style="width: 32px; height: 32px; background: var(--neu-bg); box-shadow: var(--neu-shadow-inset);"
+          style="width: 32px; height: 32px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
         ></div>
-        <p class="mt-3" style="font-size: 13px; color: var(--neu-text-muted);">
+        <p class="mt-3" style="font-size: 13px; color: var(--text-secondary);">
           {t('common.loading')}
         </p>
       </div>
@@ -211,15 +211,15 @@
       <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
         <div
           class="mb-3 flex items-center justify-center rounded-full"
-          style="width: 64px; height: 64px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+          style="width: 64px; height: 64px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
         >
-          <Bell style="width: 32px; height: 32px; color: var(--neu-text-muted);" />
+          <Bell style="width: 32px; height: 32px; color: var(--text-secondary);" />
         </div>
-        <p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">加载通知失败</p>
-        <p style="font-size: 12px; color: var(--neu-text-muted);">请稍后重试</p>
+        <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">加载通知失败</p>
+        <p style="font-size: 12px; color: var(--text-secondary);">请稍后重试</p>
         <button
           class="mt-4 rounded-full px-5 py-2 outline-none transition-all duration-150 hover:scale-105 active:scale-[0.97]"
-          style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;"
+          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px;"
           onclick={retryLoadRecent}
         >
           重试
@@ -229,14 +229,14 @@
       <div class="flex flex-col items-center justify-center py-12">
         <div
           class="mb-3 flex items-center justify-center rounded-full"
-          style="width: 64px; height: 64px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+          style="width: 64px; height: 64px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
         >
-          <Bell style="width: 32px; height: 32px; color: var(--neu-text-muted);" />
+          <Bell style="width: 32px; height: 32px; color: var(--text-secondary);" />
         </div>
-        <p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">
+        <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
           {t('notificationDropdown.emptyTitle')}
         </p>
-        <p style="font-size: 12px; color: var(--neu-text-muted);">
+        <p style="font-size: 12px; color: var(--text-secondary);">
           {t('notificationDropdown.emptyDescription')}
         </p>
       </div>
@@ -247,8 +247,8 @@
             {@const locale = getLocale()}
             {@const Icon = getNotificationIcon(item.type)}
             <div
-              class="group relative flex gap-3 p-4 transition-colors duration-150 hover:bg-[var(--neu-fallback-bg)]"
-              style="border-bottom: 1px solid var(--neu-border);"
+              class="group relative flex gap-3 p-4 transition-colors duration-150 hover:bg-[var(--surface-secondary)]"
+              style="border-bottom: 1px solid var(--border-theme);"
             >
               <button
                 type="button"
@@ -257,24 +257,24 @@
               >
                 <div
                   class="flex shrink-0 items-center justify-center rounded-full"
-                  style="width: 40px; height: 40px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+                  style="width: 40px; height: 40px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
                 >
-                  <Icon style="width: 20px; height: 20px; color: var(--neu-accent-primary);" />
+                  <Icon style="width: 20px; height: 20px; color: var(--brand);" />
                 </div>
                 <div class="min-w-0 flex-1 pr-8">
                   <div
                     class="mb-0.5"
-                    style="font-size: 14px; font-weight: 500; color: var(--neu-text);"
+                    style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
                   >
                     {getNotificationTitle(item, locale)}
                   </div>
                   <p
                     class="mb-1"
-                    style="font-size: 14px; color: var(--neu-text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+                    style="font-size: 14px; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
                   >
                     {getNotificationContent(item, locale)}
                   </p>
-                  <span style="font-size: 12px; color: var(--neu-text-muted);">
+                  <span style="font-size: 12px; color: var(--text-secondary);">
                     {formatNotificationTimestamp(item.created_at, locale)}
                   </span>
                 </div>
@@ -283,11 +283,11 @@
                 <button
                   type="button"
                   class="absolute right-2 top-2 z-10 flex items-center justify-center rounded-full opacity-0 transition-all duration-150 active:scale-[0.9] group-hover:opacity-100"
-                  style="width: 24px; height: 24px; background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border);"
+                  style="width: 24px; height: 24px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                   onclick={(e) => handleMarkAsRead(item.notification_id, e)}
                   title={t('notificationDropdown.markAsRead')}
                 >
-                  <Check style="width: 14px; height: 14px; color: var(--neu-text);" />
+                  <Check style="width: 14px; height: 14px; color: var(--text-primary);" />
                 </button>
               {/if}
             </div>
@@ -296,10 +296,10 @@
       </div>
 
       <!-- Footer -->
-      <div class="p-2" style="border-top: 1px solid var(--neu-border);">
+      <div class="p-2" style="border-top: 1px solid var(--border-theme);">
         <button
           class="w-full flex items-center justify-center rounded-full px-5 py-2 outline-none transition-all duration-150 hover:scale-105 active:scale-[0.97]"
-          style="background: var(--neu-bg); color: var(--neu-text); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); font-size: 13px;"
+          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px;"
           onclick={handleViewAll}
         >
           {hasMore

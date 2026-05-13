@@ -95,7 +95,7 @@
     {#snippet actions()}
       <button
         class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-        style="background: var(--neu-bg); box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border); color: var(--neu-text);"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-primary);"
         onclick={() => loadShares(true)}
         disabled={pagination.loading}
       >
@@ -111,8 +111,8 @@
       <button
         class="rounded-full px-4 py-1.5 text-sm transition-all disabled:opacity-50"
         style={activeType === option.value
-          ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 8px var(--neu-glow);'
-          : 'background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);'}
+          ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 8px var(--glow);'
+          : 'background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);'}
         disabled={pagination.loading}
         onclick={async () => {
           if (pagination.loading || activeType === option.value) return;
@@ -148,7 +148,7 @@
       {#each pagination.items as item (item.share_id)}
         <div
           class="rounded-[22px] p-4 sm:p-5"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0 flex-1 space-y-2">
@@ -168,7 +168,7 @@
                 {:else}
                   <span
                     class="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium"
-                    style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border); color: var(--neu-accent-primary);"
+                    style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); color: var(--brand);"
                   >
                     可访问
                   </span>
@@ -176,12 +176,12 @@
               </div>
               <div>
                 <h2
-                  style="font-size: 15px; font-weight: 600; color: var(--neu-text);"
+                  style="font-size: 15px; font-weight: 600; color: var(--text-primary);"
                   class="truncate"
                 >
                   {getShareTitle(item)}
                 </h2>
-                <p style="font-size: 13px; color: var(--neu-text-muted); margin-top: 4px;">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
                   {getShareSubtitle(item)}
                 </p>
               </div>
@@ -190,7 +190,7 @@
               <a href={getShareHref(item)} target="_blank" rel="noreferrer">
                 <button
                   class="flex items-center rounded-[18px] px-4 py-2 text-sm transition-opacity hover:opacity-80"
-                  style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-border); color: var(--neu-text);"
+                  style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
                 >
                   <ExternalLink size={14} class="mr-2" />
                   查看
@@ -198,7 +198,7 @@
               </a>
               <button
                 class="flex items-center rounded-[18px] px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-                style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid var(--neu-error-border); color: var(--neu-error);"
+                style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--neu-error-border); color: var(--neu-error);"
                 onclick={() => revokeShare(item)}
                 disabled={item.is_revoked || revokingShareId === item.share_id}
               >
@@ -214,31 +214,31 @@
 
           <div
             class="mt-4 grid gap-3 rounded-[18px] px-4 py-3 text-sm sm:grid-cols-3"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
           >
             <div>
-              <p style="font-size: 11px; color: var(--neu-text-muted);">创建时间</p>
+              <p style="font-size: 11px; color: var(--text-secondary);">创建时间</p>
               <p
-                style="font-size: 13px; font-weight: 500; color: var(--neu-text); margin-top: 4px;"
+                style="font-size: 13px; font-weight: 500; color: var(--text-primary); margin-top: 4px;"
               >
                 {formatRelativeTime(item.created_at)}
               </p>
-              <p style="font-size: 11px; color: var(--neu-text-muted); margin-top: 2px;">
+              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
                 {formatDateTime(item.created_at)}
               </p>
             </div>
             <div>
-              <p style="font-size: 11px; color: var(--neu-text-muted);">分享码</p>
+              <p style="font-size: 11px; color: var(--text-secondary);">分享码</p>
               <p
-                style="font-size: 13px; font-weight: 500; font-family: monospace; text-transform: uppercase; letter-spacing: 0.12em; color: var(--neu-text); margin-top: 4px;"
+                style="font-size: 13px; font-weight: 500; font-family: monospace; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-primary); margin-top: 4px;"
               >
                 {item.share_code}
               </p>
             </div>
             <div>
-              <p style="font-size: 11px; color: var(--neu-text-muted);">有效期</p>
+              <p style="font-size: 11px; color: var(--text-secondary);">有效期</p>
               <p
-                style="font-size: 13px; font-weight: 500; color: var(--neu-text); margin-top: 4px;"
+                style="font-size: 13px; font-weight: 500; color: var(--text-primary); margin-top: 4px;"
               >
                 {item.expires_at ? formatDateTime(item.expires_at) : '长期有效'}
               </p>

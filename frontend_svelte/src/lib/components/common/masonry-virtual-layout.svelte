@@ -348,16 +348,16 @@
     <div class="flex items-center justify-center py-8">
       <div
         class="animate-spin rounded-full h-8 w-8 border-b-2"
-        style="border-color: var(--neu-accent-primary);"
+        style="border-color: var(--brand);"
       ></div>
-      <span class="ml-3" style="font-size: 13px; color: var(--neu-text-muted);">加载中...</span>
+      <span class="ml-3" style="font-size: 13px; color: var(--text-secondary);">加载中...</span>
     </div>
   {/if}
 
   {#if !hasMore && items.length > 0}
     <div
       class="flex items-center justify-center py-8"
-      style="font-size: 13px; color: var(--neu-text-muted);"
+      style="font-size: 13px; color: var(--text-secondary);"
     >
       没有更多了
     </div>

@@ -102,43 +102,40 @@
     <!-- Sticky header -->
     <div
       class="sticky top-0 z-10 px-5 pt-3 pb-3"
-      style="background-color: var(--neu-bg); border-bottom: 1px solid var(--neu-border);"
+      style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
       <div class="mb-3 flex items-center justify-between">
         <div>
-          <h1 style="font-size: 22px; color: var(--neu-text);">消息</h1>
-          <p style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">
+          <h1 style="font-size: 22px; color: var(--text-primary);">消息</h1>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
             {totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}
           </p>
         </div>
         <div class="flex gap-2.5">
           <button
-            class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
-            style="width: 38px; height: 38px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+            class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9] surface-flat"
+            style="width: 38px; height: 38px;"
           >
-            <UserPlus size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
+            <UserPlus size={16} strokeWidth={1.5} color="var(--text-secondary)" />
           </button>
           <button
-            class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
-            style="width: 38px; height: 38px; background: var(--neu-bg); box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+            class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9] surface-flat"
+            style="width: 38px; height: 38px;"
           >
-            <Plus size={16} strokeWidth={1.5} color="var(--neu-text-muted)" />
+            <Plus size={16} strokeWidth={1.5} color="var(--text-secondary)" />
           </button>
         </div>
       </div>
 
       <!-- Search bar -->
-      <div
-        class="flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-        style="box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
-      >
-        <Search size={15} strokeWidth={1.5} color="var(--neu-text-muted)" />
+      <div class="input-surface flex items-center gap-3 rounded-[18px] px-4 py-2.5">
+        <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" />
         <input
           type="text"
           bind:value={searchVal}
           placeholder="搜索会话…"
           class="flex-1 bg-transparent outline-none"
-          style="font-size: 13px; color: var(--neu-text);"
+          style="font-size: 13px; color: var(--text-primary);"
         />
       </div>
     </div>
@@ -153,7 +150,7 @@
         <div class="mb-4">
           <p
             class="uppercase mb-2.5"
-            style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
+            style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
           >
             在线
           </p>
@@ -165,8 +162,8 @@
               >
                 <div class="relative">
                   <div
-                    class="overflow-hidden rounded-full"
-                    style="width: 52px; height: 52px; padding: 2.5px; background: var(--neu-bg); box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light); border: 1.5px solid var(--neu-accent-primary);"
+                    class="neu-flat overflow-hidden rounded-full"
+                    style="width: 52px; height: 52px; padding: 2.5px; background: var(--surface-bg); border: 1.5px solid var(--brand);"
                   >
                     <img
                       src={chat.other_user.avatar_url || ''}
@@ -176,10 +173,10 @@
                   </div>
                   <span
                     class="absolute bottom-0.5 right-0.5 rounded-full"
-                    style="width: 12px; height: 12px; background: #22c55e; border: 2px solid var(--neu-bg);"
+                    style="width: 12px; height: 12px; background: #22c55e; border: 2px solid var(--surface-bg);"
                   ></span>
                 </div>
-                <span style="font-size: 11px; color: var(--neu-text-muted);"
+                <span style="font-size: 11px; color: var(--text-secondary);"
                   >{chat.other_user.nickname}</span
                 >
               </a>
@@ -192,7 +189,7 @@
       <div class="mb-2.5 flex items-center gap-2">
         <p
           class="uppercase"
-          style="font-size: 10px; letter-spacing: 0.14em; color: var(--neu-text-muted);"
+          style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
         >
           最近
         </p>
@@ -201,8 +198,9 @@
           <button
             class="rounded-full px-2.5 py-1 outline-none transition-all"
             style={currentTab === tab.id
-              ? 'background: var(--neu-accent-primary); color: var(--neu-active-text); font-size: 11px; box-shadow: 0 2px 8px var(--neu-glow);'
-              : 'background: var(--neu-bg); color: var(--neu-text-muted); font-size: 11px; box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light); border: 1px solid var(--neu-border);'}
+              ? 'background: var(--brand); color: var(--text-on-accent); font-size: 11px; box-shadow: 0 2px 8px var(--glow);'
+              : 'background: var(--surface-bg); color: var(--text-secondary); font-size: 11px; border: 1px solid var(--border-theme);'}
+            class:surface-flat={currentTab !== tab.id}
             onclick={() => handleTabChange(tab.id)}
           >
             {tab.label}
@@ -211,26 +209,23 @@
       </div>
 
       <!-- Chat list card -->
-      <div
-        class="overflow-hidden rounded-[22px]"
-        style="background: var(--neu-bg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
-      >
+      <div class="surface-flat overflow-hidden rounded-[22px]">
         {#if currentTab === 'private'}
           {#if isLoadingPrivate}
             {#each Array(5) as _}
               <div class="flex items-center gap-3.5 px-4 py-3">
                 <div
                   class="rounded-full"
-                  style="width: 44px; height: 44px; background: var(--neu-border);"
+                  style="width: 44px; height: 44px; background: var(--border-theme);"
                 ></div>
                 <div class="flex-1">
                   <div
                     class="mb-1.5 rounded"
-                    style="width: 70px; height: 12px; background: var(--neu-border);"
+                    style="width: 70px; height: 12px; background: var(--border-theme);"
                   ></div>
                   <div
                     class="rounded"
-                    style="width: 120px; height: 10px; background: var(--neu-border);"
+                    style="width: 120px; height: 10px; background: var(--border-theme);"
                   ></div>
                 </div>
               </div>
@@ -240,10 +235,10 @@
               <MessageSquareDashed
                 size={36}
                 strokeWidth={1.25}
-                color="var(--neu-text-muted)"
+                color="var(--text-secondary)"
                 style="opacity: 0.5;"
               />
-              <p style="font-size: 14px; color: var(--neu-text-muted);">没有找到会话</p>
+              <p style="font-size: 14px; color: var(--text-secondary);">没有找到会话</p>
             </div>
           {:else}
             {#each filteredPrivateChats as chat, i (chat.other_user.user_id)}
@@ -253,12 +248,12 @@
               <div class="px-2 py-1">
                 <a
                   href="/chat/users/{chat.other_user.user_id}"
-                  class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all neu-row-hover active:scale-[0.98]"
+                  class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all row-hover active:scale-[0.98]"
                 >
                   <div class="relative flex-shrink-0">
                     <div
                       class="overflow-hidden rounded-full"
-                      style="width: 44px; height: 44px; border: 1.5px solid var(--neu-border);"
+                      style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
                     >
                       <img
                         src={chat.other_user.avatar_url || ''}
@@ -269,23 +264,23 @@
                     {#if isOnline}
                       <span
                         class="absolute bottom-0 right-0 rounded-full"
-                        style="width: 10px; height: 10px; background: #22c55e; border: 2px solid var(--neu-bg);"
+                        style="width: 10px; height: 10px; background: #22c55e; border: 2px solid var(--surface-bg);"
                       ></span>
                     {/if}
                   </div>
                   <div class="min-w-0 flex-1">
                     <div class="mb-0.5 flex items-center justify-between">
                       <span
-                        style="font-size: 14px; color: var(--neu-text); font-weight: {chat.unread_count >
+                        style="font-size: 14px; color: var(--text-primary); font-weight: {chat.unread_count >
                         0
                           ? 600
                           : 400};">{chat.other_user.nickname}</span
                       >
-                      <span style="font-size: 11px; color: var(--neu-text-muted);"
+                      <span style="font-size: 11px; color: var(--text-secondary);"
                         >{formatRelativeTime(chat.last_activity_at)}</span
                       >
                     </div>
-                    <p class="truncate pr-4" style="font-size: 12px; color: var(--neu-text-muted);">
+                    <p class="truncate pr-4" style="font-size: 12px; color: var(--text-secondary);">
                       {#if chat.last_message}{chat.last_message.content ||
                           '[媒体消息]'}{:else}暂无消息{/if}
                     </p>
@@ -293,7 +288,7 @@
                   {#if chat.unread_count > 0}
                     <div
                       class="flex flex-shrink-0 items-center justify-center rounded-full"
-                      style="width: 20px; height: 20px; background: var(--neu-accent-primary); color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--neu-glow);"
+                      style="width: 20px; height: 20px; background: var(--brand); color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--glow);"
                     >
                       {chat.unread_count > 99 ? '99+' : chat.unread_count}
                     </div>
@@ -301,7 +296,7 @@
                 </a>
               </div>
               {#if i < filteredPrivateChats.length - 1}
-                <div class="mx-4" style="height: 1px; background: var(--neu-border);"></div>
+                <div class="mx-4" style="height: 1px; background: var(--border-theme);"></div>
               {/if}
             {/each}
           {/if}
@@ -310,16 +305,16 @@
             <div class="flex items-center gap-3.5 px-4 py-3">
               <div
                 class="rounded-full"
-                style="width: 44px; height: 44px; background: var(--neu-border);"
+                style="width: 44px; height: 44px; background: var(--border-theme);"
               ></div>
               <div class="flex-1">
                 <div
                   class="mb-1.5 rounded"
-                  style="width: 80px; height: 12px; background: var(--neu-border);"
+                  style="width: 80px; height: 12px; background: var(--border-theme);"
                 ></div>
                 <div
                   class="rounded"
-                  style="width: 100px; height: 10px; background: var(--neu-border);"
+                  style="width: 100px; height: 10px; background: var(--border-theme);"
                 ></div>
               </div>
             </div>
@@ -329,21 +324,21 @@
             <MessageSquareDashed
               size={36}
               strokeWidth={1.25}
-              color="var(--neu-text-muted)"
+              color="var(--text-secondary)"
               style="opacity: 0.5;"
             />
-            <p style="font-size: 14px; color: var(--neu-text-muted);">没有找到群聊</p>
+            <p style="font-size: 14px; color: var(--text-secondary);">没有找到群聊</p>
           </div>
         {:else}
           {#each filteredGroupChats as group, i (group.group.group_id)}
             <div class="px-2 py-1">
               <a
                 href="/chat/groups/{group.group.group_id}"
-                class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all neu-row-hover active:scale-[0.98]"
+                class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all row-hover active:scale-[0.98]"
               >
                 <div
                   class="flex-shrink-0 overflow-hidden rounded-full"
-                  style="width: 44px; height: 44px; border: 1.5px solid var(--neu-border);"
+                  style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
                 >
                   {#if group.group.avatar_url}
                     <img
@@ -354,29 +349,29 @@
                   {:else}
                     <div
                       class="flex h-full w-full items-center justify-center"
-                      style="background: var(--neu-fallback-bg);"
+                      style="background: var(--surface-secondary);"
                     >
-                      <Users size={18} color="var(--neu-fallback-text)" />
+                      <Users size={18} color="var(--text-tertiary)" />
                     </div>
                   {/if}
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="mb-0.5 flex items-center justify-between">
-                    <span style="font-size: 14px; color: var(--neu-text); font-weight: 500;"
+                    <span style="font-size: 14px; color: var(--text-primary); font-weight: 500;"
                       >{group.group.name}</span
                     >
-                    <span style="font-size: 11px; color: var(--neu-text-muted);"
+                    <span style="font-size: 11px; color: var(--text-secondary);"
                       >{group.group.members_count}人</span
                     >
                   </div>
-                  <p style="font-size: 12px; color: var(--neu-text-muted);">
+                  <p style="font-size: 12px; color: var(--text-secondary);">
                     {formatRelativeTime(group.last_activity_at ?? group.my_state?.joined_at ?? '')}
                   </p>
                 </div>
                 {#if (group.my_state?.unread_count ?? 0) > 0}
                   <div
                     class="flex flex-shrink-0 items-center justify-center rounded-full"
-                    style="width: 20px; height: 20px; background: var(--neu-accent-primary); color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--neu-glow);"
+                    style="width: 20px; height: 20px; background: var(--brand); color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--glow);"
                   >
                     {(group.my_state?.unread_count ?? 0) > 99
                       ? '99+'
@@ -386,7 +381,7 @@
               </a>
             </div>
             {#if i < filteredGroupChats.length - 1}
-              <div class="mx-4" style="height: 1px; background: var(--neu-border);"></div>
+              <div class="mx-4" style="height: 1px; background: var(--border-theme);"></div>
             {/if}
           {/each}
         {/if}

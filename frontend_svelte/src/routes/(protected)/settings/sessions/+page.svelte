@@ -89,7 +89,7 @@
       <div class="flex flex-wrap items-center gap-2">
         <button
           class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-border); color: var(--neu-text);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-primary);"
           onclick={loadSessions}
           disabled={isLoading}
         >
@@ -98,7 +98,7 @@
         </button>
         <button
           class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-sm); border: 1px solid var(--neu-error-border); color: var(--neu-error);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--neu-error-border); color: var(--neu-error);"
           onclick={revokeOthers}
           disabled={isLoading || isRevokingOthers}
         >
@@ -116,20 +116,20 @@
       {#each Array(4) as _, i (i)}
         <div
           class="flex items-center gap-4 rounded-[22px] p-4"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <div
             class="h-12 w-12 rounded-[12px]"
-            style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
           ></div>
           <div class="flex-1 space-y-2">
             <div
               class="h-4 w-48 rounded-[12px]"
-              style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
             ></div>
             <div
               class="h-3 w-64 rounded-[12px]"
-              style="background: var(--neu-bg); box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
             ></div>
           </div>
         </div>
@@ -138,44 +138,44 @@
   {:else if sessions.length === 0}
     <div
       class="flex flex-col items-center justify-center rounded-[22px] py-12"
-      style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div
         class="flex items-center justify-center rounded-full mb-4"
-        style="width: 48px; height: 48px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+        style="width: 48px; height: 48px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
       >
-        <Shield size={20} color="var(--neu-text-muted)" />
+        <Shield size={20} color="var(--text-secondary)" />
       </div>
-      <p style="font-size: 14px; color: var(--neu-text-muted);">暂无会话记录</p>
+      <p style="font-size: 14px; color: var(--text-secondary);">暂无会话记录</p>
     </div>
   {:else}
     <div class="space-y-3">
       {#each sessions as session (session.session_id)}
         <div
           class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
-          style="background: var(--neu-bg); box-shadow: var(--neu-shadow-lg); border: 1px solid var(--neu-border);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <div class="flex items-center gap-3 min-w-0">
             <div
               class="flex flex-shrink-0 items-center justify-center rounded-full"
-              style="width: 36px; height: 36px; box-shadow: var(--neu-shadow-inset); border: 1px solid var(--neu-border);"
+              style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
             >
-              <Smartphone size={15} strokeWidth={1.5} color="var(--neu-accent-primary)" />
+              <Smartphone size={15} strokeWidth={1.5} color="var(--brand)" />
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <p style="font-size: 14px; font-weight: 500; color: var(--neu-text);">
+                <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
                   {session.device_name || session.device_type || '未知设备'}
                 </p>
                 {#if session.is_current}
                   <span
                     class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                    style="background: var(--neu-accent-primary); color: var(--neu-active-text); box-shadow: 0 2px 6px var(--neu-glow);"
+                    style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
                     >当前设备</span
                   >
                 {/if}
               </div>
-              <div style="font-size: 12px; color: var(--neu-text-muted); margin-top: 2px;">
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
                 {session.ip_location || '未知位置'} · 最后活跃 {formatDateTime(
                   session.last_active_at
                 )}
@@ -185,10 +185,10 @@
           <div>
             <button
               class="flex items-center rounded-[18px] px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style="background: var(--neu-bg); box-shadow: var(--neu-shadow-md); border: 1px solid {session.is_current
-                ? 'var(--neu-border)'
+              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid {session.is_current
+                ? 'var(--border-theme)'
                 : 'var(--neu-error-border)'}; color: {session.is_current
-                ? 'var(--neu-text-muted)'
+                ? 'var(--text-secondary)'
                 : 'var(--neu-error)'};"
               disabled={session.is_current || isRevoking === session.session_id}
               onclick={() => revoke(session.session_id)}
