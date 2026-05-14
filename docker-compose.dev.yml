@@ -3,7 +3,7 @@
 #
 # 变更:
 #   - 后端从源码构建，挂载编译产物，暴露调试端口
-#   - 前端使用 Bun 原生 HMR 替代生产 Node 镜像
+#   - 前端使用 Vite HMR 开发服务器替代生产 Nginx 镜像
 #   - 暴露 postgres 端口到宿主机方便数据库工具直连
 
 services:
@@ -29,25 +29,20 @@ services:
     pull_policy: missing
     working_dir: /app
     ports:
-      - "3000:3000"
+      - "5173:5173"
     volumes:
-      - ./frontend_svelte:/app
+      - ./frontend:/app
       - /app/node_modules
     environment:
-      PORT: "3000"
-      ORIGIN: http://localhost:8888
       BACKEND_URL: http://backend:8081
-      VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
-      VITE_AMAP_SECURITY_CODE: ${VITE_AMAP_SECURITY_CODE:-}
-      VITE_AMAP_SERVICE_HOST: /_AMapService
     command:
       [
         "sh",
         "-c",
-        "bun install --frozen-lockfile --silent 2>/dev/null; exec bun run dev -- --host 0.0.0.0 --port 3000"
+        "bun install --frozen-lockfile --silent 2>/dev/null; exec bun run dev -- --host 0.0.0.0 --port 5173"
       ]
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5173/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

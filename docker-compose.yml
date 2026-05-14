@@ -67,7 +67,7 @@ services:
       timeout: 5s
       retries: 20
 
-  # ── Frontend (SvelteKit, Node adapter) ──────────────────────────
+  # ── Frontend (React SPA, Nginx) ────────────────────────────────
   frontend:
     image: hotspot-frontend:latest
     pull_policy: never
@@ -75,20 +75,12 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    environment:
-      PORT: "3000"
-      HOST: 0.0.0.0
-      ORIGIN: http://localhost:8888
-      BACKEND_URL: http://backend:8081
-      VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
-      VITE_AMAP_SECURITY_CODE: ${VITE_AMAP_SECURITY_CODE:-}
-      VITE_AMAP_SERVICE_HOST: /_AMapService
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 5s
 
   # ── Gateway (Nginx) ─────────────────────────────────────────────
   nginx:
