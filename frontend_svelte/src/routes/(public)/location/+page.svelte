@@ -9,7 +9,8 @@
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Crosshair from 'lucide-svelte/icons/crosshair';
   import SlidersHorizontal from 'lucide-svelte/icons/sliders-horizontal';
-  import type { Map as LeafletMap } from 'leaflet';
+
+  // Dynamic import — Leaflet only works in browser
 
   /* ── Types & Constants ─────────────────────────────────────────── */
   type PinType = 'user' | 'group' | 'post';
@@ -205,15 +206,13 @@
 
   /* ── State ─────────────────────────────────────────────────────── */
   let mapEl: HTMLElement;
-  let map: LeafletMap | null = null;
+  let map: any = null;
 
   let snap = $state<SnapState>('mid');
   let sheetHeight = $state(SNAP_MID);
   let showFilter = $state(false);
   let activeFilters = $state<Set<PinType>>(new Set(['user', 'group', 'post']));
   let searchQuery = $state('');
-  let selectedPin = $state<Pin | null>(null);
-  let selectedLoc = $state<LocationResult | null>(null);
   let activeTab = $state<'recent' | 'hot'>('recent');
 
   // Drag state
@@ -258,20 +257,18 @@
   }
 
   function handleMapClick() {
-    selectedPin = null;
     showFilter = false;
     snapTo('min');
   }
 
   function handleSelectLoc(loc: LocationResult) {
-    selectedLoc = loc;
     searchQuery = loc.displayName;
     if (map) map.setView([loc.lat, loc.lng], DEFAULT_ZOOM);
     if (snap === 'max') snapTo('mid');
   }
 
   function handleConfirm() {
-    goto(-1);
+    goto('/');
   }
 
   function toggleFilter(type: PinType) {
@@ -283,7 +280,14 @@
   }
 
   /* ── Leaflet lifecycle ─────────────────────────────────────────── */
-  onMount(async () => {
+  onMount(() => {
+    initMap();
+    return () => {
+      map?.remove();
+    };
+  });
+
+  async function initMap() {
     const L = await import('leaflet');
 
     const centerLat = mapAnchorStore.latitude || XUZHOU_CENTER.lat;
@@ -302,7 +306,7 @@
     }).addTo(map);
 
     // Add pins
-    markers = MOCK_PINS.map((pin) => {
+    MOCK_PINS.forEach((pin) => {
       const color = PIN_COLORS[pin.type];
       const isCluster = (pin.count ?? 1) > 1;
       const html = isCluster
@@ -317,16 +321,10 @@
       });
       const m = L.marker([pin.lat, pin.lng], { icon }).addTo(map!);
       m.on('click', () => {
-        selectedPin = pin;
         snapTo('mid');
       });
-      return m;
     });
-
-    return () => {
-      map?.remove();
-    };
-  });
+  }
 </script>
 
 <!-- ════════════════════════════════════════════════════ MOBILE / TABLET ══════ -->
@@ -369,7 +367,7 @@
       <!-- Search + Confirm -->
       <div class="flex items-center gap-2 px-4 pt-1 pb-3">
         <button
-          onclick={() => goto(-1)}
+          onclick={() => goto('/')}
           class="flex items-center justify-center rounded-full flex-shrink-0"
           style="width: 36px; height: 36px; background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 2px 2px 6px var(--neu-shadow-dark), -2px -2px 6px var(--neu-shadow-light);"
         >
@@ -407,7 +405,6 @@
           <button
             onclick={() => toggleFilter(type)}
             class="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all duration-200 flex-shrink-0"
-            class:bg-opacity-15
             style="background: {activeFilters.has(type)
               ? PIN_COLORS[type] + '18'
               : 'var(--neu-border)'}; color: {activeFilters.has(type)
@@ -530,7 +527,7 @@
       <!-- Panel header -->
       <div class="flex items-center gap-3 px-4 pt-4 pb-3">
         <button
-          onclick={() => goto(-1)}
+          onclick={() => goto('/')}
           class="flex items-center justify-center rounded-full flex-shrink-0"
           style="width: 36px; height: 36px; background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 2px 2px 6px var(--neu-shadow-dark), -2px -2px 6px var(--neu-shadow-light);"
         >
