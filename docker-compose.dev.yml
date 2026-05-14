@@ -1,0 +1,35 @@
+services:
+  # ── 开发模式覆盖 ──────────────────────────────────────────────
+  # 不构建镜像，编译产物或源码通过 volume 挂载进容器，restart 即生效
+
+  backend:
+    image: hotspot-backend:latest
+    pull_policy: never
+    volumes:
+      - ./backend-go/server:/app/server:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8081/api/v1/system/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  frontend:
+    image: oven/bun:1.3-alpine
+    pull_policy: if_not_present
+    working_dir: /app
+    volumes:
+      - ./frontend_svelte:/app
+      - /app/node_modules
+    environment:
+      PORT: "3000"
+      ORIGIN: http://localhost:8888
+      BACKEND_URL: http://backend:8081
+      VITE_AMAP_KEY: "${VITE_AMAP_KEY:-}"
+      VITE_AMAP_SECURITY_CODE: "${VITE_AMAP_SECURITY_CODE:-}"
+      VITE_AMAP_SERVICE_HOST: /_AMapService
+    command:
+      [
+        "sh",
+        "-c",
+        "bun install --frozen-lockfile --silent 2>/dev/null; exec bun run dev -- --host 0.0.0.0 --port 3000"
+      ]

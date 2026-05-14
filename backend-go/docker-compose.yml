@@ -2,6 +2,7 @@ services:
   # ── Storage ────────────────────────────────────────────────────────
   postgres:
     image: postgres:17.4-alpine3.21
+    restart: unless-stopped
     environment:
       POSTGRES_DB: hotspot
       POSTGRES_USER: postgres
@@ -18,12 +19,13 @@ services:
 
   seaweedfs:
     image: chrislusf/seaweedfs:4.21
+    restart: unless-stopped
     command: server -s3 -dir=/seaweedfs/data
     ports:
-      - "9333:9333"  # Master + S3 API
-      - "8333:8333"  # S3 gateway
+      - "9333:9333"
+      - "8333:8333"
     volumes:
-      - ./.local/seaweedfs-data:/seaweedfs/data
+      - seaweedfs_data:/seaweedfs/data
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9333/dir/heartbeat || exit 1"]
       interval: 5s
@@ -35,6 +37,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,7 +51,6 @@ services:
       POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/hotspot?sslmode=disable
       AUTH_TOKEN_SECRET: test-secret-do-not-use-in-prod
       APP_NAME: hotspot-backend-go
-      # S3 / SeaweedFS — swap these 6 vars to point at real AWS S3 in production
       S3_ENDPOINT: http://seaweedfs:8333
       S3_PUBLIC_ENDPOINT: http://localhost:8333
       S3_REGION: us-east-1

@@ -25,6 +25,7 @@ target/
 frontend_svelte/node_modules/
 frontend_svelte/build/
 frontend_svelte/.svelte-kit/
+backend-go/server
 
 # ============================================
 # IDE & Editor
