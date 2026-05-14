@@ -65,6 +65,8 @@ services:
 
   # ── Frontend (SvelteKit) ──────────────────────────────────────
   frontend:
+    image: hotspot-frontend:latest
+    pull_policy: never
     build:
       context: ./frontend_svelte
       dockerfile: Dockerfile
