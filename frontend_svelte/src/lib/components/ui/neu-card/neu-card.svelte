@@ -2,6 +2,7 @@
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
   import { cn } from '$lib/utils';
+  import { interactive } from '$lib/actions/interactive';
 
   type Variant = 'flat' | 'pressed' | 'convex';
 
@@ -19,6 +20,7 @@
 </script>
 
 <div
+  use:interactive={{ type: 'card' }}
   class={cn('rounded-[32px] p-6 transition-all duration-300', variantClass, className)}
   {...rest}
 >

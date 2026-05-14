@@ -55,6 +55,10 @@
   --color-border-theme: var(--border-theme);
   --color-page-bg: var(--page-bg);
 
+  /* Accent soft tokens */
+  --color-neu-accent-soft: var(--neu-accent-soft);
+  --color-neu-accent-soft-border: var(--neu-accent-soft-border);
+
   --radius: 0.625rem;
 }
 
@@ -65,18 +69,20 @@
    Shadows zeroed → components render as clean flat shapes.
    ═══════════════════════════════════════════════════════════════════════ */
 :root[data-theme-family='forest'] {
-  --neu-bg: #ffffff;
-  --page-bg: #ededed;
+  --neu-bg: #f9f9f5;
+  --page-bg: #edecea;
   --neu-shadow-light: rgba(255, 255, 255, 0);
   --neu-shadow-dark: rgba(0, 0, 0, 0);
-  --neu-text: #1a1a1a;
-  --neu-text-muted: #8a9190;
+  --neu-text: #1b1f1b;
+  --neu-text-muted: #6a7b70;
   --neu-accent: #3d7a55;
   --neu-accent-primary: #3d7a55;
-  --neu-glow: rgba(61, 122, 85, 0.15);
+  --neu-glow: rgba(61, 122, 85, 0.18);
   --neu-fab-glow: 0 6px 18px rgba(61, 122, 85, 0.32), 0 2px 4px rgba(0, 0, 0, 0.1);
-  --neu-border: rgba(0, 0, 0, 0.08);
-  --neu-border-pressed: rgba(0, 0, 0, 0.13);
+  --neu-border: rgba(61, 122, 85, 0.13);
+  --neu-border-pressed: rgba(61, 122, 85, 0.24);
+  --neu-accent-soft: rgba(61, 122, 85, 0.1);
+  --neu-accent-soft-border: rgba(61, 122, 85, 0.32);
   --neu-error: #ef4444;
   --neu-error-border: rgba(239, 68, 68, 0.3);
   --neu-success: #059669;
@@ -97,7 +103,7 @@
   --foreground: var(--neu-text);
   --card: var(--neu-bg);
   --card-foreground: var(--neu-text);
-  --popover: #ffffff;
+  --popover: #f9f9f5;
   --popover-foreground: var(--neu-text);
   --primary: var(--neu-accent-primary);
   --primary-foreground: #ffffff;
@@ -122,7 +128,7 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: #ffffff;
+  --sidebar: #f9f9f5;
   --sidebar-foreground: #111827;
   --sidebar-primary: #3d7a55;
   --sidebar-primary-foreground: #ffffff;
@@ -135,18 +141,20 @@
 }
 
 :root[data-theme-family='forest'].dark {
-  --neu-bg: #1a1c1a;
-  --page-bg: #111311;
+  --neu-bg: #161a16;
+  --page-bg: #0e110e;
   --neu-shadow-light: rgba(255, 255, 255, 0);
   --neu-shadow-dark: rgba(0, 0, 0, 0);
-  --neu-text: #e4eae5;
-  --neu-text-muted: #8aa096;
+  --neu-text: #dce8de;
+  --neu-text-muted: #7a9080;
   --neu-accent: #52b878;
   --neu-accent-primary: #52b878;
-  --neu-glow: rgba(82, 184, 120, 0.18);
+  --neu-glow: rgba(82, 184, 120, 0.2);
   --neu-fab-glow: 0 6px 22px rgba(82, 184, 120, 0.38), 0 2px 6px rgba(0, 0, 0, 0.2);
-  --neu-border: rgba(255, 255, 255, 0.07);
-  --neu-border-pressed: rgba(255, 255, 255, 0.04);
+  --neu-border: rgba(82, 184, 120, 0.12);
+  --neu-border-pressed: rgba(82, 184, 120, 0.22);
+  --neu-accent-soft: rgba(82, 184, 120, 0.12);
+  --neu-accent-soft-border: rgba(82, 184, 120, 0.34);
   --neu-error: #f87171;
   --neu-error-border: rgba(248, 113, 113, 0.3);
   --neu-success: #34d399;
@@ -209,18 +217,20 @@
    ═══════════════════════════════════════════════════════════════════════ */
 :root,
 :root[data-theme-family='vibrant'] {
-  --neu-bg: #ffffff;
+  --neu-bg: #fafafe;
   --page-bg: #eef2ff;
   --neu-shadow-light: rgba(255, 255, 255, 1);
-  --neu-shadow-dark: rgba(99, 91, 200, 0.1);
+  --neu-shadow-dark: rgba(99, 91, 200, 0.12);
   --neu-text: #1e1b4b;
   --neu-text-muted: #5b5792;
   --neu-accent: #6366f1;
   --neu-accent-primary: #6366f1;
-  --neu-glow: rgba(99, 102, 241, 0.32);
+  --neu-glow: rgba(99, 102, 241, 0.34);
   --neu-fab-glow: 0 6px 18px rgba(99, 102, 241, 0.38), 0 2px 4px rgba(0, 0, 0, 0.1);
-  --neu-border: rgba(99, 102, 241, 0.13);
-  --neu-border-pressed: rgba(99, 102, 241, 0.22);
+  --neu-border: rgba(99, 102, 241, 0.15);
+  --neu-border-pressed: rgba(99, 102, 241, 0.26);
+  --neu-accent-soft: rgba(99, 102, 241, 0.1);
+  --neu-accent-soft-border: rgba(99, 102, 241, 0.3);
   --neu-error: #ef4444;
   --neu-error-border: rgba(239, 68, 68, 0.3);
   --neu-success: #059669;
@@ -243,7 +253,7 @@
   --foreground: var(--neu-text);
   --card: var(--neu-bg);
   --card-foreground: var(--neu-text);
-  --popover: #ffffff;
+  --popover: #fafafe;
   --popover-foreground: var(--neu-text);
   --primary: var(--neu-accent-primary);
   --primary-foreground: #ffffff;
@@ -268,7 +278,7 @@
   --chart-3: oklch(0.61 0.22 14);
   --chart-4: oklch(0.8 0.16 88);
   --chart-5: oklch(0.72 0.17 315);
-  --sidebar: #f7f9ff;
+  --sidebar: #fafafe;
   --sidebar-foreground: var(--neu-text);
   --sidebar-primary: #6366f1;
   --sidebar-primary-foreground: #ffffff;
@@ -283,18 +293,20 @@
 :root,
 :root.dark,
 :root[data-theme-family='vibrant'].dark {
-  --neu-bg: #141028;
-  --page-bg: #09060f;
-  --neu-shadow-light: rgba(99, 102, 241, 0.06);
-  --neu-shadow-dark: rgba(0, 0, 0, 0.65);
-  --neu-text: #e8e4ff;
+  --neu-bg: #130f26;
+  --page-bg: #07040f;
+  --neu-shadow-light: rgba(129, 140, 248, 0.07);
+  --neu-shadow-dark: rgba(0, 0, 0, 0.72);
+  --neu-text: #eae6ff;
   --neu-text-muted: #7a75b0;
   --neu-accent: #818cf8;
   --neu-accent-primary: #818cf8;
-  --neu-glow: rgba(129, 140, 248, 0.26);
+  --neu-glow: rgba(129, 140, 248, 0.3);
   --neu-fab-glow: 0 6px 22px rgba(129, 140, 248, 0.42), 0 2px 6px rgba(0, 0, 0, 0.2);
-  --neu-border: rgba(129, 140, 248, 0.13);
-  --neu-border-pressed: rgba(129, 140, 248, 0.22);
+  --neu-border: rgba(129, 140, 248, 0.14);
+  --neu-border-pressed: rgba(129, 140, 248, 0.26);
+  --neu-accent-soft: rgba(129, 140, 248, 0.14);
+  --neu-accent-soft-border: rgba(129, 140, 248, 0.34);
   --neu-error: #f87171;
   --neu-error-border: rgba(248, 113, 113, 0.3);
   --neu-success: #34d399;
@@ -340,7 +352,7 @@
   --chart-3: oklch(0.72 0.17 8);
   --chart-4: oklch(0.8 0.16 88);
   --chart-5: oklch(0.74 0.15 315);
-  --sidebar: #141028;
+  --sidebar: #130f26;
   --sidebar-foreground: var(--neu-text);
   --sidebar-primary: #818cf8;
   --sidebar-primary-foreground: #09060f;
@@ -368,6 +380,8 @@
   --neu-fab-glow: 0 6px 18px rgba(212, 132, 90, 0.34), 0 2px 4px rgba(0, 0, 0, 0.1);
   --neu-border: #f7f5f2;
   --neu-border-pressed: #dfd9d1;
+  --neu-accent-soft: rgba(212, 132, 90, 0.1);
+  --neu-accent-soft-border: rgba(212, 132, 90, 0.28);
   --neu-error: #c0392b;
   --neu-error-border: rgba(192, 57, 43, 0.3);
   --neu-success: #748377;
@@ -439,6 +453,8 @@
   --neu-fab-glow: 0 6px 22px rgba(232, 168, 124, 0.36), 0 2px 6px rgba(0, 0, 0, 0.22);
   --neu-border: #2a2c35;
   --neu-border-pressed: #15161c;
+  --neu-accent-soft: rgba(232, 168, 124, 0.12);
+  --neu-accent-soft-border: rgba(232, 168, 124, 0.3);
   --neu-error: #e06f6f;
   --neu-error-border: rgba(224, 111, 111, 0.3);
   --neu-success: #8d94a0;
@@ -580,6 +596,18 @@
   --neu-radius-xxl: var(--radius-xxl);
   --neu-radius-pill: var(--radius-pill);
   --neu-glass-blur: var(--glass-blur);
+
+  /* ── FAB icon animation ──────────────────────────────────────────── */
+  @keyframes fabIconIn {
+    from {
+      opacity: 0.5;
+      transform: rotate(-45deg) scale(0.75);
+    }
+    to {
+      opacity: 1;
+      transform: rotate(0deg) scale(1);
+    }
+  }
   --neu-glass-saturate: var(--glass-saturate);
   --neu-switch-thumb: var(--switch-thumb);
   --neu-switch-shadow: var(--switch-shadow);

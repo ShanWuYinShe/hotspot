@@ -2,6 +2,7 @@
   import type { Snippet } from 'svelte';
   import type { HTMLButtonAttributes } from 'svelte/elements';
   import { cn } from '$lib/utils';
+  import { interactive } from '$lib/actions/interactive';
 
   type Variant = 'flat' | 'pressed' | 'icon' | 'glow';
   type Size = 'sm' | 'md' | 'lg' | 'icon';
@@ -47,6 +48,7 @@
 </script>
 
 <button
+  use:interactive={{ type: 'btn' }}
   class={cn(
     'relative flex items-center justify-center rounded-[28px] outline-none select-none',
     'pill-hover transition-[transform,box-shadow,background-color] duration-200',

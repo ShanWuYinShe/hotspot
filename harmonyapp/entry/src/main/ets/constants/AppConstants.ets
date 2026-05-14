@@ -81,6 +81,8 @@ export interface PageNamesType {
   ACCOUNTS: string;
   MY_SHARES: string;
   SHARE_RESOLUTION: string;
+  EVENT_DETAIL: string;
+  PROFILE_EDIT: string;
 }
 
 export const PageNames: PageNamesType = {
@@ -108,7 +110,9 @@ export const PageNames: PageNamesType = {
   SUBSCRIPTIONS: 'SubscriptionsPage',
   ACCOUNTS: 'AccountsPage',
   MY_SHARES: 'MySharesPage',
-  SHARE_RESOLUTION: 'ShareResolutionPage'
+  SHARE_RESOLUTION: 'ShareResolutionPage',
+  EVENT_DETAIL: 'EventDetailPage',
+  PROFILE_EDIT: 'ProfileEditPage'
 };
 
 // 默认配置（服务端 ClientConfig 加载前的回退值）

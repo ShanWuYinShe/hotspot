@@ -15,6 +15,14 @@
   import Settings from 'lucide-svelte/icons/settings';
   import { notificationStore } from '$lib/stores/notification.svelte';
   import Sidebar from '$lib/components/common/sidebar.svelte';
+  import {
+    TabletRail,
+    NearbyPulseCard,
+    StreakCard,
+    DailyPickCard,
+    SuggestedFollowsCard,
+    VibeCard
+  } from '$lib/components/common/tablet-rail';
 
   let { children } = $props();
 
@@ -41,19 +49,31 @@
     <MobileBottomNav />
   </div>
 {:else if platformStore.isTablet}
-  <!-- Tablet: full-width content + floating glass pill bottom nav -->
+  <!-- Tablet: content + right rail + floating glass pill bottom nav -->
   <div
-    class="flex h-[100dvh] w-full flex-col overflow-hidden transition-colors duration-500"
+    class="flex h-[100dvh] w-full overflow-hidden transition-colors duration-500"
     style="background-color: var(--surface-bg); color: var(--text-primary);"
   >
     <main
-      class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar"
+      class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar scroll-smooth"
       style="background-color: var(--surface-bg);"
     >
       {@render children()}
     </main>
-    <TabletBottomNav />
+    <div
+      class="w-[280px] flex-shrink-0 overflow-y-auto no-scrollbar p-3 transition-colors duration-500"
+      style="background-color: var(--page-bg);"
+    >
+      <TabletRail>
+        <NearbyPulseCard />
+        <StreakCard />
+        <DailyPickCard />
+        <SuggestedFollowsCard />
+        <VibeCard />
+      </TabletRail>
+    </div>
   </div>
+  <TabletBottomNav />
 {:else}
   <!-- Desktop: header + sidebar + main card (≥1280px) -->
   <div

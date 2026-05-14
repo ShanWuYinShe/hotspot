@@ -2,6 +2,7 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { t } from '$lib/i18n';
+  import { interactive } from '$lib/actions/interactive';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { notificationStore } from '$lib/stores/notification.svelte';
@@ -11,6 +12,7 @@
   import MessageCircle from 'lucide-svelte/icons/message-circle';
   import User from 'lucide-svelte/icons/user';
   import Plus from 'lucide-svelte/icons/plus';
+  import X from 'lucide-svelte/icons/x';
 
   const navItems = [
     { href: '/', label: t('nav.nearby'), icon: MapPin },
@@ -67,6 +69,7 @@
     >
       {#each navItems.slice(0, 2) as item (item.href)}
         <button
+          use:interactive={{ type: 'btn' }}
           class="relative flex flex-col items-center justify-center outline-none select-none transition-transform duration-150 active:scale-95"
           style="flex: 1; min-width: 0; padding: 9px 0; gap: 5px;"
           onclick={() => navigate(item)}
@@ -103,17 +106,31 @@
       <!-- Center FAB -->
       <div class="flex shrink-0 items-center justify-center" style="width: 64px;">
         <button
+          use:interactive={{ type: 'btn' }}
           class="flex items-center justify-center rounded-full outline-none select-none"
-          style="width: 48px; height: 48px; background: var(--brand); box-shadow: var(--neu-fab-glow); transition: background 0.22s, box-shadow 0.22s;"
+          style="width: 48px; height: 48px; background: {uiStore.showCreateSheet
+            ? 'var(--neu-text-muted)'
+            : 'var(--brand)'}; box-shadow: {uiStore.showCreateSheet
+            ? 'none'
+            : 'var(--neu-fab-glow)'}; transition: background 0.22s, box-shadow 0.22s;"
           onclick={() => uiStore.openCreateSheet()}
-          aria-label={t('nav.publish')}
+          aria-label={uiStore.showCreateSheet ? '关闭' : '发布'}
         >
-          <Plus size={19} strokeWidth={2.2} color="var(--text-on-accent)" />
+          {#if uiStore.showCreateSheet}
+            <span style="display: flex; animation: fabIconIn 0.18s ease-out both;">
+              <X size={19} strokeWidth={2.2} color="var(--text-on-accent)" />
+            </span>
+          {:else}
+            <span style="display: flex; animation: fabIconIn 0.18s ease-out both;">
+              <Plus size={19} strokeWidth={2.2} color="var(--text-on-accent)" />
+            </span>
+          {/if}
         </button>
       </div>
 
       {#each navItems.slice(2) as item (item.href)}
         <button
+          use:interactive={{ type: 'btn' }}
           class="relative flex flex-col items-center justify-center outline-none select-none transition-transform duration-150 active:scale-95"
           style="flex: 1; min-width: 0; padding: 9px 0; gap: 5px;"
           onclick={() => navigate(item)}

@@ -150,9 +150,13 @@
               <span style="font-size: 14px; color: var(--text-primary);">{svc.label}</span>
               <div class="flex items-center gap-2">
                 <span
-                  style="width: 8px; height: 8px; border-radius: 50%; background: {svc.ok ? 'var(--neu-success)' : '#EF4444'};"
+                  style="width: 8px; height: 8px; border-radius: 50%; background: {svc.ok
+                    ? 'var(--neu-success)'
+                    : '#EF4444'};"
                 ></span>
-                <span style="font-size: 13px; color: {svc.ok ? 'var(--neu-success)' : '#EF4444'};">{svc.ok ? '正常' : '异常'}</span>
+                <span style="font-size: 13px; color: {svc.ok ? 'var(--neu-success)' : '#EF4444'};"
+                  >{svc.ok ? '正常' : '异常'}</span
+                >
               </div>
             </div>
           {/each}

@@ -475,7 +475,10 @@
       >
         {#each trendingTags.slice(0, 2) as t, i}
           {@const Icon = [Coffee, Music][i] ?? Star}
-          {@const cfg = [{ color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' }, { color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' }][i] ?? { color: 'var(--brand)', bg: 'var(--surface-bg)' }}
+          {@const cfg = [
+            { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
+            { color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' }
+          ][i] ?? { color: 'var(--brand)', bg: 'var(--surface-bg)' }}
           <button
             class="surface-flat flex flex-col justify-between rounded-[22px] cursor-pointer card-hover transition-transform duration-150 active:scale-[0.97]"
             style="aspect-ratio: 1/1; padding: 16px;"
@@ -488,7 +491,9 @@
             </div>
             <div>
               <p style="font-size: 13px; color: var(--text-primary);">#{t.name}</p>
-              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">{t.usage_count}条动态</p>
+              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+                {t.usage_count}条动态
+              </p>
             </div>
           </button>
         {/each}
@@ -615,7 +620,11 @@
           <div class="flex flex-col gap-2.5">
             {#each trendingTags.slice(0, 3) as t, i}
               {@const Icon = [Coffee, Music, Sparkles][i] ?? Star}
-              {@const cfg = [{ color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' }, { color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' }, { color: '#06B6D4', bg: 'rgba(6,182,212,0.1)' }][i] ?? { color: 'var(--brand)', bg: 'var(--surface-bg)' }}
+              {@const cfg = [
+                { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
+                { color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' },
+                { color: '#06B6D4', bg: 'rgba(6,182,212,0.1)' }
+              ][i] ?? { color: 'var(--brand)', bg: 'var(--surface-bg)' }}
               <div
                 class="surface-flat flex cursor-pointer items-center gap-3 rounded-[18px] px-4 py-3 row-hover"
               >

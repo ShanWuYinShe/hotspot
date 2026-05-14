@@ -87,9 +87,7 @@
 
   const onlineCount = $derived(nearbyUsers.filter((u) => u.presence_status === 'online').length);
   const peopleCount = $derived(nearbyUsers.length);
-  const activityCount = $derived(
-    trendingTags.reduce((sum, t) => sum + t.usage_count, 0)
-  );
+  const activityCount = $derived(trendingTags.reduce((sum, t) => sum + t.usage_count, 0));
 
   // Shared props
   const heroProps = $derived({
@@ -152,7 +150,21 @@
             更多 →
           </button>
         </div>
-        <ActivityList activities={trendingTags.slice(0, 3).map((t, i) => ({ id: t.name, icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star', title: `#${t.name}`, sub: `${t.usage_count}条动态`, color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)', bg: ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ?? 'var(--surface-bg)' }))} {loading} />
+        <ActivityList
+          activities={trendingTags
+            .slice(0, 3)
+            .map((t, i) => ({
+              id: t.name,
+              icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star',
+              title: `#${t.name}`,
+              sub: `${t.usage_count}条动态`,
+              color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)',
+              bg:
+                ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ??
+                'var(--surface-bg)'
+            }))}
+          {loading}
+        />
       </div>
 
       {#if !loading}
@@ -234,7 +246,21 @@
               更多 →
             </button>
           </div>
-          <ActivityList activities={trendingTags.slice(0, 3).map((t, i) => ({ id: t.name, icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star', title: `#${t.name}`, sub: `${t.usage_count}条动态`, color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)', bg: ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ?? 'var(--surface-bg)' }))} {loading} />
+          <ActivityList
+            activities={trendingTags
+              .slice(0, 3)
+              .map((t, i) => ({
+                id: t.name,
+                icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star',
+                title: `#${t.name}`,
+                sub: `${t.usage_count}条动态`,
+                color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)',
+                bg:
+                  ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ??
+                  'var(--surface-bg)'
+              }))}
+            {loading}
+          />
         </div>
 
         {#if !loading}
@@ -306,7 +332,21 @@
               更多 →
             </button>
           </div>
-          <ActivityList activities={trendingTags.slice(0, 3).map((t, i) => ({ id: t.name, icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star', title: `#${t.name}`, sub: `${t.usage_count}条动态`, color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)', bg: ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ?? 'var(--surface-bg)' }))} {loading} />
+          <ActivityList
+            activities={trendingTags
+              .slice(0, 3)
+              .map((t, i) => ({
+                id: t.name,
+                icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star',
+                title: `#${t.name}`,
+                sub: `${t.usage_count}条动态`,
+                color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)',
+                bg:
+                  ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ??
+                  'var(--surface-bg)'
+              }))}
+            {loading}
+          />
         </div>
 
         {#if !loading}
@@ -353,7 +393,21 @@
           <div class="flex items-end justify-between mb-3">
             <span class="eyebrow">周边热度</span>
           </div>
-          <ActivityList activities={trendingTags.slice(0, 3).map((t, i) => ({ id: t.name, icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star', title: `#${t.name}`, sub: `${t.usage_count}条动态`, color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)', bg: ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ?? 'var(--surface-bg)' }))} {loading} />
+          <ActivityList
+            activities={trendingTags
+              .slice(0, 3)
+              .map((t, i) => ({
+                id: t.name,
+                icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star',
+                title: `#${t.name}`,
+                sub: `${t.usage_count}条动态`,
+                color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)',
+                bg:
+                  ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ??
+                  'var(--surface-bg)'
+              }))}
+            {loading}
+          />
         </div>
       </div>
     </div>

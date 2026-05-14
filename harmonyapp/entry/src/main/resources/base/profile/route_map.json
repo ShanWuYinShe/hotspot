@@ -114,6 +114,16 @@
       "name": "ShareResolutionPage",
       "pageSourceFile": "src/main/ets/features/share/pages/ShareResolutionPage.ets",
       "buildFunction": "ShareResolutionPageBuilder"
+    },
+    {
+      "name": "EventDetailPage",
+      "pageSourceFile": "src/main/ets/features/event/pages/EventDetailPage.ets",
+      "buildFunction": "EventDetailPageBuilder"
+    },
+    {
+      "name": "ProfileEditPage",
+      "pageSourceFile": "src/main/ets/features/profile/pages/ProfileEditPage.ets",
+      "buildFunction": "ProfileEditPageBuilder"
     }
   ]
 }

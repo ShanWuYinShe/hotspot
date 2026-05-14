@@ -19,6 +19,7 @@
     "@sveltejs/kit": "^2.57.1",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/vite": "^4.2.2",
+    "@types/leaflet": "^1.9.21",
     "prettier": "^3.8.3",
     "prettier-plugin-svelte": "^3.5.1",
     "svelte": "^5.55.4",
@@ -30,6 +31,7 @@
   "dependencies": {
     "bits-ui": "^2.17.3",
     "clsx": "^2.1.1",
+    "leaflet": "^1.9.4",
     "lucide-svelte": "^0.563.0",
     "mode-watcher": "^1.1.0",
     "png-to-ico": "^3.0.1",

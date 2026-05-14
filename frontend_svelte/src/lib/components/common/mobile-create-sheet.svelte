@@ -1,8 +1,8 @@
 <script lang="ts">
-  import * as Dialog from '$lib/components/ui/dialog';
   import { t } from '$lib/i18n';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { platformStore } from '$lib/stores/platform.svelte';
+  import { fade, fly } from 'svelte/transition';
   import Image from 'lucide-svelte/icons/image';
   import UsersRound from 'lucide-svelte/icons/users-round';
 
@@ -19,18 +19,23 @@
   }
 
   const isMobileOrTablet = $derived(platformStore.isMobile || platformStore.isTablet);
+  const show = $derived(uiStore.showCreateSheet);
 </script>
 
-<Dialog.Root
-  open={uiStore.showCreateSheet}
-  onOpenChange={(open) => (open ? uiStore.openCreateSheet() : uiStore.closeCreateSheet())}
->
-  <Dialog.Content
-    class={isMobileOrTablet
-      ? 'left-1/2 top-auto bottom-0 w-[calc(100%-1rem)] max-w-sm translate-x-[-50%] translate-y-0 rounded-t-[28px] rounded-b-none px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-5'
-      : 'max-w-[480px] rounded-[22px] px-5 pt-5 pb-5'}
-    style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: 0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--border-theme);"
-    hideClose
+{#if show}
+  <!-- Backdrop -->
+  <button
+    class="fixed inset-0 z-40 cursor-default"
+    style="background: rgba(0,0,0,0.35); backdrop-filter: blur(3px);"
+    onclick={() => uiStore.closeCreateSheet()}
+    transition:fade={{ duration: 220 }}
+  ></button>
+
+  <!-- Sheet -->
+  <div
+    class="fixed z-50 bottom-0 left-0 right-0 overflow-hidden rounded-t-[28px] px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-5"
+    style="background: var(--surface-bg); border-top: 1px solid var(--border-theme); box-shadow: 0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--border-theme);"
+    transition:fly={{ y: 300, duration: 320 }}
   >
     {#if isMobileOrTablet}
       <div class="mx-auto mb-4 h-1 w-9 rounded-full" style="background: var(--border-theme);"></div>
@@ -83,5 +88,5 @@
         </div>
       </button>
     </div>
-  </Dialog.Content>
-</Dialog.Root>
+  </div>
+{/if}

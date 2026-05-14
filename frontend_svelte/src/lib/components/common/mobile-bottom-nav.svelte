@@ -2,6 +2,7 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { t } from '$lib/i18n';
+  import { interactive } from '$lib/actions/interactive';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { notificationStore } from '$lib/stores/notification.svelte';
@@ -11,6 +12,7 @@
   import MessageCircle from 'lucide-svelte/icons/message-circle';
   import User from 'lucide-svelte/icons/user';
   import Plus from 'lucide-svelte/icons/plus';
+  import X from 'lucide-svelte/icons/x';
 
   const navItems = [
     { href: '/', label: t('nav.nearby'), icon: MapPin },
@@ -46,6 +48,7 @@
   >
     {#each navItems.slice(0, 2) as item (item.href)}
       <button
+        use:interactive={{ type: 'btn' }}
         class="mobile-bottom-nav__tab {isActive(item.href) ? 'active' : ''}"
         onclick={() => navigate(item)}
         aria-label={item.label}
@@ -77,17 +80,31 @@
     <!-- Center FAB -->
     <div class="flex flex-col items-center" style="width: 68px;">
       <button
+        use:interactive={{ type: 'btn' }}
         class="mobile-bottom-nav__fab"
-        style="background: var(--brand); box-shadow: var(--neu-fab-glow); transition: background 0.22s ease, box-shadow 0.22s ease;"
+        style="background: {uiStore.showCreateSheet
+          ? 'var(--neu-text-muted)'
+          : 'var(--brand)'}; box-shadow: {uiStore.showCreateSheet
+          ? 'none'
+          : 'var(--neu-fab-glow)'}; transition: background 0.22s ease, box-shadow 0.22s ease;"
         onclick={() => uiStore.openCreateSheet()}
-        aria-label={t('nav.publish')}
+        aria-label={uiStore.showCreateSheet ? '关闭' : '发布'}
       >
-        <Plus size={20} strokeWidth={2.2} color="var(--text-on-accent)" />
+        {#if uiStore.showCreateSheet}
+          <span style="display: flex; animation: fabIconIn 0.18s ease-out both;">
+            <X size={20} strokeWidth={2.2} color="var(--text-on-accent)" />
+          </span>
+        {:else}
+          <span style="display: flex; animation: fabIconIn 0.18s ease-out both;">
+            <Plus size={20} strokeWidth={2.2} color="var(--text-on-accent)" />
+          </span>
+        {/if}
       </button>
     </div>
 
     {#each navItems.slice(2) as item (item.href)}
       <button
+        use:interactive={{ type: 'btn' }}
         class="mobile-bottom-nav__tab {isActive(item.href) ? 'active' : ''}"
         onclick={() => navigate(item)}
         aria-label={item.label}
