@@ -5,13 +5,14 @@
   import { t } from '$lib/i18n';
   import { withMinimumLoadingTime } from '$lib/utils/loading';
   import { usersService, momentsService, groupsService } from '$lib/api/services';
+  import { feedService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import UserCard from '$lib/components/common/user-card.svelte';
   import GroupCard from '$lib/components/common/group-card.svelte';
   import MomentCard from '$lib/components/moments/moment-card.svelte';
-  import type { UserItem, MomentItem, GroupItem } from '$lib/types/api';
+  import type { UserItem, MomentItem, GroupItem, TrendingTagItem } from '$lib/types/api';
   import ArrowLeft from 'lucide-svelte/icons/arrow-left';
   import Search from 'lucide-svelte/icons/search';
   import Clock from 'lucide-svelte/icons/clock';
@@ -23,17 +24,22 @@
   type SearchTab = 'all' | 'users' | 'moments' | 'groups';
 
   const SEARCH_TABS: SearchTab[] = ['all', 'users', 'moments', 'groups'];
-  const HOT_SEARCHES = ['植物园', '云龙湖', '周末市集', '咖啡馆', '摄影'];
-  const SUGGESTED_TAGS = [
-    '摄影',
-    '城市探索',
-    '周末去哪',
-    '隐藏咖啡馆',
-    '徐州美食',
-    '本地生活',
-    '户外运动',
-    '街头摄影'
-  ];
+
+  let trendingTags: TrendingTagItem[] = $state([]);
+
+  async function loadTrending() {
+    try {
+      const result = await feedService.getTrending();
+      if (result.code === 0) {
+        trendingTags = result.data?.trending_tags ?? [];
+      }
+    } catch {
+      // non-critical, silently fail
+    }
+  }
+
+  const hotSearches = $derived(trendingTags.slice(0, 5).map((t) => t.name));
+  const suggestedTags = $derived(trendingTags.slice(0, 8).map((t) => t.name));
 
   const STORAGE_KEY_RECENT = 'hotspot_recent_searches';
   const MAX_RECENT = 6;
@@ -42,6 +48,10 @@
   let isLoading = $state(false);
   let searchError = $state<string | null>(null);
   let recentSearches = $state<string[]>(loadRecent());
+
+  $effect(() => {
+    void loadTrending();
+  });
 
   let users = $state.raw<UserItem[]>([]);
   let moments = $state.raw<MomentItem[]>([]);
@@ -396,10 +406,10 @@
               热门搜索
             </p>
           </div>
-          {#each HOT_SEARCHES as h, i (h)}
+          {#each hotSearches as h, i (h)}
             <button
               class="flex items-center gap-3 w-full py-2.5 outline-none transition-transform duration-150 active:scale-[0.98]"
-              style="border-bottom: {i < HOT_SEARCHES.length - 1
+              style="border-bottom: {i < hotSearches.length - 1
                 ? '1px solid var(--border-theme)'
                 : 'none'};"
               onclick={() => searchFor(h)}
@@ -432,7 +442,7 @@
             </p>
           </div>
           <div class="flex flex-wrap gap-2">
-            {#each SUGGESTED_TAGS as tag (tag)}
+            {#each suggestedTags as tag (tag)}
               <button
                 class="surface-flat px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
                 style="color: var(--brand); font-size: 12px;"

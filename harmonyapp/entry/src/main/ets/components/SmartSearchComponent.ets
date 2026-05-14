@@ -63,8 +63,15 @@ export struct SmartSearchComponent {
     }
   }
 
-  private loadSearchHistory() {
-    this.searchHistory = ['附近咖啡厅', '技术交流群', '摄影爱好者'];
+  private async loadSearchHistory() {
+    try {
+      const saved = await PreferencesUtil.get<string[]>('search_history', []);
+      if (saved && saved.length > 0) {
+        this.searchHistory = saved;
+      }
+    } catch (e) {
+      // ignore, keep empty history
+    }
   }
 
   private async performSearch(query: string) {
@@ -216,12 +223,17 @@ export struct SmartSearchComponent {
     }
   }
 
-  private saveSearchHistory(query: string) {
+  private async saveSearchHistory(query: string) {
     if (!this.searchHistory.includes(query)) {
       this.searchHistory.unshift(query);
       if (this.searchHistory.length > 10) {
         this.searchHistory = this.searchHistory.slice(0, 10);
       }
+    }
+    try {
+      await PreferencesUtil.set('search_history', this.searchHistory);
+    } catch (e) {
+      // ignore
     }
   }
 

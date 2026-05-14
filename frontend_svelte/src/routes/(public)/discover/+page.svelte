@@ -11,17 +11,23 @@
   import Compass from 'lucide-svelte/icons/compass';
   import TrendingUp from 'lucide-svelte/icons/trending-up';
   import Sparkles from 'lucide-svelte/icons/sparkles';
-  import type { MomentItem } from '$lib/types/api';
+  import type { MomentItem, TrendingTagItem } from '$lib/types/api';
 
   const TABS = ['热门', '附近', '活动', '关注'];
   const TAGS = ['自然', '城市', '美食', '音乐', '活动', '摄影', '生活', '旅行'];
-  const TRENDING_TOPICS = [
-    { tag: '#城市探索', count: 89 },
-    { tag: '#周末去哪', count: 64 },
-    { tag: '#隐藏咖啡馆', count: 52 },
-    { tag: '#街头摄影', count: 48 },
-    { tag: '#本地美食', count: 41 }
-  ];
+
+  let trendingTags: TrendingTagItem[] = $state([]);
+
+  async function loadTrending() {
+    try {
+      const result = await feedService.getTrending();
+      if (result.code === 0) {
+        trendingTags = result.data?.trending_tags ?? [];
+      }
+    } catch {
+      // trending data non-critical, silently fail
+    }
+  }
 
   let searchVal = $state('');
   let activeTab = $state('热门');
@@ -74,6 +80,7 @@
 
   $effect(() => {
     void loadFeed(true);
+    void loadTrending();
   });
 
   // Unique users from feed for sidebar
@@ -238,16 +245,16 @@
       <TrendingUp size={13} strokeWidth={2} color="var(--brand)" />
       <span class="eyebrow">热门话题</span>
     </div>
-    {#each TRENDING_TOPICS as topic (topic.tag)}
+    {#each trendingTags as topic (topic.name)}
       <button
         type="button"
         class="flex w-full items-center justify-between rounded-[12px] px-3 py-2.5 outline-none transition-colors"
         onmouseenter={(e) => (e.currentTarget.style.background = 'var(--border-theme)')}
         onmouseleave={(e) => (e.currentTarget.style.background = 'transparent')}
-        onclick={() => handleTrendingClick(topic.tag)}
+        onclick={() => handleTrendingClick(`#${topic.name}`)}
       >
-        <span style="font-size: 13px; color: var(--text-primary);">{topic.tag}</span>
-        <span style="font-size: 11px; color: var(--text-secondary);">{topic.count}帖</span>
+        <span style="font-size: 13px; color: var(--text-primary);">#{topic.name}</span>
+        <span style="font-size: 11px; color: var(--text-secondary);">{topic.usage_count}帖</span>
       </button>
     {/each}
   </div>

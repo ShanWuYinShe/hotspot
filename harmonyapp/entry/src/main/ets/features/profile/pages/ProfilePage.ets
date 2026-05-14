@@ -76,6 +76,7 @@ export struct ProfilePage {
   @State myGroupsCount: number = 0;
   @State myFollowersCount: number = 0;
   @State myFollowingCount: number = 0;
+  @State selectedTab: number = 0;
   // 快速体验弹窗
   @State showQuickStart: boolean = false;
   @State quickNickname: string = '';
@@ -1275,10 +1276,10 @@ export struct ProfilePage {
             // 统计行 (3列: posts/followers/friends)
             this.buildFigmaStatsRow()
 
-            // 标签栏 (posts/liked/saved) - TODO: 实现切换
+            // 标签栏 (posts/liked/saved)
             this.buildFigmaTabBar()
 
-            // 画廊 (3列)
+            // 画廊 (根据选中的 tab 展示不同内容)
             this.buildFigmaGallery()
 
             // 菜单项
@@ -1411,10 +1412,13 @@ export struct ProfilePage {
         }
         Text(tab)
           .fontSize(13)
-          .fontColor(index === 0 ? this.getAccentBackground() : this.getSecondaryTextColor())
-          .fontWeight(index === 0 ? FontWeight.Medium : FontWeight.Normal)
+          .fontColor(index === this.selectedTab ? this.getAccentBackground() : this.getSecondaryTextColor())
+          .fontWeight(index === this.selectedTab ? FontWeight.Medium : FontWeight.Normal)
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
+          .onClick(() => {
+            this.selectedTab = index;
+          })
       })
     }
     .width('100%')
@@ -1425,39 +1429,59 @@ export struct ProfilePage {
 
   @Builder
   private buildFigmaGallery() {
-    if (this.myMomentsCount === 0) {
+    if (this.selectedTab === 0) {
+      // 帖子 tab
+      if (this.myMomentsCount === 0) {
+        Column({ space: 12 }) {
+          Text() {
+            SymbolSpan($r(AppIcon.EMPTY))
+              .fontSize(22)
+              .fontColor([this.getSecondaryTextColor()])
+          }
+          .opacity(0.5)
+
+          Text('还没有发布帖子')
+            .fontSize(14)
+            .fontColor(this.getSecondaryTextColor())
+        }
+        .width('100%')
+        .height(160)
+        .justifyContent(FlexAlign.Center)
+      } else {
+        Flex({ wrap: FlexWrap.Wrap }) {
+          ForEach(Array.from({ length: Math.min(this.myMomentsCount, 9) }, (_: Object, i: number) => i), (i: number) => {
+            Column() {
+              Column()
+                .width('100%')
+                .aspectRatio(1)
+                .borderRadius(16)
+                .backgroundColor(this.getSurfaceSubtle())
+                .border({ width: 1, color: this.getSurfaceBorder() })
+                .shadow(this.getCurrentThemePalette().controlShadow)
+            }
+            .width('calc(33.33% - 7vp)')
+            .margin({ left: 3.5, right: 3.5, top: 3.5, bottom: 3.5 })
+          })
+        }
+        .width('100%')
+      }
+    } else {
+      // 喜欢 / 收藏 tab
       Column({ space: 12 }) {
         Text() {
-          SymbolSpan($r(AppIcon.EMPTY))
+          SymbolSpan($r(this.selectedTab === 1 ? AppIcon.HEART : AppIcon.STAR))
             .fontSize(22)
             .fontColor([this.getSecondaryTextColor()])
         }
         .opacity(0.5)
 
-        Text('还没有发布帖子')
+        Text(this.selectedTab === 1 ? '喜欢的帖子将在这里展示' : '收藏的帖子将在这里展示')
           .fontSize(14)
           .fontColor(this.getSecondaryTextColor())
       }
       .width('100%')
       .height(160)
       .justifyContent(FlexAlign.Center)
-    } else {
-      Flex({ wrap: FlexWrap.Wrap }) {
-        ForEach(Array.from({ length: Math.min(this.myMomentsCount, 9) }, (_: Object, i: number) => i), (i: number) => {
-          Column() {
-            Column()
-              .width('100%')
-              .aspectRatio(1)
-              .borderRadius(16)
-              .backgroundColor(this.getSurfaceSubtle())
-              .border({ width: 1, color: this.getSurfaceBorder() })
-              .shadow(this.getCurrentThemePalette().controlShadow)
-          }
-          .width('calc(33.33% - 7vp)')
-          .margin({ left: 3.5, right: 3.5, top: 3.5, bottom: 3.5 })
-        })
-      }
-      .width('100%')
     }
   }
 

@@ -8,7 +8,7 @@ import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/Global
 import { ApiClient } from '../../../core/api/ApiClient';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MessageSyncManager } from '../../../core/state/MessageSyncManager';
-import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest, UserOpenTheDoorRequest } from '../../../core/types/api';
+import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest, UserOpenTheDoorRequest, CreateReportRequest, MediaCategory } from '../../../core/types/api';
 import type {
   ServerEvent,
   PrivateMessageNewEvent,
@@ -669,11 +669,40 @@ export struct ChatPage {
       const context = AppStorage.get<common.UIAbilityContext>('context');
       if (!context) return;
       const uris = await MediaServiceManager.selectImages(context, 1);
-      if (uris.length > 0) {
-        SystemToast.show('图片功能开发中', this.getUIContext());
+      if (uris.length === 0) return;
+
+      this.isSending = true;
+      SystemToast.show('图片上传中...', this.getUIContext());
+
+      const category: MediaCategory = 'chat_image';
+      const uploaded = await ApiClient.uploadFile(context, uris[0], category);
+
+      if (this.chatType === 'private_chat') {
+        const targetUserId = this.targetId;
+        if (!targetUserId) {
+          SystemToast.showError('无法获取目标用户ID', this.getUIContext());
+          return;
+        }
+        const request: SendPrivateMessageRequest = {
+          target_user_id: targetUserId,
+          type: 'image',
+          file_id: uploaded.file_id
+        };
+        await ApiClient.sendPrivateMessage(request);
+      } else {
+        const request: SendGroupMessageRequest = {
+          group_id: this.chatId,
+          type: 'image',
+          file_id: uploaded.file_id
+        };
+        await ApiClient.sendGroupMessage(request);
       }
+      this.scrollToBottom();
     } catch (e) {
-      hilog.info(DOMAIN_NUMBER, TAG, `附件选择取消或失败: ${e}`);
+      hilog.info(DOMAIN_NUMBER, TAG, `图片发送失败: ${e}`);
+      SystemToast.showError('图片发送失败', this.getUIContext());
+    } finally {
+      this.isSending = false;
     }
   }
 
@@ -1356,12 +1385,22 @@ export struct ChatPage {
         .width('100%')
         .height(44)
         .backgroundColor(this.getSurfaceSubtle())
-        .fontColor('#E74C3C')
+        .fontColor(DesignConstants.COLOR.ERROR)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .border({ width: 1, color: this.getSurfaceBorder() })
         .onClick(() => {
           this.showConversationActionsSheet = false;
-          SystemToast.show('举报功能开发中', this.getUIContext());
+          const reportReq: CreateReportRequest = {
+            target_type: 'user',
+            target_id: this.targetId ?? this.chatId,
+            reason: 'harassment',
+            description: '来自聊天页面的举报'
+          };
+          ApiClient.createReport(reportReq).then(() => {
+            SystemToast.show('举报已提交', this.getUIContext());
+          }).catch(() => {
+            SystemToast.showError('举报提交失败', this.getUIContext());
+          });
         })
 
       Button('关闭')

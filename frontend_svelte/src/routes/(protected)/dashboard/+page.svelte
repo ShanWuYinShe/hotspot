@@ -6,7 +6,7 @@
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import { feedService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
-  import type { UserItem, GroupItem, GeoPoint } from '$lib/types/api';
+  import type { UserItem, GroupItem, GeoPoint, TrendingTagItem } from '$lib/types/api';
   import HeroStats from '$lib/components/home/hero-stats.svelte';
   import PeopleRadarStrip from '$lib/components/home/people-radar-strip.svelte';
   import ActivityList from '$lib/components/home/activity-list.svelte';
@@ -21,6 +21,7 @@
   let loading = $state(true);
   let nearbyUsers: UserItem[] = $state([]);
   let nearbyGroups: GroupItem[] = $state([]);
+  let trendingTags: TrendingTagItem[] = $state([]);
   let followingIds = $state(new Set<string>());
 
   function toReferencePoint(): GeoPoint {
@@ -34,9 +35,10 @@
     loading = true;
     const ref = toReferencePoint();
 
-    const [usersRes, groupsRes] = await Promise.allSettled([
+    const [usersRes, groupsRes, trendingRes] = await Promise.allSettled([
       feedService.getUsers({ reference_point: ref, radius: 5, pagination: { limit: 15 } }),
-      feedService.getGroups({ reference_point: ref, radius: 5, pagination: { limit: 8 } })
+      feedService.getGroups({ reference_point: ref, radius: 5, pagination: { limit: 8 } }),
+      feedService.getTrending()
     ]);
 
     if (usersRes.status === 'fulfilled' && isSuccess(usersRes.value)) {
@@ -44,6 +46,9 @@
     }
     if (groupsRes.status === 'fulfilled' && isSuccess(groupsRes.value)) {
       nearbyGroups = groupsRes.value.data?.items ?? [];
+    }
+    if (trendingRes.status === 'fulfilled' && isSuccess(trendingRes.value)) {
+      trendingTags = trendingRes.value.data?.trending_tags ?? [];
     }
     loading = false;
   }
@@ -82,11 +87,14 @@
 
   const onlineCount = $derived(nearbyUsers.filter((u) => u.presence_status === 'online').length);
   const peopleCount = $derived(nearbyUsers.length);
+  const activityCount = $derived(
+    trendingTags.reduce((sum, t) => sum + t.usage_count, 0)
+  );
 
   // Shared props
   const heroProps = $derived({
     people: peopleCount,
-    activity: 0,
+    activity: activityCount,
     online: onlineCount,
     radius: `${mapAnchorStore.radius}km`,
     location: mapAnchorStore.displayName,
@@ -144,7 +152,7 @@
             更多 →
           </button>
         </div>
-        <ActivityList activities={[]} {loading} />
+        <ActivityList activities={trendingTags.slice(0, 3).map((t, i) => ({ id: t.name, icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star', title: `#${t.name}`, sub: `${t.usage_count}条动态`, color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)', bg: ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ?? 'var(--surface-bg)' }))} {loading} />
       </div>
 
       {#if !loading}
@@ -226,7 +234,7 @@
               更多 →
             </button>
           </div>
-          <ActivityList activities={[]} {loading} />
+          <ActivityList activities={trendingTags.slice(0, 3).map((t, i) => ({ id: t.name, icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star', title: `#${t.name}`, sub: `${t.usage_count}条动态`, color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)', bg: ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ?? 'var(--surface-bg)' }))} {loading} />
         </div>
 
         {#if !loading}
@@ -298,7 +306,7 @@
               更多 →
             </button>
           </div>
-          <ActivityList activities={[]} {loading} />
+          <ActivityList activities={trendingTags.slice(0, 3).map((t, i) => ({ id: t.name, icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star', title: `#${t.name}`, sub: `${t.usage_count}条动态`, color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)', bg: ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ?? 'var(--surface-bg)' }))} {loading} />
         </div>
 
         {#if !loading}
@@ -345,7 +353,7 @@
           <div class="flex items-end justify-between mb-3">
             <span class="eyebrow">周边热度</span>
           </div>
-          <ActivityList activities={[]} {loading} />
+          <ActivityList activities={trendingTags.slice(0, 3).map((t, i) => ({ id: t.name, icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star', title: `#${t.name}`, sub: `${t.usage_count}条动态`, color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)', bg: ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ?? 'var(--surface-bg)' }))} {loading} />
         </div>
       </div>
     </div>

@@ -764,7 +764,7 @@ export struct MessagePage {
                   .width(12)
                   .height(12)
                   .borderRadius(6)
-                  .backgroundColor('#22c55e')
+                  .backgroundColor(DesignConstants.COLOR.SUCCESS)
                   .border({ width: 2, color: this.getCurrentThemePalette().surfaceBackground })
                   .position({ x: 38, y: 38 })
               }

@@ -3,9 +3,9 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import { t } from '$lib/i18n';
-  import { usersService } from '$lib/api/services';
+  import { usersService, feedService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
-  import type { UserItem } from '$lib/types/api';
+  import type { UserItem, TrendingTagItem } from '$lib/types/api';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import Users from 'lucide-svelte/icons/users';
   import Compass from 'lucide-svelte/icons/compass';
@@ -28,11 +28,13 @@
   let lastAnchorUpdatedAt = $state<number | null>(null);
   let locationDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // Nearby users (for Figma Make layout)
+  // Nearby users
   let nearbyUsers = $state.raw<UserItem[]>([]);
+  let trendingTags: TrendingTagItem[] = $state([]);
   let loadingNearby = $state(false);
 
   const onlineCount = $derived(nearbyUsers.filter((u) => u.presence_status === 'online').length);
+  const activityCount = $derived(trendingTags.reduce((sum, t) => sum + t.usage_count, 0));
 
   function getAnchor() {
     return {
@@ -75,6 +77,17 @@
     }
   }
 
+  async function loadTrending() {
+    try {
+      const result = await feedService.getTrending();
+      if (isSuccess(result)) {
+        trendingTags = result.data?.trending_tags ?? [];
+      }
+    } catch {
+      // non-critical, silently fail
+    }
+  }
+
   async function refreshHome(
     options: {
       refreshWidgets?: boolean;
@@ -88,6 +101,9 @@
 
     if (refreshWidgets && authStore.isAuthenticated) {
       await loadNearbyUsers();
+      await loadTrending();
+    } else if (refreshWidgets) {
+      await loadTrending();
     }
   }
 
@@ -457,21 +473,22 @@
         class="mb-5"
         style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%;"
       >
-        {#each [{ icon: Coffee, title: '晨间咖啡会', sub: '12人参加 · 0.3km', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' }, { icon: Music, title: '街头音乐节', sub: '38人参加 · 0.7km', color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' }] as a}
-          {@const Icon = a.icon}
+        {#each trendingTags.slice(0, 2) as t, i}
+          {@const Icon = [Coffee, Music][i] ?? Star}
+          {@const cfg = [{ color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' }, { color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' }][i] ?? { color: 'var(--brand)', bg: 'var(--surface-bg)' }}
           <button
             class="surface-flat flex flex-col justify-between rounded-[22px] cursor-pointer card-hover transition-transform duration-150 active:scale-[0.97]"
             style="aspect-ratio: 1/1; padding: 16px;"
           >
             <div
               class="flex items-center justify-center rounded-[12px]"
-              style="width: 36px; height: 36px; background: {a.bg};"
+              style="width: 36px; height: 36px; background: {cfg.bg};"
             >
-              <Icon size={17} strokeWidth={1.75} color={a.color} />
+              <Icon size={17} strokeWidth={1.75} color={cfg.color} />
             </div>
             <div>
-              <p style="font-size: 13px; color: var(--text-primary);">{a.title}</p>
-              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">{a.sub}</p>
+              <p style="font-size: 13px; color: var(--text-primary);">#{t.name}</p>
+              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">{t.usage_count}条动态</p>
             </div>
           </button>
         {/each}
@@ -567,7 +584,7 @@
 
         <!-- Stats grid (3 cards) -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
-          {#each [{ icon: Users, label: '附近', value: nearbyUsers.length, color: 'var(--brand)' }, { icon: Star, label: '活动', value: 12, color: '#F59E0B' }, { icon: TrendingUp, label: '在线', value: onlineCount, color: '#22c55e' }] as stat}
+          {#each [{ icon: Users, label: '附近', value: nearbyUsers.length, color: 'var(--brand)' }, { icon: Star, label: '活动', value: activityCount, color: '#F59E0B' }, { icon: TrendingUp, label: '在线', value: onlineCount, color: '#22c55e' }] as stat}
             <div
               class="surface-flat flex flex-col items-center justify-center rounded-[18px] py-3.5"
             >
@@ -596,20 +613,22 @@
             附近活动
           </p>
           <div class="flex flex-col gap-2.5">
-            {#each [{ icon: Coffee, title: '晨间咖啡聚会', sub: '周六上午 · 市中心', bg: 'rgba(245,158,11,0.1)', color: '#F59E0B' }, { icon: Music, title: '街头音乐节', sub: '周五晚 · 云龙湖畔', bg: 'rgba(139,92,246,0.1)', color: '#8B5CF6' }, { icon: Sparkles, title: '创意市集', sub: '周末 · 彭城广场', bg: 'rgba(6,182,212,0.1)', color: '#06B6D4' }] as activity}
+            {#each trendingTags.slice(0, 3) as t, i}
+              {@const Icon = [Coffee, Music, Sparkles][i] ?? Star}
+              {@const cfg = [{ color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' }, { color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' }, { color: '#06B6D4', bg: 'rgba(6,182,212,0.1)' }][i] ?? { color: 'var(--brand)', bg: 'var(--surface-bg)' }}
               <div
                 class="surface-flat flex cursor-pointer items-center gap-3 rounded-[18px] px-4 py-3 row-hover"
               >
                 <div
                   class="flex items-center justify-center rounded-[12px]"
-                  style="width: 36px; height: 36px; background: {activity.bg};"
+                  style="width: 36px; height: 36px; background: {cfg.bg};"
                 >
-                  <activity.icon size={17} strokeWidth={1.75} color={activity.color} />
+                  <Icon size={17} strokeWidth={1.75} color={cfg.color} />
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p style="font-size: 13px; color: var(--text-primary);">{activity.title}</p>
+                  <p style="font-size: 13px; color: var(--text-primary);">#{t.name}</p>
                   <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-                    {activity.sub}
+                    {t.usage_count}条动态
                   </p>
                 </div>
                 <ChevronRight size={14} strokeWidth={1.5} color="var(--text-secondary)" />
