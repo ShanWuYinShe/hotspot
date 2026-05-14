@@ -1,5 +1,12 @@
+# ── HotSpot Base Configuration ────────────────────────────────────
+# 生产环境直接使用此文件: docker compose up -d
+# 开发环境叠加 dev 文件:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# 所有服务使用固定版本的预构建镜像，不在此处定义 build: 上下文。
+# build: 上下文在 docker-compose.dev.yml 中按需覆盖。
+
 services:
-  # ── Storage ────────────────────────────────────────────────────
+  # ── Storage ──────────────────────────────────────────────────────
   postgres:
     image: postgres:17.4-alpine3.21
     restart: unless-stopped
@@ -30,11 +37,10 @@ services:
       timeout: 5s
       retries: 10
 
-  # ── Backend (Go) ──────────────────────────────────────────────
+  # ── Backend (Go) ────────────────────────────────────────────────
   backend:
-    build:
-      context: ./backend-go
-      dockerfile: Dockerfile
+    image: hotspot-backend:latest
+    pull_policy: never
     restart: unless-stopped
     depends_on:
       postgres:
@@ -63,17 +69,10 @@ services:
       timeout: 5s
       retries: 20
 
-  # ── Frontend (SvelteKit) ──────────────────────────────────────
+  # ── Frontend (SvelteKit) ────────────────────────────────────────
   frontend:
     image: hotspot-frontend:latest
     pull_policy: never
-    build:
-      context: ./frontend_svelte
-      dockerfile: Dockerfile
-      args:
-        VITE_AMAP_KEY: "${VITE_AMAP_KEY:-}"
-        VITE_AMAP_SECURITY_CODE: "${VITE_AMAP_SECURITY_CODE:-}"
-        VITE_AMAP_SERVICE_HOST: /_AMapService
     restart: unless-stopped
     depends_on:
       backend:
@@ -87,7 +86,7 @@ services:
       VITE_AMAP_SECURITY_CODE: "${VITE_AMAP_SECURITY_CODE:-}"
       VITE_AMAP_SERVICE_HOST: /_AMapService
 
-  # ── Gateway (Nginx) ──────────────────────────────────────────
+  # ── Gateway (Nginx) ─────────────────────────────────────────────
   nginx:
     image: nginx:1.30.1-alpine
     restart: unless-stopped
