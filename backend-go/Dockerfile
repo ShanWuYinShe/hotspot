@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.2-alpine AS builder
 
 WORKDIR /src
 
@@ -12,7 +12,7 @@ COPY . .
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} go build -ldflags="-s -w" -o server ./cmd/server
 
-FROM alpine:3.22
+FROM alpine:3.22.3
 
 RUN apk add --no-cache ca-certificates tzdata curl
 
