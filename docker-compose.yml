@@ -1,19 +1,19 @@
 # ── HotSpot Base Configuration ────────────────────────────────────
-# 生产环境直接使用此文件: docker compose up -d
-# 开发环境叠加 dev 文件:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# 生产: docker compose up -d
+# 开发: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 #
-# 所有服务使用固定版本的预构建镜像，不在此处定义 build: 上下文。
-# build: 上下文在 docker-compose.dev.yml 中按需覆盖。
+# 密钥通过 .env 文件注入（复制 .env.example → .env 后填入真实值）。
+# build: 上下文仅在 dev override 中定义，base 引用预构建镜像。
 
 services:
-  # ── Storage ──────────────────────────────────────────────────────
+  # ── Database ────────────────────────────────────────────────────
   postgres:
     image: postgres:17.4-alpine3.21
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_DB: hotspot
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,38 +22,36 @@ services:
       timeout: 5s
       retries: 10
 
+  # ── Object Storage (S3-compatible) ──────────────────────────────
   seaweedfs:
     image: chrislusf/seaweedfs:4.21
-    restart: unless-stopped
+    restart: always
     command: server -s3 -dir=/seaweedfs/data
     tmpfs:
       - /seaweedfs/data:size=512M
-    ports:
-      - "9333:9333"
-      - "8333:8333"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9333/dir/status || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
 
-  # ── Backend (Go) ────────────────────────────────────────────────
+  # ── Backend (Go API) ────────────────────────────────────────────
   backend:
     image: hotspot-backend:latest
     pull_policy: never
-    restart: unless-stopped
+    restart: always
     depends_on:
       postgres:
         condition: service_healthy
       seaweedfs:
         condition: service_healthy
     environment:
-      APP_ENV: dev
-      LOG_LEVEL: debug
+      APP_ENV: production
+      LOG_LEVEL: info
       APP_HOST: 0.0.0.0
       APP_PORT: "8081"
-      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/hotspot?sslmode=disable
-      AUTH_TOKEN_SECRET: dev-secret-change-me-in-prod
+      POSTGRES_DSN: postgres://postgres:${POSTGRES_PASSWORD:-change-me}@postgres:5432/hotspot?sslmode=disable
+      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-change-me}
       APP_NAME: hotspot-backend-go
       S3_ENDPOINT: http://seaweedfs:8333
       S3_PUBLIC_ENDPOINT: http://localhost:8333
@@ -61,19 +59,19 @@ services:
       S3_FORCE_PATH_STYLE: "true"
       S3_REGION: us-east-1
       S3_BUCKET: hotspot
-      S3_ACCESS_KEY: minioadmin
-      S3_SECRET_KEY: minioadmin123
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8081/api/v1/system/health || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 20
 
-  # ── Frontend (SvelteKit) ────────────────────────────────────────
+  # ── Frontend (SvelteKit, Node adapter) ──────────────────────────
   frontend:
     image: hotspot-frontend:latest
     pull_policy: never
-    restart: unless-stopped
+    restart: always
     depends_on:
       backend:
         condition: service_healthy
@@ -82,24 +80,35 @@ services:
       HOST: 0.0.0.0
       ORIGIN: http://localhost:8888
       BACKEND_URL: http://backend:8081
-      VITE_AMAP_KEY: "${VITE_AMAP_KEY:-}"
-      VITE_AMAP_SECURITY_CODE: "${VITE_AMAP_SECURITY_CODE:-}"
+      VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
+      VITE_AMAP_SECURITY_CODE: ${VITE_AMAP_SECURITY_CODE:-}
       VITE_AMAP_SERVICE_HOST: /_AMapService
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # ── Gateway (Nginx) ─────────────────────────────────────────────
   nginx:
     image: nginx:1.30.1-alpine
-    restart: unless-stopped
+    restart: always
     depends_on:
       backend:
         condition: service_healthy
       frontend:
-        condition: service_started
+        condition: service_healthy
     ports:
-      - "8888:80"
+      - "${NGINX_PORT:-8888}:80"
     volumes:
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./.local/amap.generated.conf:/etc/nginx/conf.d/amap.inc:ro
+      - ./docker/amap.default.inc:/etc/nginx/conf.d/amap.inc:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:80/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

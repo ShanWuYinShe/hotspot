@@ -1,8 +1,11 @@
 FROM --platform=$BUILDPLATFORM golang:1.26.2-alpine AS builder
 
+RUN apk add --no-cache git
+
 WORKDIR /src
 
-ENV GOPROXY=https://goproxy.cn,direct
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY:-direct}
 
 COPY go.mod go.sum ./
 RUN go mod download
@@ -16,6 +19,7 @@ FROM alpine:3.22.3
 
 RUN apk add --no-cache ca-certificates tzdata curl
 
+RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 COPY --from=builder /src/server .
 
@@ -24,4 +28,5 @@ EXPOSE 8081
 ENV APP_PORT=8081
 ENV APP_HOST=0.0.0.0
 
+USER app
 CMD ["./server"]
