@@ -38,27 +38,46 @@ class ApiClient {
     const url = `${BASE_URL}${path}`;
 
     const headers: Record<string, string> = {
+      'Accept': 'application/json',
       'Content-Type': 'application/json',
       'Idempotency-Key': generateIdempotencyKey(),
       ...(options.headers as Record<string, string> || {}),
     };
 
-    const res = await fetch(url, {
-      method: 'POST',
-      credentials: 'include',
-      headers,
-      ...options,
-    });
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers,
+        ...options,
+      });
 
-    if (!res.ok) {
+      // Always try to parse response body as JSON
+      const body = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        // Return backend's JSON error if available, else synthesize one
+        if (body && typeof body.code === 'number') {
+          return { code: body.code, message: body.message || `HTTP ${res.status}`, data: null as T };
+        }
+        return { code: res.status, message: `HTTP ${res.status}`, data: null as T };
+      }
+
+      // Backend always returns { code, message, data }
+      if (body && typeof body.code === 'number') {
+        return body as ApiResponse<T>;
+      }
+
+      // Fallback: wrap raw response
+      return { code: 0, message: 'ok', data: body as T };
+    } catch (err) {
+      // Network error, timeout, DNS failure — always return JSON
       return {
-        code: res.status,
-        message: `HTTP ${res.status}`,
+        code: -1,
+        message: err instanceof Error ? err.message : 'Network error',
         data: null as T,
       };
     }
-
-    return res.json();
   }
 
   async post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
