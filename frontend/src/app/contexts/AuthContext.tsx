@@ -1,75 +1,74 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { authService, type User } from '@/lib/api/services';
+import { api } from '@/lib/api/client';
 
 interface AuthState {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
 
 interface AuthContextType extends AuthState {
-  login: (username: string, password: string) => Promise<boolean>;
-  register: (username: string, password: string, nickname: string) => Promise<boolean>;
+  login: (login_id: string, password: string) => Promise<boolean>;
+  register: (login_id: string, nickname: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const TOKEN_KEY = 'hotspot_token';
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
-    token: localStorage.getItem(TOKEN_KEY),
     isAuthenticated: false,
     isLoading: true,
   });
 
-  // Restore session on mount
+  // Restore session on mount — backend auth via HttpOnly cookie
   useEffect(() => {
-    if (state.token) {
-      authService.me().then((res) => {
-        if (res.code === 0) {
-          setState((s) => ({ ...s, user: res.data, isAuthenticated: true, isLoading: false }));
-        } else {
-          localStorage.removeItem(TOKEN_KEY);
-          setState((s) => ({ ...s, token: null, isLoading: false }));
-        }
-      });
-    } else {
-      setState((s) => ({ ...s, isLoading: false }));
+    authService.me().then((res) => {
+      if (api.isSuccess(res) && res.data) {
+        setState({ user: res.data, isAuthenticated: true, isLoading: false });
+      } else {
+        setState({ user: null, isAuthenticated: false, isLoading: false });
+      }
+    }).catch(() => {
+      setState({ user: null, isAuthenticated: false, isLoading: false });
+    });
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const res = await authService.me();
+    if (api.isSuccess(res) && res.data) {
+      setState({ user: res.data, isAuthenticated: true, isLoading: false });
     }
   }, []);
 
-  const login = useCallback(async (username: string, password: string): Promise<boolean> => {
-    const res = await authService.login(username, password);
-    if (res.code === 0 && res.data?.token) {
-      localStorage.setItem(TOKEN_KEY, res.data.token);
-      setState({ user: res.data.user, token: res.data.token, isAuthenticated: true, isLoading: false });
+  const login = useCallback(async (login_id: string, password: string): Promise<boolean> => {
+    const res = await authService.login(login_id, password);
+    if (api.isSuccess(res)) {
+      await refreshUser();
       return true;
     }
     return false;
-  }, []);
+  }, [refreshUser]);
 
-  const register = useCallback(async (username: string, password: string, nickname: string): Promise<boolean> => {
-    const res = await authService.register(username, password, nickname);
-    if (res.code === 0 && res.data?.token) {
-      localStorage.setItem(TOKEN_KEY, res.data.token);
-      setState({ user: res.data.user, token: res.data.token, isAuthenticated: true, isLoading: false });
+  const register = useCallback(async (login_id: string, nickname: string, password: string): Promise<boolean> => {
+    const res = await authService.register(login_id, nickname, password);
+    if (api.isSuccess(res)) {
+      await refreshUser();
       return true;
     }
     return false;
-  }, []);
+  }, [refreshUser]);
 
   const logout = useCallback(async () => {
     await authService.logout();
-    localStorage.removeItem(TOKEN_KEY);
-    setState({ user: null, token: null, isAuthenticated: false, isLoading: false });
+    setState({ user: null, isAuthenticated: false, isLoading: false });
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

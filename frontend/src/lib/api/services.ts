@@ -74,16 +74,20 @@ export interface Notification {
 }
 
 // ── Auth ─────────────────────────────────────────────────────────
+// Web 端 token 通过 HttpOnly Set-Cookie 传递，响应体为空对象
 export const authService = {
-  login: (username: string, password: string) =>
-    api.post<{ token: string; user: User }>('/auth/login', { username, password }),
+  login: (login_id: string, password: string) =>
+    api.post<Record<string, never>>('/auth/login', { login_id, password, client_type: 'web' }),
 
-  register: (username: string, password: string, nickname: string) =>
-    api.post<{ token: string; user: User }>('/auth/register', { username, password, nickname }),
+  register: (login_id: string, nickname: string, password: string) =>
+    api.post<Record<string, never>>('/auth/register', { login_id, nickname, password, client_type: 'web' }),
+
+  guest: (nickname: string) =>
+    api.post<Record<string, never>>('/auth/guest', { nickname, client_type: 'web' }),
 
   logout: () => api.post('/auth/logout'),
 
-  me: () => api.post<User>('/auth/me'),
+  me: () => api.post<User>('/users/me'),
 };
 
 // ── Users ────────────────────────────────────────────────────────

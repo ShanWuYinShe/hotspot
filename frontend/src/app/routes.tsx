@@ -1,6 +1,5 @@
 import { createBrowserRouter } from "react-router";
 import { MainLayout }   from "./components/layout/MainLayout";
-import { RequireAuth }  from "./components/auth/RequireAuth";
 import { Home }         from "./pages/Home";
 import { Discover }     from "./pages/Discover";
 import { Messages }     from "./pages/Messages";
@@ -25,11 +24,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/",
-    element: (
-      <RequireAuth>
-        <MainLayout />
-      </RequireAuth>
-    ),
+    Component: MainLayout,
     children: [
       { index: true,                     Component: Home         },
       { path: "discover",                Component: Discover     },

@@ -31,8 +31,8 @@ export function Login() {
       try {
         const ok =
           mode === "login"
-            ? await login(username.trim(), password)
-            : await register(username.trim(), password, nickname.trim());
+            ? await login(username.trim(), password.trim())
+            : await register(username.trim(), nickname.trim(), password.trim());
 
         if (ok) {
           toast.success(mode === "login" ? "登录成功" : "注册成功");

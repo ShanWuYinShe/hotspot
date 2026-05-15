@@ -12,6 +12,24 @@ export interface PaginatedData<T> {
   total: number;
 }
 
+// ── Idempotency Key ──────────────────────────────────────────────
+let _clientId: string | null = null;
+
+function getClientId(): string {
+  if (!_clientId) {
+    _clientId = crypto.randomUUID().replace(/-/g, '').substring(0, 8);
+  }
+  return _clientId;
+}
+
+function generateIdempotencyKey(): string {
+  const clientId = getClientId();
+  const timestamp = Date.now();
+  const random = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
+  return `${clientId}-${timestamp}-${random}`;
+}
+
+// ── API Client ───────────────────────────────────────────────────
 class ApiClient {
   private async request<T>(
     path: string,
@@ -19,13 +37,16 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${BASE_URL}${path}`;
 
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': generateIdempotencyKey(),
+      ...(options.headers as Record<string, string> || {}),
+    };
+
     const res = await fetch(url, {
       method: 'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       ...options,
     });
 
@@ -44,11 +65,6 @@ class ApiClient {
     return this.request<T>(path, {
       body: body ? JSON.stringify(body) : '{}',
     });
-  }
-
-  async get<T>(path: string): Promise<ApiResponse<T>> {
-    // Backend uses POST only, but for local dev/proxy we map GET too
-    return this.post<T>(path);
   }
 
   isSuccess(res: ApiResponse<unknown>): boolean {
