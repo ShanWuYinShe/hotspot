@@ -17,6 +17,7 @@ import {
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { useTheme } from "../contexts/ThemeContext";
+import { useAuth } from "../contexts/AuthContext";
 import { useHoverConfig } from "../hooks/useHoverConfig";
 
 const USER_AVATAR =
@@ -252,6 +253,7 @@ function ThemeCard({
 export function Settings() {
   const navigate = useNavigate();
   const { isDark, toggleDark, theme, setTheme } = useTheme();
+  const { logout } = useAuth();
   const hover = useHoverConfig();
   const [notif, setNotif] = useState(true);
   const [sounds, setSounds] = useState(true);
@@ -416,6 +418,10 @@ export function Settings() {
         <div className="mt-5">
           <motion.button
             whileTap={hover.tap as any}
+            onClick={async () => {
+              await logout();
+              navigate("/login", { replace: true });
+            }}
             className="flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] w-full outline-none neu-surface-flat"
             style={{ color: "var(--neu-accent-primary)" }}
           >

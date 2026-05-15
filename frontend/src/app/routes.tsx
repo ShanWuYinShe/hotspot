@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router";
 import { MainLayout }   from "./components/layout/MainLayout";
+import { RequireAuth }  from "./components/auth/RequireAuth";
 import { Home }         from "./pages/Home";
 import { Discover }     from "./pages/Discover";
 import { Messages }     from "./pages/Messages";
@@ -7,6 +8,7 @@ import { ChatDetail }   from "./pages/ChatDetail";
 import { Profile }      from "./pages/Profile";
 import { Settings }     from "./pages/Settings";
 import { Location }     from "./pages/Location";
+import { Login }        from "./pages/Login";
 import { UserProfile }  from "./pages/UserProfile";
 import { PostDetail }   from "./pages/PostDetail";
 import { EventDetail }  from "./pages/EventDetail";
@@ -18,8 +20,16 @@ import { Search }       from "./pages/Search";
 
 export const router = createBrowserRouter([
   {
+    path: "/login",
+    Component: Login,
+  },
+  {
     path: "/",
-    Component: MainLayout,
+    element: (
+      <RequireAuth>
+        <MainLayout />
+      </RequireAuth>
+    ),
     children: [
       { index: true,                     Component: Home         },
       { path: "discover",                Component: Discover     },
