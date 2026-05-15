@@ -23,11 +23,7 @@ import {
   SuggestedFollowsCard,
   VibeCard,
 } from "../components/TabletRail";
-import {
-  feedService,
-  type User,
-  type Group,
-} from "@/lib/api/services";
+import { feedService, type User, type Group } from "@/lib/api/services";
 import { api } from "@/lib/api/client";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -77,6 +73,109 @@ function mapGroup(g: Group): HomeNearbyGroup {
     privacy: g.privacy,
   };
 }
+
+/* ── Mock data — used when user is not authenticated ─────────────── */
+const NEARBY_USERS: HomeNearbyUser[] = [
+  {
+    id: 1,
+    name: "林晓雨",
+    avatar: "",
+    distance: "0.2km",
+    status: "Online",
+    tag: "咖啡",
+  },
+  {
+    id: 2,
+    name: "张思远",
+    avatar: "",
+    distance: "0.5km",
+    status: "Online",
+    tag: "摄影",
+  },
+  {
+    id: 3,
+    name: "王子涵",
+    avatar: "",
+    distance: "0.8km",
+    status: "Offline",
+    tag: "骑行",
+  },
+  {
+    id: 4,
+    name: "陈雅文",
+    avatar: "",
+    distance: "1.1km",
+    status: "Online",
+    tag: "阅读",
+  },
+  {
+    id: 5,
+    name: "赵明哲",
+    avatar: "",
+    distance: "1.4km",
+    status: "Online",
+    tag: "音乐",
+  },
+  {
+    id: 6,
+    name: "刘诗雨",
+    avatar: "",
+    distance: "1.7km",
+    status: "Offline",
+    tag: "瑜伽",
+  },
+  {
+    id: 7,
+    name: "周子轩",
+    avatar: "",
+    distance: "2.0km",
+    status: "Online",
+    tag: "飞盘",
+  },
+  {
+    id: 8,
+    name: "吴佳琪",
+    avatar: "",
+    distance: "2.3km",
+    status: "Online",
+    tag: "美食",
+  },
+];
+
+const NEARBY_GROUPS: HomeNearbyGroup[] = [
+  {
+    id: 1,
+    name: "晨跑小分队",
+    members: 28,
+    banner: "",
+    distance: "0.3km",
+    privacy: "public",
+  },
+  {
+    id: 2,
+    name: "周末徒步团",
+    members: 56,
+    banner: "",
+    distance: "0.7km",
+    privacy: "public",
+  },
+  {
+    id: 3,
+    name: "摄影爱好者",
+    members: 42,
+    banner: "",
+    distance: "1.2km",
+    privacy: "public",
+  },
+  {
+    id: 4,
+    name: "桌游之夜",
+    members: 15,
+    banner: "",
+    distance: "1.5km",
+    privacy: "private",
+  },
+];
 
 /* ── Themed decoration (UI chrome, not real data) ────────────────── */
 const ACTIVITIES = [
@@ -667,7 +766,7 @@ function NearbyUsersFlatList({
 function HomeMobile() {
   const navigate = useNavigate();
   const { platform } = usePlatform();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [followingIds, setFollowingIds] = useState<Set<number>>(new Set());
   const toggle = (id: number) =>
     setFollowingIds((p) => {
@@ -682,6 +781,13 @@ function HomeMobile() {
   const [groupsLoading, setGroupsLoading] = useState(true);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setUsers(NEARBY_USERS);
+      setGroups(NEARBY_GROUPS);
+      setUsersLoading(false);
+      setGroupsLoading(false);
+      return;
+    }
     feedService.listUsers().then((res) => {
       if (api.isSuccess(res) && res.data?.items) {
         setUsers(res.data.items.map(mapUser));
@@ -694,7 +800,7 @@ function HomeMobile() {
       }
       setGroupsLoading(false);
     });
-  }, []);
+  }, [isAuthenticated]);
 
   const isTablet = platform === "tablet";
   const shellStyle: React.CSSProperties = isTablet
@@ -841,7 +947,7 @@ function HomeMobile() {
 ══════════════════════════════════════════════════════════════════ */
 function HomeDesktop() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [followingIds, setFollowingIds] = useState<Set<number>>(new Set());
   const toggle = (id: number) =>
     setFollowingIds((p) => {
@@ -856,6 +962,13 @@ function HomeDesktop() {
   const [groupsLoading, setGroupsLoading] = useState(true);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setUsers(NEARBY_USERS);
+      setGroups(NEARBY_GROUPS);
+      setUsersLoading(false);
+      setGroupsLoading(false);
+      return;
+    }
     feedService.listUsers().then((res) => {
       if (api.isSuccess(res) && res.data?.items) {
         setUsers(res.data.items.map(mapUser));
@@ -868,7 +981,7 @@ function HomeDesktop() {
       }
       setGroupsLoading(false);
     });
-  }, []);
+  }, [isAuthenticated]);
 
   const onlineCount = users.filter((u) => u.status === "Online").length;
 
