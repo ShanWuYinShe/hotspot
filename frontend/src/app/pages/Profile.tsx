@@ -3,11 +3,12 @@ import {
   Heart, MapPin, Grid3X3, Settings, Share2, Bookmark,
   ChevronRight, Camera, Users, MessageCircle, Search,
   Plus, Check, Bell, Clock, Filter, Pencil, UserPlus,
-  MoreHorizontal, TrendingUp, Shield, X, ArrowLeft,
+  MoreHorizontal, TrendingUp, Shield, X, ArrowLeft, LogOut,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, useSearchParams } from "react-router";
 import { usePlatform } from "../contexts/PlatformContext";
+import { useAuth } from "../contexts/AuthContext";
 import { useHoverConfig } from "../hooks/useHoverConfig";
 import { CreateGroupSheet } from "../components/ui/CreateGroupSheet";
 import {
@@ -16,8 +17,6 @@ import {
 } from "../components/TabletRail";
 
 /* ── Constants ──────────────────────────────────────────────────── */
-const USER_AVATAR = "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400";
-
 const GALLERY_POSTS = [
   { id: 1, img: "https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", likes: 124, comments: 18 },
   { id: 2, img: "https://images.unsplash.com/photo-1748737349771-e2b6605e5961?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", likes: 89, comments: 7 },
@@ -659,8 +658,13 @@ function SectionFans() {
 function ProfileDesktop() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user, logout } = useAuth();
   // null = 个人主页总览；有值 = 进入对应分区全宽页面
   const section = searchParams.get("section");
+  const nickname = user?.nickname || "";
+  const avatarUrl = user?.avatar_url || "";
+  const bio = user?.bio || "";
+  const handle = nickname ? `@${nickname.replace(/\s+/g, ".").toLowerCase()}` : "";
 
   const SECTION_META: Record<string, { title: string; render: () => React.ReactNode }> = {
     moments:  { title: "我的瞬间",  render: () => <SectionMoments /> },
@@ -705,8 +709,8 @@ function ProfileDesktop() {
       <div className="flex-shrink-0 flex items-center justify-between px-6 py-4"
         style={{ backgroundColor: "var(--neu-bg)", borderBottom: "1px solid var(--neu-border)" }}>
         <div>
-          <p style={{ fontSize: 20, color: "var(--neu-text)" }}>Elara Vance</p>
-          <p style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 1 }}>@elara.v</p>
+          <p style={{ fontSize: 20, color: "var(--neu-text)" }}>{nickname || "用户"}</p>
+          {handle && <p style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 1 }}>{handle}</p>}
         </div>
         <div className="flex gap-2">
           <motion.button whileTap={{ scale: 0.9 }} className="flex items-center justify-center rounded-full outline-none"
@@ -717,6 +721,11 @@ function ProfileDesktop() {
             className="flex items-center justify-center rounded-full outline-none"
             style={{ width: 36, height: 36, background: "var(--neu-bg)", boxShadow: "5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
             <Settings style={{ width: 14, height: 14, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
+          </motion.button>
+          <motion.button whileTap={{ scale: 0.9 }} onClick={async () => { await logout(); navigate("/login"); }}
+            className="flex items-center justify-center rounded-full outline-none"
+            style={{ width: 36, height: 36, background: "var(--neu-bg)", boxShadow: "5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
+            <LogOut style={{ width: 14, height: 14, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
           </motion.button>
         </div>
       </div>
@@ -731,7 +740,7 @@ function ProfileDesktop() {
               style={{ background: "var(--neu-glow)", filter: "blur(20px)", transform: "scale(1.2)", opacity: 0.5 }} />
             <div className="relative rounded-full"
               style={{ width: 96, height: 96, padding: 2, background: "var(--neu-bg)", boxShadow: "8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light)", border: "1.5px solid var(--neu-border)" }}>
-              <img src={USER_AVATAR} alt="Elara" className="w-full h-full object-cover rounded-full" />
+              <img src={avatarUrl} alt={nickname} className="w-full h-full object-cover rounded-full" />
             </div>
             <motion.button whileTap={{ scale: 0.9 }}
               className="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none"
@@ -740,10 +749,10 @@ function ProfileDesktop() {
             </motion.button>
           </div>
 
-          <h2 style={{ fontSize: 18, color: "var(--neu-text)", textAlign: "center" }}>Elara Vance</h2>
-          <span style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 2 }}>@elara.v</span>
+          <h2 style={{ fontSize: 18, color: "var(--neu-text)", textAlign: "center" }}>{nickname || "用户"}</h2>
+          {handle && <span style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 2 }}>{handle}</span>}
           <p style={{ fontSize: 12, color: "var(--neu-text-muted)", textAlign: "center", marginTop: 8, lineHeight: 1.6, paddingLeft: 8, paddingRight: 8 }}>
-            触感思考者 · 在流动中寻觅静止
+            {bio || "这个人很懒，什么都没写..."}
           </p>
           <div className="flex items-center gap-1 mt-2 mb-4">
             <MapPin style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
@@ -851,6 +860,11 @@ function ProfileDesktop() {
 ══════════════════════════════════════════════════════════════════ */
 function ProfileHarmony() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const nickname = user?.nickname || "";
+  const avatarUrl = user?.avatar_url || "";
+  const bio = user?.bio || "";
+  const handle = nickname ? `@${nickname.replace(/\s+/g, ".").toLowerCase()}` : "";
   const [activeTab, setActiveTab] = useState<Tab>("posts");
   const postsMap: Record<Tab, typeof GALLERY_POSTS> = { posts: GALLERY_POSTS, liked: LIKED_POSTS, saved: SAVED_POSTS };
 
@@ -870,6 +884,11 @@ function ProfileHarmony() {
             style={{ width: 34, height: 34, background: "rgba(255,255,255,0.2)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.3)" }}>
             <Settings style={{ width: 14, height: 14, color: "white" }} strokeWidth={1.5} />
           </motion.button>
+          <motion.button whileTap={{ scale: 0.9 }} onClick={async () => { await logout(); navigate("/login"); }}
+            className="flex items-center justify-center rounded-full outline-none"
+            style={{ width: 34, height: 34, background: "rgba(255,255,255,0.2)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.3)" }}>
+            <LogOut style={{ width: 14, height: 14, color: "white" }} strokeWidth={1.5} />
+          </motion.button>
         </div>
       </div>
 
@@ -878,7 +897,7 @@ function ProfileHarmony() {
         <div className="relative flex-shrink-0">
           <div className="rounded-[24px] overflow-hidden"
             style={{ width: 80, height: 80, border: "3px solid var(--neu-bg)", boxShadow: "0 8px 24px rgba(0,0,0,0.2)" }}>
-            <img src={USER_AVATAR} alt="Elara" className="w-full h-full object-cover" />
+            <img src={avatarUrl} alt={nickname} className="w-full h-full object-cover" />
           </div>
           <motion.button whileTap={{ scale: 0.9 }}
             className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"
@@ -887,8 +906,8 @@ function ProfileHarmony() {
           </motion.button>
         </div>
         <div className="flex-1 pb-1">
-          <p style={{ fontSize: 20, color: "var(--neu-text)" }}>Elara Vance</p>
-          <p style={{ fontSize: 13, color: "var(--neu-text-muted)" }}>@elara.v</p>
+          <p style={{ fontSize: 20, color: "var(--neu-text)" }}>{nickname || "用户"}</p>
+          {handle && <p style={{ fontSize: 13, color: "var(--neu-text-muted)" }}>{handle}</p>}
         </div>
         <motion.button whileTap={{ scale: 0.96 }} onClick={() => navigate("/profile/edit")}
           className="flex-shrink-0 px-4 py-2 rounded-[16px] outline-none flex items-center gap-1.5"
@@ -900,7 +919,7 @@ function ProfileHarmony() {
 
       {/* Bio + location */}
       <div className="px-6 mb-4">
-        <p style={{ fontSize: 13, color: "var(--neu-text-muted)", lineHeight: 1.7 }}>触感思考者 · 在流动中寻觅静止</p>
+        <p style={{ fontSize: 13, color: "var(--neu-text-muted)", lineHeight: 1.7 }}>{bio || "这个人很懒，什么都没写..."}</p>
         <div className="flex items-center gap-1 mt-2">
           <MapPin style={{ width: 12, height: 12, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
           <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>江苏·徐州</span>
@@ -951,6 +970,11 @@ function ProfileHarmony() {
 function ProfileMobile() {
   const navigate = useNavigate();
   const { platform } = usePlatform();
+  const { user, logout } = useAuth();
+  const nickname = user?.nickname || "";
+  const avatarUrl = user?.avatar_url || "";
+  const bio = user?.bio || "";
+  const handle = nickname ? `@${nickname.replace(/\s+/g, ".").toLowerCase()}` : "";
   const [activeTab, setActiveTab] = useState<Tab>("posts");
   const postsMap: Record<Tab, typeof GALLERY_POSTS> = { posts: GALLERY_POSTS, liked: LIKED_POSTS, saved: SAVED_POSTS };
 
@@ -982,8 +1006,8 @@ function ProfileMobile() {
             style={mainColStyle}>
             <div className="flex items-center justify-between">
               <div>
-                <p style={{ fontSize: 18, color: "var(--neu-text)" }}>Elara Vance</p>
-                <p style={{ fontSize: 11, color: "var(--neu-text-muted)", marginTop: 1 }}>@elara.v</p>
+                <p style={{ fontSize: 18, color: "var(--neu-text)" }}>{nickname || "用户"}</p>
+                {handle && <p style={{ fontSize: 11, color: "var(--neu-text-muted)", marginTop: 1 }}>{handle}</p>}
               </div>
               <div className="flex gap-2">
                 <motion.button whileTap={{ scale: 0.92 }}
@@ -995,6 +1019,11 @@ function ProfileMobile() {
                   className="flex items-center justify-center rounded-full outline-none neu-surface-flat"
                   style={{ width: 36, height: 36 }}>
                   <Settings style={{ width: 15, height: 15, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
+                </motion.button>
+                <motion.button whileTap={{ scale: 0.92 }} onClick={async () => { await logout(); navigate("/login"); }}
+                  className="flex items-center justify-center rounded-full outline-none neu-surface-flat"
+                  style={{ width: 36, height: 36 }}>
+                  <LogOut style={{ width: 15, height: 15, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
                 </motion.button>
               </div>
             </div>
@@ -1027,7 +1056,7 @@ function ProfileMobile() {
                     border: "3px solid var(--neu-bg)",
                     boxShadow: "0 6px 18px var(--neu-glow)",
                   }}>
-                  <img src={USER_AVATAR} alt="Elara" className="w-full h-full object-cover" />
+                  <img src={avatarUrl} alt={nickname} className="w-full h-full object-cover" />
                 </div>
                 <motion.button whileTap={{ scale: 0.9 }}
                   className="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none"
@@ -1037,10 +1066,10 @@ function ProfileMobile() {
               </div>
 
               {/* Identity */}
-              <h2 style={{ fontSize: 22, color: "var(--neu-text)" }}>Elara Vance</h2>
-              <span style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 2 }}>@elara.v</span>
+              <h2 style={{ fontSize: 22, color: "var(--neu-text)" }}>{nickname || "用户"}</h2>
+              {handle && <span style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 2 }}>{handle}</span>}
               <p style={{ fontSize: 12, color: "var(--neu-text-muted)", textAlign: "center", padding: "10px 20px 4px", lineHeight: 1.6 }}>
-                触感思考者 · 在流动中寻觅静止
+                {bio || "这个人很懒，什么都没写..."}
               </p>
               <div className="flex items-center gap-1 mb-4">
                 <MapPin style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />

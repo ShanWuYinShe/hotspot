@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Search, Plus, MessageSquareDashed, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -7,14 +7,51 @@ import { ChatView } from "../components/ui/ChatView";
 import { useHoverConfig } from "../hooks/useHoverConfig";
 import { NewConversationSheet } from "../components/ui/NewConversationSheet";
 import { CreateGroupSheet } from "../components/ui/CreateGroupSheet";
+import { chatsService, type Conversation } from "@/lib/api/services";
 
-/* ── Data ────────────────────────────────────────────────────────── */
-const CHATS = [
-  { id: 1, name: "Noah",      avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", lastMessage: "嘿，我们今晚的计划还在吗？", time: "13:27", unread: 2, online: true,  group: false },
-  { id: 2, name: "设计小队",  avatar: "https://images.unsplash.com/photo-1763467669450-e69029c1484d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", lastMessage: "新原型看起来太棒了！",         time: "09:41", unread: 0, online: false, group: true  },
-  { id: 3, name: "Isabella",  avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", lastMessage: "给你发了张照片 📷",            time: "昨天",  unread: 0, online: true,  group: false },
-  { id: 4, name: "Kai",       avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", lastMessage: "在老地方见！",                time: "周一",  unread: 0, online: false, group: false },
-];
+/* ── Types ────────────────────────────────────────────────────────── */
+interface ChatItem {
+  id: number;
+  name: string;
+  avatar: string;
+  lastMessage: string;
+  time: string;
+  unread: number;
+  online: boolean;
+  group: boolean;
+}
+
+function formatTime(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return "刚刚";
+  if (diffMins < 60) return `${diffMins}分钟前`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}小时前`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return "昨天";
+  if (diffDays < 7) return `${diffDays}天前`;
+  const h = d.getHours().toString().padStart(2, "0");
+  const m = d.getMinutes().toString().padStart(2, "0");
+  return `${d.getMonth() + 1}/${d.getDate()} ${h}:${m}`;
+}
+
+function toChatItem(c: Conversation): ChatItem {
+  return {
+    id: c.id,
+    name: c.target_name,
+    avatar: c.target_avatar || "",
+    lastMessage: c.last_message || "",
+    time: formatTime(c.last_message_at),
+    unread: c.unread_count || 0,
+    online: false,
+    group: c.type === "group",
+  };
+}
 
 /* ── Shared ChatListItem ─────────────────────────────────────────── */
 function ChatListItem({
@@ -23,7 +60,7 @@ function ChatListItem({
   onClick,
   compact = false,
 }: {
-  chat: typeof CHATS[0];
+  chat: ChatItem;
   isSelected?: boolean;
   onClick: () => void;
   compact?: boolean;
@@ -86,12 +123,12 @@ function ChatListItem({
 /* ══════════════════════════════════════════════════════════════════
    Mobile Messages
 ══════════════════════════════════════════════════════════════════ */
-function MessagesMobile() {
+function MessagesMobile({ chats, loading }: { chats: ChatItem[]; loading: boolean }) {
   const navigate = useNavigate();
   const [searchVal, setSearchVal] = useState("");
-  const filtered = CHATS.filter(c => c.name.toLowerCase().includes(searchVal.toLowerCase()));
-  const onlineChats = CHATS.filter(c => c.online);
-  const totalUnread = CHATS.reduce((s, c) => s + c.unread, 0);
+  const filtered = chats.filter(c => c.name.toLowerCase().includes(searchVal.toLowerCase()));
+  const onlineChats = chats.filter(c => c.online);
+  const totalUnread = chats.reduce((s, c) => s + c.unread, 0);
   const hover = useHoverConfig();
   const [showNewChat, setShowNewChat] = useState(false);
   const [newChatTab, setNewChatTab] = useState<"add" | "chat">("chat");
@@ -154,21 +191,34 @@ function MessagesMobile() {
         <p className="uppercase mb-2.5" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--neu-text-muted)" }}>最近</p>
 
         <div className="rounded-[18px] overflow-hidden neu-surface-flat">
-          {filtered.length === 0
-            ? (<div className="flex flex-col items-center justify-center py-12 gap-3">
-                <MessageSquareDashed style={{ width: 36, height: 36, color: "var(--neu-text-muted)", opacity: 0.5 }} strokeWidth={1.25} />
-                <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>没有找到会话</p>
-              </div>)
-            : filtered.map((chat, i) => (
-                <React.Fragment key={chat.id}>
-                  <div className="px-2 py-1">
-                    <ChatListItem chat={chat} onClick={() => navigate(`/messages/${chat.id}`)} />
+          {loading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div key={i}>
+                  <div className="flex items-center gap-3.5" style={{ padding: "12px 16px" }}>
+                    <div className="rounded-full flex-shrink-0" style={{ width: 44, height: 44, background: "var(--neu-border)", opacity: 0.6 }} />
+                    <div className="flex-1 min-w-0">
+                      <div style={{ width: "40%", height: 14, borderRadius: 8, background: "var(--neu-border)", opacity: 0.6, marginBottom: 6 }} />
+                      <div style={{ width: "65%", height: 11, borderRadius: 6, background: "var(--neu-border)", opacity: 0.4 }} />
+                    </div>
                   </div>
-                  {i < filtered.length - 1 && (
-                    <div className="mx-4" style={{ height: 1, background: "var(--neu-border)" }} />
-                  )}
-                </React.Fragment>
-              ))}
+                  {i < 3 && <div className="mx-4" style={{ height: 1, background: "var(--neu-border)" }} />}
+                </div>
+              ))
+            : filtered.length === 0
+              ? (<div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <MessageSquareDashed style={{ width: 36, height: 36, color: "var(--neu-text-muted)", opacity: 0.5 }} strokeWidth={1.25} />
+                  <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>没有找到会话</p>
+                </div>)
+              : filtered.map((chat, i) => (
+                  <React.Fragment key={chat.id}>
+                    <div className="px-2 py-1">
+                      <ChatListItem chat={chat} onClick={() => navigate(`/messages/${chat.id}`)} />
+                    </div>
+                    {i < filtered.length - 1 && (
+                      <div className="mx-4" style={{ height: 1, background: "var(--neu-border)" }} />
+                    )}
+                  </React.Fragment>
+                ))}
         </div>
       </motion.div>
 
@@ -223,12 +273,12 @@ function MessagesMobile() {
 /* ══════════════════════════════════════════════════════════════════
    Desktop Messages — split pane (list left + chat right)
 ══════════════════════════════════════════════════════════════════ */
-function MessagesDesktop() {
+function MessagesDesktop({ chats, loading }: { chats: ChatItem[]; loading: boolean }) {
   const [searchVal, setSearchVal] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const filtered = CHATS.filter(c => c.name.toLowerCase().includes(searchVal.toLowerCase()));
-  const totalUnread = CHATS.reduce((s, c) => s + c.unread, 0);
-  const onlineChats = CHATS.filter(c => c.online);
+  const filtered = chats.filter(c => c.name.toLowerCase().includes(searchVal.toLowerCase()));
+  const totalUnread = chats.reduce((s, c) => s + c.unread, 0);
+  const onlineChats = chats.filter(c => c.online);
   const hover = useHoverConfig();
   const [showNewChat, setShowNewChat] = useState(false);
   const [newChatTab, setNewChatTab] = useState<"add" | "chat">("chat");
@@ -285,18 +335,32 @@ function MessagesDesktop() {
 
         {/* Chat list */}
         <div className="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
-          {totalUnread > 0 && (
-            <p className="uppercase px-2 mb-1" style={{ fontSize: 9, letterSpacing: "0.12em", color: "var(--neu-text-muted)" }}>未读</p>
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3" style={{ padding: "10px 16px" }}>
+                <div className="rounded-full flex-shrink-0" style={{ width: 40, height: 40, background: "var(--neu-border)", opacity: 0.6 }} />
+                <div className="flex-1 min-w-0">
+                  <div style={{ width: "45%", height: 12, borderRadius: 6, background: "var(--neu-border)", opacity: 0.6, marginBottom: 5 }} />
+                  <div style={{ width: "70%", height: 10, borderRadius: 5, background: "var(--neu-border)", opacity: 0.4 }} />
+                </div>
+              </div>
+            ))
+          ) : (
+            <>
+              {totalUnread > 0 && (
+                <p className="uppercase px-2 mb-1" style={{ fontSize: 9, letterSpacing: "0.12em", color: "var(--neu-text-muted)" }}>未读</p>
+              )}
+              {filtered.map(chat => (
+                <ChatListItem
+                  key={chat.id}
+                  chat={chat}
+                  isSelected={selectedId === chat.id}
+                  onClick={() => setSelectedId(chat.id)}
+                  compact
+                />
+              ))}
+            </>
           )}
-          {filtered.map(chat => (
-            <ChatListItem
-              key={chat.id}
-              chat={chat}
-              isSelected={selectedId === chat.id}
-              onClick={() => setSelectedId(chat.id)}
-              compact
-            />
-          ))}
         </div>
       </div>
 
@@ -388,10 +452,28 @@ function MessagesDesktop() {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   Entry
+   Entry — fetches chat list, passes to platform variant
 ══════════════════════════════════════════════════════════════════ */
 export function Messages() {
   const { platform } = usePlatform();
-  if (platform === "desktop") return <MessagesDesktop />;
-  return <MessagesMobile />;
+  const [chats, setChats] = useState<ChatItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    chatsService.list().then((res) => {
+      if (cancelled) return;
+      if (res.code === 0 && Array.isArray(res.data)) {
+        setChats(res.data.map(toChatItem));
+      }
+      setLoading(false);
+    }).catch(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (platform === "desktop") return <MessagesDesktop chats={chats} loading={loading} />;
+  return <MessagesMobile chats={chats} loading={loading} />;
 }
