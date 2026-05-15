@@ -20,7 +20,7 @@ export interface Group {
   privacy: 'public' | 'private';
 }
 
-export interface Moment {
+export interface MomentItem {
   id: number;
   title: string;
   content: string;
@@ -33,44 +33,9 @@ export interface Moment {
   tags: string[];
 }
 
-export interface Event {
-  id: number;
-  title: string;
-  description: string;
-  cover_url: string;
-  start_time: string;
-  end_time: string;
-  location: string;
-  participant_count: number;
-  is_joined: boolean;
-  tags: string[];
-}
-
-export interface ChatMessage {
-  id: number;
-  sender_id: number;
-  content: string;
-  created_at: string;
-}
-
-export interface Conversation {
-  id: number;
-  type: 'user' | 'group';
-  target_id: number;
-  target_name: string;
-  target_avatar: string;
-  last_message: string;
-  last_message_at: string;
-  unread_count: number;
-}
-
-export interface Notification {
-  id: number;
-  type: string;
-  title: string;
-  content: string;
-  is_read: boolean;
-  created_at: string;
+export interface TrendingTag {
+  name: string;
+  usage_count: number;
 }
 
 // ── Auth ─────────────────────────────────────────────────────────
@@ -87,89 +52,103 @@ export const authService = {
 
   logout: () => api.post('/auth/logout'),
 
-  me: () => api.post<User>('/users/me'),
+  checkStatus: () => api.post<{ is_valid: boolean }>('/auth/check_status'),
 };
 
 // ── Users ────────────────────────────────────────────────────────
 export const usersService = {
-  nearby: (cursor?: string) =>
-    api.post<PaginatedData<User>>('/users/nearby', { cursor }),
+  me: () => api.post<User>('/users/me/profile/get'),
 
-  getById: (id: number) =>
-    api.post<User>(`/users/${id}`),
+  updateProfile: (data: { nickname?: string; bio?: string; avatar_url?: string }) =>
+    api.post<User>('/users/me/profile/update', data),
 
-  updateProfile: (data: Partial<User>) =>
-    api.post<User>('/users/me', data),
+  search: (query: { keyword?: string; cursor?: string }) =>
+    api.post<PaginatedData<User>>('/users/search', query),
+
+  listFriends: (userId?: number) =>
+    api.post<PaginatedData<User>>('/users/list_friends', userId ? { user_id: userId } : {}),
+
+  listFollowing: (userId?: number) =>
+    api.post<PaginatedData<User>>('/users/list_following', userId ? { user_id: userId } : {}),
+
+  listFollowers: (userId?: number) =>
+    api.post<PaginatedData<User>>('/users/list_followers', userId ? { user_id: userId } : {}),
+
+  listGroups: (userId?: number) =>
+    api.post<PaginatedData<Group>>('/users/list_groups', userId ? { user_id: userId } : {}),
+
+  listMoments: (userId?: number) =>
+    api.post<PaginatedData<MomentItem>>('/users/list_moments', userId ? { user_id: userId } : {}),
 
   follow: (userId: number) =>
-    api.post(`/users/${userId}/follow`),
+    api.post('/users/me/follow', { user_id: userId }),
 
   unfollow: (userId: number) =>
-    api.post(`/users/${userId}/unfollow`),
+    api.post('/users/me/unfollow', { user_id: userId }),
+
+  updateLocation: (lat: number, lng: number) =>
+    api.post('/users/me/location/update', { latitude: lat, longitude: lng }),
+};
+
+// ── Feed ─────────────────────────────────────────────────────────
+export const feedService = {
+  listUsers: (cursor?: string) =>
+    api.post<PaginatedData<User>>('/feed/list_users', cursor ? { cursor } : {}),
+
+  listGroups: (cursor?: string) =>
+    api.post<PaginatedData<Group>>('/feed/list_groups', cursor ? { cursor } : {}),
+
+  listMoments: (cursor?: string) =>
+    api.post<PaginatedData<MomentItem>>('/feed/list_moments', cursor ? { cursor } : {}),
+
+  listTrending: () =>
+    api.post<TrendingTag[]>('/feed/list_trending'),
 };
 
 // ── Groups ───────────────────────────────────────────────────────
 export const groupsService = {
-  nearby: (cursor?: string) =>
-    api.post<PaginatedData<Group>>('/groups/nearby', { cursor }),
+  search: (query: { keyword?: string; cursor?: string }) =>
+    api.post<PaginatedData<Group>>('/groups/search', query),
 
-  getById: (id: number) =>
-    api.post<Group>(`/groups/${id}`),
+  getMembers: (groupId: number) =>
+    api.post<PaginatedData<User>>('/groups/members/list', { group_id: groupId }),
+
+  create: (data: { name: string; description?: string; privacy?: string }) =>
+    api.post<Group>('/groups/create', data),
 
   join: (groupId: number) =>
-    api.post(`/groups/${groupId}/join`),
+    api.post('/groups/me/join', { group_id: groupId }),
 
   leave: (groupId: number) =>
-    api.post(`/groups/${groupId}/leave`),
+    api.post('/groups/me/leave', { group_id: groupId }),
+
+  listMyGroups: () =>
+    api.post<Group[]>('/groups/me/list'),
 };
 
 // ── Moments ──────────────────────────────────────────────────────
 export const momentsService = {
-  nearby: (cursor?: string) =>
-    api.post<PaginatedData<Moment>>('/moments/nearby', { cursor }),
+  create: (data: { title: string; content: string; images?: string[] }) =>
+    api.post<MomentItem>('/moments/create', data),
 
   getById: (id: number) =>
-    api.post<Moment>(`/moments/${id}`),
-
-  create: (data: { title: string; content: string; images?: string[] }) =>
-    api.post<Moment>('/moments', data),
-};
-
-// ── Chats ────────────────────────────────────────────────────────
-export const chatsService = {
-  list: () =>
-    api.post<Conversation[]>('/chats'),
-
-  messages: (conversationId: number, cursor?: string) =>
-    api.post<PaginatedData<ChatMessage>>(`/chats/${conversationId}/messages`, { cursor }),
-
-  send: (conversationId: number, content: string) =>
-    api.post<ChatMessage>(`/chats/${conversationId}/send`, { content }),
+    api.post<MomentItem>('/moments/get', { moment_id: id }),
 };
 
 // ── Notifications ────────────────────────────────────────────────
 export const notificationsService = {
-  list: (type?: string) =>
-    api.post<Notification[]>('/notifications', { type }),
-
-  markRead: (id: number) =>
-    api.post(`/notifications/${id}/read`),
+  list: () => api.post<Notification[]>('/notifications/list'),
+  unreadCount: () => api.post<{ count: number }>('/notifications/unread_count'),
 };
 
-// ── Events ───────────────────────────────────────────────────────
-export const eventsService = {
-  nearby: () =>
-    api.post<Event[]>('/events/nearby'),
-
-  getById: (id: number) =>
-    api.post<Event>(`/events/${id}`),
-
-  join: (eventId: number) =>
-    api.post(`/events/${eventId}/join`),
-
-  leave: (eventId: number) =>
-    api.post(`/events/${eventId}/leave`),
-};
+export interface Notification {
+  id: number;
+  type: string;
+  title: string;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+}
 
 // ── System ───────────────────────────────────────────────────────
 export const systemService = {

@@ -7,9 +7,17 @@ import { ChatView } from "../components/ui/ChatView";
 import { useHoverConfig } from "../hooks/useHoverConfig";
 import { NewConversationSheet } from "../components/ui/NewConversationSheet";
 import { CreateGroupSheet } from "../components/ui/CreateGroupSheet";
-import { chatsService, type Conversation } from "@/lib/api/services";
-
 /* ── Types ────────────────────────────────────────────────────────── */
+interface Conversation {
+  id: number;
+  target_name: string;
+  target_avatar?: string;
+  last_message?: string;
+  last_message_at: string;
+  unread_count?: number;
+  type: string;
+}
+
 interface ChatItem {
   id: number;
   name: string;
@@ -462,15 +470,9 @@ export function Messages() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    chatsService.list().then((res) => {
-      if (cancelled) return;
-      if (res.code === 0 && Array.isArray(res.data)) {
-        setChats(res.data.map(toChatItem));
-      }
-      setLoading(false);
-    }).catch(() => {
-      if (!cancelled) setLoading(false);
-    });
+    // chatsService not yet available — use mock/empty state
+    // TODO: wire up privateChatsService when backend endpoint is ready
+    if (!cancelled) setLoading(false);
     return () => { cancelled = true; };
   }, []);
 

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
-import { authService, type User } from '@/lib/api/services';
+import { authService, usersService, type User } from '@/lib/api/services';
 import { api } from '@/lib/api/client';
 
 interface AuthState {
@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Restore session on mount — backend auth via HttpOnly cookie
   useEffect(() => {
-    authService.me().then((res) => {
+    usersService.me().then((res) => {
       if (api.isSuccess(res) && res.data) {
         setState({ user: res.data, isAuthenticated: true, isLoading: false });
       } else {
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const res = await authService.me();
+    const res = await usersService.me();
     if (api.isSuccess(res) && res.data) {
       setState({ user: res.data, isAuthenticated: true, isLoading: false });
     }

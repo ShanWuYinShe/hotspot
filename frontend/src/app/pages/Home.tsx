@@ -24,8 +24,7 @@ import {
   VibeCard,
 } from "../components/TabletRail";
 import {
-  usersService,
-  groupsService,
+  feedService,
   type User,
   type Group,
 } from "@/lib/api/services";
@@ -683,13 +682,13 @@ function HomeMobile() {
   const [groupsLoading, setGroupsLoading] = useState(true);
 
   useEffect(() => {
-    usersService.nearby().then((res) => {
+    feedService.listUsers().then((res) => {
       if (api.isSuccess(res) && res.data?.items) {
         setUsers(res.data.items.map(mapUser));
       }
       setUsersLoading(false);
     });
-    groupsService.nearby().then((res) => {
+    feedService.listGroups().then((res) => {
       if (api.isSuccess(res) && res.data?.items) {
         setGroups(res.data.items.map(mapGroup));
       }
@@ -857,13 +856,13 @@ function HomeDesktop() {
   const [groupsLoading, setGroupsLoading] = useState(true);
 
   useEffect(() => {
-    usersService.nearby().then((res) => {
+    feedService.listUsers().then((res) => {
       if (api.isSuccess(res) && res.data?.items) {
         setUsers(res.data.items.map(mapUser));
       }
       setUsersLoading(false);
     });
-    groupsService.nearby().then((res) => {
+    feedService.listGroups().then((res) => {
       if (api.isSuccess(res) && res.data?.items) {
         setGroups(res.data.items.map(mapGroup));
       }
