@@ -1,18 +1,19 @@
-import React from "react";
 import { useNavigate, useParams } from "react-router";
 import { ChatView } from "../components/ui/ChatView";
+import { useDocumentTitle } from "@/lib/hooks/use-document-title";
+import { goBack } from "@/lib/utils/navigation";
 
 export function ChatDetail() {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
-  const id = Number(chatId);
+  useDocumentTitle("聊天");
 
   return (
     <div className="flex flex-col" style={{ height: "100%", backgroundColor: "var(--neu-bg)" }}>
       <ChatView
-        chatId={id}
+        chatId={chatId ?? ""}
         showBackButton
-        onBack={() => navigate(-1)}
+        onBack={() => goBack(navigate)}
       />
     </div>
   );

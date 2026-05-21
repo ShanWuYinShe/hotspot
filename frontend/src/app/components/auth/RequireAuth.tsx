@@ -1,11 +1,10 @@
-import React from "react";
-import { Navigate } from "react-router";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuthStore } from "@/lib/stores/auth";
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isRestoring = useAuthStore((s) => s.isRestoring);
 
-  if (isLoading) {
+  if (isRestoring) {
     return (
       <div
         className="min-h-[100dvh] flex items-center justify-center"
@@ -27,8 +26,20 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // 来宾用户也算已认证（guest 模式）
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return (
+      <div
+        className="min-h-[100dvh] flex items-center justify-center"
+        style={{ backgroundColor: "var(--page-bg)" }}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <span style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
+            请先登录
+          </span>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;

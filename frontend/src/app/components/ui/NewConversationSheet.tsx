@@ -4,7 +4,7 @@
  *   2. 新建私聊  (tab: "私聊")
  *   3. 新建群聊  → triggers CreateGroupSheet
  */
-import React, { useState } from "react";
+import { useState } from "react";
 import { Search, X, UserPlus, MessageCircle, Users, Check } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useHoverConfig } from "../../hooks/useHoverConfig";
@@ -59,7 +59,7 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
         <h2 style={{ fontSize: 17, color: "var(--neu-text)" }}>
           {tab === "add" ? "添加好友" : "新建会话"}
         </h2>
-        <motion.button whileTap={hover.tap as any} onClick={onClose}
+        <motion.button whileTap={hover.tap} onClick={onClose}
           className="flex items-center justify-center rounded-full outline-none"
           style={{ width: 32, height: 32, background: "var(--neu-bg)", boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
           <X style={{ width: 14, height: 14, color: "var(--neu-text-muted)" }} strokeWidth={2} />
@@ -72,11 +72,11 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
           { id: "add" as Tab,  icon: UserPlus,        label: "添加好友" },
           { id: "chat" as Tab, icon: MessageCircle,   label: "开始私聊" },
         ].map(t => (
-          <motion.button key={t.id} whileTap={hover.tap as any}
+          <motion.button key={t.id} whileTap={hover.tap}
             onClick={() => { setTab(t.id); setSearchQ(""); }}
             className="flex items-center gap-2 px-4 py-2 rounded-full outline-none"
             style={tab === t.id
-              ? { background: "var(--neu-accent-primary)", color: "white", fontSize: 13, fontWeight: 500, boxShadow: "0 4px 12px var(--neu-glow)" }
+              ? { background: "var(--neu-accent-primary)", color: "var(--text-on-accent, white)", fontSize: 13, fontWeight: 500, boxShadow: "0 4px 12px var(--neu-glow)" }
               : { background: "var(--neu-bg)", color: "var(--neu-text-muted)", fontSize: 13, boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }
             }
           >
@@ -91,6 +91,7 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
         <div className="flex items-center gap-2.5 px-4 rounded-[14px] neu-input-surface" style={{ height: 40 }}>
           <Search style={{ width: 14, height: 14, color: "var(--neu-text-muted)", flexShrink: 0 }} strokeWidth={1.5} />
           <input className="flex-1 bg-transparent outline-none"
+            aria-label="搜索用户"
             style={{ fontSize: 13, color: "var(--neu-text)" }}
             placeholder={tab === "add" ? "搜索用户名或手机号…" : "搜索联系人…"}
             value={searchQ}
@@ -109,7 +110,7 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
                 附近推荐
               </p>
               {filteredSuggested.map(u => (
-                <motion.div key={u.id} whileTap={hover.tap as any}
+                <motion.div key={u.id} whileTap={hover.tap}
                   className="flex items-center gap-3.5 px-3 py-3 rounded-[16px] neu-row-hover"
                   style={{ border: "1px solid var(--neu-border)" }}>
                   <img src={u.avatar} alt={u.name}
@@ -119,12 +120,12 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
                     <p style={{ fontSize: 14, color: "var(--neu-text)" }}>{u.name}</p>
                     <p style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>{u.subtitle}</p>
                   </div>
-                  <motion.button whileTap={{ scale: 0.92 }}
+                  <motion.button whileTap={{ scale: 0.94 }}
                     onClick={() => setAddedIds(p => { const n = new Set(p); n.has(u.id) ? n.delete(u.id) : n.add(u.id); return n; })}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none flex-shrink-0"
                     style={addedIds.has(u.id)
                       ? { boxShadow: "inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light)", border: "1px solid var(--neu-border-pressed)", color: "var(--neu-accent-primary)", background: "var(--neu-bg)", fontSize: 11 }
-                      : { background: "var(--neu-accent-primary)", color: "white", fontSize: 11, boxShadow: "0 3px 8px var(--neu-glow)" }
+                      : { background: "var(--neu-accent-primary)", color: "var(--text-on-accent, white)", fontSize: 11, boxShadow: "0 3px 8px var(--neu-glow)" }
                     }>
                     {addedIds.has(u.id)
                       ? <><Check style={{ width: 10, height: 10 }} strokeWidth={2.5} /> 已添加</>
@@ -139,13 +140,13 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
               transition={{ duration: 0.18 }} className="flex flex-col gap-1">
 
               {/* Create group chat row */}
-              <motion.button whileTap={hover.tap as any} whileHover={hover.row as any}
+              <motion.button whileTap={hover.tap} whileHover={hover.row}
                 onClick={() => { onClose(); onCreateGroup?.(); }}
                 className="flex items-center gap-3.5 px-3 py-3 rounded-[16px] w-full outline-none text-left mb-3 neu-row-hover"
                 style={{ background: "var(--neu-bg)", boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
                 <div className="flex items-center justify-center rounded-full flex-shrink-0"
                   style={{ width: 44, height: 44, background: "var(--neu-accent-primary)", boxShadow: "0 3px 8px var(--neu-glow)" }}>
-                  <Users style={{ width: 20, height: 20, color: "white" }} strokeWidth={1.75} />
+                  <Users style={{ width: 20, height: 20, color: "var(--text-on-accent, white)" }} strokeWidth={1.75} />
                 </div>
                 <div>
                   <p style={{ fontSize: 14, color: "var(--neu-text)", fontWeight: 500 }}>创建群聊</p>
@@ -157,7 +158,7 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
                 联系人
               </p>
               {filteredContacts.map(c => (
-                <motion.div key={c.id} whileTap={hover.tap as any}
+                <motion.div key={c.id} whileTap={hover.tap}
                   onClick={() => { onNewChat?.(c.id); onClose(); }}
                   className="flex items-center gap-3.5 px-3 py-3 rounded-[16px] cursor-pointer neu-row-hover"
                   style={{ border: "1px solid var(--neu-border)" }}>

@@ -7,7 +7,7 @@ import react from '@vitejs/plugin-react'
 function figmaAssetResolver() {
   return {
     name: 'figma-asset-resolver',
-    resolveId(id) {
+    resolveId(id: string) {
       if (id.startsWith('figma:asset/')) {
         const filename = id.replace('figma:asset/', '')
         return path.resolve(__dirname, 'src/assets', filename)
@@ -19,32 +19,33 @@ function figmaAssetResolver() {
 export default defineConfig({
   plugins: [
     figmaAssetResolver(),
-    // The React and Tailwind plugins are both required for Make, even if
-    // Tailwind is not being actively used – do not remove them
     react(),
     tailwindcss(),
   ],
   resolve: {
     alias: {
-      // Alias @ to the src directory
       '@': path.resolve(__dirname, './src'),
     },
   },
-
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: process.env.BACKEND_URL || 'http://localhost:8081',
-        changeOrigin: true,
-      },
-      '/ws': {
-        target: process.env.BACKEND_URL || 'http://localhost:8081',
-        ws: true,
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router'],
+          'vendor-motion': ['motion/react'],
+          'vendor-lucide': ['lucide-react'],
+          'vendor-zustand': ['zustand'],
+        },
       },
     },
   },
-
-  // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
+  server: {
+    proxy: {
+      '/api': {
+        target: process.env.DOCKER_ENV ? 'http://nginx:80' : 'http://localhost:8888',
+        changeOrigin: true,
+      },
+    },
+  },
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })

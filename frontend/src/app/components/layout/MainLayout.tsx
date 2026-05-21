@@ -1,7 +1,15 @@
 import React, { useState, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
-import { MapPin, Compass, Plus, X, MessageCircle, CircleUser } from "lucide-react";
+import {
+  MapPin,
+  Compass,
+  Plus,
+  X,
+  MessageCircle,
+  CircleUser,
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { readThemeCssVar } from "@/lib/theme";
 import { cn } from "../../../lib/utils";
 import { useTheme } from "../../contexts/ThemeContext";
 import { usePlatform } from "../../contexts/PlatformContext";
@@ -10,12 +18,13 @@ import { StatusBar } from "./StatusBar";
 import { DesktopLayout } from "./DesktopLayout";
 import { TabletLayout } from "./TabletLayout";
 import { useHoverConfig } from "../../hooks/useHoverConfig";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 const NAV_ITEMS = [
-  { path: "/",         icon: MapPin,         label: "附近" },
-  { path: "/discover", icon: Compass,        label: "发现" },
-  { path: "/messages", icon: MessageCircle,  label: "消息" },
-  { path: "/profile",  icon: CircleUser,     label: "我的" },
+  { path: "/", icon: MapPin, label: "附近" },
+  { path: "/discover", icon: Compass, label: "发现" },
+  { path: "/messages", icon: MessageCircle, label: "消息" },
+  { path: "/profile", icon: CircleUser, label: "个人" },
 ];
 
 export function MainLayout() {
@@ -24,39 +33,20 @@ export function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
+  const createTrapRef = useFocusTrap(showCreate, () => setShowCreate(false));
 
   // Resolve actual CSS-variable colour values so Motion's layoutId engine
   // always receives concrete hex strings — it caches computed values and
   // won't re-read CSS variables when a class on <html> changes.
-  const accentColor = useMemo(() => {
-    return getComputedStyle(document.documentElement)
-      .getPropertyValue("--neu-accent-primary").trim() || "#6366f1";
-  }, [theme, isDark]);
+  const accentColor = useMemo(
+    () => readThemeCssVar("--neu-accent-primary", "#6366f1"),
+    [theme, isDark],
+  );
 
-  const mutedColor = useMemo(() => {
-    return getComputedStyle(document.documentElement)
-      .getPropertyValue("--neu-text-muted").trim() || "#8D94A0";
-  }, [theme, isDark]);
-
-  // Glass nav background — theme-aware semi-transparent tint
-  const glassNavBg = useMemo(() => {
-    if (isDark) {
-      if (theme === "forest")  return "rgba(22,26,22,0.92)";   /* 清野 dark: #161A16 */
-      if (theme === "vibrant") return "rgba(19,15,38,0.92)";   /* 星际 dark: #130F26 */
-      return "rgba(26,28,35,0.92)";                             /* 暖砂 dark: #1A1C23 */
-    }
-    if (theme === "forest")  return "rgba(249,249,245,0.90)";  /* 清野 light: #F9F9F5 */
-    if (theme === "vibrant") return "rgba(250,250,254,0.90)";  /* 星际 light: #FAFAFE */
-    return "rgba(234,229,222,0.90)";                            /* 暖砂 light: #EAE5DE */
-  }, [theme, isDark]);
-
-  const glassNavBorder = isDark
-    ? theme === "forest"  ? "rgba(82,184,120,0.16)"
-    : theme === "vibrant" ? "rgba(129,140,248,0.18)"
-    : "rgba(255,255,255,0.08)"
-    : theme === "forest"  ? "rgba(61,122,85,0.15)"
-    : theme === "vibrant" ? "rgba(99,102,241,0.14)"
-    : "rgba(255,255,255,0.7)";
+  const mutedColor = useMemo(
+    () => readThemeCssVar("--neu-text-muted", "#8D94A0"),
+    [theme, isDark],
+  );
 
   /* Platform routing */
   if (platform === "desktop") return <DesktopLayout />;
@@ -66,35 +56,25 @@ export function MainLayout() {
   /* ── Mobile phone-frame layout ─────────────────────────────────── */
   if (isMobileLandscape) {
     return (
-      <MobileLandscape
-        showCreate={showCreate}
-        setShowCreate={setShowCreate}
-      />
+      <MobileLandscape showCreate={showCreate} setShowCreate={setShowCreate} />
     );
   }
 
-  const SUB_PAGE_PATHS = ["/settings", "/location", "/notifications", "/profile/edit", "/search", "/nearby", "/nearby-groups"];
+  const SUB_PAGE_PATHS = [
+    "/settings",
+    "/location",
+    "/notifications",
+    "/profile/edit",
+    "/search",
+    "/nearby",
+    "/nearby-groups",
+  ];
   const isSubPage =
-    SUB_PAGE_PATHS.some(p => location.pathname === p) ||
+    SUB_PAGE_PATHS.some((p) => location.pathname === p) ||
     location.pathname.startsWith("/messages/") ||
     location.pathname.startsWith("/user/") ||
     location.pathname.startsWith("/post/") ||
     location.pathname.startsWith("/events/");
-
-  const fabGlow = (() => {
-    if (showCreate) return "none";
-    if (theme === "forest")
-      return isDark
-        ? "0 6px 22px rgba(82,184,120,0.38), 0 2px 6px rgba(0,0,0,0.20)"
-        : "0 6px 18px rgba(61,122,85,0.32), 0 2px 4px rgba(0,0,0,0.10)";
-    if (theme === "vibrant")
-      return isDark
-        ? "0 6px 22px rgba(129,140,248,0.42), 0 2px 6px rgba(0,0,0,0.20)"
-        : "0 6px 18px rgba(99,102,241,0.38), 0 2px 4px rgba(0,0,0,0.10)";
-    return isDark
-      ? "0 6px 22px rgba(232,168,124,0.36), 0 2px 6px rgba(0,0,0,0.22)"
-      : "0 6px 18px rgba(212,132,90,0.34), 0 2px 4px rgba(0,0,0,0.10)";
-  })();
 
   return (
     <div
@@ -104,7 +84,7 @@ export function MainLayout() {
       <div
         className={cn(
           "flex flex-col h-[100dvh] w-full",
-          "transition-colors duration-500 overflow-hidden relative"
+          "transition-colors duration-500 overflow-hidden relative",
         )}
         style={{ backgroundColor: "var(--neu-bg)", color: "var(--neu-text)" }}
       >
@@ -120,12 +100,14 @@ export function MainLayout() {
             aria-label="Main navigation"
             className="flex-shrink-0 w-full"
             style={{
-              background: glassNavBg,
+              background: "var(--bottom-nav-glass-bg)",
               backdropFilter: "blur(24px) saturate(1.8)",
               WebkitBackdropFilter: "blur(24px) saturate(1.8)",
-              borderTop: `1px solid ${glassNavBorder}`,
-              boxShadow: `0 -1px 0 ${glassNavBorder}, 0 -8px 28px var(--neu-shadow-dark)`,
-              transition: "background 0.4s ease, border-color 0.4s ease",
+              borderTop: "1px solid var(--bottom-nav-glass-border)",
+              boxShadow:
+                "0 -1px 0 var(--bottom-nav-glass-border), var(--bottom-nav-glass-shadow)",
+              transition:
+                "background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease",
             }}
           >
             <div
@@ -158,14 +140,14 @@ export function MainLayout() {
               <div className="flex flex-col items-center" style={{ width: 68 }}>
                 <motion.button
                   whileTap={{ scale: 0.88, y: 1 }}
-                  className="flex items-center justify-center outline-none select-none rounded-full"
+                  className="flex items-center justify-center outline-none select-none rounded-full neu-focus-ring"
                   style={{
                     width: 50,
                     height: 50,
                     background: showCreate
                       ? "var(--neu-text-muted)"
                       : "var(--neu-accent-primary)",
-                    boxShadow: fabGlow,
+                    boxShadow: showCreate ? "none" : "var(--fab-shadow)",
                     transition: "background 0.22s ease, box-shadow 0.22s ease",
                   }}
                   onClick={() => setShowCreate((v) => !v)}
@@ -181,7 +163,10 @@ export function MainLayout() {
                         transition={{ duration: 0.18, ease: "easeOut" }}
                         style={{ display: "flex" }}
                       >
-                        <X style={{ width: 20, height: 20, color: "white" }} strokeWidth={2.2} />
+                        <X
+                          style={{ width: 20, height: 20, color: "white" }}
+                          strokeWidth={2.2}
+                        />
                       </motion.span>
                     ) : (
                       <motion.span
@@ -192,7 +177,10 @@ export function MainLayout() {
                         transition={{ duration: 0.18, ease: "easeOut" }}
                         style={{ display: "flex" }}
                       >
-                        <Plus style={{ width: 20, height: 20, color: "white" }} strokeWidth={2.2} />
+                        <Plus
+                          style={{ width: 20, height: 20, color: "white" }}
+                          strokeWidth={2.2}
+                        />
                       </motion.span>
                     )}
                   </AnimatePresence>
@@ -205,7 +193,8 @@ export function MainLayout() {
                     ? location.pathname === "/"
                     : location.pathname === item.path ||
                       location.pathname.startsWith(item.path + "/") ||
-                      (item.path === "/profile" && location.pathname === "/settings");
+                      (item.path === "/profile" &&
+                        location.pathname === "/settings");
                 return (
                   <NavTab
                     key={item.path}
@@ -232,20 +221,33 @@ export function MainLayout() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.22 }}
                 className="absolute inset-0 z-40"
-                style={{ background: "rgba(0,0,0,0.35)", backdropFilter: "blur(3px)" }}
+                style={{
+                  background: "rgba(0,0,0,0.35)",
+                  backdropFilter: "blur(3px)",
+                }}
                 onClick={() => setShowCreate(false)}
               />
               <motion.div
                 key="sheet"
+                ref={createTrapRef}
+                role="dialog"
+                aria-modal="true"
+                aria-label="发布新动态"
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 30, stiffness: 260, mass: 0.9 }}
+                transition={{
+                  type: "spring",
+                  damping: 30,
+                  stiffness: 260,
+                  mass: 0.9,
+                }}
                 className="absolute bottom-0 left-0 right-0 z-50 overflow-hidden"
                 style={{
                   height: "92%",
                   borderRadius: "28px 28px 0 0",
-                  boxShadow: "0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--neu-border)",
+                  boxShadow:
+                    "0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--neu-border)",
                   backgroundColor: "var(--neu-bg)",
                 }}
               >
@@ -260,7 +262,12 @@ export function MainLayout() {
 }
 
 function NavTab({
-  label, isActive, onClick, Icon, accentColor, mutedColor,
+  label,
+  isActive,
+  onClick,
+  Icon,
+  accentColor,
+  mutedColor,
 }: {
   label: string;
   isActive: boolean;
@@ -274,9 +281,9 @@ function NavTab({
   return (
     <motion.button
       whileTap={hover.tap as any}
-      whileHover={!isActive ? hover.btn as any : {}}
+      whileHover={!isActive ? (hover.btn as any) : {}}
       onClick={onClick}
-      className="relative flex flex-col items-center justify-center outline-none select-none"
+      className="relative flex flex-col items-center justify-center outline-none select-none neu-focus-ring"
       style={{ width: 68, paddingTop: 10, paddingBottom: 8, gap: 4 }}
       aria-label={label}
       aria-current={isActive ? "page" : undefined}
@@ -294,26 +301,44 @@ function NavTab({
             background: accentColor,
             opacity: 0.13,
           }}
-          transition={{ type: "spring", stiffness: 500, damping: 38, mass: 0.75 }}
+          transition={{
+            type: "spring",
+            stiffness: 500,
+            damping: 38,
+            mass: 0.75,
+          }}
         />
       )}
 
       <div
-        style={{ display: "flex", alignItems: "center", justifyContent: "center", position: "relative", zIndex: 1 }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          position: "relative",
+          zIndex: 1,
+        }}
       >
         <Icon
-          style={{ width: 22, height: 22, color: iconColor, transition: "color 0.22s ease" }}
+          style={{
+            width: 22,
+            height: 22,
+            color: iconColor,
+            transition: "color 0.22s ease",
+          }}
           strokeWidth={isActive ? 2.1 : 1.5}
         />
       </div>
       <span
         style={{
-          fontSize: 11, lineHeight: 1,
+          fontSize: 11,
+          lineHeight: 1,
           color: iconColor,
           fontWeight: isActive ? 600 : 400,
           transition: "color 0.22s ease",
           letterSpacing: "0.01em",
-          position: "relative", zIndex: 1,
+          position: "relative",
+          zIndex: 1,
         }}
       >
         {label}
@@ -332,8 +357,17 @@ function MobileLandscape({
 }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const createTrapRef = useFocusTrap(showCreate, () => setShowCreate(false));
 
-  const SUB_PAGE_PATHS = ["/settings", "/location", "/notifications", "/profile/edit", "/search", "/nearby", "/nearby-groups"];
+  const SUB_PAGE_PATHS = [
+    "/settings",
+    "/location",
+    "/notifications",
+    "/profile/edit",
+    "/search",
+    "/nearby",
+    "/nearby-groups",
+  ];
   const isSubPage =
     SUB_PAGE_PATHS.some((p) => location.pathname === p) ||
     location.pathname.startsWith("/messages/") ||
@@ -383,9 +417,11 @@ function MobileLandscape({
             style={{
               width: 44,
               height: 44,
-              background: showCreate ? "var(--neu-text-muted)" : "var(--neu-accent-primary)",
-              boxShadow: showCreate ? "none" : "0 4px 14px var(--neu-glow)",
-              transition: "background 0.22s",
+              background: showCreate
+                ? "var(--neu-text-muted)"
+                : "var(--neu-accent-primary)",
+              boxShadow: showCreate ? "none" : "var(--fab-shadow)",
+              transition: "background 0.22s ease, box-shadow 0.22s ease",
             }}
             aria-label={showCreate ? "关闭" : "发布"}
           >
@@ -399,7 +435,10 @@ function MobileLandscape({
                   transition={{ duration: 0.18 }}
                   style={{ display: "flex" }}
                 >
-                  <X style={{ width: 18, height: 18, color: "white" }} strokeWidth={2.2} />
+                  <X
+                    style={{ width: 18, height: 18, color: "white" }}
+                    strokeWidth={2.2}
+                  />
                 </motion.span>
               ) : (
                 <motion.span
@@ -410,7 +449,10 @@ function MobileLandscape({
                   transition={{ duration: 0.18 }}
                   style={{ display: "flex" }}
                 >
-                  <Plus style={{ width: 18, height: 18, color: "white" }} strokeWidth={2.2} />
+                  <Plus
+                    style={{ width: 18, height: 18, color: "white" }}
+                    strokeWidth={2.2}
+                  />
                 </motion.span>
               )}
             </AnimatePresence>
@@ -445,11 +487,18 @@ function MobileLandscape({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="fixed inset-0 z-40"
-              style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}
+              style={{
+                background: "rgba(0,0,0,0.4)",
+                backdropFilter: "blur(4px)",
+              }}
               onClick={() => setShowCreate(false)}
             />
             <motion.div
               key="sheet"
+              ref={createTrapRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="发布新动态"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
@@ -486,15 +535,21 @@ function RailIcon({
   const [hovered, setHovered] = useState(false);
   const showHover = hovered && !isActive;
 
-  const accentColor = useMemo(() =>
-    getComputedStyle(document.documentElement).getPropertyValue("--neu-accent-primary").trim() || "#6366f1"
-  , [theme, isDark]);
+  const accentColor = useMemo(
+    () => readThemeCssVar("--neu-accent-primary", "#6366f1"),
+    [theme, isDark],
+  );
 
-  const mutedColor = useMemo(() =>
-    getComputedStyle(document.documentElement).getPropertyValue("--neu-text-muted").trim() || "#8D94A0"
-  , [theme, isDark]);
+  const mutedColor = useMemo(
+    () => readThemeCssVar("--neu-text-muted", "#8D94A0"),
+    [theme, isDark],
+  );
 
-  const iconColor = isActive ? accentColor : showHover ? accentColor : mutedColor;
+  const iconColor = isActive
+    ? accentColor
+    : showHover
+      ? accentColor
+      : mutedColor;
 
   // Theme-aware hover state for RailIcon
   const hoverBg = showHover
@@ -505,38 +560,49 @@ function RailIcon({
 
   const hoverShadow = showHover
     ? theme === "forest"
-      ? isDark ? "0 0 0 1px rgba(82,184,120,0.28)" : "0 0 0 1px rgba(61,122,85,0.22)"
-      : theme === "vibrant"
       ? isDark
-        ? "0 6px 16px rgba(129,140,248,0.22), 0 2px 6px rgba(129,140,248,0.12)"
-        : "0 6px 16px rgba(99,102,241,0.18), 0 2px 6px rgba(99,102,241,0.10)"
-      : "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)"
+        ? "0 0 0 1px rgba(82,184,120,0.28)"
+        : "0 0 0 1px rgba(61,122,85,0.22)"
+      : theme === "vibrant"
+        ? isDark
+          ? "0 6px 16px rgba(129,140,248,0.22), 0 2px 6px rgba(129,140,248,0.12)"
+          : "0 6px 16px rgba(99,102,241,0.18), 0 2px 6px rgba(99,102,241,0.10)"
+        : "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)"
     : "none";
 
-  const hoverScale = showHover
-    ? theme === "forest" ? 1.08 : 1.14
-    : 1;
+  const hoverScale = showHover ? (theme === "forest" ? 1.08 : 1.14) : 1;
 
-  const transitionType = theme === "forest"
-    ? { type: "tween", duration: 0.16, ease: [0.22, 1, 0.36, 1] }
-    : { type: "spring", stiffness: 380, damping: 18, mass: 0.65 };
+  const transitionType =
+    theme === "forest"
+      ? { type: "tween", duration: 0.16, ease: [0.22, 1, 0.36, 1] }
+      : { type: "spring", stiffness: 380, damping: 18, mass: 0.65 };
 
   return (
     <motion.button
-      whileTap={theme === "forest"
-        ? { scale: 0.97, transition: { type: "tween", duration: 0.1 } } as any
-        : { scale: 0.86, transition: { type: "spring", stiffness: 600, damping: 26 } } as any
+      whileTap={
+        theme === "forest"
+          ? ({
+              scale: 0.97,
+              transition: { type: "tween", duration: 0.1 },
+            } as any)
+          : ({
+              scale: 0.86,
+              transition: { type: "spring", stiffness: 600, damping: 26 },
+            } as any)
       }
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       onClick={onClick}
-      className="relative flex flex-col items-center justify-center outline-none rounded-[16px]"
+      className="relative flex flex-col items-center justify-center outline-none rounded-[16px] neu-focus-ring"
       style={{
-        width: 52, height: 52, gap: 3,
+        width: 52,
+        height: 52,
+        gap: 3,
         background: hoverBg,
         boxShadow: hoverShadow,
         transform: `scale(${hoverScale})`,
-        transition: "background 0.16s ease, box-shadow 0.2s cubic-bezier(0.22,1,0.36,1), transform 0.2s cubic-bezier(0.34,1.56,0.64,1)",
+        transition:
+          "background 0.16s ease, box-shadow 0.2s cubic-bezier(0.22,1,0.36,1), transform 0.2s cubic-bezier(0.34,1.56,0.64,1)",
       }}
       aria-label={label}
       aria-current={isActive ? "page" : undefined}
@@ -555,16 +621,41 @@ function RailIcon({
         />
       )}
       <Icon
-        style={{ width: 22, height: 22, color: iconColor, transition: "color 0.18s ease", position: "relative", zIndex: 1 }}
+        style={{
+          width: 22,
+          height: 22,
+          color: iconColor,
+          transition: "color 0.18s ease",
+          position: "relative",
+          zIndex: 1,
+        }}
         strokeWidth={isActive ? 2.1 : showHover ? 1.75 : 1.5}
       />
-      <span style={{ fontSize: 10, lineHeight: 1, color: iconColor, fontWeight: isActive ? 600 : 400, position: "relative", zIndex: 1, transition: "color 0.18s ease" }}>
+      <span
+        style={{
+          fontSize: 10,
+          lineHeight: 1,
+          color: iconColor,
+          fontWeight: isActive ? 600 : 400,
+          position: "relative",
+          zIndex: 1,
+          transition: "color 0.18s ease",
+        }}
+      >
         {label}
       </span>
       {isActive && (
         <motion.div
           layoutId="rail-indicator"
-          style={{ position: "absolute", left: 0, top: 10, bottom: 10, width: 3, borderRadius: 2, background: accentColor }}
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 10,
+            bottom: 10,
+            width: 3,
+            borderRadius: 2,
+            background: accentColor,
+          }}
         />
       )}
     </motion.button>

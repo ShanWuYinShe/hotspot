@@ -1,15 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import {
-  Home, Users, Rss, MessageCircle, Bell, ImageIcon,
-  Heart, UserPlus, UserCheck, Search, Moon, Sun,
-  Plus, Navigation2, ChevronRight, UserRound,
+  Home,
+  Users,
+  Rss,
+  MessageCircle,
+  Bell,
+  ImageIcon,
+  Heart,
+  UserPlus,
+  UserCheck,
+  Search,
+  Moon,
+  Sun,
+  Plus,
+  Navigation2,
+  ChevronRight,
+  UserRound,
   Settings,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useTheme } from "../../contexts/ThemeContext";
 import { CreateSheet } from "./CreateSheet";
-import { cn } from "../../../lib/utils";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 import imgHotSpot from "figma:asset/9254a1e0e11b516a6c1aecb80d92b66f2caa243e.png";
 
 /* ── Constants ──────────────────────────────────────────────────── */
@@ -25,20 +38,45 @@ interface NavItem {
 }
 
 const TOP_NAV: NavItem[] = [
-  { id: "home",            icon: Home,        label: "首页",     path: "/" },
-  { id: "nearby-people",   icon: Users,       label: "附近的人", path: "/nearby" },
-  { id: "nearby-groups",   icon: UserRound,   label: "附近群组", path: "/nearby-groups" },
-  { id: "nearby-activity", icon: Rss,         label: "附近动态", path: "/discover" },
+  { id: "home", icon: Home, label: "首页", path: "/" },
+  { id: "nearby-people", icon: Users, label: "附近的人", path: "/nearby" },
+  {
+    id: "nearby-groups",
+    icon: UserRound,
+    label: "附近群组",
+    path: "/nearby-groups",
+  },
+  { id: "nearby-activity", icon: Rss, label: "附近动态", path: "/discover" },
 ];
 
 const PERSONAL_NAV: NavItem[] = [
-  { id: "messages",      icon: MessageCircle, label: "消息",     path: "/messages" },
-  { id: "notifications", icon: Bell,          label: "通知",     path: "/notifications" },
-  { id: "moments",       icon: ImageIcon,     label: "我的瞬间", path: "/profile?section=moments" },
-  { id: "my-groups",     icon: Users,         label: "我的群组", path: "/profile?section=groups" },
-  { id: "friends",       icon: Heart,         label: "好友",     path: "/profile?section=friends" },
-  { id: "following",     icon: UserPlus,      label: "关注",     path: "/profile?section=following" },
-  { id: "fans",          icon: UserCheck,     label: "粉丝",     path: "/profile?section=fans" },
+  { id: "messages", icon: MessageCircle, label: "消息", path: "/messages" },
+  { id: "notifications", icon: Bell, label: "通知", path: "/notifications" },
+  {
+    id: "moments",
+    icon: ImageIcon,
+    label: "瞬间",
+    path: "/profile?section=moments",
+  },
+  {
+    id: "my-groups",
+    icon: Users,
+    label: "群组",
+    path: "/profile?section=groups",
+  },
+  {
+    id: "friends",
+    icon: Heart,
+    label: "好友",
+    path: "/profile?section=friends",
+  },
+  {
+    id: "following",
+    icon: UserPlus,
+    label: "关注",
+    path: "/profile?section=following",
+  },
+  { id: "fans", icon: UserCheck, label: "粉丝", path: "/profile?section=fans" },
 ];
 
 function getNavIdFromPath(pathname: string, search: string): string {
@@ -75,8 +113,14 @@ function HeaderBtn({
 }) {
   return (
     <motion.button
-      whileTap={{ scale: 0.84, transition: { type: "spring", stiffness: 600, damping: 28 } }}
-      whileHover={{ scale: 1.18, transition: { type: "spring", stiffness: 400, damping: 16, mass: 0.6 } }}
+      whileTap={{
+        scale: 0.88,
+        transition: { type: "spring", stiffness: 600, damping: 28 },
+      }}
+      whileHover={{
+        scale: 1.18,
+        transition: { type: "spring", stiffness: 400, damping: 16, mass: 0.6 },
+      }}
       onClick={onClick}
       aria-label={label}
       className="flex items-center justify-center rounded-full outline-none"
@@ -84,7 +128,8 @@ function HeaderBtn({
     >
       <Icon
         style={{
-          width: 17, height: 17,
+          width: 17,
+          height: 17,
           color: active ? "var(--neu-accent-primary)" : "var(--neu-text-muted)",
           transition: "color 0.2s",
         }}
@@ -118,7 +163,7 @@ function SidebarNavItem({
 
   return (
     <motion.button
-      whileTap={{ scale: 0.985 }}
+      whileTap={{ scale: 0.94 }}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       onClick={onClick}
@@ -127,10 +172,10 @@ function SidebarNavItem({
         padding: "9px 12px",
         background: isActive ? "var(--neu-accent-primary)" : hoverBg,
         color: isActive
-          ? "#FFF8F4"
+          ? "var(--text-on-accent, #fff)"
           : showHover
-          ? "var(--neu-text)"
-          : "var(--neu-text-muted)",
+            ? "var(--neu-text)"
+            : "var(--neu-text-muted)",
         boxShadow: isActive
           ? "0 2px 10px var(--neu-glow, rgba(0,0,0,0.10))"
           : "none",
@@ -151,7 +196,8 @@ function SidebarNavItem({
           borderRadius: 2,
           background: "var(--neu-accent-primary)",
           opacity: showHover ? 0.9 : 0,
-          transition: "height 0.18s ease, opacity 0.18s ease, margin-top 0.18s ease",
+          transition:
+            "height 0.18s ease, opacity 0.18s ease, margin-top 0.18s ease",
           pointerEvents: "none",
         }}
       />
@@ -161,10 +207,10 @@ function SidebarNavItem({
           height: 17,
           flexShrink: 0,
           color: isActive
-            ? "#FFF8F4"
+            ? "var(--text-on-accent, #fff)"
             : showHover
-            ? "var(--neu-accent-primary)"
-            : "var(--neu-text-muted)",
+              ? "var(--neu-accent-primary)"
+              : "var(--neu-text-muted)",
           transition: "color 0.16s ease",
         }}
         strokeWidth={isActive ? 2 : 1.6}
@@ -187,14 +233,18 @@ function LocationCard({ onClick }: { onClick: () => void }) {
   return (
     <motion.button
       whileTap={{ scale: 0.97 }}
-      whileHover={{ y: -2, transition: { type: "spring", stiffness: 360, damping: 20 } }}
+      whileHover={{
+        y: -2,
+        transition: { type: "spring", stiffness: 360, damping: 20 },
+      }}
       onClick={onClick}
       className="flex items-center gap-3 w-full rounded-[16px] outline-none text-left neu-card-hover"
       style={{
         padding: "10px 12px",
         background: "var(--neu-bg)",
         border: "1px solid var(--neu-border)",
-        boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)",
+        boxShadow:
+          "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)",
         transition: "box-shadow 0.22s cubic-bezier(0.22,1,0.36,1)",
       }}
     >
@@ -202,23 +252,52 @@ function LocationCard({ onClick }: { onClick: () => void }) {
       <div
         className="flex items-center justify-center rounded-full flex-shrink-0"
         style={{
-          width: 34, height: 34,
+          width: 34,
+          height: 34,
           background: "var(--neu-accent-primary)",
           boxShadow: "0 3px 10px var(--neu-glow)",
         }}
       >
-        <Navigation2 style={{ width: 14, height: 14, color: "white" }} strokeWidth={2} />
+        <Navigation2
+          style={{
+            width: 14,
+            height: 14,
+            color: "var(--text-on-accent, white)",
+          }}
+          strokeWidth={2}
+        />
       </div>
 
       <div className="flex-1 min-w-0 text-left">
-        <p style={{ fontSize: 12, color: "var(--neu-text)", fontWeight: 500 }}>地图探索</p>
+        <p style={{ fontSize: 12, color: "var(--neu-text)", fontWeight: 500 }}>
+          地图探索
+        </p>
         <div className="flex items-center gap-1">
-          <span className="inline-block rounded-full" style={{ width: 5, height: 5, background: "#22c55e" }} />
-          <p style={{ fontSize: 10, lineHeight: 1.4, color: "var(--neu-text-muted)" }}>徐州 · 云龙区</p>
+          <span
+            className="inline-block rounded-full"
+            style={{ width: 5, height: 5, background: "#22c55e" }}
+          />
+          <p
+            style={{
+              fontSize: 10,
+              lineHeight: 1.4,
+              color: "var(--neu-text-muted)",
+            }}
+          >
+            徐州 · 云龙区
+          </p>
         </div>
       </div>
 
-      <ChevronRight style={{ width: 13, height: 13, color: "var(--neu-text-muted)", flexShrink: 0 }} strokeWidth={1.5} />
+      <ChevronRight
+        style={{
+          width: 13,
+          height: 13,
+          color: "var(--neu-text-muted)",
+          flexShrink: 0,
+        }}
+        strokeWidth={1.5}
+      />
     </motion.button>
   );
 }
@@ -231,10 +310,11 @@ export function DesktopLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
+  const createTrapRef = useFocusTrap(showCreate, () => setShowCreate(false));
 
   /* Track which sidebar item is visually active */
   const [activeNavId, setActiveNavId] = useState(() =>
-    getNavIdFromPath(location.pathname, location.search)
+    getNavIdFromPath(location.pathname, location.search),
   );
 
   /* Sync with browser back/forward navigation */
@@ -274,7 +354,7 @@ export function DesktopLayout() {
         >
           <img
             src={imgHotSpot}
-            alt="HotSpot Logo"
+            alt="HotSpot 图标"
             className="rounded-full object-cover flex-shrink-0"
             style={{ width: 28, height: 28 }}
           />
@@ -304,7 +384,7 @@ export function DesktopLayout() {
 
           {/* Create (+) button — accent circle */}
           <motion.button
-            whileTap={{ scale: 0.90 }}
+            whileTap={{ scale: 0.88 }}
             whileHover={{ scale: 1.05 }}
             onClick={() => setShowCreate(true)}
             aria-label="发布"
@@ -317,7 +397,11 @@ export function DesktopLayout() {
             }}
           >
             <Plus
-              style={{ width: 15, height: 15, color: "white" }}
+              style={{
+                width: 15,
+                height: 15,
+                color: "var(--text-on-accent, white)",
+              }}
               strokeWidth={2.5}
             />
           </motion.button>
@@ -325,7 +409,10 @@ export function DesktopLayout() {
           <HeaderBtn
             icon={Bell}
             label="通知"
-            onClick={() => { setActiveNavId("notifications"); navigate("/notifications"); }}
+            onClick={() => {
+              setActiveNavId("notifications");
+              navigate("/notifications");
+            }}
           />
 
           {/* Settings shortcut */}
@@ -340,7 +427,7 @@ export function DesktopLayout() {
 
           {/* Avatar with notification badge */}
           <motion.div
-            whileTap={{ scale: 0.92 }}
+            whileTap={{ scale: 0.94 }}
             onClick={() => {
               setActiveNavId("moments");
               navigate("/profile");
@@ -350,7 +437,7 @@ export function DesktopLayout() {
           >
             <img
               src={USER_AVATAR}
-              alt="My Profile"
+              alt="我的头像"
               className="w-full h-full rounded-full object-cover"
               style={{
                 border: "1.5px solid var(--neu-border)",
@@ -358,8 +445,9 @@ export function DesktopLayout() {
             />
             {/* Badge */}
             <div
-              className="absolute flex items-center justify-center rounded-full text-white pointer-events-none"
+              className="absolute flex items-center justify-center rounded-full pointer-events-none"
               style={{
+                color: "var(--text-on-accent, white)",
                 width: 15,
                 height: 15,
                 fontSize: 8,
@@ -381,15 +469,13 @@ export function DesktopLayout() {
           BODY — sidebar + main content
       ═══════════════════════════════════════════════════════ */}
       <div className="flex flex-1 overflow-hidden p-4 gap-4">
-
         {/* ── Sidebar (192px, fixed width) ─────────────────── */}
-        <aside
-          className="flex flex-col flex-shrink-0"
-          style={{ width: 192 }}
-        >
+        <aside className="flex flex-col flex-shrink-0" style={{ width: 192 }}>
           {/* Scrollable nav region — takes all available space */}
-          <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar min-h-0">
-
+          <div
+            className="flex-1 flex flex-col overflow-y-auto no-scrollbar min-h-0"
+            style={{ overscrollBehavior: "contain" }}
+          >
             {/* Section 1: Discovery nav */}
             <div className="flex flex-col gap-0.5">
               {TOP_NAV.map((item) => (
@@ -417,7 +503,7 @@ export function DesktopLayout() {
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
                 color: "var(--neu-text-muted)",
-                opacity: 0.65,
+                opacity: 0.9,
               }}
             >
               个人中心
@@ -434,7 +520,6 @@ export function DesktopLayout() {
                 />
               ))}
             </div>
-
           </div>
 
           {/* ── Location Anchor — ALWAYS pinned to bottom ─── */}
@@ -459,11 +544,13 @@ export function DesktopLayout() {
           }}
         >
           {/* Inner scroll container — sticky headers inside will stick to this */}
-          <div className="h-full overflow-y-auto no-scrollbar">
+          <div
+            className="h-full overflow-y-auto no-scrollbar"
+            style={{ overscrollBehavior: "contain" }}
+          >
             <Outlet />
           </div>
         </main>
-
       </div>
 
       {/* ═══════════════════════════════════════════════════════
@@ -492,6 +579,10 @@ export function DesktopLayout() {
               {/* Animated modal */}
               <motion.div
                 key="modal"
+                ref={createTrapRef}
+                role="dialog"
+                aria-modal="true"
+                aria-label="发布新动态"
                 initial={{ opacity: 0, scale: 0.93, y: 14 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.93, y: 14 }}

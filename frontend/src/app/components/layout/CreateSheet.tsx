@@ -1,19 +1,17 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { X, ImagePlus, MapPin, Send, Smile, Hash } from "lucide-react";
 import { motion } from "motion/react";
-import { useTheme } from "../../contexts/ThemeContext";
 
 const USER_AVATAR =
   "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400";
 
-const MOOD_TAGS = ["Calm", "Adventure", "Foodie", "Culture", "Nature", "Urban"];
+const MOOD_TAGS = ["平静", "冒险", "美食", "文化", "自然", "都市"];
 
 interface Props {
   onClose: () => void;
 }
 
 export function CreateSheet({ onClose }: Props) {
-  const { isDark, theme } = useTheme();
   const [text, setText] = useState("");
   const [selectedMoods, setSelectedMoods] = useState<Set<string>>(new Set());
   const [hasImage, setHasImage] = useState(false);
@@ -62,15 +60,16 @@ export function CreateSheet({ onClose }: Props) {
               className="text-[20px] tracking-tight"
               style={{ color: "var(--neu-text)" }}
             >
-              New Post
+              发布动态
             </h1>
             <p className="text-[12px] mt-0.5" style={{ color: "var(--neu-text-muted)" }}>
-              Share what's around you
+              分享你身边的新鲜事
             </p>
           </div>
 
           {/* Close button */}
           <motion.button
+            aria-label="关闭"
             whileTap={{ scale: 0.88 }}
             onClick={onClose}
             className="flex items-center justify-center rounded-full outline-none"
@@ -92,7 +91,7 @@ export function CreateSheet({ onClose }: Props) {
       </div>
 
       {/* ── Scrollable Body ─────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-4 flex flex-col gap-4">
+      <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-4 flex flex-col gap-4" style={{ overscrollBehavior: "contain" }}>
         {/* Author Row */}
         <div className="flex items-center gap-3">
           <div
@@ -105,7 +104,7 @@ export function CreateSheet({ onClose }: Props) {
                 "4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)",
             }}
           >
-            <img src={USER_AVATAR} alt="You" className="w-full h-full object-cover" />
+            <img src={USER_AVATAR} alt="我的头像" className="w-full h-full object-cover" />
           </div>
           <div>
             <p className="text-[13px]" style={{ color: "var(--neu-text)" }}>
@@ -114,7 +113,7 @@ export function CreateSheet({ onClose }: Props) {
             <div className="flex items-center gap-1">
               <MapPin style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
               <span className="text-[11px]" style={{ color: "var(--neu-text-muted)" }}>
-                Xuzhou, Jiangsu
+                徐州, 江苏
               </span>
             </div>
           </div>
@@ -133,15 +132,17 @@ export function CreateSheet({ onClose }: Props) {
           }}
         >
           <textarea
+            aria-label="发布内容"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="What's on your mind?"
+            placeholder="此刻在想什么？"
             className="w-full flex-1 bg-transparent outline-none resize-none text-[13px] leading-relaxed"
             style={{ color: "var(--neu-text)", minHeight: 90 }}
           />
           <div className="flex justify-between items-center mt-2">
             <div className="flex gap-2">
               <motion.button
+                aria-label="表情"
                 whileTap={{ scale: 0.88 }}
                 className="flex items-center justify-center rounded-full outline-none"
                 style={{
@@ -157,6 +158,7 @@ export function CreateSheet({ onClose }: Props) {
                 <Smile style={{ width: 15, height: 15 }} strokeWidth={1.5} />
               </motion.button>
               <motion.button
+                aria-label="话题标签"
                 whileTap={{ scale: 0.88 }}
                 className="flex items-center justify-center rounded-full outline-none"
                 style={{
@@ -196,11 +198,12 @@ export function CreateSheet({ onClose }: Props) {
           >
             <img
               src="https://images.unsplash.com/photo-1762113396314-8e9e5417ed17?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800"
-              alt="Selected"
+              alt="已选照片"
               className="w-full h-full object-cover"
             />
             <motion.button
-              whileTap={{ scale: 0.9 }}
+              aria-label="删除图片"
+              whileTap={{ scale: 0.85 }}
               onClick={() => setHasImage(false)}
               className="absolute top-2.5 right-2.5 rounded-full flex items-center justify-center outline-none"
               style={{
@@ -230,7 +233,7 @@ export function CreateSheet({ onClose }: Props) {
               strokeWidth={1.25}
             />
             <span className="text-[12px]" style={{ color: "var(--neu-text-muted)" }}>
-              Add photo
+              添加照片
             </span>
           </motion.button>
         )}
@@ -241,7 +244,7 @@ export function CreateSheet({ onClose }: Props) {
             className="text-[11px] uppercase tracking-widest mb-2.5"
             style={{ color: "var(--neu-text-muted)" }}
           >
-            Vibe
+            心情
           </p>
           <div className="flex flex-wrap gap-2">
             {MOOD_TAGS.map((tag) => {
@@ -249,14 +252,14 @@ export function CreateSheet({ onClose }: Props) {
               return (
                 <motion.button
                   key={tag}
-                  whileTap={{ scale: 0.92 }}
+                  whileTap={{ scale: 0.94 }}
                   onClick={() => toggleMood(tag)}
                   className="px-4 py-1.5 rounded-full text-[12px] outline-none transition-all duration-250"
                   style={
                     active
                       ? {
                           background: "var(--neu-accent-primary)",
-                          color: "white",
+                          color: "var(--text-on-accent, white)",
                           boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                           border: "1px solid transparent",
                         }
@@ -286,7 +289,7 @@ export function CreateSheet({ onClose }: Props) {
             canPost
               ? {
                   background: "var(--neu-accent-primary)",
-                  color: "white",
+                  color: "var(--text-on-accent, white)",
                   boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
                   border: "1px solid transparent",
                 }
@@ -301,7 +304,7 @@ export function CreateSheet({ onClose }: Props) {
                 }
           }
         >
-          <span>Share Post</span>
+          <span>发布</span>
           <Send style={{ width: 16, height: 16 }} strokeWidth={1.75} />
         </motion.button>
 

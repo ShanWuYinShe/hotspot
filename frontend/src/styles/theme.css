@@ -195,6 +195,14 @@
   --neu-accent-soft: rgba(212, 132, 90, 0.1);
   --neu-accent-soft-border: rgba(212, 132, 90, 0.28);
   --page-bg: #d0cbc3;
+  --theme-preview-bg: #eae5de;
+  --theme-preview-accent: #d4845a;
+  --bottom-nav-glass-bg: rgba(244, 238, 230, 0.84);
+  --bottom-nav-glass-border: rgba(212, 132, 90, 0.14);
+  --bottom-nav-glass-shadow:
+    0 -4px 18px rgba(116, 90, 66, 0.08), 0 10px 30px rgba(212, 132, 90, 0.12);
+  --fab-shadow:
+    0 8px 24px rgba(212, 132, 90, 0.28), 0 2px 6px rgba(111, 80, 56, 0.14);
 
   /* Hover — deep convex shadow lift */
   --hover-shadow-card:
@@ -222,6 +230,14 @@
   --neu-accent-soft: rgba(232, 168, 124, 0.12);
   --neu-accent-soft-border: rgba(232, 168, 124, 0.3);
   --page-bg: #0f1015;
+  --theme-preview-bg: #1a1c23;
+  --theme-preview-accent: #e8a87c;
+  --bottom-nav-glass-bg: rgba(26, 28, 35, 0.92);
+  --bottom-nav-glass-border: rgba(232, 168, 124, 0.14);
+  --bottom-nav-glass-shadow:
+    0 -4px 24px rgba(0, 0, 0, 0.42), 0 10px 32px rgba(0, 0, 0, 0.3);
+  --fab-shadow:
+    0 8px 24px rgba(232, 168, 124, 0.22), 0 2px 6px rgba(0, 0, 0, 0.28);
   /* Hover vars inherit from :root — auto-update via --neu-shadow-* */
 }
 
@@ -271,6 +287,14 @@
   --neu-border-pressed: rgba(61, 122, 85, 0.24);
   --neu-accent-soft: rgba(61, 122, 85, 0.1);
   --neu-accent-soft-border: rgba(61, 122, 85, 0.32);
+  --theme-preview-bg: #f9f9f5;
+  --theme-preview-accent: #3d7a55;
+  --bottom-nav-glass-bg: rgba(249, 249, 245, 0.9);
+  --bottom-nav-glass-border: rgba(61, 122, 85, 0.15);
+  --bottom-nav-glass-shadow:
+    0 -2px 16px rgba(61, 122, 85, 0.08), 0 8px 24px rgba(61, 122, 85, 0.1);
+  --fab-shadow:
+    0 6px 18px rgba(61, 122, 85, 0.32), 0 2px 4px rgba(0, 0, 0, 0.1);
 
   /* Hover */
   --hover-shadow-card: 0 0 0 1.5px rgba(61, 122, 85, 0.22);
@@ -302,6 +326,14 @@
   --neu-border-pressed: rgba(82, 184, 120, 0.22);
   --neu-accent-soft: rgba(82, 184, 120, 0.12);
   --neu-accent-soft-border: rgba(82, 184, 120, 0.34);
+  --theme-preview-bg: #161a16;
+  --theme-preview-accent: #52b878;
+  --bottom-nav-glass-bg: rgba(22, 26, 22, 0.92);
+  --bottom-nav-glass-border: rgba(82, 184, 120, 0.16);
+  --bottom-nav-glass-shadow:
+    0 -4px 24px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.28);
+  --fab-shadow:
+    0 6px 22px rgba(82, 184, 120, 0.38), 0 2px 6px rgba(0, 0, 0, 0.2);
 
   /* Hover */
   --hover-shadow-card: 0 0 0 1.5px rgba(82, 184, 120, 0.26);
@@ -332,6 +364,14 @@
   --neu-border-pressed: rgba(99, 102, 241, 0.26);
   --neu-accent-soft: rgba(99, 102, 241, 0.1);
   --neu-accent-soft-border: rgba(99, 102, 241, 0.3);
+  --theme-preview-bg: #fafafe;
+  --theme-preview-accent: #6366f1;
+  --bottom-nav-glass-bg: rgba(250, 250, 254, 0.9);
+  --bottom-nav-glass-border: rgba(99, 102, 241, 0.14);
+  --bottom-nav-glass-shadow:
+    0 -2px 16px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(99, 102, 241, 0.1);
+  --fab-shadow:
+    0 6px 18px rgba(99, 102, 241, 0.38), 0 2px 4px rgba(0, 0, 0, 0.1);
 
   /* Hover — directional accent-glow elevation */
   --hover-shadow-card:
@@ -360,6 +400,14 @@
   --neu-border-pressed: rgba(129, 140, 248, 0.26);
   --neu-accent-soft: rgba(129, 140, 248, 0.14);
   --neu-accent-soft-border: rgba(129, 140, 248, 0.34);
+  --theme-preview-bg: #130f26;
+  --theme-preview-accent: #818cf8;
+  --bottom-nav-glass-bg: rgba(19, 15, 38, 0.92);
+  --bottom-nav-glass-border: rgba(129, 140, 248, 0.18);
+  --bottom-nav-glass-shadow:
+    0 -4px 24px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.28);
+  --fab-shadow:
+    0 6px 22px rgba(129, 140, 248, 0.42), 0 2px 6px rgba(0, 0, 0, 0.2);
 
   /* Hover */
   --hover-shadow-card:
@@ -434,6 +482,19 @@
   }
 
   /*
+   * neu-field-focus — keep keyboard focus visible without the default
+   * square shadcn ring that clashes with the neumorphic surfaces.
+   */
+  .neu-field-focus:focus-visible {
+    border-color: var(--neu-accent-soft-border);
+    box-shadow:
+      inset 4px 4px 10px var(--neu-shadow-dark),
+      inset -4px -4px 10px var(--neu-shadow-light),
+      0 0 0 1px var(--neu-accent-soft-border);
+    outline: none;
+  }
+
+  /*
    * neu-icon-badge — small circular icon containers (凸起按钮感)
    */
   .neu-icon-badge {
@@ -482,6 +543,11 @@
     box-shadow: var(--hover-shadow-pill) !important;
   }
 
+  .neu-focus-ring:focus-visible {
+    outline: 2px solid var(--neu-accent-primary);
+    outline-offset: 3px;
+  }
+
   .no-scrollbar {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -527,7 +593,7 @@
     box-shadow:
       8px 8px 16px var(--neu-shadow-dark),
       -8px -8px 16px var(--neu-shadow-light),
-      0 0 20px rgba(244, 200, 155, 0.15);
+      0 0 20px var(--neu-glow);
   }
   .text-neu {
     color: var(--neu-text);

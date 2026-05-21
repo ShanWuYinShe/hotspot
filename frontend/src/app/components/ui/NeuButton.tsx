@@ -18,11 +18,11 @@ export const NeuButton = React.forwardRef<HTMLButtonElement, NeuButtonProps>(
     return (
       <motion.button
         ref={ref}
-        whileTap={hover.tap as any}
+        whileTap={hover.tap}
         whileHover={!active ? {
           ...hover.btn,
           y: -2,
-        } as any : {}}
+        } : {}}
         className={cn(
           "relative flex items-center justify-center rounded-[28px] outline-none select-none",
           "text-neu font-medium neu-pill-hover",

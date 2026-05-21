@@ -99,7 +99,7 @@ export function VisitorsCard() {
   return (
     <motion.button
       whileHover={{ y: -1 }}
-      whileTap={{ scale: 0.99 }}
+      whileTap={{ scale: 0.98 }}
       className="neu-surface-flat rounded-[18px] p-4 text-left outline-none w-full"
     >
       <div className="flex items-center justify-between mb-3">
@@ -162,7 +162,7 @@ export function MoodCheckinCard() {
         {MOODS.map(m => (
           <motion.button
             key={m.label}
-            whileTap={{ scale: 0.92 }}
+            whileTap={{ scale: 0.94 }}
             whileHover={{ y: -1 }}
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-full outline-none neu-surface-ghost"
             style={{ borderColor: "var(--neu-border)" }}
@@ -283,7 +283,7 @@ export function NearbyPulseCard() {
   return (
     <motion.button
       whileHover={{ y: -1 }}
-      whileTap={{ scale: 0.99 }}
+      whileTap={{ scale: 0.98 }}
       className="neu-surface-flat rounded-[18px] p-4 text-left outline-none w-full overflow-hidden relative"
     >
       <div className="flex items-center justify-between mb-2.5">
@@ -333,7 +333,7 @@ export function DailyPickCard() {
   return (
     <motion.button
       whileHover={{ y: -1 }}
-      whileTap={{ scale: 0.99 }}
+      whileTap={{ scale: 0.98 }}
       className="neu-surface-flat rounded-[18px] overflow-hidden text-left outline-none w-full"
     >
       <div
@@ -345,7 +345,7 @@ export function DailyPickCard() {
       >
         <img
           src="https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=400&q=80"
-          alt="pick"
+          alt="今日精选"
           className="w-full h-full object-cover"
           style={{ opacity: 0.92 }}
         />
@@ -400,7 +400,7 @@ export function VibeCard() {
             opacity: 0.9,
           }}
         >
-          <Music style={{ width: 14, height: 14, color: "white" }} strokeWidth={2} />
+          <Music style={{ width: 14, height: 14, color: "var(--text-on-accent, white)" }} strokeWidth={2} />
         </div>
         <div className="flex-1 min-w-0">
           <p style={{ fontSize: 11, color: "var(--neu-text)", lineHeight: 1.2 }} className="truncate">
