@@ -4,12 +4,16 @@
 # 变更:
 #   - 后端从源码构建，挂载编译产物，暴露调试端口
 #   - 前端使用 Vite HMR 开发服务器替代生产 Nginx 镜像
-#   - 暴露 postgres 端口到宿主机方便数据库工具直连
+#   - 暴露 postgres / seaweedfs 端口到宿主机方便工具直连
 
 services:
   postgres:
     ports:
       - "5432:5432"
+
+  seaweedfs:
+    ports:
+      - "8333:8333"
 
   backend:
     build:

@@ -1,9 +1,9 @@
 # ── HotSpot Base Configuration ────────────────────────────────────
-# 生产: docker compose up -d
-# 开发: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# 生产:   docker compose up -d
+# 开发:   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# 集成测试: docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm integration-test
 #
 # 密钥通过 .env 文件注入（复制 .env.example → .env 后填入真实值）。
-# build: 上下文仅在 dev override 中定义，base 引用预构建镜像。
 
 services:
   # ── Database ────────────────────────────────────────────────────

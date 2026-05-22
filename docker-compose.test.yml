@@ -1,0 +1,29 @@
+# ── HotSpot Integration Test ───────────────────────────────────────
+# 使用方式:
+#   docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm integration-test
+#
+# 说明:
+#   依赖基础 docker-compose.yml 中的 postgres / seaweedfs / backend 服务。
+#   先确保基础服务已启动: docker compose up -d
+#   再运行集成测试: docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm integration-test
+
+services:
+  integration-test:
+    build:
+      context: ./backend-go
+      dockerfile: test/integration/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    environment:
+      APP_ENV: test
+      BACKEND_URL: http://backend:8081
+      POSTGRES_DSN: postgres://postgres:${POSTGRES_PASSWORD:-change-me}@postgres:5432/hotspot?sslmode=disable
+    volumes:
+      - ./.local/test-results:/test-results
+    working_dir: /test
+    command: ["go", "test", "-v", "-count=1", "-timeout=180s", "./test/integration/..."]
