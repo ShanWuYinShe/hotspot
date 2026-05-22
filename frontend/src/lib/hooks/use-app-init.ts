@@ -4,6 +4,12 @@ import { useConfigStore } from '@/lib/stores/config';
 import { authService } from '@/lib/api/services/auth';
 import { usersService } from '@/lib/api/services/users';
 import { ensureRefreshToken, isSuccess } from '@/lib/api/client';
+import { useWebSocketStore } from '@/lib/websocket/store';
+import { setPresenceStore } from '@/lib/websocket/handlers';
+import { usePresenceStore } from '@/lib/stores/presence';
+import { useNotificationStore } from '@/lib/stores/notification';
+import { useMessageStore } from '@/lib/stores/message';
+import { useAdminPermissionsStore } from '@/lib/stores/admin-permissions';
 
 const CHECK_INTERVAL = 60 * 1000;
 const REFRESH_THRESHOLD = 3;
@@ -104,8 +110,19 @@ export function useAppInit() {
     // Start token refresh
     tokenRefreshManager.start();
 
+    // Initialize WebSocket and real-time stores
+    setPresenceStore(usePresenceStore.getState());
+    useWebSocketStore.getState().initialize();
+    useNotificationStore.getState().initialize();
+    useMessageStore.getState().initialize();
+    useAdminPermissionsStore.getState().initialize();
+
     return () => {
       tokenRefreshManager.stop();
+      useWebSocketStore.getState().destroy();
+      useNotificationStore.getState().destroy();
+      useMessageStore.getState().destroy();
+      useAdminPermissionsStore.getState().destroy();
     };
   }, []);
 }
