@@ -5,7 +5,8 @@
 ## 仓库地图
 - `backend/`：Rust 后端（**已暂停**），Axum + PostGIS。当前功能稳定、定型后可能重新用 Rust 全面实现以提高稳定性。现阶段仅保留代码，不做主动开发。
 - `backend-go/`：Go **主后端**，模块化单体 + S2 地理索引，当前所有后端开发在此进行。
-- `frontend_svelte/`：SvelteKit Web 前端，Svelte 5 + TypeScript。
+- `frontend/`：React SPA 前端（**正在从 `frontend_svelte/` 迁移**），Vite + TypeScript + Tailwind CSS。
+- `frontend_svelte/`：SvelteKit Web 前端（**迁移中**），待 `frontend/` 功能对齐后退役。
 - `harmonyapp/`：HarmonyOS ArkTS 客户端。
 - `spec/`：API 契约的唯一权威来源（只读）。
 
@@ -13,7 +14,6 @@
 - **格式化（最高优先级）**：修改代码后必须立即运行对应语言的格式化工具，提交前必须确认无格式差异。具体规则由各子项目的格式化配置文件定义（`.prettierrc`、`gofmt`、DevEco Studio 等），禁止手动调整格式。
 - **隔离开发**：所有写操作、测试和提交都在 `git worktree` 中完成；默认 worktree 目录为 `.worktrees/`。主目录仅用于同步和只读操作。
 - **契约权威**：`spec/` 是 API 契约的唯一权威来源；修改接口、字段、错误码前先对齐 `spec/`。
-- **格式化**：修改代码后必须运行对应语言的格式化工具，具体规则由各子项目的格式化配置文件定义；禁止手动调整格式。
 - **跨端边界**：距离与位置计算统一由后端完成，前端和客户端只展示结果。
 
 ## 规则优先级

@@ -56,7 +56,7 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 	if sourceMomentID != "" {
 		newFollowerPayload["source_moment_id"] = sourceMomentID
 	}
-	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "NewFollower", Payload: newFollowerPayload})
+	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeNewFollower, Payload: newFollowerPayload})
 	relation, err := s.repo.Relationship(ctx, targetUserID, principal.UserID)
 	if err != nil {
 		observability.L().Error("users.follow relationship check failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -75,8 +75,8 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 			}
 		}
 		mutualPayload := map[string]any{"actor": actor, "mutual_at": mutualAt}
-		realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: "MutualFollow", Payload: mutualPayload})
-		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "MutualFollow", Payload: mutualPayload})
+		realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayload})
+		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayload})
 	}
 	observability.L().Info("users.follow completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
@@ -99,6 +99,10 @@ func (s *Service) Unfollow(ctx context.Context, targetUserID string) error {
 		observability.L().Error("users.unfollow failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfRelationSync, Payload: map[string]any{
+		"action":         "unfollow",
+		"target_user_id": targetUserID,
+	}})
 	observability.L().Info("users.unfollow completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
@@ -120,6 +124,10 @@ func (s *Service) Block(ctx context.Context, targetUserID, reason string) error 
 		observability.L().Error("users.block failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfRelationSync, Payload: map[string]any{
+		"action":         "block",
+		"target_user_id": targetUserID,
+	}})
 	observability.L().Info("users.block completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
@@ -141,6 +149,10 @@ func (s *Service) Unblock(ctx context.Context, targetUserID string) error {
 		observability.L().Error("users.unblock failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfRelationSync, Payload: map[string]any{
+		"action":         "unblock",
+		"target_user_id": targetUserID,
+	}})
 	observability.L().Info("users.unblock completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }

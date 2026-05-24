@@ -6,9 +6,10 @@
 
 | 子项目 | 技术栈 |
 |--------|--------|
-| `backend/` | Rust / Axum / SQLx / PostGIS |
+| `backend/` | Rust / Axum / SQLx / PostGIS（已暂停） |
 | `backend-go/` | Go / Chi / pgx / PostgreSQL / S2 |
-| `frontend_svelte/` | SvelteKit / Svelte 5 / TypeScript |
+| `frontend/` | React / Vite / TypeScript / Tailwind CSS（迁移中） |
+| `frontend_svelte/` | SvelteKit / Svelte 5 / TypeScript（迁移中） |
 | `harmonyapp/` | HarmonyOS ArkTS |
 | `spec/` | API 规范 |
 
@@ -20,6 +21,22 @@
 - 普通分析、代码阅读、局部低副作用开发动作通常可以直接完成；中大型任务再升级到设计、计划或调试 skill。
 - 临时文件、中间文件、验证截图和调试输出统一写入 `.local/`，避免污染 git 状态。
 - 涉及数据库写入、迁移、跨服务联调等有副作用的操作，应在 Docker 隔离环境中执行。
+
+## Docker 环境
+
+```bash
+# 准备环境变量
+cp .env.example .env
+
+# 生产模式：构建并启动所有服务
+docker compose up --build -d
+
+# 开发模式：后端从源码构建 + 前端 Vite HMR
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+# 集成测试（需先启动基础服务）
+docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm integration-test
+```
 
 ## 任务与验证分级
 

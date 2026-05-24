@@ -33,7 +33,7 @@ func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) err
 		return err
 	}
 	s.notifyGroupInviteAccepted(ctx, invite, principal.UserID)
-	realtime.DefaultHub().BroadcastToGroup(invite.Group.GroupID, realtime.Event{Type: "GroupMemberJoined", Payload: map[string]any{"group_id": invite.Group.GroupID, "user": s.resolveUserInfo(ctx, principal.UserID), "role": string(GroupRoleMember), "member_count": invite.Group.MembersCount + 1, "joined_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToGroup(invite.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: map[string]any{"group_id": invite.Group.GroupID, "user": s.resolveUserInfo(ctx, principal.UserID), "role": string(GroupRoleMember), "member_count": invite.Group.MembersCount + 1, "joined_at": time.Now().UTC().Format(time.RFC3339)}})
 	return nil
 }
 

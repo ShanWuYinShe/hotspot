@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+
 	"hotspot/backend-go/internal/modules/groups"
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -26,6 +28,7 @@ type App struct {
 	router      http.Handler
 	modules     []modulekit.Module
 	persistence *persistence.Factory
+	bridge      *realtime.RedisBridge
 }
 
 func NewApp(cfg config.Config) (*App, error) {
@@ -43,6 +46,7 @@ func NewApp(cfg config.Config) (*App, error) {
 	}
 	resourceguard.SetDefaultChecker(newResourceGuardChecker(persistenceFactory))
 	modules := BuildModules(cfg, persistenceFactory)
+	bridge := initRedisBridge(cfg, logger)
 	router := NewHTTPRouterWithLogger(modules, logger)
 	rootMux := http.NewServeMux()
 	rootMux.Handle("/", router)
@@ -57,6 +61,7 @@ func NewApp(cfg config.Config) (*App, error) {
 		router:      rootMux,
 		modules:     modules,
 		persistence: persistenceFactory,
+		bridge:      bridge,
 	}, nil
 }
 
@@ -70,6 +75,12 @@ func (a *App) Logger() *observability.Logger {
 
 func (a *App) LogField(key string, value any) (string, any) {
 	return key, value
+}
+
+func (a *App) Shutdown() {
+	if a.bridge != nil {
+		a.bridge.Close()
+	}
 }
 
 func ensureSchema(cfg config.Config, factory *persistence.Factory) error {
@@ -97,4 +108,34 @@ func newResourceGuardChecker(factory *persistence.Factory) resourceguard.Checker
 		return resourceguard.NoopChecker{}
 	}
 	return resourceguard.NewDBChecker(queryable)
+}
+
+func initRedisBridge(cfg config.Config, logger *observability.Logger) *realtime.RedisBridge {
+	if cfg.RedisURL == "" {
+		logger.Info("redis not configured, realtime hub running in single-instance mode")
+		return nil
+	}
+	opts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		logger.Error("invalid redis url, falling back to single-instance mode", "err", err)
+		return nil
+	}
+	rdb := redis.NewClient(opts)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		logger.Error("redis connection failed, falling back to single-instance mode", "err", err)
+		rdb.Close()
+		return nil
+	}
+	instanceID := fmt.Sprintf("hs-%d", time.Now().UnixNano())
+	bridge, err := realtime.NewRedisBridge(rdb, instanceID, realtime.DefaultHub())
+	if err != nil {
+		logger.Error("redis bridge init failed, falling back to single-instance mode", "err", err)
+		rdb.Close()
+		return nil
+	}
+	realtime.DefaultHub().SetPublisher(bridge)
+	logger.Info("redis bridge initialized", "instance", instanceID)
+	return bridge
 }

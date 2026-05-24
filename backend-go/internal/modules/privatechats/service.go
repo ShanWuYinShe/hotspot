@@ -9,6 +9,7 @@ import (
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/realtime"
 )
 
 type userReader interface {
@@ -134,7 +135,16 @@ func (s *Service) UpdateSettings(ctx context.Context, req UpdatePrivateChatSetti
 	if _, err := s.repo.GetOrCreate(ctx, principal.UserID, req.TargetUserID); err != nil {
 		return err
 	}
-	return s.repo.UpdateSettings(ctx, principal.UserID, req.TargetUserID, UpdateChatSettings{IsMuted: req.IsMuted, IsPinned: req.IsPinned})
+	if err := s.repo.UpdateSettings(ctx, principal.UserID, req.TargetUserID, UpdateChatSettings{IsMuted: req.IsMuted, IsPinned: req.IsPinned}); err != nil {
+		return err
+	}
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfChatSettingsSync, Payload: map[string]any{
+		"chat_type": "private",
+		"target_id": req.TargetUserID,
+		"is_muted":  req.IsMuted,
+		"is_pinned": req.IsPinned,
+	}})
+	return nil
 }
 
 func (s *Service) Delete(ctx context.Context, targetUserID string) error {

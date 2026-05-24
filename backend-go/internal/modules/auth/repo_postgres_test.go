@@ -90,10 +90,10 @@ func TestPostgresRepositoryCreateGuestRollsBackProfileWhenSettingsWriteFails(t *
 	if backend.execs[0] != queryInsertUserProfile || backend.execs[1] != queryUpsertUserSettings || backend.execs[2] != queryDeleteUserProfileByUserID {
 		t.Fatalf("unexpected exec order: %#v", backend.execs)
 	}
-	if got := backend.execArgs[0][12]; got != "203.0.113.10" {
+	if got := backend.execArgs[0][11]; got != "203.0.113.10" {
 		t.Fatalf("unexpected register ip arg: %v", got)
 	}
-	if got := backend.execArgs[0][13]; got != "US" {
+	if got := backend.execArgs[0][12]; got != "US" {
 		t.Fatalf("unexpected register location arg: %v", got)
 	}
 }

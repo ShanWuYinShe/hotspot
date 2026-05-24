@@ -102,7 +102,7 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req 
 	if req.UpToMessageID == "" {
 		return queryable.Exec(ctx, queryMarkGroupMessagesReadToLatest, userID, req.GroupID)
 	}
-	var sentAt string
+	var sentAt time.Time
 	var messageID string
 	if err := queryable.QueryRow(ctx, queryGroupMessageReadStateByMessage, userID, req.GroupID, req.UpToMessageID).Scan(&sentAt, &messageID); err != nil {
 		return ErrMessageNotFound

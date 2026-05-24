@@ -25,6 +25,7 @@ type Config struct {
 	S3SecretKey            string
 	S3ForcePathStyle       bool
 	S3PublicForcePathStyle bool
+	RedisURL               string
 }
 
 func Load() Config {
@@ -51,6 +52,7 @@ func Load() Config {
 		S3SecretKey:            envOrDefault("S3_SECRET_KEY", ""),
 		S3ForcePathStyle:       envBoolOrDefault("S3_FORCE_PATH_STYLE", true),
 		S3PublicForcePathStyle: envBoolOrDefault("S3_PUBLIC_FORCE_PATH_STYLE", true),
+		RedisURL:               os.Getenv("REDIS_URL"),
 	}
 }
 

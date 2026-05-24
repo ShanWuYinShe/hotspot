@@ -99,7 +99,7 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 			payload["media"] = media
 		}
 	}
-	event := realtime.Event{Type: "PrivateMessageNew", Payload: payload}
+	event := realtime.Event{Type: realtime.EventTypePrivateMessageNew, Payload: payload}
 	realtime.DefaultHub().BroadcastToUser(req.TargetUserID, event)
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
 	return msg, nil
@@ -133,7 +133,7 @@ func (s *Service) Update(ctx context.Context, req UpdatePrivateMessageRequest) e
 		return err
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
-	event := realtime.Event{Type: "PrivateMessageEdited", Payload: map[string]any{
+	event := realtime.Event{Type: realtime.EventTypePrivateMessageEdited, Payload: map[string]any{
 		"message_id":     req.MessageID,
 		"target_user_id": meta.TargetUserID,
 		"content":        meta.Content,
@@ -152,7 +152,7 @@ func (s *Service) Recall(ctx context.Context, req RecallPrivateMessageRequest) e
 		return err
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
-	event := realtime.Event{Type: "PrivateMessageRecalled", Payload: map[string]any{
+	event := realtime.Event{Type: realtime.EventTypePrivateMessageRecalled, Payload: map[string]any{
 		"message_id":     req.MessageID,
 		"target_user_id": meta.TargetUserID,
 		"recalled_by":    s.resolveUserInfo(ctx, principal.UserID),
@@ -170,7 +170,7 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadReq
 		observability.L().Error("privatemessages.mark_as_read failed", "error", err, "target_user_id", req.TargetUserID, "up_to_message_id", req.UpToMessageID)
 		return err
 	}
-	event := realtime.Event{Type: "PrivateMessageRead", Payload: map[string]any{
+	event := realtime.Event{Type: realtime.EventTypePrivateMessageRead, Payload: map[string]any{
 		"target_user_id":   meta.TargetUserID,
 		"up_to_message_id": meta.MessageID,
 		"reader_id":        principal.UserID,
@@ -180,6 +180,11 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadReq
 	if principal.UserID != meta.TargetUserID {
 		realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
 	}
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfReadSync, Payload: map[string]any{
+		"chat_type":        "private",
+		"target_id":        req.TargetUserID,
+		"up_to_message_id": meta.MessageID,
+	}})
 	return nil
 }
 
@@ -189,6 +194,9 @@ func (s *Service) MarkAllRead(ctx context.Context) error {
 		observability.L().Error("privatemessages.mark_all_read failed", "error", err)
 		return err
 	}
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfReadSync, Payload: map[string]any{
+		"chat_type": "private",
+	}})
 	return nil
 }
 

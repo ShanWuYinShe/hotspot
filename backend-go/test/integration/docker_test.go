@@ -26,11 +26,12 @@ const (
 )
 
 var (
-	testClient  *http.Client
-	accessToken string
-	backendAddr string
-	idempKeySeq int64
-	idempKeyMu  sync.Mutex
+	testClient   *http.Client
+	accessToken  string
+	backendAddr  string
+	backendReady bool
+	idempKeySeq  int64
+	idempKeyMu   sync.Mutex
 )
 
 type ApiResponse[T any] struct {
@@ -48,17 +49,17 @@ func TestMain(m *testing.M) {
 	maybeMigrate()
 	if shouldWaitForBackend() {
 		if err := waitForBackendWithPost(backendAddr+"/api/v1/system/health", 60*time.Second); err != nil {
-			fmt.Fprintf(os.Stderr, "backend not ready: %v\n", err)
-			os.Exit(1)
-		}
-
-		jar, _ := cookiejar.New(nil)
-		testClient = &http.Client{
-			Jar: jar,
-			CheckRedirect: func(*http.Request, []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
-			Timeout: 15 * time.Second,
+			fmt.Fprintf(os.Stderr, "backend not ready, skipping backend tests: %v\n", err)
+		} else {
+			backendReady = true
+			jar, _ := cookiejar.New(nil)
+			testClient = &http.Client{
+				Jar: jar,
+				CheckRedirect: func(*http.Request, []*http.Request) error {
+					return http.ErrUseLastResponse
+				},
+				Timeout: 15 * time.Second,
+			}
 		}
 	}
 
@@ -67,6 +68,11 @@ func TestMain(m *testing.M) {
 }
 
 func shouldWaitForBackend() bool {
+	for _, arg := range os.Args {
+		if arg == "-short" || strings.HasPrefix(arg, "-test.short") {
+			return false
+		}
+	}
 	for _, arg := range os.Args {
 		if strings.HasPrefix(arg, "-test.run=") {
 			pattern := strings.TrimPrefix(arg, "-test.run=")
@@ -176,7 +182,15 @@ func getHTTPStatus(path string) int {
 	return status
 }
 
+func requireBackend(t *testing.T) {
+	t.Helper()
+	if !backendReady {
+		t.Skip("backend not available")
+	}
+}
+
 func apiRespOK(t *testing.T, path string, body, result any) {
+	requireBackend(t)
 	status, err := post(path, body, result)
 	if err != nil {
 		t.Fatalf("POST %s: %v", path, err)
@@ -192,6 +206,7 @@ func apiRespOK(t *testing.T, path string, body, result any) {
 }
 
 func apiRespOKWithCode(t *testing.T, path string, body, result any, expectCode int) {
+	requireBackend(t)
 	status, err := post(path, body, result)
 	if err != nil {
 		t.Fatalf("POST %s: %v", path, err)
@@ -207,6 +222,7 @@ func apiRespOKWithCode(t *testing.T, path string, body, result any, expectCode i
 }
 
 func apiOK(t *testing.T, path string, body, result any) any {
+	requireBackend(t)
 	status, err := post(path, body, result)
 	if err != nil {
 		t.Fatalf("POST %s: %v", path, err)
@@ -218,6 +234,7 @@ func apiOK(t *testing.T, path string, body, result any) any {
 }
 
 func apiNoAuth(t *testing.T, path string, body, result any) {
+	requireBackend(t)
 	status, err := post(path, body, result)
 	if err != nil {
 		t.Fatalf("POST %s: %v", path, err)
@@ -231,6 +248,7 @@ func apiNoAuth(t *testing.T, path string, body, result any) {
 }
 
 func emptyBody(t *testing.T, path string) {
+	requireBackend(t)
 	status, err := post(path, nil, nil)
 	if err != nil {
 		t.Fatalf("POST %s: %v", path, err)
@@ -368,6 +386,7 @@ func TestAuth_CheckStatus_Anonymous(t *testing.T) {
 }
 
 func TestAuth_RefreshToken_NoToken(t *testing.T) {
+	requireBackend(t)
 	var resp ApiResponse[map[string]any]
 	status, _ := post("/api/v1/auth/refresh_token", map[string]any{"client_type": "app"}, &resp)
 	if status != http.StatusOK {

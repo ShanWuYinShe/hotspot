@@ -83,13 +83,14 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 	items := make([]CommentItem, 0, limit+1)
 	for rows.Next() {
 		var item CommentItem
-		var userID, parentID, createdAt string
+		var userID, parentID string
+		var createdAt time.Time
 		if err := rows.Scan(&item.CommentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount); err != nil {
 			return PaginatedComments{}, err
 		}
 		item.User = UserInfo{UserID: userID, Nickname: userID}
 		item.ParentID = parentID
-		item.CreatedAt = createdAt
+		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		item.MyState = &MyCommentState{IsLiked: false}
 		items = append(items, item)
 	}
@@ -112,7 +113,8 @@ func (r *PostgresRepository) Get(ctx context.Context, commentID string) (Comment
 	}
 	row := queryable.QueryRow(ctx, queryGetComment, commentID)
 	var item CommentItem
-	var userID, parentID, createdAt string
+	var userID, parentID string
+	var createdAt time.Time
 	if err := row.Scan(&item.CommentID, &item.MomentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return CommentItem{}, false, nil
@@ -121,7 +123,7 @@ func (r *PostgresRepository) Get(ctx context.Context, commentID string) (Comment
 	}
 	item.User = UserInfo{UserID: userID, Nickname: userID}
 	item.ParentID = parentID
-	item.CreatedAt = createdAt
+	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	item.MyState = &MyCommentState{IsLiked: false}
 	return item, true, nil
 }
@@ -147,13 +149,14 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 	items := make([]CommentItem, 0, limit+1)
 	for rows.Next() {
 		var item CommentItem
-		var userID, parentID, createdAt string
+		var userID, parentID string
+		var createdAt time.Time
 		if err := rows.Scan(&item.CommentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount); err != nil {
 			return PaginatedComments{}, err
 		}
 		item.User = UserInfo{UserID: userID, Nickname: userID}
 		item.ParentID = parentID
-		item.CreatedAt = createdAt
+		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		item.MyState = &MyCommentState{IsLiked: false}
 		items = append(items, item)
 	}
@@ -225,9 +228,11 @@ func (r *PostgresRepository) ListLikes(ctx context.Context, commentID string, li
 	items := make([]CommentLikeItem, 0, limit+1)
 	for rows.Next() {
 		var item CommentLikeItem
-		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &item.LikedAt); err != nil {
+		var likedAt time.Time
+		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &likedAt); err != nil {
 			return nil, "", err
 		}
+		item.LikedAt = likedAt.UTC().Format(time.RFC3339)
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {

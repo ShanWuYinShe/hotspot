@@ -50,7 +50,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	var authEvent Event
 	if err := conn.ReadJSON(&authEvent); err != nil || authEvent.Type != "Auth" {
-		_ = conn.WriteJSON(Event{Type: "Error", Payload: ErrorPayload{Code: 20000, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
+		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
 		return
 	}
 	var authPayload AuthPayload
@@ -64,7 +64,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	principal, _, ok := h.auth.AuthenticateRequest(ctx, authorization, accessCookie)
 	if !ok {
-		_ = conn.WriteJSON(Event{Type: "Error", Payload: ErrorPayload{Code: 20000, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
+		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
 		return
 	}
 	principalCtx := platformauth.WithPrincipal(ctx, principal)
@@ -72,11 +72,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	sink := &socketSink{conn: conn}
 	if DefaultHub().RegisterUser(principal.UserID, principal.SessionID, sink) {
-		DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: "UserOnline", Payload: UserOnlinePayload{UserID: principal.UserID, OnlineAt: time.Now().UTC().Format(time.RFC3339)}})
+		DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOnline, Payload: UserOnlinePayload{UserID: principal.UserID, OnlineAt: time.Now().UTC().Format(time.RFC3339)}})
 	}
 	defer func() {
 		if DefaultHub().UnregisterUser(principal.UserID, principal.SessionID, sink) {
-			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: "UserOffline", Payload: UserOfflinePayload{UserID: principal.UserID, OfflineAt: time.Now().UTC().Format(time.RFC3339)}})
+			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOffline, Payload: UserOfflinePayload{UserID: principal.UserID, OfflineAt: time.Now().UTC().Format(time.RFC3339)}})
 		}
 	}()
 
@@ -86,7 +86,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	payload.Config.PingTimeout = 10
 	payload.Config.MaxSubscriptions.User = 500
 	payload.Config.MaxSubscriptions.Group = 100
-	if err := sink.Send(Event{Type: "ConnectionEstablished", Payload: payload}); err != nil {
+	if err := sink.Send(Event{Type: EventTypeConnectionEstablished, Payload: payload}); err != nil {
 		return
 	}
 
@@ -99,20 +99,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 		switch msg.Type {
 		case "Ping":
-			_ = sink.Send(Event{Type: "Pong", Payload: PingPayload{}})
+			_ = sink.Send(Event{Type: EventTypePong, Payload: PingPayload{}})
 		case "GetSubscriptions":
 			var payload GetSubscriptionsPayload
 			blob, _ := json.Marshal(msg.Payload)
 			_ = json.Unmarshal(blob, &payload)
 			snapshot := subs.snapshot()
 			snapshot.ClientRequestID = payload.ClientRequestID
-			_ = sink.Send(Event{Type: "SubscriptionsSnapshot", Payload: snapshot})
+			_ = sink.Send(Event{Type: EventTypeSubscriptionsSnapshot, Payload: snapshot})
 		case "SetSubscriptions":
 			var payload SetSubscriptionsPayload
 			blob, _ := json.Marshal(msg.Payload)
 			_ = json.Unmarshal(blob, &payload)
 			if retryAfter, limited := ratelimit.AllowWebsocketSubscribe(r.Context(), principal.UserID, connectionID); limited {
-				_ = sink.Send(Event{Type: "Error", Payload: ErrorPayload{Code: 20300, Message: "请求过于频繁", Severity: "recoverable", Retryable: true, RetryAfter: retryAfter}})
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20300, Message: "请求过于频繁", Severity: "recoverable", Retryable: true, RetryAfter: retryAfter}})
 				continue
 			}
 			limit := 500
@@ -134,15 +134,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					ack.Message = "订阅部分失败"
 				}
 			}
-			_ = sink.Send(Event{Type: "SubscribeAck", Payload: ack})
+			_ = sink.Send(Event{Type: EventTypeSubscribeAck, Payload: ack})
 			snapshot.ClientRequestID = payload.ClientRequestID
-			_ = sink.Send(Event{Type: "SubscriptionsSnapshot", Payload: snapshot})
+			_ = sink.Send(Event{Type: EventTypeSubscriptionsSnapshot, Payload: snapshot})
 		case "PrivateTyping":
 			var payload PrivateTypingPayload
 			blob, _ := json.Marshal(msg.Payload)
 			_ = json.Unmarshal(blob, &payload)
 			if !h.canSendPrivateTyping(principalCtx, principal.UserID, payload.TargetUserID) {
-				_ = sink.Send(Event{Type: "Error", Payload: ErrorPayload{Code: 20400, Message: "无权限", Severity: "warning", Retryable: false}})
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20400, Message: "无权限", Severity: "warning", Retryable: false}})
 				continue
 			}
 			typingKey := fmt.Sprintf("typing:%s:%s", principal.UserID, payload.TargetUserID)
@@ -152,14 +152,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			h.typingThrottle.Store(typingKey, time.Now())
-			DefaultHub().BroadcastToUser(payload.TargetUserID, Event{Type: "PrivateUserTyping", Payload: map[string]any{"user_id": principal.UserID, "target_user_id": payload.TargetUserID, "is_typing": payload.IsTyping}})
-			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: "PrivateUserTyping", Payload: map[string]any{"user_id": principal.UserID, "target_user_id": payload.TargetUserID, "is_typing": payload.IsTyping}})
+			DefaultHub().BroadcastToUser(payload.TargetUserID, Event{Type: EventTypePrivateUserTyping, Payload: map[string]any{"user_id": principal.UserID, "target_user_id": payload.TargetUserID, "is_typing": payload.IsTyping}})
+			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypePrivateUserTyping, Payload: map[string]any{"user_id": principal.UserID, "target_user_id": payload.TargetUserID, "is_typing": payload.IsTyping}})
 		case "GroupTyping":
 			var payload GroupTypingPayload
 			blob, _ := json.Marshal(msg.Payload)
 			_ = json.Unmarshal(blob, &payload)
 			if !h.isGroupMember(principalCtx, principal.UserID, payload.GroupID) {
-				_ = sink.Send(Event{Type: "Error", Payload: ErrorPayload{Code: 20400, Message: "无权限", Severity: "warning", Retryable: false}})
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20400, Message: "无权限", Severity: "warning", Retryable: false}})
 				continue
 			}
 			typingKey := fmt.Sprintf("typing:%s:%s", principal.UserID, payload.GroupID)
@@ -169,11 +169,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			h.typingThrottle.Store(typingKey, time.Now())
-			DefaultHub().BroadcastToGroup(payload.GroupID, Event{Type: "GroupUserTyping", Payload: map[string]any{"user_id": principal.UserID, "group_id": payload.GroupID, "is_typing": payload.IsTyping}})
+			DefaultHub().BroadcastToGroup(payload.GroupID, Event{Type: EventTypeGroupUserTyping, Payload: map[string]any{"user_id": principal.UserID, "group_id": payload.GroupID, "is_typing": payload.IsTyping}})
 		case "Auth":
-			_ = sink.Send(Event{Type: "Error", Payload: ErrorPayload{Code: 20000, Message: "重复鉴权", Severity: "warning", Retryable: false}})
+			_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "重复鉴权", Severity: "warning", Retryable: false}})
 		default:
-			_ = sink.Send(Event{Type: "Error", Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
+			_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
 		}
 	}
 }

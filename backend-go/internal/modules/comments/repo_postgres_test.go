@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sort"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -25,6 +26,14 @@ func (r rowValues) Scan(dest ...any) error {
 			*d = r.values[i].(string)
 		case *int:
 			*d = r.values[i].(int)
+		case *time.Time:
+			switch v := r.values[i].(type) {
+			case string:
+				parsed, _ := time.Parse(time.RFC3339, v)
+				*d = parsed
+			case time.Time:
+				*d = v
+			}
 		}
 	}
 	return nil

@@ -26,6 +26,14 @@ func (r privateMessageRowValues) Scan(dest ...any) error {
 			*d = r.values[i].(string)
 		case *bool:
 			*d = r.values[i].(bool)
+		case *time.Time:
+			switch v := r.values[i].(type) {
+			case time.Time:
+				*d = v
+			case string:
+				t, _ := time.Parse(time.RFC3339Nano, v)
+				*d = t
+			}
 		}
 	}
 	return nil
@@ -92,6 +100,13 @@ func normalizeStringArg(v any) string {
 	return ""
 }
 
+func sentAtString(v any) string {
+	if t, ok := v.(time.Time); ok {
+		return t.Format(time.RFC3339Nano)
+	}
+	return v.(string)
+}
+
 func (b *privateMessageBackendStub) Exec(_ context.Context, query string, args ...any) error {
 	if err := b.execErrs[query]; err != nil {
 		return err
@@ -145,7 +160,7 @@ func (b *privateMessageBackendStub) Exec(_ context.Context, query string, args .
 		chatKey := args[0].(string)
 		userID := args[1].(string)
 		messageID := args[2].(string)
-		sentAt := args[3].(string)
+		sentAt := sentAtString(args[3])
 		if b.readStates[chatKey] == nil {
 			b.readStates[chatKey] = map[string]privateMessageReadState{}
 		}

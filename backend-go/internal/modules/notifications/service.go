@@ -203,5 +203,5 @@ func (s *Service) AppendMentioned(ctx context.Context, targetUserID string, acto
 }
 
 func (s *Service) PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem) {
-	realtime.DefaultHub().BroadcastToAll(realtime.Event{Type: "SystemAnnouncement", Payload: item})
+	realtime.DefaultHub().BroadcastToAll(realtime.Event{Type: realtime.EventTypeSystemAnnouncement, Payload: item})
 }

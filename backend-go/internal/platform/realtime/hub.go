@@ -1,6 +1,9 @@
 package realtime
 
-import "sync"
+import (
+	"context"
+	"sync"
+)
 
 type FanoutSink interface {
 	Send(Event) error
@@ -13,10 +16,17 @@ type Hub struct {
 	bySession      map[string][]FanoutSink
 	byUserWatchers map[string][]FanoutSink
 	byGroup        map[string][]FanoutSink
+	publisher      EventPublisher
 }
 
 func NewHub() *Hub {
 	return &Hub{byUser: map[string][]FanoutSink{}, bySession: map[string][]FanoutSink{}, byUserWatchers: map[string][]FanoutSink{}, byGroup: map[string][]FanoutSink{}}
+}
+
+func (h *Hub) SetPublisher(p EventPublisher) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.publisher = p
 }
 
 func (h *Hub) RegisterUser(userID, sessionID string, sink FanoutSink) bool {
@@ -103,6 +113,11 @@ func (h *Hub) SetGroupSubscriptions(groupIDs []string, sink FanoutSink) {
 }
 
 func (h *Hub) BroadcastToUser(userID string, event Event) {
+	h.deliverUserLocal(userID, event)
+	h.publish("user:"+userID, event)
+}
+
+func (h *Hub) deliverUserLocal(userID string, event Event) {
 	h.mu.RLock()
 	sinks := append([]FanoutSink(nil), h.byUser[userID]...)
 	h.mu.RUnlock()
@@ -112,6 +127,11 @@ func (h *Hub) BroadcastToUser(userID string, event Event) {
 }
 
 func (h *Hub) BroadcastToUserSubscribers(userID string, event Event) {
+	h.deliverUserSubscribersLocal(userID, event)
+	h.publish("usersub:"+userID, event)
+}
+
+func (h *Hub) deliverUserSubscribersLocal(userID string, event Event) {
 	h.mu.RLock()
 	sinks := append([]FanoutSink(nil), h.byUserWatchers[userID]...)
 	h.mu.RUnlock()
@@ -121,6 +141,11 @@ func (h *Hub) BroadcastToUserSubscribers(userID string, event Event) {
 }
 
 func (h *Hub) BroadcastToGroup(groupID string, event Event) {
+	h.deliverGroupLocal(groupID, event)
+	h.publish("group:"+groupID, event)
+}
+
+func (h *Hub) deliverGroupLocal(groupID string, event Event) {
 	h.mu.RLock()
 	sinks := append([]FanoutSink(nil), h.byGroup[groupID]...)
 	h.mu.RUnlock()
@@ -130,6 +155,11 @@ func (h *Hub) BroadcastToGroup(groupID string, event Event) {
 }
 
 func (h *Hub) BroadcastToAll(event Event) {
+	h.deliverAllLocal(event)
+	h.publish("all", event)
+}
+
+func (h *Hub) deliverAllLocal(event Event) {
 	h.mu.RLock()
 	sinks := make([]FanoutSink, 0, len(h.bySession))
 	for _, sessionSinks := range h.bySession {
@@ -138,5 +168,14 @@ func (h *Hub) BroadcastToAll(event Event) {
 	h.mu.RUnlock()
 	for _, sink := range sinks {
 		_ = sink.Send(event)
+	}
+}
+
+func (h *Hub) publish(channel string, event Event) {
+	h.mu.RLock()
+	p := h.publisher
+	h.mu.RUnlock()
+	if p != nil {
+		_ = p.Publish(context.Background(), channel, event)
 	}
 }

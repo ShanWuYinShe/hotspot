@@ -56,6 +56,10 @@ func RequiredAuth(next http.Handler) http.Handler {
 		}
 		ctx = WithPrincipal(ctx, principal)
 		ctx = WithAccessExpiry(ctx, expiresAt)
+		if detectPlatform(r) == "web" && !ValidateCSRF(r) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10100, "CSRF token 校验失败"))
+			return
+		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

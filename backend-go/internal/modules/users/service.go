@@ -93,7 +93,7 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateProfileRequest)
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	event := realtime.Event{
-		Type: "UserProfileUpdated",
+		Type: realtime.EventTypeUserProfileUpdated,
 		Payload: map[string]any{
 			"user_id":    principal.UserID,
 			"updated_at": now,
@@ -241,7 +241,7 @@ func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest)
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	event := realtime.Event{
-		Type: "UserProfileUpdated",
+		Type: realtime.EventTypeUserProfileUpdated,
 		Payload: map[string]any{
 			"user_id":    principal.UserID,
 			"updated_at": now,

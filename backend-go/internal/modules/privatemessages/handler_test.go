@@ -252,7 +252,7 @@ func TestMarkAsReadBroadcastsPrivateMessageReadToTarget(t *testing.T) {
 	}
 }
 
-func TestMarkAllReadDoesNotBroadcast(t *testing.T) {
+func TestMarkAllReadBroadcastsSelfReadSync(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
 
@@ -272,8 +272,11 @@ func TestMarkAllReadDoesNotBroadcast(t *testing.T) {
 		t.Fatalf("mark all read: %v", err)
 	}
 
-	if len(sink.events) != 0 {
-		t.Fatalf("expected no events for MarkAllRead, got %d", len(sink.events))
+	if len(sink.events) != 1 {
+		t.Fatalf("expected 1 SelfReadSync event, got %d", len(sink.events))
+	}
+	if sink.events[0].Type != realtime.EventTypeSelfReadSync {
+		t.Fatalf("expected SelfReadSync event, got %s", sink.events[0].Type)
 	}
 }
 

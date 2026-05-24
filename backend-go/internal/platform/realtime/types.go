@@ -1,5 +1,85 @@
 package realtime
 
+// 连接管理
+const (
+	EventTypeConnectionEstablished = "ConnectionEstablished"
+	EventTypePong                  = "Pong"
+	EventTypeError                 = "Error"
+	EventTypeSubscribeAck          = "SubscribeAck"
+	EventTypeSubscriptionsSnapshot = "SubscriptionsSnapshot"
+)
+
+// 用户状态
+const (
+	EventTypeUserOnline  = "UserOnline"
+	EventTypeUserOffline = "UserOffline"
+)
+
+// 社交
+const (
+	EventTypeNewFollower  = "NewFollower"
+	EventTypeMutualFollow = "MutualFollow"
+)
+
+// 瞬间互动
+const (
+	EventTypeMomentLiked      = "MomentLiked"
+	EventTypeMomentCommented  = "MomentCommented"
+	EventTypeCommentLiked     = "CommentLiked"
+	EventTypeCommentReply     = "CommentReply"
+	EventTypeMessageMentioned = "MessageMentioned"
+)
+
+// 私聊
+const (
+	EventTypePrivateMessageNew      = "PrivateMessageNew"
+	EventTypePrivateMessageEdited   = "PrivateMessageEdited"
+	EventTypePrivateMessageRecalled = "PrivateMessageRecalled"
+	EventTypePrivateMessageRead     = "PrivateMessageRead"
+	EventTypePrivateUserTyping      = "PrivateUserTyping"
+)
+
+// 群聊
+const (
+	EventTypeGroupMessageNew      = "GroupMessageNew"
+	EventTypeGroupMessageEdited   = "GroupMessageEdited"
+	EventTypeGroupMessageRecalled = "GroupMessageRecalled"
+	EventTypeGroupUserTyping      = "GroupUserTyping"
+)
+
+// 群组管理
+const (
+	EventTypeGroupMemberJoined        = "GroupMemberJoined"
+	EventTypeGroupMemberLeft          = "GroupMemberLeft"
+	EventTypeGroupMemberRemoved       = "GroupMemberRemoved"
+	EventTypeGroupMemberMuted         = "GroupMemberMuted"
+	EventTypeGroupMemberUnmuted       = "GroupMemberUnmuted"
+	EventTypeGroupInviteReceived      = "GroupInviteReceived"
+	EventTypeGroupInviteResponse      = "GroupInviteResponse"
+	EventTypeGroupApplicationReceived = "GroupApplicationReceived"
+	EventTypeGroupApplicationResponse = "GroupApplicationResponse"
+	EventTypeGroupAnnouncementCreated = "GroupAnnouncementCreated"
+	EventTypeGroupUpdated             = "GroupUpdated"
+	EventTypeGroupDismissed           = "GroupDismissed"
+)
+
+// 用户
+const EventTypeUserProfileUpdated = "UserProfileUpdated"
+
+// 系统
+const (
+	EventTypeSystemAnnouncement = "SystemAnnouncement"
+	EventTypeAccountBanned      = "AccountBanned"
+)
+
+// 多端同步（Deferred）
+const (
+	EventTypeSelfReadSync         = "SelfReadSync"
+	EventTypeSelfChatSettingsSync = "SelfChatSettingsSync"
+	EventTypeSelfSettingsUpdated  = "SelfSettingsUpdated"
+	EventTypeSelfRelationSync     = "SelfRelationSync"
+)
+
 type Event struct {
 	Type    string `json:"type"`
 	Payload any    `json:"payload"`

@@ -381,7 +381,7 @@ func (s *Service) DismissGroup(ctx context.Context, req AdminDismissGroupRequest
 	if !found {
 		return &httpx.APIError{Code: 10300, Message: "群组不存在"}, nil
 	}
-	event := realtime.Event{Type: "GroupDismissed", Payload: map[string]any{"group_id": req.GroupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "policy_violation"}}
+	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: map[string]any{"group_id": req.GroupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "policy_violation"}}
 	for _, userID := range memberIDs {
 		realtime.DefaultHub().BroadcastToUser(userID, event)
 	}
@@ -550,7 +550,7 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 		return nil, err
 	}
 	for _, sessionID := range sessionIDs {
-		realtime.DefaultHub().CloseSession(sessionID, realtime.Event{Type: "AccountBanned", Payload: payload})
+		realtime.DefaultHub().CloseSession(sessionID, realtime.Event{Type: realtime.EventTypeAccountBanned, Payload: payload})
 		if err := s.repo.RevokeSession(ctx, sessionID); err != nil {
 			return nil, err
 		}

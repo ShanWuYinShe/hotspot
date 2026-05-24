@@ -43,7 +43,7 @@ func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplic
 		return err
 	}
 	s.notifyGroupApplicationAccepted(ctx, group, application)
-	realtime.DefaultHub().BroadcastToGroup(group.Group.GroupID, realtime.Event{Type: "GroupMemberJoined", Payload: map[string]any{"group_id": group.Group.GroupID, "user": s.resolveUserInfo(ctx, application.Applicant.UserID), "role": string(GroupRoleMember), "member_count": group.Group.MembersCount + 1, "joined_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToGroup(group.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: map[string]any{"group_id": group.Group.GroupID, "user": s.resolveUserInfo(ctx, application.Applicant.UserID), "role": string(GroupRoleMember), "member_count": group.Group.MembersCount + 1, "joined_at": time.Now().UTC().Format(time.RFC3339)}})
 	return nil
 }
 
@@ -98,7 +98,7 @@ func (s *Service) MuteMember(ctx context.Context, req MuteMemberRequest) error {
 		return err
 	}
 	event := realtime.Event{
-		Type: "GroupMemberMuted",
+		Type: realtime.EventTypeGroupMemberMuted,
 		Payload: map[string]any{
 			"group_id":         req.GroupID,
 			"user":             s.resolveUserInfo(ctx, req.UserID),
@@ -129,7 +129,7 @@ func (s *Service) UnmuteMember(ctx context.Context, req UnmuteMemberRequest) err
 		return err
 	}
 	event := realtime.Event{
-		Type: "GroupMemberUnmuted",
+		Type: realtime.EventTypeGroupMemberUnmuted,
 		Payload: map[string]any{
 			"group_id":   req.GroupID,
 			"user":       s.resolveUserInfo(ctx, req.UserID),
@@ -162,7 +162,7 @@ func (s *Service) BanMember(ctx context.Context, req BanMemberRequest) error {
 		return err
 	}
 	event := realtime.Event{
-		Type: "GroupMemberRemoved",
+		Type: realtime.EventTypeGroupMemberRemoved,
 		Payload: map[string]any{
 			"group_id":     req.GroupID,
 			"user":         s.resolveUserInfo(ctx, req.UserID),
@@ -236,7 +236,7 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 		return err
 	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
-		Type: "GroupMemberRemoved",
+		Type: realtime.EventTypeGroupMemberRemoved,
 		Payload: map[string]any{
 			"group_id":     req.GroupID,
 			"user":         s.resolveUserInfo(ctx, req.UserID),
@@ -247,7 +247,7 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 		},
 	})
 	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{
-		Type: "GroupMemberRemoved",
+		Type: realtime.EventTypeGroupMemberRemoved,
 		Payload: map[string]any{
 			"group_id":     req.GroupID,
 			"reason":       "kicked",

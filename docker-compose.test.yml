@@ -9,9 +9,7 @@
 
 services:
   integration-test:
-    build:
-      context: ./backend-go
-      dockerfile: test/integration/Dockerfile
+    image: golang:1.26.2-alpine
     depends_on:
       postgres:
         condition: service_healthy
@@ -24,6 +22,10 @@ services:
       BACKEND_URL: http://backend:8081
       POSTGRES_DSN: postgres://postgres:${POSTGRES_PASSWORD:-change-me}@postgres:5432/hotspot?sslmode=disable
     volumes:
-      - ./.local/test-results:/test-results
+      - ./backend-go:/test
+      - go-module-cache:/go
     working_dir: /test
-    command: ["go", "test", "-v", "-count=1", "-timeout=180s", "./test/integration/..."]
+    command: ["go", "test", "-v", "-count=1", "-timeout=180s", "./..."]
+
+volumes:
+  go-module-cache:

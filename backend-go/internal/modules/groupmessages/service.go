@@ -68,7 +68,7 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 			payload["media"] = media
 		}
 	}
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{Type: "GroupMessageNew", Payload: payload})
+	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageNew, Payload: payload})
 	return msg, nil
 }
 func (s *Service) History(ctx context.Context, groupID string, pagination *PaginationParams) (PaginatedGroupMessages, error) {
@@ -85,7 +85,7 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupMessageRequest) err
 		observability.L().Error("groupmessages.update failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: "GroupMessageEdited", Payload: map[string]any{
+	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageEdited, Payload: map[string]any{
 		"group_id":   meta.GroupID,
 		"message_id": meta.MessageID,
 		"content":    meta.Content,
@@ -100,7 +100,7 @@ func (s *Service) Recall(ctx context.Context, req RecallGroupMessageRequest) err
 		observability.L().Error("groupmessages.recall failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: "GroupMessageRecalled", Payload: map[string]any{
+	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageRecalled, Payload: map[string]any{
 		"group_id":    meta.GroupID,
 		"message_id":  meta.MessageID,
 		"recalled_by": map[string]any{"user_id": req.UserID},
@@ -115,6 +115,11 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkGroupMessagesReadReque
 		observability.L().Error("groupmessages.mark_as_read failed", "error", err, "group_id", req.GroupID, "up_to_message_id", req.UpToMessageID, "user_id", principal.UserID)
 		return err
 	}
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfReadSync, Payload: map[string]any{
+		"chat_type":        "group",
+		"target_id":        req.GroupID,
+		"up_to_message_id": req.UpToMessageID,
+	}})
 	return nil
 }
 
@@ -124,6 +129,9 @@ func (s *Service) MarkAllRead(ctx context.Context) error {
 		observability.L().Error("groupmessages.mark_all_read failed", "error", err, "user_id", principal.UserID)
 		return err
 	}
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfReadSync, Payload: map[string]any{
+		"chat_type": "group",
+	}})
 	return nil
 }
 

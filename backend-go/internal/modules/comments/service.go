@@ -179,7 +179,7 @@ func (s *Service) Like(ctx context.Context, req LikeCommentRequest) error {
 			observability.L().Error("comments.like append comment_liked notification failed", "error", err, "moment_id", comment.MomentID, "comment_id", comment.CommentID, "target_user_id", comment.User.UserID)
 		}
 	}
-	realtime.DefaultHub().BroadcastToUser(comment.User.UserID, realtime.Event{Type: "CommentLiked", Payload: map[string]any{
+	realtime.DefaultHub().BroadcastToUser(comment.User.UserID, realtime.Event{Type: realtime.EventTypeCommentLiked, Payload: map[string]any{
 		"comment_id":      comment.CommentID,
 		"moment_id":       comment.MomentID,
 		"moment_summary":  cloneSummary(momentSummary),
@@ -256,7 +256,7 @@ func (s *Service) notifyMomentAuthor(ctx context.Context, momentContext MomentNo
 			observability.L().Error("comments.create append moment_commented notification failed", "error", err, "moment_id", item.MomentID, "comment_id", item.CommentID, "target_user_id", targetUserID)
 		}
 	}
-	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "MomentCommented", Payload: map[string]any{
+	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMomentCommented, Payload: map[string]any{
 		"moment_id":      item.MomentID,
 		"moment_summary": cloneSummary(momentSummary),
 		"comment_id":     item.CommentID,
@@ -280,7 +280,7 @@ func (s *Service) notifyReplyTarget(ctx context.Context, momentContext MomentNot
 			observability.L().Error("comments.create append comment_reply notification failed", "error", err, "moment_id", item.MomentID, "comment_id", item.CommentID, "target_user_id", targetUserID)
 		}
 	}
-	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "CommentReply", Payload: map[string]any{
+	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeCommentReply, Payload: map[string]any{
 		"moment_id":               item.MomentID,
 		"moment_summary":          cloneSummary(momentSummary),
 		"comment_id":              replyTarget.CommentID,
@@ -301,7 +301,7 @@ func (s *Service) notifyMentionedUsers(ctx context.Context, momentContext Moment
 				observability.L().Error("comments.create append mentioned notification failed", "error", err, "moment_id", item.MomentID, "comment_id", item.CommentID, "target_user_id", targetUserID)
 			}
 		}
-		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "MessageMentioned", Payload: map[string]any{
+		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMessageMentioned, Payload: map[string]any{
 			"target_type":     "comment",
 			"moment_id":       item.MomentID,
 			"comment_id":      item.CommentID,

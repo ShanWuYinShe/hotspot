@@ -1,7 +1,8 @@
 # ── HotSpot Base Configuration ────────────────────────────────────
-# 生产:   docker compose up -d
-# 开发:   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-# 集成测试: docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm integration-test
+# 构建 + 运行: docker compose up --build -d
+# 仅运行:     docker compose up -d
+# 开发模式:   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# 集成测试:   docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm integration-test
 #
 # 密钥通过 .env 文件注入（复制 .env.example → .env 后填入真实值）。
 
@@ -22,13 +23,26 @@ services:
       timeout: 5s
       retries: 10
 
+  # ── Cache & Pub/Sub (Redis) ───────────────────────────────────────
+  redis:
+    image: redis:7.4-alpine
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   # ── Object Storage (S3-compatible) ──────────────────────────────
   seaweedfs:
     image: chrislusf/seaweedfs:4.21
     restart: always
     command: server -s3 -dir=/seaweedfs/data
-    tmpfs:
-      - /seaweedfs/data:size=512M
+    volumes:
+      - seaweedfs_data:/seaweedfs/data
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9333/dir/status || exit 1"]
       interval: 5s
@@ -37,13 +51,17 @@ services:
 
   # ── Backend (Go API) ────────────────────────────────────────────
   backend:
+    build:
+      context: ./backend-go
+      dockerfile: Dockerfile
     image: hotspot-backend:latest
-    pull_policy: never
     restart: always
     depends_on:
       postgres:
         condition: service_healthy
       seaweedfs:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     environment:
       APP_ENV: production
@@ -51,6 +69,7 @@ services:
       APP_HOST: 0.0.0.0
       APP_PORT: "8081"
       POSTGRES_DSN: postgres://postgres:${POSTGRES_PASSWORD:-change-me}@postgres:5432/hotspot?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-change-me}
       APP_NAME: hotspot-backend-go
       S3_ENDPOINT: http://seaweedfs:8333
@@ -65,12 +84,19 @@ services:
       test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8081/api/v1/system/health || exit 1"]
       interval: 5s
       timeout: 5s
-      retries: 20
+      retries: 10
+      start_period: 30s
 
   # ── Frontend (React SPA, Nginx) ────────────────────────────────
   frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
+        VITE_AMAP_SECURITY_CODE: ${VITE_AMAP_SECURITY_CODE:-}
+        VITE_AMAP_SERVICE_HOST: ${VITE_AMAP_SERVICE_HOST:-}
     image: hotspot-frontend:latest
-    pull_policy: never
     restart: always
     depends_on:
       backend:
@@ -104,3 +130,5 @@ services:
 
 volumes:
   postgres_data:
+  seaweedfs_data:
+  redis_data:

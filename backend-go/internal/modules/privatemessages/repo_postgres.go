@@ -106,7 +106,7 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req 
 		}
 		return MessageEventMeta{TargetUserID: req.TargetUserID}, nil
 	}
-	var sentAt string
+	var sentAt time.Time
 	var messageID string
 	if err := queryable.QueryRow(ctx, queryPrivateMessageReadStateByMessage, chatKey, req.UpToMessageID).Scan(&sentAt, &messageID); err != nil {
 		return MessageEventMeta{}, ErrMessageNotFound
@@ -114,7 +114,7 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req 
 	if err := queryable.Exec(ctx, queryUpsertPrivateMessageReadState, chatKey, userID, messageID, sentAt); err != nil {
 		return MessageEventMeta{}, err
 	}
-	return MessageEventMeta{TargetUserID: req.TargetUserID, MessageID: messageID, SentAt: sentAt}, nil
+	return MessageEventMeta{TargetUserID: req.TargetUserID, MessageID: messageID, SentAt: sentAt.Format(time.RFC3339Nano)}, nil
 }
 func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {

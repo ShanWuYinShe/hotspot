@@ -111,7 +111,7 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) error {
 		return err
 	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
-		Type: "GroupUpdated",
+		Type: realtime.EventTypeGroupUpdated,
 		Payload: map[string]any{
 			"group_id":   req.GroupID,
 			"updated_by": s.resolveUserInfo(ctx, principal.UserID),
@@ -143,7 +143,7 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 		observability.L().Error("groups.dismiss failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
-	event := realtime.Event{Type: "GroupDismissed", Payload: map[string]any{"group_id": req.GroupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "owner_dismissed"}}
+	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: map[string]any{"group_id": req.GroupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "owner_dismissed"}}
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
 	observability.L().Info("groups.dismiss completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -278,7 +278,7 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnounc
 		return GroupAnnouncementItem{}, err
 	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
-		Type: "GroupAnnouncementCreated",
+		Type: realtime.EventTypeGroupAnnouncementCreated,
 		Payload: map[string]any{
 			"group_id":        req.GroupID,
 			"announcement_id": item.AnnouncementID,
@@ -365,7 +365,7 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 		return err
 	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
-		Type: "GroupMemberLeft",
+		Type: realtime.EventTypeGroupMemberLeft,
 		Payload: map[string]any{
 			"group_id": req.GroupID,
 			"user":     s.resolveUserInfo(ctx, principal.UserID),
@@ -432,7 +432,7 @@ func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem
 	if req.Message != nil && *req.Message != "" {
 		payload["message"] = *req.Message
 	}
-	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{Type: "GroupInviteReceived", Payload: payload})
+	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteReceived, Payload: payload})
 }
 
 func (s *Service) notifyGroupInviteAccepted(ctx context.Context, invite GroupInviteItem, userID string) {
@@ -440,7 +440,7 @@ func (s *Service) notifyGroupInviteAccepted(ctx context.Context, invite GroupInv
 	if s.notifications != nil {
 		_ = s.notifications.AppendGroupInviteAccepted(ctx, invite.Inviter.UserID, invite.Group.GroupID, invite.Group.Name, invite.InviteID, user)
 	}
-	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: "GroupInviteResponse", Payload: map[string]any{"invite_id": invite.InviteID, "group_id": invite.Group.GroupID, "user": user, "status": "accepted", "responded_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteResponse, Payload: map[string]any{"invite_id": invite.InviteID, "group_id": invite.Group.GroupID, "user": user, "status": "accepted", "responded_at": time.Now().UTC().Format(time.RFC3339)}})
 }
 
 func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group GroupItem, applicantUserID string, application *struct {
@@ -465,7 +465,7 @@ func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group Grou
 		if message != nil && *message != "" {
 			payload["message"] = *message
 		}
-		realtime.DefaultHub().BroadcastToUser(member.User.UserID, realtime.Event{Type: "GroupApplicationReceived", Payload: payload})
+		realtime.DefaultHub().BroadcastToUser(member.User.UserID, realtime.Event{Type: realtime.EventTypeGroupApplicationReceived, Payload: payload})
 	}
 }
 
@@ -473,5 +473,5 @@ func (s *Service) notifyGroupApplicationAccepted(ctx context.Context, group Grou
 	if s.notifications != nil {
 		_ = s.notifications.AppendGroupApplicationAccepted(ctx, application.Applicant.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID)
 	}
-	realtime.DefaultHub().BroadcastToUser(application.Applicant.UserID, realtime.Event{Type: "GroupApplicationResponse", Payload: map[string]any{"application_id": application.ApplicationID, "group": map[string]any{"group_id": group.Group.GroupID, "name": group.Group.Name, "avatar_url": group.Group.AvatarURL, "members_count": group.Group.MembersCount}, "status": "accepted", "responded_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToUser(application.Applicant.UserID, realtime.Event{Type: realtime.EventTypeGroupApplicationResponse, Payload: map[string]any{"application_id": application.ApplicationID, "group": map[string]any{"group_id": group.Group.GroupID, "name": group.Group.Name, "avatar_url": group.Group.AvatarURL, "members_count": group.Group.MembersCount}, "status": "accepted", "responded_at": time.Now().UTC().Format(time.RFC3339)}})
 }

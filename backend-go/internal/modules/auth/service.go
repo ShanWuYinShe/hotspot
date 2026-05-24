@@ -310,7 +310,7 @@ func (s *Service) closeOtherSessions(userID, currentSessionID string) {
 }
 
 func sessionRevokedEvent() realtime.Event {
-	return realtime.Event{Type: "Error", Payload: realtime.ErrorPayload{Code: 20000, Message: "会话已失效", Severity: "fatal", Retryable: false}}
+	return realtime.Event{Type: realtime.EventTypeError, Payload: realtime.ErrorPayload{Code: 20000, Message: "会话已失效", Severity: "fatal", Retryable: false}}
 }
 
 func maskIPAddress(raw string) string {

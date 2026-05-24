@@ -100,9 +100,9 @@ SELECT target_user_id, blocked_at, COALESCE(block_reason, '')
 FROM user_relations
 WHERE user_id = $1 AND is_blocked = TRUE
   AND (
-    $2 IS NULL
-    OR blocked_at < $2
-    OR (blocked_at = $2 AND target_user_id > $3)
+    $2::timestamptz IS NULL
+    OR blocked_at < $2::timestamptz
+    OR (blocked_at = $2::timestamptz AND target_user_id > $3)
   )
 ORDER BY blocked_at DESC, target_user_id ASC
 LIMIT $4`
@@ -114,9 +114,9 @@ JOIN user_relations rev ON rev.user_id = me.target_user_id AND rev.target_user_i
 JOIN users u ON u.user_id = me.target_user_id
 WHERE me.user_id = $1 AND me.is_following = TRUE
   AND (
-    $2 IS NULL
-    OR GREATEST(me.followed_at, rev.followed_at) < $2
-    OR (GREATEST(me.followed_at, rev.followed_at) = $2 AND u.user_id > $3)
+    $2::timestamptz IS NULL
+    OR GREATEST(me.followed_at, rev.followed_at) < $2::timestamptz
+    OR (GREATEST(me.followed_at, rev.followed_at) = $2::timestamptz AND u.user_id > $3)
   )
 ORDER BY GREATEST(me.followed_at, rev.followed_at) DESC, u.user_id ASC
 LIMIT $4`
@@ -127,9 +127,9 @@ FROM user_relations me
 JOIN users u ON u.user_id = me.target_user_id
 WHERE me.user_id = $1 AND me.is_following = TRUE
   AND (
-    $2 IS NULL
-    OR me.followed_at < $2
-    OR (me.followed_at = $2 AND u.user_id > $3)
+    $2::timestamptz IS NULL
+    OR me.followed_at < $2::timestamptz
+    OR (me.followed_at = $2::timestamptz AND u.user_id > $3)
   )
 ORDER BY me.followed_at DESC, u.user_id ASC
 LIMIT $4`
@@ -140,9 +140,9 @@ FROM user_relations me
 JOIN users u ON u.user_id = me.user_id
 WHERE me.target_user_id = $1 AND me.is_following = TRUE
   AND (
-    $2 IS NULL
-    OR me.followed_at < $2
-    OR (me.followed_at = $2 AND u.user_id > $3)
+    $2::timestamptz IS NULL
+    OR me.followed_at < $2::timestamptz
+    OR (me.followed_at = $2::timestamptz AND u.user_id > $3)
   )
 ORDER BY me.followed_at DESC, u.user_id ASC
 LIMIT $4`
@@ -153,9 +153,9 @@ FROM group_members gm
 JOIN groups g ON g.group_id = gm.group_id
 WHERE gm.user_id = $1 AND g.deleted_at IS NULL AND g.is_searchable = TRUE
   AND (
-    $2 IS NULL
-    OR gm.joined_at < $2
-    OR (gm.joined_at = $2 AND g.group_id > $3)
+    $2::timestamptz IS NULL
+    OR gm.joined_at < $2::timestamptz
+    OR (gm.joined_at = $2::timestamptz AND g.group_id > $3)
   )
 ORDER BY gm.joined_at DESC, g.group_id ASC
 LIMIT $4`
@@ -166,9 +166,9 @@ FROM moments
 WHERE user_id = $1
   AND ($2 OR privacy_level <> 'private')
   AND (
-    $3 IS NULL
-    OR created_at < $3
-    OR (created_at = $3 AND moment_id < $4)
+    $3::timestamptz IS NULL
+    OR created_at < $3::timestamptz
+    OR (created_at = $3::timestamptz AND moment_id < $4)
   )
 ORDER BY created_at DESC, moment_id DESC
 LIMIT $5`
@@ -180,9 +180,9 @@ JOIN moments m ON m.moment_id = ml.moment_id
 WHERE ml.user_id = $1
   AND ($2 = '' OR m.user_id = $2 OR m.privacy_level <> 'private')
   AND (
-    $3 IS NULL
-    OR ml.liked_at < $3
-    OR (ml.liked_at = $3 AND m.moment_id < $4)
+    $3::timestamptz IS NULL
+    OR ml.liked_at < $3::timestamptz
+    OR (ml.liked_at = $3::timestamptz AND m.moment_id < $4)
   )
 ORDER BY ml.liked_at DESC, m.moment_id DESC
 LIMIT $5`

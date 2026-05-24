@@ -207,7 +207,7 @@ func (s *Service) Like(ctx context.Context, momentID string) error {
 			observability.L().Error("moments.like append notification failed", "error", err, "moment_id", momentID, "target_user_id", momentContext.UserID)
 		}
 	}
-	realtime.DefaultHub().BroadcastToUser(momentContext.UserID, realtime.Event{Type: "MomentLiked", Payload: map[string]any{
+	realtime.DefaultHub().BroadcastToUser(momentContext.UserID, realtime.Event{Type: realtime.EventTypeMomentLiked, Payload: map[string]any{
 		"moment_id":      momentID,
 		"moment_summary": cloneMomentSummary(momentSummary, momentID),
 		"actor":          actor,
@@ -346,7 +346,7 @@ func (s *Service) notifyMomentMentions(ctx context.Context, actorUserID string, 
 		if err := s.notifications.AppendMentioned(ctx, mentionedUserID, actor, "moment", item.MomentID, momentSummary, "", ""); err != nil {
 			observability.L().Error("moments.mentions append notification failed", "error", err, "moment_id", item.MomentID, "mentioned_user_id", mentionedUserID)
 		}
-		realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: "MessageMentioned", Payload: map[string]any{
+		realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeMessageMentioned, Payload: map[string]any{
 			"target_type":    "moment",
 			"moment_id":      item.MomentID,
 			"moment_summary": cloneMomentSummary(momentSummary, item.MomentID),

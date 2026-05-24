@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sort"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -25,6 +26,14 @@ func (r groupMessageRowValues) Scan(dest ...any) error {
 			*d = r.values[i].(string)
 		case *int:
 			*d = r.values[i].(int)
+		case *time.Time:
+			switch v := r.values[i].(type) {
+			case time.Time:
+				*d = v
+			case string:
+				t, _ := time.Parse(time.RFC3339Nano, v)
+				*d = t
+			}
 		}
 	}
 	return nil
@@ -84,7 +93,12 @@ func (b *groupMessageBackendStub) Exec(_ context.Context, query string, args ...
 		groupID := args[0].(string)
 		userID := args[1].(string)
 		messageID := args[2].(string)
-		sentAt := args[3].(string)
+		sentAt := func() string {
+			if t, ok := args[3].(time.Time); ok {
+				return t.Format(time.RFC3339Nano)
+			}
+			return args[3].(string)
+		}()
 		key := groupMessageReadStateKey(groupID, userID)
 		current, ok := b.readStates[key]
 		if !ok || current.SentAt <= sentAt {
