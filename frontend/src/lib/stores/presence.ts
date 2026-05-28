@@ -5,10 +5,14 @@
  * spec 仅定义 online/offline 两种状态，前端扩展了 idle/dnd/invisible 供未来使用。
  */
 
-import { create } from 'zustand';
-import type { UserPresenceStatus } from '@/lib/types/api';
+import { create } from "zustand";
+import type { UserPresenceStatus } from "@/lib/types/api";
 
-export type ExtendedPresenceStatus = UserPresenceStatus | 'idle' | 'dnd' | 'invisible';
+export type ExtendedPresenceStatus =
+  | UserPresenceStatus
+  | "idle"
+  | "dnd"
+  | "invisible";
 
 export interface UserPresence {
   user_id: string;
@@ -29,7 +33,12 @@ interface PresenceState {
   getBatchStatuses: (userIds: string[]) => Map<string, ExtendedPresenceStatus>;
   getAllUserIds: () => string[];
 
-  setOnline: (userId: string, status: string, statusText?: string, onlineAt?: string) => void;
+  setOnline: (
+    userId: string,
+    status: string,
+    statusText?: string,
+    onlineAt?: string,
+  ) => void;
   setOffline: (userId: string, offlineAt: string) => void;
   clearPresence: (userId: string) => void;
   clearBatchPresences: (userIds: string[]) => void;
@@ -44,16 +53,16 @@ export const usePresenceStore = create<PresenceState>((set, get) => ({
   },
 
   getStatus(userId) {
-    return get().presences.get(userId)?.status ?? 'offline';
+    return get().presences.get(userId)?.status ?? "offline";
   },
 
   isOnline(userId) {
     const status = get().getStatus(userId);
-    return status === 'online' || status === 'idle';
+    return status === "online" || status === "idle";
   },
 
   isOffline(userId) {
-    return get().getStatus(userId) === 'offline';
+    return get().getStatus(userId) === "offline";
   },
 
   getLastSeen(userId) {
@@ -64,7 +73,7 @@ export const usePresenceStore = create<PresenceState>((set, get) => ({
     const { presences } = get();
     const result = new Map<string, ExtendedPresenceStatus>();
     for (const id of userIds) {
-      result.set(id, presences.get(id)?.status ?? 'offline');
+      result.set(id, presences.get(id)?.status ?? "offline");
     }
     return result;
   },
@@ -102,7 +111,7 @@ export const usePresenceStore = create<PresenceState>((set, get) => ({
       const existing = state.presences.get(userId);
       const nextLastSeen = existing?.last_seen ?? offlineAt;
       if (
-        existing?.status === 'offline' &&
+        existing?.status === "offline" &&
         existing?.updated_at === offlineAt &&
         existing?.last_seen === nextLastSeen
       ) {
@@ -111,7 +120,7 @@ export const usePresenceStore = create<PresenceState>((set, get) => ({
       const next = new Map(state.presences);
       next.set(userId, {
         user_id: userId,
-        status: 'offline',
+        status: "offline",
         updated_at: offlineAt,
         last_seen: nextLastSeen,
       });

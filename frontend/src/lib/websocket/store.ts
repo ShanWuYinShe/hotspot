@@ -9,17 +9,17 @@
  *   untrack()    → getState()（不带订阅的读取）
  */
 
-import { create } from 'zustand';
-import { toast } from 'sonner';
-import { useAuthStore } from '@/lib/stores/auth';
-import { ensureRefreshToken } from '@/lib/api/client';
+import { create } from "zustand";
+import { toast } from "sonner";
+import { useAuthStore } from "@/lib/stores/auth";
+import { ensureRefreshToken, TOKEN_INVALID_CODE } from "@/lib/api/client";
 import type {
   ServerWebSocketEvent,
   ClientEvent,
   WebSocketEventMap,
   ConnectionEstablishedPayload,
   ErrorPayload,
-} from './types';
+} from "./types";
 
 const isDev = import.meta.env.DEV;
 const log = isDev ? console.log.bind(console) : () => {};
@@ -41,12 +41,12 @@ const CONSECUTIVE_FAILURE_THRESHOLD = 10;
 // ============ 连接状态 ============
 
 export type ConnectionState =
-  | 'disconnected'
-  | 'connecting'
-  | 'authenticating'
-  | 'connected'
-  | 'reconnecting'
-  | 'failed';
+  | "disconnected"
+  | "connecting"
+  | "authenticating"
+  | "connected"
+  | "reconnecting"
+  | "failed";
 
 // ============ Zustand State 接口 ============
 
@@ -71,7 +71,7 @@ interface WebSocketState {
 // ============ 模块级内部状态（不触发重渲染）============
 
 let ws: WebSocket | null = null;
-let wsUrl = '';
+let wsUrl = "";
 let serverConfig: {
   ping_interval: number;
   ping_timeout: number;
@@ -104,30 +104,30 @@ let unsubscribeAuth: (() => void) | null = null;
 // ============ Store 创建 ============
 
 export const useWebSocketStore = create<WebSocketState>((set, get) => ({
-  connectionState: 'disconnected',
+  connectionState: "disconnected",
   connectionId: null,
   lastError: null,
   lastDisconnectDurationMs: null,
 
   initialize() {
-    if (typeof window === 'undefined') return;
-    log('[WebSocket] 初始化自动生命周期管理');
+    if (typeof window === "undefined") return;
+    log("[WebSocket] 初始化自动生命周期管理");
 
     // 监听认证状态变化
     unsubscribeAuth = useAuthStore.subscribe((state, prevState) => {
       if (state.isAuthenticated === prevState.isAuthenticated) return;
       const { isAuthenticated } = state;
-      log('[WebSocket] 认证状态变化:', isAuthenticated);
+      log("[WebSocket] 认证状态变化:", isAuthenticated);
 
       const current = get().connectionState;
       if (isAuthenticated) {
-        if (current === 'disconnected' || current === 'failed') {
-          log('[WebSocket] 用户已登录，自动连接');
+        if (current === "disconnected" || current === "failed") {
+          log("[WebSocket] 用户已登录，自动连接");
           get().connect();
         }
       } else {
-        if (current !== 'disconnected' && current !== 'failed') {
-          log('[WebSocket] 用户已登出，自动断开');
+        if (current !== "disconnected" && current !== "failed") {
+          log("[WebSocket] 用户已登出，自动断开");
           get().disconnect();
         }
       }
@@ -138,28 +138,34 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
       if (!document.hidden) {
         const { isAuthenticated } = useAuthStore.getState();
         const { connectionState } = get();
-        if (isAuthenticated && (connectionState === 'failed' || connectionState === 'disconnected')) {
-          log('[WebSocket] 页面显示，尝试恢复连接');
+        if (
+          isAuthenticated &&
+          (connectionState === "failed" || connectionState === "disconnected")
+        ) {
+          log("[WebSocket] 页面显示，尝试恢复连接");
           reconnectAttempts = 0;
           userNotifiedUnstable = false;
           get().connect();
         }
       }
     };
-    document.addEventListener('visibilitychange', visibilityChangeHandler);
+    document.addEventListener("visibilitychange", visibilityChangeHandler);
 
     // 网络恢复
     onlineHandler = () => {
-      log('[WebSocket] 网络恢复');
+      log("[WebSocket] 网络恢复");
       const { isAuthenticated } = useAuthStore.getState();
       const { connectionState } = get();
-      if (isAuthenticated && (connectionState === 'failed' || connectionState === 'disconnected')) {
+      if (
+        isAuthenticated &&
+        (connectionState === "failed" || connectionState === "disconnected")
+      ) {
         reconnectAttempts = 0;
         userNotifiedUnstable = false;
         get().connect();
       }
     };
-    window.addEventListener('online', onlineHandler);
+    window.addEventListener("online", onlineHandler);
 
     // 开发环境调试工具
     if (isDev) {
@@ -189,8 +195,11 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
     if (connectingLock) return;
 
     // 防护 3: 状态检查
-    const isConnecting = connectionState === 'connecting' || connectionState === 'authenticating' || connectionState === 'reconnecting';
-    const isConnected = connectionState === 'connected';
+    const isConnecting =
+      connectionState === "connecting" ||
+      connectionState === "authenticating" ||
+      connectionState === "reconnecting";
+    const isConnected = connectionState === "connected";
     if (isConnecting || isConnected) return;
 
     // 防护 4: 认证检查
@@ -207,42 +216,42 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
 
     set({ lastError: null, lastDisconnectDurationMs: null });
 
-    if (connectionState === 'failed' || connectionState === 'disconnected') {
+    if (connectionState === "failed" || connectionState === "disconnected") {
       reconnectAttempts = 0;
     }
 
     if (url) {
       wsUrl = url;
     } else if (!wsUrl) {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       wsUrl = `${protocol}//${window.location.host}/ws/v1`;
     }
 
-    set({ connectionState: 'connecting' });
+    set({ connectionState: "connecting" });
     log(`[WebSocket] 连接到 ${wsUrl}`);
 
     try {
       ws = new WebSocket(wsUrl);
       setupWebSocketHandlers(set, get);
     } catch (error) {
-      logError('[WebSocket] 连接失败:', error);
+      logError("[WebSocket] 连接失败:", error);
       connectingLock = false;
-      handleConnectionError(set, get, '连接初始化失败');
+      handleConnectionError(set, get, "连接初始化失败");
     }
   },
 
   disconnect() {
-    log('[WebSocket] 主动断开连接');
+    log("[WebSocket] 主动断开连接");
     shouldReconnect = false;
     reconnectAttempts = 0;
     connectingLock = false;
     pendingMessages = [];
     cleanup();
-    set({ connectionState: 'disconnected' });
+    set({ connectionState: "disconnected" });
   },
 
   send(event: ClientEvent) {
-    const canSend = get().connectionState === 'connected';
+    const canSend = get().connectionState === "connected";
     if (!canSend) {
       pendingMessages.push(event);
       return;
@@ -275,17 +284,17 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
   },
 
   destroy() {
-    log('[WebSocket] 彻底清理所有资源');
+    log("[WebSocket] 彻底清理所有资源");
     shouldReconnect = false;
     pendingMessages = [];
     cleanup();
 
     if (visibilityChangeHandler) {
-      document.removeEventListener('visibilitychange', visibilityChangeHandler);
+      document.removeEventListener("visibilitychange", visibilityChangeHandler);
       visibilityChangeHandler = null;
     }
     if (onlineHandler) {
-      window.removeEventListener('online', onlineHandler);
+      window.removeEventListener("online", onlineHandler);
       onlineHandler = null;
     }
     if (unsubscribeAuth) {
@@ -293,7 +302,7 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
       unsubscribeAuth = null;
     }
     eventListeners.clear();
-    log('[WebSocket] 资源清理完成');
+    log("[WebSocket] 资源清理完成");
   },
 }));
 
@@ -306,8 +315,8 @@ function setupWebSocketHandlers(
   if (!ws) return;
 
   ws.onopen = () => {
-    log('[WebSocket] 连接已建立，开始鉴权...');
-    set({ connectionState: 'authenticating' });
+    log("[WebSocket] 连接已建立，开始鉴权...");
+    set({ connectionState: "authenticating" });
     reconnectAttempts = 0;
     userNotifiedUnstable = false;
     authenticate(set, get);
@@ -318,16 +327,16 @@ function setupWebSocketHandlers(
       const message: ServerWebSocketEvent = JSON.parse(event.data);
       handleServerEvent(set, get, message);
     } catch (error) {
-      logError('[WebSocket] 解析消息失败:', error);
+      logError("[WebSocket] 解析消息失败:", error);
     }
   };
 
   ws.onerror = (error) => {
-    logError('[WebSocket] 连接错误:', error);
+    logError("[WebSocket] 连接错误:", error);
   };
 
   ws.onclose = (event) => {
-    log('[WebSocket] 连接已关闭:', event.code, event.reason);
+    log("[WebSocket] 连接已关闭:", event.code, event.reason);
     if (event.code === 1000 || event.code === 1001) {
       shouldReconnect = false;
     }
@@ -340,15 +349,15 @@ function authenticate(
   get: () => WebSocketState,
 ) {
   const authEvent: ClientEvent = {
-    type: 'Auth',
-    payload: { client_type: 'web' },
+    type: "Auth",
+    payload: { client_type: "web" },
   };
   try {
     ws?.send(JSON.stringify(authEvent));
-    log('[WebSocket] 已发送鉴权请求');
+    log("[WebSocket] 已发送鉴权请求");
   } catch (error) {
-    logError('[WebSocket] 发送鉴权消息失败:', error);
-    handleConnectionError(_set, get, '鉴权失败');
+    logError("[WebSocket] 发送鉴权消息失败:", error);
+    handleConnectionError(_set, get, "鉴权失败");
   }
 }
 
@@ -357,16 +366,20 @@ function handleServerEvent(
   get: () => WebSocketState,
   event: ServerWebSocketEvent,
 ) {
-  log('[WebSocket] 收到事件:', event.type);
+  log("[WebSocket] 收到事件:", event.type);
 
   switch (event.type) {
-    case 'ConnectionEstablished':
-      handleConnectionEstablished(set, get, event.payload as ConnectionEstablishedPayload);
+    case "ConnectionEstablished":
+      handleConnectionEstablished(
+        set,
+        get,
+        event.payload as ConnectionEstablishedPayload,
+      );
       break;
-    case 'Pong':
+    case "Pong":
       handlePong();
       break;
-    case 'Error':
+    case "Error":
       handleServerError(set, get, event.payload as ErrorPayload);
       break;
     default:
@@ -390,7 +403,7 @@ function handleConnectionEstablished(
     const diff = currentServerMs - lastServerMs;
     disconnectDurationMs = diff > 0 ? diff : null;
     if (diff > 10000) {
-      log('[WebSocket] 断开超过 10 秒，建议补拉离线数据');
+      log("[WebSocket] 断开超过 10 秒，建议补拉离线数据");
     }
   } else if (disconnectTime > 0) {
     const diff = Date.now() - disconnectTime;
@@ -399,7 +412,7 @@ function handleConnectionEstablished(
   lastServerTime = payload.server_time;
 
   set({
-    connectionState: 'connected',
+    connectionState: "connected",
     connectionId: payload.connection_id ?? null,
     lastError: null,
     lastDisconnectDurationMs: disconnectDurationMs,
@@ -407,7 +420,7 @@ function handleConnectionEstablished(
 
   startHeartbeat();
   flushPendingMessages(get);
-  emitEvent('ConnectionEstablished', payload);
+  emitEvent("ConnectionEstablished", payload);
 }
 
 function handlePong() {
@@ -416,7 +429,7 @@ function handlePong() {
     pongTimer = null;
   }
   const latency = Date.now() - lastPingTime;
-  log('[WebSocket] 收到 Pong，延迟:', latency, 'ms');
+  log("[WebSocket] 收到 Pong，延迟:", latency, "ms");
 }
 
 function handleServerError(
@@ -424,24 +437,24 @@ function handleServerError(
   get: () => WebSocketState,
   payload: ErrorPayload,
 ) {
-  logError('[WebSocket] 服务端错误:', payload);
-  set({ lastError: payload.message ?? '未知错误' });
-  emitEvent('Error', payload);
+  logError("[WebSocket] 服务端错误:", payload);
+  set({ lastError: payload.message ?? "未知错误" });
+  emitEvent("Error", payload);
 
   switch (payload.severity) {
-    case 'fatal':
+    case "fatal":
       shouldReconnect = false;
       cleanup();
-      set({ connectionState: 'failed' });
-      toast.error(payload.message || '会话已失效，请重新登录');
+      set({ connectionState: "failed" });
+      toast.error(payload.message || "会话已失效，请重新登录");
       useAuthStore.getState().logout();
       break;
 
-    case 'recoverable':
-      if (payload.code === 20000 || payload.code === 10100) {
+    case "recoverable":
+      if (payload.code === 20000 || payload.code === TOKEN_INVALID_CODE) {
         shouldReconnect = true;
         cleanup();
-        set({ connectionState: 'reconnecting' });
+        set({ connectionState: "reconnecting" });
 
         ensureRefreshToken()
           .then((success) => {
@@ -450,17 +463,17 @@ function handleServerError(
               get().connect();
             } else {
               shouldReconnect = false;
-              set({ connectionState: 'failed' });
+              set({ connectionState: "failed" });
               useAuthStore.getState().logout();
             }
           })
           .catch((err) => {
-            logError('[WebSocket] Token刷新异常', err);
+            logError("[WebSocket] Token刷新异常", err);
           });
       }
       break;
 
-    case 'warning':
+    case "warning":
       break;
   }
 }
@@ -470,7 +483,7 @@ function handleConnectionError(
   get: () => WebSocketState,
   error: string,
 ) {
-  set({ lastError: error, connectionState: 'failed' });
+  set({ lastError: error, connectionState: "failed" });
   connectingLock = false;
   cleanup(false);
   scheduleReconnect(set, get);
@@ -489,7 +502,7 @@ function handleConnectionClose(
   if (shouldReconnect) {
     scheduleReconnect(set, get);
   } else {
-    set({ connectionState: 'disconnected' });
+    set({ connectionState: "disconnected" });
   }
 }
 
@@ -520,21 +533,21 @@ function stopHeartbeat() {
 
 function sendPing() {
   const state = useWebSocketStore.getState().connectionState;
-  if (state !== 'connected') return;
+  if (state !== "connected") return;
 
   lastPingTime = Date.now();
-  useWebSocketStore.getState().send({ type: 'Ping', payload: {} });
+  useWebSocketStore.getState().send({ type: "Ping", payload: {} });
 
   const pongTimeout = serverConfig?.ping_timeout
     ? serverConfig.ping_timeout * 1000
     : SPEC_REFERENCE_PONG_TIMEOUT;
 
   pongTimer = setTimeout(() => {
-    logError('[WebSocket] Pong 超时，连接异常');
+    logError("[WebSocket] Pong 超时，连接异常");
     handleConnectionError(
       useWebSocketStore.setState.bind(useWebSocketStore),
       useWebSocketStore.getState,
-      'Pong 超时',
+      "Pong 超时",
     );
   }, pongTimeout);
 }
@@ -545,30 +558,35 @@ function scheduleReconnect(
 ) {
   if (reconnectTimer) return;
   if (!shouldReconnect) {
-    set({ connectionState: 'failed' });
+    set({ connectionState: "failed" });
     connectingLock = false;
     return;
   }
 
   if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
     shouldReconnect = false;
-    set({ connectionState: 'failed' });
+    set({ connectionState: "failed" });
     connectingLock = false;
-    toast.error('连接失败，请检查网络后重试');
+    toast.error("连接失败，请检查网络后重试");
     return;
   }
 
-  set({ connectionState: 'reconnecting' });
+  set({ connectionState: "reconnecting" });
 
   const delay = getReconnectDelay(reconnectAttempts);
   reconnectAttempts++;
 
-  if (reconnectAttempts >= CONSECUTIVE_FAILURE_THRESHOLD && !userNotifiedUnstable) {
+  if (
+    reconnectAttempts >= CONSECUTIVE_FAILURE_THRESHOLD &&
+    !userNotifiedUnstable
+  ) {
     userNotifiedUnstable = true;
-    toast.warning('连接不稳定，正在重试…');
+    toast.warning("连接不稳定，正在重试…");
   }
 
-  log(`[WebSocket] ${delay.toFixed(1)}秒后重连（第 ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} 次）`);
+  log(
+    `[WebSocket] ${delay.toFixed(1)}秒后重连（第 ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} 次）`,
+  );
 
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
@@ -578,7 +596,9 @@ function scheduleReconnect(
 }
 
 function getReconnectDelay(attempt: number): number {
-  const baseDelay = RECONNECT_DELAYS[Math.min(attempt, RECONNECT_DELAYS.length - 1)] ?? MAX_DELAY;
+  const baseDelay =
+    RECONNECT_DELAYS[Math.min(attempt, RECONNECT_DELAYS.length - 1)] ??
+    MAX_DELAY;
   const jitter = baseDelay * JITTER_PERCENT * (Math.random() * 2 - 1);
   return Math.max(Math.min(baseDelay + jitter, MAX_DELAY), 0.1);
 }
@@ -598,7 +618,7 @@ function cleanup(closeWebSocket = true) {
 
 function flushPendingMessages(get: () => WebSocketState) {
   if (pendingMessages.length === 0) return;
-  log('[WebSocket] 发送待发送队列:', pendingMessages.length);
+  log("[WebSocket] 发送待发送队列:", pendingMessages.length);
   for (const msg of pendingMessages) {
     get().send(msg);
   }
@@ -620,16 +640,16 @@ function emitEvent(eventType: string, payload: unknown) {
 
 function debug(get: () => WebSocketState) {
   const state = get();
-  console.group('🔍 WebSocket Debug Info');
-  console.group('📡 连接状态');
-  log('状态:', state.connectionState);
-  log('连接 ID:', state.connectionId ?? '无');
+  console.group("🔍 WebSocket Debug Info");
+  console.group("📡 连接状态");
+  log("状态:", state.connectionState);
+  log("连接 ID:", state.connectionId ?? "无");
   console.groupEnd();
-  console.group('🔄 重连控制');
-  log('重连次数:', `${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
+  console.group("🔄 重连控制");
+  log("重连次数:", `${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
   console.groupEnd();
-  console.group('📨 消息队列');
-  log('待发送消息:', pendingMessages.length);
+  console.group("📨 消息队列");
+  log("待发送消息:", pendingMessages.length);
   console.groupEnd();
   console.groupEnd();
   return state;

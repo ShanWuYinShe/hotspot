@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import type { ClientConfig } from '@/lib/types/api';
-import { systemService } from '@/lib/api/services/system';
+import { create } from "zustand";
+import type { ClientConfig } from "@/lib/types/api";
+import { systemService } from "@/lib/api/services/system";
 
 interface ConfigState {
   config: ClientConfig | null;
@@ -11,11 +11,11 @@ interface ConfigState {
   maxMomentTags: number;
   momentDescriptionMaxLength: number;
   commentMaxLength: number;
-  features: ClientConfig['features'] | null;
-  limits: ClientConfig['limits'] | null;
-  contact: ClientConfig['contact'] | null;
-  defaults: ClientConfig['defaults'] | null;
-  defaultLocation: ClientConfig['defaults']['default_location'] | null;
+  features: ClientConfig["features"] | null;
+  limits: ClientConfig["limits"] | null;
+  contact: ClientConfig["contact"] | null;
+  defaults: ClientConfig["defaults"] | null;
+  defaultLocation: ClientConfig["defaults"]["default_location"] | null;
   fetch: () => Promise<void>;
 }
 
@@ -60,12 +60,12 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       if (res.code === 0 && res.data) {
         set({ config: res.data, error: null });
       } else {
-        set({ error: res.message || '获取配置失败' });
+        set({ error: res.message || "获取配置失败" });
       }
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : '获取配置失败' });
+      set({ error: e instanceof Error ? e.message : "获取配置失败" });
     } finally {
       set({ loaded: true });
     }
-  }
+  },
 }));

@@ -21,7 +21,7 @@ export const NeuAvatar = React.forwardRef<HTMLDivElement, NeuAvatarProps>(
           size === "xl" && "w-28 h-28 p-[6px]",
           size === "hero" && "w-[120px] h-[120px] p-[6px]",
           active && "neu-pressed",
-          className
+          className,
         )}
         {...props}
       >
@@ -34,6 +34,6 @@ export const NeuAvatar = React.forwardRef<HTMLDivElement, NeuAvatarProps>(
         </div>
       </div>
     );
-  }
+  },
 );
 NeuAvatar.displayName = "NeuAvatar";

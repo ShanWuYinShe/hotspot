@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { privateChatsService, groupsService } from '@/lib/api/services';
-import { isSuccess } from '@/lib/api/client';
-import type { PrivateChatItem, GroupItem } from '@/lib/types/api';
+import { useState, useEffect, useCallback } from "react";
+import { privateChatsService, groupsService } from "@/lib/api/services";
+import { isSuccess, TOKEN_INVALID_CODE } from "@/lib/api/client";
+import type { PrivateChatItem, GroupItem } from "@/lib/types/api";
 
 interface MessagesData {
   privateChats: PrivateChatItem[];
@@ -28,14 +28,16 @@ export function useMessagesData(): MessagesData {
     setLoadingPrivate(true);
     setError(null);
     try {
-      const res = await privateChatsService.getChats({ pagination: { limit: 50 } });
+      const res = await privateChatsService.getChats({
+        pagination: { limit: 50 },
+      });
       if (isSuccess(res) && res.data) {
         setPrivateChats(res.data.items);
-      } else {
-        setError('加载失败，请重试');
+      } else if (res.code !== TOKEN_INVALID_CODE) {
+        setError("加载失败，请重试");
       }
     } catch {
-      setError('网络异常');
+      setError("网络异常");
     } finally {
       setLoadingPrivate(false);
     }
@@ -45,7 +47,9 @@ export function useMessagesData(): MessagesData {
     if (groupsLoaded) return;
     setLoadingGroup(true);
     try {
-      const res = await groupsService.getMyGroups({ pagination: { limit: 50 } });
+      const res = await groupsService.getMyGroups({
+        pagination: { limit: 50 },
+      });
       if (isSuccess(res) && res.data) {
         setGroupChats(res.data.items);
         setGroupsLoaded(true);

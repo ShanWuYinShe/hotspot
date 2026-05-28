@@ -1,11 +1,11 @@
-import { post, paginate } from '../client';
-import { NOTIFICATIONS } from '../endpoints';
+import { post, paginate } from "../client";
+import { NOTIFICATIONS } from "../endpoints";
 import type {
   NotificationItem,
   UnreadCountResult,
   PaginationParams,
-  NotificationType
-} from '@/lib/types/api';
+  NotificationType,
+} from "@/lib/types/api";
 
 export const notificationsService = {
   list(params?: { type?: NotificationType; pagination?: PaginationParams }) {
@@ -22,5 +22,5 @@ export const notificationsService = {
 
   markAllRead() {
     return post<void>(NOTIFICATIONS.MARK_ALL_READ, {});
-  }
+  },
 };

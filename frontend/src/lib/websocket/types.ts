@@ -17,78 +17,82 @@ import type {
   FollowSource,
   GroupJoinMethod,
   GroupRole,
-  UserSettings
-} from '@/lib/types/api';
+  UserSettings,
+} from "@/lib/types/api";
 
 // ============ 基础类型 ============
 
-export type SubscriptionOperation = 'subscribe' | 'unsubscribe' | 'set';
-export type SubscriptionFailureReason = 'invalid' | 'denied' | 'limit_exceeded' | 'error';
-export type ErrorSeverity = 'fatal' | 'recoverable' | 'warning';
+export type SubscriptionOperation = "subscribe" | "unsubscribe" | "set";
+export type SubscriptionFailureReason =
+  | "invalid"
+  | "denied"
+  | "limit_exceeded"
+  | "error";
+export type ErrorSeverity = "fatal" | "recoverable" | "warning";
 
 // ============ WebSocket 事件类型枚举 ============
 
 export type ServerEventType =
   // 连接管理
-  | 'ConnectionEstablished'
-  | 'Pong'
+  | "ConnectionEstablished"
+  | "Pong"
   // 用户状态
-  | 'UserOnline'
-  | 'UserOffline'
+  | "UserOnline"
+  | "UserOffline"
   // 关注关系
-  | 'NewFollower'
-  | 'MutualFollow'
+  | "NewFollower"
+  | "MutualFollow"
   // 生活瞬间互动
-  | 'MomentLiked'
-  | 'MomentCommented'
-  | 'CommentLiked'
-  | 'CommentReply'
-  | 'MessageMentioned'
+  | "MomentLiked"
+  | "MomentCommented"
+  | "CommentLiked"
+  | "CommentReply"
+  | "MessageMentioned"
   // 私聊消息
-  | 'PrivateMessageNew'
-  | 'PrivateMessageEdited'
-  | 'PrivateMessageRecalled'
-  | 'PrivateMessageRead'
-  | 'PrivateUserTyping'
+  | "PrivateMessageNew"
+  | "PrivateMessageEdited"
+  | "PrivateMessageRecalled"
+  | "PrivateMessageRead"
+  | "PrivateUserTyping"
   // 群聊消息
-  | 'GroupMessageNew'
-  | 'GroupMessageEdited'
-  | 'GroupMessageRecalled'
-  | 'GroupUserTyping'
+  | "GroupMessageNew"
+  | "GroupMessageEdited"
+  | "GroupMessageRecalled"
+  | "GroupUserTyping"
   // 群组管理
-  | 'GroupMemberJoined'
-  | 'GroupMemberLeft'
-  | 'GroupMemberRemoved'
-  | 'GroupMemberMuted'
-  | 'GroupMemberUnmuted'
-  | 'GroupInviteReceived'
-  | 'GroupInviteResponse'
-  | 'GroupApplicationReceived'
-  | 'GroupApplicationResponse'
-  | 'GroupAnnouncementCreated'
-  | 'GroupUpdated'
-  | 'GroupDismissed'
+  | "GroupMemberJoined"
+  | "GroupMemberLeft"
+  | "GroupMemberRemoved"
+  | "GroupMemberMuted"
+  | "GroupMemberUnmuted"
+  | "GroupInviteReceived"
+  | "GroupInviteResponse"
+  | "GroupApplicationReceived"
+  | "GroupApplicationResponse"
+  | "GroupAnnouncementCreated"
+  | "GroupUpdated"
+  | "GroupDismissed"
   // 用户
-  | 'UserProfileUpdated'
+  | "UserProfileUpdated"
   // 系统
-  | 'SystemAnnouncement'
-  | 'AccountBanned'
-  | 'Error'
-  | 'SubscribeAck'
-  | 'SubscriptionsSnapshot'
+  | "SystemAnnouncement"
+  | "AccountBanned"
+  | "Error"
+  | "SubscribeAck"
+  | "SubscriptionsSnapshot"
   // 多端同步（⏳ 延期实现）
-  | 'SelfReadSync'
-  | 'SelfChatSettingsSync'
-  | 'SelfSettingsUpdated'
-  | 'SelfRelationSync';
+  | "SelfReadSync"
+  | "SelfChatSettingsSync"
+  | "SelfSettingsUpdated"
+  | "SelfRelationSync";
 
 export type ClientEventType =
-  | 'Auth'
-  | 'Ping'
-  | 'SetSubscriptions'
-  | 'GetSubscriptions'
-  | 'PrivateTyping'
-  | 'GroupTyping';
+  | "Auth"
+  | "Ping"
+  | "SetSubscriptions"
+  | "GetSubscriptions"
+  | "PrivateTyping"
+  | "GroupTyping";
 
 // ============ 通用事件结构 ============
 
@@ -101,7 +105,7 @@ export type ServerWebSocketEvent = WebSocketEvent<ServerEventType, unknown>;
 
 // ============ 辅助类型 ============
 
-export type { MessageReplyTo } from '@/lib/types/api';
+export type { MessageReplyTo } from "@/lib/types/api";
 
 export interface FailedSubscriptionId {
   subscription_id: string;
@@ -185,7 +189,7 @@ export interface CommentReplyPayload {
 }
 
 export interface MessageMentionedPayload {
-  target_type: 'moment' | 'comment';
+  target_type: "moment" | "comment";
   moment_id: string;
   comment_id?: string;
   moment_summary: MomentSummary;
@@ -292,7 +296,7 @@ export interface GroupMemberRemovedPayload {
   group_id: string;
   user: UserInfo;
   removed_by: UserInfo;
-  reason?: 'kicked' | 'banned';
+  reason?: "kicked" | "banned";
   removed_at: string;
   member_count: number;
 }
@@ -325,7 +329,7 @@ export interface GroupInviteResponsePayload {
   invite_id: string;
   group_id: string;
   user: UserInfo;
-  status: 'accepted';
+  status: "accepted";
   responded_at: string;
 }
 
@@ -340,7 +344,7 @@ export interface GroupApplicationReceivedPayload {
 export interface GroupApplicationResponsePayload {
   application_id: string;
   group: GroupInfo;
-  status: 'accepted';
+  status: "accepted";
   responded_at: string;
 }
 
@@ -364,7 +368,7 @@ export interface GroupUpdatedPayload {
 export interface GroupDismissedPayload {
   group_id: string;
   dismissed_at: string;
-  reason?: 'owner_dismissed' | 'policy_violation';
+  reason?: "owner_dismissed" | "policy_violation";
 }
 
 export interface ErrorPayload {
@@ -383,7 +387,7 @@ export interface ErrorPayload {
 export interface SubscribeAckPayload {
   client_request_id: string;
   operation: SubscriptionOperation;
-  type: 'user' | 'group';
+  type: "user" | "group";
   ids: string[];
   code: number;
   message?: string;
@@ -403,13 +407,13 @@ export interface AccountBannedPayload {
 }
 
 export interface SelfReadSyncPayload {
-  chat_type: 'private' | 'group';
+  chat_type: "private" | "group";
   target_id: string;
   up_to_message_id?: string;
 }
 
 export interface SelfChatSettingsSyncPayload {
-  chat_type: 'private' | 'group';
+  chat_type: "private" | "group";
   target_id: string;
   is_muted?: boolean;
   is_pinned?: boolean;
@@ -420,7 +424,7 @@ export interface SelfSettingsUpdatedPayload {
 }
 
 export interface SelfRelationSyncPayload {
-  action: 'follow' | 'unfollow' | 'block' | 'unblock';
+  action: "follow" | "unfollow" | "block" | "unblock";
   target_user_id: string;
 }
 
@@ -436,7 +440,7 @@ export interface PingPayload {}
 export interface SetSubscriptionsPayload {
   client_request_id: string;
   operation: SubscriptionOperation;
-  type: 'user' | 'group';
+  type: "user" | "group";
   ids: string[];
 }
 
@@ -457,56 +461,56 @@ export interface GroupTypingPayload {
 // ============ 类型联合 ============
 
 export type ServerEvent =
-  | WebSocketEvent<'ConnectionEstablished', ConnectionEstablishedPayload>
-  | WebSocketEvent<'Pong', PongPayload>
-  | WebSocketEvent<'UserOnline', UserOnlinePayload>
-  | WebSocketEvent<'UserOffline', UserOfflinePayload>
-  | WebSocketEvent<'NewFollower', NewFollowerPayload>
-  | WebSocketEvent<'MutualFollow', MutualFollowPayload>
-  | WebSocketEvent<'MomentLiked', MomentLikedPayload>
-  | WebSocketEvent<'MomentCommented', MomentCommentedPayload>
-  | WebSocketEvent<'CommentLiked', CommentLikedPayload>
-  | WebSocketEvent<'CommentReply', CommentReplyPayload>
-  | WebSocketEvent<'MessageMentioned', MessageMentionedPayload>
-  | WebSocketEvent<'SystemAnnouncement', SystemAnnouncementPayload>
-  | WebSocketEvent<'UserProfileUpdated', UserProfileUpdatedPayload>
-  | WebSocketEvent<'PrivateMessageNew', PrivateMessageNewPayload>
-  | WebSocketEvent<'PrivateMessageEdited', PrivateMessageEditedPayload>
-  | WebSocketEvent<'PrivateMessageRecalled', PrivateMessageRecalledPayload>
-  | WebSocketEvent<'PrivateMessageRead', PrivateMessageReadPayload>
-  | WebSocketEvent<'PrivateUserTyping', PrivateUserTypingPayload>
-  | WebSocketEvent<'GroupMessageNew', GroupMessageNewPayload>
-  | WebSocketEvent<'GroupMessageEdited', GroupMessageEditedPayload>
-  | WebSocketEvent<'GroupMessageRecalled', GroupMessageRecalledPayload>
-  | WebSocketEvent<'GroupUserTyping', GroupUserTypingPayload>
-  | WebSocketEvent<'GroupMemberJoined', GroupMemberJoinedPayload>
-  | WebSocketEvent<'GroupMemberLeft', GroupMemberLeftPayload>
-  | WebSocketEvent<'GroupMemberRemoved', GroupMemberRemovedPayload>
-  | WebSocketEvent<'GroupMemberMuted', GroupMemberMutedPayload>
-  | WebSocketEvent<'GroupMemberUnmuted', GroupMemberUnmutedPayload>
-  | WebSocketEvent<'GroupInviteReceived', GroupInviteReceivedPayload>
-  | WebSocketEvent<'GroupInviteResponse', GroupInviteResponsePayload>
-  | WebSocketEvent<'GroupApplicationReceived', GroupApplicationReceivedPayload>
-  | WebSocketEvent<'GroupApplicationResponse', GroupApplicationResponsePayload>
-  | WebSocketEvent<'GroupAnnouncementCreated', GroupAnnouncementItem>
-  | WebSocketEvent<'GroupUpdated', GroupUpdatedPayload>
-  | WebSocketEvent<'GroupDismissed', GroupDismissedPayload>
-  | WebSocketEvent<'AccountBanned', AccountBannedPayload>
-  | WebSocketEvent<'Error', ErrorPayload>
-  | WebSocketEvent<'SubscribeAck', SubscribeAckPayload>
-  | WebSocketEvent<'SubscriptionsSnapshot', SubscriptionsSnapshotPayload>
-  | WebSocketEvent<'SelfReadSync', SelfReadSyncPayload>
-  | WebSocketEvent<'SelfChatSettingsSync', SelfChatSettingsSyncPayload>
-  | WebSocketEvent<'SelfSettingsUpdated', SelfSettingsUpdatedPayload>
-  | WebSocketEvent<'SelfRelationSync', SelfRelationSyncPayload>;
+  | WebSocketEvent<"ConnectionEstablished", ConnectionEstablishedPayload>
+  | WebSocketEvent<"Pong", PongPayload>
+  | WebSocketEvent<"UserOnline", UserOnlinePayload>
+  | WebSocketEvent<"UserOffline", UserOfflinePayload>
+  | WebSocketEvent<"NewFollower", NewFollowerPayload>
+  | WebSocketEvent<"MutualFollow", MutualFollowPayload>
+  | WebSocketEvent<"MomentLiked", MomentLikedPayload>
+  | WebSocketEvent<"MomentCommented", MomentCommentedPayload>
+  | WebSocketEvent<"CommentLiked", CommentLikedPayload>
+  | WebSocketEvent<"CommentReply", CommentReplyPayload>
+  | WebSocketEvent<"MessageMentioned", MessageMentionedPayload>
+  | WebSocketEvent<"SystemAnnouncement", SystemAnnouncementPayload>
+  | WebSocketEvent<"UserProfileUpdated", UserProfileUpdatedPayload>
+  | WebSocketEvent<"PrivateMessageNew", PrivateMessageNewPayload>
+  | WebSocketEvent<"PrivateMessageEdited", PrivateMessageEditedPayload>
+  | WebSocketEvent<"PrivateMessageRecalled", PrivateMessageRecalledPayload>
+  | WebSocketEvent<"PrivateMessageRead", PrivateMessageReadPayload>
+  | WebSocketEvent<"PrivateUserTyping", PrivateUserTypingPayload>
+  | WebSocketEvent<"GroupMessageNew", GroupMessageNewPayload>
+  | WebSocketEvent<"GroupMessageEdited", GroupMessageEditedPayload>
+  | WebSocketEvent<"GroupMessageRecalled", GroupMessageRecalledPayload>
+  | WebSocketEvent<"GroupUserTyping", GroupUserTypingPayload>
+  | WebSocketEvent<"GroupMemberJoined", GroupMemberJoinedPayload>
+  | WebSocketEvent<"GroupMemberLeft", GroupMemberLeftPayload>
+  | WebSocketEvent<"GroupMemberRemoved", GroupMemberRemovedPayload>
+  | WebSocketEvent<"GroupMemberMuted", GroupMemberMutedPayload>
+  | WebSocketEvent<"GroupMemberUnmuted", GroupMemberUnmutedPayload>
+  | WebSocketEvent<"GroupInviteReceived", GroupInviteReceivedPayload>
+  | WebSocketEvent<"GroupInviteResponse", GroupInviteResponsePayload>
+  | WebSocketEvent<"GroupApplicationReceived", GroupApplicationReceivedPayload>
+  | WebSocketEvent<"GroupApplicationResponse", GroupApplicationResponsePayload>
+  | WebSocketEvent<"GroupAnnouncementCreated", GroupAnnouncementItem>
+  | WebSocketEvent<"GroupUpdated", GroupUpdatedPayload>
+  | WebSocketEvent<"GroupDismissed", GroupDismissedPayload>
+  | WebSocketEvent<"AccountBanned", AccountBannedPayload>
+  | WebSocketEvent<"Error", ErrorPayload>
+  | WebSocketEvent<"SubscribeAck", SubscribeAckPayload>
+  | WebSocketEvent<"SubscriptionsSnapshot", SubscriptionsSnapshotPayload>
+  | WebSocketEvent<"SelfReadSync", SelfReadSyncPayload>
+  | WebSocketEvent<"SelfChatSettingsSync", SelfChatSettingsSyncPayload>
+  | WebSocketEvent<"SelfSettingsUpdated", SelfSettingsUpdatedPayload>
+  | WebSocketEvent<"SelfRelationSync", SelfRelationSyncPayload>;
 
 export type ClientEvent =
-  | WebSocketEvent<'Auth', AuthPayload>
-  | WebSocketEvent<'Ping', PingPayload>
-  | WebSocketEvent<'SetSubscriptions', SetSubscriptionsPayload>
-  | WebSocketEvent<'GetSubscriptions', GetSubscriptionsPayload>
-  | WebSocketEvent<'PrivateTyping', PrivateTypingPayload>
-  | WebSocketEvent<'GroupTyping', GroupTypingPayload>;
+  | WebSocketEvent<"Auth", AuthPayload>
+  | WebSocketEvent<"Ping", PingPayload>
+  | WebSocketEvent<"SetSubscriptions", SetSubscriptionsPayload>
+  | WebSocketEvent<"GetSubscriptions", GetSubscriptionsPayload>
+  | WebSocketEvent<"PrivateTyping", PrivateTypingPayload>
+  | WebSocketEvent<"GroupTyping", GroupTypingPayload>;
 
 // ============ WebSocket 事件类型映射 ============
 

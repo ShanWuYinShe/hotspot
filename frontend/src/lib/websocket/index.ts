@@ -3,14 +3,14 @@
  * 严格遵循 @spec/api_spec_websocket.md
  */
 
-export { useWebSocketStore } from './store';
-export type { ConnectionState } from './store';
+export { useWebSocketStore } from "./store";
+export type { ConnectionState } from "./store";
 
-export { SubscriptionManager } from './subscription-manager';
-export type { SubscriptionType } from './subscription-manager';
+export { SubscriptionManager } from "./subscription-manager";
+export type { SubscriptionType } from "./subscription-manager";
 
-export { WebSocketEventHandlers, setPresenceStore } from './handlers';
-export type { EventHandler } from './handlers';
+export { WebSocketEventHandlers, setPresenceStore } from "./handlers";
+export type { EventHandler } from "./handlers";
 
 export type {
   ServerEventType,
@@ -70,4 +70,4 @@ export type {
   SubscriptionFailureReason,
   ErrorSeverity,
   FailedSubscriptionId,
-} from './types';
+} from "./types";

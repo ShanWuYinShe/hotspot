@@ -1,6 +1,6 @@
-import { post, paginate, generateIdempotencyKey } from '../client';
-import { COMMENTS } from '../endpoints';
-import type { CommentItem, LikeItem, PaginationParams } from '@/lib/types/api';
+import { post, paginate, generateIdempotencyKey } from "../client";
+import { COMMENTS } from "../endpoints";
+import type { CommentItem, LikeItem, PaginationParams } from "@/lib/types/api";
 
 export const commentsService = {
   getComments(params: { moment_id: string; pagination?: PaginationParams }) {
@@ -15,8 +15,15 @@ export const commentsService = {
     return paginate<LikeItem>(COMMENTS.LIST_LIKES, params);
   },
 
-  create(data: { moment_id: string; content: string; parent_id?: string; mentions?: string[] }) {
-    return post<CommentItem>(COMMENTS.CREATE, data, { idempotencyKey: generateIdempotencyKey() });
+  create(data: {
+    moment_id: string;
+    content: string;
+    parent_id?: string;
+    mentions?: string[];
+  }) {
+    return post<CommentItem>(COMMENTS.CREATE, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
   },
 
   delete(data: { comment_id: string }) {
@@ -29,5 +36,5 @@ export const commentsService = {
 
   unlike(data: { comment_id: string }) {
     return post<void>(COMMENTS.ME.UNLIKE, data);
-  }
+  },
 };

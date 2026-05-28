@@ -41,7 +41,8 @@ export function createReconnectTracker() {
     return {
       justReconnected,
       shouldBackfill:
-        justReconnected && shouldBackfillAfterReconnect(disconnectDurationMs, thresholdMs),
+        justReconnected &&
+        shouldBackfillAfterReconnect(disconnectDurationMs, thresholdMs),
     };
   }
 
@@ -57,12 +58,15 @@ export function mergeMessagesByIdAndSentAt<T extends MessageWithIdAndTime>(
   currentMessages: T[],
   recentMessages: T[],
 ): T[] {
-  const merged = new Map(currentMessages.map((message) => [message.message_id, message] as const));
+  const merged = new Map(
+    currentMessages.map((message) => [message.message_id, message] as const),
+  );
   for (const message of recentMessages) {
     merged.set(message.message_id, message);
   }
   return Array.from(merged.values()).sort((a, b) => {
-    const timeDiff = new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime();
+    const timeDiff =
+      new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime();
     if (timeDiff !== 0) return timeDiff;
     return a.message_id.localeCompare(b.message_id);
   });
@@ -73,7 +77,9 @@ export function resolveLatestVisibleMessageId<T extends { message_id: string }>(
   visibleMessageIds: string[],
 ): string | undefined {
   if (visibleMessageIds.length === 0) return undefined;
-  const indexMap = new Map(messages.map((message, index) => [message.message_id, index] as const));
+  const indexMap = new Map(
+    messages.map((message, index) => [message.message_id, index] as const),
+  );
   let latestId: string | undefined;
   let latestIndex = -1;
   for (const messageId of visibleMessageIds) {

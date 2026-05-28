@@ -1,22 +1,29 @@
-import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Trash2, Megaphone } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { toast } from 'sonner';
-import { adminAnnouncementsService } from '@/lib/api/services';
-import { isSuccess } from '@/lib/api/client';
-import { useDocumentTitle } from '@/lib/hooks/use-document-title';
-import { usePagination } from '@/lib/hooks/use-pagination';
-import type { AdminAnnouncementItem, AnnouncementSeverity } from '@/lib/types/api';
+import { useState, useCallback } from "react";
+import { useNavigate } from "react-router";
+import { ArrowLeft, Plus, Trash2, Megaphone } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
+import { adminAnnouncementsService } from "@/lib/api/services";
+import { isSuccess } from "@/lib/api/client";
+import { useDocumentTitle } from "@/lib/hooks/use-document-title";
+import { usePagination } from "@/lib/hooks/use-pagination";
+import type {
+  AdminAnnouncementItem,
+  AnnouncementSeverity,
+} from "@/lib/types/api";
 
-const SEVERITY_OPTIONS: { label: string; value: AnnouncementSeverity; color: string }[] = [
-  { label: '通知', value: 'info', color: '#6366F1' },
-  { label: '警告', value: 'warning', color: '#F59E0B' },
-  { label: '严重', value: 'error', color: '#EF4444' },
+const SEVERITY_OPTIONS: {
+  label: string;
+  value: AnnouncementSeverity;
+  color: string;
+}[] = [
+  { label: "通知", value: "info", color: "#6366F1" },
+  { label: "警告", value: "warning", color: "#F59E0B" },
+  { label: "严重", value: "error", color: "#EF4444" },
 ];
 
 function severityColor(s: AnnouncementSeverity): string {
-  return SEVERITY_OPTIONS.find((o) => o.value === s)?.color ?? '#6366F1';
+  return SEVERITY_OPTIONS.find((o) => o.value === s)?.color ?? "#6366F1";
 }
 
 function severityLabel(s: AnnouncementSeverity): string {
@@ -25,13 +32,16 @@ function severityLabel(s: AnnouncementSeverity): string {
 
 export function AdminAnnouncements() {
   const navigate = useNavigate();
-  useDocumentTitle('公告管理');
+  useDocumentTitle("公告管理");
 
-  const page = usePagination<AdminAnnouncementItem>({ uniqueKey: 'announcement_id' });
+  const page = usePagination<AdminAnnouncementItem>({
+    uniqueKey: "announcement_id",
+  });
   const [showForm, setShowForm] = useState(false);
-  const [formTitle, setFormTitle] = useState('');
-  const [formContent, setFormContent] = useState('');
-  const [formSeverity, setFormSeverity] = useState<AnnouncementSeverity>('info');
+  const [formTitle, setFormTitle] = useState("");
+  const [formContent, setFormContent] = useState("");
+  const [formSeverity, setFormSeverity] =
+    useState<AnnouncementSeverity>("info");
   const [submitting, setSubmitting] = useState(false);
 
   const fetchList = useCallback(
@@ -49,7 +59,7 @@ export function AdminAnnouncements() {
 
   const handleCreate = useCallback(async () => {
     if (!formTitle.trim() || !formContent.trim()) {
-      toast.error('请填写标题和内容');
+      toast.error("请填写标题和内容");
       return;
     }
     setSubmitting(true);
@@ -60,17 +70,17 @@ export function AdminAnnouncements() {
         severity: formSeverity,
       });
       if (isSuccess(res)) {
-        toast.success('公告已创建');
-        setFormTitle('');
-        setFormContent('');
-        setFormSeverity('info');
+        toast.success("公告已创建");
+        setFormTitle("");
+        setFormContent("");
+        setFormSeverity("info");
         setShowForm(false);
         fetchList(true);
       } else {
-        toast.error('创建失败');
+        toast.error("创建失败");
       }
     } catch {
-      toast.error('创建请求失败');
+      toast.error("创建请求失败");
     } finally {
       setSubmitting(false);
     }
@@ -86,24 +96,27 @@ export function AdminAnnouncements() {
           announcement_id: item.announcement_id,
         });
         if (isSuccess(res)) {
-          toast.success('已删除');
+          toast.success("已删除");
           fetchList(true);
         } else {
-          toast.error('删除失败');
+          toast.error("删除失败");
         }
       } catch {
-        toast.error('删除请求失败');
+        toast.error("删除请求失败");
       }
     },
     [fetchList],
   );
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: 'var(--neu-bg)' }}>
+    <div
+      className="flex flex-col min-h-screen"
+      style={{ background: "var(--neu-bg)" }}
+    >
       {/* Header */}
       <div
         className="flex-shrink-0 flex items-center gap-3 px-4"
-        style={{ height: 56, borderBottom: '1px solid var(--neu-border)' }}
+        style={{ height: 56, borderBottom: "1px solid var(--neu-border)" }}
       >
         <motion.button
           whileTap={{ scale: 0.88 }}
@@ -112,18 +125,18 @@ export function AdminAnnouncements() {
           style={{
             width: 36,
             height: 36,
-            background: 'var(--neu-bg)',
+            background: "var(--neu-bg)",
             boxShadow:
-              '3px 3px 8px var(--neu-shadow-dark), -3px -3px 8px var(--neu-shadow-light)',
-            border: '1px solid var(--neu-border)',
+              "3px 3px 8px var(--neu-shadow-dark), -3px -3px 8px var(--neu-shadow-light)",
+            border: "1px solid var(--neu-border)",
           }}
         >
           <ArrowLeft
-            style={{ width: 15, height: 15, color: 'var(--neu-text-muted)' }}
+            style={{ width: 15, height: 15, color: "var(--neu-text-muted)" }}
             strokeWidth={1.5}
           />
         </motion.button>
-        <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--neu-text)' }}>
+        <p style={{ fontSize: 16, fontWeight: 600, color: "var(--neu-text)" }}>
           公告管理
         </p>
         <div className="flex-1" />
@@ -134,16 +147,16 @@ export function AdminAnnouncements() {
           style={{
             width: 32,
             height: 32,
-            background: showForm ? '#EF4444' : 'var(--neu-accent-primary)',
+            background: showForm ? "#EF4444" : "var(--neu-accent-primary)",
           }}
         >
           <Plus
             style={{
               width: 16,
               height: 16,
-              color: 'white',
-              transform: showForm ? 'rotate(45deg)' : 'none',
-              transition: 'transform 0.2s',
+              color: "white",
+              transform: showForm ? "rotate(45deg)" : "none",
+              transition: "transform 0.2s",
             }}
             strokeWidth={2}
           />
@@ -155,14 +168,19 @@ export function AdminAnnouncements() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         className="flex-1 px-4 py-4"
-        style={{ maxWidth: 600, marginLeft: 'auto', marginRight: 'auto', width: '100%' }}
+        style={{
+          maxWidth: 600,
+          marginLeft: "auto",
+          marginRight: "auto",
+          width: "100%",
+        }}
       >
         {/* Create form */}
         <AnimatePresence>
           {showForm && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
+              animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.25 }}
               className="overflow-hidden mb-4"
@@ -170,15 +188,19 @@ export function AdminAnnouncements() {
               <div
                 className="px-4 py-4 rounded-[20px]"
                 style={{
-                  background: 'var(--neu-bg)',
+                  background: "var(--neu-bg)",
                   boxShadow:
-                    '5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)',
-                  border: '1px solid var(--neu-border)',
+                    "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)",
+                  border: "1px solid var(--neu-border)",
                 }}
               >
                 <p
                   className="mb-3"
-                  style={{ fontSize: 14, fontWeight: 600, color: 'var(--neu-text)' }}
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "var(--neu-text)",
+                  }}
                 >
                   新建公告
                 </p>
@@ -190,8 +212,8 @@ export function AdminAnnouncements() {
                   className="w-full bg-transparent outline-none mb-3 px-3 py-2 rounded-[12px]"
                   style={{
                     fontSize: 14,
-                    color: 'var(--neu-text)',
-                    border: '1px solid var(--neu-border)',
+                    color: "var(--neu-text)",
+                    border: "1px solid var(--neu-border)",
                   }}
                 />
 
@@ -203,8 +225,8 @@ export function AdminAnnouncements() {
                   className="w-full bg-transparent outline-none mb-3 px-3 py-2 rounded-[12px] resize-none"
                   style={{
                     fontSize: 14,
-                    color: 'var(--neu-text)',
-                    border: '1px solid var(--neu-border)',
+                    color: "var(--neu-text)",
+                    border: "1px solid var(--neu-border)",
                   }}
                 />
 
@@ -221,10 +243,12 @@ export function AdminAnnouncements() {
                         background:
                           formSeverity === opt.value
                             ? `${opt.color}20`
-                            : 'transparent',
+                            : "transparent",
                         color:
-                          formSeverity === opt.value ? opt.color : 'var(--neu-text-muted)',
-                        border: `1px solid ${formSeverity === opt.value ? opt.color : 'var(--neu-border)'}`,
+                          formSeverity === opt.value
+                            ? opt.color
+                            : "var(--neu-text-muted)",
+                        border: `1px solid ${formSeverity === opt.value ? opt.color : "var(--neu-border)"}`,
                       }}
                     >
                       {opt.label}
@@ -238,13 +262,13 @@ export function AdminAnnouncements() {
                   disabled={submitting}
                   className="w-full py-2.5 rounded-[12px]"
                   style={{
-                    background: 'var(--neu-accent-primary)',
-                    color: 'var(--text-on-accent, white)',
+                    background: "var(--neu-accent-primary)",
+                    color: "var(--text-on-accent, white)",
                     fontSize: 14,
                     opacity: submitting ? 0.6 : 1,
                   }}
                 >
-                  {submitting ? '创建中...' : '发布公告'}
+                  {submitting ? "创建中..." : "发布公告"}
                 </motion.button>
               </div>
             </motion.div>
@@ -252,7 +276,10 @@ export function AdminAnnouncements() {
         </AnimatePresence>
 
         {page.error && (
-          <p className="mb-3 text-center" style={{ fontSize: 13, color: '#EF4444' }}>
+          <p
+            className="mb-3 text-center"
+            style={{ fontSize: 13, color: "#EF4444" }}
+          >
             {page.error}
           </p>
         )}
@@ -264,9 +291,9 @@ export function AdminAnnouncements() {
               style={{
                 width: 28,
                 height: 28,
-                border: '3px solid var(--neu-border)',
-                borderTopColor: 'var(--neu-accent-primary)',
-                animation: 'spin 0.8s linear infinite',
+                border: "3px solid var(--neu-border)",
+                borderTopColor: "var(--neu-accent-primary)",
+                animation: "spin 0.8s linear infinite",
               }}
             />
             <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
@@ -276,10 +303,13 @@ export function AdminAnnouncements() {
         {!page.loading && page.items.length === 0 && (
           <div className="flex flex-col items-center py-16">
             <Megaphone
-              style={{ width: 40, height: 40, color: 'var(--neu-text-muted)' }}
+              style={{ width: 40, height: 40, color: "var(--neu-text-muted)" }}
               strokeWidth={1.2}
             />
-            <p className="mt-3" style={{ fontSize: 14, color: 'var(--neu-text-muted)' }}>
+            <p
+              className="mt-3"
+              style={{ fontSize: 14, color: "var(--neu-text-muted)" }}
+            >
               暂无公告
             </p>
           </div>
@@ -291,10 +321,10 @@ export function AdminAnnouncements() {
               key={ann.announcement_id}
               className="px-4 py-3 rounded-[16px]"
               style={{
-                background: 'var(--neu-bg)',
+                background: "var(--neu-bg)",
                 boxShadow:
-                  '4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)',
-                border: '1px solid var(--neu-border)',
+                  "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)",
+                border: "1px solid var(--neu-border)",
               }}
             >
               <div className="flex items-center justify-between mb-1.5">
@@ -314,7 +344,7 @@ export function AdminAnnouncements() {
                     style={{
                       fontSize: 14,
                       fontWeight: 500,
-                      color: 'var(--neu-text)',
+                      color: "var(--neu-text)",
                       maxWidth: 240,
                     }}
                   >
@@ -325,24 +355,24 @@ export function AdminAnnouncements() {
                   whileTap={{ scale: 0.9 }}
                   onClick={() => handleDelete(ann)}
                   className="flex items-center justify-center rounded-full flex-shrink-0"
-                  style={{ width: 28, height: 28, background: '#EF444418' }}
+                  style={{ width: 28, height: 28, background: "#EF444418" }}
                 >
                   <Trash2
-                    style={{ width: 13, height: 13, color: '#EF4444' }}
+                    style={{ width: 13, height: 13, color: "#EF4444" }}
                     strokeWidth={1.5}
                   />
                 </motion.button>
               </div>
               <p
                 className="line-clamp-2 mb-1.5"
-                style={{ fontSize: 12, color: 'var(--neu-text-muted)' }}
+                style={{ fontSize: 12, color: "var(--neu-text-muted)" }}
               >
                 {ann.content}
               </p>
-              <p style={{ fontSize: 11, color: 'var(--neu-text-muted)' }}>
+              <p style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>
                 {new Date(ann.created_at).toLocaleString()}
-                {' · 创建者 '}
-                {ann.created_by?.nickname ?? '系统'}
+                {" · 创建者 "}
+                {ann.created_by?.nickname ?? "系统"}
               </p>
             </div>
           ))}
@@ -355,15 +385,15 @@ export function AdminAnnouncements() {
             disabled={page.loadingMore}
             className="mt-4 py-2.5 rounded-[14px] w-full"
             style={{
-              background: 'var(--neu-bg)',
+              background: "var(--neu-bg)",
               boxShadow:
-                '4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)',
-              border: '1px solid var(--neu-border)',
+                "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)",
+              border: "1px solid var(--neu-border)",
               fontSize: 13,
-              color: 'var(--neu-text-muted)',
+              color: "var(--neu-text-muted)",
             }}
           >
-            {page.loadingMore ? '加载中...' : '加载更多'}
+            {page.loadingMore ? "加载中..." : "加载更多"}
           </motion.button>
         )}
       </motion.div>

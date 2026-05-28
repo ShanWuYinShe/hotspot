@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import { momentsService } from '@/lib/api/services/moments';
-import { commentsService } from '@/lib/api/services/comments';
-import { isSuccess } from '@/lib/api/client';
-import type { MomentItem, CommentItem } from '@/lib/types/api';
+import { useState, useEffect, useCallback } from "react";
+import { momentsService } from "@/lib/api/services/moments";
+import { commentsService } from "@/lib/api/services/comments";
+import { isSuccess, TOKEN_INVALID_CODE } from "@/lib/api/client";
+import type { MomentItem, CommentItem } from "@/lib/types/api";
 
 interface PostDetailData {
   post: MomentItem | null;
@@ -23,7 +23,9 @@ interface PostDetailData {
   toggleCommentLike: (commentId: string, isLiked: boolean) => void;
 }
 
-export function usePostDetailData(momentId: string | undefined): PostDetailData {
+export function usePostDetailData(
+  momentId: string | undefined,
+): PostDetailData {
   const [post, setPost] = useState<MomentItem | null>(null);
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
@@ -49,35 +51,38 @@ export function usePostDetailData(momentId: string | undefined): PostDetailData 
         setIsFavorited(m.my_state?.is_favorited ?? false);
         setLikesCount(m.likes_count);
         setCommentsCount(m.comments_count);
-      } else {
-        setError('加载失败，请重试');
+      } else if (res.code !== TOKEN_INVALID_CODE) {
+        setError("加载失败，请重试");
       }
     } catch (e) {
-      setError('网络异常，请重试');
+      setError("网络异常，请重试");
     } finally {
       setLoading(false);
     }
   }, [momentId]);
 
-  const loadComments = useCallback(async (cursor?: string) => {
-    if (!momentId) return;
+  const loadComments = useCallback(
+    async (cursor?: string) => {
+      if (!momentId) return;
 
-    try {
-      const res = await commentsService.getComments({
-        moment_id: momentId,
-        pagination: { limit: 20, cursor }
-      });
+      try {
+        const res = await commentsService.getComments({
+          moment_id: momentId,
+          pagination: { limit: 20, cursor },
+        });
 
-      if (isSuccess(res) && res.data) {
-        if (cursor) {
-          setComments((prev) => [...prev, ...res.data!.items]);
-        } else {
-          setComments(res.data.items);
+        if (isSuccess(res) && res.data) {
+          if (cursor) {
+            setComments((prev) => [...prev, ...res.data!.items]);
+          } else {
+            setComments(res.data.items);
+          }
+          setNextCursor(res.data.next_cursor);
         }
-        setNextCursor(res.data.next_cursor);
-      }
-    } catch {}
-  }, [momentId]);
+      } catch {}
+    },
+    [momentId],
+  );
 
   useEffect(() => {
     loadPost();
@@ -138,7 +143,7 @@ export function usePostDetailData(momentId: string | undefined): PostDetailData 
       try {
         const res = await commentsService.create({
           moment_id: momentId,
-          content: content.trim()
+          content: content.trim(),
         });
 
         if (isSuccess(res) && res.data) {
@@ -151,35 +156,52 @@ export function usePostDetailData(momentId: string | undefined): PostDetailData 
         return false;
       }
     },
-    [momentId]
+    [momentId],
   );
 
-  const toggleCommentLike = useCallback(async (commentId: string, wasLiked: boolean) => {
-    setComments(prev => prev.map(c => {
-      if (c.comment_id !== commentId) return c;
-      return {
-        ...c,
-        is_liked: !wasLiked,
-        likes_count: c.likes_count + (wasLiked ? -1 : 1),
-      };
-    }));
-    try {
-      const res = wasLiked
-        ? await commentsService.unlike({ comment_id: commentId })
-        : await commentsService.like({ comment_id: commentId });
-      if (!isSuccess(res)) {
-        setComments(prev => prev.map(c => {
+  const toggleCommentLike = useCallback(
+    async (commentId: string, wasLiked: boolean) => {
+      setComments((prev) =>
+        prev.map((c) => {
           if (c.comment_id !== commentId) return c;
-          return { ...c, is_liked: wasLiked, likes_count: c.likes_count + (wasLiked ? 1 : -1) };
-        }));
+          return {
+            ...c,
+            is_liked: !wasLiked,
+            likes_count: c.likes_count + (wasLiked ? -1 : 1),
+          };
+        }),
+      );
+      try {
+        const res = wasLiked
+          ? await commentsService.unlike({ comment_id: commentId })
+          : await commentsService.like({ comment_id: commentId });
+        if (!isSuccess(res)) {
+          setComments((prev) =>
+            prev.map((c) => {
+              if (c.comment_id !== commentId) return c;
+              return {
+                ...c,
+                is_liked: wasLiked,
+                likes_count: c.likes_count + (wasLiked ? 1 : -1),
+              };
+            }),
+          );
+        }
+      } catch {
+        setComments((prev) =>
+          prev.map((c) => {
+            if (c.comment_id !== commentId) return c;
+            return {
+              ...c,
+              is_liked: wasLiked,
+              likes_count: c.likes_count + (wasLiked ? 1 : -1),
+            };
+          }),
+        );
       }
-    } catch {
-      setComments(prev => prev.map(c => {
-        if (c.comment_id !== commentId) return c;
-        return { ...c, is_liked: wasLiked, likes_count: c.likes_count + (wasLiked ? 1 : -1) };
-      }));
-    }
-  }, []);
+    },
+    [],
+  );
 
   return {
     post,

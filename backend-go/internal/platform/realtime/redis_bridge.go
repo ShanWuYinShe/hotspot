@@ -18,6 +18,7 @@ const (
 	redisChannelUser    = "user:"
 	redisChannelUserSub = "usersub:"
 	redisChannelGroup   = "group:"
+	redisChannelSession = "session:"
 	redisChannelAll     = "all"
 )
 
@@ -31,6 +32,7 @@ type redisEnvelope struct {
 // to the local Hub via the local-only delivery methods.
 type RedisBridge struct {
 	rdb      *redis.Client
+	sub      *redis.PubSub
 	instance string
 	hub      *Hub
 	subCh    <-chan *redis.Message
@@ -51,6 +53,7 @@ func NewRedisBridge(rdb *redis.Client, instanceID string, hub *Hub) (*RedisBridg
 	}
 
 	sub := rdb.Subscribe(ctx, redisChannelPrefix+"*")
+	b.sub = sub
 	b.subCh = sub.Channel()
 
 	b.done.Add(1)
@@ -75,6 +78,7 @@ func (b *RedisBridge) Close() error {
 		return nil
 	}
 	b.cancel()
+	_ = b.sub.Close()
 	b.done.Wait()
 	return b.rdb.Close()
 }
@@ -99,13 +103,18 @@ func (b *RedisBridge) receiveLoop() {
 }
 
 func (b *RedisBridge) dispatchLocal(channel string, event Event) {
+	// Order matters: "session:" and "usersub:" must be checked before "user:"
+	// because strings.HasPrefix("usersub:xxx", "user:") is true.
 	switch {
-	case strings.HasPrefix(channel, redisChannelUser):
-		userID := strings.TrimPrefix(channel, redisChannelUser)
-		b.hub.deliverUserLocal(userID, event)
+	case strings.HasPrefix(channel, redisChannelSession):
+		sessionID := strings.TrimPrefix(channel, redisChannelSession)
+		b.hub.closeSessionLocal(sessionID, event)
 	case strings.HasPrefix(channel, redisChannelUserSub):
 		userID := strings.TrimPrefix(channel, redisChannelUserSub)
 		b.hub.deliverUserSubscribersLocal(userID, event)
+	case strings.HasPrefix(channel, redisChannelUser):
+		userID := strings.TrimPrefix(channel, redisChannelUser)
+		b.hub.deliverUserLocal(userID, event)
 	case strings.HasPrefix(channel, redisChannelGroup):
 		groupID := strings.TrimPrefix(channel, redisChannelGroup)
 		b.hub.deliverGroupLocal(groupID, event)

@@ -2,10 +2,10 @@
  * 聊天 WebSocket 订阅生命周期管理 Hook
  */
 
-import { useRef, useCallback, useState } from 'react';
-import { SubscriptionManager } from '@/lib/websocket/subscription-manager';
+import { useRef, useCallback, useState } from "react";
+import { SubscriptionManager } from "@/lib/websocket/subscription-manager";
 
-export type ChatSubscriptionType = 'user' | 'group';
+export type ChatSubscriptionType = "user" | "group";
 
 export interface SyncChatSubscriptionOptions {
   connected: boolean;
@@ -29,7 +29,10 @@ function normalizeIds(ids: string[]): string[] {
   return Array.from(unique);
 }
 
-function isSameTarget(a: ChatSubscriptionTarget | null, b: ChatSubscriptionTarget): boolean {
+function isSameTarget(
+  a: ChatSubscriptionTarget | null,
+  b: ChatSubscriptionTarget,
+): boolean {
   if (!a) return false;
   if (a.type !== b.type) return false;
   if (a.ids.length !== b.ids.length) return false;
@@ -38,7 +41,9 @@ function isSameTarget(a: ChatSubscriptionTarget | null, b: ChatSubscriptionTarge
   return aSorted.every((id, index) => id === bSorted[index]);
 }
 
-export function useChatWsSubscription(subscriptionManager: SubscriptionManager) {
+export function useChatWsSubscription(
+  subscriptionManager: SubscriptionManager,
+) {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isAttemptingSubscribe, setIsAttemptingSubscribe] = useState(false);
 
@@ -59,7 +64,10 @@ export function useChatWsSubscription(subscriptionManager: SubscriptionManager) 
       const targetChanged = !isSameTarget(previousTarget, nextTarget);
 
       if (targetChanged && previousTarget && previousTarget.ids.length > 0) {
-        void subscriptionManager.unsubscribe(previousTarget.type, previousTarget.ids);
+        void subscriptionManager.unsubscribe(
+          previousTarget.type,
+          previousTarget.ids,
+        );
       }
       if (targetChanged) {
         previousTargetRef.current = nextTarget;

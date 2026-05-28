@@ -62,7 +62,10 @@ export function CreateSheet({ onClose }: Props) {
             >
               发布动态
             </h1>
-            <p className="text-[12px] mt-0.5" style={{ color: "var(--neu-text-muted)" }}>
+            <p
+              className="text-[12px] mt-0.5"
+              style={{ color: "var(--neu-text-muted)" }}
+            >
               分享你身边的新鲜事
             </p>
           </div>
@@ -91,7 +94,10 @@ export function CreateSheet({ onClose }: Props) {
       </div>
 
       {/* ── Scrollable Body ─────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-4 flex flex-col gap-4" style={{ overscrollBehavior: "contain" }}>
+      <div
+        className="flex-1 overflow-y-auto no-scrollbar px-5 py-4 flex flex-col gap-4"
+        style={{ overscrollBehavior: "contain" }}
+      >
         {/* Author Row */}
         <div className="flex items-center gap-3">
           <div
@@ -104,15 +110,29 @@ export function CreateSheet({ onClose }: Props) {
                 "4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)",
             }}
           >
-            <img src={USER_AVATAR} alt="我的头像" className="w-full h-full object-cover" />
+            <img
+              src={USER_AVATAR}
+              alt="我的头像"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
             <p className="text-[13px]" style={{ color: "var(--neu-text)" }}>
               Elara Vance
             </p>
             <div className="flex items-center gap-1">
-              <MapPin style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
-              <span className="text-[11px]" style={{ color: "var(--neu-text-muted)" }}>
+              <MapPin
+                style={{
+                  width: 11,
+                  height: 11,
+                  color: "var(--neu-accent-primary)",
+                }}
+                strokeWidth={1.5}
+              />
+              <span
+                className="text-[11px]"
+                style={{ color: "var(--neu-text-muted)" }}
+              >
                 徐州, 江苏
               </span>
             </div>
@@ -177,7 +197,10 @@ export function CreateSheet({ onClose }: Props) {
             <span
               className="text-[11px]"
               style={{
-                color: text.length > 240 ? "var(--neu-accent-primary)" : "var(--neu-text-muted)",
+                color:
+                  text.length > 240
+                    ? "var(--neu-accent-primary)"
+                    : "var(--neu-text-muted)",
               }}
             >
               {text.length}/280
@@ -213,7 +236,10 @@ export function CreateSheet({ onClose }: Props) {
                 backdropFilter: "blur(4px)",
               }}
             >
-              <X style={{ width: 14, height: 14, color: "white" }} strokeWidth={2} />
+              <X
+                style={{ width: 14, height: 14, color: "white" }}
+                strokeWidth={2}
+              />
             </motion.button>
           </div>
         ) : (
@@ -232,7 +258,10 @@ export function CreateSheet({ onClose }: Props) {
               style={{ width: 22, height: 22, color: "var(--neu-text-muted)" }}
               strokeWidth={1.25}
             />
-            <span className="text-[12px]" style={{ color: "var(--neu-text-muted)" }}>
+            <span
+              className="text-[12px]"
+              style={{ color: "var(--neu-text-muted)" }}
+            >
               添加照片
             </span>
           </motion.button>

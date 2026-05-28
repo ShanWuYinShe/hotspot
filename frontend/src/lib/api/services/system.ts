@@ -1,11 +1,11 @@
-import { post } from '../client';
-import { SYSTEM } from '../endpoints';
+import { post } from "../client";
+import { SYSTEM } from "../endpoints";
 import type {
   ApiVersionMeta,
   ClientConfig,
   HealthStatus,
-  SystemAnnouncementItem
-} from '@/lib/types/api';
+  SystemAnnouncementItem,
+} from "@/lib/types/api";
 
 export const systemService = {
   health() {
@@ -21,6 +21,10 @@ export const systemService = {
   },
 
   getAnnouncements() {
-    return post<{ items: SystemAnnouncementItem[] }>(SYSTEM.LIST_ANNOUNCEMENTS, {}, { skipAuth: true });
-  }
+    return post<{ items: SystemAnnouncementItem[] }>(
+      SYSTEM.LIST_ANNOUNCEMENTS,
+      {},
+      { skipAuth: true },
+    );
+  },
 };

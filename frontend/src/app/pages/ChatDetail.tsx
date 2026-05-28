@@ -9,7 +9,10 @@ export function ChatDetail() {
   useDocumentTitle("聊天");
 
   return (
-    <div className="flex flex-col" style={{ height: "100%", backgroundColor: "var(--neu-bg)" }}>
+    <div
+      className="flex flex-col"
+      style={{ height: "100%", backgroundColor: "var(--neu-bg)" }}
+    >
       <ChatView
         chatId={chatId ?? ""}
         showBackButton

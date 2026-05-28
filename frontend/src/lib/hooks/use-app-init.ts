@@ -1,15 +1,15 @@
-import { useEffect, useRef } from 'react';
-import { useAuthStore } from '@/lib/stores/auth';
-import { useConfigStore } from '@/lib/stores/config';
-import { authService } from '@/lib/api/services/auth';
-import { usersService } from '@/lib/api/services/users';
-import { ensureRefreshToken, isSuccess } from '@/lib/api/client';
-import { useWebSocketStore } from '@/lib/websocket/store';
-import { setPresenceStore } from '@/lib/websocket/handlers';
-import { usePresenceStore } from '@/lib/stores/presence';
-import { useNotificationStore } from '@/lib/stores/notification';
-import { useMessageStore } from '@/lib/stores/message';
-import { useAdminPermissionsStore } from '@/lib/stores/admin-permissions';
+import { useEffect, useRef } from "react";
+import { useAuthStore } from "@/lib/stores/auth";
+import { useConfigStore } from "@/lib/stores/config";
+import { authService } from "@/lib/api/services/auth";
+import { usersService } from "@/lib/api/services/users";
+import { ensureRefreshToken, isSuccess } from "@/lib/api/client";
+import { useWebSocketStore } from "@/lib/websocket/store";
+import { setPresenceStore } from "@/lib/websocket/handlers";
+import { usePresenceStore } from "@/lib/stores/presence";
+import { useNotificationStore } from "@/lib/stores/notification";
+import { useMessageStore } from "@/lib/stores/message";
+import { useAdminPermissionsStore } from "@/lib/stores/admin-permissions";
 
 const CHECK_INTERVAL = 60 * 1000;
 const REFRESH_THRESHOLD = 3;
@@ -20,7 +20,10 @@ class TokenRefreshManager {
   start() {
     if (this.checkInterval) return;
     this.checkAndRefresh();
-    this.checkInterval = setInterval(() => this.checkAndRefresh(), CHECK_INTERVAL);
+    this.checkInterval = setInterval(
+      () => this.checkAndRefresh(),
+      CHECK_INTERVAL,
+    );
   }
 
   stop() {
@@ -31,8 +34,12 @@ class TokenRefreshManager {
   }
 
   private async checkAndRefresh() {
-    const { isAuthenticated, isTokenExpiringSoon, updateExpiresAt, invalidateSession } =
-      useAuthStore.getState();
+    const {
+      isAuthenticated,
+      isTokenExpiringSoon,
+      updateExpiresAt,
+      invalidateSession,
+    } = useAuthStore.getState();
     if (!isAuthenticated) return;
     try {
       if (isTokenExpiringSoon(REFRESH_THRESHOLD)) {
@@ -42,7 +49,9 @@ class TokenRefreshManager {
           if (isSuccess(res) && res.data?.expires_at) {
             updateExpiresAt(res.data.expires_at);
           } else {
-            updateExpiresAt(new Date(Date.now() + 15 * 60 * 1000).toISOString());
+            updateExpiresAt(
+              new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+            );
           }
         } else {
           invalidateSession();
@@ -57,8 +66,14 @@ class TokenRefreshManager {
 const tokenRefreshManager = new TokenRefreshManager();
 
 async function restoreSession() {
-  const { startRestoring, finishRestoring, invalidateSession, login, setProfile, currentUserId } =
-    useAuthStore.getState();
+  const {
+    startRestoring,
+    finishRestoring,
+    invalidateSession,
+    login,
+    setProfile,
+    currentUserId,
+  } = useAuthStore.getState();
   startRestoring();
 
   try {
@@ -80,11 +95,13 @@ async function restoreSession() {
       return;
     }
 
-    const expiresAt = statusRes.data.expires_at ?? new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const expiresAt =
+      statusRes.data.expires_at ??
+      new Date(Date.now() + 15 * 60 * 1000).toISOString();
     login({
       user_id: profileRes.data.user_id,
       user_type: profileRes.data.user_type,
-      access_token_expires_at: expiresAt
+      access_token_expires_at: expiresAt,
     });
     setProfile(profileRes.data);
   } catch {

@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { privateChatsService, privateMessagesService } from '@/lib/api/services';
-import { isSuccess } from '@/lib/api/client';
-import type { PrivateChatItem, PrivateMessageItem } from '@/lib/types/api';
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  privateChatsService,
+  privateMessagesService,
+} from "@/lib/api/services";
+import { isSuccess, TOKEN_INVALID_CODE } from "@/lib/api/client";
+import type { PrivateChatItem, PrivateMessageItem } from "@/lib/types/api";
 
 interface ChatData {
   chat: PrivateChatItem | null;
@@ -29,16 +32,18 @@ export function useChatData(chatId: string | undefined): ChatData {
     setLoading(true);
     setError(null);
     try {
-      const res = await privateChatsService.openChat({ target_user_id: chatId });
+      const res = await privateChatsService.openChat({
+        target_user_id: chatId,
+      });
       if (isSuccess(res) && res.data) {
         setChat(res.data.chat);
         setMessages(res.data.recent_messages.items);
         setNextCursor(res.data.recent_messages.next_cursor);
-      } else {
-        setError('加载失败，请重试');
+      } else if (res.code !== TOKEN_INVALID_CODE) {
+        setError("加载失败，请重试");
       }
     } catch {
-      setError('网络异常');
+      setError("网络异常");
     } finally {
       setLoading(false);
     }
@@ -56,48 +61,56 @@ export function useChatData(chatId: string | undefined): ChatData {
     try {
       const res = await privateMessagesService.getHistory({
         target_user_id: chatId,
-        pagination: { cursor: nextCursor, limit: 20 }
+        pagination: { cursor: nextCursor, limit: 20 },
       });
       if (isSuccess(res) && res.data) {
-        setMessages(prev => [...res.data!.items, ...prev]);
+        setMessages((prev) => [...res.data!.items, ...prev]);
         setNextCursor(res.data.next_cursor);
       }
     } catch {}
   }, [chatId, nextCursor]);
 
-  const sendMessage = useCallback(async (content: string): Promise<boolean> => {
-    if (!chatId || !content.trim()) return false;
-    setSending(true);
-    try {
-      const res = await privateMessagesService.send({
-        target_user_id: chatId,
-        type: 'text',
-        content: content.trim()
-      });
-      if (isSuccess(res) && res.data) {
-        const msg: PrivateMessageItem = {
-          message_id: res.data.message_id,
-          type: 'text',
+  const sendMessage = useCallback(
+    async (content: string): Promise<boolean> => {
+      if (!chatId || !content.trim()) return false;
+      setSending(true);
+      try {
+        const res = await privateMessagesService.send({
+          target_user_id: chatId,
+          type: "text",
           content: content.trim(),
-          sender: { user_id: 'me', nickname: '' },
-          sent_at: res.data.sent_at,
-          is_read: false,
-        };
-        setMessages(prev => [...prev, msg]);
-        return true;
+        });
+        if (isSuccess(res) && res.data) {
+          const msg: PrivateMessageItem = {
+            message_id: res.data.message_id,
+            type: "text",
+            content: content.trim(),
+            sender: { user_id: "me", nickname: "" },
+            sent_at: res.data.sent_at,
+            is_read: false,
+          };
+          setMessages((prev) => [...prev, msg]);
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      } finally {
+        setSending(false);
       }
-      return false;
-    } catch {
-      return false;
-    } finally {
-      setSending(false);
-    }
-  }, [chatId]);
+    },
+    [chatId],
+  );
 
   return {
-    chat, messages, loading, sending, error,
+    chat,
+    messages,
+    loading,
+    sending,
+    error,
     hasMore: !!nextCursor,
-    sendMessage, loadMore,
+    sendMessage,
+    loadMore,
     refresh: loadChat,
   };
 }

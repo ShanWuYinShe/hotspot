@@ -49,7 +49,9 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <PlatformContext.Provider value={value}>{children}</PlatformContext.Provider>
+    <PlatformContext.Provider value={value}>
+      {children}
+    </PlatformContext.Provider>
   );
 }
 

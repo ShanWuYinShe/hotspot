@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { usersService } from '@/lib/api/services/users';
-import { isSuccess } from '@/lib/api/client';
-import type { UserItem, MomentItem } from '@/lib/types/api';
+import { useState, useEffect, useCallback } from "react";
+import { usersService } from "@/lib/api/services/users";
+import { isSuccess, TOKEN_INVALID_CODE } from "@/lib/api/client";
+import type { UserItem, MomentItem } from "@/lib/types/api";
 
 interface UserProfileData {
   user: UserItem | null;
@@ -16,7 +16,9 @@ interface UserProfileData {
   toggleFollow: () => void;
 }
 
-export function useUserProfileData(userId: string | undefined): UserProfileData {
+export function useUserProfileData(
+  userId: string | undefined,
+): UserProfileData {
   const [user, setUser] = useState<UserItem | null>(null);
   const [moments, setMoments] = useState<MomentItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
@@ -35,35 +37,38 @@ export function useUserProfileData(userId: string | undefined): UserProfileData 
       if (isSuccess(res) && res.data) {
         setUser(res.data);
         setIsFollowing(res.data.relation?.is_following ?? false);
-      } else {
-        setError('加载失败，请重试');
+      } else if (res.code !== TOKEN_INVALID_CODE) {
+        setError("加载失败，请重试");
       }
     } catch (e) {
-      setError('网络异常，请重试');
+      setError("网络异常，请重试");
     } finally {
       setLoading(false);
     }
   }, [userId]);
 
-  const loadMoments = useCallback(async (cursor?: string) => {
-    if (!userId) return;
+  const loadMoments = useCallback(
+    async (cursor?: string) => {
+      if (!userId) return;
 
-    try {
-      const res = await usersService.getMoments({
-        user_id: userId,
-        pagination: { limit: 20, cursor }
-      });
+      try {
+        const res = await usersService.getMoments({
+          user_id: userId,
+          pagination: { limit: 20, cursor },
+        });
 
-      if (isSuccess(res) && res.data) {
-        if (cursor) {
-          setMoments((prev) => [...prev, ...res.data!.items]);
-        } else {
-          setMoments(res.data.items);
+        if (isSuccess(res) && res.data) {
+          if (cursor) {
+            setMoments((prev) => [...prev, ...res.data!.items]);
+          } else {
+            setMoments(res.data.items);
+          }
+          setNextCursor(res.data.next_cursor);
         }
-        setNextCursor(res.data.next_cursor);
-      }
-    } catch {}
-  }, [userId]);
+      } catch {}
+    },
+    [userId],
+  );
 
   useEffect(() => {
     loadUser();
@@ -88,14 +93,16 @@ export function useUserProfileData(userId: string | undefined): UserProfileData 
                 stats: prev.stats
                   ? {
                       ...prev.stats,
-                      followers_count: prev.stats.followers_count + (isFollowing ? -1 : 1)
+                      followers_count:
+                        prev.stats.followers_count + (isFollowing ? -1 : 1),
                     }
-                  : prev.stats
+                  : prev.stats,
               }
-            : prev
+            : prev,
         );
       }
-    } catch {} finally {
+    } catch {
+    } finally {
       setFollowLoading(false);
     }
   }, [userId, isFollowing, followLoading]);
@@ -113,6 +120,6 @@ export function useUserProfileData(userId: string | undefined): UserProfileData 
       loadUser();
       loadMoments();
     },
-    toggleFollow
+    toggleFollow,
   };
 }

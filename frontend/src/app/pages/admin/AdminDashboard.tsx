@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router';
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router";
 import {
   ArrowLeft,
   Users,
@@ -8,18 +8,18 @@ import {
   Heart,
   Shield,
   Activity,
-} from 'lucide-react';
-import { motion } from 'motion/react';
-import { toast } from 'sonner';
+} from "lucide-react";
+import { motion } from "motion/react";
+import { toast } from "sonner";
 import {
   adminUsersService,
   adminGroupsService,
   adminReportsService,
   systemService,
-} from '@/lib/api/services';
-import { isSuccess } from '@/lib/api/client';
-import { useDocumentTitle } from '@/lib/hooks/use-document-title';
-import type { HealthStatus } from '@/lib/types/api';
+} from "@/lib/api/services";
+import { isSuccess } from "@/lib/api/client";
+import { useDocumentTitle } from "@/lib/hooks/use-document-title";
+import type { HealthStatus } from "@/lib/types/api";
 
 interface StatCard {
   label: string;
@@ -30,7 +30,7 @@ interface StatCard {
 
 export function AdminDashboard() {
   const navigate = useNavigate();
-  useDocumentTitle('管理面板');
+  useDocumentTitle("管理面板");
 
   const [stats, setStats] = useState<StatCard[]>([]);
   const [health, setHealth] = useState<HealthStatus | null>(null);
@@ -42,39 +42,53 @@ export function AdminDashboard() {
       const [usersRes, groupsRes, reportsRes, healthRes] = await Promise.all([
         adminUsersService.search({ pagination: { limit: 1 } }),
         adminGroupsService.search({ pagination: { limit: 1 } }),
-        adminReportsService.search({ status: 'pending', pagination: { limit: 1 } }),
+        adminReportsService.search({
+          status: "pending",
+          pagination: { limit: 1 },
+        }),
         systemService.health(),
       ]);
 
-      const userCount = isSuccess(usersRes) && usersRes.data ? usersRes.data.items.length : 0;
-      const groupCount = isSuccess(groupsRes) && groupsRes.data ? groupsRes.data.items.length : 0;
-      const reportCount = isSuccess(reportsRes) && reportsRes.data ? reportsRes.data.items.length : 0;
+      const toCount = (res: {
+        code?: number;
+        data?: { items?: unknown[]; next_cursor?: string };
+      }) => {
+        if (!isSuccess(res) || !res.data) return "0";
+        if (res.data.items && res.data.items.length === 0) return "0";
+        return res.data.next_cursor ? "1+" : "1";
+      };
+      const userCount = toCount(usersRes);
+      const groupCount = toCount(groupsRes);
+      const reportCount = toCount(reportsRes);
 
       // Use next_cursor existence to know if there are more items, but we only have count hint from limit=1
       setStats([
         {
-          label: '用户总数',
+          label: "用户总数",
           value: userCount,
           icon: Users,
-          color: '#6366F1',
+          color: "#6366F1",
         },
         {
-          label: '群组总数',
+          label: "群组总数",
           value: groupCount,
           icon: UserCheck,
-          color: '#10B981',
+          color: "#10B981",
         },
         {
-          label: '待处理举报',
+          label: "待处理举报",
           value: reportCount,
           icon: Flag,
-          color: '#F59E0B',
+          color: "#F59E0B",
         },
         {
-          label: '系统健康',
-          value: isSuccess(healthRes) && healthRes.data ? healthRes.data.status : '未知',
+          label: "系统健康",
+          value:
+            isSuccess(healthRes) && healthRes.data
+              ? healthRes.data.status
+              : "未知",
           icon: Heart,
-          color: '#EC4899',
+          color: "#EC4899",
         },
       ]);
 
@@ -82,7 +96,7 @@ export function AdminDashboard() {
         setHealth(healthRes.data);
       }
     } catch {
-      toast.error('加载仪表盘失败');
+      toast.error("加载仪表盘失败");
     } finally {
       setLoading(false);
     }
@@ -93,19 +107,32 @@ export function AdminDashboard() {
   }, [fetchDashboard]);
 
   const navItems = [
-    { label: '用户管理', icon: Users, path: '/admin/users', color: '#6366F1' },
-    { label: '群组管理', icon: UserCheck, path: '/admin/groups', color: '#10B981' },
-    { label: '举报处理', icon: Flag, path: '/admin/reports', color: '#F59E0B' },
-    { label: '公告管理', icon: Activity, path: '/admin/announcements', color: '#8B5CF6' },
-    { label: 'RBAC 权限', icon: Shield, path: '/admin/rbac', color: '#EF4444' },
+    { label: "用户管理", icon: Users, path: "/admin/users", color: "#6366F1" },
+    {
+      label: "群组管理",
+      icon: UserCheck,
+      path: "/admin/groups",
+      color: "#10B981",
+    },
+    { label: "举报处理", icon: Flag, path: "/admin/reports", color: "#F59E0B" },
+    {
+      label: "公告管理",
+      icon: Activity,
+      path: "/admin/announcements",
+      color: "#8B5CF6",
+    },
+    { label: "RBAC 权限", icon: Shield, path: "/admin/rbac", color: "#EF4444" },
   ];
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: 'var(--neu-bg)' }}>
+    <div
+      className="flex flex-col min-h-screen"
+      style={{ background: "var(--neu-bg)" }}
+    >
       {/* Header */}
       <div
         className="flex-shrink-0 flex items-center gap-3 px-4"
-        style={{ height: 56, borderBottom: '1px solid var(--neu-border)' }}
+        style={{ height: 56, borderBottom: "1px solid var(--neu-border)" }}
       >
         <motion.button
           whileTap={{ scale: 0.88 }}
@@ -114,18 +141,18 @@ export function AdminDashboard() {
           style={{
             width: 36,
             height: 36,
-            background: 'var(--neu-bg)',
+            background: "var(--neu-bg)",
             boxShadow:
-              '3px 3px 8px var(--neu-shadow-dark), -3px -3px 8px var(--neu-shadow-light)',
-            border: '1px solid var(--neu-border)',
+              "3px 3px 8px var(--neu-shadow-dark), -3px -3px 8px var(--neu-shadow-light)",
+            border: "1px solid var(--neu-border)",
           }}
         >
           <ArrowLeft
-            style={{ width: 15, height: 15, color: 'var(--neu-text-muted)' }}
+            style={{ width: 15, height: 15, color: "var(--neu-text-muted)" }}
             strokeWidth={1.5}
           />
         </motion.button>
-        <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--neu-text)' }}>
+        <p style={{ fontSize: 16, fontWeight: 600, color: "var(--neu-text)" }}>
           管理面板
         </p>
       </div>
@@ -136,7 +163,12 @@ export function AdminDashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         className="flex-1 px-4 py-5"
-        style={{ maxWidth: 600, marginLeft: 'auto', marginRight: 'auto', width: '100%' }}
+        style={{
+          maxWidth: 600,
+          marginLeft: "auto",
+          marginRight: "auto",
+          width: "100%",
+        }}
       >
         {/* Stats */}
         {loading ? (
@@ -146,9 +178,9 @@ export function AdminDashboard() {
               style={{
                 width: 32,
                 height: 32,
-                border: '3px solid var(--neu-border)',
-                borderTopColor: 'var(--neu-accent-primary)',
-                animation: 'spin 0.8s linear infinite',
+                border: "3px solid var(--neu-border)",
+                borderTopColor: "var(--neu-accent-primary)",
+                animation: "spin 0.8s linear infinite",
               }}
             />
             <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
@@ -162,10 +194,10 @@ export function AdminDashboard() {
                   whileTap={{ scale: 0.97 }}
                   className="flex flex-col items-center py-5 rounded-[20px]"
                   style={{
-                    background: 'var(--neu-bg)',
+                    background: "var(--neu-bg)",
                     boxShadow:
-                      '5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)',
-                    border: '1px solid var(--neu-border)',
+                      "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)",
+                    border: "1px solid var(--neu-border)",
                   }}
                 >
                   <div
@@ -186,13 +218,15 @@ export function AdminDashboard() {
                     style={{
                       fontSize: 22,
                       fontWeight: 700,
-                      color: 'var(--neu-text)',
+                      color: "var(--neu-text)",
                     }}
                   >
-                    {typeof card.value === 'number' ? card.value : String(card.value)}
+                    {typeof card.value === "number"
+                      ? card.value
+                      : String(card.value)}
                   </span>
                   <span
-                    style={{ fontSize: 11, color: 'var(--neu-text-muted)' }}
+                    style={{ fontSize: 11, color: "var(--neu-text-muted)" }}
                   >
                     {card.label}
                   </span>
@@ -205,10 +239,10 @@ export function AdminDashboard() {
               <div
                 className="flex items-center gap-3 px-4 py-3 rounded-[16px] mb-6"
                 style={{
-                  background: 'var(--neu-bg)',
+                  background: "var(--neu-bg)",
                   boxShadow:
-                    'inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light)',
-                  border: '1px solid var(--neu-border)',
+                    "inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light)",
+                  border: "1px solid var(--neu-border)",
                 }}
               >
                 <div
@@ -217,15 +251,20 @@ export function AdminDashboard() {
                     width: 10,
                     height: 10,
                     background:
-                      health.status === 'healthy'
-                        ? '#10B981'
-                        : health.status === 'degraded'
-                          ? '#F59E0B'
-                          : '#EF4444',
+                      health.status === "healthy"
+                        ? "#10B981"
+                        : health.status === "degraded"
+                          ? "#F59E0B"
+                          : "#EF4444",
                   }}
                 />
-                <span style={{ fontSize: 13, color: 'var(--neu-text)' }}>
-                  系统状态：{health.status === 'healthy' ? '正常' : health.status === 'degraded' ? '降级' : '异常'}
+                <span style={{ fontSize: 13, color: "var(--neu-text)" }}>
+                  系统状态：
+                  {health.status === "healthy"
+                    ? "正常"
+                    : health.status === "degraded"
+                      ? "降级"
+                      : "异常"}
                 </span>
               </div>
             )}
@@ -235,9 +274,9 @@ export function AdminDashboard() {
               className="px-1 mb-2"
               style={{
                 fontSize: 11,
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                color: 'var(--neu-text-muted)',
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: "var(--neu-text-muted)",
               }}
             >
               快捷入口
@@ -250,10 +289,10 @@ export function AdminDashboard() {
                   onClick={() => navigate(item.path)}
                   className="flex items-center gap-3 px-4 py-3.5 rounded-[16px] w-full outline-none text-left"
                   style={{
-                    background: 'var(--neu-bg)',
+                    background: "var(--neu-bg)",
                     boxShadow:
-                      '4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)',
-                    border: '1px solid var(--neu-border)',
+                      "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)",
+                    border: "1px solid var(--neu-border)",
                   }}
                 >
                   <div
@@ -269,7 +308,7 @@ export function AdminDashboard() {
                       strokeWidth={1.5}
                     />
                   </div>
-                  <span style={{ fontSize: 14, color: 'var(--neu-text)' }}>
+                  <span style={{ fontSize: 14, color: "var(--neu-text)" }}>
                     {item.label}
                   </span>
                 </motion.button>

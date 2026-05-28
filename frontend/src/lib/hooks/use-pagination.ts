@@ -4,10 +4,10 @@
  * 管理 cursor 分页状态，带竞态保护和去重
  */
 
-import { useState, useRef, useCallback } from 'react';
-import { isSuccess } from '@/lib/api/client';
-import type { ApiResponse, PaginatedData } from '@/lib/types/api';
-import { withMinimumLoadingTime } from '@/lib/utils/loading';
+import { useState, useRef, useCallback } from "react";
+import { isSuccess } from "@/lib/api/client";
+import type { ApiResponse, PaginatedData } from "@/lib/types/api";
+import { withMinimumLoadingTime } from "@/lib/utils/loading";
 
 interface UsePaginationOptions<T> {
   initialLoading?: boolean;
@@ -32,7 +32,9 @@ export interface PaginationState<T> {
   setItems: (newItems: T[]) => void;
 }
 
-export function usePagination<T>(options?: UsePaginationOptions<T>): PaginationState<T> {
+export function usePagination<T>(
+  options?: UsePaginationOptions<T>,
+): PaginationState<T> {
   const [items, setItemsState] = useState<T[]>([]);
   const [loading, setLoading] = useState(options?.initialLoading ?? true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -82,12 +84,14 @@ export function usePagination<T>(options?: UsePaginationOptions<T>): PaginationS
               if (options?.uniqueKey) {
                 const uniqueKeyOpt = options.uniqueKey;
                 const getKey = (item: T): unknown =>
-                  typeof uniqueKeyOpt === 'function'
+                  typeof uniqueKeyOpt === "function"
                     ? uniqueKeyOpt(item)
                     : item[uniqueKeyOpt as keyof T];
 
                 const existingKeys = new Set(prev.map(getKey));
-                const uniqueNewItems = newItems.filter((item) => !existingKeys.has(getKey(item)));
+                const uniqueNewItems = newItems.filter(
+                  (item) => !existingKeys.has(getKey(item)),
+                );
                 return [...prev, ...uniqueNewItems];
               }
               return [...prev, ...newItems];
@@ -98,11 +102,11 @@ export function usePagination<T>(options?: UsePaginationOptions<T>): PaginationS
           cursorRef.current = response.data.next_cursor;
           setErrorState(null);
         } else {
-          setErrorState(response.message || '加载失败');
+          setErrorState(response.message || "加载失败");
         }
       } catch (e) {
         if (version !== loadVersionRef.current) return;
-        setErrorState(e instanceof Error ? e.message : '加载失败');
+        setErrorState(e instanceof Error ? e.message : "加载失败");
       } finally {
         if (version === loadVersionRef.current) {
           setLoading(false);

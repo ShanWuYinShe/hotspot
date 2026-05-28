@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { usersService } from '@/lib/api/services';
-import { isSuccess } from '@/lib/api/client';
+import { useState, useEffect, useCallback } from "react";
+import { usersService } from "@/lib/api/services";
+import { isSuccess } from "@/lib/api/client";
 import type {
   MyProfile,
   MomentItem,
@@ -8,7 +8,7 @@ import type {
   FriendItem,
   FollowingItem,
   FollowerItem,
-} from '@/lib/types/api';
+} from "@/lib/types/api";
 
 interface ProfileData {
   profile: MyProfile | null;
@@ -55,7 +55,9 @@ export function useProfileData(): ProfileData {
   const [loadingFollowers, setLoadingFollowers] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
 
-  const [nextMomentCursor, setNextMomentCursor] = useState<string | undefined>();
+  const [nextMomentCursor, setNextMomentCursor] = useState<
+    string | undefined
+  >();
 
   const loadProfile = useCallback(async () => {
     setLoadingProfile(true);
@@ -65,10 +67,10 @@ export function useProfileData(): ProfileData {
       if (isSuccess(res) && res.data) {
         setProfile(res.data);
       } else {
-        setProfileError('加载失败，请重试');
+        setProfileError("加载失败，请重试");
       }
     } catch {
-      setProfileError('网络异常，请重试');
+      setProfileError("网络异常，请重试");
     } finally {
       setLoadingProfile(false);
     }
@@ -77,7 +79,10 @@ export function useProfileData(): ProfileData {
   const loadMoments = useCallback(async () => {
     setLoadingMoments(true);
     try {
-      const res = await usersService.getMoments({ user_id: profile?.user_id ?? '', pagination: { limit: 20 } });
+      const res = await usersService.getMoments({
+        user_id: profile?.user_id ?? "",
+        pagination: { limit: 20 },
+      });
       if (isSuccess(res) && res.data) {
         setMoments(res.data.items);
         setNextMomentCursor(res.data.next_cursor);
@@ -92,7 +97,10 @@ export function useProfileData(): ProfileData {
   const loadLiked = useCallback(async () => {
     setLoadingLiked(true);
     try {
-      const res = await usersService.getLikedMoments({ user_id: profile?.user_id ?? '', pagination: { limit: 20 } });
+      const res = await usersService.getLikedMoments({
+        user_id: profile?.user_id ?? "",
+        pagination: { limit: 20 },
+      });
       if (isSuccess(res) && res.data) {
         setLikedMoments(res.data.items);
       }
@@ -107,7 +115,10 @@ export function useProfileData(): ProfileData {
     if (!profile?.user_id) return;
     setLoadingGroups(true);
     try {
-      const res = await usersService.getGroups({ user_id: profile.user_id, pagination: { limit: 50 } });
+      const res = await usersService.getGroups({
+        user_id: profile.user_id,
+        pagination: { limit: 50 },
+      });
       if (isSuccess(res) && res.data) {
         setGroups(res.data.items);
       }
@@ -135,7 +146,9 @@ export function useProfileData(): ProfileData {
   const loadFollowing = useCallback(async () => {
     setLoadingFollowing(true);
     try {
-      const res = await usersService.getFollowing({ pagination: { limit: 50 } });
+      const res = await usersService.getFollowing({
+        pagination: { limit: 50 },
+      });
       if (isSuccess(res) && res.data) {
         setFollowing(res.data.items);
       }
@@ -149,7 +162,9 @@ export function useProfileData(): ProfileData {
   const loadFollowers = useCallback(async () => {
     setLoadingFollowers(true);
     try {
-      const res = await usersService.getFollowers({ pagination: { limit: 50 } });
+      const res = await usersService.getFollowers({
+        pagination: { limit: 50 },
+      });
       if (isSuccess(res) && res.data) {
         setFollowers(res.data.items);
       }

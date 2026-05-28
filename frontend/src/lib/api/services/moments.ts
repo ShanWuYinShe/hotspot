@@ -1,13 +1,18 @@
-import { post, paginate, generateIdempotencyKey, type RequestOptions } from '../client';
-import { MOMENTS } from '../endpoints';
+import {
+  post,
+  paginate,
+  generateIdempotencyKey,
+  type RequestOptions,
+} from "../client";
+import { MOMENTS } from "../endpoints";
 import type {
   MomentItem,
   LikeItem,
   Location,
   PrivacyLevel,
   PaginationParams,
-  GeoPoint
-} from '@/lib/types/api';
+  GeoPoint,
+} from "@/lib/types/api";
 
 export const momentsService = {
   search(
@@ -15,11 +20,11 @@ export const momentsService = {
       keyword?: string;
       tag?: string;
       radius?: number;
-      sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
+      sort_by?: "relevance" | "distance" | "newest" | "popular";
       reference_point: GeoPoint;
       pagination?: PaginationParams;
     },
-    options?: RequestOptions
+    options?: RequestOptions,
   ) {
     return paginate<MomentItem>(MOMENTS.SEARCH, params, options);
   },
@@ -40,7 +45,9 @@ export const momentsService = {
     privacy_level?: PrivacyLevel;
     mentions?: string[];
   }) {
-    return post<MomentItem>(MOMENTS.CREATE, data, { idempotencyKey: generateIdempotencyKey() });
+    return post<MomentItem>(MOMENTS.CREATE, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
   },
 
   update(data: {
@@ -81,5 +88,5 @@ export const momentsService = {
 
   getMyFavorites(params?: { pagination?: PaginationParams }) {
     return paginate<MomentItem>(MOMENTS.ME.LIST_FAVORITES, params);
-  }
+  },
 };

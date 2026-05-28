@@ -4,8 +4,8 @@
  * 首次立即加载，后续变化防抖刷新。自动清理定时器。
  */
 
-import { useEffect, useRef } from 'react';
-import { useMapAnchorStore } from '@/lib/stores/map-anchor';
+import { useEffect, useRef } from "react";
+import { useMapAnchorStore } from "@/lib/stores/map-anchor";
 
 export function useLocationAwareLoad(
   loadFn: (refresh: boolean) => Promise<void>,

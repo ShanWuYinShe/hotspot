@@ -5,7 +5,7 @@
  * 所有端点统一使用 POST /api/v1/ 前缀
  */
 
-export const API_VERSION = 'v1';
+export const API_VERSION = "v1";
 export const API_BASE = `/api/${API_VERSION}`;
 
 export const AUTH = {
@@ -21,8 +21,8 @@ export const AUTH = {
     CHANGE_PASSWORD: `${API_BASE}/auth/me/change_password`,
     SESSIONS_LIST: `${API_BASE}/auth/me/sessions/list`,
     REVOKE_SESSION: `${API_BASE}/auth/me/sessions/revoke`,
-    REVOKE_ALL_SESSIONS: `${API_BASE}/auth/me/sessions/revoke_all`
-  }
+    REVOKE_ALL_SESSIONS: `${API_BASE}/auth/me/sessions/revoke_all`,
+  },
 } as const;
 
 export const USERS = {
@@ -51,8 +51,8 @@ export const USERS = {
     EMAIL_REQUEST_CHANGE: `${API_BASE}/users/me/email/request_change`,
     EMAIL_CONFIRM_CHANGE: `${API_BASE}/users/me/email/confirm_change`,
     PHONE_REQUEST_CHANGE: `${API_BASE}/users/me/phone/request_change`,
-    PHONE_CONFIRM_CHANGE: `${API_BASE}/users/me/phone/confirm_change`
-  }
+    PHONE_CONFIRM_CHANGE: `${API_BASE}/users/me/phone/confirm_change`,
+  },
 } as const;
 
 export const MOMENTS = {
@@ -68,8 +68,8 @@ export const MOMENTS = {
     FAVORITE: `${API_BASE}/moments/me/favorite`,
     UNFAVORITE: `${API_BASE}/moments/me/unfavorite`,
     LIST: `${API_BASE}/moments/me/list`,
-    LIST_FAVORITES: `${API_BASE}/moments/me/list_favorites`
-  }
+    LIST_FAVORITES: `${API_BASE}/moments/me/list_favorites`,
+  },
 } as const;
 
 export const COMMENTS = {
@@ -80,8 +80,8 @@ export const COMMENTS = {
   DELETE: `${API_BASE}/comments/delete`,
   ME: {
     LIKE: `${API_BASE}/comments/me/like`,
-    UNLIKE: `${API_BASE}/comments/me/unlike`
-  }
+    UNLIKE: `${API_BASE}/comments/me/unlike`,
+  },
 } as const;
 
 export const PRIVATE_CHATS = {
@@ -89,8 +89,8 @@ export const PRIVATE_CHATS = {
   ME: {
     LIST: `${API_BASE}/private_chats/me/list`,
     UPDATE_SETTINGS: `${API_BASE}/private_chats/me/update_settings`,
-    DELETE: `${API_BASE}/private_chats/me/delete`
-  }
+    DELETE: `${API_BASE}/private_chats/me/delete`,
+  },
 } as const;
 
 export const PRIVATE_MESSAGES = {
@@ -100,8 +100,8 @@ export const PRIVATE_MESSAGES = {
   RECALL: `${API_BASE}/private_messages/recall`,
   ME: {
     MARK_AS_READ: `${API_BASE}/private_messages/me/mark_as_read`,
-    MARK_ALL_READ: `${API_BASE}/private_messages/me/mark_all_read`
-  }
+    MARK_ALL_READ: `${API_BASE}/private_messages/me/mark_all_read`,
+  },
 } as const;
 
 export const GROUPS = {
@@ -122,18 +122,18 @@ export const GROUPS = {
     BAN: `${API_BASE}/groups/members/ban`,
     UNBAN: `${API_BASE}/groups/members/unban`,
     LIST_BANNED: `${API_BASE}/groups/members/list_banned`,
-    REMOVE_MEMBER: `${API_BASE}/groups/members/remove_member`
+    REMOVE_MEMBER: `${API_BASE}/groups/members/remove_member`,
   },
   APPLICATIONS: {
     LIST: `${API_BASE}/groups/applications/list`,
     APPROVE: `${API_BASE}/groups/applications/approve`,
-    REJECT: `${API_BASE}/groups/applications/reject`
+    REJECT: `${API_BASE}/groups/applications/reject`,
   },
   ANNOUNCEMENTS: {
     LIST: `${API_BASE}/groups/announcements/list`,
     CREATE: `${API_BASE}/groups/announcements/create`,
     UPDATE: `${API_BASE}/groups/announcements/update`,
-    DELETE: `${API_BASE}/groups/announcements/delete`
+    DELETE: `${API_BASE}/groups/announcements/delete`,
   },
   ME: {
     UPDATE_SETTINGS: `${API_BASE}/groups/me/update_settings`,
@@ -145,8 +145,8 @@ export const GROUPS = {
     INVITES_LIST: `${API_BASE}/groups/me/invites/list`,
     ACCEPT_INVITE: `${API_BASE}/groups/me/invites/accept`,
     REJECT_INVITE: `${API_BASE}/groups/me/invites/reject`,
-    LEAVE: `${API_BASE}/groups/me/leave`
-  }
+    LEAVE: `${API_BASE}/groups/me/leave`,
+  },
 } as const;
 
 export const GROUP_MESSAGES = {
@@ -156,8 +156,8 @@ export const GROUP_MESSAGES = {
   RECALL: `${API_BASE}/group_messages/recall`,
   ME: {
     MARK_AS_READ: `${API_BASE}/group_messages/me/mark_as_read`,
-    MARK_ALL_READ: `${API_BASE}/group_messages/me/mark_all_read`
-  }
+    MARK_ALL_READ: `${API_BASE}/group_messages/me/mark_all_read`,
+  },
 } as const;
 
 export const FEED = {
@@ -166,48 +166,48 @@ export const FEED = {
   LIST_USERS: `${API_BASE}/feed/list_users`,
   LIST_TRENDING: `${API_BASE}/feed/list_trending`,
   ME: {
-    DISMISS: `${API_BASE}/feed/me/dismiss`
-  }
+    DISMISS: `${API_BASE}/feed/me/dismiss`,
+  },
 } as const;
 
 export const SEARCH = {
-  SUGGEST: `${API_BASE}/search/suggest`
+  SUGGEST: `${API_BASE}/search/suggest`,
 } as const;
 
 export const MAP = {
-  CANVAS: `${API_BASE}/map/canvas`
+  CANVAS: `${API_BASE}/map/canvas`,
 } as const;
 
 export const SHARE = {
   CREATE: `${API_BASE}/share/create`,
   GET: `${API_BASE}/share/get`,
   ME_LIST: `${API_BASE}/share/me/list`,
-  REVOKE: `${API_BASE}/share/revoke`
+  REVOKE: `${API_BASE}/share/revoke`,
 } as const;
 
 export const MEDIA = {
   PRESIGN_UPLOAD: `${API_BASE}/media/presign_upload`,
   BATCH_PRESIGN_UPLOAD: `${API_BASE}/media/batch_presign_upload`,
-  COMPLETE_UPLOAD: `${API_BASE}/media/complete_upload`
+  COMPLETE_UPLOAD: `${API_BASE}/media/complete_upload`,
 } as const;
 
 export const NOTIFICATIONS = {
   LIST: `${API_BASE}/notifications/list`,
   UNREAD_COUNT: `${API_BASE}/notifications/unread_count`,
   MARK_AS_READ: `${API_BASE}/notifications/mark_as_read`,
-  MARK_ALL_READ: `${API_BASE}/notifications/mark_all_read`
+  MARK_ALL_READ: `${API_BASE}/notifications/mark_all_read`,
 } as const;
 
 export const REPORTS = {
   CREATE: `${API_BASE}/reports/create`,
-  ME_LIST: `${API_BASE}/reports/me/list`
+  ME_LIST: `${API_BASE}/reports/me/list`,
 } as const;
 
 export const SYSTEM = {
   GET_META: `${API_BASE}/system/get_meta`,
   HEALTH: `${API_BASE}/system/health`,
   LIST_ANNOUNCEMENTS: `${API_BASE}/system/list_announcements`,
-  GET_CLIENT_CONFIG: `${API_BASE}/system/get_client_config`
+  GET_CLIENT_CONFIG: `${API_BASE}/system/get_client_config`,
 } as const;
 
 export const ADMIN_RBAC = {
@@ -218,13 +218,13 @@ export const ADMIN_RBAC = {
     CREATE: `${API_BASE}/admin/rbac/roles/create`,
     UPDATE: `${API_BASE}/admin/rbac/roles/update`,
     DELETE: `${API_BASE}/admin/rbac/roles/delete`,
-    SET_PERMISSIONS: `${API_BASE}/admin/rbac/roles/set_permissions`
+    SET_PERMISSIONS: `${API_BASE}/admin/rbac/roles/set_permissions`,
   },
   ADMINS: {
     LIST: `${API_BASE}/admin/rbac/admins/list`,
     GRANT: `${API_BASE}/admin/rbac/admins/grant`,
-    REVOKE: `${API_BASE}/admin/rbac/admins/revoke`
-  }
+    REVOKE: `${API_BASE}/admin/rbac/admins/revoke`,
+  },
 } as const;
 
 export const ADMIN_APP_CONFIG = {
@@ -235,42 +235,42 @@ export const ADMIN_APP_CONFIG = {
   UPDATE_RESPONSE_DEFAULTS: `${API_BASE}/admin/app_config/update_response_defaults`,
   UPDATE_FEATURES: `${API_BASE}/admin/app_config/update_features`,
   UPDATE_LIMITS: `${API_BASE}/admin/app_config/update_limits`,
-  UPDATE_CONTACT: `${API_BASE}/admin/app_config/update_contact`
+  UPDATE_CONTACT: `${API_BASE}/admin/app_config/update_contact`,
 } as const;
 
 export const ADMIN_USERS = {
   SEARCH: `${API_BASE}/admin/users/search`,
   OPEN_THE_DOOR: `${API_BASE}/admin/users/open_the_door`,
   BAN: `${API_BASE}/admin/users/ban`,
-  UNBAN: `${API_BASE}/admin/users/unban`
+  UNBAN: `${API_BASE}/admin/users/unban`,
 } as const;
 
 export const ADMIN_GROUPS = {
   SEARCH: `${API_BASE}/admin/groups/search`,
   OPEN_THE_DOOR: `${API_BASE}/admin/groups/open_the_door`,
-  DISMISS: `${API_BASE}/admin/groups/dismiss`
+  DISMISS: `${API_BASE}/admin/groups/dismiss`,
 } as const;
 
 export const ADMIN_ANNOUNCEMENTS = {
   SEARCH: `${API_BASE}/admin/announcements/search`,
   CREATE: `${API_BASE}/admin/announcements/create`,
   UPDATE: `${API_BASE}/admin/announcements/update`,
-  DELETE: `${API_BASE}/admin/announcements/delete`
+  DELETE: `${API_BASE}/admin/announcements/delete`,
 } as const;
 
 export const ADMIN_AUDIT = {
   LIST: `${API_BASE}/admin/audit/list`,
-  OPEN_THE_DOOR: `${API_BASE}/admin/audit/open_the_door`
+  OPEN_THE_DOOR: `${API_BASE}/admin/audit/open_the_door`,
 } as const;
 
 export const ADMIN_REPORTS = {
   SEARCH: `${API_BASE}/admin/reports/search`,
-  HANDLE: `${API_BASE}/admin/reports/handle`
+  HANDLE: `${API_BASE}/admin/reports/handle`,
 } as const;
 
 export const ADMIN_TAGS = {
   SEARCH: `${API_BASE}/admin/tags/search`,
-  DELETE: `${API_BASE}/admin/tags/delete`
+  DELETE: `${API_BASE}/admin/tags/delete`,
 } as const;
 
 export const ENDPOINTS = {
@@ -297,5 +297,5 @@ export const ENDPOINTS = {
   ADMIN_ANNOUNCEMENTS,
   ADMIN_AUDIT,
   ADMIN_REPORTS,
-  ADMIN_TAGS
+  ADMIN_TAGS,
 } as const;

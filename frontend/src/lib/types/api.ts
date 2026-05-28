@@ -8,64 +8,89 @@
 // 枚举类型
 // ============================================================================
 
-export type UserType = 'temp' | 'normal';
-export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'share' | 'system';
-export type SendMessageType = Exclude<MessageType, 'system'>;
-export type PrivacyLevel = 'public' | 'private';
-export type GroupRole = 'owner' | 'admin' | 'member';
-export type SettableGroupRole = 'admin' | 'member';
-export type Gender = 'male' | 'female' | 'apache_helicopter';
-export type ClientType = 'web' | 'app';
-export type UserPresenceStatus = 'online' | 'offline';
-export type UserAccountStatus = 'normal' | 'banned';
-export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
-export type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
-export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
-export type ReportHandleAction = 'resolve' | 'dismiss' | 'escalate';
+export type UserType = "temp" | "normal";
+export type MessageType =
+  | "text"
+  | "image"
+  | "video"
+  | "audio"
+  | "file"
+  | "share"
+  | "system";
+export type SendMessageType = Exclude<MessageType, "system">;
+export type PrivacyLevel = "public" | "private";
+export type GroupRole = "owner" | "admin" | "member";
+export type SettableGroupRole = "admin" | "member";
+export type Gender = "male" | "female" | "apache_helicopter";
+export type ClientType = "web" | "app";
+export type UserPresenceStatus = "online" | "offline";
+export type UserAccountStatus = "normal" | "banned";
+export type ApplicationStatus = "pending" | "accepted" | "rejected" | "revoked";
+export type ReportStatus = "pending" | "reviewing" | "resolved" | "dismissed";
+export type ReportTargetType =
+  | "user"
+  | "moment"
+  | "comment"
+  | "message"
+  | "group";
+export type ReportHandleAction = "resolve" | "dismiss" | "escalate";
 export type ReportReason =
-  | 'spam'
-  | 'harassment'
-  | 'violence'
-  | 'hate_speech'
-  | 'sexual_content'
-  | 'misinformation'
-  | 'impersonation'
-  | 'self_harm'
-  | 'other';
-export type GroupJoinMethod = 'open' | 'approval' | 'invite_only';
-export type FeedSource = 'following' | 'nearby' | 'all';
-export type DismissTargetType = 'moment' | 'user' | 'group';
-export type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
-export type AnnouncementSeverity = 'info' | 'warning' | 'error';
-export type TagTrend = 'rising' | 'stable' | 'falling';
-export type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
-export type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
+  | "spam"
+  | "harassment"
+  | "violence"
+  | "hate_speech"
+  | "sexual_content"
+  | "misinformation"
+  | "impersonation"
+  | "self_harm"
+  | "other";
+export type GroupJoinMethod = "open" | "approval" | "invite_only";
+export type FeedSource = "following" | "nearby" | "all";
+export type DismissTargetType = "moment" | "user" | "group";
+export type PrivateChatPermission = "everyone" | "friends" | "nobody";
+export type AnnouncementSeverity = "info" | "warning" | "error";
+export type TagTrend = "rising" | "stable" | "falling";
+export type FollowSource =
+  | "moment"
+  | "search"
+  | "recommendation"
+  | "profile"
+  | "group";
+export type RecommendationType =
+  | "friend_liked"
+  | "nearby"
+  | "trending"
+  | "following"
+  | "tag_match";
 export type NotificationType =
-  | 'new_follower'
-  | 'mutual_follow'
-  | 'moment_liked'
-  | 'moment_commented'
-  | 'comment_liked'
-  | 'comment_reply'
-  | 'mentioned'
-  | 'group_invite_received'
-  | 'group_invite_accepted'
-  | 'group_application_received'
-  | 'group_application_accepted'
-  | 'system_announcement';
+  | "new_follower"
+  | "mutual_follow"
+  | "moment_liked"
+  | "moment_commented"
+  | "comment_liked"
+  | "comment_reply"
+  | "mentioned"
+  | "group_invite_received"
+  | "group_invite_accepted"
+  | "group_application_received"
+  | "group_application_accepted"
+  | "system_announcement";
 export type MediaCategory =
-  | 'avatar'
-  | 'group_avatar'
-  | 'moment_image'
-  | 'chat_image'
-  | 'chat_video'
-  | 'chat_audio'
-  | 'chat_file';
-export type MapDataType = 'user' | 'group' | 'moment' | 'all';
-export type ShareType = 'user' | 'group' | 'moment' | 'location';
-export type MessageBlockedReason = 'privacy' | 'stranger_quota_exceeded' | 'account_suspended';
-export type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
-export type SystemHealthStatus = 'healthy' | 'degraded' | 'unhealthy';
+  | "avatar"
+  | "group_avatar"
+  | "moment_image"
+  | "chat_image"
+  | "chat_video"
+  | "chat_audio"
+  | "chat_file";
+export type MapDataType = "user" | "group" | "moment" | "all";
+export type ShareType = "user" | "group" | "moment" | "location";
+export type MessageBlockedReason =
+  | "privacy"
+  | "stranger_quota_exceeded"
+  | "account_suspended";
+export type SearchSuggestType = "tag" | "user" | "group" | "moment";
+export type SystemHealthStatus = "healthy" | "degraded" | "unhealthy";
 
 // ============================================================================
 // 位置类型
@@ -379,7 +404,7 @@ export interface Application {
 }
 
 export interface JoinGroupResult {
-  status: 'joined' | 'pending_approval';
+  status: "joined" | "pending_approval";
   application?: Application;
 }
 
@@ -511,11 +536,21 @@ export interface PrivateChatOpenResult {
 // ============================================================================
 
 export type NotificationPayload =
-  | { type: 'new_follower'; actor: UserInfo; source?: FollowSource; source_moment_id?: string }
-  | { type: 'mutual_follow'; actor: UserInfo }
-  | { type: 'moment_liked'; actor: UserInfo; moment_id: string; moment_summary: MomentSummary }
   | {
-      type: 'moment_commented';
+      type: "new_follower";
+      actor: UserInfo;
+      source?: FollowSource;
+      source_moment_id?: string;
+    }
+  | { type: "mutual_follow"; actor: UserInfo }
+  | {
+      type: "moment_liked";
+      actor: UserInfo;
+      moment_id: string;
+      moment_summary: MomentSummary;
+    }
+  | {
+      type: "moment_commented";
       actor: UserInfo;
       moment_id: string;
       moment_summary: MomentSummary;
@@ -523,7 +558,7 @@ export type NotificationPayload =
       comment_preview: string;
     }
   | {
-      type: 'comment_liked';
+      type: "comment_liked";
       actor: UserInfo;
       comment_id: string;
       comment_preview: string;
@@ -531,7 +566,7 @@ export type NotificationPayload =
       moment_summary: MomentSummary;
     }
   | {
-      type: 'comment_reply';
+      type: "comment_reply";
       actor: UserInfo;
       comment_id: string;
       replied_comment_preview: string;
@@ -541,16 +576,16 @@ export type NotificationPayload =
       moment_summary: MomentSummary;
     }
   | {
-      type: 'mentioned';
+      type: "mentioned";
       actor: UserInfo;
-      target_type: 'moment' | 'comment';
+      target_type: "moment" | "comment";
       moment_id: string;
       moment_summary: MomentSummary;
       comment_id?: string;
       comment_preview?: string;
     }
   | {
-      type: 'group_invite_received';
+      type: "group_invite_received";
       actor: UserInfo;
       group_id: string;
       group_name: string;
@@ -559,26 +594,30 @@ export type NotificationPayload =
       message?: string;
     }
   | {
-      type: 'group_invite_accepted';
+      type: "group_invite_accepted";
       group_id: string;
       group_name: string;
       invite_id: string;
       user: UserInfo;
     }
   | {
-      type: 'group_application_received';
+      type: "group_application_received";
       applicant: UserInfo;
       group_id: string;
       group_name: string;
       application_id: string;
     }
   | {
-      type: 'group_application_accepted';
+      type: "group_application_accepted";
       group_id: string;
       group_name: string;
       application_id: string;
     }
-  | { type: 'system_announcement'; announcement_id: string; severity: AnnouncementSeverity };
+  | {
+      type: "system_announcement";
+      announcement_id: string;
+      severity: AnnouncementSeverity;
+    };
 
 export interface NotificationItem {
   notification_id: string;
@@ -629,7 +668,7 @@ export interface MapHeatCanvas {
   items: MapHeatBucket[];
 }
 
-export type HotspotObjectType = 'user' | 'group' | 'moment';
+export type HotspotObjectType = "user" | "group" | "moment";
 
 export interface MapHotspotItem {
   object_type: HotspotObjectType;
@@ -715,10 +754,10 @@ export interface MomentSuggestItem {
 }
 
 export type SearchSuggestItem =
-  | { type: 'tag'; payload: TagSuggestItem }
-  | { type: 'user'; payload: UserSuggestItem }
-  | { type: 'group'; payload: GroupSuggestItem }
-  | { type: 'moment'; payload: MomentSuggestItem };
+  | { type: "tag"; payload: TagSuggestItem }
+  | { type: "user"; payload: UserSuggestItem }
+  | { type: "group"; payload: GroupSuggestItem }
+  | { type: "moment"; payload: MomentSuggestItem };
 
 export interface SearchSuggestResponse {
   items: SearchSuggestItem[];
@@ -832,68 +871,73 @@ export interface AdminOperatorItem {
 }
 
 export type AuditAction =
-  | 'user.ban'
-  | 'user.unban'
-  | 'group.dismiss'
-  | 'group.member_mute'
-  | 'group.member_ban'
-  | 'group.member_remove'
-  | 'announcement.create'
-  | 'announcement.update'
-  | 'announcement.delete'
-  | 'role.create'
-  | 'role.update'
-  | 'role.delete'
-  | 'role.set_permissions'
-  | 'admin.grant'
-  | 'admin.revoke'
-  | 'report.handle'
-  | 'tag.delete'
-  | 'permission.grant'
-  | 'permission.revoke'
-  | 'config.update';
+  | "user.ban"
+  | "user.unban"
+  | "group.dismiss"
+  | "group.member_mute"
+  | "group.member_ban"
+  | "group.member_remove"
+  | "announcement.create"
+  | "announcement.update"
+  | "announcement.delete"
+  | "role.create"
+  | "role.update"
+  | "role.delete"
+  | "role.set_permissions"
+  | "admin.grant"
+  | "admin.revoke"
+  | "report.handle"
+  | "tag.delete"
+  | "permission.grant"
+  | "permission.revoke"
+  | "config.update";
 
 export type AuditTargetType =
-  | 'user'
-  | 'group'
-  | 'announcement'
-  | 'role'
-  | 'admin'
-  | 'report'
-  | 'tag'
-  | 'config';
+  | "user"
+  | "group"
+  | "announcement"
+  | "role"
+  | "admin"
+  | "report"
+  | "tag"
+  | "config";
 
 export type AuditDetails =
-  | { type: 'user.ban'; reason?: string; duration_days?: number }
-  | { type: 'user.unban'; reason?: string }
-  | { type: 'group.dismiss'; reason?: string }
-  | { type: 'group.member_mute'; reason?: string; duration_minutes?: number }
-  | { type: 'group.member_ban'; reason?: string }
-  | { type: 'group.member_remove'; reason?: string }
-  | { type: 'announcement.create'; title: string }
-  | { type: 'announcement.update'; title: string; changed_fields?: string[] }
-  | { type: 'announcement.delete'; title: string }
-  | { type: 'role.create'; role_name: string; permissions: string[] }
+  | { type: "user.ban"; reason?: string; duration_days?: number }
+  | { type: "user.unban"; reason?: string }
+  | { type: "group.dismiss"; reason?: string }
+  | { type: "group.member_mute"; reason?: string; duration_minutes?: number }
+  | { type: "group.member_ban"; reason?: string }
+  | { type: "group.member_remove"; reason?: string }
+  | { type: "announcement.create"; title: string }
+  | { type: "announcement.update"; title: string; changed_fields?: string[] }
+  | { type: "announcement.delete"; title: string }
+  | { type: "role.create"; role_name: string; permissions: string[] }
   | {
-      type: 'role.update';
+      type: "role.update";
       role_name: string;
       added_permissions?: string[];
       removed_permissions?: string[];
     }
-  | { type: 'role.delete'; role_name: string }
-  | { type: 'role.set_permissions'; role_name: string; permissions: string[] }
+  | { type: "role.delete"; role_name: string }
+  | { type: "role.set_permissions"; role_name: string; permissions: string[] }
   | {
-      type: 'admin.grant';
+      type: "admin.grant";
       target_user_id: string;
       role_ids: string[];
       grant_all_permissions?: boolean;
     }
-  | { type: 'admin.revoke'; target_user_id: string }
-  | { type: 'report.handle'; report_id: string; action: string; note?: string }
-  | { type: 'tag.delete'; name: string }
-  | { type: 'permission.grant'; permission: string }
-  | { type: 'permission.revoke'; permission: string }
-  | { type: 'config.update'; config_key: string; old_value: unknown; new_value: unknown };
+  | { type: "admin.revoke"; target_user_id: string }
+  | { type: "report.handle"; report_id: string; action: string; note?: string }
+  | { type: "tag.delete"; name: string }
+  | { type: "permission.grant"; permission: string }
+  | { type: "permission.revoke"; permission: string }
+  | {
+      type: "config.update";
+      config_key: string;
+      old_value: unknown;
+      new_value: unknown;
+    };
 
 export interface AuditLogItem {
   log_id: string;
@@ -983,7 +1027,10 @@ export interface AdminTagItem {
   created_at: string;
 }
 
-export type AdminTagSortBy = 'usage_count_desc' | 'usage_count_asc' | 'created_at_desc';
+export type AdminTagSortBy =
+  | "usage_count_desc"
+  | "usage_count_asc"
+  | "created_at_desc";
 
 export interface AnnouncementCreated {
   announcement_id: string;
@@ -1081,9 +1128,9 @@ export interface ServerConfig {
 }
 
 export interface AppConfig {
-  features: ClientConfig['features'];
-  limits: ClientConfig['limits'];
-  contact: ClientConfig['contact'];
+  features: ClientConfig["features"];
+  limits: ClientConfig["limits"];
+  contact: ClientConfig["contact"];
   upload: UploadConfig;
   defaults: ContentDefaults;
   rate_limits: RateLimitConfig;
@@ -1092,7 +1139,7 @@ export interface AppConfig {
   updated_by_user_id?: string;
 }
 
-export type ApiVersionStatus = 'active' | 'deprecated' | 'sunset';
+export type ApiVersionStatus = "active" | "deprecated" | "sunset";
 
 export interface ApiVersionMeta {
   version: string;

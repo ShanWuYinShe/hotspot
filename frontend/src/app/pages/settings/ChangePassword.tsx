@@ -10,7 +10,10 @@ import { useDocumentTitle } from "@/lib/hooks/use-document-title";
 
 const hasLetterAndDigit = (v: string) => /[A-Za-z]/.test(v) && /\d/.test(v);
 
-function validate(value: string, rules: Array<{ test: (v: string) => string | undefined }>): string | undefined {
+function validate(
+  value: string,
+  rules: Array<{ test: (v: string) => string | undefined }>,
+): string | undefined {
   for (const rule of rules) {
     const err = rule.test(value);
     if (err) return err;
@@ -28,11 +31,15 @@ export function ChangePassword() {
   const [isSaving, setIsSaving] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  const markTouched = (field: string) => setTouched((prev) => ({ ...prev, [field]: true }));
-  const markAllTouched = () => setTouched({ oldPassword: true, newPassword: true, confirmPassword: true });
+  const markTouched = (field: string) =>
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  const markAllTouched = () =>
+    setTouched({ oldPassword: true, newPassword: true, confirmPassword: true });
 
   const oldPasswordError = touched.oldPassword
-    ? validate(oldPassword, [{ test: (v) => (!v ? "请输入当前密码" : undefined) }])
+    ? validate(oldPassword, [
+        { test: (v) => (!v ? "请输入当前密码" : undefined) },
+      ])
     : undefined;
 
   const newPasswordError = touched.newPassword
@@ -40,14 +47,21 @@ export function ChangePassword() {
         { test: (v) => (!v ? "请输入新密码" : undefined) },
         { test: (v) => (v.length < 8 ? "新密码至少 8 个字符" : undefined) },
         { test: (v) => (v.length > 128 ? "新密码最多 128 个字符" : undefined) },
-        { test: (v) => (v && !hasLetterAndDigit(v) ? "新密码需同时包含字母和数字" : undefined) },
+        {
+          test: (v) =>
+            v && !hasLetterAndDigit(v)
+              ? "新密码需同时包含字母和数字"
+              : undefined,
+        },
       ])
     : undefined;
 
   const confirmPasswordError = touched.confirmPassword
     ? validate(confirmPassword, [
         { test: (v) => (!v ? "请确认新密码" : undefined) },
-        { test: (v) => (v && v !== newPassword ? "两次密码不一致" : undefined) },
+        {
+          test: (v) => (v && v !== newPassword ? "两次密码不一致" : undefined),
+        },
       ])
     : undefined;
 
@@ -126,7 +140,12 @@ export function ChangePassword() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         className="flex flex-col px-5 pt-4 pb-10 gap-5"
-        style={{ maxWidth: 560, marginLeft: "auto", marginRight: "auto", width: "100%" }}
+        style={{
+          maxWidth: 560,
+          marginLeft: "auto",
+          marginRight: "auto",
+          width: "100%",
+        }}
       >
         <div
           className="rounded-[22px] p-5"
@@ -160,7 +179,10 @@ export function ChangePassword() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* Old password */}
             <div className="flex flex-col gap-2">
-              <label htmlFor="old-password" style={{ fontSize: 13, color: "var(--neu-text-muted)" }}>
+              <label
+                htmlFor="old-password"
+                style={{ fontSize: 13, color: "var(--neu-text-muted)" }}
+              >
                 当前密码
               </label>
               <input
@@ -177,13 +199,18 @@ export function ChangePassword() {
                 }}
               />
               {oldPasswordError && (
-                <p style={{ fontSize: 12, color: "#EF4444" }}>{oldPasswordError}</p>
+                <p style={{ fontSize: 12, color: "#EF4444" }}>
+                  {oldPasswordError}
+                </p>
               )}
             </div>
 
             {/* New password */}
             <div className="flex flex-col gap-2">
-              <label htmlFor="new-password" style={{ fontSize: 13, color: "var(--neu-text-muted)" }}>
+              <label
+                htmlFor="new-password"
+                style={{ fontSize: 13, color: "var(--neu-text-muted)" }}
+              >
                 新密码
               </label>
               <input
@@ -200,7 +227,9 @@ export function ChangePassword() {
                 }}
               />
               {newPasswordError && (
-                <p style={{ fontSize: 12, color: "#EF4444" }}>{newPasswordError}</p>
+                <p style={{ fontSize: 12, color: "#EF4444" }}>
+                  {newPasswordError}
+                </p>
               )}
             </div>
 
@@ -226,7 +255,9 @@ export function ChangePassword() {
                 }}
               />
               {confirmPasswordError && (
-                <p style={{ fontSize: 12, color: "#EF4444" }}>{confirmPasswordError}</p>
+                <p style={{ fontSize: 12, color: "#EF4444" }}>
+                  {confirmPasswordError}
+                </p>
               )}
             </div>
 

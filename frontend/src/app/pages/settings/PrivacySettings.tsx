@@ -8,7 +8,11 @@ import { usersService } from "@/lib/api/services";
 import { isSuccess } from "@/lib/api/client";
 import { useDocumentTitle } from "@/lib/hooks/use-document-title";
 import { withMinimumLoadingTime } from "@/lib/utils/loading";
-import type { PrivacyLevel, PrivateChatPermission, UserSettings } from "@/lib/types/api";
+import type {
+  PrivacyLevel,
+  PrivateChatPermission,
+  UserSettings,
+} from "@/lib/types/api";
 
 function NeuToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
@@ -68,8 +72,12 @@ function ToggleRow({
       }}
     >
       <div>
-        <p style={{ fontSize: 14, fontWeight: 500, color: "var(--neu-text)" }}>{label}</p>
-        <p style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{description}</p>
+        <p style={{ fontSize: 14, fontWeight: 500, color: "var(--neu-text)" }}>
+          {label}
+        </p>
+        <p style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>
+          {description}
+        </p>
       </div>
       <NeuToggle on={on} onToggle={onToggle} />
     </div>
@@ -84,7 +92,8 @@ export function PrivacySettings() {
   const [isSaving, setIsSaving] = useState(false);
 
   const [privacyLevel, setPrivacyLevel] = useState<PrivacyLevel>("public");
-  const [allowPrivateChat, setAllowPrivateChat] = useState<PrivateChatPermission>("everyone");
+  const [allowPrivateChat, setAllowPrivateChat] =
+    useState<PrivateChatPermission>("everyone");
   const [allowFollow, setAllowFollow] = useState(true);
   const [searchable, setSearchable] = useState(true);
   const [locationSearchable, setLocationSearchable] = useState(true);
@@ -95,7 +104,9 @@ export function PrivacySettings() {
   useEffect(() => {
     (async () => {
       try {
-        const response = await withMinimumLoadingTime(() => usersService.getMySettings());
+        const response = await withMinimumLoadingTime(() =>
+          usersService.getMySettings(),
+        );
         if (isSuccess(response) && response.data) {
           const s: UserSettings = response.data;
           setPrivacyLevel(s.privacy_level);
@@ -165,7 +176,9 @@ export function PrivacySettings() {
             strokeWidth={1.5}
           />
         </motion.button>
-        <p style={{ fontSize: 16, fontWeight: 600, color: "var(--neu-text)" }}>隐私设置</p>
+        <p style={{ fontSize: 16, fontWeight: 600, color: "var(--neu-text)" }}>
+          隐私设置
+        </p>
       </div>
 
       {/* Content */}
@@ -174,7 +187,12 @@ export function PrivacySettings() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         className="flex flex-col px-5 pt-4 pb-10 gap-5"
-        style={{ maxWidth: 560, marginLeft: "auto", marginRight: "auto", width: "100%" }}
+        style={{
+          maxWidth: 560,
+          marginLeft: "auto",
+          marginRight: "auto",
+          width: "100%",
+        }}
       >
         {isLoading ? (
           <div
@@ -257,7 +275,9 @@ export function PrivacySettings() {
                   <select
                     id="privacy-level"
                     value={privacyLevel}
-                    onChange={(e) => setPrivacyLevel(e.target.value as PrivacyLevel)}
+                    onChange={(e) =>
+                      setPrivacyLevel(e.target.value as PrivacyLevel)
+                    }
                     className="w-full rounded-[18px] px-4 py-2.5 outline-none"
                     style={{
                       border: "1px solid var(--neu-border)",
@@ -353,7 +373,11 @@ export function PrivacySettings() {
                   <select
                     id="private-chat"
                     value={allowPrivateChat}
-                    onChange={(e) => setAllowPrivateChat(e.target.value as PrivateChatPermission)}
+                    onChange={(e) =>
+                      setAllowPrivateChat(
+                        e.target.value as PrivateChatPermission,
+                      )
+                    }
                     className="w-full rounded-[18px] px-4 py-2.5 outline-none"
                     style={{
                       boxShadow:

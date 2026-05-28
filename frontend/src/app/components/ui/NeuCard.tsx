@@ -15,13 +15,13 @@ export const NeuCard = React.forwardRef<HTMLDivElement, NeuCardProps>(
           variant === "flat" && "neu-flat",
           variant === "pressed" && "neu-pressed",
           variant === "convex" && "neu-convex",
-          className
+          className,
         )}
         {...props}
       >
         {children}
       </div>
     );
-  }
+  },
 );
 NeuCard.displayName = "NeuCard";

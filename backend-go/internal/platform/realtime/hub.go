@@ -61,6 +61,11 @@ func (h *Hub) UnregisterUser(userID, sessionID string, sink FanoutSink) bool {
 }
 
 func (h *Hub) CloseSession(sessionID string, event Event) {
+	h.closeSessionLocal(sessionID, event)
+	h.publish("session:"+sessionID, event)
+}
+
+func (h *Hub) closeSessionLocal(sessionID string, event Event) {
 	h.mu.RLock()
 	sinks := append([]FanoutSink(nil), h.bySession[sessionID]...)
 	h.mu.RUnlock()

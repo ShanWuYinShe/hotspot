@@ -1,13 +1,13 @@
-import { RouterProvider } from 'react-router';
-import { router } from './routes';
-import { ThemeProvider } from './contexts/ThemeContext';
-import { PlatformProvider } from './contexts/PlatformContext';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { Toaster } from './components/ui/sonner';
-import { toast } from 'sonner';
-import { useAppInit } from '@/lib/hooks/use-app-init';
-import { useNetworkStatus } from '@/lib/hooks/use-network-status';
-import { MotionConfig } from 'motion/react';
+import { RouterProvider } from "react-router";
+import { router } from "./routes";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { PlatformProvider } from "./contexts/PlatformContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { Toaster } from "./components/ui/sonner";
+import { toast } from "sonner";
+import { useAppInit } from "@/lib/hooks/use-app-init";
+import { useNetworkStatus } from "@/lib/hooks/use-network-status";
+import { MotionConfig } from "motion/react";
 
 function AppInit() {
   useAppInit();

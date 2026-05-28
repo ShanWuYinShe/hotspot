@@ -1,5 +1,5 @@
-import { post, generateIdempotencyKey } from '../client';
-import { AUTH } from '../endpoints';
+import { post, generateIdempotencyKey } from "../client";
+import { AUTH } from "../endpoints";
 import type {
   ClientType,
   LoginRequest,
@@ -7,8 +7,8 @@ import type {
   GuestRequest,
   SessionItem,
   AuthStatus,
-  RevokeAllResult
-} from '@/lib/types/api';
+  RevokeAllResult,
+} from "@/lib/types/api";
 
 export const authService = {
   login(data: LoginRequest) {
@@ -17,13 +17,13 @@ export const authService = {
 
   register(data: RegisterRequest) {
     return post<Record<string, never>>(AUTH.REGISTER, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   guest(data: GuestRequest) {
     return post<Record<string, never>>(AUTH.GUEST, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
@@ -36,7 +36,9 @@ export const authService = {
   },
 
   changePassword(data: { old_password: string; new_password: string }) {
-    return post<void>(AUTH.ME.CHANGE_PASSWORD, data, { idempotencyKey: generateIdempotencyKey() });
+    return post<void>(AUTH.ME.CHANGE_PASSWORD, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
   },
 
   getSessions() {
@@ -53,7 +55,7 @@ export const authService = {
 
   requestPasswordReset(data: { login_id: string; client_type: ClientType }) {
     return post<void>(AUTH.REQUEST_PASSWORD_RESET, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
@@ -64,7 +66,7 @@ export const authService = {
     client_type: ClientType;
   }) {
     return post<Record<string, never>>(AUTH.RESET_PASSWORD, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
-  }
+  },
 };

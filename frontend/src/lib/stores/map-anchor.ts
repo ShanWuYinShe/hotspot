@@ -6,12 +6,12 @@
  * 若配置未加载则回退到硬编码值（与后端默认值一致）。
  */
 
-import { create } from 'zustand';
-import { useConfigStore } from './config';
+import { create } from "zustand";
+import { useConfigStore } from "./config";
 
-const STORAGE_KEY = 'hotspot_map_anchor';
+const STORAGE_KEY = "hotspot_map_anchor";
 
-export const DEFAULT_ANCHOR_NAME = '南天门';
+export const DEFAULT_ANCHOR_NAME = "南天门";
 
 const FALLBACK_DEFAULTS = {
   latitude: 35.154922,
@@ -42,7 +42,7 @@ export interface MapAnchor {
 }
 
 function loadFromStorage(): MapAnchor {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return { ...getDefaults(), updatedAt: Date.now() };
   }
 
@@ -52,15 +52,23 @@ function loadFromStorage(): MapAnchor {
       return { ...getDefaults(), updatedAt: Date.now() };
     }
     const parsed = JSON.parse(stored) as Partial<MapAnchor>;
-    if (!parsed || typeof parsed.latitude !== 'number' || typeof parsed.longitude !== 'number') {
+    if (
+      !parsed ||
+      typeof parsed.latitude !== "number" ||
+      typeof parsed.longitude !== "number"
+    ) {
       return { ...getDefaults(), updatedAt: Date.now() };
     }
     return {
       latitude: parsed.latitude,
       longitude: parsed.longitude,
-      name: typeof parsed.name === 'string' ? parsed.name : undefined,
-      radius: typeof parsed.radius === 'number' && parsed.radius > 0 ? parsed.radius : undefined,
-      updatedAt: typeof parsed.updatedAt === 'number' ? parsed.updatedAt : Date.now(),
+      name: typeof parsed.name === "string" ? parsed.name : undefined,
+      radius:
+        typeof parsed.radius === "number" && parsed.radius > 0
+          ? parsed.radius
+          : undefined,
+      updatedAt:
+        typeof parsed.updatedAt === "number" ? parsed.updatedAt : Date.now(),
     };
   } catch {
     // 忽略解析错误
@@ -70,7 +78,7 @@ function loadFromStorage(): MapAnchor {
 }
 
 function saveToStorage(anchor: MapAnchor) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(anchor));
   } catch {
@@ -82,7 +90,12 @@ interface MapAnchorState {
   anchor: MapAnchor;
   initialized: boolean;
 
-  setAnchor: (latitude: number, longitude: number, name?: string, radius?: number) => void;
+  setAnchor: (
+    latitude: number,
+    longitude: number,
+    name?: string,
+    radius?: number,
+  ) => void;
   setRadius: (radius: number) => void;
   setName: (name: string) => void;
   reset: () => void;
@@ -90,11 +103,15 @@ interface MapAnchorState {
 }
 
 export const useMapAnchorStore = create<MapAnchorState>((set, get) => ({
-  anchor: typeof window !== 'undefined' ? loadFromStorage() : { ...FALLBACK_DEFAULTS, updatedAt: Date.now() },
-  initialized: typeof window !== 'undefined',
+  anchor:
+    typeof window !== "undefined"
+      ? loadFromStorage()
+      : { ...FALLBACK_DEFAULTS, updatedAt: Date.now() },
+  initialized: typeof window !== "undefined",
 
   setAnchor(latitude, longitude, name, radius) {
-    const baseRadius = radius ?? get().anchor.radius ?? FALLBACK_DEFAULTS.radius;
+    const baseRadius =
+      radius ?? get().anchor.radius ?? FALLBACK_DEFAULTS.radius;
     const maxRadiusKm = getMaxRadiusKm();
     const clampedRadius = Math.min(baseRadius, maxRadiusKm);
     const anchor: MapAnchor = {
@@ -109,7 +126,8 @@ export const useMapAnchorStore = create<MapAnchorState>((set, get) => ({
   },
 
   setRadius(radius) {
-    const baseRadius = radius > 0 ? radius : (get().anchor.radius ?? FALLBACK_DEFAULTS.radius);
+    const baseRadius =
+      radius > 0 ? radius : (get().anchor.radius ?? FALLBACK_DEFAULTS.radius);
     const maxRadiusKm = getMaxRadiusKm();
     const clampedRadius = Math.min(baseRadius, maxRadiusKm);
     const anchor: MapAnchor = {
@@ -139,14 +157,18 @@ export const useMapAnchorStore = create<MapAnchorState>((set, get) => ({
 
   async useCurrentLocation() {
     return new Promise((resolve) => {
-      if (typeof window === 'undefined' || !navigator.geolocation) {
+      if (typeof window === "undefined" || !navigator.geolocation) {
         resolve(false);
         return;
       }
 
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          get().setAnchor(position.coords.latitude, position.coords.longitude, '');
+          get().setAnchor(
+            position.coords.latitude,
+            position.coords.longitude,
+            "",
+          );
           resolve(true);
         },
         () => {

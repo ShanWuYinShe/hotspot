@@ -49,38 +49,68 @@ function PrivateChatListItem({
           style={{
             width: compact ? 40 : 44,
             height: compact ? 40 : 44,
-            border: isSelected ? "1.5px solid rgba(255,255,255,0.35)" : "1.5px solid var(--neu-border)",
+            border: isSelected
+              ? "1.5px solid rgba(255,255,255,0.35)"
+              : "1.5px solid var(--neu-border)",
           }}
         >
-          <img src={normalizeAvatar(user.avatar_url)} alt={user.nickname} className="w-full h-full object-cover" />
+          <img
+            src={normalizeAvatar(user.avatar_url)}
+            alt={user.nickname}
+            className="w-full h-full object-cover"
+          />
         </div>
         {isOnline && (
           <span
             className="absolute bottom-0 right-0 rounded-full"
-            style={{ width: 10, height: 10, background: "#22c55e", border: "2px solid var(--neu-bg)" }}
+            style={{
+              width: 10,
+              height: 10,
+              background: "#22c55e",
+              border: "2px solid var(--neu-bg)",
+            }}
           />
         )}
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-baseline mb-0.5">
-          <span className="truncate"
+          <span
+            className="truncate"
             style={{
               fontSize: 14,
-              color: isSelected ? "var(--text-on-accent, white)" : "var(--neu-text)",
+              color: isSelected
+                ? "var(--text-on-accent, white)"
+                : "var(--neu-text)",
               fontWeight: chat.unread_count > 0 ? 600 : 400,
             }}
           >
             {user.nickname}
           </span>
           <span
-            style={{ fontSize: 11, flexShrink: 0, color: isSelected ? "rgba(255,255,255,0.7)" : "var(--neu-text-muted)" }}
+            style={{
+              fontSize: 11,
+              flexShrink: 0,
+              color: isSelected
+                ? "rgba(255,255,255,0.7)"
+                : "var(--neu-text-muted)",
+            }}
           >
             {formatRelativeTime(chat.last_activity_at)}
           </span>
         </div>
-        <p style={{ fontSize: 12, color: isSelected ? "rgba(255,255,255,0.8)" : "var(--neu-text-muted)" }} className="truncate pr-4">
-          {chat.last_message ? chat.last_message.content || "[媒体消息]" : "暂无消息"}
+        <p
+          style={{
+            fontSize: 12,
+            color: isSelected
+              ? "rgba(255,255,255,0.8)"
+              : "var(--neu-text-muted)",
+          }}
+          className="truncate pr-4"
+        >
+          {chat.last_message
+            ? chat.last_message.content || "[媒体消息]"
+            : "暂无消息"}
         </p>
       </div>
 
@@ -138,14 +168,23 @@ function GroupChatListItem({
           style={{
             width: 40,
             height: 40,
-            border: isSelected ? "1.5px solid rgba(255,255,255,0.35)" : "1.5px solid var(--neu-border)",
+            border: isSelected
+              ? "1.5px solid rgba(255,255,255,0.35)"
+              : "1.5px solid var(--neu-border)",
             background: g.avatar_url ? "transparent" : "var(--neu-bg)",
           }}
         >
           {g.avatar_url ? (
-            <img src={normalizeAvatar(g.avatar_url)} alt={g.name} className="w-full h-full object-cover" />
+            <img
+              src={normalizeAvatar(g.avatar_url)}
+              alt={g.name}
+              className="w-full h-full object-cover"
+            />
           ) : (
-            <Users style={{ width: 16, height: 16, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
+            <Users
+              style={{ width: 16, height: 16, color: "var(--neu-text-muted)" }}
+              strokeWidth={1.5}
+            />
           )}
         </div>
       </div>
@@ -156,17 +195,37 @@ function GroupChatListItem({
             style={{
               fontSize: 14,
               fontWeight: 500,
-              color: isSelected ? "var(--text-on-accent, white)" : "var(--neu-text)",
+              color: isSelected
+                ? "var(--text-on-accent, white)"
+                : "var(--neu-text)",
             }}
           >
             {g.name}
           </span>
-          <span style={{ fontSize: 11, flexShrink: 0, color: isSelected ? "rgba(255,255,255,0.7)" : "var(--neu-text-muted)" }}>
+          <span
+            style={{
+              fontSize: 11,
+              flexShrink: 0,
+              color: isSelected
+                ? "rgba(255,255,255,0.7)"
+                : "var(--neu-text-muted)",
+            }}
+          >
             {g.members_count}人
           </span>
         </div>
-        <p style={{ fontSize: 12, color: isSelected ? "rgba(255,255,255,0.8)" : "var(--neu-text-muted)" }} className="truncate pr-4">
-          {formatRelativeTime(group.last_activity_at ?? group.my_state?.joined_at ?? "")}
+        <p
+          style={{
+            fontSize: 12,
+            color: isSelected
+              ? "rgba(255,255,255,0.8)"
+              : "var(--neu-text-muted)",
+          }}
+          className="truncate pr-4"
+        >
+          {formatRelativeTime(
+            group.last_activity_at ?? group.my_state?.joined_at ?? "",
+          )}
         </p>
       </div>
 
@@ -196,10 +255,19 @@ function ChatSkeleton() {
     <>
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 px-3 py-2.5">
-          <div className="rounded-full" style={{ width: 40, height: 40, background: "var(--neu-border)" }} />
+          <div
+            className="rounded-full"
+            style={{ width: 40, height: 40, background: "var(--neu-border)" }}
+          />
           <div className="flex-1">
-            <div className="mb-1 rounded" style={{ width: 60, height: 11, background: "var(--neu-border)" }} />
-            <div className="rounded" style={{ width: 100, height: 9, background: "var(--neu-border)" }} />
+            <div
+              className="mb-1 rounded"
+              style={{ width: 60, height: 11, background: "var(--neu-border)" }}
+            />
+            <div
+              className="rounded"
+              style={{ width: 100, height: 9, background: "var(--neu-border)" }}
+            />
           </div>
         </div>
       ))}
@@ -230,12 +298,18 @@ function MessagesMobile() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const hover = useHoverConfig();
   const newChatTrapRef = useFocusTrap(showNewChat, () => setShowNewChat(false));
-  const groupTrapRef = useFocusTrap(showCreateGroup, () => setShowCreateGroup(false));
+  const groupTrapRef = useFocusTrap(showCreateGroup, () =>
+    setShowCreateGroup(false),
+  );
 
   const filteredPrivate = useMemo(
     () =>
       searchVal.trim()
-        ? privateChats.filter((c) => c.other_user.nickname.toLowerCase().includes(searchVal.toLowerCase()))
+        ? privateChats.filter((c) =>
+            c.other_user.nickname
+              .toLowerCase()
+              .includes(searchVal.toLowerCase()),
+          )
         : privateChats,
     [searchVal, privateChats],
   );
@@ -243,7 +317,9 @@ function MessagesMobile() {
   const filteredGroups = useMemo(
     () =>
       searchVal.trim()
-        ? groupChats.filter((g) => g.group.name.toLowerCase().includes(searchVal.toLowerCase()))
+        ? groupChats.filter((g) =>
+            g.group.name.toLowerCase().includes(searchVal.toLowerCase()),
+          )
         : groupChats,
     [searchVal, groupChats],
   );
@@ -262,12 +338,21 @@ function MessagesMobile() {
     <>
       <div
         className="sticky top-0 z-10 px-5 pt-3 pb-3"
-        style={{ backgroundColor: "var(--neu-bg)", borderBottom: "1px solid var(--neu-border)" }}
+        style={{
+          backgroundColor: "var(--neu-bg)",
+          borderBottom: "1px solid var(--neu-border)",
+        }}
       >
         <div className="flex items-center justify-between mb-3">
           <div>
             <h1 style={{ fontSize: 22, color: "var(--neu-text)" }}>消息</h1>
-            <p style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 2 }}>
+            <p
+              style={{
+                fontSize: 12,
+                color: "var(--neu-text-muted)",
+                marginTop: 2,
+              }}
+            >
               {totalUnread > 0 ? `${totalUnread} 条未读` : "全部已读"}
             </p>
           </div>
@@ -277,15 +362,27 @@ function MessagesMobile() {
             onClick={() => {
               setNewChatTab("chat");
               setShowNewChat(true);
-            }} aria-label="新建会话"
+            }}
+            aria-label="新建会话"
             className="flex items-center justify-center rounded-full outline-none neu-surface-flat"
             style={{ width: 36, height: 36 }}
           >
-            <Plus style={{ width: 16, height: 16, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
+            <Plus
+              style={{ width: 16, height: 16, color: "var(--neu-text-muted)" }}
+              strokeWidth={1.5}
+            />
           </motion.button>
         </div>
         <div className="flex items-center gap-3 px-4 py-2.5 rounded-[18px] neu-input-surface">
-          <Search style={{ width: 15, height: 15, color: "var(--neu-text-muted)", flexShrink: 0 }} strokeWidth={1.5} />
+          <Search
+            style={{
+              width: 15,
+              height: 15,
+              color: "var(--neu-text-muted)",
+              flexShrink: 0,
+            }}
+            strokeWidth={1.5}
+          />
           <input
             value={searchVal}
             onChange={(e) => setSearchVal(e.target.value)}
@@ -301,12 +398,24 @@ function MessagesMobile() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         className="flex flex-col px-5 pt-4 pb-4"
-        style={{ maxWidth: 640, marginLeft: "auto", marginRight: "auto", width: "100%" }}
+        style={{
+          maxWidth: 640,
+          marginLeft: "auto",
+          marginRight: "auto",
+          width: "100%",
+        }}
       >
         {/* Online strip */}
         {onlineChats.length > 0 && (
           <div className="mb-4">
-            <p className="uppercase mb-2.5" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--neu-text-muted)" }}>
+            <p
+              className="uppercase mb-2.5"
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.14em",
+                color: "var(--neu-text-muted)",
+              }}
+            >
               在线
             </p>
             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
@@ -314,7 +423,9 @@ function MessagesMobile() {
                 <motion.div
                   key={chat.other_user.user_id}
                   whileTap={{ scale: 0.93 }}
-                  onClick={() => navigate(`/messages/${chat.other_user.user_id}`)}
+                  onClick={() =>
+                    navigate(`/messages/${chat.other_user.user_id}`)
+                  }
                   className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer"
                 >
                   <div className="relative">
@@ -336,10 +447,19 @@ function MessagesMobile() {
                     </div>
                     <span
                       className="absolute bottom-0.5 right-0.5 rounded-full"
-                      style={{ width: 12, height: 12, background: "#22c55e", border: "2px solid var(--neu-bg)" }}
+                      style={{
+                        width: 12,
+                        height: 12,
+                        background: "#22c55e",
+                        border: "2px solid var(--neu-bg)",
+                      }}
                     />
                   </div>
-                  <span style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>{chat.other_user.nickname}</span>
+                  <span
+                    style={{ fontSize: 11, color: "var(--neu-text-muted)" }}
+                  >
+                    {chat.other_user.nickname}
+                  </span>
                 </motion.div>
               ))}
             </div>
@@ -382,24 +502,45 @@ function MessagesMobile() {
               <ChatSkeleton />
             ) : error && filteredPrivate.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>{error}</p>
-                <motion.button whileTap={{ scale: 0.94 }} onClick={refreshPrivate}
+                <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
+                  {error}
+                </p>
+                <motion.button
+                  whileTap={{ scale: 0.94 }}
+                  onClick={refreshPrivate}
                   className="px-4 py-2 rounded-full outline-none"
-                  style={{ background: "var(--neu-accent-primary)", color: "var(--text-on-accent, white)", fontSize: 13 }}>
+                  style={{
+                    background: "var(--neu-accent-primary)",
+                    color: "var(--text-on-accent, white)",
+                    fontSize: 13,
+                  }}
+                >
                   重试
                 </motion.button>
               </div>
             ) : filteredPrivate.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <MessageSquareDashed style={{ width: 36, height: 36, color: "var(--neu-text-muted)", opacity: 0.5 }} strokeWidth={1.25} />
-                <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>没有找到会话</p>
+                <MessageSquareDashed
+                  style={{
+                    width: 36,
+                    height: 36,
+                    color: "var(--neu-text-muted)",
+                    opacity: 0.5,
+                  }}
+                  strokeWidth={1.25}
+                />
+                <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
+                  没有找到会话
+                </p>
               </div>
             ) : (
               filteredPrivate.map((chat) => (
                 <div key={chat.other_user.user_id} className="px-2 py-1">
                   <PrivateChatListItem
                     chat={chat}
-                    onClick={() => navigate(`/messages/${chat.other_user.user_id}`)}
+                    onClick={() =>
+                      navigate(`/messages/${chat.other_user.user_id}`)
+                    }
                   />
                 </div>
               ))
@@ -408,15 +549,27 @@ function MessagesMobile() {
             <ChatSkeleton />
           ) : filteredGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <Users style={{ width: 36, height: 36, color: "var(--neu-text-muted)", opacity: 0.5 }} strokeWidth={1.25} />
-              <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>暂无群聊</p>
+              <Users
+                style={{
+                  width: 36,
+                  height: 36,
+                  color: "var(--neu-text-muted)",
+                  opacity: 0.5,
+                }}
+                strokeWidth={1.25}
+              />
+              <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
+                暂无群聊
+              </p>
             </div>
           ) : (
             filteredGroups.map((group) => (
               <div key={group.group.group_id} className="px-2 py-1">
                 <GroupChatListItem
                   group={group}
-                  onClick={() => navigate(`/messages/group-${group.group.group_id}`)}
+                  onClick={() =>
+                    navigate(`/messages/group-${group.group.group_id}`)
+                  }
                 />
               </div>
             ))
@@ -435,7 +588,10 @@ function MessagesMobile() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="fixed inset-0 z-40"
-              style={{ background: "rgba(0,0,0,0.35)", backdropFilter: "blur(3px)" }}
+              style={{
+                background: "rgba(0,0,0,0.35)",
+                backdropFilter: "blur(3px)",
+              }}
               onClick={() => setShowNewChat(false)}
             />
             <motion.div
@@ -447,7 +603,12 @@ function MessagesMobile() {
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 260, mass: 0.9 }}
+              transition={{
+                type: "spring",
+                damping: 30,
+                stiffness: 260,
+                mass: 0.9,
+              }}
               className="fixed bottom-0 left-0 right-0 z-50 overflow-hidden"
               style={{
                 height: "85%",
@@ -478,7 +639,10 @@ function MessagesMobile() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="fixed inset-0 z-50"
-              style={{ background: "rgba(0,0,0,0.35)", backdropFilter: "blur(3px)" }}
+              style={{
+                background: "rgba(0,0,0,0.35)",
+                backdropFilter: "blur(3px)",
+              }}
               onClick={() => setShowCreateGroup(false)}
             />
             <motion.div
@@ -490,7 +654,12 @@ function MessagesMobile() {
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 260, mass: 0.9 }}
+              transition={{
+                type: "spring",
+                damping: 30,
+                stiffness: 260,
+                mass: 0.9,
+              }}
               className="fixed bottom-0 left-0 right-0 z-[60] overflow-hidden"
               style={{
                 height: "92%",
@@ -529,12 +698,18 @@ function MessagesDesktop() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const hover = useHoverConfig();
   const newChatTrapRef = useFocusTrap(showNewChat, () => setShowNewChat(false));
-  const groupTrapRef = useFocusTrap(showCreateGroup, () => setShowCreateGroup(false));
+  const groupTrapRef = useFocusTrap(showCreateGroup, () =>
+    setShowCreateGroup(false),
+  );
 
   const filteredPrivate = useMemo(
     () =>
       searchVal.trim()
-        ? privateChats.filter((c) => c.other_user.nickname.toLowerCase().includes(searchVal.toLowerCase()))
+        ? privateChats.filter((c) =>
+            c.other_user.nickname
+              .toLowerCase()
+              .includes(searchVal.toLowerCase()),
+          )
         : privateChats,
     [searchVal, privateChats],
   );
@@ -542,7 +717,9 @@ function MessagesDesktop() {
   const filteredGroups = useMemo(
     () =>
       searchVal.trim()
-        ? groupChats.filter((g) => g.group.name.toLowerCase().includes(searchVal.toLowerCase()))
+        ? groupChats.filter((g) =>
+            g.group.name.toLowerCase().includes(searchVal.toLowerCase()),
+          )
         : groupChats,
     [searchVal, groupChats],
   );
@@ -560,9 +737,15 @@ function MessagesDesktop() {
   return (
     <div className="flex h-full">
       {/* Left: chat list */}
-      <div className="flex flex-col flex-shrink-0 overflow-hidden" style={{ width: 300, borderRight: "1px solid var(--neu-border)" }}>
+      <div
+        className="flex flex-col flex-shrink-0 overflow-hidden"
+        style={{ width: 300, borderRight: "1px solid var(--neu-border)" }}
+      >
         {/* List header */}
-        <div className="flex-shrink-0 px-4 pt-4 pb-3" style={{ borderBottom: "1px solid var(--neu-border)" }}>
+        <div
+          className="flex-shrink-0 px-4 pt-4 pb-3"
+          style={{ borderBottom: "1px solid var(--neu-border)" }}
+        >
           <div className="flex items-center justify-between mb-3">
             <h1 style={{ fontSize: 18, color: "var(--neu-text)" }}>消息</h1>
             <motion.button
@@ -571,15 +754,26 @@ function MessagesDesktop() {
               onClick={() => {
                 setNewChatTab("chat");
                 setShowNewChat(true);
-              }} aria-label="新建会话"
+              }}
+              aria-label="新建会话"
               className="flex items-center justify-center rounded-full outline-none neu-surface-flat"
               style={{ width: 38, height: 38 }}
             >
-              <Plus style={{ width: 14, height: 14, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
+              <Plus
+                style={{
+                  width: 14,
+                  height: 14,
+                  color: "var(--neu-text-muted)",
+                }}
+                strokeWidth={1.5}
+              />
             </motion.button>
           </div>
           <div className="flex items-center gap-2 px-3 py-2 rounded-[14px] neu-input-surface">
-            <Search style={{ width: 14, height: 14, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
+            <Search
+              style={{ width: 14, height: 14, color: "var(--neu-text-muted)" }}
+              strokeWidth={1.5}
+            />
             <input
               value={searchVal}
               onChange={(e) => setSearchVal(e.target.value)}
@@ -592,8 +786,18 @@ function MessagesDesktop() {
 
         {/* Online strip */}
         {onlineChats.length > 0 && (
-          <div className="flex-shrink-0 px-4 py-2.5" style={{ borderBottom: "1px solid var(--neu-border)" }}>
-            <p className="uppercase mb-2" style={{ fontSize: 9, letterSpacing: "0.12em", color: "var(--neu-text-muted)" }}>
+          <div
+            className="flex-shrink-0 px-4 py-2.5"
+            style={{ borderBottom: "1px solid var(--neu-border)" }}
+          >
+            <p
+              className="uppercase mb-2"
+              style={{
+                fontSize: 9,
+                letterSpacing: "0.12em",
+                color: "var(--neu-text-muted)",
+              }}
+            >
               在线
             </p>
             <div className="flex gap-3 overflow-x-auto no-scrollbar">
@@ -610,17 +814,33 @@ function MessagesDesktop() {
                       style={{
                         width: 36,
                         height: 36,
-                        border: selectedId === c.other_user.user_id ? "2px solid var(--neu-accent-primary)" : "1.5px solid var(--neu-border)",
+                        border:
+                          selectedId === c.other_user.user_id
+                            ? "2px solid var(--neu-accent-primary)"
+                            : "1.5px solid var(--neu-border)",
                       }}
                     >
-                      <img src={normalizeAvatar(c.other_user.avatar_url)} alt={c.other_user.nickname} className="w-full h-full object-cover" />
+                      <img
+                        src={normalizeAvatar(c.other_user.avatar_url)}
+                        alt={c.other_user.nickname}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     <span
                       className="absolute bottom-0 right-0 rounded-full"
-                      style={{ width: 8, height: 8, background: "#22c55e", border: "1.5px solid var(--neu-bg)" }}
+                      style={{
+                        width: 8,
+                        height: 8,
+                        background: "#22c55e",
+                        border: "1.5px solid var(--neu-bg)",
+                      }}
                     />
                   </div>
-                  <span style={{ fontSize: 10, color: "var(--neu-text-muted)" }}>{c.other_user.nickname}</span>
+                  <span
+                    style={{ fontSize: 10, color: "var(--neu-text-muted)" }}
+                  >
+                    {c.other_user.nickname}
+                  </span>
                 </motion.div>
               ))}
             </div>
@@ -664,7 +884,14 @@ function MessagesDesktop() {
             ) : (
               <>
                 {totalUnread > 0 && (
-                  <p className="uppercase px-2 mb-1" style={{ fontSize: 9, letterSpacing: "0.12em", color: "var(--neu-text-muted)" }}>
+                  <p
+                    className="uppercase px-2 mb-1"
+                    style={{
+                      fontSize: 9,
+                      letterSpacing: "0.12em",
+                      color: "var(--neu-text-muted)",
+                    }}
+                  >
                     未读
                   </p>
                 )}
@@ -716,12 +943,33 @@ function MessagesDesktop() {
               exit={{ opacity: 0 }}
               className="h-full flex flex-col items-center justify-center gap-4"
             >
-              <div className="flex items-center justify-center rounded-full neu-surface-flat" style={{ width: 72, height: 72 }}>
-                <MessageSquareDashed style={{ width: 28, height: 28, color: "var(--neu-text-muted)", opacity: 0.5 }} strokeWidth={1.25} />
+              <div
+                className="flex items-center justify-center rounded-full neu-surface-flat"
+                style={{ width: 72, height: 72 }}
+              >
+                <MessageSquareDashed
+                  style={{
+                    width: 28,
+                    height: 28,
+                    color: "var(--neu-text-muted)",
+                    opacity: 0.5,
+                  }}
+                  strokeWidth={1.25}
+                />
               </div>
               <div className="text-center">
-                <p style={{ fontSize: 16, color: "var(--neu-text)" }}>选择一个会话</p>
-                <p style={{ fontSize: 13, color: "var(--neu-text-muted)", marginTop: 4 }}>从左侧选择联系人开始聊天</p>
+                <p style={{ fontSize: 16, color: "var(--neu-text)" }}>
+                  选择一个会话
+                </p>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: "var(--neu-text-muted)",
+                    marginTop: 4,
+                  }}
+                >
+                  从左侧选择联系人开始聊天
+                </p>
               </div>
             </motion.div>
           )}
@@ -739,7 +987,10 @@ function MessagesDesktop() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               className="fixed inset-0 z-50"
-              style={{ background: "rgba(0,0,0,0.42)", backdropFilter: "blur(5px)" }}
+              style={{
+                background: "rgba(0,0,0,0.42)",
+                backdropFilter: "blur(5px)",
+              }}
               onClick={() => setShowNewChat(false)}
             />
             <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
@@ -760,7 +1011,8 @@ function MessagesDesktop() {
                   maxHeight: 600,
                   borderRadius: 24,
                   background: "var(--neu-bg)",
-                  boxShadow: "0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--neu-border)",
+                  boxShadow:
+                    "0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--neu-border)",
                 }}
               >
                 <NewConversationSheet
@@ -792,7 +1044,10 @@ function MessagesDesktop() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               className="fixed inset-0 z-50"
-              style={{ background: "rgba(0,0,0,0.42)", backdropFilter: "blur(5px)" }}
+              style={{
+                background: "rgba(0,0,0,0.42)",
+                backdropFilter: "blur(5px)",
+              }}
               onClick={() => setShowCreateGroup(false)}
             />
             <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
@@ -813,7 +1068,8 @@ function MessagesDesktop() {
                   maxHeight: 700,
                   borderRadius: 24,
                   background: "var(--neu-bg)",
-                  boxShadow: "0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--neu-border)",
+                  boxShadow:
+                    "0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--neu-border)",
                 }}
               >
                 <CreateGroupSheet onClose={() => setShowCreateGroup(false)} />

@@ -40,14 +40,13 @@ services:
   seaweedfs:
     image: chrislusf/seaweedfs:4.21
     restart: always
-    command: server -s3 -dir=/seaweedfs/data
-    volumes:
-      - seaweedfs_data:/seaweedfs/data
+    command: server -s3 -dir=/data
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9333/dir/status || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
   # ── Backend (Go API) ────────────────────────────────────────────
   backend:
@@ -73,7 +72,7 @@ services:
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-change-me}
       APP_NAME: hotspot-backend-go
       S3_ENDPOINT: http://seaweedfs:8333
-      S3_PUBLIC_ENDPOINT: http://localhost:8333
+      S3_PUBLIC_ENDPOINT: http://localhost:8888/s3
       S3_PUBLIC_FORCE_PATH_STYLE: "true"
       S3_FORCE_PATH_STYLE: "true"
       S3_REGION: us-east-1
@@ -88,14 +87,9 @@ services:
       start_period: 30s
 
   # ── Frontend (React SPA, Nginx) ────────────────────────────────
+  # 开发模式: image 由 dev override 替换为 oven/bun + Vite HMR
+  # 生产模式: docker compose build frontend 或 docker compose --profile prod up --build
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
-        VITE_AMAP_SECURITY_CODE: ${VITE_AMAP_SECURITY_CODE:-}
-        VITE_AMAP_SERVICE_HOST: ${VITE_AMAP_SERVICE_HOST:-}
     image: hotspot-frontend:latest
     restart: always
     depends_on:
@@ -108,6 +102,18 @@ services:
       retries: 5
       start_period: 5s
 
+  # ── Frontend Builder (仅生产构建) ─────────────────────────────
+  frontend-build:
+    profiles: ["prod"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
+        VITE_AMAP_SECURITY_CODE: ${VITE_AMAP_SECURITY_CODE:-}
+        VITE_AMAP_SERVICE_HOST: ${VITE_AMAP_SERVICE_HOST:-}
+    image: hotspot-frontend:latest
+
   # ── Gateway (Nginx) ─────────────────────────────────────────────
   nginx:
     image: nginx:1.30.1-alpine
@@ -116,6 +122,8 @@ services:
       backend:
         condition: service_healthy
       frontend:
+        condition: service_healthy
+      seaweedfs:
         condition: service_healthy
     ports:
       - "${NGINX_PORT:-8888}:80"
@@ -130,5 +138,4 @@ services:
 
 volumes:
   postgres_data:
-  seaweedfs_data:
   redis_data:

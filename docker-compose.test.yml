@@ -3,8 +3,8 @@
 #   docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm integration-test
 #
 # 说明:
-#   依赖基础 docker-compose.yml 中的 postgres / seaweedfs / backend 服务。
-#   先确保基础服务已启动: docker compose up -d
+#   依赖基础 docker-compose.yml 中的 postgres / seaweedfs 服务。
+#   先确保基础服务已启动: docker compose up -d postgres seaweedfs
 #   再运行集成测试: docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm integration-test
 
 services:
@@ -12,10 +12,6 @@ services:
     image: golang:1.26.2-alpine
     depends_on:
       postgres:
-        condition: service_healthy
-      seaweedfs:
-        condition: service_healthy
-      backend:
         condition: service_healthy
     environment:
       APP_ENV: test

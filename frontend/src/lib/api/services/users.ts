@@ -1,5 +1,10 @@
-import { post, paginate, generateIdempotencyKey, type RequestOptions } from '../client';
-import { USERS } from '../endpoints';
+import {
+  post,
+  paginate,
+  generateIdempotencyKey,
+  type RequestOptions,
+} from "../client";
+import { USERS } from "../endpoints";
 import type {
   UserItem,
   UserSettings,
@@ -15,8 +20,8 @@ import type {
   FollowSource,
   PaginationParams,
   GeoPoint,
-  VerificationSent
-} from '@/lib/types/api';
+  VerificationSent,
+} from "@/lib/types/api";
 
 export const usersService = {
   search(
@@ -24,11 +29,11 @@ export const usersService = {
       keyword?: string;
       tag?: string;
       radius?: number;
-      sort_by?: 'relevance' | 'distance' | 'newest';
+      sort_by?: "relevance" | "distance" | "newest";
       reference_point: GeoPoint;
       pagination?: PaginationParams;
     },
-    options?: RequestOptions
+    options?: RequestOptions,
   ) {
     return paginate<UserItem>(USERS.SEARCH, params, options);
   },
@@ -92,14 +97,20 @@ export const usersService = {
   },
 
   deleteAccount(data: { confirmation: string }) {
-    return post<void>(USERS.ME.DELETE, data, { idempotencyKey: generateIdempotencyKey() });
+    return post<void>(USERS.ME.DELETE, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
   },
 
   getBlocked(params?: { pagination?: PaginationParams }) {
     return paginate<BlockedUserItem>(USERS.ME.LIST_BLOCKED, params);
   },
 
-  follow(data: { user_id: string; source?: FollowSource; source_moment_id?: string }) {
+  follow(data: {
+    user_id: string;
+    source?: FollowSource;
+    source_moment_id?: string;
+  }) {
     return post<void>(USERS.ME.FOLLOW, data);
   },
 
@@ -121,25 +132,25 @@ export const usersService = {
 
   requestEmailChange(data: { new_email: string; password: string }) {
     return post<VerificationSent>(USERS.ME.EMAIL_REQUEST_CHANGE, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   confirmEmailChange(data: { new_email: string; verification_code: string }) {
     return post<void>(USERS.ME.EMAIL_CONFIRM_CHANGE, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   requestPhoneChange(data: { new_phone: string; password: string }) {
     return post<VerificationSent>(USERS.ME.PHONE_REQUEST_CHANGE, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   confirmPhoneChange(data: { new_phone: string; verification_code: string }) {
     return post<void>(USERS.ME.PHONE_CONFIRM_CHANGE, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
-  }
+  },
 };

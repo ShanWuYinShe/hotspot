@@ -1,15 +1,19 @@
-import { post } from '../client';
-import { MAP } from '../endpoints';
-import type { MapCanvasRequest, MapCanvasResponse, MapHeatBucket } from '@/lib/types/api';
+import { post } from "../client";
+import { MAP } from "../endpoints";
+import type {
+  MapCanvasRequest,
+  MapCanvasResponse,
+  MapHeatBucket,
+} from "@/lib/types/api";
 
 export const mapService = {
   canvas(data: MapCanvasRequest) {
     return post<MapCanvasResponse>(MAP.CANVAS, data);
-  }
+  },
 };
 
 const COORD_GROUP_PRECISION = 10000;
-const OVERLAP_GROUP_PREFIX = 'overlap_';
+const OVERLAP_GROUP_PREFIX = "overlap_";
 const OVERLAP_CLUSTER_MAX_ZOOM = 15;
 
 export interface RenderItem extends MapHeatBucket {
@@ -43,12 +47,15 @@ function getFanOutOffset(index: number, total: number): [number, number] {
   }
   const ringRadius = total <= 6 ? 20 : 28;
   const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
-  return [Math.round(Math.cos(angle) * ringRadius), Math.round(Math.sin(angle) * ringRadius)];
+  return [
+    Math.round(Math.cos(angle) * ringRadius),
+    Math.round(Math.sin(angle) * ringRadius),
+  ];
 }
 
 export function groupOverlappingRenderItems(
   items: RenderItem[],
-  zoom: number
+  zoom: number,
 ): {
   merged: PreparedRenderMarker[];
   groups: Map<string, RenderItem[]>;
@@ -77,19 +84,22 @@ export function groupOverlappingRenderItems(
       groupItems.forEach((item, index) => {
         merged.push({
           item,
-          offset: getFanOutOffset(index, groupItems.length)
+          offset: getFanOutOffset(index, groupItems.length),
         });
       });
     } else {
       const groupId = `${OVERLAP_GROUP_PREFIX}${key}`;
       groups.set(groupId, groupItems);
-      const totalCount = groupItems.reduce((sum, item) => sum + item.total_count, 0);
+      const totalCount = groupItems.reduce(
+        (sum, item) => sum + item.total_count,
+        0,
+      );
       merged.push({
         item: {
           ...first,
           render_id: groupId,
-          total_count: totalCount
-        }
+          total_count: totalCount,
+        },
       });
     }
   }

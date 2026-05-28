@@ -1,20 +1,28 @@
 import { createRoot } from "react-dom/client";
 import App from "./app/App.tsx";
 import { initApiClient } from "./lib/api/client";
+import { useAuthStore } from "./lib/stores/auth";
 import "./styles/index.css";
 
 initApiClient({
-  baseUrl: '',
+  baseUrl: "",
+  canRefresh: () => {
+    const state = useAuthStore.getState();
+    return state.sessionValid || state.isRestoring;
+  },
   onRefreshSuccess: () => {
-    console.debug('[API] Token refreshed');
+    console.debug("[API] Token refreshed");
   },
   onRefreshFail: () => {
-    console.warn('[API] Token refresh failed');
-    window.dispatchEvent(new CustomEvent('auth:session-expired'));
+    console.warn("[API] Token refresh failed");
+    useAuthStore.getState().invalidateSession();
+    window.dispatchEvent(new CustomEvent("auth:session-expired"));
   },
   onAccountBanned: (message: string) => {
-    window.dispatchEvent(new CustomEvent('auth:account-banned', { detail: { message } }));
-  }
+    window.dispatchEvent(
+      new CustomEvent("auth:account-banned", { detail: { message } }),
+    );
+  },
 });
 
 createRoot(document.getElementById("root")!).render(<App />);

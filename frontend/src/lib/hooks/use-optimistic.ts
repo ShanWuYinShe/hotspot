@@ -2,9 +2,9 @@
  * 通用乐观更新 Toggle Hook (React)
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { toast } from 'sonner';
-import { isSuccess, type ApiResponse } from '@/lib/api/client';
+import { useState, useRef, useCallback, useEffect } from "react";
+import { toast } from "sonner";
+import { isSuccess, type ApiResponse } from "@/lib/api/client";
 
 interface OptimisticOptions<T> {
   initialValue: boolean | (() => boolean);
@@ -16,11 +16,13 @@ interface OptimisticOptions<T> {
 
 export function useOptimisticToggle<T>(options: OptimisticOptions<T>) {
   const getExternalValue = () =>
-    typeof options.initialValue === 'function' ? options.initialValue() : options.initialValue;
+    typeof options.initialValue === "function"
+      ? options.initialValue()
+      : options.initialValue;
 
   const getExternalCount = () =>
     options.initialCount !== undefined
-      ? typeof options.initialCount === 'function'
+      ? typeof options.initialCount === "function"
         ? options.initialCount()
         : options.initialCount
       : 0;
@@ -73,14 +75,15 @@ export function useOptimisticToggle<T>(options: OptimisticOptions<T>) {
       const response = await action();
 
       if (!isSuccess(response)) {
-        throw new Error(response.message || 'Operation failed');
+        throw new Error(response.message || "Operation failed");
       }
     } catch (error) {
       if (!aliveRef.current) return;
       setIsOn(previousIsOn);
       setCount(previousCount);
       toast.error(
-        options.errorMessage || (error instanceof Error ? error.message : '操作失败'),
+        options.errorMessage ||
+          (error instanceof Error ? error.message : "操作失败"),
       );
     } finally {
       if (aliveRef.current) setIsLoading(false);

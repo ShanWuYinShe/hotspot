@@ -1,5 +1,10 @@
-import { post, paginate, generateIdempotencyKey, type RequestOptions } from '../client';
-import { GROUPS, GROUP_MESSAGES } from '../endpoints';
+import {
+  post,
+  paginate,
+  generateIdempotencyKey,
+  type RequestOptions,
+} from "../client";
+import { GROUPS, GROUP_MESSAGES } from "../endpoints";
 import type {
   ApplicationStatus,
   GroupItem,
@@ -18,8 +23,8 @@ import type {
   SettableGroupRole,
   PaginationParams,
   GeoPoint,
-  GroupRole
-} from '@/lib/types/api';
+  GroupRole,
+} from "@/lib/types/api";
 
 export const groupsService = {
   search(
@@ -27,11 +32,11 @@ export const groupsService = {
       keyword?: string;
       tag?: string;
       radius?: number;
-      sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
+      sort_by?: "relevance" | "distance" | "newest" | "popular";
       reference_point: GeoPoint;
       pagination?: PaginationParams;
     },
-    options?: RequestOptions
+    options?: RequestOptions,
   ) {
     return paginate<GroupItem>(GROUPS.SEARCH, params, options);
   },
@@ -47,11 +52,13 @@ export const groupsService = {
     avatar_file_id?: string;
     tags?: string[];
     password?: string;
-    join_method?: 'open' | 'approval' | 'invite_only';
+    join_method?: "open" | "approval" | "invite_only";
     is_searchable?: boolean;
     max_members?: number;
   }) {
-    return post<GroupItem>(GROUPS.CREATE, data, { idempotencyKey: generateIdempotencyKey() });
+    return post<GroupItem>(GROUPS.CREATE, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
   },
 
   update(data: {
@@ -62,7 +69,7 @@ export const groupsService = {
     tags?: string[];
     password?: string;
     clear_password?: boolean;
-    join_method?: 'open' | 'approval' | 'invite_only';
+    join_method?: "open" | "approval" | "invite_only";
     is_searchable?: boolean;
     max_members?: number;
     location?: Location;
@@ -70,21 +77,31 @@ export const groupsService = {
     return post<void>(GROUPS.UPDATE, data);
   },
 
-  updateMySettings(data: { group_id: string; is_muted?: boolean; is_pinned?: boolean }) {
+  updateMySettings(data: {
+    group_id: string;
+    is_muted?: boolean;
+    is_pinned?: boolean;
+  }) {
     return post<void>(GROUPS.ME.UPDATE_SETTINGS, data);
   },
 
   dismiss(data: { group_id: string }) {
-    return post<void>(GROUPS.DISMISS, data, { idempotencyKey: generateIdempotencyKey() });
+    return post<void>(GROUPS.DISMISS, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
   },
 
   transferOwnership(data: { group_id: string; new_owner_id: string }) {
     return post<void>(GROUPS.ME.TRANSFER_OWNERSHIP, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
-  getMembers(params: { group_id: string; role?: GroupRole; pagination?: PaginationParams }) {
+  getMembers(params: {
+    group_id: string;
+    role?: GroupRole;
+    pagination?: PaginationParams;
+  }) {
     return paginate<GroupMemberItem>(GROUPS.MEMBERS.LIST, params);
   },
 
@@ -99,29 +116,37 @@ export const groupsService = {
 
   invite(data: { group_id: string; user_id: string; message?: string }) {
     return post<Invitation>(GROUPS.MEMBERS.INVITE, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   getSentInvites(params: {
     group_id: string;
-    status?: ApplicationStatus | 'all';
+    status?: ApplicationStatus | "all";
     pagination?: PaginationParams;
   }) {
     return paginate<GroupSentInviteItem>(GROUPS.MEMBERS.INVITES_LIST, params);
   },
 
-  revokeSentInvite(data: { group_id: string; invite_id: string; reason?: string }) {
+  revokeSentInvite(data: {
+    group_id: string;
+    invite_id: string;
+    reason?: string;
+  }) {
     return post<void>(GROUPS.MEMBERS.INVITES_REVOKE, data);
   },
 
   join(data: { group_id: string; password?: string; message?: string }) {
     return post<JoinGroupResult>(GROUPS.ME.JOIN, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
-  setRole(data: { group_id: string; user_id: string; role: SettableGroupRole }) {
+  setRole(data: {
+    group_id: string;
+    user_id: string;
+    role: SettableGroupRole;
+  }) {
     return post<void>(GROUPS.MEMBERS.SET_ROLE, data);
   },
 
@@ -134,7 +159,9 @@ export const groupsService = {
   },
 
   ban(data: { group_id: string; user_id: string; reason?: string }) {
-    return post<void>(GROUPS.MEMBERS.BAN, data, { idempotencyKey: generateIdempotencyKey() });
+    return post<void>(GROUPS.MEMBERS.BAN, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
   },
 
   unban(data: { group_id: string; user_id: string }) {
@@ -151,7 +178,7 @@ export const groupsService = {
 
   getApplications(params: {
     group_id: string;
-    status?: ApplicationStatus | 'all';
+    status?: ApplicationStatus | "all";
     pagination?: PaginationParams;
   }) {
     return paginate<GroupApplicationItem>(GROUPS.APPLICATIONS.LIST, params);
@@ -159,18 +186,21 @@ export const groupsService = {
 
   approveApplication(data: { application_id: string }) {
     return post<void>(GROUPS.APPLICATIONS.APPROVE, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   rejectApplication(data: { application_id: string; reason?: string }) {
     return post<void>(GROUPS.APPLICATIONS.REJECT, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   getAnnouncements(params: { group_id: string }) {
-    return post<{ items: GroupAnnouncementItem[] }>(GROUPS.ANNOUNCEMENTS.LIST, params);
+    return post<{ items: GroupAnnouncementItem[] }>(
+      GROUPS.ANNOUNCEMENTS.LIST,
+      params,
+    );
   },
 
   createAnnouncement(data: {
@@ -180,7 +210,7 @@ export const groupsService = {
     is_pinned?: boolean;
   }) {
     return post<GroupAnnouncementItem>(GROUPS.ANNOUNCEMENTS.CREATE, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
@@ -203,7 +233,7 @@ export const groupsService = {
   },
 
   getMyApplications(params?: {
-    status?: ApplicationStatus | 'all';
+    status?: ApplicationStatus | "all";
     pagination?: PaginationParams;
   }) {
     return paginate<GroupApplicationItem>(GROUPS.ME.APPLICATIONS_LIST, params);
@@ -213,21 +243,30 @@ export const groupsService = {
     return post<void>(GROUPS.ME.CANCEL_APPLICATION, data);
   },
 
-  getInvites(params?: { status?: ApplicationStatus | 'all'; pagination?: PaginationParams }) {
+  getInvites(params?: {
+    status?: ApplicationStatus | "all";
+    pagination?: PaginationParams;
+  }) {
     return paginate<GroupInviteItem>(GROUPS.ME.INVITES_LIST, params);
   },
 
   acceptInvite(data: { invite_id: string }) {
-    return post<void>(GROUPS.ME.ACCEPT_INVITE, data, { idempotencyKey: generateIdempotencyKey() });
+    return post<void>(GROUPS.ME.ACCEPT_INVITE, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
   },
 
   rejectInvite(data: { invite_id: string }) {
-    return post<void>(GROUPS.ME.REJECT_INVITE, data, { idempotencyKey: generateIdempotencyKey() });
+    return post<void>(GROUPS.ME.REJECT_INVITE, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
   },
 
   leave(data: { group_id: string }) {
-    return post<void>(GROUPS.ME.LEAVE, data, { idempotencyKey: generateIdempotencyKey() });
-  }
+    return post<void>(GROUPS.ME.LEAVE, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
+  },
 };
 
 export const groupMessagesService = {
@@ -241,7 +280,7 @@ export const groupMessagesService = {
     mentions?: string[];
   }) {
     return post<MessageSent>(GROUP_MESSAGES.SEND, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
@@ -263,5 +302,5 @@ export const groupMessagesService = {
 
   markAllRead() {
     return post<void>(GROUP_MESSAGES.ME.MARK_ALL_READ, {});
-  }
+  },
 };

@@ -6,14 +6,14 @@
  * 支持漂移检测、自动对账、重连恢复。
  */
 
-import { useWebSocketStore } from './store';
+import { useWebSocketStore } from "./store";
 import type {
   SubscriptionOperation,
   SubscribeAckPayload,
   SubscriptionsSnapshotPayload,
-} from './types';
+} from "./types";
 
-export type SubscriptionType = 'user' | 'group';
+export type SubscriptionType = "user" | "group";
 
 export class SubscriptionManager {
   private desiredSubscriptions = new Map<SubscriptionType, Set<string>>();
@@ -40,13 +40,19 @@ export class SubscriptionManager {
     this.initMap(this.effectiveSubscriptions);
 
     this.cleanupFns.push(
-      useWebSocketStore.getState().on('SubscribeAck', (p) => this.handleSubscribeAck(p)),
-      useWebSocketStore.getState().on('SubscriptionsSnapshot', (p) =>
-        this.handleSubscriptionsSnapshot(p),
-      ),
-      useWebSocketStore.getState().on('ConnectionEstablished', () =>
-        this.restoreAndReconcileSubscriptions(),
-      ),
+      useWebSocketStore
+        .getState()
+        .on("SubscribeAck", (p) => this.handleSubscribeAck(p)),
+      useWebSocketStore
+        .getState()
+        .on("SubscriptionsSnapshot", (p) =>
+          this.handleSubscriptionsSnapshot(p),
+        ),
+      useWebSocketStore
+        .getState()
+        .on("ConnectionEstablished", () =>
+          this.restoreAndReconcileSubscriptions(),
+        ),
     );
   }
 
@@ -58,21 +64,21 @@ export class SubscriptionManager {
   subscribe(type: SubscriptionType, ids: string[]): Promise<boolean> {
     const normalized = this.normalize(ids);
     if (normalized.length === 0) return Promise.resolve(true);
-    this.applyDesired('subscribe', type, normalized);
-    return this.sendOrQueue('subscribe', type, normalized);
+    this.applyDesired("subscribe", type, normalized);
+    return this.sendOrQueue("subscribe", type, normalized);
   }
 
   unsubscribe(type: SubscriptionType, ids: string[]): Promise<boolean> {
     const normalized = this.normalize(ids);
     if (normalized.length === 0) return Promise.resolve(true);
-    this.applyDesired('unsubscribe', type, normalized);
-    return this.sendOrQueue('unsubscribe', type, normalized);
+    this.applyDesired("unsubscribe", type, normalized);
+    return this.sendOrQueue("unsubscribe", type, normalized);
   }
 
   setSubscriptions(type: SubscriptionType, ids: string[]): Promise<boolean> {
     const normalized = this.normalize(ids);
-    this.applyDesired('set', type, normalized);
-    return this.sendOrQueue('set', type, normalized);
+    this.applyDesired("set", type, normalized);
+    return this.sendOrQueue("set", type, normalized);
   }
 
   getSubscriptions(type: SubscriptionType): string[] {
@@ -88,8 +94,8 @@ export class SubscriptionManager {
   }
 
   getDriftState() {
-    const user = this.computeDrift('user');
-    const group = this.computeDrift('group');
+    const user = this.computeDrift("user");
+    const group = this.computeDrift("group");
     return {
       user,
       group,
@@ -116,7 +122,7 @@ export class SubscriptionManager {
     type: SubscriptionType,
     ids: string[],
   ): Promise<boolean> {
-    if (!useWebSocketStore.getState().connectionState.startsWith('connect')) {
+    if (!useWebSocketStore.getState().connectionState.startsWith("connect")) {
       return Promise.resolve(true);
     }
     return this.sendRequest(operation, type, ids);
@@ -127,13 +133,14 @@ export class SubscriptionManager {
     type: SubscriptionType,
     ids: string[],
   ): Promise<boolean> {
-    const isConnected = useWebSocketStore.getState().connectionState === 'connected';
+    const isConnected =
+      useWebSocketStore.getState().connectionState === "connected";
     if (!isConnected) return Promise.resolve(true);
 
     const clientMsgId = crypto.randomUUID();
 
     useWebSocketStore.getState().send({
-      type: 'SetSubscriptions',
+      type: "SetSubscriptions",
       payload: { client_request_id: clientMsgId, operation, type, ids },
     });
 
@@ -145,14 +152,23 @@ export class SubscriptionManager {
         }
       }, 10000);
 
-      this.pendingAcks.set(clientMsgId, { operation, type, ids, resolve, timer });
+      this.pendingAcks.set(clientMsgId, {
+        operation,
+        type,
+        ids,
+        resolve,
+        timer,
+      });
     });
   }
 
   private handleSubscribeAck(payload: SubscribeAckPayload) {
-    const { client_request_id, operation, type, ids, code, failed_ids } = payload;
+    const { client_request_id, operation, type, ids, code, failed_ids } =
+      payload;
     const subType = type as SubscriptionType;
-    const failedIds = this.normalize(failed_ids?.map((f) => f.subscription_id) ?? []);
+    const failedIds = this.normalize(
+      failed_ids?.map((f) => f.subscription_id) ?? [],
+    );
     const successfulIds = this.excludeFailed(ids, failedIds);
     this.updateEffective(subType, successfulIds);
 
@@ -160,7 +176,7 @@ export class SubscriptionManager {
       this.rollbackDesired(operation, subType, failedIds, successfulIds);
     }
     if (!this.isRestoreInFlight) {
-      this.reconcileDriftIfNeeded('subscribe_ack');
+      this.reconcileDriftIfNeeded("subscribe_ack");
     }
 
     const pending = this.pendingAcks.get(client_request_id);
@@ -172,15 +188,15 @@ export class SubscriptionManager {
   }
 
   private handleSubscriptionsSnapshot(payload: SubscriptionsSnapshotPayload) {
-    this.updateEffective('user', this.normalize(payload.user_ids ?? []));
-    this.updateEffective('group', this.normalize(payload.group_ids ?? []));
-    this.reconcileDriftIfNeeded('subscriptions_snapshot');
+    this.updateEffective("user", this.normalize(payload.user_ids ?? []));
+    this.updateEffective("group", this.normalize(payload.group_ids ?? []));
+    this.reconcileDriftIfNeeded("subscriptions_snapshot");
   }
 
   private async restoreSubscriptions() {
-    for (const type of ['user', 'group'] as SubscriptionType[]) {
+    for (const type of ["user", "group"] as SubscriptionType[]) {
       const ids = Array.from(this.desiredSubscriptions.get(type) ?? []);
-      await this.sendOrQueue('set', type, ids);
+      await this.sendOrQueue("set", type, ids);
     }
   }
 
@@ -189,10 +205,11 @@ export class SubscriptionManager {
     try {
       await this.restoreSubscriptions();
       await this.waitForPendingAcks();
-      const isConnected = useWebSocketStore.getState().connectionState === 'connected';
+      const isConnected =
+        useWebSocketStore.getState().connectionState === "connected";
       if (isConnected) {
         useWebSocketStore.getState().send({
-          type: 'GetSubscriptions',
+          type: "GetSubscriptions",
           payload: { client_request_id: crypto.randomUUID() },
         });
       }
@@ -202,8 +219,8 @@ export class SubscriptionManager {
   }
 
   private initMap(map: Map<SubscriptionType, Set<string>>) {
-    map.set('user', new Set());
-    map.set('group', new Set());
+    map.set("user", new Set());
+    map.set("group", new Set());
   }
 
   private normalize(ids: string[]): string[] {
@@ -229,13 +246,13 @@ export class SubscriptionManager {
     const set = this.desiredSubscriptions.get(type);
     if (!set) return;
     switch (operation) {
-      case 'subscribe':
+      case "subscribe":
         ids.forEach((id) => set.add(id));
         break;
-      case 'unsubscribe':
+      case "unsubscribe":
         ids.forEach((id) => set.delete(id));
         break;
-      case 'set':
+      case "set":
         set.clear();
         ids.forEach((id) => set.add(id));
         break;
@@ -258,13 +275,13 @@ export class SubscriptionManager {
     const set = this.desiredSubscriptions.get(type);
     if (!set) return;
     switch (operation) {
-      case 'subscribe':
+      case "subscribe":
         failedIds.forEach((id) => set.delete(id));
         break;
-      case 'unsubscribe':
+      case "unsubscribe":
         failedIds.forEach((id) => set.add(id));
         break;
-      case 'set':
+      case "set":
         set.clear();
         this.normalize(serverSnapshotIds).forEach((id) => set.add(id));
         break;
@@ -284,29 +301,41 @@ export class SubscriptionManager {
 
   private computeDrift(type: SubscriptionType) {
     const desired = this.desiredSubscriptions.get(type) ?? new Set<string>();
-    const effective = this.effectiveSubscriptions.get(type) ?? new Set<string>();
+    const effective =
+      this.effectiveSubscriptions.get(type) ?? new Set<string>();
     return {
-      missing_on_server: this.toSorted(new Set(Array.from(desired).filter((id) => !effective.has(id)))),
-      extra_on_server: this.toSorted(new Set(Array.from(effective).filter((id) => !desired.has(id)))),
+      missing_on_server: this.toSorted(
+        new Set(Array.from(desired).filter((id) => !effective.has(id))),
+      ),
+      extra_on_server: this.toSorted(
+        new Set(Array.from(effective).filter((id) => !desired.has(id))),
+      ),
     };
   }
 
-  private async reconcileDriftIfNeeded(_trigger: 'subscribe_ack' | 'subscriptions_snapshot') {
+  private async reconcileDriftIfNeeded(
+    _trigger: "subscribe_ack" | "subscriptions_snapshot",
+  ) {
     const drift = this.getDriftState();
     if (!drift.has_drift) return;
 
     const now = Date.now();
     if (
       this.isDriftReconciling ||
-      now - this.lastDriftReconcileAt < SubscriptionManager.DRIFT_RECONCILE_COOLDOWN_MS
+      now - this.lastDriftReconcileAt <
+        SubscriptionManager.DRIFT_RECONCILE_COOLDOWN_MS
     )
       return;
 
     this.isDriftReconciling = true;
     this.lastDriftReconcileAt = now;
     try {
-      for (const type of ['user', 'group'] as SubscriptionType[]) {
-        await this.sendOrQueue('set', type, this.toSorted(this.desiredSubscriptions.get(type)));
+      for (const type of ["user", "group"] as SubscriptionType[]) {
+        await this.sendOrQueue(
+          "set",
+          type,
+          this.toSorted(this.desiredSubscriptions.get(type)),
+        );
       }
     } finally {
       this.isDriftReconciling = false;

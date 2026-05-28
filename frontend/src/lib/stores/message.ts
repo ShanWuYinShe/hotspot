@@ -3,14 +3,17 @@
  * 监听 WebSocket 推送的消息事件来更新未读计数
  */
 
-import { create } from 'zustand';
-import { useAuthStore } from './auth';
-import { useWebSocketStore } from '@/lib/websocket/store';
-import type { PrivateMessageNewPayload, GroupMessageNewPayload } from '@/lib/websocket/types';
+import { create } from "zustand";
+import { useAuthStore } from "./auth";
+import { useWebSocketStore } from "@/lib/websocket/store";
+import type {
+  PrivateMessageNewPayload,
+  GroupMessageNewPayload,
+} from "@/lib/websocket/types";
 
 export interface UnreadConversation {
   id: string;
-  type: 'private' | 'group';
+  type: "private" | "group";
   count: number;
   lastMessage?: {
     content: string;
@@ -64,15 +67,19 @@ export const useMessageStore = create<MessageState>((set) => ({
   },
 
   initialize() {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
     const incrementUnread = (
       conversationId: string,
-      type: 'private' | 'group',
-      payload: { content?: string; sent_at: string; sender: { nickname: string } },
+      type: "private" | "group",
+      payload: {
+        content?: string;
+        sent_at: string;
+        sender: { nickname: string };
+      },
     ) => {
       const lastMessage = {
-        content: payload.content ?? '',
+        content: payload.content ?? "",
         timestamp: payload.sent_at,
         senderName: payload.sender.nickname,
       };
@@ -91,17 +98,27 @@ export const useMessageStore = create<MessageState>((set) => ({
     };
 
     cleanupFns.push(
-      useWebSocketStore.getState().on('PrivateMessageNew', (payload: PrivateMessageNewPayload) => {
-        if (payload.sender.user_id === useAuthStore.getState().currentUserId) return;
-        incrementUnread(`private_${payload.sender.user_id}`, 'private', payload);
-      }),
+      useWebSocketStore
+        .getState()
+        .on("PrivateMessageNew", (payload: PrivateMessageNewPayload) => {
+          if (payload.sender.user_id === useAuthStore.getState().currentUserId)
+            return;
+          incrementUnread(
+            `private_${payload.sender.user_id}`,
+            "private",
+            payload,
+          );
+        }),
     );
 
     cleanupFns.push(
-      useWebSocketStore.getState().on('GroupMessageNew', (payload: GroupMessageNewPayload) => {
-        if (payload.sender.user_id === useAuthStore.getState().currentUserId) return;
-        incrementUnread(`group_${payload.group_id}`, 'group', payload);
-      }),
+      useWebSocketStore
+        .getState()
+        .on("GroupMessageNew", (payload: GroupMessageNewPayload) => {
+          if (payload.sender.user_id === useAuthStore.getState().currentUserId)
+            return;
+          incrementUnread(`group_${payload.group_id}`, "group", payload);
+        }),
     );
 
     unsubscribeAuth = useAuthStore.subscribe((state, prevState) => {

@@ -1,6 +1,10 @@
-import { post, type RequestOptions } from '../client';
-import { SEARCH } from '../endpoints';
-import type { SearchSuggestResponse, GeoPoint, SearchSuggestType } from '@/lib/types/api';
+import { post, type RequestOptions } from "../client";
+import { SEARCH } from "../endpoints";
+import type {
+  SearchSuggestResponse,
+  GeoPoint,
+  SearchSuggestType,
+} from "@/lib/types/api";
 
 export const searchService = {
   suggest(
@@ -10,8 +14,8 @@ export const searchService = {
       types?: SearchSuggestType[];
       radius?: number;
     },
-    options?: RequestOptions
+    options?: RequestOptions,
   ) {
     return post<SearchSuggestResponse>(SEARCH.SUGGEST, params, options);
-  }
+  },
 };

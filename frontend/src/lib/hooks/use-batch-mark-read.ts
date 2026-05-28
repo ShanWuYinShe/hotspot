@@ -7,7 +7,7 @@
  * 4. 离开页面时：批量标记所有可见过的消息
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
 export interface UseBatchMarkReadOptions {
   markAsRead: (messageIds?: string[]) => Promise<void>;
@@ -22,8 +22,15 @@ export interface BatchMarkReadResult {
   markAllVisibleAsRead: () => Promise<void>;
 }
 
-export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkReadResult {
-  const { markAsRead, debounceMs = 2000, visibilityThreshold = 1000, enabled = true } = options;
+export function useBatchMarkRead(
+  options: UseBatchMarkReadOptions,
+): BatchMarkReadResult {
+  const {
+    markAsRead,
+    debounceMs = 2000,
+    visibilityThreshold = 1000,
+    enabled = true,
+  } = options;
 
   const visibleMessageIdsRef = useRef<string[]>([]);
   const pendingMessageIdsRef = useRef<string[]>([]);
@@ -31,7 +38,9 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
   const visibilityTimestampsRef = useRef(new Map<string, number>());
   const observerRef = useRef<IntersectionObserver | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const visibilityTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const visibilityTimersRef = useRef(
+    new Map<string, ReturnType<typeof setTimeout>>(),
+  );
 
   function appendUniqueIds(target: string[], ids: string[]): string[] {
     if (ids.length === 0) return target;
@@ -54,7 +63,10 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
     try {
       await markAsRead(idsToMark);
     } catch {
-      pendingMessageIdsRef.current = appendUniqueIds(pendingMessageIdsRef.current, idsToMark);
+      pendingMessageIdsRef.current = appendUniqueIds(
+        pendingMessageIdsRef.current,
+        idsToMark,
+      );
     }
   }
 
@@ -66,14 +78,18 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
   }
 
   // handleIntersection 需要通过 ref 间接引用，以避免闭包陷阱
-  const handleIntersectionRef = useRef<(entries: IntersectionObserverEntry[]) => void>(() => {});
+  const handleIntersectionRef = useRef<
+    (entries: IntersectionObserverEntry[]) => void
+  >(() => {});
 
   handleIntersectionRef.current = (entries: IntersectionObserverEntry[]) => {
     if (!enabled) return;
     const now = Date.now();
 
     for (const entry of entries) {
-      const messageId = elementToIdMapRef.current.get(entry.target as HTMLElement);
+      const messageId = elementToIdMapRef.current.get(
+        entry.target as HTMLElement,
+      );
       if (!messageId) continue;
 
       if (entry.isIntersecting) {
@@ -86,10 +102,14 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
 
         if (visibleDuration >= visibilityThreshold) {
           if (!visibleMessageIdsRef.current.includes(messageId)) {
-            visibleMessageIdsRef.current = [...visibleMessageIdsRef.current, messageId];
-            pendingMessageIdsRef.current = appendUniqueIds(pendingMessageIdsRef.current, [
+            visibleMessageIdsRef.current = [
+              ...visibleMessageIdsRef.current,
               messageId,
-            ]);
+            ];
+            pendingMessageIdsRef.current = appendUniqueIds(
+              pendingMessageIdsRef.current,
+              [messageId],
+            );
             scheduleBatchMarkAsRead();
           }
         } else {
@@ -123,7 +143,7 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
       (entries) => handleIntersectionRef.current(entries),
       {
         root: null,
-        rootMargin: '0px',
+        rootMargin: "0px",
         threshold: 0.5,
       },
     );

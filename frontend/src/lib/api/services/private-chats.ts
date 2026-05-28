@@ -1,13 +1,13 @@
-import { post, paginate, generateIdempotencyKey } from '../client';
-import { PRIVATE_CHATS, PRIVATE_MESSAGES } from '../endpoints';
+import { post, paginate, generateIdempotencyKey } from "../client";
+import { PRIVATE_CHATS, PRIVATE_MESSAGES } from "../endpoints";
 import type {
   PrivateChatItem,
   PrivateChatOpenResult,
   PrivateMessageItem,
   MessageSent,
   SendMessageType,
-  PaginationParams
-} from '@/lib/types/api';
+  PaginationParams,
+} from "@/lib/types/api";
 
 export const privateChatsService = {
   getChats(params?: { pagination?: PaginationParams }) {
@@ -18,13 +18,17 @@ export const privateChatsService = {
     return post<PrivateChatOpenResult>(PRIVATE_CHATS.OPEN_THE_DOOR, data);
   },
 
-  updateSettings(data: { target_user_id: string; is_muted?: boolean; is_pinned?: boolean }) {
+  updateSettings(data: {
+    target_user_id: string;
+    is_muted?: boolean;
+    is_pinned?: boolean;
+  }) {
     return post<void>(PRIVATE_CHATS.ME.UPDATE_SETTINGS, data);
   },
 
   deleteChat(data: { target_user_id: string }) {
     return post<void>(PRIVATE_CHATS.ME.DELETE, data);
-  }
+  },
 };
 
 export const privateMessagesService = {
@@ -37,11 +41,14 @@ export const privateMessagesService = {
     reply_to_message_id?: string;
   }) {
     return post<MessageSent>(PRIVATE_MESSAGES.SEND, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
 
-  getHistory(params: { target_user_id: string; pagination?: PaginationParams }) {
+  getHistory(params: {
+    target_user_id: string;
+    pagination?: PaginationParams;
+  }) {
     return paginate<PrivateMessageItem>(PRIVATE_MESSAGES.GET_HISTORY, params);
   },
 
@@ -59,5 +66,5 @@ export const privateMessagesService = {
 
   markAllRead() {
     return post<void>(PRIVATE_MESSAGES.ME.MARK_ALL_READ, {});
-  }
+  },
 };

@@ -11,18 +11,29 @@ interface NeuButtonProps extends HTMLMotionProps<"button"> {
 
 export const NeuButton = React.forwardRef<HTMLButtonElement, NeuButtonProps>(
   (
-    { className, variant = "flat", size = "md", active = false, children, ...props },
-    ref
+    {
+      className,
+      variant = "flat",
+      size = "md",
+      active = false,
+      children,
+      ...props
+    },
+    ref,
   ) => {
     const hover = useHoverConfig();
     return (
       <motion.button
         ref={ref}
         whileTap={hover.tap}
-        whileHover={!active ? {
-          ...hover.btn,
-          y: -2,
-        } : {}}
+        whileHover={
+          !active
+            ? {
+                ...hover.btn,
+                y: -2,
+              }
+            : {}
+        }
         className={cn(
           "relative flex items-center justify-center rounded-[28px] outline-none select-none",
           "text-neu font-medium neu-pill-hover",
@@ -35,13 +46,13 @@ export const NeuButton = React.forwardRef<HTMLButtonElement, NeuButtonProps>(
           variant === "glow" && !active && "neu-button-glow",
           variant === "icon" && !active && "neu-flat text-neu-accent",
           active && "neu-pressed text-neu-accent",
-          className
+          className,
         )}
         {...props}
       >
         {children}
       </motion.button>
     );
-  }
+  },
 );
 NeuButton.displayName = "NeuButton";

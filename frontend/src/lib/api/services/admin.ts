@@ -1,4 +1,4 @@
-import { post, paginate, generateIdempotencyKey } from '../client';
+import { post, paginate, generateIdempotencyKey } from "../client";
 import {
   ADMIN_RBAC,
   ADMIN_USERS,
@@ -7,8 +7,8 @@ import {
   ADMIN_AUDIT,
   ADMIN_REPORTS,
   ADMIN_TAGS,
-  ADMIN_APP_CONFIG
-} from '../endpoints';
+  ADMIN_APP_CONFIG,
+} from "../endpoints";
 import type {
   AdminPermissionItem,
   AdminPermissions,
@@ -36,8 +36,8 @@ import type {
   ResponseDefaults,
   GroupSettings,
   PaginationParams,
-  Location
-} from '@/lib/types/api';
+  Location,
+} from "@/lib/types/api";
 
 export const adminRbacService = {
   getMyPermissions() {
@@ -51,7 +51,7 @@ export const adminRbacService = {
   },
   createRole(data: { name: string; description?: string }) {
     return post<AdminRoleItem>(ADMIN_RBAC.ROLES.CREATE, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
   updateRole(data: {
@@ -71,12 +71,18 @@ export const adminRbacService = {
   getAdmins(params?: { pagination?: PaginationParams }) {
     return paginate<AdminOperatorItem>(ADMIN_RBAC.ADMINS.LIST, params);
   },
-  grantAdmin(data: { user_id: string; grant_all_permissions?: boolean; role_ids: string[] }) {
-    return post<void>(ADMIN_RBAC.ADMINS.GRANT, data, { idempotencyKey: generateIdempotencyKey() });
+  grantAdmin(data: {
+    user_id: string;
+    grant_all_permissions?: boolean;
+    role_ids: string[];
+  }) {
+    return post<void>(ADMIN_RBAC.ADMINS.GRANT, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
   },
   revokeAdmin(data: { user_id: string }) {
     return post<void>(ADMIN_RBAC.ADMINS.REVOKE, data);
-  }
+  },
 };
 
 export const adminUsersService = {
@@ -94,11 +100,13 @@ export const adminUsersService = {
     return post<AdminUserItem>(ADMIN_USERS.OPEN_THE_DOOR, data);
   },
   ban(data: { user_id: string; reason?: string; duration_days?: number }) {
-    return post<void>(ADMIN_USERS.BAN, data, { idempotencyKey: generateIdempotencyKey() });
+    return post<void>(ADMIN_USERS.BAN, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
   },
   unban(data: { user_id: string; reason?: string }) {
     return post<void>(ADMIN_USERS.UNBAN, data);
-  }
+  },
 };
 
 export const adminGroupsService = {
@@ -114,12 +122,17 @@ export const adminGroupsService = {
     return post<AdminGroupItem>(ADMIN_GROUPS.OPEN_THE_DOOR, data);
   },
   dismiss(data: { group_id: string; reason?: string }) {
-    return post<void>(ADMIN_GROUPS.DISMISS, data, { idempotencyKey: generateIdempotencyKey() });
-  }
+    return post<void>(ADMIN_GROUPS.DISMISS, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
+  },
 };
 
 export const adminAnnouncementsService = {
-  search(params?: { pagination?: PaginationParams; severity?: AnnouncementSeverity }) {
+  search(params?: {
+    pagination?: PaginationParams;
+    severity?: AnnouncementSeverity;
+  }) {
     return paginate<AdminAnnouncementItem>(ADMIN_ANNOUNCEMENTS.SEARCH, params);
   },
   create(data: {
@@ -130,7 +143,7 @@ export const adminAnnouncementsService = {
     send_push?: boolean;
   }) {
     return post<AnnouncementCreated>(ADMIN_ANNOUNCEMENTS.CREATE, data, {
-      idempotencyKey: generateIdempotencyKey()
+      idempotencyKey: generateIdempotencyKey(),
     });
   },
   update(data: {
@@ -144,7 +157,7 @@ export const adminAnnouncementsService = {
   },
   delete(data: { announcement_id: string }) {
     return post<void>(ADMIN_ANNOUNCEMENTS.DELETE, data);
-  }
+  },
 };
 
 export const adminAuditService = {
@@ -161,7 +174,7 @@ export const adminAuditService = {
   },
   getDetail(data: { log_id: string }) {
     return post<AuditLogItem>(ADMIN_AUDIT.OPEN_THE_DOOR, data);
-  }
+  },
 };
 
 export const adminReportsService = {
@@ -172,18 +185,28 @@ export const adminReportsService = {
   }) {
     return paginate<AdminReportItem>(ADMIN_REPORTS.SEARCH, params);
   },
-  handle(data: { report_id: string; action: ReportHandleAction; note?: string }) {
-    return post<void>(ADMIN_REPORTS.HANDLE, data, { idempotencyKey: generateIdempotencyKey() });
-  }
+  handle(data: {
+    report_id: string;
+    action: ReportHandleAction;
+    note?: string;
+  }) {
+    return post<void>(ADMIN_REPORTS.HANDLE, data, {
+      idempotencyKey: generateIdempotencyKey(),
+    });
+  },
 };
 
 export const adminTagsService = {
-  search(params?: { keyword?: string; sort_by?: AdminTagSortBy; pagination?: PaginationParams }) {
+  search(params?: {
+    keyword?: string;
+    sort_by?: AdminTagSortBy;
+    pagination?: PaginationParams;
+  }) {
     return paginate<AdminTagItem>(ADMIN_TAGS.SEARCH, params);
   },
   delete(data: { name: string }) {
     return post<void>(ADMIN_TAGS.DELETE, data);
-  }
+  },
 };
 
 export const adminAppConfigService = {
@@ -204,7 +227,9 @@ export const adminAppConfigService = {
   updateRateLimits(data: { rate_limits: Partial<RateLimitConfig> }) {
     return post<void>(ADMIN_APP_CONFIG.UPDATE_RATE_LIMITS, data);
   },
-  updateResponseDefaults(data: { response_defaults: Partial<ResponseDefaults> }) {
+  updateResponseDefaults(data: {
+    response_defaults: Partial<ResponseDefaults>;
+  }) {
     return post<void>(ADMIN_APP_CONFIG.UPDATE_RESPONSE_DEFAULTS, data);
   },
   updateFeatures(data: {
@@ -234,5 +259,5 @@ export const adminAppConfigService = {
     official_website?: string;
   }) {
     return post<void>(ADMIN_APP_CONFIG.UPDATE_CONTACT, data);
-  }
+  },
 };

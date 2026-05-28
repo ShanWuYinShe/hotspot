@@ -58,10 +58,16 @@ export function Create() {
     >
       {/* Header */}
       <div className="mb-4">
-        <h1 className="text-[24px] tracking-tight" style={{ color: "var(--neu-text)" }}>
+        <h1
+          className="text-[24px] tracking-tight"
+          style={{ color: "var(--neu-text)" }}
+        >
           发布动态
         </h1>
-        <p className="text-[12px] mt-0.5" style={{ color: "var(--neu-text-muted)" }}>
+        <p
+          className="text-[12px] mt-0.5"
+          style={{ color: "var(--neu-text-muted)" }}
+        >
           分享你此刻的所见所想
         </p>
       </div>
@@ -78,20 +84,42 @@ export function Create() {
               "4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)",
           }}
         >
-          {avatarUrl
-            ? <img src={avatarUrl} alt="我的头像" className="w-full h-full object-cover" />
-            : <div className="w-full h-full flex items-center justify-center" style={{ background: "var(--neu-accent-primary)" }}>
-                <span style={{ fontSize: 16, color: "var(--text-on-accent, white)" }}>{nickname.charAt(0)}</span>
-              </div>
-          }
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt="我的头像"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div
+              className="w-full h-full flex items-center justify-center"
+              style={{ background: "var(--neu-accent-primary)" }}
+            >
+              <span
+                style={{ fontSize: 16, color: "var(--text-on-accent, white)" }}
+              >
+                {nickname.charAt(0)}
+              </span>
+            </div>
+          )}
         </div>
         <div>
           <p className="text-[13px]" style={{ color: "var(--neu-text)" }}>
             {nickname}
           </p>
           <div className="flex items-center gap-1">
-            <MapPin style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
-            <span className="text-[11px]" style={{ color: "var(--neu-text-muted)" }}>
+            <MapPin
+              style={{
+                width: 11,
+                height: 11,
+                color: "var(--neu-accent-primary)",
+              }}
+              strokeWidth={1.5}
+            />
+            <span
+              className="text-[11px]"
+              style={{ color: "var(--neu-text-muted)" }}
+            >
               {locationName}
             </span>
           </div>
@@ -124,7 +152,8 @@ export function Create() {
         <div className="flex justify-between items-center mt-2">
           <div className="flex gap-2">
             <motion.button
-              whileTap={{ scale: 0.88 }} aria-label="表情"
+              whileTap={{ scale: 0.88 }}
+              aria-label="表情"
               className="flex items-center justify-center rounded-full outline-none transition-all duration-200"
               style={{
                 width: 30,
@@ -139,7 +168,8 @@ export function Create() {
               <Smile style={{ width: 15, height: 15 }} strokeWidth={1.5} />
             </motion.button>
             <motion.button
-              whileTap={{ scale: 0.88 }} aria-label="添加标签"
+              whileTap={{ scale: 0.88 }}
+              aria-label="添加标签"
               className="flex items-center justify-center rounded-full outline-none transition-all duration-200"
               style={{
                 width: 30,
@@ -157,7 +187,10 @@ export function Create() {
           <span
             className="text-[11px]"
             style={{
-              color: text.length > 240 ? "var(--neu-accent-primary)" : "var(--neu-text-muted)",
+              color:
+                text.length > 240
+                  ? "var(--neu-accent-primary)"
+                  : "var(--neu-text-muted)",
             }}
           >
             {text.length}/280
@@ -169,7 +202,7 @@ export function Create() {
       {selectedTags.size > 0 && (
         <div className="mb-4">
           <div className="flex flex-wrap gap-2">
-            {Array.from(selectedTags).map(tag => (
+            {Array.from(selectedTags).map((tag) => (
               <motion.button
                 key={tag}
                 whileTap={{ scale: 0.94 }}
@@ -215,7 +248,9 @@ export function Create() {
         }
       >
         <span>{submitting ? "发布中…" : "发布"}</span>
-        {!submitting && <Send style={{ width: 16, height: 16 }} strokeWidth={1.75} />}
+        {!submitting && (
+          <Send style={{ width: 16, height: 16 }} strokeWidth={1.75} />
+        )}
       </motion.button>
     </motion.div>
   );

@@ -1,8 +1,8 @@
-import { useState, useCallback, useRef } from 'react';
-import { searchService } from '@/lib/api/services/search';
-import { useLocationStore } from '@/lib/stores/location';
-import { isSuccess } from '@/lib/api/client';
-import type { SearchSuggestItem } from '@/lib/types/api';
+import { useState, useCallback, useRef } from "react";
+import { searchService } from "@/lib/api/services/search";
+import { useLocationStore } from "@/lib/stores/location";
+import { isSuccess } from "@/lib/api/client";
+import type { SearchSuggestItem } from "@/lib/types/api";
 
 interface SearchData {
   results: SearchSuggestItem[];
@@ -33,7 +33,7 @@ export function useSearchData(): SearchData {
           const point = geoPoint ?? { latitude: 34.26, longitude: 117.18 };
           const res = await searchService.suggest({
             prefix: query.trim(),
-            reference_point: point
+            reference_point: point,
           });
 
           if (isSuccess(res) && res.data) {
@@ -48,7 +48,7 @@ export function useSearchData(): SearchData {
         }
       }, 300);
     },
-    [geoPoint]
+    [geoPoint],
   );
 
   const clear = useCallback(() => {

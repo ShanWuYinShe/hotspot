@@ -20,12 +20,12 @@ export const NeuInput = React.forwardRef<HTMLInputElement, NeuInputProps>(
             // neu-input-base: convex by default, concave on :focus (pure CSS, no JS state needed)
             "w-full neu-input-base rounded-2xl py-3 px-4 placeholder:text-neu-muted transition-all duration-200",
             icon && "pl-12",
-            className
+            className,
           )}
           {...props}
         />
       </div>
     );
-  }
+  },
 );
 NeuInput.displayName = "NeuInput";

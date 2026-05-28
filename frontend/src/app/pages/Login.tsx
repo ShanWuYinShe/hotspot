@@ -55,10 +55,16 @@ export function Login() {
         style={{ maxWidth: 400 }}
       >
         <div className="mb-8 text-center">
-          <h1 className="text-[28px] tracking-tight" style={{ color: "var(--neu-text)" }}>
+          <h1
+            className="text-[28px] tracking-tight"
+            style={{ color: "var(--neu-text)" }}
+          >
             HotSpot
           </h1>
-          <p className="mt-1.5 text-[13px]" style={{ color: "var(--neu-text-muted)" }}>
+          <p
+            className="mt-1.5 text-[13px]"
+            style={{ color: "var(--neu-text-muted)" }}
+          >
             {mode === "login" ? "发现附近的热点" : "创建你的账号"}
           </p>
         </div>
@@ -67,15 +73,30 @@ export function Login() {
           className="w-full rounded-[22px] overflow-hidden p-6"
           style={{
             background: "var(--neu-bg)",
-            boxShadow: "7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light)",
+            boxShadow:
+              "7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light)",
             border: "1px solid var(--neu-border)",
           }}
         >
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-1.5">
-                <User style={{ width: 13, height: 13, color: "var(--neu-accent-primary)" }} strokeWidth={1.75} />
-                <label style={{ fontSize: 11, color: "var(--neu-text-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                <User
+                  style={{
+                    width: 13,
+                    height: 13,
+                    color: "var(--neu-accent-primary)",
+                  }}
+                  strokeWidth={1.75}
+                />
+                <label
+                  style={{
+                    fontSize: 11,
+                    color: "var(--neu-text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                  }}
+                >
                   用户名
                 </label>
               </div>
@@ -94,8 +115,22 @@ export function Login() {
 
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-1.5">
-                <Lock style={{ width: 13, height: 13, color: "var(--neu-accent-primary)" }} strokeWidth={1.75} />
-                <label style={{ fontSize: 11, color: "var(--neu-text-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                <Lock
+                  style={{
+                    width: 13,
+                    height: 13,
+                    color: "var(--neu-accent-primary)",
+                  }}
+                  strokeWidth={1.75}
+                />
+                <label
+                  style={{
+                    fontSize: 11,
+                    color: "var(--neu-text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                  }}
+                >
                   密码
                 </label>
               </div>
@@ -105,7 +140,9 @@ export function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="输入密码"
-                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  autoComplete={
+                    mode === "login" ? "current-password" : "new-password"
+                  }
                   aria-label="密码"
                   className="w-full bg-transparent outline-none"
                   style={{ fontSize: 14, color: "var(--neu-text)" }}
@@ -114,10 +151,28 @@ export function Login() {
             </div>
 
             {mode === "register" && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex flex-col gap-1.5">
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="flex flex-col gap-1.5"
+              >
                 <div className="flex items-center gap-1.5">
-                  <UserPlus style={{ width: 13, height: 13, color: "var(--neu-accent-primary)" }} strokeWidth={1.75} />
-                  <label style={{ fontSize: 11, color: "var(--neu-text-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                  <UserPlus
+                    style={{
+                      width: 13,
+                      height: 13,
+                      color: "var(--neu-accent-primary)",
+                    }}
+                    strokeWidth={1.75}
+                  />
+                  <label
+                    style={{
+                      fontSize: 11,
+                      color: "var(--neu-text-muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                    }}
+                  >
                     昵称
                   </label>
                 </div>
@@ -162,10 +217,17 @@ export function Login() {
             <motion.button
               whileTap={{ scale: 0.93 }}
               type="button"
-              onClick={() => { setMode(mode === "login" ? "register" : "login"); setNickname(""); }}
+              onClick={() => {
+                setMode(mode === "login" ? "register" : "login");
+                setNickname("");
+              }}
               aria-label={mode === "login" ? "切换到注册" : "切换到登录"}
               className="outline-none"
-              style={{ fontSize: 13, color: "var(--neu-accent-primary)", fontWeight: 500 }}
+              style={{
+                fontSize: 13,
+                color: "var(--neu-accent-primary)",
+                fontWeight: 500,
+              }}
             >
               {mode === "login" ? "注册" : "登录"}
             </motion.button>
