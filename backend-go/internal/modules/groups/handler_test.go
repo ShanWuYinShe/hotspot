@@ -1155,3 +1155,238 @@ func TestJoinGroupHandlerValidation(t *testing.T) {
 		})
 	}
 }
+
+// --- Update / Dismiss / MySettings / Leave / Applications ---
+
+func TestHandlerUpdateReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"group_id":"g1","name":"Updated Name"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.Update(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestHandlerUpdateRejectsInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{invalid`))
+	rr := httptest.NewRecorder()
+	handler.Update(rr, req)
+	assertGroupCode(t, rr, 10000)
+}
+
+func TestHandlerUpdateReturns10300WhenNotFound(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"group_id":"missing"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.Update(rr, req)
+	assertGroupCode(t, rr, 10300)
+}
+
+func TestHandlerUpdateReturns10200WhenAccessRestricted(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"group_id":"g1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.Update(rr, req)
+	assertGroupCode(t, rr, 10200)
+}
+
+func TestHandlerDismissReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"group_id":"g1"}`))
+	req.Header.Set("Idempotency-Key", "dismiss-ok-1234567890123456789012345")
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.Dismiss(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestHandlerDismissRejectsMissingIdempotencyKey(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"group_id":"g1"}`))
+	rr := httptest.NewRecorder()
+	handler.Dismiss(rr, req)
+	assertGroupCode(t, rr, 10000)
+}
+
+func TestHandlerDismissRejectsInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{broken`))
+	req.Header.Set("Idempotency-Key", "dismiss-invalid-12345678901234567890123")
+	rr := httptest.NewRecorder()
+	handler.Dismiss(rr, req)
+	assertGroupCode(t, rr, 10000)
+}
+
+func TestHandlerDismissReturns10300WhenNotFound(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"group_id":"missing"}`))
+	req.Header.Set("Idempotency-Key", "dismiss-nf-123456789012345678901234")
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.Dismiss(rr, req)
+	assertGroupCode(t, rr, 10300)
+}
+
+func TestHandlerUpdateMySettingsReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/me/settings", strings.NewReader(`{"group_id":"g1","is_muted":true}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.UpdateMySettings(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestHandlerUpdateMySettingsRejectsInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	req := httptest.NewRequest(http.MethodPost, "/me/settings", strings.NewReader(`{bad`))
+	rr := httptest.NewRecorder()
+	handler.UpdateMySettings(rr, req)
+	assertGroupCode(t, rr, 10000)
+}
+
+func TestHandlerUpdateMySettingsReturns10300WhenNotFound(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	req := httptest.NewRequest(http.MethodPost, "/me/settings", strings.NewReader(`{"group_id":"missing"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.UpdateMySettings(rr, req)
+	assertGroupCode(t, rr, 10300)
+}
+
+func TestHandlerLeaveGroupReturnsSuccess(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getFound:  true,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/me/leave", strings.NewReader(`{"group_id":"g1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.LeaveGroup(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestHandlerLeaveGroupRejectsInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	req := httptest.NewRequest(http.MethodPost, "/me/leave", strings.NewReader(`{broken`))
+	rr := httptest.NewRecorder()
+	handler.LeaveGroup(rr, req)
+	assertGroupCode(t, rr, 10000)
+}
+
+func TestHandlerLeaveGroupReturns10300WhenNotFound(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	req := httptest.NewRequest(http.MethodPost, "/me/leave", strings.NewReader(`{"group_id":"missing"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.LeaveGroup(rr, req)
+	assertGroupCode(t, rr, 10300)
+}
+
+func TestHandlerListMyApplicationsReturnsSuccess(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	req := httptest.NewRequest(http.MethodPost, "/me/applications", strings.NewReader(`{}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.ListMyApplications(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestHandlerListMyApplicationsRejectsInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	req := httptest.NewRequest(http.MethodPost, "/me/applications", strings.NewReader(`{invalid`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.ListMyApplications(rr, req)
+	assertGroupCode(t, rr, 10000)
+}
+
+func TestHandlerCancelApplicationReturnsSuccess(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	req := httptest.NewRequest(http.MethodPost, "/me/applications/cancel", strings.NewReader(`{"application_id":"app_1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.CancelApplication(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestHandlerCancelApplicationRejectsMissingApplicationID(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	req := httptest.NewRequest(http.MethodPost, "/me/applications/cancel", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+	handler.CancelApplication(rr, req)
+	assertGroupCode(t, rr, 10000)
+}

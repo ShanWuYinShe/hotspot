@@ -502,3 +502,184 @@ func TestServiceDeleteAnnouncementRejectsNotFound(t *testing.T) {
 		t.Fatalf("expected 10300, got %v", apiErr)
 	}
 }
+
+// --- SearchUsers (no auth) ---
+
+func TestServiceSearchUsersRejectsNoAuth(t *testing.T) {
+	svc, _, _, _ := newTestService()
+	_, apiErr, err := svc.SearchUsers(context.Background(), AdminUserSearchRequest{Pagination: &PaginationParams{Limit: 10}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr == nil || apiErr.Code != 10100 {
+		t.Fatalf("expected 10100, got %v", apiErr)
+	}
+}
+
+// --- BanUser happy path ---
+
+func TestServiceBanUserHappyPath(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	apiErr, err := svc.BanUser(adminCtx("admin1"), AdminBanUserRequest{UserID: "user_bob", Reason: "violation"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr != nil {
+		t.Fatalf("unexpected api error: %v", apiErr)
+	}
+	banned, checkErr := repo.IsBanned(context.Background(), "user_bob")
+	if checkErr != nil {
+		t.Fatalf("unexpected error checking ban state: %v", checkErr)
+	}
+	if !banned {
+		t.Fatal("expected user_bob to be banned")
+	}
+}
+
+// --- BanUser rejects empty userID ---
+
+func TestServiceBanUserRejectsEmptyUserID(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	apiErr, err := svc.BanUser(adminCtx("admin1"), AdminBanUserRequest{UserID: "", Reason: "test"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr == nil || apiErr.Code != 10000 {
+		t.Fatalf("expected 10000, got %v", apiErr)
+	}
+}
+
+// --- UnbanUser happy path ---
+
+func TestServiceUnbanUserHappyPath(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	// 先封禁用户
+	if apiErr, err := svc.BanUser(adminCtx("admin1"), AdminBanUserRequest{UserID: "user_bob", Reason: "violation"}); err != nil {
+		t.Fatalf("ban setup error: %v", err)
+	} else if apiErr != nil {
+		t.Fatalf("ban setup api error: %v", apiErr)
+	}
+	// 解封
+	apiErr, err := svc.UnbanUser(adminCtx("admin1"), AdminUnbanUserRequest{UserID: "user_bob", Reason: "appeal approved"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr != nil {
+		t.Fatalf("unexpected api error: %v", apiErr)
+	}
+	banned, checkErr := repo.IsBanned(context.Background(), "user_bob")
+	if checkErr != nil {
+		t.Fatalf("unexpected error checking ban state: %v", checkErr)
+	}
+	if banned {
+		t.Fatal("expected user_bob to be unbanned")
+	}
+}
+
+// --- SearchGroups returns results ---
+
+func TestServiceSearchGroupsReturnsResults(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	result, apiErr, err := svc.SearchGroups(adminCtx("admin1"), AdminGroupSearchRequest{Pagination: &PaginationParams{Limit: 10}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr != nil {
+		t.Fatalf("unexpected api error: %v", apiErr)
+	}
+	if len(result.Items) == 0 {
+		t.Fatal("expected at least one group in results")
+	}
+}
+
+// --- DismissGroup happy path ---
+
+func TestServiceDismissGroupHappyPath(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	apiErr, err := svc.DismissGroup(adminCtx("admin1"), AdminDismissGroupRequest{GroupID: "group_hotspot", Reason: "policy violation"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr != nil {
+		t.Fatalf("unexpected api error: %v", apiErr)
+	}
+	_, found, _ := repo.GetGroup(context.Background(), "group_hotspot")
+	if found {
+		t.Fatal("expected group_hotspot to be dismissed (not found)")
+	}
+}
+
+// --- SearchReports rejects no permission ---
+
+func TestServiceSearchReportsRejectsNoPermission(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", RoleIDs: []string{"role_with_users_read"}})
+	_, apiErr, err := svc.SearchReports(adminCtx("admin1"), AdminReportSearchRequest{Pagination: &PaginationParams{Limit: 10}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr == nil || apiErr.Code != 10200 {
+		t.Fatalf("expected 10200, got %v", apiErr)
+	}
+}
+
+// --- HandleReport happy path ---
+
+func TestServiceHandleReportHappyPath(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	apiErr, err := svc.HandleReport(adminCtx("admin1"), AdminReportHandleRequest{
+		ReportID: "report_1",
+		Action:   ReportHandleDismiss,
+		Note:     "false alarm",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr != nil {
+		t.Fatalf("unexpected api error: %v", apiErr)
+	}
+}
+
+// --- UpdateRateLimits happy path ---
+
+func TestServiceUpdateRateLimitsHappyPath(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	hundred := 100
+	apiErr, err := svc.UpdateRateLimits(adminCtx("admin1"), UpdateRateLimitsRequest{
+		RateLimits: PartialRateLimitConfig{GlobalPerHour: &hundred},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr != nil {
+		t.Fatalf("unexpected api error: %v", apiErr)
+	}
+}
+
+// --- UpdateFeatures happy path (already exists, re-test with all flags) ---
+
+func TestServiceUpdateFeaturesAllFlags(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	enabled := true
+	disabled := false
+	apiErr, err := svc.UpdateFeatures(adminCtx("admin1"), UpdateFeaturesRequest{
+		EnablePublicRegistration: &enabled,
+		EnableGuestLogin:         &disabled,
+		EnableMoments:            &enabled,
+		EnableNearbyPeople:       &enabled,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr != nil {
+		t.Fatalf("unexpected api error: %v", apiErr)
+	}
+}

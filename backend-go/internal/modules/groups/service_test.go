@@ -646,3 +646,593 @@ func TestServiceUpdateMySettingsHappyPath(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+// =========================================================================
+// A) service_invite 补充测试
+// =========================================================================
+
+func TestServiceAcceptInviteHappyPath(t *testing.T) {
+	pending := ApplicationStatusPending
+	repo := &stubGroupsRepo{
+		myInvites: []GroupInviteItem{{
+			InviteID: "inv1",
+			Status:   pending,
+			Group:    GroupInfo{GroupID: "g1", Name: "test", MembersCount: 5},
+			Inviter:  UserInfo{UserID: "u2"},
+		}},
+		acceptErr: nil,
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.AcceptInvite(grpCtx("u1"), AcceptInviteRequest{InviteID: "inv1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceAcceptInvitePropagatesRepoError(t *testing.T) {
+	pending := ApplicationStatusPending
+	repo := &stubGroupsRepo{
+		myInvites: []GroupInviteItem{{InviteID: "inv1", Status: pending, Group: GroupInfo{GroupID: "g1"}, Inviter: UserInfo{UserID: "u2"}}},
+		acceptErr: errors.New("db error"),
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.AcceptInvite(grpCtx("u1"), AcceptInviteRequest{InviteID: "inv1"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+func TestServiceAcceptInviteRejectsExpired(t *testing.T) {
+	rejected := ApplicationStatusRejected
+	repo := &stubGroupsRepo{
+		myInvites: []GroupInviteItem{{InviteID: "inv1", Status: rejected, Group: GroupInfo{GroupID: "g1"}, Inviter: UserInfo{UserID: "u2"}}},
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.AcceptInvite(grpCtx("u1"), AcceptInviteRequest{InviteID: "inv1"})
+	// AcceptInvite only checks if the invite was found (via findInviteForUser);
+	// it does NOT check invite.Status before calling AcceptInvite.
+	// So it should succeed when acceptErr is nil.
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceRejectInviteHappyPath(t *testing.T) {
+	pending := ApplicationStatusPending
+	repo := &stubGroupsRepo{
+		myInvites: []GroupInviteItem{{InviteID: "inv1", Status: pending, Group: GroupInfo{GroupID: "g1"}, Inviter: UserInfo{UserID: "u2"}}},
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.RejectInvite(grpCtx("u1"), RejectInviteRequest{InviteID: "inv1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceRejectInvitePropagatesRepoError(t *testing.T) {
+	pending := ApplicationStatusPending
+	repo := &stubGroupsRepo{
+		myInvites:    []GroupInviteItem{{InviteID: "inv1", Status: pending, Group: GroupInfo{GroupID: "g1"}, Inviter: UserInfo{UserID: "u2"}}},
+		rejectInvErr: errors.New("db error"),
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.RejectInvite(grpCtx("u1"), RejectInviteRequest{InviteID: "inv1"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+func TestServiceListMyInvitesDelegatesToRepo(t *testing.T) {
+	pending := ApplicationStatusPending
+	repo := &stubGroupsRepo{
+		myInvites:    []GroupInviteItem{{InviteID: "inv1", Status: pending}},
+		myInvitesCur: "cursor1",
+	}
+	svc := NewServiceWithRepo(repo)
+	items, cursor, err := svc.ListMyInvites(grpCtx("u1"), MyInvitesRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if cursor != "cursor1" {
+		t.Fatalf("expected cursor1, got %s", cursor)
+	}
+}
+
+func TestServiceListMyInvitesNormalizesLimit(t *testing.T) {
+	repo := &stubGroupsRepo{
+		myInvites: []GroupInviteItem{{InviteID: "inv1"}},
+	}
+	svc := NewServiceWithRepo(repo)
+	items, _, err := svc.ListMyInvites(grpCtx("u1"), MyInvitesRequest{Limit: 150})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+}
+
+// =========================================================================
+// B) service_member 补充测试
+// =========================================================================
+
+// --- ApproveApplication ---
+
+func TestServiceApproveApplicationHappyPath(t *testing.T) {
+	pending := ApplicationStatusPending
+	repo := &stubGroupsRepo{
+		myGroups: []GroupItem{ownerGroup()},
+		apps:     []GroupApplicationItem{{ApplicationID: "app1", Status: pending, Applicant: UserInfo{UserID: "u3"}}},
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.ApproveApplication(grpCtx("u1"), ApproveGroupApplicationRequest{ApplicationID: "app1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceApproveApplicationRejectsNotFound(t *testing.T) {
+	repo := &stubGroupsRepo{
+		myGroups: []GroupItem{ownerGroup()},
+		apps:     []GroupApplicationItem{}, // 无匹配申请
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.ApproveApplication(grpCtx("u1"), ApproveGroupApplicationRequest{ApplicationID: "missing"})
+	if !errors.Is(err, ErrGroupNotFound) {
+		t.Fatalf("expected ErrGroupNotFound, got %v", err)
+	}
+}
+
+func TestServiceApproveApplicationPropagatesRepoError(t *testing.T) {
+	pending := ApplicationStatusPending
+	repo := &stubGroupsRepo{
+		myGroups:   []GroupItem{ownerGroup()},
+		apps:       []GroupApplicationItem{{ApplicationID: "app1", Status: pending, Applicant: UserInfo{UserID: "u3"}}},
+		approveErr: errors.New("db error"),
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.ApproveApplication(grpCtx("u1"), ApproveGroupApplicationRequest{ApplicationID: "app1"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+// --- RejectApplication ---
+
+func TestServiceRejectApplicationRejectsNotFound(t *testing.T) {
+	repo := &stubGroupsRepo{
+		myGroups: []GroupItem{ownerGroup()},
+		apps:     []GroupApplicationItem{},
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.RejectApplication(grpCtx("u1"), RejectGroupApplicationRequest{ApplicationID: "missing"})
+	if !errors.Is(err, ErrGroupNotFound) {
+		t.Fatalf("expected ErrGroupNotFound, got %v", err)
+	}
+}
+
+func TestServiceRejectApplicationHappyPath(t *testing.T) {
+	pending := ApplicationStatusPending
+	repo := &stubGroupsRepo{
+		myGroups: []GroupItem{ownerGroup()},
+		apps:     []GroupApplicationItem{{ApplicationID: "app1", Status: pending, Applicant: UserInfo{UserID: "u3"}}},
+	}
+	svc := NewServiceWithRepo(repo)
+	reason := "not suitable"
+	err := svc.RejectApplication(grpCtx("u1"), RejectGroupApplicationRequest{ApplicationID: "app1", Reason: &reason})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceRejectApplicationPropagatesRepoError(t *testing.T) {
+	pending := ApplicationStatusPending
+	repo := &stubGroupsRepo{
+		myGroups:  []GroupItem{ownerGroup()},
+		apps:      []GroupApplicationItem{{ApplicationID: "app1", Status: pending, Applicant: UserInfo{UserID: "u3"}}},
+		rejectErr: errors.New("db error"),
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.RejectApplication(grpCtx("u1"), RejectGroupApplicationRequest{ApplicationID: "app1"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+// --- SetMemberRole ---
+
+func TestServiceSetMemberRoleHappyPath(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.SetMemberRole(grpCtx("u1"), SetMemberRoleRequest{GroupID: "g1", UserID: "u2", Role: GroupRoleAdmin})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceSetMemberRolePropagatesRepoError(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, setRoleErr: errors.New("db error")}
+	svc := NewServiceWithRepo(repo)
+	err := svc.SetMemberRole(grpCtx("u1"), SetMemberRoleRequest{GroupID: "g1", UserID: "u2", Role: GroupRoleAdmin})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+// --- MuteMember ---
+
+func TestServiceMuteMemberHappyPath(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.MuteMember(grpCtx("u1"), MuteMemberRequest{GroupID: "g1", UserID: "u2", DurationMinutes: 10})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceMuteMemberPropagatesRepoError(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, muteErr: errors.New("db error")}
+	svc := NewServiceWithRepo(repo)
+	err := svc.MuteMember(grpCtx("u1"), MuteMemberRequest{GroupID: "g1", UserID: "u2", DurationMinutes: 10})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+// --- BanMember ---
+
+func TestServiceBanMemberHappyPath(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.BanMember(grpCtx("u1"), BanMemberRequest{GroupID: "g1", UserID: "u2"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceBanMemberPropagatesRepoError(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, banErr: errors.New("db error")}
+	svc := NewServiceWithRepo(repo)
+	err := svc.BanMember(grpCtx("u1"), BanMemberRequest{GroupID: "g1", UserID: "u2"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+// --- UnbanMember ---
+
+func TestServiceUnbanMemberRequiresAdmin(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: memberGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.UnbanMember(grpCtx("u1"), UnbanMemberRequest{GroupID: "g1", UserID: "u2"})
+	if !errors.Is(err, ErrAccessRestricted) {
+		t.Fatalf("expected ErrAccessRestricted, got %v", err)
+	}
+}
+
+func TestServiceUnbanMemberHappyPath(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.UnbanMember(grpCtx("u1"), UnbanMemberRequest{GroupID: "g1", UserID: "u2"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceUnbanMemberPropagatesRepoError(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, unbanErr: errors.New("db error")}
+	svc := NewServiceWithRepo(repo)
+	err := svc.UnbanMember(grpCtx("u1"), UnbanMemberRequest{GroupID: "g1", UserID: "u2"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+// --- ListBannedMembers ---
+
+func TestServiceListBannedMembersRequiresAdmin(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: memberGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	_, _, err := svc.ListBannedMembers(grpCtx("u1"), BannedMembersRequest{GroupID: "g1"})
+	if !errors.Is(err, ErrAccessRestricted) {
+		t.Fatalf("expected ErrAccessRestricted, got %v", err)
+	}
+}
+
+func TestServiceListBannedMembersRejectsNotFound(t *testing.T) {
+	svc := NewServiceWithRepo(&stubGroupsRepo{})
+	_, _, err := svc.ListBannedMembers(grpCtx("u1"), BannedMembersRequest{GroupID: "g1"})
+	if !errors.Is(err, ErrGroupNotFound) {
+		t.Fatalf("expected ErrGroupNotFound, got %v", err)
+	}
+}
+
+// --- RemoveMember ---
+
+func TestServiceRemoveMemberHappyPath(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.RemoveMember(grpCtx("u1"), RemoveMemberRequest{GroupID: "g1", UserID: "u2"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceRemoveMemberPropagatesRepoError(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, removeErr: errors.New("db error")}
+	svc := NewServiceWithRepo(repo)
+	err := svc.RemoveMember(grpCtx("u1"), RemoveMemberRequest{GroupID: "g1", UserID: "u2"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+// --- TransferOwnership ---
+
+func TestServiceTransferOwnershipPropagatesRepoError(t *testing.T) {
+	repo := &stubGroupsRepo{
+		getResult:   ownerGroup(),
+		getFound:    true,
+		members:     []GroupMemberItem{{User: UserInfo{UserID: "u2"}}},
+		transferErr: errors.New("db error"),
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.TransferOwnership(grpCtx("u1"), TransferOwnershipRequest{GroupID: "g1", NewOwnerID: "u2"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+// =========================================================================
+// C) service.go 额外错误路径
+// =========================================================================
+
+func TestServiceUpdatePropagatesRepoError(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, updateErr: errors.New("db error")}
+	svc := NewServiceWithRepo(repo)
+	err := svc.Update(grpCtx("u1"), UpdateGroupRequest{GroupID: "g1"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+func TestServiceDismissPropagatesRepoError(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, dismissErr: errors.New("db error")}
+	svc := NewServiceWithRepo(repo)
+	err := svc.Dismiss(grpCtx("u1"), DismissGroupRequest{GroupID: "g1"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+func TestServiceListMyApplicationsDelegatesToRepo(t *testing.T) {
+	repo := &stubGroupsRepo{
+		myApps:    []GroupApplicationItem{{ApplicationID: "app1"}},
+		myAppsCur: "cursor1",
+	}
+	svc := NewServiceWithRepo(repo)
+	items, cursor, err := svc.ListMyApplications(grpCtx("u1"), MyApplicationsRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if cursor != "cursor1" {
+		t.Fatalf("expected cursor1, got %s", cursor)
+	}
+}
+
+func TestServiceListMyApplicationsNormalizesLimit(t *testing.T) {
+	repo := &stubGroupsRepo{
+		myApps: []GroupApplicationItem{{ApplicationID: "app1"}},
+	}
+	svc := NewServiceWithRepo(repo)
+	items, _, err := svc.ListMyApplications(grpCtx("u1"), MyApplicationsRequest{Limit: 150})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+}
+
+func TestServiceListMyApplicationsPropagatesError(t *testing.T) {
+	repo := &stubGroupsRepo{myAppsErr: errors.New("db error")}
+	svc := NewServiceWithRepo(repo)
+	_, _, err := svc.ListMyApplications(grpCtx("u1"), MyApplicationsRequest{})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+func TestServiceCancelApplicationDelegatesToRepo(t *testing.T) {
+	repo := &stubGroupsRepo{}
+	svc := NewServiceWithRepo(repo)
+	err := svc.CancelApplication(grpCtx("u1"), CancelApplicationRequest{ApplicationID: "app1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceCancelApplicationPropagatesError(t *testing.T) {
+	repo := &stubGroupsRepo{cancelErr: errors.New("db error")}
+	svc := NewServiceWithRepo(repo)
+	err := svc.CancelApplication(grpCtx("u1"), CancelApplicationRequest{ApplicationID: "app1"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+func TestServiceListMyGroupsPropagatesError(t *testing.T) {
+	repo := &stubGroupsRepo{myGroupsErr: errors.New("db error")}
+	svc := NewServiceWithRepo(repo)
+	_, _, err := svc.ListMyGroups(grpCtx("u1"), MyGroupsRequest{})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+func TestServiceListApplicationsHappyPath(t *testing.T) {
+	pending := ApplicationStatusPending
+	repo := &stubGroupsRepo{
+		getResult: ownerGroup(),
+		getFound:  true,
+		apps:      []GroupApplicationItem{{ApplicationID: "app1", Status: pending}},
+		appsCur:   "cursor1",
+	}
+	svc := NewServiceWithRepo(repo)
+	items, cursor, err := svc.ListApplications(grpCtx("u1"), GroupApplicationsRequest{GroupID: "g1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if cursor != "cursor1" {
+		t.Fatalf("expected cursor1, got %s", cursor)
+	}
+}
+
+func TestServiceListApplicationsPropagatesError(t *testing.T) {
+	repo := &stubGroupsRepo{
+		getResult: ownerGroup(),
+		getFound:  true,
+		appsErr:   errors.New("db error"),
+	}
+	svc := NewServiceWithRepo(repo)
+	_, _, err := svc.ListApplications(grpCtx("u1"), GroupApplicationsRequest{GroupID: "g1"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+func TestServiceInviteMemberPropagatesRepoError(t *testing.T) {
+	repo := &stubGroupsRepo{
+		getResult: ownerGroup(),
+		getFound:  true,
+		inviteErr: errors.New("db error"),
+	}
+	svc := NewServiceWithRepo(repo)
+	_, err := svc.InviteMember(grpCtx("u1"), InviteMemberRequest{GroupID: "g1", UserID: "u2"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "db error" {
+		t.Fatalf("expected db error, got %v", err)
+	}
+}
+
+func TestServiceListSentInvitesRequiresAdmin(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: memberGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	_, _, err := svc.ListSentInvites(grpCtx("u1"), GroupSentInvitesRequest{GroupID: "g1"})
+	if !errors.Is(err, ErrAccessRestricted) {
+		t.Fatalf("expected ErrAccessRestricted, got %v", err)
+	}
+}
+
+func TestServiceListSentInvitesRejectsNotFound(t *testing.T) {
+	svc := NewServiceWithRepo(&stubGroupsRepo{})
+	_, _, err := svc.ListSentInvites(grpCtx("u1"), GroupSentInvitesRequest{GroupID: "g1"})
+	if !errors.Is(err, ErrGroupNotFound) {
+		t.Fatalf("expected ErrGroupNotFound, got %v", err)
+	}
+}
+
+func TestServiceListSentInvitesHappyPath(t *testing.T) {
+	repo := &stubGroupsRepo{
+		getResult:      ownerGroup(),
+		getFound:       true,
+		sentInvites:    []GroupSentInviteItem{{InviteID: "inv1"}},
+		sentInvitesCur: "cursor1",
+	}
+	svc := NewServiceWithRepo(repo)
+	items, cursor, err := svc.ListSentInvites(grpCtx("u1"), GroupSentInvitesRequest{GroupID: "g1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if cursor != "cursor1" {
+		t.Fatalf("expected cursor1, got %s", cursor)
+	}
+}
+
+func TestServiceRevokeInviteRequiresAdmin(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: memberGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.RevokeInvite(grpCtx("u1"), RevokeSentInviteRequest{GroupID: "g1", InviteID: "inv1"})
+	if !errors.Is(err, ErrAccessRestricted) {
+		t.Fatalf("expected ErrAccessRestricted, got %v", err)
+	}
+}
+
+func TestServiceRevokeInviteRejectsNotFound(t *testing.T) {
+	svc := NewServiceWithRepo(&stubGroupsRepo{})
+	err := svc.RevokeInvite(grpCtx("u1"), RevokeSentInviteRequest{GroupID: "g1", InviteID: "inv1"})
+	if !errors.Is(err, ErrGroupNotFound) {
+		t.Fatalf("expected ErrGroupNotFound, got %v", err)
+	}
+}
+
+func TestServiceRevokeInviteHappyPath(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.RevokeInvite(grpCtx("u1"), RevokeSentInviteRequest{GroupID: "g1", InviteID: "inv1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

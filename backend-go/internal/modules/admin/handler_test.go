@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -1453,3 +1454,123 @@ func TestUpdateContactRejectsInvalidEmail(t *testing.T) {
 		t.Fatalf("unexpected update response: %#v", updateResp)
 	}
 }
+
+// RateLimits & Features handler tests
+
+func TestAdminHandlerUpdateRateLimitsRejectsInvalidJSON(t *testing.T) {
+	handler := newTestHandler()
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_rate_limits", strings.NewReader(`{invalid`)), "admin", true)
+	rr := httptest.NewRecorder()
+
+	handler.UpdateRateLimits(rr, req)
+
+	resp := decodeResponse[struct{}](t, rr)
+	if resp.Code != 10000 || resp.Message != "参数错误" {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+func TestAdminHandlerUpdateRateLimitsReturnsSuccess(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_rate_limits", strings.NewReader(`{"rate_limits":{"global_per_hour":5000}}`)), "admin", true)
+	rr := httptest.NewRecorder()
+
+	handler.UpdateRateLimits(rr, req)
+
+	resp := decodeResponse[struct{}](t, rr)
+	if resp.Code != 0 {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+
+	foundAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "rate_limits" {
+			foundAudit = true
+			break
+		}
+	}
+	if !foundAudit {
+		t.Fatalf("expected config.update audit log for rate_limits, got %#v", store.auditLogs)
+	}
+}
+
+func TestAdminHandlerUpdateRateLimitsReturns10600OnError(t *testing.T) {
+	module, _ := newTestModuleWithStore()
+	module.handler.service.provider = &failingProvider{}
+
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_rate_limits", strings.NewReader(`{"rate_limits":{"global_per_hour":5000}}`)), "admin", true)
+	rr := httptest.NewRecorder()
+
+	module.handler.UpdateRateLimits(rr, req)
+
+	resp := decodeResponse[struct{}](t, rr)
+	if resp.Code != 10600 || resp.Message != "服务暂时不可用" {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+func TestAdminHandlerUpdateFeaturesRejectsInvalidJSON(t *testing.T) {
+	handler := newTestHandler()
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_features", strings.NewReader(`{invalid`)), "admin", true)
+	rr := httptest.NewRecorder()
+
+	handler.UpdateFeatures(rr, req)
+
+	resp := decodeResponse[struct{}](t, rr)
+	if resp.Code != 10000 || resp.Message != "参数错误" {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+func TestAdminHandlerUpdateFeaturesReturnsSuccess(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_features", strings.NewReader(`{"enable_moments":false}`)), "admin", true)
+	rr := httptest.NewRecorder()
+
+	handler.UpdateFeatures(rr, req)
+
+	resp := decodeResponse[struct{}](t, rr)
+	if resp.Code != 0 {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+
+	foundAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "features" {
+			foundAudit = true
+			break
+		}
+	}
+	if !foundAudit {
+		t.Fatalf("expected config.update audit log for features, got %#v", store.auditLogs)
+	}
+}
+
+func TestAdminHandlerUpdateFeaturesReturns10600OnError(t *testing.T) {
+	module, _ := newTestModuleWithStore()
+	module.handler.service.provider = &failingProvider{}
+
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_features", strings.NewReader(`{"enable_moments":false}`)), "admin", true)
+	rr := httptest.NewRecorder()
+
+	module.handler.UpdateFeatures(rr, req)
+
+	resp := decodeResponse[struct{}](t, rr)
+	if resp.Code != 10600 || resp.Message != "服务暂时不可用" {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+// failingProvider is a Provider whose UpdateAppConfig always returns an error,
+// used to test the 10600 (服务暂时不可用) handler path.
+type failingProvider struct{}
+
+func (f *failingProvider) GetAppConfig(_ context.Context) (AppConfig, error) {
+	return AppConfig{}, nil
+}
+
+func (f *failingProvider) UpdateAppConfig(_ context.Context, _ string, _ func(AppConfig) (AppConfig, *httpx.APIError)) (AppConfig, *httpx.APIError, error) {
+	return AppConfig{}, nil, errTestProviderFailure
+}
+
+var errTestProviderFailure = errors.New("provider unavailable for test")

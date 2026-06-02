@@ -105,3 +105,59 @@ func TestServiceGetClientConfigDelegates(t *testing.T) {
 		t.Fatal("expected EnableMoments=true")
 	}
 }
+
+func TestServiceGetClientConfigReturnsConfig(t *testing.T) {
+	expected := ClientConfig{
+		Features: FeatureSwitches{EnableNearbyPeople: true, EnableMoments: false},
+		Limits:   AppLimits{MaxGroupMembers: 200, CommentMaxLength: 500},
+		Contact:  ContactInfo{SupportEmail: "test@example.com"},
+	}
+	service := NewServiceWithDeps(&stubRepo{}, &stubProvider{config: expected})
+	result := service.GetClientConfig(context.Background())
+	if !result.Features.EnableNearbyPeople {
+		t.Fatal("expected EnableNearbyPeople=true")
+	}
+	if result.Features.EnableMoments {
+		t.Fatal("expected EnableMoments=false")
+	}
+	if result.Limits.MaxGroupMembers != 200 {
+		t.Fatalf("expected MaxGroupMembers=200, got %d", result.Limits.MaxGroupMembers)
+	}
+	if result.Contact.SupportEmail != "test@example.com" {
+		t.Fatalf("expected support email test@example.com, got %s", result.Contact.SupportEmail)
+	}
+}
+
+func TestServiceListAnnouncementsEmptyList(t *testing.T) {
+	repo := &stubRepo{announces: []AnnouncementRecord{}}
+	provider := &stubProvider{announceCount: 5}
+	service := NewServiceWithDeps(repo, provider)
+	result, err := service.ListAnnouncements(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Items == nil {
+		t.Fatal("expected non-nil items slice")
+	}
+	if len(result.Items) != 0 {
+		t.Fatalf("expected 0 items, got %d", len(result.Items))
+	}
+}
+
+func TestServiceListAnnouncementsZeroCount(t *testing.T) {
+	repo := &stubRepo{announces: []AnnouncementRecord{
+		{AnnouncementID: "a1", Title: "T", Content: "C", CreatedAt: time.Now().UTC()},
+	}}
+	provider := &stubProvider{announceCount: 0}
+	service := NewServiceWithDeps(repo, provider)
+	result, err := service.ListAnnouncements(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(result.Items))
+	}
+	if result.Items[0].AnnouncementID != "a1" {
+		t.Fatalf("expected a1, got %s", result.Items[0].AnnouncementID)
+	}
+}

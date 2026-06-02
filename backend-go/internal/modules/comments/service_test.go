@@ -562,3 +562,179 @@ func TestCreateCommentReturnsNotFoundWhenMomentDoesNotExist(t *testing.T) {
 		t.Fatalf("expected ErrMomentNotFound, got %v", err)
 	}
 }
+
+// Delete service tests
+
+func TestServiceDeleteRejectsNotOwner(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
+	service := NewServiceWithDeps(repo, moments, notifications.NewService(), nil)
+	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "alice comment"})
+	if err != nil {
+		t.Fatalf("create comment: %v", err)
+	}
+	err = service.Delete(testCommentContext("user_bob"), DeleteCommentRequest{CommentID: comment.CommentID})
+	if !errors.Is(err, ErrPermissionDenied) {
+		t.Fatalf("expected ErrPermissionDenied, got %v", err)
+	}
+}
+
+func TestServiceDeleteRejectsNotFound(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
+	service := NewServiceWithDeps(repo, moments, notifications.NewService(), nil)
+	err := service.Delete(testCommentContext("user_alice"), DeleteCommentRequest{CommentID: "nonexistent_comment"})
+	if !errors.Is(err, ErrCommentNotFound) {
+		t.Fatalf("expected ErrCommentNotFound, got %v", err)
+	}
+}
+
+func TestServiceDeleteHappyPath(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
+	service := NewServiceWithDeps(repo, moments, notifications.NewService(), nil)
+	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "to be deleted"})
+	if err != nil {
+		t.Fatalf("create comment: %v", err)
+	}
+	err = service.Delete(testCommentContext("user_alice"), DeleteCommentRequest{CommentID: comment.CommentID})
+	if err != nil {
+		t.Fatalf("delete comment: %v", err)
+	}
+	_, found, _ := repo.Get(context.Background(), comment.CommentID)
+	if found {
+		t.Fatal("expected comment to be deleted")
+	}
+}
+
+// Like service tests
+
+func TestServiceLikeRejectsMomentNotFound(t *testing.T) {
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{exists: false}
+	service := NewServiceWithDeps(repo, moments, notifications.NewService(), nil)
+	// Like uses repo.Get to check comment existence; if comment doesn't exist, ErrCommentNotFound is returned.
+	err := service.Like(testCommentContext("user_bob"), LikeCommentRequest{CommentID: "missing_comment"})
+	if !errors.Is(err, ErrCommentNotFound) {
+		t.Fatalf("expected ErrCommentNotFound, got %v", err)
+	}
+}
+
+func TestServiceLikeHappyPath(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
+	service := NewServiceWithDeps(repo, moments, notifications.NewService(), nil)
+	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "likeable"})
+	if err != nil {
+		t.Fatalf("create comment: %v", err)
+	}
+	err = service.Like(testCommentContext("user_bob"), LikeCommentRequest{CommentID: comment.CommentID})
+	if err != nil {
+		t.Fatalf("like comment: %v", err)
+	}
+	updated, found, _ := repo.Get(context.Background(), comment.CommentID)
+	if !found {
+		t.Fatal("expected comment to exist")
+	}
+	if updated.LikesCount != 1 {
+		t.Fatalf("expected likes_count=1, got %d", updated.LikesCount)
+	}
+}
+
+// Unlike service tests
+
+func TestServiceUnlikeHappyPath(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
+	service := NewServiceWithDeps(repo, moments, notifications.NewService(), nil)
+	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "unlikeable"})
+	if err != nil {
+		t.Fatalf("create comment: %v", err)
+	}
+	// Like first
+	if err := service.Like(testCommentContext("user_bob"), LikeCommentRequest{CommentID: comment.CommentID}); err != nil {
+		t.Fatalf("like comment: %v", err)
+	}
+	// Then unlike
+	err = service.Unlike(testCommentContext("user_bob"), UnlikeCommentRequest{CommentID: comment.CommentID})
+	if err != nil {
+		t.Fatalf("unlike comment: %v", err)
+	}
+	updated, found, _ := repo.Get(context.Background(), comment.CommentID)
+	if !found {
+		t.Fatal("expected comment to exist")
+	}
+	if updated.LikesCount != 0 {
+		t.Fatalf("expected likes_count=0 after unlike, got %d", updated.LikesCount)
+	}
+}
+
+// ListLikes service tests
+
+func TestServiceListLikesDelegates(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
+	service := NewServiceWithDeps(repo, moments, notifications.NewService(), nil)
+	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "liked"})
+	if err != nil {
+		t.Fatalf("create comment: %v", err)
+	}
+	// Like from two users
+	if _, err := repo.Like(context.Background(), comment.CommentID, "user_bob"); err != nil {
+		t.Fatalf("bob like: %v", err)
+	}
+	if _, err := repo.Like(context.Background(), comment.CommentID, "user_carol"); err != nil {
+		t.Fatalf("carol like: %v", err)
+	}
+	result, err := service.ListLikes(context.Background(), CommentLikesRequest{CommentID: comment.CommentID})
+	if err != nil {
+		t.Fatalf("list likes: %v", err)
+	}
+	if len(result.Items) != 2 {
+		t.Fatalf("expected 2 likes, got %d", len(result.Items))
+	}
+}
+
+func TestServiceListLikesNormalizesLimit(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
+	service := NewServiceWithDeps(repo, moments, notifications.NewService(), nil)
+	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "liked"})
+	if err != nil {
+		t.Fatalf("create comment: %v", err)
+	}
+	// Like from 3 users
+	for _, uid := range []string{"user_bob", "user_carol", "user_dave"} {
+		if _, err := repo.Like(context.Background(), comment.CommentID, uid); err != nil {
+			t.Fatalf("like from %s: %v", uid, err)
+		}
+	}
+	// Request with limit=2
+	result, err := service.ListLikes(context.Background(), CommentLikesRequest{
+		CommentID:  comment.CommentID,
+		Pagination: &PaginationParams{Limit: 2},
+	})
+	if err != nil {
+		t.Fatalf("list likes: %v", err)
+	}
+	if len(result.Items) != 2 {
+		t.Fatalf("expected 2 items with limit=2, got %d", len(result.Items))
+	}
+	if result.NextCursor == "" {
+		t.Fatal("expected next_cursor when results are truncated")
+	}
+}

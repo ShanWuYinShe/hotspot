@@ -221,6 +221,157 @@ func TestListAnnouncementsReturnsUnavailableOnRepoError(t *testing.T) {
 	}
 }
 
+func TestSystemHandlerGetMetaReturnsVersion(t *testing.T) {
+	repo := &stubRepo{meta: ApiVersionMeta{Version: "v2", Status: ApiVersionStatusActive}}
+	handler := NewHandler(NewServiceWithDeps(repo, &stubProvider{}))
+	req := httptest.NewRequest(http.MethodPost, "/get_meta", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+
+	handler.GetMeta(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d", rr.Code)
+	}
+	var resp httpx.ApiResponse[ApiVersionMeta]
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("unexpected code: %d", resp.Code)
+	}
+	if resp.Data.Version != "v2" {
+		t.Fatalf("expected version v2, got %s", resp.Data.Version)
+	}
+	if resp.Data.Status != ApiVersionStatusActive {
+		t.Fatalf("expected status active, got %s", resp.Data.Status)
+	}
+}
+
+func TestSystemHandlerHealthReturnsStatus(t *testing.T) {
+	ts := time.Now().UTC().Format(time.RFC3339)
+	health := &HealthStatus{Status: SystemHealthHealthy, Timestamp: ts}
+	repo := &stubRepo{healthCode: 0, health: health}
+	handler := NewHandler(NewServiceWithDeps(repo, &stubProvider{}))
+	req := httptest.NewRequest(http.MethodPost, "/health", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+
+	handler.Health(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d", rr.Code)
+	}
+	var resp httpx.ApiResponse[HealthStatus]
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("unexpected code: %d", resp.Code)
+	}
+	if resp.Data.Status != SystemHealthHealthy {
+		t.Fatalf("expected healthy, got %s", resp.Data.Status)
+	}
+	if resp.Data.Timestamp != ts {
+		t.Fatalf("expected timestamp %s, got %s", ts, resp.Data.Timestamp)
+	}
+}
+
+func TestSystemHandlerGetClientConfigReturnsConfig(t *testing.T) {
+	cfg := ClientConfig{
+		Features: FeatureSwitches{EnableNearbyPeople: true},
+		Contact:  ContactInfo{SupportEmail: "handler@test.com"},
+	}
+	handler := NewHandler(NewServiceWithDeps(&stubRepo{}, &stubProvider{config: cfg}))
+	req := httptest.NewRequest(http.MethodPost, "/get_client_config", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+
+	handler.GetClientConfig(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d", rr.Code)
+	}
+	var resp struct {
+		Code int `json:"code"`
+		Data struct {
+			Features struct {
+				EnableNearbyPeople bool `json:"enable_nearby_people"`
+			} `json:"features"`
+			Contact struct {
+				SupportEmail string `json:"support_email"`
+			} `json:"contact"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("unexpected code: %d", resp.Code)
+	}
+	if !resp.Data.Features.EnableNearbyPeople {
+		t.Fatal("expected EnableNearbyPeople=true")
+	}
+	if resp.Data.Contact.SupportEmail != "handler@test.com" {
+		t.Fatalf("expected support email handler@test.com, got %s", resp.Data.Contact.SupportEmail)
+	}
+}
+
+func TestSystemHandlerListAnnouncementsReturnsSuccess(t *testing.T) {
+	repo := &staticRepo{items: []AnnouncementRecord{
+		{AnnouncementID: "h1", Title: "公告", Content: "内容", Severity: AnnouncementSeverityInfo, CreatedAt: time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)},
+	}}
+	handler := NewHandler(NewServiceWithDeps(repo, fixedProvider{count: 5}))
+	req := httptest.NewRequest(http.MethodPost, "/list_announcements", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+
+	handler.ListAnnouncements(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d", rr.Code)
+	}
+	var resp struct {
+		Code int `json:"code"`
+		Data struct {
+			Items []SystemAnnouncementItem `json:"items"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("unexpected code: %d", resp.Code)
+	}
+	if len(resp.Data.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(resp.Data.Items))
+	}
+	if resp.Data.Items[0].AnnouncementID != "h1" {
+		t.Fatalf("expected h1, got %s", resp.Data.Items[0].AnnouncementID)
+	}
+}
+
+func TestSystemHandlerListAnnouncementsReturns10600OnError(t *testing.T) {
+	handler := NewHandler(NewServiceWithDeps(&staticRepo{err: errors.New("connection refused")}, fixedProvider{count: 5}))
+	req := httptest.NewRequest(http.MethodPost, "/list_announcements", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+
+	handler.ListAnnouncements(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d", rr.Code)
+	}
+	var resp struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 10600 {
+		t.Fatalf("expected code 10600, got %d", resp.Code)
+	}
+	if resp.Message != "服务暂时不可用" {
+		t.Fatalf("expected 服务暂时不可用, got %s", resp.Message)
+	}
+}
+
 func TestGetClientConfigUsesSharedAppConfigSource(t *testing.T) {
 	cfg := config.Load()
 	source := appconfig.NewStaticSource(cfg)
