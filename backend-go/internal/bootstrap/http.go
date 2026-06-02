@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"hotspot/backend-go/internal/platform/cors"
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/observability"
 )
@@ -19,6 +20,7 @@ func NewHTTPRouterWithLogger(modules []modulekit.Module, logger *observability.L
 
 func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger) http.Handler {
 	r := chi.NewRouter()
+	r.Use(cors.Middleware(cors.DefaultConfig()))
 	r.Use(observability.RequestIDMiddleware)
 	if logger != nil {
 		r.Use(observability.RequestLoggerMiddleware(logger))
