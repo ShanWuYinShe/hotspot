@@ -190,35 +190,48 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 	if err != nil {
 		return nil, "", err
 	}
-	defer rows.Close()
-	items := make([]GroupItem, 0)
+	type scannedItem struct {
+		item           GroupItem
+		locationName   string
+		latitude       float64
+		longitude      float64
+		joinMethod     string
+		roleText       string
+		createdAt      *time.Time
+		lastActivityAt *time.Time
+		tags           []string
+		joinedAt       time.Time
+	}
+	scanned := make([]scannedItem, 0)
 	for rows.Next() {
-		var item GroupItem
-		var locationName, joinMethod, roleText string
-		var latitude, longitude float64
-		var createdAt, lastActivityAt *time.Time
-		var tags []string
-		var joinedAt time.Time
-		if err := rows.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &roleText, &joinedAt); err != nil {
+		var s scannedItem
+		if err := rows.Scan(&s.item.Group.GroupID, &s.item.Group.Name, &s.item.Group.AvatarURL, &s.item.Description, &s.item.HasPassword, &s.locationName, &s.latitude, &s.longitude, &s.joinMethod, &s.item.IsSearchable, &s.item.MaxMembers, &s.item.OwnerID, &s.createdAt, &s.lastActivityAt, &s.tags, &s.roleText, &s.joinedAt); err != nil {
+			rows.Close()
 			return nil, "", err
 		}
-		item.Location = RelativeLocation{Point: struct {
+		scanned = append(scanned, s)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, "", err
+	}
+	items := make([]GroupItem, 0, len(scanned))
+	for _, s := range scanned {
+		s.item.Location = RelativeLocation{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
-		}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
-		item.Tags = tags
-		item.JoinMethod = GroupJoinMethod(joinMethod)
-		item.CreatedAt = formatOptionalTime(createdAt)
-		item.LastActivityAt = formatOptionalTime(lastActivityAt)
-		item.MyState = &MyGroupState{Role: GroupRole(roleText), IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: joinedAt.UTC().Format(time.RFC3339)}
-		item.Group.MembersCount, err = countGroupMembers(ctx, queryable, item.Group.GroupID)
+		}{Latitude: s.latitude, Longitude: s.longitude}, LocationName: s.locationName}
+		s.item.Tags = s.tags
+		s.item.JoinMethod = GroupJoinMethod(s.joinMethod)
+		s.item.CreatedAt = formatOptionalTime(s.createdAt)
+		s.item.LastActivityAt = formatOptionalTime(s.lastActivityAt)
+		s.item.MyState = &MyGroupState{Role: GroupRole(s.roleText), IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: s.joinedAt.UTC().Format(time.RFC3339)}
+		count, err := countGroupMembers(ctx, queryable, s.item.Group.GroupID)
 		if err != nil {
 			return nil, "", err
 		}
-		items = append(items, item)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, "", err
+		s.item.Group.MembersCount = count
+		items = append(items, s.item)
 	}
 	return items, "", nil
 }
@@ -863,6 +876,7 @@ func (r *PostgresRepository) loadApplication(ctx context.Context, applicationID 
 	if err := queryable.QueryRow(ctx, queryGetGroupApplication, applicationID).Scan(&item.ApplicationID, &groupID, &applicantUserID, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
 		return GroupApplicationItem{}, err
 	}
+	item.GroupID = groupID
 	item.Applicant = UserInfo{UserID: applicantUserID, Nickname: applicantUserID}
 	if message != "" {
 		item.Message = &message

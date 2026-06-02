@@ -157,13 +157,18 @@ func (r *PostgresRepository) Exists(ctx context.Context, momentID string) (bool,
 
 func scanMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) {
 	var item MomentItem
-	var userID, locationName, privacyLevel string
+	var userID, nickname, locationName, privacyLevel string
 	var createdAt time.Time
 	var latitude, longitude float64
-	if err := scanner.Scan(&item.MomentID, &userID, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel); err != nil {
+	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel); err != nil {
 		return MomentItem{}, err
 	}
-	item.User = UserInfo{UserID: userID, Nickname: userID}
+	// nickname 已通过 SQL 的 COALESCE(u.nickname, '') 兜底
+	// 若 SQL 未提供 nickname（兼容性回退），降级为 userID
+	if nickname == "" {
+		nickname = userID
+	}
+	item.User = UserInfo{UserID: userID, Nickname: nickname}
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	item.Location = Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
@@ -221,13 +226,16 @@ func loadMomentMentions(ctx context.Context, queryable persistence.QueryableDB, 
 
 func scanFavoriteMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, string, error) {
 	var item MomentItem
-	var userID, locationName, privacyLevel string
+	var userID, nickname, locationName, privacyLevel string
 	var createdAt, favoritedAt time.Time
 	var latitude, longitude float64
-	if err := scanner.Scan(&item.MomentID, &userID, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &favoritedAt); err != nil {
+	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &favoritedAt); err != nil {
 		return MomentItem{}, "", err
 	}
-	item.User = UserInfo{UserID: userID, Nickname: userID}
+	if nickname == "" {
+		nickname = userID
+	}
+	item.User = UserInfo{UserID: userID, Nickname: nickname}
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	item.Location = Location{Point: struct {
 		Latitude  float64 `json:"latitude"`

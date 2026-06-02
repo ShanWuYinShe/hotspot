@@ -190,7 +190,7 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 		if !ok {
 			return rowValues{err: pgx.ErrNoRows}
 		}
-		return rowValues{values: []any{item.MomentID, item.User.UserID, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel}}
+		return rowValues{values: []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel}}
 	case queryGetMomentLike:
 		momentID := args[0].(string)
 		userID := args[1].(string)
@@ -209,7 +209,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 	if b.queryErr != nil {
 		return nil, b.queryErr
 	}
-	if strings.Contains(query, "FROM moments WHERE privacy_level <>") && strings.Contains(query, "unnest($1::bigint[], $2::bigint[])") {
+	if strings.Contains(query, "FROM moments") && strings.Contains(query, "privacy_level <>") && strings.Contains(query, "unnest($1::bigint[], $2::bigint[])") {
 		argIndex := 2
 		var keywordStr string
 		if len(args) > argIndex {
@@ -255,7 +255,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.MomentID, item.User.UserID, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel})
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel})
 		}
 		return &rowsValues{rows: rows}, nil
 	}
@@ -276,7 +276,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		})
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.MomentID, item.User.UserID, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel})
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel})
 		}
 		return &rowsValues{rows: rows}, nil
 	case queryFilterAllowedMomentTags:
@@ -403,7 +403,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		rows := make([][]any, 0, len(favoriteRows))
 		for _, row := range favoriteRows {
 			item := row.moment
-			rows = append(rows, []any{item.MomentID, item.User.UserID, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, row.favoritedAt})
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, row.favoritedAt})
 		}
 		return &rowsValues{rows: rows}, nil
 	case querySearchMoments, querySearchMomentsAll:
@@ -447,7 +447,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.MomentID, item.User.UserID, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel})
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel})
 		}
 		return &rowsValues{rows: rows}, nil
 	default:

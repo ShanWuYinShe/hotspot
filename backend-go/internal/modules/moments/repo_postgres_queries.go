@@ -2,17 +2,19 @@ package moments
 
 const (
 	queryGetMoment = `
-SELECT moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level
-FROM moments
-WHERE moment_id = $1`
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
+FROM moments m
+LEFT JOIN users u ON u.user_id = m.user_id
+WHERE m.moment_id = $1`
 
 	queryListMyMoments = `
-SELECT moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level
-FROM moments
-WHERE user_id = $1
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
+FROM moments m
+LEFT JOIN users u ON u.user_id = m.user_id
+WHERE m.user_id = $1
   AND ($2::timestamptz IS NULL
-       OR (created_at, moment_id) < ($2::timestamptz, $3))
-ORDER BY created_at DESC, moment_id DESC
+       OR (m.created_at, m.moment_id) < ($2::timestamptz, $3))
+ORDER BY m.created_at DESC, m.moment_id DESC
 LIMIT $4`
 
 	queryInsertMoment = `
@@ -97,20 +99,22 @@ WHERE moment_id = $1`
 DELETE FROM moments WHERE moment_id = $1`
 
 	querySearchMoments = `
-SELECT moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level
-FROM moments
-WHERE privacy_level != 'private'
-  AND ($1::text IS NULL OR description ILIKE '%' || $1 || '%')
-  AND ($2::text IS NULL OR moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $2))
-ORDER BY created_at DESC, moment_id DESC
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
+FROM moments m
+LEFT JOIN users u ON u.user_id = m.user_id
+WHERE m.privacy_level != 'private'
+  AND ($1::text IS NULL OR m.description ILIKE '%' || $1 || '%')
+  AND ($2::text IS NULL OR m.moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $2))
+ORDER BY m.created_at DESC, m.moment_id DESC
 LIMIT $3`
 
 	querySearchMomentsAll = `
-SELECT moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level
-FROM moments
-WHERE privacy_level != 'private'
-  AND ($1::text IS NULL OR description ILIKE '%' || $1 || '%')
-  AND ($2::text IS NULL OR moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $2))`
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
+FROM moments m
+LEFT JOIN users u ON u.user_id = m.user_id
+WHERE m.privacy_level != 'private'
+  AND ($1::text IS NULL OR m.description ILIKE '%' || $1 || '%')
+  AND ($2::text IS NULL OR m.moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $2))`
 
 	queryInsertMomentLike = `
 INSERT INTO moment_likes (moment_id, user_id, liked_at)
@@ -163,9 +167,10 @@ ORDER BY liked_at DESC, user_id ASC
 LIMIT $4`
 
 	queryListFavoriteMoments = `
-SELECT m.moment_id, m.user_id, m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, mf.favorited_at
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, mf.favorited_at
 FROM moment_favorites mf
 JOIN moments m ON m.moment_id = mf.moment_id
+LEFT JOIN users u ON u.user_id = m.user_id
 WHERE mf.user_id = $1
   AND (
     $2 IS NULL
