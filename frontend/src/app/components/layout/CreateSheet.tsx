@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { X, ImagePlus, MapPin, Send, Smile, Hash } from "lucide-react";
 import { motion } from "motion/react";
+import { momentsService } from "@/lib/api/services/moments";
+import { useLocationStore } from "@/lib/stores/location";
+import { toast } from "sonner";
 
 const USER_AVATAR =
   "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400";
@@ -15,6 +18,8 @@ export function CreateSheet({ onClose }: Props) {
   const [text, setText] = useState("");
   const [selectedMoods, setSelectedMoods] = useState<Set<string>>(new Set());
   const [hasImage, setHasImage] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
+  const location = useLocationStore((s) => s.current);
 
   const toggleMood = (tag: string) =>
     setSelectedMoods((prev) => {
@@ -23,10 +28,38 @@ export function CreateSheet({ onClose }: Props) {
       return next;
     });
 
-  const canPost = text.trim().length > 0;
+  const canPost = text.trim().length > 0 && !isPosting;
 
-  const handlePost = () => {
-    if (canPost) onClose();
+  const handlePost = async () => {
+    if (!canPost) return;
+    setIsPosting(true);
+    try {
+      const tags = Array.from(selectedMoods);
+      const description = text.trim();
+      const point = location?.point ?? { latitude: 0, longitude: 0 };
+      const locationName = location?.location_name ?? "";
+      await momentsService.create({
+        description,
+        location: {
+          point,
+          location_name: locationName,
+        },
+        tags: tags.length > 0 ? tags : undefined,
+        privacy_level: "public",
+      });
+      toast.success("发布成功");
+      setText("");
+      setSelectedMoods(new Set());
+      onClose();
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : "发布失败";
+      toast.error(message);
+    } finally {
+      setIsPosting(false);
+    }
   };
 
   return (

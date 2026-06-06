@@ -1,10 +1,15 @@
 import { lazy, Suspense } from "react";
+import { Navigate } from "react-router";
 import { createBrowserRouter } from "react-router";
 import { MainLayout } from "./components/layout/MainLayout";
 import { Home } from "./pages/Home";
 import { Discover } from "./pages/Discover";
 import { Messages } from "./pages/Messages";
 import { ListSkeleton } from "./components/ui/skeleton";
+
+function MomentsRedirect() {
+  return <Navigate to="/profile?section=moments" replace />;
+}
 
 const ChatDetail = lazy(() =>
   import("./pages/ChatDetail").then((m) => ({ default: m.ChatDetail })),
@@ -168,6 +173,14 @@ export const router = createBrowserRouter([
         Component: () => (
           <LazyPage>
             <Profile />
+          </LazyPage>
+        ),
+      },
+      {
+        path: "moments",
+        Component: () => (
+          <LazyPage>
+            <MomentsRedirect />
           </LazyPage>
         ),
       },

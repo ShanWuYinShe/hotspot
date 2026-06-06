@@ -45,6 +45,12 @@ export default defineConfig({
         target: process.env.DOCKER_ENV ? 'http://nginx:80' : 'http://localhost:8888',
         changeOrigin: true,
       },
+      '/ws': {
+        target: process.env.DOCKER_ENV ? 'http://nginx:80' : 'http://localhost:8888',
+        changeOrigin: true,
+        ws: true,
+        rewriteWsOrigin: true,
+      },
     },
   },
   assetsInclude: ['**/*.svg', '**/*.csv'],

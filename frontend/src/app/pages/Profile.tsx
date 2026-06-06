@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Heart,
   MapPin,
@@ -38,6 +38,7 @@ import {
   VibeCard,
 } from "../components/TabletRail";
 import { useProfileData } from "@/lib/hooks/use-profile-data";
+import { useAuthStore } from "@/lib/stores/auth";
 import { useDocumentTitle } from "@/lib/hooks/use-document-title";
 import { normalizeAvatar, formatRelativeTime } from "@/lib/utils";
 import type { MomentItem } from "@/lib/types/api";
@@ -2433,6 +2434,14 @@ function ProfileMobile() {
 export function Profile() {
   const { platform } = usePlatform();
   useDocumentTitle("个人中心");
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/login", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+  if (!isAuthenticated) return null;
   if (platform === "desktop") return <ProfileDesktop />;
   return <ProfileMobile />;
 }
