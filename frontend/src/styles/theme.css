@@ -214,6 +214,24 @@
     7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light);
   --hover-shadow-pill:
     5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);
+
+  /* ── Semantic status colors ──────────────────────────────────────
+     Theme-independent hues (success/warn/danger/info). These keep their
+     meaning across all 3 themes; only the dark variants are brightened
+     for contrast (see .dark below). Always prefer these tokens over
+     hardcoded hex so status reads correctly in light AND dark. */
+  --neu-success: #22c55e;
+  --neu-success-soft: rgba(34, 197, 94, 0.12);
+  --neu-success-border: rgba(34, 197, 94, 0.3);
+  --neu-warn: #f59e0b;
+  --neu-warn-soft: rgba(245, 158, 11, 0.12);
+  --neu-warn-border: rgba(245, 158, 11, 0.3);
+  --neu-danger: #ef4444;
+  --neu-danger-soft: rgba(239, 68, 68, 0.12);
+  --neu-danger-border: rgba(239, 68, 68, 0.3);
+  --neu-info: #3b82f6;
+  --neu-info-soft: rgba(59, 130, 246, 0.12);
+  --neu-info-border: rgba(59, 130, 246, 0.3);
 }
 
 .dark {
@@ -239,6 +257,20 @@
   --fab-shadow:
     0 8px 24px rgba(232, 168, 124, 0.22), 0 2px 6px rgba(0, 0, 0, 0.28);
   /* Hover vars inherit from :root — auto-update via --neu-shadow-* */
+
+  /* Status colors — brightened for contrast on dark surfaces */
+  --neu-success: #4ade80;
+  --neu-success-soft: rgba(74, 222, 128, 0.14);
+  --neu-success-border: rgba(74, 222, 128, 0.34);
+  --neu-warn: #fbbf24;
+  --neu-warn-soft: rgba(251, 191, 36, 0.14);
+  --neu-warn-border: rgba(251, 191, 36, 0.34);
+  --neu-danger: #f87171;
+  --neu-danger-soft: rgba(248, 113, 113, 0.14);
+  --neu-danger-border: rgba(248, 113, 113, 0.34);
+  --neu-info: #60a5fa;
+  --neu-info-soft: rgba(96, 165, 250, 0.14);
+  --neu-info-border: rgba(96, 165, 250, 0.34);
 }
 
 /* ── Skeleton loading pulse ──────────────────────────────────────── */
@@ -434,6 +466,18 @@
   --color-neu-accent-soft: var(--neu-accent-soft);
   --color-neu-accent-soft-border: var(--neu-accent-soft-border);
   --color-page-bg: var(--page-bg);
+  --color-neu-success: var(--neu-success);
+  --color-neu-success-soft: var(--neu-success-soft);
+  --color-neu-success-border: var(--neu-success-border);
+  --color-neu-warn: var(--neu-warn);
+  --color-neu-warn-soft: var(--neu-warn-soft);
+  --color-neu-warn-border: var(--neu-warn-border);
+  --color-neu-danger: var(--neu-danger);
+  --color-neu-danger-soft: var(--neu-danger-soft);
+  --color-neu-danger-border: var(--neu-danger-border);
+  --color-neu-info: var(--neu-info);
+  --color-neu-info-soft: var(--neu-info-soft);
+  --color-neu-info-border: var(--neu-info-border);
 }
 
 @layer utilities {
@@ -606,6 +650,18 @@
   }
   .text-neu-accent-primary {
     color: var(--neu-accent-primary);
+  }
+  .text-neu-success {
+    color: var(--neu-success);
+  }
+  .text-neu-warn {
+    color: var(--neu-warn);
+  }
+  .text-neu-danger {
+    color: var(--neu-danger);
+  }
+  .text-neu-info {
+    color: var(--neu-info);
   }
 
   /* ── Surface hierarchy ──────────────────────────────────────────

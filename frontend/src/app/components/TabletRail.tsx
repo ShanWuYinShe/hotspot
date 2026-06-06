@@ -420,8 +420,8 @@ export function NearbyPulseCard() {
               width: 6,
               height: 6,
               borderRadius: 999,
-              background: "#22c55e",
-              boxShadow: "0 0 0 3px rgba(34,197,94,0.18)",
+              background: "var(--neu-success)",
+              boxShadow: "0 0 0 3px var(--neu-success-soft)",
             }}
           />
           <span style={{ fontSize: 10, color: "var(--neu-text-muted)" }}>

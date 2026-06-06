@@ -147,7 +147,7 @@ export function AdminAnnouncements() {
           style={{
             width: 32,
             height: 32,
-            background: showForm ? "#EF4444" : "var(--neu-accent-primary)",
+            background: showForm ? "var(--neu-danger)" : "var(--neu-accent-primary)",
           }}
         >
           <Plus
@@ -278,7 +278,7 @@ export function AdminAnnouncements() {
         {page.error && (
           <p
             className="mb-3 text-center"
-            style={{ fontSize: 13, color: "#EF4444" }}
+            style={{ fontSize: 13, color: "var(--neu-danger)" }}
           >
             {page.error}
           </p>
@@ -355,10 +355,10 @@ export function AdminAnnouncements() {
                   whileTap={{ scale: 0.9 }}
                   onClick={() => handleDelete(ann)}
                   className="flex items-center justify-center rounded-full flex-shrink-0"
-                  style={{ width: 28, height: 28, background: "#EF444418" }}
+                  style={{ width: 28, height: 28, background: "var(--neu-danger-soft)" }}
                 >
                   <Trash2
-                    style={{ width: 13, height: 13, color: "#EF4444" }}
+                    style={{ width: 13, height: 13, color: "var(--neu-danger)" }}
                     strokeWidth={1.5}
                   />
                 </motion.button>

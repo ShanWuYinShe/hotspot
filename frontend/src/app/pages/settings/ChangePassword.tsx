@@ -193,13 +193,13 @@ export function ChangePassword() {
                 onBlur={() => markTouched("oldPassword")}
                 className="w-full rounded-[18px] px-4 py-2.5 outline-none"
                 style={{
-                  border: `1px solid ${oldPasswordError ? "#EF4444" : "var(--neu-border)"}`,
+                  border: `1px solid ${oldPasswordError ? "var(--neu-danger)" : "var(--neu-border)"}`,
                   background: "var(--neu-bg)",
                   color: "var(--neu-text)",
                 }}
               />
               {oldPasswordError && (
-                <p style={{ fontSize: 12, color: "#EF4444" }}>
+                <p style={{ fontSize: 12, color: "var(--neu-danger)" }}>
                   {oldPasswordError}
                 </p>
               )}
@@ -221,13 +221,13 @@ export function ChangePassword() {
                 onBlur={() => markTouched("newPassword")}
                 className="w-full rounded-[18px] px-4 py-2.5 outline-none"
                 style={{
-                  border: `1px solid ${newPasswordError ? "#EF4444" : "var(--neu-border)"}`,
+                  border: `1px solid ${newPasswordError ? "var(--neu-danger)" : "var(--neu-border)"}`,
                   background: "var(--neu-bg)",
                   color: "var(--neu-text)",
                 }}
               />
               {newPasswordError && (
-                <p style={{ fontSize: 12, color: "#EF4444" }}>
+                <p style={{ fontSize: 12, color: "var(--neu-danger)" }}>
                   {newPasswordError}
                 </p>
               )}
@@ -249,13 +249,13 @@ export function ChangePassword() {
                 onBlur={() => markTouched("confirmPassword")}
                 className="w-full rounded-[18px] px-4 py-2.5 outline-none"
                 style={{
-                  border: `1px solid ${confirmPasswordError ? "#EF4444" : "var(--neu-border)"}`,
+                  border: `1px solid ${confirmPasswordError ? "var(--neu-danger)" : "var(--neu-border)"}`,
                   background: "var(--neu-bg)",
                   color: "var(--neu-text)",
                 }}
               />
               {confirmPasswordError && (
-                <p style={{ fontSize: 12, color: "#EF4444" }}>
+                <p style={{ fontSize: 12, color: "var(--neu-danger)" }}>
                   {confirmPasswordError}
                 </p>
               )}

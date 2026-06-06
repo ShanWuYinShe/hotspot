@@ -204,7 +204,7 @@ export function UserProfile() {
                   style={{
                     width: 12,
                     height: 12,
-                    background: "#22c55e",
+                    background: "var(--neu-success)",
                     border: "2px solid var(--neu-bg)",
                   }}
                 />

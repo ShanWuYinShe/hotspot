@@ -78,8 +78,8 @@ export function AdminUsers() {
         className="px-2 py-0.5 rounded-full"
         style={{
           fontSize: 11,
-          background: isBanned ? "#EF444420" : "#10B98120",
-          color: isBanned ? "#EF4444" : "#10B981",
+          background: isBanned ? "var(--neu-danger-soft)" : "#10B98120",
+          color: isBanned ? "var(--neu-danger)" : "#10B981",
         }}
       >
         {isBanned ? "已封禁" : "正常"}
@@ -177,7 +177,7 @@ export function AdminUsers() {
         {page.error && (
           <p
             className="mb-3 text-center"
-            style={{ fontSize: 13, color: "#EF4444" }}
+            style={{ fontSize: 13, color: "var(--neu-danger)" }}
           >
             {page.error}
           </p>
@@ -301,12 +301,12 @@ export function AdminUsers() {
                     style={{
                       width: 32,
                       height: 32,
-                      background: "#EF444418",
+                      background: "var(--neu-danger-soft)",
                     }}
                     title="封禁"
                   >
                     <ShieldBan
-                      style={{ width: 15, height: 15, color: "#EF4444" }}
+                      style={{ width: 15, height: 15, color: "var(--neu-danger)" }}
                       strokeWidth={1.5}
                     />
                   </motion.button>

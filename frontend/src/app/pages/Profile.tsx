@@ -769,8 +769,8 @@ function SectionFriends() {
             className="flex items-center gap-1 px-2 py-0.5 rounded-full"
             style={{
               fontSize: 11,
-              background: "#22c55e20",
-              border: "1px solid #22c55e30",
+              background: "var(--neu-success-soft)",
+              border: "1px solid var(--neu-success-border)",
             }}
           >
             <div
@@ -778,10 +778,10 @@ function SectionFriends() {
                 width: 6,
                 height: 6,
                 borderRadius: "50%",
-                background: "#22c55e",
+                background: "var(--neu-success)",
               }}
             />
-            <span style={{ color: "#22c55e" }}>{onlineCount} 在线</span>
+            <span style={{ color: "var(--neu-success)" }}>{onlineCount} 在线</span>
           </div>
         </div>
         <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>
@@ -920,7 +920,7 @@ function SectionFriends() {
                       width: 12,
                       height: 12,
                       background: isOnline
-                        ? "#22c55e"
+                        ? "var(--neu-success)"
                         : "var(--neu-text-muted)",
                       border: "2.5px solid var(--neu-bg)",
                       opacity: isOnline ? 1 : 0.5,
@@ -1254,9 +1254,9 @@ function SectionFans() {
               className="px-2 py-0.5 rounded-full"
               style={{
                 fontSize: 11,
-                background: "#f59e0b20",
-                color: "#f59e0b",
-                border: "1px solid #f59e0b30",
+                background: "var(--neu-warn-soft)",
+                color: "var(--neu-warn)",
+                border: "1px solid var(--neu-warn-border)",
               }}
             >
               {pendingCount} 待回关
@@ -1276,8 +1276,8 @@ function SectionFans() {
         >
           {[
             { v: followers.length, label: "总粉丝", color: "var(--neu-text)" },
-            { v: mutualCount, label: "互相关注", color: "#22c55e" },
-            { v: pendingCount, label: "待回关", color: "#f59e0b" },
+            { v: mutualCount, label: "互相关注", color: "var(--neu-success)" },
+            { v: pendingCount, label: "待回关", color: "var(--neu-warn)" },
           ].map((s) => (
             <div
               key={s.label}
@@ -1405,8 +1405,8 @@ function SectionFans() {
                           className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full"
                           style={{
                             fontSize: 10,
-                            background: "rgba(34,197,94,0.12)",
-                            color: "#22c55e",
+                            background: "var(--neu-success-soft)",
+                            color: "var(--neu-success)",
                           }}
                         >
                           <Check

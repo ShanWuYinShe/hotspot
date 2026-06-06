@@ -118,7 +118,7 @@ export function AdminAudit() {
         {page.error && (
           <p
             className="mb-3 text-center"
-            style={{ fontSize: 13, color: "#EF4444" }}
+            style={{ fontSize: 13, color: "var(--neu-danger)" }}
           >
             {page.error}
           </p>

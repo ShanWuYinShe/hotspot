@@ -19,7 +19,7 @@ const STATUS_OPTIONS: { label: string; value: ReportStatus | "all" }[] = [
 function statusColor(status: ReportStatus): string {
   switch (status) {
     case "pending":
-      return "#F59E0B";
+      return "var(--neu-warn)";
     case "reviewing":
       return "#6366F1";
     case "resolved":
@@ -183,7 +183,7 @@ export function AdminReports() {
         {page.error && (
           <p
             className="mb-3 text-center"
-            style={{ fontSize: 13, color: "#EF4444" }}
+            style={{ fontSize: 13, color: "var(--neu-danger)" }}
           >
             {page.error}
           </p>

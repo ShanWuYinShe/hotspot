@@ -197,8 +197,8 @@ function HeroStats({
               v: String(usersCount),
               color: "var(--neu-accent-primary)",
             },
-            { label: "群组", v: String(groupsCount), color: "#F59E0B" },
-            { label: "在线", v: String(onlineCount), color: "#22c55e" },
+            { label: "群组", v: String(groupsCount), color: "var(--neu-warn)" },
+            { label: "在线", v: String(onlineCount), color: "var(--neu-success)" },
           ].map((s) => (
             <div
               key={s.label}
@@ -278,7 +278,7 @@ function PeopleRadarStrip({
                   style={{
                     width: 11,
                     height: 11,
-                    background: "#22c55e",
+                    background: "var(--neu-success)",
                     border: "2px solid var(--neu-bg)",
                   }}
                 />
@@ -527,7 +527,7 @@ function NearbyUsersFlatList({
                   style={{
                     width: 9,
                     height: 9,
-                    background: "#22c55e",
+                    background: "var(--neu-success)",
                     border: "2px solid var(--neu-bg)",
                   }}
                 />
@@ -664,7 +664,7 @@ function HomeMobile() {
                 style={{
                   width: 6,
                   height: 6,
-                  background: "#22c55e",
+                  background: "var(--neu-success)",
                   flexShrink: 0,
                 }}
               />
@@ -865,7 +865,7 @@ function HomeDesktop() {
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full neu-surface-flat">
             <span
               className="rounded-full"
-              style={{ width: 6, height: 6, background: "#22c55e" }}
+              style={{ width: 6, height: 6, background: "var(--neu-success)" }}
             />
             <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>
               {onlineCount} 在线

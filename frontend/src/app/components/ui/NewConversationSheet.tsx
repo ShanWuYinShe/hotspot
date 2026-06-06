@@ -403,7 +403,7 @@ export function NewConversationSheet({
                         style={{
                           width: 10,
                           height: 10,
-                          background: "#22c55e",
+                          background: "var(--neu-success)",
                           border: "2px solid var(--neu-bg)",
                         }}
                       />
@@ -416,7 +416,7 @@ export function NewConversationSheet({
                     <p
                       style={{
                         fontSize: 11,
-                        color: c.online ? "#22c55e" : "var(--neu-text-muted)",
+                        color: c.online ? "var(--neu-success)" : "var(--neu-text-muted)",
                       }}
                     >
                       {c.online ? "在线" : "离线"}

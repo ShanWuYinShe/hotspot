@@ -215,7 +215,7 @@ export function NearbyAll() {
                     marginTop: 2,
                   }}
                 >
-                  <span style={{ color: "#22c55e" }}>{onlineCount} 人在线</span>
+                  <span style={{ color: "var(--neu-success)" }}>{onlineCount} 人在线</span>
                   <span style={{ marginLeft: 8 }}>
                     · 共 {filtered.length} 人
                   </span>
@@ -341,7 +341,7 @@ export function NearbyAll() {
                           style={{
                             width: 10,
                             height: 10,
-                            background: "#22c55e",
+                            background: "var(--neu-success)",
                             border: "2px solid var(--neu-bg)",
                           }}
                         />

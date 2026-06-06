@@ -925,7 +925,7 @@ function LocationMobile() {
                                 style={{
                                   width: 10,
                                   height: 10,
-                                  background: "#22c55e",
+                                  background: "var(--neu-success)",
                                   border: "2px solid var(--neu-bg)",
                                 }}
                               />
@@ -1689,7 +1689,7 @@ function LocationDesktop() {
                             style={{
                               width: 10,
                               height: 10,
-                              background: "#22c55e",
+                              background: "var(--neu-success)",
                               border: "2px solid var(--neu-bg)",
                             }}
                           />
@@ -1806,7 +1806,7 @@ function LocationDesktop() {
                           width: 7,
                           height: 7,
                           borderRadius: "50%",
-                          background: "#22c55e",
+                          background: "var(--neu-success)",
                           flexShrink: 0,
                         }}
                       />
@@ -2342,7 +2342,7 @@ function LocationDesktop() {
                         style={{
                           width: 12,
                           height: 12,
-                          background: "#22c55e",
+                          background: "var(--neu-success)",
                           border: "2.5px solid var(--neu-bg)",
                         }}
                       />

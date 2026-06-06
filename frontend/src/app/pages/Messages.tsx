@@ -66,7 +66,7 @@ function PrivateChatListItem({
             style={{
               width: 10,
               height: 10,
-              background: "#22c55e",
+              background: "var(--neu-success)",
               border: "2px solid var(--neu-bg)",
             }}
           />
@@ -450,7 +450,7 @@ function MessagesMobile() {
                       style={{
                         width: 12,
                         height: 12,
-                        background: "#22c55e",
+                        background: "var(--neu-success)",
                         border: "2px solid var(--neu-bg)",
                       }}
                     />
@@ -831,7 +831,7 @@ function MessagesDesktop() {
                       style={{
                         width: 8,
                         height: 8,
-                        background: "#22c55e",
+                        background: "var(--neu-success)",
                         border: "1.5px solid var(--neu-bg)",
                       }}
                     />

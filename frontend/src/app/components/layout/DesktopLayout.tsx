@@ -275,7 +275,7 @@ function LocationCard({ onClick }: { onClick: () => void }) {
         <div className="flex items-center gap-1">
           <span
             className="inline-block rounded-full"
-            style={{ width: 5, height: 5, background: "#22c55e" }}
+            style={{ width: 5, height: 5, background: "var(--neu-success)" }}
           />
           <p
             style={{

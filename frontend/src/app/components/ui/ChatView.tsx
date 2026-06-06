@@ -164,7 +164,7 @@ export function ChatView({
               style={{
                 width: 9,
                 height: 9,
-                background: "#22c55e",
+                background: "var(--neu-success)",
                 border: "2px solid var(--neu-bg)",
               }}
             />
@@ -181,7 +181,7 @@ export function ChatView({
           <p
             style={{
               fontSize: 11,
-              color: isOnline ? "#22c55e" : "var(--neu-text-muted)",
+              color: isOnline ? "var(--neu-success)" : "var(--neu-text-muted)",
             }}
           >
             {isOnline

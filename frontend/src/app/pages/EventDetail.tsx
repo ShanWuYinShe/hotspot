@@ -185,8 +185,8 @@ export function EventDetail() {
               </p>
               <div className="flex items-center gap-1">
                 <Star
-                  style={{ width: 10, height: 10, color: "#F59E0B" }}
-                  fill="#F59E0B"
+                  style={{ width: 10, height: 10, color: "var(--neu-warn)" }}
+                  fill="var(--neu-warn)"
                   strokeWidth={1.5}
                 />
                 <span style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>

@@ -479,7 +479,7 @@ export function Notifications() {
               <p className="neu-eyebrow">类型分布</p>
               <div className="flex flex-col gap-2.5 mt-3">
                 {[
-                  { label: "点赞", value: groupedStats.like, color: "#EF4444" },
+                  { label: "点赞", value: groupedStats.like, color: "var(--neu-danger)" },
                   {
                     label: "关注",
                     value: groupedStats.follow,
@@ -493,7 +493,7 @@ export function Notifications() {
                   {
                     label: "系统",
                     value: groupedStats.system + groupedStats.nearby,
-                    color: "#F59E0B",
+                    color: "var(--neu-warn)",
                   },
                 ].map((item) => (
                   <div

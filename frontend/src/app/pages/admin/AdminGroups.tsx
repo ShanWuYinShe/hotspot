@@ -145,7 +145,7 @@ export function AdminGroups() {
         {page.error && (
           <p
             className="mb-3 text-center"
-            style={{ fontSize: 13, color: "#EF4444" }}
+            style={{ fontSize: 13, color: "var(--neu-danger)" }}
           >
             {page.error}
           </p>
@@ -246,11 +246,11 @@ export function AdminGroups() {
                 whileTap={{ scale: 0.92 }}
                 onClick={() => handleDissolve(group)}
                 className="flex items-center justify-center rounded-full flex-shrink-0"
-                style={{ width: 32, height: 32, background: "#EF444418" }}
+                style={{ width: 32, height: 32, background: "var(--neu-danger-soft)" }}
                 title="解散群组"
               >
                 <Trash2
-                  style={{ width: 15, height: 15, color: "#EF4444" }}
+                  style={{ width: 15, height: 15, color: "var(--neu-danger)" }}
                   strokeWidth={1.5}
                 />
               </motion.button>

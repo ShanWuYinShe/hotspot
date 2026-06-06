@@ -183,10 +183,10 @@ export function EditProfile() {
           disabled={saving}
           className="flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all"
           style={{
-            background: saved ? "#22c55e" : "var(--neu-accent-primary)",
+            background: saved ? "var(--neu-success)" : "var(--neu-accent-primary)",
             color: "var(--text-on-accent, white)",
             fontSize: 13,
-            boxShadow: `0 4px 14px ${saved ? "rgba(34,197,94,0.35)" : "var(--neu-glow)"}`,
+            boxShadow: `0 4px 14px ${saved ? "var(--neu-success-border)" : "var(--neu-glow)"}`,
             border: "none",
             opacity: saving ? 0.7 : 1,
           }}
@@ -433,7 +433,7 @@ export function EditProfile() {
                 "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)",
               border: "1px solid var(--neu-border)",
               fontSize: 14,
-              color: "#EF4444",
+              color: "var(--neu-danger)",
             }}
           >
             注销账号
