@@ -1298,7 +1298,7 @@ export struct ProfilePage {
             .margin({ top: 24, bottom: 24 })
           }
           .alignItems(HorizontalAlign.Center)
-          .padding({ left: 20, right: 20, top: 8, bottom: 24 })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 8, bottom: 24 })
         }
         .layoutWeight(1)
         .scrollBar(BarState.Auto)

@@ -403,7 +403,7 @@ export struct NearbyPage {
       .backgroundColor(this.getPalette().surfaceBackground)
     }
     .width('100%')
-    .padding({ left: 20, right: 20, top: this.getHeaderTopPadding(), bottom: 12 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: this.getHeaderTopPadding(), bottom: 12 })
     .backgroundColor(this.getPalette().pageBackground)
     .border({ width: { bottom: 1 }, color: this.getPalette().borderColor })
   }
@@ -474,7 +474,7 @@ export struct NearbyPage {
     }
     .width('100%')
     .borderRadius(24)
-    .margin({ left: 16, right: 16, bottom: 20 })
+    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 20 })
     .shadow(this.getPalette().elevatedShadow)
     .border({ width: 1, color: this.getPalette().borderColor })
   }
@@ -591,7 +591,7 @@ export struct NearbyPage {
       .width('100%')
     }
     .width('100%')
-    .padding({ left: 16, right: 16 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
     .margin({ bottom: 20 })
   }
 
@@ -633,7 +633,7 @@ export struct NearbyPage {
       .width('100%')
     }
     .width('100%')
-    .padding({ left: 16, right: 16 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
     .margin({ bottom: 20 })
   }
 
@@ -728,7 +728,7 @@ export struct NearbyPage {
       .width('100%')
     }
     .width('100%')
-    .padding({ left: 16, right: 16 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
     .margin({ bottom: 24 })
   }
 }
