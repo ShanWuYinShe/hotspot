@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/ratelimit"
 )
 
@@ -50,6 +51,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	var authEvent Event
 	if err := conn.ReadJSON(&authEvent); err != nil || authEvent.Type != "Auth" {
+		observability.L().Warn("ws: auth failed, invalid auth message", "error", err)
 		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
 		return
 	}
@@ -64,11 +66,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	principal, _, ok := h.auth.AuthenticateRequest(ctx, authorization, accessCookie)
 	if !ok {
+		observability.L().Warn("ws: auth failed, token invalid")
 		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
 		return
 	}
 	principalCtx := platformauth.WithPrincipal(ctx, principal)
 	_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))
+
+	connectionID := fmt.Sprintf("conn_%d", time.Now().UTC().UnixNano())
+	observability.L().Info("ws: connected", "user_id", principal.UserID, "session_id", principal.SessionID, "connection_id", connectionID)
 
 	sink := &socketSink{conn: conn}
 	if DefaultHub().RegisterUser(principal.UserID, principal.SessionID, sink) {
@@ -78,9 +84,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if DefaultHub().UnregisterUser(principal.UserID, principal.SessionID, sink) {
 			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOffline, Payload: UserOfflinePayload{UserID: principal.UserID, OfflineAt: time.Now().UTC().Format(time.RFC3339)}})
 		}
+		observability.L().Info("ws: disconnected", "user_id", principal.UserID, "session_id", principal.SessionID, "connection_id", connectionID)
 	}()
 
-	connectionID := fmt.Sprintf("conn_%d", time.Now().UTC().UnixNano())
 	payload := ConnectionEstablishedPayload{ConnectionID: connectionID, UserID: principal.UserID, ServerTime: time.Now().UTC().Format(time.RFC3339)}
 	payload.Config.PingInterval = 30
 	payload.Config.PingTimeout = 10
@@ -94,6 +100,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for {
 		var msg Event
 		if err := conn.ReadJSON(&msg); err != nil {
+			observability.L().Debug("ws: read error, closing", "user_id", principal.UserID, "connection_id", connectionID, "error", err)
 			return
 		}
 		_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))
@@ -112,6 +119,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			blob, _ := json.Marshal(msg.Payload)
 			_ = json.Unmarshal(blob, &payload)
 			if retryAfter, limited := ratelimit.AllowWebsocketSubscribe(r.Context(), principal.UserID, connectionID); limited {
+				observability.L().Warn("ws: subscribe rate limited", "user_id", principal.UserID, "connection_id", connectionID, "retry_after", retryAfter)
 				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20300, Message: "请求过于频繁", Severity: "recoverable", Retryable: true, RetryAfter: retryAfter}})
 				continue
 			}
