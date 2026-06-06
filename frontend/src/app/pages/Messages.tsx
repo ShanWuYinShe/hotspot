@@ -399,12 +399,6 @@ function MessagesMobile() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         className="flex flex-col px-5 pt-4 pb-4"
-        style={{
-          maxWidth: 640,
-          marginLeft: "auto",
-          marginRight: "auto",
-          width: "100%",
-        }}
       >
         {/* Online strip */}
         {onlineChats.length > 0 && (

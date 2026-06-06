@@ -159,16 +159,7 @@ export function NearbyAll() {
 
       <div
         className={isTablet ? "flex gap-6 mx-auto pt-5 pb-8" : "px-5 pt-5 pb-8"}
-        style={
-          isTablet
-            ? { maxWidth: 964, width: "100%" }
-            : {
-                maxWidth: 640,
-                marginLeft: "auto",
-                marginRight: "auto",
-                width: "100%",
-              }
-        }
+        style={isTablet ? { maxWidth: 964, width: "100%" } : {}}
       >
         <div
           className={

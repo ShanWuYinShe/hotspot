@@ -54,15 +54,7 @@ export function NearbyGroups() {
           borderBottom: "1px solid var(--neu-border)",
         }}
       >
-        <div
-          className="px-5"
-          style={{
-            maxWidth: 640,
-            marginLeft: "auto",
-            marginRight: "auto",
-            width: "100%",
-          }}
-        >
+        <div className="px-5">
           <div className="flex items-center gap-3 mb-3">
             <motion.button
               whileTap={{ scale: 0.88 }}
@@ -172,15 +164,7 @@ export function NearbyGroups() {
         </div>
       </div>
 
-      <div
-        className="flex flex-col px-5 pt-4 pb-6 gap-3"
-        style={{
-          maxWidth: 640,
-          marginLeft: "auto",
-          marginRight: "auto",
-          width: "100%",
-        }}
-      >
+      <div className="flex flex-col px-5 pt-4 pb-6 gap-3">
         {loading ? (
           <ListSkeleton rows={4} />
         ) : error && filtered.length === 0 ? (

@@ -288,15 +288,7 @@ export function Search() {
       <div className="flex-1 overflow-y-auto no-scrollbar">
         {/* No query: show discovery */}
         {!q && (
-          <div
-            className="px-5 pt-4 pb-6"
-            style={{
-              maxWidth: 640,
-              marginLeft: "auto",
-              marginRight: "auto",
-              width: "100%",
-            }}
-          >
+          <div className="px-5 pt-4 pb-6">
             {/* Recent searches */}
             {recent.length > 0 && (
               <div className="mb-5">
@@ -385,14 +377,7 @@ export function Search() {
 
         {/* Has query: show results */}
         {q && (
-          <div
-            style={{
-              maxWidth: 640,
-              marginLeft: "auto",
-              marginRight: "auto",
-              width: "100%",
-            }}
-          >
+          <div>
             {/* Result tabs */}
             <div className="flex overflow-x-auto no-scrollbar px-5 pt-3 pb-0 gap-2">
               {RESULT_TABS.map((t) => (
