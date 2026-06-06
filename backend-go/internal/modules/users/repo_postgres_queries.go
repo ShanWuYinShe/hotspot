@@ -161,22 +161,24 @@ ORDER BY gm.joined_at DESC, g.group_id ASC
 LIMIT $4`
 
 	queryListUserMoments = `
-SELECT moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level
-FROM moments
-WHERE user_id = $1
-  AND ($2 OR privacy_level <> 'private')
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
+FROM moments m
+LEFT JOIN users u ON u.user_id = m.user_id
+WHERE m.user_id = $1
+  AND ($2 OR m.privacy_level <> 'private')
   AND (
     $3::timestamptz IS NULL
-    OR created_at < $3::timestamptz
-    OR (created_at = $3::timestamptz AND moment_id < $4)
+    OR m.created_at < $3::timestamptz
+    OR (m.created_at = $3::timestamptz AND m.moment_id < $4)
   )
-ORDER BY created_at DESC, moment_id DESC
+ORDER BY m.created_at DESC, m.moment_id DESC
 LIMIT $5`
 
 	queryListLikedMoments = `
-SELECT m.moment_id, m.user_id, m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, ml.liked_at
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, ml.liked_at
 FROM moment_likes ml
 JOIN moments m ON m.moment_id = ml.moment_id
+LEFT JOIN users u ON u.user_id = m.user_id
 WHERE ml.user_id = $1
   AND ($2 = '' OR m.user_id = $2 OR m.privacy_level <> 'private')
   AND (

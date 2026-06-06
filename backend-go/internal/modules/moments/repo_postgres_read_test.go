@@ -185,6 +185,14 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 		return rowValues{err: err}
 	}
 	switch query {
+	case queryGetUserNickname:
+		userID := args[0].(string)
+		for _, item := range b.moments {
+			if item.User.UserID == userID {
+				return rowValues{values: []any{item.User.Nickname}}
+			}
+		}
+		return rowValues{err: pgx.ErrNoRows}
 	case queryGetMoment:
 		item, ok := b.moments[args[0].(string)]
 		if !ok {

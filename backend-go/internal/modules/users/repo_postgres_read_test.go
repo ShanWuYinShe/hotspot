@@ -229,7 +229,7 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 		queryRowsByQuery: map[string][][]any{
 			"FROM users u":                            {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC)}},
 			queryListBlockedUsers:                     {{"user_bob", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), "buddy"}},
-			queryListLikedMoments:                     {{"moment_1", "user_alice", "hello", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), 3, 2, 1, "南天门", 35.0, 112.0, "public", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC)}},
+			queryListLikedMoments:                     {{"moment_1", "user_alice", "Alice", "hello", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), 3, 2, 1, "南天门", 35.0, 112.0, "public", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC)}},
 			momenttypesQueryListMomentTagsByMomentID:  {{"travel"}, {"hotspot"}},
 			momenttypesQueryListMomentTagsByMomentIDs: {{"moment_1", "travel"}, {"moment_1", "hotspot"}},
 		},
@@ -341,12 +341,12 @@ func TestListUserMomentsPostgresReturnsNextCursorWithoutDupingNextPage(t *testin
 	createdAt3 := time.Date(2026, 3, 29, 10, 0, 0, 0, time.UTC)
 	backend := &userMomentCursorBackend{
 		firstPage: [][]any{
-			{"moment_3", "user_alice", "third", createdAt3, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
-			{"moment_2", "user_alice", "second", createdAt2, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
-			{"moment_1", "user_alice", "first", createdAt1, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
+			{"moment_3", "user_alice", "Alice", "third", createdAt3, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
+			{"moment_2", "user_alice", "Alice", "second", createdAt2, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
+			{"moment_1", "user_alice", "Alice", "first", createdAt1, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
 		},
 		secondPage: [][]any{
-			{"moment_1", "user_alice", "first", createdAt1, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
+			{"moment_1", "user_alice", "Alice", "first", createdAt1, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
 		},
 		tags: [][]any{{"moment_3", "travel"}},
 	}

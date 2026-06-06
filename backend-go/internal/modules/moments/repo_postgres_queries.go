@@ -1,6 +1,11 @@
 package moments
 
 const (
+	queryGetUserNickname = `
+SELECT COALESCE(nickname, '')
+FROM users
+WHERE user_id = $1`
+
 	queryGetMoment = `
 SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
 FROM moments m

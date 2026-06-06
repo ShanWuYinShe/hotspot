@@ -52,6 +52,13 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if err := replaceMomentMentions(ctx, queryable, momentID, normalizedMentions, now); err != nil {
 		return MomentItem{}, err
 	}
+	nickname, err := lookupUserNickname(ctx, queryable, userID)
+	if err != nil {
+		return MomentItem{}, err
+	}
+	if nickname == "" {
+		nickname = userID
+	}
 	return MomentItem{
 		MomentID:      momentID,
 		Description:   req.Description,
@@ -61,11 +68,23 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		LikesCount:    0,
 		CommentsCount: 0,
 		SharesCount:   0,
-		User:          UserInfo{UserID: userID, Nickname: userID},
+		User:          UserInfo{UserID: userID, Nickname: nickname},
 		Location:      req.Location,
 		PrivacyLevel:  privacy,
 		MyState:       &MyMomentState{IsLiked: false, IsFavorited: false},
 	}, nil
+}
+
+func lookupUserNickname(ctx context.Context, queryable persistence.QueryableDB, userID string) (string, error) {
+	var nickname string
+	err := queryable.QueryRow(ctx, queryGetUserNickname, userID).Scan(&nickname)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", nil
+		}
+		return "", err
+	}
+	return nickname, nil
 }
 
 func (r *PostgresRepository) IncrementCommentCount(ctx context.Context, momentID string) error {

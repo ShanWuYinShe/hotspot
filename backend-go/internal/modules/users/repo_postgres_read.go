@@ -549,13 +549,16 @@ func scanUserGroupRow(scanner interface{ Scan(...any) error }) (grouptypes.Group
 
 func scanMomentItem(scanner interface{ Scan(...any) error }) (momenttypes.MomentItem, error) {
 	var item momenttypes.MomentItem
-	var userID, locationName, privacyLevel string
+	var userID, nickname, locationName, privacyLevel string
 	var latitude, longitude float64
 	var createdAt time.Time
-	if err := scanner.Scan(&item.MomentID, &userID, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel); err != nil {
+	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel); err != nil {
 		return momenttypes.MomentItem{}, err
 	}
-	item.User = momenttypes.UserInfo{UserID: userID, Nickname: userID}
+	if nickname == "" {
+		nickname = userID
+	}
+	item.User = momenttypes.UserInfo{UserID: userID, Nickname: nickname}
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	item.Location = momenttypes.Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
@@ -567,13 +570,16 @@ func scanMomentItem(scanner interface{ Scan(...any) error }) (momenttypes.Moment
 
 func scanUserLikedMomentRow(scanner interface{ Scan(...any) error }) (momenttypes.MomentItem, string, error) {
 	var item momenttypes.MomentItem
-	var userID, locationName, privacyLevel string
+	var userID, nickname, locationName, privacyLevel string
 	var latitude, longitude float64
 	var createdAt, likedAt time.Time
-	if err := scanner.Scan(&item.MomentID, &userID, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &likedAt); err != nil {
+	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &likedAt); err != nil {
 		return momenttypes.MomentItem{}, "", err
 	}
-	item.User = momenttypes.UserInfo{UserID: userID, Nickname: userID}
+	if nickname == "" {
+		nickname = userID
+	}
+	item.User = momenttypes.UserInfo{UserID: userID, Nickname: nickname}
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	item.Location = momenttypes.Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
