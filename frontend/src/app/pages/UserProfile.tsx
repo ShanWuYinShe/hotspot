@@ -12,6 +12,7 @@ import {
   Bookmark,
   MoreHorizontal,
 } from "lucide-react";
+import { EmptyState } from "../components/ui/EmptyState";
 import { motion } from "motion/react";
 
 import { useUserProfileData } from "@/lib/hooks/use-user-profile-data";
@@ -455,24 +456,16 @@ export function UserProfile() {
         </div>
 
         {/* Content placeholder — moments gallery not yet implemented */}
-        <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <Grid3X3
-            style={{
-              width: 36,
-              height: 36,
-              color: "var(--neu-text-muted)",
-              opacity: 0.4,
-            }}
-            strokeWidth={1.25}
-          />
-          <p style={{ fontSize: 15, color: "var(--neu-text)" }}>
-            {activeTab === "posts"
+        <EmptyState
+          icon={Grid3X3}
+          title={
+            activeTab === "posts"
               ? "暂无帖子"
               : activeTab === "liked"
                 ? "暂无喜欢"
-                : "暂无收藏"}
-          </p>
-        </div>
+                : "暂无收藏"
+          }
+        />
       </div>
     </div>
   );

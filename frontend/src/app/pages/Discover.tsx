@@ -10,6 +10,7 @@ import {
   TrendingUp,
   Sparkles,
 } from "lucide-react";
+import { EmptyState } from "../components/ui/EmptyState";
 import { motion } from "motion/react";
 import { usePlatform } from "../contexts/PlatformContext";
 import { useNavigate } from "react-router";
@@ -493,20 +494,7 @@ function DiscoverContent({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-16">
-          <Sparkles
-            style={{
-              width: 32,
-              height: 32,
-              color: "var(--neu-text-muted)",
-              opacity: 0.3,
-            }}
-            strokeWidth={1.25}
-          />
-          <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
-            暂无内容，下拉刷新试试
-          </p>
-        </div>
+        <EmptyState icon={Sparkles} title="暂无内容" hint="下拉刷新试试" />
       ) : (
         <div className="flex flex-col gap-4">
           {filtered.map((item, i) =>

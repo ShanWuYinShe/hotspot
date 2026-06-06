@@ -10,6 +10,7 @@ import {
   MoreHorizontal,
   Send,
 } from "lucide-react";
+import { EmptyState } from "../components/ui/EmptyState";
 import { motion } from "motion/react";
 
 import { usePostDetailData } from "@/lib/hooks/use-post-detail-data";
@@ -472,20 +473,11 @@ export function PostDetail() {
               </div>
             ))}
             {comments.length === 0 && (
-              <div className="flex flex-col items-center py-8 gap-2">
-                <MessageCircle
-                  style={{
-                    width: 28,
-                    height: 28,
-                    color: "var(--neu-text-muted)",
-                    opacity: 0.3,
-                  }}
-                  strokeWidth={1.25}
-                />
-                <p style={{ fontSize: 13, color: "var(--neu-text-muted)" }}>
-                  暂无评论，来写第一条吧
-                </p>
-              </div>
+              <EmptyState
+                icon={MessageCircle}
+                title="暂无评论"
+                hint="来写第一条吧"
+              />
             )}
           </div>
           <div style={{ height: 80 }} />

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, MapPin, Search, Map, Radar } from "lucide-react";
+import { EmptyState } from "../components/ui/EmptyState";
 import { motion } from "motion/react";
 import { usePlatform } from "../contexts/PlatformContext";
 import { ListSkeleton } from "../components/ui/skeleton";
@@ -295,11 +296,7 @@ export function NearbyAll() {
               </motion.button>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
-                暂无附近用户
-              </p>
-            </div>
+            <EmptyState icon={Radar} title="暂无附近用户" />
           ) : (
             <div
               className="flex flex-col rounded-[16px] overflow-hidden"

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { Search, Plus, MessageSquareDashed, Users } from "lucide-react";
+import { EmptyState } from "../components/ui/EmptyState";
 import { motion, AnimatePresence } from "motion/react";
 import { usePlatform } from "../contexts/PlatformContext";
 import { ChatView } from "../components/ui/ChatView";
@@ -548,20 +549,7 @@ function MessagesMobile() {
           ) : loadingGroup ? (
             <ChatSkeleton />
           ) : filteredGroups.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <Users
-                style={{
-                  width: 36,
-                  height: 36,
-                  color: "var(--neu-text-muted)",
-                  opacity: 0.5,
-                }}
-                strokeWidth={1.25}
-              />
-              <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
-                暂无群聊
-              </p>
-            </div>
+            <EmptyState icon={Users} title="暂无群聊" />
           ) : (
             filteredGroups.map((group) => (
               <div key={group.group.group_id} className="px-2 py-1">

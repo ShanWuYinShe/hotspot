@@ -4,12 +4,13 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 import { motion } from "motion/react";
 import { usersService } from "@/lib/api/services";
 import { usePagination } from "@/lib/hooks/use-pagination";
 import { useAuthStore } from "@/lib/stores/auth";
 import { normalizeAvatar } from "@/lib/utils";
+import { EmptyState } from "../components/ui/EmptyState";
 import { useDocumentTitle } from "@/lib/hooks/use-document-title";
 
 export function Following() {
@@ -86,12 +87,7 @@ export function Following() {
             加载中…
           </p>
         ) : items.length === 0 ? (
-          <p
-            className="text-center py-8"
-            style={{ color: "var(--neu-text-muted)", fontSize: 14 }}
-          >
-            暂无关注
-          </p>
+          <EmptyState icon={Users} title="暂无关注" />
         ) : (
           <div className="flex flex-col gap-2">
             {items.map((user) => (

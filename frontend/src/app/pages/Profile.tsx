@@ -22,6 +22,7 @@ import {
   X,
   ArrowLeft,
 } from "lucide-react";
+import { EmptyState } from "../components/ui/EmptyState";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, useSearchParams } from "react-router";
 import { usePlatform } from "../contexts/PlatformContext";
@@ -300,24 +301,16 @@ function SectionMoments() {
         {isLoading ? (
           <GallerySkeleton />
         ) : activePosts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <Grid3X3
-              style={{
-                width: 36,
-                height: 36,
-                color: "var(--neu-text-muted)",
-                opacity: 0.4,
-              }}
-              strokeWidth={1.25}
-            />
-            <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
-              {activeTab === "posts"
+          <EmptyState
+            icon={Grid3X3}
+            title={
+              activeTab === "posts"
                 ? "暂无瞬间"
                 : activeTab === "liked"
                   ? "暂无喜欢"
-                  : "暂无收藏"}
-            </p>
-          </div>
+                  : "暂无收藏"
+            }
+          />
         ) : (
           <>
             <AnimatePresence mode="wait">
@@ -531,20 +524,11 @@ function SectionGroups() {
             </p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-3 xl:col-span-2">
-            <Users
-              style={{
-                width: 36,
-                height: 36,
-                color: "var(--neu-text-muted)",
-                opacity: 0.4,
-              }}
-              strokeWidth={1.25}
-            />
-            <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
-              暂无群组
-            </p>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="暂无群组"
+            className="xl:col-span-2"
+          />
         ) : (
           filtered.map((g) => (
             <motion.div
@@ -879,20 +863,11 @@ function SectionFriends() {
             </p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-3 xl:col-span-2">
-            <Users
-              style={{
-                width: 36,
-                height: 36,
-                color: "var(--neu-text-muted)",
-                opacity: 0.4,
-              }}
-              strokeWidth={1.25}
-            />
-            <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
-              暂无好友
-            </p>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="暂无好友"
+            className="xl:col-span-2"
+          />
         ) : (
           filtered.map((f) => {
             const isOnline = f.presence_status === "online";
@@ -1089,20 +1064,7 @@ function SectionFollowing() {
             </p>
           </div>
         ) : sorted.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <Heart
-              style={{
-                width: 36,
-                height: 36,
-                color: "var(--neu-text-muted)",
-                opacity: 0.4,
-              }}
-              strokeWidth={1.25}
-            />
-            <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
-              暂无关注
-            </p>
-          </div>
+          <EmptyState icon={Heart} title="暂无关注" />
         ) : (
           <div className="flex flex-col gap-3">
             {sorted.map((f) => {
@@ -1351,20 +1313,7 @@ function SectionFans() {
             </p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <UserPlus
-              style={{
-                width: 36,
-                height: 36,
-                color: "var(--neu-text-muted)",
-                opacity: 0.4,
-              }}
-              strokeWidth={1.25}
-            />
-            <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
-              暂无粉丝
-            </p>
-          </div>
+          <EmptyState icon={UserPlus} title="暂无粉丝" />
         ) : (
           <div className="flex flex-col gap-3">
             {filtered.map((f) => {
@@ -1930,20 +1879,7 @@ function ProfileDesktop() {
             </motion.button>
           </div>
           {loadingProfile || moments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <Grid3X3
-                style={{
-                  width: 36,
-                  height: 36,
-                  color: "var(--neu-text-muted)",
-                  opacity: 0.4,
-                }}
-                strokeWidth={1.25}
-              />
-              <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
-                暂无瞬间
-              </p>
-            </div>
+            <EmptyState icon={Grid3X3} title="暂无瞬间" />
           ) : (
             <div
               style={{
@@ -2363,24 +2299,16 @@ function ProfileMobile() {
               {(activeTab === "liked" ? loadingLiked : loadingMoments) ? (
                 <GallerySkeleton />
               ) : postsMap[activeTab].length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <Grid3X3
-                    style={{
-                      width: 36,
-                      height: 36,
-                      color: "var(--neu-text-muted)",
-                      opacity: 0.4,
-                    }}
-                    strokeWidth={1.25}
-                  />
-                  <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>
-                    {activeTab === "posts"
+                <EmptyState
+                  icon={Grid3X3}
+                  title={
+                    activeTab === "posts"
                       ? "暂无瞬间"
                       : activeTab === "liked"
                         ? "暂无喜欢"
-                        : "暂无收藏"}
-                  </p>
-                </div>
+                        : "暂无收藏"
+                  }
+                />
               ) : (
                 <>
                   <GalleryGrid

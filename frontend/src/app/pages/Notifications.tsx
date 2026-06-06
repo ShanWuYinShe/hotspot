@@ -9,6 +9,7 @@ import {
   MapPin,
   CheckCheck,
 } from "lucide-react";
+import { EmptyState } from "../components/ui/EmptyState";
 import { motion, AnimatePresence } from "motion/react";
 import { useHoverConfig } from "../hooks/useHoverConfig";
 import { usePlatform } from "../contexts/PlatformContext";
@@ -385,31 +386,7 @@ export function Notifications() {
               )}
 
               {filtered.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 gap-3">
-                  <div
-                    className="flex items-center justify-center rounded-full"
-                    style={{
-                      width: 64,
-                      height: 64,
-                      boxShadow:
-                        "6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)",
-                      border: "1px solid var(--neu-border)",
-                    }}
-                  >
-                    <Bell
-                      style={{
-                        width: 24,
-                        height: 24,
-                        color: "var(--neu-text-muted)",
-                        opacity: 0.5,
-                      }}
-                      strokeWidth={1.25}
-                    />
-                  </div>
-                  <p style={{ fontSize: 15, color: "var(--neu-text)" }}>
-                    暂无通知
-                  </p>
-                </div>
+                <EmptyState icon={Bell} title="暂无通知" />
               )}
             </>
           )}

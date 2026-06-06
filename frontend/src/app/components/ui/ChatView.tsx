@@ -7,10 +7,12 @@ import {
   Smile,
   CheckCheck,
   MoreHorizontal,
+  MessageCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useChatData } from "@/lib/hooks/use-chat-data";
 import { normalizeAvatar } from "@/lib/utils";
+import { EmptyState } from "./EmptyState";
 
 function formatTime(dateStr: string) {
   const d = new Date(dateStr);
@@ -63,10 +65,21 @@ export function ChatView({
   if (loading) {
     return (
       <div
-        className="flex flex-col items-center justify-center h-full gap-3"
+        className="flex flex-col items-center justify-center h-full gap-4"
         role="status"
         aria-busy="true"
       >
+        <motion.div
+          className="rounded-full"
+          style={{
+            width: 32,
+            height: 32,
+            border: "3px solid var(--neu-border)",
+            borderTopColor: "var(--neu-accent-primary)",
+          }}
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
+        />
         <p style={{ color: "var(--neu-text-muted)", fontSize: 14 }}>加载中…</p>
       </div>
     );
@@ -74,30 +87,21 @@ export function ChatView({
 
   if (error && !chat) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3">
-        <p style={{ color: "var(--neu-text-muted)", fontSize: 14 }}>{error}</p>
-        <motion.button
-          whileTap={{ scale: 0.94 }}
-          onClick={refresh}
-          className="px-4 py-2 rounded-full outline-none"
-          style={{
-            background: "var(--neu-accent-primary)",
-            color: "var(--text-on-accent, white)",
-            fontSize: 13,
-          }}
-        >
-          重试
-        </motion.button>
+      <div className="flex items-center justify-center h-full">
+        <EmptyState
+          icon={MessageCircle}
+          title={error}
+          actionLabel="重试"
+          onAction={refresh}
+        />
       </div>
     );
   }
 
   if (!chat) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3">
-        <p style={{ color: "var(--neu-text-muted)", fontSize: 14 }}>
-          会话不存在
-        </p>
+      <div className="flex items-center justify-center h-full">
+        <EmptyState icon={MessageCircle} title="会话不存在" />
       </div>
     );
   }
