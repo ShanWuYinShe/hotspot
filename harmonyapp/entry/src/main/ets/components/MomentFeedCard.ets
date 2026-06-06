@@ -190,7 +190,7 @@ export struct MomentFeedCard {
             })
 
             Text(this.moment.user?.nickname ?? '')
-              .fontSize(11)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontWeight(FontWeight.Medium)
               .fontColor(Color.White)
               .layoutWeight(1)
@@ -235,8 +235,8 @@ export struct MomentFeedCard {
       }
 
       Row() {
-        Row({ space: 14 }) {
-          Row({ space: 4 }) {
+        Row({ space: DesignConstants.SPACING.MD }) {
+          Row({ space: DesignConstants.SPACING.XS }) {
             Text() {
               SymbolSpan($r(AppIcon.HEART))
                 .fontSize(15)
@@ -246,11 +246,11 @@ export struct MomentFeedCard {
             }
             .onClick(() => this.onLikeClick(this.moment))
             Text(this.formatCount(this.getMomentState()?.likes_count ?? this.moment.likes_count))
-              .fontSize(11)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.getPalette().textSecondary)
           }
 
-          Row({ space: 4 }) {
+          Row({ space: DesignConstants.SPACING.XS }) {
             Text() {
               SymbolSpan($r(AppIcon.MESSAGE))
                 .fontSize(15)
@@ -258,7 +258,7 @@ export struct MomentFeedCard {
             }
             .onClick(() => this.openMomentDetail(this.moment))
             Text(this.formatCount(this.getMomentState()?.comments_count ?? this.moment.comments_count))
-              .fontSize(11)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.getPalette().textSecondary)
           }
         }
@@ -322,7 +322,7 @@ export struct MomentFeedCard {
       SystemAvatar({
         avatarUrl: this.moment.user?.avatar_url ?? '',
         name: this.moment.user?.nickname ?? '',
-        avatarSize: 40,
+        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
         shape: 'circle'
       })
         .onClick(() => this.openUserProfile(this.moment.user))
