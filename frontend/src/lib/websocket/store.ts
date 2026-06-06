@@ -223,8 +223,13 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
     if (url) {
       wsUrl = url;
     } else if (!wsUrl) {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      wsUrl = `${protocol}//${window.location.host}/ws/v1`;
+      const wsOverride = (import.meta.env.VITE_WS_URL as string | undefined) ?? "";
+      if (wsOverride) {
+        wsUrl = wsOverride;
+      } else {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        wsUrl = `${protocol}//${window.location.host}/ws/v1`;
+      }
     }
 
     set({ connectionState: "connecting" });

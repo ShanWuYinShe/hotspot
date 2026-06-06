@@ -36,8 +36,23 @@ export function CreateSheet({ onClose }: Props) {
     try {
       const tags = Array.from(selectedMoods);
       const description = text.trim();
-      const point = location?.point ?? { latitude: 0, longitude: 0 };
-      const locationName = location?.location_name ?? "";
+      // 若 location store 为空，回退到浏览器 geolocation（拿不到时给个默认 location_name）
+      let point = location?.point ?? { latitude: 0, longitude: 0 };
+      let locationName = location?.location_name ?? "";
+      if (!location && typeof navigator !== "undefined" && navigator.geolocation) {
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 }),
+          );
+          point = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+          locationName = "当前位置";
+        } catch {
+          locationName = "未知位置";
+        }
+      }
+      if (point.latitude === 0 && point.longitude === 0 && locationName === "") {
+        locationName = "未知位置";
+      }
       await momentsService.create({
         description,
         location: {
