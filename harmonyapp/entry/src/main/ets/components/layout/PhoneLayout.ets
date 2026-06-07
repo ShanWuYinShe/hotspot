@@ -2,60 +2,62 @@
  * PhoneLayout — 鸿蒙手机 + 平板布局
  *
  * 适用断点：xs / sm / md（< 840vp）
- * - 顶部：全宽应用栏（与 frontend StatusBar 对齐）
- * - 主体：底部 Tab 切换 + 4 个 TabContent（附近 / 发现 / 消息 / 我的）
+ * - 顶部：全宽应用栏
+ * - 主体：底部 Tab 切换 + 4 个 TabContent（Nearby / Discover / Message / Profile）
  * - 与 frontend TabletLayout "mobile-like UX" 风格一致
  *
- * 阶段 2 状态：占位实现（4 个 TabContent 各显示一句占位文字）
- * 阶段 3：将 features/main/pages/Index.ets 中手机端逻辑迁移至此
- *
- * 使用方式：
- *   if (isMobileForm(currentBreakpoint)) {
+ * 使用方式（在 Entry / Index 组件的 build() 中）：
+ *   if (isMobileForm(this.currentBreakpoint)) {
  *     PhoneLayout()
  *   } else {
  *     DesktopLayout()
  *   }
+ *
+ * 注意：PhoneLayout 是普通 @Component，不能用 @Entry（Stage 模型只能有一个入口）
  */
 
-import { GRID_BREAKPOINTS_VALUE } from '../../core/responsive/Breakpoint';
+import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
+import { DiscoverPage } from '../../features/discover/pages/DiscoverPage';
+import { MessagePage } from '../../features/message/pages/MessagePage';
+import { ProfilePage } from '../../features/profile/pages/ProfilePage';
 
-@Entry
 @Component
 export struct PhoneLayout {
   @State currentTabIndex: number = 0;
 
   build() {
     Column() {
-      // 顶部状态栏占位（与 frontend StatusBar 对齐；阶段 3 接入）
+      // 顶部应用栏
       Row() {
         Text('HotSpot')
           .fontSize($r('app.float.font_size_lg'))
           .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.brand_primary'))
       }
       .width('100%')
       .height(56)
       .padding({ left: 16, right: 16 })
       .backgroundColor($r('app.color.bg_primary'))
 
-      // 主体：4 个 Tab
+      // 主体：4 个 Tab 接入真实页面
       Tabs({ barPosition: BarPosition.End, index: this.currentTabIndex }) {
         TabContent() {
-          this.PlaceholderContent('附近', 'PhoneLayout 占位 — 阶段 3 从 Index.ets 接入 NearbyPage')
+          NearbyPage()
         }
         .tabBar(this.TabBarBuilder('附近', 0))
 
         TabContent() {
-          this.PlaceholderContent('发现', 'PhoneLayout 占位 — 阶段 3 接入 DiscoverPage')
+          DiscoverPage()
         }
         .tabBar(this.TabBarBuilder('发现', 1))
 
         TabContent() {
-          this.PlaceholderContent('消息', 'PhoneLayout 占位 — 阶段 3 接入 MessagePage')
+          MessagePage()
         }
         .tabBar(this.TabBarBuilder('消息', 2))
 
         TabContent() {
-          this.PlaceholderContent('我的', 'PhoneLayout 占位 — 阶段 3 接入 ProfilePage')
+          ProfilePage()
         }
         .tabBar(this.TabBarBuilder('我的', 3))
       }
@@ -85,25 +87,6 @@ export struct PhoneLayout {
         )
     }
     .height(56)
-    .justifyContent(FlexAlign.Center)
-  }
-
-  @Builder
-  PlaceholderContent(title: string, hint: string) {
-    Column() {
-      Text(title)
-        .fontSize($r('app.float.font_size_3xl'))
-        .fontWeight(FontWeight.SemiBold)
-        .fontColor($r('app.color.brand_primary'))
-        .margin({ bottom: 12 })
-      Text(hint)
-        .fontSize($r('app.float.font_size_sm'))
-        .fontColor($r('app.color.chip_inactive_text'))
-        .textAlign(TextAlign.Center)
-        .padding({ left: 32, right: 32 })
-    }
-    .width('100%')
-    .height('100%')
     .justifyContent(FlexAlign.Center)
   }
 }

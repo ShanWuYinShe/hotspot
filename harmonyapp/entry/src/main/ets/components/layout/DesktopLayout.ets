@@ -4,24 +4,29 @@
  * 适用断点：lg / xl / xxl（>= 840vp）
  * - 左侧：垂直导航栏（与 frontend 桌面 nav rail 对齐）
  * - 中央：主内容区（与 frontend main column 对齐，CONTAINER_MAX_WIDTH_VP 限宽）
- * - 右侧（可选）：详情面板
+ * - 右侧（可选）：详情面板（xl/xxl 触发）
  *
- * 阶段 2 状态：占位实现
- * 阶段 3：从 features/main/pages/Index.ets 抽取业务内容接入
- *
- * 使用方式：
- *   if (isDesktopForm(currentBreakpoint)) {
+ * 使用方式（在 Entry / Index 组件的 build() 中）：
+ *   if (isDesktopForm(this.currentBreakpoint)) {
  *     DesktopLayout()
  *   } else {
  *     PhoneLayout()
  *   }
+ *
+ * 注意：DesktopLayout 是普通 @Component，不能用 @Entry（Stage 模型只能有一个入口）
+ *
+ * 阶段 3 状态：4 个 nav 路由中只接入了 nearby（demo）；discover / messages / profile
+ * 占位（用 Text 显示路由名 + "占位"提示）
+ *
+ * TODO 阶段 4：用 SymbolSpan / SymbolGlyph 替换 NavItemBuilder 内的 Text label
+ * （与 frontend lucide-react 图标语义对齐）
  */
 
 import {
-  GRID_BREAKPOINTS_VALUE,
   CONTAINER_MAX_WIDTH_VP,
   type BreakpointType
 } from '../../core/responsive/Breakpoint';
+import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
 
 interface NavItem {
   label: string;
@@ -35,7 +40,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: '我的', route: 'profile' }
 ];
 
-@Entry
 @Component
 export struct DesktopLayout {
   @State currentRoute: string = 'nearby';
@@ -126,26 +130,25 @@ export struct DesktopLayout {
       .padding({ left: 24, right: 24 })
       .backgroundColor($r('app.color.bg_primary'))
 
-      // 主内容区
-      Scroll() {
+      // 主内容区：nearby 路由接 NearbyPage，其他占位
+      if (this.currentRoute === 'nearby') {
+        NearbyPage()
+      } else {
         Column() {
-          Text('DesktopLayout 占位')
-            .fontSize($r('app.float.font_size_2xl'))
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.brand_primary'))
-            .margin({ bottom: 12 })
-          Text('阶段 3 从 features/main/pages/Index.ets 抽取业务内容接入此布局')
+          Text(`${this.getCurrentTitle()}（占位）`)
+            .fontSize($r('app.float.font_size_lg'))
+            .fontColor($r('app.color.chip_inactive_text'))
+            .margin({ bottom: 8 })
+          Text('阶段 3 仅 nearby 接入，discover / messages / profile 待阶段 4 接入')
             .fontSize($r('app.float.font_size_sm'))
             .fontColor($r('app.color.chip_inactive_text'))
             .textAlign(TextAlign.Center)
             .padding({ left: 24, right: 24 })
         }
         .width('100%')
+        .height('100%')
         .justifyContent(FlexAlign.Center)
-        .padding({ top: 48, bottom: 48 })
       }
-      .layoutWeight(1)
-      .backgroundColor($r('app.color.bg_primary'))
     }
     .width('100%')
     .height('100%')
