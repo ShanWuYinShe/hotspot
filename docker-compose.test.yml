@@ -15,6 +15,9 @@ services:
         condition: service_healthy
     environment:
       APP_ENV: test
+      # BACKEND_URL 仅供 Go 集成测试（backend-go/test/integration/docker_test.go）使用，
+      # 与前端 React 应用的 vite env 无关。前端接入已统一走 nginx 网关 (8888)，
+      # 不再需要 BACKEND_URL/DOCKER_ENV/VITE_WS_URL 等 env 注入。
       BACKEND_URL: http://backend:8081
       POSTGRES_DSN: postgres://postgres:${POSTGRES_PASSWORD:-change-me}@postgres:5432/hotspot?sslmode=disable
     volumes:

@@ -39,19 +39,9 @@ export default defineConfig({
       },
     },
   },
-  server: {
-    proxy: {
-      '/api': {
-        target: process.env.DOCKER_ENV ? 'http://nginx:80' : 'http://localhost:8888',
-        changeOrigin: true,
-      },
-      '/ws': {
-        target: process.env.DOCKER_ENV ? 'http://nginx:80' : 'http://localhost:8888',
-        changeOrigin: true,
-        ws: true,
-        rewriteWsOrigin: true,
-      },
-    },
-  },
+  // 开发期 /api 与 /ws 反代由 nginx 网关统一处理，与生产保持一致。
+  // 访问入口为 http://localhost:<NGINX_PORT>（默认 8888，由 .env 配置），
+  // dev server 只负责静态资源 + HMR（端口 5173 仍 expose 但不再代理 API）。
+  // 详见 docker-compose.dev.yml 与 docker/nginx.dev.conf。
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })
