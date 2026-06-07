@@ -1,28 +1,32 @@
 /**
- * PhoneLayout — 鸿蒙手机 + 平板布局
+ * PhoneLayout — 鸿蒙手机 + 平板布局（完整版）
  *
  * 适用断点：xs / sm / md（< 840vp）
- * - 顶部：全宽应用栏
- * - 主体：底部 Tab 切换 + 4 个 TabContent（Nearby / Discover / Message / Profile）
- * - 与 frontend TabletLayout "mobile-like UX" 风格一致
  *
- * 使用方式（在 Entry / Index 组件的 build() 中）：
- *   if (isMobileForm(this.currentBreakpoint)) {
- *     PhoneLayout()
- *   } else {
- *     DesktopLayout()
- *   }
+ * 完整业务：
+ * - 4 Tab（Nearby / Discover / Create / Message / Profile）
+ * - 通知中心 / 通知 banner / 通知铃铛按钮
+ * - Create Sheet（bindSheet 模式 + 中间「+」按钮）
+ * - 性能详情 overlay
+ * - Login Prompt（未登录时包装消息 tab）
+ * - Upgrade Banner（临时用户时包装消息 tab）
  *
- * 注意：PhoneLayout 是普通 @Component，不能用 @Entry（Stage 模型只能有一个入口）
+ * 状态传递：通过 @Link 接收 Index.ets 维护的 6 个 @State
+ * 业务回调（initApp / WS / 通知同步等）仍由 Index.ets 的 aboutToAppear 触发
  *
- * 图标：使用系统 SymbolSpan（按 harmonyapp/CLAUDE.md "系统图标" 约束）。
- * 具体资源 ID 需在 DevEco Studio 中以代码补全确认。
+ * 图标：使用系统 SymbolSpan（按 harmonyapp/CLAUDE.md "系统图标" 约束）
  */
 
 import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
 import { DiscoverPage } from '../../features/discover/pages/DiscoverPage';
 import { MessagePage } from '../../features/message/pages/MessagePage';
 import { ProfilePage } from '../../features/profile/pages/ProfilePage';
+import { LoginPromptView } from '../LoginPromptView';
+import { NotificationCenter } from '../NotificationCenter';
+import { NotificationBanner } from '../NotificationBanner';
+import { PerformanceIndicator } from '../PerformanceIndicator';
+import { NotificationRenderer } from '../../core/services/notification/NotificationRenderer';
+import { type SmartNotification, type NotificationAction } from '../../core/services/notification/NotificationDataManager';
 
 interface TabItem {
   label: string;
@@ -32,66 +36,140 @@ interface TabItem {
 const TAB_ITEMS: TabItem[] = [
   { label: '附近', symbolId: $r('sys.symbol.location_fill') },
   { label: '发现', symbolId: $r('sys.symbol.compass') },
+  { label: '发布', symbolId: $r('sys.symbol.plus') },
   { label: '消息', symbolId: $r('sys.symbol.message_fill') },
   { label: '我的', symbolId: $r('sys.symbol.person_fill') }
 ];
 
+const CREATE_TAB_INDEX: number = 2;
+
 @Component
 export struct PhoneLayout {
-  @State currentTabIndex: number = 0;
+  // 来自父组件（Index.ets）的 6 个核心状态
+  @Link currentTabIndex: number;
+  @Link showCreateSheet: boolean;
+  @Link showNotificationCenter: boolean;
+  @Link showPerformanceDetails: boolean;
+  @Link isCreateTabPressed: boolean;
+  @Link isNotifBtnPressed: boolean;
+
+  // 来自父组件的只读状态
+  @Prop unreadCount: number = 0;
+  @Prop visibleNotifications: SmartNotification[] = [];
+  @Prop isLoggedIn: boolean = false;
+  @Prop userType: string = '';
+  @Prop safeAreaBottom: number = 0;
+  @Prop safeAreaTop: number = 0;
+  @Prop isTablet: boolean = false;
+  @Prop resolvedThemeId: string = 'vibrant_light';
+
+  // 内部状态
+  @State showUpgradeBanner: boolean = false;
+
+  private tabsController: TabsController = new TabsController();
+
+  aboutToAppear() {
+    this.showUpgradeBanner = this.isLoggedIn && this.userType === 'temp';
+  }
 
   build() {
-    Column() {
-      // 顶部应用栏
-      Row() {
-        Text('HotSpot')
-          .fontSize($r('app.float.font_size_lg'))
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.brand_primary'))
+    Stack({ alignContent: Alignment.Top }) {
+      // 主体：Tabs + 5 TabContent（Nearby / Discover / Create / Message / Profile）
+      Tabs({ barPosition: BarPosition.End, controller: this.tabsController, index: this.currentTabIndex }) {
+        TabContent() { NearbyPage() }.tabBar(this.TabBarBuilder(0))
+        TabContent() { Stack() { DiscoverPage(); this.DiscoverNotificationButton() } }.tabBar(this.TabBarBuilder(1))
+        TabContent() { Column() {} }.tabBar(this.CreateTabBuilder())
+        TabContent() {
+          if (this.isLoggedIn) {
+            Column() {
+              if (this.showUpgradeBanner) { this.UpgradeBanner() }
+              MessagePage()
+            }.width('100%').height('100%')
+          } else {
+            LoginPromptView({
+              title: '消息功能需要登录',
+              subtitle: '登录后可与好友实时聊天、加入群组讨论'
+            })
+          }
+        }.tabBar(this.TabBarBuilder(3))
+        TabContent() { ProfilePage() }.tabBar(this.TabBarBuilder(4))
       }
-      .width('100%')
-      .height(56)
-      .padding({ left: 16, right: 16 })
-      .backgroundColor($r('app.color.bg_primary'))
-
-      // 主体：4 个 Tab 接入真实页面
-      Tabs({ barPosition: BarPosition.End, index: this.currentTabIndex }) {
-        TabContent() {
-          NearbyPage()
-        }
-        .tabBar(this.TabBarBuilder(0))
-
-        TabContent() {
-          DiscoverPage()
-        }
-        .tabBar(this.TabBarBuilder(1))
-
-        TabContent() {
-          MessagePage()
-        }
-        .tabBar(this.TabBarBuilder(2))
-
-        TabContent() {
-          ProfilePage()
-        }
-        .tabBar(this.TabBarBuilder(3))
-      }
+      .barHeight(56)
+      .scrollable(false)
       .barMode(BarMode.Fixed)
-      .barBackgroundColor($r('app.color.tab_bar_bg'))
+      .divider({ strokeWidth: 0, color: Color.Transparent, startMargin: 0, endMargin: 0 })
       .onChange((index: number) => {
+        if (index === CREATE_TAB_INDEX) {
+          this.showCreateSheet = true;
+          return;
+        }
         this.currentTabIndex = index;
       })
+      .barBackgroundColor(Color.Transparent)
+      .backgroundColor($r('app.color.bg_primary'))
+      .width('100%')
+      .height('100%')
+      .padding({ bottom: this.safeAreaBottom })
+      .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
+
+      // 通知 banner overlay（顶部）
+      if (this.visibleNotifications.length > 0) {
+        Column() {
+          ForEach(this.visibleNotifications, (notification: SmartNotification) => {
+            NotificationBanner({
+              notification: notification,
+              onClose: () => NotificationRenderer.getInstance().hideNotification(notification.id, 'manual'),
+              onBannerClick: () => NotificationRenderer.getInstance().handleClick(notification),
+              onAction: (action: NotificationAction) => NotificationRenderer.getInstance().handleAction(action, notification)
+            })
+          }, (item: SmartNotification) => item.id)
+        }
+        .width('100%')
+        .padding({ top: 12, left: 16, right: 16 })
+      }
+
+      // 通知中心 overlay
+      if (this.showNotificationCenter) {
+        Stack() {
+          Column()
+            .width('100%').height('100%')
+            .backgroundColor('#66000000')
+            .onClick(() => { this.showNotificationCenter = false; })
+          Column() {
+            NotificationCenter({ onClose: () => { this.showNotificationCenter = false; } })
+          }
+          .width('100%').height('100%')
+          .backgroundColor($r('app.color.bg_primary'))
+        }
+        .width('100%').height('100%')
+      }
+
+      // 性能详情 overlay
+      if (this.showPerformanceDetails) {
+        Column() {
+          PerformanceIndicator({ showDetails: true, compact: false })
+        }
+        .width('100%').height('100%')
+        .backgroundColor($r('app.color.bg_primary'))
+        .onClick(() => { this.showPerformanceDetails = false; })
+      }
+
+      // Create Sheet
+      .bindSheet($$this.showCreateSheet, this.CreateSheetContent(), {
+        height: SheetSize.FIT_CONTENT,
+        dragBar: true,
+        showClose: true,
+        backgroundColor: $r('app.color.bg_primary')
+      })
     }
-    .width('100%')
-    .height('100%')
+    .width('100%').height('100%')
     .backgroundColor($r('app.color.bg_primary'))
   }
 
-  @Builder
-  TabBarBuilder(index: number) {
+  @Builder TabBarBuilder(index: number) {
     Column() {
       SymbolSpan(TAB_ITEMS[index].symbolId)
-        .fontSize(20)
+        .fontSize(24)
         .fontColor([
           this.currentTabIndex === index
             ? $r('app.color.brand_primary')
@@ -111,5 +189,128 @@ export struct PhoneLayout {
     }
     .height(56)
     .justifyContent(FlexAlign.Center)
+    .onClick(() => {
+      if (index !== CREATE_TAB_INDEX) {
+        this.tabsController.changeIndex(index);
+        this.currentTabIndex = index;
+      }
+    })
+  }
+
+  @Builder CreateTabBuilder() {
+    Column() {
+      Row() {
+        SymbolSpan($r('sys.symbol.plus'))
+          .fontSize(20)
+          .fontColor([
+            this.currentTabIndex === CREATE_TAB_INDEX
+              ? $r('app.color.bg_primary')
+              : $r('app.color.brand_primary')
+          ])
+      }
+      .width(40).height(40)
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor(
+        this.currentTabIndex === CREATE_TAB_INDEX
+          ? $r('app.color.brand_primary')
+          : $r('app.color.bg_secondary')
+      )
+      .borderRadius($r('app.float.radius_full'))
+      .border({ width: 1, color: $r('app.color.brand_primary') })
+      .scale(this.isCreateTabPressed ? { x: 0.9, y: 0.9 } : { x: 1, y: 1 })
+    }
+    .height(56)
+    .justifyContent(FlexAlign.Center)
+    .onClick(() => {
+      this.currentTabIndex = CREATE_TAB_INDEX;
+      this.showCreateSheet = true;
+    })
+  }
+
+  @Builder DiscoverNotificationButton() {
+    Row() {
+      Blank().layoutWeight(1)
+      Stack({ alignContent: Alignment.TopEnd }) {
+        Button() {
+          SymbolSpan(
+            this.unreadCount > 0
+              ? $r('sys.symbol.bell_fill')
+              : $r('sys.symbol.bell')
+          )
+            .fontSize(18)
+            .fontColor([$r('app.color.brand_primary')])
+        }
+        .type(ButtonType.Normal)
+        .width(40).height(40)
+        .backgroundColor($r('app.color.bg_secondary'))
+        .borderRadius($r('app.float.radius_full'))
+        .border({ width: 1, color: $r('app.color.divider') })
+        .scale(this.isNotifBtnPressed ? { x: 0.9, y: 0.9 } : { x: 1, y: 1 })
+        .onClick(() => { this.showNotificationCenter = true; })
+
+        if (this.unreadCount > 0) {
+          Text(this.unreadCount > 99 ? '99+' : `${this.unreadCount}`)
+            .fontSize(10)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('app.color.bg_primary'))
+            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .backgroundColor($r('app.color.brand_primary'))
+            .borderRadius($r('app.float.radius_full'))
+            .translate({ x: 8, y: -6 })
+        }
+      }
+      .margin({ top: this.safeAreaTop > 0 ? this.safeAreaTop + 12 : 24, right: 16 })
+    }
+    .width('100%')
+    .position({ x: 0, y: 0 })
+  }
+
+  @Builder CreateSheetContent() {
+    Column() {
+      Text('发布动态')
+        .fontSize($r('app.float.font_size_lg'))
+        .fontWeight(FontWeight.SemiBold)
+        .fontColor($r('app.color.brand_primary'))
+        .margin({ top: 24, bottom: 16 })
+      Button('发布文字动态')
+        .type(ButtonType.Normal)
+        .width('90%').height(48)
+        .backgroundColor($r('app.color.brand_primary'))
+        .fontColor($r('app.color.bg_primary'))
+        .borderRadius($r('app.float.radius_md'))
+        .margin({ bottom: 12 })
+        .onClick(() => { this.showCreateSheet = false; })
+      Button('发布图片动态')
+        .type(ButtonType.Normal)
+        .width('90%').height(48)
+        .backgroundColor($r('app.color.bg_secondary'))
+        .fontColor($r('app.color.brand_primary'))
+        .borderRadius($r('app.float.radius_md'))
+        .onClick(() => { this.showCreateSheet = false; })
+    }
+    .width('100%')
+    .padding({ bottom: 24 })
+  }
+
+  @Builder UpgradeBanner() {
+    Row() {
+      Text('当前为临时用户，注册账号可保留所有数据')
+        .fontSize($r('app.float.font_size_sm'))
+        .fontColor($r('app.color.chip_inactive_text'))
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+      Button('去注册')
+        .type(ButtonType.Normal)
+        .height(28)
+        .fontSize($r('app.float.font_size_sm'))
+        .backgroundColor($r('app.color.brand_primary'))
+        .fontColor($r('app.color.bg_primary'))
+        .borderRadius($r('app.float.radius_sm'))
+        .padding({ left: 12, right: 12 })
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+    .backgroundColor($r('app.color.chip_selected_bg'))
   }
 }

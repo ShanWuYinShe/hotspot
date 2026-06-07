@@ -74,6 +74,7 @@ struct Index {
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'lg';
 
   @State currentTabIndex: number = 0;
+  @State currentRoute: string = 'nearby';
   @State previousTabIndex: number = 0;
   @State isInitialized: boolean = false;
   @State lastError: string = '';
@@ -941,57 +942,42 @@ struct Index {
         .backgroundColor(this.getCurrentThemePalette().pageBackground)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       } else {
-        Stack({ alignContent: Alignment.Bottom }) {
-          // 底部背景容器：与页面背景无缝融合
-          Column() {}
-            .width('100%')
-            .height(this.getTabBarVisualStyle().height + this.safeAreaBottom)
-            .backgroundColor(this.getTabBarBackground())
-            .shadow(this.resolvedThemeId.startsWith('figma_neu') ?
-              this.getTabBarVisualStyle().shadow :
-              { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } as ShadowOptions)
+        if (isMobileForm(this.currentBreakpoint)) {
+          PhoneLayout({
+            currentTabIndex: $currentTabIndex,
+            showCreateSheet: $showCreateSheet,
+            showNotificationCenter: $showNotificationCenter,
+            showPerformanceDetails: $showPerformanceDetails,
+            isCreateTabPressed: $isCreateTabPressed,
+            isNotifBtnPressed: $isNotifBtnPressed,
+            unreadCount: this.unreadCount.total_unread_count,
+            visibleNotifications: this.visibleNotifications,
+            isLoggedIn: this.isLoggedIn,
+            userType: this.userType,
+            safeAreaTop: this.safeAreaTop,
+            safeAreaBottom: this.safeAreaBottom,
+            isTablet: this.isTablet,
+            resolvedThemeId: this.resolvedThemeId
+          })
+        } else {
+          DesktopLayout({
+            currentRoute: $currentRoute,
+            showCreateSheet: $showCreateSheet,
+            showNotificationCenter: $showNotificationCenter,
+            showPerformanceDetails: $showPerformanceDetails,
+            unreadCount: this.unreadCount.total_unread_count,
+            visibleNotifications: this.visibleNotifications,
+            isLoggedIn: this.isLoggedIn,
+            userType: this.userType,
+            currentBreakpoint: this.currentBreakpoint
+          })
+        }
+      }
+    }
+  }
 
-          Column() {
-        Navigation(this.navPathStack) {
-        Tabs({ barPosition: BarPosition.End, controller: this.tabsController }) {
-          // 1. 附近（含动态/用户/群组子标签）
-          TabContent() {
-            NearbyPage()
-          }
-          .tabBar(this.TabBuilderIcon('附近', 0, AppIcon.NEARBY))
-
-          // 2. 发现（热门话题/推荐用户/热门瞬间）
-          TabContent() {
-            DiscoverPage()
-          }
-          .tabBar(this.TabBuilderIcon('发现', 1, AppIcon.RECOMMEND))
-
-          // 3. 发布（+按钮，拦截后弹出 ActionSheet）
-          TabContent() {
-            // 占位：不会真正显示，点击时拦截弹出菜单
-            Column() {}
-          }
-          .tabBar(this.CreateTabBuilder())
-
-          // 4. 消息
-          TabContent() {
-            if (this.isLoggedIn) {
-              Column() {
-                if (this.userType === 'temp') {
-                  this.buildUpgradeBanner()
-                }
-                MessagePage()
-              }
-              .width('100%')
-              .height('100%')
-            } else {
-              LoginPromptView({
-                title: '消息功能需要登录',
-                subtitle: '登录后可与好友实时聊天、加入群组讨论',
-                icon: AppIcon.MESSAGE,
-                redirectUrl: PageNames.INDEX,
-                loginAction: '消息功能'
-              })
+  // 以下 build() 内容（line 945-1181）已迁移到 PhoneLayout / DesktopLayout
+  // 保留为空函数占位（避免 IDE 误删）；后续 commit 清理
             }
           }
           .tabBar(this.TabBuilderIcon('消息', 3, AppIcon.MESSAGE, this.isLoggedIn ? this.unreadCount.total_unread_count : 0))

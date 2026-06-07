@@ -1,25 +1,22 @@
 /**
- * DesktopLayout — 鸿蒙桌面 / 折叠屏 / PC 布局
+ * DesktopLayout — 鸿蒙桌面 / 折叠屏 / PC 布局（完整版）
  *
  * 适用断点：lg / xl / xxl（>= 840vp）
- * - 左侧：垂直导航栏（与 frontend 桌面 nav rail 对齐）
- * - 中央：主内容区（与 frontend main column 对齐，CONTAINER_MAX_WIDTH_VP 限宽）
- * - 右侧（可选）：详情面板（xl/xxl 触发）
  *
- * 使用方式（在 Entry / Index 组件的 build() 中）：
- *   if (isDesktopForm(this.currentBreakpoint)) {
- *     DesktopLayout()
- *   } else {
- *     PhoneLayout()
- *   }
+ * 完整业务：
+ * - 左侧 nav rail（4 路由：附近 / 发现 / 消息 / 我的）
+ * - 中央主内容（按 currentRoute 切换 NearbyPage / DiscoverPage / MessagePage / ProfilePage）
+ * - 右侧详情面板（xl/xxl 触发）
+ * - 通知中心 / 通知 banner overlay
+ * - 性能详情 overlay
+ * - Login Prompt 包装（未登录时）
+ * - Upgrade Banner（临时用户时）
  *
- * 注意：DesktopLayout 是普通 @Component，不能用 @Entry（Stage 模型只能有一个入口）
+ * 状态传递：通过 @Link 接收 Index.ets 维护的 4 个 @State
+ * 业务回调仍由 Index.ets 的 aboutToAppear 触发
  *
- * 阶段 3 状态：4 个 nav 路由中只接入了 nearby（demo）；discover / messages / profile
- * 占位（用 Text 显示路由名 + "占位"提示）
- *
- * TODO 阶段 4：用 SymbolSpan / SymbolGlyph 替换 NavItemBuilder 内的 Text label
- * （与 frontend lucide-react 图标语义对齐）
+ * 注意：DesktopLayout 是普通 @Component，不能用 @Entry
+ * 图标：使用系统 SymbolSpan
  */
 
 import {
@@ -30,6 +27,12 @@ import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
 import { DiscoverPage } from '../../features/discover/pages/DiscoverPage';
 import { MessagePage } from '../../features/message/pages/MessagePage';
 import { ProfilePage } from '../../features/profile/pages/ProfilePage';
+import { LoginPromptView } from '../LoginPromptView';
+import { NotificationCenter } from '../NotificationCenter';
+import { NotificationBanner } from '../NotificationBanner';
+import { PerformanceIndicator } from '../PerformanceIndicator';
+import { NotificationRenderer } from '../../core/services/notification/NotificationRenderer';
+import { type SmartNotification, type NotificationAction } from '../../core/services/notification/NotificationDataManager';
 
 interface NavItem {
   label: string;
@@ -46,8 +49,25 @@ const NAV_ITEMS: NavItem[] = [
 
 @Component
 export struct DesktopLayout {
-  @State currentRoute: string = 'nearby';
-  @State currentBreakpoint: BreakpointType = 'lg';
+  // 来自父组件的核心状态
+  @Link currentRoute: string;
+  @Link showNotificationCenter: boolean;
+  @Link showPerformanceDetails: boolean;
+  @Link showCreateSheet: boolean;
+
+  // 来自父组件的只读状态
+  @Prop unreadCount: number = 0;
+  @Prop visibleNotifications: SmartNotification[] = [];
+  @Prop isLoggedIn: boolean = false;
+  @Prop userType: string = '';
+  @Prop currentBreakpoint: BreakpointType = 'lg';
+
+  // 内部状态
+  @State showUpgradeBanner: boolean = false;
+
+  aboutToAppear() {
+    this.showUpgradeBanner = this.isLoggedIn && this.userType === 'temp';
+  }
 
   build() {
     SideBarContainer(SideBarContainerType.Embed) {
@@ -57,7 +77,7 @@ export struct DesktopLayout {
       // 中央主内容
       this.MainContent()
 
-      // 右侧详情面板（可选；x-breakpoint 时不显示）
+      // 右侧详情面板
     } {
       if (this.shouldShowRightPanel()) {
         this.RightDetailPanel()
@@ -66,31 +86,103 @@ export struct DesktopLayout {
     .showSideBar(true)
     .showControlButton(false)
     .sideBarWidth(240)
-    .controlButton({ icons: { hidden: '', shown: '' }, pos: { top: 0, left: 0 } })
     .backgroundColor($r('app.color.bg_primary'))
     .width('100%')
     .height('100%')
+
+    // 通知 banner overlay（顶部）
+    if (this.visibleNotifications.length > 0) {
+      Column() {
+        ForEach(this.visibleNotifications, (notification: SmartNotification) => {
+          NotificationBanner({
+            notification: notification,
+            onClose: () => NotificationRenderer.getInstance().hideNotification(notification.id, 'manual'),
+            onBannerClick: () => NotificationRenderer.getInstance().handleClick(notification),
+            onAction: (action: NotificationAction) => NotificationRenderer.getInstance().handleAction(action, notification)
+          })
+        }, (item: SmartNotification) => item.id)
+      }
+      .width('100%')
+      .padding({ top: 12, left: 16, right: 16 })
+      .position({ x: 0, y: 0 })
+    }
+
+    // 通知中心 overlay
+    if (this.showNotificationCenter) {
+      Stack() {
+        Column()
+          .width('100%')
+          .height('100%')
+          .backgroundColor('#66000000')
+          .onClick(() => { this.showNotificationCenter = false; })
+
+        Column() {
+          NotificationCenter({
+            onClose: () => { this.showNotificationCenter = false; }
+          })
+        }
+        .width('100%')
+        .height('100%')
+        .backgroundColor($r('app.color.bg_primary'))
+      }
+      .width('100%')
+      .height('100%')
+    }
+
+    // 性能详情 overlay
+    if (this.showPerformanceDetails) {
+      Column() {
+        PerformanceIndicator({ showDetails: true, compact: false })
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor($r('app.color.bg_primary'))
+      .onClick(() => { this.showPerformanceDetails = false; })
+    }
   }
 
   @Builder
   LeftNavRail() {
     Column() {
-      // Logo / 标题
       Text('HotSpot')
         .fontSize($r('app.float.font_size_xl'))
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.brand_primary'))
         .margin({ top: 24, bottom: 32 })
 
-      // 导航项
       ForEach(NAV_ITEMS, (item: NavItem) => {
         this.NavItemBuilder(item)
       }, (item: NavItem) => item.route)
+
+      // 通知铃铛入口
+      Blank().layoutWeight(1)
+      Row() {
+        SymbolSpan(
+          this.unreadCount > 0
+            ? $r('sys.symbol.bell_fill')
+            : $r('sys.symbol.bell')
+        )
+          .fontSize(20)
+          .fontColor([$r('app.color.brand_primary')])
+        Text('通知')
+          .fontSize($r('app.float.font_size_base'))
+          .fontColor($r('app.color.brand_primary'))
+          .margin({ left: 12 })
+      }
+      .width('100%')
+      .height(44)
+      .padding({ left: 12, right: 12 })
+      .borderRadius($r('app.float.radius_md'))
+      .backgroundColor($r('app.color.chip_selected_bg'))
+      .margin({ bottom: 24 })
+      .onClick(() => {
+        this.showNotificationCenter = true;
+      })
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.bg_secondary'))
-    .padding({ left: 16, right: 16 })
+    .padding({ left: 16, right: 16, top: 16 })
   }
 
   @Builder
@@ -130,25 +222,45 @@ export struct DesktopLayout {
   @Builder
   MainContent() {
     Column() {
-      // 顶部应用栏
+      // 顶部应用栏（含标题 + 通知铃铛 badge）
       Row() {
         Text(this.getCurrentTitle())
           .fontSize($r('app.float.font_size_2xl'))
           .fontWeight(FontWeight.SemiBold)
           .fontColor($r('app.color.brand_primary'))
+
+        Blank().layoutWeight(1)
+
+        if (this.unreadCount > 0) {
+          Text(`${this.unreadCount} 未读`)
+            .fontSize($r('app.float.font_size_sm'))
+            .fontColor($r('app.color.chip_inactive_text'))
+        }
       }
       .width('100%')
       .height(64)
       .padding({ left: 24, right: 24 })
       .backgroundColor($r('app.color.bg_primary'))
 
-      // 主内容区：4 路由全部接入（nearby / discover / messages / profile）
+      // 主内容区
       if (this.currentRoute === 'nearby') {
         NearbyPage()
       } else if (this.currentRoute === 'discover') {
         DiscoverPage()
       } else if (this.currentRoute === 'messages') {
-        MessagePage()
+        if (this.isLoggedIn) {
+          Column() {
+            if (this.showUpgradeBanner) {
+              this.UpgradeBanner()
+            }
+            MessagePage()
+          }
+        } else {
+          LoginPromptView({
+            title: '消息功能需要登录',
+            subtitle: '登录后可与好友实时聊天、加入群组讨论'
+          })
+        }
       } else if (this.currentRoute === 'profile') {
         ProfilePage()
       } else {
@@ -180,6 +292,30 @@ export struct DesktopLayout {
     .backgroundColor($r('app.color.bg_secondary'))
     .padding(16)
     .justifyContent(FlexAlign.Start)
+  }
+
+  @Builder
+  UpgradeBanner() {
+    Row() {
+      Text('当前为临时用户，注册账号可保留所有数据')
+        .fontSize($r('app.float.font_size_sm'))
+        .fontColor($r('app.color.chip_inactive_text'))
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Button('去注册')
+        .type(ButtonType.Normal)
+        .height(28)
+        .fontSize($r('app.float.font_size_sm'))
+        .backgroundColor($r('app.color.brand_primary'))
+        .fontColor($r('app.color.bg_primary'))
+        .borderRadius($r('app.float.radius_sm'))
+        .padding({ left: 12, right: 12 })
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+    .backgroundColor($r('app.color.chip_selected_bg'))
   }
 
   shouldShowRightPanel(): boolean {
