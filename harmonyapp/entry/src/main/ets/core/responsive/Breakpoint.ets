@@ -1,67 +1,111 @@
 /**
- * 响应式断点常量与工具函数
+ * 响应式断点（HarmonyOS ArkUI 声明式栅格）
  *
- * 断点值与 frontend `use-mobile.ts` MOBILE_BREAKPOINT=768 / Tailwind md=768 / lg=1024 / xl=1280 对齐，
- * 保证跨端（Web + 鸿蒙）在 phone / tablet / desktop / wide 四态的视觉与布局一致。
+ * 使用方式：
+ *   GridRow({ ...GRID_ROW_OPTIONS }) {
+ *     GridCol({ span: { sm: 12, md: 6, lg: 4 } }) { ... }
+ *   }
  *
- * 鸿蒙 vp 单位：1vp ≈ 1.5px @ 160dpi baseline；与 px 在常见 DPR 下数值近似，便于与 CSS 断点直接对齐。
+ *   if (GRID_ROW_OPTIONS.currentBreakpoint === 'lg' || GRID_ROW_OPTIONS.currentBreakpoint === 'xl') {
+ *     // desktop 布局
+ *   }
  *
- * 资源子目录约定（HarmonyOS 标准）：
- *   base/      — phone 默认
- *   phone/     — 显式手机（< 768vp）
- *   tablet/    — 平板（768-1023vp，**复用 phone 布局**，与 frontend TabletLayout 一致）
- *   2in1/      — 桌面 / 折叠屏（≥ 1024vp，独立布局）
+ * 设计动机：
+ *   - HarmonyOS 4+ 提供 GridRow/GridCol 声明式栅格（breakpoints / columns / gutter），
+ *     内部自动响应屏幕尺寸变化，无需写 mediaQuery 监听
+ *   - 与 frontend 768/1024/1280 断点风格对齐（lg 切桌面 = frontend `lg:` 断点），
+ *     但用 HarmonyOS 标准命名 xs/sm/md/lg/xl/xxl 与原生栅格无缝集成
+ *   - 旧版 mediaQuery 监听实现（BreakpointState.ets）已删除
  */
 
-// 断点阈值（vp）
-export const BREAKPOINT_MOBILE_MAX_VP: number = 768; // < 768vp = mobile
-export const BREAKPOINT_TABLET_MAX_VP: number = 1023; // 768-1023vp = tablet
-export const BREAKPOINT_DESKTOP_MIN_VP: number = 1024; // >= 1024vp = desktop
-export const BREAKPOINT_WIDE_MIN_VP: number = 1280; // >= 1280vp = wide
+// 断点阈值（vp）— 与 HarmonyOS ArkUI GridRow breakpoints 标准对齐
+export const BREAKPOINT_XS_MAX_VP: number = 319;   // < 320vp = xs
+export const BREAKPOINT_SM_MAX_VP: number = 599;   // 320-599vp = sm
+export const BREAKPOINT_MD_MAX_VP: number = 839;   // 600-839vp = md（手机横屏 / 平板竖屏）
+export const BREAKPOINT_LG_MAX_VP: number = 1199;  // 840-1199vp = lg（桌面 / 平板横屏）
+export const BREAKPOINT_XL_MAX_VP: number = 1599;  // 1200-1599vp = xl
+// >= 1600vp = xxl（宽屏）
 
 /**
- * 断点类型枚举
- * - MOBILE:  < 768vp（手机，单独布局）
- * - TABLET:  768-1023vp（平板，**复用 mobile 布局**，与 frontend TabletLayout 一致）
- * - DESKTOP: 1024-1279vp（桌面，多列布局 + 顶部 nav）
- * - WIDE:    >= 1280vp（宽屏，桌面布局 + 2 列 grid 变体）
+ * HarmonyOS 命名断点（与 ArkUI GridRow.currentBreakpoint 一致）
+ * - xs: < 320vp（紧凑手机）
+ * - sm: 320-599vp（标准手机竖屏）
+ * - md: 600-839vp（手机横屏 / 平板竖屏）
+ * - lg: 840-1199vp（**桌面** / 平板横屏，与 frontend `lg:` 断点对齐）
+ * - xl: 1200-1599vp（宽屏桌面，与 frontend `xl:` 对齐）
+ * - xxl: >= 1600vp（超宽屏）
  */
-export enum BreakpointType {
-  MOBILE = 'mobile',
-  TABLET = 'tablet',
-  DESKTOP = 'desktop',
-  WIDE = 'wide',
+export type BreakpointType = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+
+/**
+ * 业务视角的端形态
+ * - MOBILE: xs / sm / md（手机，**含平板竖屏**，与 frontend TabletLayout 一致）
+ * - DESKTOP: lg / xl / xxl（桌面 / 折叠屏 / PC）
+ */
+export type DeviceForm = 'mobile' | 'desktop';
+
+export function isMobileForm(bp: BreakpointType): boolean {
+  return bp === 'xs' || bp === 'sm' || bp === 'md';
+}
+
+export function isDesktopForm(bp: BreakpointType): boolean {
+  return bp === 'lg' || bp === 'xl' || bp === 'xxl';
 }
 
 /**
- * 根据屏幕宽度（vp）计算当前断点类型
- * @param widthVp 屏幕宽度（vp）
- * @returns 当前断点类型
+ * ArkUI GridRow breakpoints 配置（vp 单位）
+ * 与 frontend lg=1024 风格对齐：lg (840vp) 起视为桌面。
  */
-export function getBreakpointType(widthVp: number): BreakpointType {
-  if (widthVp >= BREAKPOINT_WIDE_MIN_VP) {
-    return BreakpointType.WIDE;
-  }
-  if (widthVp >= BREAKPOINT_DESKTOP_MIN_VP) {
-    return BreakpointType.DESKTOP;
-  }
-  if (widthVp >= BREAKPOINT_MOBILE_MAX_VP) {
-    return BreakpointType.TABLET;
-  }
-  return BreakpointType.MOBILE;
-}
+export const GRID_BREAKPOINTS_VALUE: string[] = [
+  '320vp',
+  '600vp',
+  '840vp',
+  '1200vp',
+  '1600vp'
+];
 
 /**
- * 判断是否为手机 + 平板（即"窄屏"—— 768vp 以下）
- * 与 frontend 768px 以下一致；tablet 在布局上与 mobile 复用同一套。
+ * ArkUI GridRow columns 配置：每个断点对应的栅格总列数
  */
-export function isNarrowScreen(breakpoint: BreakpointType): boolean {
-  return breakpoint === BreakpointType.MOBILE || breakpoint === BreakpointType.TABLET;
-}
+export const GRID_COLUMNS: Record<BreakpointType, number> = {
+  xs: 4,
+  sm: 4,
+  md: 8,
+  lg: 12,
+  xl: 12,
+  xxl: 12
+};
 
 /**
- * 判断是否为桌面（>= 1024vp）
+ * ArkUI GridRow gutter 配置：每个断点对应的列间距
  */
-export function isDesktopScreen(breakpoint: BreakpointType): boolean {
-  return breakpoint === BreakpointType.DESKTOP || breakpoint === BreakpointType.WIDE;
-}
+export const GRID_GUTTER_X: Record<BreakpointType, number> = {
+  xs: 8,
+  sm: 12,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 32
+};
+
+export const GRID_GUTTER_Y: Record<BreakpointType, number> = {
+  xs: 8,
+  sm: 12,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 32
+};
+
+/**
+ * 容器最大宽度（vp）— 与 frontend content max-width 对齐
+ * 桌面端限制内容最大宽度，避免超宽屏铺满
+ */
+export const CONTAINER_MAX_WIDTH_VP: Record<BreakpointType, number> = {
+  xs: 0,    // 充满
+  sm: 0,
+  md: 720,
+  lg: 960,
+  xl: 1200,
+  xxl: 1440
+};

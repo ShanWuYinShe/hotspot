@@ -10,7 +10,7 @@
     },
     {
       "name": "color_danger",
-      "value": "#EF4444"
+      "value": "#D4183D"
     },
     {
       "name": "color_overlay_light",
@@ -46,11 +46,11 @@
     },
     {
       "name": "brand_primary",
-      "value": "#4A7A57"
+      "value": "#030213"
     },
     {
       "name": "divider",
-      "value": "#F3F4F6"
+      "value": "#1A000000"
     },
     {
       "name": "status_online",
@@ -70,11 +70,11 @@
     },
     {
       "name": "chip_selected_bg",
-      "value": "#E2F0E7"
+      "value": "#ECECF0"
     },
     {
       "name": "chip_active_bg",
-      "value": "#4A7A57"
+      "value": "#030213"
     },
     {
       "name": "chip_active_text",
@@ -82,7 +82,7 @@
     },
     {
       "name": "chip_inactive_text",
-      "value": "#6B7280"
+      "value": "#717182"
     },
     {
       "name": "bubble_self_bg",

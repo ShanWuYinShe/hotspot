@@ -3,6 +3,148 @@
     {
       "name": "page_text_font_size",
       "value": "50fp"
+    },
+
+    {
+      "name": "radius_xs",
+      "value": "4vp"
+    },
+    {
+      "name": "radius_sm",
+      "value": "6vp"
+    },
+    {
+      "name": "radius_md",
+      "value": "10vp"
+    },
+    {
+      "name": "radius_lg",
+      "value": "14vp"
+    },
+    {
+      "name": "radius_xl",
+      "value": "20vp"
+    },
+    {
+      "name": "radius_full",
+      "value": "9999vp"
+    },
+
+    {
+      "name": "space_xxs",
+      "value": "2vp"
+    },
+    {
+      "name": "space_xs",
+      "value": "4vp"
+    },
+    {
+      "name": "space_sm",
+      "value": "8vp"
+    },
+    {
+      "name": "space_md",
+      "value": "12vp"
+    },
+    {
+      "name": "space_lg",
+      "value": "16vp"
+    },
+    {
+      "name": "space_xl",
+      "value": "20vp"
+    },
+    {
+      "name": "space_2xl",
+      "value": "24vp"
+    },
+    {
+      "name": "space_3xl",
+      "value": "32vp"
+    },
+    {
+      "name": "space_4xl",
+      "value": "40vp"
+    },
+    {
+      "name": "space_5xl",
+      "value": "48vp"
+    },
+
+    {
+      "name": "font_size_xs",
+      "value": "12fp"
+    },
+    {
+      "name": "font_size_sm",
+      "value": "14fp"
+    },
+    {
+      "name": "font_size_base",
+      "value": "16fp"
+    },
+    {
+      "name": "font_size_lg",
+      "value": "18fp"
+    },
+    {
+      "name": "font_size_xl",
+      "value": "20fp"
+    },
+    {
+      "name": "font_size_2xl",
+      "value": "24fp"
+    },
+    {
+      "name": "font_size_3xl",
+      "value": "30fp"
+    },
+    {
+      "name": "font_size_4xl",
+      "value": "36fp"
+    },
+
+    {
+      "name": "font_weight_regular",
+      "value": "400"
+    },
+    {
+      "name": "font_weight_medium",
+      "value": "500"
+    },
+    {
+      "name": "font_weight_semibold",
+      "value": "600"
+    },
+    {
+      "name": "font_weight_bold",
+      "value": "700"
+    },
+
+    {
+      "name": "line_height_tight",
+      "value": "1.2"
+    },
+    {
+      "name": "line_height_normal",
+      "value": "1.5"
+    },
+    {
+      "name": "line_height_relaxed",
+      "value": "1.75"
+    },
+
+    {
+      "name": "border_thin",
+      "value": "0.5vp"
+    },
+    {
+      "name": "border_normal",
+      "value": "1vp"
+    },
+    {
+      "name": "border_thick",
+      "value": "2vp"
     }
   ]
 }

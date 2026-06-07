@@ -2,7 +2,7 @@
   "color": [
     {
       "name": "start_window_background",
-      "value": "#0F1115"
+      "value": "#252525"
     },
     {
       "name": "color_shadow",
@@ -10,7 +10,7 @@
     },
     {
       "name": "color_danger",
-      "value": "#EF4444"
+      "value": "#A03F3C"
     },
     {
       "name": "color_overlay_light",
@@ -34,23 +34,23 @@
     },
     {
       "name": "bg_primary",
-      "value": "#0F1115"
+      "value": "#252525"
     },
     {
       "name": "bg_secondary",
-      "value": "#171A20"
+      "value": "#1A1A1A"
     },
     {
       "name": "bg_tertiary",
-      "value": "#222733"
+      "value": "#2A2A2A"
     },
     {
       "name": "brand_primary",
-      "value": "#6BAF86"
+      "value": "#FBFBFB"
     },
     {
       "name": "divider",
-      "value": "#28303D"
+      "value": "#2D3544"
     },
     {
       "name": "status_online",
@@ -66,23 +66,23 @@
     },
     {
       "name": "color_success",
-      "value": "#4ADE80"
+      "value": "#34D399"
     },
     {
       "name": "chip_selected_bg",
-      "value": "#1F3A2A"
+      "value": "#2A2A2A"
     },
     {
       "name": "chip_active_bg",
-      "value": "#6BAF86"
+      "value": "#FBFBFB"
     },
     {
       "name": "chip_active_text",
-      "value": "#0F1115"
+      "value": "#252525"
     },
     {
       "name": "chip_inactive_text",
-      "value": "#A5ACBA"
+      "value": "#B5B5B5"
     },
     {
       "name": "bubble_self_bg",
@@ -94,11 +94,11 @@
     },
     {
       "name": "tab_bar_bg",
-      "value": "#11151D"
+      "value": "#1A1A1A"
     },
     {
       "name": "section_header_bg",
-      "value": "#11151D"
+      "value": "#1A1A1A"
     },
     {
       "name": "bg_inset",
@@ -110,7 +110,7 @@
     },
     {
       "name": "chat_bg",
-      "value": "#11131D"
+      "value": "#1A1A1A"
     },
     {
       "name": "chat_list_bg",
@@ -130,7 +130,7 @@
     },
     {
       "name": "chat_input_bar_bg",
-      "value": "#11151D"
+      "value": "#1A1A1A"
     },
     {
       "name": "chat_input_field_bg",
@@ -162,11 +162,11 @@
     },
     {
       "name": "chat_title_icon_bg",
-      "value": "#171A20"
+      "value": "#1A1A1A"
     },
     {
       "name": "chat_title_bar_bg",
-      "value": "#171A20"
+      "value": "#1A1A1A"
     },
     {
       "name": "chat_title_bar_border",
