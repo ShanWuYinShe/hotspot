@@ -101,6 +101,10 @@ export struct ProfileEditPage {
     return this.tags.length < MAX_TAGS;
   }
 
+  private isTagDisabled(tag: string): boolean {
+    return !this.isTagSelected(tag) && !this.canSelectMoreTags();
+  }
+
   private handleSave(): void {
     const trimmedNickname = this.nickname.trim();
     if (!trimmedNickname) {
@@ -288,22 +292,19 @@ export struct ProfileEditPage {
 
               Flex({ wrap: FlexWrap.Wrap }) {
                 ForEach(TAG_OPTIONS, (tag: string) => {
-                  const selected: boolean = this.isTagSelected(tag);
-                  const disabled: boolean = !selected && !this.canSelectMoreTags();
-
                   Button() {
                     Text('#' + tag)
                       .fontSize(12)
-                      .fontColor(selected ? Color.White : (disabled ? this.getCurrentThemePalette().textTertiary : this.getCurrentThemePalette().textSecondary))
+                      .fontColor(this.isTagSelected(tag) ? Color.White : (this.isTagDisabled(tag) ? this.getCurrentThemePalette().textTertiary : this.getCurrentThemePalette().textSecondary))
                   }
                   .type(ButtonType.Normal)
                   .padding({ left: 12, right: 12, top: 6, bottom: 6 })
                   .borderRadius(16)
-                  .backgroundColor(selected ? this.getCurrentThemePalette().accentBackground : this.getSurfaceBackground())
-                  .border({ width: 1, color: selected ? Color.Transparent : this.getSurfaceBorder() })
-                  .opacity(disabled ? 0.4 : 1.0)
+                  .backgroundColor(this.isTagSelected(tag) ? this.getCurrentThemePalette().accentBackground : this.getSurfaceBackground())
+                  .border({ width: 1, color: this.isTagSelected(tag) ? Color.Transparent : this.getSurfaceBorder() })
+                  .opacity(this.isTagDisabled(tag) ? 0.4 : 1.0)
                   .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-                  .enabled(!disabled)
+                  .enabled(!this.isTagDisabled(tag))
                   .onClick(() => {
                     this.toggleTag(tag);
                   })
