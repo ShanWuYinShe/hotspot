@@ -14,12 +14,27 @@
  *   }
  *
  * 注意：PhoneLayout 是普通 @Component，不能用 @Entry（Stage 模型只能有一个入口）
+ *
+ * 图标：使用系统 SymbolSpan（按 harmonyapp/CLAUDE.md "系统图标" 约束）。
+ * 具体资源 ID 需在 DevEco Studio 中以代码补全确认。
  */
 
 import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
 import { DiscoverPage } from '../../features/discover/pages/DiscoverPage';
 import { MessagePage } from '../../features/message/pages/MessagePage';
 import { ProfilePage } from '../../features/profile/pages/ProfilePage';
+
+interface TabItem {
+  label: string;
+  symbolId: Resource;
+}
+
+const TAB_ITEMS: TabItem[] = [
+  { label: '附近', symbolId: $r('sys.symbol.location_fill') },
+  { label: '发现', symbolId: $r('sys.symbol.compass') },
+  { label: '消息', symbolId: $r('sys.symbol.message_fill') },
+  { label: '我的', symbolId: $r('sys.symbol.person_fill') }
+];
 
 @Component
 export struct PhoneLayout {
@@ -44,22 +59,22 @@ export struct PhoneLayout {
         TabContent() {
           NearbyPage()
         }
-        .tabBar(this.TabBarBuilder('附近', 0))
+        .tabBar(this.TabBarBuilder(0))
 
         TabContent() {
           DiscoverPage()
         }
-        .tabBar(this.TabBarBuilder('发现', 1))
+        .tabBar(this.TabBarBuilder(1))
 
         TabContent() {
           MessagePage()
         }
-        .tabBar(this.TabBarBuilder('消息', 2))
+        .tabBar(this.TabBarBuilder(2))
 
         TabContent() {
           ProfilePage()
         }
-        .tabBar(this.TabBarBuilder('我的', 3))
+        .tabBar(this.TabBarBuilder(3))
       }
       .barMode(BarMode.Fixed)
       .barBackgroundColor($r('app.color.tab_bar_bg'))
@@ -73,18 +88,26 @@ export struct PhoneLayout {
   }
 
   @Builder
-  TabBarBuilder(label: string, _index: number) {
+  TabBarBuilder(index: number) {
     Column() {
-      Text(label)
-        .fontSize($r('app.float.font_size_sm'))
+      SymbolSpan(TAB_ITEMS[index].symbolId)
+        .fontSize(20)
+        .fontColor([
+          this.currentTabIndex === index
+            ? $r('app.color.brand_primary')
+            : $r('app.color.chip_inactive_text')
+        ])
+      Text(TAB_ITEMS[index].label)
+        .fontSize($r('app.float.font_size_xs'))
         .fontColor(
-          this.currentTabIndex === _index
+          this.currentTabIndex === index
             ? $r('app.color.brand_primary')
             : $r('app.color.chip_inactive_text')
         )
         .fontWeight(
-          this.currentTabIndex === _index ? FontWeight.Medium : FontWeight.Regular
+          this.currentTabIndex === index ? FontWeight.Medium : FontWeight.Regular
         )
+        .margin({ top: 2 })
     }
     .height(56)
     .justifyContent(FlexAlign.Center)

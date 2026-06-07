@@ -28,6 +28,7 @@ import { StorageKeys } from '../constants/AppConstants';
 import { ApiClient } from '../core/api/ApiClient';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { AppRouter, ShareResolutionRouteParam } from '../core/router/AppRouter';
+import { getBreakpointType, type BreakpointType } from '../core/responsive/Breakpoint';
 
 const DOMAIN_NUMBER: number = 0xFF00;
 const TAG: string = 'GeoTalk';
@@ -214,6 +215,8 @@ export default class EntryAbility extends UIAbility {
         '设备信息 - 类型: %{public}s, 系统: %{public}s, 品牌: %{public}s, 型号: %{public}s',
         device, osVersion, brand, model);
 
+      // 计算并存储当前响应式断点（xs/sm/md/lg/xl/xxl）
+      this.computeAndStoreBreakpoint();
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, '获取设备信息失败: %{public}s', JSON.stringify(error));
     }
@@ -315,6 +318,32 @@ export default class EntryAbility extends UIAbility {
       hilog.warn(DOMAIN_NUMBER, TAG, '获取设备密度失败，使用默认值: %{public}s', JSON.stringify(error));
       this.cachedDensityScale = 1;
       return this.cachedDensityScale;
+    }
+  }
+
+  /**
+   * 计算并存储当前响应式断点到 AppStorage 'currentBreakpoint'
+   * - 读 display.getDefaultDisplaySync() 拿 width + densityDPI
+   * - 换算为 vp 后用 getBreakpointType() 算断点
+   * - 写入 AppStorage，Index.ets / PhoneLayout / DesktopLayout 读取
+   */
+  private computeAndStoreBreakpoint(): void {
+    try {
+      const displayInfo = display.getDefaultDisplaySync();
+      const px = displayInfo.width;
+      const density = displayInfo.densityDPI;
+      if (px <= 0 || density <= 0) {
+        hilog.warn(DOMAIN_NUMBER, TAG, 'display 信息异常 (px=%{public}d, density=%{public}d)，breakpoint 保持默认 lg', px, density);
+        AppStorage.setOrCreate<BreakpointType>('currentBreakpoint', 'lg');
+        return;
+      }
+      const widthVp = Math.floor((px * 160) / density);
+      const bp: BreakpointType = getBreakpointType(widthVp);
+      AppStorage.setOrCreate<BreakpointType>('currentBreakpoint', bp);
+      hilog.info(DOMAIN_NUMBER, TAG, '当前断点: %{public}s (px=%{public}d, density=%{public}d, vp=%{public}d)', bp, px, density, widthVp);
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, '计算 breakpoint 失败，使用默认 lg: %{public}s', JSON.stringify(error));
+      AppStorage.setOrCreate<BreakpointType>('currentBreakpoint', 'lg');
     }
   }
 

@@ -53,6 +53,30 @@ export function isDesktopForm(bp: BreakpointType): boolean {
 }
 
 /**
+ * 根据屏幕宽度（vp）计算当前断点类型
+ * @param widthVp 屏幕宽度（vp）
+ * @returns 当前断点类型
+ */
+export function getBreakpointType(widthVp: number): BreakpointType {
+  if (widthVp >= BREAKPOINT_XL_MAX_VP + 1) {
+    return 'xxl';
+  }
+  if (widthVp >= BREAKPOINT_LG_MAX_VP + 1) {
+    return 'xl';
+  }
+  if (widthVp >= BREAKPOINT_MD_MAX_VP + 1) {
+    return 'lg';
+  }
+  if (widthVp >= BREAKPOINT_XS_MAX_VP + 1) {
+    return 'md';
+  }
+  if (widthVp >= BREAKPOINT_XS_MAX_VP - 300) {
+    return 'sm';
+  }
+  return 'xs';
+}
+
+/**
  * ArkUI GridRow breakpoints 配置（vp 单位）
  * 与 frontend lg=1024 风格对齐：lg (840vp) 起视为桌面。
  */

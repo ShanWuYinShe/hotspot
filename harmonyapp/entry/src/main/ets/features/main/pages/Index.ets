@@ -41,6 +41,7 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { type BreakpointType } from '../../../core/responsive/Breakpoint';
 import { curves } from '@kit.ArkUI';
 
 const DOMAIN_NUMBER: number = 0xFF09;
@@ -70,6 +71,7 @@ struct Index {
   @StorageLink(STORAGE_KEY_OPEN_CREATE_SHEET) @Watch('onCreateSheetRequested') openCreateSheet: boolean = false;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @StorageProp('isTablet') isTablet: boolean = false;
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'lg';
 
   @State currentTabIndex: number = 0;
   @State previousTabIndex: number = 0;

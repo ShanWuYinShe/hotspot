@@ -27,17 +27,21 @@ import {
   type BreakpointType
 } from '../../core/responsive/Breakpoint';
 import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
+import { DiscoverPage } from '../../features/discover/pages/DiscoverPage';
+import { MessagePage } from '../../features/message/pages/MessagePage';
+import { ProfilePage } from '../../features/profile/pages/ProfilePage';
 
 interface NavItem {
   label: string;
   route: string;
+  symbolId: Resource;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: '附近', route: 'nearby' },
-  { label: '发现', route: 'discover' },
-  { label: '消息', route: 'messages' },
-  { label: '我的', route: 'profile' }
+  { label: '附近', route: 'nearby', symbolId: $r('sys.symbol.location_fill') },
+  { label: '发现', route: 'discover', symbolId: $r('sys.symbol.compass') },
+  { label: '消息', route: 'messages', symbolId: $r('sys.symbol.message_fill') },
+  { label: '我的', route: 'profile', symbolId: $r('sys.symbol.person_fill') }
 ];
 
 @Component
@@ -92,6 +96,13 @@ export struct DesktopLayout {
   @Builder
   NavItemBuilder(item: NavItem) {
     Row() {
+      SymbolSpan(item.symbolId)
+        .fontSize(20)
+        .fontColor([
+          this.currentRoute === item.route
+            ? $r('app.color.brand_primary')
+            : $r('app.color.chip_inactive_text')
+        ])
       Text(item.label)
         .fontSize($r('app.float.font_size_base'))
         .fontColor(
@@ -102,6 +113,7 @@ export struct DesktopLayout {
         .fontWeight(
           this.currentRoute === item.route ? FontWeight.Medium : FontWeight.Regular
         )
+        .margin({ left: 12 })
     }
     .width('100%')
     .height(44)
@@ -130,20 +142,20 @@ export struct DesktopLayout {
       .padding({ left: 24, right: 24 })
       .backgroundColor($r('app.color.bg_primary'))
 
-      // 主内容区：nearby 路由接 NearbyPage，其他占位
+      // 主内容区：4 路由全部接入（nearby / discover / messages / profile）
       if (this.currentRoute === 'nearby') {
         NearbyPage()
+      } else if (this.currentRoute === 'discover') {
+        DiscoverPage()
+      } else if (this.currentRoute === 'messages') {
+        MessagePage()
+      } else if (this.currentRoute === 'profile') {
+        ProfilePage()
       } else {
         Column() {
-          Text(`${this.getCurrentTitle()}（占位）`)
+          Text('未知路由')
             .fontSize($r('app.float.font_size_lg'))
             .fontColor($r('app.color.chip_inactive_text'))
-            .margin({ bottom: 8 })
-          Text('阶段 3 仅 nearby 接入，discover / messages / profile 待阶段 4 接入')
-            .fontSize($r('app.float.font_size_sm'))
-            .fontColor($r('app.color.chip_inactive_text'))
-            .textAlign(TextAlign.Center)
-            .padding({ left: 24, right: 24 })
         }
         .width('100%')
         .height('100%')
