@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "/Users/liyou/.ohos/config/default_harmonyapp_B9Uv_-vddcTKAoWc3LuP-S_-NldVKoukY5K_Xa_ccCI=.cer",
+          "certpath": "/Users/liyou/.ohos/config/default_harmonyapp_hY-oXtHDp2vwW9ved-9DrO2wSbqWkgNnEiIM4ztl7Qo=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001BD35DF091F9DCBBAE96450C17F976DE17E3796953ED8EF9C603461F332A17E1FDB5ECB1C3362EAA",
-          "profile": "/Users/liyou/.ohos/config/default_harmonyapp_B9Uv_-vddcTKAoWc3LuP-S_-NldVKoukY5K_Xa_ccCI=.p7b",
+          "keyPassword": "0000001BA26ED408929972C753D9E56A6FFC8AEA61D7186B1CEB45E30E19C9976D2195103AA5452E434E26",
+          "profile": "/Users/liyou/.ohos/config/default_harmonyapp_hY-oXtHDp2vwW9ved-9DrO2wSbqWkgNnEiIM4ztl7Qo=.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "/Users/liyou/.ohos/config/default_harmonyapp_B9Uv_-vddcTKAoWc3LuP-S_-NldVKoukY5K_Xa_ccCI=.p12",
-          "storePassword": "0000001B9A440CE7B0F46CC132B65ADF202A1D73515774CBC0D4A0175E4D931C82CCA1091AE2EB66EBF248"
+          "storeFile": "/Users/liyou/.ohos/config/default_harmonyapp_hY-oXtHDp2vwW9ved-9DrO2wSbqWkgNnEiIM4ztl7Qo=.p12",
+          "storePassword": "0000001B866ED4E7983FB705F77A32441BABE65D1A47131994292613ED93AA11D61504C4565C94D4304FC7"
         }
       }
     ],
