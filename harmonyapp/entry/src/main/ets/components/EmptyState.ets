@@ -16,43 +16,66 @@ export struct EmptyState {
   @Prop actionLabel: string = '';
   onAction?: () => void;
 
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
   build() {
-    Column({ space: DesignConstants.SPACING.LG }) {
-      Text() {
-        SymbolSpan($r(this.icon))
-          .fontSize(48)
-          .fontColor([this.getPalette().iconMuted])
-      }
+    Column() {
+      Column({ space: DesignConstants.SPACING.LG }) {
+        Stack() {
+          Column()
+            .width(64)
+            .height(64)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(this.getPalette().surfaceBackground)
+            .shadow(this.getPalette().controlShadow)
+            .border({ width: 1, color: this.getPalette().floatingBorderColor })
 
-      Text(this.message ?? '')
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor(this.getPalette().textSecondary)
-        .textAlign(TextAlign.Center)
-        .lineHeight(24)
+          Text() {
+            SymbolSpan($r(this.icon))
+              .fontSize(30)
+              .fontColor([this.getPalette().accentBackground])
+          }
+        }
+        .width(64)
+        .height(64)
 
-      if ((this.actionLabel ?? '').length > 0 && this.onAction) {
-        Button(this.actionLabel ?? '')
-          .type(ButtonType.Normal)
-          .stateEffect(true)
-          .backgroundColor(this.getPalette().accentBackground)
-          .fontColor(this.getPalette().accentText as ResourceColor)
-          .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .onClick(() => {
-            this.onAction?.();
-          })
+        Text(this.message ?? '')
+          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .fontColor(this.getPalette().textSecondary)
+          .textAlign(TextAlign.Center)
+          .lineHeight(24)
+
+        if ((this.actionLabel ?? '').length > 0 && this.onAction) {
+          Button(this.actionLabel ?? '')
+            .type(ButtonType.Normal)
+            .stateEffect(true)
+            .backgroundColor(this.getPalette().accentBackground)
+            .fontColor(this.getPalette().accentText as ResourceColor)
+            .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
+            .borderRadius(DesignConstants.SHAPE.BUTTON)
+            .border({ width: 1, color: this.getPalette().primaryButtonBorderColor })
+            .shadow(this.getPalette().accentShadow)
+            .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
+            .onClick(() => {
+              this.onAction?.();
+            })
+        }
       }
+      .width('100%')
+      .padding(DesignConstants.SPACING.XXL)
+      .borderRadius(DesignConstants.SHAPE.HERO_CARD)
+      .backgroundColor(this.getPalette().surfaceBackground)
+      .border({ width: 1, color: this.getPalette().floatingBorderColor })
+      .shadow(this.getPalette().elevatedShadow)
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .padding(DesignConstants.SPACING.XXL)
+    .padding(DesignConstants.SPACING.XL)
   }
 }
 
@@ -67,7 +90,11 @@ export struct LoadingMoreIndicator {
 
   build() {
     Row({ space: DesignConstants.SPACING.SM }) {
-      LoadingProgress().width(20).height(20).accessibilityText('正在加载')
+      LoadingProgress()
+        .width(20)
+        .height(20)
+        .color(AppThemeManager.getSafeCurrentPalette().accentBackground)
+        .accessibilityText('正在加载')
       Text(this.message)
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor(AppThemeManager.getSafeCurrentPalette().textSecondary)
@@ -75,6 +102,10 @@ export struct LoadingMoreIndicator {
     .width('100%')
     .justifyContent(FlexAlign.Center)
     .padding(DesignConstants.SPACING.MD)
+    .borderRadius(DesignConstants.SHAPE.CHIP)
+    .backgroundColor(AppThemeManager.getSafeCurrentPalette().surfaceBackground)
+    .border({ width: 1, color: AppThemeManager.getSafeCurrentPalette().floatingBorderColor })
+    .shadow(AppThemeManager.getSafeCurrentPalette().surfaceShadow)
     .accessibilityText(this.message)
   }
 }
@@ -86,7 +117,11 @@ export struct LoadingMoreIndicator {
 @Builder
 export function RefreshIndicator() {
   Row() {
-    LoadingProgress().width(24).height(24).accessibilityText('正在刷新')
+    LoadingProgress()
+      .width(24)
+      .height(24)
+      .color(AppThemeManager.getSafeCurrentPalette().accentBackground)
+      .accessibilityText('正在刷新')
     Text('正在刷新...')
       .fontSize(DesignConstants.FONT.SIZE.MD)
       .margin({ left: DesignConstants.SPACING.SM })

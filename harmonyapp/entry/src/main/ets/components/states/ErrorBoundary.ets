@@ -35,13 +35,15 @@ export struct ErrorBoundary {
   build() {
     if (this.err) {
       Column({ space: 16 }) {
-        SymbolSpan($r('sys.symbol.exclamationmark_triangle_fill'))
-          .fontSize(48)
-          .fontColor([$r('app.color.color_danger')])
+        Text() {
+          SymbolSpan($r('sys.symbol.exclamationmark_triangle_fill'))
+            .fontSize(48)
+            .fontColor([$r('app.color.color_danger')])
+        }
 
         Text('加载失败')
           .fontSize($r('app.float.font_size_lg'))
-          .fontWeight(FontWeight.SemiBold)
+          .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.brand_primary'))
 
         Text(this.err)

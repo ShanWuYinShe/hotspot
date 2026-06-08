@@ -341,9 +341,9 @@ const VIBRANT_DARK = buildPalette(
 
 const THEME_OPTIONS: ThemeOptionItem[] = [
   { mode: 'follow_system', label: '跟随系统', description: '自动匹配系统明暗模式' } as ThemeOptionItem,
+  { mode: 'figma_neu', label: '浮雕暖调', description: '柔和压边、暖灰底与立体按钮感' } as ThemeOptionItem,
   { mode: 'vibrant', label: '活力靛蓝', description: '靛蓝强调、带色调单向阴影' } as ThemeOptionItem,
-  { mode: 'default_clean', label: '清新森林', description: '纯扁平设计、森林绿强调' } as ThemeOptionItem,
-  { mode: 'figma_neu', label: '浮雕暖调', description: '柔和压边、暖灰底与立体按钮感' } as ThemeOptionItem
+  { mode: 'default_clean', label: '清新森林', description: '纯扁平设计、森林绿强调' } as ThemeOptionItem
 ];
 
 export class AppThemeManager {
@@ -390,7 +390,7 @@ export class AppThemeManager {
     try {
       return AppThemeManager.getCurrentPalette();
     } catch (_) {
-      return DEFAULT_CLEAN_LIGHT;
+      return FIGMA_NEU_LIGHT;
     }
   }
 
@@ -481,6 +481,7 @@ export class AppThemeManager {
   private static resolveThemeId(themeMode: ThemeMode, isDarkMode: boolean): ResolvedThemeId {
     switch (themeMode) {
       case 'follow_system':
+        return isDarkMode ? 'figma_neu_dark' : 'figma_neu_light';
       case 'vibrant':
         return isDarkMode ? 'vibrant_dark' : 'vibrant_light';
       case 'default_clean':

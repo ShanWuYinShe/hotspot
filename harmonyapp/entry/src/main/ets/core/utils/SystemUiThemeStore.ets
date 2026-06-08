@@ -7,7 +7,7 @@ export interface SystemSurfaceStyle {
 type SystemSurfaceListener = (style: SystemSurfaceStyle) => void;
 
 const DEFAULT_SYSTEM_SURFACE_STYLE: SystemSurfaceStyle = {
-  baseColor: '#FFFFFF',
+  baseColor: '#D0CBC3',
   overlayOpacity: 1,
   preferDarkContent: true
 };

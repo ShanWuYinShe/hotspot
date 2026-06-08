@@ -47,7 +47,7 @@ export struct LoginPromptView {
   @State isQuickStarting: boolean = false;
   @State isQuickInputFocused: boolean = false;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

@@ -41,7 +41,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: '附近', route: 'nearby', symbolId: $r('sys.symbol.location_fill') },
+  { label: '附近', route: 'nearby', symbolId: $r('sys.symbol.position') },
   { label: '发现', route: 'discover', symbolId: $r('sys.symbol.compass') },
   { label: '消息', route: 'messages', symbolId: $r('sys.symbol.message_fill') },
   { label: '我的', route: 'profile', symbolId: $r('sys.symbol.person_fill') }
@@ -70,75 +70,84 @@ export struct DesktopLayout {
   }
 
   build() {
-    SideBarContainer(SideBarContainerType.Embed) {
-      // 左侧导航栏
-      this.LeftNavRail()
-
-      // 中央主内容
-      this.MainContent()
-
-      // 右侧详情面板
-    } {
-      if (this.shouldShowRightPanel()) {
-        this.RightDetailPanel()
-      }
-    }
-    .showSideBar(true)
-    .showControlButton(false)
-    .sideBarWidth(240)
-    .backgroundColor($r('app.color.bg_primary'))
-    .width('100%')
-    .height('100%')
-
-    // 通知 banner overlay（顶部）
-    if (this.visibleNotifications.length > 0) {
-      Column() {
-        ForEach(this.visibleNotifications, (notification: SmartNotification) => {
-          NotificationBanner({
-            notification: notification,
-            onClose: () => NotificationRenderer.getInstance().hideNotification(notification.id, 'manual'),
-            onBannerClick: () => NotificationRenderer.getInstance().handleClick(notification),
-            onAction: (action: NotificationAction) => NotificationRenderer.getInstance().handleAction(action, notification)
-          })
-        }, (item: SmartNotification) => item.id)
-      }
-      .width('100%')
-      .padding({ top: 12, left: 16, right: 16 })
-      .position({ x: 0, y: 0 })
-    }
-
-    // 通知中心 overlay
-    if (this.showNotificationCenter) {
-      Stack() {
-        Column()
-          .width('100%')
+    Stack({ alignContent: Alignment.Top }) {
+      Row() {
+        Column() {
+          this.LeftNavRail()
+        }
+          .width(240)
           .height('100%')
-          .backgroundColor('#66000000')
-          .onClick(() => { this.showNotificationCenter = false; })
 
         Column() {
-          NotificationCenter({
-            onClose: () => { this.showNotificationCenter = false; }
-          })
+          this.MainContent()
         }
-        .width('100%')
-        .height('100%')
-        .backgroundColor($r('app.color.bg_primary'))
-      }
-      .width('100%')
-      .height('100%')
-    }
+          .layoutWeight(1)
+          .height('100%')
 
-    // 性能详情 overlay
-    if (this.showPerformanceDetails) {
-      Column() {
-        PerformanceIndicator({ showDetails: true, compact: false })
+        if (this.shouldShowRightPanel()) {
+          Column() {
+            this.RightDetailPanel()
+          }
+            .width(320)
+            .height('100%')
+        }
       }
       .width('100%')
       .height('100%')
       .backgroundColor($r('app.color.bg_primary'))
-      .onClick(() => { this.showPerformanceDetails = false; })
+
+      // 通知 banner overlay（顶部）
+      if (this.visibleNotifications.length > 0) {
+        Column() {
+          ForEach(this.visibleNotifications, (notification: SmartNotification) => {
+            NotificationBanner({
+              notification: notification,
+              onClose: () => NotificationRenderer.getInstance().hideNotification(notification.id, 'manual'),
+              onBannerClick: () => NotificationRenderer.getInstance().handleClick(notification),
+              onAction: (action: NotificationAction) => NotificationRenderer.getInstance().handleAction(action, notification)
+            })
+          }, (item: SmartNotification) => item.id)
+        }
+        .width('100%')
+        .padding({ top: 12, left: 16, right: 16 })
+        .position({ x: 0, y: 0 })
+      }
+
+      // 通知中心 overlay
+      if (this.showNotificationCenter) {
+        Stack() {
+          Column()
+            .width('100%')
+            .height('100%')
+            .backgroundColor('#66000000')
+            .onClick(() => { this.showNotificationCenter = false; })
+
+          Column() {
+            NotificationCenter({
+              onClose: () => { this.showNotificationCenter = false; }
+            })
+          }
+          .width('100%')
+          .height('100%')
+          .backgroundColor($r('app.color.bg_primary'))
+        }
+        .width('100%')
+        .height('100%')
+      }
+
+      // 性能详情 overlay
+      if (this.showPerformanceDetails) {
+        Column() {
+          PerformanceIndicator({ showDetails: true, compact: false })
+        }
+        .width('100%')
+        .height('100%')
+        .backgroundColor($r('app.color.bg_primary'))
+        .onClick(() => { this.showPerformanceDetails = false; })
+      }
     }
+    .width('100%')
+    .height('100%')
   }
 
   @Builder
@@ -157,13 +166,15 @@ export struct DesktopLayout {
       // 通知铃铛入口
       Blank().layoutWeight(1)
       Row() {
-        SymbolSpan(
-          this.unreadCount > 0
-            ? $r('sys.symbol.bell_fill')
-            : $r('sys.symbol.bell')
-        )
-          .fontSize(20)
-          .fontColor([$r('app.color.brand_primary')])
+        Text() {
+          SymbolSpan(
+            this.unreadCount > 0
+              ? $r('sys.symbol.bell_fill')
+              : $r('sys.symbol.bell')
+          )
+            .fontSize(20)
+            .fontColor([$r('app.color.brand_primary')])
+        }
         Text('通知')
           .fontSize($r('app.float.font_size_base'))
           .fontColor($r('app.color.brand_primary'))
@@ -188,13 +199,15 @@ export struct DesktopLayout {
   @Builder
   NavItemBuilder(item: NavItem) {
     Row() {
-      SymbolSpan(item.symbolId)
-        .fontSize(20)
-        .fontColor([
-          this.currentRoute === item.route
-            ? $r('app.color.brand_primary')
-            : $r('app.color.chip_inactive_text')
-        ])
+      Text() {
+        SymbolSpan(item.symbolId)
+          .fontSize(20)
+          .fontColor([
+            this.currentRoute === item.route
+              ? $r('app.color.brand_primary')
+              : $r('app.color.chip_inactive_text')
+          ])
+      }
       Text(item.label)
         .fontSize($r('app.float.font_size_base'))
         .fontColor(
@@ -226,7 +239,7 @@ export struct DesktopLayout {
       Row() {
         Text(this.getCurrentTitle())
           .fontSize($r('app.float.font_size_2xl'))
-          .fontWeight(FontWeight.SemiBold)
+          .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.brand_primary'))
 
         Blank().layoutWeight(1)
@@ -276,7 +289,24 @@ export struct DesktopLayout {
     }
     .width('100%')
     .height('100%')
-    .constraintSize({ maxWidth: `${CONTAINER_MAX_WIDTH_VP[this.currentBreakpoint]}vp` })
+    .constraintSize({ maxWidth: this.getContainerMaxWidth() })
+  }
+
+  private getContainerMaxWidth(): string {
+    switch (this.currentBreakpoint) {
+      case 'md':
+        return `${CONTAINER_MAX_WIDTH_VP.md}vp`;
+      case 'lg':
+        return `${CONTAINER_MAX_WIDTH_VP.lg}vp`;
+      case 'xl':
+        return `${CONTAINER_MAX_WIDTH_VP.xl}vp`;
+      case 'xxl':
+        return `${CONTAINER_MAX_WIDTH_VP.xxl}vp`;
+      case 'xs':
+      case 'sm':
+      default:
+        return '100%';
+    }
   }
 
   @Builder

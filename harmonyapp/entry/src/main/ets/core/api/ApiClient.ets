@@ -7,6 +7,7 @@ import { HttpUtil } from '../network/HttpUtil';
 import { ApiEndpoints } from '../config/ApiEndpoints';
 import common from '@ohos.app.ability.common';
 import fs from '@ohos.file.fs';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
   // 基础类型
   ApiResponse,
@@ -214,6 +215,9 @@ import {
   MarkAsReadRequest,
 } from '../types/api';
 
+const DOMAIN_NUMBER: number = 0xFF21;
+const TAG: string = 'ApiClient';
+
 // 空请求体类
 class EmptyRequest {}
 
@@ -309,7 +313,11 @@ export class ApiClient {
       throw (error instanceof Error) ? error : new Error(String(error));
     } finally {
       if (file) {
-        try { fs.closeSync(file); } catch (e) {}
+        try {
+          fs.closeSync(file);
+        } catch (error) {
+          hilog.warn(DOMAIN_NUMBER, TAG, `关闭上传文件失败: ${JSON.stringify(error)}`);
+        }
       }
     }
 

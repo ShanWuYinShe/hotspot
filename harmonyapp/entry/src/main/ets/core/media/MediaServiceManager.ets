@@ -415,14 +415,16 @@ export class MediaServiceManager {
           if (srcFile) {
             try {
               fileIo.closeSync(srcFile);
-            } catch (_) {
+            } catch (closeError) {
+              hilog.warn(DOMAIN, TAG, `关闭源文件失败: ${JSON.stringify(closeError)}`);
             }
             srcFile = null;
           }
           if (destFile) {
             try {
               fileIo.closeSync(destFile);
-            } catch (_) {
+            } catch (closeError) {
+              hilog.warn(DOMAIN, TAG, `关闭目标文件失败: ${JSON.stringify(closeError)}`);
             }
             destFile = null;
           }
@@ -442,13 +444,15 @@ export class MediaServiceManager {
       if (srcFile) {
         try {
           fileIo.closeSync(srcFile);
-        } catch (_) {
+        } catch (closeError) {
+          hilog.warn(DOMAIN, TAG, `关闭源文件失败: ${JSON.stringify(closeError)}`);
         }
       }
       if (destFile) {
         try {
           fileIo.closeSync(destFile);
-        } catch (_) {
+        } catch (closeError) {
+          hilog.warn(DOMAIN, TAG, `关闭目标文件失败: ${JSON.stringify(closeError)}`);
         }
       }
     }

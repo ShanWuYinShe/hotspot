@@ -44,6 +44,15 @@ export type BreakpointType = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
  */
 export type DeviceForm = 'mobile' | 'desktop';
 
+export interface BreakpointNumberMap {
+  xs: number;
+  sm: number;
+  md: number;
+  lg: number;
+  xl: number;
+  xxl: number;
+}
+
 export function isMobileForm(bp: BreakpointType): boolean {
   return bp === 'xs' || bp === 'sm' || bp === 'md';
 }
@@ -91,7 +100,7 @@ export const GRID_BREAKPOINTS_VALUE: string[] = [
 /**
  * ArkUI GridRow columns 配置：每个断点对应的栅格总列数
  */
-export const GRID_COLUMNS: Record<BreakpointType, number> = {
+export const GRID_COLUMNS: BreakpointNumberMap = {
   xs: 4,
   sm: 4,
   md: 8,
@@ -103,7 +112,7 @@ export const GRID_COLUMNS: Record<BreakpointType, number> = {
 /**
  * ArkUI GridRow gutter 配置：每个断点对应的列间距
  */
-export const GRID_GUTTER_X: Record<BreakpointType, number> = {
+export const GRID_GUTTER_X: BreakpointNumberMap = {
   xs: 8,
   sm: 12,
   md: 16,
@@ -112,7 +121,7 @@ export const GRID_GUTTER_X: Record<BreakpointType, number> = {
   xxl: 32
 };
 
-export const GRID_GUTTER_Y: Record<BreakpointType, number> = {
+export const GRID_GUTTER_Y: BreakpointNumberMap = {
   xs: 8,
   sm: 12,
   md: 16,
@@ -125,7 +134,7 @@ export const GRID_GUTTER_Y: Record<BreakpointType, number> = {
  * 容器最大宽度（vp）— 与 frontend content max-width 对齐
  * 桌面端限制内容最大宽度，避免超宽屏铺满
  */
-export const CONTAINER_MAX_WIDTH_VP: Record<BreakpointType, number> = {
+export const CONTAINER_MAX_WIDTH_VP: BreakpointNumberMap = {
   xs: 0,    // 充满
   sm: 0,
   md: 720,

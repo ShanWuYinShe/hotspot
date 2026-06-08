@@ -37,7 +37,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem(THEME_STORAGE_KEYS.isDark, String(isDark));
       localStorage.setItem(THEME_STORAGE_KEYS.theme, theme);
-    } catch {}
+    } catch (error) {
+      console.warn("Failed to persist theme preference", error);
+    }
   }, [isDark, theme]);
 
   const toggleDark = () => setIsDark((value) => !value);

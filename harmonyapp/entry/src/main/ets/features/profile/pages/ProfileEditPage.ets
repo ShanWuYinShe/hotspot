@@ -27,7 +27,7 @@ const MAX_BIO: number = 150;
 @Component
 export struct ProfileEditPage {
   pathStack: NavPathStack = new NavPathStack();
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;

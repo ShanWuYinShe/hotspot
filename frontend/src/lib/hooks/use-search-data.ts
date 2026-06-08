@@ -41,7 +41,8 @@ export function useSearchData(): SearchData {
           } else {
             setResults([]);
           }
-        } catch {
+        } catch (error) {
+          console.warn("Failed to fetch search suggestions", error);
           setResults([]);
         } finally {
           setLoading(false);

@@ -91,7 +91,9 @@ export function useNotificationsData(
         ),
       );
       setUnreadCount((prev) => Math.max(0, prev - ids.length));
-    } catch {}
+    } catch (error) {
+      console.warn("Failed to mark notifications as read", error);
+    }
   }, []);
 
   const markAllRead = useCallback(async () => {
@@ -99,7 +101,9 @@ export function useNotificationsData(
       await notificationsService.markAllRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
       setUnreadCount(0);
-    } catch {}
+    } catch (error) {
+      console.warn("Failed to mark all notifications as read", error);
+    }
   }, []);
 
   return {

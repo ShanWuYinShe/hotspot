@@ -92,7 +92,7 @@ function buildSupportLinks(config: ClientConfig | null): SupportLinkItem[] {
 export struct SettingsSectionCard {
   @Prop title: string = '';
   @BuilderParam content: () => void;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -127,7 +127,7 @@ export struct SettingsSectionCard {
 @Component
 export struct SettingsEntryRow {
   @Prop item: SettingsEntryItem;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -192,7 +192,7 @@ export struct SettingsMetaCard {
   @Prop error: string = '';
   @Prop lastChecked: string = '';
   refreshAction: () => void = () => {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -288,7 +288,7 @@ export struct SettingsMetaCard {
 export struct SettingsInfoLine {
   @Prop label: string = '';
   @Prop value: string = '';
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -315,7 +315,7 @@ export struct AnnouncementSummaryCard {
   @Prop maxItems: number = 2;
   @Prop showOpenAll: boolean = true;
   openAll: () => void = () => {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -410,7 +410,7 @@ export struct AnnouncementSummaryCard {
 @Component
 export struct SupportConfigCard {
   @Prop config: ClientConfig | null = null;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -459,7 +459,7 @@ export struct ToggleSettingRow {
   @Prop item: SettingToggleItem;
   @Prop isOn: boolean = false;
   onChange: (value: boolean) => void = () => {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -495,7 +495,7 @@ export struct SessionListSection {
   @Prop sessions: SessionItem[] = [];
   revokeOne: (item: SessionItem) => void = () => {};
   revokeAll: () => void = () => {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -593,7 +593,7 @@ export struct RelationshipListSection {
   @Prop followers: FollowerItem[] = [];
   @Prop blocked: BlockedUserItem[] = [];
   unblockUserAction: (userId: string) => void = () => {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

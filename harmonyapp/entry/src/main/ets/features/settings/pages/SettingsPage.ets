@@ -19,6 +19,10 @@ import { WebSocketService } from '../../../core/network/WebSocketService';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { AnnouncementSummaryCard, SettingsEntryItem, SettingsEntryRow, SettingsMetaCard, SettingsSectionCard, SupportConfigCard } from './SettingsSupport';
 import { AppIcon } from '../../../components/SystemIcon';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const DOMAIN_NUMBER: number = 0xFF27;
+const TAG: string = 'SettingsPage';
 
 @Preview
 @Component
@@ -30,7 +34,7 @@ export struct SettingsPage {
   @StorageLink(KEY_CLIENT_CONFIG) clientConfig: ClientConfig | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink(KEY_THEME_MODE) themeMode: ThemeMode = 'follow_system';
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
   @State systemMeta: ApiVersionMeta | null = null;
   @State systemMetaLoading: boolean = false;
   @State systemMetaError: string = '';
@@ -139,7 +143,8 @@ export struct SettingsPage {
       if (response.code === 0 && response.data) {
         this.announcements = response.data.items ?? [];
       }
-    } catch (_) {
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `加载系统公告失败: ${JSON.stringify(error)}`);
     } finally {
       this.announcementsLoading = false;
       this.metaRefreshing = false;

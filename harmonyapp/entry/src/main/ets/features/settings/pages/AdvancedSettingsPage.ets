@@ -18,7 +18,7 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 export struct AdvancedSettingsPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();

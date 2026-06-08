@@ -37,7 +37,7 @@ export struct SystemPageHeader {
   rightAction: IconAction | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @Prop surfaceColor: ResourceColor | null = null;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -48,15 +48,15 @@ export struct SystemPageHeader {
   }
 
   private getBackgroundColor(): ResourceColor {
-    return this.surfaceColor ? this.surfaceColor : this.getPalette().pageBackground;
+    return this.surfaceColor ? this.surfaceColor : this.getPalette().sheetBackground;
   }
 
   private getHeaderShadow(): ShadowOptions {
-    return this.getPalette().tabBarShadow;
+    return this.getPalette().surfaceShadow;
   }
 
   private getHeaderBorderColor(): ResourceColor {
-    return this.getPalette().borderColor;
+    return this.getPalette().floatingBorderColor;
   }
 
   private canShowBackButton(): boolean {
@@ -127,7 +127,7 @@ export struct SystemPageHeader {
                 .type(ButtonType.Normal)
                 .backgroundColor(this.getPalette().surfaceBackground)
                 .borderRadius(DesignConstants.RADIUS.FULL)
-                .border({ width: 1, color: this.getPalette().borderColor })
+                .border({ width: 1, color: this.getPalette().floatingBorderColor })
                 .shadow(this.getPalette().controlShadow)
                 .height(38)
                 .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
@@ -136,11 +136,8 @@ export struct SystemPageHeader {
                   : this.getPalette().accentBackground)
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .enabled(!this.action.disabled)
-                .onClick(async () => {
-                  try {
-                    await this.action?.onClick()
-                  } catch (_) {
-                  }
+                .onClick(() => {
+                  this.action?.onClick();
                 })
             }
           }

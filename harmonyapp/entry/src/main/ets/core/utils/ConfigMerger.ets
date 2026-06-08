@@ -3,7 +3,12 @@
  * 提供简化的配置合并功能
  */
 
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
 declare const structuredClone: (<T>(value: T) => T) | undefined;
+
+const DOMAIN_NUMBER: number = 0xFF22;
+const TAG: string = 'ConfigMerger';
 
 function deepClone(value: Record<string, Object>): Record<string, Object>;
 function deepClone(value: Object[]): Object[];
@@ -12,7 +17,9 @@ function deepClone(value: Record<string, Object> | Object[]): Record<string, Obj
     if (typeof structuredClone === 'function') {
       return structuredClone(value);
     }
-  } catch (_) {}
+  } catch (error) {
+    hilog.warn(DOMAIN_NUMBER, TAG, `structuredClone failed, falling back to manual clone: ${JSON.stringify(error)}`);
+  }
   if (Array.isArray(value)) {
     const result: Object[] = [];
     const sourceArray = value as Object[];

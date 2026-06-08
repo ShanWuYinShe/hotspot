@@ -79,7 +79,9 @@ export function usePostDetailData(
           }
           setNextCursor(res.data.next_cursor);
         }
-      } catch {}
+      } catch (error) {
+        console.warn("Failed to load comments", error);
+      }
     },
     [momentId],
   );

@@ -10,12 +10,16 @@ import { SessionListSection, SettingsSectionCard } from './SettingsSupport';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const DOMAIN_NUMBER: number = 0xFF28;
+const TAG: string = 'SafetySettingsPage';
 
 @Preview
 @Component
 export struct SafetySettingsPage {
   pathStack: NavPathStack = new NavPathStack();
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
   @State oldPassword: string = '';
   @State newPassword: string = '';
   @State sessions: SessionItem[] = [];
@@ -35,7 +39,8 @@ export struct SafetySettingsPage {
       if (response.code === 0 && response.data) {
         this.sessions = response.data.items ?? [];
       }
-    } catch (_) {
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `加载会话列表失败: ${JSON.stringify(error)}`);
     }
   }
 

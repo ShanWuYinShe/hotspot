@@ -67,7 +67,9 @@ export function useChatData(chatId: string | undefined): ChatData {
         setMessages((prev) => [...res.data!.items, ...prev]);
         setNextCursor(res.data.next_cursor);
       }
-    } catch {}
+    } catch (error) {
+      console.warn("Failed to load more chat messages", error);
+    }
   }, [chatId, nextCursor]);
 
   const sendMessage = useCallback(

@@ -48,7 +48,7 @@ export struct DiscoverPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
   @StorageProp('isTablet') isTablet: boolean = false;
 

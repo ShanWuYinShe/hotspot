@@ -65,7 +65,9 @@ export function useUserProfileData(
           }
           setNextCursor(res.data.next_cursor);
         }
-      } catch {}
+      } catch (error) {
+        console.warn("Failed to load user moments", error);
+      }
     },
     [userId],
   );

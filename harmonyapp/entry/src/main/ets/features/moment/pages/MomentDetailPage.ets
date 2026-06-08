@@ -49,7 +49,7 @@ export struct MomentDetailPage {
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink('interaction_moment_state') momentStateMap: Record<string, MomentSocialState> = {};
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private stateManager = GlobalStateManager.getInstance();
   private momentId: string = '';

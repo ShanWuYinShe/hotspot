@@ -233,43 +233,43 @@ export interface DesignConstantsType {
   MAP_MARKER: MapMarkerColors;
 }
 
-// ==================== 颜色系统（干净扁平极简风格）====================
+// ==================== 颜色系统（暖色拟物浮雕风格）====================
 const COLOR: ColorPalette = {
-  PRIMARY_BG_LIGHT: '#FFFFFF',
+  PRIMARY_BG_LIGHT: '#EAE5DE',
   PRIMARY_BG_DARK: '#0F1115',
-  SECONDARY_BG_LIGHT: '#FFFFFF',
-  SECONDARY_BG_DARK: '#171A20',
-  TERTIARY_BG_LIGHT: '#F3F4F6',
-  TERTIARY_BG_DARK: '#222733',
-  TEXT_PRIMARY_LIGHT: '#111827',
-  TEXT_PRIMARY_DARK: '#F9FAFB',
-  TEXT_SECONDARY_LIGHT: '#6B7280',
-  TEXT_SECONDARY_DARK: '#9CA3AF',
-  TEXT_TERTIARY_LIGHT: '#9CA3AF',
-  TEXT_TERTIARY_DARK: '#6B7280',
-  BRAND_PRIMARY: '#4A7A57',
-  BRAND_PRIMARY_LIGHT: '#4A7A57',
-  BRAND_PRIMARY_DARK: '#6BAF86',
+  SECONDARY_BG_LIGHT: '#F2EEE8',
+  SECONDARY_BG_DARK: '#1A1C23',
+  TERTIARY_BG_LIGHT: '#E1DBD3',
+  TERTIARY_BG_DARK: '#232731',
+  TEXT_PRIMARY_LIGHT: '#4A4036',
+  TEXT_PRIMARY_DARK: '#E5E7EB',
+  TEXT_SECONDARY_LIGHT: '#7A7269',
+  TEXT_SECONDARY_DARK: '#8D94A0',
+  TEXT_TERTIARY_LIGHT: '#9B9590',
+  TEXT_TERTIARY_DARK: '#5A5550',
+  BRAND_PRIMARY: '#D4845A',
+  BRAND_PRIMARY_LIGHT: '#D4845A',
+  BRAND_PRIMARY_DARK: '#E8A87C',
   SUCCESS: '#22C55E',
   WARNING: '#FBBF24',
   ERROR: '#EF4444',
   INFO: '#3B82F6',
-  DIVIDER_LIGHT: '#F3F4F6',
-  DIVIDER_DARK: '#28303D',
+  DIVIDER_LIGHT: '#F7F5F2',
+  DIVIDER_DARK: '#2A2C35',
   ONLINE_STATUS: '#22C55E',
   OFFLINE_STATUS: '#9CA3AF',
-  SURFACE_NEUTRAL_SOFT: '#F9FAFB',
+  SURFACE_NEUTRAL_SOFT: '#F2EEE8',
   SURFACE_INFO_SOFT: '#EFF6FF',
   SURFACE_SUCCESS_SOFT: '#F0FDF4',
   SURFACE_WARNING_SOFT: '#FFFBEB',
   SURFACE_DANGER_SOFT: '#FEF2F2',
-  CHIP_ACTIVE_BG: '#4A7A57',
+  CHIP_ACTIVE_BG: '#D4845A',
   CHIP_ACTIVE_TEXT: '#FFFFFF',
-  CHIP_INACTIVE_TEXT: '#6B7280',
-  HEADER_ICON_BG: '#FDF2F8',
-  HEADER_ICON_BORDER: '#FECDD3',
-  HEADER_ICON_TEXT: '#BE123C',
-  CHAT_TITLE_ICON_BG: '#FFFFFF',
+  CHIP_INACTIVE_TEXT: '#7A7269',
+  HEADER_ICON_BG: '#F2EEE8',
+  HEADER_ICON_BORDER: '#F7F5F2',
+  HEADER_ICON_TEXT: '#D4845A',
+  CHAT_TITLE_ICON_BG: '#EAE5DE',
 };
 
 // ==================== 字体系统 ====================
@@ -304,13 +304,13 @@ const SPACING: SpacingSystem = {
   XXXL: 48,
 };
 
-// ==================== 圆角系统（干净现代风格）====================
+// ==================== 圆角系统（拟物圆润风格）====================
 const RADIUS: RadiusSystem = {
   SM: 8,
   MD: 12,
   LG: 16,
   XL: 20,
-  XXL: 22,
+  XXL: 24,
   FULL: 999,
 };
 
@@ -327,37 +327,37 @@ const SHAPE: ShapeSemanticTokens = {
   ICON_TILE: RADIUS.MD,
 };
 
-// ==================== 阴影系统（干净扁平风格：极轻微阴影）====================
+// ==================== 阴影系统（暖色软浮雕）====================
 const SHADOW: ShadowSystem = {
   SMALL: {
-    radius: 4,
-    color: '#0A000000',
-    offsetX: 0,
-    offsetY: 1,
+    radius: 10,
+    color: '#40CDC8C0',
+    offsetX: 3,
+    offsetY: 3,
   },
   MEDIUM: {
-    radius: 8,
-    color: '#0A000000',
-    offsetX: 0,
-    offsetY: 2,
+    radius: 18,
+    color: '#55BFB7AC',
+    offsetX: 6,
+    offsetY: 6,
   },
   LARGE: {
-    radius: 16,
-    color: '#0F000000',
-    offsetX: 0,
-    offsetY: 4,
+    radius: 28,
+    color: '#55C3BAAE',
+    offsetX: 12,
+    offsetY: 12,
   },
   INSET: {
-    radius: 0,
-    color: '#00000000',
-    offsetX: 0,
-    offsetY: 0,
+    radius: 12,
+    color: '#44BFB7AC',
+    offsetX: 4,
+    offsetY: 4,
   },
   HIGHLIGHT: {
-    radius: 0,
-    color: '#00000000',
-    offsetX: 0,
-    offsetY: 0,
+    radius: 10,
+    color: '#C8FFFFFF',
+    offsetX: -4,
+    offsetY: -4,
   },
 };
 

@@ -62,7 +62,9 @@ export function useAuthActions(): AuthActions {
   const logout = useCallback(async (): Promise<void> => {
     try {
       await authService.logout();
-    } catch {}
+    } catch (error) {
+      console.warn("Failed to logout on server", error);
+    }
   }, []);
 
   return { loading, login, register, logout };

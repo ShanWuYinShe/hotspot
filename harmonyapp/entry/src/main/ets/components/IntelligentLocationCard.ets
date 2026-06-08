@@ -26,7 +26,7 @@ export struct IntelligentLocationCard {
   onNavigationTap?: () => void;
   @State private cardElevation: number = 1;
   @State private elevationInfo: string = '';
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

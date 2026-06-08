@@ -60,7 +60,7 @@ export struct ProfilePage {
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
   @StorageProp('isTablet') isTablet: boolean = false;
 
   private stateManager = GlobalStateManager.getInstance();

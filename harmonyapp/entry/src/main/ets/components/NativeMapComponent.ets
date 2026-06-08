@@ -122,7 +122,7 @@ interface ClusterItemCandidate {
 @Component
 export struct NativeMapComponent {
   @Watch('onDarkModeChange') @StorageProp('isDarkMode') isDarkMode: boolean = false;
-  @Watch('onResolvedThemeIdChange') @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @Watch('onResolvedThemeIdChange') @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
   @Watch('onRegionChangeProp') @Prop mapRegion: MapRegion = {
     latitude: 39.9042,
     longitude: 116.4074,

@@ -34,7 +34,7 @@ interface TabItem {
 }
 
 const TAB_ITEMS: TabItem[] = [
-  { label: '附近', symbolId: $r('sys.symbol.location_fill') },
+  { label: '附近', symbolId: $r('sys.symbol.position') },
   { label: '发现', symbolId: $r('sys.symbol.compass') },
   { label: '发布', symbolId: $r('sys.symbol.plus') },
   { label: '消息', symbolId: $r('sys.symbol.message_fill') },
@@ -61,7 +61,7 @@ export struct PhoneLayout {
   @Prop safeAreaBottom: number = 0;
   @Prop safeAreaTop: number = 0;
   @Prop isTablet: boolean = false;
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = 'figma_neu_light';
 
   // 内部状态
   @State showUpgradeBanner: boolean = false;
@@ -154,27 +154,28 @@ export struct PhoneLayout {
         .onClick(() => { this.showPerformanceDetails = false; })
       }
 
-      // Create Sheet
-      .bindSheet($$this.showCreateSheet, this.CreateSheetContent(), {
-        height: SheetSize.FIT_CONTENT,
-        dragBar: true,
-        showClose: true,
-        backgroundColor: $r('app.color.bg_primary')
-      })
     }
+    .bindSheet($$this.showCreateSheet, this.CreateSheetContent(), {
+      height: SheetSize.FIT_CONTENT,
+      dragBar: true,
+      showClose: true,
+      backgroundColor: $r('app.color.bg_primary')
+    })
     .width('100%').height('100%')
     .backgroundColor($r('app.color.bg_primary'))
   }
 
   @Builder TabBarBuilder(index: number) {
     Column() {
-      SymbolSpan(TAB_ITEMS[index].symbolId)
-        .fontSize(24)
-        .fontColor([
-          this.currentTabIndex === index
-            ? $r('app.color.brand_primary')
-            : $r('app.color.chip_inactive_text')
-        ])
+      Text() {
+        SymbolSpan(TAB_ITEMS[index].symbolId)
+          .fontSize(24)
+          .fontColor([
+            this.currentTabIndex === index
+              ? $r('app.color.brand_primary')
+              : $r('app.color.chip_inactive_text')
+          ])
+      }
       Text(TAB_ITEMS[index].label)
         .fontSize($r('app.float.font_size_xs'))
         .fontColor(
@@ -200,13 +201,15 @@ export struct PhoneLayout {
   @Builder CreateTabBuilder() {
     Column() {
       Row() {
-        SymbolSpan($r('sys.symbol.plus'))
-          .fontSize(20)
-          .fontColor([
-            this.currentTabIndex === CREATE_TAB_INDEX
-              ? $r('app.color.bg_primary')
-              : $r('app.color.brand_primary')
-          ])
+        Text() {
+          SymbolSpan($r('sys.symbol.plus'))
+            .fontSize(20)
+            .fontColor([
+              this.currentTabIndex === CREATE_TAB_INDEX
+                ? $r('app.color.bg_primary')
+                : $r('app.color.brand_primary')
+            ])
+        }
       }
       .width(40).height(40)
       .justifyContent(FlexAlign.Center)
@@ -232,14 +235,16 @@ export struct PhoneLayout {
       Blank().layoutWeight(1)
       Stack({ alignContent: Alignment.TopEnd }) {
         Button() {
-          SymbolSpan(
-            this.unreadCount > 0
-              ? $r('sys.symbol.bell_fill')
-              : $r('sys.symbol.bell')
-          )
-            .fontSize(18)
-            .fontColor([$r('app.color.brand_primary')])
-        }
+          Text() {
+            SymbolSpan(
+              this.unreadCount > 0
+                ? $r('sys.symbol.bell_fill')
+                : $r('sys.symbol.bell')
+            )
+              .fontSize(18)
+              .fontColor([$r('app.color.brand_primary')])
+          }
+      }
         .type(ButtonType.Normal)
         .width(40).height(40)
         .backgroundColor($r('app.color.bg_secondary'))
@@ -269,7 +274,7 @@ export struct PhoneLayout {
     Column() {
       Text('发布动态')
         .fontSize($r('app.float.font_size_lg'))
-        .fontWeight(FontWeight.SemiBold)
+        .fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.brand_primary'))
         .margin({ top: 24, bottom: 16 })
       Button('发布文字动态')

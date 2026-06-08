@@ -50,7 +50,11 @@ export function PostDetail() {
     if (navigator.share) {
       try {
         await navigator.share({ title: post?.description?.slice(0, 50), url });
-      } catch {}
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.warn("Failed to share post", error);
+        }
+      }
     } else {
       await navigator.clipboard.writeText(url);
       toast.success("链接已复制");

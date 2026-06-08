@@ -9,6 +9,9 @@ DevEco Studio 各工具路径：
 NODE=/Applications/DevEco-Studio.app/Contents/tools/node/bin/node
 HVIGORW=/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw.js
 OHPM=/Applications/DevEco-Studio.app/Contents/tools/ohpm/bin/ohpm
+DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk
+JAVA_HOME=/Applications/DevEco-Studio.app/Contents/jbr/Contents/Home
+PATH=$JAVA_HOME/bin:$PATH
 ```
 
 - `$OHPM install --all --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true` — 安装依赖
@@ -16,6 +19,8 @@ OHPM=/Applications/DevEco-Studio.app/Contents/tools/ohpm/bin/ohpm
 - `$NODE $HVIGORW assembleHap` — 仅编译 HAP 包（快速检查用）
 - `$NODE $HVIGORW clean` — 清理构建产物
 - `$NODE $HVIGORW collectCoverage` — 测试覆盖率（需要真机或模拟器）
+
+> 如果修正 `DEVECO_SDK_HOME` / `JAVA_HOME` 后仍复用旧环境，先运行 `$NODE $HVIGORW --stop-daemon`，再重新构建。
 
 > **Lint & Format**：DevEco Studio 内置，无独立 CLI。代码检查（ESLint + HarmonyOS 插件）由 IDE 在编辑时自动执行。
 

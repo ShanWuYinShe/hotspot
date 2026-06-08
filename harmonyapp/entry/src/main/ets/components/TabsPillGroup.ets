@@ -28,7 +28,7 @@ export struct TabsPillGroup {
   @Prop activeIndex: number = 0;
   @Prop gap: number = DesignConstants.SPACING.XS;
   actions?: TabsPillGroupActions;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

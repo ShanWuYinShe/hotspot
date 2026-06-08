@@ -14,6 +14,7 @@ import { useSearchData } from "@/lib/hooks/use-search-data";
 import { useDocumentTitle } from "@/lib/hooks/use-document-title";
 import { goBack } from "@/lib/utils/navigation";
 import { ListSkeleton } from "../components/ui/skeleton";
+import { EmptyState } from "../components/ui/EmptyState";
 import type {
   UserSuggestItem,
   MomentSuggestItem,
@@ -27,7 +28,8 @@ const RECENT_KEY = "hotspot_recent_searches";
 function loadRecent(): string[] {
   try {
     return JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
-  } catch {
+  } catch (error) {
+    console.warn("Failed to load recent searches", error);
     return [];
   }
 }
@@ -35,7 +37,9 @@ function loadRecent(): string[] {
 function saveRecent(items: string[]) {
   try {
     localStorage.setItem(RECENT_KEY, JSON.stringify(items));
-  } catch {}
+  } catch (error) {
+    console.warn("Failed to save recent searches", error);
+  }
 }
 
 export function Search() {
@@ -54,8 +58,11 @@ export function Search() {
   const q = query.toLowerCase().trim();
 
   useEffect(() => {
+    if (!q) {
+      clear();
+      return;
+    }
     search(q);
-    if (!q) clear();
   }, [q, search, clear]);
 
   const addRecent = (s: string) => {
@@ -67,8 +74,10 @@ export function Search() {
   };
 
   const handleSearch = (s: string) => {
-    setQuery(s);
-    addRecent(s);
+    const next = s.trim();
+    if (!next) return;
+    setQuery(next);
+    addRecent(next);
   };
 
   const people = results.filter((r) => r.type === "user");
@@ -245,7 +254,6 @@ export function Search() {
             aria-label="搜索"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => {}}
             onKeyDown={(e) => {
               if (e.key === "Enter" && query.trim()) addRecent(query.trim());
               if (e.key === "Escape") {
@@ -354,23 +362,11 @@ export function Search() {
 
             {/* Empty state */}
             {recent.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <SearchIcon
-                  style={{
-                    width: 36,
-                    height: 36,
-                    color: "var(--neu-text-muted)",
-                    opacity: 0.4,
-                  }}
-                  strokeWidth={1.25}
-                />
-                <p style={{ fontSize: 15, color: "var(--neu-text)" }}>
-                  搜索用户、群组、话题
-                </p>
-                <p style={{ fontSize: 13, color: "var(--neu-text-muted)" }}>
-                  输入关键词开始搜索
-                </p>
-              </div>
+              <EmptyState
+                icon={SearchIcon}
+                title="搜索用户、群组、话题"
+                hint="输入关键词开始搜索"
+              />
             )}
           </div>
         )}
@@ -385,6 +381,7 @@ export function Search() {
                   key={t.id}
                   whileTap={{ scale: 0.94 }}
                   onClick={() => setTab(t.id)}
+                  aria-pressed={tab === t.id}
                   className="flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none"
                   style={
                     tab === t.id
@@ -415,23 +412,11 @@ export function Search() {
 
               {/* No results */}
               {!loading && !hasResults && (
-                <div className="flex flex-col items-center justify-center py-16 gap-3">
-                  <SearchIcon
-                    style={{
-                      width: 36,
-                      height: 36,
-                      color: "var(--neu-text-muted)",
-                      opacity: 0.4,
-                    }}
-                    strokeWidth={1.25}
-                  />
-                  <p style={{ fontSize: 15, color: "var(--neu-text)" }}>
-                    未找到相关内容
-                  </p>
-                  <p style={{ fontSize: 13, color: "var(--neu-text-muted)" }}>
-                    尝试其他关键词
-                  </p>
-                </div>
+                <EmptyState
+                  icon={SearchIcon}
+                  title="未找到相关内容"
+                  hint="换个关键词试试，或检查是否有错别字"
+                />
               )}
 
               {/* People results */}
@@ -508,6 +493,8 @@ export function Search() {
                           <motion.button
                             key={t.name}
                             whileTap={{ scale: 0.93 }}
+                            onClick={() => handleSearch(t.name)}
+                            aria-label={`搜索标签 ${t.name}`}
                             className="px-4 py-2 rounded-full outline-none"
                             style={{
                               background: "var(--neu-bg)",

@@ -21,7 +21,7 @@ import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 export struct LocationBar {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   /** 是否显示搜索按钮 */
   @Prop showSearchButton: boolean = true;

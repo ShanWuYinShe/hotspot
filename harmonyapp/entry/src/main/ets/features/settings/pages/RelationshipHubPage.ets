@@ -14,7 +14,7 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 @Component
 export struct RelationshipHubPage {
   pathStack: NavPathStack = new NavPathStack();
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
   @State friends: FriendItem[] = [];
   @State following: FollowingItem[] = [];
   @State followers: FollowerItem[] = [];

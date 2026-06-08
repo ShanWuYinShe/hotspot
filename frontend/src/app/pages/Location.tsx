@@ -349,7 +349,9 @@ function LocationMobile() {
         "hotspot_last_location",
         JSON.stringify([loc.lat, loc.lng]),
       );
-    } catch {}
+    } catch (error) {
+      console.warn("Failed to persist selected location", error);
+    }
     goBack(navigate);
   }
 
@@ -1316,7 +1318,9 @@ function LocationDesktop() {
           "hotspot_last_location",
           JSON.stringify([selectedLoc.lat, selectedLoc.lng]),
         );
-      } catch {}
+      } catch (error) {
+        console.warn("Failed to persist selected location", error);
+      }
     }
     goBack(navigate);
   }

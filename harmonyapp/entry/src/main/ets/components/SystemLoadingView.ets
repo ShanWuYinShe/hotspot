@@ -15,45 +15,64 @@ export struct SystemLoadingView {
   @Prop progressType: 'indeterminate' | 'determinate' = 'indeterminate';
   @Prop maxProgress: number = 100;
   @Prop externalProgress: number = 0;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
   build() {
-    Column({ space: DesignConstants.SPACING.MD }) {
-      if (this.showProgress) {
-        if (this.progressType === 'determinate') {
-          Progress({
-            value: this.externalProgress,
-            total: this.maxProgress,
-            type: ProgressType.Ring
-          })
-            .width(56)
-            .height(56)
-            .color(this.getPalette().accentBackground)
-            .style({ strokeWidth: 4 })
-        } else {
-          LoadingProgress()
-            .width(36)
-            .height(36)
-            .color(this.getPalette().accentBackground)
-            .accessibilityText('正在加载')
+    Column() {
+      Column({ space: DesignConstants.SPACING.MD }) {
+        if (this.showProgress) {
+          Stack() {
+            Column()
+              .width(72)
+              .height(72)
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .backgroundColor(this.getPalette().surfaceBackground)
+              .shadow(this.getPalette().controlShadow)
+              .border({ width: 1, color: this.getPalette().floatingBorderColor })
+
+            if (this.progressType === 'determinate') {
+              Progress({
+                value: this.externalProgress,
+                total: this.maxProgress,
+                type: ProgressType.Ring
+              })
+                .width(46)
+                .height(46)
+                .color(this.getPalette().accentBackground)
+                .style({ strokeWidth: 4 })
+            } else {
+              LoadingProgress()
+                .width(34)
+                .height(34)
+                .color(this.getPalette().accentBackground)
+                .accessibilityText('正在加载')
+            }
+          }
+          .width(72)
+          .height(72)
+        }
+
+        Text(this.message)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor(this.getPalette().textSecondary)
+          .textAlign(TextAlign.Center)
+
+        if (this.showProgress && this.progressType === 'determinate') {
+          Text(`${Math.round(this.externalProgress)}%`)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getPalette().textTertiary)
+            .textAlign(TextAlign.Center)
         }
       }
-
-      Text(this.message)
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor(this.getPalette().textSecondary)
-        .textAlign(TextAlign.Center)
-
-      if (this.showProgress && this.progressType === 'determinate') {
-        Text(`${Math.round(this.externalProgress)}%`)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getPalette().textTertiary)
-          .textAlign(TextAlign.Center)
-      }
+      .padding(DesignConstants.SPACING.XXL)
+      .borderRadius(DesignConstants.SHAPE.HERO_CARD)
+      .backgroundColor(this.getPalette().surfaceBackground)
+      .border({ width: 1, color: this.getPalette().floatingBorderColor })
+      .shadow(this.getPalette().elevatedShadow)
     }
     .width('100%')
     .height('100%')
