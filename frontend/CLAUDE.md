@@ -2,7 +2,7 @@
 
 本文件只定义本子项目的技术约束与本地命令；仓库级 workflow 以根 `CLAUDE.md` 为准。
 
-> **注意**：本项目正在从 `frontend_svelte/` 迁移至此，使用 React + Vite + TypeScript + Tailwind CSS。
+> **注意**：本项目（React）**已暂停**，作为 `frontend_svelte/`（SvelteKit 主前端）的 UI/UX 设计参考保留。迁移方向已反转，本项目不再作为主前端推进。
 
 ## 技术栈
 
