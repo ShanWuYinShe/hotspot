@@ -93,7 +93,7 @@
   >
     <div class="mb-3 flex items-center gap-3">
       <button
-        class="surface-flat flex items-center justify-center rounded-full outline-none"
+        class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
         style="width: 36px; height: 36px;"
         onclick={handleBack}
         aria-label="返回"
@@ -115,7 +115,7 @@
 
     <!-- Search -->
     <div class="input-surface mb-3 flex items-center gap-3 rounded-[18px] px-4 py-2.5">
-      <Search size={14} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
+      <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
       <input
         type="text"
         bind:value={searchText}

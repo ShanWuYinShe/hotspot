@@ -107,10 +107,10 @@
   </div>
   <!-- Search bar -->
   <div
-    class="input-surface flex items-center gap-3 rounded-[14px] px-4 py-2.5"
+    class="input-surface flex items-center gap-3 rounded-[18px] px-4 py-2.5"
     style="margin-bottom: 10px;"
   >
-    <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" />
+    <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
     <input
       type="text"
       bind:value={searchVal}
@@ -346,10 +346,10 @@
         </div>
       </div>
       <div
-        class="input-surface flex items-center gap-3 rounded-[14px] px-4 py-2.5"
+        class="input-surface flex items-center gap-3 rounded-[18px] px-4 py-2.5"
         style="margin-bottom: 10px;"
       >
-        <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" />
+        <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
         <input
           type="text"
           bind:value={searchVal}

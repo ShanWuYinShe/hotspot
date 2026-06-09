@@ -368,26 +368,26 @@
       <div class="flex items-center gap-2 px-4 pt-1 pb-3">
         <button
           onclick={() => goto('/')}
-          class="flex items-center justify-center rounded-full flex-shrink-0"
-          style="width: 36px; height: 36px; background: var(--theme-bg); border: 1px solid var(--theme-border); box-shadow: 2px 2px 6px var(--theme-shadow-dark), -2px -2px 6px var(--theme-shadow-light);"
+          class="surface-flat flex flex-shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+          style="width: 36px; height: 36px;"
         >
-          <ArrowLeft size={18} style="color: var(--theme-text)" />
+          <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
         </button>
-        <div
-          class="flex-1 flex items-center gap-2 rounded-full px-3 py-2"
-          style="background: var(--theme-bg); box-shadow: inset 3px 3px 6px var(--theme-shadow-dark), inset -3px -3px 6px var(--theme-shadow-light); border: 1px solid var(--theme-border);"
-        >
-          <Search size={14} style="color: var(--theme-text-muted)" />
+        <div class="input-surface flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5">
+          <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
           <input
             type="text"
             bind:value={searchQuery}
             placeholder="搜索地点"
-            class="flex-1 bg-transparent outline-none text-sm"
-            style="color: var(--theme-text);"
+            class="flex-1 bg-transparent outline-none"
+            style="font-size: 13px; color: var(--text-primary);"
           />
           {#if searchQuery}
-            <button onclick={() => (searchQuery = '')}
-              ><X size={14} style="color: var(--theme-text-muted)" /></button
+            <button
+              type="button"
+              class="flex-shrink-0 outline-none"
+              onclick={() => (searchQuery = '')}
+              ><X size={13} strokeWidth={2} color="var(--text-secondary)" /></button
             >
           {/if}
         </div>
@@ -528,26 +528,26 @@
       <div class="flex items-center gap-3 px-4 pt-4 pb-3">
         <button
           onclick={() => goto('/')}
-          class="flex items-center justify-center rounded-full flex-shrink-0"
-          style="width: 36px; height: 36px; background: var(--theme-bg); border: 1px solid var(--theme-border); box-shadow: 2px 2px 6px var(--theme-shadow-dark), -2px -2px 6px var(--theme-shadow-light);"
+          class="surface-flat flex flex-shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+          style="width: 36px; height: 36px;"
         >
-          <ArrowLeft size={18} style="color: var(--theme-text)" />
+          <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
         </button>
-        <div
-          class="flex-1 flex items-center gap-2 rounded-full px-3 py-2"
-          style="background: var(--theme-bg); box-shadow: inset 3px 3px 6px var(--theme-shadow-dark), inset -3px -3px 6px var(--theme-shadow-light); border: 1px solid var(--theme-border);"
-        >
-          <Search size={14} style="color: var(--theme-text-muted)" />
+        <div class="input-surface flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5">
+          <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
           <input
             type="text"
             bind:value={searchQuery}
             placeholder="搜索地点"
-            class="flex-1 bg-transparent outline-none text-sm"
-            style="color: var(--theme-text);"
+            class="flex-1 bg-transparent outline-none"
+            style="font-size: 13px; color: var(--text-primary);"
           />
           {#if searchQuery}
-            <button onclick={() => (searchQuery = '')}
-              ><X size={14} style="color: var(--theme-text-muted)" /></button
+            <button
+              type="button"
+              class="flex-shrink-0 outline-none"
+              onclick={() => (searchQuery = '')}
+              ><X size={13} strokeWidth={2} color="var(--text-secondary)" /></button
             >
           {/if}
         </div>

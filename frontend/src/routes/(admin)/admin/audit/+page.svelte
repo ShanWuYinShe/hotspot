@@ -56,11 +56,8 @@
 
   <!-- Search -->
   <div class="flex gap-2">
-    <div
-      class="relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-      style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-    >
-      <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" />
+    <div class="input-surface relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5">
+      <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
       <input
         type="search"
         placeholder="按操作类型筛选..."

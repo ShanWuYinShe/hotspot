@@ -256,10 +256,9 @@
         >
         <input
           id="group-name"
-          class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
-          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid {nameError
-            ? 'var(--error)'
-            : 'var(--border-theme)'}; font-size: 13px;"
+          class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+          class:field-error={nameError}
+          style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
           placeholder="例如：城市漫步俱乐部"
           bind:value={name}
           onblur={() => markTouched('name')}
@@ -286,10 +285,9 @@
         <textarea
           id="group-desc"
           placeholder="简单描述群组用途与氛围"
-          class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full resize-none"
-          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid {groupDescriptionError
-            ? 'var(--error)'
-            : 'var(--border-theme)'}; font-size: 13px; min-height: 100px;"
+          class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 w-full resize-none"
+          class:field-error={groupDescriptionError}
+          style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px; min-height: 100px;"
           bind:value={description}
           onblur={() => markTouched('description')}
         ></textarea>
@@ -314,8 +312,8 @@
         >
         <input
           id="group-tags"
-          class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
-          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px;"
+          class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+          style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
           placeholder="兴趣、城市、活动"
           bind:value={tagsInput}
         />
@@ -343,8 +341,8 @@
           >
           <select
             id="join-method"
-            class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
-            style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px;"
+            class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+            style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
             bind:value={joinMethod}
           >
             <option value="open">自由加入</option>
@@ -358,10 +356,9 @@
           >
           <input
             id="group-password"
-            class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
-            style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid {groupPasswordError
-              ? 'var(--error)'
-              : 'var(--border-theme)'}; font-size: 13px;"
+            class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+            class:field-error={groupPasswordError}
+            style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
             type="password"
             placeholder="设置后需口令加入"
             bind:value={password}
@@ -384,10 +381,9 @@
           >
           <input
             id="max-members"
-            class="rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
-            style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid {maxMembersError
-              ? 'var(--error)'
-              : 'var(--border-theme)'}; font-size: 13px;"
+            class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+            class:field-error={maxMembersError}
+            style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
             type="number"
             min="2"
             max="2000"

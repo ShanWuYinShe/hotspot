@@ -285,10 +285,9 @@
               bind:value={password}
               disabled={isLoading}
               onblur={() => markTouched('password')}
-              class="rounded-[14px] px-4 py-2.5 outline-none w-full pr-10"
-              style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid {passwordError
-                ? 'var(--error)'
-                : 'var(--border-theme)'}; font-size: 13px;"
+              class="field-inset rounded-[14px] px-4 py-2.5 outline-none w-full pr-10"
+              class:field-error={passwordError}
+              style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
             />
             <button
               type="button"

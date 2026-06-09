@@ -454,12 +454,12 @@
     >
       <button
         type="button"
-        class="surface-flat flex flex-shrink-0 items-center justify-center rounded-full"
-        style="width: 38px; height: 38px;"
+        class="surface-flat flex flex-shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+        style="width: 36px; height: 36px;"
         onclick={() => history.back()}
         aria-label="返回"
       >
-        <ArrowLeft size={16} color="var(--text-secondary)" strokeWidth={1.5} />
+        <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
       </button>
       <h1 class="text-[18px] tracking-tight" style="color: var(--text-primary);">设置</h1>
     </div>

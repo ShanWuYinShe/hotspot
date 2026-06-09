@@ -215,23 +215,23 @@
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     <button
-      class="flex items-center justify-center rounded-full outline-none"
-      style="width: 36px; height: 36px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+      class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+      style="width: 36px; height: 36px;"
       onclick={handleBackClick}
       aria-label="返回"
     >
-      <ArrowLeft size={18} color="var(--text-primary)" />
+      <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
     </button>
     <h1 style="font-size: 16px; color: var(--text-primary);">瞬间详情</h1>
     {#if isOwner}
       <div class="ml-auto">
         <button
-          class="flex items-center justify-center rounded-full outline-none"
-          style="width: 36px; height: 36px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+          class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+          style="width: 36px; height: 36px;"
           onclick={() => (showEditModal = true)}
           aria-label="编辑"
         >
-          <Pencil size={16} color="var(--text-secondary)" />
+          <Pencil size={15} strokeWidth={1.5} color="var(--text-secondary)" />
         </button>
       </div>
     {/if}

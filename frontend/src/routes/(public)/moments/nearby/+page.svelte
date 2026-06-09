@@ -231,10 +231,7 @@
       </div>
 
       <!-- Search bar -->
-      <div
-        class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 input-surface"
-        style="border: 1px solid var(--border-theme);"
-      >
+      <div class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 input-surface">
         <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
         <input
           type="text"
@@ -385,10 +382,7 @@
       </div>
 
       <!-- Search bar -->
-      <div
-        class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 input-surface"
-        style="border: 1px solid var(--border-theme);"
-      >
+      <div class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 input-surface">
         <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
         <input
           type="text"

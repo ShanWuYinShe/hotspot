@@ -268,8 +268,8 @@
           placeholder="公告内容"
           rows="5"
           bind:value={content}
-          class="w-full rounded-[14px] px-4 py-2.5 outline-none resize-none"
-          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px;"
+          class="field-inset w-full rounded-[14px] px-4 py-2.5 outline-none resize-none"
+          style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
         ></textarea>
       </div>
       <div class="space-y-2">

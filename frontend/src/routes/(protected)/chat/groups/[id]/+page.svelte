@@ -617,12 +617,12 @@
   >
     {#if !platformStore.isDesktop}
       <button
-        class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-        style="width: 36px; height: 36px; box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); background: var(--surface-bg);"
+        class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+        style="width: 36px; height: 36px;"
         onclick={handleBackClick}
         aria-label="返回"
       >
-        <ArrowLeft size={18} color="var(--text-primary)" />
+        <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
       </button>
     {/if}
 
@@ -673,11 +673,11 @@
     {/if}
 
     <button
-      class="flex items-center justify-center rounded-full outline-none shrink-0"
-      style="width: 36px; height: 36px; box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); background: var(--surface-bg);"
+      class="surface-flat flex shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+      style="width: 36px; height: 36px;"
       aria-label="更多选项"
     >
-      <MoreVertical size={18} color="var(--text-primary)" />
+      <MoreVertical size={15} strokeWidth={1.5} color="var(--text-secondary)" />
     </button>
   </header>
 
@@ -956,8 +956,8 @@
           bind:value={messageText}
           rows={1}
           maxlength={MESSAGE_CONTENT_MAX}
-          class="max-h-32 min-h-[42px] flex w-full resize-none rounded-[20px] px-4 py-2.5 text-[15px] outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); color: var(--text-primary);"
+          class="field-inset max-h-32 min-h-[42px] flex w-full resize-none rounded-[20px] px-4 py-2.5 text-[15px] outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          style="background: var(--surface-bg); color: var(--text-primary);"
           disabled={isSending}
           oninput={() => {
             eventHandlers.sendGroupTyping(groupId, messageText.trim().length > 0);

@@ -91,11 +91,8 @@
 
   <!-- Search -->
   <div class="flex gap-2">
-    <div
-      class="relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-      style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-    >
-      <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" />
+    <div class="input-surface relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5">
+      <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
       <input
         type="search"
         placeholder="搜索群组名称..."
@@ -211,8 +208,8 @@
                 <DropdownMenu.Trigger>
                   {#snippet child({ props })}
                     <button
-                      class="flex items-center justify-center rounded-full outline-none"
-                      style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                      class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+                      style="width: 30px; height: 30px;"
                       aria-label="更多操作"
                       {...props}
                     >
