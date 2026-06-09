@@ -243,7 +243,24 @@ export struct PhoneLayout {
       )
       .borderRadius($r('app.float.radius_full'))
       .border({ width: 1, color: $r('app.color.brand_primary') })
-      .scale(this.isCreateTabPressed ? { x: 0.9, y: 0.9 } : { x: 1, y: 1 })
+      .scale(
+        this.isCreateTabPressed
+          ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON }
+          : { x: 1, y: 1 }
+      )
+      .animation({
+        curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+        )
+      })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.isCreateTabPressed = true;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.isCreateTabPressed = false;
+        }
+      })
     }
     .height(56)
     .justifyContent(FlexAlign.Center)
