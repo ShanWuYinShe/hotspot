@@ -1,7 +1,9 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { page } from '$app/state';
   import { t } from '$lib/i18n';
   import { goto } from '$app/navigation';
+  import { isSubPage } from '$lib/utils/sub-page';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { mode, toggleMode } from 'mode-watcher';
@@ -26,6 +28,8 @@
 
   let { children } = $props();
 
+  const isSubPageView = $derived(isSubPage(page.url.pathname));
+
   $effect(() => {
     if (browser && authStore.initialized && !authStore.isAuthenticated && !authStore.isRestoring) {
       uiStore.saveRedirectUrl();
@@ -42,11 +46,13 @@
     style="background-color: var(--surface-bg); color: var(--text-primary);"
   >
     <main class="mobile-app-main no-scrollbar scroll-smooth page-enter">
-      <div class="mobile-shell-content">
+      <div class="mobile-shell-content" class:mobile-shell-content--no-nav={isSubPageView}>
         {@render children()}
       </div>
     </main>
-    <MobileBottomNav />
+    {#if !isSubPageView}
+      <MobileBottomNav />
+    {/if}
   </div>
 {:else if platformStore.isTablet}
   <!-- Tablet: content + right rail + floating glass pill bottom nav -->

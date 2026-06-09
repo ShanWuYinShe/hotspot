@@ -265,8 +265,8 @@
       </div>
     </div>
   </div>
-{:else if platformStore.isTablet}
-  <!-- Tablet Home (Figma Make HomeMobile with maxWidth 680) -->
+{:else if !platformStore.isDesktop}
+  <!-- Mobile / Tablet Home (Figma Make HomeMobile, single column, maxWidth 680) -->
   <div class="flex flex-col">
     <!-- Sticky header -->
     <div

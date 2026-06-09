@@ -1028,6 +1028,10 @@
     padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
   }
 
+  .mobile-shell-content--no-nav {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   /* Mobile bottom nav (Figma Make MainLayout — glassmorphic) */
   .mobile-bottom-nav {
     flex-shrink: 0;

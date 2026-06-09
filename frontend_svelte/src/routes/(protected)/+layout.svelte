@@ -1,7 +1,9 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { page } from '$app/state';
   import { t } from '$lib/i18n';
   import { goto } from '$app/navigation';
+  import { isSubPage } from '$lib/utils/sub-page';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { mode, toggleMode } from 'mode-watcher';
@@ -17,6 +19,8 @@
   import Sidebar from '$lib/components/common/sidebar.svelte';
 
   let { children } = $props();
+
+  const isSubPageView = $derived(isSubPage(page.url.pathname));
 
   $effect(() => {
     if (browser && authStore.initialized && !authStore.isAuthenticated && !authStore.isRestoring) {
@@ -34,7 +38,7 @@
     style="background-color: var(--surface-bg); color: var(--text-primary);"
   >
     <main class="mobile-app-main no-scrollbar scroll-smooth">
-      <div class="mobile-shell-content">
+      <div class="mobile-shell-content" class:mobile-shell-content--no-nav={isSubPageView}>
         {#if authStore.isAuthenticated}
           {@render children()}
         {:else if authStore.isRestoring}
@@ -83,7 +87,9 @@
         {/if}
       </div>
     </main>
-    <MobileBottomNav />
+    {#if !isSubPageView}
+      <MobileBottomNav />
+    {/if}
   </div>
 {:else if platformStore.isTablet}
   <!-- Tablet: full-width content + floating glass pill bottom nav -->
