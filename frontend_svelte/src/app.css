@@ -1076,21 +1076,22 @@
     border-radius: 12px;
   }
 
-  .mobile-bottom-nav__tab-pill {
+  .mobile-bottom-nav__slider {
     position: absolute;
-    top: 6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 52px;
+    left: 0;
     height: 36px;
     border-radius: 18px;
     background: var(--neu-accent-primary);
     opacity: 0;
-    transition: opacity 0.22s ease;
     pointer-events: none;
+    z-index: 0;
+    will-change: transform;
+    transition:
+      transform 0.42s cubic-bezier(0.34, 1.32, 0.46, 1),
+      opacity 0.22s ease;
   }
 
-  .mobile-bottom-nav__tab.active .mobile-bottom-nav__tab-pill {
+  .mobile-bottom-nav__slider.visible {
     opacity: 0.14;
   }
 
