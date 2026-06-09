@@ -1,111 +1,91 @@
-/**
- * HotSpot API 类型定义
- *
- * 严格对齐 openapi/components/schemas/ 下的 OpenAPI 3.1 规范
- */
+// HotSpot API 类型定义
+// 严格对齐 openapi/components/schemas/ 下的 OpenAPI 3.1 规范
 
 // ============================================================================
-// 枚举类型
+// 枚举类型（common.yaml + 各模块）
 // ============================================================================
 
-export type UserType = "temp" | "normal";
-export type MessageType =
-  | "text"
-  | "image"
-  | "video"
-  | "audio"
-  | "file"
-  | "share"
-  | "system";
-export type SendMessageType = Exclude<MessageType, "system">;
-export type PrivacyLevel = "public" | "private";
-export type GroupRole = "owner" | "admin" | "member";
-export type SettableGroupRole = "admin" | "member";
-export type Gender = "male" | "female" | "apache_helicopter";
-export type ClientType = "web" | "app";
-export type UserPresenceStatus = "online" | "offline";
-export type UserAccountStatus = "normal" | "banned";
-export type ApplicationStatus = "pending" | "accepted" | "rejected" | "revoked";
-export type ReportStatus = "pending" | "reviewing" | "resolved" | "dismissed";
-export type ReportTargetType =
-  | "user"
-  | "moment"
-  | "comment"
-  | "message"
-  | "group";
-export type ReportHandleAction = "resolve" | "dismiss" | "escalate";
+export type UserType = 'temp' | 'normal';
+export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'share' | 'system';
+export type SendMessageType = Exclude<MessageType, 'system'>;
+export type PrivacyLevel = 'public' | 'private';
+export type GroupRole = 'owner' | 'admin' | 'member';
+export type SettableGroupRole = 'admin' | 'member';
+export type Gender = 'male' | 'female' | 'apache_helicopter';
+export type ClientType = 'web' | 'app';
+export type UserPresenceStatus = 'online' | 'offline';
+export type UserAccountStatus = 'normal' | 'banned';
+export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
+export type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
+export type ReportHandleAction = 'resolve' | 'dismiss' | 'escalate';
 export type ReportReason =
-  | "spam"
-  | "harassment"
-  | "violence"
-  | "hate_speech"
-  | "sexual_content"
-  | "misinformation"
-  | "impersonation"
-  | "self_harm"
-  | "other";
-export type GroupJoinMethod = "open" | "approval" | "invite_only";
-export type FeedSource = "following" | "nearby" | "all";
-export type DismissTargetType = "moment" | "user" | "group";
-export type PrivateChatPermission = "everyone" | "friends" | "nobody";
-export type AnnouncementSeverity = "info" | "warning" | "error";
-export type TagTrend = "rising" | "stable" | "falling";
-export type FollowSource =
-  | "moment"
-  | "search"
-  | "recommendation"
-  | "profile"
-  | "group";
-export type RecommendationType =
-  | "friend_liked"
-  | "nearby"
-  | "trending"
-  | "following"
-  | "tag_match";
+  | 'spam'
+  | 'harassment'
+  | 'violence'
+  | 'hate_speech'
+  | 'sexual_content'
+  | 'misinformation'
+  | 'impersonation'
+  | 'self_harm'
+  | 'other';
+export type GroupJoinMethod = 'open' | 'approval' | 'invite_only';
+export type FeedSource = 'following' | 'nearby' | 'all';
+export type DismissTargetType = 'moment' | 'user' | 'group';
+export type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
+export type AnnouncementSeverity = 'info' | 'warning' | 'error';
+export type TagTrend = 'rising' | 'stable' | 'falling';
+export type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
+export type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
 export type NotificationType =
-  | "new_follower"
-  | "mutual_follow"
-  | "moment_liked"
-  | "moment_commented"
-  | "comment_liked"
-  | "comment_reply"
-  | "mentioned"
-  | "group_invite_received"
-  | "group_invite_accepted"
-  | "group_application_received"
-  | "group_application_accepted"
-  | "system_announcement";
+  | 'new_follower'
+  | 'mutual_follow'
+  | 'moment_liked'
+  | 'moment_commented'
+  | 'comment_liked'
+  | 'comment_reply'
+  | 'mentioned'
+  | 'group_invite_received'
+  | 'group_invite_accepted'
+  | 'group_application_received'
+  | 'group_application_accepted'
+  | 'system_announcement';
+// NotificationTargetType 已删除：spec 中不存在该类型，mentioned payload 的 target_type 为内联 'moment' | 'comment'
 export type MediaCategory =
-  | "avatar"
-  | "group_avatar"
-  | "moment_image"
-  | "chat_image"
-  | "chat_video"
-  | "chat_audio"
-  | "chat_file";
-export type MapDataType = "user" | "group" | "moment" | "all";
-export type ShareType = "user" | "group" | "moment" | "location";
-export type MessageBlockedReason =
-  | "privacy"
-  | "stranger_quota_exceeded"
-  | "account_suspended";
-export type SearchSuggestType = "tag" | "user" | "group" | "moment";
-export type SystemHealthStatus = "healthy" | "degraded" | "unhealthy";
+  | 'avatar'
+  | 'group_avatar'
+  | 'moment_image'
+  | 'chat_image'
+  | 'chat_video'
+  | 'chat_audio'
+  | 'chat_file';
+export type MapDataType = 'user' | 'group' | 'moment' | 'all';
+export type ShareType = 'user' | 'group' | 'moment' | 'location';
+// 设计说明：被拉黑场景统一返回 'privacy'，不暴露拉黑状态
+export type MessageBlockedReason = 'privacy' | 'stranger_quota_exceeded' | 'account_suspended';
+export type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
+export type SystemHealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
 // ============================================================================
-// 位置类型
+// 位置类型（common.yaml）
 // ============================================================================
 
+/** 基础坐标点（经纬度） */
 export interface GeoPoint {
   latitude: number;
   longitude: number;
 }
 
+/** 位置信息（仅用于 Request 请求参数） */
 export interface Location {
   point: GeoPoint;
   location_name: string;
 }
 
+/**
+ * 相对位置（用于所有 Response 响应数据）
+ * distance/bearing_degrees 基于 reference_point 计算，搜索/列表/Feed 场景有值，详情场景为 undefined
+ */
 export interface RelativeLocation {
   point: GeoPoint;
   location_name: string;
@@ -126,7 +106,7 @@ export interface MapViewport {
 }
 
 // ============================================================================
-// 分页与搜索
+// 分页与搜索（common.yaml）
 // ============================================================================
 
 export interface PaginationParams {
@@ -145,7 +125,7 @@ export interface TimeRangeParams {
 }
 
 // ============================================================================
-// 媒体资源
+// 媒体资源（common.yaml + media.yaml）
 // ============================================================================
 
 export interface MomentImage {
@@ -189,15 +169,17 @@ export interface RecommendationContext {
 }
 
 // ============================================================================
-// 用户类型
+// 用户类型（common.yaml + users.yaml）
 // ============================================================================
 
+/** 用户基础信息（用于嵌套在其他对象中），不包含 user_type */
 export interface UserInfo {
   user_id: string;
   nickname: string;
   avatar_url?: string;
 }
 
+/** 用户统计信息 */
 export interface UserStats {
   moments_count: number;
   friends_count: number;
@@ -206,12 +188,15 @@ export interface UserStats {
   groups_count: number;
 }
 
+/** 用户关系信息（@auth-only） */
+// 设计说明：不暴露 is_blocked_by，被拉黑的用户不应感知到自己被拉黑
 export interface Relationship {
   is_following: boolean;
   is_followed_by: boolean;
   is_blocked: boolean;
 }
 
+/** 社交上下文（@auth-only） */
 export interface SocialContext {
   mutual_friends_count: number;
   mutual_friends_preview?: UserInfo[];
@@ -219,6 +204,10 @@ export interface SocialContext {
   common_tags?: string[];
 }
 
+/**
+ * 用户统一数据类型（用于列表、搜索、详情、Feed 等所有场景）
+ * 替代原 UserSearchItem/UserCard/FeedUserItem
+ */
 export interface UserItem {
   user: UserInfo;
   bio?: string;
@@ -227,10 +216,12 @@ export interface UserItem {
   last_online?: string;
   location?: RelativeLocation;
   stats?: UserStats;
+  // @auth-only
   relation?: Relationship;
   social_context?: SocialContext;
 }
 
+/** 用户设置 */
 export interface UserSettings {
   privacy_level: PrivacyLevel;
   location_visible: boolean;
@@ -247,6 +238,10 @@ export interface UserSettings {
   location_searchable: boolean;
 }
 
+/**
+ * 我的资料（/users/me/profile/get 返回）
+ * user_type 仅在此处返回，UserInfo 不包含
+ */
 export interface MyProfile {
   user_id: string;
   nickname: string;
@@ -264,6 +259,7 @@ export interface MyProfile {
   stats: UserStats;
 }
 
+/** 好友列表项 */
 export interface FriendItem {
   user: UserInfo;
   presence_status?: UserPresenceStatus;
@@ -273,6 +269,7 @@ export interface FriendItem {
   followed_back_at: string;
 }
 
+/** 关注列表项 */
 export interface FollowingItem {
   user: UserInfo;
   followed_at: string;
@@ -281,6 +278,7 @@ export interface FollowingItem {
   last_online?: string;
 }
 
+/** 粉丝列表项 */
 export interface FollowerItem {
   user: UserInfo;
   followed_at: string;
@@ -289,6 +287,7 @@ export interface FollowerItem {
   last_online?: string;
 }
 
+/** 拉黑列表项 */
 export interface BlockedUserItem {
   user: UserInfo;
   blocked_at: string;
@@ -296,9 +295,10 @@ export interface BlockedUserItem {
 }
 
 // ============================================================================
-// 群组类型
+// 群组类型（common.yaml + groups.yaml）
 // ============================================================================
 
+/** 群组基础信息（用于嵌套在其他对象中） */
 export interface GroupInfo {
   group_id: string;
   name: string;
@@ -306,6 +306,7 @@ export interface GroupInfo {
   members_count: number;
 }
 
+/** 群组设置 */
 export interface GroupSettings {
   join_method: GroupJoinMethod;
   is_searchable: boolean;
@@ -313,6 +314,7 @@ export interface GroupSettings {
   location: Location;
 }
 
+/** 我在群内的状态（@auth-only） */
 export interface MyGroupState {
   role: GroupRole;
   is_joined: boolean;
@@ -322,6 +324,10 @@ export interface MyGroupState {
   joined_at?: string;
 }
 
+/**
+ * 群组统一数据类型（用于列表、搜索、详情、Feed 等所有场景）
+ * 替代原 GroupSearchItem/GroupCard/FeedGroupItem/MyGroupItem
+ */
 export interface GroupItem {
   group: GroupInfo;
   description?: string;
@@ -331,13 +337,16 @@ export interface GroupItem {
   last_activity_at?: string;
   created_at?: string;
   owner_id?: string;
+  // @auth-only
   my_state?: MyGroupState;
   friends_in_group?: number;
+  // @group-admin-only
   join_method?: GroupJoinMethod;
   is_searchable?: boolean;
   max_members?: number;
 }
 
+/** 群公告列表项 */
 export interface GroupAnnouncementItem {
   announcement_id: string;
   group_id: string;
@@ -348,6 +357,7 @@ export interface GroupAnnouncementItem {
   is_pinned: boolean;
 }
 
+/** 群组成员列表项 */
 export interface GroupMemberItem {
   user: UserInfo;
   role: GroupRole;
@@ -357,6 +367,7 @@ export interface GroupMemberItem {
   last_online?: string;
 }
 
+/** 封禁成员列表项 */
 export interface BannedMemberItem {
   user: UserInfo;
   banned_at: string;
@@ -364,6 +375,7 @@ export interface BannedMemberItem {
   banned_by?: UserInfo;
 }
 
+/** 群组申请列表项 */
 export interface GroupApplicationItem {
   application_id: string;
   applicant: UserInfo;
@@ -374,6 +386,7 @@ export interface GroupApplicationItem {
   handled_by?: UserInfo;
 }
 
+/** 群组邀请列表项 */
 export interface GroupInviteItem {
   invite_id: string;
   group: GroupInfo;
@@ -394,35 +407,43 @@ export interface GroupSentInviteItem {
   responded_at?: string;
 }
 
+/** 邀请响应 */
 export interface Invitation {
   invite_id: string;
   expires_at: string;
 }
 
+/** 申请响应 */
 export interface Application {
   application_id: string;
 }
 
+/** 加入群组响应 */
 export interface JoinGroupResult {
-  status: "joined" | "pending_approval";
+  status: 'joined' | 'pending_approval';
   application?: Application;
 }
 
 // ============================================================================
-// 瞬间类型
+// 瞬间类型（common.yaml + moments.yaml）
 // ============================================================================
 
+/** 瞬间摘要快照（用于通知、WebSocket 事件等场景的轻量级预览） */
 export interface MomentSummary {
   moment_id: string;
   cover_url?: string;
   description_preview: string;
 }
 
+/**
+ * 瞬间统一数据类型（用于列表、搜索、详情、Feed、用户瞬间历史等所有场景）
+ * 替代原 MomentBase/MomentSearchItem/MomentCard/FeedMomentItem/UserMomentListItem
+ */
 export interface MomentItem {
   moment_id: string;
   description: string;
   images?: MomentImage[];
-  tags?: string[];
+  tags: string[];
   mentions?: string[];
   created_at: string;
   likes_count: number;
@@ -430,23 +451,28 @@ export interface MomentItem {
   shares_count: number;
   user: UserInfo;
   location: RelativeLocation;
+  // @owner-only
   privacy_level?: PrivacyLevel;
+  // @auth-only
   my_state?: {
     is_liked: boolean;
     is_favorited: boolean;
   };
+  // Feed 场景返回
   recommendation?: RecommendationContext;
 }
 
+/** 点赞列表项（瞬间/评论共用） */
 export interface LikeItem {
   user: UserInfo;
   liked_at: string;
 }
 
 // ============================================================================
-// 评论类型
+// 评论类型（moments.yaml）
 // ============================================================================
 
+/** 评论项 */
 export interface CommentItem {
   comment_id: string;
   user: UserInfo;
@@ -456,13 +482,15 @@ export interface CommentItem {
   created_at: string;
   likes_count: number;
   replies_count: number;
+  // @auth-only
   is_liked?: boolean;
 }
 
 // ============================================================================
-// 消息类型
+// 消息类型（chat.yaml）
 // ============================================================================
 
+/** 回复引用快照 */
 export interface MessageReplyTo {
   message_id: string;
   user_id: string;
@@ -471,11 +499,13 @@ export interface MessageReplyTo {
   share_code?: string;
 }
 
+/** 消息发送响应（私聊/群聊共用） */
 export interface MessageSent {
   message_id: string;
   sent_at: string;
 }
 
+/** 私聊消息项 */
 export interface PrivateMessageItem {
   message_id: string;
   type: MessageType;
@@ -490,6 +520,7 @@ export interface PrivateMessageItem {
   is_read: boolean;
 }
 
+/** 群聊消息项（使用 sender: UserInfo） */
 export interface GroupMessageItem {
   message_id: string;
   type: MessageType;
@@ -506,6 +537,10 @@ export interface GroupMessageItem {
   read_count?: number;
 }
 
+/**
+ * 私聊统一数据类型（用于列表、详情等所有场景）
+ * 替代原 PrivateChatListItem/Conversation
+ */
 export interface PrivateChatItem {
   other_user: UserInfo;
   unread_count: number;
@@ -526,6 +561,7 @@ export interface PrivateChatItem {
   created_at?: string;
 }
 
+/** 私聊详情响应 */
 export interface PrivateChatOpenResult {
   chat: PrivateChatItem;
   recent_messages: PaginatedData<PrivateMessageItem>;
@@ -536,21 +572,11 @@ export interface PrivateChatOpenResult {
 // ============================================================================
 
 export type NotificationPayload =
+  | { type: 'new_follower'; actor: UserInfo; source?: FollowSource; source_moment_id?: string }
+  | { type: 'mutual_follow'; actor: UserInfo }
+  | { type: 'moment_liked'; actor: UserInfo; moment_id: string; moment_summary: MomentSummary }
   | {
-      type: "new_follower";
-      actor: UserInfo;
-      source?: FollowSource;
-      source_moment_id?: string;
-    }
-  | { type: "mutual_follow"; actor: UserInfo }
-  | {
-      type: "moment_liked";
-      actor: UserInfo;
-      moment_id: string;
-      moment_summary: MomentSummary;
-    }
-  | {
-      type: "moment_commented";
+      type: 'moment_commented';
       actor: UserInfo;
       moment_id: string;
       moment_summary: MomentSummary;
@@ -558,7 +584,7 @@ export type NotificationPayload =
       comment_preview: string;
     }
   | {
-      type: "comment_liked";
+      type: 'comment_liked';
       actor: UserInfo;
       comment_id: string;
       comment_preview: string;
@@ -566,7 +592,7 @@ export type NotificationPayload =
       moment_summary: MomentSummary;
     }
   | {
-      type: "comment_reply";
+      type: 'comment_reply';
       actor: UserInfo;
       comment_id: string;
       replied_comment_preview: string;
@@ -576,16 +602,16 @@ export type NotificationPayload =
       moment_summary: MomentSummary;
     }
   | {
-      type: "mentioned";
+      type: 'mentioned';
       actor: UserInfo;
-      target_type: "moment" | "comment";
+      target_type: 'moment' | 'comment';
       moment_id: string;
       moment_summary: MomentSummary;
       comment_id?: string;
       comment_preview?: string;
     }
   | {
-      type: "group_invite_received";
+      type: 'group_invite_received';
       actor: UserInfo;
       group_id: string;
       group_name: string;
@@ -594,30 +620,26 @@ export type NotificationPayload =
       message?: string;
     }
   | {
-      type: "group_invite_accepted";
+      type: 'group_invite_accepted';
       group_id: string;
       group_name: string;
       invite_id: string;
       user: UserInfo;
     }
   | {
-      type: "group_application_received";
+      type: 'group_application_received';
       applicant: UserInfo;
       group_id: string;
       group_name: string;
       application_id: string;
     }
   | {
-      type: "group_application_accepted";
+      type: 'group_application_accepted';
       group_id: string;
       group_name: string;
       application_id: string;
     }
-  | {
-      type: "system_announcement";
-      announcement_id: string;
-      severity: AnnouncementSeverity;
-    };
+  | { type: 'system_announcement'; announcement_id: string; severity: AnnouncementSeverity };
 
 export interface NotificationItem {
   notification_id: string;
@@ -649,7 +671,7 @@ export interface MarkAsReadRequest {
 }
 
 // ============================================================================
-// 地图类型
+// 地图类型（map.yaml）
 // ============================================================================
 
 export interface MapHeatBreakdown {
@@ -658,9 +680,13 @@ export interface MapHeatBreakdown {
   moment?: number;
 }
 
+// 与 spec/api_spec_map.md 中的 MapHeatBucket 对齐
 export interface MapHeatBucket {
+  /** 聚合单元的代表坐标（例如行政区多边形的质心） */
   location: GeoPoint;
+  /** 当前过滤条件下，该区域内参与统计实体的总数 */
   total_count: number;
+  /** 按类型拆分；当 data_type != 'all' 时可选 */
   breakdown?: MapHeatBreakdown;
 }
 
@@ -668,7 +694,8 @@ export interface MapHeatCanvas {
   items: MapHeatBucket[];
 }
 
-export type HotspotObjectType = "user" | "group" | "moment";
+// 与 spec/api_spec_map.md 中的 MapHotspotItem / MapHotspotsCanvas 对齐
+export type HotspotObjectType = 'user' | 'group' | 'moment';
 
 export interface MapHotspotItem {
   object_type: HotspotObjectType;
@@ -703,7 +730,7 @@ export interface MapCanvasResponse {
 }
 
 // ============================================================================
-// 标签与搜索类型
+// 标签与搜索类型（search.yaml + feed.yaml）
 // ============================================================================
 
 export interface TagSuggestItem {
@@ -711,12 +738,14 @@ export interface TagSuggestItem {
   usage_count: number;
 }
 
+/** TagItem = TagSuggestItem + optional trend */
 export interface TagItem {
   name: string;
   usage_count: number;
   trend?: TagTrend;
 }
 
+/** 热门标签项（trend 必填，扩展自 TagItem） */
 export interface TrendingTagItem {
   name: string;
   usage_count: number;
@@ -754,10 +783,10 @@ export interface MomentSuggestItem {
 }
 
 export type SearchSuggestItem =
-  | { type: "tag"; payload: TagSuggestItem }
-  | { type: "user"; payload: UserSuggestItem }
-  | { type: "group"; payload: GroupSuggestItem }
-  | { type: "moment"; payload: MomentSuggestItem };
+  | { type: 'tag'; payload: TagSuggestItem }
+  | { type: 'user'; payload: UserSuggestItem }
+  | { type: 'group'; payload: GroupSuggestItem }
+  | { type: 'moment'; payload: MomentSuggestItem };
 
 export interface SearchSuggestResponse {
   items: SearchSuggestItem[];
@@ -774,9 +803,16 @@ export interface ApiResponse<T = void> {
 }
 
 // ============================================================================
-// 认证类型
+// 认证类型（auth.yaml）
 // ============================================================================
 
+/**
+ * 前端 Auth Store 使用的认证状态（仅 Web 端）
+ *
+ * spec: Web 端 auth 响应体为 AuthTokenPairWeb = Record<string, never>（空对象）
+ * Token 通过 HttpOnly Cookie 传递，前端不可见
+ * user_id/user_type/expires_at 通过 check_status + users/me/profile/get 获取
+ */
 export interface AuthData {
   user_id: string;
   user_type: UserType;
@@ -815,12 +851,13 @@ export interface RevokeAllResult {
   revoked_count: number;
 }
 
+/** 验证码发送成功响应（用于 email/phone 变更请求） */
 export interface VerificationSent {
-  expires_at: string;
+  expires_at: string; // 验证码过期时间（UTC ISO 8601）
 }
 
 // ============================================================================
-// 举报类型
+// 举报类型（report.yaml）
 // ============================================================================
 
 export interface ReportCreated {
@@ -839,8 +876,10 @@ export interface ReportItem {
 }
 
 // ============================================================================
-// 管理员类型
+// 管理员类型（admin-core.yaml + admin-moderation.yaml）
 // ============================================================================
+
+// === RBAC 类型 ===
 
 export interface AdminPermissionItem {
   key: string;
@@ -860,84 +899,82 @@ export interface AdminRoleItem {
 }
 
 export interface AdminPermissions {
-  permissions: string[];
+  permissions: string[]; // '*' 表示拥有全部权限
   roles: AdminRoleBasic[];
 }
 
 export interface AdminOperatorItem {
   user: UserInfo;
-  permissions: string[];
+  permissions: string[]; // '*' 表示拥有全部权限
   roles: AdminRoleBasic[];
 }
 
+// === 审计日志类型 ===
+
 export type AuditAction =
-  | "user.ban"
-  | "user.unban"
-  | "group.dismiss"
-  | "group.member_mute"
-  | "group.member_ban"
-  | "group.member_remove"
-  | "announcement.create"
-  | "announcement.update"
-  | "announcement.delete"
-  | "role.create"
-  | "role.update"
-  | "role.delete"
-  | "role.set_permissions"
-  | "admin.grant"
-  | "admin.revoke"
-  | "report.handle"
-  | "tag.delete"
-  | "permission.grant"
-  | "permission.revoke"
-  | "config.update";
+  | 'user.ban'
+  | 'user.unban'
+  | 'group.dismiss'
+  | 'group.member_mute'
+  | 'group.member_ban'
+  | 'group.member_remove'
+  | 'announcement.create'
+  | 'announcement.update'
+  | 'announcement.delete'
+  | 'role.create'
+  | 'role.update'
+  | 'role.delete'
+  | 'role.set_permissions'
+  | 'admin.grant'
+  | 'admin.revoke'
+  | 'report.handle'
+  | 'tag.delete'
+  | 'permission.grant'
+  | 'permission.revoke'
+  | 'config.update';
 
 export type AuditTargetType =
-  | "user"
-  | "group"
-  | "announcement"
-  | "role"
-  | "admin"
-  | "report"
-  | "tag"
-  | "config";
+  | 'user'
+  | 'group'
+  | 'announcement'
+  | 'role'
+  | 'admin'
+  | 'report'
+  | 'tag'
+  | 'config';
 
+/** 审计详情可辨识联合（type 与 AuditAction 一一对应） */
 export type AuditDetails =
-  | { type: "user.ban"; reason?: string; duration_days?: number }
-  | { type: "user.unban"; reason?: string }
-  | { type: "group.dismiss"; reason?: string }
-  | { type: "group.member_mute"; reason?: string; duration_minutes?: number }
-  | { type: "group.member_ban"; reason?: string }
-  | { type: "group.member_remove"; reason?: string }
-  | { type: "announcement.create"; title: string }
-  | { type: "announcement.update"; title: string; changed_fields?: string[] }
-  | { type: "announcement.delete"; title: string }
-  | { type: "role.create"; role_name: string; permissions: string[] }
+  | { type: 'user.ban'; reason?: string; duration_days?: number }
+  | { type: 'user.unban'; reason?: string }
+  | { type: 'group.dismiss'; reason?: string }
+  | { type: 'group.member_mute'; reason?: string; duration_minutes?: number }
+  | { type: 'group.member_ban'; reason?: string }
+  | { type: 'group.member_remove'; reason?: string }
+  | { type: 'announcement.create'; title: string }
+  | { type: 'announcement.update'; title: string; changed_fields?: string[] }
+  | { type: 'announcement.delete'; title: string }
+  | { type: 'role.create'; role_name: string; permissions: string[] }
   | {
-      type: "role.update";
+      type: 'role.update';
       role_name: string;
       added_permissions?: string[];
       removed_permissions?: string[];
     }
-  | { type: "role.delete"; role_name: string }
-  | { type: "role.set_permissions"; role_name: string; permissions: string[] }
+  | { type: 'role.delete'; role_name: string }
+  | { type: 'role.set_permissions'; role_name: string; permissions: string[] }
   | {
-      type: "admin.grant";
+      type: 'admin.grant';
       target_user_id: string;
       role_ids: string[];
       grant_all_permissions?: boolean;
     }
-  | { type: "admin.revoke"; target_user_id: string }
-  | { type: "report.handle"; report_id: string; action: string; note?: string }
-  | { type: "tag.delete"; name: string }
-  | { type: "permission.grant"; permission: string }
-  | { type: "permission.revoke"; permission: string }
-  | {
-      type: "config.update";
-      config_key: string;
-      old_value: unknown;
-      new_value: unknown;
-    };
+  | { type: 'admin.revoke'; target_user_id: string }
+  | { type: 'report.handle'; report_id: string; action: string; note?: string }
+  | { type: 'tag.delete'; name: string }
+  | { type: 'permission.grant'; permission: string }
+  | { type: 'permission.revoke'; permission: string }
+  | { type: 'config.update'; config_key: string; old_value: unknown; new_value: unknown };
 
 export interface AuditLogItem {
   log_id: string;
@@ -952,6 +989,8 @@ export interface AuditLogItem {
   device_summary?: string;
   created_at: string;
 }
+
+// === Admin 扩展类型（管理员视角的完整数据）===
 
 export interface AdminUserItem extends UserItem {
   status: UserAccountStatus;
@@ -1004,15 +1043,6 @@ export interface AdminReportItem extends ReportItem {
   target_snapshot?: ReportTargetSnapshot;
 }
 
-export interface SystemAnnouncementItem {
-  announcement_id: string;
-  title: string;
-  content: string;
-  severity: AnnouncementSeverity;
-  action_url?: string;
-  created_at: string;
-}
-
 export interface AdminAnnouncementItem extends SystemAnnouncementItem {
   created_by: UserInfo;
   send_push: boolean;
@@ -1027,17 +1057,23 @@ export interface AdminTagItem {
   created_at: string;
 }
 
-export type AdminTagSortBy =
-  | "usage_count_desc"
-  | "usage_count_asc"
-  | "created_at_desc";
+export type AdminTagSortBy = 'usage_count_desc' | 'usage_count_asc' | 'created_at_desc';
+
+export interface SystemAnnouncementItem {
+  announcement_id: string;
+  title: string;
+  content: string;
+  severity: AnnouncementSeverity;
+  action_url?: string;
+  created_at: string;
+}
 
 export interface AnnouncementCreated {
   announcement_id: string;
 }
 
 // ============================================================================
-// 系统配置类型
+// 系统配置类型（system.yaml）
 // ============================================================================
 
 export interface ClientConfig {
@@ -1127,19 +1163,26 @@ export interface ServerConfig {
   updated_by_user_id?: string;
 }
 
+/**
+ * 完整应用配置（admin/app_config/get 返回）
+ * spec: AppConfig 包含 ClientConfig 的所有客户端可见字段 + 仅服务端使用字段 + 元数据
+ */
 export interface AppConfig {
-  features: ClientConfig["features"];
-  limits: ClientConfig["limits"];
-  contact: ClientConfig["contact"];
+  // 客户端可见配置（构成 ClientConfig）
+  features: ClientConfig['features'];
+  limits: ClientConfig['limits'];
+  contact: ClientConfig['contact'];
+  // 仅服务端使用
   upload: UploadConfig;
   defaults: ContentDefaults;
   rate_limits: RateLimitConfig;
   response_defaults: ResponseDefaults;
+  // 元数据
   updated_at?: string;
   updated_by_user_id?: string;
 }
 
-export type ApiVersionStatus = "active" | "deprecated" | "sunset";
+export type ApiVersionStatus = 'active' | 'deprecated' | 'sunset';
 
 export interface ApiVersionMeta {
   version: string;
@@ -1156,7 +1199,7 @@ export interface HealthStatus {
 }
 
 // ============================================================================
-// 会话管理类型
+// 会话管理类型（auth.yaml）
 // ============================================================================
 
 export interface SessionItem {
@@ -1171,7 +1214,7 @@ export interface SessionItem {
 }
 
 // ============================================================================
-// 分享系统
+// 分享系统（share.yaml）
 // ============================================================================
 
 export interface LocationSharePayload {
