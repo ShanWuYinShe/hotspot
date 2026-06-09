@@ -8,8 +8,8 @@
 |--------|--------|
 | `backend/` | Rust / Axum / SQLx / PostGIS（已暂停） |
 | `backend-go/` | Go / Chi / pgx / PostgreSQL / S2 |
-| `frontend/` | React / Vite / TypeScript / Tailwind CSS（迁移中） |
-| `frontend_svelte/` | SvelteKit / Svelte 5 / TypeScript（迁移中） |
+| `frontend/` | SvelteKit / Svelte 5 / TypeScript / Tailwind CSS |
+| `frontend_react/` | React / Vite / TypeScript / Tailwind CSS（已暂停，保留作设计参考） |
 | `harmonyapp/` | HarmonyOS ArkTS |
 | `spec/` | API 规范 |
 

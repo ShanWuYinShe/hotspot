@@ -1,5 +1,5 @@
 ---
-globs: frontend_svelte/**
+globs: frontend/**
 alwaysApply: false
 ---
 

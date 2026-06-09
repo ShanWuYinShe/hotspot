@@ -86,7 +86,7 @@ services:
       retries: 10
       start_period: 30s
 
-  # ── Frontend (React SPA, Nginx) ────────────────────────────────
+  # ── Frontend (SvelteKit, Nginx) ────────────────────────────────
   # 开发模式: image 由 dev override 替换为 oven/bun + Vite HMR
   # 生产模式: docker compose build frontend 或 docker compose --profile prod up --build
   frontend:

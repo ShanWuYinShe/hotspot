@@ -20,11 +20,11 @@ case "$file_path" in
       *.go) command -v gofmt >/dev/null 2>&1 && gofmt -w "$file_path" 2>/dev/null || true ;;
     esac
     ;;
-  */frontend_svelte/*)
+  */frontend/*)
     case "$file_path" in
       *.ts|*.tsx|*.js|*.jsx|*.svelte|*.css|*.html|*.json|*.yaml|*.yml|*.md)
-        if [ -f "frontend_svelte/node_modules/.bin/prettier" ]; then
-          frontend_svelte/node_modules/.bin/prettier --write "$file_path" 2>/dev/null || true
+        if [ -f "frontend/node_modules/.bin/prettier" ]; then
+          frontend/node_modules/.bin/prettier --write "$file_path" 2>/dev/null || true
         fi
         ;;
     esac
