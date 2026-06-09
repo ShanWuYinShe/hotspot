@@ -27,6 +27,9 @@ import { NotificationBanner } from '../NotificationBanner';
 import { PerformanceIndicator } from '../PerformanceIndicator';
 import { NotificationRenderer } from '../../core/services/notification/NotificationRenderer';
 import { type SmartNotification, type NotificationAction } from '../../core/services/notification/NotificationDataManager';
+import { AppThemeManager } from '../../core/theme/AppThemeManager';
+import { DesignConstants } from '../../constants/DesignConstants';
+import { curves } from '@kit.ArkUI';
 
 interface TabItem {
   label: string;
@@ -165,28 +168,48 @@ export struct PhoneLayout {
     .backgroundColor($r('app.color.bg_primary'))
   }
 
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
   @Builder TabBarBuilder(index: number) {
     Column() {
-      Text() {
-        SymbolSpan(TAB_ITEMS[index].symbolId)
-          .fontSize(24)
-          .fontColor([
+      Column() {
+        Text() {
+          SymbolSpan(TAB_ITEMS[index].symbolId)
+            .fontSize(24)
+            .fontColor([
+              this.currentTabIndex === index
+                ? $r('app.color.brand_primary')
+                : $r('app.color.chip_inactive_text')
+            ])
+        }
+        Text(TAB_ITEMS[index].label)
+          .fontSize($r('app.float.font_size_xs'))
+          .fontColor(
             this.currentTabIndex === index
               ? $r('app.color.brand_primary')
               : $r('app.color.chip_inactive_text')
-          ])
+          )
+          .fontWeight(
+            this.currentTabIndex === index ? FontWeight.Medium : FontWeight.Regular
+          )
+          .margin({ top: 2 })
       }
-      Text(TAB_ITEMS[index].label)
-        .fontSize($r('app.float.font_size_xs'))
-        .fontColor(
-          this.currentTabIndex === index
-            ? $r('app.color.brand_primary')
-            : $r('app.color.chip_inactive_text')
+      .width(60)
+      .padding({ top: 6, bottom: 6 })
+      .borderRadius(16)
+      .backgroundColor(
+        this.currentTabIndex === index
+          ? this.getPalette().tabBarActiveBackground
+          : Color.Transparent
+      )
+      .animation({
+        curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,
+          DesignConstants.INTERACTION.SPRING_DAMPING_TAB
         )
-        .fontWeight(
-          this.currentTabIndex === index ? FontWeight.Medium : FontWeight.Regular
-        )
-        .margin({ top: 2 })
+      })
     }
     .height(56)
     .justifyContent(FlexAlign.Center)
@@ -220,7 +243,24 @@ export struct PhoneLayout {
       )
       .borderRadius($r('app.float.radius_full'))
       .border({ width: 1, color: $r('app.color.brand_primary') })
-      .scale(this.isCreateTabPressed ? { x: 0.9, y: 0.9 } : { x: 1, y: 1 })
+      .scale(
+        this.isCreateTabPressed
+          ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON }
+          : { x: 1, y: 1 }
+      )
+      .animation({
+        curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+        )
+      })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.isCreateTabPressed = true;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.isCreateTabPressed = false;
+        }
+      })
     }
     .height(56)
     .justifyContent(FlexAlign.Center)
