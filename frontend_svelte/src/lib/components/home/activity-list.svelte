@@ -27,9 +27,15 @@
   interface Props {
     activities?: Activity[];
     loading?: boolean;
+    onSelect?: (id: string) => void;
   }
 
-  let { activities = [], loading = false }: Props = $props();
+  let { activities = [], loading = false, onSelect }: Props = $props();
+
+  function handleSelect(id: string) {
+    if (onSelect) onSelect(id);
+    else void goto(`/events/${id}`);
+  }
 </script>
 
 <div
@@ -61,7 +67,7 @@
         style="background: var(--surface-bg);"
         onmouseenter={(e) => (e.currentTarget.style.background = 'var(--border-theme)')}
         onmouseleave={(e) => (e.currentTarget.style.background = 'var(--surface-bg)')}
-        onclick={() => void goto(`/events/${a.id}`)}
+        onclick={() => handleSelect(a.id)}
       >
         <div
           class="flex flex-shrink-0 items-center justify-center rounded-[10px]"

@@ -16,6 +16,7 @@
   import ArrowLeft from 'lucide-svelte/icons/arrow-left';
   import MapIcon from 'lucide-svelte/icons/map';
   import Search from 'lucide-svelte/icons/search';
+  import Radar from 'lucide-svelte/icons/radar';
   import Users from 'lucide-svelte/icons/users';
   import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
   import LogIn from 'lucide-svelte/icons/log-in';
@@ -100,9 +101,6 @@
       </button>
       <div class="flex-1">
         <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">附近的人</h1>
-        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
-          {onlineCount} 人在线 · {pagination.items.length} 人附近
-        </p>
       </div>
       <button
         class="surface-flat flex items-center justify-center rounded-full outline-none"
@@ -156,66 +154,86 @@
   </div>
 
   <!-- List -->
-  <div class="w-full px-5 pt-3 pb-6">
-    {#if pagination.loading}
-      <div
-        class="flex flex-col gap-2.5"
-        style="max-width: 640px; margin-left: auto; margin-right: auto;"
-      >
-        {#each Array(6) as _, i (i)}
+  <div class="w-full px-5 pt-4 pb-6">
+    <div style="max-width: 640px; margin-left: auto; margin-right: auto;">
+      <!-- Hero summary -->
+      <div class="ambient-glow mb-5">
+        <div
+          class="surface-hero flex items-center gap-4 rounded-[22px]"
+          style="padding: 16px 18px;"
+        >
           <div
-            class="animate-pulse rounded-[22px]"
-            style="height: 72px; background: var(--border-theme);"
-          ></div>
-        {/each}
-      </div>
-    {:else if pagination.error}
-      {#if !authStore.isAuthenticated}
-        <EmptyState
-          icon={LogIn}
-          title="登录后查看"
-          description="登录后即可浏览附近的人"
-          actionText="立即登录"
-          onAction={() => uiStore.openLoginModalWithRedirect({})}
-        />
-      {:else}
-        <EmptyState
-          icon={AlertTriangle}
-          title="加载失败"
-          description={pagination.error}
-          actionText="重试"
-          onAction={handleRetry}
-        />
-      {/if}
-    {:else if pagination.items.length === 0 && hasLoadedOnce}
-      <EmptyState
-        icon={Users}
-        title="附近暂无其他用户"
-        description="换个浏览位置或稍后再来看看。"
-      />
-    {:else}
-      <div
-        class="flex flex-col gap-2.5"
-        style="max-width: 640px; margin-left: auto; margin-right: auto;"
-      >
-        {#each pagination.items as user (user.user.user_id)}
-          <UserCard
-            {user}
-            showDistance
-            showBio
-            showTags
-            showOnlineStatus
-            variant="nearby-row"
-            class="overflow-hidden"
-          />
-        {/each}
+            class="flex flex-shrink-0 items-center justify-center rounded-full"
+            style="width: 44px; height: 44px; background: var(--brand); box-shadow: 0 4px 14px var(--glow);"
+          >
+            <Radar size={19} strokeWidth={2} color="var(--text-on-accent)" />
+          </div>
+          <div class="flex-1">
+            <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
+              {mapAnchorStore.displayName} · {mapAnchorStore.radius}km 范围
+            </p>
+            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+              <span style="color: var(--color-semantic-online);">{onlineCount} 人在线</span>
+              <span style="margin-left: 8px;">· 共 {pagination.items.length} 人</span>
+            </p>
+          </div>
+        </div>
       </div>
 
-      <LoadMoreButton
-        loading={pagination.loadingMore}
-        hasMore={pagination.hasMore}
-        onLoadMore={() => loadUsers(false)}
-      />
-    {/if}
+      {#if pagination.loading}
+        <div class="flex flex-col gap-2.5">
+          {#each Array(6) as _, i (i)}
+            <div
+              class="animate-pulse rounded-[22px]"
+              style="height: 72px; background: var(--border-theme);"
+            ></div>
+          {/each}
+        </div>
+      {:else if pagination.error}
+        {#if !authStore.isAuthenticated}
+          <EmptyState
+            icon={LogIn}
+            title="登录后查看"
+            description="登录后即可浏览附近的人"
+            actionText="立即登录"
+            onAction={() => uiStore.openLoginModalWithRedirect({})}
+          />
+        {:else}
+          <EmptyState
+            icon={AlertTriangle}
+            title="加载失败"
+            description={pagination.error}
+            actionText="重试"
+            onAction={handleRetry}
+          />
+        {/if}
+      {:else if pagination.items.length === 0 && hasLoadedOnce}
+        <EmptyState
+          icon={Users}
+          title="附近暂无其他用户"
+          description="换个浏览位置或稍后再来看看。"
+        />
+      {:else}
+        <div class="flex flex-col gap-2.5">
+          {#each pagination.items as user (user.user.user_id)}
+            <UserCard
+              {user}
+              showDistance
+              showBio
+              showTags
+              showOnlineStatus
+              variant="nearby-row"
+              class="overflow-hidden"
+            />
+          {/each}
+        </div>
+
+        <LoadMoreButton
+          loading={pagination.loadingMore}
+          hasMore={pagination.hasMore}
+          onLoadMore={() => loadUsers(false)}
+        />
+      {/if}
+    </div>
   </div>
 </div>

@@ -387,9 +387,10 @@
   class:overflow-hidden={platformStore.isDesktop}
 >
   <div
-    class="flex min-w-0 flex-1 flex-col"
+    class="mx-auto flex min-w-0 flex-1 flex-col"
     class:overflow-y-auto={platformStore.isDesktop}
     class:no-scrollbar={platformStore.isDesktop}
+    style="width: 100%; max-width: {platformStore.isDesktop ? '760px' : '640px'};"
   >
     <!-- Sticky header -->
     <div

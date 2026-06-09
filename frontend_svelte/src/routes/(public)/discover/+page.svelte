@@ -171,11 +171,11 @@
 {/snippet}
 
 <!-- Shared feed grid -->
-{#snippet feedGrid(columns: 1 | 2)}
+{#snippet feedGrid(mode: 'list' | 'grid2' | 'autofill')}
   {#if feed.loading}
-    {#if columns === 2}
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
-        {#each Array(4) as _}
+    {#if mode === 'list'}
+      <div class="flex flex-col gap-4">
+        {#each Array(3) as _}
           <div class="surface-flat rounded-[18px] overflow-hidden">
             <div style="aspect-ratio: 16/9; background: var(--border-theme);"></div>
             <div style="padding: 12px 16px;">
@@ -192,8 +192,12 @@
         {/each}
       </div>
     {:else}
-      <div class="flex flex-col gap-4">
-        {#each Array(3) as _}
+      <div
+        style="display: grid; grid-template-columns: {mode === 'autofill'
+          ? 'repeat(auto-fill, minmax(300px, 1fr))'
+          : 'repeat(2, 1fr)'}; gap: 14px;"
+      >
+        {#each Array(4) as _}
           <div class="surface-flat rounded-[18px] overflow-hidden">
             <div style="aspect-ratio: 16/9; background: var(--border-theme);"></div>
             <div style="padding: 12px 16px;">
@@ -212,23 +216,32 @@
     {/if}
   {:else if getFilteredItems().length === 0}
     <EmptyState icon={Compass} title="暂无内容" description="换个标签或关键词试试" />
-  {:else if columns === 2}
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
-      {#each getFilteredItems() as moment (moment.moment_id)}
-        <MomentCard {moment} dense />
-      {/each}
-    </div>
-    <LoadMoreButton
-      loading={feed.loadingMore}
-      hasMore={feed.hasMore}
-      onLoadMore={() => loadFeed(false)}
-    />
   {:else}
-    <div class="flex flex-col gap-4">
-      {#each getFilteredItems() as moment (moment.moment_id)}
-        <MomentCard {moment} />
-      {/each}
-    </div>
+    {@const items = getFilteredItems()}
+    <!-- Hero first card -->
+    {#if items[0]}
+      <div class="ambient-glow mb-4">
+        <MomentCard moment={items[0]} />
+      </div>
+    {/if}
+    <!-- Remaining items -->
+    {#if mode === 'list'}
+      <div class="flex flex-col gap-4">
+        {#each items.slice(1) as moment (moment.moment_id)}
+          <MomentCard {moment} />
+        {/each}
+      </div>
+    {:else}
+      <div
+        style="display: grid; grid-template-columns: {mode === 'autofill'
+          ? 'repeat(auto-fill, minmax(300px, 1fr))'
+          : 'repeat(2, 1fr)'}; gap: 14px;"
+      >
+        {#each items.slice(1) as moment (moment.moment_id)}
+          <MomentCard {moment} dense />
+        {/each}
+      </div>
+    {/if}
     <LoadMoreButton
       loading={feed.loadingMore}
       hasMore={feed.hasMore}
@@ -305,7 +318,7 @@
     <div class="flex flex-1 min-h-0 overflow-hidden">
       <div class="flex-1 overflow-y-auto no-scrollbar" style="padding: 20px 24px 28px;">
         {@render tagChips()}
-        {@render feedGrid(2)}
+        {@render feedGrid('autofill')}
       </div>
 
       <div
@@ -343,6 +356,7 @@
           placeholder="地点、人物、关键词…"
           class="flex-1 bg-transparent outline-none"
           style="font-size: 13px; color: var(--text-primary);"
+          onkeydown={(e) => e.key === 'Enter' && handleSearch()}
         />
         {#if searchVal.length > 0}
           <button type="button" class="flex-shrink-0 outline-none" onclick={() => (searchVal = '')}>
@@ -381,7 +395,7 @@
       style="max-width: 800px; margin: 0 auto; width: 100%; padding: 16px 20px 28px;"
     >
       {@render tagChips()}
-      {@render feedGrid(2)}
+      {@render feedGrid('grid2')}
     </div>
   </div>
 {:else}
@@ -398,7 +412,7 @@
       style="max-width: 560px; margin: 0 auto; width: 100%; padding: 12px 16px 24px;"
     >
       {@render tagChips()}
-      {@render feedGrid(1)}
+      {@render feedGrid('list')}
     </div>
   </div>
 {/if}
