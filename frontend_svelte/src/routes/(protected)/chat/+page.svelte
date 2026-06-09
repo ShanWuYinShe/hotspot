@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import { withMinimumLoadingTime } from '$lib/utils/loading';
   import { formatRelativeTime } from '$lib/utils/format';
   import { privateChatsService, groupsService } from '$lib/api/services';
@@ -115,12 +116,16 @@
           <button
             class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9] surface-flat"
             style="width: 38px; height: 38px;"
+            aria-label="发起私聊"
+            onclick={() => goto('/users/nearby')}
           >
             <UserPlus size={16} strokeWidth={1.5} color="var(--text-secondary)" />
           </button>
           <button
             class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9] surface-flat"
             style="width: 38px; height: 38px;"
+            aria-label="发现群聊"
+            onclick={() => goto('/groups/nearby')}
           >
             <Plus size={16} strokeWidth={1.5} color="var(--text-secondary)" />
           </button>

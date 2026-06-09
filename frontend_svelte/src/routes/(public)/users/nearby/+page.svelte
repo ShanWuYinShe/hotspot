@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { usersService } from '$lib/api/services';
@@ -107,6 +108,7 @@
         class="surface-flat flex items-center justify-center rounded-full outline-none"
         style="width: 36px; height: 36px;"
         aria-label="地图"
+        onclick={() => goto('/location')}
       >
         <MapIcon size={15} strokeWidth={1.5} color="var(--brand)" />
       </button>
