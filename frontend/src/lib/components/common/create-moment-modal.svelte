@@ -519,7 +519,7 @@
             <button
               class="px-4 py-1.5 rounded-full text-[12px] outline-none transition-all duration-200 active:scale-[0.92]"
               style={active
-                ? 'background: var(--brand); color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid transparent;'
+                ? 'background: var(--brand); color: white; box-shadow: 0 4px 12px var(--glow); border: 1px solid transparent;'
                 : 'background: var(--surface-bg); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
               onclick={() => toggleVibe(tag)}
             >
@@ -558,7 +558,7 @@
       <button
         class="flex items-center justify-center gap-2 w-full py-3.5 rounded-[22px] text-[14px] outline-none transition-all duration-300 active:scale-[0.97]"
         style={canPost && !isSubmitting
-          ? 'background: var(--brand); color: white; box-shadow: 0 8px 24px rgba(0,0,0,0.18); border: 1px solid transparent;'
+          ? 'background: var(--brand); color: white; box-shadow: 0 8px 24px var(--glow); border: 1px solid transparent;'
           : 'background: var(--surface-bg); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary); opacity: 0.6; cursor: not-allowed;'}
         onclick={handleSubmit}
         disabled={!canPost || isSubmitting || isUploadingImages}

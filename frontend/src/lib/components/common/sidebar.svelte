@@ -196,7 +196,7 @@
       <!-- Icon circle -->
       <div
         class="flex flex-shrink-0 items-center justify-center rounded-full"
-        style="width: 34px; height: 34px; background: var(--brand); box-shadow: 0 3px 10px rgba(0,0,0,0.15);"
+        style="width: 34px; height: 34px; background: var(--brand); box-shadow: var(--shadow-md);"
       >
         <Navigation2 size={14} strokeWidth={2} color="var(--text-on-accent)" />
       </div>

@@ -480,10 +480,9 @@
               {@const avatarUrl = getActorAvatar(item)}
               {@const thumbnailUrl = getPostThumbnail(item)}
               <div
-                class="flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
+                class="row-hover flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
                 style="background: {`${typeColor}07`};
-                border: 1px solid {`${typeColor}18`};
-                box-shadow: var(--shadow-lg);"
+                border: 1px solid {`${typeColor}18`};"
               >
                 <!-- Avatar with type badge -->
                 <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
@@ -595,6 +594,7 @@
             {@const thumbnailUrl = getPostThumbnail(item)}
             <div
               class="row-hover flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
+              style="border: 1px solid transparent;"
             >
               <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
                 {#if avatarUrl}

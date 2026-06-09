@@ -278,7 +278,7 @@
                 onclick={() => setThemeFamily(option.family)}
               >
                 <div
-                  style="width: 60px; height: 80px; border-radius: 12px; background: var(--surface-bg); border: 1px solid {accent}22; box-shadow: 0 2px 8px rgba(0,0,0,0.12); position: relative; overflow: hidden;"
+                  style="width: 60px; height: 80px; border-radius: 12px; background: var(--surface-bg); border: 1px solid {accent}22; box-shadow: var(--shadow-md); position: relative; overflow: hidden;"
                 >
                   <div
                     style="position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; height: 20px; background: var(--surface-bg); border-top: 1px solid {accent}30;"
@@ -524,7 +524,7 @@
           >
             <!-- Mini phone frame preview -->
             <div
-              style="width: 60px; height: 80px; border-radius: 12px; background: var(--surface-bg); border: 1px solid {accent}22; box-shadow: 0 2px 8px rgba(0,0,0,0.12); position: relative; overflow: hidden;"
+              style="width: 60px; height: 80px; border-radius: 12px; background: var(--surface-bg); border: 1px solid {accent}22; box-shadow: var(--shadow-md); position: relative; overflow: hidden;"
             >
               <div
                 style="position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; height: 20px; background: var(--surface-bg); border-top: 1px solid {accent}30;"

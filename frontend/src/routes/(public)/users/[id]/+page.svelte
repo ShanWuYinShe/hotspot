@@ -256,7 +256,7 @@
         <div class="relative">
           <div
             class="overflow-hidden rounded-[22px]"
-            style="width: 76px; height: 76px; border: 3px solid var(--surface-bg); box-shadow: 0 6px 20px rgba(0,0,0,0.22);"
+            style="width: 76px; height: 76px; border: 3px solid var(--surface-bg); box-shadow: var(--shadow-lg);"
           >
             <img
               src={user.user.avatar_url}
