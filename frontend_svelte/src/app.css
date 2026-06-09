@@ -59,6 +59,14 @@
   --color-neu-accent-soft: var(--neu-accent-soft);
   --color-neu-accent-soft-border: var(--neu-accent-soft-border);
 
+  /* Semantic + map tokens (match Figma Make design system) */
+  --color-semantic-online: var(--semantic-online);
+  --color-semantic-hot: var(--semantic-hot);
+  --color-semantic-warning: var(--semantic-warning);
+  --color-map-user: var(--map-user);
+  --color-map-group: var(--map-group);
+  --color-map-post: var(--map-post);
+
   --radius: 0.625rem;
 }
 
@@ -83,6 +91,20 @@
   --neu-border-pressed: rgba(61, 122, 85, 0.24);
   --neu-accent-soft: rgba(61, 122, 85, 0.1);
   --neu-accent-soft-border: rgba(61, 122, 85, 0.32);
+  --semantic-online: #3d7a55;
+  --semantic-hot: #8e6f35;
+  --semantic-warning: #9a7a35;
+  --map-user: #3d7a55;
+  --map-group: #638b46;
+  --map-post: #a57c38;
+  --overlay-soft: rgba(27, 31, 27, 0.08);
+  --overlay-strong: rgba(20, 28, 20, 0.42);
+  --surface-image-scrim: linear-gradient(
+    to bottom,
+    rgba(20, 28, 20, 0.02) 0%,
+    rgba(20, 28, 20, 0.44) 100%
+  );
+  --switch-background: var(--neu-border-pressed);
   --neu-error: #ef4444;
   --neu-error-border: rgba(239, 68, 68, 0.3);
   --neu-success: #059669;
@@ -155,6 +177,20 @@
   --neu-border-pressed: rgba(82, 184, 120, 0.22);
   --neu-accent-soft: rgba(82, 184, 120, 0.12);
   --neu-accent-soft-border: rgba(82, 184, 120, 0.34);
+  --semantic-online: #52b878;
+  --semantic-hot: #c4a75a;
+  --semantic-warning: #c4a75a;
+  --map-user: #52b878;
+  --map-group: #88b85a;
+  --map-post: #c4a75a;
+  --overlay-soft: rgba(220, 232, 222, 0.07);
+  --overlay-strong: rgba(0, 0, 0, 0.54);
+  --surface-image-scrim: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.02) 0%,
+    rgba(0, 0, 0, 0.56) 100%
+  );
+  --switch-background: var(--neu-border-pressed);
   --neu-error: #f87171;
   --neu-error-border: rgba(248, 113, 113, 0.3);
   --neu-success: #34d399;
@@ -231,6 +267,20 @@
   --neu-border-pressed: rgba(99, 102, 241, 0.26);
   --neu-accent-soft: rgba(99, 102, 241, 0.1);
   --neu-accent-soft-border: rgba(99, 102, 241, 0.3);
+  --semantic-online: #14b8a6;
+  --semantic-hot: #f43f5e;
+  --semantic-warning: #f59e0b;
+  --map-user: #6366f1;
+  --map-group: #10b981;
+  --map-post: #f97316;
+  --overlay-soft: rgba(30, 27, 75, 0.08);
+  --overlay-strong: rgba(14, 10, 35, 0.5);
+  --surface-image-scrim: linear-gradient(
+    to bottom,
+    rgba(20, 16, 56, 0.04) 0%,
+    rgba(20, 16, 56, 0.52) 100%
+  );
+  --switch-background: var(--neu-border-pressed);
   --neu-error: #ef4444;
   --neu-error-border: rgba(239, 68, 68, 0.3);
   --neu-success: #059669;
@@ -307,6 +357,20 @@
   --neu-border-pressed: rgba(129, 140, 248, 0.26);
   --neu-accent-soft: rgba(129, 140, 248, 0.14);
   --neu-accent-soft-border: rgba(129, 140, 248, 0.34);
+  --semantic-online: #2dd4bf;
+  --semantic-hot: #fb7185;
+  --semantic-warning: #fbbf24;
+  --map-user: #818cf8;
+  --map-group: #34d399;
+  --map-post: #fb923c;
+  --overlay-soft: rgba(234, 230, 255, 0.08);
+  --overlay-strong: rgba(0, 0, 0, 0.6);
+  --surface-image-scrim: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.02) 0%,
+    rgba(0, 0, 0, 0.62) 100%
+  );
+  --switch-background: var(--neu-border-pressed);
   --neu-error: #f87171;
   --neu-error-border: rgba(248, 113, 113, 0.3);
   --neu-success: #34d399;
@@ -363,64 +427,79 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Theme: neu — warm neumorphic with soft tactile shadows
-   Light:  warm beige #EAE5DE canvas, terracotta #D4845A accent
-   Dark:   deep navy #1A1C23 canvas, warm glow #E8A87C accent
+   Theme: neu — 暖砂 warm-sand ceramic (matches Figma Make "暖砂" default)
+   Character: sun-warmed stone, ceramic tactility, low-contrast embossing.
+   Light:  warm sand #EFE7DA canvas, terracotta #B86F4B accent
+   Dark:   warm brown #211B17 canvas, ember #D18A5D accent
    ═══════════════════════════════════════════════════════════════════════ */
 :root[data-theme-family='neu'] {
-  --neu-bg: #eae5de;
-  --page-bg: #d0cbc3;
-  --neu-shadow-light: #ffffff;
-  --neu-shadow-dark: #cdc8c0;
-  --neu-text: #4a4036;
-  --neu-text-muted: #7a7269;
-  --neu-accent: #748377;
-  --neu-accent-primary: #d4845a;
-  --neu-glow: rgba(228, 178, 137, 0.6);
-  --neu-fab-glow: 0 6px 18px rgba(212, 132, 90, 0.34), 0 2px 4px rgba(0, 0, 0, 0.1);
-  --neu-border: #f7f5f2;
-  --neu-border-pressed: #dfd9d1;
-  --neu-accent-soft: rgba(212, 132, 90, 0.1);
-  --neu-accent-soft-border: rgba(212, 132, 90, 0.28);
+  --neu-bg: #efe7da;
+  --page-bg: #e2d6c5;
+  --neu-shadow-light: rgba(255, 252, 245, 0.96);
+  --neu-shadow-dark: rgba(167, 145, 116, 0.38);
+  --neu-text: #3f342a;
+  --neu-text-muted: #827466;
+  --neu-accent: #8b806f;
+  --neu-accent-primary: #b86f4b;
+  --neu-glow: rgba(184, 111, 75, 0.24);
+  --neu-fab-glow: 0 6px 18px rgba(184, 111, 75, 0.34), 0 2px 4px rgba(0, 0, 0, 0.1);
+  --neu-border: rgba(93, 72, 52, 0.09);
+  --neu-border-pressed: rgba(93, 72, 52, 0.18);
+  --neu-accent-soft: rgba(184, 111, 75, 0.1);
+  --neu-accent-soft-border: rgba(184, 111, 75, 0.24);
   --neu-error: #c0392b;
   --neu-error-border: rgba(192, 57, 43, 0.3);
-  --neu-success: #748377;
-  --neu-warning: #b8860b;
-  --neu-warning-border: rgba(184, 134, 11, 0.3);
-  --neu-fallback-bg: rgba(212, 132, 90, 0.12);
-  --neu-fallback-text: #d4845a;
+  --neu-success: #66835d;
+  --neu-warning: #b8843f;
+  --neu-warning-border: rgba(184, 132, 63, 0.3);
+  --neu-fallback-bg: rgba(184, 111, 75, 0.12);
+  --neu-fallback-text: #b86f4b;
   --neu-active-text: #fff8f4;
-  --neu-glass-bg: rgba(234, 229, 222, 0.88);
-  --neu-glass-border: rgba(255, 255, 255, 0.65);
-  --neu-glass-shadow: 0 -2px 16px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(212, 132, 90, 0.1);
-  --hover-shadow-card:
-    12px 12px 26px var(--neu-shadow-dark), -12px -12px 26px var(--neu-shadow-light);
-  --hover-shadow-row: 9px 9px 20px var(--neu-shadow-dark), -9px -9px 20px var(--neu-shadow-light);
-  --hover-shadow-btn: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light);
-  --hover-shadow-pill: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);
+  --neu-glass-bg: rgba(239, 231, 218, 0.88);
+  --neu-glass-border: rgba(255, 252, 245, 0.65);
+  --neu-glass-shadow: 0 -2px 16px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(184, 111, 75, 0.1);
+  --semantic-online: #66835d;
+  --semantic-hot: #b86f4b;
+  --semantic-warning: #b8843f;
+  --map-user: #a97855;
+  --map-group: #7b8a69;
+  --map-post: #c97a55;
+  --overlay-soft: rgba(63, 52, 42, 0.1);
+  --overlay-strong: rgba(43, 33, 25, 0.46);
+  --surface-image-scrim: linear-gradient(
+    to bottom,
+    rgba(35, 27, 20, 0.04) 0%,
+    rgba(35, 27, 20, 0.48) 100%
+  );
+  --hover-shadow-card: 9px 9px 22px var(--neu-shadow-dark), -9px -9px 22px var(--neu-shadow-light);
+  --hover-shadow-row: 6px 6px 16px var(--neu-shadow-dark), -6px -6px 16px var(--neu-shadow-light);
+  --hover-shadow-btn: 5px 5px 13px var(--neu-shadow-dark), -5px -5px 13px var(--neu-shadow-light);
+  --hover-shadow-pill: 3px 3px 9px var(--neu-shadow-dark), -3px -3px 9px var(--neu-shadow-light);
 
   --background: var(--page-bg);
   --foreground: var(--neu-text);
   --card: var(--neu-bg);
   --card-foreground: var(--neu-text);
-  --popover: #f2eee8;
+  --popover: var(--neu-bg);
   --popover-foreground: var(--neu-text);
   --primary: var(--neu-accent-primary);
   --primary-foreground: #fff8f4;
-  --secondary: #e6e0d8;
+  --secondary: color-mix(in srgb, var(--neu-bg) 78%, var(--page-bg));
   --secondary-foreground: var(--neu-text);
-  --accent: #f2eee8;
+  --accent: color-mix(in srgb, var(--neu-bg) 90%, var(--page-bg));
   --accent-foreground: var(--neu-text);
-  --muted: #e1dbd3;
+  --muted: color-mix(in srgb, var(--neu-bg) 72%, var(--page-bg));
   --muted-foreground: var(--neu-text-muted);
   --destructive: var(--neu-error);
   --destructive-foreground: #ffffff;
   --border: var(--neu-border);
   --input: var(--neu-border-pressed);
+  --input-background: color-mix(in srgb, var(--neu-bg) 86%, var(--page-bg));
+  --switch-background: var(--neu-border-pressed);
   --ring: var(--neu-accent-primary);
-  --glow-primary: rgba(212, 132, 90, 0.24);
-  --glow-accent: rgba(228, 178, 137, 0.22);
-  --glow-success: rgba(116, 131, 119, 0.18);
+  --glow-primary: rgba(184, 111, 75, 0.24);
+  --glow-accent: rgba(184, 111, 75, 0.22);
+  --glow-success: rgba(102, 131, 93, 0.18);
   --shadow-light: var(--neu-shadow-light);
   --shadow-dark: var(--neu-shadow-dark);
   --chart-1: oklch(0.646 0.222 41.116);
@@ -428,72 +507,86 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: #eae5de;
+  --sidebar: var(--neu-bg);
   --sidebar-foreground: var(--neu-text);
-  --sidebar-primary: #d4845a;
+  --sidebar-primary: var(--neu-accent-primary);
   --sidebar-primary-foreground: #fff8f4;
-  --sidebar-accent: #f2eee8;
+  --sidebar-accent: color-mix(in srgb, var(--neu-bg) 90%, var(--page-bg));
   --sidebar-accent-foreground: var(--neu-text);
-  --sidebar-border: #dfd9d1;
-  --sidebar-ring: #d4845a;
+  --sidebar-border: var(--neu-border-pressed);
+  --sidebar-ring: var(--neu-accent-primary);
   --topbar-height-mobile: 3.5rem;
   --topbar-height-desktop: 4rem;
 }
 
 :root[data-theme-family='neu'].dark {
-  --neu-bg: #1a1c23;
-  --page-bg: #0f1015;
-  --neu-shadow-light: #232731;
-  --neu-shadow-dark: #111217;
-  --neu-text: #e5e7eb;
-  --neu-text-muted: #8d94a0;
-  --neu-accent: #8d94a0;
-  --neu-accent-primary: #e8a87c;
-  --neu-glow: rgba(244, 200, 155, 0.3);
-  --neu-fab-glow: 0 6px 22px rgba(232, 168, 124, 0.36), 0 2px 6px rgba(0, 0, 0, 0.22);
-  --neu-border: #2a2c35;
-  --neu-border-pressed: #15161c;
-  --neu-accent-soft: rgba(232, 168, 124, 0.12);
-  --neu-accent-soft-border: rgba(232, 168, 124, 0.3);
+  --neu-bg: #211b17;
+  --page-bg: #15110e;
+  --neu-shadow-light: rgba(255, 218, 179, 0.055);
+  --neu-shadow-dark: rgba(0, 0, 0, 0.58);
+  --neu-text: #f1e4d2;
+  --neu-text-muted: #a99682;
+  --neu-accent: #b7a28a;
+  --neu-accent-primary: #d18a5d;
+  --neu-glow: rgba(209, 138, 93, 0.22);
+  --neu-fab-glow: 0 6px 22px rgba(209, 138, 93, 0.36), 0 2px 6px rgba(0, 0, 0, 0.22);
+  --neu-border: rgba(255, 220, 183, 0.08);
+  --neu-border-pressed: rgba(255, 220, 183, 0.16);
+  --neu-accent-soft: rgba(209, 138, 93, 0.12);
+  --neu-accent-soft-border: rgba(209, 138, 93, 0.28);
   --neu-error: #e06f6f;
   --neu-error-border: rgba(224, 111, 111, 0.3);
-  --neu-success: #8d94a0;
-  --neu-warning: #fbbf24;
-  --neu-warning-border: rgba(251, 191, 36, 0.3);
-  --neu-fallback-bg: rgba(232, 168, 124, 0.15);
-  --neu-fallback-text: #e8a87c;
+  --neu-success: #8ca877;
+  --neu-warning: #d1a35d;
+  --neu-warning-border: rgba(209, 163, 93, 0.3);
+  --neu-fallback-bg: rgba(209, 138, 93, 0.15);
+  --neu-fallback-text: #d18a5d;
   --neu-active-text: #fff8f4;
-  --neu-glass-bg: rgba(26, 28, 35, 0.9);
-  --neu-glass-border: rgba(255, 255, 255, 0.08);
+  --neu-glass-bg: rgba(33, 27, 23, 0.9);
+  --neu-glass-border: rgba(255, 220, 183, 0.08);
   --neu-glass-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.28);
-  --hover-shadow-card:
-    12px 12px 26px var(--neu-shadow-dark), -12px -12px 26px var(--neu-shadow-light);
-  --hover-shadow-row: 9px 9px 20px var(--neu-shadow-dark), -9px -9px 20px var(--neu-shadow-light);
-  --hover-shadow-btn: 7px 7px 16px var(--neu-shadow-dark), -7px -7px 16px var(--neu-shadow-light);
-  --hover-shadow-pill: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);
+  --semantic-online: #8ca877;
+  --semantic-hot: #d18a5d;
+  --semantic-warning: #d1a35d;
+  --map-user: #d18a5d;
+  --map-group: #9aaf84;
+  --map-post: #c87857;
+  --overlay-soft: rgba(241, 228, 210, 0.08);
+  --overlay-strong: rgba(0, 0, 0, 0.56);
+  --surface-image-scrim: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.02) 0%,
+    rgba(0, 0, 0, 0.58) 100%
+  );
+  --hover-shadow-card: 9px 9px 22px var(--neu-shadow-dark), -9px -9px 22px var(--neu-shadow-light);
+  --hover-shadow-row: 6px 6px 16px var(--neu-shadow-dark), -6px -6px 16px var(--neu-shadow-light);
+  --hover-shadow-btn: 5px 5px 13px var(--neu-shadow-dark), -5px -5px 13px var(--neu-shadow-light);
+  --hover-shadow-pill: 3px 3px 9px var(--neu-shadow-dark), -3px -3px 9px var(--neu-shadow-light);
 
   --background: var(--page-bg);
   --foreground: var(--neu-text);
   --card: var(--neu-bg);
   --card-foreground: var(--neu-text);
-  --popover: #20242d;
+  --popover: var(--neu-bg);
   --popover-foreground: var(--neu-text);
   --primary: var(--neu-accent-primary);
-  --primary-foreground: #fff8f4;
-  --secondary: #232731;
+  --primary-foreground: #1a120c;
+  --secondary: color-mix(in srgb, var(--neu-bg) 82%, var(--page-bg));
   --secondary-foreground: var(--neu-text);
-  --accent: #232731;
+  --accent: color-mix(in srgb, var(--neu-bg) 88%, var(--page-bg));
   --accent-foreground: var(--neu-text);
-  --muted: #20242d;
+  --muted: color-mix(in srgb, var(--neu-bg) 78%, var(--page-bg));
   --muted-foreground: var(--neu-text-muted);
   --destructive: var(--neu-error);
   --destructive-foreground: #fff8f4;
   --border: var(--neu-border);
-  --input: #15161c;
+  --input: var(--neu-border-pressed);
+  --input-background: color-mix(in srgb, var(--neu-bg) 84%, var(--page-bg));
+  --switch-background: var(--neu-border-pressed);
   --ring: var(--neu-accent-primary);
-  --glow-primary: rgba(212, 132, 90, 0.18);
-  --glow-accent: rgba(228, 178, 137, 0.14);
-  --glow-success: rgba(116, 131, 119, 0.14);
+  --glow-primary: rgba(209, 138, 93, 0.18);
+  --glow-accent: rgba(209, 138, 93, 0.14);
+  --glow-success: rgba(140, 168, 119, 0.14);
   --shadow-light: var(--neu-shadow-light);
   --shadow-dark: var(--neu-shadow-dark);
   --chart-1: oklch(0.488 0.243 264.376);
@@ -501,14 +594,14 @@
   --chart-3: oklch(0.985 0 0);
   --chart-4: oklch(0.806 0.204 91.732);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: #171920;
+  --sidebar: var(--neu-bg);
   --sidebar-foreground: var(--neu-text);
-  --sidebar-primary: #e8a87c;
-  --sidebar-primary-foreground: #fff8f4;
-  --sidebar-accent: #232731;
+  --sidebar-primary: var(--neu-accent-primary);
+  --sidebar-primary-foreground: #1a120c;
+  --sidebar-accent: color-mix(in srgb, var(--neu-bg) 88%, var(--page-bg));
   --sidebar-accent-foreground: var(--neu-text);
-  --sidebar-border: #2a2c35;
-  --sidebar-ring: #e8a87c;
+  --sidebar-border: var(--neu-border-pressed);
+  --sidebar-ring: var(--neu-accent-primary);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -1076,21 +1169,22 @@
     border-radius: 12px;
   }
 
-  .mobile-bottom-nav__tab-pill {
+  .mobile-bottom-nav__slider {
     position: absolute;
-    top: 6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 52px;
+    left: 0;
     height: 36px;
     border-radius: 18px;
     background: var(--neu-accent-primary);
     opacity: 0;
-    transition: opacity 0.22s ease;
     pointer-events: none;
+    z-index: 0;
+    will-change: transform;
+    transition:
+      transform 0.42s cubic-bezier(0.34, 1.32, 0.46, 1),
+      opacity 0.22s ease;
   }
 
-  .mobile-bottom-nav__tab.active .mobile-bottom-nav__tab-pill {
+  .mobile-bottom-nav__slider.visible {
     opacity: 0.14;
   }
 
@@ -1205,22 +1299,49 @@
 
   /* Desktop sidebar (Figma Make) */
   .desktop-sidebar__nav-item {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
     width: 100%;
-    padding: 10px 12px;
-    border-radius: 12px;
+    padding: 9px 12px;
+    border-radius: 10px;
     border: none;
     outline: none;
     text-align: left;
     cursor: pointer;
     transition:
-      background 0.18s ease,
-      box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-      color 0.18s ease;
+      background 0.16s ease,
+      color 0.16s ease,
+      box-shadow 0.2s ease;
     background: transparent;
+    color: var(--neu-text-muted);
     font-size: 14px;
+    letter-spacing: 0.01em;
+  }
+
+  /* Left accent indicator bar — only visible on hover (Figma Make) */
+  .desktop-sidebar__nav-item::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    width: 3px;
+    height: 0;
+    margin-top: 0;
+    border-radius: 2px;
+    background: var(--neu-accent-primary);
+    opacity: 0;
+    transition:
+      height 0.18s ease,
+      opacity 0.18s ease,
+      margin-top 0.18s ease;
+    pointer-events: none;
+  }
+
+  .desktop-sidebar__nav-item svg {
+    color: var(--neu-text-muted);
+    transition: color 0.16s ease;
   }
 
   .desktop-sidebar__nav-item:focus-visible {
@@ -1229,15 +1350,25 @@
   }
 
   .desktop-sidebar__nav-item:not(.active):hover {
-    background: transparent;
-    box-shadow: var(--hover-shadow-row);
+    background: rgba(0, 0, 0, 0.035);
+    color: var(--neu-text);
+    box-shadow: none;
+  }
+  .desktop-sidebar__nav-item:not(.active):hover svg {
+    color: var(--neu-accent-primary);
+  }
+  .desktop-sidebar__nav-item:not(.active):hover::before {
+    height: 16px;
+    margin-top: -8px;
+    opacity: 0.9;
   }
   .desktop-sidebar__nav-item.active {
     background: var(--neu-accent-primary);
     color: var(--neu-active-text);
-    box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.18),
-      inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    box-shadow: 0 2px 10px var(--neu-glow);
+  }
+  .desktop-sidebar__nav-item.active svg {
+    color: var(--neu-active-text);
   }
 
   /* Desktop main content card (Figma Make) */
@@ -1269,6 +1400,9 @@
 /* Dark mode sidebar hover override */
 :is(.dark) .desktop-header__btn:hover {
   background: rgba(255, 255, 255, 0.07);
+}
+:is(.dark) .desktop-sidebar__nav-item:not(.active):hover {
+  background: rgba(255, 255, 255, 0.045);
 }
 
 /* Tablet glass-bg override (mobile=0.88, tablet=0.92 per Figma Make) */

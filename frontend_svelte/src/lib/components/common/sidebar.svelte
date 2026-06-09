@@ -88,11 +88,7 @@
           class="desktop-sidebar__nav-item {isActive(item) ? 'active' : ''}"
           onclick={() => handleNavClick(item)}
         >
-          <item.icon
-            size={17}
-            strokeWidth={isActive(item) ? 2 : 1.5}
-            color={isActive(item) ? 'var(--text-on-accent)' : 'var(--text-secondary)'}
-          />
+          <item.icon size={17} strokeWidth={isActive(item) ? 2 : 1.6} />
           <span class="text-sm" class:font-medium={isActive(item)}>
             {item.label}
           </span>
@@ -142,11 +138,7 @@
           class="desktop-sidebar__nav-item {isActive(item) ? 'active' : ''}"
           onclick={() => handleNavClick(item)}
         >
-          <item.icon
-            size={17}
-            strokeWidth={isActive(item) ? 2 : 1.5}
-            color={isActive(item) ? 'var(--text-on-accent)' : 'var(--text-secondary)'}
-          />
+          <item.icon size={17} strokeWidth={isActive(item) ? 2 : 1.6} />
           <span class="text-sm" class:font-medium={isActive(item)}>
             {item.label}
           </span>
@@ -185,13 +177,7 @@
           class="desktop-sidebar__nav-item {currentPathname.startsWith('/admin') ? 'active' : ''}"
           onclick={() => void goto('/admin')}
         >
-          <Shield
-            size={17}
-            strokeWidth={currentPathname.startsWith('/admin') ? 2 : 1.5}
-            color={currentPathname.startsWith('/admin')
-              ? 'var(--text-on-accent)'
-              : 'var(--text-secondary)'}
-          />
+          <Shield size={17} strokeWidth={currentPathname.startsWith('/admin') ? 2 : 1.6} />
           <span class="text-sm" class:font-medium={currentPathname.startsWith('/admin')}>
             {t('sidebar.adminPanel')}
           </span>

@@ -1,96 +1,87 @@
 <script lang="ts">
   import Radar from 'lucide-svelte/icons/radar';
-  import MapPin from 'lucide-svelte/icons/map-pin';
+  import ChevronRight from 'lucide-svelte/icons/chevron-right';
 
   interface Props {
     people?: number;
     activity?: number;
     online?: number;
-    radius?: string;
-    location?: string;
+    title?: string;
+    rangeLabel?: string;
+    peopleLabel?: string;
+    activityLabel?: string;
+    onlineLabel?: string;
     loading?: boolean;
+    onclick?: () => void;
   }
 
   let {
     people = 0,
     activity = 0,
     online = 0,
-    radius = '5km',
-    location = '',
-    loading = false
+    title = '实时附近',
+    rangeLabel = '5km 内 · 持续更新',
+    peopleLabel = '人附近',
+    activityLabel = '活动中',
+    onlineLabel = '在线',
+    loading = false,
+    onclick
   }: Props = $props();
+
+  const stats = $derived([
+    { label: peopleLabel, value: people, color: 'var(--brand)' },
+    { label: activityLabel, value: activity, color: 'var(--color-semantic-warning, #b8843f)' },
+    { label: onlineLabel, value: online, color: 'var(--color-semantic-online, #66835d)' }
+  ]);
 </script>
 
 <div class="ambient-glow">
-  <div class="surface-hero rounded-[24px]" style="padding: 18px 20px;">
+  <button
+    type="button"
+    class="surface-hero w-full overflow-hidden rounded-[24px] text-left transition-transform duration-150 active:scale-[0.99]"
+    style="padding: 18px 20px;"
+    {onclick}
+  >
     <!-- Header row -->
-    <div class="flex items-center gap-3 mb-4">
-      <div
-        class="flex items-center justify-center rounded-full"
-        style="width: 38px; height: 38px; background: var(--brand); box-shadow: 0 4px 14px var(--glow);"
-      >
-        <Radar size={18} strokeWidth={2} color="var(--text-on-accent)" />
-      </div>
-      <div class="flex-1">
-        <div class="flex items-center gap-1.5">
-          <div
-            style="width: 6px; height: 6px; border-radius: 999px; background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.18);"
-          ></div>
-          <span style="font-size: 12px; color: var(--text-secondary);">{radius} 范围</span>
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div
+          class="flex items-center justify-center rounded-full"
+          style="width: 38px; height: 38px; background: var(--brand); box-shadow: 0 4px 14px var(--glow);"
+        >
+          <Radar size={17} strokeWidth={2} color="var(--text-on-accent)" />
+        </div>
+        <div>
+          <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">{title}</p>
+          <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+            {rangeLabel}
+          </p>
         </div>
       </div>
-      {#if location}
-        <div class="flex items-center gap-1" style="font-size: 12px; color: var(--brand);">
-          <MapPin size={12} strokeWidth={2} />
-          <span>{location}</span>
-        </div>
-      {/if}
+      <ChevronRight size={16} strokeWidth={1.5} color="var(--text-secondary)" />
     </div>
 
     <!-- Stats grid -->
-    {#if loading}
-      <div
-        class="grid grid-cols-3 gap-1 rounded-[14px] overflow-hidden"
-        style="background: var(--border-theme);"
-      >
-        {#each [0, 1, 2] as _}
-          <div class="flex flex-col items-center py-3" style="background: var(--surface-bg);">
+    <div
+      class="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-[14px]"
+      style="background: var(--border-theme);"
+    >
+      {#each stats as s (s.label)}
+        <div class="flex flex-col items-center py-2.5" style="background: var(--surface-bg);">
+          {#if loading}
             <div
-              style="width: 32px; height: 18px; border-radius: 4px; background: var(--border-theme);"
+              style="width: 28px; height: 19px; border-radius: 4px; background: var(--border-theme);"
             ></div>
-            <div
-              style="width: 24px; height: 10px; border-radius: 3px; background: var(--border-theme); margin-top: 4px;"
-            ></div>
-          </div>
-        {/each}
-      </div>
-    {:else}
-      <div
-        class="grid grid-cols-3 gap-1 rounded-[14px] overflow-hidden"
-        style="background: var(--border-theme);"
-      >
-        <div class="flex flex-col items-center py-3" style="background: var(--surface-bg);">
-          <span style="font-size: 22px; font-weight: 700; color: var(--brand);">{people}</span>
-          <span
-            style="font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-top: 2px;"
-            >附近的人</span
+          {:else}
+            <span style="font-size: 19px; font-weight: 600; line-height: 1; color: {s.color};"
+              >{s.value}</span
+            >
+          {/if}
+          <span style="font-size: 10px; color: var(--text-secondary); margin-top: 4px;"
+            >{s.label}</span
           >
         </div>
-        <div class="flex flex-col items-center py-3" style="background: var(--surface-bg);">
-          <span style="font-size: 22px; font-weight: 700; color: #f59e0b;">{activity}</span>
-          <span
-            style="font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-top: 2px;"
-            >活动</span
-          >
-        </div>
-        <div class="flex flex-col items-center py-3" style="background: var(--surface-bg);">
-          <span style="font-size: 22px; font-weight: 700; color: #22c55e;">{online}</span>
-          <span
-            style="font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-top: 2px;"
-            >在线</span
-          >
-        </div>
-      </div>
-    {/if}
-  </div>
+      {/each}
+    </div>
+  </button>
 </div>

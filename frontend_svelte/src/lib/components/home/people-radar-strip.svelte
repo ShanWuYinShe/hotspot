@@ -13,23 +13,26 @@
     users?: NearbyUser[];
     loading?: boolean;
     onViewAll?: () => void;
+    showHeader?: boolean;
   }
 
-  let { users = [], loading = false, onViewAll }: Props = $props();
+  let { users = [], loading = false, onViewAll, showHeader = true }: Props = $props();
 </script>
 
 <div>
-  <div class="flex items-center justify-between mb-3">
-    <span class="eyebrow">附近的人</span>
-    <button
-      class="flex items-center gap-0.5"
-      style="font-size: 12px; color: var(--brand); background: none; border: none; cursor: pointer;"
-      onclick={onViewAll}
-    >
-      更多
-      <ChevronRight size={14} strokeWidth={1.5} />
-    </button>
-  </div>
+  {#if showHeader}
+    <div class="flex items-center justify-between mb-3">
+      <span class="eyebrow">附近的人</span>
+      <button
+        class="flex items-center gap-0.5"
+        style="font-size: 12px; color: var(--brand); background: none; border: none; cursor: pointer;"
+        onclick={onViewAll}
+      >
+        更多
+        <ChevronRight size={14} strokeWidth={1.5} />
+      </button>
+    </div>
+  {/if}
 
   <div class="flex gap-3 overflow-x-auto no-scrollbar" style="padding-bottom: 4px;">
     {#if loading}
@@ -42,7 +45,10 @@
       {/each}
     {:else}
       {#each users as user (user.id)}
-        <div class="flex flex-col items-center gap-1.5 flex-shrink-0" style="cursor: pointer;">
+        <div
+          class="flex flex-col items-center gap-1 flex-shrink-0"
+          style="cursor: pointer; width: 56px;"
+        >
           <div style="position: relative; width: 56px; height: 56px;">
             <img
               src={user.avatar_url}
@@ -55,20 +61,28 @@
               ></div>
             {/if}
           </div>
+          <span
+            style="font-size: 12px; color: var(--text-primary); max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+            >{user.nickname}</span
+          >
           {#if user.distance}
-            <span style="font-size: 10px; color: var(--brand);">{user.distance}</span>
+            <span style="font-size: 10px; color: var(--brand); margin-top: -2px;"
+              >{user.distance}</span
+            >
           {/if}
         </div>
       {/each}
 
       <!-- More card -->
-      <button
-        class="flex items-center justify-center flex-shrink-0"
-        style="width: 56px; height: 56px; border-radius: 9999px; border: 1.5px dashed var(--border-active); background: transparent; cursor: pointer;"
-        onclick={onViewAll}
-      >
-        <ChevronRight size={18} strokeWidth={1.5} color="var(--text-secondary)" />
-      </button>
+      <div class="flex flex-col items-center gap-1 flex-shrink-0" style="width: 56px;">
+        <button
+          class="flex items-center justify-center"
+          style="width: 56px; height: 56px; border-radius: 9999px; border: 1.5px dashed var(--border-active); background: transparent; cursor: pointer;"
+          onclick={onViewAll}
+        >
+          <ChevronRight size={18} strokeWidth={1.5} color="var(--text-secondary)" />
+        </button>
+      </div>
     {/if}
   </div>
 </div>

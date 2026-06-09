@@ -40,6 +40,41 @@
   const messageBadge = $derived(authStore.isAuthenticated ? messageStore.totalUnreadCount : 0);
   const profileBadge = $derived(authStore.isAuthenticated ? notificationStore.unreadCount : 0);
 
+  // Shared sliding pill — glides (and resizes) between tabs like the React
+  // reference's Framer Motion `layoutId` indicator, instead of fading per tab.
+  let barEl = $state<HTMLDivElement | undefined>();
+  let tabEls = $state<(HTMLButtonElement | undefined)[]>([]);
+  let pill = $state({ x: 0, y: 4, w: 0, h: 0, visible: false });
+  const activeIndex = $derived(navItems.findIndex((it) => isActive(it.href)));
+
+  function measurePill() {
+    const el = tabEls[activeIndex];
+    if (!barEl || !el) return;
+    pill = {
+      x: el.offsetLeft + 6,
+      y: el.offsetTop + 4,
+      w: Math.max(0, el.offsetWidth - 12),
+      h: Math.max(0, el.offsetHeight - 8),
+      visible: true
+    };
+  }
+
+  $effect(() => {
+    activeIndex;
+    currentPath;
+    if (activeIndex < 0) {
+      pill = { ...pill, visible: false };
+      return;
+    }
+    const raf = requestAnimationFrame(measurePill);
+    const onResize = () => measurePill();
+    window.addEventListener('resize', onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize);
+    };
+  });
+
   const HIDDEN_ROUTES = [
     '/settings',
     '/location',
@@ -64,11 +99,19 @@
     style="padding: 8px 24px; padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px); background: transparent;"
   >
     <div
+      bind:this={barEl}
       class="flex items-center"
-      style="width: 100%; max-width: 520px; border-radius: var(--radius-pill); background: var(--glass-bg); backdrop-filter: blur(var(--neu-glass-blur)) saturate(var(--neu-glass-saturate)); -webkit-backdrop-filter: blur(var(--neu-glass-blur)) saturate(var(--neu-glass-saturate)); box-shadow: var(--neu-glass-shadow); border: 1px solid var(--glass-border); padding: 8px 16px; gap: 6px;"
+      style="position: relative; width: 100%; max-width: 520px; border-radius: var(--radius-pill); background: var(--glass-bg); backdrop-filter: blur(var(--neu-glass-blur)) saturate(var(--neu-glass-saturate)); -webkit-backdrop-filter: blur(var(--neu-glass-blur)) saturate(var(--neu-glass-saturate)); box-shadow: var(--neu-glass-shadow); border: 1px solid var(--glass-border); padding: 8px 16px; gap: 6px;"
     >
-      {#each navItems.slice(0, 2) as item (item.href)}
+      <span
+        aria-hidden="true"
+        style="position: absolute; left: {pill.x}px; top: {pill.y}px; width: {pill.w}px; height: {pill.h}px; border-radius: 20px; background: var(--brand); opacity: {pill.visible
+          ? 0.14
+          : 0}; pointer-events: none; z-index: 0; will-change: left, width; transition: left 0.42s cubic-bezier(0.34, 1.32, 0.46, 1), width 0.42s cubic-bezier(0.34, 1.32, 0.46, 1), top 0.42s cubic-bezier(0.34, 1.32, 0.46, 1), height 0.42s cubic-bezier(0.34, 1.32, 0.46, 1), opacity 0.22s ease;"
+      ></span>
+      {#each navItems.slice(0, 2) as item, i (item.href)}
         <button
+          bind:this={tabEls[i]}
           use:interactive={{ type: 'btn' }}
           class="relative flex flex-col items-center justify-center outline-none select-none transition-transform duration-150 active:scale-95"
           style="flex: 1; min-width: 0; padding: 9px 0; gap: 5px;"
@@ -76,11 +119,6 @@
           aria-label={item.label}
           aria-current={isActive(item.href) ? 'page' : undefined}
         >
-          {#if isActive(item.href)}
-            <span
-              style="position: absolute; inset: 4px 6px; border-radius: 20px; background: var(--brand); opacity: 0.14; transition: background 0.22s;"
-            ></span>
-          {/if}
           <span
             style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;"
           >
@@ -128,8 +166,9 @@
         </button>
       </div>
 
-      {#each navItems.slice(2) as item (item.href)}
+      {#each navItems.slice(2) as item, i (item.href)}
         <button
+          bind:this={tabEls[i + 2]}
           use:interactive={{ type: 'btn' }}
           class="relative flex flex-col items-center justify-center outline-none select-none transition-transform duration-150 active:scale-95"
           style="flex: 1; min-width: 0; padding: 9px 0; gap: 5px;"
@@ -137,11 +176,6 @@
           aria-label={item.label}
           aria-current={isActive(item.href) ? 'page' : undefined}
         >
-          {#if isActive(item.href)}
-            <span
-              style="position: absolute; inset: 4px 6px; border-radius: 20px; background: var(--brand); opacity: 0.14; transition: background 0.22s;"
-            ></span>
-          {/if}
           <span
             style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;"
           >

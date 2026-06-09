@@ -3,20 +3,23 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import { t } from '$lib/i18n';
-  import { usersService, feedService } from '$lib/api/services';
+  import { usersService, feedService, groupsService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
-  import type { UserItem, TrendingTagItem } from '$lib/types/api';
+  import type { UserItem, TrendingTagItem, GroupItem } from '$lib/types/api';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import Users from 'lucide-svelte/icons/users';
   import Compass from 'lucide-svelte/icons/compass';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Sparkles from 'lucide-svelte/icons/sparkles';
   import Star from 'lucide-svelte/icons/star';
-  import TrendingUp from 'lucide-svelte/icons/trending-up';
-  import Coffee from 'lucide-svelte/icons/coffee';
-  import Music from 'lucide-svelte/icons/music';
   import Navigation2 from 'lucide-svelte/icons/navigation-2';
   import { goto } from '$app/navigation';
+
+  import HeroStats from '$lib/components/home/hero-stats.svelte';
+  import PeopleRadarStrip from '$lib/components/home/people-radar-strip.svelte';
+  import ActivityList from '$lib/components/home/activity-list.svelte';
+  import NearbyUsersFlatList from '$lib/components/home/nearby-users-flat-list.svelte';
+  import GroupCarousel from '$lib/components/home/group-carousel.svelte';
 
   type HomeMode = 'guest' | 'explore' | 'authenticated';
 
@@ -31,10 +34,80 @@
   // Nearby users
   let nearbyUsers = $state.raw<UserItem[]>([]);
   let trendingTags: TrendingTagItem[] = $state([]);
+  let nearbyGroups = $state.raw<GroupItem[]>([]);
   let loadingNearby = $state(false);
 
   const onlineCount = $derived(nearbyUsers.filter((u) => u.presence_status === 'online').length);
   const activityCount = $derived(trendingTags.reduce((sum, t) => sum + t.usage_count, 0));
+
+  const radarUsers = $derived(
+    nearbyUsers.map((u) => ({
+      id: u.user.user_id,
+      avatar_url: u.user.avatar_url || '',
+      nickname: u.user.nickname,
+      distance: u.location?.distance != null ? formatDistance(u.location.distance) : undefined,
+      online: u.presence_status === 'online'
+    }))
+  );
+
+  const flatUsers = $derived(
+    nearbyUsers.map((u) => ({
+      id: u.user.user_id,
+      avatar_url: u.user.avatar_url || '',
+      nickname: u.user.nickname,
+      distance: u.location?.distance != null ? formatDistance(u.location.distance) : undefined,
+      online: u.presence_status === 'online',
+      tag: u.tags?.[0]
+    }))
+  );
+
+  const followingIds = $derived(
+    new Set(nearbyUsers.filter((u) => u.relation?.is_following).map((u) => u.user.user_id))
+  );
+
+  const carouselGroups = $derived(
+    nearbyGroups.map((g) => ({
+      id: g.group.group_id,
+      name: g.group.name,
+      banner_url: g.group.avatar_url,
+      member_count: g.group.members_count,
+      distance: g.location?.distance != null ? formatDistance(g.location.distance) : undefined,
+      is_private: g.has_password || g.join_method === 'invite_only'
+    }))
+  );
+
+  const ACTIVITY_STYLES = [
+    { icon: 'coffee', color: 'var(--color-semantic-warning, #b8843f)' },
+    { icon: 'music', color: 'var(--brand)' },
+    { icon: 'users', color: 'var(--color-map-group, #6d83b8)' },
+    { icon: 'star', color: 'var(--color-semantic-hot, #c2603f)' }
+  ];
+
+  const activities = $derived(
+    trendingTags.slice(0, 4).map((tag, i) => {
+      const style = ACTIVITY_STYLES[i % ACTIVITY_STYLES.length] ?? {
+        icon: 'star',
+        color: 'var(--brand)'
+      };
+      return {
+        id: tag.name,
+        icon: style.icon,
+        title: `#${tag.name}`,
+        sub: `${tag.usage_count}${t('home.posts')}`,
+        color: style.color,
+        bg: `color-mix(in srgb, ${style.color} 12%, transparent)`
+      };
+    })
+  );
+
+  function handleActivitySelect(id: string) {
+    void goto(`/discover?tag=${encodeURIComponent(id)}`);
+  }
+
+  function handleFlatFollow(id: string) {
+    const user = nearbyUsers.find((u) => u.user.user_id === id);
+    if (user) handleFollowToggle(user);
+  }
 
   function getAnchor() {
     return {
@@ -88,6 +161,22 @@
     }
   }
 
+  async function loadNearbyGroups() {
+    try {
+      const response = await groupsService.search({
+        radius: mapAnchorStore.radius * 1000,
+        reference_point: getAnchor(),
+        sort_by: 'distance',
+        pagination: { limit: 8 }
+      });
+      if (isSuccess(response) && response.data) {
+        nearbyGroups = response.data.items ?? [];
+      }
+    } catch {
+      // non-critical, silently fail
+    }
+  }
+
   async function refreshHome(
     options: {
       refreshWidgets?: boolean;
@@ -102,8 +191,10 @@
     if (refreshWidgets && authStore.isAuthenticated) {
       await loadNearbyUsers();
       await loadTrending();
+      await loadNearbyGroups();
     } else if (refreshWidgets) {
       await loadTrending();
+      await loadNearbyGroups();
     }
   }
 
@@ -266,33 +357,39 @@
     </div>
   </div>
 {:else if !platformStore.isDesktop}
-  <!-- Mobile / Tablet Home (Figma Make HomeMobile, single column, maxWidth 680) -->
+  <!-- Mobile / Tablet Home (Figma Make HomeMobile; tablet = centered 600 column) -->
+  {@const contentMax = platformStore.isTablet ? '600px' : '680px'}
   <div class="flex flex-col">
     <!-- Sticky header -->
     <div
-      class="sticky top-0 z-10 flex items-center justify-between px-5 py-3"
+      class="sticky top-0 z-10 px-5 py-3"
       style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <div>
-        <h1 style="font-size: 22px; color: var(--text-primary);">{t('nav.nearby')}</h1>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-          {t('home.discoverNearbyPeopleAndThings')}
-        </p>
-      </div>
       <div
-        class="surface-flat flex cursor-pointer items-center gap-1.5 rounded-full py-1.5 px-3.5"
-        onclick={() => void goto('/location')}
+        class="flex items-center justify-between"
+        style="max-width: {contentMax}; margin-left: auto; margin-right: auto; width: 100%;"
       >
-        <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
-        <span style="font-size: 11px; color: var(--text-secondary);"
-          >{mapAnchorStore.displayName}</span
+        <div>
+          <h1 style="font-size: 22px; color: var(--text-primary);">{t('nav.nearby')}</h1>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+            {t('home.discoverNearbyPeopleAndThings')}
+          </p>
+        </div>
+        <div
+          class="surface-flat flex cursor-pointer items-center gap-1.5 rounded-full py-1.5 px-3.5"
+          onclick={() => void goto('/location')}
         >
+          <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
+          <span style="font-size: 11px; color: var(--text-secondary);"
+            >{mapAnchorStore.displayName}</span
+          >
+        </div>
       </div>
     </div>
 
     <div
       class="flex flex-col px-5 pt-4 pb-6"
-      style="max-width: 680px; margin-left: auto; margin-right: auto; width: 100%;"
+      style="max-width: {contentMax}; margin-left: auto; margin-right: auto; width: 100%;"
     >
       <!-- Map Card (Figma Make HomeMobile) -->
       <div
@@ -339,169 +436,63 @@
         </div>
       </div>
 
-      <!-- Nearby People -->
-      {#if authStore.isAuthenticated}
-        <div class="mb-3 flex items-center justify-between">
-          <span
-            class="uppercase"
-            style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
-            >附近的人</span
-          >
-          <button
-            class="flex items-center gap-0.5 outline-none"
-            style="color: var(--brand);"
-            onclick={() => void goto('/users/nearby')}
-          >
-            <span style="font-size: 12px;">{t('common.viewAll')}</span>
-            <ChevronRight size={13} strokeWidth={1.5} />
-          </button>
-        </div>
-        <div class="mb-5 flex flex-col gap-2.5">
-          {#if loadingNearby}
-            {#each Array(3) as _}
-              <div
-                class="surface-flat flex items-center gap-3.5 rounded-[22px] px-4 py-3.5"
-                style="height: 68px;"
-              >
-                <div
-                  class="rounded-full"
-                  style="width: 44px; height: 44px; background: var(--border-theme);"
-                ></div>
-                <div class="flex-1">
-                  <div
-                    class="mb-1.5 rounded"
-                    style="width: 60px; height: 12px; background: var(--border-theme);"
-                  ></div>
-                  <div
-                    class="rounded"
-                    style="width: 80px; height: 10px; background: var(--border-theme);"
-                  ></div>
-                </div>
-              </div>
-            {/each}
-          {:else}
-            {#each nearbyUsers.slice(0, 3) as user (user.user.user_id)}
-              <div
-                role="button"
-                tabindex="0"
-                class="surface-flat flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5 text-left row-hover transition-transform duration-150 active:scale-[0.97]"
-                aria-label={user.user.nickname}
-                onclick={() => void goto(`/users/${user.user.user_id}`)}
-              >
-                <div class="relative flex-shrink-0">
-                  <div
-                    class="overflow-hidden rounded-full"
-                    style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
-                  >
-                    <img
-                      src={user.user.avatar_url || ''}
-                      alt={user.user.nickname}
-                      class="h-full w-full object-cover"
-                    />
-                  </div>
-                  {#if user.presence_status === 'online'}
-                    <span
-                      class="absolute bottom-0 right-0 rounded-full"
-                      style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--surface-bg);"
-                    ></span>
-                  {/if}
-                </div>
-                <div class="min-w-0 flex-1">
-                  <p style="font-size: 14px; color: var(--text-primary);">{user.user.nickname}</p>
-                  <div class="mt-0.5 flex items-center gap-1.5">
-                    {#if user.presence_status}
-                      <span
-                        style="font-size: 10px; color: {user.presence_status === 'online'
-                          ? '#22c55e'
-                          : 'var(--text-secondary)'};"
-                      >
-                        {user.presence_status === 'online'
-                          ? t('common.online')
-                          : t('common.offline')}
-                      </span>
-                      <span style="font-size: 10px; color: var(--text-secondary); opacity: 0.5;"
-                        >·</span
-                      >
-                    {/if}
-                    {#if user.tags && user.tags.length > 0}
-                      <span style="font-size: 10px; color: var(--brand); opacity: 0.8;"
-                        >{user.tags[0]}</span
-                      >
-                    {/if}
-                  </div>
-                </div>
-                <div class="flex flex-col items-end gap-2">
-                  {#if user.location?.distance != null}
-                    <span style="font-size: 12px; color: var(--brand);"
-                      >{formatDistance(user.location.distance)}</span
-                    >
-                  {/if}
-                  <button
-                    class="rounded-full px-3.5 py-1 outline-none transition-all active:scale-[0.93]"
-                    class:surface-pressed={user.relation?.is_following}
-                    class:surface-flat={!user.relation?.is_following}
-                    style={user.relation?.is_following
-                      ? 'color: var(--brand); font-size: 11px;'
-                      : 'color: var(--text-secondary); font-size: 11px;'}
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      handleFollowToggle(user);
-                    }}
-                  >
-                    {user.relation?.is_following ? t('common.following') : t('common.follow')}
-                  </button>
-                </div>
-              </div>
-            {/each}
-          {/if}
+      <!-- Nearby people -->
+      {#if authStore.isAuthenticated && (loadingNearby || radarUsers.length > 0)}
+        <div class="mb-5">
+          <div class="mb-3 flex items-center justify-between">
+            <span class="eyebrow">{t('sidebar.nearbyPeople')}</span>
+            <a
+              href="/users/nearby"
+              class="flex items-center gap-0.5 outline-none"
+              style="color: var(--brand); font-size: 12px;"
+            >
+              {t('common.viewAll')}
+              <ChevronRight size={13} strokeWidth={1.5} />
+            </a>
+          </div>
+          <PeopleRadarStrip
+            users={radarUsers}
+            loading={loadingNearby}
+            showHeader={false}
+            onViewAll={() => void goto('/users/nearby')}
+          />
+          <div class="mt-3">
+            <NearbyUsersFlatList
+              users={flatUsers.slice(0, 5)}
+              loading={loadingNearby}
+              {followingIds}
+              onToggleFollow={handleFlatFollow}
+            />
+          </div>
         </div>
       {/if}
 
-      <!-- Activities (Figma Make) -->
-      <div class="mb-3 flex items-center justify-between">
-        <span
-          class="uppercase"
-          style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
-          >附近活动</span
-        >
-        <button class="flex items-center gap-0.5 outline-none" style="color: var(--brand);">
-          <span style="font-size: 12px;">更多</span>
-          <ChevronRight size={13} strokeWidth={1.5} />
-        </button>
-      </div>
-      <div
-        class="mb-5"
-        style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%;"
-      >
-        {#each trendingTags.slice(0, 2) as t, i}
-          {@const Icon = [Coffee, Music][i] ?? Star}
-          {@const cfg = [
-            { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
-            { color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' }
-          ][i] ?? { color: 'var(--brand)', bg: 'var(--surface-bg)' }}
-          <button
-            class="surface-flat flex flex-col justify-between rounded-[22px] cursor-pointer card-hover transition-transform duration-150 active:scale-[0.97]"
-            style="aspect-ratio: 1/1; padding: 16px;"
-          >
-            <div
-              class="flex items-center justify-center rounded-[12px]"
-              style="width: 36px; height: 36px; background: {cfg.bg};"
+      <!-- Nearby activity -->
+      {#if loadingNearby || activities.length > 0}
+        <div class="mb-5">
+          <div class="mb-3 flex items-center justify-between">
+            <span class="eyebrow">{t('home.nearbyActivity')}</span>
+            <button
+              class="flex items-center gap-0.5 outline-none"
+              style="color: var(--brand); font-size: 12px; background: none; border: none; cursor: pointer;"
+              onclick={() => void goto('/discover')}
             >
-              <Icon size={17} strokeWidth={1.75} color={cfg.color} />
-            </div>
-            <div>
-              <p style="font-size: 13px; color: var(--text-primary);">#{t.name}</p>
-              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-                {t.usage_count}条动态
-              </p>
-            </div>
-          </button>
-        {/each}
-      </div>
+              {t('common.viewAll')}
+              <ChevronRight size={13} strokeWidth={1.5} />
+            </button>
+          </div>
+          <ActivityList {activities} loading={loadingNearby} onSelect={handleActivitySelect} />
+        </div>
+      {/if}
+
+      <!-- Nearby groups -->
+      {#if carouselGroups.length > 0}
+        <GroupCarousel groups={carouselGroups} loading={loadingNearby} />
+      {/if}
     </div>
   </div>
 {:else}
-  <!-- Desktop Home (Figma Make HomeDesktop — 3-column) -->
+  <!-- Desktop Home (Figma Make HomeDesktop — 2-column) -->
   <div class="flex h-full flex-col">
     <!-- Sticky header -->
     <div
@@ -510,327 +501,89 @@
     >
       <div>
         <h1 style="font-size: 24px; color: var(--text-primary);">
-          {t('nav.nearby')}
+          {t('sidebar.home')}
         </h1>
         <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
           {t('home.discoverNearbyPeopleAndThings')}
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <div class="surface-flat flex items-center gap-1.5 rounded-full py-1.5 px-3.5">
+        <a
+          href="/location"
+          class="surface-flat flex items-center gap-1.5 rounded-full py-1.5 px-3.5 outline-none"
+          style="text-decoration: none;"
+        >
           <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
           <span style="font-size: 11px; color: var(--text-secondary);"
             >{mapAnchorStore.displayName}</span
           >
-        </div>
+        </a>
         <button
-          class="flex items-center gap-1 rounded-full px-3 py-1.5"
-          style="background: var(--brand); box-shadow: 0 4px 12px var(--glow);"
+          class="surface-flat flex items-center gap-1.5 rounded-full py-1.5 px-3.5 outline-none"
           onclick={refreshAll}
         >
-          <TrendingUp size={11} strokeWidth={2} color="var(--text-on-accent)" />
-          <span style="font-size: 11px; color: var(--text-on-accent);"
-            >{nearbyUsers.length}{t('sidebar.nearbyPeople')}</span
+          <span
+            style="width: 7px; height: 7px; border-radius: 999px; background: var(--color-semantic-online, #66835d); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-semantic-online, #66835d) 22%, transparent);"
+          ></span>
+          <span style="font-size: 11px; color: var(--text-secondary);"
+            >{onlineCount} {t('common.online')}</span
           >
         </button>
       </div>
     </div>
 
-    <div class="flex min-h-0 flex-1 gap-0">
-      <!-- Left column (Figma Make HomeDesktop) -->
+    <div class="flex min-h-0 flex-1">
+      <!-- Left column -->
       <div
-        class="flex flex-col gap-4 overflow-y-auto no-scrollbar p-5"
+        class="flex flex-col gap-6 overflow-y-auto no-scrollbar p-6"
         style="width: 340px; flex-shrink: 0; border-right: 1px solid var(--border-theme);"
       >
-        <!-- Map card -->
-        <div
-          class="surface-hero relative w-full overflow-hidden rounded-[24px]"
-          style="height: 200px; opacity: 0.7;"
-        >
-          <div
-            class="absolute inset-0"
-            style="background: linear-gradient(135deg, var(--surface-secondary), var(--surface-bg));"
-          ></div>
-          <div
-            class="absolute inset-0"
-            style="background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.3) 100%);"
-          ></div>
-          <div class="absolute inset-0 flex items-center justify-center">
-            <div
-              class="flex items-center justify-center rounded-full"
-              style="width: 48px; height: 48px; background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(10px); border: 1.5px solid rgba(255,255,255,0.35); box-shadow: 0 4px 16px rgba(0,0,0,0.18);"
-            >
-              <span
-                class="rounded-full animate-pulse"
-                style="width: 14px; height: 14px; background: var(--brand); box-shadow: 0 0 0 5px var(--glow);"
-              ></span>
-            </div>
-          </div>
-          <div class="absolute bottom-3 right-3 flex flex-col gap-2">
-            {#each [Navigation2, Compass] as Icon}
+        <HeroStats
+          people={nearbyUsers.length}
+          activity={activityCount}
+          online={onlineCount}
+          title={t('home.realtimeNearby')}
+          rangeLabel={`${mapAnchorStore.radius}km ${t('home.rangeWithin')}`}
+          loading={loadingNearby}
+          onclick={() => void goto('/location')}
+        />
+
+        <!-- Nearby activity -->
+        {#if loadingNearby || activities.length > 0}
+          <div>
+            <div class="mb-3 flex items-center justify-between">
+              <span class="eyebrow">{t('home.nearbyActivity')}</span>
               <button
-                class="flex items-center justify-center rounded-xl outline-none"
-                style="width: 34px; height: 34px; background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.25); box-shadow: 2px 2px 6px rgba(0,0,0,0.15);"
+                class="flex items-center gap-0.5 outline-none"
+                style="color: var(--brand); font-size: 12px; background: none; border: none; cursor: pointer;"
+                onclick={() => void goto('/discover')}
               >
-                <Icon size={14} strokeWidth={1.5} color="var(--text-primary)" />
+                {t('common.viewAll')}
+                <ChevronRight size={13} strokeWidth={1.5} />
               </button>
-            {/each}
-          </div>
-          <div
-            class="absolute bottom-3 left-3 flex items-center gap-1 rounded-full px-2.5 py-1"
-            style="background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2);"
-          >
-            <span style="font-size: 11px; color: var(--brand); font-weight: 600;"
-              >{nearbyUsers.length}</span
-            >
-            <span style="font-size: 10px; color: var(--text-secondary);">人附近</span>
-          </div>
-        </div>
-
-        <!-- Stats grid (3 cards) -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
-          {#each [{ icon: Users, label: '附近', value: nearbyUsers.length, color: 'var(--brand)' }, { icon: Star, label: '活动', value: activityCount, color: '#F59E0B' }, { icon: TrendingUp, label: '在线', value: onlineCount, color: '#22c55e' }] as stat}
-            <div
-              class="surface-flat flex flex-col items-center justify-center rounded-[18px] py-3.5"
-            >
-              <stat.icon
-                size={16}
-                strokeWidth={1.75}
-                color={stat.color}
-                style="margin-bottom: 4px;"
-              />
-              <span style="font-size: 20px; font-weight: 700; color: var(--text-primary);"
-                >{stat.value}</span
-              >
-              <span style="font-size: 10px; color: var(--text-secondary); margin-top: 1px;"
-                >{stat.label}</span
-              >
             </div>
-          {/each}
-        </div>
-
-        <!-- Activities list -->
-        <div>
-          <p
-            class="uppercase mb-3"
-            style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
-          >
-            附近活动
-          </p>
-          <div class="flex flex-col gap-2.5">
-            {#each trendingTags.slice(0, 3) as t, i}
-              {@const Icon = [Coffee, Music, Sparkles][i] ?? Star}
-              {@const cfg = [
-                { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
-                { color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' },
-                { color: '#06B6D4', bg: 'rgba(6,182,212,0.1)' }
-              ][i] ?? { color: 'var(--brand)', bg: 'var(--surface-bg)' }}
-              <div
-                class="surface-flat flex cursor-pointer items-center gap-3 rounded-[18px] px-4 py-3 row-hover"
-              >
-                <div
-                  class="flex items-center justify-center rounded-[12px]"
-                  style="width: 36px; height: 36px; background: {cfg.bg};"
-                >
-                  <Icon size={17} strokeWidth={1.75} color={cfg.color} />
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p style="font-size: 13px; color: var(--text-primary);">#{t.name}</p>
-                  <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-                    {t.usage_count}条动态
-                  </p>
-                </div>
-                <ChevronRight size={14} strokeWidth={1.5} color="var(--text-secondary)" />
-              </div>
-            {/each}
-          </div>
-        </div>
-      </div>
-
-      <!-- Main content column — people + feed -->
-      <div class="flex-1 overflow-y-auto no-scrollbar p-5">
-        <!-- Nearby People -->
-        {#if authStore.isAuthenticated}
-          <div class="mb-4 flex items-center justify-between">
-            <p
-              class="uppercase"
-              style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
-            >
-              {t('sidebar.nearbyPeople')}
-            </p>
-            <a
-              href="/users/nearby"
-              class="flex items-center gap-0.5 outline-none"
-              style="color: var(--brand);"
-            >
-              <span style="font-size: 12px;">{t('common.viewAll')}</span>
-              <ChevronRight size={13} strokeWidth={1.5} />
-            </a>
-          </div>
-          <div class="mb-5 flex flex-col gap-3">
-            {#if loadingNearby}
-              {#each Array(4) as _}
-                <div
-                  class="surface-flat flex items-center gap-3.5 rounded-[22px] px-4 py-3.5"
-                  style="height: 68px;"
-                >
-                  <div
-                    class="rounded-full"
-                    style="width: 44px; height: 44px; background: var(--border-theme);"
-                  ></div>
-                  <div class="flex-1">
-                    <div
-                      class="mb-1.5 rounded"
-                      style="width: 60px; height: 12px; background: var(--border-theme);"
-                    ></div>
-                    <div
-                      class="rounded"
-                      style="width: 80px; height: 10px; background: var(--border-theme);"
-                    ></div>
-                  </div>
-                </div>
-              {/each}
-            {:else}
-              {#each nearbyUsers as user (user.user.user_id)}
-                <div
-                  role="button"
-                  tabindex="0"
-                  class="surface-flat flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5 text-left row-hover transition-transform duration-150 active:scale-[0.97]"
-                  aria-label={user.user.nickname}
-                  onclick={() => void goto(`/users/${user.user.user_id}`)}
-                >
-                  <div class="relative flex-shrink-0">
-                    <div
-                      class="overflow-hidden rounded-full"
-                      style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
-                    >
-                      <img
-                        src={user.user.avatar_url || ''}
-                        alt={user.user.nickname}
-                        class="h-full w-full object-cover"
-                      />
-                    </div>
-                    {#if user.presence_status === 'online'}
-                      <span
-                        class="absolute bottom-0 right-0 rounded-full"
-                        style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--surface-bg);"
-                      ></span>
-                    {/if}
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <p style="font-size: 14px; color: var(--text-primary);">{user.user.nickname}</p>
-                    <div class="mt-0.5 flex items-center gap-1.5">
-                      {#if user.presence_status}
-                        <span
-                          style="font-size: 10px; color: {user.presence_status === 'online'
-                            ? '#22c55e'
-                            : 'var(--text-secondary)'};"
-                        >
-                          {user.presence_status === 'online'
-                            ? t('common.online')
-                            : t('common.offline')}
-                        </span>
-                        <span style="font-size: 10px; color: var(--text-secondary); opacity: 0.5;"
-                          >·</span
-                        >
-                      {/if}
-                      {#if user.tags && user.tags.length > 0}
-                        <span style="font-size: 10px; color: var(--brand); opacity: 0.8;"
-                          >{user.tags[0]}</span
-                        >
-                      {/if}
-                    </div>
-                  </div>
-                  <div class="flex flex-col items-end gap-2">
-                    {#if user.location?.distance != null}
-                      <span style="font-size: 12px; color: var(--brand);"
-                        >{formatDistance(user.location.distance)}</span
-                      >
-                    {/if}
-                    <button
-                      class="rounded-full px-3.5 py-1.5 outline-none transition-all active:scale-[0.93]"
-                      class:surface-pressed={user.relation?.is_following}
-                      class:surface-flat={!user.relation?.is_following}
-                      style={user.relation?.is_following
-                        ? 'color: var(--brand); font-size: 11px;'
-                        : 'color: var(--text-secondary); font-size: 11px;'}
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        handleFollowToggle(user);
-                      }}
-                    >
-                      {user.relation?.is_following ? t('common.following') : t('common.follow')}
-                    </button>
-                  </div>
-                </div>
-              {/each}
-            {/if}
+            <ActivityList {activities} loading={loadingNearby} onSelect={handleActivitySelect} />
           </div>
         {/if}
 
-        <!-- Banner card (Figma Make HomeDesktop) -->
-        <div
-          class="surface-hero relative mb-5 overflow-hidden rounded-[24px]"
-          style="height: clamp(120px, 12vw, 180px);"
-        >
-          <div
-            class="absolute inset-0"
-            style="background: linear-gradient(135deg, var(--surface-secondary), var(--surface-bg));"
-          ></div>
-          <div
-            class="absolute inset-0"
-            style="background: linear-gradient(to right, rgba(99,102,241,0.75) 0%, transparent 60%);"
-          ></div>
-          <div class="relative flex h-full flex-col justify-center px-5">
-            <h2 style="font-size: 16px; font-weight: 700; color: white;">发现身边精彩</h2>
-            <p style="font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 4px;">
-              加入本地社区，探索附近的人和活动
-            </p>
-            <button
-              class="mt-3 rounded-[20px] px-3.5 py-1.5 outline-none"
-              style="background: white; color: var(--brand); font-size: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2);"
-              >立即探索</button
-            >
-          </div>
-        </div>
+        <!-- Nearby groups -->
+        {#if carouselGroups.length > 0}
+          <GroupCarousel groups={carouselGroups} loading={loadingNearby} />
+        {/if}
       </div>
 
-      <!-- Right context rail (Figma Make DesktopHome/Nearby v2) -->
-      <div
-        class="flex flex-col gap-4 overflow-y-auto no-scrollbar p-5"
-        style="width: 320px; flex-shrink: 0; border-left: 1px solid var(--border-theme);"
-      >
-        <!-- Location context -->
-        <div>
-          <p
-            class="uppercase mb-3"
-            style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
-          >
-            位置信息
-          </p>
-          <div class="surface-flat rounded-[18px] p-4">
-            <div class="flex items-center gap-2 mb-2">
-              <Navigation2 size={14} strokeWidth={1.5} color="var(--brand)" />
-              <span style="font-size: 13px; color: var(--text-primary); font-weight: 500;"
-                >{mapAnchorStore.displayName}</span
-              >
-            </div>
-            <span style="font-size: 11px; color: var(--text-secondary);">
-              半径 {mapAnchorStore.radius}km · {nearbyUsers.length} 人附近
-            </span>
-          </div>
-        </div>
-
-        <!-- Suggested people -->
-        {#if nearbyUsers.length > 0}
+      <!-- Right column -->
+      <div class="flex flex-1 flex-col gap-6 overflow-y-auto no-scrollbar p-6">
+        <!-- People radar -->
+        {#if loadingNearby || radarUsers.length > 0}
           <div>
-            <div class="mb-3 flex items-center justify-between">
-              <p
-                class="uppercase"
-                style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
-              >
-                推荐关注
-              </p>
+            <div class="mb-3 flex items-start justify-between">
+              <div>
+                <span class="eyebrow">{t('sidebar.nearbyPeople')}</span>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 3px;">
+                  {mapAnchorStore.radius}km {t('home.rangeWithin')}
+                </p>
+              </div>
               <a
                 href="/users/nearby"
                 class="flex items-center gap-0.5 outline-none"
@@ -840,42 +593,30 @@
                 <ChevronRight size={13} strokeWidth={1.5} />
               </a>
             </div>
-            <div class="flex flex-col gap-2">
-              {#each nearbyUsers.slice(0, 4) as user (user.user.user_id)}
-                <a
-                  href="/users/{user.user.user_id}"
-                  class="surface-flat flex items-center gap-3 rounded-[14px] px-3 py-2.5 row-hover"
-                  style="text-decoration: none;"
-                >
-                  <div class="relative flex-shrink-0">
-                    <div
-                      class="overflow-hidden rounded-full"
-                      style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
-                    >
-                      <img
-                        src={user.user.avatar_url || ''}
-                        alt={user.user.nickname}
-                        class="h-full w-full object-cover"
-                      />
-                    </div>
-                    {#if user.presence_status === 'online'}
-                      <span
-                        class="absolute bottom-0 right-0 rounded-full"
-                        style="width: 9px; height: 9px; background: #22c55e; border: 2px solid var(--surface-bg);"
-                      ></span>
-                    {/if}
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <p style="font-size: 12px; color: var(--text-primary);">{user.user.nickname}</p>
-                    {#if user.location?.distance != null}
-                      <span style="font-size: 10px; color: var(--brand);"
-                        >{formatDistance(user.location.distance)}</span
-                      >
-                    {/if}
-                  </div>
-                </a>
-              {/each}
+            <PeopleRadarStrip
+              users={radarUsers}
+              loading={loadingNearby}
+              showHeader={false}
+              onViewAll={() => void goto('/users/nearby')}
+            />
+            <div class="mt-4">
+              <NearbyUsersFlatList
+                users={flatUsers}
+                loading={loadingNearby}
+                {followingIds}
+                onToggleFollow={handleFlatFollow}
+              />
             </div>
+          </div>
+        {/if}
+
+        <!-- Surrounding heat -->
+        {#if activities.length > 0}
+          <div>
+            <div class="mb-3 flex items-center justify-between">
+              <span class="eyebrow">{t('home.surroundingHeat')}</span>
+            </div>
+            <ActivityList {activities} loading={loadingNearby} onSelect={handleActivitySelect} />
           </div>
         {/if}
       </div>
