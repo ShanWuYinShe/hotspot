@@ -6,6 +6,7 @@
   import { usersService } from '$lib/api/services';
   import { navigateToNearbyBackTarget } from '../../nearby-back';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
+  import { platformStore } from '$lib/stores/platform.svelte';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
   import { useLocationAwareLoad } from '$lib/hooks/use-location-aware-load.svelte';
   import { presenceStore } from '$lib/stores/presence.svelte';
@@ -170,7 +171,8 @@
           </div>
           <div class="flex-1">
             <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
-              {mapAnchorStore.displayName} · {mapAnchorStore.radius}km 范围
+              {#if !platformStore.isDesktop}{mapAnchorStore.displayName} ·
+              {/if}{mapAnchorStore.radius}km 范围
             </p>
             <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
               <span style="color: var(--color-semantic-online);">{onlineCount} 人在线</span>

@@ -508,16 +508,6 @@
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <a
-          href="/location"
-          class="surface-flat flex items-center gap-1.5 rounded-full py-1.5 px-3.5 outline-none"
-          style="text-decoration: none;"
-        >
-          <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
-          <span style="font-size: 11px; color: var(--text-secondary);"
-            >{mapAnchorStore.displayName}</span
-          >
-        </a>
         <button
           class="surface-flat flex items-center gap-1.5 rounded-full py-1.5 px-3.5 outline-none"
           onclick={refreshAll}
