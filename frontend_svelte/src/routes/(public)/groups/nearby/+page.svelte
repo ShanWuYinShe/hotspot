@@ -11,11 +11,13 @@
   import MasonryLayoutItem from '$lib/components/common/masonry-layout-item.svelte';
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
+  import CreateGroupModal from '$lib/components/common/create-group-modal.svelte';
   import type { GroupItem } from '$lib/types/api';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import ArrowLeft from 'lucide-svelte/icons/arrow-left';
   import MapPin from 'lucide-svelte/icons/map-pin';
+  import Plus from 'lucide-svelte/icons/plus';
   import UsersRound from 'lucide-svelte/icons/users-round';
   import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
   import LogIn from 'lucide-svelte/icons/log-in';
@@ -25,6 +27,15 @@
   });
 
   let hasLoadedOnce = $state(false);
+  let showCreateGroup = $state(false);
+
+  function handleCreateGroup() {
+    if (!authStore.isAuthenticated) {
+      uiStore.openLoginModalWithRedirect({});
+      return;
+    }
+    showCreateGroup = true;
+  }
 
   const returnTarget = $derived(page.url.searchParams.get('from') || '/search');
 
@@ -91,6 +102,14 @@
           >{mapAnchorStore.displayName}</span
         >
       </div>
+      <button
+        class="flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+        style="width: 36px; height: 36px; background: var(--brand); box-shadow: 0 3px 10px var(--glow);"
+        onclick={handleCreateGroup}
+        aria-label="创建群组"
+      >
+        <Plus size={18} color="var(--text-on-accent)" />
+      </button>
     </div>
   </div>
 
@@ -152,3 +171,5 @@
     />
   {/if}
 </div>
+
+<CreateGroupModal bind:open={showCreateGroup} onCreated={() => loadGroups(true)} />
