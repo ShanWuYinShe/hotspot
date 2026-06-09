@@ -108,7 +108,7 @@
     }
 
     :global(.dialog-responsive-position[data-state='open']) {
-      animation: dialogSlideUp 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+      animation: dialogSlideUp 0.42s cubic-bezier(0.34, 1.32, 0.46, 1);
     }
     :global(.dialog-responsive-position[data-state='closed']) {
       animation: dialogSlideDown 0.2s cubic-bezier(0.22, 1, 0.36, 1);
@@ -117,7 +117,7 @@
 
   @media (min-width: 640px) {
     :global(.dialog-responsive-position[data-state='open']) {
-      animation: dialogZoomIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+      animation: dialogZoomIn 0.28s cubic-bezier(0.34, 1.46, 0.5, 1);
     }
     :global(.dialog-responsive-position[data-state='closed']) {
       animation: dialogZoomOut 0.15s cubic-bezier(0.22, 1, 0.36, 1);

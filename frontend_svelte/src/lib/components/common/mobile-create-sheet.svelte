@@ -3,6 +3,7 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { platformStore } from '$lib/stores/platform.svelte';
   import { fade, fly } from 'svelte/transition';
+  import { backOut, cubicIn } from 'svelte/easing';
   import Image from 'lucide-svelte/icons/image';
   import UsersRound from 'lucide-svelte/icons/users-round';
 
@@ -35,7 +36,8 @@
   <div
     class="fixed z-50 bottom-0 left-0 right-0 overflow-hidden rounded-t-[28px] px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-5"
     style="background: var(--surface-bg); border-top: 1px solid var(--border-theme); box-shadow: 0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--border-theme);"
-    transition:fly={{ y: 300, duration: 320 }}
+    in:fly={{ y: 320, duration: 440, easing: backOut }}
+    out:fly={{ y: 320, duration: 240, easing: cubicIn }}
   >
     {#if isMobileOrTablet}
       <div class="mx-auto mb-4 h-1 w-9 rounded-full" style="background: var(--border-theme);"></div>
