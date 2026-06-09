@@ -5,6 +5,7 @@
   import { groupsService } from '$lib/api/services';
   import { toast } from '$lib/stores/toast.svelte';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
+  import { platformStore } from '$lib/stores/platform.svelte';
   import { getLocale, t } from '$lib/i18n';
   import type { NotificationItem, NotificationPayload, NotificationType } from '$lib/types/api';
   import EmptyState from '$lib/components/common/empty-state.svelte';
@@ -155,6 +156,40 @@
   let unreadGroup = $derived(filteredItems.filter((i) => !i.is_read));
   let readGroup = $derived(filteredItems.filter((i) => i.is_read));
 
+  const overviewTiles = $derived.by(() => {
+    const items = pagination.items;
+    const total = items.length;
+    const unread = items.filter((i) => !i.is_read).length;
+    return [
+      { label: '全部', value: String(total), color: 'var(--text-primary)', big: true },
+      { label: '未读', value: String(unread), color: 'var(--brand)', big: true },
+      {
+        label: '当前筛选',
+        value: filterLabels[activeFilter],
+        color: 'var(--text-primary)',
+        big: false
+      },
+      { label: '已读', value: String(total - unread), color: 'var(--text-secondary)', big: true }
+    ];
+  });
+
+  const distributionRows = $derived.by(() => {
+    const items = pagination.items;
+    const countOf = (s: Set<NotificationType>) => items.filter((i) => s.has(i.type)).length;
+    const like = countOf(new Set<NotificationType>(['moment_liked', 'comment_liked']));
+    const follow = countOf(new Set<NotificationType>(['new_follower', 'mutual_follow']));
+    const comment = countOf(
+      new Set<NotificationType>(['moment_commented', 'comment_reply', 'mentioned'])
+    );
+    const system = items.length - like - follow - comment;
+    return [
+      { label: '点赞', value: like, color: '#EF4444' },
+      { label: '关注', value: follow, color: '#6366F1' },
+      { label: '评论', value: comment, color: '#3B82F6' },
+      { label: '系统', value: system, color: '#F59E0B' }
+    ];
+  });
+
   async function markAllRead() {
     const ok = await notificationStore.markAllAsRead();
     if (ok) {
@@ -301,101 +336,265 @@
   <title>{t('notificationsPage.title')} - HotSpot</title>
 </svelte:head>
 
-<div class="flex flex-col">
-  <!-- Sticky header -->
-  <div
-    class="sticky top-0 z-10 px-5 pt-3 pb-3"
-    style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
-  >
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <button
-          class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
-          style="width: 38px; height: 38px;"
-          onclick={() => window.history.back()}
-        >
-          <ArrowLeft size={16} strokeWidth={2} color="var(--text-primary)" />
-        </button>
-        <div>
-          <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
-            {t('notificationsPage.title')}
-          </h1>
-          {#if notificationStore.unreadCount > 0}
-            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 1px;">
-              {notificationStore.unreadCount} 条未读
-            </p>
-          {/if}
+{#snippet overviewSidebar()}
+  <!-- Overview stats -->
+  <div class="surface-flat rounded-[22px] p-4">
+    <span class="eyebrow">通知概览</span>
+    <div class="grid grid-cols-2 gap-3" style="margin-top: 12px;">
+      {#each overviewTiles as tile (tile.label)}
+        <div class="rounded-[16px]" style="background: var(--border-theme); padding: 12px;">
+          <p
+            style="font-size: 10px; color: var(--text-secondary); letter-spacing: 0.08em; text-transform: uppercase;"
+          >
+            {tile.label}
+          </p>
+          <p
+            style="font-size: {tile.big
+              ? '22px'
+              : '14px'}; color: {tile.color}; margin-top: 6px; font-weight: 600; line-height: 1.1;"
+          >
+            {tile.value}
+          </p>
         </div>
-      </div>
-      {#if notificationStore.unreadCount > 0}
-        <button
-          class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none transition-transform duration-150 active:scale-[0.93]"
-          style="font-size: 12px; color: var(--brand);"
-          onclick={markAllRead}
-        >
-          <CheckCheck size={13} strokeWidth={2} />
-          {t('notificationDropdown.markAllRead')}
-        </button>
-      {/if}
+      {/each}
     </div>
   </div>
 
-  <!-- Filter pills -->
-  <div class="flex gap-2 overflow-x-auto px-5 py-3" style="scrollbar-width: none;">
-    {#each Object.entries(filterLabels) as [key, label]}
-      <button
-        class="flex-shrink-0 outline-none transition-all duration-200"
-        class:surface-flat={activeFilter !== key}
-        style="padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 500;
-          {activeFilter === key
-          ? 'background: var(--brand); color: white; box-shadow: 0 3px 10px var(--glow); border: none;'
-          : 'color: var(--text-primary);'}"
-        onclick={() => (activeFilter = key as FilterKey)}
-      >
-        {label}
-      </button>
-    {/each}
-  </div>
-
-  <div class="flex flex-col px-3 pb-4">
-    {#if pagination.loading}
-      <div class="flex justify-center py-12">
-        <Loader2 class="h-8 w-8 animate-spin" color="var(--text-secondary)" />
-      </div>
-    {:else if pagination.error}
-      <EmptyState icon={Bell} title={t('notificationsPage.loadFailed')} />
-      <div class="flex justify-center pt-2">
-        <button
-          class="surface-flat rounded-full px-5 py-2 outline-none"
-          style="color: var(--brand); font-size: 13px;"
-          onclick={() => loadNotifications(true)}>{t('common.retry')}</button
+  <!-- Type distribution -->
+  <div class="surface-flat rounded-[22px] p-4" style="margin-top: 16px;">
+    <span class="eyebrow">类型分布</span>
+    <div class="flex flex-col" style="gap: 10px; margin-top: 12px;">
+      {#each distributionRows as row (row.label)}
+        <div
+          class="flex items-center justify-between rounded-[16px]"
+          style="background: var(--border-theme); padding: 10px 12px;"
         >
-      </div>
-    {:else if filteredItems.length === 0}
-      <EmptyState icon={Bell} title={t('notificationsPage.emptyTitle')} />
-    {:else}
-      <div class="space-y-2.5">
-        <!-- Unread group -->
-        {#if unreadGroup.length > 0}
-          <p
-            class="uppercase mb-2"
-            style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
+          <div class="flex items-center gap-2">
+            <span class="rounded-full" style="width: 8px; height: 8px; background: {row.color};"
+            ></span>
+            <span style="font-size: 13px; color: var(--text-primary);">{row.label}</span>
+          </div>
+          <span style="font-size: 12px; color: var(--text-secondary);">{row.value}</span>
+        </div>
+      {/each}
+    </div>
+  </div>
+{/snippet}
+
+<div
+  class="flex"
+  class:h-full={platformStore.isDesktop}
+  class:overflow-hidden={platformStore.isDesktop}
+>
+  <div
+    class="flex min-w-0 flex-1 flex-col"
+    class:overflow-y-auto={platformStore.isDesktop}
+    class:no-scrollbar={platformStore.isDesktop}
+  >
+    <!-- Sticky header -->
+    <div
+      class="sticky top-0 z-10 px-5 pt-3 pb-3"
+      style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
+    >
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <button
+            class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
+            style="width: 38px; height: 38px;"
+            onclick={() => window.history.back()}
           >
-            新消息
-          </p>
-          {#each unreadGroup as item (item.notification_id)}
+            <ArrowLeft size={16} strokeWidth={2} color="var(--text-primary)" />
+          </button>
+          <div>
+            <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
+              {t('notificationsPage.title')}
+            </h1>
+            {#if notificationStore.unreadCount > 0}
+              <p style="font-size: 12px; color: var(--text-secondary); margin-top: 1px;">
+                {notificationStore.unreadCount} 条未读
+              </p>
+            {/if}
+          </div>
+        </div>
+        {#if notificationStore.unreadCount > 0}
+          <button
+            class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none transition-transform duration-150 active:scale-[0.93]"
+            style="font-size: 12px; color: var(--brand);"
+            onclick={markAllRead}
+          >
+            <CheckCheck size={13} strokeWidth={2} />
+            {t('notificationDropdown.markAllRead')}
+          </button>
+        {/if}
+      </div>
+    </div>
+
+    <!-- Filter pills -->
+    <div class="flex gap-2 overflow-x-auto px-5 py-3" style="scrollbar-width: none;">
+      {#each Object.entries(filterLabels) as [key, label]}
+        <button
+          class="flex-shrink-0 outline-none transition-all duration-200"
+          class:surface-flat={activeFilter !== key}
+          style="padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 500;
+          {activeFilter === key
+            ? 'background: var(--brand); color: white; box-shadow: 0 3px 10px var(--glow); border: none;'
+            : 'color: var(--text-primary);'}"
+          onclick={() => (activeFilter = key as FilterKey)}
+        >
+          {label}
+        </button>
+      {/each}
+    </div>
+
+    <div class="flex flex-col px-3 pb-4">
+      {#if pagination.loading}
+        <div class="flex justify-center py-12">
+          <Loader2 class="h-8 w-8 animate-spin" color="var(--text-secondary)" />
+        </div>
+      {:else if pagination.error}
+        <EmptyState icon={Bell} title={t('notificationsPage.loadFailed')} />
+        <div class="flex justify-center pt-2">
+          <button
+            class="surface-flat rounded-full px-5 py-2 outline-none"
+            style="color: var(--brand); font-size: 13px;"
+            onclick={() => loadNotifications(true)}>{t('common.retry')}</button
+          >
+        </div>
+      {:else if filteredItems.length === 0}
+        <EmptyState icon={Bell} title={t('notificationsPage.emptyTitle')} />
+      {:else}
+        <div class="space-y-2.5">
+          <!-- Unread group -->
+          {#if unreadGroup.length > 0}
+            <p
+              class="uppercase mb-2"
+              style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
+            >
+              新消息
+            </p>
+            {#each unreadGroup as item (item.notification_id)}
+              {@const locale = getLocale()}
+              {@const typeColor = getTypeColor(item.type)}
+              {@const TypeIcon = getTypeIcon(item.type)}
+              {@const avatarUrl = getActorAvatar(item)}
+              {@const thumbnailUrl = getPostThumbnail(item)}
+              <div
+                class="flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
+                style="background: {`${typeColor}07`};
+                border: 1px solid {`${typeColor}18`};
+                box-shadow: var(--shadow-lg);"
+              >
+                <!-- Avatar with type badge -->
+                <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
+                  {#if avatarUrl}
+                    <img
+                      src={avatarUrl}
+                      alt=""
+                      style="width: 44px; height: 44px; border-radius: 9999px; object-fit: cover; border: 1px solid var(--border-theme);"
+                    />
+                  {:else}
+                    <div
+                      class="input-surface flex items-center justify-center"
+                      style="width: 44px; height: 44px; border-radius: 9999px;"
+                    >
+                      <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
+                    </div>
+                  {/if}
+                  <div
+                    class="absolute flex items-center justify-center"
+                    style="width: 18px; height: 18px; border-radius: 9999px; background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"
+                  >
+                    <TypeIcon size={10} strokeWidth={2} color="white" />
+                  </div>
+                </div>
+
+                <div class="min-w-0 flex-1">
+                  <button
+                    class="w-full text-left outline-none"
+                    onclick={() => handleNotificationClick(item)}
+                  >
+                    <div
+                      style="font-size: 13px; color: var(--text-primary); font-weight: 500; line-height: 1.4;"
+                    >
+                      <span class="mr-1">{getNotificationTitle(item, locale)}</span>
+                      <span style="color: var(--text-secondary);"
+                        >{getNotificationContent(item, locale)}</span
+                      >
+                    </div>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+                      {formatNotificationTimestamp(item.created_at, locale)}
+                    </p>
+                  </button>
+                  {#if canHandleGroupInvite(item)}
+                    <div class="mt-2 flex gap-2">
+                      <button
+                        class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
+                        disabled={isProcessing(item.notification_id)}
+                        onclick={() => handleInviteAction(item, 'accept')}
+                        >{t('common.accept')}</button
+                      >
+                      <button
+                        class="surface-flat rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                        style="color: var(--text-secondary);"
+                        disabled={isProcessing(item.notification_id)}
+                        onclick={() => handleInviteAction(item, 'reject')}
+                        >{t('common.reject')}</button
+                      >
+                    </div>
+                  {:else if canHandleGroupApplication(item)}
+                    <div class="mt-2 flex gap-2">
+                      <button
+                        class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
+                        disabled={isProcessing(item.notification_id)}
+                        onclick={() => handleApplicationAction(item, 'approve')}
+                        >{t('common.approve')}</button
+                      >
+                      <button
+                        class="surface-flat rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                        style="color: var(--text-secondary);"
+                        disabled={isProcessing(item.notification_id)}
+                        onclick={() => handleApplicationAction(item, 'reject')}
+                        >{t('common.reject')}</button
+                      >
+                    </div>
+                  {/if}
+                </div>
+
+                <div class="flex flex-shrink-0 flex-col items-center gap-1.5 pt-1">
+                  {#if thumbnailUrl}
+                    <img
+                      src={thumbnailUrl}
+                      alt=""
+                      style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-theme);"
+                    />
+                  {/if}
+                  <div
+                    style="width: 8px; height: 8px; border-radius: 9999px; background: var(--brand);"
+                  ></div>
+                </div>
+              </div>
+            {/each}
+            {#if readGroup.length > 0}
+              <p
+                class="uppercase mt-4 mb-2"
+                style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
+              >
+                较早
+              </p>
+            {/if}
+          {/if}
+          <!-- Read group -->
+          {#each readGroup as item (item.notification_id)}
             {@const locale = getLocale()}
             {@const typeColor = getTypeColor(item.type)}
             {@const TypeIcon = getTypeIcon(item.type)}
             {@const avatarUrl = getActorAvatar(item)}
             {@const thumbnailUrl = getPostThumbnail(item)}
             <div
-              class="flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
-              style="background: {`${typeColor}07`};
-                border: 1px solid {`${typeColor}18`};
-                box-shadow: var(--shadow-lg);"
+              class="row-hover flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
             >
-              <!-- Avatar with type badge -->
               <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
                 {#if avatarUrl}
                   <img
@@ -405,8 +604,8 @@
                   />
                 {:else}
                   <div
-                    class="input-surface flex items-center justify-center"
-                    style="width: 44px; height: 44px; border-radius: 9999px;"
+                    class="flex items-center justify-center"
+                    style="width: 44px; height: 44px; border-radius: 9999px; background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
                   >
                     <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
                   </div>
@@ -425,7 +624,7 @@
                   onclick={() => handleNotificationClick(item)}
                 >
                   <div
-                    style="font-size: 13px; color: var(--text-primary); font-weight: 500; line-height: 1.4;"
+                    style="font-size: 13px; color: var(--text-primary); font-weight: 400; line-height: 1.4;"
                   >
                     <span class="mr-1">{getNotificationTitle(item, locale)}</span>
                     <span style="color: var(--text-secondary);"
@@ -446,8 +645,8 @@
                       >{t('common.accept')}</button
                     >
                     <button
-                      class="surface-flat rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                      style="color: var(--text-secondary);"
+                      class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                      style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                       disabled={isProcessing(item.notification_id)}
                       onclick={() => handleInviteAction(item, 'reject')}
                       >{t('common.reject')}</button
@@ -463,8 +662,8 @@
                       >{t('common.approve')}</button
                     >
                     <button
-                      class="surface-flat rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                      style="color: var(--text-secondary);"
+                      class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                      style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                       disabled={isProcessing(item.notification_id)}
                       onclick={() => handleApplicationAction(item, 'reject')}
                       >{t('common.reject')}</button
@@ -481,131 +680,32 @@
                     style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-theme);"
                   />
                 {/if}
-                <div
-                  style="width: 8px; height: 8px; border-radius: 9999px; background: var(--brand);"
-                ></div>
               </div>
             </div>
           {/each}
-          {#if readGroup.length > 0}
-            <p
-              class="uppercase mt-4 mb-2"
-              style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
-            >
-              较早
-            </p>
-          {/if}
-        {/if}
-        <!-- Read group -->
-        {#each readGroup as item (item.notification_id)}
-          {@const locale = getLocale()}
-          {@const typeColor = getTypeColor(item.type)}
-          {@const TypeIcon = getTypeIcon(item.type)}
-          {@const avatarUrl = getActorAvatar(item)}
-          {@const thumbnailUrl = getPostThumbnail(item)}
-          <div
-            class="row-hover flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
-          >
-            <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
-              {#if avatarUrl}
-                <img
-                  src={avatarUrl}
-                  alt=""
-                  style="width: 44px; height: 44px; border-radius: 9999px; object-fit: cover; border: 1px solid var(--border-theme);"
-                />
-              {:else}
-                <div
-                  class="flex items-center justify-center"
-                  style="width: 44px; height: 44px; border-radius: 9999px; background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-                >
-                  <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
-                </div>
-              {/if}
-              <div
-                class="absolute flex items-center justify-center"
-                style="width: 18px; height: 18px; border-radius: 9999px; background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"
-              >
-                <TypeIcon size={10} strokeWidth={2} color="white" />
-              </div>
-            </div>
-
-            <div class="min-w-0 flex-1">
-              <button
-                class="w-full text-left outline-none"
-                onclick={() => handleNotificationClick(item)}
-              >
-                <div
-                  style="font-size: 13px; color: var(--text-primary); font-weight: 400; line-height: 1.4;"
-                >
-                  <span class="mr-1">{getNotificationTitle(item, locale)}</span>
-                  <span style="color: var(--text-secondary);"
-                    >{getNotificationContent(item, locale)}</span
-                  >
-                </div>
-                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-                  {formatNotificationTimestamp(item.created_at, locale)}
-                </p>
-              </button>
-              {#if canHandleGroupInvite(item)}
-                <div class="mt-2 flex gap-2">
-                  <button
-                    class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                    style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
-                    disabled={isProcessing(item.notification_id)}
-                    onclick={() => handleInviteAction(item, 'accept')}>{t('common.accept')}</button
-                  >
-                  <button
-                    class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                    style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-                    disabled={isProcessing(item.notification_id)}
-                    onclick={() => handleInviteAction(item, 'reject')}>{t('common.reject')}</button
-                  >
-                </div>
-              {:else if canHandleGroupApplication(item)}
-                <div class="mt-2 flex gap-2">
-                  <button
-                    class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                    style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
-                    disabled={isProcessing(item.notification_id)}
-                    onclick={() => handleApplicationAction(item, 'approve')}
-                    >{t('common.approve')}</button
-                  >
-                  <button
-                    class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                    style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-                    disabled={isProcessing(item.notification_id)}
-                    onclick={() => handleApplicationAction(item, 'reject')}
-                    >{t('common.reject')}</button
-                  >
-                </div>
-              {/if}
-            </div>
-
-            <div class="flex flex-shrink-0 flex-col items-center gap-1.5 pt-1">
-              {#if thumbnailUrl}
-                <img
-                  src={thumbnailUrl}
-                  alt=""
-                  style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-theme);"
-                />
-              {/if}
-            </div>
-          </div>
-        {/each}
-      </div>
-      {#if pagination.hasMore}
-        <div class="flex justify-center pt-4">
-          <button
-            class="surface-flat rounded-full px-5 py-2 outline-none transition-transform duration-150 active:scale-[0.97]"
-            style="color: var(--text-secondary); font-size: 13px;"
-            disabled={pagination.loadingMore}
-            onclick={() => loadNotifications(false)}
-          >
-            {#if pagination.loadingMore}<Loader2 class="mr-2 inline h-4 w-4 animate-spin" />{/if}
-            {t('common.loadMore')}
-          </button>
         </div>
+        {#if pagination.hasMore}
+          <div class="flex justify-center pt-4">
+            <button
+              class="surface-flat rounded-full px-5 py-2 outline-none transition-transform duration-150 active:scale-[0.97]"
+              style="color: var(--text-secondary); font-size: 13px;"
+              disabled={pagination.loadingMore}
+              onclick={() => loadNotifications(false)}
+            >
+              {#if pagination.loadingMore}<Loader2 class="mr-2 inline h-4 w-4 animate-spin" />{/if}
+              {t('common.loadMore')}
+            </button>
+          </div>
+        {/if}
       {/if}
-    {/if}
+    </div>
   </div>
+  {#if platformStore.isDesktop}
+    <aside
+      class="flex-shrink-0 overflow-y-auto no-scrollbar"
+      style="width: 300px; border-left: 1px solid var(--border-theme); padding: 20px 16px;"
+    >
+      {@render overviewSidebar()}
+    </aside>
+  {/if}
 </div>
