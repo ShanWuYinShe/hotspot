@@ -5,7 +5,7 @@
 <button class="neu-surface-flat rounded-[18px] overflow-hidden text-left w-full">
   <div
     class="relative"
-    style="height: 110px; background: linear-gradient(135deg, var(--neu-accent-soft) 0%, var(--neu-border) 100%);"
+    style="height: 110px; background: linear-gradient(135deg, var(--theme-accent-soft) 0%, var(--theme-border) 100%);"
   >
     <!-- Placeholder gradient as hero image -->
     <div
@@ -22,14 +22,14 @@
   </div>
 
   <div class="p-3">
-    <p style="font-size: 12px; color: var(--neu-text); line-height: 1.4;">
+    <p style="font-size: 12px; color: var(--theme-text); line-height: 1.4;">
       雨后的旧书店，光线像被泡软了
     </p>
     <div class="flex items-center gap-2 mt-1.5">
-      <Heart size={11} color="var(--neu-text-muted)" strokeWidth={1.5} />
-      <span style="font-size: 10px; color: var(--neu-text-muted);">1.2k</span>
-      <span style="font-size: 10px; color: var(--neu-text-muted);">·</span>
-      <span style="font-size: 10px; color: var(--neu-text-muted);">来自 @lumi</span>
+      <Heart size={11} color="var(--theme-text-muted)" strokeWidth={1.5} />
+      <span style="font-size: 10px; color: var(--theme-text-muted);">1.2k</span>
+      <span style="font-size: 10px; color: var(--theme-text-muted);">·</span>
+      <span style="font-size: 10px; color: var(--theme-text-muted);">来自 @lumi</span>
     </div>
   </div>
 </button>

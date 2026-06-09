@@ -15,41 +15,41 @@
 <div class="neu-surface-flat rounded-[18px] p-4">
   <div class="flex items-center justify-between mb-3">
     <span
-      style="font-size: 10px; color: var(--neu-text-muted); text-transform: uppercase; letter-spacing: 0.08em;"
+      style="font-size: 10px; color: var(--theme-text-muted); text-transform: uppercase; letter-spacing: 0.08em;"
     >
       连续签到
     </span>
-    <Flame size={14} color="var(--neu-accent-primary)" strokeWidth={1.75} />
+    <Flame size={14} color="var(--theme-accent-primary)" strokeWidth={1.75} />
   </div>
 
   <div class="flex items-baseline gap-1.5 mb-3.5">
-    <span style="font-size: 32px; color: var(--neu-text); font-weight: 600; line-height: 1;"
+    <span style="font-size: 32px; color: var(--theme-text); font-weight: 600; line-height: 1;"
       >27</span
     >
-    <span style="font-size: 11px; color: var(--neu-text-muted);">天</span>
+    <span style="font-size: 11px; color: var(--theme-text-muted);">天</span>
   </div>
 
   <div class="flex gap-1 mb-2.5">
     {#each STREAK_DAYS as d}
       <div class="flex-1 flex flex-col items-center gap-1">
-        <span style="font-size: 9px; color: var(--neu-text-muted); opacity: {d.today ? 1 : 0.7};"
+        <span style="font-size: 9px; color: var(--theme-text-muted); opacity: {d.today ? 1 : 0.7};"
           >{d.label}</span
         >
         <div
           style="width: 100%; height: 22px; border-radius: 5px;
             background: {d.done
-            ? 'var(--neu-accent-primary)'
+            ? 'var(--theme-accent-primary)'
             : d.today
-              ? 'var(--neu-accent-soft)'
-              : 'var(--neu-border)'};
+              ? 'var(--theme-accent-soft)'
+              : 'var(--theme-border)'};
             opacity: {d.done ? 0.88 : 1};
-            border: {d.today ? '1.5px dashed var(--neu-accent-soft-border)' : 'none'};"
+            border: {d.today ? '1.5px dashed var(--theme-accent-soft-border)' : 'none'};"
         ></div>
       </div>
     {/each}
   </div>
 
-  <p style="font-size: 11px; color: var(--neu-text-muted); line-height: 1.5;">
+  <p style="font-size: 11px; color: var(--theme-text-muted); line-height: 1.5;">
     明天再来就满 28 天啦 🌱
   </p>
 </div>

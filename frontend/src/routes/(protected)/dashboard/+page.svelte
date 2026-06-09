@@ -123,7 +123,7 @@
       >
         <span
           class="rounded-full"
-          style="width: 6px; height: 6px; background: #22c55e; flex-shrink: 0;"
+          style="width: 6px; height: 6px; background: var(--semantic-online); flex-shrink: 0;"
         ></span>
         <span style="font-size: 11px; color: var(--text-secondary);"
           >{mapAnchorStore.displayName}</span
@@ -210,7 +210,7 @@
       >
         <span
           class="rounded-full"
-          style="width: 6px; height: 6px; background: #22c55e; flex-shrink: 0;"
+          style="width: 6px; height: 6px; background: var(--semantic-online); flex-shrink: 0;"
         ></span>
         <span style="font-size: 11px; color: var(--text-secondary);"
           >{mapAnchorStore.displayName}</span
@@ -304,7 +304,10 @@
       </div>
       <div class="flex items-center gap-2">
         <div class="flex items-center gap-1.5 rounded-full px-3 py-1.5 surface-flat">
-          <span class="rounded-full" style="width: 6px; height: 6px; background: #22c55e;"></span>
+          <span
+            class="rounded-full"
+            style="width: 6px; height: 6px; background: var(--semantic-online);"
+          ></span>
           <span style="font-size: 12px; color: var(--text-secondary);">{onlineCount} 在线</span>
         </div>
       </div>

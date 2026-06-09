@@ -79,7 +79,7 @@
       class="rounded-[22px] p-6"
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
-      <h2 style="font-size: 18px; font-weight: 600; color: var(--neu-error);">无法加载分享</h2>
+      <h2 style="font-size: 18px; font-weight: 600; color: var(--theme-error);">无法加载分享</h2>
       <p style="font-size: 14px; color: var(--text-secondary); margin-top: 8px;">
         {data.error || '此分享不存在或已被删除'}
       </p>

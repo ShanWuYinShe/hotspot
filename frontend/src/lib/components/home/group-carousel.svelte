@@ -57,7 +57,7 @@
         >
           <!-- Banner -->
           <div
-            style="position: relative; height: 72px; border-radius: 14px 14px 0 0; overflow: hidden; background: linear-gradient(135deg, var(--neu-accent-soft), var(--border-theme));"
+            style="position: relative; height: 72px; border-radius: 14px 14px 0 0; overflow: hidden; background: linear-gradient(135deg, var(--theme-accent-soft), var(--border-theme));"
           >
             {#if group.banner_url}
               <img

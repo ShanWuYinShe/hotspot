@@ -17,15 +17,15 @@
   import Moon from 'lucide-svelte/icons/moon';
 
   const PREVIEW_ACCENT: Record<ThemeFamily, string> = {
-    vibrant: '#6366f1',
+    indigo: '#6366f1',
     forest: '#3D7A55',
-    neu: '#D4845A'
+    sand: '#D4845A'
   };
 
   const THEME_NAMES: Record<ThemeFamily, string> = {
-    vibrant: '活力',
+    indigo: '活力',
     forest: '自然',
-    neu: '质感'
+    sand: '质感'
   };
 
   const settingsSections = [
@@ -45,7 +45,7 @@
           label: '修改密码',
           href: '/settings/password',
           description: '更改登录密码',
-          color: 'var(--neu-warning)'
+          color: 'var(--theme-warning)'
         },
         {
           icon: Shield,
@@ -91,7 +91,7 @@
           label: '我的分享',
           href: '/settings/shares',
           description: '查看并撤销已创建分享',
-          color: 'var(--neu-success)'
+          color: 'var(--theme-success)'
         },
         {
           icon: ShieldAlert,
@@ -311,7 +311,7 @@
                   <span
                     style="font-size: 10px; text-align: center; line-height: 1.4; color: {accent}99;"
                   >
-                    {#if option.family === 'vibrant'}霓虹活力{:else if option.family === 'forest'}森林极简{:else}柔和质感{/if}
+                    {#if option.family === 'indigo'}霓虹活力{:else if option.family === 'forest'}森林极简{:else}柔和质感{/if}
                   </span>
                 </div>
                 {#if isSelected}
@@ -556,7 +556,7 @@
               <span
                 style="font-size: 10px; text-align: center; line-height: 1.4; color: {accent}99;"
               >
-                {#if option.family === 'vibrant'}霓虹活力{:else if option.family === 'forest'}森林极简{:else}柔和质感{/if}
+                {#if option.family === 'indigo'}霓虹活力{:else if option.family === 'forest'}森林极简{:else}柔和质感{/if}
               </span>
             </div>
             {#if isSelected}

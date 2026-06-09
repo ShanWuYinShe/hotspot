@@ -329,7 +329,7 @@
 
 <!-- ════════════════════════════════════════════════════ MOBILE / TABLET ══════ -->
 {#if !platformStore.isDesktop}
-  <div class="relative w-full h-[100dvh] overflow-hidden" style="background: var(--neu-bg)">
+  <div class="relative w-full h-[100dvh] overflow-hidden" style="background: var(--theme-bg)">
     <!-- Map -->
     <div class="absolute inset-0 z-0" onclick={handleMapClick}>
       <div bind:this={mapEl} class="w-full h-full"></div>
@@ -342,17 +342,17 @@
     >
       <button
         class="flex items-center justify-center rounded-full"
-        style="width: 40px; height: 40px; background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 0 2px 12px var(--neu-shadow-dark);"
+        style="width: 40px; height: 40px; background: var(--theme-bg); border: 1px solid var(--theme-border); box-shadow: 0 2px 12px var(--theme-shadow-dark);"
         onclick={() => map?.setView([XUZHOU_CENTER.lat, XUZHOU_CENTER.lng], DEFAULT_ZOOM)}
       >
-        <Crosshair size={18} style="color: var(--neu-text)" />
+        <Crosshair size={18} style="color: var(--theme-text)" />
       </button>
     </div>
 
     <!-- Bottom sheet -->
     <div
       class="absolute bottom-0 left-0 right-0 z-30 rounded-t-[28px] overflow-hidden"
-      style="height: {sheetHeight}px; background: var(--neu-bg); box-shadow: 0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--neu-border); transition: height 0.25s ease-out;"
+      style="height: {sheetHeight}px; background: var(--theme-bg); box-shadow: 0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--theme-border); transition: height 0.25s ease-out;"
     >
       <!-- Handle -->
       <div
@@ -361,7 +361,7 @@
         onpointermove={onPointerMove}
         onpointerup={onPointerUp}
       >
-        <div class="w-8 h-1 rounded-full" style="background: var(--neu-border-pressed)"></div>
+        <div class="w-8 h-1 rounded-full" style="background: var(--theme-border-pressed)"></div>
       </div>
 
       <!-- Search + Confirm -->
@@ -369,32 +369,32 @@
         <button
           onclick={() => goto('/')}
           class="flex items-center justify-center rounded-full flex-shrink-0"
-          style="width: 36px; height: 36px; background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 2px 2px 6px var(--neu-shadow-dark), -2px -2px 6px var(--neu-shadow-light);"
+          style="width: 36px; height: 36px; background: var(--theme-bg); border: 1px solid var(--theme-border); box-shadow: 2px 2px 6px var(--theme-shadow-dark), -2px -2px 6px var(--theme-shadow-light);"
         >
-          <ArrowLeft size={18} style="color: var(--neu-text)" />
+          <ArrowLeft size={18} style="color: var(--theme-text)" />
         </button>
         <div
           class="flex-1 flex items-center gap-2 rounded-full px-3 py-2"
-          style="background: var(--neu-bg); box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+          style="background: var(--theme-bg); box-shadow: inset 3px 3px 6px var(--theme-shadow-dark), inset -3px -3px 6px var(--theme-shadow-light); border: 1px solid var(--theme-border);"
         >
-          <Search size={14} style="color: var(--neu-text-muted)" />
+          <Search size={14} style="color: var(--theme-text-muted)" />
           <input
             type="text"
             bind:value={searchQuery}
             placeholder="搜索地点"
             class="flex-1 bg-transparent outline-none text-sm"
-            style="color: var(--neu-text);"
+            style="color: var(--theme-text);"
           />
           {#if searchQuery}
             <button onclick={() => (searchQuery = '')}
-              ><X size={14} style="color: var(--neu-text-muted)" /></button
+              ><X size={14} style="color: var(--theme-text-muted)" /></button
             >
           {/if}
         </div>
         <button
           onclick={handleConfirm}
           class="px-4 py-2 rounded-full flex-shrink-0 text-white text-sm font-medium"
-          style="background: var(--neu-accent-primary); box-shadow: 0 4px 12px var(--neu-glow);"
+          style="background: var(--theme-accent-primary); box-shadow: 0 4px 12px var(--theme-glow);"
           >确认</button
         >
       </div>
@@ -407,9 +407,9 @@
             class="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all duration-200 flex-shrink-0"
             style="background: {activeFilters.has(type)
               ? PIN_COLORS[type] + '18'
-              : 'var(--neu-border)'}; color: {activeFilters.has(type)
+              : 'var(--theme-border)'}; color: {activeFilters.has(type)
               ? PIN_COLORS[type]
-              : 'var(--neu-text-muted)'}; border: 1px solid {activeFilters.has(type)
+              : 'var(--theme-text-muted)'}; border: 1px solid {activeFilters.has(type)
               ? PIN_COLORS[type] + '40'
               : 'transparent'};"
           >
@@ -420,9 +420,9 @@
         <button
           onclick={() => (showFilter = !showFilter)}
           class="flex items-center justify-center rounded-full flex-shrink-0"
-          style="width: 28px; height: 28px; background: showFilter ? 'var(--neu-accent-soft)' : 'transparent'; border: 1px solid var(--neu-border);"
+          style="width: 28px; height: 28px; background: showFilter ? 'var(--theme-accent-soft)' : 'transparent'; border: 1px solid var(--theme-border);"
         >
-          <SlidersHorizontal size={13} style="color: var(--neu-text-muted)" />
+          <SlidersHorizontal size={13} style="color: var(--theme-text-muted)" />
         </button>
       </div>
 
@@ -434,25 +434,25 @@
             <button
               onclick={() => handleSelectLoc(loc)}
               class="flex items-center gap-3 w-full py-3 text-left border-b"
-              style="border-color: var(--neu-border)"
+              style="border-color: var(--theme-border)"
             >
               <span class="text-lg">{loc.emoji || '📍'}</span>
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium truncate" style="color: var(--neu-text)">
+                <p class="text-sm font-medium truncate" style="color: var(--theme-text)">
                   {loc.displayName}
                 </p>
-                {#if loc.desc}<p class="text-xs" style="color: var(--neu-text-muted)">
+                {#if loc.desc}<p class="text-xs" style="color: var(--theme-text-muted)">
                     {loc.desc}
                   </p>{/if}
               </div>
-              <ChevronRight size={14} style="color: var(--neu-text-muted)" />
+              <ChevronRight size={14} style="color: var(--theme-text-muted)" />
             </button>
           {/each}
         {:else if !searchQuery.trim() && activeTab === 'recent'}
           <!-- Recent locations -->
           <p
             class="text-xs font-medium uppercase tracking-wider mb-2 mt-1"
-            style="color: var(--neu-text-muted); opacity: 0.75;"
+            style="color: var(--theme-text-muted); opacity: 0.75;"
           >
             最近去过
           </p>
@@ -460,25 +460,25 @@
             <button
               onclick={() => handleSelectLoc(loc)}
               class="flex items-center gap-3 w-full py-3 text-left border-b"
-              style="border-color: var(--neu-border)"
+              style="border-color: var(--theme-border)"
             >
               <span class="text-lg">{loc.emoji}</span>
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium truncate" style="color: var(--neu-text)">
+                <p class="text-sm font-medium truncate" style="color: var(--theme-text)">
                   {loc.displayName}
                 </p>
-                {#if loc.desc}<p class="text-xs" style="color: var(--neu-text-muted)">
+                {#if loc.desc}<p class="text-xs" style="color: var(--theme-text-muted)">
                     {loc.desc}
                   </p>{/if}
               </div>
-              <ChevronRight size={14} style="color: var(--neu-text-muted)" />
+              <ChevronRight size={14} style="color: var(--theme-text-muted)" />
             </button>
           {/each}
         {:else if !searchQuery.trim()}
           <!-- Hot locations -->
           <p
             class="text-xs font-medium uppercase tracking-wider mb-2 mt-1"
-            style="color: var(--neu-text-muted); opacity: 0.75;"
+            style="color: var(--theme-text-muted); opacity: 0.75;"
           >
             热门地点
           </p>
@@ -486,26 +486,26 @@
             <button
               onclick={() => handleSelectLoc(loc)}
               class="flex items-center gap-3 w-full py-3 text-left border-b"
-              style="border-color: var(--neu-border)"
+              style="border-color: var(--theme-border)"
             >
               <span class="text-lg">{loc.emoji}</span>
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium truncate" style="color: var(--neu-text)">
+                <p class="text-sm font-medium truncate" style="color: var(--theme-text)">
                   {loc.displayName}
                 </p>
-                {#if loc.desc}<p class="text-xs" style="color: var(--neu-text-muted)">
+                {#if loc.desc}<p class="text-xs" style="color: var(--theme-text-muted)">
                     {loc.desc}
                   </p>{/if}
               </div>
               {#if loc.users}<span
                   class="text-xs flex-shrink-0"
-                  style="color: var(--neu-text-muted)">{loc.users}人在附近</span
+                  style="color: var(--theme-text-muted)">{loc.users}人在附近</span
                 >{/if}
             </button>
           {/each}
         {:else}
           <div class="flex flex-col items-center justify-center py-12">
-            <p class="text-sm" style="color: var(--neu-text-muted)">未找到地点</p>
+            <p class="text-sm" style="color: var(--theme-text-muted)">未找到地点</p>
           </div>
         {/if}
       </div>
@@ -513,7 +513,7 @@
   </div>
 {:else}
   <!-- ════════════════════════════════════════════════════ DESKTOP ═══════ -->
-  <div class="relative w-full h-[100dvh] overflow-hidden" style="background: var(--neu-bg)">
+  <div class="relative w-full h-[100dvh] overflow-hidden" style="background: var(--theme-bg)">
     <!-- Map -->
     <div class="absolute inset-0 z-0" onclick={handleMapClick}>
       <div bind:this={mapEl} class="w-full h-full"></div>
@@ -522,32 +522,32 @@
     <!-- Side panel -->
     <div
       class="absolute right-0 top-0 bottom-0 z-20 flex flex-col overflow-hidden"
-      style="width: 380px; background: var(--neu-bg); border-left: 1px solid var(--neu-border); box-shadow: -4px 0 24px rgba(0,0,0,0.08);"
+      style="width: 380px; background: var(--theme-bg); border-left: 1px solid var(--theme-border); box-shadow: -4px 0 24px rgba(0,0,0,0.08);"
     >
       <!-- Panel header -->
       <div class="flex items-center gap-3 px-4 pt-4 pb-3">
         <button
           onclick={() => goto('/')}
           class="flex items-center justify-center rounded-full flex-shrink-0"
-          style="width: 36px; height: 36px; background: var(--neu-bg); border: 1px solid var(--neu-border); box-shadow: 2px 2px 6px var(--neu-shadow-dark), -2px -2px 6px var(--neu-shadow-light);"
+          style="width: 36px; height: 36px; background: var(--theme-bg); border: 1px solid var(--theme-border); box-shadow: 2px 2px 6px var(--theme-shadow-dark), -2px -2px 6px var(--theme-shadow-light);"
         >
-          <ArrowLeft size={18} style="color: var(--neu-text)" />
+          <ArrowLeft size={18} style="color: var(--theme-text)" />
         </button>
         <div
           class="flex-1 flex items-center gap-2 rounded-full px-3 py-2"
-          style="background: var(--neu-bg); box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); border: 1px solid var(--neu-border);"
+          style="background: var(--theme-bg); box-shadow: inset 3px 3px 6px var(--theme-shadow-dark), inset -3px -3px 6px var(--theme-shadow-light); border: 1px solid var(--theme-border);"
         >
-          <Search size={14} style="color: var(--neu-text-muted)" />
+          <Search size={14} style="color: var(--theme-text-muted)" />
           <input
             type="text"
             bind:value={searchQuery}
             placeholder="搜索地点"
             class="flex-1 bg-transparent outline-none text-sm"
-            style="color: var(--neu-text);"
+            style="color: var(--theme-text);"
           />
           {#if searchQuery}
             <button onclick={() => (searchQuery = '')}
-              ><X size={14} style="color: var(--neu-text-muted)" /></button
+              ><X size={14} style="color: var(--theme-text-muted)" /></button
             >
           {/if}
         </div>
@@ -561,9 +561,9 @@
             class="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all duration-200"
             style="background: {activeFilters.has(type)
               ? PIN_COLORS[type] + '18'
-              : 'var(--neu-border)'}; color: {activeFilters.has(type)
+              : 'var(--theme-border)'}; color: {activeFilters.has(type)
               ? PIN_COLORS[type]
-              : 'var(--neu-text-muted)'}; border: 1px solid {activeFilters.has(type)
+              : 'var(--theme-text-muted)'}; border: 1px solid {activeFilters.has(type)
               ? PIN_COLORS[type] + '40'
               : 'transparent'};"
           >
@@ -580,44 +580,44 @@
             <button
               onclick={() => handleSelectLoc(loc)}
               class="flex items-center gap-3 w-full py-3 text-left border-b"
-              style="border-color: var(--neu-border)"
+              style="border-color: var(--theme-border)"
             >
               <span class="text-lg">{loc.emoji || '📍'}</span>
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium truncate" style="color: var(--neu-text)">
+                <p class="text-sm font-medium truncate" style="color: var(--theme-text)">
                   {loc.displayName}
                 </p>
-                {#if loc.desc}<p class="text-xs" style="color: var(--neu-text-muted)">
+                {#if loc.desc}<p class="text-xs" style="color: var(--theme-text-muted)">
                     {loc.desc}
                   </p>{/if}
               </div>
-              <ChevronRight size={14} style="color: var(--neu-text-muted)" />
+              <ChevronRight size={14} style="color: var(--theme-text-muted)" />
             </button>
           {/each}
         {:else}
           <!-- Tab toggle -->
-          <div class="flex gap-1 mb-3 p-0.5 rounded-full" style="background: var(--neu-border)">
+          <div class="flex gap-1 mb-3 p-0.5 rounded-full" style="background: var(--theme-border)">
             <button
               onclick={() => (activeTab = 'recent')}
               class="flex-1 rounded-full py-1.5 text-xs font-medium transition-all"
               class:bg-white={activeTab === 'recent'}
               style="background: {activeTab === 'recent'
-                ? 'var(--neu-bg)'
+                ? 'var(--theme-bg)'
                 : 'transparent'}; color: {activeTab === 'recent'
-                ? 'var(--neu-text)'
-                : 'var(--neu-text-muted)'}; box-shadow: {activeTab === 'recent'
-                ? '2px 2px 4px var(--neu-shadow-dark), -2px -2px 4px var(--neu-shadow-light)'
+                ? 'var(--theme-text)'
+                : 'var(--theme-text-muted)'}; box-shadow: {activeTab === 'recent'
+                ? '2px 2px 4px var(--theme-shadow-dark), -2px -2px 4px var(--theme-shadow-light)'
                 : 'none'};">最近</button
             >
             <button
               onclick={() => (activeTab = 'hot')}
               class="flex-1 rounded-full py-1.5 text-xs font-medium transition-all"
               style="background: {activeTab === 'hot'
-                ? 'var(--neu-bg)'
+                ? 'var(--theme-bg)'
                 : 'transparent'}; color: {activeTab === 'hot'
-                ? 'var(--neu-text)'
-                : 'var(--neu-text-muted)'}; box-shadow: {activeTab === 'hot'
-                ? '2px 2px 4px var(--neu-shadow-dark), -2px -2px 4px var(--neu-shadow-light)'
+                ? 'var(--theme-text)'
+                : 'var(--theme-text-muted)'}; box-shadow: {activeTab === 'hot'
+                ? '2px 2px 4px var(--theme-shadow-dark), -2px -2px 4px var(--theme-shadow-light)'
                 : 'none'};">热门</button
             >
           </div>
@@ -625,7 +625,7 @@
           {#if activeTab === 'recent'}
             <p
               class="text-xs font-medium uppercase tracking-wider mb-2"
-              style="color: var(--neu-text-muted); opacity: 0.75;"
+              style="color: var(--theme-text-muted); opacity: 0.75;"
             >
               最近去过
             </p>
@@ -633,24 +633,24 @@
               <button
                 onclick={() => handleSelectLoc(loc)}
                 class="flex items-center gap-3 w-full py-3 text-left border-b"
-                style="border-color: var(--neu-border)"
+                style="border-color: var(--theme-border)"
               >
                 <span class="text-lg">{loc.emoji}</span>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium truncate" style="color: var(--neu-text)">
+                  <p class="text-sm font-medium truncate" style="color: var(--theme-text)">
                     {loc.displayName}
                   </p>
-                  {#if loc.desc}<p class="text-xs" style="color: var(--neu-text-muted)">
+                  {#if loc.desc}<p class="text-xs" style="color: var(--theme-text-muted)">
                       {loc.desc}
                     </p>{/if}
                 </div>
-                <ChevronRight size={14} style="color: var(--neu-text-muted)" />
+                <ChevronRight size={14} style="color: var(--theme-text-muted)" />
               </button>
             {/each}
           {:else}
             <p
               class="text-xs font-medium uppercase tracking-wider mb-2"
-              style="color: var(--neu-text-muted); opacity: 0.75;"
+              style="color: var(--theme-text-muted); opacity: 0.75;"
             >
               热门地点
             </p>
@@ -658,20 +658,20 @@
               <button
                 onclick={() => handleSelectLoc(loc)}
                 class="flex items-center gap-3 w-full py-3 text-left border-b"
-                style="border-color: var(--neu-border)"
+                style="border-color: var(--theme-border)"
               >
                 <span class="text-lg">{loc.emoji}</span>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium truncate" style="color: var(--neu-text)">
+                  <p class="text-sm font-medium truncate" style="color: var(--theme-text)">
                     {loc.displayName}
                   </p>
-                  {#if loc.desc}<p class="text-xs" style="color: var(--neu-text-muted)">
+                  {#if loc.desc}<p class="text-xs" style="color: var(--theme-text-muted)">
                       {loc.desc}
                     </p>{/if}
                 </div>
                 {#if loc.users}<span
                     class="text-xs flex-shrink-0"
-                    style="color: var(--neu-text-muted)">{loc.users}人在附近</span
+                    style="color: var(--theme-text-muted)">{loc.users}人在附近</span
                   >{/if}
               </button>
             {/each}

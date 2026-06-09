@@ -6,7 +6,7 @@
 import { browser } from '$app/environment';
 import type { TranslationKey } from '$lib/i18n';
 
-export const THEME_FAMILIES = ['vibrant', 'forest', 'neu'] as const;
+export const THEME_FAMILIES = ['indigo', 'forest', 'sand'] as const;
 
 export type ThemeFamily = (typeof THEME_FAMILIES)[number];
 
@@ -16,9 +16,9 @@ export const THEME_FAMILY_OPTIONS: {
   descriptionKey: TranslationKey;
 }[] = [
   {
-    family: 'vibrant',
-    labelKey: 'sidebar.vibrant',
-    descriptionKey: 'sidebar.vibrantDesc'
+    family: 'indigo',
+    labelKey: 'sidebar.indigo',
+    descriptionKey: 'sidebar.indigoDesc'
   },
   {
     family: 'forest',
@@ -26,20 +26,25 @@ export const THEME_FAMILY_OPTIONS: {
     descriptionKey: 'sidebar.forestDesc'
   },
   {
-    family: 'neu',
-    labelKey: 'sidebar.neu',
-    descriptionKey: 'sidebar.neuDesc'
+    family: 'sand',
+    labelKey: 'sidebar.sand',
+    descriptionKey: 'sidebar.sandDesc'
   }
 ];
 
 const THEME_FAMILY_STORAGE_KEY = 'hotspot_theme_family';
-const DEFAULT_THEME_FAMILY: ThemeFamily = 'vibrant';
+const DEFAULT_THEME_FAMILY: ThemeFamily = 'indigo';
+
+/** `<html>` 上用于选择当前主题族的属性名 */
+export const THEME_FAMILY_ATTRIBUTE = 'data-theme-family';
 
 /** Map old theme names to current names */
 const THEME_MIGRATION: Record<string, ThemeFamily> = {
-  social_blue: 'vibrant',
+  social_blue: 'indigo',
   default_clean: 'forest',
-  figma_neu: 'neu'
+  figma_neu: 'sand',
+  vibrant: 'indigo',
+  neu: 'sand'
 };
 
 function isThemeFamily(value: string | null | undefined): value is ThemeFamily {
@@ -52,6 +57,45 @@ function normalizeThemeFamily(value: string | null | undefined): ThemeFamily {
     return THEME_MIGRATION[value as keyof typeof THEME_MIGRATION]!;
   return DEFAULT_THEME_FAMILY;
 }
+
+/**
+ * 纯函数主题族解析器，会被序列化为阻塞式 <head> 脚本，在首屏绘制前应用主题族
+ * 以避免主题闪烁（FOUC）。函数体不能引用任何模块作用域变量——所有输入均通过
+ * config 传入，以保证 `.toString()` 序列化结果自包含、可独立运行。
+ * 解析规则必须与 normalizeThemeFamily 保持一致，避免水合前后主题不一致。
+ */
+function resolveInitialThemeFamily(config: {
+  storageKey: string;
+  attribute: string;
+  families: readonly string[];
+  migration: Record<string, string>;
+  defaultFamily: string;
+}) {
+  try {
+    const stored = window.localStorage.getItem(config.storageKey);
+    const family =
+      stored && config.families.indexOf(stored) !== -1
+        ? stored
+        : (stored && config.migration[stored]) || config.defaultFamily;
+    document.documentElement.setAttribute(config.attribute, family);
+  } catch {
+    document.documentElement.setAttribute(config.attribute, config.defaultFamily);
+  }
+}
+
+/**
+ * 阻塞式内联脚本源码：在 hydration 之前根据 localStorage 把持久化的主题族写入
+ * <html>，避免首屏主题闪烁。通过 +layout.svelte 的 <svelte:head> 用 {@html} 注入。
+ */
+export const THEME_FAMILY_INIT_SCRIPT = `(${resolveInitialThemeFamily.toString()})(${JSON.stringify(
+  {
+    storageKey: THEME_FAMILY_STORAGE_KEY,
+    attribute: THEME_FAMILY_ATTRIBUTE,
+    families: THEME_FAMILIES,
+    migration: THEME_MIGRATION,
+    defaultFamily: DEFAULT_THEME_FAMILY
+  }
+)});`;
 
 class ThemeStore {
   #themeFamily = $state<ThemeFamily>(DEFAULT_THEME_FAMILY);
@@ -78,7 +122,7 @@ class ThemeStore {
 
   #apply(themeFamily: ThemeFamily) {
     if (!browser) return;
-    document.documentElement.setAttribute('data-theme-family', themeFamily);
+    document.documentElement.setAttribute(THEME_FAMILY_ATTRIBUTE, themeFamily);
   }
 }
 

@@ -892,10 +892,10 @@
   {#if group && !wsGroupSubscription.state.isSubscribed}
     <div
       class="flex items-center gap-2 rounded-[16px] px-4 py-2"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--neu-warning-border);"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--theme-warning-border);"
     >
-      <Loader2 size={14} class="animate-spin" style="color: var(--neu-warning);" />
-      <span style="font-size: 14px; color: var(--neu-warning);">
+      <Loader2 size={14} class="animate-spin" style="color: var(--theme-warning);" />
+      <span style="font-size: 14px; color: var(--theme-warning);">
         {#if wsGroupSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
           群组实时事件连接中…
         {:else}
@@ -1311,7 +1311,7 @@
                         <DropdownMenuItem onclick={() => openDeleteAnnouncement(announcement)}>
                           <Trash2
                             size={16}
-                            style="margin-right: 8px; color: var(--neu-error);"
+                            style="margin-right: 8px; color: var(--theme-error);"
                           />删除公告
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -1469,7 +1469,7 @@
                         加入于 {formatDateTime(member.joined_at)}
                       </p>
                       {#if member.muted_until}
-                        <p style="font-size: 12px; color: var(--neu-error); opacity: 0.8;">
+                        <p style="font-size: 12px; color: var(--theme-error); opacity: 0.8;">
                           禁言至 {formatDateTime(member.muted_until)}
                         </p>
                       {/if}
@@ -1521,7 +1521,7 @@
                           <DropdownMenuItem onclick={() => openRemoveDialog(member)}
                             ><UserMinus
                               size={16}
-                              style="margin-right: 8px; color: var(--neu-error);"
+                              style="margin-right: 8px; color: var(--theme-error);"
                             />移除成员</DropdownMenuItem
                           >
                         </DropdownMenuContent>
@@ -1862,7 +1862,7 @@
       >
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--neu-error); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--neu-error-border);"
+        style="background: var(--theme-error); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--theme-error-border);"
         onclick={handleDeleteAnnouncement}>确认删除</button
       >
     </Dialog.Footer>
@@ -1996,7 +1996,7 @@
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--neu-error); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--neu-error-border);"
+        style="background: var(--theme-error); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--theme-error-border);"
         onclick={handleRemoveMember}
         disabled={removeSubmitting}
       >
@@ -2035,7 +2035,7 @@
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--neu-error); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--neu-error-border);"
+        style="background: var(--theme-error); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--theme-error-border);"
         onclick={handleLeave}
         disabled={isLeaving}
       >

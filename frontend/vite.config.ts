@@ -5,11 +5,11 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
   server: {
-    port: parseInt(process.env.PORT || '5173'),
+    port: parseInt(process.env['PORT'] || '5173'),
     allowedHosts: ['.yinghuoren.com', '.chaoset.com', '.orb.local']
   },
   preview: {
-    port: parseInt(process.env.PORT || '5173'),
+    port: parseInt(process.env['PORT'] || '5173'),
     allowedHosts: ['.yinghuoren.com', '.chaoset.com', '.orb.local']
   },
   build: {

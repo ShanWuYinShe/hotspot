@@ -215,14 +215,18 @@
         {#if isOnline}
           <span
             class="absolute bottom-0 right-0 rounded-full"
-            style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--surface-bg);"
+            style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
           ></span>
         {/if}
       </div>
       <div class="min-w-0 flex-1">
         <p style="font-size: 14px; color: var(--text-primary);">{userInfo.nickname}</p>
         <div class="mt-0.5 flex items-center gap-1.5">
-          <span style="font-size: 11px; color: {isOnline ? '#22c55e' : 'var(--text-secondary)'};">
+          <span
+            style="font-size: 11px; color: {isOnline
+              ? 'var(--semantic-online)'
+              : 'var(--text-secondary)'};"
+          >
             {isOnline ? '在线' : '离线'}
           </span>
           {#if distance}
@@ -289,7 +293,7 @@
               {#if isOnline}
                 <span
                   class="absolute bottom-0 right-0 rounded-full"
-                  style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--surface-bg);"
+                  style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
                 ></span>
               {/if}
             </div>
@@ -353,7 +357,7 @@
         {#if isOnline}
           <span
             class="absolute bottom-0 right-0 rounded-full"
-            style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--surface-bg);"
+            style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
           ></span>
         {/if}
       </div>
@@ -395,7 +399,7 @@
           {#if isOnline}
             <span
               class="absolute bottom-0 right-0 rounded-full"
-              style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--surface-bg);"
+              style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
             ></span>
           {/if}
         </div>
@@ -446,7 +450,7 @@
           {#if isOnline}
             <span
               class="absolute bottom-0 right-0 rounded-full"
-              style="width: 11px; height: 11px; background: #22c55e; border: 2px solid var(--surface-bg);"
+              style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
             ></span>
           {/if}
         </div>

@@ -98,7 +98,7 @@
         </button>
         <button
           class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--neu-error-border); color: var(--neu-error);"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--theme-error-border); color: var(--theme-error);"
           onclick={revokeOthers}
           disabled={isLoading || isRevokingOthers}
         >
@@ -187,9 +187,9 @@
               class="flex items-center rounded-[18px] px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
               style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid {session.is_current
                 ? 'var(--border-theme)'
-                : 'var(--neu-error-border)'}; color: {session.is_current
+                : 'var(--theme-error-border)'}; color: {session.is_current
                 ? 'var(--text-secondary)'
-                : 'var(--neu-error)'};"
+                : 'var(--theme-error)'};"
               disabled={session.is_current || isRevoking === session.session_id}
               onclick={() => revoke(session.session_id)}
             >

@@ -380,9 +380,9 @@
 </svelte:head>
 
 <div
-  class="flex flex-col overflow-hidden"
+  class="flex min-w-0 flex-col overflow-hidden"
   style="{platformStore.isDesktop
-    ? 'height: 100%;'
+    ? 'height: 100%; width: 100%; flex: 1;'
     : 'height: calc(100dvh - 8rem); border-radius: 22px; box-shadow: var(--shadow-lg);'} background: var(--surface-bg); border: 1px solid var(--border-theme);"
 >
   <!-- Header -->

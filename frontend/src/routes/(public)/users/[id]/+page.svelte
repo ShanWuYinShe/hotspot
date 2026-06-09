@@ -267,7 +267,7 @@
           <!-- Online status dot -->
           <span
             class="absolute bottom-1 right-1 rounded-full"
-            style="width: 12px; height: 12px; background: #22c55e; border: 2px solid var(--surface-bg);"
+            style="width: 12px; height: 12px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
           ></span>
         </div>
 

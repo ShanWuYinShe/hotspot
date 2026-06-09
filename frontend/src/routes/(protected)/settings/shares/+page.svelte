@@ -161,7 +161,7 @@
                 {#if item.is_revoked}
                   <span
                     class="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium"
-                    style="border: 1px solid var(--neu-error-border); color: var(--neu-error);"
+                    style="border: 1px solid var(--theme-error-border); color: var(--theme-error);"
                   >
                     已撤销
                   </span>
@@ -198,7 +198,7 @@
               </a>
               <button
                 class="flex items-center rounded-[18px] px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--neu-error-border); color: var(--neu-error);"
+                style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--theme-error-border); color: var(--theme-error);"
                 onclick={() => revokeShare(item)}
                 disabled={item.is_revoked || revokingShareId === item.share_id}
               >

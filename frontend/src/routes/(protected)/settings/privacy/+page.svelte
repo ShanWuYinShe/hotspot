@@ -159,7 +159,7 @@
                 ? 'white'
                 : 'var(--text-secondary)'}; transform: translateX({locationVisible
                 ? '22px'
-                : '4px'}); box-shadow: 0 1px 3px var(--neu-switch-shadow);"
+                : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
             ></span>
           </button>
         </div>
@@ -190,7 +190,7 @@
                 ? 'white'
                 : 'var(--text-secondary)'}; transform: translateX({presenceVisible
                 ? '22px'
-                : '4px'}); box-shadow: 0 1px 3px var(--neu-switch-shadow);"
+                : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
             ></span>
           </button>
         </div>
@@ -223,7 +223,7 @@
                 ? 'white'
                 : 'var(--text-secondary)'}; transform: translateX({socialListsVisible
                 ? '22px'
-                : '4px'}); box-shadow: 0 1px 3px var(--neu-switch-shadow);"
+                : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
             ></span>
           </button>
         </div>
@@ -269,7 +269,7 @@
                 ? 'white'
                 : 'var(--text-secondary)'}; transform: translateX({allowFollow
                 ? '22px'
-                : '4px'}); box-shadow: 0 1px 3px var(--neu-switch-shadow);"
+                : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
             ></span>
           </button>
         </div>
@@ -336,7 +336,7 @@
                 ? 'white'
                 : 'var(--text-secondary)'}; transform: translateX({searchable
                 ? '22px'
-                : '4px'}); box-shadow: 0 1px 3px var(--neu-switch-shadow);"
+                : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
             ></span>
           </button>
         </div>
@@ -365,7 +365,7 @@
                 ? 'white'
                 : 'var(--text-secondary)'}; transform: translateX({locationSearchable
                 ? '22px'
-                : '4px'}); box-shadow: 0 1px 3px var(--neu-switch-shadow);"
+                : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
             ></span>
           </button>
         </div>

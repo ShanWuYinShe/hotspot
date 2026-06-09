@@ -196,7 +196,7 @@
               <span
                 class="rounded-full px-2 py-0.5"
                 style="font-size: 10px; font-weight: 500; {user.status === 'banned'
-                  ? 'background: var(--neu-error); color: var(--text-on-accent);'
+                  ? 'background: var(--theme-error); color: var(--text-on-accent);'
                   : 'background: var(--brand); color: var(--text-on-accent);'}"
                 >{STATUS_TEXT[user.status] ?? user.status}</span
               >

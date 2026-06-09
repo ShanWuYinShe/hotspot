@@ -44,12 +44,12 @@ export default {
     settingsLabel: '设置',
     themeFamily: '主题风格',
     currentTheme: '当前',
-    vibrant: '活力靛蓝',
+    indigo: '活力靛蓝',
     forest: '清爽森林',
-    neu: '浮雕暖调',
-    vibrantDesc: '靛蓝紫色调，现代活力，发光点缀',
+    sand: '暖砂陶瓷',
+    indigoDesc: '靛蓝紫色调，现代活力，发光点缀',
     forestDesc: '清爽、中性、稳妥的绿色基调',
-    neuDesc: '暖灰底、柔和阴影、立体按钮感',
+    sandDesc: '暖砂底色，柔和阴影，陶瓷质感',
     systemMode: '跟随系统'
   },
   auth: {

@@ -101,7 +101,7 @@
     <div
       bind:this={barEl}
       class="flex items-center"
-      style="position: relative; width: 100%; max-width: 520px; border-radius: var(--radius-pill); background: var(--glass-bg); backdrop-filter: blur(var(--neu-glass-blur)) saturate(var(--neu-glass-saturate)); -webkit-backdrop-filter: blur(var(--neu-glass-blur)) saturate(var(--neu-glass-saturate)); box-shadow: var(--neu-glass-shadow); border: 1px solid var(--glass-border); padding: 8px 16px; gap: 6px;"
+      style="position: relative; width: 100%; max-width: 520px; border-radius: var(--radius-pill); background: var(--glass-bg); backdrop-filter: blur(var(--theme-glass-blur)) saturate(var(--theme-glass-saturate)); -webkit-backdrop-filter: blur(var(--theme-glass-blur)) saturate(var(--theme-glass-saturate)); box-shadow: var(--theme-glass-shadow); border: 1px solid var(--glass-border); padding: 8px 16px; gap: 6px;"
     >
       <span
         aria-hidden="true"
@@ -147,10 +147,10 @@
           use:interactive={{ type: 'btn' }}
           class="flex items-center justify-center rounded-full outline-none select-none"
           style="width: 48px; height: 48px; background: {uiStore.showCreateSheet
-            ? 'var(--neu-text-muted)'
+            ? 'var(--theme-text-muted)'
             : 'var(--brand)'}; box-shadow: {uiStore.showCreateSheet
             ? 'none'
-            : 'var(--neu-fab-glow)'}; transition: background 0.22s, box-shadow 0.22s;"
+            : 'var(--theme-fab-glow)'}; transition: background 0.22s, box-shadow 0.22s;"
           onclick={() => uiStore.openCreateSheet()}
           aria-label={uiStore.showCreateSheet ? '关闭' : '发布'}
         >

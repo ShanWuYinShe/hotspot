@@ -68,7 +68,7 @@
           ? 'var(--error)'
           : 'var(--brand)'}; color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px {variant ===
         'destructive'
-          ? 'var(--neu-error-border)'
+          ? 'var(--theme-error-border)'
           : 'var(--glow)'};"
         onclick={handleConfirm}
         disabled={loading}

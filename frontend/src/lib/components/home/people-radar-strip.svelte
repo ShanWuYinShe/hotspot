@@ -57,7 +57,7 @@
             />
             {#if user.online}
               <div
-                style="position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; border-radius: 9999px; background: #22c55e; border: 2px solid var(--surface-bg);"
+                style="position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; border-radius: 9999px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
               ></div>
             {/if}
           </div>

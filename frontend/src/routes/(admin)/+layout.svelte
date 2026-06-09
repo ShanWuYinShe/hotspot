@@ -8,7 +8,7 @@
   import { adminPermissionsStore } from '$lib/stores/admin-permissions.svelte';
   import { cn } from '$lib/utils';
   import Navbar from '$lib/components/common/navbar.svelte';
-  import { NeuButton } from '$lib/components/ui/neu-button';
+  import { Button } from '$lib/components/ui/button';
   import Users from 'lucide-svelte/icons/users';
   import UsersRound from 'lucide-svelte/icons/users-round';
   import Megaphone from 'lucide-svelte/icons/megaphone';
@@ -93,7 +93,7 @@
         <button
           type="button"
           class="fixed inset-0 z-40 h-full w-full cursor-pointer border-none p-0 md:hidden"
-          style="background: var(--neu-overlay-scene);"
+          style="background: var(--theme-overlay-scene);"
           onclick={closeSidebar}
           onkeydown={(e) => e.key === 'Escape' && closeSidebar()}
           aria-label={t('nav.closeSidebar')}
@@ -168,9 +168,9 @@
           <div class="flex flex-col items-center justify-center py-20 text-center">
             <div
               class="mb-4 flex items-center justify-center rounded-full"
-              style="width: 56px; height: 56px; background: var(--neu-error-subtle);"
+              style="width: 56px; height: 56px; background: var(--theme-error-subtle);"
             >
-              <Shield size={24} strokeWidth={1.5} style="color: var(--neu-error);" />
+              <Shield size={24} strokeWidth={1.5} style="color: var(--theme-error);" />
             </div>
             <h2 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">
               {t('admin.accessDenied')}
@@ -178,9 +178,9 @@
             <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
               {t('admin.accessDeniedDescription')}
             </p>
-            <NeuButton class="mt-6" onclick={() => goto('/')}>
+            <Button variant="flat" class="mt-6" onclick={() => goto('/')}>
               {t('common.backHome')}
-            </NeuButton>
+            </Button>
           </div>
         </div>
       </main>
@@ -206,12 +206,12 @@
               {t('admin.permissionCheckFailedDescription')}
             </p>
             <div class="mt-6 flex gap-3">
-              <NeuButton variant="flat" onclick={() => adminPermissionsStore.refresh()}>
+              <Button variant="flat" onclick={() => adminPermissionsStore.refresh()}>
                 {t('common.retry')}
-              </NeuButton>
-              <NeuButton onclick={() => goto('/')}>
+              </Button>
+              <Button variant="flat" onclick={() => goto('/')}>
                 {t('common.backHome')}
-              </NeuButton>
+              </Button>
             </div>
           </div>
         </div>
@@ -254,9 +254,9 @@
             <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
               {t('admin.loginRequiredDescription')}
             </p>
-            <NeuButton class="mt-6" onclick={handleLoginClick}>
+            <Button variant="flat" class="mt-6" onclick={handleLoginClick}>
               {t('common.loginNow')}
-            </NeuButton>
+            </Button>
           </div>
         </div>
       </main>

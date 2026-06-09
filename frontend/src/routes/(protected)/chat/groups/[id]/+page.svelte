@@ -605,9 +605,9 @@
 
 <!-- 聊天容器 - Neumorphic 风格 -->
 <div
-  class="flex flex-col overflow-hidden"
+  class="flex min-w-0 flex-col overflow-hidden"
   style="{platformStore.isDesktop
-    ? 'height: 100%;'
+    ? 'height: 100%; width: 100%; flex: 1;'
     : 'height: calc(100dvh - 8rem); border-radius: 22px; box-shadow: var(--shadow-lg);'} background: var(--surface-bg); border: 1px solid var(--border-theme);"
 >
   <!-- Header -->
@@ -917,7 +917,7 @@
     {#if !wsSubscription.state.isSubscribed && !isLoading}
       <div
         class="rounded-[16px] px-4 py-3 text-center mb-3"
-        style="border: 1px solid var(--neu-warning-border); background: var(--neu-warning-border);"
+        style="border: 1px solid var(--theme-warning-border); background: var(--theme-warning-border);"
       >
         <p
           class="flex items-center justify-center gap-2"
@@ -994,7 +994,7 @@
 {#if selectedImage}
   <div
     class="fixed inset-0 z-50 flex items-center justify-center p-4"
-    style="background: var(--neu-overlay-strong);"
+    style="background: var(--theme-overlay-strong);"
     onclick={closeImagePreview}
     role="button"
     tabindex="0"
@@ -1003,7 +1003,7 @@
     <button
       type="button"
       class="absolute right-4 top-4 flex items-center justify-center rounded-full outline-none"
-      style="width: 40px; height: 40px; background: var(--neu-surface-glass); color: white;"
+      style="width: 40px; height: 40px; background: var(--theme-surface-glass); color: white;"
       onclick={closeImagePreview}
       aria-label="关闭图片预览"
     >

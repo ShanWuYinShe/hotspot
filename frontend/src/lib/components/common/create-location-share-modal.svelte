@@ -131,7 +131,7 @@
         <!-- 说明 -->
         <div
           class="rounded-[22px] p-4 space-y-2"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--neu-overlay-subtle); font-size: 13px;"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--theme-overlay-subtle); font-size: 13px;"
         >
           <p class="flex items-center gap-2" style="font-weight: 500; color: var(--brand);">
             <UsersRound style="width: 16px; height: 16px;" />

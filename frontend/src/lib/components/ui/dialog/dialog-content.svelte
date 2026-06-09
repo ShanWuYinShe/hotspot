@@ -92,7 +92,7 @@
     top: 50%;
     transform: translate(-50%, -50%);
     max-width: 32rem;
-    border-radius: var(--neu-radius-xl, 24px);
+    border-radius: var(--theme-radius-xl, 24px);
   }
 
   @media (max-width: 639px) {

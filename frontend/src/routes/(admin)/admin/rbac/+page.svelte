@@ -275,7 +275,7 @@
                     onclick={() => requestDeleteRole(role.role_id)}
                     aria-label="删除角色"
                   >
-                    <Trash2 size={13} strokeWidth={1.5} color="var(--neu-error)" />
+                    <Trash2 size={13} strokeWidth={1.5} color="var(--theme-error)" />
                   </button>
                 </div>
               </div>

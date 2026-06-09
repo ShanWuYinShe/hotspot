@@ -4,8 +4,8 @@
   import { isSuccess } from '$lib/api/client';
   import { toast } from '$lib/stores/toast.svelte';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
-  import { NeuButton } from '$lib/components/ui/neu-button';
-  import { NeuInput } from '$lib/components/ui/neu-input';
+  import { Button } from '$lib/components/ui/button';
+  import { Input } from '$lib/components/ui/input';
   import PageHeader from '$lib/components/layout/page-header.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
   import * as Dialog from '$lib/components/ui/dialog';
@@ -123,8 +123,8 @@
     AnnouncementSeverity,
     { variant: BadgeVariant; text: string; color: string }
   > = {
-    error: { variant: 'destructive', text: '紧急', color: 'var(--neu-error)' },
-    warning: { variant: 'default', text: '警告', color: 'var(--neu-warning)' },
+    error: { variant: 'destructive', text: '紧急', color: 'var(--theme-error)' },
+    warning: { variant: 'default', text: '警告', color: 'var(--theme-warning)' },
     info: { variant: 'secondary', text: '通知', color: 'var(--brand)' }
   };
 
@@ -141,7 +141,7 @@
   <PageHeader title="公告管理">
     {#snippet actions()}
       <div class="flex gap-2">
-        <NeuButton
+        <Button
           variant="flat"
           size="sm"
           onclick={() => loadAnnouncements()}
@@ -153,11 +153,11 @@
             class={pagination.loading ? 'animate-spin mr-2' : 'mr-2'}
           />
           刷新
-        </NeuButton>
-        <NeuButton size="sm" onclick={openCreateDialog}>
+        </Button>
+        <Button variant="flat" size="sm" onclick={openCreateDialog}>
           <Plus size={14} strokeWidth={1.75} class="mr-2" />
           发布公告
-        </NeuButton>
+        </Button>
       </div>
     {/snippet}
   </PageHeader>
@@ -234,7 +234,7 @@
                 onclick={() => requestDelete(announcement.announcement_id)}
                 aria-label="删除公告"
               >
-                <Trash2 size={14} strokeWidth={1.75} style="color: var(--neu-error);" />
+                <Trash2 size={14} strokeWidth={1.75} style="color: var(--theme-error);" />
               </button>
             </div>
           </div>
@@ -259,7 +259,7 @@
     <div class="space-y-4 py-4">
       <div class="space-y-2">
         <label for="title" style="font-size: 12px; color: var(--text-primary);">标题</label>
-        <NeuInput id="title" placeholder="公告标题" bind:value={title} autocomplete="off" />
+        <Input id="title" placeholder="公告标题" bind:value={title} autocomplete="off" />
       </div>
       <div class="space-y-2">
         <label for="content" style="font-size: 12px; color: var(--text-primary);">内容</label>
@@ -275,27 +275,27 @@
       <div class="space-y-2">
         <label style="font-size: 12px; color: var(--text-primary);">级别</label>
         <div class="flex gap-2">
-          {#each [{ key: 'info', label: '通知', color: 'var(--brand)' }, { key: 'warning', label: '警告', color: 'var(--neu-warning)' }, { key: 'error', label: '紧急', color: 'var(--neu-error)' }] as opt}
-            <NeuButton
+          {#each [{ key: 'info', label: '通知', color: 'var(--brand)' }, { key: 'warning', label: '警告', color: 'var(--theme-warning)' }, { key: 'error', label: '紧急', color: 'var(--theme-error)' }] as opt}
+            <Button
               type="button"
               variant={severity === opt.key ? 'pressed' : 'flat'}
               size="sm"
               onclick={() => (severity = opt.key as AnnouncementSeverity)}
             >
               {opt.label}
-            </NeuButton>
+            </Button>
           {/each}
         </div>
       </div>
     </div>
     <Dialog.Footer>
-      <NeuButton variant="flat" onclick={closeOverlayDialogs}>取消</NeuButton>
-      <NeuButton onclick={handleSubmit} disabled={isSubmitting}>
+      <Button variant="flat" onclick={closeOverlayDialogs}>取消</Button>
+      <Button variant="flat" onclick={handleSubmit} disabled={isSubmitting}>
         {#if isSubmitting}
           <Loader2 size={14} strokeWidth={1.75} class="mr-2 animate-spin" />
         {/if}
         发布
-      </NeuButton>
+      </Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

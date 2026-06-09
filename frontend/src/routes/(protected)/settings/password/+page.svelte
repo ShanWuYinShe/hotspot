@@ -117,11 +117,11 @@
           onblur={() => markTouched('oldPassword')}
           class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
           style="border: 1px solid {oldPasswordError
-            ? 'var(--neu-error)'
+            ? 'var(--theme-error)'
             : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
         />
         {#if oldPasswordError}
-          <p style="font-size: 12px; color: var(--neu-error);">{oldPasswordError}</p>
+          <p style="font-size: 12px; color: var(--theme-error);">{oldPasswordError}</p>
         {/if}
       </div>
       <div class="space-y-2">
@@ -135,11 +135,11 @@
           onblur={() => markTouched('newPassword')}
           class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
           style="border: 1px solid {newPasswordError
-            ? 'var(--neu-error)'
+            ? 'var(--theme-error)'
             : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
         />
         {#if newPasswordError}
-          <p style="font-size: 12px; color: var(--neu-error);">{newPasswordError}</p>
+          <p style="font-size: 12px; color: var(--theme-error);">{newPasswordError}</p>
         {/if}
       </div>
       <div class="space-y-2">
@@ -153,11 +153,11 @@
           onblur={() => markTouched('confirmPassword')}
           class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
           style="border: 1px solid {confirmPasswordError
-            ? 'var(--neu-error)'
+            ? 'var(--theme-error)'
             : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
         />
         {#if confirmPasswordError}
-          <p style="font-size: 12px; color: var(--neu-error);">{confirmPasswordError}</p>
+          <p style="font-size: 12px; color: var(--theme-error);">{confirmPasswordError}</p>
         {/if}
       </div>
       <button

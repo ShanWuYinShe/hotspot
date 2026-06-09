@@ -260,7 +260,7 @@
                 ? 'white'
                 : 'var(--text-secondary)'}; transform: translateX({isGroupEnabled(item.key)
                 ? '22px'
-                : '4px'}); box-shadow: 0 1px 3px var(--neu-switch-shadow);"
+                : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
             ></span>
           </button>
         </div>

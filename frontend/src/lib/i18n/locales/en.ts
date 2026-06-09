@@ -44,12 +44,12 @@ export default {
     settingsLabel: 'Settings',
     themeFamily: 'Theme style',
     currentTheme: 'Current',
-    vibrant: 'Vibrant Indigo',
+    indigo: 'Vibrant Indigo',
     forest: 'Clean Forest',
-    neu: 'Soft Relief',
-    vibrantDesc: 'Energetic indigo/violet palette with glow accents',
+    sand: 'Warm Sand',
+    indigoDesc: 'Energetic indigo/violet palette with glow accents',
     forestDesc: 'Clean, neutral, and stable green baseline',
-    neuDesc: 'Warm gray surfaces with soft shadow depth',
+    sandDesc: 'Warm sand surfaces with soft shadow depth',
     systemMode: 'System'
   },
   auth: {

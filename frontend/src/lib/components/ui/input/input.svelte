@@ -1,23 +1,31 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import type { HTMLInputAttributes } from 'svelte/elements';
   import { cn } from '$lib/utils';
-  import { useKeyboardFocus } from '$lib/attachments';
 
-  interface Props extends HTMLInputAttributes {
+  interface Props extends Omit<HTMLInputAttributes, 'value'> {
+    icon?: Snippet;
     class?: string;
     value?: string;
   }
 
-  let { class: className, value = $bindable(''), ...restProps }: Props = $props();
+  let { icon, class: className, value = $bindable(''), ...rest }: Props = $props();
 </script>
 
-<input
-  {@attach useKeyboardFocus()}
-  class={cn(
-    'input-base flex h-9 w-full select-text rounded-2xl outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
-    className
-  )}
-  style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary);"
-  bind:value
-  {...restProps}
-/>
+<div class="relative flex w-full items-center">
+  {#if icon}
+    <div class="pointer-events-none absolute left-4 text-secondary">
+      {@render icon()}
+    </div>
+  {/if}
+  <input
+    class={cn(
+      'w-full input-base rounded-2xl py-3 px-4 text-neu outline-none transition-all duration-200',
+      'placeholder:text-secondary',
+      icon && 'pl-12',
+      className
+    )}
+    bind:value
+    {...rest}
+  />
+</div>

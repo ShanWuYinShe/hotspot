@@ -178,7 +178,7 @@
                   </div>
                   <span
                     class="absolute bottom-0.5 right-0.5 rounded-full"
-                    style="width: 12px; height: 12px; background: #22c55e; border: 2px solid var(--surface-bg);"
+                    style="width: 12px; height: 12px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
                   ></span>
                 </div>
                 <span style="font-size: 11px; color: var(--text-secondary);"
@@ -269,7 +269,7 @@
                     {#if isOnline}
                       <span
                         class="absolute bottom-0 right-0 rounded-full"
-                        style="width: 10px; height: 10px; background: #22c55e; border: 2px solid var(--surface-bg);"
+                        style="width: 10px; height: 10px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
                       ></span>
                     {/if}
                   </div>

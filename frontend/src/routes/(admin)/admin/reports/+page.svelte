@@ -190,9 +190,9 @@
                   <span
                     class="rounded-full px-2 py-0.5"
                     style="font-size: 10px; font-weight: 500; {report.status === 'pending'
-                      ? 'background: var(--neu-warning); color: var(--text-on-accent);'
+                      ? 'background: var(--theme-warning); color: var(--text-on-accent);'
                       : report.status === 'resolved'
-                        ? 'background: var(--neu-success); color: var(--text-on-accent);'
+                        ? 'background: var(--theme-success); color: var(--text-on-accent);'
                         : 'background: var(--border-theme); color: var(--text-secondary);'}"
                     >{STATUS_TEXT[report.status] ?? report.status}</span
                   >
@@ -222,7 +222,7 @@
                               {...props}
                               onclick={() => handleProcess(report.report_id, 'resolve')}
                             >
-                              <Check size={14} strokeWidth={1.5} color="var(--neu-success)" />
+                              <Check size={14} strokeWidth={1.5} color="var(--theme-success)" />
                               确认并处理
                             </button>
                           {/snippet}
@@ -234,7 +234,7 @@
                               {...props}
                               onclick={() => handleProcess(report.report_id, 'dismiss')}
                             >
-                              <X size={14} strokeWidth={1.5} color="var(--neu-error)" />
+                              <X size={14} strokeWidth={1.5} color="var(--theme-error)" />
                               驳回举报
                             </button>
                           {/snippet}

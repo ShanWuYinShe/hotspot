@@ -370,7 +370,7 @@
         <div class="flex gap-2">
           <button
             class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="color: {isFavorited ? 'var(--neu-warning)' : 'var(--text-secondary)'};"
+            style="color: {isFavorited ? 'var(--theme-warning)' : 'var(--text-secondary)'};"
             onclick={handleFavorite}
           >
             <Bookmark size={19} class={isFavorited ? 'fill-current' : ''} />

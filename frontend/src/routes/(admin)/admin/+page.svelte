@@ -151,10 +151,10 @@
               <div class="flex items-center gap-2">
                 <span
                   style="width: 8px; height: 8px; border-radius: 50%; background: {svc.ok
-                    ? 'var(--neu-success)'
+                    ? 'var(--theme-success)'
                     : '#EF4444'};"
                 ></span>
-                <span style="font-size: 13px; color: {svc.ok ? 'var(--neu-success)' : '#EF4444'};"
+                <span style="font-size: 13px; color: {svc.ok ? 'var(--theme-success)' : '#EF4444'};"
                   >{svc.ok ? '正常' : '异常'}</span
                 >
               </div>

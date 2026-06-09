@@ -337,7 +337,7 @@
         {t('home.coreFeatures')}
       </p>
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
-        {#each [{ icon: MapPin, label: t('nav.nearby'), color: 'var(--brand)' }, { icon: Compass, label: t('nav.discover'), color: 'var(--text-tertiary)' }, { icon: Users, label: t('nav.messagesTab'), color: 'var(--brand)' }, { icon: Star, label: t('nav.me'), color: 'var(--neu-warning)' }] as feat}
+        {#each [{ icon: MapPin, label: t('nav.nearby'), color: 'var(--brand)' }, { icon: Compass, label: t('nav.discover'), color: 'var(--text-tertiary)' }, { icon: Users, label: t('nav.messagesTab'), color: 'var(--brand)' }, { icon: Star, label: t('nav.me'), color: 'var(--theme-warning)' }] as feat}
           <div
             class="surface-flat flex flex-col items-center justify-center rounded-[22px] card-hover transition-transform duration-150 active:scale-[0.97]"
             style="aspect-ratio: 1.2;"

@@ -119,10 +119,10 @@
         use:interactive={{ type: 'btn' }}
         class="mobile-bottom-nav__fab"
         style="background: {uiStore.showCreateSheet
-          ? 'var(--neu-text-muted)'
+          ? 'var(--theme-text-muted)'
           : 'var(--brand)'}; box-shadow: {uiStore.showCreateSheet
           ? 'none'
-          : 'var(--neu-fab-glow)'}; transition: background 0.22s ease, box-shadow 0.22s ease;"
+          : 'var(--theme-fab-glow)'}; transition: background 0.22s ease, box-shadow 0.22s ease;"
         onclick={() => uiStore.openCreateSheet()}
         aria-label={uiStore.showCreateSheet ? '关闭' : '发布'}
       >
