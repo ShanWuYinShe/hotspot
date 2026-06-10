@@ -12,6 +12,7 @@
   import ActivityList from '$lib/components/home/activity-list.svelte';
   import GroupCarousel from '$lib/components/home/group-carousel.svelte';
   import NearbyUsersFlatList from '$lib/components/home/nearby-users-flat-list.svelte';
+  import LocationPickerModal from '$lib/components/common/location-picker-modal.svelte';
 
   function formatDistance(m: number): string {
     if (m < 1000) return `${Math.round(m)}m`;
@@ -23,6 +24,7 @@
   let nearbyGroups: GroupItem[] = $state([]);
   let trendingTags: TrendingTagItem[] = $state([]);
   let followingIds = $state(new Set<string>());
+  let showLocationPicker = $state(false);
 
   function toReferencePoint(): GeoPoint {
     return {
@@ -119,7 +121,7 @@
       </div>
       <button
         class="flex items-center gap-1.5 rounded-full px-3 py-1.5 surface-flat"
-        onclick={() => void goto('/location')}
+        onclick={() => (showLocationPicker = true)}
       >
         <span
           class="rounded-full"
@@ -206,7 +208,7 @@
       </div>
       <button
         class="flex items-center gap-1.5 rounded-full px-3 py-1.5 surface-flat"
-        onclick={() => void goto('/location')}
+        onclick={() => (showLocationPicker = true)}
       >
         <span
           class="rounded-full"
@@ -408,3 +410,5 @@
     </div>
   </div>
 {/if}
+
+<LocationPickerModal bind:open={showLocationPicker} />

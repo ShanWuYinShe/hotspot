@@ -9,7 +9,6 @@
 /** 精确匹配的子页面（均自带返回头部）。 */
 const SUB_PAGE_EXACT = new Set([
   '/settings',
-  '/location',
   '/notifications',
   '/profile/edit',
   '/search',

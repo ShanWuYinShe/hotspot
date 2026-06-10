@@ -1059,7 +1059,7 @@
   .neu-ambient-glow::before {
     content: '';
     position: absolute;
-    inset: -20% -10% auto -10%;
+    inset: -16px -10% auto -10%;
     height: 70%;
     background: radial-gradient(ellipse at top, var(--glow) 0%, transparent 65%);
     opacity: 0.55;

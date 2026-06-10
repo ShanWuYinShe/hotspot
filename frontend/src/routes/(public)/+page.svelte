@@ -20,6 +20,7 @@
   import ActivityList from '$lib/components/home/activity-list.svelte';
   import NearbyUsersFlatList from '$lib/components/home/nearby-users-flat-list.svelte';
   import GroupCarousel from '$lib/components/home/group-carousel.svelte';
+  import LocationPickerModal from '$lib/components/common/location-picker-modal.svelte';
 
   type HomeMode = 'guest' | 'explore' | 'authenticated';
 
@@ -27,6 +28,7 @@
 
   let refreshTrigger = $state(0);
   let showExplore = $state(false);
+  let showLocationPicker = $state(false);
   let lastMode = $state<HomeMode>('guest');
   let lastAnchorUpdatedAt = $state<number | null>(null);
   let locationDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -377,7 +379,7 @@
         </div>
         <div
           class="surface-flat flex cursor-pointer items-center gap-1.5 rounded-full py-1.5 px-3.5"
-          onclick={() => void goto('/location')}
+          onclick={() => (showLocationPicker = true)}
         >
           <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
           <span style="font-size: 11px; color: var(--text-secondary);"
@@ -535,7 +537,7 @@
           title={t('home.realtimeNearby')}
           rangeLabel={`${mapAnchorStore.radius}km ${t('home.rangeWithin')}`}
           loading={loadingNearby}
-          onclick={() => void goto('/location')}
+          onclick={() => (showLocationPicker = true)}
         />
 
         <!-- Nearby activity -->
@@ -613,3 +615,5 @@
     </div>
   </div>
 {/if}
+
+<LocationPickerModal bind:open={showLocationPicker} />

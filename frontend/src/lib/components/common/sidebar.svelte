@@ -184,40 +184,40 @@
         </button>
       </div>
     {/if}
-  </div>
 
-  <!-- Location Anchor — pinned to bottom -->
-  <div class="flex-shrink-0 pt-3">
-    <button
-      class="flex w-full items-center gap-3 rounded-[16px] text-left outline-none transition-shadow duration-200"
-      style="padding: 10px 12px; background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: 5px 5px 12px var(--shadow-dark), -5px -5px 12px var(--shadow-light);"
-      onclick={() => (showLocationPicker = true)}
-    >
-      <!-- Icon circle -->
-      <div
-        class="flex flex-shrink-0 items-center justify-center rounded-full"
-        style="width: 34px; height: 34px; background: var(--brand); box-shadow: var(--shadow-md);"
+    <!-- Location Anchor — sits right after nav so spacing stays consistent on tall screens -->
+    <div class="mt-4">
+      <button
+        class="flex w-full items-center gap-3 rounded-[16px] text-left outline-none transition-shadow duration-200"
+        style="padding: 10px 12px; background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: 5px 5px 12px var(--shadow-dark), -5px -5px 12px var(--shadow-light);"
+        onclick={() => (showLocationPicker = true)}
       >
-        <Navigation2 size={14} strokeWidth={2} color="var(--text-on-accent)" />
-      </div>
-      <!-- Text -->
-      <div class="min-w-0 flex-1">
-        <p
-          style="font-size: 10px; line-height: 1.4; color: var(--text-secondary); letter-spacing: 0.06em;"
+        <!-- Icon circle -->
+        <div
+          class="flex flex-shrink-0 items-center justify-center rounded-full"
+          style="width: 34px; height: 34px; background: var(--brand); box-shadow: var(--shadow-md);"
         >
-          {t('sidebar.browseAnchor')}
-        </p>
-        <p style="font-size: 13px; line-height: 1.4; color: var(--text-primary);">
-          {mapAnchorStore.displayName}
-        </p>
-      </div>
-      <ChevronRight
-        size={14}
-        strokeWidth={1.5}
-        color="var(--text-secondary)"
-        class="flex-shrink-0"
-      />
-    </button>
+          <Navigation2 size={14} strokeWidth={2} color="var(--text-on-accent)" />
+        </div>
+        <!-- Text -->
+        <div class="min-w-0 flex-1">
+          <p
+            style="font-size: 10px; line-height: 1.4; color: var(--text-secondary); letter-spacing: 0.06em;"
+          >
+            {t('sidebar.browseAnchor')}
+          </p>
+          <p style="font-size: 13px; line-height: 1.4; color: var(--text-primary);">
+            {mapAnchorStore.displayName}
+          </p>
+        </div>
+        <ChevronRight
+          size={14}
+          strokeWidth={1.5}
+          color="var(--text-secondary)"
+          class="flex-shrink-0"
+        />
+      </button>
+    </div>
   </div>
 </aside>
 

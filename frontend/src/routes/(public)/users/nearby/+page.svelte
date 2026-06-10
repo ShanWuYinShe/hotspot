@@ -1,6 +1,5 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { usersService } from '$lib/api/services';
@@ -13,6 +12,7 @@
   import UserCard from '$lib/components/common/user-card.svelte';
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
+  import LocationPickerModal from '$lib/components/common/location-picker-modal.svelte';
   import type { UserItem } from '$lib/types/api';
   import ArrowLeft from 'lucide-svelte/icons/arrow-left';
   import MapIcon from 'lucide-svelte/icons/map';
@@ -33,6 +33,7 @@
   let searchText = $state('');
   let activeSort = $state<string>('距离');
   let activeTag = $state<string>('全部');
+  let showLocationPicker = $state(false);
 
   const returnTarget = $derived(page.url.searchParams.get('from') || '/search');
 
@@ -107,7 +108,7 @@
         class="surface-flat flex items-center justify-center rounded-full outline-none"
         style="width: 36px; height: 36px;"
         aria-label="地图"
-        onclick={() => goto('/location')}
+        onclick={() => (showLocationPicker = true)}
       >
         <MapIcon size={15} strokeWidth={1.5} color="var(--brand)" />
       </button>
@@ -239,3 +240,5 @@
     </div>
   </div>
 </div>
+
+<LocationPickerModal bind:open={showLocationPicker} />
