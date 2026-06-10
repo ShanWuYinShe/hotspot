@@ -1463,63 +1463,64 @@
 /* Tablet bottom nav glass morphism tokens */
 .neu-glass-bg {
   background: var(--theme-glass-bg);
-  /* Page entrance animation */
-  .page-enter {
-    animation: pageEnter 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  @keyframes pageEnter {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+}
 
-  /* Notification item entrance */
-  .notif-enter {
-    animation: notifEnter 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+/* Page entrance animation */
+.page-enter {
+  animation: pageEnter 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  @keyframes notifEnter {
-    from {
-      opacity: 0;
-      transform: translateX(-12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
+}
 
-  /* Chat message entrance */
-  .chat-msg-enter {
-    animation: chatMsgEnter 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+/* Notification item entrance */
+.notif-enter {
+  animation: notifEnter 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes notifEnter {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
   }
-  @keyframes chatMsgEnter {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
+}
 
-  /* Error page entrance */
-  .error-enter {
-    animation: errorEnter 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+/* Chat message entrance */
+.chat-msg-enter {
+  animation: chatMsgEnter 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes chatMsgEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
-  @keyframes errorEnter {
-    from {
-      opacity: 0;
-      transform: scale(0.95) translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1) translateY(0);
-    }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Error page entrance */
+.error-enter {
+  animation: errorEnter 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes errorEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }

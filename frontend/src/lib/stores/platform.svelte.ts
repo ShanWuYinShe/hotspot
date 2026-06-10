@@ -11,16 +11,17 @@ class PlatformStore {
   isDesktop = $state(false);
 
   #initialized = false;
+  #raf = 0;
 
   constructor() {
     if (!browser) return;
     this.update();
-    window.addEventListener('resize', () => {
-      requestAnimationFrame(() => this.update());
-    });
-    window.addEventListener('orientationchange', () => {
-      requestAnimationFrame(() => this.update());
-    });
+    const schedule = () => {
+      cancelAnimationFrame(this.#raf);
+      this.#raf = requestAnimationFrame(() => this.update());
+    };
+    window.addEventListener('resize', schedule);
+    window.addEventListener('orientationchange', schedule);
   }
 
   private update() {

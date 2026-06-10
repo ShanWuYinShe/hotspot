@@ -150,7 +150,9 @@
         {/if}
       </div>
     </main>
-    <TabletBottomNav />
+    {#if !isSubPageView}
+      <TabletBottomNav />
+    {/if}
   </div>
 {:else}
   <!-- Desktop: header + sidebar + main card (≥1280px) -->
