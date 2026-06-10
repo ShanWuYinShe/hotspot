@@ -392,12 +392,12 @@
   >
     {#if !platformStore.isDesktop}
       <button
-        class="surface-flat flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
+        class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
         style="width: 36px; height: 36px;"
         onclick={handleBackClick}
         aria-label="返回"
       >
-        <ArrowLeft size={15} color="var(--text-secondary)" strokeWidth={1.5} />
+        <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
       </button>
     {/if}
 
@@ -459,11 +459,11 @@
       <DropdownMenu>
         <DropdownMenuTrigger>
           <button
-            class="surface-flat flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
+            class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
             style="width: 36px; height: 36px;"
             aria-label="更多选项"
           >
-            <MoreHorizontal size={14} color="var(--text-secondary)" strokeWidth={1.5} />
+            <MoreHorizontal size={15} strokeWidth={1.5} color="var(--text-secondary)" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" class="w-44">
@@ -634,8 +634,8 @@
         bind:value={messageText}
         rows={1}
         maxlength={MESSAGE_CONTENT_MAX}
-        class="min-h-[38px] flex w-full resize-none rounded-[18px] px-3 py-2 outline-none disabled:cursor-not-allowed disabled:opacity-50"
-        style="font-size: 13px; background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); color: var(--text-primary);"
+        class="field-inset min-h-[38px] flex w-full resize-none rounded-[18px] px-3 py-2 outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        style="font-size: 13px; background: var(--surface-bg); color: var(--text-primary);"
         disabled={isSending}
         oninput={handleInput}
         onkeydown={(e) => {

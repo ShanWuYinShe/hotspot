@@ -328,14 +328,13 @@
     <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
       <!-- Search bar -->
       <form
-        class="flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-        style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+        class="input-surface flex items-center gap-3 rounded-[18px] px-4 py-2.5"
         onsubmit={(event) => {
           event.preventDefault();
           handleSearch();
         }}
       >
-        <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" />
+        <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
         <input
           type="text"
           placeholder={t('searchModal.placeholder')}

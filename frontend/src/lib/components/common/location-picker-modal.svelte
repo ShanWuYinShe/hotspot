@@ -2242,17 +2242,21 @@
                     </div>
                     <div class="space-y-3 px-4 py-3">
                       <div
-                        class="flex h-12 items-center gap-2 rounded-[18px] px-3"
-                        style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+                        class="input-surface flex h-12 items-center gap-3 rounded-[18px] px-3"
+                        style="background: var(--surface-bg);"
                       >
-                        <Search class="h-4 w-4 shrink-0" />
+                        <Search
+                          class="h-4 w-4 shrink-0"
+                          color="var(--text-secondary)"
+                          strokeWidth={1.5}
+                        />
                         <input
                           {@attach useKeyboardFocus()}
                           type="text"
                           bind:this={searchInput}
                           bind:value={searchText}
                           placeholder="搜索地点名称、街道或商圈"
-                          class="flex-1 select-text bg-transparent text-sm outline-none placeholder:"
+                          class="flex-1 select-text bg-transparent text-sm outline-none"
                           oninput={() => {
                             if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
                             if (searchText.trim().length > 0) {
@@ -2676,17 +2680,17 @@
         <!-- 搜索与结果（桌面端常驻在信息栏中） -->
         <div class="space-y-2">
           <div
-            class="flex h-12 items-center gap-2 rounded-[18px] px-3 text-sm"
-            style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+            class="input-surface flex h-12 items-center gap-3 rounded-[18px] px-3 text-sm"
+            style="background: var(--surface-bg);"
           >
-            <Search class="h-4 w-4 shrink-0" />
+            <Search class="h-4 w-4 shrink-0" color="var(--text-secondary)" strokeWidth={1.5} />
             <input
               {@attach useKeyboardFocus()}
               type="text"
               bind:this={searchInput}
               bind:value={searchText}
               placeholder="搜索地点、地标或坐标"
-              class="flex-1 select-text bg-transparent text-sm outline-none placeholder:"
+              class="flex-1 select-text bg-transparent text-sm outline-none"
               oninput={() => {
                 if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
                 if (searchText.trim().length > 0) {

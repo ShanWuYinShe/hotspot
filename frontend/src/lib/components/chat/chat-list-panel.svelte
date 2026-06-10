@@ -122,17 +122,14 @@
     </div>
   </div>
   <!-- Search -->
-  <div
-    class="flex items-center gap-2 rounded-[14px] px-3 py-2"
-    style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-  >
-    <Search size={14} strokeWidth={1.5} color="var(--text-secondary)" />
+  <div class="input-surface flex items-center gap-3 rounded-[18px] px-4 py-2.5">
+    <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
     <input
       type="text"
       bind:value={searchVal}
       placeholder="搜索…"
       class="flex-1 bg-transparent outline-none"
-      style="font-size: 12px; color: var(--text-primary);"
+      style="font-size: 13px; color: var(--text-primary);"
     />
   </div>
 </div>

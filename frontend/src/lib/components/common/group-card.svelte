@@ -446,8 +446,8 @@
           <DropdownMenuTrigger>
             <button
               data-card-action
-              class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.92]"
-              style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+              class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+              style="width: 30px; height: 30px;"
               onclick={(e: MouseEvent) => {
                 e.preventDefault();
                 e.stopPropagation();

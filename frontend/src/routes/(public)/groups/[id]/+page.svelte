@@ -874,12 +874,12 @@
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     <button
-      class="flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-      style="width: 36px; height: 36px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+      class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+      style="width: 36px; height: 36px;"
       onclick={() => history.back()}
       aria-label="返回"
     >
-      <ArrowLeft size={18} color="var(--text-primary)" />
+      <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
     </button>
     <div>
       <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">群组详情</h1>

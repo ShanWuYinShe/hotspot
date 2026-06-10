@@ -285,8 +285,8 @@
           >
           <select
             id="private-chat"
-            class="w-full rounded-[18px] px-4 py-2.5 outline-none"
-            style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); background: var(--surface-bg); color: var(--text-primary);"
+            class="field-inset w-full rounded-[18px] px-4 py-2.5 outline-none"
+            style="background: var(--surface-bg); color: var(--text-primary);"
             bind:value={allowPrivateChat}
           >
             <option value="everyone">所有人可私聊</option>

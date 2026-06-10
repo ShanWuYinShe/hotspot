@@ -206,8 +206,8 @@
                 type="number"
                 bind:value={field.val}
                 placeholder={field.placeholder}
-                class="mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
-                style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px;"
+                class="field-inset mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
+                style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
               />
               <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
                 当前: {(Number(field.val || 0) / 1024 / 1024).toFixed(1)} MB
@@ -313,8 +313,8 @@
                 type="number"
                 bind:value={f.val}
                 placeholder={f.ph}
-                class="mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
-                style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px;"
+                class="field-inset mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
+                style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
               />
             </div>
           {/each}

@@ -400,11 +400,11 @@
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           <button
-            class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
-            style="width: 38px; height: 38px;"
+            class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+            style="width: 36px; height: 36px;"
             onclick={() => window.history.back()}
           >
-            <ArrowLeft size={16} strokeWidth={2} color="var(--text-primary)" />
+            <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
           </button>
           <div>
             <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">

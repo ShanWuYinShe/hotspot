@@ -262,16 +262,16 @@
                 </div>
                 <div class="flex gap-1">
                   <button
-                    class="flex items-center justify-center rounded-full outline-none"
-                    style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                    class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+                    style="width: 30px; height: 30px;"
                     onclick={() => openEditRoleDialog(role)}
                     aria-label="编辑角色"
                   >
                     <Edit size={13} strokeWidth={1.5} color="var(--text-secondary)" />
                   </button>
                   <button
-                    class="flex items-center justify-center rounded-full outline-none"
-                    style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                    class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+                    style="width: 30px; height: 30px;"
                     onclick={() => requestDeleteRole(role.role_id)}
                     aria-label="删除角色"
                   >
@@ -373,8 +373,8 @@
           placeholder="例如：内容审核员"
           bind:value={roleName}
           autocomplete="off"
-          class="mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
-          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px;"
+          class="field-inset mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
+          style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
         />
       </div>
       <div>
@@ -383,9 +383,9 @@
           id="role-desc"
           placeholder="描述该角色的职责"
           bind:value={roleDescription}
-          class="mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none resize-none"
+          class="field-inset mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none resize-none"
           rows="3"
-          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px;"
+          style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
         ></textarea>
       </div>
       <div>
