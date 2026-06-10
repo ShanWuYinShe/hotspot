@@ -248,6 +248,7 @@
             type="button"
             role="switch"
             aria-checked={isGroupEnabled(item.key)}
+            aria-label={item.title}
             class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
             style={isGroupEnabled(item.key)
               ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'

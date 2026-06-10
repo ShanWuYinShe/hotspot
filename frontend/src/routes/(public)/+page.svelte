@@ -377,15 +377,16 @@
             {t('home.discoverNearbyPeopleAndThings')}
           </p>
         </div>
-        <div
-          class="surface-flat flex cursor-pointer items-center gap-1.5 rounded-full py-1.5 px-3.5"
+        <button
+          type="button"
+          class="surface-flat flex items-center gap-1.5 rounded-full py-1.5 px-3.5 outline-none"
           onclick={() => (showLocationPicker = true)}
         >
           <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
           <span style="font-size: 11px; color: var(--text-secondary);"
             >{mapAnchorStore.displayName}</span
           >
-        </div>
+        </button>
       </div>
     </div>
 

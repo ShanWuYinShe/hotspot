@@ -273,7 +273,7 @@
         ></textarea>
       </div>
       <div class="space-y-2">
-        <label style="font-size: 12px; color: var(--text-primary);">级别</label>
+        <span style="font-size: 12px; color: var(--text-primary);">级别</span>
         <div class="flex gap-2">
           {#each [{ key: 'info', label: '通知', color: 'var(--brand)' }, { key: 'warning', label: '警告', color: 'var(--theme-warning)' }, { key: 'error', label: '紧急', color: 'var(--theme-error)' }] as opt}
             <Button

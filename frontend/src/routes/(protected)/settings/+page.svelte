@@ -387,6 +387,7 @@
                 type="button"
                 role="switch"
                 aria-checked={notifications[item.key]}
+                aria-label={item.label}
                 class="relative flex-shrink-0"
                 style="width: 50px; height: 28px; border-radius: 14px; border: none; cursor: pointer; transition: background 0.25s ease; background: {notifications[
                   item.key
@@ -653,6 +654,7 @@
               type="button"
               role="switch"
               aria-checked={notifications[item.key]}
+              aria-label={item.label}
               class="relative flex-shrink-0"
               style="width: 50px; height: 28px; border-radius: 14px; border: none; cursor: pointer; transition: background 0.25s ease; background: {notifications[
                 item.key

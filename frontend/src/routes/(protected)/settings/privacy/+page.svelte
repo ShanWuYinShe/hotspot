@@ -147,6 +147,7 @@
             type="button"
             role="switch"
             aria-checked={locationVisible}
+            aria-label="位置可见"
             class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
             style={locationVisible
               ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
@@ -178,6 +179,7 @@
             type="button"
             role="switch"
             aria-checked={presenceVisible}
+            aria-label="在线状态可见"
             class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
             style={presenceVisible
               ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
@@ -211,6 +213,7 @@
             type="button"
             role="switch"
             aria-checked={socialListsVisible}
+            aria-label="好友/关注/粉丝列表可见"
             class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
             style={socialListsVisible
               ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
@@ -257,6 +260,7 @@
             type="button"
             role="switch"
             aria-checked={allowFollow}
+            aria-label="允许关注"
             class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
             style={allowFollow
               ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
@@ -324,6 +328,7 @@
             type="button"
             role="switch"
             aria-checked={searchable}
+            aria-label="允许被搜索"
             class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
             style={searchable
               ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
@@ -353,6 +358,7 @@
             type="button"
             role="switch"
             aria-checked={locationSearchable}
+            aria-label="附近可见"
             class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
             style={locationSearchable
               ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'

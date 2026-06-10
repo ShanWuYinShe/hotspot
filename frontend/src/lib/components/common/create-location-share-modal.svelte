@@ -183,9 +183,12 @@
           class="rounded-[22px] p-4 space-y-2"
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
-          <label style="font-size: 12px; color: var(--text-secondary);">分享链接</label>
+          <label for="share-link-url" style="font-size: 12px; color: var(--text-secondary);"
+            >分享链接</label
+          >
           <div class="flex gap-2">
             <input
+              id="share-link-url"
               value={shareUrl ?? ''}
               readonly
               class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 flex-1"

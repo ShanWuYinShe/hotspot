@@ -389,7 +389,7 @@
         ></textarea>
       </div>
       <div>
-        <label style="font-size: 12px; color: var(--text-primary);">分配权限</label>
+        <span style="font-size: 12px; color: var(--text-primary);">分配权限</span>
         <div
           class="mt-1.5 max-h-60 space-y-3 overflow-y-auto rounded-[14px] p-3"
           style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"

@@ -253,6 +253,10 @@
                 </p>
               </div>
               <button
+                type="button"
+                role="switch"
+                aria-checked={toggle.val}
+                aria-label={toggle.label}
                 class="relative rounded-full outline-none"
                 style="width: 44px; height: 24px; transition: background 0.2s; {toggle.val
                   ? 'background: var(--brand);'

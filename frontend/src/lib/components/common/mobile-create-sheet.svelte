@@ -29,6 +29,7 @@
     class="fixed inset-0 z-40 cursor-default"
     style="background: rgba(0,0,0,0.35); backdrop-filter: blur(3px);"
     onclick={() => uiStore.closeCreateSheet()}
+    aria-label="关闭"
     transition:fade={{ duration: 220 }}
   ></button>
 

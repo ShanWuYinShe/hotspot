@@ -97,7 +97,7 @@
           onclick={closeSidebar}
           onkeydown={(e) => e.key === 'Escape' && closeSidebar()}
           aria-label={t('nav.closeSidebar')}
-        />
+        ></button>
         <aside
           class="app-mobile-sidebar fixed left-0 z-50 w-64 md:hidden"
           style="background: var(--surface-bg); border-right: 1px solid var(--border-theme);"
