@@ -157,7 +157,11 @@
 
   <!-- List -->
   <div class="w-full px-5 pt-4 pb-6">
-    <div style="max-width: 640px; margin-left: auto; margin-right: auto;">
+    <div
+      style="max-width: {platformStore.isDesktop
+        ? '960px'
+        : '640px'}; margin-left: auto; margin-right: auto;"
+    >
       <!-- Hero summary -->
       <div class="ambient-glow mb-5">
         <div
@@ -184,7 +188,7 @@
       </div>
 
       {#if pagination.loading}
-        <div class="flex flex-col gap-2.5">
+        <div class={platformStore.isDesktop ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
           {#each Array(6) as _, i (i)}
             <div
               class="animate-pulse rounded-[22px]"
@@ -217,7 +221,7 @@
           description="换个浏览位置或稍后再来看看。"
         />
       {:else}
-        <div class="flex flex-col gap-2.5">
+        <div class={platformStore.isDesktop ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
           {#each pagination.items as user (user.user.user_id)}
             <UserCard
               {user}
