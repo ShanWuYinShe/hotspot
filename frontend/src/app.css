@@ -696,22 +696,22 @@
   --theme-radius-xxl: var(--radius-xxl);
   --theme-radius-pill: var(--radius-pill);
   --theme-glass-blur: var(--glass-blur);
-
-  /* ── FAB icon animation ──────────────────────────────────────────── */
-  @keyframes fabIconIn {
-    from {
-      opacity: 0.5;
-      transform: rotate(-45deg) scale(0.75);
-    }
-    to {
-      opacity: 1;
-      transform: rotate(0deg) scale(1);
-    }
-  }
   --theme-glass-saturate: var(--glass-saturate);
   --theme-switch-thumb: var(--switch-thumb);
   --theme-switch-shadow: var(--switch-shadow);
   --theme-text-on-media: var(--text-on-media);
+}
+
+/* ── FAB icon animation ──────────────────────────────────────────── */
+@keyframes fabIconIn {
+  from {
+    opacity: 0.5;
+    transform: rotate(-45deg) scale(0.75);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
 }
 
 @layer base {
@@ -1209,15 +1209,20 @@
   .mobile-bottom-nav__slider {
     position: absolute;
     left: 0;
-    height: 36px;
+    top: 0;
+    width: 0;
+    height: 0;
     border-radius: 18px;
     background: var(--theme-accent-primary);
     opacity: 0;
     pointer-events: none;
     z-index: 0;
-    will-change: transform;
+    will-change: left, top, width, height;
     transition:
-      transform 0.42s cubic-bezier(0.34, 1.32, 0.46, 1),
+      left 0.42s cubic-bezier(0.34, 1.32, 0.46, 1),
+      top 0.42s cubic-bezier(0.34, 1.32, 0.46, 1),
+      width 0.42s cubic-bezier(0.34, 1.32, 0.46, 1),
+      height 0.42s cubic-bezier(0.34, 1.32, 0.46, 1),
       opacity 0.22s ease;
   }
 
@@ -1276,6 +1281,45 @@
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
     border: 2px solid var(--theme-bg);
     pointer-events: none;
+  }
+
+  .feed-density-shell {
+    width: 100%;
+    max-width: min(1180px, calc(100vw - 32px));
+    margin-inline: auto;
+  }
+
+  .feed-density-shell--narrow {
+    max-width: min(640px, calc(100vw - 32px));
+  }
+
+  .feed-density-shell--medium {
+    max-width: min(960px, calc(100vw - 40px));
+  }
+
+  .feed-density-pad {
+    padding: clamp(14px, 2vw, 24px) clamp(16px, 2.3vw, 28px) clamp(24px, 4vw, 40px);
+  }
+
+  .feed-density-list {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(14px, 2vw, 20px);
+  }
+
+  .feed-density-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    gap: clamp(14px, 1.6vw, 22px);
+  }
+
+  .feed-density-grid--compact {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: clamp(12px, 1.4vw, 18px);
+  }
+
+  .feed-density-tags {
+    margin-bottom: clamp(16px, 2vw, 24px);
   }
 
   /* Desktop header badge (Figma Make: 15x15, fontSize 8, fontWeight 700) */

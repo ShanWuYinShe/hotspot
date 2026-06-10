@@ -130,10 +130,7 @@
     </div>
 
     <!-- Content — centred column, max 560px -->
-    <div
-      class="w-full pb-6"
-      style="max-width: 560px; margin-left: auto; margin-right: auto; padding-left: 16px; padding-right: 16px; padding-top: 12px;"
-    >
+    <div class="w-full pb-6 feed-density-shell feed-density-shell--narrow feed-density-pad">
       <!-- Tag chips — interactive filter -->
       <div class="mb-4 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
         {#each TAGS as tag}
@@ -153,7 +150,7 @@
       </div>
 
       <!-- Feed cards -->
-      <div class="flex flex-col gap-4">
+      <div class="feed-density-list">
         {#if pagination.loading}
           {#each Array(4) as _}
             <div class="surface-flat rounded-[22px] overflow-hidden">
@@ -282,9 +279,7 @@
 
     <!-- Content — 2-column grid, centred, max 800px -->
     <div class="flex-1 overflow-y-auto no-scrollbar">
-      <div
-        style="max-width: 800px; margin-left: auto; margin-right: auto; padding: 16px 20px 28px;"
-      >
+      <div class="feed-density-shell feed-density-shell--medium feed-density-pad">
         <!-- Tag chips -->
         <div class="mb-5 flex flex-wrap items-center gap-2">
           {#each TAGS as tag}
@@ -304,7 +299,7 @@
         </div>
 
         {#if pagination.loading}
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+          <div class="feed-density-grid">
             {#each Array(4) as _}
               <div class="surface-flat rounded-[22px] overflow-hidden">
                 <div
@@ -349,7 +344,7 @@
             description={t('discover.noMomentsDesc')}
           />
         {:else}
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+          <div class="feed-density-grid">
             {#each pagination.items as moment (moment.moment_id)}
               <MomentCard {moment} />
             {/each}
@@ -435,86 +430,84 @@
     <div class="flex flex-1 min-h-0 overflow-hidden">
       <!-- Main feed -->
       <div class="flex-1 overflow-y-auto no-scrollbar">
-        <div style="padding: 20px 24px 28px;">
-          <!-- Tag chips -->
-          <div class="mb-5 flex flex-wrap items-center gap-2">
-            {#each TAGS as tag}
-              <button
-                class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all duration-150 active:scale-[0.93]"
-                class:surface-flat={activeTag !== tag}
-                style={activeTag === tag
-                  ? 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
-                  : 'color: var(--text-secondary); font-size: 12px;'}
-                onclick={() => {
-                  activeTag = activeTag === tag ? null : tag;
-                }}
-              >
-                {tag}
-              </button>
-            {/each}
-          </div>
-
-          {#if pagination.loading}
-            <div
-              style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 800px;"
-            >
-              {#each Array(6) as _}
-                <div class="surface-flat rounded-[22px] overflow-hidden">
-                  <div
-                    class="overflow-hidden rounded-t-[22px]"
-                    style="aspect-ratio: 16/9; background: var(--border-theme);"
-                  ></div>
-                  <div class="p-3">
-                    <div
-                      class="mb-2 rounded"
-                      style="width: 80%; height: 11px; background: var(--border-theme);"
-                    ></div>
-                    <div
-                      class="rounded"
-                      style="width: 60%; height: 9px; background: var(--border-theme);"
-                    ></div>
-                  </div>
-                </div>
+        <div class="feed-density-pad">
+          <div class="feed-density-shell">
+            <!-- Tag chips -->
+            <div class="mb-5 flex flex-wrap items-center gap-2">
+              {#each TAGS as tag}
+                <button
+                  class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all duration-150 active:scale-[0.93]"
+                  class:surface-flat={activeTag !== tag}
+                  style={activeTag === tag
+                    ? 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
+                    : 'color: var(--text-secondary); font-size: 12px;'}
+                  onclick={() => {
+                    activeTag = activeTag === tag ? null : tag;
+                  }}
+                >
+                  {tag}
+                </button>
               {/each}
             </div>
-          {:else if pagination.error}
-            {#if !authStore.isAuthenticated}
+
+            {#if pagination.loading}
+              <div class="feed-density-grid">
+                {#each Array(6) as _}
+                  <div class="surface-flat rounded-[22px] overflow-hidden">
+                    <div
+                      class="overflow-hidden rounded-t-[22px]"
+                      style="aspect-ratio: 16/9; background: var(--border-theme);"
+                    ></div>
+                    <div class="p-3">
+                      <div
+                        class="mb-2 rounded"
+                        style="width: 80%; height: 11px; background: var(--border-theme);"
+                      ></div>
+                      <div
+                        class="rounded"
+                        style="width: 60%; height: 9px; background: var(--border-theme);"
+                      ></div>
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            {:else if pagination.error}
+              {#if !authStore.isAuthenticated}
+                <EmptyState
+                  icon={LogIn}
+                  title="登录后查看"
+                  description="登录后即可浏览附近的动态"
+                  actionText="立即登录"
+                  onAction={() => uiStore.openLoginModalWithRedirect({})}
+                />
+              {:else}
+                <EmptyState
+                  icon={AlertTriangle}
+                  title={t('discover.loadFailed')}
+                  description={pagination.error}
+                  actionText={t('common.retry')}
+                  onAction={handleRetry}
+                />
+              {/if}
+            {:else if pagination.items.length === 0 && hasLoadedOnce}
               <EmptyState
-                icon={LogIn}
-                title="登录后查看"
-                description="登录后即可浏览附近的动态"
-                actionText="立即登录"
-                onAction={() => uiStore.openLoginModalWithRedirect({})}
+                icon={Image}
+                title={t('discover.noMoments')}
+                description={t('discover.noMomentsDesc')}
               />
             {:else}
-              <EmptyState
-                icon={AlertTriangle}
-                title={t('discover.loadFailed')}
-                description={pagination.error}
-                actionText={t('common.retry')}
-                onAction={handleRetry}
+              <div class="feed-density-grid">
+                {#each pagination.items as moment (moment.moment_id)}
+                  <MomentCard {moment} />
+                {/each}
+              </div>
+              <LoadMoreButton
+                loading={pagination.loadingMore}
+                hasMore={pagination.hasMore}
+                onLoadMore={() => loadMoments(false)}
               />
             {/if}
-          {:else if pagination.items.length === 0 && hasLoadedOnce}
-            <EmptyState
-              icon={Image}
-              title={t('discover.noMoments')}
-              description={t('discover.noMomentsDesc')}
-            />
-          {:else}
-            <div
-              style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 800px;"
-            >
-              {#each pagination.items as moment (moment.moment_id)}
-                <MomentCard {moment} />
-              {/each}
-            </div>
-            <LoadMoreButton
-              loading={pagination.loadingMore}
-              hasMore={pagination.hasMore}
-              onLoadMore={() => loadMoments(false)}
-            />
-          {/if}
+          </div>
         </div>
       </div>
 

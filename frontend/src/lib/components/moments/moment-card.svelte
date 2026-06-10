@@ -34,15 +34,27 @@
     onFalse: () => momentsService.unfavorite({ moment_id: moment.moment_id })
   });
 
+  const primaryImage = $derived(moment.images?.[0]?.url ?? '');
+  const imageCount = $derived(moment.images?.length ?? 0);
+  const visibleTags = $derived((moment.tags ?? []).slice(0, dense ? 2 : 3));
+  const timeText = $derived(formatRelativeTime(moment.created_at));
+  const distanceText = $derived(
+    moment.location?.distance != null ? formatDistance(moment.location.distance) : ''
+  );
+
   function isInteractiveTarget(target: EventTarget | null): boolean {
     return target instanceof HTMLElement
       ? Boolean(target.closest('button, a, input, select, textarea, [data-card-action]'))
       : false;
   }
 
+  function openMoment() {
+    void goto(`/moments/${moment.moment_id}`);
+  }
+
   function handleCardClick(event: MouseEvent) {
     if (event.defaultPrevented || isInteractiveTarget(event.target)) return;
-    goto(`/moments/${moment.moment_id}`);
+    openMoment();
   }
 
   let heartBurst = $state(false);
@@ -95,205 +107,456 @@
   function handleAuthorClick(event: MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
-    goto(`/users/${moment.user.user_id}`);
+    void goto(`/users/${moment.user.user_id}`);
   }
 </script>
 
 <div
-  class="card-hover cursor-pointer overflow-hidden rounded-[22px] outline-none transition-[box-shadow,outline,transform] duration-200 hover:scale-[1.008] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
-  style="background: var(--surface-bg); box-shadow: 7px 7px 16px var(--shadow-dark), -7px -7px 16px var(--shadow-light); border: 1px solid var(--border-theme);"
+  class="moment-card {dense ? 'moment-card--dense' : ''} {className}"
   onclick={handleCardClick}
   role="link"
   tabindex={0}
+  aria-label={`查看 ${moment.user.nickname} 的动态`}
   onkeydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      goto(`/moments/${moment.moment_id}`);
+      openMoment();
     }
   }}
 >
-  <!-- Image -->
-  {#if moment.images && moment.images.length > 0}
-    <div class="relative overflow-hidden" style="aspect-ratio: 16/9;">
-      <img
-        src={moment.images[0]?.url ?? ''}
-        alt="动态图片"
-        class="h-full w-full object-cover"
-        loading="lazy"
-      />
-      <div
-        class="absolute inset-0"
-        style="background: linear-gradient(to bottom, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.44) 100%);"
-      ></div>
-      <!-- Tags overlay -->
-      {#if moment.tags && moment.tags.length > 0}
-        <div class="absolute left-2.5 top-2.5">
-          <span
-            class="rounded-full px-2 py-0.5"
-            style="background: var(--brand); box-shadow: 0 2px 8px var(--glow); font-size: 10px; color: white;"
-          >
-            {moment.tags[0]}
-          </span>
-        </div>
-      {/if}
-      <!-- User overlay on image bottom -->
-      <div class="absolute bottom-0 left-0 right-0 flex items-center gap-2 px-3 pb-2.5">
-        <a
-          href="/users/{moment.user.user_id}"
-          data-card-action
-          onclick={handleAuthorClick}
-          class="flex-shrink-0 overflow-hidden rounded-full"
-          style="width: 22px; height: 22px; border: 1.5px solid rgba(255,255,255,0.65);"
-        >
-          <img
-            src={moment.user.avatar_url || ''}
-            alt={moment.user.nickname}
-            class="h-full w-full object-cover"
-          />
-        </a>
-        <a
-          href="/users/{moment.user.user_id}"
-          data-card-action
-          onclick={handleAuthorClick}
-          style="font-size: 11px; color: white; font-weight: 500;"
-        >
-          {moment.user.nickname}
-        </a>
-        {#if moment.location?.distance != null}
-          <div class="ml-auto flex items-center gap-0.5">
-            <MapPin size={9} strokeWidth={1.5} style="color: rgba(255,255,255,0.8);" />
-            <span style="font-size: 10px; color: rgba(255,255,255,0.8);"
-              >{formatDistance(moment.location.distance)}</span
-            >
-          </div>
+  <header class="moment-card__header">
+    <a
+      href="/users/{moment.user.user_id}"
+      data-card-action
+      onclick={handleAuthorClick}
+      class="moment-card__avatar"
+      aria-label={`查看 ${moment.user.nickname} 的主页`}
+    >
+      <img src={moment.user.avatar_url || ''} alt={moment.user.nickname} loading="lazy" />
+    </a>
+
+    <div class="moment-card__author">
+      <a href="/users/{moment.user.user_id}" data-card-action onclick={handleAuthorClick}>
+        {moment.user.nickname}
+      </a>
+      <div class="moment-card__meta">
+        <span>{timeText}</span>
+        {#if distanceText}
+          <span aria-hidden="true">·</span>
+          <span>{distanceText}</span>
         {/if}
       </div>
     </div>
+
+    {#if moment.location?.location_name}
+      <span class="moment-card__location">
+        <MapPin size={12} strokeWidth={1.7} />
+        <span>{moment.location.location_name}</span>
+      </span>
+    {/if}
+  </header>
+
+  {#if primaryImage}
+    <div class="moment-card__media">
+      <img
+        src={primaryImage}
+        alt={moment.description || moment.tags?.[0] || '动态图片'}
+        loading="lazy"
+      />
+      <div class="moment-card__media-shade"></div>
+      {#if imageCount > 1}
+        <span class="moment-card__image-count">+{imageCount - 1}</span>
+      {/if}
+    </div>
   {/if}
 
-  <!-- Content -->
-  <div style="padding: {dense ? '10px 14px 6px' : '12px 16px 8px'};">
-    {#if !moment.images || moment.images.length === 0}
-      <!-- No image: show author info inline -->
-      <div class="mb-2 flex items-center gap-2">
-        <a
-          href="/users/{moment.user.user_id}"
-          data-card-action
-          onclick={handleAuthorClick}
-          class="flex-shrink-0 overflow-hidden rounded-full"
-          style="width: 28px; height: 28px; border: 1.5px solid var(--border-theme);"
-        >
-          <img
-            src={moment.user.avatar_url || ''}
-            alt={moment.user.nickname}
-            class="h-full w-full object-cover"
-          />
-        </a>
-        <div class="min-w-0 flex-1">
-          <a
-            href="/users/{moment.user.user_id}"
-            data-card-action
-            onclick={handleAuthorClick}
-            style="font-size: 13px; color: var(--text-primary); font-weight: 500;"
-          >
-            {moment.user.nickname}
-          </a>
-          <div class="flex items-center gap-2" style="margin-top: 1px;">
-            <span style="font-size: 10px; color: var(--text-secondary);"
-              >{formatRelativeTime(moment.created_at)}</span
-            >
-            {#if moment.location?.distance != null}
-              <span style="font-size: 10px; color: var(--brand);"
-                >{formatDistance(moment.location.distance)}</span
-              >
-            {/if}
-          </div>
-        </div>
-      </div>
-    {/if}
+  <div class="moment-card__body">
     {#if moment.description}
-      <p
-        class="line-clamp-2"
-        style="font-size: {dense ? 12 : 13}px; color: var(--text-secondary); line-height: 1.6;"
-      >
+      <p class="moment-card__description">
         {moment.description}
       </p>
     {/if}
-    {#if moment.images && moment.images.length > 0}
-      <div
-        class="mt-1 flex items-center gap-1"
-        style="font-size: 10px; color: var(--text-secondary);"
-      >
-        <span>{formatRelativeTime(moment.created_at)}</span>
+
+    {#if visibleTags.length > 0}
+      <div class="moment-card__tags" aria-label="动态标签">
+        {#each visibleTags as tag (tag)}
+          <span>#{tag}</span>
+        {/each}
       </div>
     {/if}
   </div>
 
-  <!-- Actions -->
-  <div
-    class="flex items-center justify-between"
-    style="padding: {dense ? '4px 14px 12px' : '4px 16px 14px'};"
-  >
-    <div class="flex gap-3.5">
+  <footer class="moment-card__footer">
+    <div class="moment-card__actions">
       <button
+        type="button"
         data-card-action
-        class="flex items-center gap-1.5 rounded-full px-1 py-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--glow)]"
-        style="color: {likeAction.isOn ? 'var(--brand)' : 'var(--text-secondary)'};"
+        class="moment-card__action"
+        class:is-active={likeAction.isOn}
         onclick={handleLike}
         disabled={likeAction.isLoading}
+        aria-label={likeAction.isOn ? '取消点赞' : '点赞'}
+        aria-pressed={likeAction.isOn}
       >
         <Heart
-          size={15}
-          strokeWidth={1.5}
+          size={16}
+          strokeWidth={1.7}
           fill={likeAction.isOn ? 'currentColor' : 'none'}
           class={heartBurst ? 'heart-burst' : ''}
         />
-        <span style="font-size: 11px;">{likeAction.count}</span>
+        <span>{likeAction.count}</span>
       </button>
+
       <button
+        type="button"
         data-card-action
-        class="flex items-center gap-1.5 rounded-full px-1 py-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--glow)]"
-        style="color: var(--text-secondary);"
+        class="moment-card__action"
         onclick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          goto(`/moments/${moment.moment_id}`);
+          openMoment();
         }}
+        aria-label="查看评论"
       >
-        <MessageCircle size={15} strokeWidth={1.5} />
-        <span style="font-size: 11px;">{moment.comments_count}</span>
+        <MessageCircle size={16} strokeWidth={1.7} />
+        <span>{moment.comments_count}</span>
       </button>
     </div>
-    <div class="flex gap-3">
+
+    <div class="moment-card__actions moment-card__actions--secondary">
       <button
+        type="button"
         data-card-action
-        class="rounded-full p-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--glow)]"
-        style="color: {favoriteAction.isOn ? 'var(--brand)' : 'var(--text-secondary)'};"
+        class="moment-card__icon-action"
+        class:is-active={favoriteAction.isOn}
         onclick={handleFavorite}
         disabled={favoriteAction.isLoading}
+        aria-label={favoriteAction.isOn ? '取消收藏' : '收藏'}
+        aria-pressed={favoriteAction.isOn}
       >
         <Bookmark
-          size={15}
-          strokeWidth={1.5}
+          size={16}
+          strokeWidth={1.7}
           fill={favoriteAction.isOn ? 'currentColor' : 'none'}
         />
       </button>
+
       <button
+        type="button"
         data-card-action
-        class="rounded-full p-1 outline-none transition-transform duration-150 hover:scale-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--glow)]"
-        style="color: var(--text-secondary);"
+        class="moment-card__icon-action"
         onclick={handleShare}
+        aria-label="分享"
       >
-        <Share2 size={15} strokeWidth={1.5} />
+        <Share2 size={16} strokeWidth={1.7} />
       </button>
     </div>
-  </div>
+  </footer>
 </div>
 
 <style>
+  .moment-card {
+    --card-pad-x: clamp(14px, 2vw, 18px);
+    --card-pad-y: clamp(13px, 1.8vw, 16px);
+    --media-ratio: 16 / 10;
+    position: relative;
+    display: flex;
+    min-width: 0;
+    cursor: pointer;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--border-theme) 82%, transparent);
+    border-radius: 26px;
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--surface-bg) 96%, white 4%),
+        var(--surface-bg)
+      ),
+      var(--surface-bg);
+    box-shadow:
+      0 16px 36px color-mix(in srgb, var(--shadow-dark) 45%, transparent),
+      -8px -8px 22px color-mix(in srgb, var(--shadow-light) 68%, transparent);
+    outline: none;
+    transition:
+      transform 0.22s ease,
+      border-color 0.22s ease,
+      box-shadow 0.22s ease;
+  }
+
+  .moment-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--brand) 30%, var(--border-theme));
+    box-shadow:
+      0 20px 46px color-mix(in srgb, var(--shadow-dark) 54%, transparent),
+      -8px -8px 22px color-mix(in srgb, var(--shadow-light) 70%, transparent);
+  }
+
+  .moment-card:active {
+    transform: translateY(0) scale(0.99);
+  }
+
+  .moment-card:focus-visible {
+    box-shadow:
+      0 0 0 2px var(--glow),
+      0 18px 42px color-mix(in srgb, var(--shadow-dark) 50%, transparent);
+  }
+
+  .moment-card--dense {
+    --card-pad-x: 14px;
+    --card-pad-y: 12px;
+    --media-ratio: 4 / 3;
+    border-radius: 22px;
+  }
+
+  .moment-card__header {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+    padding: var(--card-pad-y) var(--card-pad-x) 10px;
+  }
+
+  .moment-card__avatar {
+    display: block;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border: 2px solid color-mix(in srgb, var(--brand) 18%, var(--border-theme));
+    border-radius: 9999px;
+    background: var(--surface-bg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .moment-card--dense .moment-card__avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .moment-card__avatar img,
+  .moment-card__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .moment-card__author {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .moment-card__author a {
+    display: block;
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .moment-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 3px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .moment-card__location {
+    display: flex;
+    max-width: min(42%, 150px);
+    flex: 0 1 auto;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--border-theme));
+    border-radius: 9999px;
+    padding: 5px 8px;
+    color: var(--brand);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    background: color-mix(in srgb, var(--brand) 9%, var(--surface-bg));
+  }
+
+  .moment-card__location span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .moment-card__media {
+    position: relative;
+    margin: 0 var(--card-pad-x);
+    overflow: hidden;
+    border-radius: 20px;
+    aspect-ratio: var(--media-ratio);
+    background: var(--border-theme);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, white 10%, transparent);
+  }
+
+  .moment-card--dense .moment-card__media {
+    border-radius: 18px;
+  }
+
+  .moment-card__media-shade {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.02), transparent 38%),
+      linear-gradient(to top, rgba(0, 0, 0, 0.16), transparent 45%);
+    pointer-events: none;
+  }
+
+  .moment-card__image-count {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 9999px;
+    padding: 4px 8px;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    background: rgba(15, 23, 42, 0.58);
+    backdrop-filter: blur(10px);
+  }
+
+  .moment-card__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px var(--card-pad-x) 8px;
+  }
+
+  .moment-card--dense .moment-card__body {
+    gap: 8px;
+    padding-top: 10px;
+  }
+
+  .moment-card__description {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: clamp(13px, 1.2vw, 14px);
+    line-height: 1.65;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .moment-card--dense .moment-card__description {
+    font-size: 12px;
+    line-height: 1.58;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .moment-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .moment-card__tags span {
+    border: 1px solid color-mix(in srgb, var(--brand) 20%, var(--border-theme));
+    border-radius: 9999px;
+    padding: 4px 8px;
+    color: var(--brand);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    background: color-mix(in srgb, var(--brand) 7%, transparent);
+  }
+
+  .moment-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-top: 1px solid color-mix(in srgb, var(--border-theme) 72%, transparent);
+    padding: 10px var(--card-pad-x) var(--card-pad-y);
+  }
+
+  .moment-card__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .moment-card__actions--secondary {
+    flex: 0 0 auto;
+  }
+
+  .moment-card__action,
+  .moment-card__icon-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    color: var(--text-secondary);
+    background: transparent;
+    outline: none;
+    transition:
+      transform 0.15s ease,
+      color 0.18s ease,
+      background 0.18s ease,
+      border-color 0.18s ease;
+  }
+
+  .moment-card__action {
+    gap: 5px;
+    min-height: 32px;
+    padding: 6px 9px;
+    font-size: 12px;
+    font-weight: 650;
+  }
+
+  .moment-card__icon-action {
+    width: 32px;
+    height: 32px;
+  }
+
+  .moment-card__action:hover,
+  .moment-card__icon-action:hover,
+  .moment-card__action:focus-visible,
+  .moment-card__icon-action:focus-visible {
+    color: var(--brand);
+    border-color: color-mix(in srgb, var(--brand) 20%, var(--border-theme));
+    background: color-mix(in srgb, var(--brand) 8%, transparent);
+  }
+
+  .moment-card__action:active,
+  .moment-card__icon-action:active {
+    transform: scale(0.94);
+  }
+
+  .moment-card__action.is-active,
+  .moment-card__icon-action.is-active {
+    color: var(--brand);
+    background: color-mix(in srgb, var(--brand) 10%, transparent);
+  }
+
+  .moment-card__action:disabled,
+  .moment-card__icon-action:disabled {
+    cursor: wait;
+    opacity: 0.62;
+  }
+
   :global(.heart-burst) {
     animation: heartBurst 0.3s ease-out;
   }
+
   @keyframes heartBurst {
     0% {
       transform: scale(1);

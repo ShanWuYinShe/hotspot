@@ -499,7 +499,7 @@
                   用户
                 </p>
               {/if}
-              <div class="flex flex-col gap-2.5">
+              <div class="feed-density-list">
                 {#if isLoading && users.length === 0}
                   {#each Array(3) as _, i (i)}
                     <div

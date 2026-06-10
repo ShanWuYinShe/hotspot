@@ -174,7 +174,7 @@
 {#snippet feedGrid(mode: 'list' | 'grid2' | 'autofill')}
   {#if feed.loading}
     {#if mode === 'list'}
-      <div class="flex flex-col gap-4">
+      <div class="feed-density-list">
         {#each Array(3) as _}
           <div class="surface-flat rounded-[18px] overflow-hidden">
             <div style="aspect-ratio: 16/9; background: var(--border-theme);"></div>
@@ -192,11 +192,7 @@
         {/each}
       </div>
     {:else}
-      <div
-        style="display: grid; grid-template-columns: {mode === 'autofill'
-          ? 'repeat(auto-fill, minmax(300px, 1fr))'
-          : 'repeat(2, 1fr)'}; gap: 14px;"
-      >
+      <div class="feed-density-grid feed-density-grid--compact">
         {#each Array(4) as _}
           <div class="surface-flat rounded-[18px] overflow-hidden">
             <div style="aspect-ratio: 16/9; background: var(--border-theme);"></div>
@@ -226,17 +222,13 @@
     {/if}
     <!-- Remaining items -->
     {#if mode === 'list'}
-      <div class="flex flex-col gap-4">
+      <div class="feed-density-list">
         {#each items.slice(1) as moment (moment.moment_id)}
           <MomentCard {moment} />
         {/each}
       </div>
     {:else}
-      <div
-        style="display: grid; grid-template-columns: {mode === 'autofill'
-          ? 'repeat(auto-fill, minmax(300px, 1fr))'
-          : 'repeat(2, 1fr)'}; gap: 14px;"
-      >
+      <div class="feed-density-grid feed-density-grid--compact">
         {#each items.slice(1) as moment (moment.moment_id)}
           <MomentCard {moment} dense />
         {/each}
@@ -316,9 +308,11 @@
     </div>
 
     <div class="flex flex-1 min-h-0 overflow-hidden">
-      <div class="flex-1 overflow-y-auto no-scrollbar" style="padding: 20px 24px 28px;">
-        {@render tagChips()}
-        {@render feedGrid('autofill')}
+      <div class="flex-1 overflow-y-auto no-scrollbar feed-density-pad">
+        <div class="feed-density-shell">
+          {@render tagChips()}
+          {@render feedGrid('autofill')}
+        </div>
       </div>
 
       <div
@@ -391,8 +385,7 @@
     </div>
 
     <div
-      class="flex-1 overflow-y-auto no-scrollbar"
-      style="max-width: 800px; margin: 0 auto; width: 100%; padding: 16px 20px 28px;"
+      class="flex-1 overflow-y-auto no-scrollbar feed-density-shell feed-density-shell--medium feed-density-pad"
     >
       {@render tagChips()}
       {@render feedGrid('grid2')}
@@ -408,8 +401,7 @@
     </div>
 
     <div
-      class="flex-1 overflow-y-auto no-scrollbar"
-      style="max-width: 560px; margin: 0 auto; width: 100%; padding: 12px 16px 24px;"
+      class="flex-1 overflow-y-auto no-scrollbar feed-density-shell feed-density-shell--narrow feed-density-pad"
     >
       {@render tagChips()}
       {@render feedGrid('list')}

@@ -42,18 +42,21 @@
 
   // Shared sliding pill — mirrors the React reference's Framer Motion `layoutId`
   // behaviour so the active indicator glides between tabs instead of fading per tab.
-  const SLIDER_W = 52;
   let rowEl = $state<HTMLDivElement | undefined>();
   let tabEls = $state<(HTMLButtonElement | undefined)[]>([]);
-  let sliderX = $state(0);
-  let sliderTop = $state(6);
+  let pill = $state({ x: 0, y: 0, w: 0, h: 0 });
   const activeIndex = $derived(navItems.findIndex((it) => isActive(it.href)));
+  const pillVisible = $derived(activeIndex >= 0 && pill.w > 0);
 
   function measureSlider() {
     const el = tabEls[activeIndex];
     if (!rowEl || !el) return;
-    sliderX = el.offsetLeft + el.offsetWidth / 2 - SLIDER_W / 2;
-    sliderTop = el.offsetTop + 6;
+    pill = {
+      x: el.offsetLeft + 4,
+      y: el.offsetTop + 4,
+      w: Math.max(0, el.offsetWidth - 8),
+      h: Math.max(0, el.offsetHeight - 8)
+    };
   }
 
   $effect(() => {
@@ -78,8 +81,8 @@
     style="position: relative; padding-top: 8px; padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));"
   >
     <span
-      class="mobile-bottom-nav__slider {activeIndex >= 0 ? 'visible' : ''}"
-      style="width: {SLIDER_W}px; top: {sliderTop}px; transform: translateX({sliderX}px);"
+      class="mobile-bottom-nav__slider {pillVisible ? 'visible' : ''}"
+      style="left: {pill.x}px; top: {pill.y}px; width: {pill.w}px; height: {pill.h}px;"
       aria-hidden="true"
     ></span>
     {#each navItems.slice(0, 2) as item, i (item.href)}
@@ -89,6 +92,7 @@
         class="mobile-bottom-nav__tab {isActive(item.href) ? 'active' : ''}"
         onclick={() => navigate(item)}
         aria-label={item.label}
+        aria-current={isActive(item.href) ? 'page' : undefined}
       >
         <span
           class="mobile-bottom-nav__tab-icon"
@@ -145,6 +149,7 @@
         class="mobile-bottom-nav__tab {isActive(item.href) ? 'active' : ''}"
         onclick={() => navigate(item)}
         aria-label={item.label}
+        aria-current={isActive(item.href) ? 'page' : undefined}
       >
         <span
           class="mobile-bottom-nav__tab-icon"
