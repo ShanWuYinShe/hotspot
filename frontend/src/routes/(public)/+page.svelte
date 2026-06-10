@@ -21,6 +21,7 @@
   import NearbyUsersFlatList from '$lib/components/home/nearby-users-flat-list.svelte';
   import GroupCarousel from '$lib/components/home/group-carousel.svelte';
   import LocationPickerModal from '$lib/components/common/location-picker-modal.svelte';
+  import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
 
   type HomeMode = 'guest' | 'explore' | 'authenticated';
 
@@ -286,12 +287,7 @@
           {t('home.discoverNearbyPeopleAndThings')}
         </p>
       </div>
-      <div class="surface-flat flex cursor-pointer items-center gap-1.5 rounded-full py-1.5 px-3.5">
-        <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
-        <span style="font-size: 11px; color: var(--text-secondary);"
-          >{mapAnchorStore.displayName}</span
-        >
-      </div>
+      <AnchorEntry variant="pill" onAdjust={() => (showLocationPicker = true)} />
     </div>
 
     <!-- Hero card -->
@@ -377,16 +373,7 @@
             {t('home.discoverNearbyPeopleAndThings')}
           </p>
         </div>
-        <button
-          type="button"
-          class="surface-flat flex items-center gap-1.5 rounded-full py-1.5 px-3.5 outline-none"
-          onclick={() => (showLocationPicker = true)}
-        >
-          <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
-          <span style="font-size: 11px; color: var(--text-secondary);"
-            >{mapAnchorStore.displayName}</span
-          >
-        </button>
+        <AnchorEntry variant="pill" onAdjust={() => (showLocationPicker = true)} />
       </div>
     </div>
 
@@ -600,16 +587,6 @@
                 onToggleFollow={handleFlatFollow}
               />
             </div>
-          </div>
-        {/if}
-
-        <!-- Surrounding heat -->
-        {#if activities.length > 0}
-          <div>
-            <div class="mb-3 flex items-center justify-between">
-              <span class="eyebrow">{t('home.surroundingHeat')}</span>
-            </div>
-            <ActivityList {activities} loading={loadingNearby} onSelect={handleActivitySelect} />
           </div>
         {/if}
       </div>

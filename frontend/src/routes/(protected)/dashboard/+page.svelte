@@ -13,6 +13,7 @@
   import GroupCarousel from '$lib/components/home/group-carousel.svelte';
   import NearbyUsersFlatList from '$lib/components/home/nearby-users-flat-list.svelte';
   import LocationPickerModal from '$lib/components/common/location-picker-modal.svelte';
+  import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
 
   function formatDistance(m: number): string {
     if (m < 1000) return `${Math.round(m)}m`;
@@ -119,18 +120,7 @@
           发现周边有趣的人和事
         </p>
       </div>
-      <button
-        class="flex items-center gap-1.5 rounded-full px-3 py-1.5 surface-flat"
-        onclick={() => (showLocationPicker = true)}
-      >
-        <span
-          class="rounded-full"
-          style="width: 6px; height: 6px; background: var(--semantic-online); flex-shrink: 0;"
-        ></span>
-        <span style="font-size: 11px; color: var(--text-secondary);"
-          >{mapAnchorStore.displayName}</span
-        >
-      </button>
+      <AnchorEntry variant="pill" onAdjust={() => (showLocationPicker = true)} />
     </div>
 
     <div class="flex flex-col gap-7 px-5 pt-5 pb-8 flex-1 overflow-y-auto no-scrollbar">
@@ -158,10 +148,15 @@
             icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star',
             title: `#${t.name}`,
             sub: `${t.usage_count}条动态`,
-            color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)',
+            color:
+              ['var(--color-semantic-warning)', 'var(--brand)', 'var(--color-semantic-hot)'][i] ??
+              'var(--brand)',
             bg:
-              ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ??
-              'var(--surface-bg)'
+              [
+                'color-mix(in srgb, var(--color-semantic-warning) 12%, transparent)',
+                'color-mix(in srgb, var(--brand) 12%, transparent)',
+                'color-mix(in srgb, var(--color-semantic-hot) 12%, transparent)'
+              ][i] ?? 'var(--surface-bg)'
           }))}
           {loading}
         />
@@ -206,28 +201,14 @@
           发现周边有趣的人和事
         </p>
       </div>
-      <button
-        class="flex items-center gap-1.5 rounded-full px-3 py-1.5 surface-flat"
-        onclick={() => (showLocationPicker = true)}
-      >
-        <span
-          class="rounded-full"
-          style="width: 6px; height: 6px; background: var(--semantic-online); flex-shrink: 0;"
-        ></span>
-        <span style="font-size: 11px; color: var(--text-secondary);"
-          >{mapAnchorStore.displayName}</span
-        >
-      </button>
+      <AnchorEntry variant="pill" onAdjust={() => (showLocationPicker = true)} />
     </div>
 
     <div
       class="flex gap-6 pt-5 pb-8 flex-1 overflow-hidden"
-      style="max-width: 924px; margin: 0 auto; width: 100%;"
+      style="max-width: 600px; margin: 0 auto; width: 100%;"
     >
-      <div
-        class="flex flex-col gap-7 px-5 flex-1 min-w-0 overflow-y-auto no-scrollbar"
-        style="max-width: 600px;"
-      >
+      <div class="flex flex-col gap-7 px-5 flex-1 min-w-0 overflow-y-auto no-scrollbar">
         <HeroStats {...heroProps} />
 
         {#if !loading}
@@ -252,10 +233,15 @@
               icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star',
               title: `#${t.name}`,
               sub: `${t.usage_count}条动态`,
-              color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)',
+              color:
+                ['var(--color-semantic-warning)', 'var(--brand)', 'var(--color-semantic-hot)'][i] ??
+                'var(--brand)',
               bg:
-                ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ??
-                'var(--surface-bg)'
+                [
+                  'color-mix(in srgb, var(--color-semantic-warning) 12%, transparent)',
+                  'color-mix(in srgb, var(--brand) 12%, transparent)',
+                  'color-mix(in srgb, var(--color-semantic-hot) 12%, transparent)'
+                ][i] ?? 'var(--surface-bg)'
             }))}
             {loading}
           />
@@ -286,9 +272,6 @@
           />
         </div>
       </div>
-
-      <!-- Tablet right rail -->
-      <aside class="hidden lg:block flex-shrink-0" style="width: 320px;"></aside>
     </div>
   </div>
 {:else}
@@ -339,10 +322,15 @@
               icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star',
               title: `#${t.name}`,
               sub: `${t.usage_count}条动态`,
-              color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)',
+              color:
+                ['var(--color-semantic-warning)', 'var(--brand)', 'var(--color-semantic-hot)'][i] ??
+                'var(--brand)',
               bg:
-                ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ??
-                'var(--surface-bg)'
+                [
+                  'color-mix(in srgb, var(--color-semantic-warning) 12%, transparent)',
+                  'color-mix(in srgb, var(--brand) 12%, transparent)',
+                  'color-mix(in srgb, var(--color-semantic-hot) 12%, transparent)'
+                ][i] ?? 'var(--surface-bg)'
             }))}
             {loading}
           />
@@ -385,25 +373,6 @@
             {loading}
             {followingIds}
             onToggleFollow={toggleFollow}
-          />
-        </div>
-
-        <div class="mt-7">
-          <div class="flex items-end justify-between mb-3">
-            <span class="eyebrow">周边热度</span>
-          </div>
-          <ActivityList
-            activities={trendingTags.slice(0, 3).map((t, i) => ({
-              id: t.name,
-              icon: ['coffee' as const, 'music' as const, 'flame' as const][i] ?? 'star',
-              title: `#${t.name}`,
-              sub: `${t.usage_count}条动态`,
-              color: ['#F59E0B', '#8B5CF6', '#EF4444'][i] ?? 'var(--brand)',
-              bg:
-                ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(239,68,68,0.1)'][i] ??
-                'var(--surface-bg)'
-            }))}
-            {loading}
           />
         </div>
       </div>
