@@ -108,14 +108,16 @@
         <h1 class="flex-1" style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
           附近群组
         </h1>
-        <button
-          class="flex items-center justify-center rounded-full outline-none"
-          style="width: 36px; height: 36px; background: var(--brand); box-shadow: 0 3px 10px var(--glow);"
-          onclick={handleCreateGroup}
-          aria-label="创建群组"
-        >
-          <Plus size={16} strokeWidth={2} color="var(--text-on-accent)" />
-        </button>
+        {#if !platformStore.isDesktop}
+          <button
+            class="flex items-center justify-center rounded-full outline-none"
+            style="width: 36px; height: 36px; background: var(--brand); box-shadow: 0 3px 10px var(--glow);"
+            onclick={handleCreateGroup}
+            aria-label="创建群组"
+          >
+            <Plus size={16} strokeWidth={2} color="var(--text-on-accent)" />
+          </button>
+        {/if}
       </div>
 
       <!-- Search -->
