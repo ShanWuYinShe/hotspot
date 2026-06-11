@@ -72,189 +72,192 @@
   <title>举报审核 - HotSpot 管理后台</title>
 </svelte:head>
 
-<div class="space-y-6">
-  <div class="flex items-center justify-between">
-    <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">举报审核</h1>
-    <button
-      class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
-      onclick={() => loadReports()}
-      disabled={pagination.loading}
-    >
-      <RefreshCw size={14} strokeWidth={1.5} class={pagination.loading ? 'animate-spin' : ''} />
-      刷新
-    </button>
-  </div>
-
-  <!-- Filter -->
-  <div class="flex gap-2">
-    {#each [{ value: 'pending', label: '待处理' }, { value: 'resolved', label: '已处理' }, { value: 'dismissed', label: '已驳回' }, { value: 'all', label: '全部' }] as f (f.value)}
+<div class="page-pad">
+  <div class="page-shell page-shell--wide space-y-6">
+    <div class="flex items-center justify-between">
+      <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">举报审核</h1>
       <button
-        class="rounded-full px-4 py-1.5 outline-none"
-        style="font-size: 12px; font-weight: 500; {statusFilter === f.value
-          ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow);'
-          : 'background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);'}"
-        onclick={() => (statusFilter = f.value as ReportStatus | 'all')}>{f.label}</button
+        class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+        onclick={() => loadReports()}
+        disabled={pagination.loading}
       >
-    {/each}
-  </div>
-
-  <!-- Reports list -->
-  <div
-    class="rounded-[22px] overflow-hidden"
-    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-  >
-    <div
-      class="flex items-center gap-2 px-4 py-3"
-      style="border-bottom: 1px solid var(--border-theme);"
-    >
-      <Flag size={16} strokeWidth={1.5} color="var(--brand)" />
-      <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);">举报列表</span>
+        <RefreshCw size={14} strokeWidth={1.5} class={pagination.loading ? 'animate-spin' : ''} />
+        刷新
+      </button>
     </div>
-    <div class="p-4">
-      {#if pagination.loading && pagination.items.length === 0}
-        <div class="space-y-3">
-          {#each Array(5) as _, i (i)}
-            <div
-              class="rounded-[18px] p-3"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-            >
-              <div class="flex items-center gap-3">
-                <div
-                  class="rounded-full"
-                  style="width: 36px; height: 36px; background: var(--border-theme);"
-                ></div>
-                <div class="flex-1 space-y-2">
+
+    <!-- Filter -->
+    <div class="flex gap-2">
+      {#each [{ value: 'pending', label: '待处理' }, { value: 'resolved', label: '已处理' }, { value: 'dismissed', label: '已驳回' }, { value: 'all', label: '全部' }] as f (f.value)}
+        <button
+          class="rounded-full px-4 py-1.5 outline-none"
+          style="font-size: 12px; font-weight: 500; {statusFilter === f.value
+            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow);'
+            : 'background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);'}"
+          onclick={() => (statusFilter = f.value as ReportStatus | 'all')}>{f.label}</button
+        >
+      {/each}
+    </div>
+
+    <!-- Reports list -->
+    <div
+      class="rounded-[22px] overflow-hidden"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+    >
+      <div
+        class="flex items-center gap-2 px-4 py-3"
+        style="border-bottom: 1px solid var(--border-theme);"
+      >
+        <Flag size={16} strokeWidth={1.5} color="var(--brand)" />
+        <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);">举报列表</span>
+      </div>
+      <div class="p-4">
+        {#if pagination.loading && pagination.items.length === 0}
+          <div class="space-y-3">
+            {#each Array(5) as _, i (i)}
+              <div
+                class="rounded-[18px] p-3"
+                style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+              >
+                <div class="flex items-center gap-3">
                   <div
-                    class="rounded"
-                    style="height: 12px; width: 120px; background: var(--border-theme);"
+                    class="rounded-full"
+                    style="width: 36px; height: 36px; background: var(--border-theme);"
                   ></div>
-                  <div
-                    class="rounded"
-                    style="height: 10px; width: 160px; background: var(--border-theme);"
-                  ></div>
+                  <div class="flex-1 space-y-2">
+                    <div
+                      class="rounded"
+                      style="height: 12px; width: 120px; background: var(--border-theme);"
+                    ></div>
+                    <div
+                      class="rounded"
+                      style="height: 10px; width: 160px; background: var(--border-theme);"
+                    ></div>
+                  </div>
                 </div>
               </div>
-            </div>
-          {/each}
-        </div>
-      {:else if pagination.items.length === 0}
-        <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
-          {statusFilter === 'pending' ? '暂无待处理举报' : '暂无举报记录'}
-        </p>
-      {:else}
-        <div class="space-y-3">
-          {#each pagination.items as report (report.report_id)}
-            <div
-              class="rounded-[18px] p-3"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div class="flex items-start gap-3">
-                  <div
-                    class="flex flex-shrink-0 items-center justify-center rounded-full"
-                    style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-                  >
-                    <span style="font-size: 12px; color: var(--text-secondary);">?</span>
-                  </div>
-                  <div>
-                    <div class="flex items-center gap-1.5">
-                      <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
-                        >用户举报</span
-                      >
-                      <span style="font-size: 12px; color: var(--text-secondary);">举报了</span>
-                      <span
-                        class="rounded-full px-1.5 py-0.5"
-                        style="font-size: 10px; background: var(--surface-bg); color: var(--text-primary); border: 1px solid var(--border-theme);"
-                        >{REPORT_TARGET_TYPE_LABEL[report.target_type] ?? report.target_type}</span
-                      >
+            {/each}
+          </div>
+        {:else if pagination.items.length === 0}
+          <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
+            {statusFilter === 'pending' ? '暂无待处理举报' : '暂无举报记录'}
+          </p>
+        {:else}
+          <div class="space-y-3">
+            {#each pagination.items as report (report.report_id)}
+              <div
+                class="rounded-[18px] p-3"
+                style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-3">
+                    <div
+                      class="flex flex-shrink-0 items-center justify-center rounded-full"
+                      style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                    >
+                      <span style="font-size: 12px; color: var(--text-secondary);">?</span>
                     </div>
-                    <div class="flex items-center gap-1.5 mt-1">
-                      <span
-                        class="rounded-full px-1.5 py-0.5"
-                        style="font-size: 10px; background: var(--surface-bg); color: var(--text-secondary); border: 1px solid var(--border-theme);"
-                        >{REPORT_REASON_LABEL[report.reason] ?? report.reason}</span
-                      >
-                      {#if report.description}
-                        <span style="font-size: 12px; color: var(--text-secondary);"
-                          >{report.description}</span
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
+                          >用户举报</span
                         >
-                      {/if}
+                        <span style="font-size: 12px; color: var(--text-secondary);">举报了</span>
+                        <span
+                          class="rounded-full px-1.5 py-0.5"
+                          style="font-size: 10px; background: var(--surface-bg); color: var(--text-primary); border: 1px solid var(--border-theme);"
+                          >{REPORT_TARGET_TYPE_LABEL[report.target_type] ??
+                            report.target_type}</span
+                        >
+                      </div>
+                      <div class="flex items-center gap-1.5 mt-1">
+                        <span
+                          class="rounded-full px-1.5 py-0.5"
+                          style="font-size: 10px; background: var(--surface-bg); color: var(--text-secondary); border: 1px solid var(--border-theme);"
+                          >{REPORT_REASON_LABEL[report.reason] ?? report.reason}</span
+                        >
+                        {#if report.description}
+                          <span style="font-size: 12px; color: var(--text-secondary);"
+                            >{report.description}</span
+                          >
+                        {/if}
+                      </div>
+                      <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
+                        {formatDateTime(report.created_at)}
+                      </p>
                     </div>
-                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
-                      {formatDateTime(report.created_at)}
-                    </p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="rounded-full px-2 py-0.5"
+                      style="font-size: 10px; font-weight: 500; {report.status === 'pending'
+                        ? 'background: var(--theme-warning); color: var(--text-on-accent);'
+                        : report.status === 'resolved'
+                          ? 'background: var(--theme-success); color: var(--text-on-accent);'
+                          : 'background: var(--border-theme); color: var(--text-secondary);'}"
+                      >{STATUS_TEXT[report.status] ?? report.status}</span
+                    >
+                    {#if report.status === 'pending'}
+                      <DropdownMenu.Root>
+                        <DropdownMenu.Trigger>
+                          {#snippet child({ props })}
+                            <button
+                              class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+                              style="width: 30px; height: 30px;"
+                              aria-label="更多操作"
+                              {...props}
+                            >
+                              <MoreVertical
+                                size={14}
+                                strokeWidth={1.5}
+                                color="var(--text-secondary)"
+                              />
+                            </button>
+                          {/snippet}
+                        </DropdownMenu.Trigger>
+                        <DropdownMenu.Content align="end">
+                          <DropdownMenu.Item>
+                            {#snippet child({ props })}
+                              <button
+                                style="display: flex; align-items: center; gap: 6px; font-size: 13px;"
+                                {...props}
+                                onclick={() => handleProcess(report.report_id, 'resolve')}
+                              >
+                                <Check size={14} strokeWidth={1.5} color="var(--theme-success)" />
+                                确认并处理
+                              </button>
+                            {/snippet}
+                          </DropdownMenu.Item>
+                          <DropdownMenu.Item>
+                            {#snippet child({ props })}
+                              <button
+                                style="display: flex; align-items: center; gap: 6px; font-size: 13px;"
+                                {...props}
+                                onclick={() => handleProcess(report.report_id, 'dismiss')}
+                              >
+                                <X size={14} strokeWidth={1.5} color="var(--theme-error)" />
+                                驳回举报
+                              </button>
+                            {/snippet}
+                          </DropdownMenu.Item>
+                        </DropdownMenu.Content>
+                      </DropdownMenu.Root>
+                    {/if}
                   </div>
                 </div>
-                <div class="flex items-center gap-2">
-                  <span
-                    class="rounded-full px-2 py-0.5"
-                    style="font-size: 10px; font-weight: 500; {report.status === 'pending'
-                      ? 'background: var(--theme-warning); color: var(--text-on-accent);'
-                      : report.status === 'resolved'
-                        ? 'background: var(--theme-success); color: var(--text-on-accent);'
-                        : 'background: var(--border-theme); color: var(--text-secondary);'}"
-                    >{STATUS_TEXT[report.status] ?? report.status}</span
-                  >
-                  {#if report.status === 'pending'}
-                    <DropdownMenu.Root>
-                      <DropdownMenu.Trigger>
-                        {#snippet child({ props })}
-                          <button
-                            class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-                            style="width: 30px; height: 30px;"
-                            aria-label="更多操作"
-                            {...props}
-                          >
-                            <MoreVertical
-                              size={14}
-                              strokeWidth={1.5}
-                              color="var(--text-secondary)"
-                            />
-                          </button>
-                        {/snippet}
-                      </DropdownMenu.Trigger>
-                      <DropdownMenu.Content align="end">
-                        <DropdownMenu.Item>
-                          {#snippet child({ props })}
-                            <button
-                              style="display: flex; align-items: center; gap: 6px; font-size: 13px;"
-                              {...props}
-                              onclick={() => handleProcess(report.report_id, 'resolve')}
-                            >
-                              <Check size={14} strokeWidth={1.5} color="var(--theme-success)" />
-                              确认并处理
-                            </button>
-                          {/snippet}
-                        </DropdownMenu.Item>
-                        <DropdownMenu.Item>
-                          {#snippet child({ props })}
-                            <button
-                              style="display: flex; align-items: center; gap: 6px; font-size: 13px;"
-                              {...props}
-                              onclick={() => handleProcess(report.report_id, 'dismiss')}
-                            >
-                              <X size={14} strokeWidth={1.5} color="var(--theme-error)" />
-                              驳回举报
-                            </button>
-                          {/snippet}
-                        </DropdownMenu.Item>
-                      </DropdownMenu.Content>
-                    </DropdownMenu.Root>
-                  {/if}
-                </div>
               </div>
-            </div>
-          {/each}
-        </div>
-        {#if pagination.hasMore}
-          <button
-            class="mt-4 w-full rounded-full py-2.5 outline-none"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
-            onclick={() => loadReports(false)}>加载更多</button
-          >
+            {/each}
+          </div>
+          {#if pagination.hasMore}
+            <button
+              class="mt-4 w-full rounded-full py-2.5 outline-none"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+              onclick={() => loadReports(false)}>加载更多</button
+            >
+          {/if}
         {/if}
-      {/if}
+      </div>
     </div>
   </div>
 </div>

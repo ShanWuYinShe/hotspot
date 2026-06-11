@@ -137,116 +137,118 @@
   <title>公告管理 - HotSpot 管理后台</title>
 </svelte:head>
 
-<div class="space-y-6">
-  <PageHeader title="公告管理">
-    {#snippet actions()}
-      <div class="flex gap-2">
-        <Button
-          variant="flat"
-          size="sm"
-          onclick={() => loadAnnouncements()}
-          disabled={pagination.loading}
-        >
-          <RefreshCw
-            size={14}
-            strokeWidth={1.75}
-            class={pagination.loading ? 'animate-spin mr-2' : 'mr-2'}
-          />
-          刷新
-        </Button>
-        <Button variant="flat" size="sm" onclick={openCreateDialog}>
-          <Plus size={14} strokeWidth={1.75} class="mr-2" />
-          发布公告
-        </Button>
-      </div>
-    {/snippet}
-  </PageHeader>
-
-  <!-- Announcements list -->
-  <div
-    class="rounded-[22px] p-5"
-    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-  >
-    <!-- Section header -->
-    <div class="mb-4 flex items-center gap-2">
-      <Megaphone size={18} strokeWidth={1.75} style="color: var(--brand);" />
-      <span style="font-size: 16px; font-weight: 600; color: var(--text-primary);">公告列表</span>
-    </div>
-
-    {#if pagination.loading && pagination.items.length === 0}
-      <div class="space-y-4">
-        {#each Array(3) as _, i (i)}
-          <div
-            class="rounded-[18px] p-4"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-active);"
+<div class="page-pad">
+  <div class="page-shell page-shell--wide space-y-6">
+    <PageHeader title="公告管理">
+      {#snippet actions()}
+        <div class="flex gap-2">
+          <Button
+            variant="flat"
+            size="sm"
+            onclick={() => loadAnnouncements()}
+            disabled={pagination.loading}
           >
-            <div
-              style="width: 48px; height: 16px; background: var(--border-theme); border-radius: 4px; margin-bottom: 8px;"
-            ></div>
-            <div
-              style="width: 100%; height: 12px; background: var(--border-theme); border-radius: 4px; margin-bottom: 6px;"
-            ></div>
-            <div
-              style="width: 75%; height: 12px; background: var(--border-theme); border-radius: 4px;"
-            ></div>
-          </div>
-        {/each}
+            <RefreshCw
+              size={14}
+              strokeWidth={1.75}
+              class={pagination.loading ? 'animate-spin mr-2' : 'mr-2'}
+            />
+            刷新
+          </Button>
+          <Button variant="flat" size="sm" onclick={openCreateDialog}>
+            <Plus size={14} strokeWidth={1.75} class="mr-2" />
+            发布公告
+          </Button>
+        </div>
+      {/snippet}
+    </PageHeader>
+
+    <!-- Announcements list -->
+    <div
+      class="rounded-[22px] p-5"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+    >
+      <!-- Section header -->
+      <div class="mb-4 flex items-center gap-2">
+        <Megaphone size={18} strokeWidth={1.75} style="color: var(--brand);" />
+        <span style="font-size: 16px; font-weight: 600; color: var(--text-primary);">公告列表</span>
       </div>
-    {:else if pagination.items.length === 0}
-      <div class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
-        暂无公告
-      </div>
-    {:else}
-      <div class="space-y-4">
-        {#each pagination.items as announcement (announcement.announcement_id)}
-          {@const badge = SEVERITY_BADGE[announcement.severity]}
-          <div
-            class="rounded-[18px] p-4"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-active);"
-          >
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <span style="font-size: 15px; font-weight: 600; color: var(--text-primary);"
-                    >{announcement.title}</span
-                  >
-                  <span
-                    class="rounded-full px-2.5 py-0.5"
-                    style="font-size: 11px; font-weight: 500; color: {badge.color}; background: {badge.color}15; border: 1px solid {badge.color}30;"
-                  >
-                    {badge.text}
-                  </span>
-                </div>
-                <p
-                  class="mt-2 whitespace-pre-wrap"
-                  style="font-size: 13px; color: var(--text-secondary);"
-                >
-                  {announcement.content}
-                </p>
-                <p class="mt-2" style="font-size: 11px; color: var(--text-secondary);">
-                  发布于 {formatDateTime(announcement.created_at)}
-                </p>
-              </div>
-              <button
-                type="button"
-                class="flex items-center justify-center rounded-full outline-none transition-opacity hover:opacity-70"
-                style="width: 36px; height: 36px; box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-                onclick={() => requestDelete(announcement.announcement_id)}
-                aria-label="删除公告"
-              >
-                <Trash2 size={14} strokeWidth={1.75} style="color: var(--theme-error);" />
-              </button>
+
+      {#if pagination.loading && pagination.items.length === 0}
+        <div class="space-y-4">
+          {#each Array(3) as _, i (i)}
+            <div
+              class="rounded-[18px] p-4"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-active);"
+            >
+              <div
+                style="width: 48px; height: 16px; background: var(--border-theme); border-radius: 4px; margin-bottom: 8px;"
+              ></div>
+              <div
+                style="width: 100%; height: 12px; background: var(--border-theme); border-radius: 4px; margin-bottom: 6px;"
+              ></div>
+              <div
+                style="width: 75%; height: 12px; background: var(--border-theme); border-radius: 4px;"
+              ></div>
             </div>
-          </div>
-        {/each}
-      </div>
+          {/each}
+        </div>
+      {:else if pagination.items.length === 0}
+        <div class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
+          暂无公告
+        </div>
+      {:else}
+        <div class="space-y-4">
+          {#each pagination.items as announcement (announcement.announcement_id)}
+            {@const badge = SEVERITY_BADGE[announcement.severity]}
+            <div
+              class="rounded-[18px] p-4"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-active);"
+            >
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2">
+                    <span style="font-size: 15px; font-weight: 600; color: var(--text-primary);"
+                      >{announcement.title}</span
+                    >
+                    <span
+                      class="rounded-full px-2.5 py-0.5"
+                      style="font-size: 11px; font-weight: 500; color: {badge.color}; background: {badge.color}15; border: 1px solid {badge.color}30;"
+                    >
+                      {badge.text}
+                    </span>
+                  </div>
+                  <p
+                    class="mt-2 whitespace-pre-wrap"
+                    style="font-size: 13px; color: var(--text-secondary);"
+                  >
+                    {announcement.content}
+                  </p>
+                  <p class="mt-2" style="font-size: 11px; color: var(--text-secondary);">
+                    发布于 {formatDateTime(announcement.created_at)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="flex items-center justify-center rounded-full outline-none transition-opacity hover:opacity-70"
+                  style="width: 36px; height: 36px; box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                  onclick={() => requestDelete(announcement.announcement_id)}
+                  aria-label="删除公告"
+                >
+                  <Trash2 size={14} strokeWidth={1.75} style="color: var(--theme-error);" />
+                </button>
+              </div>
+            </div>
+          {/each}
+        </div>
 
-      <LoadMoreButton
-        loading={pagination.loading}
-        hasMore={pagination.hasMore}
-        onLoadMore={() => loadAnnouncements(false)}
-      />
-    {/if}
+        <LoadMoreButton
+          loading={pagination.loading}
+          hasMore={pagination.hasMore}
+          onLoadMore={() => loadAnnouncements(false)}
+        />
+      {/if}
+    </div>
   </div>
 </div>
 

@@ -163,194 +163,200 @@
   <title>权限管理 - HotSpot 管理后台</title>
 </svelte:head>
 
-<div class="space-y-6">
-  <div class="flex items-center justify-between">
-    <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">权限管理</h1>
-    <div class="flex gap-2">
-      <button
-        class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
-        onclick={loadData}
-        disabled={isLoading}
-      >
-        <RefreshCw size={14} strokeWidth={1.5} class={isLoading ? 'animate-spin' : ''} />
-        刷新
-      </button>
-      <button
-        class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-        style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
-        onclick={openCreateRoleDialog}
-      >
-        <Plus size={14} strokeWidth={1.5} />
-        创建角色
-      </button>
-    </div>
-  </div>
-
-  <div class="grid gap-6 lg:grid-cols-2">
-    <!-- Roles -->
-    <div
-      class="rounded-[22px] overflow-hidden"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-    >
-      <div
-        class="flex items-center gap-2 px-4 py-3"
-        style="border-bottom: 1px solid var(--border-theme);"
-      >
-        <Shield size={16} strokeWidth={1.5} color="var(--brand)" />
-        <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);">角色列表</span>
+<div class="page-pad">
+  <div class="page-shell page-shell--wide space-y-6">
+    <div class="flex items-center justify-between">
+      <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">权限管理</h1>
+      <div class="flex gap-2">
+        <button
+          class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+          onclick={loadData}
+          disabled={isLoading}
+        >
+          <RefreshCw size={14} strokeWidth={1.5} class={isLoading ? 'animate-spin' : ''} />
+          刷新
+        </button>
+        <button
+          class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+          style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
+          onclick={openCreateRoleDialog}
+        >
+          <Plus size={14} strokeWidth={1.5} />
+          创建角色
+        </button>
       </div>
-      <div class="p-4">
-        {#if isLoading}
-          <div class="space-y-3">
-            {#each Array(4) as _, i (i)}
-              <div
-                class="rounded-[18px] p-3"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-              >
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-2">
+      <!-- Roles -->
+      <div
+        class="rounded-[22px] overflow-hidden"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      >
+        <div
+          class="flex items-center gap-2 px-4 py-3"
+          style="border-bottom: 1px solid var(--border-theme);"
+        >
+          <Shield size={16} strokeWidth={1.5} color="var(--brand)" />
+          <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+            >角色列表</span
+          >
+        </div>
+        <div class="p-4">
+          {#if isLoading}
+            <div class="space-y-3">
+              {#each Array(4) as _, i (i)}
+                <div
+                  class="rounded-[18px] p-3"
+                  style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                >
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="rounded"
+                      style="width: 36px; height: 36px; background: var(--border-theme);"
+                    ></div>
+                    <div class="flex-1 space-y-1.5">
+                      <div
+                        class="rounded"
+                        style="height: 12px; width: 80px; background: var(--border-theme);"
+                      ></div>
+                      <div
+                        class="rounded"
+                        style="height: 10px; width: 140px; background: var(--border-theme);"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {:else if roles.length === 0}
+            <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
+              暂无角色
+            </p>
+          {:else}
+            <div class="space-y-2">
+              {#each roles as role (role.role_id)}
+                <div
+                  class="flex items-center gap-3 rounded-[18px] p-3"
+                  style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                >
+                  <div
+                    class="flex flex-shrink-0 items-center justify-center rounded-full"
+                    style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                  >
+                    <Shield size={15} strokeWidth={1.5} color="var(--brand)" />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
+                      {role.name}
+                    </p>
+                    {#if role.description}
+                      <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+                        {role.description}
+                      </p>
+                    {/if}
+                    <div class="flex items-center gap-1 mt-1">
+                      <Key size={11} strokeWidth={1.5} color="var(--text-secondary)" />
+                      <span style="font-size: 11px; color: var(--text-secondary);"
+                        >{role.permissions?.length || 0} 权限</span
+                      >
+                    </div>
+                  </div>
+                  <div class="flex gap-1">
+                    <button
+                      class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+                      style="width: 30px; height: 30px;"
+                      onclick={() => openEditRoleDialog(role)}
+                      aria-label="编辑角色"
+                    >
+                      <Edit size={13} strokeWidth={1.5} color="var(--text-secondary)" />
+                    </button>
+                    <button
+                      class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+                      style="width: 30px; height: 30px;"
+                      onclick={() => requestDeleteRole(role.role_id)}
+                      aria-label="删除角色"
+                    >
+                      <Trash2 size={13} strokeWidth={1.5} color="var(--theme-error)" />
+                    </button>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      </div>
+
+      <!-- Permissions -->
+      <div
+        class="rounded-[22px] overflow-hidden"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      >
+        <div
+          class="flex items-center gap-2 px-4 py-3"
+          style="border-bottom: 1px solid var(--border-theme);"
+        >
+          <Key size={16} strokeWidth={1.5} color="var(--brand)" />
+          <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+            >权限列表</span
+          >
+        </div>
+        <div class="p-4">
+          {#if isLoading}
+            <div class="space-y-2">
+              {#each Array(6) as _, i (i)}
                 <div class="flex items-center gap-3">
                   <div
                     class="rounded"
-                    style="width: 36px; height: 36px; background: var(--border-theme);"
+                    style="width: 14px; height: 14px; background: var(--border-theme);"
                   ></div>
-                  <div class="flex-1 space-y-1.5">
-                    <div
-                      class="rounded"
-                      style="height: 12px; width: 80px; background: var(--border-theme);"
-                    ></div>
-                    <div
-                      class="rounded"
-                      style="height: 10px; width: 140px; background: var(--border-theme);"
-                    ></div>
-                  </div>
+                  <div
+                    class="rounded"
+                    style="height: 12px; width: 120px; background: var(--border-theme);"
+                  ></div>
                 </div>
-              </div>
-            {/each}
-          </div>
-        {:else if roles.length === 0}
-          <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
-            暂无角色
-          </p>
-        {:else}
-          <div class="space-y-2">
-            {#each roles as role (role.role_id)}
-              <div
-                class="flex items-center gap-3 rounded-[18px] p-3"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-              >
-                <div
-                  class="flex flex-shrink-0 items-center justify-center rounded-full"
-                  style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-                >
-                  <Shield size={15} strokeWidth={1.5} color="var(--brand)" />
-                </div>
-                <div class="min-w-0 flex-1">
-                  <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
-                    {role.name}
+              {/each}
+            </div>
+          {:else if permissions.length === 0}
+            <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
+              暂无权限数据
+            </p>
+          {:else}
+            <div class="space-y-4">
+              {#each [...groupPermissions(permissions)] as [category, perms] (category)}
+                <div>
+                  <p
+                    class="uppercase"
+                    style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 6px;"
+                  >
+                    {category}
                   </p>
-                  {#if role.description}
-                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
-                      {role.description}
-                    </p>
-                  {/if}
-                  <div class="flex items-center gap-1 mt-1">
-                    <Key size={11} strokeWidth={1.5} color="var(--text-secondary)" />
-                    <span style="font-size: 11px; color: var(--text-secondary);"
-                      >{role.permissions?.length || 0} 权限</span
-                    >
+                  <div class="space-y-1">
+                    {#each perms as perm (perm.key)}
+                      <div
+                        class="flex items-center gap-2 rounded-[14px] px-2 py-1.5"
+                        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                      >
+                        <Key size={13} strokeWidth={1.5} color="var(--text-secondary)" />
+                        <div class="flex-1">
+                          <p style="font-size: 12px; font-weight: 500; color: var(--text-primary);">
+                            {perm.key}
+                          </p>
+                          {#if perm.description}
+                            <p style="font-size: 11px; color: var(--text-secondary);">
+                              {perm.description}
+                            </p>
+                          {/if}
+                        </div>
+                      </div>
+                    {/each}
                   </div>
                 </div>
-                <div class="flex gap-1">
-                  <button
-                    class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-                    style="width: 30px; height: 30px;"
-                    onclick={() => openEditRoleDialog(role)}
-                    aria-label="编辑角色"
-                  >
-                    <Edit size={13} strokeWidth={1.5} color="var(--text-secondary)" />
-                  </button>
-                  <button
-                    class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-                    style="width: 30px; height: 30px;"
-                    onclick={() => requestDeleteRole(role.role_id)}
-                    aria-label="删除角色"
-                  >
-                    <Trash2 size={13} strokeWidth={1.5} color="var(--theme-error)" />
-                  </button>
-                </div>
-              </div>
-            {/each}
-          </div>
-        {/if}
-      </div>
-    </div>
-
-    <!-- Permissions -->
-    <div
-      class="rounded-[22px] overflow-hidden"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-    >
-      <div
-        class="flex items-center gap-2 px-4 py-3"
-        style="border-bottom: 1px solid var(--border-theme);"
-      >
-        <Key size={16} strokeWidth={1.5} color="var(--brand)" />
-        <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);">权限列表</span>
-      </div>
-      <div class="p-4">
-        {#if isLoading}
-          <div class="space-y-2">
-            {#each Array(6) as _, i (i)}
-              <div class="flex items-center gap-3">
-                <div
-                  class="rounded"
-                  style="width: 14px; height: 14px; background: var(--border-theme);"
-                ></div>
-                <div
-                  class="rounded"
-                  style="height: 12px; width: 120px; background: var(--border-theme);"
-                ></div>
-              </div>
-            {/each}
-          </div>
-        {:else if permissions.length === 0}
-          <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
-            暂无权限数据
-          </p>
-        {:else}
-          <div class="space-y-4">
-            {#each [...groupPermissions(permissions)] as [category, perms] (category)}
-              <div>
-                <p
-                  class="uppercase"
-                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 6px;"
-                >
-                  {category}
-                </p>
-                <div class="space-y-1">
-                  {#each perms as perm (perm.key)}
-                    <div
-                      class="flex items-center gap-2 rounded-[14px] px-2 py-1.5"
-                      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-                    >
-                      <Key size={13} strokeWidth={1.5} color="var(--text-secondary)" />
-                      <div class="flex-1">
-                        <p style="font-size: 12px; font-weight: 500; color: var(--text-primary);">
-                          {perm.key}
-                        </p>
-                        {#if perm.description}
-                          <p style="font-size: 11px; color: var(--text-secondary);">
-                            {perm.description}
-                          </p>
-                        {/if}
-                      </div>
-                    </div>
-                  {/each}
-                </div>
-              </div>
-            {/each}
-          </div>
-        {/if}
+              {/each}
+            </div>
+          {/if}
+        </div>
       </div>
     </div>
   </div>

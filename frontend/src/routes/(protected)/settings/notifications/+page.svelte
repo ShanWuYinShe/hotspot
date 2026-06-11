@@ -126,158 +126,160 @@
   <title>通知设置 - HotSpot</title>
 </svelte:head>
 
-<div class="mx-auto max-w-3xl space-y-5">
-  <PageHeader
-    title="通知设置"
-    description="管理通知偏好、未读状态和通知中心入口"
-    backHref="/settings"
-    backLabel="返回设置"
-  />
+<div class="page-pad">
+  <div class="page-shell page-shell--form space-y-5">
+    <PageHeader
+      title="通知设置"
+      description="管理通知偏好、未读状态和通知中心入口"
+      backHref="/settings"
+      backLabel="返回设置"
+    />
 
-  <!-- Notification Status Card -->
-  <div
-    class="rounded-[22px] p-5"
-    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-  >
-    <div class="mb-4 flex items-center gap-2">
-      <div
-        class="flex items-center justify-center rounded-full"
-        style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-      >
-        <Bell size={15} strokeWidth={1.5} color="var(--brand)" />
-      </div>
-      <div>
-        <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">通知状态</p>
-        <p style="font-size: 12px; color: var(--text-secondary);">
-          快速查看当前未读情况，并进入通知中心处理通知。
-        </p>
-      </div>
-    </div>
-
+    <!-- Notification Status Card -->
     <div
-      class="flex items-center justify-between rounded-[18px] px-4 py-4"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+      class="rounded-[22px] p-5"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
-      <div>
-        <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">当前未读通知</p>
-        <p style="font-size: 12px; color: var(--text-secondary);">
-          未读数量会和通知下拉、通知列表保持一致
-        </p>
-      </div>
-      <div style="font-size: 24px; font-weight: 600; color: var(--brand);" class="tabular-nums">
-        {notificationStore.unreadCount}
-      </div>
-    </div>
-
-    <div class="mt-4 flex flex-col gap-3 sm:flex-row">
-      <button
-        class="flex h-11 flex-1 items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90"
-        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
-        onclick={() => goto('/notifications')}
-      >
-        <ExternalLink size={16} class="mr-2" />
-        进入通知中心
-      </button>
-      <button
-        class="flex h-11 flex-1 items-center justify-center rounded-[18px] text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-primary);"
-        onclick={markAllRead}
-        disabled={isMarkingAllRead || notificationStore.unreadCount === 0}
-      >
-        {#if isMarkingAllRead}
-          <Loader2 size={16} class="mr-2 animate-spin" />
-        {:else}
-          <CheckCheck size={16} class="mr-2" />
-        {/if}
-        全部标记为已读
-      </button>
-    </div>
-  </div>
-
-  <!-- Preference Explanation Card -->
-  <div
-    class="rounded-[22px] p-5"
-    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-  >
-    <div class="mb-3">
-      <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">偏好说明</p>
-      <p style="font-size: 12px; color: var(--text-secondary);">
-        当前仓库尚未接入服务端通知偏好协议，所以这里先用本地持久化保存一个与 NotificationType
-        对齐的偏好模型。
-      </p>
-    </div>
-    <div
-      class="rounded-[18px] px-4 py-3"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-    >
-      <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
-        这些开关用于保留你在当前浏览器的通知偏好，并已按真实 NotificationType
-        存储，后续若接入服务端协议，可直接映射到服务端字段。真正收到的通知仍以服务端与 WebSocket
-        推送为准。
-      </p>
-    </div>
-  </div>
-
-  <!-- Notification Preferences Card -->
-  <div
-    class="rounded-[22px] p-5"
-    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-  >
-    <div class="mb-4">
-      <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">
-        当前浏览器通知偏好
-      </p>
-      <p style="font-size: 12px; color: var(--text-secondary);">
-        本页设置仅保存在当前浏览器，用于保留你的本地通知偏好；不会影响其他设备。
-      </p>
-    </div>
-
-    <div class="space-y-3">
-      {#each preferenceItems as item (item.key)}
+      <div class="mb-4 flex items-center gap-2">
         <div
-          class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+          class="flex items-center justify-center rounded-full"
+          style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
         >
-          <div>
-            <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
-              {item.title}
-            </p>
-            <p style="font-size: 12px; color: var(--text-secondary);">{item.description}</p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isGroupEnabled(item.key)}
-            aria-label={item.title}
-            class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
-            style={isGroupEnabled(item.key)
-              ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
-              : 'background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);'}
-            onclick={() => togglePreference(item.key, !isGroupEnabled(item.key))}
-          >
-            <span
-              class="block h-5 w-5 rounded-full transition-transform"
-              style="background: {isGroupEnabled(item.key)
-                ? 'white'
-                : 'var(--text-secondary)'}; transform: translateX({isGroupEnabled(item.key)
-                ? '22px'
-                : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
-            ></span>
-          </button>
+          <Bell size={15} strokeWidth={1.5} color="var(--brand)" />
         </div>
-      {/each}
+        <div>
+          <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">通知状态</p>
+          <p style="font-size: 12px; color: var(--text-secondary);">
+            快速查看当前未读情况，并进入通知中心处理通知。
+          </p>
+        </div>
+      </div>
+
+      <div
+        class="flex items-center justify-between rounded-[18px] px-4 py-4"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+      >
+        <div>
+          <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">当前未读通知</p>
+          <p style="font-size: 12px; color: var(--text-secondary);">
+            未读数量会和通知下拉、通知列表保持一致
+          </p>
+        </div>
+        <div style="font-size: 24px; font-weight: 600; color: var(--brand);" class="tabular-nums">
+          {notificationStore.unreadCount}
+        </div>
+      </div>
+
+      <div class="mt-4 flex flex-col gap-3 sm:flex-row">
+        <button
+          class="flex h-11 flex-1 items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90"
+          style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+          onclick={() => goto('/notifications')}
+        >
+          <ExternalLink size={16} class="mr-2" />
+          进入通知中心
+        </button>
+        <button
+          class="flex h-11 flex-1 items-center justify-center rounded-[18px] text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-primary);"
+          onclick={markAllRead}
+          disabled={isMarkingAllRead || notificationStore.unreadCount === 0}
+        >
+          {#if isMarkingAllRead}
+            <Loader2 size={16} class="mr-2 animate-spin" />
+          {:else}
+            <CheckCheck size={16} class="mr-2" />
+          {/if}
+          全部标记为已读
+        </button>
+      </div>
     </div>
 
-    <button
-      class="mt-4 flex h-11 w-full items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
-      onclick={savePreferences}
-      disabled={isSaving}
+    <!-- Preference Explanation Card -->
+    <div
+      class="rounded-[22px] p-5"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
-      {#if isSaving}
-        <Loader2 size={16} class="mr-2 animate-spin" />
-      {/if}
-      保存通知偏好
-    </button>
+      <div class="mb-3">
+        <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">偏好说明</p>
+        <p style="font-size: 12px; color: var(--text-secondary);">
+          当前仓库尚未接入服务端通知偏好协议，所以这里先用本地持久化保存一个与 NotificationType
+          对齐的偏好模型。
+        </p>
+      </div>
+      <div
+        class="rounded-[18px] px-4 py-3"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+      >
+        <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+          这些开关用于保留你在当前浏览器的通知偏好，并已按真实 NotificationType
+          存储，后续若接入服务端协议，可直接映射到服务端字段。真正收到的通知仍以服务端与 WebSocket
+          推送为准。
+        </p>
+      </div>
+    </div>
+
+    <!-- Notification Preferences Card -->
+    <div
+      class="rounded-[22px] p-5"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+    >
+      <div class="mb-4">
+        <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">
+          当前浏览器通知偏好
+        </p>
+        <p style="font-size: 12px; color: var(--text-secondary);">
+          本页设置仅保存在当前浏览器，用于保留你的本地通知偏好；不会影响其他设备。
+        </p>
+      </div>
+
+      <div class="space-y-3">
+        {#each preferenceItems as item (item.key)}
+          <div
+            class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+          >
+            <div>
+              <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+                {item.title}
+              </p>
+              <p style="font-size: 12px; color: var(--text-secondary);">{item.description}</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isGroupEnabled(item.key)}
+              aria-label={item.title}
+              class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
+              style={isGroupEnabled(item.key)
+                ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
+                : 'background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);'}
+              onclick={() => togglePreference(item.key, !isGroupEnabled(item.key))}
+            >
+              <span
+                class="block h-5 w-5 rounded-full transition-transform"
+                style="background: {isGroupEnabled(item.key)
+                  ? 'white'
+                  : 'var(--text-secondary)'}; transform: translateX({isGroupEnabled(item.key)
+                  ? '22px'
+                  : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
+              ></span>
+            </button>
+          </div>
+        {/each}
+      </div>
+
+      <button
+        class="mt-4 flex h-11 w-full items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+        onclick={savePreferences}
+        disabled={isSaving}
+      >
+        {#if isSaving}
+          <Loader2 size={16} class="mr-2 animate-spin" />
+        {/if}
+        保存通知偏好
+      </button>
+    </div>
   </div>
 </div>

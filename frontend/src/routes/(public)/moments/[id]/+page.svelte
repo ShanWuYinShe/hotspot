@@ -208,332 +208,336 @@
   <title>{moment?.description?.slice(0, 30) ?? '瞬间详情'} - HotSpot</title>
 </svelte:head>
 
-<div class="mx-auto max-w-2xl space-y-6">
-  <!-- Header -->
-  <div
-    class="sticky top-0 z-10 flex items-center gap-4 px-4 py-3"
-    style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
-  >
-    <button
-      class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-      style="width: 36px; height: 36px;"
-      onclick={handleBackClick}
-      aria-label="返回"
-    >
-      <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-    </button>
-    <h1 style="font-size: 16px; color: var(--text-primary);">瞬间详情</h1>
-    {#if isOwner}
-      <div class="ml-auto">
-        <button
-          class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-          style="width: 36px; height: 36px;"
-          onclick={() => (showEditModal = true)}
-          aria-label="编辑"
-        >
-          <Pencil size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-        </button>
-      </div>
-    {/if}
-  </div>
-
-  {#if isLoading}
+<div class="page-pad">
+  <div class="page-shell page-shell--narrow space-y-6">
+    <!-- Header -->
     <div
-      class="rounded-[22px] p-6 space-y-4"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      class="sticky top-0 z-10 flex items-center gap-4 px-4 py-3"
+      style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <div class="flex items-center gap-3">
-        <div
-          class="rounded-full"
-          style="width: 48px; height: 48px; background: var(--border-theme);"
-        ></div>
-        <div class="space-y-2">
-          <div
-            class="rounded"
-            style="width: 96px; height: 14px; background: var(--border-theme);"
-          ></div>
-          <div
-            class="rounded"
-            style="width: 64px; height: 12px; background: var(--border-theme);"
-          ></div>
-        </div>
-      </div>
-      <div
-        class="rounded"
-        style="width: 100%; height: 80px; background: var(--border-theme);"
-      ></div>
-      <div
-        class="rounded"
-        style="width: 100%; height: 256px; background: var(--border-theme);"
-      ></div>
-    </div>
-  {:else if moment}
-    <div
-      class="rounded-[22px] p-6"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-    >
-      <!-- Author -->
-      <a href="/users/{moment.user.user_id}" class="flex items-center gap-3">
-        <div
-          class="overflow-hidden rounded-full"
-          style="width: 44px; height: 44px; border: 2px solid var(--brand);"
-        >
-          <img
-            src={moment.user.avatar_url}
-            alt={moment.user.nickname}
-            class="h-full w-full object-cover"
-          />
-        </div>
-        <div>
-          <p style="font-weight: 500; font-size: 15px; color: var(--text-primary);">
-            {moment.user.nickname}
-          </p>
-          <div
-            class="flex items-center gap-2"
-            style="font-size: 13px; color: var(--text-secondary);"
-          >
-            <span>{formatTime(moment.created_at)}</span>
-            {#if moment.location}
-              <span class="flex items-center gap-0.5">
-                <MapPin size={12} />
-                {moment.location.location_name}
-              </span>
-            {/if}
-          </div>
-        </div>
-      </a>
-
-      <!-- Content -->
-      <div class="mt-4 space-y-4">
-        <p class="whitespace-pre-wrap" style="color: var(--text-primary);">{moment.description}</p>
-
-        {#if moment.images && moment.images.length > 0}
-          <div class="grid gap-2 {moment.images.length === 1 ? '' : 'grid-cols-2'}">
-            {#each moment.images as image, i (image.url)}
-              <div class="relative">
-                <img
-                  src={image.url}
-                  alt="图片 {i + 1}"
-                  class="w-full rounded-[14px]"
-                  style="height: clamp(220px, 38vw, 380px); object-fit: cover;"
-                  loading="lazy"
-                />
-                {#if i === 0 && moment.tags && moment.tags.length > 0}
-                  <div
-                    class="absolute left-3 top-3 rounded-full px-2.5 py-0.5"
-                    style="background: var(--brand); box-shadow: 0 2px 8px var(--glow);"
-                  >
-                    <span style="font-size: 10px; color: white;">#{moment.tags[0]}</span>
-                  </div>
-                {/if}
-              </div>
-            {/each}
-          </div>
-        {/if}
-
-        {#if moment.tags && moment.tags.length > 1}
-          <div class="flex flex-wrap gap-2">
-            {#each moment.tags.slice(1) as tag (tag)}
-              <span
-                class="rounded-full px-2.5 py-1"
-                style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-              >
-                #{tag}
-              </span>
-            {/each}
-          </div>
-        {/if}
-      </div>
-
-      <!-- Actions -->
-      <div
-        class="mt-4 flex items-center justify-between"
-        style="border-top: 1px solid var(--border-theme); padding-top: 16px;"
+      <button
+        class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+        style="width: 36px; height: 36px;"
+        onclick={handleBackClick}
+        aria-label="返回"
       >
-        <div class="flex gap-2">
+        <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
+      </button>
+      <h1 style="font-size: 16px; color: var(--text-primary);">瞬间详情</h1>
+      {#if isOwner}
+        <div class="ml-auto">
           <button
-            class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="color: {isLiked ? 'var(--brand)' : 'var(--text-secondary)'};"
-            onclick={handleLike}
+            class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+            style="width: 36px; height: 36px;"
+            onclick={() => (showEditModal = true)}
+            aria-label="编辑"
           >
-            <Heart size={19} class={isLiked ? 'fill-current' : ''} />
-            <span style="font-size: 13px;">{likesCount}</span>
-          </button>
-          <button
-            class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="color: var(--text-secondary);"
-          >
-            <MessageCircle size={19} />
-            <span style="font-size: 13px;">{commentsCount}</span>
+            <Pencil size={15} strokeWidth={1.5} color="var(--text-secondary)" />
           </button>
         </div>
-        <div class="flex gap-2">
-          <button
-            class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="color: {isFavorited ? 'var(--theme-warning)' : 'var(--text-secondary)'};"
-            onclick={handleFavorite}
-          >
-            <Bookmark size={19} class={isFavorited ? 'fill-current' : ''} />
-          </button>
-          <button
-            class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="color: var(--text-secondary);"
-          >
-            <Share2 size={19} />
-          </button>
-        </div>
-      </div>
+      {/if}
     </div>
 
-    <!-- Comment input -->
-    {#if authStore.isAuthenticated}
+    {#if isLoading}
       <div
-        class="rounded-[22px] p-4"
+        class="rounded-[22px] p-6 space-y-4"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <div class="flex items-center gap-3">
-          <div class="overflow-hidden rounded-full" style="width: 34px; height: 34px;">
+          <div
+            class="rounded-full"
+            style="width: 48px; height: 48px; background: var(--border-theme);"
+          ></div>
+          <div class="space-y-2">
+            <div
+              class="rounded"
+              style="width: 96px; height: 14px; background: var(--border-theme);"
+            ></div>
+            <div
+              class="rounded"
+              style="width: 64px; height: 12px; background: var(--border-theme);"
+            ></div>
+          </div>
+        </div>
+        <div
+          class="rounded"
+          style="width: 100%; height: 80px; background: var(--border-theme);"
+        ></div>
+        <div
+          class="rounded"
+          style="width: 100%; height: 256px; background: var(--border-theme);"
+        ></div>
+      </div>
+    {:else if moment}
+      <div
+        class="rounded-[22px] p-6"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      >
+        <!-- Author -->
+        <a href="/users/{moment.user.user_id}" class="flex items-center gap-3">
+          <div
+            class="overflow-hidden rounded-full"
+            style="width: 44px; height: 44px; border: 2px solid var(--brand);"
+          >
             <img
-              src={authStore.currentAccount?.avatar_url || ''}
-              alt=""
+              src={moment.user.avatar_url}
+              alt={moment.user.nickname}
               class="h-full w-full object-cover"
             />
           </div>
-          <div
-            class="input-surface flex flex-1 items-center"
-            style="height: 38px; border-radius: 9999px;"
-          >
-            <input
-              type="text"
-              {@attach useKeyboardFocus()}
-              placeholder="写下你的评论..."
-              bind:value={commentText}
-              disabled={isSubmitting}
-              class="bg-transparent flex-1 outline-none text-sm"
-              style="color: var(--text-primary);"
-            />
-            <button
-              class="ml-2 mr-1 flex items-center justify-center rounded-full outline-none"
-              style="width: 36px; height: 36px; background: var(--brand); box-shadow: 0 2px 8px var(--glow);"
-              onclick={submitComment}
-              disabled={!commentText.trim() || isSubmitting}
+          <div>
+            <p style="font-weight: 500; font-size: 15px; color: var(--text-primary);">
+              {moment.user.nickname}
+            </p>
+            <div
+              class="flex items-center gap-2"
+              style="font-size: 13px; color: var(--text-secondary);"
             >
-              {#if isSubmitting}
-                <Loader2 size={14} color="var(--text-on-accent)" class="animate-spin" />
-              {:else}
-                <Send size={14} color="var(--text-on-accent)" />
+              <span>{formatTime(moment.created_at)}</span>
+              {#if moment.location}
+                <span class="flex items-center gap-0.5">
+                  <MapPin size={12} />
+                  {moment.location.location_name}
+                </span>
               {/if}
+            </div>
+          </div>
+        </a>
+
+        <!-- Content -->
+        <div class="mt-4 space-y-4">
+          <p class="whitespace-pre-wrap" style="color: var(--text-primary);">
+            {moment.description}
+          </p>
+
+          {#if moment.images && moment.images.length > 0}
+            <div class="grid gap-2 {moment.images.length === 1 ? '' : 'grid-cols-2'}">
+              {#each moment.images as image, i (image.url)}
+                <div class="relative">
+                  <img
+                    src={image.url}
+                    alt="图片 {i + 1}"
+                    class="w-full rounded-[14px]"
+                    style="height: clamp(220px, 38vw, 380px); object-fit: cover;"
+                    loading="lazy"
+                  />
+                  {#if i === 0 && moment.tags && moment.tags.length > 0}
+                    <div
+                      class="absolute left-3 top-3 rounded-full px-2.5 py-0.5"
+                      style="background: var(--brand); box-shadow: 0 2px 8px var(--glow);"
+                    >
+                      <span style="font-size: 10px; color: white;">#{moment.tags[0]}</span>
+                    </div>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          {/if}
+
+          {#if moment.tags && moment.tags.length > 1}
+            <div class="flex flex-wrap gap-2">
+              {#each moment.tags.slice(1) as tag (tag)}
+                <span
+                  class="rounded-full px-2.5 py-1"
+                  style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                >
+                  #{tag}
+                </span>
+              {/each}
+            </div>
+          {/if}
+        </div>
+
+        <!-- Actions -->
+        <div
+          class="mt-4 flex items-center justify-between"
+          style="border-top: 1px solid var(--border-theme); padding-top: 16px;"
+        >
+          <div class="flex gap-2">
+            <button
+              class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+              style="color: {isLiked ? 'var(--brand)' : 'var(--text-secondary)'};"
+              onclick={handleLike}
+            >
+              <Heart size={19} class={isLiked ? 'fill-current' : ''} />
+              <span style="font-size: 13px;">{likesCount}</span>
+            </button>
+            <button
+              class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+              style="color: var(--text-secondary);"
+            >
+              <MessageCircle size={19} />
+              <span style="font-size: 13px;">{commentsCount}</span>
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <button
+              class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+              style="color: {isFavorited ? 'var(--theme-warning)' : 'var(--text-secondary)'};"
+              onclick={handleFavorite}
+            >
+              <Bookmark size={19} class={isFavorited ? 'fill-current' : ''} />
+            </button>
+            <button
+              class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+              style="color: var(--text-secondary);"
+            >
+              <Share2 size={19} />
             </button>
           </div>
         </div>
       </div>
-    {/if}
 
-    <!-- Comments -->
-    <div
-      class="rounded-[22px] p-6"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-    >
-      <p
-        class="uppercase"
-        style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 16px;"
-      >
-        评论 · {commentsCount}
-      </p>
-
-      {#if isLoadingComments}
-        <div class="space-y-4">
-          {#each Array(3) as _, i (i)}
-            <div class="flex gap-3">
-              <div
-                class="rounded-full"
-                style="width: 34px; height: 34px; background: var(--border-theme);"
-              ></div>
-              <div class="flex-1 space-y-2">
-                <div
-                  class="rounded"
-                  style="width: 96px; height: 14px; background: var(--border-theme);"
-                ></div>
-                <div
-                  class="rounded"
-                  style="width: 100%; height: 14px; background: var(--border-theme);"
-                ></div>
-              </div>
+      <!-- Comment input -->
+      {#if authStore.isAuthenticated}
+        <div
+          class="rounded-[22px] p-4"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        >
+          <div class="flex items-center gap-3">
+            <div class="overflow-hidden rounded-full" style="width: 34px; height: 34px;">
+              <img
+                src={authStore.currentAccount?.avatar_url || ''}
+                alt=""
+                class="h-full w-full object-cover"
+              />
             </div>
-          {/each}
-        </div>
-      {:else if commentsError}
-        <div class="flex flex-col items-center gap-3 py-8 text-center">
-          <p style="font-size: 14px; color: var(--text-secondary);">加载评论失败</p>
-          <button
-            class="rounded-full px-4 py-2 font-medium outline-none"
-            style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-            onclick={() => {
-              const v = ++loadVersion;
-              isLoadingComments = true;
-              commentsError = false;
-              loadComments(momentId, v);
-            }}
-          >
-            重试
-          </button>
-        </div>
-      {:else if comments.length === 0}
-        <p class="py-8 text-center" style="color: var(--text-secondary);">暂无评论</p>
-      {:else}
-        <div class="space-y-4">
-          {#each comments as comment (comment.comment_id)}
-            <div class="flex gap-3">
-              <a href="/users/{comment.user.user_id}">
-                <div class="overflow-hidden rounded-full" style="width: 34px; height: 34px;">
-                  <img
-                    src={comment.user.avatar_url}
-                    alt={comment.user.nickname}
-                    class="h-full w-full object-cover"
-                  />
-                </div>
-              </a>
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <a
-                    href="/users/{comment.user.user_id}"
-                    style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
-                  >
-                    {comment.user.nickname}
-                  </a>
-                  <span style="font-size: 12px; color: var(--text-secondary);">
-                    {formatTime(comment.created_at)}
-                  </span>
-                </div>
-                <p
-                  class="mt-1 whitespace-pre-wrap"
-                  style="font-size: 14px; color: var(--text-primary);"
-                >
-                  {comment.content}
-                </p>
-              </div>
+            <div
+              class="input-surface flex flex-1 items-center"
+              style="height: 38px; border-radius: 9999px;"
+            >
+              <input
+                type="text"
+                {@attach useKeyboardFocus()}
+                placeholder="写下你的评论..."
+                bind:value={commentText}
+                disabled={isSubmitting}
+                class="bg-transparent flex-1 outline-none text-sm"
+                style="color: var(--text-primary);"
+              />
+              <button
+                class="ml-2 mr-1 flex items-center justify-center rounded-full outline-none"
+                style="width: 36px; height: 36px; background: var(--brand); box-shadow: 0 2px 8px var(--glow);"
+                onclick={submitComment}
+                disabled={!commentText.trim() || isSubmitting}
+              >
+                {#if isSubmitting}
+                  <Loader2 size={14} color="var(--text-on-accent)" class="animate-spin" />
+                {:else}
+                  <Send size={14} color="var(--text-on-accent)" />
+                {/if}
+              </button>
             </div>
-          {/each}
+          </div>
         </div>
       {/if}
-    </div>
-  {:else}
-    <div
-      class="rounded-[22px] py-12 text-center"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-    >
-      <p style="color: var(--text-secondary);">瞬间不存在或已被删除</p>
-      <button
-        class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none"
-        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-        onclick={() => goto('/')}
-      >
-        返回首页
-      </button>
-    </div>
-  {/if}
 
-  {#if isOwner && moment}
-    <CreateMomentModal bind:open={showEditModal} editMoment={moment} onEdited={handleEdited} />
-  {/if}
+      <!-- Comments -->
+      <div
+        class="rounded-[22px] p-6"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      >
+        <p
+          class="uppercase"
+          style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 16px;"
+        >
+          评论 · {commentsCount}
+        </p>
+
+        {#if isLoadingComments}
+          <div class="space-y-4">
+            {#each Array(3) as _, i (i)}
+              <div class="flex gap-3">
+                <div
+                  class="rounded-full"
+                  style="width: 34px; height: 34px; background: var(--border-theme);"
+                ></div>
+                <div class="flex-1 space-y-2">
+                  <div
+                    class="rounded"
+                    style="width: 96px; height: 14px; background: var(--border-theme);"
+                  ></div>
+                  <div
+                    class="rounded"
+                    style="width: 100%; height: 14px; background: var(--border-theme);"
+                  ></div>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {:else if commentsError}
+          <div class="flex flex-col items-center gap-3 py-8 text-center">
+            <p style="font-size: 14px; color: var(--text-secondary);">加载评论失败</p>
+            <button
+              class="rounded-full px-4 py-2 font-medium outline-none"
+              style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+              onclick={() => {
+                const v = ++loadVersion;
+                isLoadingComments = true;
+                commentsError = false;
+                loadComments(momentId, v);
+              }}
+            >
+              重试
+            </button>
+          </div>
+        {:else if comments.length === 0}
+          <p class="py-8 text-center" style="color: var(--text-secondary);">暂无评论</p>
+        {:else}
+          <div class="space-y-4">
+            {#each comments as comment (comment.comment_id)}
+              <div class="flex gap-3">
+                <a href="/users/{comment.user.user_id}">
+                  <div class="overflow-hidden rounded-full" style="width: 34px; height: 34px;">
+                    <img
+                      src={comment.user.avatar_url}
+                      alt={comment.user.nickname}
+                      class="h-full w-full object-cover"
+                    />
+                  </div>
+                </a>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2">
+                    <a
+                      href="/users/{comment.user.user_id}"
+                      style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
+                    >
+                      {comment.user.nickname}
+                    </a>
+                    <span style="font-size: 12px; color: var(--text-secondary);">
+                      {formatTime(comment.created_at)}
+                    </span>
+                  </div>
+                  <p
+                    class="mt-1 whitespace-pre-wrap"
+                    style="font-size: 14px; color: var(--text-primary);"
+                  >
+                    {comment.content}
+                  </p>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {:else}
+      <div
+        class="rounded-[22px] py-12 text-center"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      >
+        <p style="color: var(--text-secondary);">瞬间不存在或已被删除</p>
+        <button
+          class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none"
+          style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+          onclick={() => goto('/')}
+        >
+          返回首页
+        </button>
+      </div>
+    {/if}
+
+    {#if isOwner && moment}
+      <CreateMomentModal bind:open={showEditModal} editMoment={moment} onEdited={handleEdited} />
+    {/if}
+  </div>
 </div>

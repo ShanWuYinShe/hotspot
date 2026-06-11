@@ -189,219 +189,221 @@
     </div>
   </div>
 
-  <div class="flex flex-col px-4 pt-4 pb-6 gap-5">
-    {#if isLoading}
-      <ListSkeleton type="group" count={6} layout="grid" />
-    {:else if groups.length === 0}
-      <EmptyState icon={Users} title="还没有加入群组" description="去探索或创建一个群组吧">
-        <div class="mt-4 flex gap-3">
-          <a
-            href="/groups/nearby"
-            class="rounded-full px-4 py-2 text-sm"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary); text-decoration: none;"
-            >发现附近群组</a
-          >
-          <button
-            class="rounded-full px-4 py-2 text-sm"
-            style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 8px var(--glow);"
-            onclick={() => (showCreateGroup = true)}>创建群组</button
-          >
-        </div>
-      </EmptyState>
-    {:else}
-      <div class="columns-1 gap-4 sm:columns-2 xl:columns-3">
-        {#each groups as group (group.group.group_id)}
-          <div class="mb-4 break-inside-avoid">
-            <a href="/groups/{group.group.group_id}" style="text-decoration: none;">
-              <div
-                class="flex items-center gap-4 rounded-[18px] p-4"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-              >
+  <div class="flex flex-col page-pad">
+    <div class="page-shell flex flex-col gap-5">
+      {#if isLoading}
+        <ListSkeleton type="group" count={6} layout="grid" />
+      {:else if groups.length === 0}
+        <EmptyState icon={Users} title="还没有加入群组" description="去探索或创建一个群组吧">
+          <div class="mt-4 flex gap-3">
+            <a
+              href="/groups/nearby"
+              class="rounded-full px-4 py-2 text-sm"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary); text-decoration: none;"
+              >发现附近群组</a
+            >
+            <button
+              class="rounded-full px-4 py-2 text-sm"
+              style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 8px var(--glow);"
+              onclick={() => (showCreateGroup = true)}>创建群组</button
+            >
+          </div>
+        </EmptyState>
+      {:else}
+        <div class="columns-1 gap-4 sm:columns-2 xl:columns-3">
+          {#each groups as group (group.group.group_id)}
+            <div class="mb-4 break-inside-avoid">
+              <a href="/groups/{group.group.group_id}" style="text-decoration: none;">
                 <div
-                  class="overflow-hidden rounded-full shrink-0"
-                  style="width: 48px; height: 48px; border: 1.5px solid var(--border-theme);"
+                  class="flex items-center gap-4 rounded-[18px] p-4"
+                  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
                 >
-                  {#if group.group.avatar_url}
-                    <img
-                      src={group.group.avatar_url}
-                      alt={group.group.name}
-                      class="h-full w-full object-cover"
-                    />
-                  {:else}
-                    <div
-                      class="flex h-full w-full items-center justify-center"
-                      style="background: var(--surface-bg); font-size: 14px; color: var(--text-secondary);"
-                    >
-                      {group.group.name.slice(0, 2)}
-                    </div>
-                  {/if}
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center justify-between">
-                    <p
-                      class="truncate"
-                      style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
-                    >
-                      {group.group.name}
-                    </p>
-                    {#if (group.my_state?.unread_count ?? 0) > 0}
+                  <div
+                    class="overflow-hidden rounded-full shrink-0"
+                    style="width: 48px; height: 48px; border: 1.5px solid var(--border-theme);"
+                  >
+                    {#if group.group.avatar_url}
+                      <img
+                        src={group.group.avatar_url}
+                        alt={group.group.name}
+                        class="h-full w-full object-cover"
+                      />
+                    {:else}
                       <div
-                        class="flex items-center justify-center rounded-full"
-                        style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--glow);"
+                        class="flex h-full w-full items-center justify-center"
+                        style="background: var(--surface-bg); font-size: 14px; color: var(--text-secondary);"
                       >
-                        {(group.my_state?.unread_count ?? 0) > 99
-                          ? '99+'
-                          : (group.my_state?.unread_count ?? 0)}
+                        {group.group.name.slice(0, 2)}
                       </div>
                     {/if}
                   </div>
-                  <p style="font-size: 13px; color: var(--text-secondary);">
-                    {group.group.members_count} 成员
-                  </p>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center justify-between">
+                      <p
+                        class="truncate"
+                        style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+                      >
+                        {group.group.name}
+                      </p>
+                      {#if (group.my_state?.unread_count ?? 0) > 0}
+                        <div
+                          class="flex items-center justify-center rounded-full"
+                          style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--glow);"
+                        >
+                          {(group.my_state?.unread_count ?? 0) > 99
+                            ? '99+'
+                            : (group.my_state?.unread_count ?? 0)}
+                        </div>
+                      {/if}
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-secondary);">
+                      {group.group.members_count} 成员
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </a>
-          </div>
-        {/each}
-      </div>
-    {/if}
-
-    <!-- Invites & Applications -->
-    <div class="grid gap-4 lg:grid-cols-2">
-      <!-- Invites -->
-      <div
-        class="rounded-[22px] p-4"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-      >
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2">
-            <div
-              class="flex items-center justify-center rounded-full"
-              style="width: 28px; height: 28px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-            >
-              <Inbox size={12} color="var(--text-secondary)" strokeWidth={1.5} />
+              </a>
             </div>
-            <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);"
-              >收到的群邀请</span
-            >
-          </div>
-          <button
-            class="rounded-full px-3 py-1 text-xs outline-none"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary);"
-            onclick={loadInvites}
-            disabled={invitesLoading}
-          >
-            刷新
-          </button>
+          {/each}
         </div>
-        {#if invitesLoading && invites.length === 0}
-          <p style="font-size: 13px; color: var(--text-secondary);">加载中...</p>
-        {:else if invites.length === 0}
-          <p style="font-size: 13px; color: var(--text-secondary);">暂无待处理邀请</p>
-        {:else}
-          <div class="space-y-2">
-            {#each invites as invite (invite.invite_id)}
+      {/if}
+
+      <!-- Invites & Applications -->
+      <div class="grid gap-4 lg:grid-cols-2">
+        <!-- Invites -->
+        <div
+          class="rounded-[22px] p-4"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
               <div
-                class="rounded-[14px] p-3"
-                style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                class="flex items-center justify-center rounded-full"
+                style="width: 28px; height: 28px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
               >
-                <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
-                  {invite.group.name}
-                </p>
-                <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                  邀请人：{invite.inviter.nickname}
-                </p>
-                {#if invite.message}
-                  <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-                    {invite.message}
+                <Inbox size={12} color="var(--text-secondary)" strokeWidth={1.5} />
+              </div>
+              <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);"
+                >收到的群邀请</span
+              >
+            </div>
+            <button
+              class="rounded-full px-3 py-1 text-xs outline-none"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary);"
+              onclick={loadInvites}
+              disabled={invitesLoading}
+            >
+              刷新
+            </button>
+          </div>
+          {#if invitesLoading && invites.length === 0}
+            <p style="font-size: 13px; color: var(--text-secondary);">加载中...</p>
+          {:else if invites.length === 0}
+            <p style="font-size: 13px; color: var(--text-secondary);">暂无待处理邀请</p>
+          {:else}
+            <div class="space-y-2">
+              {#each invites as invite (invite.invite_id)}
+                <div
+                  class="rounded-[14px] p-3"
+                  style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                >
+                  <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
+                    {invite.group.name}
                   </p>
-                {/if}
-                <div class="mt-2 flex gap-2">
-                  <button
-                    class="rounded-full px-3 py-1 text-xs outline-none"
-                    style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
-                    disabled={isInviteProcessing(invite.invite_id)}
-                    onclick={() => handleInvite(invite, 'accept')}
-                  >
-                    接受
-                  </button>
-                  <button
-                    class="rounded-full px-3 py-1 text-xs outline-none"
-                    style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-                    disabled={isInviteProcessing(invite.invite_id)}
-                    onclick={() => handleInvite(invite, 'reject')}
-                  >
-                    拒绝
-                  </button>
-                </div>
-              </div>
-            {/each}
-          </div>
-        {/if}
-      </div>
-
-      <!-- Applications -->
-      <div
-        class="rounded-[22px] p-4"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-      >
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2">
-            <div
-              class="flex items-center justify-center rounded-full"
-              style="width: 28px; height: 28px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-            >
-              <CheckCircle2 size={12} color="var(--text-secondary)" strokeWidth={1.5} />
-            </div>
-            <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);"
-              >我的入群申请</span
-            >
-          </div>
-          <button
-            class="rounded-full px-3 py-1 text-xs outline-none"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary);"
-            onclick={loadApplications}
-            disabled={applicationsLoading}
-          >
-            刷新
-          </button>
-        </div>
-        {#if applicationsLoading && applications.length === 0}
-          <p style="font-size: 13px; color: var(--text-secondary);">加载中...</p>
-        {:else if applications.length === 0}
-          <p style="font-size: 13px; color: var(--text-secondary);">暂无待处理申请</p>
-        {:else}
-          <div class="space-y-2">
-            {#each applications as application (application.application_id)}
-              <div
-                class="rounded-[14px] p-3"
-                style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-              >
-                <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
-                  群组申请
-                </p>
-                {#if application.message}
                   <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                    {application.message}
+                    邀请人：{invite.inviter.nickname}
                   </p>
-                {/if}
-                <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-                  申请时间：{formatDateTime(application.created_at)}
-                </p>
-                <div class="mt-2 flex gap-2">
-                  <button
-                    class="rounded-full px-3 py-1 text-xs outline-none"
-                    style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-                    disabled={isApplicationProcessing(application.application_id)}
-                    onclick={() => handleCancelApplication(application)}
-                  >
-                    取消申请
-                  </button>
+                  {#if invite.message}
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                      {invite.message}
+                    </p>
+                  {/if}
+                  <div class="mt-2 flex gap-2">
+                    <button
+                      class="rounded-full px-3 py-1 text-xs outline-none"
+                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
+                      disabled={isInviteProcessing(invite.invite_id)}
+                      onclick={() => handleInvite(invite, 'accept')}
+                    >
+                      接受
+                    </button>
+                    <button
+                      class="rounded-full px-3 py-1 text-xs outline-none"
+                      style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                      disabled={isInviteProcessing(invite.invite_id)}
+                      onclick={() => handleInvite(invite, 'reject')}
+                    >
+                      拒绝
+                    </button>
+                  </div>
                 </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+
+        <!-- Applications -->
+        <div
+          class="rounded-[22px] p-4"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div
+                class="flex items-center justify-center rounded-full"
+                style="width: 28px; height: 28px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+              >
+                <CheckCircle2 size={12} color="var(--text-secondary)" strokeWidth={1.5} />
               </div>
-            {/each}
+              <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);"
+                >我的入群申请</span
+              >
+            </div>
+            <button
+              class="rounded-full px-3 py-1 text-xs outline-none"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary);"
+              onclick={loadApplications}
+              disabled={applicationsLoading}
+            >
+              刷新
+            </button>
           </div>
-        {/if}
+          {#if applicationsLoading && applications.length === 0}
+            <p style="font-size: 13px; color: var(--text-secondary);">加载中...</p>
+          {:else if applications.length === 0}
+            <p style="font-size: 13px; color: var(--text-secondary);">暂无待处理申请</p>
+          {:else}
+            <div class="space-y-2">
+              {#each applications as application (application.application_id)}
+                <div
+                  class="rounded-[14px] p-3"
+                  style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                >
+                  <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
+                    群组申请
+                  </p>
+                  {#if application.message}
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                      {application.message}
+                    </p>
+                  {/if}
+                  <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                    申请时间：{formatDateTime(application.created_at)}
+                  </p>
+                  <div class="mt-2 flex gap-2">
+                    <button
+                      class="rounded-full px-3 py-1 text-xs outline-none"
+                      style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                      disabled={isApplicationProcessing(application.application_id)}
+                      onclick={() => handleCancelApplication(application)}
+                    >
+                      取消申请
+                    </button>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
       </div>
     </div>
   </div>

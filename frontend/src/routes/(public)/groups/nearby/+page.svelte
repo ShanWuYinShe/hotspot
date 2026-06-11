@@ -145,12 +145,8 @@
   </div>
 
   <!-- List -->
-  <div class="w-full px-5 pt-4 pb-6">
-    <div
-      style="max-width: {platformStore.isDesktop
-        ? '960px'
-        : '640px'}; margin-left: auto; margin-right: auto;"
-    >
+  <div class="w-full page-pad">
+    <div class="page-shell">
       <!-- Summary — location/radius lives in the anchor entry, this only carries page stats -->
       {#if platformStore.isDesktop}
         <div class="ambient-glow mb-5">

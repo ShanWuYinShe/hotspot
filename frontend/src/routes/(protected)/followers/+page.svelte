@@ -54,32 +54,34 @@
     </div>
   </div>
 
-  <div class="flex flex-col px-4 pt-4 pb-6 gap-5">
-    {#if pagination.loading}
-      <ListSkeleton type="user" count={6} />
-    {:else if pagination.error}
-      <EmptyState
-        icon={AlertTriangle}
-        title="加载失败"
-        description={pagination.error}
-        actionText="重试"
-        onAction={() => loadFollowers(true)}
-      />
-    {:else if pagination.items.length === 0}
-      <EmptyState icon={UserPlus} title="暂无粉丝" />
-    {:else}
-      <div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
-        {#each pagination.items as item (item.user.user_id)}
-          <div class="mb-3 break-inside-avoid">
-            <UserCard user={item.user} showBio showTags variant="square" />
-          </div>
-        {/each}
-      </div>
-      <LoadMoreButton
-        loading={pagination.loadingMore}
-        hasMore={pagination.hasMore}
-        onLoadMore={() => loadFollowers(false)}
-      />
-    {/if}
+  <div class="flex flex-col page-pad">
+    <div class="page-shell flex flex-col gap-5">
+      {#if pagination.loading}
+        <ListSkeleton type="user" count={6} />
+      {:else if pagination.error}
+        <EmptyState
+          icon={AlertTriangle}
+          title="加载失败"
+          description={pagination.error}
+          actionText="重试"
+          onAction={() => loadFollowers(true)}
+        />
+      {:else if pagination.items.length === 0}
+        <EmptyState icon={UserPlus} title="暂无粉丝" />
+      {:else}
+        <div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
+          {#each pagination.items as item (item.user.user_id)}
+            <div class="mb-3 break-inside-avoid">
+              <UserCard user={item.user} showBio showTags variant="square" />
+            </div>
+          {/each}
+        </div>
+        <LoadMoreButton
+          loading={pagination.loadingMore}
+          hasMore={pagination.hasMore}
+          onLoadMore={() => loadFollowers(false)}
+        />
+      {/if}
+    </div>
   </div>
 </div>

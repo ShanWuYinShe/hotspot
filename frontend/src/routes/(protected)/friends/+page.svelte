@@ -82,74 +82,76 @@
     </div>
   </div>
 
-  <div class="flex flex-col px-4 pt-4 pb-6 gap-4">
-    {#if isLoading}
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {#each Array(6) as _, i (i)}
-          <div
-            class="flex items-center gap-3 rounded-[18px] p-4"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-          >
-            <div
-              class="rounded-full"
-              style="width: 48px; height: 48px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
-            ></div>
-            <div class="flex-1 space-y-2">
-              <div
-                style="width: 96px; height: 16px; border-radius: 8px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
-              ></div>
-              <div
-                style="width: 128px; height: 12px; border-radius: 6px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
-              ></div>
-            </div>
-          </div>
-        {/each}
-      </div>
-    {:else if friends.length === 0}
-      <EmptyState icon={Users} title="暂无好友" />
-    {:else}
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {#each friends as friend (friend.user.user_id)}
-          <a href="/users/{friend.user.user_id}" class="block" style="text-decoration: none;">
+  <div class="flex flex-col page-pad">
+    <div class="page-shell flex flex-col gap-4">
+      {#if isLoading}
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {#each Array(6) as _, i (i)}
             <div
               class="flex items-center gap-3 rounded-[18px] p-4"
               style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
             >
               <div
-                class="overflow-hidden rounded-full shrink-0"
-                style="width: 48px; height: 48px; border: 1.5px solid var(--border-theme);"
-              >
-                {#if friend.user.avatar_url}
-                  <img
-                    src={friend.user.avatar_url}
-                    alt={friend.user.nickname}
-                    class="h-full w-full object-cover"
-                  />
-                {:else}
-                  <div
-                    class="flex h-full w-full items-center justify-center"
-                    style="background: var(--surface-bg); font-size: 14px; color: var(--text-secondary);"
-                  >
-                    {friend.user.nickname.slice(0, 2)}
-                  </div>
-                {/if}
-              </div>
-              <div class="min-w-0">
-                <p
-                  class="truncate"
-                  style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
-                >
-                  {friend.user.nickname}
-                </p>
-                <p style="font-size: 12px; color: var(--text-secondary);">
-                  {friend.remark ? `备注：${friend.remark}` : '互相关注'}
-                </p>
+                class="rounded-full"
+                style="width: 48px; height: 48px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+              ></div>
+              <div class="flex-1 space-y-2">
+                <div
+                  style="width: 96px; height: 16px; border-radius: 8px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+                ></div>
+                <div
+                  style="width: 128px; height: 12px; border-radius: 6px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+                ></div>
               </div>
             </div>
-          </a>
-        {/each}
-      </div>
-      <LoadMoreButton loading={isLoadingMore} {hasMore} onLoadMore={() => loadFriends(false)} />
-    {/if}
+          {/each}
+        </div>
+      {:else if friends.length === 0}
+        <EmptyState icon={Users} title="暂无好友" />
+      {:else}
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {#each friends as friend (friend.user.user_id)}
+            <a href="/users/{friend.user.user_id}" class="block" style="text-decoration: none;">
+              <div
+                class="flex items-center gap-3 rounded-[18px] p-4"
+                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+              >
+                <div
+                  class="overflow-hidden rounded-full shrink-0"
+                  style="width: 48px; height: 48px; border: 1.5px solid var(--border-theme);"
+                >
+                  {#if friend.user.avatar_url}
+                    <img
+                      src={friend.user.avatar_url}
+                      alt={friend.user.nickname}
+                      class="h-full w-full object-cover"
+                    />
+                  {:else}
+                    <div
+                      class="flex h-full w-full items-center justify-center"
+                      style="background: var(--surface-bg); font-size: 14px; color: var(--text-secondary);"
+                    >
+                      {friend.user.nickname.slice(0, 2)}
+                    </div>
+                  {/if}
+                </div>
+                <div class="min-w-0">
+                  <p
+                    class="truncate"
+                    style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+                  >
+                    {friend.user.nickname}
+                  </p>
+                  <p style="font-size: 12px; color: var(--text-secondary);">
+                    {friend.remark ? `备注：${friend.remark}` : '互相关注'}
+                  </p>
+                </div>
+              </div>
+            </a>
+          {/each}
+        </div>
+        <LoadMoreButton loading={isLoadingMore} {hasMore} onLoadMore={() => loadFriends(false)} />
+      {/if}
+    </div>
   </div>
 </div>

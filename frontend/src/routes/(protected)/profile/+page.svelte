@@ -327,10 +327,7 @@
 
   <!-- ═══ Shared edit form ═══ -->
   {#snippet editForm(p: MyProfile)}
-    <div
-      class="flex flex-col px-5 pt-4 pb-8 gap-5"
-      style="max-width: 560px; margin-left: auto; margin-right: auto; width: 100%;"
-    >
+    <div class="flex flex-col gap-5 pt-4 pb-8">
       <!-- Banner -->
       <div
         class="relative overflow-hidden rounded-[24px]"
@@ -613,12 +610,14 @@
         </div>
 
         <!-- Right panel: tab bar + gallery -->
-        <div class="flex-1 overflow-y-auto no-scrollbar">
-          <div class="px-6 pt-2">
-            {@render tabBar()}
-          </div>
-          <div class="px-6 py-4">
-            {@render galleryGrid()}
+        <div class="flex-1 overflow-y-auto no-scrollbar page-pad">
+          <div class="page-shell page-shell--form">
+            <div class="pt-2">
+              {@render tabBar()}
+            </div>
+            <div class="py-4">
+              {@render galleryGrid()}
+            </div>
           </div>
         </div>
       </div>
@@ -656,91 +655,95 @@
         </div>
       </div>
 
-      <div class="flex flex-col pb-6">
-        <!-- Avatar section -->
-        <div class="flex flex-col items-center px-5 pt-5 pb-4">
-          {@render avatarBlock(profile)}
-          <h2 style="font-size: 22px; color: var(--text-primary);">{profile.nickname}</h2>
-          {#if profile.bio && !isEditing}
-            <p
-              style="font-size: 12px; color: var(--text-secondary); text-align: center; padding: 8px 32px; line-height: 1.6;"
-            >
-              {profile.bio}
-            </p>
-          {/if}
-          {#if profile.location?.location_name}
-            <div class="flex items-center gap-1 mb-2">
-              <MapPin size={11} strokeWidth={1.5} color="var(--brand)" />
-              <span style="font-size: 11px; color: var(--text-secondary);"
-                >{profile.location.location_name}</span
+      <div class="flex flex-col page-pad">
+        <div class="page-shell page-shell--form">
+          <!-- Avatar section -->
+          <div class="flex flex-col items-center px-5 pt-5 pb-4">
+            {@render avatarBlock(profile)}
+            <h2 style="font-size: 22px; color: var(--text-primary);">{profile.nickname}</h2>
+            {#if profile.bio && !isEditing}
+              <p
+                style="font-size: 12px; color: var(--text-secondary); text-align: center; padding: 8px 32px; line-height: 1.6;"
               >
-            </div>
+                {profile.bio}
+              </p>
+            {/if}
+            {#if profile.location?.location_name}
+              <div class="flex items-center gap-1 mb-2">
+                <MapPin size={11} strokeWidth={1.5} color="var(--brand)" />
+                <span style="font-size: 11px; color: var(--text-secondary);"
+                  >{profile.location.location_name}</span
+                >
+              </div>
+            {/if}
+            {#if !isEditing}
+              <button
+                class="flex items-center gap-2 rounded-full px-10 py-2.5 outline-none surface-flat"
+                style="font-size: 13px;"
+                onclick={() => (isEditing = true)}
+              >
+                <Pencil size={13} strokeWidth={1.5} color="var(--text-secondary)" />
+                <span style="color: var(--text-secondary);">编辑资料</span>
+              </button>
+            {/if}
+          </div>
+
+          <!-- Edit form -->
+          {#if isEditing}
+            {@render editForm(profile)}
           {/if}
-          {#if !isEditing}
-            <button
-              class="flex items-center gap-2 rounded-full px-10 py-2.5 outline-none surface-flat"
-              style="font-size: 13px;"
-              onclick={() => (isEditing = true)}
-            >
-              <Pencil size={13} strokeWidth={1.5} color="var(--text-secondary)" />
-              <span style="color: var(--text-secondary);">编辑资料</span>
-            </button>
-          {/if}
-        </div>
 
-        <!-- Edit form -->
-        {#if isEditing}
-          {@render editForm(profile)}
-        {/if}
+          <!-- Stats row -->
+          <div class="mb-5 px-5">
+            {@render statsRowDisplay()}
+          </div>
 
-        <!-- Stats row -->
-        <div class="mb-5 px-5">
-          {@render statsRowDisplay()}
-        </div>
+          <!-- Tab bar -->
+          {@render tabBar()}
 
-        <!-- Tab bar -->
-        {@render tabBar()}
-
-        <!-- Gallery -->
-        <div class="px-4 pt-3">
-          {@render galleryGrid()}
+          <!-- Gallery -->
+          <div class="pt-3">
+            {@render galleryGrid()}
+          </div>
         </div>
       </div>
     </div>
   {/if}
 {:else}
   <!-- Error state -->
-  <div class="flex flex-col items-center justify-center px-4 py-16">
-    <div
-      class="mb-4 flex items-center justify-center rounded-full surface-flat"
-      style="width: 64px; height: 64px;"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="28"
-        height="28"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="var(--text-secondary)"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+  <div class="page-pad">
+    <div class="page-shell page-shell--form flex flex-col items-center justify-center py-16">
+      <div
+        class="mb-4 flex items-center justify-center rounded-full surface-flat"
+        style="width: 64px; height: 64px;"
       >
-        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-        <path d="M12 9v4" />
-        <path d="M12 17h.01" />
-      </svg>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--text-secondary)"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+          <path d="M12 9v4" />
+          <path d="M12 17h.01" />
+        </svg>
+      </div>
+      <p style="font-size: 16px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">
+        加载个人资料失败
+      </p>
+      <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
+        {data.error ?? '无法获取个人资料，请稍后重试'}
+      </p>
+      <button
+        class="rounded-[22px] px-5 py-3.5 outline-none surface-flat"
+        style="color: var(--brand); font-size: 14px;"
+        onclick={() => location.reload()}>重试</button
+      >
     </div>
-    <p style="font-size: 16px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">
-      加载个人资料失败
-    </p>
-    <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
-      {data.error ?? '无法获取个人资料，请稍后重试'}
-    </p>
-    <button
-      class="rounded-[22px] px-5 py-3.5 outline-none surface-flat"
-      style="color: var(--brand); font-size: 14px;"
-      onclick={() => location.reload()}>重试</button
-    >
   </div>
 {/if}

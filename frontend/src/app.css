@@ -1283,6 +1283,37 @@
     pointer-events: none;
   }
 
+  /* ───────────────────────────────────────────────────────────────
+     Page shell — 统一的内容栏原语（所有页面、所有设备共用）
+     原则：内容居中、限定测量栏宽（宽屏不铺满、不留大片空白），
+     配合 .page-pad 的响应式留白保证内容不紧贴容器边缘。
+     档位：默认(feed/列表 1180) / --wide(表格 1320) /
+          --narrow(详情阅读 720) / --form(表单 560)。
+     详见 frontend/CLAUDE.md「页面布局规范」。
+     ─────────────────────────────────────────────────────────────── */
+  .page-shell {
+    width: 100%;
+    max-width: min(1180px, calc(100vw - 32px));
+    margin-inline: auto;
+  }
+  .page-shell--wide {
+    max-width: min(1320px, calc(100vw - 32px));
+  }
+  .page-shell--narrow {
+    max-width: min(720px, calc(100vw - 32px));
+  }
+  .page-shell--form {
+    max-width: min(560px, calc(100vw - 32px));
+  }
+
+  /* 响应式留白：横向随视口缩放，底部更宽以容纳加载更多/安全区 */
+  .page-pad {
+    padding: clamp(14px, 2vw, 24px) clamp(16px, 2.3vw, 28px) clamp(24px, 4vw, 40px);
+  }
+  .page-pad--tight {
+    padding: clamp(12px, 1.6vw, 18px) clamp(14px, 2vw, 22px) clamp(20px, 3vw, 32px);
+  }
+
   .feed-density-shell {
     width: 100%;
     max-width: min(1180px, calc(100vw - 32px));

@@ -167,206 +167,212 @@
 
 <div class="flex h-full flex-col" style="background: var(--surface-bg);">
   <!-- Scrollable area -->
-  <div class="flex-1 overflow-y-auto no-scrollbar">
-    <!-- Cover image -->
-    <div class="relative flex-shrink-0 overflow-hidden" style="height: clamp(200px, 32vw, 280px);">
-      {#if ev.cover}
-        <img src={ev.cover} alt={ev.title} class="absolute inset-0 h-full w-full object-cover" />
-      {:else}
-        <!-- Gradient placeholder -->
+  <div class="flex-1 overflow-y-auto no-scrollbar page-pad">
+    <div class="page-shell page-shell--narrow">
+      <!-- Cover image -->
+      <div
+        class="relative flex-shrink-0 overflow-hidden"
+        style="height: clamp(200px, 32vw, 280px);"
+      >
+        {#if ev.cover}
+          <img src={ev.cover} alt={ev.title} class="absolute inset-0 h-full w-full object-cover" />
+        {:else}
+          <!-- Gradient placeholder -->
+          <div
+            class="absolute inset-0"
+            style="background: linear-gradient(135deg, {ev.color}30, {ev.color}08, var(--surface-bg));"
+          ></div>
+        {/if}
         <div
           class="absolute inset-0"
-          style="background: linear-gradient(135deg, {ev.color}30, {ev.color}08, var(--surface-bg));"
+          style="background: linear-gradient(to bottom, transparent 30%, {ev.color}12 100%);"
         ></div>
-      {/if}
-      <div
-        class="absolute inset-0"
-        style="background: linear-gradient(to bottom, transparent 30%, {ev.color}12 100%);"
-      ></div>
 
-      <!-- Back button -->
-      <div class="absolute top-4 left-4 flex gap-2">
-        <button
-          type="button"
-          class="flex items-center justify-center rounded-full outline-none"
-          style="width: 36px; height: 36px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);"
-          onclick={handleBack}
-          aria-label="返回"
-        >
-          <ArrowLeft size={15} strokeWidth={1.75} color="white" />
-        </button>
-      </div>
-
-      <!-- Share button -->
-      <div class="absolute top-4 right-4">
-        <button
-          type="button"
-          class="flex items-center justify-center rounded-full outline-none"
-          style="width: 36px; height: 36px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);"
-          aria-label="分享"
-        >
-          <Share2 size={14} strokeWidth={1.75} color="white" />
-        </button>
-      </div>
-
-      <!-- Tag pill -->
-      <div class="absolute bottom-4 left-4">
-        <span
-          class="rounded-full px-3 py-1"
-          style="font-size: 12px; background: {ev.color}; color: white; box-shadow: 0 3px 10px {ev.color}50;"
-        >
-          {ev.tag}
-        </span>
-      </div>
-    </div>
-
-    <!-- Content -->
-    <div class="pb-6 px-5 pt-4" style="max-width: 640px; margin: 0 auto; width: 100%;">
-      <h1 style="font-size: 24px; color: var(--text-primary); margin-bottom: 8px;">
-        {ev.title}
-      </h1>
-
-      <!-- Meta info -->
-      <div class="mb-5 flex flex-col gap-2">
-        {#each [{ icon: Calendar, text: ev.date }, { icon: Clock, text: ev.time }, { icon: MapPin, text: ev.location }] as meta (meta.text)}
-          <div class="flex items-center gap-2.5">
-            <div
-              class="flex flex-shrink-0 items-center justify-center rounded-full"
-              style="width: 30px; height: 30px; background: {ev.color}15;"
-            >
-              <meta.icon size={13} strokeWidth={1.75} color={ev.color} />
-            </div>
-            <span style="font-size: 13px; color: var(--text-secondary);">{meta.text}</span>
-          </div>
-        {/each}
-      </div>
-
-      <!-- Host card -->
-      <div
-        class="mb-4 flex items-center gap-3 rounded-[20px] px-4 py-3.5"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-      >
-        <div
-          class="flex-shrink-0 overflow-hidden rounded-full"
-          style="width: 40px; height: 40px; border: 2px solid {ev.color};"
-        >
-          <img src={ev.host.avatar} alt={ev.host.name} class="h-full w-full object-cover" />
-        </div>
-        <div class="flex-1">
-          <p style="font-size: 13px; color: var(--text-primary);">{ev.host.name}</p>
-          <div class="flex items-center gap-1">
-            <Star size={10} style="color: #F59E0B;" fill="#F59E0B" strokeWidth={1.5} />
-            <span style="font-size: 11px; color: var(--text-secondary);">活动发起人</span>
-          </div>
-        </div>
-        <button
-          type="button"
-          class="rounded-full px-3 py-1.5 outline-none"
-          style="background: {ev.color}; color: white; font-size: 12px; box-shadow: 0 3px 10px {ev.color}40;"
-        >
-          关注
-        </button>
-      </div>
-
-      <!-- Description -->
-      <p
-        style="font-size: 14px; color: var(--text-secondary); line-height: 1.75; margin-bottom: 20px;"
-      >
-        {ev.description}
-      </p>
-
-      <!-- Highlights -->
-      <div
-        class="mb-5 grid gap-2.5"
-        style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));"
-      >
-        {#each ev.highlights as h, i (i)}
-          <div
-            class="flex items-center gap-2.5 rounded-[16px] px-3.5 py-3"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-          >
-            <div
-              class="flex flex-shrink-0 items-center justify-center rounded-full"
-              style="width: 24px; height: 24px; background: {ev.color}15;"
-            >
-              <Check size={11} color={ev.color} strokeWidth={2.5} />
-            </div>
-            <span style="font-size: 12px; color: var(--text-primary);">{h}</span>
-          </div>
-        {/each}
-      </div>
-
-      <!-- Participants section -->
-      <div class="mb-5">
-        <div class="mb-3 flex items-center justify-between">
-          <p style="font-size: 14px; color: var(--text-primary);">
-            参与者 · {ev.participants.length}/{ev.maxParticipants}
-          </p>
+        <!-- Back button -->
+        <div class="absolute top-4 left-4 flex gap-2">
           <button
             type="button"
-            class="flex items-center gap-0.5 outline-none"
-            style="color: var(--brand);"
+            class="flex items-center justify-center rounded-full outline-none"
+            style="width: 36px; height: 36px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);"
+            onclick={handleBack}
+            aria-label="返回"
           >
-            <span style="font-size: 12px;">查看全部</span>
-            <ChevronRight size={13} strokeWidth={1.5} />
+            <ArrowLeft size={15} strokeWidth={1.75} color="white" />
           </button>
         </div>
 
-        <!-- Progress bar -->
-        <div
-          class="mb-3 overflow-hidden rounded-full"
-          style="height: 6px; background: var(--border-theme);"
-        >
-          <div
-            style="height: 100%; width: {fillRate}%; background: {ev.color}; border-radius: 3px; transition: width 0.8s ease-out;"
-          ></div>
+        <!-- Share button -->
+        <div class="absolute top-4 right-4">
+          <button
+            type="button"
+            class="flex items-center justify-center rounded-full outline-none"
+            style="width: 36px; height: 36px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);"
+            aria-label="分享"
+          >
+            <Share2 size={14} strokeWidth={1.75} color="white" />
+          </button>
         </div>
 
-        <!-- Avatar stack -->
-        <div class="flex items-center gap-1">
-          {#each ev.participants as p, i (p.id)}
-            <div
-              class="overflow-hidden rounded-full"
-              style="width: 36px; height: 36px; border: 2px solid var(--surface-bg); margin-left: {i >
-              0
-                ? '-10px'
-                : '0'}; z-index: {ev.participants.length - i};"
-            >
-              <img src={p.avatar} alt={p.name} class="h-full w-full object-cover" />
-            </div>
-          {/each}
-          {#if remaining > 0}
-            <div
-              class="flex items-center justify-center rounded-full"
-              style="width: 36px; height: 36px; border: 2px solid var(--surface-bg); margin-left: -10px; background: {ev.color}20;"
-            >
-              <span style="font-size: 11px; color: {ev.color}; font-weight: 600;">+{remaining}</span
-              >
-            </div>
-          {/if}
-          <span style="font-size: 12px; color: var(--text-secondary); margin-left: 8px;">
-            共 {ev.participants.length} 人
+        <!-- Tag pill -->
+        <div class="absolute bottom-4 left-4">
+          <span
+            class="rounded-full px-3 py-1"
+            style="font-size: 12px; background: {ev.color}; color: white; box-shadow: 0 3px 10px {ev.color}50;"
+          >
+            {ev.tag}
           </span>
         </div>
       </div>
 
-      <!-- Distance info -->
-      <div
-        class="flex items-center gap-2 rounded-[16px] px-4 py-3"
-        style="background: {ev.color}10; border: 1px solid {ev.color}25;"
-      >
-        <MapPin size={14} color={ev.color} strokeWidth={1.5} />
-        <span style="font-size: 13px; color: var(--text-secondary);">
-          距你 {ev.distance} · 步行约 {Math.ceil(parseFloat(ev.distance) * 12)} 分钟
-        </span>
+      <!-- Content -->
+      <div class="pt-4">
+        <h1 style="font-size: 24px; color: var(--text-primary); margin-bottom: 8px;">
+          {ev.title}
+        </h1>
+
+        <!-- Meta info -->
+        <div class="mb-5 flex flex-col gap-2">
+          {#each [{ icon: Calendar, text: ev.date }, { icon: Clock, text: ev.time }, { icon: MapPin, text: ev.location }] as meta (meta.text)}
+            <div class="flex items-center gap-2.5">
+              <div
+                class="flex flex-shrink-0 items-center justify-center rounded-full"
+                style="width: 30px; height: 30px; background: {ev.color}15;"
+              >
+                <meta.icon size={13} strokeWidth={1.75} color={ev.color} />
+              </div>
+              <span style="font-size: 13px; color: var(--text-secondary);">{meta.text}</span>
+            </div>
+          {/each}
+        </div>
+
+        <!-- Host card -->
+        <div
+          class="mb-4 flex items-center gap-3 rounded-[20px] px-4 py-3.5"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+        >
+          <div
+            class="flex-shrink-0 overflow-hidden rounded-full"
+            style="width: 40px; height: 40px; border: 2px solid {ev.color};"
+          >
+            <img src={ev.host.avatar} alt={ev.host.name} class="h-full w-full object-cover" />
+          </div>
+          <div class="flex-1">
+            <p style="font-size: 13px; color: var(--text-primary);">{ev.host.name}</p>
+            <div class="flex items-center gap-1">
+              <Star size={10} style="color: #F59E0B;" fill="#F59E0B" strokeWidth={1.5} />
+              <span style="font-size: 11px; color: var(--text-secondary);">活动发起人</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="rounded-full px-3 py-1.5 outline-none"
+            style="background: {ev.color}; color: white; font-size: 12px; box-shadow: 0 3px 10px {ev.color}40;"
+          >
+            关注
+          </button>
+        </div>
+
+        <!-- Description -->
+        <p
+          style="font-size: 14px; color: var(--text-secondary); line-height: 1.75; margin-bottom: 20px;"
+        >
+          {ev.description}
+        </p>
+
+        <!-- Highlights -->
+        <div
+          class="mb-5 grid gap-2.5"
+          style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));"
+        >
+          {#each ev.highlights as h, i (i)}
+            <div
+              class="flex items-center gap-2.5 rounded-[16px] px-3.5 py-3"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+            >
+              <div
+                class="flex flex-shrink-0 items-center justify-center rounded-full"
+                style="width: 24px; height: 24px; background: {ev.color}15;"
+              >
+                <Check size={11} color={ev.color} strokeWidth={2.5} />
+              </div>
+              <span style="font-size: 12px; color: var(--text-primary);">{h}</span>
+            </div>
+          {/each}
+        </div>
+
+        <!-- Participants section -->
+        <div class="mb-5">
+          <div class="mb-3 flex items-center justify-between">
+            <p style="font-size: 14px; color: var(--text-primary);">
+              参与者 · {ev.participants.length}/{ev.maxParticipants}
+            </p>
+            <button
+              type="button"
+              class="flex items-center gap-0.5 outline-none"
+              style="color: var(--brand);"
+            >
+              <span style="font-size: 12px;">查看全部</span>
+              <ChevronRight size={13} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          <!-- Progress bar -->
+          <div
+            class="mb-3 overflow-hidden rounded-full"
+            style="height: 6px; background: var(--border-theme);"
+          >
+            <div
+              style="height: 100%; width: {fillRate}%; background: {ev.color}; border-radius: 3px; transition: width 0.8s ease-out;"
+            ></div>
+          </div>
+
+          <!-- Avatar stack -->
+          <div class="flex items-center gap-1">
+            {#each ev.participants as p, i (p.id)}
+              <div
+                class="overflow-hidden rounded-full"
+                style="width: 36px; height: 36px; border: 2px solid var(--surface-bg); margin-left: {i >
+                0
+                  ? '-10px'
+                  : '0'}; z-index: {ev.participants.length - i};"
+              >
+                <img src={p.avatar} alt={p.name} class="h-full w-full object-cover" />
+              </div>
+            {/each}
+            {#if remaining > 0}
+              <div
+                class="flex items-center justify-center rounded-full"
+                style="width: 36px; height: 36px; border: 2px solid var(--surface-bg); margin-left: -10px; background: {ev.color}20;"
+              >
+                <span style="font-size: 11px; color: {ev.color}; font-weight: 600;"
+                  >+{remaining}</span
+                >
+              </div>
+            {/if}
+            <span style="font-size: 12px; color: var(--text-secondary); margin-left: 8px;">
+              共 {ev.participants.length} 人
+            </span>
+          </div>
+        </div>
+
+        <!-- Distance info -->
+        <div
+          class="flex items-center gap-2 rounded-[16px] px-4 py-3"
+          style="background: {ev.color}10; border: 1px solid {ev.color}25;"
+        >
+          <MapPin size={14} color={ev.color} strokeWidth={1.5} />
+          <span style="font-size: 13px; color: var(--text-secondary);">
+            距你 {ev.distance} · 步行约 {Math.ceil(parseFloat(ev.distance) * 12)} 分钟
+          </span>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Sticky bottom CTA -->
   <div
-    class="flex-shrink-0 px-5 pb-6 pt-3"
-    style="background-color: var(--surface-bg); border-top: 1px solid var(--border-theme); max-width: 640px; margin: 0 auto; width: 100%;"
+    class="page-shell page-shell--narrow flex-shrink-0 px-5 pb-6 pt-3"
+    style="background-color: var(--surface-bg); border-top: 1px solid var(--border-theme);"
   >
     <button
       type="button"

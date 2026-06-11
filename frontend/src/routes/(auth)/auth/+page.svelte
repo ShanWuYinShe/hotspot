@@ -30,9 +30,9 @@
   <title>登录 - HotSpot</title>
 </svelte:head>
 
-<div class="flex min-h-screen items-center justify-center px-4 py-10">
+<div class="flex min-h-screen items-center justify-center page-pad">
   <div
-    class="w-full max-w-md rounded-[22px] p-6"
+    class="page-shell page-shell--form w-full rounded-[22px] p-6"
     style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
   >
     <div class="mb-6 text-center">

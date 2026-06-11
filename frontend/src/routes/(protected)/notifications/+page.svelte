@@ -387,10 +387,9 @@
   class:overflow-hidden={platformStore.isDesktop}
 >
   <div
-    class="mx-auto flex min-w-0 flex-1 flex-col"
+    class="page-shell flex min-w-0 flex-1 flex-col"
     class:overflow-y-auto={platformStore.isDesktop}
     class:no-scrollbar={platformStore.isDesktop}
-    style="width: 100%; max-width: {platformStore.isDesktop ? '760px' : '640px'};"
   >
     <!-- Sticky header -->
     <div
@@ -447,7 +446,7 @@
       {/each}
     </div>
 
-    <div class="flex flex-col px-3 pb-4">
+    <div class="flex flex-col page-pad">
       {#if pagination.loading}
         <div class="flex justify-center py-12">
           <Loader2 class="h-8 w-8 animate-spin" color="var(--text-secondary)" />
