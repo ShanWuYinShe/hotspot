@@ -229,13 +229,6 @@
           >
             {isOnline ? '在线' : '离线'}
           </span>
-          {#if distance}
-            <span style="font-size: 10px; color: var(--text-secondary); opacity: 0.5;">·</span>
-            <div class="flex items-center gap-0.5">
-              <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
-              <span style="font-size: 12px; color: var(--brand);">{formatDistance(distance)}</span>
-            </div>
-          {/if}
           {#if displayTags.length > 0}
             <span style="font-size: 10px; color: var(--text-secondary); opacity: 0.5;">·</span>
             <span style="font-size: 11px; color: var(--brand); opacity: 0.8;"

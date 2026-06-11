@@ -13,6 +13,7 @@
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
   import LocationPickerModal from '$lib/components/common/location-picker-modal.svelte';
+  import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
   import type { UserItem } from '$lib/types/api';
   import ArrowLeft from 'lucide-svelte/icons/arrow-left';
   import MapIcon from 'lucide-svelte/icons/map';
@@ -104,14 +105,16 @@
       <div class="flex-1">
         <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">附近的人</h1>
       </div>
-      <button
-        class="surface-flat flex items-center justify-center rounded-full outline-none"
-        style="width: 36px; height: 36px;"
-        aria-label="地图"
-        onclick={() => (showLocationPicker = true)}
-      >
-        <MapIcon size={15} strokeWidth={1.5} color="var(--brand)" />
-      </button>
+      {#if platformStore.isDesktop}
+        <button
+          class="surface-flat flex items-center justify-center rounded-full outline-none"
+          style="width: 36px; height: 36px;"
+          aria-label="地图"
+          onclick={() => (showLocationPicker = true)}
+        >
+          <MapIcon size={15} strokeWidth={1.5} color="var(--brand)" />
+        </button>
+      {/if}
     </div>
 
     <!-- Search -->
@@ -157,34 +160,45 @@
 
   <!-- List -->
   <div class="w-full px-5 pt-4 pb-6">
-    <div style="max-width: 640px; margin-left: auto; margin-right: auto;">
-      <!-- Hero summary -->
-      <div class="ambient-glow mb-5">
-        <div
-          class="surface-hero flex items-center gap-4 rounded-[22px]"
-          style="padding: 16px 18px;"
-        >
+    <div
+      style="max-width: {platformStore.isDesktop
+        ? '960px'
+        : '640px'}; margin-left: auto; margin-right: auto;"
+    >
+      <!-- Summary — location/radius lives in the anchor entry, this only carries page stats -->
+      {#if platformStore.isDesktop}
+        <div class="ambient-glow mb-5">
           <div
-            class="flex flex-shrink-0 items-center justify-center rounded-full"
-            style="width: 44px; height: 44px; background: var(--brand); box-shadow: 0 4px 14px var(--glow);"
+            class="surface-hero flex items-center gap-4 rounded-[22px]"
+            style="padding: 14px 18px;"
           >
-            <Radar size={19} strokeWidth={2} color="var(--text-on-accent)" />
-          </div>
-          <div class="flex-1">
-            <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
-              {#if !platformStore.isDesktop}{mapAnchorStore.displayName} ·
-              {/if}{mapAnchorStore.radius}km 范围
-            </p>
-            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-              <span style="color: var(--color-semantic-online);">{onlineCount} 人在线</span>
-              <span style="margin-left: 8px;">· 共 {pagination.items.length} 人</span>
-            </p>
+            <div
+              class="flex flex-shrink-0 items-center justify-center rounded-full"
+              style="width: 44px; height: 44px; background: var(--brand); box-shadow: 0 4px 14px var(--glow);"
+            >
+              <Radar size={19} strokeWidth={2} color="var(--text-on-accent)" />
+            </div>
+            <div class="flex-1">
+              <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">附近概览</p>
+              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+                <span style="color: var(--color-semantic-online);">{onlineCount} 人在线</span>
+                <span style="margin-left: 8px;">· 共 {pagination.items.length} 人</span>
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      {:else}
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <AnchorEntry variant="pill" onAdjust={() => (showLocationPicker = true)} />
+          <p class="flex-shrink-0" style="font-size: 11px; color: var(--text-secondary);">
+            <span style="color: var(--color-semantic-online);">{onlineCount} 在线</span>
+            <span style="margin-left: 6px;">· 共 {pagination.items.length} 人</span>
+          </p>
+        </div>
+      {/if}
 
       {#if pagination.loading}
-        <div class="flex flex-col gap-2.5">
+        <div class={platformStore.isDesktop ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
           {#each Array(6) as _, i (i)}
             <div
               class="animate-pulse rounded-[22px]"
@@ -217,7 +231,7 @@
           description="换个浏览位置或稍后再来看看。"
         />
       {:else}
-        <div class="flex flex-col gap-2.5">
+        <div class={platformStore.isDesktop ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
           {#each pagination.items as user (user.user.user_id)}
             <UserCard
               {user}

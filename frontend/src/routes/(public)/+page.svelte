@@ -11,7 +11,7 @@
   import Compass from 'lucide-svelte/icons/compass';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Sparkles from 'lucide-svelte/icons/sparkles';
-  import Star from 'lucide-svelte/icons/star';
+  import MessageCircle from 'lucide-svelte/icons/message-circle';
   import Navigation2 from 'lucide-svelte/icons/navigation-2';
   import { goto } from '$app/navigation';
 
@@ -21,6 +21,7 @@
   import NearbyUsersFlatList from '$lib/components/home/nearby-users-flat-list.svelte';
   import GroupCarousel from '$lib/components/home/group-carousel.svelte';
   import LocationPickerModal from '$lib/components/common/location-picker-modal.svelte';
+  import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
 
   type HomeMode = 'guest' | 'explore' | 'authenticated';
 
@@ -105,6 +106,33 @@
   function handleActivitySelect(id: string) {
     void goto(`/discover?tag=${encodeURIComponent(id)}`);
   }
+
+  const guestFeatures = $derived([
+    {
+      icon: MapPin,
+      title: t('home.locationBased'),
+      desc: t('home.discoverNearbyContent'),
+      color: 'var(--brand)'
+    },
+    {
+      icon: Sparkles,
+      title: t('home.lifeMoments'),
+      desc: t('home.shareLifeMoments'),
+      color: 'var(--color-semantic-warning, #b8843f)'
+    },
+    {
+      icon: Users,
+      title: t('home.groupInteraction'),
+      desc: t('home.joinInterestGroups'),
+      color: 'var(--color-map-group, #6d83b8)'
+    },
+    {
+      icon: MessageCircle,
+      title: t('home.instantChat'),
+      desc: t('home.chatWithFriends'),
+      color: 'var(--color-semantic-hot, #c2603f)'
+    }
+  ]);
 
   function handleFlatFollow(id: string) {
     const user = nearbyUsers.find((u) => u.user.user_id === id);
@@ -273,91 +301,208 @@
 </svelte:head>
 
 {#if !authStore.isAuthenticated && !showExplore}
-  <!-- Guest landing (Figma Make style) -->
-  <div class="flex flex-col px-5 pt-4 pb-6">
-    <!-- Sticky header -->
-    <div
-      class="sticky top-0 z-10 flex items-center justify-between px-1 py-3"
-      style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
-    >
-      <div>
-        <h1 style="font-size: 22px; color: var(--text-primary);">{t('home.title')}</h1>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-          {t('home.discoverNearbyPeopleAndThings')}
-        </p>
-      </div>
-      <div class="surface-flat flex cursor-pointer items-center gap-1.5 rounded-full py-1.5 px-3.5">
-        <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
-        <span style="font-size: 11px; color: var(--text-secondary);"
-          >{mapAnchorStore.displayName}</span
-        >
-      </div>
-    </div>
-
-    <!-- Hero card -->
-    <div class="mt-4">
-      <div class="surface-hero flex flex-col items-center rounded-[24px] px-6 py-10 text-center">
-        <div
-          class="mb-4 flex items-center justify-center rounded-full"
-          style="width: 56px; height: 56px; background: var(--brand); box-shadow: 0 6px 20px var(--glow);"
-        >
-          <Sparkles size={24} color="var(--text-on-accent)" />
-        </div>
-        <h2 style="font-size: 22px; font-weight: 700; color: var(--text-primary);">
-          {t('home.discoverNearby')}
-        </h2>
-        <p
-          style="font-size: 14px; color: var(--text-secondary); margin-top: 8px; max-width: 320px;"
-        >
-          {t('home.heroDescription')}
-        </p>
-        <div class="mt-6 flex gap-3">
-          <button
-            class="rounded-[22px] px-6 py-3.5 font-medium transition-transform duration-150 active:scale-[0.95]"
-            style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
-            onclick={handleGetStarted}
-          >
-            {t('home.getStarted')}
-          </button>
-          <button
-            class="rounded-[22px] px-6 py-3.5 font-medium transition-transform duration-150 active:scale-[0.97]"
-            style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-            onclick={handleExplore}
-          >
-            {t('home.browseFirst')}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Features grid -->
-    <div class="mt-5">
-      <p
-        class="mb-3 uppercase"
-        style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
+  {#if platformStore.isDesktop}
+    <!-- Desktop guest landing: split hero + feature showcase -->
+    <div class="flex h-full flex-col">
+      <div
+        class="sticky top-0 z-10 flex items-center justify-between px-6 py-4"
+        style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
       >
-        {t('home.coreFeatures')}
-      </p>
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
-        {#each [{ icon: MapPin, label: t('nav.nearby'), color: 'var(--brand)' }, { icon: Compass, label: t('nav.discover'), color: 'var(--text-tertiary)' }, { icon: Users, label: t('nav.messagesTab'), color: 'var(--brand)' }, { icon: Star, label: t('nav.me'), color: 'var(--theme-warning)' }] as feat}
-          <div
-            class="surface-flat flex flex-col items-center justify-center rounded-[22px] card-hover transition-transform duration-150 active:scale-[0.97]"
-            style="aspect-ratio: 1.2;"
+        <div>
+          <h1 style="font-size: 24px; color: var(--text-primary);">{t('sidebar.home')}</h1>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+            {t('home.discoverNearbyPeopleAndThings')}
+          </p>
+        </div>
+        <AnchorEntry variant="pill" onAdjust={() => (showLocationPicker = true)} />
+      </div>
+
+      <div class="min-h-0 flex-1 overflow-y-auto no-scrollbar">
+        <div class="mx-auto w-full px-8 py-10" style="max-width: 1080px;">
+          <!-- Hero -->
+          <section
+            class="surface-hero ambient-glow relative overflow-hidden rounded-[28px] px-10 py-14"
           >
             <div
-              class="flex items-center justify-center rounded-[14px]"
-              style="width: 36px; height: 36px; background: var(--surface-secondary);"
+              class="grid items-center gap-12"
+              style="grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);"
             >
-              <feat.icon size={17} strokeWidth={1.75} color={feat.color} />
+              <div class="flex flex-col">
+                <span class="eyebrow">{t('home.locationBasedSocial')}</span>
+                <h2
+                  style="font-size: 38px; line-height: 1.12; font-weight: 700; color: var(--text-primary); margin-top: 14px;"
+                >
+                  {t('home.discoverNearby')}
+                </h2>
+                <p
+                  style="font-size: 15px; line-height: 1.65; color: var(--text-secondary); margin-top: 16px; max-width: 440px;"
+                >
+                  {t('home.heroDescription')}
+                </p>
+                <div class="mt-8 flex flex-wrap gap-3">
+                  <button
+                    class="rounded-[18px] px-7 py-3.5 font-medium transition-transform duration-150 active:scale-[0.97]"
+                    style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 8px 24px var(--glow);"
+                    onclick={handleGetStarted}
+                  >
+                    {t('home.getStarted')}
+                  </button>
+                  <button
+                    class="rounded-[18px] px-7 py-3.5 font-medium transition-transform duration-150 active:scale-[0.97]"
+                    style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg); box-shadow: var(--shadow-sm);"
+                    onclick={handleExplore}
+                  >
+                    {t('home.browseFirst')}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Radar visual -->
+              <div class="relative" style="aspect-ratio: 4 / 3;">
+                <div
+                  class="absolute inset-0 overflow-hidden rounded-[26px]"
+                  style="background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 20%, var(--surface-secondary)), var(--surface-bg)); border: 1px solid var(--border-theme);"
+                >
+                  {#each [80, 56, 32] as ring}
+                    <div
+                      class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                      style="width: {ring}%; aspect-ratio: 1; border: 1px solid color-mix(in srgb, var(--brand) 28%, transparent);"
+                    ></div>
+                  {/each}
+                  <div
+                    class="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
+                    style="width: 60px; height: 60px; background: var(--surface-bg); box-shadow: 0 10px 28px rgba(0,0,0,0.14); border: 1.5px solid color-mix(in srgb, var(--brand) 35%, transparent);"
+                  >
+                    <span
+                      class="animate-pulse rounded-full"
+                      style="width: 18px; height: 18px; background: var(--brand); box-shadow: 0 0 0 7px var(--glow);"
+                    ></span>
+                  </div>
+                  {#each [{ icon: Users, top: '22%', left: '26%', c: 'var(--brand)' }, { icon: Sparkles, top: '30%', left: '74%', c: 'var(--color-semantic-warning, #b8843f)' }, { icon: MapPin, top: '72%', left: '64%', c: 'var(--color-map-group, #6d83b8)' }] as blip}
+                    <div
+                      class="absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
+                      style="top: {blip.top}; left: {blip.left}; width: 36px; height: 36px; background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+                    >
+                      <blip.icon size={16} strokeWidth={1.75} color={blip.c} />
+                    </div>
+                  {/each}
+                </div>
+              </div>
             </div>
-            <span style="font-size: 12px; color: var(--text-primary); margin-top: 8px;"
-              >{feat.label}</span
-            >
+          </section>
+
+          <!-- Features -->
+          <p class="eyebrow mt-12 mb-5">{t('home.coreFeatures')}</p>
+          <div class="grid gap-5" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+            {#each guestFeatures as feat}
+              <div
+                class="surface-flat card-hover flex flex-col gap-3 rounded-[22px] p-6 transition-transform duration-150"
+              >
+                <div
+                  class="flex items-center justify-center rounded-[16px]"
+                  style="width: 46px; height: 46px; background: color-mix(in srgb, {feat.color} 14%, transparent);"
+                >
+                  <feat.icon size={22} strokeWidth={1.75} color={feat.color} />
+                </div>
+                <span style="font-size: 15px; font-weight: 600; color: var(--text-primary);"
+                  >{feat.title}</span
+                >
+                <span style="font-size: 12.5px; line-height: 1.5; color: var(--text-secondary);"
+                  >{feat.desc}</span
+                >
+              </div>
+            {/each}
           </div>
-        {/each}
+        </div>
       </div>
     </div>
-  </div>
+  {:else}
+    <!-- Mobile / Tablet guest landing (tablet = centered 640 column) -->
+    {@const guestMax = platformStore.isTablet ? '640px' : '100%'}
+    <div class="flex flex-col">
+      <div
+        class="sticky top-0 z-10 px-5 py-3"
+        style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
+      >
+        <div
+          class="flex items-center justify-between"
+          style="max-width: {guestMax}; margin-left: auto; margin-right: auto; width: 100%;"
+        >
+          <div>
+            <h1 style="font-size: 22px; color: var(--text-primary);">{t('home.title')}</h1>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+              {t('home.discoverNearbyPeopleAndThings')}
+            </p>
+          </div>
+          <AnchorEntry variant="pill" onAdjust={() => (showLocationPicker = true)} />
+        </div>
+      </div>
+
+      <div
+        class="flex flex-col px-5 pt-4 pb-6"
+        style="max-width: {guestMax}; margin-left: auto; margin-right: auto; width: 100%;"
+      >
+        <!-- Hero card -->
+        <div
+          class="surface-hero ambient-glow flex flex-col items-center rounded-[24px] px-6 py-10 text-center"
+        >
+          <div
+            class="mb-4 flex items-center justify-center rounded-full"
+            style="width: 56px; height: 56px; background: var(--brand); box-shadow: 0 6px 20px var(--glow);"
+          >
+            <Sparkles size={24} color="var(--text-on-accent)" />
+          </div>
+          <h2 style="font-size: 22px; font-weight: 700; color: var(--text-primary);">
+            {t('home.discoverNearby')}
+          </h2>
+          <p
+            style="font-size: 14px; line-height: 1.6; color: var(--text-secondary); margin-top: 8px; max-width: 340px;"
+          >
+            {t('home.heroDescription')}
+          </p>
+          <div class="mt-6 flex w-full gap-3" style="max-width: 380px;">
+            <button
+              class="flex-1 rounded-[18px] py-3.5 font-medium transition-transform duration-150 active:scale-[0.96]"
+              style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+              onclick={handleGetStarted}
+            >
+              {t('home.getStarted')}
+            </button>
+            <button
+              class="flex-1 rounded-[18px] py-3.5 font-medium transition-transform duration-150 active:scale-[0.97]"
+              style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+              onclick={handleExplore}
+            >
+              {t('home.browseFirst')}
+            </button>
+          </div>
+        </div>
+
+        <!-- Features -->
+        <p class="eyebrow mt-6 mb-3">{t('home.coreFeatures')}</p>
+        <div class="grid gap-3" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+          {#each guestFeatures as feat}
+            <div
+              class="surface-flat card-hover flex flex-col gap-2.5 rounded-[20px] p-4 transition-transform duration-150 active:scale-[0.98]"
+            >
+              <div
+                class="flex items-center justify-center rounded-[14px]"
+                style="width: 40px; height: 40px; background: color-mix(in srgb, {feat.color} 14%, transparent);"
+              >
+                <feat.icon size={19} strokeWidth={1.75} color={feat.color} />
+              </div>
+              <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);"
+                >{feat.title}</span
+              >
+              <span style="font-size: 12px; line-height: 1.45; color: var(--text-secondary);"
+                >{feat.desc}</span
+              >
+            </div>
+          {/each}
+        </div>
+      </div>
+    </div>
+  {/if}
 {:else if !platformStore.isDesktop}
   <!-- Mobile / Tablet Home (Figma Make HomeMobile; tablet = centered 600 column) -->
   {@const contentMax = platformStore.isTablet ? '600px' : '680px'}
@@ -377,16 +522,7 @@
             {t('home.discoverNearbyPeopleAndThings')}
           </p>
         </div>
-        <button
-          type="button"
-          class="surface-flat flex items-center gap-1.5 rounded-full py-1.5 px-3.5 outline-none"
-          onclick={() => (showLocationPicker = true)}
-        >
-          <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
-          <span style="font-size: 11px; color: var(--text-secondary);"
-            >{mapAnchorStore.displayName}</span
-          >
-        </button>
+        <AnchorEntry variant="pill" onAdjust={() => (showLocationPicker = true)} />
       </div>
     </div>
 
@@ -536,7 +672,7 @@
           activity={activityCount}
           online={onlineCount}
           title={t('home.realtimeNearby')}
-          rangeLabel={`${mapAnchorStore.radius}km ${t('home.rangeWithin')}`}
+          rangeLabel={t('home.rangeWithin')}
           loading={loadingNearby}
           onclick={() => (showLocationPicker = true)}
         />
@@ -574,7 +710,7 @@
               <div>
                 <span class="eyebrow">{t('sidebar.nearbyPeople')}</span>
                 <p style="font-size: 11px; color: var(--text-secondary); margin-top: 3px;">
-                  {mapAnchorStore.radius}km {t('home.rangeWithin')}
+                  {t('home.rangeWithin')}
                 </p>
               </div>
               <a
@@ -600,16 +736,6 @@
                 onToggleFollow={handleFlatFollow}
               />
             </div>
-          </div>
-        {/if}
-
-        <!-- Surrounding heat -->
-        {#if activities.length > 0}
-          <div>
-            <div class="mb-3 flex items-center justify-between">
-              <span class="eyebrow">{t('home.surroundingHeat')}</span>
-            </div>
-            <ActivityList {activities} loading={loadingNearby} onSelect={handleActivitySelect} />
           </div>
         {/if}
       </div>

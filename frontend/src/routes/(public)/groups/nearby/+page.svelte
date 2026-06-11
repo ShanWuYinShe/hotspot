@@ -10,6 +10,7 @@
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
   import CreateGroupModal from '$lib/components/common/create-group-modal.svelte';
+  import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
   import type { GroupItem } from '$lib/types/api';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
@@ -145,33 +146,43 @@
 
   <!-- List -->
   <div class="w-full px-5 pt-4 pb-6">
-    <div style="max-width: 640px; margin-left: auto; margin-right: auto;">
-      <!-- Hero summary -->
-      <div class="ambient-glow mb-5">
-        <div
-          class="surface-hero flex items-center gap-4 rounded-[22px]"
-          style="padding: 16px 18px;"
-        >
+    <div
+      style="max-width: {platformStore.isDesktop
+        ? '960px'
+        : '640px'}; margin-left: auto; margin-right: auto;"
+    >
+      <!-- Summary — location/radius lives in the anchor entry, this only carries page stats -->
+      {#if platformStore.isDesktop}
+        <div class="ambient-glow mb-5">
           <div
-            class="flex flex-shrink-0 items-center justify-center rounded-full"
-            style="width: 44px; height: 44px; background: var(--brand); box-shadow: 0 4px 14px var(--glow);"
+            class="surface-hero flex items-center gap-4 rounded-[22px]"
+            style="padding: 14px 18px;"
           >
-            <UsersRound size={19} strokeWidth={2} color="var(--text-on-accent)" />
-          </div>
-          <div class="flex-1">
-            <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
-              {#if !platformStore.isDesktop}{mapAnchorStore.displayName} ·
-              {/if}{mapAnchorStore.radius}km 范围
-            </p>
-            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-              共 {pagination.items.length} 个群组
-            </p>
+            <div
+              class="flex flex-shrink-0 items-center justify-center rounded-full"
+              style="width: 44px; height: 44px; background: var(--brand); box-shadow: 0 4px 14px var(--glow);"
+            >
+              <UsersRound size={19} strokeWidth={2} color="var(--text-on-accent)" />
+            </div>
+            <div class="flex-1">
+              <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">附近概览</p>
+              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+                共 {pagination.items.length} 个群组
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      {:else}
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <AnchorEntry variant="pill" />
+          <p class="flex-shrink-0" style="font-size: 11px; color: var(--text-secondary);">
+            共 {pagination.items.length} 个群组
+          </p>
+        </div>
+      {/if}
 
       {#if pagination.loading}
-        <div class="flex flex-col gap-2.5">
+        <div class={platformStore.isDesktop ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
           {#each Array(6) as _, i (i)}
             <div
               class="animate-pulse rounded-[22px]"
@@ -206,7 +217,7 @@
       {:else if filteredGroups.length === 0}
         <EmptyState icon={UsersRound} title="没有匹配的群组" description="试试其他分类或关键词。" />
       {:else}
-        <div class="flex flex-col gap-2.5">
+        <div class={platformStore.isDesktop ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
           {#each filteredGroups as group (group.group.group_id)}
             <GroupCard {group} showDistance showMembers variant="default" class="overflow-hidden" />
           {/each}
