@@ -1339,6 +1339,13 @@
     padding: clamp(14px, 2vw, 24px) clamp(16px, 2.3vw, 28px) clamp(24px, 4vw, 40px);
   }
 
+  /* 仅横向留白，与 .feed-density-pad 的横向 clamp 完全一致。
+     用于 feed 类 sticky 头部：背景/分隔线全宽出血，内层 .feed-density-shell
+     收束内容，使头部与下方 feed 正文严格左对齐、共用同一测量栏宽度。 */
+  .feed-density-pad-x {
+    padding-inline: clamp(16px, 2.3vw, 28px);
+  }
+
   .feed-density-list {
     display: flex;
     flex-direction: column;

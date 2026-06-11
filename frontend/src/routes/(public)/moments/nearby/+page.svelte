@@ -67,65 +67,67 @@
   <div class="flex flex-col">
     <!-- Sticky header -->
     <div
-      class="sticky top-0 z-10 px-5 pt-3 pb-0"
+      class="sticky top-0 z-10 pt-3 pb-0"
       style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <!-- Top bar: title + content count -->
-      <div class="mb-2 flex items-center justify-between">
-        <h1 style="font-size: 22px; color: var(--text-primary);">{t('discover.title')}</h1>
-        <span style="font-size: 12px; color: var(--text-secondary);">
-          {pagination.items.length} 条内容
-        </span>
-      </div>
+      <div class="feed-density-shell feed-density-shell--narrow feed-density-pad-x">
+        <!-- Top bar: title + content count -->
+        <div class="mb-2 flex items-center justify-between">
+          <h1 style="font-size: 22px; color: var(--text-primary);">{t('discover.title')}</h1>
+          <span style="font-size: 12px; color: var(--text-secondary);">
+            {pagination.items.length} 条内容
+          </span>
+        </div>
 
-      <!-- Search bar -->
-      <div class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 input-surface">
-        <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
-        <input
-          type="text"
-          bind:value={searchVal}
-          placeholder="地点、人物、关键词…"
-          class="flex-1 bg-transparent outline-none"
-          style="font-size: 13px; color: var(--text-primary);"
-        />
-        {#if searchVal.length > 0}
-          <button
-            class="flex-shrink-0 outline-none transition-transform duration-150 active:scale-[0.85]"
-            onclick={() => {
-              searchVal = '';
-            }}
-          >
-            <X size={13} color="var(--text-secondary)" strokeWidth={2} />
-          </button>
-        {/if}
-      </div>
+        <!-- Search bar -->
+        <div class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 input-surface">
+          <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
+          <input
+            type="text"
+            bind:value={searchVal}
+            placeholder="地点、人物、关键词…"
+            class="flex-1 bg-transparent outline-none"
+            style="font-size: 13px; color: var(--text-primary);"
+          />
+          {#if searchVal.length > 0}
+            <button
+              class="flex-shrink-0 outline-none transition-transform duration-150 active:scale-[0.85]"
+              onclick={() => {
+                searchVal = '';
+              }}
+            >
+              <X size={13} color="var(--text-secondary)" strokeWidth={2} />
+            </button>
+          {/if}
+        </div>
 
-      <!-- Tab bar -->
-      <div
-        class="relative flex overflow-x-auto no-scrollbar"
-        style="border-bottom: 1px solid var(--border-theme);"
-      >
-        {#each TABS as tab}
-          <button
-            class="tab-btn relative flex-shrink-0 pb-3 pt-1 outline-none transition-transform duration-150 active:scale-[0.94]"
-            style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab
-              ? 'var(--brand)'
-              : 'var(--text-secondary)'}; font-weight: {activeTab === tab
-              ? 500
-              : 400}; font-size: 13px; transition: color 0.2s;"
-            onclick={() => {
-              activeTab = tab;
-            }}
-            data-tab-id={tab}
-          >
-            {tab}
-            {#if activeTab === tab}
-              <div
-                style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--brand); transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);"
-              ></div>
-            {/if}
-          </button>
-        {/each}
+        <!-- Tab bar -->
+        <div
+          class="relative flex overflow-x-auto no-scrollbar"
+          style="border-bottom: 1px solid var(--border-theme);"
+        >
+          {#each TABS as tab}
+            <button
+              class="tab-btn relative flex-shrink-0 pb-3 pt-1 outline-none transition-transform duration-150 active:scale-[0.94]"
+              style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab
+                ? 'var(--brand)'
+                : 'var(--text-secondary)'}; font-weight: {activeTab === tab
+                ? 500
+                : 400}; font-size: 13px; transition: color 0.2s;"
+              onclick={() => {
+                activeTab = tab;
+              }}
+              data-tab-id={tab}
+            >
+              {tab}
+              {#if activeTab === tab}
+                <div
+                  style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--brand); transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);"
+                ></div>
+              {/if}
+            </button>
+          {/each}
+        </div>
       </div>
     </div>
 
@@ -212,68 +214,70 @@
   <div class="flex h-full flex-col">
     <!-- Sticky header -->
     <div
-      class="flex-shrink-0 px-6 pt-4 pb-0"
+      class="flex-shrink-0 pt-4 pb-0"
       style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <!-- Top bar -->
-      <div class="mb-2 flex items-center justify-between">
-        <h1 style="font-size: 24px; color: var(--text-primary);">{t('discover.title')}</h1>
-        <span
-          class="flex items-center gap-1 rounded-full px-3 py-1.5"
-          style="background: var(--brand); font-size: 11px; color: white;"
+      <div class="feed-density-shell feed-density-shell--medium feed-density-pad-x">
+        <!-- Top bar -->
+        <div class="mb-2 flex items-center justify-between">
+          <h1 style="font-size: 24px; color: var(--text-primary);">{t('discover.title')}</h1>
+          <span
+            class="flex items-center gap-1 rounded-full px-3 py-1.5"
+            style="background: var(--brand); font-size: 11px; color: white;"
+          >
+            <Sparkles size={11} color="white" strokeWidth={2} />
+            精选
+          </span>
+        </div>
+
+        <!-- Search bar -->
+        <div class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 input-surface">
+          <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
+          <input
+            type="text"
+            bind:value={searchVal}
+            placeholder="地点、人物、关键词…"
+            class="flex-1 bg-transparent outline-none"
+            style="font-size: 13px; color: var(--text-primary);"
+          />
+          {#if searchVal.length > 0}
+            <button
+              class="flex-shrink-0 outline-none transition-transform duration-150 active:scale-[0.85]"
+              onclick={() => {
+                searchVal = '';
+              }}
+            >
+              <X size={13} color="var(--text-secondary)" strokeWidth={2} />
+            </button>
+          {/if}
+        </div>
+
+        <!-- Tab bar -->
+        <div
+          class="relative flex overflow-x-auto no-scrollbar"
+          style="border-bottom: 1px solid var(--border-theme);"
         >
-          <Sparkles size={11} color="white" strokeWidth={2} />
-          精选
-        </span>
-      </div>
-
-      <!-- Search bar -->
-      <div class="mb-2.5 flex items-center gap-3 rounded-[18px] px-4 py-2.5 input-surface">
-        <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
-        <input
-          type="text"
-          bind:value={searchVal}
-          placeholder="地点、人物、关键词…"
-          class="flex-1 bg-transparent outline-none"
-          style="font-size: 13px; color: var(--text-primary);"
-        />
-        {#if searchVal.length > 0}
-          <button
-            class="flex-shrink-0 outline-none transition-transform duration-150 active:scale-[0.85]"
-            onclick={() => {
-              searchVal = '';
-            }}
-          >
-            <X size={13} color="var(--text-secondary)" strokeWidth={2} />
-          </button>
-        {/if}
-      </div>
-
-      <!-- Tab bar -->
-      <div
-        class="relative flex overflow-x-auto no-scrollbar"
-        style="border-bottom: 1px solid var(--border-theme);"
-      >
-        {#each TABS as tab}
-          <button
-            class="relative flex-shrink-0 pb-3 pt-1 outline-none transition-transform duration-150 active:scale-[0.94]"
-            style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab
-              ? 'var(--brand)'
-              : 'var(--text-secondary)'}; font-weight: {activeTab === tab
-              ? 500
-              : 400}; font-size: 13px; transition: color 0.2s;"
-            onclick={() => {
-              activeTab = tab;
-            }}
-          >
-            {tab}
-            {#if activeTab === tab}
-              <div
-                style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--brand);"
-              ></div>
-            {/if}
-          </button>
-        {/each}
+          {#each TABS as tab}
+            <button
+              class="relative flex-shrink-0 pb-3 pt-1 outline-none transition-transform duration-150 active:scale-[0.94]"
+              style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab
+                ? 'var(--brand)'
+                : 'var(--text-secondary)'}; font-weight: {activeTab === tab
+                ? 500
+                : 400}; font-size: 13px; transition: color 0.2s;"
+              onclick={() => {
+                activeTab = tab;
+              }}
+            >
+              {tab}
+              {#if activeTab === tab}
+                <div
+                  style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--brand);"
+                ></div>
+              {/if}
+            </button>
+          {/each}
+        </div>
       </div>
     </div>
 
