@@ -83,94 +83,98 @@
   <title>修改密码 - HotSpot</title>
 </svelte:head>
 
-<div class="mx-auto max-w-3xl space-y-5">
-  <PageHeader
-    title="修改密码"
-    description="请确保新密码足够安全，避免与其他平台重复"
-    backHref="/settings"
-    backLabel="返回设置"
-  />
+<div class="page-pad">
+  <div class="page-shell page-shell--form space-y-5">
+    <PageHeader
+      title="修改密码"
+      description="请确保新密码足够安全，避免与其他平台重复"
+      backHref="/settings"
+      backLabel="返回设置"
+    />
 
-  <div
-    class="rounded-[22px] p-5"
-    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-  >
-    <p style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px;">
-      账户安全
-    </p>
-
-    <form
-      onsubmit={(e) => {
-        e.preventDefault();
-        handleSubmit();
-      }}
-      class="space-y-4"
+    <div
+      class="rounded-[22px] p-5"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
-      <div class="space-y-2">
-        <label for="old-password" style="font-size: 13px; color: var(--text-secondary);"
-          >当前密码</label
-        >
-        <input
-          id="old-password"
-          type="password"
-          bind:value={oldPassword}
-          onblur={() => markTouched('oldPassword')}
-          class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
-          style="border: 1px solid {oldPasswordError
-            ? 'var(--theme-error)'
-            : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
-        />
-        {#if oldPasswordError}
-          <p style="font-size: 12px; color: var(--theme-error);">{oldPasswordError}</p>
-        {/if}
-      </div>
-      <div class="space-y-2">
-        <label for="new-password" style="font-size: 13px; color: var(--text-secondary);"
-          >新密码</label
-        >
-        <input
-          id="new-password"
-          type="password"
-          bind:value={newPassword}
-          onblur={() => markTouched('newPassword')}
-          class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
-          style="border: 1px solid {newPasswordError
-            ? 'var(--theme-error)'
-            : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
-        />
-        {#if newPasswordError}
-          <p style="font-size: 12px; color: var(--theme-error);">{newPasswordError}</p>
-        {/if}
-      </div>
-      <div class="space-y-2">
-        <label for="confirm-password" style="font-size: 13px; color: var(--text-secondary);"
-          >确认新密码</label
-        >
-        <input
-          id="confirm-password"
-          type="password"
-          bind:value={confirmPassword}
-          onblur={() => markTouched('confirmPassword')}
-          class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
-          style="border: 1px solid {confirmPasswordError
-            ? 'var(--theme-error)'
-            : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
-        />
-        {#if confirmPasswordError}
-          <p style="font-size: 12px; color: var(--theme-error);">{confirmPasswordError}</p>
-        {/if}
-      </div>
-      <button
-        type="submit"
-        class="flex h-11 w-full items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
-        disabled={isSaving}
+      <p
+        style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px;"
       >
-        {#if isSaving}
-          <Loader2 size={16} class="mr-2 animate-spin" />
-        {/if}
-        保存修改
-      </button>
-    </form>
+        账户安全
+      </p>
+
+      <form
+        onsubmit={(e) => {
+          e.preventDefault();
+          handleSubmit();
+        }}
+        class="space-y-4"
+      >
+        <div class="space-y-2">
+          <label for="old-password" style="font-size: 13px; color: var(--text-secondary);"
+            >当前密码</label
+          >
+          <input
+            id="old-password"
+            type="password"
+            bind:value={oldPassword}
+            onblur={() => markTouched('oldPassword')}
+            class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+            style="border: 1px solid {oldPasswordError
+              ? 'var(--theme-error)'
+              : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
+          />
+          {#if oldPasswordError}
+            <p style="font-size: 12px; color: var(--theme-error);">{oldPasswordError}</p>
+          {/if}
+        </div>
+        <div class="space-y-2">
+          <label for="new-password" style="font-size: 13px; color: var(--text-secondary);"
+            >新密码</label
+          >
+          <input
+            id="new-password"
+            type="password"
+            bind:value={newPassword}
+            onblur={() => markTouched('newPassword')}
+            class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+            style="border: 1px solid {newPasswordError
+              ? 'var(--theme-error)'
+              : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
+          />
+          {#if newPasswordError}
+            <p style="font-size: 12px; color: var(--theme-error);">{newPasswordError}</p>
+          {/if}
+        </div>
+        <div class="space-y-2">
+          <label for="confirm-password" style="font-size: 13px; color: var(--text-secondary);"
+            >确认新密码</label
+          >
+          <input
+            id="confirm-password"
+            type="password"
+            bind:value={confirmPassword}
+            onblur={() => markTouched('confirmPassword')}
+            class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+            style="border: 1px solid {confirmPasswordError
+              ? 'var(--theme-error)'
+              : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
+          />
+          {#if confirmPasswordError}
+            <p style="font-size: 12px; color: var(--theme-error);">{confirmPasswordError}</p>
+          {/if}
+        </div>
+        <button
+          type="submit"
+          class="flex h-11 w-full items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+          style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+          disabled={isSaving}
+        >
+          {#if isSaving}
+            <Loader2 size={16} class="mr-2 animate-spin" />
+          {/if}
+          保存修改
+        </button>
+      </form>
+    </div>
   </div>
 </div>

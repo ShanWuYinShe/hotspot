@@ -354,13 +354,10 @@
   </div>
 
   <!-- Scrollable body -->
-  <div class="flex-1 overflow-y-auto no-scrollbar">
+  <div class="flex-1 overflow-y-auto no-scrollbar page-pad">
     {#if !activeTerm}
       <!-- No query: discovery state -->
-      <div
-        class="px-5 pt-4 pb-6"
-        style="max-width: 640px; margin-left: auto; margin-right: auto; width: 100%;"
-      >
+      <div class="page-shell page-shell--form">
         <!-- Recent searches -->
         {#if recentSearches.length > 0}
           <div class="mb-5">
@@ -456,7 +453,7 @@
       </div>
     {:else}
       <!-- Has query: results -->
-      <div style="max-width: 640px; margin-left: auto; margin-right: auto; width: 100%;">
+      <div class="page-shell page-shell--form">
         <!-- Result tabs -->
         <div class="flex overflow-x-auto no-scrollbar px-5 pt-3 pb-0 gap-2">
           {#each [{ value: 'all', label: '全部' }, { value: 'users', label: `用户${users.length ? ` (${users.length})` : ''}` }, { value: 'moments', label: `动态${moments.length ? ` (${moments.length})` : ''}` }, { value: 'groups', label: `群组${groups.length ? ` (${groups.length})` : ''}` }] as tab (tab.value)}
@@ -474,7 +471,7 @@
         </div>
 
         <!-- Results content -->
-        <div class="px-5 pt-4 pb-6 flex flex-col gap-4">
+        <div class="flex flex-col gap-4 pt-4">
           <!-- No results -->
           {#if !isLoading && !searchError && !hasAnyResults}
             <div class="flex flex-col items-center justify-center py-16 gap-3">

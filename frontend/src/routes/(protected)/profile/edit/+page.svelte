@@ -136,8 +136,10 @@
 </svelte:head>
 
 {#if isLoading}
-  <div class="flex flex-col items-center justify-center px-4 py-24">
-    <Loader2 class="h-8 w-8 animate-spin" style="color: var(--brand);" />
+  <div class="page-pad">
+    <div class="page-shell page-shell--form flex flex-col items-center justify-center py-24">
+      <Loader2 class="h-8 w-8 animate-spin" style="color: var(--brand);" />
+    </div>
   </div>
 {:else if profile}
   <!-- Header -->
@@ -173,147 +175,151 @@
     </button>
   </div>
 
-  <div
-    class="flex flex-col px-5 pt-4 pb-10 gap-5"
-    style="max-width: 560px; margin-left: auto; margin-right: auto; width: 100%;"
-  >
-    <!-- Banner -->
-    <div class="relative overflow-hidden rounded-[24px]" style="height: clamp(120px, 18vw, 160px);">
+  <div class="page-pad">
+    <div class="page-shell page-shell--form flex flex-col gap-5">
+      <!-- Banner -->
       <div
-        class="absolute inset-0"
-        style="background: linear-gradient(135deg, var(--brand), var(--glow)); opacity: 0.3;"
-      ></div>
-      <div
-        class="absolute inset-0"
-        style="background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.5));"
-      ></div>
-      <button
-        class="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
-        style="padding: 6px 12px; background: rgba(0,0,0,0.45); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25); font-size: 12px; color: white;"
+        class="relative overflow-hidden rounded-[24px]"
+        style="height: clamp(120px, 18vw, 160px);"
       >
-        <Camera size={13} strokeWidth={1.75} />
-        更换横幅
+        <div
+          class="absolute inset-0"
+          style="background: linear-gradient(135deg, var(--brand), var(--glow)); opacity: 0.3;"
+        ></div>
+        <div
+          class="absolute inset-0"
+          style="background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.5));"
+        ></div>
+        <button
+          class="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
+          style="padding: 6px 12px; background: rgba(0,0,0,0.45); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25); font-size: 12px; color: white;"
+        >
+          <Camera size={13} strokeWidth={1.75} />
+          更换横幅
+        </button>
+      </div>
+
+      <!-- Avatar edit -->
+      <div class="flex items-center gap-4 -mt-8 ml-2">
+        <div class="relative flex-shrink-0">
+          <div
+            class="overflow-hidden rounded-[22px]"
+            style="width: 72px; height: 72px; border: 3px solid var(--surface-bg); box-shadow: var(--shadow-lg);"
+          >
+            {#if avatarUrl}
+              <img src={avatarUrl} alt="avatar" class="w-full h-full object-cover" />
+            {:else}
+              <div
+                class="flex h-full w-full items-center justify-center"
+                style="background: var(--surface-bg); font-size: 20px; color: var(--text-primary);"
+              >
+                {nickname.slice(0, 2)}
+              </div>
+            {/if}
+          </div>
+          <button
+            class="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"
+            style="width: 26px; height: 26px; background: var(--brand); border: 2px solid var(--surface-bg); box-shadow: 0 2px 8px var(--glow);"
+            title="更换头像"
+            onclick={handleAvatarClick}
+          >
+            <Camera size={12} color="var(--text-on-accent)" strokeWidth={2} />
+          </button>
+          <input
+            type="file"
+            accept="image/*"
+            bind:this={avatarInput}
+            class="hidden"
+            onchange={handleAvatarChange}
+          />
+        </div>
+        <div>
+          <p style="font-size: 16px; color: var(--text-primary);">{profile.nickname}</p>
+          <p style="font-size: 12px; color: var(--text-secondary);">
+            @{profile.nickname.toLowerCase().replace(/\s+/g, '.')}
+          </p>
+        </div>
+      </div>
+
+      <!-- Nickname field -->
+      <div class="flex flex-col gap-1.5">
+        <div class="flex items-center gap-1.5">
+          <User style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
+          <span class="eyebrow">昵称</span>
+        </div>
+        <div class="input-surface rounded-[14px] px-4 py-3">
+          <input
+            id="nickname"
+            bind:value={nickname}
+            placeholder="你的名字"
+            maxlength={30}
+            class="w-full bg-transparent outline-none"
+            style="color: var(--text-primary); font-size: 14px;"
+          />
+        </div>
+      </div>
+
+      <!-- Bio field -->
+      <div class="flex flex-col gap-1.5">
+        <div class="flex items-center gap-1.5">
+          <FileText style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
+          <span class="eyebrow">简介</span>
+        </div>
+        <div class="input-surface rounded-[14px] px-4 py-3">
+          <textarea
+            id="bio"
+            bind:value={bio}
+            placeholder="介绍一下自己..."
+            rows="3"
+            maxlength={150}
+            class="w-full bg-transparent outline-none resize-none"
+            style="color: var(--text-primary); font-size: 14px; line-height: 1.65;"
+          ></textarea>
+          <div class="flex justify-end mt-1">
+            <span
+              style="font-size: 11px; color: {bio.length > 150 * 0.85
+                ? 'var(--brand)'
+                : 'var(--text-secondary)'};">{bio.length}/150</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- Save button (bottom) -->
+      <button
+        class="flex w-full items-center justify-center gap-2 rounded-[22px] px-4 py-3.5 outline-none transition-all"
+        style={saved
+          ? 'background: #22c55e; color: white; font-size: 14px; box-shadow: 0 4px 14px rgba(34,197,94,0.35); border: none;'
+          : canSave
+            ? 'background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px var(--glow); border: none;'
+            : 'background: var(--surface-secondary); color: var(--text-secondary); font-size: 14px; border: none; opacity: 0.5;'}
+        onclick={saveProfile}
+        disabled={!canSave}
+      >
+        {#if saved}
+          <Check size={16} color="white" strokeWidth={2.5} />
+          已保存
+        {:else if isSaving}
+          <Loader2 class="h-4 w-4 animate-spin" />
+          保存中...
+        {:else}
+          保存
+        {/if}
       </button>
     </div>
-
-    <!-- Avatar edit -->
-    <div class="flex items-center gap-4 -mt-8 ml-2">
-      <div class="relative flex-shrink-0">
-        <div
-          class="overflow-hidden rounded-[22px]"
-          style="width: 72px; height: 72px; border: 3px solid var(--surface-bg); box-shadow: var(--shadow-lg);"
-        >
-          {#if avatarUrl}
-            <img src={avatarUrl} alt="avatar" class="w-full h-full object-cover" />
-          {:else}
-            <div
-              class="flex h-full w-full items-center justify-center"
-              style="background: var(--surface-bg); font-size: 20px; color: var(--text-primary);"
-            >
-              {nickname.slice(0, 2)}
-            </div>
-          {/if}
-        </div>
-        <button
-          class="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"
-          style="width: 26px; height: 26px; background: var(--brand); border: 2px solid var(--surface-bg); box-shadow: 0 2px 8px var(--glow);"
-          title="更换头像"
-          onclick={handleAvatarClick}
-        >
-          <Camera size={12} color="var(--text-on-accent)" strokeWidth={2} />
-        </button>
-        <input
-          type="file"
-          accept="image/*"
-          bind:this={avatarInput}
-          class="hidden"
-          onchange={handleAvatarChange}
-        />
-      </div>
-      <div>
-        <p style="font-size: 16px; color: var(--text-primary);">{profile.nickname}</p>
-        <p style="font-size: 12px; color: var(--text-secondary);">
-          @{profile.nickname.toLowerCase().replace(/\s+/g, '.')}
-        </p>
-      </div>
-    </div>
-
-    <!-- Nickname field -->
-    <div class="flex flex-col gap-1.5">
-      <div class="flex items-center gap-1.5">
-        <User style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
-        <span class="eyebrow">昵称</span>
-      </div>
-      <div class="input-surface rounded-[14px] px-4 py-3">
-        <input
-          id="nickname"
-          bind:value={nickname}
-          placeholder="你的名字"
-          maxlength={30}
-          class="w-full bg-transparent outline-none"
-          style="color: var(--text-primary); font-size: 14px;"
-        />
-      </div>
-    </div>
-
-    <!-- Bio field -->
-    <div class="flex flex-col gap-1.5">
-      <div class="flex items-center gap-1.5">
-        <FileText style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
-        <span class="eyebrow">简介</span>
-      </div>
-      <div class="input-surface rounded-[14px] px-4 py-3">
-        <textarea
-          id="bio"
-          bind:value={bio}
-          placeholder="介绍一下自己..."
-          rows="3"
-          maxlength={150}
-          class="w-full bg-transparent outline-none resize-none"
-          style="color: var(--text-primary); font-size: 14px; line-height: 1.65;"
-        ></textarea>
-        <div class="flex justify-end mt-1">
-          <span
-            style="font-size: 11px; color: {bio.length > 150 * 0.85
-              ? 'var(--brand)'
-              : 'var(--text-secondary)'};">{bio.length}/150</span
-          >
-        </div>
-      </div>
-    </div>
-
-    <!-- Save button (bottom) -->
-    <button
-      class="flex w-full items-center justify-center gap-2 rounded-[22px] px-4 py-3.5 outline-none transition-all"
-      style={saved
-        ? 'background: #22c55e; color: white; font-size: 14px; box-shadow: 0 4px 14px rgba(34,197,94,0.35); border: none;'
-        : canSave
-          ? 'background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px var(--glow); border: none;'
-          : 'background: var(--surface-secondary); color: var(--text-secondary); font-size: 14px; border: none; opacity: 0.5;'}
-      onclick={saveProfile}
-      disabled={!canSave}
-    >
-      {#if saved}
-        <Check size={16} color="white" strokeWidth={2.5} />
-        已保存
-      {:else if isSaving}
-        <Loader2 class="h-4 w-4 animate-spin" />
-        保存中...
-      {:else}
-        保存
-      {/if}
-    </button>
   </div>
 {:else}
   <!-- Error state -->
-  <div class="flex flex-col items-center justify-center px-4 py-16">
-    <p style="font-size: 14px; color: var(--text-secondary);">加载失败</p>
-    <button
-      class="rounded-[22px] px-5 py-3.5 outline-none surface-flat mt-4"
-      style="color: var(--brand); font-size: 14px;"
-      onclick={() => void goto('/profile')}
-    >
-      返回个人资料
-    </button>
+  <div class="page-pad">
+    <div class="page-shell page-shell--form flex flex-col items-center justify-center py-16">
+      <p style="font-size: 14px; color: var(--text-secondary);">加载失败</p>
+      <button
+        class="rounded-[22px] px-5 py-3.5 outline-none surface-flat mt-4"
+        style="color: var(--brand); font-size: 14px;"
+        onclick={() => void goto('/profile')}
+      >
+        返回个人资料
+      </button>
+    </div>
   </div>
 {/if}

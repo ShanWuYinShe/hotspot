@@ -867,817 +867,821 @@
   <title>{group?.group.name ?? '群组详情'} - HotSpot</title>
 </svelte:head>
 
-<div class="mx-auto max-w-5xl space-y-5">
-  <!-- Sticky header -->
-  <div
-    class="sticky top-0 z-10 flex items-center gap-4 px-4 py-3"
-    style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
-  >
-    <button
-      class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-      style="width: 36px; height: 36px;"
-      onclick={() => history.back()}
-      aria-label="返回"
-    >
-      <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-    </button>
-    <div>
-      <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">群组详情</h1>
-      <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-        查看群信息、成员与公告管理
-      </p>
-    </div>
-  </div>
-
-  {#if group && !wsGroupSubscription.state.isSubscribed}
+<div class="page-pad">
+  <div class="page-shell page-shell--narrow space-y-5">
+    <!-- Sticky header -->
     <div
-      class="flex items-center gap-2 rounded-[16px] px-4 py-2"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--theme-warning-border);"
+      class="sticky top-0 z-10 flex items-center gap-4 px-4 py-3"
+      style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <Loader2 size={14} class="animate-spin" style="color: var(--theme-warning);" />
-      <span style="font-size: 14px; color: var(--theme-warning);">
-        {#if wsGroupSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
-          群组实时事件连接中…
-        {:else}
-          群组实时事件订阅重试中…
-        {/if}
-      </span>
-    </div>
-  {/if}
-
-  {#if !group}
-    <div
-      class="rounded-[22px] p-6"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-    >
-      <div class="flex flex-col items-center gap-4">
-        <p style="color: var(--text-secondary);">
-          {data.error || '群组不存在'}
+      <button
+        class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+        style="width: 36px; height: 36px;"
+        onclick={() => history.back()}
+        aria-label="返回"
+      >
+        <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
+      </button>
+      <div>
+        <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">群组详情</h1>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+          查看群信息、成员与公告管理
         </p>
       </div>
     </div>
-  {:else}
-    <!-- Group profile card -->
-    <div
-      class="rounded-[22px] p-6"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-    >
-      <div class="space-y-6">
-        <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div
-              class="overflow-hidden rounded-full"
-              style="width: 96px; height: 96px; border: 2px solid var(--brand); opacity: 0.9;"
-            >
-              <img
-                src={group.group.avatar_url}
-                alt={group.group.name}
-                class="h-full w-full object-cover"
-              />
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary);">
-                  {group.group.name}
-                </h2>
-                {#if group.has_password}
-                  <Lock size={16} color="var(--text-secondary)" />
-                {/if}
-              </div>
-              {#if group.description}
-                <p
-                  style="margin-top: 8px; max-width: 36rem; font-size: 14px; color: var(--text-secondary);"
-                >
-                  {group.description}
-                </p>
-              {/if}
-              {#if group.tags && group.tags.length > 0}
-                <div class="mt-3 flex flex-wrap gap-2">
-                  {#each group.tags as tag (tag)}
-                    <span
-                      class="rounded-full px-2.5 py-1"
-                      style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-                    >
-                      #{tag}
-                    </span>
-                  {/each}
-                </div>
-              {/if}
-            </div>
-          </div>
 
-          <div class="flex flex-wrap gap-3">
-            {#if group.my_state?.is_joined}
-              <button
-                class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
-                onclick={() => goto(`/chat/groups/${groupId}`)}
-              >
-                进入群聊
-              </button>
-              <button
-                class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] cursor-default"
-                style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); color: var(--brand); background: var(--surface-bg);"
-                disabled
-              >
-                已加入
-              </button>
-              <button
-                class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-                onclick={confirmLeave}
-                disabled={isLeaving}
-              >
-                {#if isLeaving}
-                  <Loader2 size={14} class="animate-spin" />
-                {/if}
-                退出群组
-              </button>
-            {:else}
-              <button
-                class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
-                onclick={openJoinDialog}
-                disabled={settings?.join_method === 'invite_only'}
-              >
-                {settings?.join_method === 'invite_only' ? '仅限邀请' : '加入群组'}
-              </button>
-            {/if}
-          </div>
-        </div>
-
-        <!-- Stats row -->
-        <div class="grid gap-3 sm:grid-cols-3">
-          <div
-            class="rounded-[18px] p-4 text-left"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-          >
-            <div
-              class="flex items-center gap-2"
-              style="font-size: 14px; color: var(--text-secondary);"
-            >
-              <Users size={16} />
-              成员数量
-            </div>
-            <div
-              style="margin-top: 8px; font-size: 24px; font-weight: 700; color: var(--text-primary);"
-            >
-              {group.group.members_count}
-            </div>
-          </div>
-          <div
-            class="rounded-[18px] p-4 text-left"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-          >
-            <div
-              class="flex items-center gap-2"
-              style="font-size: 14px; color: var(--text-secondary);"
-            >
-              <Shield size={16} />
-              加入方式
-            </div>
-            <div
-              style="margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary);"
-            >
-              {getJoinMethodLabel(settings?.join_method)}
-            </div>
-          </div>
-          <div
-            class="rounded-[18px] p-4 text-left"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-          >
-            <div
-              class="flex items-center gap-2"
-              style="font-size: 14px; color: var(--text-secondary);"
-            >
-              <MapPin size={16} />
-              群组位置
-            </div>
-            <div
-              style="margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary);"
-            >
-              {group.location.location_name}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tab bar -->
-    <div class="flex flex-wrap gap-2">
-      {#each [{ value: 'overview', label: '概览' }, { value: 'announcements', label: '公告' }, { value: 'members', label: '成员' }, ...(canManageGroup ? [{ value: 'applications', label: '申请' }] : [])] as tab (tab.value)}
-        <button
-          class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] transition-all"
-          style={currentTab === tab.value
-            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow);'
-            : 'background: var(--surface-bg); color: var(--text-secondary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);'}
-          onclick={() =>
-            (currentTab = tab.value as 'overview' | 'announcements' | 'members' | 'applications')}
-        >
-          <span style="font-size: 13px;">{tab.label}</span>
-        </button>
-      {/each}
-    </div>
-
-    <!-- Tab: Overview -->
-    {#if currentTab === 'overview'}
-      <div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div
-          class="rounded-[22px] p-5"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-        >
-          <h3
-            class="uppercase"
-            style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 12px;"
-          >
-            群组说明
-          </h3>
-          <p style="font-size: 14px; color: var(--text-secondary);">
-            {group.description || '暂无群组简介，欢迎加入后一起完善。'}
-          </p>
-          {#if group.tags && group.tags.length > 0}
-            <div class="mt-3 flex flex-wrap gap-2">
-              {#each group.tags as tag (tag)}
-                <span
-                  class="rounded-full px-2.5 py-1"
-                  style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-                >
-                  #{tag}
-                </span>
-              {/each}
-            </div>
+    {#if group && !wsGroupSubscription.state.isSubscribed}
+      <div
+        class="flex items-center gap-2 rounded-[16px] px-4 py-2"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--theme-warning-border);"
+      >
+        <Loader2 size={14} class="animate-spin" style="color: var(--theme-warning);" />
+        <span style="font-size: 14px; color: var(--theme-warning);">
+          {#if wsGroupSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
+            群组实时事件连接中…
+          {:else}
+            群组实时事件订阅重试中…
           {/if}
-        </div>
-        <div
-          class="rounded-[22px] p-5"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-        >
-          <h3
-            class="uppercase"
-            style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 12px;"
-          >
-            加入须知
-          </h3>
-          <div class="space-y-2" style="font-size: 14px; color: var(--text-secondary);">
-            <div class="flex items-center justify-between">
-              <span>加入方式</span>
-              <span style="font-weight: 500; color: var(--text-primary);"
-                >{getJoinMethodLabel(settings?.join_method)}</span
-              >
-            </div>
-            <div style="height: 1px; background: var(--border-theme);"></div>
-            <div class="flex items-center justify-between">
-              <span>是否需要密码</span>
-              <span style="font-weight: 500; color: var(--text-primary);"
-                >{group.has_password ? '需要' : '不需要'}</span
-              >
-            </div>
-            <div style="height: 1px; background: var(--border-theme);"></div>
-            <div class="flex items-center justify-between">
-              <span>当前位置</span>
-              <span style="font-weight: 500; color: var(--text-primary);"
-                >{group.location.location_name}</span
-              >
-            </div>
-          </div>
-          <div class="mt-4">
-            {#if !authStore.isAuthenticated}
-              <button
-                class="w-full rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-                onclick={() => uiStore.openLoginModal()}
-              >
-                登录后加入
-              </button>
-            {:else if group.my_state?.is_joined}
-              <div
-                class="rounded-[14px] px-3 py-2 text-center"
-                style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
-              >
-                你已加入该群组
-              </div>
-            {:else}
-              <button
-                class="w-full rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
-                onclick={openJoinDialog}
-              >
-                申请加入
-              </button>
-            {/if}
-          </div>
-        </div>
+        </span>
       </div>
     {/if}
 
-    <!-- Tab: Announcements (abbreviated for neumorphic style) -->
-    {#if currentTab === 'announcements'}
-      {#if !authStore.isAuthenticated}
-        <div
-          class="flex flex-col items-center gap-3 rounded-[22px] py-10"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-        >
-          <p style="font-size: 14px; color: var(--text-secondary);">登录后查看群公告</p>
-          <button
-            class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-            onclick={() => uiStore.openLoginModal()}
-          >
-            去登录
-          </button>
+    {#if !group}
+      <div
+        class="rounded-[22px] p-6"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      >
+        <div class="flex flex-col items-center gap-4">
+          <p style="color: var(--text-secondary);">
+            {data.error || '群组不存在'}
+          </p>
         </div>
-      {:else if !group.my_state?.is_joined}
-        <div
-          class="flex flex-col items-center gap-3 rounded-[22px] py-10"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-        >
-          <p style="font-size: 14px; color: var(--text-secondary);">加入群组后可查看公告</p>
-          <button
-            class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
-            onclick={openJoinDialog}
-          >
-            申请加入
-          </button>
-        </div>
-      {:else}
-        <!-- Announcements toolbar -->
-        <div
-          class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-        >
-          <div>
-            <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">群公告</p>
-            <p style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
-              重要通知与管理提示将展示在这里
-            </p>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button
-              class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-              style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-              onclick={() => loadAnnouncements(true)}
-              disabled={announcementsPagination.loading}
-            >
-              <RefreshCw size={14} />
-              刷新
-            </button>
-            {#if canManageGroup}
-              <button
-                class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
-                onclick={() => openAnnouncementDialog()}
-              >
-                <Plus size={14} />
-                发布公告
-              </button>
-            {/if}
-          </div>
-        </div>
-        {#if announcementsPagination.loading && announcementsPagination.items.length === 0}
-          <div class="space-y-3">
-            {#each Array(3) as _, i (i)}
+      </div>
+    {:else}
+      <!-- Group profile card -->
+      <div
+        class="rounded-[22px] p-6"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      >
+        <div class="space-y-6">
+          <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div
-                class="rounded-[22px] p-4 space-y-2"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+                class="overflow-hidden rounded-full"
+                style="width: 96px; height: 96px; border: 2px solid var(--brand); opacity: 0.9;"
               >
-                <div
-                  class="rounded"
-                  style="width: 160px; height: 14px; background: var(--border-theme);"
-                ></div>
-                <div
-                  class="rounded"
-                  style="width: 100%; height: 14px; background: var(--border-theme);"
-                ></div>
-                <div
-                  class="rounded"
-                  style="width: 128px; height: 12px; background: var(--border-theme);"
-                ></div>
+                <img
+                  src={group.group.avatar_url}
+                  alt={group.group.name}
+                  class="h-full w-full object-cover"
+                />
               </div>
-            {/each}
-          </div>
-        {:else if announcementsPagination.items.length === 0}
-          <div
-            class="rounded-[22px] py-10 text-center"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-          >
-            <p style="font-size: 14px; color: var(--text-secondary);">暂无公告</p>
-          </div>
-        {:else}
-          <div class="space-y-3">
-            {#each announcementsPagination.items as announcement (announcement.announcement_id)}
-              <div
-                class="rounded-[22px] p-4"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <div class="space-y-2">
-                    <div class="flex items-center gap-2">
-                      <p style="font-weight: 500; font-size: 15px; color: var(--text-primary);">
-                        {announcement.title}
-                      </p>
-                      {#if announcement.is_pinned}
-                        <span
-                          class="rounded-full px-2 py-0.5"
-                          style="font-size: 10px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-                          >置顶</span
-                        >
-                      {/if}
-                    </div>
-                    <p
-                      class="whitespace-pre-wrap"
-                      style="font-size: 14px; color: var(--text-secondary);"
-                    >
-                      {announcement.content}
-                    </p>
-                    <div style="font-size: 12px; color: var(--text-secondary);">
-                      {formatDateTime(announcement.created_at)}
-                    </div>
-                  </div>
-                  {#if canManageGroup}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
-                        aria-label="公告操作"
-                      >
-                        <MoreHorizontal size={16} />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" class="w-40">
-                        <DropdownMenuItem onclick={() => openAnnouncementDialog(announcement)}>
-                          <Pencil size={16} style="margin-right: 8px;" />编辑公告
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onclick={() => openDeleteAnnouncement(announcement)}>
-                          <Trash2
-                            size={16}
-                            style="margin-right: 8px; color: var(--theme-error);"
-                          />删除公告
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary);">
+                    {group.group.name}
+                  </h2>
+                  {#if group.has_password}
+                    <Lock size={16} color="var(--text-secondary)" />
                   {/if}
                 </div>
+                {#if group.description}
+                  <p
+                    style="margin-top: 8px; max-width: 36rem; font-size: 14px; color: var(--text-secondary);"
+                  >
+                    {group.description}
+                  </p>
+                {/if}
+                {#if group.tags && group.tags.length > 0}
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    {#each group.tags as tag (tag)}
+                      <span
+                        class="rounded-full px-2.5 py-1"
+                        style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                      >
+                        #{tag}
+                      </span>
+                    {/each}
+                  </div>
+                {/if}
               </div>
-            {/each}
-          </div>
-          {#if announcementsPagination.hasMore}
-            <div class="flex justify-center pt-2">
-              <button
-                class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-                onclick={() => loadAnnouncements(false)}
-                disabled={announcementsPagination.loadingMore}
-              >
-                {#if announcementsPagination.loadingMore}<Loader2
-                    size={14}
-                    class="animate-spin"
-                  />{/if}
-                加载更多
-              </button>
             </div>
-          {/if}
-        {/if}
-      {/if}
-    {/if}
 
-    <!-- Tab: Members (abbreviated for neumorphic style) -->
-    {#if currentTab === 'members'}
-      {#if !authStore.isAuthenticated}
-        <div
-          class="flex flex-col items-center gap-3 rounded-[22px] py-10"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-        >
-          <p style="font-size: 14px; color: var(--text-secondary);">登录后查看成员</p>
-          <button
-            class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-            onclick={() => uiStore.openLoginModal()}>去登录</button
-          >
-        </div>
-      {:else if !group.my_state?.is_joined}
-        <div
-          class="flex flex-col items-center gap-3 rounded-[22px] py-10"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-        >
-          <p style="font-size: 14px; color: var(--text-secondary);">加入群组后可查看成员</p>
-          <button
-            class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
-            onclick={openJoinDialog}>申请加入</button
-          >
-        </div>
-      {:else}
-        <div
-          class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-        >
-          <div>
-            <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">成员列表</p>
-            <p style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
-              支持群主/管理员进行禁言与角色管理
-            </p>
+            <div class="flex flex-wrap gap-3">
+              {#if group.my_state?.is_joined}
+                <button
+                  class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                  style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+                  onclick={() => goto(`/chat/groups/${groupId}`)}
+                >
+                  进入群聊
+                </button>
+                <button
+                  class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] cursor-default"
+                  style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); color: var(--brand); background: var(--surface-bg);"
+                  disabled
+                >
+                  已加入
+                </button>
+                <button
+                  class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                  style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                  onclick={confirmLeave}
+                  disabled={isLeaving}
+                >
+                  {#if isLeaving}
+                    <Loader2 size={14} class="animate-spin" />
+                  {/if}
+                  退出群组
+                </button>
+              {:else}
+                <button
+                  class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                  style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+                  onclick={openJoinDialog}
+                  disabled={settings?.join_method === 'invite_only'}
+                >
+                  {settings?.join_method === 'invite_only' ? '仅限邀请' : '加入群组'}
+                </button>
+              {/if}
+            </div>
           </div>
-          <div class="flex flex-wrap gap-2">
-            <button
-              class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-              style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-              onclick={() => loadMembers(true)}
-              disabled={membersPagination.loading}
+
+          <!-- Stats row -->
+          <div class="grid gap-3 sm:grid-cols-3">
+            <div
+              class="rounded-[18px] p-4 text-left"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
             >
-              <RefreshCw size={14} />刷新
-            </button>
-            {#if canManageGroup}
-              <span
-                class="rounded-full px-3 py-1"
-                style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-                >可管理成员</span
+              <div
+                class="flex items-center gap-2"
+                style="font-size: 14px; color: var(--text-secondary);"
               >
+                <Users size={16} />
+                成员数量
+              </div>
+              <div
+                style="margin-top: 8px; font-size: 24px; font-weight: 700; color: var(--text-primary);"
+              >
+                {group.group.members_count}
+              </div>
+            </div>
+            <div
+              class="rounded-[18px] p-4 text-left"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            >
+              <div
+                class="flex items-center gap-2"
+                style="font-size: 14px; color: var(--text-secondary);"
+              >
+                <Shield size={16} />
+                加入方式
+              </div>
+              <div
+                style="margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary);"
+              >
+                {getJoinMethodLabel(settings?.join_method)}
+              </div>
+            </div>
+            <div
+              class="rounded-[18px] p-4 text-left"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            >
+              <div
+                class="flex items-center gap-2"
+                style="font-size: 14px; color: var(--text-secondary);"
+              >
+                <MapPin size={16} />
+                群组位置
+              </div>
+              <div
+                style="margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary);"
+              >
+                {group.location.location_name}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab bar -->
+      <div class="flex flex-wrap gap-2">
+        {#each [{ value: 'overview', label: '概览' }, { value: 'announcements', label: '公告' }, { value: 'members', label: '成员' }, ...(canManageGroup ? [{ value: 'applications', label: '申请' }] : [])] as tab (tab.value)}
+          <button
+            class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] transition-all"
+            style={currentTab === tab.value
+              ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow);'
+              : 'background: var(--surface-bg); color: var(--text-secondary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);'}
+            onclick={() =>
+              (currentTab = tab.value as 'overview' | 'announcements' | 'members' | 'applications')}
+          >
+            <span style="font-size: 13px;">{tab.label}</span>
+          </button>
+        {/each}
+      </div>
+
+      <!-- Tab: Overview -->
+      {#if currentTab === 'overview'}
+        <div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <div
+            class="rounded-[22px] p-5"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          >
+            <h3
+              class="uppercase"
+              style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 12px;"
+            >
+              群组说明
+            </h3>
+            <p style="font-size: 14px; color: var(--text-secondary);">
+              {group.description || '暂无群组简介，欢迎加入后一起完善。'}
+            </p>
+            {#if group.tags && group.tags.length > 0}
+              <div class="mt-3 flex flex-wrap gap-2">
+                {#each group.tags as tag (tag)}
+                  <span
+                    class="rounded-full px-2.5 py-1"
+                    style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                  >
+                    #{tag}
+                  </span>
+                {/each}
+              </div>
             {/if}
           </div>
-        </div>
-        {#if membersPagination.loading && membersPagination.items.length === 0}
-          <div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
-            {#each Array(6) as _, i (i)}
-              <div class="mb-3 break-inside-avoid">
+          <div
+            class="rounded-[22px] p-5"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          >
+            <h3
+              class="uppercase"
+              style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 12px;"
+            >
+              加入须知
+            </h3>
+            <div class="space-y-2" style="font-size: 14px; color: var(--text-secondary);">
+              <div class="flex items-center justify-between">
+                <span>加入方式</span>
+                <span style="font-weight: 500; color: var(--text-primary);"
+                  >{getJoinMethodLabel(settings?.join_method)}</span
+                >
+              </div>
+              <div style="height: 1px; background: var(--border-theme);"></div>
+              <div class="flex items-center justify-between">
+                <span>是否需要密码</span>
+                <span style="font-weight: 500; color: var(--text-primary);"
+                  >{group.has_password ? '需要' : '不需要'}</span
+                >
+              </div>
+              <div style="height: 1px; background: var(--border-theme);"></div>
+              <div class="flex items-center justify-between">
+                <span>当前位置</span>
+                <span style="font-weight: 500; color: var(--text-primary);"
+                  >{group.location.location_name}</span
+                >
+              </div>
+            </div>
+            <div class="mt-4">
+              {#if !authStore.isAuthenticated}
+                <button
+                  class="w-full rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                  style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                  onclick={() => uiStore.openLoginModal()}
+                >
+                  登录后加入
+                </button>
+              {:else if group.my_state?.is_joined}
                 <div
-                  class="flex items-center gap-3 rounded-[22px] p-4"
+                  class="rounded-[14px] px-3 py-2 text-center"
+                  style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
+                >
+                  你已加入该群组
+                </div>
+              {:else}
+                <button
+                  class="w-full rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                  style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+                  onclick={openJoinDialog}
+                >
+                  申请加入
+                </button>
+              {/if}
+            </div>
+          </div>
+        </div>
+      {/if}
+
+      <!-- Tab: Announcements (abbreviated for neumorphic style) -->
+      {#if currentTab === 'announcements'}
+        {#if !authStore.isAuthenticated}
+          <div
+            class="flex flex-col items-center gap-3 rounded-[22px] py-10"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          >
+            <p style="font-size: 14px; color: var(--text-secondary);">登录后查看群公告</p>
+            <button
+              class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+              style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+              onclick={() => uiStore.openLoginModal()}
+            >
+              去登录
+            </button>
+          </div>
+        {:else if !group.my_state?.is_joined}
+          <div
+            class="flex flex-col items-center gap-3 rounded-[22px] py-10"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          >
+            <p style="font-size: 14px; color: var(--text-secondary);">加入群组后可查看公告</p>
+            <button
+              class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+              style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+              onclick={openJoinDialog}
+            >
+              申请加入
+            </button>
+          </div>
+        {:else}
+          <!-- Announcements toolbar -->
+          <div
+            class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+          >
+            <div>
+              <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">群公告</p>
+              <p style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
+                重要通知与管理提示将展示在这里
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button
+                class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                onclick={() => loadAnnouncements(true)}
+                disabled={announcementsPagination.loading}
+              >
+                <RefreshCw size={14} />
+                刷新
+              </button>
+              {#if canManageGroup}
+                <button
+                  class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                  style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+                  onclick={() => openAnnouncementDialog()}
+                >
+                  <Plus size={14} />
+                  发布公告
+                </button>
+              {/if}
+            </div>
+          </div>
+          {#if announcementsPagination.loading && announcementsPagination.items.length === 0}
+            <div class="space-y-3">
+              {#each Array(3) as _, i (i)}
+                <div
+                  class="rounded-[22px] p-4 space-y-2"
                   style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
                 >
                   <div
-                    class="rounded-full"
-                    style="width: 40px; height: 40px; background: var(--border-theme);"
+                    class="rounded"
+                    style="width: 160px; height: 14px; background: var(--border-theme);"
                   ></div>
-                  <div class="flex-1 space-y-2">
-                    <div
-                      class="rounded"
-                      style="width: 96px; height: 12px; background: var(--border-theme);"
-                    ></div>
-                    <div
-                      class="rounded"
-                      style="width: 128px; height: 12px; background: var(--border-theme);"
-                    ></div>
-                  </div>
+                  <div
+                    class="rounded"
+                    style="width: 100%; height: 14px; background: var(--border-theme);"
+                  ></div>
+                  <div
+                    class="rounded"
+                    style="width: 128px; height: 12px; background: var(--border-theme);"
+                  ></div>
                 </div>
-              </div>
-            {/each}
-          </div>
-        {:else if membersPagination.items.length === 0}
-          <div
-            class="rounded-[22px] py-10 text-center"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-          >
-            <p style="font-size: 14px; color: var(--text-secondary);">暂无成员</p>
-          </div>
-        {:else}
-          <div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
-            {#each membersPagination.items as member (member.user.user_id)}
-              <div class="mb-3 break-inside-avoid">
+              {/each}
+            </div>
+          {:else if announcementsPagination.items.length === 0}
+            <div
+              class="rounded-[22px] py-10 text-center"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            >
+              <p style="font-size: 14px; color: var(--text-secondary);">暂无公告</p>
+            </div>
+          {:else}
+            <div class="space-y-3">
+              {#each announcementsPagination.items as announcement (announcement.announcement_id)}
                 <div
-                  class="flex items-center gap-3 rounded-[22px] p-4 transition-all"
+                  class="rounded-[22px] p-4"
                   style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
                 >
-                  <a
-                    href="/users/{member.user.user_id}"
-                    class="flex min-w-0 flex-1 items-center gap-3"
-                  >
-                    <div
-                      class="overflow-hidden rounded-full"
-                      style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme);"
-                    >
-                      <img
-                        src={member.user.avatar_url}
-                        alt={member.user.nickname}
-                        class="h-full w-full object-cover"
-                      />
-                    </div>
-                    <div class="min-w-0 flex-1">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="space-y-2">
                       <div class="flex items-center gap-2">
-                        <p
-                          class="truncate"
-                          style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
-                        >
-                          {member.user.nickname}
+                        <p style="font-weight: 500; font-size: 15px; color: var(--text-primary);">
+                          {announcement.title}
                         </p>
-                        <span
-                          class="rounded-full px-2 py-0.5"
-                          style="font-size: 10px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-                          >{getRoleLabel(member.role)}</span
-                        >
+                        {#if announcement.is_pinned}
+                          <span
+                            class="rounded-full px-2 py-0.5"
+                            style="font-size: 10px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                            >置顶</span
+                          >
+                        {/if}
                       </div>
-                      <p style="font-size: 12px; color: var(--text-secondary);">
-                        加入于 {formatDateTime(member.joined_at)}
-                      </p>
-                      {#if member.muted_until}
-                        <p style="font-size: 12px; color: var(--theme-error); opacity: 0.8;">
-                          禁言至 {formatDateTime(member.muted_until)}
-                        </p>
-                      {/if}
-                    </div>
-                  </a>
-                  <div class="flex items-center gap-2">
-                    {#if member.muted_until}
-                      <span
-                        class="rounded-full px-2 py-0.5"
-                        style="font-size: 10px; color: var(--text-secondary); background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-                        >已禁言</span
+                      <p
+                        class="whitespace-pre-wrap"
+                        style="font-size: 14px; color: var(--text-secondary);"
                       >
-                    {/if}
-                    {#if canManageMember(member)}
+                        {announcement.content}
+                      </p>
+                      <div style="font-size: 12px; color: var(--text-secondary);">
+                        {formatDateTime(announcement.created_at)}
+                      </div>
+                    </div>
+                    {#if canManageGroup}
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
                           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
-                          aria-label="成员操作"
+                          aria-label="公告操作"
                         >
                           <MoreHorizontal size={16} />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" class="w-40">
-                          {#if member.muted_until}
-                            <DropdownMenuItem onclick={() => handleUnmuteMember(member)}
-                              ><Mic
-                                size={16}
-                                style="margin-right: 8px;"
-                              />解除禁言</DropdownMenuItem
-                            >
-                          {:else}
-                            <DropdownMenuItem onclick={() => openMuteDialog(member)}
-                              ><MicOff
-                                size={16}
-                                style="margin-right: 8px;"
-                              />禁言成员</DropdownMenuItem
-                            >
-                          {/if}
-                          {#if canChangeRole(member)}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onclick={() => openRoleDialog(member)}
-                              ><UserCog
-                                size={16}
-                                style="margin-right: 8px;"
-                              />角色管理</DropdownMenuItem
-                            >
-                          {/if}
+                          <DropdownMenuItem onclick={() => openAnnouncementDialog(announcement)}>
+                            <Pencil size={16} style="margin-right: 8px;" />编辑公告
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onclick={() => openRemoveDialog(member)}
-                            ><UserMinus
+                          <DropdownMenuItem onclick={() => openDeleteAnnouncement(announcement)}>
+                            <Trash2
                               size={16}
                               style="margin-right: 8px; color: var(--theme-error);"
-                            />移除成员</DropdownMenuItem
-                          >
+                            />删除公告
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     {/if}
                   </div>
                 </div>
-              </div>
-            {/each}
-          </div>
-          {#if membersPagination.hasMore}
-            <div class="flex justify-center pt-2">
-              <button
-                class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-                onclick={() => loadMembers(false)}
-                disabled={membersPagination.loadingMore}
-              >
-                {#if membersPagination.loadingMore}<Loader2 size={14} class="animate-spin" />{/if}
-                加载更多
-              </button>
+              {/each}
             </div>
+            {#if announcementsPagination.hasMore}
+              <div class="flex justify-center pt-2">
+                <button
+                  class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                  style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                  onclick={() => loadAnnouncements(false)}
+                  disabled={announcementsPagination.loadingMore}
+                >
+                  {#if announcementsPagination.loadingMore}<Loader2
+                      size={14}
+                      class="animate-spin"
+                    />{/if}
+                  加载更多
+                </button>
+              </div>
+            {/if}
           {/if}
         {/if}
       {/if}
-    {/if}
 
-    <!-- Tab: Applications -->
-    {#if canManageGroup && currentTab === 'applications'}
-      <div class="space-y-4">
-        <div
-          class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-        >
-          <div>
-            <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">待处理申请</p>
-            <p style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
-              仅展示 pending 申请，处理后会自动移出列表
-            </p>
-          </div>
-          <button
-            class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-            onclick={() => loadApplications(true)}
-            disabled={applicationsPagination.loading}
-          >
-            <RefreshCw size={14} />刷新
-          </button>
-        </div>
-        {#if applicationsPagination.loading && applicationsPagination.items.length === 0}
-          <div class="space-y-3">
-            {#each Array(3) as _, i (i)}
-              <div
-                class="rounded-[22px] p-4 space-y-2"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-              >
-                <div
-                  class="rounded"
-                  style="width: 128px; height: 14px; background: var(--border-theme);"
-                ></div>
-                <div
-                  class="rounded"
-                  style="width: 100%; height: 14px; background: var(--border-theme);"
-                ></div>
-                <div
-                  class="rounded"
-                  style="width: 144px; height: 12px; background: var(--border-theme);"
-                ></div>
-              </div>
-            {/each}
-          </div>
-        {:else if applicationsPagination.items.length === 0}
+      <!-- Tab: Members (abbreviated for neumorphic style) -->
+      {#if currentTab === 'members'}
+        {#if !authStore.isAuthenticated}
           <div
-            class="rounded-[22px] py-10 text-center"
+            class="flex flex-col items-center gap-3 rounded-[22px] py-10"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
-            <p style="font-size: 14px; color: var(--text-secondary);">暂无待处理申请</p>
+            <p style="font-size: 14px; color: var(--text-secondary);">登录后查看成员</p>
+            <button
+              class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+              style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+              onclick={() => uiStore.openLoginModal()}>去登录</button
+            >
+          </div>
+        {:else if !group.my_state?.is_joined}
+          <div
+            class="flex flex-col items-center gap-3 rounded-[22px] py-10"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          >
+            <p style="font-size: 14px; color: var(--text-secondary);">加入群组后可查看成员</p>
+            <button
+              class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+              style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+              onclick={openJoinDialog}>申请加入</button
+            >
           </div>
         {:else}
-          <div class="space-y-3">
-            {#each applicationsPagination.items as application (application.application_id)}
-              <div
-                class="rounded-[22px] p-4"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          <div
+            class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+          >
+            <div>
+              <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">成员列表</p>
+              <p style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
+                支持群主/管理员进行禁言与角色管理
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button
+                class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                onclick={() => loadMembers(true)}
+                disabled={membersPagination.loading}
               >
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div class="min-w-0 space-y-1">
-                    <div class="flex items-center gap-2">
+                <RefreshCw size={14} />刷新
+              </button>
+              {#if canManageGroup}
+                <span
+                  class="rounded-full px-3 py-1"
+                  style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                  >可管理成员</span
+                >
+              {/if}
+            </div>
+          </div>
+          {#if membersPagination.loading && membersPagination.items.length === 0}
+            <div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
+              {#each Array(6) as _, i (i)}
+                <div class="mb-3 break-inside-avoid">
+                  <div
+                    class="flex items-center gap-3 rounded-[22px] p-4"
+                    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+                  >
+                    <div
+                      class="rounded-full"
+                      style="width: 40px; height: 40px; background: var(--border-theme);"
+                    ></div>
+                    <div class="flex-1 space-y-2">
+                      <div
+                        class="rounded"
+                        style="width: 96px; height: 12px; background: var(--border-theme);"
+                      ></div>
+                      <div
+                        class="rounded"
+                        style="width: 128px; height: 12px; background: var(--border-theme);"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {:else if membersPagination.items.length === 0}
+            <div
+              class="rounded-[22px] py-10 text-center"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            >
+              <p style="font-size: 14px; color: var(--text-secondary);">暂无成员</p>
+            </div>
+          {:else}
+            <div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
+              {#each membersPagination.items as member (member.user.user_id)}
+                <div class="mb-3 break-inside-avoid">
+                  <div
+                    class="flex items-center gap-3 rounded-[22px] p-4 transition-all"
+                    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+                  >
+                    <a
+                      href="/users/{member.user.user_id}"
+                      class="flex min-w-0 flex-1 items-center gap-3"
+                    >
                       <div
                         class="overflow-hidden rounded-full"
-                        style="width: 32px; height: 32px; border: 1.5px solid var(--border-theme);"
+                        style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme);"
                       >
                         <img
-                          src={application.applicant.avatar_url}
-                          alt={application.applicant.nickname}
+                          src={member.user.avatar_url}
+                          alt={member.user.nickname}
                           class="h-full w-full object-cover"
                         />
                       </div>
-                      <p
-                        class="truncate"
-                        style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
-                      >
-                        {application.applicant.nickname}
-                      </p>
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                          <p
+                            class="truncate"
+                            style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
+                          >
+                            {member.user.nickname}
+                          </p>
+                          <span
+                            class="rounded-full px-2 py-0.5"
+                            style="font-size: 10px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                            >{getRoleLabel(member.role)}</span
+                          >
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-secondary);">
+                          加入于 {formatDateTime(member.joined_at)}
+                        </p>
+                        {#if member.muted_until}
+                          <p style="font-size: 12px; color: var(--theme-error); opacity: 0.8;">
+                            禁言至 {formatDateTime(member.muted_until)}
+                          </p>
+                        {/if}
+                      </div>
+                    </a>
+                    <div class="flex items-center gap-2">
+                      {#if member.muted_until}
+                        <span
+                          class="rounded-full px-2 py-0.5"
+                          style="font-size: 10px; color: var(--text-secondary); background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                          >已禁言</span
+                        >
+                      {/if}
+                      {#if canManageMember(member)}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
+                            aria-label="成员操作"
+                          >
+                            <MoreHorizontal size={16} />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" class="w-40">
+                            {#if member.muted_until}
+                              <DropdownMenuItem onclick={() => handleUnmuteMember(member)}
+                                ><Mic
+                                  size={16}
+                                  style="margin-right: 8px;"
+                                />解除禁言</DropdownMenuItem
+                              >
+                            {:else}
+                              <DropdownMenuItem onclick={() => openMuteDialog(member)}
+                                ><MicOff
+                                  size={16}
+                                  style="margin-right: 8px;"
+                                />禁言成员</DropdownMenuItem
+                              >
+                            {/if}
+                            {#if canChangeRole(member)}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onclick={() => openRoleDialog(member)}
+                                ><UserCog
+                                  size={16}
+                                  style="margin-right: 8px;"
+                                />角色管理</DropdownMenuItem
+                              >
+                            {/if}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onclick={() => openRemoveDialog(member)}
+                              ><UserMinus
+                                size={16}
+                                style="margin-right: 8px; color: var(--theme-error);"
+                              />移除成员</DropdownMenuItem
+                            >
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      {/if}
                     </div>
-                    {#if application.message}
-                      <p style="font-size: 14px; color: var(--text-secondary);">
-                        {application.message}
-                      </p>
-                    {/if}
-                    <p style="font-size: 12px; color: var(--text-secondary);">
-                      申请时间：{formatDateTime(application.created_at)}
-                    </p>
-                  </div>
-                  <div class="flex flex-wrap gap-2">
-                    <button
-                      class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow); font-size: 13px;"
-                      disabled={isApplicationHandling(application.application_id)}
-                      onclick={() => handleApplicationDecision(application, 'approve')}
-                    >
-                      {isApplicationHandling(application.application_id) ? '处理中...' : '批准'}
-                    </button>
-                    <button
-                      class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                      style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg); font-size: 13px;"
-                      disabled={isApplicationHandling(application.application_id)}
-                      onclick={() => handleApplicationDecision(application, 'reject')}
-                    >
-                      拒绝
-                    </button>
                   </div>
                 </div>
-              </div>
-            {/each}
-          </div>
-          {#if applicationsPagination.hasMore}
-            <div class="flex justify-center pt-2">
-              <button
-                class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-                onclick={() => loadApplications(false)}
-                disabled={applicationsPagination.loadingMore}
-              >
-                {#if applicationsPagination.loadingMore}<Loader2
-                    size={14}
-                    class="animate-spin"
-                  />{/if}
-                加载更多
-              </button>
+              {/each}
             </div>
+            {#if membersPagination.hasMore}
+              <div class="flex justify-center pt-2">
+                <button
+                  class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                  style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                  onclick={() => loadMembers(false)}
+                  disabled={membersPagination.loadingMore}
+                >
+                  {#if membersPagination.loadingMore}<Loader2 size={14} class="animate-spin" />{/if}
+                  加载更多
+                </button>
+              </div>
+            {/if}
           {/if}
         {/if}
-      </div>
+      {/if}
+
+      <!-- Tab: Applications -->
+      {#if canManageGroup && currentTab === 'applications'}
+        <div class="space-y-4">
+          <div
+            class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+          >
+            <div>
+              <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">
+                待处理申请
+              </p>
+              <p style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
+                仅展示 pending 申请，处理后会自动移出列表
+              </p>
+            </div>
+            <button
+              class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+              style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+              onclick={() => loadApplications(true)}
+              disabled={applicationsPagination.loading}
+            >
+              <RefreshCw size={14} />刷新
+            </button>
+          </div>
+          {#if applicationsPagination.loading && applicationsPagination.items.length === 0}
+            <div class="space-y-3">
+              {#each Array(3) as _, i (i)}
+                <div
+                  class="rounded-[22px] p-4 space-y-2"
+                  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+                >
+                  <div
+                    class="rounded"
+                    style="width: 128px; height: 14px; background: var(--border-theme);"
+                  ></div>
+                  <div
+                    class="rounded"
+                    style="width: 100%; height: 14px; background: var(--border-theme);"
+                  ></div>
+                  <div
+                    class="rounded"
+                    style="width: 144px; height: 12px; background: var(--border-theme);"
+                  ></div>
+                </div>
+              {/each}
+            </div>
+          {:else if applicationsPagination.items.length === 0}
+            <div
+              class="rounded-[22px] py-10 text-center"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            >
+              <p style="font-size: 14px; color: var(--text-secondary);">暂无待处理申请</p>
+            </div>
+          {:else}
+            <div class="space-y-3">
+              {#each applicationsPagination.items as application (application.application_id)}
+                <div
+                  class="rounded-[22px] p-4"
+                  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+                >
+                  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="min-w-0 space-y-1">
+                      <div class="flex items-center gap-2">
+                        <div
+                          class="overflow-hidden rounded-full"
+                          style="width: 32px; height: 32px; border: 1.5px solid var(--border-theme);"
+                        >
+                          <img
+                            src={application.applicant.avatar_url}
+                            alt={application.applicant.nickname}
+                            class="h-full w-full object-cover"
+                          />
+                        </div>
+                        <p
+                          class="truncate"
+                          style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+                        >
+                          {application.applicant.nickname}
+                        </p>
+                      </div>
+                      {#if application.message}
+                        <p style="font-size: 14px; color: var(--text-secondary);">
+                          {application.message}
+                        </p>
+                      {/if}
+                      <p style="font-size: 12px; color: var(--text-secondary);">
+                        申请时间：{formatDateTime(application.created_at)}
+                      </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <button
+                        class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow); font-size: 13px;"
+                        disabled={isApplicationHandling(application.application_id)}
+                        onclick={() => handleApplicationDecision(application, 'approve')}
+                      >
+                        {isApplicationHandling(application.application_id) ? '处理中...' : '批准'}
+                      </button>
+                      <button
+                        class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg); font-size: 13px;"
+                        disabled={isApplicationHandling(application.application_id)}
+                        onclick={() => handleApplicationDecision(application, 'reject')}
+                      >
+                        拒绝
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              {/each}
+            </div>
+            {#if applicationsPagination.hasMore}
+              <div class="flex justify-center pt-2">
+                <button
+                  class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                  style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                  onclick={() => loadApplications(false)}
+                  disabled={applicationsPagination.loadingMore}
+                >
+                  {#if applicationsPagination.loadingMore}<Loader2
+                      size={14}
+                      class="animate-spin"
+                    />{/if}
+                  加载更多
+                </button>
+              </div>
+            {/if}
+          {/if}
+        </div>
+      {/if}
     {/if}
-  {/if}
+  </div>
 </div>
 
 <!-- Dialogs: kept with neumorphic inner styling -->
