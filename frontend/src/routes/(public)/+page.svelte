@@ -418,16 +418,12 @@
     </div>
   {:else}
     <!-- Mobile / Tablet guest landing (tablet = centered 640 column) -->
-    {@const guestMax = platformStore.isTablet ? '640px' : '100%'}
     <div class="flex flex-col">
       <div
-        class="sticky top-0 z-10 px-5 py-3"
+        class="sticky top-0 z-10 py-3"
         style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
       >
-        <div
-          class="flex items-center justify-between"
-          style="max-width: {guestMax}; margin-left: auto; margin-right: auto; width: 100%;"
-        >
+        <div class="page-pad-x page-shell page-shell--narrow flex items-center justify-between">
           <div>
             <h1 style="font-size: 22px; color: var(--text-primary);">{t('home.title')}</h1>
             <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
@@ -438,10 +434,7 @@
         </div>
       </div>
 
-      <div
-        class="flex flex-col px-5 pt-4 pb-6"
-        style="max-width: {guestMax}; margin-left: auto; margin-right: auto; width: 100%;"
-      >
+      <div class="page-pad-x page-shell page-shell--narrow flex flex-col pt-4 pb-6">
         <!-- Hero card -->
         <div
           class="surface-hero ambient-glow flex flex-col items-center rounded-[24px] px-6 py-10 text-center"
@@ -505,17 +498,13 @@
   {/if}
 {:else if !platformStore.isDesktop}
   <!-- Mobile / Tablet Home (Figma Make HomeMobile; tablet = centered 600 column) -->
-  {@const contentMax = platformStore.isTablet ? '600px' : '680px'}
   <div class="flex flex-col">
     <!-- Sticky header -->
     <div
-      class="sticky top-0 z-10 px-5 py-3"
+      class="sticky top-0 z-10 py-3"
       style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <div
-        class="flex items-center justify-between"
-        style="max-width: {contentMax}; margin-left: auto; margin-right: auto; width: 100%;"
-      >
+      <div class="page-pad-x page-shell page-shell--narrow flex items-center justify-between">
         <div>
           <h1 style="font-size: 22px; color: var(--text-primary);">{t('nav.nearby')}</h1>
           <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
@@ -526,10 +515,7 @@
       </div>
     </div>
 
-    <div
-      class="flex flex-col px-5 pt-4 pb-6"
-      style="max-width: {contentMax}; margin-left: auto; margin-right: auto; width: 100%;"
-    >
+    <div class="page-pad-x page-shell page-shell--narrow flex flex-col pt-4 pb-6">
       <!-- Map Card (Figma Make HomeMobile) -->
       <div
         class="surface-hero relative mb-5 w-full overflow-hidden rounded-[24px]"
