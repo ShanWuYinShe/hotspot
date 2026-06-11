@@ -20,7 +20,7 @@
     activity = 0,
     online = 0,
     title = '实时附近',
-    rangeLabel = '5km 内 · 持续更新',
+    rangeLabel = '持续更新',
     peopleLabel = '人附近',
     activityLabel = '活动中',
     onlineLabel = '在线',

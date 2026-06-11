@@ -672,7 +672,7 @@
           activity={activityCount}
           online={onlineCount}
           title={t('home.realtimeNearby')}
-          rangeLabel={`${mapAnchorStore.radius}km ${t('home.rangeWithin')}`}
+          rangeLabel={t('home.rangeWithin')}
           loading={loadingNearby}
           onclick={() => (showLocationPicker = true)}
         />
@@ -710,7 +710,7 @@
               <div>
                 <span class="eyebrow">{t('sidebar.nearbyPeople')}</span>
                 <p style="font-size: 11px; color: var(--text-secondary); margin-top: 3px;">
-                  {mapAnchorStore.radius}km {t('home.rangeWithin')}
+                  {t('home.rangeWithin')}
                 </p>
               </div>
               <a

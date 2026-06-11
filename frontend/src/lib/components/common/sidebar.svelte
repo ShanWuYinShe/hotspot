@@ -179,10 +179,10 @@
         </button>
       </div>
     {/if}
+  </div>
 
-    <!-- Location Anchor — sits right after nav so spacing stays consistent on tall screens -->
-    <div class="mt-4">
-      <AnchorEntry variant="card" />
-    </div>
+  <!-- Location Anchor — pinned to the bottom-left corner of the sidebar -->
+  <div class="flex-shrink-0 pt-3 mt-3" style="border-top: 1px solid var(--border-theme);">
+    <AnchorEntry variant="card" />
   </div>
 </aside>

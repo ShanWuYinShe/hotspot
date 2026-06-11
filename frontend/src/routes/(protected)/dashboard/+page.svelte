@@ -97,7 +97,6 @@
     people: peopleCount,
     activity: activityCount,
     online: onlineCount,
-    radius: `${mapAnchorStore.radius}km`,
     location: mapAnchorStore.displayName,
     loading
   });
@@ -349,7 +348,7 @@
           <div>
             <span class="eyebrow">附近的人</span>
             <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-              {mapAnchorStore.radius}km 范围内 · 实时更新
+              {t('home.rangeWithin')}
             </p>
           </div>
           <button

@@ -45,9 +45,17 @@
       >
         {resolvedLabel}
       </p>
-      <p class="truncate" style="font-size: 13px; line-height: 1.4; color: var(--text-primary);">
-        {mapAnchorStore.displayName}
-      </p>
+      <div class="flex items-center gap-1.5">
+        <p class="truncate" style="font-size: 13px; line-height: 1.4; color: var(--text-primary);">
+          {mapAnchorStore.displayName}
+        </p>
+        <span
+          class="flex-shrink-0"
+          style="font-size: 10px; line-height: 1.5; padding: 0 6px; border-radius: 999px; background: color-mix(in srgb, var(--brand) 12%, transparent); color: var(--brand);"
+        >
+          {mapAnchorStore.radius}km
+        </span>
+      </div>
     </div>
     <ChevronRight size={14} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
   </button>
@@ -61,6 +69,9 @@
     <MapPin size={12} strokeWidth={1.5} color="var(--brand)" class="flex-shrink-0" />
     <span class="truncate" style="font-size: 11px; color: var(--text-secondary);">
       {mapAnchorStore.displayName}
+    </span>
+    <span class="flex-shrink-0" style="font-size: 11px; color: var(--brand);">
+      · {mapAnchorStore.radius}km
     </span>
   </button>
 {/if}
