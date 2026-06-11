@@ -67,6 +67,8 @@
 - 头部与正文的 `.page-shell` 档位必须一致（同为默认档或同为 `--narrow` 等）。
 - 分隔线/背景全宽通栏，内容收束——参考「发现」桌面头部的处理。
 - **禁止**头部用 `px-5` 而正文用 `.page-shell` 这种宽度不一致的写法。
+- **feed 专用变体**：discover、moments/nearby 用的是 `.feed-density-shell[--narrow|--medium]` + `.feed-density-pad`；其 sticky 头部对应用 **`.feed-density-pad-x`**（横向 `clamp` 与 `.feed-density-pad` 一致）+ 内层同档 `.feed-density-shell`，规则与上面完全等价。
+- **例外（无需收束对齐）**：① 桌面端 feed 页（discover / moments/nearby 的 `isDesktop` 分支）采用「全宽顶栏 + 主列/右栏分屏」范式，顶栏本就横跨整个面板，不要求与居中主列对齐；② 设置 / 资料 / 编辑资料等 app-bar 式头部（返回在左、操作在右、`justify-between` 横跨全宽）按惯例保持全宽，不要把返回按钮收进 `--form` 档居中。
 
 ### 档位选择
 
@@ -87,7 +89,7 @@
 
 - 禁止页面直接用裸 `max-w-3xl` / `max-w-2xl` / 内联 `max-width: 640px` 等各自为政的写法——统一走 `.page-shell` 档位，保证全站节奏一致。
 - 禁止内容直接 `w-full` 平铺到容器边缘（既无 max-width 又无 `page-pad`）。
-- 禁止 sticky 头部宽度与正文不一致（头部 `px-5` 平铺、正文 shell 收束）——头部内容必须包进同档 `.page-shell` + `.page-pad-x`。
+- 禁止 sticky 头部宽度与正文不一致（头部 `px-5` 平铺、正文 shell 收束）——头部内容必须包进同档 `.page-shell` + `.page-pad-x`（feed 页用 `.feed-density-shell` + `.feed-density-pad-x`）。
 - 改动布局后用 `bun check` + `bun run build` 校验。
 
 ## 导航与页面框架规范（消除重复入口与冗余 chrome）
