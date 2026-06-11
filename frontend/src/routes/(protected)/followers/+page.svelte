@@ -34,23 +34,27 @@
 <div class="flex flex-col">
   <!-- Sticky header -->
   <div
-    class="sticky top-0 z-10 px-5 pt-3 pb-3"
+    class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">粉丝</h1>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">关注你的用户</p>
+    <div class="page-shell">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">粉丝</h1>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+            关注你的用户
+          </p>
+        </div>
+        <button
+          class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
+          onclick={() => loadFollowers(true)}
+          disabled={pagination.loading}
+        >
+          <RefreshCw size={13} class={pagination.loading ? 'animate-spin' : ''} />
+          刷新
+        </button>
       </div>
-      <button
-        class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
-        onclick={() => loadFollowers(true)}
-        disabled={pagination.loading}
-      >
-        <RefreshCw size={13} class={pagination.loading ? 'animate-spin' : ''} />
-        刷新
-      </button>
     </div>
   </div>
 

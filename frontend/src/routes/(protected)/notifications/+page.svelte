@@ -393,18 +393,21 @@
   >
     <!-- Sticky header -->
     <div
-      class="sticky top-0 z-10 px-5 pt-3 pb-3"
+      class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
       style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <button
-            class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-            style="width: 36px; height: 36px;"
-            onclick={() => window.history.back()}
-          >
-            <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-          </button>
+          {#if !platformStore.isDesktop}
+            <button
+              class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+              style="width: 36px; height: 36px;"
+              onclick={() => window.history.back()}
+              aria-label="返回"
+            >
+              <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
+            </button>
+          {/if}
           <div>
             <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
               {t('notificationsPage.title')}
@@ -430,7 +433,7 @@
     </div>
 
     <!-- Filter pills -->
-    <div class="flex gap-2 overflow-x-auto px-5 py-3" style="scrollbar-width: none;">
+    <div class="flex gap-2 overflow-x-auto page-pad-x py-3" style="scrollbar-width: none;">
       {#each Object.entries(filterLabels) as [key, label]}
         <button
           class="flex-shrink-0 outline-none transition-all duration-200"

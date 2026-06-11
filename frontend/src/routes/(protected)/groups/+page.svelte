@@ -157,34 +157,36 @@
 <div class="flex flex-col">
   <!-- Sticky header -->
   <div
-    class="sticky top-0 z-10 px-5 pt-3 pb-3"
+    class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">我的群组</h1>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-          管理已加入群组、邀请与申请
-        </p>
-      </div>
-      <div class="flex gap-2">
-        <button
-          class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
-          onclick={loadGroups}
-          disabled={isLoading}
-        >
-          <RefreshCw size={13} class={isLoading ? 'animate-spin' : ''} />
-          刷新
-        </button>
-        <button
-          class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-          style="background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 2px 8px var(--glow);"
-          onclick={() => (showCreateGroup = true)}
-        >
-          <Plus size={13} />
-          创建群组
-        </button>
+    <div class="page-shell">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">我的群组</h1>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+            管理已加入群组、邀请与申请
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <button
+            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
+            onclick={loadGroups}
+            disabled={isLoading}
+          >
+            <RefreshCw size={13} class={isLoading ? 'animate-spin' : ''} />
+            刷新
+          </button>
+          <button
+            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+            style="background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 2px 8px var(--glow);"
+            onclick={() => (showCreateGroup = true)}
+          >
+            <Plus size={13} />
+            创建群组
+          </button>
+        </div>
       </div>
     </div>
   </div>
