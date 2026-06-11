@@ -2,6 +2,8 @@
 
 **本项目已暂停开发**，仅保留代码。当前所有后端开发在 `backend-go/` 进行。
 
+> 本文件只定义本子项目的技术约束与本地命令；仓库级 workflow 与 Git 规范以根 `CLAUDE.md` 和全局 `~/.claude/CLAUDE.md` 为准。
+
 ## 构建 & 测试
 
 - `cargo build` — 编译
