@@ -1,7 +1,5 @@
 # CLAUDE.md
 
-本文件只定义本子项目的技术约束与本地命令；仓库级 workflow 以根 `CLAUDE.md` 为准。
-
 ## 构建 & 测试
 
 - `go build ./...` — 编译

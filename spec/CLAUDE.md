@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 ## 这个目录是什么
-`spec/` 是 HotSpot 的 API 契约和行为规范的权威来源。实现代码必须以这里的规范为准；除非用户明确要求，不要修改这里的文件。仓库级 workflow 与 Git 规范以根 `CLAUDE.md` 和全局 `~/.claude/CLAUDE.md` 为准。
+`spec/` 是 HotSpot 的 API 契约和行为规范的权威来源。实现代码必须以这里的规范为准；除非用户明确要求，不要修改这里的文件。
 
 ## 读取顺序
 - 查接口先看 `api_spec_index.md`，再看对应模块 spec。
