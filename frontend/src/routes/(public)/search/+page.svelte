@@ -312,37 +312,39 @@
 <div class="flex flex-col" style="height: 100%; background-color: var(--surface-bg);">
   <!-- Search header — back button + search input -->
   <div
-    class="flex-shrink-0 flex items-center gap-3 px-5 py-3"
+    class="flex-shrink-0 page-pad-x py-3"
     style="border-bottom: 1px solid var(--border-theme); background-color: var(--surface-bg);"
   >
-    <BackButton onclick={() => history.back()} size={36} />
+    <div class="page-shell page-shell--form flex items-center gap-3">
+      <BackButton onclick={() => history.back()} size={36} />
 
-    <div
-      class="flex-1 flex items-center gap-3 px-4 rounded-[18px] input-surface"
-      style="height: 38px;"
-    >
-      <Search size={15} style="flex-shrink: 0; color: var(--text-secondary);" strokeWidth={1.5} />
-      <input
-        type="text"
-        placeholder="搜索用户、地点、话题…"
-        class="flex-1 bg-transparent outline-none"
-        style="font-size: 13px; color: var(--text-primary);"
-        autocomplete="off"
-        bind:value={keywordInput}
-        onkeydown={(e) => {
-          if (e.key === 'Enter' && keywordInput.trim()) handleSearch();
-        }}
-      />
-      {#if keywordInput}
-        <button
-          type="button"
-          class="flex-shrink-0 outline-none transition-transform duration-150 active:scale-[0.85]"
-          onclick={clearSearch}
-          aria-label={t('searchPage.clear')}
-        >
-          <X size={13} style="color: var(--text-secondary);" strokeWidth={2} />
-        </button>
-      {/if}
+      <div
+        class="flex-1 flex items-center gap-3 px-4 rounded-[18px] input-surface"
+        style="height: 38px;"
+      >
+        <Search size={15} style="flex-shrink: 0; color: var(--text-secondary);" strokeWidth={1.5} />
+        <input
+          type="text"
+          placeholder="搜索用户、地点、话题…"
+          class="flex-1 bg-transparent outline-none"
+          style="font-size: 13px; color: var(--text-primary);"
+          autocomplete="off"
+          bind:value={keywordInput}
+          onkeydown={(e) => {
+            if (e.key === 'Enter' && keywordInput.trim()) handleSearch();
+          }}
+        />
+        {#if keywordInput}
+          <button
+            type="button"
+            class="flex-shrink-0 outline-none transition-transform duration-150 active:scale-[0.85]"
+            onclick={clearSearch}
+            aria-label={t('searchPage.clear')}
+          >
+            <X size={13} style="color: var(--text-secondary);" strokeWidth={2} />
+          </button>
+        {/if}
+      </div>
     </div>
   </div>
 
@@ -448,14 +450,11 @@
       <!-- Has query: results -->
       <div class="page-shell page-shell--form">
         <!-- Result tabs -->
-        <div class="flex overflow-x-auto no-scrollbar px-5 pt-3 pb-0 gap-2">
+        <div class="flex overflow-x-auto no-scrollbar pt-3 pb-0 gap-2">
           {#each [{ value: 'all', label: '全部' }, { value: 'users', label: `用户${users.length ? ` (${users.length})` : ''}` }, { value: 'moments', label: `动态${moments.length ? ` (${moments.length})` : ''}` }, { value: 'groups', label: `群组${groups.length ? ` (${groups.length})` : ''}` }] as tab (tab.value)}
             <button
-              class="flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.92]"
-              class:surface-flat={currentTab !== tab.value}
-              style={currentTab === tab.value
-                ? 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow);'
-                : 'color: var(--text-secondary); font-size: 12px;'}
+              class="filter-chip"
+              class:filter-chip--active={currentTab === tab.value}
               onclick={() => handleTabChange(tab.value)}
             >
               {tab.label}

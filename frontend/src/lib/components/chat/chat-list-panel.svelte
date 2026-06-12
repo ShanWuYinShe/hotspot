@@ -187,10 +187,8 @@
 <div class="flex-shrink-0 flex items-center gap-2 px-4 pt-2 pb-1">
   {#each [{ id: 'private', label: '私聊' }, { id: 'group', label: '群聊' }] as tab (tab.id)}
     <button
-      class="rounded-full px-2 py-0.5 outline-none transition-all"
-      style={currentTab === tab.id
-        ? 'background: var(--brand); color: var(--text-on-accent); font-size: 11px; box-shadow: 0 2px 8px var(--glow);'
-        : 'background: var(--surface-bg); color: var(--text-secondary); font-size: 11px; border: 1px solid var(--border-theme);'}
+      class="filter-chip"
+      class:filter-chip--active={currentTab === tab.id}
       onclick={() => handleTabChange(tab.id)}
     >
       {tab.label}

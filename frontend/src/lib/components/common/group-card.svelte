@@ -270,11 +270,7 @@
         {#if groupWithTags.tags && groupWithTags.tags.length > 0}
           <div class="mt-3 flex flex-wrap gap-1.5">
             {#each groupWithTags.tags.slice(0, 5) as tag (tag)}
-              <span
-                class="rounded-full px-2 py-0.5"
-                style="font-size: 10px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-                >#{tag}</span
-              >
+              <span class="tag-chip tag-chip--sm">#{tag}</span>
             {/each}
           </div>
         {/if}

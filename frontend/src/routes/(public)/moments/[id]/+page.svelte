@@ -209,29 +209,31 @@
   <title>{moment?.description?.slice(0, 30) ?? '瞬间详情'} - HotSpot</title>
 </svelte:head>
 
+<!-- Header — full-bleed sticky, content aligned to the same narrow shell as the body -->
+<div
+  class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
+  style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
+>
+  <div class="page-shell page-shell--narrow flex items-center gap-4">
+    <BackButton onclick={handleBackClick} size={36} />
+    <h1 style="font-size: 16px; color: var(--text-primary);">瞬间详情</h1>
+    {#if isOwner}
+      <div class="ml-auto">
+        <button
+          class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
+          style="width: 36px; height: 36px;"
+          onclick={() => (showEditModal = true)}
+          aria-label="编辑"
+        >
+          <Pencil size={15} strokeWidth={1.5} color="var(--text-secondary)" />
+        </button>
+      </div>
+    {/if}
+  </div>
+</div>
+
 <div class="page-pad">
   <div class="page-shell page-shell--narrow space-y-6">
-    <!-- Header -->
-    <div
-      class="sticky top-0 z-10 flex items-center gap-4 px-4 py-3"
-      style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
-    >
-      <BackButton onclick={handleBackClick} size={36} />
-      <h1 style="font-size: 16px; color: var(--text-primary);">瞬间详情</h1>
-      {#if isOwner}
-        <div class="ml-auto">
-          <button
-            class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-            style="width: 36px; height: 36px;"
-            onclick={() => (showEditModal = true)}
-            aria-label="编辑"
-          >
-            <Pencil size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-          </button>
-        </div>
-      {/if}
-    </div>
-
     {#if isLoading}
       <div
         class="rounded-[22px] p-6 space-y-4"

@@ -868,22 +868,24 @@
   <title>{group?.group.name ?? '群组详情'} - HotSpot</title>
 </svelte:head>
 
+<!-- Sticky header — full-bleed, content aligned to the same narrow shell as the body -->
+<div
+  class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
+  style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
+>
+  <div class="page-shell page-shell--narrow flex items-center gap-4">
+    <BackButton onclick={() => history.back()} size={36} />
+    <div>
+      <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">群组详情</h1>
+      <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+        查看群信息、成员与公告管理
+      </p>
+    </div>
+  </div>
+</div>
+
 <div class="page-pad">
   <div class="page-shell page-shell--narrow space-y-5">
-    <!-- Sticky header -->
-    <div
-      class="sticky top-0 z-10 flex items-center gap-4 px-4 py-3"
-      style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
-    >
-      <BackButton onclick={() => history.back()} size={36} />
-      <div>
-        <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">群组详情</h1>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-          查看群信息、成员与公告管理
-        </p>
-      </div>
-    </div>
-
     {#if group && !wsGroupSubscription.state.isSubscribed}
       <div
         class="flex items-center gap-2 rounded-[16px] px-4 py-2"
@@ -947,12 +949,7 @@
                 {#if group.tags && group.tags.length > 0}
                   <div class="mt-3 flex flex-wrap gap-2">
                     {#each group.tags as tag (tag)}
-                      <span
-                        class="rounded-full px-2.5 py-1"
-                        style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
-                      >
-                        #{tag}
-                      </span>
+                      <span class="tag-chip">#{tag}</span>
                     {/each}
                   </div>
                 {/if}
@@ -1060,14 +1057,12 @@
       <div class="flex flex-wrap gap-2">
         {#each [{ value: 'overview', label: '概览' }, { value: 'announcements', label: '公告' }, { value: 'members', label: '成员' }, ...(canManageGroup ? [{ value: 'applications', label: '申请' }] : [])] as tab (tab.value)}
           <button
-            class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] transition-all"
-            style={currentTab === tab.value
-              ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow);'
-              : 'background: var(--surface-bg); color: var(--text-secondary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);'}
+            class="filter-chip"
+            class:filter-chip--active={currentTab === tab.value}
             onclick={() =>
               (currentTab = tab.value as 'overview' | 'announcements' | 'members' | 'applications')}
           >
-            <span style="font-size: 13px;">{tab.label}</span>
+            {tab.label}
           </button>
         {/each}
       </div>

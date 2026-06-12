@@ -225,11 +225,8 @@
           <div class="flex-1"></div>
           {#each [{ id: 'private', label: '私聊' }, { id: 'group', label: '群聊' }] as tab (tab.id)}
             <button
-              class="rounded-full px-2.5 py-1 outline-none transition-all"
-              style={currentTab === tab.id
-                ? 'background: var(--brand); color: var(--text-on-accent); font-size: 11px; box-shadow: 0 2px 8px var(--glow);'
-                : 'background: var(--surface-bg); color: var(--text-secondary); font-size: 11px; border: 1px solid var(--border-theme);'}
-              class:surface-flat={currentTab !== tab.id}
+              class="filter-chip"
+              class:filter-chip--active={currentTab === tab.id}
               onclick={() => handleTabChange(tab.id)}
             >
               {tab.label}
@@ -238,7 +235,7 @@
         </div>
 
         <!-- Chat list card -->
-        <div class="surface-flat overflow-hidden rounded-[22px]">
+        <div class="surface-card overflow-hidden rounded-[22px]">
           {#if currentTab === 'private'}
             {#if isLoadingPrivate}
               {#each Array(5) as _}

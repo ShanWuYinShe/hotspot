@@ -117,26 +117,24 @@
       </div>
 
       <!-- Sort tabs + Filter tags -->
-      <div class="no-scrollbar mb-3 flex gap-2 overflow-x-auto">
+      <div class="no-scrollbar mb-3 flex items-center gap-2 overflow-x-auto">
         {#each SORT_OPTIONS as s (s)}
           <button
-            class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all"
-            class:surface-flat={activeSort !== s}
-            style={activeSort === s
-              ? 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow);'
-              : 'color: var(--text-secondary); font-size: 12px;'}
+            class="filter-chip"
+            class:filter-chip--active={activeSort === s}
             onclick={() => (activeSort = s)}
           >
             {s}
           </button>
         {/each}
-        <div style="width: 1px; height: 28px; background: var(--border-theme); margin: auto;"></div>
+        <div
+          class="mx-1 flex-shrink-0"
+          style="width: 1px; height: 18px; background: var(--border-theme);"
+        ></div>
         {#each FILTER_TAGS as t (t)}
           <button
-            class="flex-shrink-0 rounded-full px-3 py-1.5 outline-none transition-all"
-            style={activeTag === t && t !== '全部'
-              ? 'background: rgba(99,102,241,0.12); color: var(--brand); font-size: 12px; border: 1px solid rgba(99,102,241,0.25);'
-              : 'font-size: 12px; color: var(--text-secondary); background: transparent;'}
+            class="filter-chip"
+            class:filter-chip--active={activeTag === t && t !== '全部'}
             onclick={() => (activeTag = t)}
           >
             {t}

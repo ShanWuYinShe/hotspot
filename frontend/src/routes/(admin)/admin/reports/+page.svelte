@@ -91,10 +91,8 @@
     <div class="flex gap-2">
       {#each [{ value: 'pending', label: '待处理' }, { value: 'resolved', label: '已处理' }, { value: 'dismissed', label: '已驳回' }, { value: 'all', label: '全部' }] as f (f.value)}
         <button
-          class="rounded-full px-4 py-1.5 outline-none"
-          style="font-size: 12px; font-weight: 500; {statusFilter === f.value
-            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow);'
-            : 'background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);'}"
+          class="filter-chip"
+          class:filter-chip--active={statusFilter === f.value}
           onclick={() => (statusFilter = f.value as ReportStatus | 'all')}>{f.label}</button
         >
       {/each}

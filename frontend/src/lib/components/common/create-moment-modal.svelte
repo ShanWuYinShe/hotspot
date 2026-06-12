@@ -518,10 +518,8 @@
           {#each VIBE_TAGS as tag (tag)}
             {@const active = selectedVibes.has(tag)}
             <button
-              class="px-4 py-1.5 rounded-full text-[12px] outline-none transition-all duration-200 active:scale-[0.92]"
-              style={active
-                ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow); border: 1px solid transparent;'
-                : 'background: var(--surface-bg); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
+              class="filter-chip"
+              class:filter-chip--active={active}
               onclick={() => toggleVibe(tag)}
             >
               {tag}

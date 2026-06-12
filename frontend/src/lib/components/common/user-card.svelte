@@ -201,7 +201,7 @@
 >
   {#if variant === 'nearby-row'}
     <!-- Nearby row: horizontal row for nearby all page -->
-    <div class="row-hover flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5">
+    <div class="flex items-center gap-3.5 px-4 py-3.5">
       <div class="relative flex-shrink-0">
         <Avatar
           src={userInfo.avatar_url}
@@ -317,11 +317,7 @@
       {#if displayTags.length > 0}
         <div class="mt-3 flex flex-wrap gap-1.5">
           {#each displayTags as tag (tag)}
-            <span
-              class="rounded-full px-2 py-0.5"
-              style="font-size: 10px; color: var(--brand); background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);"
-              >#{tag}</span
-            >
+            <span class="tag-chip tag-chip--sm">#{tag}</span>
           {/each}
         </div>
       {/if}
@@ -401,11 +397,7 @@
       {#if displayTags.length > 0}
         <div class="mt-3 flex flex-wrap gap-1.5">
           {#each displayTags as tag (tag)}
-            <span
-              class="rounded-full px-2 py-0.5"
-              style="font-size: 10px; color: var(--brand); background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);"
-              >#{tag}</span
-            >
+            <span class="tag-chip tag-chip--sm">#{tag}</span>
           {/each}
         </div>
       {/if}
@@ -452,11 +444,7 @@
       {#if displayTags.length > 0}
         <div class="mt-2.5 flex flex-wrap gap-1.5">
           {#each displayTags as tag (tag)}
-            <span
-              class="rounded-full px-2 py-0.5"
-              style="font-size: 10px; color: var(--brand); background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);"
-              >#{tag}</span
-            >
+            <span class="tag-chip tag-chip--sm">#{tag}</span>
           {/each}
         </div>
       {/if}
@@ -464,7 +452,7 @@
   {/if}
 
   <!-- Action buttons -->
-  {#if !isMe}
+  {#if !isMe && variant !== 'nearby-row'}
     <div style="border-top: 1px solid var(--border-theme);" class="px-4 py-2.5">
       <div class="flex items-center justify-between">
         <button

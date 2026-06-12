@@ -99,10 +99,8 @@
         <div class="flex flex-wrap gap-2">
           {#each statusOptions as option (option.value)}
             <button
-              class="rounded-full px-4 py-1.5 text-sm transition-all disabled:opacity-50"
-              style={activeStatus === option.value
-                ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 8px var(--glow);'
-                : 'background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);'}
+              class="filter-chip disabled:opacity-50"
+              class:filter-chip--active={activeStatus === option.value}
               disabled={pagination.loading}
               onclick={async () => {
                 if (pagination.loading || activeStatus === option.value) return;
@@ -117,10 +115,8 @@
         <div class="flex flex-wrap gap-2">
           {#each targetTypeOptions as option (option.value)}
             <button
-              class="rounded-full px-4 py-1.5 text-sm transition-all disabled:opacity-50"
-              style={activeTargetType === option.value
-                ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 8px var(--glow);'
-                : 'background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);'}
+              class="filter-chip disabled:opacity-50"
+              class:filter-chip--active={activeTargetType === option.value}
               disabled={pagination.loading}
               onclick={async () => {
                 if (pagination.loading || activeTargetType === option.value) return;

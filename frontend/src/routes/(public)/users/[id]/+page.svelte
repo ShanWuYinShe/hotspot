@@ -337,12 +337,7 @@
           {#if user.tags && user.tags.length > 0}
             <div class="mt-3 flex flex-wrap gap-2">
               {#each user.tags as tag (tag)}
-                <span
-                  class="rounded-full px-2.5 py-0.5"
-                  style="font-size: 11px; background: rgba(99,102,241,0.10); color: var(--brand); border: 1px solid rgba(99,102,241,0.18);"
-                >
-                  #{tag}
-                </span>
+                <span class="tag-chip">#{tag}</span>
               {/each}
             </div>
           {/if}

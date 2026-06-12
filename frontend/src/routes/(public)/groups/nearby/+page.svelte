@@ -129,11 +129,8 @@
       <div class="no-scrollbar mb-3 flex gap-2 overflow-x-auto">
         {#each CATEGORIES as c (c)}
           <button
-            class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all"
-            class:surface-flat={activeCategory !== c}
-            style={activeCategory === c
-              ? 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow);'
-              : 'color: var(--text-secondary); font-size: 12px;'}
+            class="filter-chip"
+            class:filter-chip--active={activeCategory === c}
             onclick={() => (activeCategory = c)}
           >
             {c}

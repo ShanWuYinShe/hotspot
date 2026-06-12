@@ -138,11 +138,8 @@
       <div class="mb-4 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
         {#each TAGS as tag}
           <button
-            class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all duration-150 active:scale-[0.93]"
-            class:surface-flat={activeTag !== tag}
-            style={activeTag === tag
-              ? 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
-              : 'color: var(--text-secondary); font-size: 12px;'}
+            class="filter-chip"
+            class:filter-chip--active={activeTag === tag}
             onclick={() => {
               activeTag = activeTag === tag ? null : tag;
             }}
@@ -289,11 +286,8 @@
         <div class="mb-5 flex flex-wrap items-center gap-2">
           {#each TAGS as tag}
             <button
-              class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all duration-150 active:scale-[0.93]"
-              class:surface-flat={activeTag !== tag}
-              style={activeTag === tag
-                ? 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
-                : 'color: var(--text-secondary); font-size: 12px;'}
+              class="filter-chip"
+              class:filter-chip--active={activeTag === tag}
               onclick={() => {
                 activeTag = activeTag === tag ? null : tag;
               }}
@@ -441,11 +435,8 @@
             <div class="mb-5 flex flex-wrap items-center gap-2">
               {#each TAGS as tag}
                 <button
-                  class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all duration-150 active:scale-[0.93]"
-                  class:surface-flat={activeTag !== tag}
-                  style={activeTag === tag
-                    ? 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
-                    : 'color: var(--text-secondary); font-size: 12px;'}
+                  class="filter-chip"
+                  class:filter-chip--active={activeTag === tag}
                   onclick={() => {
                     activeTag = activeTag === tag ? null : tag;
                   }}

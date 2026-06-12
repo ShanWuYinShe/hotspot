@@ -447,12 +447,8 @@
             {@const active = selectedInterestTags.has(t)}
             {@const disabled = !active && selectedInterestTags.size >= MAX_INTEREST_TAGS}
             <button
-              class="rounded-full px-3.5 py-1.5 outline-none transition-all"
-              style={active
-                ? 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: none;'
-                : 'background: var(--surface-bg); color: var(--text-secondary); font-size: 12px; border: 1px solid var(--border-theme); opacity: ' +
-                  (disabled ? 0.4 : 1) +
-                  ';'}
+              class="filter-chip disabled:opacity-40"
+              class:filter-chip--active={active}
               onclick={() => !disabled && toggleInterestTag(t)}
               {disabled}
             >
@@ -579,10 +575,7 @@
           </div>
 
           <!-- Quick links -->
-          <div
-            class="w-full rounded-[18px] overflow-hidden surface-flat"
-            style="border: 1px solid var(--border-theme);"
-          >
+          <div class="w-full rounded-[18px] overflow-hidden surface-card">
             {#each quickLinks as link}
               <a
                 href={link.href}

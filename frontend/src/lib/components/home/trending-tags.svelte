@@ -47,13 +47,9 @@
     </div>
     <div class="flex flex-wrap gap-1.5">
       {#each tags as tag (tag.name)}
-        <a
-          href="/search?tag={encodeURIComponent(tag.name)}"
-          class="rounded-full px-3 py-1 text-xs pill-hover transition-transform duration-150 active:scale-[0.93]"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary);"
-        >
+        <a href="/search?tag={encodeURIComponent(tag.name)}" class="tag-chip">
           #{tag.name}
-          <span style="opacity: 0.5;">{tag.usage_count}</span>
+          <span class="tag-chip__count">{tag.usage_count}</span>
         </a>
       {/each}
     </div>

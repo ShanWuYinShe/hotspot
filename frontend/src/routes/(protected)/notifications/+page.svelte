@@ -429,12 +429,8 @@
     <div class="flex gap-2 overflow-x-auto page-pad-x py-3" style="scrollbar-width: none;">
       {#each Object.entries(filterLabels) as [key, label]}
         <button
-          class="flex-shrink-0 outline-none transition-all duration-200"
-          class:surface-flat={activeFilter !== key}
-          style="padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 500;
-          {activeFilter === key
-            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow); border: none;'
-            : 'color: var(--text-primary);'}"
+          class="filter-chip"
+          class:filter-chip--active={activeFilter === key}
           onclick={() => (activeFilter = key as FilterKey)}
         >
           {label}

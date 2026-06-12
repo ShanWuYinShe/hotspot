@@ -161,10 +161,8 @@
     {#each TAGS as tag (tag)}
       <button
         type="button"
-        class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all"
-        style={activeTag === tag
-          ? 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
-          : 'background: var(--surface-bg); color: var(--text-secondary); font-size: 12px; border: 1px solid var(--border-theme);'}
+        class="filter-chip"
+        class:filter-chip--active={activeTag === tag}
         onclick={() => handleTagClick(tag)}
       >
         {tag}

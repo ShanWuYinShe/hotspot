@@ -4,6 +4,7 @@
   import { isSuccess } from '$lib/api/client';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import type { GroupItem } from '$lib/types/api';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
 
   interface Props {
@@ -73,8 +74,8 @@
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div
-              class="rounded-[12px]"
-              style="width: 36px; height: 36px; background: var(--border-theme);"
+              class="rounded-full"
+              style="width: 40px; height: 40px; background: var(--border-theme);"
             ></div>
             <div class="flex-1">
               <div
@@ -97,13 +98,14 @@
             class="flex items-center gap-3 rounded-[18px] px-4 py-3 row-hover transition-transform duration-150 active:scale-[0.98]"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
-            <div
-              class="flex flex-shrink-0 items-center justify-center rounded-[12px]"
-              style="width: 36px; height: 36px; background: var(--surface-secondary);"
-            >
-              <span style="font-size: 14px; font-weight: 600; color: var(--text-tertiary);">
-                {group.group.name?.charAt(0) ?? 'G'}
-              </span>
+            <div class="flex-shrink-0">
+              <Avatar
+                src={group.group.avatar_url}
+                name={group.group.name}
+                alt={group.group.name}
+                size={40}
+                type="group"
+              />
             </div>
             <div class="min-w-0 flex-1">
               <p style="font-size: 13px; color: var(--text-primary);">{group.group.name}</p>
