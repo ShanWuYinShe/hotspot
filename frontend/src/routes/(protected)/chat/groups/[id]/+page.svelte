@@ -607,8 +607,8 @@
 <div
   class="flex min-w-0 flex-col overflow-hidden"
   style="{platformStore.isDesktop
-    ? 'height: 100%; width: 100%; flex: 1;'
-    : 'height: calc(100dvh - 8rem); border-radius: 22px; box-shadow: var(--shadow-lg);'} background: var(--surface-bg); border: 1px solid var(--border-theme);"
+    ? 'height: 100%; width: 100%; flex: 1; border: 1px solid var(--border-theme);'
+    : 'height: calc(100dvh - env(safe-area-inset-bottom, 0px)); width: 100%;'} background: var(--surface-bg);"
 >
   <!-- Header -->
   <header

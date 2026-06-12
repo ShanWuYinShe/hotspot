@@ -31,6 +31,7 @@
       );
       if (isSuccess(response) && response.data) {
         privateChats = response.data.items;
+        messageStore.syncFromChatList(privateChats, []);
       }
     } catch {
       toast.error('加载失败');
@@ -49,6 +50,7 @@
       if (isSuccess(response) && response.data) {
         groupChats = response.data.items;
         groupsLoaded = true;
+        messageStore.syncFromChatList(privateChats, groupChats);
       }
     } catch {
       toast.error('加载群聊失败');

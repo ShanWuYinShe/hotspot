@@ -107,6 +107,37 @@ class MessageStore {
 
   // ============ 公共方法 ============
 
+  /**
+   * 用会话列表接口返回的未读数对齐本地未读 Map。
+   * WebSocket 只能在运行时累加，登录后已有的未读只能从列表接口获取，
+   * 因此每次加载会话列表后调用，保证底栏/侧栏角标与「X 条未读」与服务端一致。
+   * 只更新传入列表里出现的会话，避免覆盖其它来源（如 WS）维护的未读。
+   */
+  syncFromChatList(
+    privateChats: { other_user: { user_id: string }; unread_count: number }[],
+    groupChats: { group: { group_id: string }; my_state?: { unread_count?: number } }[]
+  ) {
+    this.updateMap((map) => {
+      for (const chat of privateChats) {
+        const id = `private_${chat.other_user.user_id}`;
+        if (chat.unread_count > 0) {
+          map.set(id, { id, type: 'private', count: chat.unread_count });
+        } else {
+          map.delete(id);
+        }
+      }
+      for (const group of groupChats) {
+        const id = `group_${group.group.group_id}`;
+        const count = group.my_state?.unread_count ?? 0;
+        if (count > 0) {
+          map.set(id, { id, type: 'group', count });
+        } else {
+          map.delete(id);
+        }
+      }
+    });
+  }
+
   markConversationAsRead(conversationId: string) {
     this.updateMap((map) => map.delete(conversationId));
   }
