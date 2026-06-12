@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import Avatar from '$lib/components/common/avatar.svelte';
 
   interface NearbyUser {
     id: string;
@@ -66,9 +67,7 @@
         }}
       >
         <div class="relative flex-shrink-0">
-          <div class="overflow-hidden rounded-full" style="width: 38px; height: 38px;">
-            <img src={user.avatar_url} alt={user.nickname} class="h-full w-full object-cover" />
-          </div>
+          <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={38} />
           {#if user.online}
             <span
               class="absolute bottom-0 right-0 rounded-full"
@@ -93,7 +92,7 @@
             class="rounded-full px-3 py-1 outline-none transition-all"
             style={followed
               ? 'background: transparent; color: var(--text-secondary); border: 1px solid var(--border-theme); font-size: 11px;'
-              : 'background: var(--brand); color: white; border: 1px solid transparent; font-size: 11px;'}
+              : 'background: var(--brand); color: var(--text-on-accent); border: 1px solid transparent; font-size: 11px;'}
             onclick={(e) => {
               e.stopPropagation();
               onToggleFollow(user.id);

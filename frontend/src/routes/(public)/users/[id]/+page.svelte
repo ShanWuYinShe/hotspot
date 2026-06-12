@@ -20,6 +20,7 @@
   import Grid3X3 from 'lucide-svelte/icons/grid-3x3';
   import Heart from 'lucide-svelte/icons/heart';
   import Bookmark from 'lucide-svelte/icons/bookmark';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
@@ -190,7 +191,7 @@
         <p style="color: var(--text-secondary);">{data.error || '用户不存在'}</p>
         <button
           class="mt-4 flex items-center gap-2 rounded-full px-5 py-2 font-medium outline-none"
-          style="background: var(--brand); color: white;"
+          style="background: var(--brand); color: var(--text-on-accent);"
           onclick={() => history.back()}
         >
           <ArrowLeft size={16} />
@@ -212,7 +213,7 @@
         {:else}
           <div
             class="absolute inset-0"
-            style="background: linear-gradient(135deg, var(--brand), #a855f7);"
+            style="background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 48%, var(--surface-bg)));"
           ></div>
         {/if}
         <!-- Gradient overlay -->
@@ -229,7 +230,7 @@
             onclick={() => history.back()}
             aria-label="返回"
           >
-            <ArrowLeft size={15} color="white" strokeWidth={1.75} />
+            <ArrowLeft size={15} color="var(--text-on-overlay)" strokeWidth={1.75} />
           </button>
           <div class="flex gap-2">
             <button
@@ -237,14 +238,14 @@
               style="width: 38px; height: 38px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);"
               aria-label="分享"
             >
-              <Share2 size={14} color="white" strokeWidth={1.75} />
+              <Share2 size={14} color="var(--text-on-overlay)" strokeWidth={1.75} />
             </button>
             <button
               class="flex items-center justify-center rounded-full outline-none"
               style="width: 38px; height: 38px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);"
               aria-label="更多"
             >
-              <MoreHorizontal size={14} color="white" strokeWidth={1.75} />
+              <MoreHorizontal size={14} color="var(--text-on-overlay)" strokeWidth={1.75} />
             </button>
           </div>
         </div>
@@ -259,10 +260,13 @@
               class="overflow-hidden rounded-[22px]"
               style="width: 76px; height: 76px; border: 3px solid var(--surface-bg); box-shadow: var(--shadow-lg);"
             >
-              <img
+              <Avatar
                 src={user.user.avatar_url}
+                name={user.user.nickname}
                 alt={user.user.nickname}
-                class="h-full w-full object-cover"
+                size={76}
+                shape="rounded"
+                border={false}
               />
             </div>
             <!-- Online status dot -->
@@ -289,7 +293,7 @@
                   : 'flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]'}
                 style={isFollowing
                   ? 'border: 1.5px solid var(--brand); color: var(--brand); font-size: 12px;'
-                  : 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 4px 14px var(--glow); border: 1px solid transparent;'}
+                  : 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 4px 14px var(--glow); border: 1px solid transparent;'}
                 onclick={handleFollow}
                 disabled={isActionLoading}
               >
@@ -480,16 +484,12 @@
                 <div
                   class="surface-flat flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all active:scale-[0.98]"
                 >
-                  <div
-                    class="overflow-hidden rounded-full"
-                    style="width: 48px; height: 48px; border: 1.5px solid var(--border-theme);"
-                  >
-                    <img
-                      src={follower.user.avatar_url}
-                      alt={follower.user.nickname}
-                      class="h-full w-full object-cover"
-                    />
-                  </div>
+                  <Avatar
+                    src={follower.user.avatar_url}
+                    name={follower.user.nickname}
+                    alt={follower.user.nickname}
+                    size={48}
+                  />
                   <div class="min-w-0">
                     <p
                       class="truncate"
@@ -546,16 +546,12 @@
                 <div
                   class="surface-flat flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all active:scale-[0.98]"
                 >
-                  <div
-                    class="overflow-hidden rounded-full"
-                    style="width: 48px; height: 48px; border: 1.5px solid var(--border-theme);"
-                  >
-                    <img
-                      src={follow.user.avatar_url}
-                      alt={follow.user.nickname}
-                      class="h-full w-full object-cover"
-                    />
-                  </div>
+                  <Avatar
+                    src={follow.user.avatar_url}
+                    name={follow.user.nickname}
+                    alt={follow.user.nickname}
+                    size={48}
+                  />
                   <div class="min-w-0">
                     <p
                       class="truncate"

@@ -1,5 +1,6 @@
 <script lang="ts">
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
+  import Avatar from '$lib/components/common/avatar.svelte';
 
   interface NearbyUser {
     id: string;
@@ -50,11 +51,7 @@
           style="cursor: pointer; width: 56px;"
         >
           <div style="position: relative; width: 56px; height: 56px;">
-            <img
-              src={user.avatar_url}
-              alt={user.nickname}
-              style="width: 56px; height: 56px; border-radius: 9999px; object-fit: cover; border: 1.5px solid var(--border-theme);"
-            />
+            <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={56} />
             {#if user.online}
               <div
                 style="position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; border-radius: 9999px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"

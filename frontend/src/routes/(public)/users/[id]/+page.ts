@@ -8,11 +8,11 @@ import type { PageLoad } from './$types';
  */
 export const ssr = false;
 
-export const load: PageLoad = async ({ params }) => {
+export const load: PageLoad = async ({ params, fetch }) => {
   const userId = params.id;
 
   try {
-    const response = await usersService.getUser({ user_id: userId });
+    const response = await usersService.getUser({ user_id: userId }, { fetch });
 
     if (isSuccess(response) && response.data) {
       return {

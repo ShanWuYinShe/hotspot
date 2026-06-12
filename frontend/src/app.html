@@ -5,6 +5,32 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <script>
+      (function (config) {
+        try {
+          var stored = window.localStorage.getItem(config.storageKey);
+          var family =
+            stored && config.families.indexOf(stored) !== -1
+              ? stored
+              : (stored && config.migration[stored]) || config.defaultFamily;
+          document.documentElement.setAttribute(config.attribute, family);
+        } catch (error) {
+          document.documentElement.setAttribute(config.attribute, config.defaultFamily);
+        }
+      })({
+        storageKey: 'hotspot_theme_family',
+        attribute: 'data-theme-family',
+        families: ['indigo', 'forest', 'sand'],
+        migration: {
+          social_blue: 'indigo',
+          default_clean: 'forest',
+          figma_neu: 'sand',
+          vibrant: 'indigo',
+          neu: 'sand'
+        },
+        defaultFamily: 'indigo'
+      });
+    </script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">

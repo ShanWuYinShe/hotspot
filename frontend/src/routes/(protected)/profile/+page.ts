@@ -16,9 +16,9 @@ import { usersService } from '$lib/api/services';
 import { isSuccess } from '$lib/api/client';
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async () => {
+export const load: PageLoad = async ({ fetch }) => {
   try {
-    const response = await usersService.getMyProfile();
+    const response = await usersService.getMyProfile({ fetch });
 
     if (isSuccess(response) && response.data) {
       return {

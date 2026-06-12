@@ -47,8 +47,8 @@ export const usersService = {
   /**
    * 获取用户详情
    */
-  getUser(data: { user_id: string }) {
-    return post<UserItem>(USERS.OPEN_THE_DOOR, data);
+  getUser(data: { user_id: string }, options?: RequestOptions) {
+    return post<UserItem>(USERS.OPEN_THE_DOOR, data, options);
   },
 
   /**
@@ -98,8 +98,8 @@ export const usersService = {
   /**
    * 获取当前用户资料
    */
-  getMyProfile() {
-    return post<MyProfile>(USERS.ME.PROFILE_GET);
+  getMyProfile(options?: RequestOptions) {
+    return post<MyProfile>(USERS.ME.PROFILE_GET, undefined, options);
   },
 
   /**

@@ -107,6 +107,8 @@
         <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
         <input
           type="text"
+          name="nearby-users-search"
+          aria-label="搜索附近用户"
           bind:value={searchText}
           placeholder="搜索附近用户"
           class="flex-1 bg-transparent outline-none"
@@ -121,7 +123,7 @@
             class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all"
             class:surface-flat={activeSort !== s}
             style={activeSort === s
-              ? 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--glow);'
+              ? 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow);'
               : 'color: var(--text-secondary); font-size: 12px;'}
             onclick={() => (activeSort = s)}
           >

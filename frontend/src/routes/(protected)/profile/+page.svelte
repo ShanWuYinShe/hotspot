@@ -22,6 +22,7 @@
   import FileText from 'lucide-svelte/icons/file-text';
   import { platformStore } from '$lib/stores/platform.svelte';
   import { goto } from '$app/navigation';
+  import Avatar from '$lib/components/common/avatar.svelte';
 
   const TAG_OPTIONS = [
     '摄影',
@@ -188,20 +189,7 @@
         class="surface-hero relative rounded-full"
         style="width: 96px; height: 96px; padding: 2px;"
       >
-        {#if p.avatar_url}
-          <img
-            src={p.avatar_url}
-            alt={p.nickname}
-            class="h-full w-full rounded-full object-cover"
-          />
-        {:else}
-          <div
-            class="flex h-full w-full items-center justify-center rounded-full"
-            style="font-size: 28px; font-weight: 700; color: var(--text-primary);"
-          >
-            {p.nickname.slice(0, 2)}
-          </div>
-        {/if}
+        <Avatar src={p.avatar_url} name={p.nickname} alt={p.nickname} size={92} border={false} />
       </div>
       <button
         class="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none"
@@ -278,8 +266,12 @@
                 class="absolute bottom-0 left-0 right-0 flex items-center gap-2 px-2 py-1.5"
                 style="background: linear-gradient(transparent, rgba(0,0,0,0.5));"
               >
-                <span style="font-size: 10px; color: white;">
-                  <Heart size={10} color="white" style="display: inline; vertical-align: middle;" />
+                <span style="font-size: 10px; color: var(--text-on-overlay);">
+                  <Heart
+                    size={10}
+                    color="var(--text-on-overlay)"
+                    style="display: inline; vertical-align: middle;"
+                  />
                   {moment.likes_count}
                 </span>
               </div>
@@ -343,7 +335,7 @@
         ></div>
         <button
           class="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
-          style="padding: 6px 12px; background: rgba(0,0,0,0.45); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25); font-size: 12px; color: white;"
+          style="padding: 6px 12px; background: rgba(0,0,0,0.45); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25); font-size: 12px; color: var(--text-on-overlay);"
         >
           <Camera size={13} strokeWidth={1.75} />
           更换横幅
@@ -357,16 +349,14 @@
             class="overflow-hidden rounded-[22px]"
             style="width: 72px; height: 72px; border: 3px solid var(--surface-bg); box-shadow: var(--shadow-lg);"
           >
-            {#if p.avatar_url}
-              <img src={p.avatar_url} alt="avatar" class="w-full h-full object-cover" />
-            {:else}
-              <div
-                class="flex h-full w-full items-center justify-center"
-                style="background: var(--surface-bg); font-size: 20px; color: var(--text-primary);"
-              >
-                {nickname.slice(0, 2)}
-              </div>
-            {/if}
+            <Avatar
+              src={p.avatar_url}
+              name={nickname}
+              alt="avatar"
+              size={72}
+              shape="rounded"
+              border={false}
+            />
           </div>
           <button
             class="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"
@@ -477,13 +467,13 @@
         <button
           class="flex flex-1 items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none transition-all"
           style={saved
-            ? 'background: #22c55e; color: white; font-size: 14px; box-shadow: 0 4px 14px rgba(34,197,94,0.35); border: none;'
+            ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
             : 'background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px var(--glow); border: none;'}
           onclick={saveProfile}
           disabled={isSaving}
         >
           {#if saved}
-            <Check size={14} color="white" strokeWidth={2.5} />
+            <Check size={14} color="var(--text-on-accent)" strokeWidth={2.5} />
           {:else if isSaving}
             <Loader2 class="h-4 w-4 animate-spin" />
             保存中...

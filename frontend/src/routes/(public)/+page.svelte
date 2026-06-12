@@ -80,10 +80,10 @@
   );
 
   const ACTIVITY_STYLES = [
-    { icon: 'coffee', color: 'var(--color-semantic-warning, #b8843f)' },
+    { icon: 'coffee', color: 'var(--semantic-warning)' },
     { icon: 'music', color: 'var(--brand)' },
-    { icon: 'users', color: 'var(--color-map-group, #6d83b8)' },
-    { icon: 'star', color: 'var(--color-semantic-hot, #c2603f)' }
+    { icon: 'users', color: 'var(--map-group)' },
+    { icon: 'star', color: 'var(--semantic-hot)' }
   ];
 
   const activities = $derived(
@@ -118,19 +118,19 @@
       icon: Sparkles,
       title: t('home.lifeMoments'),
       desc: t('home.shareLifeMoments'),
-      color: 'var(--color-semantic-warning, #b8843f)'
+      color: 'var(--semantic-warning)'
     },
     {
       icon: Users,
       title: t('home.groupInteraction'),
       desc: t('home.joinInterestGroups'),
-      color: 'var(--color-map-group, #6d83b8)'
+      color: 'var(--map-group)'
     },
     {
       icon: MessageCircle,
       title: t('home.instantChat'),
       desc: t('home.chatWithFriends'),
-      color: 'var(--color-semantic-hot, #c2603f)'
+      color: 'var(--semantic-hot)'
     }
   ]);
 
@@ -305,113 +305,117 @@
     <!-- Desktop guest landing: split hero + feature showcase -->
     <div class="flex h-full flex-col">
       <div
-        class="sticky top-0 z-10 flex items-center justify-between px-6 py-4"
+        class="sticky top-0 z-10 page-pad-x py-4"
         style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
       >
-        <div>
-          <h1 style="font-size: 24px; color: var(--text-primary);">{t('sidebar.home')}</h1>
-          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-            {t('home.discoverNearbyPeopleAndThings')}
-          </p>
+        <div class="page-shell flex items-center justify-between">
+          <div>
+            <h1 style="font-size: 24px; color: var(--text-primary);">{t('sidebar.home')}</h1>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+              {t('home.discoverNearbyPeopleAndThings')}
+            </p>
+          </div>
+          <AnchorEntry variant="pill" onAdjust={() => (showLocationPicker = true)} />
         </div>
-        <AnchorEntry variant="pill" onAdjust={() => (showLocationPicker = true)} />
       </div>
 
       <div class="min-h-0 flex-1 overflow-y-auto no-scrollbar">
-        <div class="mx-auto w-full px-8 py-10" style="max-width: 1080px;">
-          <!-- Hero -->
-          <section
-            class="surface-hero ambient-glow relative overflow-hidden rounded-[28px] px-10 py-14"
-          >
-            <div
-              class="grid items-center gap-12"
-              style="grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);"
+        <div class="page-pad">
+          <div class="page-shell">
+            <!-- Hero -->
+            <section
+              class="surface-hero ambient-glow relative overflow-hidden rounded-[28px] px-10 py-14"
             >
-              <div class="flex flex-col">
-                <span class="eyebrow">{t('home.locationBasedSocial')}</span>
-                <h2
-                  style="font-size: 38px; line-height: 1.12; font-weight: 700; color: var(--text-primary); margin-top: 14px;"
-                >
-                  {t('home.discoverNearby')}
-                </h2>
-                <p
-                  style="font-size: 15px; line-height: 1.65; color: var(--text-secondary); margin-top: 16px; max-width: 440px;"
-                >
-                  {t('home.heroDescription')}
-                </p>
-                <div class="mt-8 flex flex-wrap gap-3">
-                  <button
-                    class="rounded-[18px] px-7 py-3.5 font-medium transition-transform duration-150 active:scale-[0.97]"
-                    style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 8px 24px var(--glow);"
-                    onclick={handleGetStarted}
-                  >
-                    {t('home.getStarted')}
-                  </button>
-                  <button
-                    class="rounded-[18px] px-7 py-3.5 font-medium transition-transform duration-150 active:scale-[0.97]"
-                    style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg); box-shadow: var(--shadow-sm);"
-                    onclick={handleExplore}
-                  >
-                    {t('home.browseFirst')}
-                  </button>
-                </div>
-              </div>
-
-              <!-- Radar visual -->
-              <div class="relative" style="aspect-ratio: 4 / 3;">
-                <div
-                  class="absolute inset-0 overflow-hidden rounded-[26px]"
-                  style="background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 20%, var(--surface-secondary)), var(--surface-bg)); border: 1px solid var(--border-theme);"
-                >
-                  {#each [80, 56, 32] as ring}
-                    <div
-                      class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                      style="width: {ring}%; aspect-ratio: 1; border: 1px solid color-mix(in srgb, var(--brand) 28%, transparent);"
-                    ></div>
-                  {/each}
-                  <div
-                    class="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
-                    style="width: 60px; height: 60px; background: var(--surface-bg); box-shadow: 0 10px 28px rgba(0,0,0,0.14); border: 1.5px solid color-mix(in srgb, var(--brand) 35%, transparent);"
-                  >
-                    <span
-                      class="animate-pulse rounded-full"
-                      style="width: 18px; height: 18px; background: var(--brand); box-shadow: 0 0 0 7px var(--glow);"
-                    ></span>
-                  </div>
-                  {#each [{ icon: Users, top: '22%', left: '26%', c: 'var(--brand)' }, { icon: Sparkles, top: '30%', left: '74%', c: 'var(--color-semantic-warning, #b8843f)' }, { icon: MapPin, top: '72%', left: '64%', c: 'var(--color-map-group, #6d83b8)' }] as blip}
-                    <div
-                      class="absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
-                      style="top: {blip.top}; left: {blip.left}; width: 36px; height: 36px; background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
-                    >
-                      <blip.icon size={16} strokeWidth={1.75} color={blip.c} />
-                    </div>
-                  {/each}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- Features -->
-          <p class="eyebrow mt-12 mb-5">{t('home.coreFeatures')}</p>
-          <div class="grid gap-5" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
-            {#each guestFeatures as feat}
               <div
-                class="surface-flat card-hover flex flex-col gap-3 rounded-[22px] p-6 transition-transform duration-150"
+                class="grid items-center gap-12"
+                style="grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);"
               >
-                <div
-                  class="flex items-center justify-center rounded-[16px]"
-                  style="width: 46px; height: 46px; background: color-mix(in srgb, {feat.color} 14%, transparent);"
-                >
-                  <feat.icon size={22} strokeWidth={1.75} color={feat.color} />
+                <div class="flex flex-col">
+                  <span class="eyebrow">{t('home.locationBasedSocial')}</span>
+                  <h2
+                    style="font-size: 38px; line-height: 1.12; font-weight: 700; color: var(--text-primary); margin-top: 14px;"
+                  >
+                    {t('home.discoverNearby')}
+                  </h2>
+                  <p
+                    style="font-size: 15px; line-height: 1.65; color: var(--text-secondary); margin-top: 16px; max-width: 440px;"
+                  >
+                    {t('home.heroDescription')}
+                  </p>
+                  <div class="mt-8 flex flex-wrap gap-3">
+                    <button
+                      class="rounded-[18px] px-7 py-3.5 font-medium transition-transform duration-150 active:scale-[0.97]"
+                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 8px 24px var(--glow);"
+                      onclick={handleGetStarted}
+                    >
+                      {t('home.getStarted')}
+                    </button>
+                    <button
+                      class="rounded-[18px] px-7 py-3.5 font-medium transition-transform duration-150 active:scale-[0.97]"
+                      style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg); box-shadow: var(--shadow-sm);"
+                      onclick={handleExplore}
+                    >
+                      {t('home.browseFirst')}
+                    </button>
+                  </div>
                 </div>
-                <span style="font-size: 15px; font-weight: 600; color: var(--text-primary);"
-                  >{feat.title}</span
-                >
-                <span style="font-size: 12.5px; line-height: 1.5; color: var(--text-secondary);"
-                  >{feat.desc}</span
-                >
+
+                <!-- Radar visual -->
+                <div class="relative" style="aspect-ratio: 4 / 3;">
+                  <div
+                    class="absolute inset-0 overflow-hidden rounded-[26px]"
+                    style="background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 20%, var(--surface-secondary)), var(--surface-bg)); border: 1px solid var(--border-theme);"
+                  >
+                    {#each [80, 56, 32] as ring}
+                      <div
+                        class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                        style="width: {ring}%; aspect-ratio: 1; border: 1px solid color-mix(in srgb, var(--brand) 28%, transparent);"
+                      ></div>
+                    {/each}
+                    <div
+                      class="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
+                      style="width: 60px; height: 60px; background: var(--surface-bg); box-shadow: 0 10px 28px rgba(0,0,0,0.14); border: 1.5px solid color-mix(in srgb, var(--brand) 35%, transparent);"
+                    >
+                      <span
+                        class="animate-pulse rounded-full"
+                        style="width: 18px; height: 18px; background: var(--brand); box-shadow: 0 0 0 7px var(--glow);"
+                      ></span>
+                    </div>
+                    {#each [{ icon: Users, top: '22%', left: '26%', c: 'var(--brand)' }, { icon: Sparkles, top: '30%', left: '74%', c: 'var(--semantic-warning)' }, { icon: MapPin, top: '72%', left: '64%', c: 'var(--map-group)' }] as blip}
+                      <div
+                        class="absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
+                        style="top: {blip.top}; left: {blip.left}; width: 36px; height: 36px; background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+                      >
+                        <blip.icon size={16} strokeWidth={1.75} color={blip.c} />
+                      </div>
+                    {/each}
+                  </div>
+                </div>
               </div>
-            {/each}
+            </section>
+
+            <!-- Features -->
+            <p class="eyebrow mt-12 mb-5">{t('home.coreFeatures')}</p>
+            <div class="grid gap-5" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+              {#each guestFeatures as feat}
+                <div
+                  class="surface-flat card-hover flex flex-col gap-3 rounded-[22px] p-6 transition-transform duration-150"
+                >
+                  <div
+                    class="flex items-center justify-center rounded-[16px]"
+                    style="width: 46px; height: 46px; background: color-mix(in srgb, {feat.color} 14%, transparent);"
+                  >
+                    <feat.icon size={22} strokeWidth={1.75} color={feat.color} />
+                  </div>
+                  <span style="font-size: 15px; font-weight: 600; color: var(--text-primary);"
+                    >{feat.title}</span
+                  >
+                  <span style="font-size: 12.5px; line-height: 1.5; color: var(--text-secondary);"
+                    >{feat.desc}</span
+                  >
+                </div>
+              {/each}
+            </div>
           </div>
         </div>
       </div>
@@ -621,29 +625,31 @@
   <div class="flex h-full flex-col">
     <!-- Sticky header -->
     <div
-      class="sticky top-0 z-10 flex items-center justify-between px-6 py-4"
+      class="sticky top-0 z-10 page-pad-x py-4"
       style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <div>
-        <h1 style="font-size: 24px; color: var(--text-primary);">
-          {t('sidebar.home')}
-        </h1>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-          {t('home.discoverNearbyPeopleAndThings')}
-        </p>
-      </div>
-      <div class="flex items-center gap-2">
-        <button
-          class="surface-flat flex items-center gap-1.5 rounded-full py-1.5 px-3.5 outline-none"
-          onclick={refreshAll}
-        >
-          <span
-            style="width: 7px; height: 7px; border-radius: 999px; background: var(--color-semantic-online, #66835d); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-semantic-online, #66835d) 22%, transparent);"
-          ></span>
-          <span style="font-size: 11px; color: var(--text-secondary);"
-            >{onlineCount} {t('common.online')}</span
+      <div class="page-shell page-shell--wide flex items-center justify-between">
+        <div>
+          <h1 style="font-size: 24px; color: var(--text-primary);">
+            {t('sidebar.home')}
+          </h1>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+            {t('home.discoverNearbyPeopleAndThings')}
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            class="surface-flat flex items-center gap-1.5 rounded-full py-1.5 px-3.5 outline-none"
+            onclick={refreshAll}
           >
-        </button>
+            <span
+              style="width: 7px; height: 7px; border-radius: 999px; background: var(--semantic-online); box-shadow: 0 0 0 3px color-mix(in srgb, var(--semantic-online) 22%, transparent);"
+            ></span>
+            <span style="font-size: 11px; color: var(--text-secondary);"
+              >{onlineCount} {t('common.online')}</span
+            >
+          </button>
+        </div>
       </div>
     </div>
 

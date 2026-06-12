@@ -22,10 +22,10 @@
   import { platformStore } from '$lib/stores/platform.svelte';
   import type { GroupItem, GroupMessageItem } from '$lib/types/api';
   import BackButton from '$lib/components/common/back-button.svelte';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import Send from 'lucide-svelte/icons/send';
   import Loader2 from 'lucide-svelte/icons/loader-2';
   import MoreVertical from 'lucide-svelte/icons/more-vertical';
-  import Users from 'lucide-svelte/icons/users';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import ChevronDown from 'lucide-svelte/icons/chevron-down';
@@ -632,25 +632,13 @@
         href="/groups/{groupId}"
         class="flex flex-1 items-center gap-3 overflow-hidden transition-opacity hover:opacity-80"
       >
-        <div
-          class="overflow-hidden rounded-full shrink-0"
-          style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme);"
-        >
-          {#if group.group.avatar_url}
-            <img
-              src={group.group.avatar_url}
-              alt={group.group.name}
-              class="h-full w-full object-cover"
-            />
-          {:else}
-            <div
-              class="flex h-full w-full items-center justify-center"
-              style="background: var(--surface-bg);"
-            >
-              <Users size={18} color="var(--text-secondary)" />
-            </div>
-          {/if}
-        </div>
+        <Avatar
+          src={group.group.avatar_url}
+          name={group.group.name}
+          alt={group.group.name}
+          size={40}
+          type="group"
+        />
         <div class="flex-1 overflow-hidden">
           <div
             class="truncate"
@@ -780,25 +768,12 @@
                   <div class="w-10 shrink-0">
                     {#if showAvatar}
                       <a href="/users/{message.sender?.user_id}">
-                        <div
-                          class="overflow-hidden rounded-full"
-                          style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme);"
-                        >
-                          {#if message.sender?.avatar_url}
-                            <img
-                              src={message.sender.avatar_url}
-                              alt={message.sender?.nickname}
-                              class="h-full w-full object-cover"
-                            />
-                          {:else}
-                            <div
-                              class="flex h-full w-full items-center justify-center"
-                              style="background: var(--surface-bg); font-size: 12px; color: var(--text-secondary);"
-                            >
-                              {(message.sender?.nickname || '用户').slice(0, 2)}
-                            </div>
-                          {/if}
-                        </div>
+                        <Avatar
+                          src={message.sender?.avatar_url}
+                          name={message.sender?.nickname}
+                          alt={message.sender?.nickname}
+                          size={40}
+                        />
                       </a>
                     {/if}
                   </div>
@@ -996,7 +971,7 @@
     <button
       type="button"
       class="absolute right-4 top-4 flex items-center justify-center rounded-full outline-none"
-      style="width: 40px; height: 40px; background: var(--theme-surface-glass); color: white;"
+      style="width: 40px; height: 40px; background: var(--theme-surface-glass); color: var(--text-on-overlay);"
       onclick={closeImagePreview}
       aria-label="关闭图片预览"
     >

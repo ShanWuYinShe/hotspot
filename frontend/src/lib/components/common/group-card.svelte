@@ -24,6 +24,7 @@
   import Share2 from 'lucide-svelte/icons/share-2';
   import Flag from 'lucide-svelte/icons/flag';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import type { GroupItem, GroupInfo } from '$lib/types/api';
 
   interface Props {
@@ -203,27 +204,13 @@
         <div class="flex items-start justify-between gap-3">
           <div class="flex min-w-0 items-center gap-2.5">
             <div class="relative flex-shrink-0">
-              {#if groupInfo.avatar_url}
-                <div
-                  class="overflow-hidden rounded-full"
-                  style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
-                >
-                  <img
-                    src={groupInfo.avatar_url}
-                    alt={groupInfo.name}
-                    class="h-full w-full object-cover"
-                  />
-                </div>
-              {:else}
-                <div
-                  class="flex items-center justify-center rounded-full"
-                  style="width: 44px; height: 44px; background: var(--surface-secondary); border: 1.5px solid var(--border-theme);"
-                >
-                  <span style="font-size: 16px; font-weight: 600; color: var(--text-tertiary);"
-                    >{groupInfo.name.charAt(0)}</span
-                  >
-                </div>
-              {/if}
+              <Avatar
+                src={groupInfo.avatar_url}
+                name={groupInfo.name}
+                alt={groupInfo.name}
+                size={44}
+                type="group"
+              />
               {#if unreadCount > 0}
                 <div
                   class="absolute -top-1 -right-1 flex items-center justify-center rounded-full"
@@ -297,27 +284,13 @@
     <!-- Compact: horizontal list row -->
     <div class="flex items-center gap-3 p-3.5">
       <div class="flex-shrink-0">
-        {#if groupInfo.avatar_url}
-          <div
-            class="overflow-hidden rounded-full"
-            style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
-          >
-            <img
-              src={groupInfo.avatar_url}
-              alt={groupInfo.name}
-              class="h-full w-full object-cover"
-            />
-          </div>
-        {:else}
-          <div
-            class="flex items-center justify-center rounded-full"
-            style="width: 44px; height: 44px; background: var(--surface-secondary); border: 1.5px solid var(--border-theme);"
-          >
-            <span style="font-size: 16px; font-weight: 600; color: var(--text-tertiary);"
-              >{groupInfo.name.charAt(0)}</span
-            >
-          </div>
-        {/if}
+        <Avatar
+          src={groupInfo.avatar_url}
+          name={groupInfo.name}
+          alt={groupInfo.name}
+          size={44}
+          type="group"
+        />
       </div>
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between">
@@ -361,27 +334,13 @@
     <div class="p-4">
       <div class="flex items-center gap-3.5">
         <div class="flex-shrink-0">
-          {#if groupInfo.avatar_url}
-            <div
-              class="overflow-hidden rounded-full"
-              style="width: 48px; height: 48px; border: 1.5px solid var(--border-theme);"
-            >
-              <img
-                src={groupInfo.avatar_url}
-                alt={groupInfo.name}
-                class="h-full w-full object-cover"
-              />
-            </div>
-          {:else}
-            <div
-              class="flex items-center justify-center rounded-full"
-              style="width: 48px; height: 48px; background: var(--surface-secondary); border: 1.5px solid var(--border-theme);"
-            >
-              <span style="font-size: 18px; font-weight: 600; color: var(--text-tertiary);"
-                >{groupInfo.name.charAt(0)}</span
-              >
-            </div>
-          {/if}
+          <Avatar
+            src={groupInfo.avatar_url}
+            name={groupInfo.name}
+            alt={groupInfo.name}
+            size={48}
+            type="group"
+          />
         </div>
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-1">

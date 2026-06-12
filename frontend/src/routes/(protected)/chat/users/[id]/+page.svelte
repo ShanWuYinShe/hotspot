@@ -29,6 +29,7 @@
   } from '$lib/components/ui/dropdown-menu';
   import type { PrivateMessageItem, UserInfo } from '$lib/types/api';
   import BackButton from '$lib/components/common/back-button.svelte';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import Send from 'lucide-svelte/icons/send';
   import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -409,20 +410,13 @@
             class="neu-flat overflow-hidden rounded-full"
             style="width: 38px; height: 38px; border: 1.5px solid var(--border-theme);"
           >
-            {#if otherUser.avatar_url}
-              <img
-                src={otherUser.avatar_url}
-                alt={otherUser.nickname}
-                class="h-full w-full object-cover"
-              />
-            {:else}
-              <div
-                class="flex h-full w-full items-center justify-center"
-                style="background: var(--surface-bg); font-size: 14px; color: var(--text-secondary);"
-              >
-                {(otherUser.nickname || '用户').slice(0, 2)}
-              </div>
-            {/if}
+            <Avatar
+              src={otherUser.avatar_url}
+              name={otherUser.nickname}
+              alt={otherUser.nickname}
+              size={38}
+              border={false}
+            />
           </div>
         </div>
         <div class="min-w-0">
@@ -565,7 +559,7 @@
                       .filter((m) => isSelf(m))
                       .at(-1)?.message_id}
                   <span style="display: inline-flex; width: 12px; height: 12px; opacity: 0.8;"
-                    ><CheckCheck size={12} color="white" strokeWidth={2} /></span
+                    ><CheckCheck size={12} color="var(--text-on-accent)" strokeWidth={2} /></span
                   >
                 {/if}
               </p>

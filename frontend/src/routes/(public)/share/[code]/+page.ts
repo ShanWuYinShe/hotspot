@@ -8,11 +8,11 @@ import type { PageLoad } from './$types';
  */
 export const ssr = false;
 
-export const load: PageLoad = async ({ params }) => {
+export const load: PageLoad = async ({ params, fetch }) => {
   const shareCode = params.code;
 
   try {
-    const response = await shareService.get({ share_code: shareCode });
+    const response = await shareService.get({ share_code: shareCode }, { fetch });
 
     if (isSuccess(response) && response.data) {
       return {

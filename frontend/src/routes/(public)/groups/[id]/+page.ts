@@ -8,11 +8,11 @@ import type { PageLoad } from './$types';
  */
 export const ssr = false;
 
-export const load: PageLoad = async ({ params }) => {
+export const load: PageLoad = async ({ params, fetch }) => {
   const groupId = params.id;
 
   try {
-    const response = await groupsService.getGroup({ group_id: groupId });
+    const response = await groupsService.getGroup({ group_id: groupId }, { fetch });
 
     if (isSuccess(response) && response.data) {
       return {

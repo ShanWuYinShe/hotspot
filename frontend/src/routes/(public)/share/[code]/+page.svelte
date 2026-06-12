@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import { toast } from '$lib/stores/toast.svelte';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import { MapPin, Share2, UsersRound } from 'lucide-svelte';
   import type {
     ShareDetail,
@@ -109,16 +110,12 @@
             </h2>
           </div>
           <div class="flex items-center gap-3">
-            <div
-              class="overflow-hidden rounded-full"
-              style="width: 32px; height: 32px; border: 1.5px solid var(--border-theme);"
-            >
-              <img
-                src={share.share.creator.avatar_url}
-                alt={share.share.creator.nickname}
-                class="h-full w-full object-cover"
-              />
-            </div>
+            <Avatar
+              src={share.share.creator.avatar_url}
+              name={share.share.creator.nickname}
+              alt={share.share.creator.nickname}
+              size={32}
+            />
             <span style="font-size: 13px; color: var(--text-secondary);">
               <span style="font-weight: 500; color: var(--text-primary);"
                 >{share.share.creator.nickname}</span

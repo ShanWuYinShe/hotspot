@@ -30,8 +30,8 @@
 
   const stats = $derived([
     { label: peopleLabel, value: people, color: 'var(--brand)' },
-    { label: activityLabel, value: activity, color: 'var(--color-semantic-warning, #b8843f)' },
-    { label: onlineLabel, value: online, color: 'var(--color-semantic-online, #66835d)' }
+    { label: activityLabel, value: activity, color: 'var(--semantic-warning)' },
+    { label: onlineLabel, value: online, color: 'var(--semantic-online)' }
   ]);
 </script>
 

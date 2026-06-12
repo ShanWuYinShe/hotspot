@@ -28,6 +28,7 @@
   } from '$lib/types/api';
   import { formatDateTime } from '$lib/utils/format';
   import BackButton from '$lib/components/common/back-button.svelte';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import Users from 'lucide-svelte/icons/users';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import Lock from 'lucide-svelte/icons/lock';
@@ -919,16 +920,14 @@
         <div class="space-y-6">
           <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div
-                class="overflow-hidden rounded-full"
-                style="width: 96px; height: 96px; border: 2px solid var(--brand); opacity: 0.9;"
-              >
-                <img
-                  src={group.group.avatar_url}
-                  alt={group.group.name}
-                  class="h-full w-full object-cover"
-                />
-              </div>
+              <Avatar
+                src={group.group.avatar_url}
+                name={group.group.name}
+                alt={group.group.name}
+                size={96}
+                type="group"
+                class="opacity-90"
+              />
               <div>
                 <div class="flex items-center gap-2">
                   <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary);">
@@ -1435,16 +1434,12 @@
                       href="/users/{member.user.user_id}"
                       class="flex min-w-0 flex-1 items-center gap-3"
                     >
-                      <div
-                        class="overflow-hidden rounded-full"
-                        style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme);"
-                      >
-                        <img
-                          src={member.user.avatar_url}
-                          alt={member.user.nickname}
-                          class="h-full w-full object-cover"
-                        />
-                      </div>
+                      <Avatar
+                        src={member.user.avatar_url}
+                        name={member.user.nickname}
+                        alt={member.user.nickname}
+                        size={40}
+                      />
                       <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2">
                           <p
@@ -1606,16 +1601,12 @@
                   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div class="min-w-0 space-y-1">
                       <div class="flex items-center gap-2">
-                        <div
-                          class="overflow-hidden rounded-full"
-                          style="width: 32px; height: 32px; border: 1.5px solid var(--border-theme);"
-                        >
-                          <img
-                            src={application.applicant.avatar_url}
-                            alt={application.applicant.nickname}
-                            class="h-full w-full object-cover"
-                          />
-                        </div>
+                        <Avatar
+                          src={application.applicant.avatar_url}
+                          name={application.applicant.nickname}
+                          alt={application.applicant.nickname}
+                          size={32}
+                        />
                         <p
                           class="truncate"
                           style="font-size: 14px; font-weight: 500; color: var(--text-primary);"

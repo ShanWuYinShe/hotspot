@@ -6,6 +6,7 @@
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import ConfirmDialog from '$lib/components/common/confirm-dialog.svelte';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import type { AdminGroupItem } from '$lib/types/api';
   import { formatDate } from '$lib/utils/format';
   import Search from 'lucide-svelte/icons/search';
@@ -156,27 +157,13 @@
                 class="flex items-center gap-3 rounded-[18px] p-3"
                 style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
               >
-                <div
-                  class="flex-shrink-0 overflow-hidden rounded-full"
-                  style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme);"
-                >
-                  {#if group.group.avatar_url}
-                    <img
-                      src={group.group.avatar_url}
-                      alt={group.group.name}
-                      class="h-full w-full object-cover"
-                    />
-                  {:else}
-                    <div
-                      class="flex h-full w-full items-center justify-center"
-                      style="background: var(--surface-secondary);"
-                    >
-                      <span style="font-size: 14px; font-weight: 600; color: var(--text-tertiary);"
-                        >{group.group.name.slice(0, 2)}</span
-                      >
-                    </div>
-                  {/if}
-                </div>
+                <Avatar
+                  src={group.group.avatar_url}
+                  name={group.group.name}
+                  alt={group.group.name}
+                  size={40}
+                  type="group"
+                />
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-1">
                     <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);"

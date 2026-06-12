@@ -6,6 +6,7 @@
   import { toast } from '$lib/stores/toast.svelte';
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import type { FriendItem } from '$lib/types/api';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import Users from 'lucide-svelte/icons/users';
@@ -118,25 +119,12 @@
                 class="flex items-center gap-3 rounded-[18px] p-4"
                 style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
               >
-                <div
-                  class="overflow-hidden rounded-full shrink-0"
-                  style="width: 48px; height: 48px; border: 1.5px solid var(--border-theme);"
-                >
-                  {#if friend.user.avatar_url}
-                    <img
-                      src={friend.user.avatar_url}
-                      alt={friend.user.nickname}
-                      class="h-full w-full object-cover"
-                    />
-                  {:else}
-                    <div
-                      class="flex h-full w-full items-center justify-center"
-                      style="background: var(--surface-bg); font-size: 14px; color: var(--text-secondary);"
-                    >
-                      {friend.user.nickname.slice(0, 2)}
-                    </div>
-                  {/if}
-                </div>
+                <Avatar
+                  src={friend.user.avatar_url}
+                  name={friend.user.nickname}
+                  alt={friend.user.nickname}
+                  size={48}
+                />
                 <div class="min-w-0">
                   <p
                     class="truncate"

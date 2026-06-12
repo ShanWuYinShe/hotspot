@@ -412,7 +412,7 @@
               {#if i < 3}
                 <span
                   class="ml-auto px-2 py-0.5 rounded-full"
-                  style="font-size: 10px; background: rgba(239,68,68,0.12); color: #EF4444;"
+                  style="font-size: 10px; background: color-mix(in srgb, var(--theme-error) 12%, transparent); color: var(--theme-error);"
                   >热</span
                 >
               {/if}
@@ -454,7 +454,7 @@
               class="flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.92]"
               class:surface-flat={currentTab !== tab.value}
               style={currentTab === tab.value
-                ? 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--glow);'
+                ? 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow);'
                 : 'color: var(--text-secondary); font-size: 12px;'}
               onclick={() => handleTabChange(tab.value)}
             >

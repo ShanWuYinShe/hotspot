@@ -658,6 +658,7 @@
   --theme-shadow-xl: var(--shadow-xl);
 
   /* Overlays */
+  --text-on-overlay: #ffffff;
   --overlay: rgba(0, 0, 0, 0.35);
   --overlay-strong: rgba(0, 0, 0, 0.9);
   --overlay-scene: rgba(0, 0, 0, 0.5);

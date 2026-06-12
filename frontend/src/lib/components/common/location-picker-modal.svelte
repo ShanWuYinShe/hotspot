@@ -2936,7 +2936,7 @@
 
   :global(.map-render-marker-group) {
     background: linear-gradient(180deg, rgba(14, 165, 233, 0.98), rgba(2, 132, 199, 0.98));
-    color: white;
+    color: var(--text-on-overlay);
   }
 
   :global(.map-render-marker-group .map-render-marker-badge) {
@@ -2950,7 +2950,7 @@
 
   :global(.map-render-marker-moment) {
     background: linear-gradient(180deg, rgba(249, 115, 22, 0.98), rgba(234, 88, 12, 0.98));
-    color: white;
+    color: var(--text-on-overlay);
   }
 
   :global(.map-render-marker-moment .map-render-marker-badge) {
@@ -2964,7 +2964,7 @@
 
   :global(.map-render-marker-cluster) {
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96));
-    color: white;
+    color: var(--text-on-overlay);
   }
 
   :global(.map-render-marker-cluster .map-render-marker-badge) {

@@ -13,7 +13,7 @@
   import PageLoading from '$lib/components/common/page-loading.svelte';
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
-  import { themeStore, THEME_FAMILY_INIT_SCRIPT } from '$lib/stores/theme.svelte';
+  import { themeStore } from '$lib/stores/theme.svelte';
   import { normalizeRedirectPath, uiStore } from '$lib/stores/ui.svelte';
   import { locationStore } from '$lib/stores/location.svelte';
   import { mapAnchorStore, DEFAULT_ANCHOR_NAME } from '$lib/stores/map-anchor.svelte';
@@ -216,9 +216,6 @@
 </script>
 
 <svelte:head>
-  <!-- 首屏绘制前根据 localStorage 应用主题族，避免主题闪烁（FOUC） -->
-  <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-  {@html `<script>${THEME_FAMILY_INIT_SCRIPT}<\/script>`}
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />

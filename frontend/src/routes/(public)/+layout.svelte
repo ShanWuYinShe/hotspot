@@ -21,6 +21,7 @@
   import Check from 'lucide-svelte/icons/check';
   import { notificationStore } from '$lib/stores/notification.svelte';
   import Sidebar from '$lib/components/common/sidebar.svelte';
+  import Avatar from '$lib/components/common/avatar.svelte';
 
   let { children } = $props();
 
@@ -171,11 +172,11 @@
             aria-label="个人主页"
             onclick={() => void goto('/profile')}
           >
-            <img
+            <Avatar
               src={authStore.currentAccount?.avatar_url || ''}
+              name={authStore.currentAccount?.nickname || 'Profile'}
               alt={authStore.currentAccount?.nickname || 'Profile'}
-              class="h-full w-full rounded-full object-cover"
-              style="border: 1.5px solid var(--border-theme);"
+              size={32}
             />
             {#if notificationStore.unreadCount > 0}
               <div class="desktop-header__badge" style="top: -3px; right: -3px;">

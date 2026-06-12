@@ -85,7 +85,7 @@ function resolveInitialThemeFamily(config: {
 
 /**
  * 阻塞式内联脚本源码：在 hydration 之前根据 localStorage 把持久化的主题族写入
- * <html>，避免首屏主题闪烁。通过 +layout.svelte 的 <svelte:head> 用 {@html} 注入。
+ * <html>，避免首屏主题闪烁。src/app.html 中的静态脚本需与这里保持一致。
  */
 export const THEME_FAMILY_INIT_SCRIPT = `(${resolveInitialThemeFamily.toString()})(${JSON.stringify(
   {

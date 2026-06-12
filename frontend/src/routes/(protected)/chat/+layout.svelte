@@ -11,42 +11,47 @@
 </script>
 
 {#if platformStore.isDesktop}
-  <!-- Desktop: split-pane (300px left + right content) -->
-  <div class="flex h-full">
-    <!-- Left pane: chat list -->
+  <!-- Desktop: bounded split-pane workspace -->
+  <div class="page-pad box-border h-full min-h-0">
     <div
-      class="flex-shrink-0 flex flex-col"
-      style="width: 300px; border-right: 1px solid var(--border-theme);"
+      class="page-shell page-shell--wide flex h-full min-h-0 overflow-hidden rounded-[28px]"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
-      <ChatListPanel />
-    </div>
+      <!-- Left pane: chat list -->
+      <div
+        class="flex flex-shrink-0 flex-col"
+        style="width: 300px; border-right: 1px solid var(--border-theme);"
+      >
+        <ChatListPanel />
+      </div>
 
-    <!-- Right pane: chat content -->
-    <div class="flex flex-1 overflow-hidden">
-      {#if isOnChatRoot}
-        <!-- Empty state when no conversation selected -->
-        <div class="flex flex-1 items-center justify-center overflow-hidden">
-          <div class="flex flex-col items-center gap-3">
-            <div
-              class="surface-flat flex items-center justify-center rounded-full"
-              style="width: 72px; height: 72px;"
-            >
-              <MessageSquareDashed
-                size={28}
-                strokeWidth={1.25}
-                color="var(--text-secondary)"
-                style="opacity: 0.5;"
-              />
+      <!-- Right pane: chat content -->
+      <div class="flex flex-1 overflow-hidden">
+        {#if isOnChatRoot}
+          <!-- Empty state when no conversation selected -->
+          <div class="flex flex-1 items-center justify-center overflow-hidden">
+            <div class="flex flex-col items-center gap-3">
+              <div
+                class="surface-flat flex items-center justify-center rounded-full"
+                style="width: 72px; height: 72px;"
+              >
+                <MessageSquareDashed
+                  size={28}
+                  strokeWidth={1.25}
+                  color="var(--text-secondary)"
+                  style="opacity: 0.5;"
+                />
+              </div>
+              <p style="font-size: 16px; color: var(--text-primary);">选择一个会话</p>
+              <p style="font-size: 13px; color: var(--text-secondary);">
+                从左侧列表中选择或开始新对话
+              </p>
             </div>
-            <p style="font-size: 16px; color: var(--text-primary);">选择一个会话</p>
-            <p style="font-size: 13px; color: var(--text-secondary);">
-              从左侧列表中选择或开始新对话
-            </p>
           </div>
-        </div>
-      {:else}
-        {@render children()}
-      {/if}
+        {:else}
+          {@render children()}
+        {/if}
+      </div>
     </div>
   </div>
 {:else}

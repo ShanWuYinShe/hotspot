@@ -50,8 +50,8 @@ export const groupsService = {
   /**
    * 获取群组详情
    */
-  getGroup(data: { group_id: string }) {
-    return post<GroupItem>(GROUPS.OPEN_THE_DOOR, data);
+  getGroup(data: { group_id: string }, options?: RequestOptions) {
+    return post<GroupItem>(GROUPS.OPEN_THE_DOOR, data, options);
   },
 
   // ==================== 群组操作 ====================

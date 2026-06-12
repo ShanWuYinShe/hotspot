@@ -11,6 +11,7 @@
   import { toast } from '$lib/stores/toast.svelte';
   import LocationPickerModal from './location-picker-modal.svelte';
   import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import type { PrivacyLevel, MomentItem } from '$lib/types/api';
   import { untrack } from 'svelte';
   import ImagePlus from 'lucide-svelte/icons/image-plus';
@@ -336,16 +337,13 @@
     <div class="flex-1 overflow-y-auto no-scrollbar px-5 py-4 flex flex-col gap-4 min-h-0">
       <!-- Author Row -->
       <div class="flex items-center gap-3">
-        <div
-          class="rounded-full overflow-hidden flex-shrink-0"
-          style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);"
-        >
-          <img
-            src={authStore.currentAccount?.avatar_url || ''}
-            alt="You"
-            class="w-full h-full object-cover"
-          />
-        </div>
+        <Avatar
+          src={authStore.currentAccount?.avatar_url}
+          name={authStore.currentAccount?.nickname}
+          alt="You"
+          size={40}
+          class="shadow-[4px_4px_8px_var(--shadow-dark),-4px_-4px_8px_var(--shadow-light)]"
+        />
         <div>
           <p class="text-[13px]" style="color: var(--text-primary);">
             {authStore.currentAccount?.nickname || '我'}
@@ -429,7 +427,7 @@
               {#if image.isUploading}
                 <div
                   class="absolute inset-0 flex items-center justify-center"
-                  style="background: var(--overlay); font-size: 12px; color: white;"
+                  style="background: var(--overlay); font-size: 12px; color: var(--text-on-overlay);"
                 >
                   上传中 {Math.round(image.progress)}%
                 </div>
@@ -440,7 +438,10 @@
                 style="width: 26px; height: 26px; background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);"
                 onclick={() => removeImage(index)}
               >
-                <X style="width: 14px; height: 14px; color: white;" strokeWidth={2} />
+                <X
+                  style="width: 14px; height: 14px; color: var(--text-on-overlay);"
+                  strokeWidth={2}
+                />
               </button>
             </div>
           {/each}
@@ -519,7 +520,7 @@
             <button
               class="px-4 py-1.5 rounded-full text-[12px] outline-none transition-all duration-200 active:scale-[0.92]"
               style={active
-                ? 'background: var(--brand); color: white; box-shadow: 0 4px 12px var(--glow); border: 1px solid transparent;'
+                ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow); border: 1px solid transparent;'
                 : 'background: var(--surface-bg); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
               onclick={() => toggleVibe(tag)}
             >
@@ -558,7 +559,7 @@
       <button
         class="flex items-center justify-center gap-2 w-full py-3.5 rounded-[22px] text-[14px] outline-none transition-all duration-300 active:scale-[0.97]"
         style={canPost && !isSubmitting
-          ? 'background: var(--brand); color: white; box-shadow: 0 8px 24px var(--glow); border: 1px solid transparent;'
+          ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 8px 24px var(--glow); border: 1px solid transparent;'
           : 'background: var(--surface-bg); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary); opacity: 0.6; cursor: not-allowed;'}
         onclick={handleSubmit}
         disabled={!canPost || isSubmitting || isUploadingImages}

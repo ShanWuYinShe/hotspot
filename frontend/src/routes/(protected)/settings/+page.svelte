@@ -4,6 +4,7 @@
   import { toast } from '$lib/stores/toast.svelte';
   import { platformStore } from '$lib/stores/platform.svelte';
   import ThemeToggle from '$lib/components/common/theme-toggle.svelte';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import User from 'lucide-svelte/icons/user';
   import Bell from 'lucide-svelte/icons/bell';
   import Shield from 'lucide-svelte/icons/shield';
@@ -154,20 +155,13 @@
             class="flex-shrink-0 overflow-hidden rounded-full"
             style="width: 42px; height: 42px; padding: 2px; border: 1px solid var(--border-theme);"
           >
-            {#if authStore.currentAccount.avatar_url}
-              <img
-                src={authStore.currentAccount.avatar_url}
-                alt={authStore.currentAccount.nickname}
-                class="h-full w-full rounded-full object-cover"
-              />
-            {:else}
-              <div
-                class="flex h-full w-full items-center justify-center rounded-full"
-                style="background: var(--brand);"
-              >
-                <User size={18} color="var(--text-on-accent)" />
-              </div>
-            {/if}
+            <Avatar
+              src={authStore.currentAccount.avatar_url}
+              name={authStore.currentAccount.nickname}
+              alt={authStore.currentAccount.nickname}
+              size={36}
+              border={false}
+            />
           </div>
           <div class="min-w-0">
             <p style="font-size: 14px; color: var(--text-primary); font-weight: 500;">
@@ -327,7 +321,7 @@
                         height="12"
                         viewBox="0 0 24 24"
                         fill="none"
-                        stroke="#FFFFFF"
+                        stroke="var(--text-on-accent)"
                         stroke-width="3"
                         stroke-linecap="round"
                         stroke-linejoin="round"
@@ -403,7 +397,7 @@
                   onclick={() => (notifications[item.key] = !notifications[item.key])}
                 >
                   <span
-                    style="position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,0.26); transition: transform 0.25s ease; left: {notifications[
+                    style="position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 11px; background: var(--surface-bg); box-shadow: 0 1px 4px rgba(0,0,0,0.26); transition: transform 0.25s ease; left: {notifications[
                       item.key
                     ]
                       ? '25px'
@@ -473,20 +467,13 @@
               class="flex-shrink-0 overflow-hidden rounded-full"
               style="width: 50px; height: 50px; padding: 2px; border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
             >
-              {#if authStore.currentAccount.avatar_url}
-                <img
-                  src={authStore.currentAccount.avatar_url}
-                  alt={authStore.currentAccount.nickname}
-                  class="h-full w-full rounded-full object-cover"
-                />
-              {:else}
-                <div
-                  class="flex h-full w-full items-center justify-center rounded-full"
-                  style="background: var(--brand);"
-                >
-                  <User size={20} color="var(--text-on-accent)" />
-                </div>
-              {/if}
+              <Avatar
+                src={authStore.currentAccount.avatar_url}
+                name={authStore.currentAccount.nickname}
+                alt={authStore.currentAccount.nickname}
+                size={44}
+                border={false}
+              />
             </div>
             <div class="min-w-0">
               <p style="font-size: 15px; color: var(--text-primary); font-weight: 500;">
@@ -569,7 +556,7 @@
                     height="12"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="#FFFFFF"
+                    stroke="var(--text-on-accent)"
                     stroke-width="3"
                     stroke-linecap="round"
                     stroke-linejoin="round"
@@ -664,7 +651,7 @@
                 onclick={() => (notifications[item.key] = !notifications[item.key])}
               >
                 <span
-                  style="position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,0.26); transition: transform 0.25s ease; left: {notifications[
+                  style="position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 11px; background: var(--surface-bg); box-shadow: 0 1px 4px rgba(0,0,0,0.26); transition: transform 0.25s ease; left: {notifications[
                     item.key
                   ]
                     ? '25px'

@@ -6,6 +6,7 @@
   import MomentCard from '$lib/components/moments/moment-card.svelte';
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import Search from 'lucide-svelte/icons/search';
   import X from 'lucide-svelte/icons/x';
   import Compass from 'lucide-svelte/icons/compass';
@@ -113,6 +114,8 @@
     <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
     <input
       type="text"
+      name="discover-search"
+      aria-label="搜索发现内容"
       bind:value={searchVal}
       placeholder="地点、人物、关键词…"
       class="flex-1 bg-transparent outline-none"
@@ -272,16 +275,7 @@
     <div class="flex flex-col mt-3" style="gap: 10px;">
       {#each topUsers as user (user.id)}
         <div class="flex items-center gap-2.5">
-          <div
-            class="flex-shrink-0 overflow-hidden rounded-full"
-            style="width: 32px; height: 32px;"
-          >
-            <img
-              src={user.avatar_url || ''}
-              alt={user.nickname}
-              class="h-full w-full object-cover"
-            />
-          </div>
+          <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={32} />
           <p class="min-w-0 flex-1 truncate" style="font-size: 12px; color: var(--text-primary);">
             {user.nickname}
           </p>
@@ -347,6 +341,8 @@
           <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
           <input
             type="text"
+            name="discover-search"
+            aria-label="搜索发现内容"
             bind:value={searchVal}
             placeholder="地点、人物、关键词…"
             class="flex-1 bg-transparent outline-none"

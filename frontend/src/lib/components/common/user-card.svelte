@@ -25,6 +25,7 @@
   import Flag from 'lucide-svelte/icons/flag';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import type { UserInfo, UserItem } from '$lib/types/api';
+  import Avatar from '$lib/components/common/avatar.svelte';
 
   interface Props {
     user: UserInfo | UserItem;
@@ -202,16 +203,12 @@
     <!-- Nearby row: horizontal row for nearby all page -->
     <div class="row-hover flex cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5">
       <div class="relative flex-shrink-0">
-        <div
-          class="overflow-hidden rounded-full"
-          style="width: 46px; height: 46px; border: 1.5px solid var(--border-theme);"
-        >
-          <img
-            src={userInfo.avatar_url || ''}
-            alt={userInfo.nickname}
-            class="h-full w-full object-cover"
-          />
-        </div>
+        <Avatar
+          src={userInfo.avatar_url}
+          name={userInfo.nickname}
+          alt={userInfo.nickname}
+          size={46}
+        />
         {#if isOnline}
           <span
             class="absolute bottom-0 right-0 rounded-full"
@@ -273,16 +270,12 @@
         <div class="flex items-start justify-between gap-3">
           <div class="flex min-w-0 items-center gap-2.5">
             <div class="relative flex-shrink-0">
-              <div
-                class="overflow-hidden rounded-full"
-                style="width: 46px; height: 46px; border: 1.5px solid var(--border-theme);"
-              >
-                <img
-                  src={userInfo.avatar_url || ''}
-                  alt={userInfo.nickname}
-                  class="h-full w-full object-cover"
-                />
-              </div>
+              <Avatar
+                src={userInfo.avatar_url}
+                name={userInfo.nickname}
+                alt={userInfo.nickname}
+                size={46}
+              />
               {#if isOnline}
                 <span
                   class="absolute bottom-0 right-0 rounded-full"
@@ -337,16 +330,12 @@
     <!-- Compact: horizontal list row -->
     <div class="flex items-center gap-3 p-3.5">
       <div class="relative flex-shrink-0">
-        <div
-          class="overflow-hidden rounded-full"
-          style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
-        >
-          <img
-            src={userInfo.avatar_url || ''}
-            alt={userInfo.nickname}
-            class="h-full w-full object-cover"
-          />
-        </div>
+        <Avatar
+          src={userInfo.avatar_url}
+          name={userInfo.nickname}
+          alt={userInfo.nickname}
+          size={44}
+        />
         {#if isOnline}
           <span
             class="absolute bottom-0 right-0 rounded-full"
@@ -379,16 +368,12 @@
     <div class="p-4">
       <div class="flex items-center gap-4">
         <div class="relative flex-shrink-0">
-          <div
-            class="overflow-hidden rounded-full"
-            style="width: 52px; height: 52px; border: 1.5px solid var(--border-theme);"
-          >
-            <img
-              src={userInfo.avatar_url || ''}
-              alt={userInfo.nickname}
-              class="h-full w-full object-cover"
-            />
-          </div>
+          <Avatar
+            src={userInfo.avatar_url}
+            name={userInfo.nickname}
+            alt={userInfo.nickname}
+            size={52}
+          />
           {#if isOnline}
             <span
               class="absolute bottom-0 right-0 rounded-full"
@@ -430,16 +415,12 @@
     <div class="p-4">
       <div class="flex items-center gap-3.5">
         <div class="relative flex-shrink-0">
-          <div
-            class="overflow-hidden rounded-full"
-            style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
-          >
-            <img
-              src={userInfo.avatar_url || ''}
-              alt={userInfo.nickname}
-              class="h-full w-full object-cover"
-            />
-          </div>
+          <Avatar
+            src={userInfo.avatar_url}
+            name={userInfo.nickname}
+            alt={userInfo.nickname}
+            size={44}
+          />
           {#if isOnline}
             <span
               class="absolute bottom-0 right-0 rounded-full"

@@ -17,6 +17,7 @@
   import Share2 from 'lucide-svelte/icons/share-2';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import BackButton from '$lib/components/common/back-button.svelte';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import Send from 'lucide-svelte/icons/send';
   import Loader2 from 'lucide-svelte/icons/loader-2';
   import Pencil from 'lucide-svelte/icons/pencil';
@@ -268,16 +269,12 @@
       >
         <!-- Author -->
         <a href="/users/{moment.user.user_id}" class="flex items-center gap-3">
-          <div
-            class="overflow-hidden rounded-full"
-            style="width: 44px; height: 44px; border: 2px solid var(--brand);"
-          >
-            <img
-              src={moment.user.avatar_url}
-              alt={moment.user.nickname}
-              class="h-full w-full object-cover"
-            />
-          </div>
+          <Avatar
+            src={moment.user.avatar_url}
+            name={moment.user.nickname}
+            alt={moment.user.nickname}
+            size={44}
+          />
           <div>
             <p style="font-weight: 500; font-size: 15px; color: var(--text-primary);">
               {moment.user.nickname}
@@ -319,7 +316,9 @@
                       class="absolute left-3 top-3 rounded-full px-2.5 py-0.5"
                       style="background: var(--brand); box-shadow: 0 2px 8px var(--glow);"
                     >
-                      <span style="font-size: 10px; color: white;">#{moment.tags[0]}</span>
+                      <span style="font-size: 10px; color: var(--text-on-accent);"
+                        >#{moment.tags[0]}</span
+                      >
                     </div>
                   {/if}
                 </div>
@@ -388,13 +387,12 @@
           style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <div class="flex items-center gap-3">
-            <div class="overflow-hidden rounded-full" style="width: 34px; height: 34px;">
-              <img
-                src={authStore.currentAccount?.avatar_url || ''}
-                alt=""
-                class="h-full w-full object-cover"
-              />
-            </div>
+            <Avatar
+              src={authStore.currentAccount?.avatar_url}
+              name={authStore.currentAccount?.nickname}
+              alt=""
+              size={34}
+            />
             <div
               class="input-surface flex flex-1 items-center"
               style="height: 38px; border-radius: 9999px;"
@@ -481,13 +479,12 @@
             {#each comments as comment (comment.comment_id)}
               <div class="flex gap-3">
                 <a href="/users/{comment.user.user_id}">
-                  <div class="overflow-hidden rounded-full" style="width: 34px; height: 34px;">
-                    <img
-                      src={comment.user.avatar_url}
-                      alt={comment.user.nickname}
-                      class="h-full w-full object-cover"
-                    />
-                  </div>
+                  <Avatar
+                    src={comment.user.avatar_url}
+                    name={comment.user.nickname}
+                    alt={comment.user.nickname}
+                    size={34}
+                  />
                 </a>
                 <div class="flex-1">
                   <div class="flex items-center gap-2">

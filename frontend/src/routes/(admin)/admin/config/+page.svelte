@@ -197,7 +197,7 @@
             >
           </div>
           <div class="space-y-4 p-4">
-            {#each [{ id: 'image-max-size', label: '图片最大大小 (字节)', val: imageMaxSize, placeholder: '5242880' }, { id: 'video-max-size', label: '视频最大大小 (字节)', val: videoMaxSize, placeholder: '52428800' }, { id: 'audio-max-size', label: '音频最大大小 (字节)', val: audioMaxSize, placeholder: '10485760' }, { id: 'file-max-size', label: '文件最大大小 (字节)', val: fileMaxSize, placeholder: '10485760' }] as field (field.id)}
+            {#each [{ id: 'image-max-size', label: '图片最大大小 (字节)', value: imageMaxSize, placeholder: '5242880', set: (value: string) => (imageMaxSize = value) }, { id: 'video-max-size', label: '视频最大大小 (字节)', value: videoMaxSize, placeholder: '52428800', set: (value: string) => (videoMaxSize = value) }, { id: 'audio-max-size', label: '音频最大大小 (字节)', value: audioMaxSize, placeholder: '10485760', set: (value: string) => (audioMaxSize = value) }, { id: 'file-max-size', label: '文件最大大小 (字节)', value: fileMaxSize, placeholder: '10485760', set: (value: string) => (fileMaxSize = value) }] as field (field.id)}
               <div>
                 <label for={field.id} style="font-size: 12px; color: var(--text-primary);"
                   >{field.label}</label
@@ -205,13 +205,14 @@
                 <input
                   id={field.id}
                   type="number"
-                  bind:value={field.val}
+                  value={field.value}
                   placeholder={field.placeholder}
                   class="field-inset mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
                   style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
+                  oninput={(event) => field.set(event.currentTarget.value)}
                 />
                 <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-                  当前: {(Number(field.val || 0) / 1024 / 1024).toFixed(1)} MB
+                  当前: {(Number(field.value || 0) / 1024 / 1024).toFixed(1)} MB
                 </p>
               </div>
             {/each}
@@ -271,7 +272,7 @@
                 >
                   <div
                     class="absolute top-1 rounded-full"
-                    style="width: 16px; height: 16px; background: white; transition: left 0.2s; left: {toggle.val
+                    style="width: 16px; height: 16px; background: var(--surface-bg); transition: left 0.2s; left: {toggle.val
                       ? '23px'
                       : '4px'}; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"
                   ></div>
@@ -308,7 +309,7 @@
             >
           </div>
           <div class="space-y-4 p-4">
-            {#each [{ id: 'max-tags', label: '动态最大标签数', val: maxMomentTags, ph: '10' }, { id: 'max-images', label: '动态最大图片数', val: maxMomentImages, ph: '9' }, { id: 'desc-max', label: '动态描述最大长度', val: momentDescriptionMaxLength, ph: '300' }, { id: 'comment-max', label: '评论最大长度', val: commentMaxLength, ph: '200' }, { id: 'group-max', label: '群组最大成员数', val: maxGroupMembers, ph: '500' }, { id: 'radius-max', label: '搜索最大半径 (km)', val: searchRadiusMax, ph: '50' }] as f (f.id)}
+            {#each [{ id: 'max-tags', label: '动态最大标签数', value: maxMomentTags, ph: '10', set: (value: string) => (maxMomentTags = value) }, { id: 'max-images', label: '动态最大图片数', value: maxMomentImages, ph: '9', set: (value: string) => (maxMomentImages = value) }, { id: 'desc-max', label: '动态描述最大长度', value: momentDescriptionMaxLength, ph: '300', set: (value: string) => (momentDescriptionMaxLength = value) }, { id: 'comment-max', label: '评论最大长度', value: commentMaxLength, ph: '200', set: (value: string) => (commentMaxLength = value) }, { id: 'group-max', label: '群组最大成员数', value: maxGroupMembers, ph: '500', set: (value: string) => (maxGroupMembers = value) }, { id: 'radius-max', label: '搜索最大半径 (km)', value: searchRadiusMax, ph: '50', set: (value: string) => (searchRadiusMax = value) }] as f (f.id)}
               <div>
                 <label for={f.id} style="font-size: 12px; color: var(--text-primary);"
                   >{f.label}</label
@@ -316,10 +317,11 @@
                 <input
                   id={f.id}
                   type="number"
-                  bind:value={f.val}
+                  value={f.value}
                   placeholder={f.ph}
                   class="field-inset mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
                   style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
+                  oninput={(event) => f.set(event.currentTarget.value)}
                 />
               </div>
             {/each}

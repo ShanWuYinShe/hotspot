@@ -75,20 +75,20 @@
                 <div
                   style="width: 20px; height: 20px; border-radius: 6px; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;"
                 >
-                  <Lock size={10} strokeWidth={2} color="white" />
+                  <Lock size={10} strokeWidth={2} color="var(--text-on-overlay)" />
                 </div>
               {:else}
                 <div
                   style="width: 20px; height: 20px; border-radius: 6px; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;"
                 >
-                  <Globe size={10} strokeWidth={2} color="white" />
+                  <Globe size={10} strokeWidth={2} color="var(--text-on-overlay)" />
                 </div>
               {/if}
             </div>
             <!-- Distance badge -->
             {#if group.distance}
               <div
-                style="position: absolute; bottom: 6px; left: 6px; font-size: 9px; color: white; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); padding: 2px 6px; border-radius: 6px;"
+                style="position: absolute; bottom: 6px; left: 6px; font-size: 9px; color: var(--text-on-overlay); background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); padding: 2px 6px; border-radius: 6px;"
               >
                 {group.distance}
               </div>

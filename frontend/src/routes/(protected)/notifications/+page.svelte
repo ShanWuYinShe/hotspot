@@ -49,21 +49,21 @@
     switch (type) {
       case 'moment_liked':
       case 'comment_liked':
-        return '#EF4444';
+        return 'var(--theme-error)';
       case 'new_follower':
       case 'mutual_follow':
-        return '#6366F1';
+        return 'var(--brand)';
       case 'moment_commented':
       case 'comment_reply':
       case 'mentioned':
-        return '#3B82F6';
+        return 'var(--map-user)';
       case 'group_invite_received':
       case 'group_invite_accepted':
       case 'group_application_received':
       case 'group_application_accepted':
-        return '#8B5CF6';
+        return 'var(--map-group)';
       case 'system_announcement':
-        return '#F59E0B';
+        return 'var(--theme-warning)';
       default:
         return 'var(--brand)';
     }
@@ -183,10 +183,10 @@
     );
     const system = items.length - like - follow - comment;
     return [
-      { label: '点赞', value: like, color: '#EF4444' },
-      { label: '关注', value: follow, color: '#6366F1' },
-      { label: '评论', value: comment, color: '#3B82F6' },
-      { label: '系统', value: system, color: '#F59E0B' }
+      { label: '点赞', value: like, color: 'var(--theme-error)' },
+      { label: '关注', value: follow, color: 'var(--brand)' },
+      { label: '评论', value: comment, color: 'var(--map-user)' },
+      { label: '系统', value: system, color: 'var(--theme-warning)' }
     ];
   });
 
@@ -433,7 +433,7 @@
           class:surface-flat={activeFilter !== key}
           style="padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 500;
           {activeFilter === key
-            ? 'background: var(--brand); color: white; box-shadow: 0 3px 10px var(--glow); border: none;'
+            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow); border: none;'
             : 'color: var(--text-primary);'}"
           onclick={() => (activeFilter = key as FilterKey)}
         >
@@ -471,13 +471,15 @@
             {#each unreadGroup as item (item.notification_id)}
               {@const locale = getLocale()}
               {@const typeColor = getTypeColor(item.type)}
+              {@const typeSoft = `color-mix(in srgb, ${typeColor} 7%, transparent)`}
+              {@const typeBorder = `color-mix(in srgb, ${typeColor} 18%, transparent)`}
               {@const TypeIcon = getTypeIcon(item.type)}
               {@const avatarUrl = getActorAvatar(item)}
               {@const thumbnailUrl = getPostThumbnail(item)}
               <div
                 class="row-hover flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
-                style="background: {`${typeColor}07`};
-                border: 1px solid {`${typeColor}18`};"
+                style="background: {typeSoft};
+                border: 1px solid {typeBorder};"
               >
                 <!-- Avatar with type badge -->
                 <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
@@ -499,7 +501,7 @@
                     class="absolute flex items-center justify-center"
                     style="width: 18px; height: 18px; border-radius: 9999px; background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"
                   >
-                    <TypeIcon size={10} strokeWidth={2} color="white" />
+                    <TypeIcon size={10} strokeWidth={2} color="var(--text-on-accent)" />
                   </div>
                 </div>
 
@@ -584,12 +586,14 @@
           {#each readGroup as item (item.notification_id)}
             {@const locale = getLocale()}
             {@const typeColor = getTypeColor(item.type)}
+            {@const typeSoft = `color-mix(in srgb, ${typeColor} 7%, transparent)`}
+            {@const typeBorder = `color-mix(in srgb, ${typeColor} 18%, transparent)`}
             {@const TypeIcon = getTypeIcon(item.type)}
             {@const avatarUrl = getActorAvatar(item)}
             {@const thumbnailUrl = getPostThumbnail(item)}
             <div
               class="row-hover flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
-              style="border: 1px solid transparent;"
+              style="background: {typeSoft}; border: 1px solid {typeBorder};"
             >
               <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
                 {#if avatarUrl}
@@ -610,7 +614,7 @@
                   class="absolute flex items-center justify-center"
                   style="width: 18px; height: 18px; border-radius: 9999px; background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"
                 >
-                  <TypeIcon size={10} strokeWidth={2} color="white" />
+                  <TypeIcon size={10} strokeWidth={2} color="var(--text-on-accent)" />
                 </div>
               </div>
 

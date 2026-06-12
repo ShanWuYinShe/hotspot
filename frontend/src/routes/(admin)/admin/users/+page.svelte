@@ -5,6 +5,7 @@
   import { toast } from '$lib/stores/toast.svelte';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import type { UserItem } from '$lib/types/api';
   import Search from 'lucide-svelte/icons/search';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
@@ -162,27 +163,12 @@
                 class="flex items-center gap-3 rounded-[18px] p-3"
                 style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
               >
-                <div
-                  class="flex-shrink-0 overflow-hidden rounded-full"
-                  style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme);"
-                >
-                  {#if user.user.avatar_url}
-                    <img
-                      src={user.user.avatar_url}
-                      alt={user.user.nickname}
-                      class="h-full w-full object-cover"
-                    />
-                  {:else}
-                    <div
-                      class="flex h-full w-full items-center justify-center"
-                      style="background: var(--surface-secondary);"
-                    >
-                      <span style="font-size: 14px; font-weight: 600; color: var(--text-tertiary);"
-                        >{user.user.nickname.slice(0, 2)}</span
-                      >
-                    </div>
-                  {/if}
-                </div>
+                <Avatar
+                  src={user.user.avatar_url}
+                  name={user.user.nickname}
+                  alt={user.user.nickname}
+                  size={40}
+                />
                 <div class="min-w-0 flex-1">
                   <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
                     >{user.user.nickname}</span

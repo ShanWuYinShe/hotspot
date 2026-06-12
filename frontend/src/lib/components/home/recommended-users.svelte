@@ -5,6 +5,7 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import type { UserItem } from '$lib/types/api';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
 
   interface Props {
@@ -107,16 +108,12 @@
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div class="relative flex-shrink-0">
-              <div
-                class="overflow-hidden rounded-full"
-                style="width: 40px; height: 40px; border: 1.5px solid var(--border-theme);"
-              >
-                <img
-                  src={user.user.avatar_url || ''}
-                  alt={user.user.nickname}
-                  class="h-full w-full object-cover"
-                />
-              </div>
+              <Avatar
+                src={user.user.avatar_url}
+                name={user.user.nickname}
+                alt={user.user.nickname}
+                size={40}
+              />
               {#if user.presence_status === 'online'}
                 <span
                   class="absolute bottom-0 right-0 rounded-full"

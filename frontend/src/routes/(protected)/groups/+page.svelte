@@ -8,6 +8,7 @@
   import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import CreateGroupModal from '$lib/components/common/create-group-modal.svelte';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import type { GroupApplicationItem, GroupInviteItem, GroupItem } from '$lib/types/api';
   import Plus from 'lucide-svelte/icons/plus';
   import Users from 'lucide-svelte/icons/users';
@@ -220,25 +221,13 @@
                   class="flex items-center gap-4 rounded-[18px] p-4"
                   style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
                 >
-                  <div
-                    class="overflow-hidden rounded-full shrink-0"
-                    style="width: 48px; height: 48px; border: 1.5px solid var(--border-theme);"
-                  >
-                    {#if group.group.avatar_url}
-                      <img
-                        src={group.group.avatar_url}
-                        alt={group.group.name}
-                        class="h-full w-full object-cover"
-                      />
-                    {:else}
-                      <div
-                        class="flex h-full w-full items-center justify-center"
-                        style="background: var(--surface-bg); font-size: 14px; color: var(--text-secondary);"
-                      >
-                        {group.group.name.slice(0, 2)}
-                      </div>
-                    {/if}
-                  </div>
+                  <Avatar
+                    src={group.group.avatar_url}
+                    name={group.group.name}
+                    alt={group.group.name}
+                    size={48}
+                    type="group"
+                  />
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center justify-between">
                       <p

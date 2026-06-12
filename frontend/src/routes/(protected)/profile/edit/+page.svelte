@@ -154,7 +154,7 @@
     <button
       class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all"
       style={saved
-        ? 'background: #22c55e; color: white; font-size: 13px; box-shadow: 0 4px 14px rgba(34,197,94,0.35); border: none;'
+        ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
         : canSave
           ? 'background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 4px 14px var(--glow); border: none;'
           : 'background: var(--surface-secondary); color: var(--text-secondary); font-size: 13px; border: none; opacity: 0.5;'}
@@ -162,7 +162,7 @@
       disabled={!canSave}
     >
       {#if saved}
-        <Check size={14} color="white" strokeWidth={2.5} />
+        <Check size={14} color="var(--text-on-accent)" strokeWidth={2.5} />
       {:else}
         保存
       {/if}
@@ -186,7 +186,7 @@
         ></div>
         <button
           class="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
-          style="padding: 6px 12px; background: rgba(0,0,0,0.45); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25); font-size: 12px; color: white;"
+          style="padding: 6px 12px; background: rgba(0,0,0,0.45); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25); font-size: 12px; color: var(--text-on-overlay);"
         >
           <Camera size={13} strokeWidth={1.75} />
           更换横幅
@@ -283,7 +283,7 @@
       <button
         class="flex w-full items-center justify-center gap-2 rounded-[22px] px-4 py-3.5 outline-none transition-all"
         style={saved
-          ? 'background: #22c55e; color: white; font-size: 14px; box-shadow: 0 4px 14px rgba(34,197,94,0.35); border: none;'
+          ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
           : canSave
             ? 'background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px var(--glow); border: none;'
             : 'background: var(--surface-secondary); color: var(--text-secondary); font-size: 14px; border: none; opacity: 0.5;'}
@@ -291,7 +291,7 @@
         disabled={!canSave}
       >
         {#if saved}
-          <Check size={16} color="white" strokeWidth={2.5} />
+          <Check size={16} color="var(--text-on-accent)" strokeWidth={2.5} />
           已保存
         {:else if isSaving}
           <Loader2 class="h-4 w-4 animate-spin" />

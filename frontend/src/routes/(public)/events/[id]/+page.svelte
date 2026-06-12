@@ -39,7 +39,7 @@
       id: 1,
       title: '云龙湖畔晨跑',
       tag: '运动',
-      color: '#10B981',
+      color: 'var(--theme-success)',
       cover: '',
       description:
         '每周六清晨，在云龙湖畔感受微风拂面，与志同道合的跑友一起奔跑。路线全程约5公里，适合各水平跑者参加。跑后我们会在湖边咖啡馆小聚，交流跑步心得。',
@@ -80,7 +80,7 @@
       id: 2,
       title: '街头音乐节',
       tag: '音乐',
-      color: '#8B5CF6',
+      color: 'var(--brand)',
       cover: '',
       description:
         '在城市的中心，用音乐连接每一颗心。本次街头音乐节将邀请本地独立乐队和歌手进行现场表演，免费入场，欢迎所有人来感受音乐的力量。',
@@ -116,7 +116,7 @@
       id: 3,
       title: '徐州美食探店',
       tag: '美食',
-      color: '#F59E0B',
+      color: 'var(--theme-warning)',
       cover: '',
       description:
         '一起探访徐州地道小吃，从户部山街头的把子肉到回龙窝的老味煎饼，感受舌尖上的徐州。每站都有独家折扣，名额有限，先到先得！',
@@ -149,8 +149,18 @@
   const ev: MockEvent = $derived(EVENTS[eventId] ?? EVENTS[1]!);
   const fillRate = $derived(Math.round((ev.participants.length / ev.maxParticipants) * 100));
   const remaining = $derived(ev.maxParticipants - ev.participants.length);
-
   let joined = $state(false);
+  const accentFaint = $derived(`color-mix(in srgb, ${ev.color} 8%, transparent)`);
+  const accentSoft = $derived(`color-mix(in srgb, ${ev.color} 15%, transparent)`);
+  const accentMedium = $derived(`color-mix(in srgb, ${ev.color} 25%, transparent)`);
+  const accentRing = $derived(`color-mix(in srgb, ${ev.color} 18%, transparent)`);
+  const accentShadow = $derived(`color-mix(in srgb, ${ev.color} 40%, transparent)`);
+  const ctaShadow = $derived(`color-mix(in srgb, ${ev.color} 45%, transparent)`);
+  const ctaStyle = $derived(
+    joined
+      ? `background: var(--surface-bg); border: 2px solid ${ev.color}; color: ${ev.color}; box-shadow: 0 0 0 4px ${accentRing}; font-size: 15px;`
+      : `background: ${ev.color}; color: var(--text-on-accent); box-shadow: 0 8px 24px ${ctaShadow}; border: none; font-size: 15px;`
+  );
 
   function handleBack() {
     history.back();
@@ -180,12 +190,12 @@
           <!-- Gradient placeholder -->
           <div
             class="absolute inset-0"
-            style="background: linear-gradient(135deg, {ev.color}30, {ev.color}08, var(--surface-bg));"
+            style="background: linear-gradient(135deg, {accentMedium}, {accentFaint}, var(--surface-bg));"
           ></div>
         {/if}
         <div
           class="absolute inset-0"
-          style="background: linear-gradient(to bottom, transparent 30%, {ev.color}12 100%);"
+          style="background: linear-gradient(to bottom, transparent 30%, {accentSoft} 100%);"
         ></div>
 
         <!-- Back button -->
@@ -197,7 +207,7 @@
             onclick={handleBack}
             aria-label="返回"
           >
-            <ArrowLeft size={15} strokeWidth={1.75} color="white" />
+            <ArrowLeft size={15} strokeWidth={1.75} color="var(--text-on-accent)" />
           </button>
         </div>
 
@@ -209,7 +219,7 @@
             style="width: 36px; height: 36px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);"
             aria-label="分享"
           >
-            <Share2 size={14} strokeWidth={1.75} color="white" />
+            <Share2 size={14} strokeWidth={1.75} color="var(--text-on-accent)" />
           </button>
         </div>
 
@@ -217,7 +227,7 @@
         <div class="absolute bottom-4 left-4">
           <span
             class="rounded-full px-3 py-1"
-            style="font-size: 12px; background: {ev.color}; color: white; box-shadow: 0 3px 10px {ev.color}50;"
+            style="font-size: 12px; background: {ev.color}; color: var(--text-on-accent); box-shadow: 0 3px 10px {accentShadow};"
           >
             {ev.tag}
           </span>
@@ -236,7 +246,7 @@
             <div class="flex items-center gap-2.5">
               <div
                 class="flex flex-shrink-0 items-center justify-center rounded-full"
-                style="width: 30px; height: 30px; background: {ev.color}15;"
+                style="width: 30px; height: 30px; background: {accentSoft};"
               >
                 <meta.icon size={13} strokeWidth={1.75} color={ev.color} />
               </div>
@@ -259,14 +269,19 @@
           <div class="flex-1">
             <p style="font-size: 13px; color: var(--text-primary);">{ev.host.name}</p>
             <div class="flex items-center gap-1">
-              <Star size={10} style="color: #F59E0B;" fill="#F59E0B" strokeWidth={1.5} />
+              <Star
+                size={10}
+                style="color: var(--theme-warning);"
+                fill="var(--theme-warning)"
+                strokeWidth={1.5}
+              />
               <span style="font-size: 11px; color: var(--text-secondary);">活动发起人</span>
             </div>
           </div>
           <button
             type="button"
             class="rounded-full px-3 py-1.5 outline-none"
-            style="background: {ev.color}; color: white; font-size: 12px; box-shadow: 0 3px 10px {ev.color}40;"
+            style="background: {ev.color}; color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px {accentShadow};"
           >
             关注
           </button>
@@ -291,7 +306,7 @@
             >
               <div
                 class="flex flex-shrink-0 items-center justify-center rounded-full"
-                style="width: 24px; height: 24px; background: {ev.color}15;"
+                style="width: 24px; height: 24px; background: {accentSoft};"
               >
                 <Check size={11} color={ev.color} strokeWidth={2.5} />
               </div>
@@ -342,7 +357,7 @@
             {#if remaining > 0}
               <div
                 class="flex items-center justify-center rounded-full"
-                style="width: 36px; height: 36px; border: 2px solid var(--surface-bg); margin-left: -10px; background: {ev.color}20;"
+                style="width: 36px; height: 36px; border: 2px solid var(--surface-bg); margin-left: -10px; background: {accentRing};"
               >
                 <span style="font-size: 11px; color: {ev.color}; font-weight: 600;"
                   >+{remaining}</span
@@ -358,7 +373,7 @@
         <!-- Distance info -->
         <div
           class="flex items-center gap-2 rounded-[16px] px-4 py-3"
-          style="background: {ev.color}10; border: 1px solid {ev.color}25;"
+          style="background: {accentFaint}; border: 1px solid {accentMedium};"
         >
           <MapPin size={14} color={ev.color} strokeWidth={1.5} />
           <span style="font-size: 13px; color: var(--text-secondary);">
@@ -377,9 +392,7 @@
     <button
       type="button"
       class="flex w-full items-center justify-center gap-2 rounded-[22px] py-4 outline-none transition-all duration-300"
-      style={joined
-        ? 'background: var(--surface-bg); border: 2px solid {ev.color}; color: {ev.color}; box-shadow: 0 0 0 4px {ev.color}18; font-size: 15px;'
-        : 'background: {ev.color}; color: white; box-shadow: 0 8px 24px {ev.color}45; border: none; font-size: 15px;'}
+      style={ctaStyle}
       onclick={toggleJoin}
     >
       {#if joined}

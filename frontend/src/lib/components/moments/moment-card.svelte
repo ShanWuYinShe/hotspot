@@ -12,6 +12,7 @@
   import Bookmark from 'lucide-svelte/icons/bookmark';
   import Share2 from 'lucide-svelte/icons/share-2';
   import MapPin from 'lucide-svelte/icons/map-pin';
+  import Avatar from '$lib/components/common/avatar.svelte';
 
   interface Props {
     moment: MomentItem;
@@ -132,7 +133,13 @@
       class="moment-card__avatar"
       aria-label={`查看 ${moment.user.nickname} 的主页`}
     >
-      <img src={moment.user.avatar_url || ''} alt={moment.user.nickname} loading="lazy" />
+      <Avatar
+        src={moment.user.avatar_url}
+        name={moment.user.nickname}
+        alt={moment.user.nickname}
+        size={dense ? 34 : 38}
+        border={false}
+      />
     </a>
 
     <div class="moment-card__author">
@@ -421,7 +428,7 @@
     border: 1px solid rgba(255, 255, 255, 0.24);
     border-radius: 9999px;
     padding: 4px 8px;
-    color: white;
+    color: var(--text-on-overlay);
     font-size: 11px;
     font-weight: 700;
     line-height: 1;

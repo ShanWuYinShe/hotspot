@@ -9,6 +9,7 @@
   import MomentCard from '$lib/components/moments/moment-card.svelte';
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import type { MomentItem } from '$lib/types/api';
   import Search from 'lucide-svelte/icons/search';
   import Image from 'lucide-svelte/icons/image';
@@ -140,7 +141,7 @@
             class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all duration-150 active:scale-[0.93]"
             class:surface-flat={activeTag !== tag}
             style={activeTag === tag
-              ? 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
+              ? 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
               : 'color: var(--text-secondary); font-size: 12px;'}
             onclick={() => {
               activeTag = activeTag === tag ? null : tag;
@@ -223,9 +224,9 @@
           <h1 style="font-size: 24px; color: var(--text-primary);">{t('discover.title')}</h1>
           <span
             class="flex items-center gap-1 rounded-full px-3 py-1.5"
-            style="background: var(--brand); font-size: 11px; color: white;"
+            style="background: var(--brand); font-size: 11px; color: var(--text-on-accent);"
           >
-            <Sparkles size={11} color="white" strokeWidth={2} />
+            <Sparkles size={11} color="var(--text-on-accent)" strokeWidth={2} />
             精选
           </span>
         </div>
@@ -291,7 +292,7 @@
               class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all duration-150 active:scale-[0.93]"
               class:surface-flat={activeTag !== tag}
               style={activeTag === tag
-                ? 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
+                ? 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
                 : 'color: var(--text-secondary); font-size: 12px;'}
               onclick={() => {
                 activeTag = activeTag === tag ? null : tag;
@@ -443,7 +444,7 @@
                   class="flex-shrink-0 rounded-full px-3.5 py-1.5 outline-none transition-all duration-150 active:scale-[0.93]"
                   class:surface-flat={activeTag !== tag}
                   style={activeTag === tag
-                    ? 'background: var(--brand); color: white; font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
+                    ? 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow); border: 1px solid transparent;'
                     : 'color: var(--text-secondary); font-size: 12px;'}
                   onclick={() => {
                     activeTag = activeTag === tag ? null : tag;
@@ -558,18 +559,12 @@
           {#if pagination.items.length > 0}
             {#each pagination.items.slice(0, 4) as item, i}
               <div class="mb-3.5 flex items-center gap-2.5">
-                <div
-                  class="flex-shrink-0 overflow-hidden rounded-full"
-                  style="width: 32px; height: 32px; background: var(--border-theme);"
-                >
-                  {#if item.user.avatar_url}
-                    <img
-                      src={item.user.avatar_url}
-                      alt={item.user.nickname}
-                      class="h-full w-full object-cover"
-                    />
-                  {/if}
-                </div>
+                <Avatar
+                  src={item.user.avatar_url}
+                  name={item.user.nickname}
+                  alt={item.user.nickname}
+                  size={32}
+                />
                 <div class="min-w-0 flex-1">
                   <p class="truncate" style="font-size: 12px; color: var(--text-primary);">
                     {item.user.nickname}
@@ -580,7 +575,7 @@
                 </div>
                 <button
                   class="flex-shrink-0 rounded-full px-2.5 py-1 outline-none"
-                  style="background: var(--brand); font-size: 10px; color: white; box-shadow: 0 2px 6px var(--glow);"
+                  style="background: var(--brand); font-size: 10px; color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
                 >
                   关注
                 </button>

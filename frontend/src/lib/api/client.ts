@@ -69,6 +69,8 @@ export interface RequestOptions {
   timeout?: number;
   /** AbortSignal，用于取消请求 */
   signal?: AbortSignal;
+  /** SvelteKit load 提供的 fetch，用于预加载跟踪和避免全局 fetch 警告 */
+  fetch?: typeof fetch;
 }
 
 export interface ApiClientConfig {
@@ -308,7 +310,8 @@ async function request<T>(
   const signal = combined?.signal ?? controller.signal;
 
   try {
-    const response = await fetch(`${cfg.baseUrl}${url}`, {
+    const fetcher = options.fetch ?? fetch;
+    const response = await fetcher(`${cfg.baseUrl}${url}`, {
       method: 'POST',
       headers,
       credentials: 'include',

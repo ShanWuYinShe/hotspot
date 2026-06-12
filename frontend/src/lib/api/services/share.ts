@@ -2,7 +2,7 @@
  * 分享服务
  */
 
-import { post, paginate, generateIdempotencyKey } from '../client';
+import { post, paginate, generateIdempotencyKey, type RequestOptions } from '../client';
 import { SHARE } from '../endpoints';
 import type {
   ApiResponse,
@@ -26,8 +26,8 @@ export const shareService = {
   /**
    * 获取分享详情
    */
-  get(request: GetShareRequest): Promise<ApiResponse<ShareDetail>> {
-    return post<ShareDetail>(SHARE.GET, request);
+  get(request: GetShareRequest, options?: RequestOptions): Promise<ApiResponse<ShareDetail>> {
+    return post<ShareDetail>(SHARE.GET, request, options);
   },
 
   /**

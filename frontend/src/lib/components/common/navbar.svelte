@@ -19,6 +19,7 @@
   import Plus from 'lucide-svelte/icons/plus';
   import Image from 'lucide-svelte/icons/image';
   import UsersRound from 'lucide-svelte/icons/users-round';
+  import Avatar from '$lib/components/common/avatar.svelte';
 
   interface Props {
     onMenuClick?: () => void;
@@ -161,22 +162,13 @@
                   class="overflow-hidden rounded-full"
                   style="width: 32px; height: 32px; border: 2px solid var(--brand);"
                 >
-                  {#if authStore.currentAccount?.avatar_url}
-                    <img
-                      src={authStore.currentAccount.avatar_url}
-                      alt=""
-                      class="h-full w-full object-cover"
-                    />
-                  {:else}
-                    <div
-                      class="flex h-full w-full items-center justify-center"
-                      style="background: var(--surface-secondary);"
-                    >
-                      <span style="font-size: 12px; font-weight: 600; color: var(--text-tertiary);"
-                        >{authStore.currentAccount?.nickname?.slice(0, 2) ?? 'U'}</span
-                      >
-                    </div>
-                  {/if}
+                  <Avatar
+                    src={authStore.currentAccount?.avatar_url}
+                    name={authStore.currentAccount?.nickname}
+                    alt=""
+                    size={28}
+                    border={false}
+                  />
                 </div>
               </button>
             {/snippet}

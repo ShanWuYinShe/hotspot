@@ -11,12 +11,12 @@
   import { notificationStore } from '$lib/stores/notification.svelte';
   import { platformStore } from '$lib/stores/platform.svelte';
   import type { PrivateChatItem, GroupItem } from '$lib/types/api';
-  import Users from 'lucide-svelte/icons/users';
   import Search from 'lucide-svelte/icons/search';
   import UserPlus from 'lucide-svelte/icons/user-plus';
   import Plus from 'lucide-svelte/icons/plus';
   import Bell from 'lucide-svelte/icons/bell';
   import MessageSquareDashed from 'lucide-svelte/icons/message-square-dashed';
+  import Avatar from '$lib/components/common/avatar.svelte';
 
   let currentTab = $state<'private' | 'group'>('private');
   let privateChats = $state.raw<PrivateChatItem[]>([]);
@@ -158,6 +158,8 @@
           <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
           <input
             type="text"
+            name="chat-search"
+            aria-label="搜索会话"
             bind:value={searchVal}
             placeholder="搜索会话…"
             class="flex-1 bg-transparent outline-none"
@@ -190,10 +192,12 @@
                       class="neu-flat overflow-hidden rounded-full"
                       style="width: 52px; height: 52px; padding: 2.5px; background: var(--surface-bg); border: 1.5px solid var(--brand);"
                     >
-                      <img
-                        src={chat.other_user.avatar_url || ''}
+                      <Avatar
+                        src={chat.other_user.avatar_url}
+                        name={chat.other_user.nickname}
                         alt={chat.other_user.nickname}
-                        class="h-full w-full rounded-full object-cover"
+                        size={52}
+                        border={false}
                       />
                     </div>
                     <span
@@ -280,10 +284,12 @@
                         class="overflow-hidden rounded-full"
                         style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
                       >
-                        <img
-                          src={chat.other_user.avatar_url || ''}
+                        <Avatar
+                          src={chat.other_user.avatar_url}
+                          name={chat.other_user.nickname}
                           alt={chat.other_user.nickname}
-                          class="h-full w-full object-cover"
+                          size={44}
+                          border={false}
                         />
                       </div>
                       {#if isOnline}
@@ -316,7 +322,7 @@
                     {#if chat.unread_count > 0}
                       <div
                         class="flex flex-shrink-0 items-center justify-center rounded-full"
-                        style="width: 20px; height: 20px; background: var(--brand); color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--glow);"
+                        style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--glow);"
                       >
                         {chat.unread_count > 99 ? '99+' : chat.unread_count}
                       </div>
@@ -368,20 +374,14 @@
                     class="flex-shrink-0 overflow-hidden rounded-full"
                     style="width: 44px; height: 44px; border: 1.5px solid var(--border-theme);"
                   >
-                    {#if group.group.avatar_url}
-                      <img
-                        src={group.group.avatar_url}
-                        alt={group.group.name}
-                        class="h-full w-full object-cover"
-                      />
-                    {:else}
-                      <div
-                        class="flex h-full w-full items-center justify-center"
-                        style="background: var(--surface-secondary);"
-                      >
-                        <Users size={18} color="var(--text-tertiary)" />
-                      </div>
-                    {/if}
+                    <Avatar
+                      src={group.group.avatar_url}
+                      name={group.group.name}
+                      alt={group.group.name}
+                      size={44}
+                      type="group"
+                      border={false}
+                    />
                   </div>
                   <div class="min-w-0 flex-1">
                     <div class="mb-0.5 flex items-center justify-between">
@@ -401,7 +401,7 @@
                   {#if (group.my_state?.unread_count ?? 0) > 0}
                     <div
                       class="flex flex-shrink-0 items-center justify-center rounded-full"
-                      style="width: 20px; height: 20px; background: var(--brand); color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--glow);"
+                      style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--glow);"
                     >
                       {(group.my_state?.unread_count ?? 0) > 99
                         ? '99+'

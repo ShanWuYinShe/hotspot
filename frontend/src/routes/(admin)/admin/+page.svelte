@@ -153,11 +153,12 @@
                   <span
                     style="width: 8px; height: 8px; border-radius: 50%; background: {svc.ok
                       ? 'var(--theme-success)'
-                      : '#EF4444'};"
+                      : 'var(--theme-error)'};"
                   ></span>
                   <span
-                    style="font-size: 13px; color: {svc.ok ? 'var(--theme-success)' : '#EF4444'};"
-                    >{svc.ok ? '正常' : '异常'}</span
+                    style="font-size: 13px; color: {svc.ok
+                      ? 'var(--theme-success)'
+                      : 'var(--theme-error)'};">{svc.ok ? '正常' : '异常'}</span
                   >
                 </div>
               </div>

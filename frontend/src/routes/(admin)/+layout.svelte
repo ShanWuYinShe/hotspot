@@ -134,7 +134,7 @@
 
       <!-- Main content -->
       <main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-[32px] md:p-6">
-        <div class="mobile-page-shell md:mx-auto md:max-w-6xl">
+        <div class="w-full">
           {@render children()}
         </div>
       </main>
@@ -164,7 +164,7 @@
     <Navbar onMenuClick={() => {}} />
     <div class="app-shell-frame flex">
       <main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-[32px] md:p-6">
-        <div class="mobile-page-shell md:mx-auto md:max-w-6xl">
+        <div class="w-full">
           <div class="flex flex-col items-center justify-center py-20 text-center">
             <div
               class="mb-4 flex items-center justify-center rounded-full"
@@ -191,7 +191,7 @@
     <Navbar onMenuClick={() => {}} />
     <div class="app-shell-frame flex">
       <main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-[32px] md:p-6">
-        <div class="mobile-page-shell md:mx-auto md:max-w-6xl">
+        <div class="w-full">
           <div class="flex flex-col items-center justify-center py-20 text-center">
             <div
               class="mb-4 flex items-center justify-center rounded-full"
@@ -240,7 +240,7 @@
     <Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
     <div class="app-shell-frame flex">
       <main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-[32px] md:p-6">
-        <div class="mobile-page-shell md:mx-auto md:max-w-6xl">
+        <div class="w-full">
           <div class="flex flex-col items-center justify-center py-20 text-center">
             <div
               class="mb-4 flex items-center justify-center rounded-full"
