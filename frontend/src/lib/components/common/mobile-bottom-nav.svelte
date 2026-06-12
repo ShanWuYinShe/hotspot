@@ -37,8 +37,11 @@
     void goto(item.href);
   }
 
-  const messageBadge = $derived(authStore.isAuthenticated ? messageStore.totalUnreadCount : 0);
-  const profileBadge = $derived(authStore.isAuthenticated ? notificationStore.unreadCount : 0);
+  // 通知在移动端归属于「消息」收件箱（页内通过铃铛进入通知页），
+  // 因此底栏「消息」角标合并未读消息 + 未读通知，「我的」不再承载通知角标。
+  const inboxBadge = $derived(
+    authStore.isAuthenticated ? messageStore.totalUnreadCount + notificationStore.unreadCount : 0
+  );
 
   // Shared sliding pill — mirrors the React reference's Framer Motion `layoutId`
   // behaviour so the active indicator glides between tabs instead of fading per tab.
@@ -161,10 +164,8 @@
             color={isActive(item.href) ? 'var(--brand)' : 'var(--text-secondary)'}
             style="transition: color 0.22s ease;"
           />
-          {#if item.href === '/chat' && messageBadge > 0}
-            <span class="mobile-bottom-nav__badge">{messageBadge > 99 ? '99+' : messageBadge}</span>
-          {:else if item.href === '/profile' && profileBadge > 0}
-            <span class="mobile-bottom-nav__badge">{profileBadge > 99 ? '99+' : profileBadge}</span>
+          {#if item.href === '/chat' && inboxBadge > 0}
+            <span class="mobile-bottom-nav__badge">{inboxBadge > 99 ? '99+' : inboxBadge}</span>
           {/if}
         </span>
         <span
