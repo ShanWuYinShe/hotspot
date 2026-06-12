@@ -12,6 +12,7 @@
 
 ## 项目特有约束
 - **隔离开发**：所有写操作、测试和提交都在 `git worktree` 中完成；默认 worktree 目录为 `.claude/worktrees/<分支名>`（已被 `.gitignore` 忽略）。主目录仅用于同步和只读操作，严禁在主目录直接堆改动。
+- **worktree 生命周期**：worktree 是临时隔离环境，**用完即清**。分支合并进 `main` 后（`git rev-list --count main..<分支> == 0`），必须立即删除其 worktree 与已合并分支（`git worktree remove …` + `git branch -d …`），不保留已合并的 worktree/分支堆积。
 - **契约权威**：`spec/` 是 API 契约的唯一权威来源；修改接口、字段、错误码前先对齐 `spec/`。
 - **跨端边界**：距离与位置计算统一由后端完成，前端和客户端只展示结果。
 - **Docker Compose 统一管理**：所有服务（postgres、redis、seaweedfs、backend、frontend、nginx）统一通过 `docker compose` 编排启动/停止；不得混用宿主机进程与容器，也不允许单独启动某个服务绕过 compose。
