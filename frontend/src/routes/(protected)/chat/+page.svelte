@@ -8,12 +8,14 @@
   import { toast } from '$lib/stores/toast.svelte';
   import { presenceStore } from '$lib/stores/presence.svelte';
   import { messageStore } from '$lib/stores/message.svelte';
+  import { notificationStore } from '$lib/stores/notification.svelte';
   import { platformStore } from '$lib/stores/platform.svelte';
   import type { PrivateChatItem, GroupItem } from '$lib/types/api';
   import Users from 'lucide-svelte/icons/users';
   import Search from 'lucide-svelte/icons/search';
   import UserPlus from 'lucide-svelte/icons/user-plus';
   import Plus from 'lucide-svelte/icons/plus';
+  import Bell from 'lucide-svelte/icons/bell';
   import MessageSquareDashed from 'lucide-svelte/icons/message-square-dashed';
 
   let currentTab = $state<'private' | 'group'>('private');
@@ -31,6 +33,7 @@
       );
       if (isSuccess(response) && response.data) {
         privateChats = response.data.items;
+        messageStore.syncFromChatList(privateChats, []);
       }
     } catch {
       toast.error('加载失败');
@@ -49,6 +52,7 @@
       if (isSuccess(response) && response.data) {
         groupChats = response.data.items;
         groupsLoaded = true;
+        messageStore.syncFromChatList(privateChats, groupChats);
       }
     } catch {
       toast.error('加载群聊失败');
@@ -114,6 +118,22 @@
             </p>
           </div>
           <div class="flex gap-2.5">
+            <button
+              class="relative flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9] surface-flat"
+              style="width: 38px; height: 38px;"
+              aria-label="通知"
+              onclick={() => goto('/notifications')}
+            >
+              <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
+              {#if notificationStore.unreadCount > 0}
+                <span
+                  class="absolute flex items-center justify-center rounded-full"
+                  style="top: -2px; right: -2px; height: 16px; min-width: 16px; padding: 0 4px; background: var(--brand); color: var(--text-on-accent); font-size: 10px; font-weight: 600; line-height: 16px; box-shadow: 0 2px 6px var(--glow);"
+                >
+                  {notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount}
+                </span>
+              {/if}
+            </button>
             <button
               class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9] surface-flat"
               style="width: 38px; height: 38px;"

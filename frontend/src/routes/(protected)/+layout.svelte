@@ -8,6 +8,8 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { mode, toggleMode } from 'mode-watcher';
   import { platformStore } from '$lib/stores/platform.svelte';
+  import { THEME_FAMILY_OPTIONS, themeStore, type ThemeFamily } from '$lib/stores/theme.svelte';
+  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import MobileBottomNav from '$lib/components/common/mobile-bottom-nav.svelte';
   import TabletBottomNav from '$lib/components/common/tablet-bottom-nav.svelte';
   import Search from 'lucide-svelte/icons/search';
@@ -15,12 +17,19 @@
   import Moon from 'lucide-svelte/icons/moon';
   import Bell from 'lucide-svelte/icons/bell';
   import Settings from 'lucide-svelte/icons/settings';
+  import Palette from 'lucide-svelte/icons/palette';
+  import Check from 'lucide-svelte/icons/check';
   import { notificationStore } from '$lib/stores/notification.svelte';
   import Sidebar from '$lib/components/common/sidebar.svelte';
 
   let { children } = $props();
 
   const isSubPageView = $derived(isSubPage(page.url.pathname));
+  const currentThemeFamily = $derived(themeStore.themeFamily);
+
+  function selectThemeFamily(family: ThemeFamily) {
+    themeStore.setThemeFamily(family);
+  }
 
   $effect(() => {
     if (browser && authStore.initialized && !authStore.isAuthenticated && !authStore.isRestoring) {
@@ -192,6 +201,27 @@
             <Moon size={17} color="var(--text-secondary)" />
           {/if}
         </button>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger>
+            {#snippet child({ props })}
+              <button {...props} class="desktop-header__btn" aria-label={t('sidebar.themeFamily')}>
+                <Palette size={17} color="var(--text-secondary)" />
+              </button>
+            {/snippet}
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content class="w-44" align="end">
+            <DropdownMenu.Label>{t('sidebar.themeFamily')}</DropdownMenu.Label>
+            <DropdownMenu.Separator />
+            {#each THEME_FAMILY_OPTIONS as option (option.family)}
+              <DropdownMenu.Item onclick={() => selectThemeFamily(option.family)}>
+                <span class="flex-1">{t(option.labelKey)}</span>
+                {#if currentThemeFamily === option.family}
+                  <Check size={15} />
+                {/if}
+              </DropdownMenu.Item>
+            {/each}
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
         <button
           class="mx-1.5 flex items-center justify-center rounded-full outline-none transition-shadow duration-200"
           style="width: 32px; height: 32px; background: var(--brand); box-shadow: 0 4px 12px var(--glow);"

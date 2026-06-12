@@ -37,8 +37,10 @@
     void goto(item.href);
   }
 
-  const messageBadge = $derived(authStore.isAuthenticated ? messageStore.totalUnreadCount : 0);
-  const profileBadge = $derived(authStore.isAuthenticated ? notificationStore.unreadCount : 0);
+  // 与移动端一致：底栏「消息」角标合并未读消息 + 未读通知，「我的」不再承载通知角标。
+  const inboxBadge = $derived(
+    authStore.isAuthenticated ? messageStore.totalUnreadCount + notificationStore.unreadCount : 0
+  );
 
   // Shared sliding pill — glides (and resizes) between tabs like the React
   // reference's Framer Motion `layoutId` indicator, instead of fading per tab.
@@ -167,19 +169,12 @@
             color={isActive(item.href) ? 'var(--brand)' : 'var(--text-secondary)'}
             style="transition: color 0.22s ease;"
           />
-          {#if item.href === '/chat' && messageBadge > 0}
+          {#if item.href === '/chat' && inboxBadge > 0}
             <span
               class="absolute flex items-center justify-center rounded-full"
               style="top: -4px; right: -6px; height: 20px; min-width: 20px; padding: 0 6px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; line-height: 20px;"
             >
-              {messageBadge > 99 ? '99+' : messageBadge}
-            </span>
-          {:else if item.href === '/profile' && profileBadge > 0}
-            <span
-              class="absolute flex items-center justify-center rounded-full"
-              style="top: -4px; right: -6px; height: 20px; min-width: 20px; padding: 0 6px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; line-height: 20px;"
-            >
-              {profileBadge > 99 ? '99+' : profileBadge}
+              {inboxBadge > 99 ? '99+' : inboxBadge}
             </span>
           {/if}
         </span>
