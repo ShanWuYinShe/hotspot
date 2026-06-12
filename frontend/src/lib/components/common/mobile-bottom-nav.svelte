@@ -121,24 +121,21 @@
     <div class="flex flex-col items-center" style="width: 68px;">
       <button
         use:interactive={{ type: 'btn' }}
-        class="mobile-bottom-nav__fab"
-        style="background: {uiStore.showCreateSheet
-          ? 'var(--theme-text-muted)'
-          : 'var(--brand)'}; box-shadow: {uiStore.showCreateSheet
-          ? 'none'
-          : 'var(--theme-fab-glow)'}; transition: background 0.22s ease, box-shadow 0.22s ease;"
+        class="mobile-bottom-nav__fab {uiStore.showCreateSheet ? 'is-open' : ''}"
         onclick={() => uiStore.openCreateSheet()}
         aria-label={uiStore.showCreateSheet ? '关闭' : '发布'}
       >
-        {#if uiStore.showCreateSheet}
-          <span style="display: flex; animation: fabIconIn 0.18s ease-out both;">
-            <X size={20} strokeWidth={2.2} color="var(--text-on-accent)" />
-          </span>
-        {:else}
-          <span style="display: flex; animation: fabIconIn 0.18s ease-out both;">
-            <Plus size={20} strokeWidth={2.2} color="var(--text-on-accent)" />
-          </span>
-        {/if}
+        <span class="mobile-bottom-nav__fab-glyph">
+          {#if uiStore.showCreateSheet}
+            <span style="display: flex; animation: fabIconIn 0.2s ease-out both;">
+              <X size={20} strokeWidth={2.2} color="var(--text-on-accent)" />
+            </span>
+          {:else}
+            <span style="display: flex; animation: fabIconIn 0.2s ease-out both;">
+              <Plus size={20} strokeWidth={2.2} color="var(--text-on-accent)" />
+            </span>
+          {/if}
+        </span>
       </button>
     </div>
 

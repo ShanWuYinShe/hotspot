@@ -253,7 +253,7 @@
                 <div class="px-2 py-1">
                   <a
                     href="/chat/users/{chat.other_user.user_id}"
-                    class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all row-hover active:scale-[0.98]"
+                    class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all list-row-hover active:scale-[0.98]"
                   >
                     <div class="relative flex-shrink-0">
                       <div
@@ -342,7 +342,7 @@
               <div class="px-2 py-1">
                 <a
                   href="/chat/groups/{group.group.group_id}"
-                  class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all row-hover active:scale-[0.98]"
+                  class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all list-row-hover active:scale-[0.98]"
                 >
                   <div
                     class="flex-shrink-0 overflow-hidden rounded-full"

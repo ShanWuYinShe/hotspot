@@ -27,7 +27,7 @@
     GroupJoinMethod
   } from '$lib/types/api';
   import { formatDateTime } from '$lib/utils/format';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import BackButton from '$lib/components/common/back-button.svelte';
   import Users from 'lucide-svelte/icons/users';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import Lock from 'lucide-svelte/icons/lock';
@@ -874,14 +874,7 @@
       class="sticky top-0 z-10 flex items-center gap-4 px-4 py-3"
       style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <button
-        class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-        style="width: 36px; height: 36px;"
-        onclick={() => history.back()}
-        aria-label="返回"
-      >
-        <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-      </button>
+      <BackButton onclick={() => history.back()} size={36} />
       <div>
         <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">群组详情</h1>
         <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">

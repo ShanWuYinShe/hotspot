@@ -7,7 +7,7 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import type { MyProfile } from '$lib/types/api';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import BackButton from '$lib/components/common/back-button.svelte';
   import Camera from 'lucide-svelte/icons/camera';
   import User from 'lucide-svelte/icons/user';
   import FileText from 'lucide-svelte/icons/file-text';
@@ -148,13 +148,7 @@
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     <div class="flex items-center gap-3">
-      <button
-        class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-        style="width: 36px; height: 36px;"
-        onclick={() => window.history.back()}
-      >
-        <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-      </button>
+      <BackButton onclick={() => window.history.back()} size={36} />
       <h1 style="font-size: 18px; color: var(--text-primary);">编辑资料</h1>
     </div>
     <button

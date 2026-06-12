@@ -13,7 +13,7 @@
   import Share2 from 'lucide-svelte/icons/share-2';
   import ShieldAlert from 'lucide-svelte/icons/shield-alert';
   import Palette from 'lucide-svelte/icons/palette';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import BackButton from '$lib/components/common/back-button.svelte';
   import Moon from 'lucide-svelte/icons/moon';
 
   const PREVIEW_ACCENT: Record<ThemeFamily, string> = {
@@ -461,15 +461,7 @@
         class="sticky top-0 z-10 flex items-center gap-3 px-5 py-3"
         style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
       >
-        <button
-          type="button"
-          class="surface-flat flex flex-shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-          style="width: 36px; height: 36px;"
-          onclick={() => history.back()}
-          aria-label="返回"
-        >
-          <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-        </button>
+        <BackButton onclick={() => history.back()} size={36} />
         <h1 class="text-[18px] tracking-tight" style="color: var(--text-primary);">设置</h1>
       </div>
 

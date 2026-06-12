@@ -15,7 +15,7 @@
   import LocationPickerModal from '$lib/components/common/location-picker-modal.svelte';
   import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
   import type { UserItem } from '$lib/types/api';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import BackButton from '$lib/components/common/back-button.svelte';
   import Search from 'lucide-svelte/icons/search';
   import Radar from 'lucide-svelte/icons/radar';
   import Users from 'lucide-svelte/icons/users';
@@ -95,14 +95,7 @@
     <div class="page-shell">
       <div class="mb-3 flex items-center gap-3">
         {#if !platformStore.isDesktop}
-          <button
-            class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-            style="width: 36px; height: 36px;"
-            onclick={handleBack}
-            aria-label="返回"
-          >
-            <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-          </button>
+          <BackButton onclick={handleBack} size={36} />
         {/if}
         <div class="flex-1">
           <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">附近的人</h1>

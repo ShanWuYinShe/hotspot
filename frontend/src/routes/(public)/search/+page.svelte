@@ -13,7 +13,7 @@
   import GroupCard from '$lib/components/common/group-card.svelte';
   import MomentCard from '$lib/components/moments/moment-card.svelte';
   import type { UserItem, MomentItem, GroupItem, TrendingTagItem } from '$lib/types/api';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import BackButton from '$lib/components/common/back-button.svelte';
   import Search from 'lucide-svelte/icons/search';
   import Clock from 'lucide-svelte/icons/clock';
   import TrendingUp from 'lucide-svelte/icons/trending-up';
@@ -315,14 +315,7 @@
     class="flex-shrink-0 flex items-center gap-3 px-5 py-3"
     style="border-bottom: 1px solid var(--border-theme); background-color: var(--surface-bg);"
   >
-    <button
-      class="surface-flat flex flex-shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-      style="width: 36px; height: 36px;"
-      onclick={() => history.back()}
-      aria-label="返回"
-    >
-      <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-    </button>
+    <BackButton onclick={() => history.back()} size={36} />
 
     <div
       class="flex-1 flex items-center gap-3 px-4 rounded-[18px] input-surface"

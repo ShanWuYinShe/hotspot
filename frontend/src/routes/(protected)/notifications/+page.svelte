@@ -15,7 +15,7 @@
     getNotificationLink,
     getNotificationTitle
   } from '$lib/utils/notification-display';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import BackButton from '$lib/components/common/back-button.svelte';
   import Bell from 'lucide-svelte/icons/bell';
   import Calendar from 'lucide-svelte/icons/calendar';
   import CheckCheck from 'lucide-svelte/icons/check-check';
@@ -399,14 +399,7 @@
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           {#if !platformStore.isDesktop}
-            <button
-              class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-              style="width: 36px; height: 36px;"
-              onclick={() => window.history.back()}
-              aria-label="返回"
-            >
-              <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-            </button>
+            <BackButton onclick={() => window.history.back()} size={36} />
           {/if}
           <div>
             <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">

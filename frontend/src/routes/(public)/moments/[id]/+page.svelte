@@ -16,7 +16,7 @@
   import Bookmark from 'lucide-svelte/icons/bookmark';
   import Share2 from 'lucide-svelte/icons/share-2';
   import MapPin from 'lucide-svelte/icons/map-pin';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import BackButton from '$lib/components/common/back-button.svelte';
   import Send from 'lucide-svelte/icons/send';
   import Loader2 from 'lucide-svelte/icons/loader-2';
   import Pencil from 'lucide-svelte/icons/pencil';
@@ -215,14 +215,7 @@
       class="sticky top-0 z-10 flex items-center gap-4 px-4 py-3"
       style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <button
-        class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-        style="width: 36px; height: 36px;"
-        onclick={handleBackClick}
-        aria-label="返回"
-      >
-        <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-      </button>
+      <BackButton onclick={handleBackClick} size={36} />
       <h1 style="font-size: 16px; color: var(--text-primary);">瞬间详情</h1>
       {#if isOwner}
         <div class="ml-auto">

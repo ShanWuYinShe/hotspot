@@ -28,7 +28,7 @@
     DropdownMenuTrigger
   } from '$lib/components/ui/dropdown-menu';
   import type { PrivateMessageItem, UserInfo } from '$lib/types/api';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import BackButton from '$lib/components/common/back-button.svelte';
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import Send from 'lucide-svelte/icons/send';
   import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -391,14 +391,7 @@
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     {#if !platformStore.isDesktop}
-      <button
-        class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-        style="width: 36px; height: 36px;"
-        onclick={handleBackClick}
-        aria-label="返回"
-      >
-        <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-      </button>
+      <BackButton onclick={handleBackClick} size={36} />
     {/if}
 
     {#if isLoading}

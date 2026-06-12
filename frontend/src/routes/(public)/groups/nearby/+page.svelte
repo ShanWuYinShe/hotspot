@@ -14,7 +14,7 @@
   import type { GroupItem } from '$lib/types/api';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import BackButton from '$lib/components/common/back-button.svelte';
   import Search from 'lucide-svelte/icons/search';
   import UsersRound from 'lucide-svelte/icons/users-round';
   import Plus from 'lucide-svelte/icons/plus';
@@ -96,14 +96,7 @@
     <div class="page-shell">
       <div class="mb-3 flex items-center gap-3">
         {#if !platformStore.isDesktop}
-          <button
-            class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-            style="width: 36px; height: 36px;"
-            onclick={handleBack}
-            aria-label="返回"
-          >
-            <ArrowLeft size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-          </button>
+          <BackButton onclick={handleBack} size={36} />
         {/if}
         <h1 class="flex-1" style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
           附近群组
