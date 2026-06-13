@@ -5,6 +5,7 @@
   import { isSuccess } from '$lib/api/client';
   import { toast } from '$lib/stores/toast.svelte';
   import type { AppConfig } from '$lib/types/api';
+  import AdminPageHeader from '$lib/components/common/admin-page-header.svelte';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import Save from 'lucide-svelte/icons/save';
   import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -137,21 +138,22 @@
   <title>系统配置 - HotSpot 管理后台</title>
 </svelte:head>
 
+<AdminPageHeader title="系统配置" description="系统参数配置">
+  {#snippet actions()}
+    <button
+      class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+      onclick={loadConfig}
+      disabled={isLoading}
+    >
+      <RefreshCw size={14} strokeWidth={1.5} class={isLoading ? 'animate-spin' : ''} />
+      刷新
+    </button>
+  {/snippet}
+</AdminPageHeader>
+
 <div class="page-pad">
   <div class="page-shell page-shell--wide space-y-6">
-    <div class="flex items-center justify-between">
-      <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">系统配置</h1>
-      <button
-        class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
-        onclick={loadConfig}
-        disabled={isLoading}
-      >
-        <RefreshCw size={14} strokeWidth={1.5} class={isLoading ? 'animate-spin' : ''} />
-        刷新
-      </button>
-    </div>
-
     {#if isLoading}
       <div class="grid gap-6 lg:grid-cols-2">
         {#each Array(3) as _, i (i)}

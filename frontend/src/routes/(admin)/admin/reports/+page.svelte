@@ -11,6 +11,7 @@
     REPORT_TARGET_TYPE_LABEL
   } from '$lib/utils/content-labels';
   import { formatDateTime } from '$lib/utils/format';
+  import AdminPageHeader from '$lib/components/common/admin-page-header.svelte';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import Flag from 'lucide-svelte/icons/flag';
   import MoreVertical from 'lucide-svelte/icons/more-vertical';
@@ -72,21 +73,22 @@
   <title>举报审核 - HotSpot 管理后台</title>
 </svelte:head>
 
+<AdminPageHeader title="举报审核" description="处理用户举报">
+  {#snippet actions()}
+    <button
+      class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+      onclick={() => loadReports()}
+      disabled={pagination.loading}
+    >
+      <RefreshCw size={14} strokeWidth={1.5} class={pagination.loading ? 'animate-spin' : ''} />
+      刷新
+    </button>
+  {/snippet}
+</AdminPageHeader>
+
 <div class="page-pad">
   <div class="page-shell page-shell--wide space-y-6">
-    <div class="flex items-center justify-between">
-      <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">举报审核</h1>
-      <button
-        class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
-        onclick={() => loadReports()}
-        disabled={pagination.loading}
-      >
-        <RefreshCw size={14} strokeWidth={1.5} class={pagination.loading ? 'animate-spin' : ''} />
-        刷新
-      </button>
-    </div>
-
     <!-- Filter -->
     <div class="flex gap-2">
       {#each [{ value: 'pending', label: '待处理' }, { value: 'resolved', label: '已处理' }, { value: 'dismissed', label: '已驳回' }, { value: 'all', label: '全部' }] as f (f.value)}

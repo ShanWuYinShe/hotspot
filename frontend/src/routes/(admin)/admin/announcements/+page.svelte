@@ -6,7 +6,7 @@
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
-  import PageHeader from '$lib/components/layout/page-header.svelte';
+  import AdminPageHeader from '$lib/components/common/admin-page-header.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
   import * as Dialog from '$lib/components/ui/dialog';
   import ConfirmDialog from '$lib/components/common/confirm-dialog.svelte';
@@ -137,32 +137,30 @@
   <title>公告管理 - HotSpot 管理后台</title>
 </svelte:head>
 
+<AdminPageHeader title="公告管理" description="发布与管理公告">
+  {#snippet actions()}
+    <Button
+      variant="flat"
+      size="sm"
+      onclick={() => loadAnnouncements()}
+      disabled={pagination.loading}
+    >
+      <RefreshCw
+        size={14}
+        strokeWidth={1.75}
+        class={pagination.loading ? 'animate-spin mr-2' : 'mr-2'}
+      />
+      刷新
+    </Button>
+    <Button variant="flat" size="sm" onclick={openCreateDialog}>
+      <Plus size={14} strokeWidth={1.75} class="mr-2" />
+      发布公告
+    </Button>
+  {/snippet}
+</AdminPageHeader>
+
 <div class="page-pad">
   <div class="page-shell page-shell--wide space-y-6">
-    <PageHeader title="公告管理">
-      {#snippet actions()}
-        <div class="flex gap-2">
-          <Button
-            variant="flat"
-            size="sm"
-            onclick={() => loadAnnouncements()}
-            disabled={pagination.loading}
-          >
-            <RefreshCw
-              size={14}
-              strokeWidth={1.75}
-              class={pagination.loading ? 'animate-spin mr-2' : 'mr-2'}
-            />
-            刷新
-          </Button>
-          <Button variant="flat" size="sm" onclick={openCreateDialog}>
-            <Plus size={14} strokeWidth={1.75} class="mr-2" />
-            发布公告
-          </Button>
-        </div>
-      {/snippet}
-    </PageHeader>
-
     <!-- Announcements list -->
     <div
       class="rounded-[22px] p-5"

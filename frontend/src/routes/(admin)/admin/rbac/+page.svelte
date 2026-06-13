@@ -7,6 +7,7 @@
   import * as Dialog from '$lib/components/ui/dialog';
   import ConfirmDialog from '$lib/components/common/confirm-dialog.svelte';
   import type { AdminRoleItem, AdminPermissionItem } from '$lib/types/api';
+  import AdminPageHeader from '$lib/components/common/admin-page-header.svelte';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import Plus from 'lucide-svelte/icons/plus';
   import Shield from 'lucide-svelte/icons/shield';
@@ -163,31 +164,30 @@
   <title>权限管理 - HotSpot 管理后台</title>
 </svelte:head>
 
+<AdminPageHeader title="权限管理" description="角色与权限管理">
+  {#snippet actions()}
+    <button
+      class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+      onclick={loadData}
+      disabled={isLoading}
+    >
+      <RefreshCw size={14} strokeWidth={1.5} class={isLoading ? 'animate-spin' : ''} />
+      刷新
+    </button>
+    <button
+      class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+      style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
+      onclick={openCreateRoleDialog}
+    >
+      <Plus size={14} strokeWidth={1.5} />
+      创建角色
+    </button>
+  {/snippet}
+</AdminPageHeader>
+
 <div class="page-pad">
   <div class="page-shell page-shell--wide space-y-6">
-    <div class="flex items-center justify-between">
-      <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">权限管理</h1>
-      <div class="flex gap-2">
-        <button
-          class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
-          onclick={loadData}
-          disabled={isLoading}
-        >
-          <RefreshCw size={14} strokeWidth={1.5} class={isLoading ? 'animate-spin' : ''} />
-          刷新
-        </button>
-        <button
-          class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-          style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
-          onclick={openCreateRoleDialog}
-        >
-          <Plus size={14} strokeWidth={1.5} />
-          创建角色
-        </button>
-      </div>
-    </div>
-
     <div class="grid gap-6 lg:grid-cols-2">
       <!-- Roles -->
       <div

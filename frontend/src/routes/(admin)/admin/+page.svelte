@@ -8,7 +8,7 @@
     adminReportsService,
     adminAuditService
   } from '$lib/api/services/admin';
-  import PageHeader from '$lib/components/layout/page-header.svelte';
+  import AdminPageHeader from '$lib/components/common/admin-page-header.svelte';
   import Users from 'lucide-svelte/icons/users';
   import UsersRound from 'lucide-svelte/icons/users-round';
   import FileText from 'lucide-svelte/icons/file-text';
@@ -64,10 +64,10 @@
   <title>管理后台 - HotSpot</title>
 </svelte:head>
 
+<AdminPageHeader title="管理后台" description="系统管理概览" />
+
 <div class="page-pad">
   <div class="page-shell page-shell--wide space-y-6">
-    <PageHeader title="管理后台" description="系统管理概览" />
-
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {#each [{ icon: Users, label: '用户总数', value: userCount, sub: '注册用户数量' }, { icon: UsersRound, label: '群组总数', value: groupCount, sub: '创建的群组数量' }, { icon: Flag, label: '待处理举报', value: pendingReports, sub: '等待审核的举报' }, { icon: FileText, label: '审计日志', value: auditCount, sub: '今日操作记录' }] as stat}
         <div

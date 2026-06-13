@@ -9,6 +9,7 @@
   import Avatar from '$lib/components/common/avatar.svelte';
   import type { AdminGroupItem } from '$lib/types/api';
   import { formatDate } from '$lib/utils/format';
+  import AdminPageHeader from '$lib/components/common/admin-page-header.svelte';
   import Search from 'lucide-svelte/icons/search';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import MoreVertical from 'lucide-svelte/icons/more-vertical';
@@ -76,21 +77,22 @@
   <title>群组管理 - HotSpot 管理后台</title>
 </svelte:head>
 
+<AdminPageHeader title="群组管理" description="查看与管理群组">
+  {#snippet actions()}
+    <button
+      class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+      onclick={() => loadGroups()}
+      disabled={pagination.loading}
+    >
+      <RefreshCw size={14} strokeWidth={1.5} class={pagination.loading ? 'animate-spin' : ''} />
+      刷新
+    </button>
+  {/snippet}
+</AdminPageHeader>
+
 <div class="page-pad">
   <div class="page-shell page-shell--wide space-y-6">
-    <div class="flex items-center justify-between">
-      <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">群组管理</h1>
-      <button
-        class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
-        onclick={() => loadGroups()}
-        disabled={pagination.loading}
-      >
-        <RefreshCw size={14} strokeWidth={1.5} class={pagination.loading ? 'animate-spin' : ''} />
-        刷新
-      </button>
-    </div>
-
     <!-- Search -->
     <div class="flex gap-2">
       <div class="input-surface relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5">

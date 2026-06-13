@@ -5,6 +5,7 @@
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
   import type { AuditLogItem, AuditAction } from '$lib/types/api';
   import { formatDateTime } from '$lib/utils/format';
+  import AdminPageHeader from '$lib/components/common/admin-page-header.svelte';
   import Search from 'lucide-svelte/icons/search';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import FileText from 'lucide-svelte/icons/file-text';
@@ -38,23 +39,22 @@
   <title>审计日志 - HotSpot 管理后台</title>
 </svelte:head>
 
+<AdminPageHeader title="审计日志" description="系统操作记录">
+  {#snippet actions()}
+    <button
+      class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+      onclick={() => loadLogs()}
+      disabled={pagination.loading}
+    >
+      <RefreshCw size={14} strokeWidth={1.5} class={pagination.loading ? 'animate-spin' : ''} />
+      刷新
+    </button>
+  {/snippet}
+</AdminPageHeader>
+
 <div class="page-pad">
   <div class="page-shell page-shell--wide space-y-6">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 style="font-size: 22px; font-weight: 600; color: var(--text-primary);">审计日志</h1>
-      </div>
-      <button
-        class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
-        onclick={() => loadLogs()}
-        disabled={pagination.loading}
-      >
-        <RefreshCw size={14} strokeWidth={1.5} class={pagination.loading ? 'animate-spin' : ''} />
-        刷新
-      </button>
-    </div>
-
     <!-- Search -->
     <div class="flex gap-2">
       <div class="input-surface relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5">
