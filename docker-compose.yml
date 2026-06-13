@@ -9,7 +9,7 @@
 services:
   # ── Database ────────────────────────────────────────────────────
   postgres:
-    image: postgres:17.4-alpine3.21
+    image: postgres:${POSTGRES_VERSION:-17.4}-alpine3.21
     restart: always
     environment:
       POSTGRES_DB: hotspot
@@ -25,7 +25,7 @@ services:
 
   # ── Cache & Pub/Sub (Redis) ───────────────────────────────────────
   redis:
-    image: redis:7.4-alpine
+    image: redis:${REDIS_VERSION:-7.4}-alpine
     restart: always
     command: redis-server --appendonly yes
     volumes:
@@ -38,7 +38,7 @@ services:
 
   # ── Object Storage (S3-compatible) ──────────────────────────────
   seaweedfs:
-    image: chrislusf/seaweedfs:4.21
+    image: chrislusf/seaweedfs:${SEAWEEDFS_VERSION:-4.21}
     restart: always
     command: server -s3 -dir=/data
     healthcheck:
@@ -53,6 +53,9 @@ services:
     build:
       context: ./backend-go
       dockerfile: Dockerfile
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26}
+        ALPINE_VERSION: ${ALPINE_VERSION:-3.22}
     image: hotspot-backend:latest
     restart: always
     depends_on:
@@ -109,6 +112,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
+        BUN_VERSION: ${BUN_VERSION:-1.3.14}
+        NGINX_VERSION: ${NGINX_VERSION:-1.30.1}
         VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
         VITE_AMAP_SECURITY_CODE: ${VITE_AMAP_SECURITY_CODE:-}
         VITE_AMAP_SERVICE_HOST: ${VITE_AMAP_SERVICE_HOST:-}
@@ -116,7 +121,7 @@ services:
 
   # ── Gateway (Nginx) ─────────────────────────────────────────────
   nginx:
-    image: nginx:1.30.1-alpine
+    image: nginx:${NGINX_VERSION:-1.30.1}-alpine
     restart: always
     depends_on:
       backend:
