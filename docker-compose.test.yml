@@ -9,7 +9,7 @@
 
 services:
   integration-test:
-    image: golang:1.26.2-alpine
+    image: golang:${GO_VERSION:-1.26}-alpine
     depends_on:
       postgres:
         condition: service_healthy
