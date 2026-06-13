@@ -236,7 +236,7 @@
             <div
               class="overflow-hidden rounded-full"
               style="width: 40px; height: 40px; border: {selected
-                ? '1.5px solid rgba(255,255,255,0.35)'
+                ? '1.5px solid color-mix(in srgb, var(--text-on-accent) 35%, transparent)'
                 : '1.5px solid var(--border-theme)'};"
             >
               <Avatar
@@ -258,20 +258,20 @@
             <div class="mb-0.5 flex items-center justify-between">
               <span
                 style="font-size: 14px; color: {selected
-                  ? 'white'
+                  ? 'var(--text-on-accent)'
                   : 'var(--text-primary)'}; font-weight: {chat.unread_count > 0 ? 600 : 400};"
                 >{chat.other_user.nickname}</span
               >
               <span
                 style="font-size: 11px; flex-shrink: 0; color: {selected
-                  ? 'rgba(255,255,255,0.7)'
+                  ? 'color-mix(in srgb, var(--text-on-accent) 70%, transparent)'
                   : 'var(--text-secondary)'};">{formatRelativeTime(chat.last_activity_at)}</span
               >
             </div>
             <p
               class="truncate pr-4"
               style="font-size: 12px; color: {selected
-                ? 'rgba(255,255,255,0.8)'
+                ? 'color-mix(in srgb, var(--text-on-accent) 80%, transparent)'
                 : 'var(--text-secondary)'};"
             >
               {#if chat.last_message}{chat.last_message.content || '[媒体消息]'}{:else}暂无消息{/if}
@@ -322,7 +322,7 @@
         <div
           class="flex-shrink-0 overflow-hidden rounded-full"
           style="width: 40px; height: 40px; border: {selected
-            ? '1.5px solid rgba(255,255,255,0.35)'
+            ? '1.5px solid color-mix(in srgb, var(--text-on-accent) 35%, transparent)'
             : '1.5px solid var(--border-theme)'};"
         >
           <Avatar
@@ -338,19 +338,19 @@
           <div class="mb-0.5 flex items-center justify-between">
             <span
               style="font-size: 14px; font-weight: 500; color: {selected
-                ? 'white'
+                ? 'var(--text-on-accent)'
                 : 'var(--text-primary)'};">{group.group.name}</span
             >
             <span
               style="font-size: 11px; flex-shrink: 0; color: {selected
-                ? 'rgba(255,255,255,0.7)'
+                ? 'color-mix(in srgb, var(--text-on-accent) 70%, transparent)'
                 : 'var(--text-secondary)'};">{group.group.members_count}人</span
             >
           </div>
           <p
             class="truncate pr-4"
             style="font-size: 12px; color: {selected
-              ? 'rgba(255,255,255,0.8)'
+              ? 'color-mix(in srgb, var(--text-on-accent) 80%, transparent)'
               : 'var(--text-secondary)'};"
           >
             {formatRelativeTime(group.last_activity_at ?? group.my_state?.joined_at ?? '')}

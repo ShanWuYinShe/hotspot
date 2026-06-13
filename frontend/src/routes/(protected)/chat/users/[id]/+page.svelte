@@ -382,7 +382,7 @@
 
 <div
   class="flex min-w-0 flex-col overflow-hidden"
-  style="{platformStore.isDesktop
+  style="{platformStore.isWide
     ? 'height: 100%; width: 100%; flex: 1; border: 1px solid var(--border-theme);'
     : 'height: calc(100dvh - env(safe-area-inset-bottom, 0px)); width: 100%;'} background: var(--surface-bg);"
 >
@@ -391,7 +391,7 @@
     class="flex h-[60px] items-center gap-3 px-4"
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
-    {#if !platformStore.isDesktop}
+    {#if !platformStore.isWide}
       <BackButton onclick={handleBackClick} size={36} />
     {/if}
 
@@ -520,7 +520,7 @@
               {#if message.recalled_at != null}
                 <p
                   style="font-size: 14px; font-style: italic; opacity: 0.7; color: {isSelf(message)
-                    ? 'white'
+                    ? 'var(--text-on-accent)'
                     : 'var(--text-primary)'};"
                 >
                   消息已撤回
@@ -529,7 +529,7 @@
                 <p
                   class="whitespace-pre-wrap"
                   style="font-size: 13px; line-height: 1.55; color: {isSelf(message)
-                    ? 'white'
+                    ? 'var(--text-on-accent)'
                     : 'var(--text-primary)'};"
                 >
                   {message.content}
@@ -539,7 +539,7 @@
               {:else}
                 <p
                   style="font-size: 14px; color: {isSelf(message)
-                    ? 'white'
+                    ? 'var(--text-on-accent)'
                     : 'var(--text-primary)'};"
                 >
                   [{message.type}]
@@ -547,7 +547,7 @@
               {/if}
               <p
                 style="font-size: 10px; margin-top: 4px; color: {isSelf(message)
-                  ? 'rgba(255,255,255,0.65)'
+                  ? 'color-mix(in srgb, var(--text-on-accent) 65%, transparent)'
                   : 'var(--text-secondary)'}; display: flex; align-items: center; gap: 3px; justify-content: {isSelf(
                   message
                 )

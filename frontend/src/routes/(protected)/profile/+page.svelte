@@ -169,7 +169,12 @@
       href: '/profile?section=moments',
       count: profile?.stats.moments_count ?? 0
     },
-    { icon: Users, label: '好友', href: '/friends', count: profile?.stats.friends_count ?? 0 }
+    {
+      icon: Users,
+      label: '好友',
+      href: '/relations?tab=friends',
+      count: profile?.stats.friends_count ?? 0
+    }
   ]);
 </script>
 
@@ -490,9 +495,9 @@
   {/snippet}
 
   <!-- ═══════════════════════════════════════════════
-       DESKTOP
+       WIDE (landscape/large tablet + desktop)
   ══════════════════════════════════════════════════ -->
-  {#if platformStore.isDesktop}
+  {#if platformStore.isWide}
     <div class="flex flex-col h-full">
       <!-- Sticky header -->
       <div
@@ -607,7 +612,7 @@
     </div>
   {:else}
     <!-- ═══════════════════════════════════════════════
-         MOBILE / TABLET
+         NARROW (mobile + portrait/small tablet)
     ══════════════════════════════════════════════════ -->
     <div class="flex flex-col">
       <!-- Sticky header -->

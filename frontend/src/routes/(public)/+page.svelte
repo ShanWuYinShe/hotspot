@@ -233,8 +233,8 @@
   <title>{t('home.title')}</title>
 </svelte:head>
 
-{#if !platformStore.isDesktop}
-  <!-- Mobile / Tablet Home (Figma Make HomeMobile; tablet = centered 600 column) -->
+{#if !platformStore.isWide}
+  <!-- Narrow (mobile + portrait/small tablet): centered single column (Figma Make HomeMobile) -->
   <div class="flex flex-col">
     <!-- Sticky header -->
     <div
@@ -364,7 +364,7 @@
     </div>
   </div>
 {:else}
-  <!-- Desktop Home (Figma Make HomeDesktop — 2-column) -->
+  <!-- Wide (landscape/large tablet + desktop): 2-column (Figma Make HomeDesktop) -->
   <div class="flex h-full flex-col">
     <!-- Sticky header -->
     <div

@@ -10,8 +10,8 @@
   const isOnChatRoot = $derived($page.url.pathname === '/chat');
 </script>
 
-{#if platformStore.isDesktop}
-  <!-- Desktop: bounded split-pane workspace -->
+{#if platformStore.isWide}
+  <!-- Wide (desktop + 横屏/大尺寸平板): bounded split-pane master-detail workspace -->
   <div class="page-pad box-border h-full min-h-0">
     <div
       class="page-shell page-shell--wide flex h-full min-h-0 overflow-hidden rounded-[28px]"

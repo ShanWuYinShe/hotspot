@@ -137,14 +137,21 @@
   <title>设置 - HotSpot</title>
 </svelte:head>
 
-{#if platformStore.isDesktop}
-  <!-- Desktop: two-column split layout -->
+{#if platformStore.isWide}
+  <!-- Wide (landscape/large tablet + desktop): two-column split layout -->
   <div class="flex h-full">
     <!-- Left navigation panel -->
     <div
       class="flex flex-shrink-0 flex-col overflow-y-auto no-scrollbar"
       style="width: 260px; border-right: 1px solid var(--border-theme); padding: 20px 16px;"
     >
+      {#if !platformStore.isDesktop}
+        <!-- Tablet 没有侧边栏，设置是子页：自带返回头部，避免被困 -->
+        <div class="mb-3 flex items-center gap-2.5">
+          <BackButton onclick={() => history.back()} size={36} />
+          <h1 style="font-size: 17px; font-weight: 600; color: var(--text-primary);">设置</h1>
+        </div>
+      {/if}
       <!-- User card -->
       {#if authStore.currentAccount}
         <div
@@ -447,7 +454,7 @@
     </div>
   </div>
 {:else}
-  <!-- Mobile / Tablet: single column layout -->
+  <!-- Narrow (mobile + portrait/small tablet): single column layout -->
   <div class="page-pad">
     <div class="page-shell page-shell--form">
       <!-- Header with back button -->

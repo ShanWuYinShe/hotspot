@@ -34,6 +34,7 @@ export default {
     friends: '好友',
     following: '关注',
     followers: '粉丝',
+    relations: '关系',
     personalCenter: '个人中心',
     admin: '管理员',
     adminPanel: '管理后台',

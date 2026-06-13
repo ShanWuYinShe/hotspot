@@ -180,7 +180,7 @@
       {/if}
 
       {#if pagination.loading}
-        <div class={platformStore.isDesktop ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
+        <div class={!platformStore.isMobile ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
           {#each Array(6) as _, i (i)}
             <div
               class="animate-pulse rounded-[22px]"
@@ -213,7 +213,7 @@
           description="换个浏览位置或稍后再来看看。"
         />
       {:else}
-        <div class={platformStore.isDesktop ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
+        <div class={!platformStore.isMobile ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
           {#each pagination.items as user (user.user.user_id)}
             <UserCard
               {user}

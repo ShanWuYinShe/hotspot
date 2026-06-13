@@ -97,9 +97,9 @@
   <title>消息 - HotSpot</title>
 </svelte:head>
 
-{#if platformStore.isDesktop}
-  <!-- Desktop: layout handles split-pane, this page is only reached on /chat root -->
-  <!-- The layout shows the empty state for /chat root, so nothing to render here -->
+{#if platformStore.isWide}
+  <!-- Wide (desktop + 横屏/大尺寸平板): layout 负责 split-pane，本页仅在 /chat 根路由出现 -->
+  <!-- layout 会为 /chat 根渲染空态，这里无需渲染内容 -->
   <div class="hidden"></div>
 {:else}
   <!-- Mobile: single-column layout -->

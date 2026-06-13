@@ -34,6 +34,7 @@ export default {
     friends: 'Friends',
     following: 'Following',
     followers: 'Followers',
+    relations: 'Relations',
     personalCenter: 'Personal',
     admin: 'Admin',
     adminPanel: 'Admin Panel',

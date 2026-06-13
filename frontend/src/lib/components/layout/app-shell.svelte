@@ -24,7 +24,13 @@
 
   let { children, sidebar, subnav, requireAuth = false }: Props = $props();
 
-  const isSubPageView = $derived(isSubPage(page.url.pathname));
+  // 宽屏平板（横屏 / 大尺寸）的 chat 采用 split-pane：会话列表常驻左栏，会话详情显示在右栏。
+  // 此时会话详情不应再被当作"全屏子页"而隐藏底栏——否则用户进入会话后会丢失全局导航。
+  const isWideChatPane = $derived(
+    platformStore.isTablet && platformStore.isWide && page.url.pathname.startsWith('/chat')
+  );
+
+  const isSubPageView = $derived(isSubPage(page.url.pathname) && !isWideChatPane);
 
   $effect(() => {
     if (browser && authStore.initialized && !authStore.isAuthenticated && !authStore.isRestoring) {

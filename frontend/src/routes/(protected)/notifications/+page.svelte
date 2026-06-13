@@ -381,15 +381,11 @@
   </div>
 {/snippet}
 
-<div
-  class="flex"
-  class:h-full={platformStore.isDesktop}
-  class:overflow-hidden={platformStore.isDesktop}
->
+<div class="flex" class:h-full={platformStore.isWide} class:overflow-hidden={platformStore.isWide}>
   <div
     class="page-shell flex min-w-0 flex-1 flex-col"
-    class:overflow-y-auto={platformStore.isDesktop}
-    class:no-scrollbar={platformStore.isDesktop}
+    class:overflow-y-auto={platformStore.isWide}
+    class:no-scrollbar={platformStore.isWide}
   >
     <!-- Sticky header -->
     <div
@@ -696,7 +692,7 @@
       {/if}
     </div>
   </div>
-  {#if platformStore.isDesktop}
+  {#if platformStore.isWide}
     <aside
       class="flex-shrink-0 overflow-y-auto no-scrollbar"
       style="width: 300px; border-left: 1px solid var(--border-theme); padding: 20px 16px;"

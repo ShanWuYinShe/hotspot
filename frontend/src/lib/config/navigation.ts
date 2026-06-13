@@ -14,8 +14,6 @@ import UsersRound from 'lucide-svelte/icons/users-round';
 import MessageCircle from 'lucide-svelte/icons/message-circle';
 import Bell from 'lucide-svelte/icons/bell';
 import Heart from 'lucide-svelte/icons/heart';
-import UserCheck from 'lucide-svelte/icons/user-check';
-import UserPlus from 'lucide-svelte/icons/user-plus';
 import MapPin from 'lucide-svelte/icons/map-pin';
 import Menu from 'lucide-svelte/icons/menu';
 import LayoutDashboard from 'lucide-svelte/icons/layout-dashboard';
@@ -88,9 +86,7 @@ export const personalNavItems: NavItem[] = [
     requiresAuth: true,
     exact: true
   },
-  { href: '/friends', labelKey: 'sidebar.friends', icon: Heart, requiresAuth: true },
-  { href: '/follows', labelKey: 'sidebar.following', icon: UserCheck, requiresAuth: true },
-  { href: '/followers', labelKey: 'sidebar.followers', icon: UserPlus, requiresAuth: true }
+  { href: '/relations', labelKey: 'sidebar.relations', icon: Heart, requiresAuth: true }
 ];
 
 /** 管理后台各分区。 */

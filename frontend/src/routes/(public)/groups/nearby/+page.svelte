@@ -174,7 +174,7 @@
       {/if}
 
       {#if pagination.loading}
-        <div class={platformStore.isDesktop ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
+        <div class={!platformStore.isMobile ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
           {#each Array(6) as _, i (i)}
             <div
               class="animate-pulse rounded-[22px]"
@@ -209,7 +209,7 @@
       {:else if filteredGroups.length === 0}
         <EmptyState icon={UsersRound} title="没有匹配的群组" description="试试其他分类或关键词。" />
       {:else}
-        <div class={platformStore.isDesktop ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
+        <div class={!platformStore.isMobile ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
           {#each filteredGroups as group (group.group.group_id)}
             <GroupCard {group} showDistance showMembers variant="default" class="overflow-hidden" />
           {/each}

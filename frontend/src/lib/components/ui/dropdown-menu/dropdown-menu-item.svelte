@@ -28,7 +28,7 @@
     className
   )}
   style="border-radius: 14px; color: {hovered
-    ? 'white'
+    ? 'var(--text-on-accent)'
     : 'var(--text-primary)'}; background: {hovered ? 'var(--brand)' : 'transparent'};"
   onmouseenter={() => (hovered = true)}
   onmouseleave={() => (hovered = false)}

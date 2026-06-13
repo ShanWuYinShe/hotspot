@@ -83,11 +83,25 @@
 - **平板（600–1279px）**：单列内容用 shell（多取默认档量级）+ `page-pad`，底部为浮动玻璃导航留出空间。
 - **移动（<600px）**：shell 的 `100vw - 32px` 兜底保证左右各约 16px 留白；不追求居中收束（视口已足够窄），重点是不贴边。
 
+#### 宽屏（`platformStore.isWide`）：平板也要充分利用横向空间
+
+> 平板不是"拉大的手机"。视口 **宽度 ≥ 960px**（横屏 / 大尺寸平板与桌面）时 `platformStore.isWide` 为真，用它决定**内容布局**是否升级为多列 / master-detail；**导航 chrome**（侧边栏 vs 底栏）仍由 `isDesktop` / `isTablet` 决定。
+
+- **内容密度优先用响应式宽度**，而非 `isDesktop` 硬分支：自适应网格（`.feed-density-grid` 的 `auto-fit` / Tailwind `columns-*`）天然在平板出多列。把"多列 vs 单列"的把关写成 `!platformStore.isMobile`（含平板）或交给 `auto-fit`，**不要**用 `isDesktop` 把平板挤回单列（典型：附近的人 / 附近群组）。
+- **多列 / 两栏页面用 `isWide` 而非 `isDesktop`**：home（两栏）、settings（左导航 + 右内容两栏）、notifications（feed + 概览 aside）、profile（左资料 + 右画廊两栏）均把布局 gate 从 `isDesktop` 改为 `isWide`，宽屏平板复用桌面两栏；窄屏 / 竖屏小平板（<960）回退单列。
+- **master-detail 用 `isWide` 而非 `isDesktop`**：如 chat 的 split-pane（左列表 + 右会话）在横屏 / 大平板同样开启。详情子页（`/chat/users/[id]` 等）据 `isWide` 决定是"贴合右栏（无返回）"还是"全屏（带返回）"。
+- **底栏不能在 split-pane 里丢失**：宽屏平板进入 chat 会话详情时，`app-shell` 通过 `isWideChatPane` 让该页**不**算全屏子页，保留底部主导航（桌面靠常驻侧边栏，平板靠底栏）。
+- **复用桌面分支时，导航 chrome 要按平板补位**（桌面靠侧边栏，平板没有）：
+  - **定位入口**：若桌面把 `AnchorEntry` 放侧边栏，平板复用桌面分支前必须在页面内保留定位入口。home 复用桌面两栏时由可点击的 `HeroStats`（打开 `LocationPickerModal`）承担；各 `nearby` 页则在概览行保留 `AnchorEntry` pill。
+  - **返回按钮**：sub-page（`/settings`、`/notifications` 等，平板隐藏底栏）复用桌面两栏时，桌面分支默认无返回（靠侧边栏）→ 必须**为平板补回返回**，否则用户被困。settings 在左导航栏顶部加 `BackButton`；notifications 的返回按钮保持 `!isDesktop`（平板可见）。顶层目的地（home / profile）有底栏，无需返回。
+
 ### 红线
 
 - 禁止页面直接用裸 `max-w-3xl` / `max-w-2xl` / 内联 `max-width: 640px` 等各自为政的写法——统一走 `.page-shell` 档位，保证全站节奏一致。
 - 禁止内容直接 `w-full` 平铺到容器边缘（既无 max-width 又无 `page-pad`）。
 - 禁止 sticky 头部宽度与正文不一致（头部 `px-5` 平铺、正文 shell 收束）——头部内容必须包进同档 `.page-shell` + `.page-pad-x`（feed 页用 `.feed-density-shell` + `.feed-density-pad-x`）。
+- 禁止用 `isDesktop` 把关"多列 vs 单列"内容密度而把平板挤回单列——改用 `!isMobile` / `isWide` / `auto-fit`（见「宽屏」小节）。
+- 禁止给"落在品牌色（`--brand` / 选中态 / 自己的气泡 / hover 高亮）之上的文字、图标、描边"硬编码 `white` / `rgba(255,255,255,…)`——必须用 `--text-on-accent`（或 `color-mix(in srgb, var(--text-on-accent) N%, transparent)` 表达透明度）。原因：`--text-on-accent` 在 forest-dark / indigo-dark 等"亮色强调"主题下解析为**深色**，硬编码白色会在这些主题下变成"白字压亮底"低对比。例外：iOS 风格开关的白色滑块（puck）、地图标记上带 `text-shadow` 的白字属于刻意设计，保留。
 - 改动布局后用 `bun check` + `bun run build` 校验。
 
 ## 导航与页面框架规范（消除重复入口与冗余 chrome）
@@ -96,7 +110,7 @@
 
 ### 返回按钮（仅在「钻取页」且非桌面时出现）
 
-- **顶层目的地**（侧边栏可直达：首页、附近的人 / 群组 / 动态、消息、通知、我的瞬间 / 群组、好友、关注、粉丝、管理后台）：
+- **顶层目的地**（侧边栏可直达：首页、附近的人 / 群组 / 动态、消息、通知、我的瞬间 / 群组、关系、管理后台）：
   - **桌面**：**不显示**返回——侧边栏即导航，返回是冗余 chrome。用 `{#if !platformStore.isDesktop}` 包裹返回按钮。
   - **移动 / 平板**：这些页可能从搜索等处进入且不在底部导航中，**保留**返回。
 - **钻取页 / 详情页**（用户主页 `/users/[id]`、群组详情、瞬间详情、活动详情、设置子页、会话详情、编辑资料等）：三档设备都**保留**返回——它们不在框架导航中，是真正的下钻。
@@ -105,6 +119,14 @@
 
 - **地图 / 浏览锚点**：位置与半径调整的唯一入口是**侧边栏底部的 `AnchorEntry`**（桌面）/ 头部或概览行的 `AnchorEntry` pill（移动·平板）。**禁止**在主内容区再放一个「地图」按钮重复打开 `LocationPickerModal`。
 - 通用：发布、搜索、通知、设置等已在桌面顶栏 / 侧边栏存在的全局动作，不在页面内重复放置同义入口。
+
+### 路由收敛（合并重复 / 同类页面，避免侧边栏与心智模型碎片化）
+
+> 原则：**同一类内容只保留一个顶层路由**；近重复或强相关的子列表用页内 `filter-chip` 分页（tabs）承载，而非各占一个侧边栏项。删除旧路由时**保留 `+page.ts` 重定向**以兼容旧链接 / 书签。
+
+- **关系**：`/relations` 是「好友 / 关注 / 粉丝」的唯一入口，三者为页内 tabs（`?tab=friends|following|followers`，URL 即单一事实源，支持深链与前进/后退）。三档列表**统一用 `UserCard variant="square"` + `usePagination`**，视觉与交互完全一致。旧路由 `/friends`、`/follows`、`/followers` 仅保留 `+page.ts` 的 `redirect(307, …)`。
+- **首页**：`/dashboard` 与 `/` 内容重复，已 `redirect(307, '/')` 收敛到 `/`。
+- 新增同类页面时优先评估能否并入既有顶层路由的 tab，而非新增侧边栏项。
 
 ### 标题
 
