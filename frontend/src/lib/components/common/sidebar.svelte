@@ -8,59 +8,25 @@
   import { notificationStore } from '$lib/stores/notification.svelte';
   import { messageStore } from '$lib/stores/message.svelte';
   import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
-  import Home from 'lucide-svelte/icons/home';
-  import Image from 'lucide-svelte/icons/image';
-  import UsersRound from 'lucide-svelte/icons/users-round';
-  import MessageCircle from 'lucide-svelte/icons/message-circle';
-  import Bell from 'lucide-svelte/icons/bell';
-  import UserPlus from 'lucide-svelte/icons/user-plus';
-  import Heart from 'lucide-svelte/icons/heart';
-  import UserCheck from 'lucide-svelte/icons/user-check';
+  import {
+    discoverNavItems,
+    personalNavItems,
+    isNavActive,
+    type NavItem
+  } from '$lib/config/navigation';
   import Shield from 'lucide-svelte/icons/shield';
-
-  interface NavItem {
-    href: string;
-    label: string;
-    icon: typeof Home;
-    requiresAuth?: boolean;
-    exact?: boolean;
-  }
-
-  const mainNavItems: NavItem[] = [
-    { href: '/', label: t('sidebar.home'), icon: Home },
-    { href: '/users/nearby', label: t('sidebar.nearbyPeople'), icon: UsersRound },
-    { href: '/groups/nearby', label: t('sidebar.nearbyGroups'), icon: UsersRound },
-    { href: '/moments/nearby', label: t('sidebar.nearbyMoments'), icon: Image }
-  ];
-
-  const personalNavItems: NavItem[] = [
-    { href: '/chat', label: t('sidebar.messages'), icon: MessageCircle, requiresAuth: true },
-    { href: '/notifications', label: t('sidebar.notifications'), icon: Bell, requiresAuth: true },
-    {
-      href: '/moments',
-      label: t('sidebar.myMoments'),
-      icon: Image,
-      requiresAuth: true,
-      exact: true
-    },
-    {
-      href: '/groups',
-      label: t('sidebar.myGroups'),
-      icon: UsersRound,
-      requiresAuth: true,
-      exact: true
-    },
-    { href: '/friends', label: t('sidebar.friends'), icon: Heart, requiresAuth: true },
-    { href: '/follows', label: t('sidebar.following'), icon: UserCheck, requiresAuth: true },
-    { href: '/followers', label: t('sidebar.followers'), icon: UserPlus, requiresAuth: true }
-  ];
 
   const currentPathname = $derived(page.url.pathname);
 
   function isActive(item: NavItem): boolean {
-    if (item.href === '/') return currentPathname === '/';
-    if (item.exact) return currentPathname === item.href;
-    return currentPathname === item.href || currentPathname.startsWith(`${item.href}/`);
+    return isNavActive(item.href, item.exact, currentPathname);
+  }
+
+  function badgeCount(item: NavItem): number {
+    if (!authStore.isAuthenticated) return 0;
+    if (item.badge === 'notifications') return notificationStore.unreadCount;
+    if (item.badge === 'messages') return messageStore.totalUnreadCount;
+    return 0;
   }
 
   function handleNavClick(item: NavItem) {
@@ -70,47 +36,27 @@
     }
     void goto(item.href);
   }
+
+  const adminActive = $derived(
+    currentPathname === '/admin' || currentPathname.startsWith('/admin/')
+  );
 </script>
 
 <!-- Figma Make DesktopLayout Sidebar — 192px fixed -->
 <aside class="flex flex-shrink-0 flex-col" style="width: 192px;">
   <!-- Scrollable nav region -->
-  <div class="flex flex-1 flex-col overflow-y-auto no-scrollbar min-h-0">
+  <div class="flex min-h-0 flex-1 flex-col overflow-y-auto no-scrollbar">
     <!-- Section 1: Discovery nav -->
     <div class="flex flex-col" style="gap: 2px;">
-      {#each mainNavItems as item (item.href)}
+      {#each discoverNavItems as item (item.href)}
         <button
           class="desktop-sidebar__nav-item {isActive(item) ? 'active' : ''}"
           onclick={() => handleNavClick(item)}
         >
           <item.icon size={17} strokeWidth={isActive(item) ? 2 : 1.6} />
           <span class="text-sm" class:font-medium={isActive(item)}>
-            {item.label}
+            {t(item.labelKey)}
           </span>
-          {#if authStore.isAuthenticated && item.href === '/notifications' && notificationStore.unreadCount > 0}
-            <span
-              class="ml-auto flex items-center justify-center rounded-full text-on-accent"
-              style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--brand);"
-            >
-              {notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount}
-            </span>
-          {/if}
-          {#if authStore.isAuthenticated && item.href === '/chat' && messageStore.totalUnreadCount > 0}
-            <span
-              class="ml-auto flex items-center justify-center rounded-full text-on-accent"
-              style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--brand);"
-            >
-              {messageStore.totalUnreadCount > 99 ? '99+' : messageStore.totalUnreadCount}
-            </span>
-          {/if}
-          {#if !authStore.isAuthenticated && item.requiresAuth}
-            <span
-              class="ml-auto rounded-full px-2 py-0.5 text-xs"
-              style="background: var(--border-theme); color: var(--text-secondary);"
-            >
-              {t('sidebar.login')}
-            </span>
-          {/if}
         </button>
       {/each}
     </div>
@@ -135,25 +81,16 @@
         >
           <item.icon size={17} strokeWidth={isActive(item) ? 2 : 1.6} />
           <span class="text-sm" class:font-medium={isActive(item)}>
-            {item.label}
+            {t(item.labelKey)}
           </span>
-          {#if authStore.isAuthenticated && item.href === '/notifications' && notificationStore.unreadCount > 0}
+          {#if badgeCount(item) > 0}
             <span
               class="ml-auto flex items-center justify-center rounded-full text-on-accent"
               style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--brand);"
             >
-              {notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount}
+              {badgeCount(item) > 99 ? '99+' : badgeCount(item)}
             </span>
-          {/if}
-          {#if authStore.isAuthenticated && item.href === '/chat' && messageStore.totalUnreadCount > 0}
-            <span
-              class="ml-auto flex items-center justify-center rounded-full text-on-accent"
-              style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--brand);"
-            >
-              {messageStore.totalUnreadCount > 99 ? '99+' : messageStore.totalUnreadCount}
-            </span>
-          {/if}
-          {#if !authStore.isAuthenticated && item.requiresAuth}
+          {:else if !authStore.isAuthenticated && item.requiresAuth}
             <span
               class="ml-auto rounded-full px-2 py-0.5 text-xs"
               style="background: var(--border-theme); color: var(--text-secondary);"
@@ -169,11 +106,11 @@
     {#if authStore.isAuthenticated && adminPermissionsStore.isAdmin}
       <div class="mt-4">
         <button
-          class="desktop-sidebar__nav-item {currentPathname.startsWith('/admin') ? 'active' : ''}"
+          class="desktop-sidebar__nav-item {adminActive ? 'active' : ''}"
           onclick={() => void goto('/admin')}
         >
-          <Shield size={17} strokeWidth={currentPathname.startsWith('/admin') ? 2 : 1.6} />
-          <span class="text-sm" class:font-medium={currentPathname.startsWith('/admin')}>
+          <Shield size={17} strokeWidth={adminActive ? 2 : 1.6} />
+          <span class="text-sm" class:font-medium={adminActive}>
             {t('sidebar.adminPanel')}
           </span>
         </button>
@@ -182,7 +119,7 @@
   </div>
 
   <!-- Location Anchor — pinned to the bottom-left corner of the sidebar -->
-  <div class="flex-shrink-0 pt-3 mt-3" style="border-top: 1px solid var(--border-theme);">
+  <div class="mt-3 flex-shrink-0 pt-3" style="border-top: 1px solid var(--border-theme);">
     <AnchorEntry variant="card" />
   </div>
 </aside>

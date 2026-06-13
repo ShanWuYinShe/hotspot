@@ -7,48 +7,47 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { notificationStore } from '$lib/stores/notification.svelte';
   import { messageStore } from '$lib/stores/message.svelte';
-  import MapPin from 'lucide-svelte/icons/map-pin';
-  import Compass from 'lucide-svelte/icons/compass';
-  import MessageCircle from 'lucide-svelte/icons/message-circle';
-  import User from 'lucide-svelte/icons/user';
+  import { bottomTabs, isNavActive, type BottomTab } from '$lib/config/navigation';
   import Plus from 'lucide-svelte/icons/plus';
   import X from 'lucide-svelte/icons/x';
 
-  const navItems = [
-    { href: '/', label: t('nav.nearby'), icon: MapPin },
-    { href: '/discover', label: t('nav.discover'), icon: Compass },
-    { href: '/chat', label: t('nav.messagesTab'), icon: MessageCircle, requiresAuth: true },
-    { href: '/profile', label: t('nav.me'), icon: User, requiresAuth: true }
-  ];
-
+  const navItems = bottomTabs;
   const currentPath = $derived(page.url.pathname);
 
-  function isActive(href: string) {
-    if (href === '/') return currentPath === '/';
-    if (href === '/profile') return currentPath === '/profile' || currentPath === '/settings';
-    return currentPath === href || currentPath.startsWith(`${href}/`);
+  function isActive(tab: BottomTab) {
+    if (tab.action === 'menu') return uiStore.showNavDrawer;
+    return isNavActive(tab.href, tab.exact, currentPath);
   }
 
-  function navigate(item: { href: string; requiresAuth?: boolean }) {
-    if (item.requiresAuth && !authStore.isAuthenticated) {
-      uiStore.openLoginModalWithRedirect({ url: item.href });
+  function navigate(tab: BottomTab) {
+    if (tab.action === 'menu') {
+      uiStore.toggleNavDrawer();
       return;
     }
-    void goto(item.href);
+    if (!tab.href) return;
+    if (tab.requiresAuth && !authStore.isAuthenticated) {
+      uiStore.openLoginModalWithRedirect({ url: tab.href });
+      return;
+    }
+    void goto(tab.href);
   }
 
   // 通知在移动端归属于「消息」收件箱（页内通过铃铛进入通知页），
-  // 因此底栏「消息」角标合并未读消息 + 未读通知，「我的」不再承载通知角标。
+  // 因此底栏「消息」角标合并未读消息 + 未读通知。
   const inboxBadge = $derived(
     authStore.isAuthenticated ? messageStore.totalUnreadCount + notificationStore.unreadCount : 0
   );
+
+  function tabBadge(tab: BottomTab): number {
+    return tab.badge === 'inbox' ? inboxBadge : 0;
+  }
 
   // Shared sliding pill — mirrors the React reference's Framer Motion `layoutId`
   // behaviour so the active indicator glides between tabs instead of fading per tab.
   let rowEl = $state<HTMLDivElement | undefined>();
   let tabEls = $state<(HTMLButtonElement | undefined)[]>([]);
   let pill = $state({ x: 0, y: 0, w: 0, h: 0 });
-  const activeIndex = $derived(navItems.findIndex((it) => isActive(it.href)));
+  const activeIndex = $derived(navItems.findIndex((it) => isActive(it)));
   const pillVisible = $derived(activeIndex >= 0 && pill.w > 0);
 
   function measureSlider() {
@@ -88,14 +87,14 @@
       style="left: {pill.x}px; top: {pill.y}px; width: {pill.w}px; height: {pill.h}px;"
       aria-hidden="true"
     ></span>
-    {#each navItems.slice(0, 2) as item, i (item.href)}
+    {#each navItems.slice(0, 2) as item, i (item.key)}
       <button
         bind:this={tabEls[i]}
         use:interactive={{ type: 'btn' }}
-        class="mobile-bottom-nav__tab {isActive(item.href) ? 'active' : ''}"
+        class="mobile-bottom-nav__tab {isActive(item) ? 'active' : ''}"
         onclick={() => navigate(item)}
-        aria-label={item.label}
-        aria-current={isActive(item.href) ? 'page' : undefined}
+        aria-label={t(item.labelKey)}
+        aria-current={isActive(item) ? 'page' : undefined}
       >
         <span
           class="mobile-bottom-nav__tab-icon"
@@ -103,18 +102,18 @@
         >
           <item.icon
             size={22}
-            strokeWidth={isActive(item.href) ? 2.1 : 1.5}
-            color={isActive(item.href) ? 'var(--brand)' : 'var(--text-secondary)'}
+            strokeWidth={isActive(item) ? 2.1 : 1.5}
+            color={isActive(item) ? 'var(--brand)' : 'var(--text-secondary)'}
             style="transition: color 0.22s ease;"
           />
         </span>
         <span
           class="mobile-bottom-nav__tab-label"
-          style="color: {isActive(item.href)
+          style="color: {isActive(item)
             ? 'var(--brand)'
             : 'var(--text-secondary)'}; transition: color 0.22s ease;"
         >
-          {item.label}
+          {t(item.labelKey)}
         </span>
         <span class="mobile-bottom-nav__tab-indicator"></span>
       </button>
@@ -142,14 +141,14 @@
       </button>
     </div>
 
-    {#each navItems.slice(2) as item, i (item.href)}
+    {#each navItems.slice(2) as item, i (item.key)}
       <button
         bind:this={tabEls[i + 2]}
         use:interactive={{ type: 'btn' }}
-        class="mobile-bottom-nav__tab {isActive(item.href) ? 'active' : ''}"
+        class="mobile-bottom-nav__tab {isActive(item) ? 'active' : ''}"
         onclick={() => navigate(item)}
-        aria-label={item.label}
-        aria-current={isActive(item.href) ? 'page' : undefined}
+        aria-label={t(item.labelKey)}
+        aria-current={isActive(item) ? 'page' : undefined}
       >
         <span
           class="mobile-bottom-nav__tab-icon"
@@ -157,21 +156,23 @@
         >
           <item.icon
             size={22}
-            strokeWidth={isActive(item.href) ? 2.1 : 1.5}
-            color={isActive(item.href) ? 'var(--brand)' : 'var(--text-secondary)'}
+            strokeWidth={isActive(item) ? 2.1 : 1.5}
+            color={isActive(item) ? 'var(--brand)' : 'var(--text-secondary)'}
             style="transition: color 0.22s ease;"
           />
-          {#if item.href === '/chat' && inboxBadge > 0}
-            <span class="mobile-bottom-nav__badge">{inboxBadge > 99 ? '99+' : inboxBadge}</span>
+          {#if tabBadge(item) > 0}
+            <span class="mobile-bottom-nav__badge"
+              >{tabBadge(item) > 99 ? '99+' : tabBadge(item)}</span
+            >
           {/if}
         </span>
         <span
           class="mobile-bottom-nav__tab-label"
-          style="color: {isActive(item.href)
+          style="color: {isActive(item)
             ? 'var(--brand)'
             : 'var(--text-secondary)'}; transition: color 0.22s ease;"
         >
-          {item.label}
+          {t(item.labelKey)}
         </span>
         <span class="mobile-bottom-nav__tab-indicator"></span>
       </button>

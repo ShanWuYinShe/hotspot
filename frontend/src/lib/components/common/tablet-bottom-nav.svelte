@@ -7,47 +7,46 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { notificationStore } from '$lib/stores/notification.svelte';
   import { messageStore } from '$lib/stores/message.svelte';
-  import MapPin from 'lucide-svelte/icons/map-pin';
-  import Compass from 'lucide-svelte/icons/compass';
-  import MessageCircle from 'lucide-svelte/icons/message-circle';
-  import User from 'lucide-svelte/icons/user';
+  import { bottomTabs, isNavActive, type BottomTab } from '$lib/config/navigation';
   import Plus from 'lucide-svelte/icons/plus';
   import X from 'lucide-svelte/icons/x';
 
-  const navItems = [
-    { href: '/', label: t('nav.nearby'), icon: MapPin },
-    { href: '/discover', label: t('nav.discover'), icon: Compass },
-    { href: '/chat', label: t('nav.messagesTab'), icon: MessageCircle, requiresAuth: true },
-    { href: '/profile', label: t('nav.me'), icon: User, requiresAuth: true }
-  ];
-
+  const navItems = bottomTabs;
   const currentPath = $derived(page.url.pathname);
 
-  function isActive(href: string) {
-    if (href === '/') return currentPath === '/';
-    if (href === '/profile') return currentPath === '/profile' || currentPath === '/settings';
-    return currentPath === href || currentPath.startsWith(`${href}/`);
+  function isActive(tab: BottomTab) {
+    if (tab.action === 'menu') return uiStore.showNavDrawer;
+    return isNavActive(tab.href, tab.exact, currentPath);
   }
 
-  function navigate(item: { href: string; requiresAuth?: boolean }) {
-    if (item.requiresAuth && !authStore.isAuthenticated) {
-      uiStore.openLoginModalWithRedirect({ url: item.href });
+  function navigate(tab: BottomTab) {
+    if (tab.action === 'menu') {
+      uiStore.toggleNavDrawer();
       return;
     }
-    void goto(item.href);
+    if (!tab.href) return;
+    if (tab.requiresAuth && !authStore.isAuthenticated) {
+      uiStore.openLoginModalWithRedirect({ url: tab.href });
+      return;
+    }
+    void goto(tab.href);
   }
 
-  // 与移动端一致：底栏「消息」角标合并未读消息 + 未读通知，「我的」不再承载通知角标。
+  // 与移动端一致：底栏「消息」角标合并未读消息 + 未读通知。
   const inboxBadge = $derived(
     authStore.isAuthenticated ? messageStore.totalUnreadCount + notificationStore.unreadCount : 0
   );
+
+  function tabBadge(tab: BottomTab): number {
+    return tab.badge === 'inbox' ? inboxBadge : 0;
+  }
 
   // Shared sliding pill — glides (and resizes) between tabs like the React
   // reference's Framer Motion `layoutId` indicator, instead of fading per tab.
   let barEl = $state<HTMLDivElement | undefined>();
   let tabEls = $state<(HTMLButtonElement | undefined)[]>([]);
   let pill = $state({ x: 0, y: 4, w: 0, h: 0 });
-  const activeIndex = $derived(navItems.findIndex((it) => isActive(it.href)));
+  const activeIndex = $derived(navItems.findIndex((it) => isActive(it)));
   const pillVisible = $derived(activeIndex >= 0 && pill.w > 0);
 
   function measurePill() {
@@ -93,34 +92,34 @@
         ? 0.14
         : 0}; pointer-events: none; z-index: 0; will-change: left, width; transition: left 0.42s cubic-bezier(0.34, 1.32, 0.46, 1), width 0.42s cubic-bezier(0.34, 1.32, 0.46, 1), top 0.42s cubic-bezier(0.34, 1.32, 0.46, 1), height 0.42s cubic-bezier(0.34, 1.32, 0.46, 1), opacity 0.22s ease;"
     ></span>
-    {#each navItems.slice(0, 2) as item, i (item.href)}
+    {#each navItems.slice(0, 2) as item, i (item.key)}
       <button
         bind:this={tabEls[i]}
         use:interactive={{ type: 'btn' }}
         class="relative flex flex-col items-center justify-center outline-none select-none transition-transform duration-150 active:scale-95"
         style="flex: 1; min-width: 0; padding: 9px 0; gap: 5px;"
         onclick={() => navigate(item)}
-        aria-label={item.label}
-        aria-current={isActive(item.href) ? 'page' : undefined}
+        aria-label={t(item.labelKey)}
+        aria-current={isActive(item) ? 'page' : undefined}
       >
         <span
           style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;"
         >
           <item.icon
             size={24}
-            strokeWidth={isActive(item.href) ? 2.1 : 1.5}
-            color={isActive(item.href) ? 'var(--brand)' : 'var(--text-secondary)'}
+            strokeWidth={isActive(item) ? 2.1 : 1.5}
+            color={isActive(item) ? 'var(--brand)' : 'var(--text-secondary)'}
             style="transition: color 0.22s ease;"
           />
         </span>
         <span
-          style="font-size: 11px; line-height: 1; color: {isActive(item.href)
+          style="font-size: 11px; line-height: 1; color: {isActive(item)
             ? 'var(--brand)'
-            : 'var(--text-secondary)'}; font-weight: {isActive(item.href)
+            : 'var(--text-secondary)'}; font-weight: {isActive(item)
             ? 600
             : 400}; transition: color 0.22s ease; letter-spacing: 0.02em; position: relative; z-index: 1;"
         >
-          {item.label}
+          {t(item.labelKey)}
         </span>
       </button>
     {/each}
@@ -150,42 +149,42 @@
       </button>
     </div>
 
-    {#each navItems.slice(2) as item, i (item.href)}
+    {#each navItems.slice(2) as item, i (item.key)}
       <button
         bind:this={tabEls[i + 2]}
         use:interactive={{ type: 'btn' }}
         class="relative flex flex-col items-center justify-center outline-none select-none transition-transform duration-150 active:scale-95"
         style="flex: 1; min-width: 0; padding: 9px 0; gap: 5px;"
         onclick={() => navigate(item)}
-        aria-label={item.label}
-        aria-current={isActive(item.href) ? 'page' : undefined}
+        aria-label={t(item.labelKey)}
+        aria-current={isActive(item) ? 'page' : undefined}
       >
         <span
           style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;"
         >
           <item.icon
             size={24}
-            strokeWidth={isActive(item.href) ? 2.1 : 1.5}
-            color={isActive(item.href) ? 'var(--brand)' : 'var(--text-secondary)'}
+            strokeWidth={isActive(item) ? 2.1 : 1.5}
+            color={isActive(item) ? 'var(--brand)' : 'var(--text-secondary)'}
             style="transition: color 0.22s ease;"
           />
-          {#if item.href === '/chat' && inboxBadge > 0}
+          {#if tabBadge(item) > 0}
             <span
               class="absolute flex items-center justify-center rounded-full"
               style="top: -4px; right: -6px; height: 20px; min-width: 20px; padding: 0 6px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; line-height: 20px;"
             >
-              {inboxBadge > 99 ? '99+' : inboxBadge}
+              {tabBadge(item) > 99 ? '99+' : tabBadge(item)}
             </span>
           {/if}
         </span>
         <span
-          style="font-size: 11px; line-height: 1; color: {isActive(item.href)
+          style="font-size: 11px; line-height: 1; color: {isActive(item)
             ? 'var(--brand)'
-            : 'var(--text-secondary)'}; font-weight: {isActive(item.href)
+            : 'var(--text-secondary)'}; font-weight: {isActive(item)
             ? 600
             : 400}; transition: color 0.22s ease; letter-spacing: 0.02em; position: relative; z-index: 1;"
         >
-          {item.label}
+          {t(item.labelKey)}
         </span>
       </button>
     {/each}

@@ -13,6 +13,7 @@ export default {
     loginOrRegister: '登录或注册',
     nearby: '附近',
     discover: '发现',
+    menu: '菜单',
     publish: '发布',
     messagesTab: '消息',
     me: '我的',

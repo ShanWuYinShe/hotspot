@@ -13,6 +13,7 @@ export default {
     loginOrRegister: 'Sign in or sign up',
     nearby: 'Nearby',
     discover: 'Discover',
+    menu: 'Menu',
     publish: 'Create',
     messagesTab: 'Messages',
     me: 'Me',
