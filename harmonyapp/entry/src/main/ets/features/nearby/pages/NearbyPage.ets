@@ -1,5 +1,5 @@
 /**
- * 附近页面 - Figma Make HomeMobile 对齐版
+ * 首页 - 对齐前端 Home 页面布局
  * 粘性头部 + 地图卡片 + 附近用户列表 + 活动网格
  */
 
@@ -50,7 +50,7 @@ export struct NearbyPage {
   @StorageLink(KEY_BROWSE_ANCHOR) @Watch('onBrowseAnchorChange') browseAnchor: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
   @StorageProp('isTablet') isTablet: boolean = false;
 
@@ -370,16 +370,10 @@ export struct NearbyPage {
   @Builder
   private buildStickyHeader() {
     Row() {
-      Column({ space: 2 }) {
-        Text('附近')
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(this.getPalette().textPrimary)
-        Text('发现周边的有趣人和事')
-          .fontSize(12)
-          .fontColor(this.getPalette().textTertiary)
-      }
-      .alignItems(HorizontalAlign.Start)
+      Text('首页')
+        .fontSize(20)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(this.getPalette().textPrimary)
 
       Blank()
 
@@ -392,18 +386,17 @@ export struct NearbyPage {
 
         Text(this.browseAnchor?.locationName ?? this.currentLocation?.locationName ?? '定位中...')
           .fontSize(11)
-          .fontColor(this.getPalette().textTertiary)
+          .fontColor(this.getPalette().textSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .padding({ left: 12, right: 14, top: 6, bottom: 6 })
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .shadow(this.getPalette().controlShadow)
       .border({ width: 1, color: this.getPalette().borderColor })
       .backgroundColor(this.getPalette().surfaceBackground)
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: this.getHeaderTopPadding(), bottom: 12 })
+    .padding({ left: 16, right: 16, top: this.getHeaderTopPadding(), bottom: 12 })
     .backgroundColor(this.getPalette().pageBackground)
     .border({ width: { bottom: 1 }, color: this.getPalette().borderColor })
   }

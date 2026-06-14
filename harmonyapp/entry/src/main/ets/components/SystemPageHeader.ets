@@ -37,7 +37,7 @@ export struct SystemPageHeader {
   rightAction: IconAction | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @Prop surfaceColor: ResourceColor | null = null;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -86,6 +86,7 @@ export struct SystemPageHeader {
   build() {
     Column() {
       Row({ space: DesignConstants.SPACING.SM }) {
+        // 左侧：返回按钮 / 左操作
         if (this.hasLeftAction()) {
           Row({ space: DesignConstants.SPACING.SM }) {
             if (this.canShowBackButton()) {
@@ -105,17 +106,17 @@ export struct SystemPageHeader {
             }
           }
           .alignItems(VerticalAlign.Center)
-        } else {
-          Blank().width(40)
         }
 
+        // 标题：左对齐，对齐前端 H1 样式
         Text(this.title)
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(FontWeight.Bold)
           .fontColor(this.getPalette().textPrimary)
           .layoutWeight(1)
-          .textAlign(TextAlign.Center)
+          .textAlign(TextAlign.Start)
 
+        // 右侧操作
         if (this.hasRightAction()) {
           Row({ space: DesignConstants.SPACING.SM }) {
             if (this.rightAction) {
@@ -125,16 +126,13 @@ export struct SystemPageHeader {
             if (this.action) {
               Button(this.action.label)
                 .type(ButtonType.Normal)
-                .backgroundColor(this.getPalette().surfaceBackground)
+                .backgroundColor(this.getPalette().accentBackground)
                 .borderRadius(DesignConstants.RADIUS.FULL)
-                .border({ width: 1, color: this.getPalette().floatingBorderColor })
-                .shadow(this.getPalette().controlShadow)
-                .height(38)
+                .height(36)
                 .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-                .fontColor(this.action.disabled
-                  ? this.getPalette().textSecondary
-                  : this.getPalette().accentBackground)
+                .fontColor(this.getPalette().accentText)
                 .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontWeight(FontWeight.Medium)
                 .enabled(!this.action.disabled)
                 .onClick(() => {
                   this.action?.onClick();
@@ -142,26 +140,22 @@ export struct SystemPageHeader {
             }
           }
           .alignItems(VerticalAlign.Center)
-        } else {
-          Blank().width(24)
         }
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
       .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: DesignConstants.SPACING.SM,
-        bottom: DesignConstants.SPACING.SM
+        left: 16,
+        right: 16,
+        top: 12,
+        bottom: 12
       })
     }
     .width('100%')
     .padding({
-      top: this.getHeaderTopPadding(),
-      bottom: DesignConstants.SPACING.SM
+      top: this.getHeaderTopPadding()
     })
     .backgroundColor(this.getBackgroundColor())
-    .shadow(this.getHeaderShadow())
     .border({ width: { bottom: 1 }, color: this.getHeaderBorderColor() })
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }

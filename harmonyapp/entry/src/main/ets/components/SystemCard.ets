@@ -53,7 +53,7 @@ export struct SystemCard {
   @Prop cardBorderColor: ResourceColor | string = '';
 
   @State isPressed: boolean = false;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -250,7 +250,7 @@ export struct MasonryCard {
   @Prop clickable: boolean = false;
 
   @State isPressed: boolean = false;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

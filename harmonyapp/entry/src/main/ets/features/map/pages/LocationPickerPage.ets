@@ -91,7 +91,7 @@ interface TopBarProps {
 }
 
 function resolveLocationPickerPalette(themeId?: string) {
-  return AppThemeManager.getPaletteById(themeId ?? 'figma_neu_light');
+  return AppThemeManager.getPaletteById(themeId ?? 'default_clean_light');
 }
 
 @Builder
@@ -283,7 +283,7 @@ struct SearchPanel {
   onSelectHistory: (item: AnchorHistoryItem) => void = (item) => {};
   onTextChange: (value: string) => void = (value) => {};
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -541,7 +541,7 @@ struct MainPanel {
   onConfirm: () => void = () => {};
   @Prop confirmLabel: string = '设为浏览锚点';
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private dragStartHeight: number = 0;
 
@@ -746,7 +746,7 @@ export struct LocationPickerPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   @State mapRegion: MapRegion = {
     latitude: 35.154921,

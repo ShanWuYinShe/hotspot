@@ -41,7 +41,7 @@ export struct RecommendationPage {
   @State trendingTags: TrendingTagItem[] = [];
   @State recommendedUsers: UserItem[] = [];
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();

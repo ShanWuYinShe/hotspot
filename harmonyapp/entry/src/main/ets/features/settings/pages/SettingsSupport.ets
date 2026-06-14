@@ -92,7 +92,7 @@ function buildSupportLinks(config: ClientConfig | null): SupportLinkItem[] {
 export struct SettingsSectionCard {
   @Prop title: string = '';
   @BuilderParam content: () => void;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -127,7 +127,7 @@ export struct SettingsSectionCard {
 @Component
 export struct SettingsEntryRow {
   @Prop item: SettingsEntryItem;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -143,24 +143,24 @@ export struct SettingsEntryRow {
         Text() {
           SymbolSpan($r(this.item.icon))
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([this.item.accentColor ? this.item.accentColor : this.getPalette().accentBackground])
+            .fontColor([this.getPalette().textSecondary])
         }
       }
       .width(36)
       .height(36)
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.item.accentColor ? this.getPalette().surfaceSubtle : this.getPalette().surfaceElevated)
+      .backgroundColor(this.getPalette().surfaceSubtle)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
       Column({ space: 4 }) {
         Text(this.item.title)
-          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.getPalette().textPrimary)
         if (this.item.subtitle) {
           Text(this.item.subtitle)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getPalette().textSecondary)
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -172,13 +172,13 @@ export struct SettingsEntryRow {
       SurfaceIconButton({
         icon: AppIcon.ARROW_RIGHT,
         kind: 'neutral',
-        buttonSize: 32,
-        glyphSize: 16,
+        buttonSize: 28,
+        glyphSize: 14,
         onPress: this.item.action
       })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+    .padding({ left: 16, right: 16, top: 14, bottom: 14 })
     .backgroundColor(this.getListItemStyle().backgroundColor)
     .borderRadius(this.getListItemStyle().borderRadius)
     .onClick(this.item.action)
@@ -192,7 +192,7 @@ export struct SettingsMetaCard {
   @Prop error: string = '';
   @Prop lastChecked: string = '';
   refreshAction: () => void = () => {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -288,7 +288,7 @@ export struct SettingsMetaCard {
 export struct SettingsInfoLine {
   @Prop label: string = '';
   @Prop value: string = '';
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -315,7 +315,7 @@ export struct AnnouncementSummaryCard {
   @Prop maxItems: number = 2;
   @Prop showOpenAll: boolean = true;
   openAll: () => void = () => {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -410,7 +410,7 @@ export struct AnnouncementSummaryCard {
 @Component
 export struct SupportConfigCard {
   @Prop config: ClientConfig | null = null;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -459,7 +459,7 @@ export struct ToggleSettingRow {
   @Prop item: SettingToggleItem;
   @Prop isOn: boolean = false;
   onChange: (value: boolean) => void = () => {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -495,7 +495,7 @@ export struct SessionListSection {
   @Prop sessions: SessionItem[] = [];
   revokeOne: (item: SessionItem) => void = () => {};
   revokeAll: () => void = () => {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -593,7 +593,7 @@ export struct RelationshipListSection {
   @Prop followers: FollowerItem[] = [];
   @Prop blocked: BlockedUserItem[] = [];
   unblockUserAction: (userId: string) => void = () => {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

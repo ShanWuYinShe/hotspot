@@ -48,7 +48,7 @@ export struct DiscoverPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
   @StorageProp('isTablet') isTablet: boolean = false;
 
@@ -197,7 +197,7 @@ export struct DiscoverPage {
       Column() {
         Row() {
           Text('发现')
-            .fontSize(22)
+            .fontSize(20)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.getCurrentThemePalette().textPrimary)
 
@@ -228,7 +228,6 @@ export struct DiscoverPage {
         .padding({ left: 16, right: 16 })
         .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
         .borderRadius(18)
-        .shadow(this.getCurrentThemePalette().controlShadow)
         .border({ width: 1, color: this.getSurfaceBorder() })
         .onClick(() => {
           AppRouter.push(PageNames.SEARCH);
@@ -240,8 +239,8 @@ export struct DiscoverPage {
       }
       .width('100%')
       .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
+        left: 16,
+        right: 16,
         top: this.getHeaderTopPadding(),
         bottom: 0
       })

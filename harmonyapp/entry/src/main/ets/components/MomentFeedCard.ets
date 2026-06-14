@@ -28,7 +28,7 @@ export struct MomentFeedCard {
   onOpenDetail?: (moment: MomentItem) => void;
   onImagePreview?: (momentId: string, images: string[], index: number) => void;
   @StorageLink('interaction_moment_state') private momentStateMap: Record<string, MomentSocialState> = {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

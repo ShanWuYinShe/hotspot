@@ -19,7 +19,7 @@ const TAG: string = 'SafetySettingsPage';
 @Component
 export struct SafetySettingsPage {
   pathStack: NavPathStack = new NavPathStack();
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @State oldPassword: string = '';
   @State newPassword: string = '';
   @State sessions: SessionItem[] = [];

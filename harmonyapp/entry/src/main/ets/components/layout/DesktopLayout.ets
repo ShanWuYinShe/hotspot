@@ -4,9 +4,9 @@
  * 适用断点：lg / xl / xxl（>= 840vp）
  *
  * 完整业务：
- * - 左侧 nav rail（4 路由：附近 / 发现 / 消息 / 我的）
- * - 中央主内容（按 currentRoute 切换 NearbyPage / DiscoverPage / MessagePage / ProfilePage）
- * - 右侧详情面板（xl/xxl 触发）
+ * - 左侧 nav rail（4 路由：首页 / 发现 / 消息 / 我的），宽度 192vp 对齐前端侧边栏
+ * - 中央主内容（按 currentRoute 切换）
+ * - 右侧详情面板（xl/xxl 触发），宽度 280vp
  * - 通知中心 / 通知 banner overlay
  * - 性能详情 overlay
  * - Login Prompt 包装（未登录时）
@@ -41,7 +41,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: '附近', route: 'nearby', symbolId: $r('sys.symbol.position') },
+  { label: '首页', route: 'nearby', symbolId: $r('sys.symbol.house_fill') },
   { label: '发现', route: 'discover', symbolId: $r('sys.symbol.compass') },
   { label: '消息', route: 'messages', symbolId: $r('sys.symbol.message_fill') },
   { label: '我的', route: 'profile', symbolId: $r('sys.symbol.person_fill') }
@@ -75,7 +75,7 @@ export struct DesktopLayout {
         Column() {
           this.LeftNavRail()
         }
-          .width(240)
+          .width(192)
           .height('100%')
 
         Column() {
@@ -88,7 +88,7 @@ export struct DesktopLayout {
           Column() {
             this.RightDetailPanel()
           }
-            .width(320)
+            .width(280)
             .height('100%')
         }
       }

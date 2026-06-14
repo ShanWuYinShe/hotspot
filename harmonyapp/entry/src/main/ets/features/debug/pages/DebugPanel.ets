@@ -24,7 +24,7 @@ export struct DebugPanel {
   @State currentUserId: string | null = null;
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   private webSocketService = WebSocketService.getInstance();
 
   async aboutToAppear() {

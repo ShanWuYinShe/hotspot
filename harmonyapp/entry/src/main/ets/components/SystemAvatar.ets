@@ -24,7 +24,7 @@ export struct SystemAvatar {
   @Prop userType: string = '';
   @Prop inset: boolean = false;
   @State private imageLoadFailed: boolean = false;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

@@ -59,7 +59,7 @@ export struct MessagePage {
   @StorageLink(KEY_LAST_MESSAGE_SYNC_TIME) @Watch('onMessageSync') lastMessageSyncTime: number = 0;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @StorageProp('isTablet') isTablet: boolean = false;
 
   private chatListDataSource: BasicDataSource<ChatItem> = new BasicDataSource([]);
@@ -498,15 +498,11 @@ export struct MessagePage {
       Row() {
         Column({ space: 2 }) {
           Text('消息')
-            .fontSize(22)
+            .fontSize(20)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.getCurrentThemePalette().textPrimary)
           if (this.getTotalUnread() > 0) {
             Text(`${this.getTotalUnread()} 条未读`)
-              .fontSize(12)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-          } else {
-            Text('全部已读')
               .fontSize(12)
               .fontColor(this.getCurrentThemePalette().textSecondary)
           }
@@ -522,12 +518,11 @@ export struct MessagePage {
                 .fontColor([this.getCurrentThemePalette().textSecondary])
             }
           }
-          .width(38)
-          .height(38)
+          .width(36)
+          .height(36)
           .justifyContent(FlexAlign.Center)
-          .borderRadius(19)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .bindMenu([
             {
@@ -580,12 +575,11 @@ export struct MessagePage {
                 .fontColor([this.getCurrentThemePalette().textSecondary])
             }
           }
-          .width(38)
-          .height(38)
+          .width(36)
+          .height(36)
           .justifyContent(FlexAlign.Center)
-          .borderRadius(19)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => {
             AppRouter.push(PageNames.SEARCH);
@@ -594,8 +588,8 @@ export struct MessagePage {
       }
       .width('100%')
       .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
+        left: 16,
+        right: 16,
         top: this.getHeaderTopPadding(),
         bottom: 12
       })
@@ -618,10 +612,9 @@ export struct MessagePage {
       }
       .height(42)
       .padding({ left: 16, right: 16 })
-      .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 8 })
+      .margin({ left: 16, right: 16, bottom: 8 })
       .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
       .borderRadius(18)
-      .shadow(this.getCurrentThemePalette().controlShadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .onClick(() => {
         AppRouter.push(PageNames.SEARCH);

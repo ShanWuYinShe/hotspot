@@ -25,7 +25,7 @@ interface MetricThresholds {
 export struct PerformanceIndicator {
   @Prop showDetails: boolean = false;
   @Prop compact: boolean = false;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @State private metrics: PerformanceMetrics | null = null;
   @State private alerts: PerformanceAlert[] = [];
   @State private isExpanded: boolean = false;

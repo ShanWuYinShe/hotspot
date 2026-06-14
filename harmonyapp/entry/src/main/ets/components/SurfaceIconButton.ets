@@ -10,11 +10,11 @@ export type SurfaceIconButtonKind = 'primary' | 'neutral';
 export struct SurfaceIconButton {
   @Prop icon: AppIcon = AppIcon.BACK;
   @Prop kind: SurfaceIconButtonKind = 'primary';
-  @Prop buttonSize: number = 40;
-  @Prop glyphSize: number = 20;
+  @Prop buttonSize: number = 36;
+  @Prop glyphSize: number = 17;
   @Prop disabled: boolean = false;
   onPress?: () => void;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'figma_neu_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   @State isPressed: boolean = false;
 

@@ -4,7 +4,7 @@
  * 适用断点：xs / sm / md（< 840vp）
  *
  * 完整业务：
- * - 4 Tab（Nearby / Discover / Create / Message / Profile）
+ * - 4 Tab（首页 / 发现 / 发布FAB / 消息 / 我的）对齐前端底栏导航
  * - 通知中心 / 通知 banner / 通知铃铛按钮
  * - Create Sheet（bindSheet 模式 + 中间「+」按钮）
  * - 性能详情 overlay
@@ -37,7 +37,7 @@ interface TabItem {
 }
 
 const TAB_ITEMS: TabItem[] = [
-  { label: '附近', symbolId: $r('sys.symbol.position') },
+  { label: '首页', symbolId: $r('sys.symbol.house_fill') },
   { label: '发现', symbolId: $r('sys.symbol.compass') },
   { label: '发布', symbolId: $r('sys.symbol.plus') },
   { label: '消息', symbolId: $r('sys.symbol.message_fill') },
@@ -64,7 +64,7 @@ export struct PhoneLayout {
   @Prop safeAreaBottom: number = 0;
   @Prop safeAreaTop: number = 0;
   @Prop isTablet: boolean = false;
-  @Prop resolvedThemeId: string = 'figma_neu_light';
+  @Prop resolvedThemeId: string = 'default_clean_light';
 
   // 内部状态
   @State showUpgradeBanner: boolean = false;
