@@ -730,15 +730,15 @@ export struct NotificationCenter {
   private getTypeColor(type: string): string {
     switch (this.mapTypeToCategory(type as NotificationType)) {
       case 'social':
-        return '#6366f1';
+        return DesignConstants.COLOR.BRAND_PRIMARY;
       case 'interaction':
-        return '#EF4444';
+        return DesignConstants.COLOR.ERROR;
       case 'group':
-        return '#22c55e';
+        return DesignConstants.COLOR.SUCCESS;
       case 'system':
-        return '#F59E0B';
+        return DesignConstants.COLOR.WARNING;
       default:
-        return '#3B82F6';
+        return DesignConstants.COLOR.BRAND_PRIMARY;
     }
   }
 

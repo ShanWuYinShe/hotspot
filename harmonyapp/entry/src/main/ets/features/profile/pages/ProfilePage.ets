@@ -1344,7 +1344,7 @@ export struct ProfilePage {
         .borderRadius(13)
         .backgroundColor(this.getAccentBackground())
         .border({ width: 2.5, color: this.getCurrentThemePalette().pageBackground })
-        .shadow({ radius: 8, color: this.getCurrentThemePalette().accentShadow.color, offsetX: 0, offsetY: 2 })
+        .shadow(this.getCurrentThemePalette().accentShadow)
         .onClick(() => this.selectAvatarForEdit())
       }
       .margin({ top: 20, bottom: 12 })

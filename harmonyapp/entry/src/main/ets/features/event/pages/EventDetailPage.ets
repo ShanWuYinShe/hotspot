@@ -39,8 +39,8 @@ const MOCK_EVENTS: EventItem[] = [
     id: 1,
     title: '晨间咖啡会',
     tag: '社交',
-    tagColor: '#F59E0B',
-    coverGradient: ['#52B878', '#3D7A55'],
+    tagColor: DesignConstants.COLOR.WARNING,
+    coverGradient: [DesignConstants.COLOR.BRAND_PRIMARY_DARK, DesignConstants.COLOR.BRAND_PRIMARY],
     description: '每周六早上九点，我们聚集在老街咖啡馆，分享一周的所见所闻。无论是设计师、程序员还是艺术家，都欢迎加入！带上你的好奇心就够了。',
     location: '老街咖啡馆 · 徐州市鼓楼区',
     date: '2026年4月18日 周六',
@@ -56,8 +56,8 @@ const MOCK_EVENTS: EventItem[] = [
     id: 2,
     title: '街头音乐节',
     tag: '音乐',
-    tagColor: '#8B5CF6',
-    coverGradient: ['#7C3AED', '#5B21B6'],
+    tagColor: DesignConstants.COLOR.BRAND_PRIMARY,
+    coverGradient: [DesignConstants.COLOR.BRAND_PRIMARY, DesignConstants.COLOR.BRAND_PRIMARY_DARK],
     description: '在城市的中心，用音乐连接每一颗心。本次街头音乐节将邀请本地独立乐队和歌手进行现场表演，免费入场，欢迎所有人来感受音乐的力量。',
     location: '彭城广场 · 徐州市云龙区',
     date: '2026年4月19日 周日',
@@ -73,8 +73,8 @@ const MOCK_EVENTS: EventItem[] = [
     id: 3,
     title: '周末摄影徒步',
     tag: '户外',
-    tagColor: '#10B981',
-    coverGradient: ['#059669', '#047857'],
+    tagColor: DesignConstants.COLOR.SUCCESS,
+    coverGradient: [DesignConstants.COLOR.SUCCESS, DesignConstants.MAP_MARKER.GROUP],
     description: '用镜头记录徐州春天的美。从云龙湖到户部山，我们将沿着精心规划的路线，一起捕捉城市与自然的交融。适合所有水平的摄影爱好者。',
     location: '云龙湖风景区 · 徐州市泉山区',
     date: '2026年4月25日 周六',
@@ -213,12 +213,10 @@ export struct EventDetailPage {
         .width(36)
         .height(36)
         .borderRadius(18)
-        .backgroundColor('#59FFFFFF')
+        .backgroundColor(DesignConstants.COLOR.OVERLAY_LIGHT)
         .onClick(() => {
           AppRouter.pop();
         })
-
-        Blank().layoutWeight(1)
 
         // 分享按钮
         Button() {
@@ -232,7 +230,7 @@ export struct EventDetailPage {
         .width(36)
         .height(36)
         .borderRadius(18)
-        .backgroundColor('#59FFFFFF')
+        .backgroundColor(DesignConstants.COLOR.OVERLAY_LIGHT)
         .onClick(() => {
           SystemToast.show('分享功能开发中', this.getUIContext());
         })
@@ -387,7 +385,7 @@ export struct EventDetailPage {
           Text() {
             SymbolSpan($r(AppIcon.STAR))
               .fontSize(10)
-              .fontColor(['#F59E0B'])
+              .fontColor([DesignConstants.COLOR.WARNING])
           }
           Text('活动发起人')
             .fontSize(11)
@@ -513,12 +511,7 @@ export struct EventDetailPage {
       .borderRadius(26)
       .backgroundColor(this.joined ? this.getSurfaceBackground() : this.getCurrentEvent().tagColor)
       .border({ width: this.joined ? 2 : 0, color: this.getCurrentEvent().tagColor })
-      .shadow({
-        radius: 16,
-        color: this.joined ? this.getCurrentEvent().tagColor + '25' : this.getCurrentEvent().tagColor + '50',
-        offsetX: 0,
-        offsetY: 6
-      })
+      .shadow(this.getCurrentThemePalette().accentShadow)
       .onClick(() => this.toggleJoin())
     }
     .width('100%')

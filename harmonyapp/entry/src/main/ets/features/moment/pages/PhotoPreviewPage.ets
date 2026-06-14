@@ -28,7 +28,7 @@ export struct PhotoPreviewPage {
   @State compHeight: number = 0;
 
   private getSurfaceBorder(): string {
-    return '#40FFFFFF';
+    return DesignConstants.COLOR.OVERLAY_LIGHT;
   }
 
   aboutToAppear(): void {
@@ -166,7 +166,7 @@ export struct PhotoPreviewPage {
         IconButton({
           icon: AppIcon.CLOSE,
           iconSize: IconSize.LARGE,
-          iconColor: '#F6F0E7',
+          iconColor: DesignConstants.COLOR.TEXT_PRIMARY_DARK,
           bgColor: Color.Transparent,
           onButtonClick: () => {
             AppRouter.pop();
@@ -182,10 +182,10 @@ export struct PhotoPreviewPage {
       // 底部页码指示器（凸起胶囊化）
       Row() {
         Text(`${this.currentIndex + 1} / ${this.images.length}`)
-          .fontColor('#F6F0E7')
+          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_DARK)
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor('#80000000')
+          .backgroundColor(DesignConstants.COLOR.OVERLAY_STRONG)
           .padding({
             left: DesignConstants.SPACING.LG,
             right: DesignConstants.SPACING.LG,
@@ -193,12 +193,7 @@ export struct PhotoPreviewPage {
             bottom: 8
           })
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .shadow({
-            radius: 22,
-            color: '#30000000',
-            offsetX: 0,
-            offsetY: 6
-          })
+          .shadow(ShadowStyle.OUTER_DEFAULT_XS)
           .border({ width: 1, color: this.getSurfaceBorder() })
       }
       .width('100%')

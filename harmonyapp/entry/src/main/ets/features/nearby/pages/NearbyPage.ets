@@ -425,7 +425,7 @@ export struct NearbyPage {
         .height(14)
         .borderRadius(7)
         .backgroundColor(this.getPalette().accentBackground)
-        .shadow({ radius: 4, color: this.getPalette().accentShadow.color, offsetX: 0, offsetY: 0 })
+        .shadow(this.getPalette().accentShadow)
         .position({ x: '50%', y: '50%' })
         .translate({ x: -7, y: -7 })
 
@@ -547,12 +547,7 @@ export struct NearbyPage {
                     .padding({ left: 6, right: 6, top: 1, bottom: 1 })
                     .borderRadius(DesignConstants.RADIUS.FULL)
                     .backgroundColor(this.getPalette().accentBackground)
-                    .shadow({
-                      radius: 8,
-                      color: this.getPalette().accentShadow.color,
-                      offsetX: 0,
-                      offsetY: 2
-                    })
+                    .shadow(this.getPalette().accentShadow)
                     .position({ x: '50%', y: 62 })
                     .translate({ x: '-50%' })
                   }

@@ -41,6 +41,8 @@ export interface ColorPalette {
   HEADER_ICON_BORDER: string;
   HEADER_ICON_TEXT: string;
   CHAT_TITLE_ICON_BG: string;
+  OVERLAY_LIGHT: string;
+  OVERLAY_STRONG: string;
 }
 
 // ==================== 字体系统接口 ====================
@@ -270,6 +272,8 @@ const COLOR: ColorPalette = {
   HEADER_ICON_BORDER: '#3D7A5521',
   HEADER_ICON_TEXT: '#3D7A55',
   CHAT_TITLE_ICON_BG: '#F9F9F5',
+  OVERLAY_LIGHT: '#59FFFFFF',
+  OVERLAY_STRONG: '#80000000',
 };
 
 // ==================== 字体系统 ====================

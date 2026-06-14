@@ -174,7 +174,7 @@ export struct ProfileEditPage {
               .type(ButtonType.Normal)
               .padding({ left: 10, right: 10, top: 5, bottom: 5 })
               .borderRadius(14)
-              .backgroundColor('#73000000')
+              .backgroundColor(DesignConstants.COLOR.OVERLAY_STRONG)
               .position({ top: 10, right: 12 })
               .onClick(() => {
                 SystemToast.show('横幅更换功能开发中', this.getUIContext());
@@ -337,14 +337,9 @@ export struct ProfileEditPage {
             .type(ButtonType.Normal)
             .width('100%')
             .height(48)
-            .borderRadius(24)
-            .backgroundColor(this.isSaved ? '#22C55E' : this.getCurrentThemePalette().accentBackground)
-            .shadow({
-              radius: 12,
-              color: this.getCurrentThemePalette().accentBackground + '40',
-              offsetX: 0,
-              offsetY: 4
-            })
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(this.isSaved ? DesignConstants.COLOR.SUCCESS : this.getCurrentThemePalette().accentBackground)
+            .shadow(this.getCurrentThemePalette().accentShadow)
             .enabled(!this.isSaving && !this.isSaved)
             .onClick(() => this.handleSave())
           }

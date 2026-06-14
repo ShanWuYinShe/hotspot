@@ -321,12 +321,7 @@ export struct SearchPage {
           .width(36)
           .height(36)
           .backgroundColor(this.getSurfaceBackground())
-          .shadow({
-            radius: 9,
-            color: this.getCurrentThemePalette().surfaceShadow.color ?? '#00000022',
-            offsetX: 4,
-            offsetY: 4
-          })
+          .shadow(this.getCurrentThemePalette().surfaceShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .scale(this.isBackPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } : { x: 1, y: 1 })
           .animation({
@@ -377,12 +372,7 @@ export struct SearchPage {
           .borderRadius(18)
           .padding({ left: 16, right: 16 })
           .backgroundColor(this.getSurfaceBackground())
-          .shadow({
-            radius: 4,
-            color: this.getCurrentThemePalette().surfaceShadow.color ?? '#00000022',
-            offsetX: 2,
-            offsetY: 2
-          })
+          .shadow(this.getCurrentThemePalette().surfaceShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
         }
         .width('100%')
@@ -500,7 +490,7 @@ export struct SearchPage {
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(20)
-    .shadow({ radius: 12, color: this.getCurrentThemePalette().surfaceShadow.color ?? '#00000022', offsetX: 5, offsetY: 5 })
+    .shadow(this.getCurrentThemePalette().surfaceShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
     .onClick(() => this.handleSuggestItemTap(item))
   }
@@ -514,8 +504,8 @@ export struct SearchPage {
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.currentIndex === index ? this.getCurrentThemePalette().accentBackground : this.getSurfaceBackground())
       .shadow(this.currentIndex === index
-        ? { radius: 10, color: this.getCurrentThemePalette().accentShadow.color ?? '#00000022', offsetX: 0, offsetY: 3 }
-        : { radius: 6, color: this.getCurrentThemePalette().surfaceShadow.color ?? '#00000022', offsetX: 3, offsetY: 3 })
+        ? this.getCurrentThemePalette().accentShadow
+        : this.getCurrentThemePalette().surfaceShadow)
       .border(this.currentIndex === index
         ? { width: 0 }
         : { width: 1, color: this.getSurfaceBorder() })
@@ -769,7 +759,7 @@ export struct SearchPage {
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(20)
-    .shadow({ radius: 12, color: this.getCurrentThemePalette().surfaceShadow.color ?? '#00000022', offsetX: 5, offsetY: 5 })
+    .shadow(this.getCurrentThemePalette().surfaceShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
@@ -869,7 +859,7 @@ export struct SearchPage {
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(20)
-    .shadow({ radius: 12, color: this.getCurrentThemePalette().surfaceShadow.color ?? '#00000022', offsetX: 5, offsetY: 5 })
+    .shadow(this.getCurrentThemePalette().surfaceShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
