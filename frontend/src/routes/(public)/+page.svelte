@@ -8,6 +8,7 @@
   import Compass from 'lucide-svelte/icons/compass';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Navigation2 from 'lucide-svelte/icons/navigation-2';
+  import Users from 'lucide-svelte/icons/users';
   import { goto } from '$app/navigation';
 
   import HeroStats from '$lib/components/home/hero-stats.svelte';
@@ -17,6 +18,7 @@
   import GroupCarousel from '$lib/components/home/group-carousel.svelte';
   import LocationPickerModal from '$lib/components/common/location-picker-modal.svelte';
   import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
+  import EmptyState from '$lib/components/common/empty-state.svelte';
 
   import { platformStore } from '$lib/stores/platform.svelte';
 
@@ -429,6 +431,15 @@
             <div class="mt-4">
               <NearbyUsersFlatList users={flatUsers} loading={loadingNearby} />
             </div>
+          </div>
+        {:else}
+          <div class="flex flex-1 items-center justify-center">
+            <EmptyState
+              icon={Users}
+              title="附近暂无其他用户"
+              description="换个浏览位置或稍后再来看看。"
+              class="w-full"
+            />
           </div>
         {/if}
       </div>

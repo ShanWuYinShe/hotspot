@@ -286,6 +286,9 @@
           </button>
         </div>
       {/each}
+      {#if topUsers.length === 0}
+        <p style="font-size: 12px; color: var(--text-secondary);">附近暂无活跃用户</p>
+      {/if}
     </div>
   </div>
 {/snippet}
