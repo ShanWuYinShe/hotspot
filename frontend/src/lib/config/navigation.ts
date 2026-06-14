@@ -11,6 +11,7 @@ import Home from 'lucide-svelte/icons/home';
 import Compass from 'lucide-svelte/icons/compass';
 import Image from 'lucide-svelte/icons/image';
 import UsersRound from 'lucide-svelte/icons/users-round';
+import UserRound from 'lucide-svelte/icons/user-round';
 import MessageCircle from 'lucide-svelte/icons/message-circle';
 import Bell from 'lucide-svelte/icons/bell';
 import Heart from 'lucide-svelte/icons/heart';
@@ -55,7 +56,7 @@ export interface BottomTab {
 export const discoverNavItems: NavItem[] = [
   { href: '/', labelKey: 'sidebar.home', icon: Home, exact: true },
   { href: '/discover', labelKey: 'nav.discover', icon: Compass },
-  { href: '/users/nearby', labelKey: 'sidebar.nearbyPeople', icon: UsersRound },
+  { href: '/users/nearby', labelKey: 'sidebar.nearbyPeople', icon: UserRound },
   { href: '/groups/nearby', labelKey: 'sidebar.nearbyGroups', icon: UsersRound }
 ];
 
