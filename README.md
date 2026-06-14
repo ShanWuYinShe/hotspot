@@ -33,9 +33,6 @@ docker compose up --build -d
 
 # 开发模式：后端从源码构建 + 前端 Vite HMR
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-
-# 集成测试（需先启动基础服务）
-docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm integration-test
 ```
 
 ### 访问入口
