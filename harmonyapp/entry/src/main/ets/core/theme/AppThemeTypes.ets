@@ -127,5 +127,5 @@ export interface ThemeOptionItem {
 export const KEY_THEME_MODE: string = 'themeMode';
 export const KEY_RESOLVED_THEME_ID: string = 'resolvedThemeId';
 
-export const DEFAULT_THEME_MODE: ThemeMode = 'figma_neu';
-export const DEFAULT_RESOLVED_THEME_ID: ResolvedThemeId = 'figma_neu_light';
+export const DEFAULT_THEME_MODE: ThemeMode = 'default_clean';
+export const DEFAULT_RESOLVED_THEME_ID: ResolvedThemeId = 'default_clean_light';

@@ -40,7 +40,7 @@ const MOCK_EVENTS: EventItem[] = [
     title: '晨间咖啡会',
     tag: '社交',
     tagColor: '#F59E0B',
-    coverGradient: ['#E8A87C', '#D4845A'],
+    coverGradient: ['#52B878', '#3D7A55'],
     description: '每周六早上九点，我们聚集在老街咖啡馆，分享一周的所见所闻。无论是设计师、程序员还是艺术家，都欢迎加入！带上你的好奇心就够了。',
     location: '老街咖啡馆 · 徐州市鼓楼区',
     date: '2026年4月18日 周六',

@@ -40,11 +40,11 @@ export class ChatThemeManager {
   }
 
   static light(): ChatThemeColors {
-    return ChatThemeManager.fromPalette(AppThemeManager.getPaletteForMode('vibrant', false), false);
+    return ChatThemeManager.fromPalette(AppThemeManager.getPaletteForMode('default_clean', false), false);
   }
 
   static dark(): ChatThemeColors {
-    return ChatThemeManager.fromPalette(AppThemeManager.getPaletteForMode('vibrant', true), true);
+    return ChatThemeManager.fromPalette(AppThemeManager.getPaletteForMode('default_clean', true), true);
   }
 
   static setTheme(setting: ThemeSettings): void {

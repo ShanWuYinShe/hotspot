@@ -233,43 +233,43 @@ export interface DesignConstantsType {
   MAP_MARKER: MapMarkerColors;
 }
 
-// ==================== 颜色系统（暖色拟物浮雕风格）====================
+// ==================== 颜色系统（forest 扁平风格，对齐前端设计系统）====================
 const COLOR: ColorPalette = {
-  PRIMARY_BG_LIGHT: '#EAE5DE',
-  PRIMARY_BG_DARK: '#0F1115',
-  SECONDARY_BG_LIGHT: '#F2EEE8',
-  SECONDARY_BG_DARK: '#1A1C23',
-  TERTIARY_BG_LIGHT: '#E1DBD3',
-  TERTIARY_BG_DARK: '#232731',
-  TEXT_PRIMARY_LIGHT: '#4A4036',
-  TEXT_PRIMARY_DARK: '#E5E7EB',
-  TEXT_SECONDARY_LIGHT: '#7A7269',
-  TEXT_SECONDARY_DARK: '#8D94A0',
-  TEXT_TERTIARY_LIGHT: '#9B9590',
-  TEXT_TERTIARY_DARK: '#5A5550',
-  BRAND_PRIMARY: '#D4845A',
-  BRAND_PRIMARY_LIGHT: '#D4845A',
-  BRAND_PRIMARY_DARK: '#E8A87C',
-  SUCCESS: '#22C55E',
-  WARNING: '#FBBF24',
+  PRIMARY_BG_LIGHT: '#EDECEA',
+  PRIMARY_BG_DARK: '#0E110E',
+  SECONDARY_BG_LIGHT: '#F9F9F5',
+  SECONDARY_BG_DARK: '#161A16',
+  TERTIARY_BG_LIGHT: '#F0F1F0',
+  TERTIARY_BG_DARK: '#242624',
+  TEXT_PRIMARY_LIGHT: '#1B1F1B',
+  TEXT_PRIMARY_DARK: '#DCE8DE',
+  TEXT_SECONDARY_LIGHT: '#566B5E',
+  TEXT_SECONDARY_DARK: '#7A9080',
+  TEXT_TERTIARY_LIGHT: '#AAB0AF',
+  TEXT_TERTIARY_DARK: '#5A6B60',
+  BRAND_PRIMARY: '#3D7A55',
+  BRAND_PRIMARY_LIGHT: '#3D7A55',
+  BRAND_PRIMARY_DARK: '#52B878',
+  SUCCESS: '#059669',
+  WARNING: '#D97706',
   ERROR: '#EF4444',
-  INFO: '#3B82F6',
-  DIVIDER_LIGHT: '#F7F5F2',
-  DIVIDER_DARK: '#2A2C35',
-  ONLINE_STATUS: '#22C55E',
+  INFO: '#3D7A55',
+  DIVIDER_LIGHT: '#00000014',
+  DIVIDER_DARK: '#FFFFFF12',
+  ONLINE_STATUS: '#3D7A55',
   OFFLINE_STATUS: '#9CA3AF',
-  SURFACE_NEUTRAL_SOFT: '#F2EEE8',
-  SURFACE_INFO_SOFT: '#EFF6FF',
+  SURFACE_NEUTRAL_SOFT: '#F0F1F0',
+  SURFACE_INFO_SOFT: '#E8F0E9',
   SURFACE_SUCCESS_SOFT: '#F0FDF4',
   SURFACE_WARNING_SOFT: '#FFFBEB',
   SURFACE_DANGER_SOFT: '#FEF2F2',
-  CHIP_ACTIVE_BG: '#D4845A',
+  CHIP_ACTIVE_BG: '#3D7A55',
   CHIP_ACTIVE_TEXT: '#FFFFFF',
-  CHIP_INACTIVE_TEXT: '#7A7269',
-  HEADER_ICON_BG: '#F2EEE8',
-  HEADER_ICON_BORDER: '#F7F5F2',
-  HEADER_ICON_TEXT: '#D4845A',
-  CHAT_TITLE_ICON_BG: '#EAE5DE',
+  CHIP_INACTIVE_TEXT: '#566B5E',
+  HEADER_ICON_BG: '#E8F0E9',
+  HEADER_ICON_BORDER: '#3D7A5521',
+  HEADER_ICON_TEXT: '#3D7A55',
+  CHAT_TITLE_ICON_BG: '#F9F9F5',
 };
 
 // ==================== 字体系统 ====================
@@ -304,60 +304,60 @@ const SPACING: SpacingSystem = {
   XXXL: 48,
 };
 
-// ==================== 圆角系统（拟物圆润风格）====================
+// ==================== 圆角系统（对齐前端 --radius: 0.625rem 基线）====================
 const RADIUS: RadiusSystem = {
   SM: 8,
   MD: 12,
   LG: 16,
-  XL: 20,
-  XXL: 24,
+  XL: 18,
+  XXL: 22,
   FULL: 999,
 };
 
 const SHAPE: ShapeSemanticTokens = {
-  CARD: RADIUS.XXL,
-  HERO_CARD: 32,
-  COMPACT_CARD: RADIUS.XL,
-  INPUT: 16,
-  BUTTON: 28,
-  CHIP: RADIUS.XL,
-  TAB_BAR: 28,
-  PREVIEW_CARD: 28,
-  LIST_ITEM: RADIUS.XXL,
+  CARD: 22,
+  HERO_CARD: 24,
+  COMPACT_CARD: 18,
+  INPUT: 18,
+  BUTTON: RADIUS.FULL,
+  CHIP: RADIUS.FULL,
+  TAB_BAR: 24,
+  PREVIEW_CARD: 22,
+  LIST_ITEM: 22,
   ICON_TILE: RADIUS.MD,
 };
 
-// ==================== 阴影系统（暖色软浮雕）====================
+// ==================== 阴影系统（扁平风格，默认归零）====================
 const SHADOW: ShadowSystem = {
   SMALL: {
-    radius: 10,
-    color: '#40CDC8C0',
-    offsetX: 3,
-    offsetY: 3,
+    radius: 0,
+    color: '#00000000',
+    offsetX: 0,
+    offsetY: 0,
   },
   MEDIUM: {
-    radius: 18,
-    color: '#55BFB7AC',
-    offsetX: 6,
-    offsetY: 6,
+    radius: 0,
+    color: '#00000000',
+    offsetX: 0,
+    offsetY: 0,
   },
   LARGE: {
-    radius: 28,
-    color: '#55C3BAAE',
-    offsetX: 12,
-    offsetY: 12,
+    radius: 0,
+    color: '#00000000',
+    offsetX: 0,
+    offsetY: 0,
   },
   INSET: {
-    radius: 12,
-    color: '#44BFB7AC',
-    offsetX: 4,
-    offsetY: 4,
+    radius: 0,
+    color: '#00000000',
+    offsetX: 0,
+    offsetY: 0,
   },
   HIGHLIGHT: {
-    radius: 10,
-    color: '#C8FFFFFF',
-    offsetX: -4,
-    offsetY: -4,
+    radius: 0,
+    color: '#00000000',
+    offsetX: 0,
+    offsetY: 0,
   },
 };
 
@@ -485,13 +485,13 @@ const OPACITY: OpacitySystem = {
   SUBTLE: 0.85,
 };
 
-// ==================== 地图标记颜色 ====================
+// ==================== 地图标记颜色（对齐前端 --map-* tokens）====================
 const MAP_MARKER: MapMarkerColors = {
-  PICKER: '#2E7CF6',
-  USER: '#2563EB',
-  GROUP: '#059669',
-  MOMENT: '#EA580C',
-  DEFAULT: '#666666',
+  PICKER: '#3D7A55',
+  USER: '#3D7A55',
+  GROUP: '#638B46',
+  MOMENT: '#A57C38',
+  DEFAULT: '#566B5E',
 };
 
 export const DesignConstants: DesignConstantsType = {
