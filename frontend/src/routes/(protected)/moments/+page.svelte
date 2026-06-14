@@ -41,9 +41,6 @@
       <div class="flex items-center justify-between">
         <div>
           <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">我的瞬间</h1>
-          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-            记录和管理你发布的动态内容
-          </p>
         </div>
         <div class="flex gap-2">
           <button
@@ -79,6 +76,7 @@
           description={pagination.error}
           actionText="重试"
           onAction={() => loadMoments(true)}
+          fill
         />
       {:else if pagination.items.length === 0}
         <EmptyState
@@ -87,6 +85,7 @@
           description="发布你的第一个瞬间吧"
           actionText="发布瞬间"
           onAction={() => (showCreateMoment = true)}
+          fill
         />
       {:else}
         <div class="columns-1 gap-4 sm:columns-2 xl:columns-3">

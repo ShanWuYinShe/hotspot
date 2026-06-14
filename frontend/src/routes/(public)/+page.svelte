@@ -214,7 +214,7 @@
 </svelte:head>
 
 {#if !platformStore.isWide}
-  <!-- Narrow (mobile + portrait/small tablet): centered single column (Figma Make HomeMobile) -->
+  <!-- Narrow (mobile + portrait/small tablet): centered single column -->
   <div class="flex flex-col">
     <!-- Sticky header -->
     <div
@@ -233,7 +233,7 @@
     </div>
 
     <div class="page-pad-x page-shell page-shell--narrow flex flex-col pt-4 pb-6">
-      <!-- Map Card (Figma Make HomeMobile) -->
+      <!-- Map Card -->
       <div
         class="surface-hero relative mb-5 w-full overflow-hidden rounded-[24px]"
         style="aspect-ratio: 2.4/1;"
@@ -279,19 +279,19 @@
       </div>
 
       <!-- Nearby people -->
-      {#if loadingNearby || radarUsers.length > 0}
-        <div class="mb-5">
-          <div class="mb-3 flex items-center justify-between">
-            <span class="eyebrow">{t('sidebar.nearbyPeople')}</span>
-            <a
-              href="/users/nearby"
-              class="flex items-center gap-0.5 outline-none"
-              style="color: var(--brand); font-size: 12px;"
-            >
-              {t('common.viewAll')}
-              <ChevronRight size={13} strokeWidth={1.5} />
-            </a>
-          </div>
+      <div class="mb-5">
+        <div class="mb-3 flex items-center justify-between">
+          <span class="eyebrow">{t('sidebar.nearbyPeople')}</span>
+          <a
+            href="/users/nearby"
+            class="flex items-center gap-0.5 outline-none"
+            style="color: var(--brand); font-size: 12px;"
+          >
+            {t('common.viewAll')}
+            <ChevronRight size={13} strokeWidth={1.5} />
+          </a>
+        </div>
+        {#if loadingNearby || radarUsers.length > 0}
           <PeopleRadarStrip
             users={radarUsers}
             loading={loadingNearby}
@@ -301,8 +301,12 @@
           <div class="mt-3">
             <NearbyUsersFlatList users={flatUsers.slice(0, 5)} loading={loadingNearby} />
           </div>
-        </div>
-      {/if}
+        {:else}
+          <p style="font-size: 12px; color: var(--text-secondary);">
+            附近暂无其他用户，可稍后再来或调整浏览位置。
+          </p>
+        {/if}
+      </div>
 
       <!-- Nearby activity -->
       {#if loadingNearby || activities.length > 0}
@@ -323,13 +327,11 @@
       {/if}
 
       <!-- Nearby groups -->
-      {#if carouselGroups.length > 0}
-        <GroupCarousel groups={carouselGroups} loading={loadingNearby} />
-      {/if}
+      <GroupCarousel groups={carouselGroups} loading={loadingNearby} />
     </div>
   </div>
 {:else}
-  <!-- Wide (landscape/large tablet + desktop): 2-column (Figma Make HomeDesktop) -->
+  <!-- Wide (landscape/large tablet + desktop): 2-column -->
   <div class="flex h-full flex-col">
     <!-- Sticky header -->
     <div
@@ -396,9 +398,7 @@
         {/if}
 
         <!-- Nearby groups -->
-        {#if carouselGroups.length > 0}
-          <GroupCarousel groups={carouselGroups} loading={loadingNearby} />
-        {/if}
+        <GroupCarousel groups={carouselGroups} loading={loadingNearby} />
       </div>
 
       <!-- Right column -->
@@ -438,6 +438,8 @@
               icon={Users}
               title="附近暂无其他用户"
               description="换个浏览位置或稍后再来看看。"
+              actionText={t('common.viewAll')}
+              onAction={() => void goto('/users/nearby')}
               class="w-full"
             />
           </div>

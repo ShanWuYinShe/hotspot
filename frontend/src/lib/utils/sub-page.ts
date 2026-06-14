@@ -1,9 +1,11 @@
 /**
- * 子页面判定 — 与 React 版 MainLayout 的 SUB_PAGE_PATHS 对齐。
+ * 子页面判定（单一事实源）。
  *
- * 子页面在移动端为全屏，自带返回（back）头部，因此隐藏底部主导航。
- * 主标签页与顶层浏览页（/、/discover、/chat、/profile、各类 nearby 浏览页等）
- * 没有返回入口，必须保留底部导航，避免用户被困。
+ * 子页面在移动 / 平板为全屏，自带返回（back）头部，因此隐藏底部主导航。
+ * 底部主标签目的地（/、/discover、/chat、/profile）及其它保留底栏的页面**不**是子页面。
+ *
+ * 注意：/users/nearby、/groups/nearby 是顶层「浏览」页，但移动·平板**不在底栏中**，
+ * 经首页「查看全部」等处下钻进入，故按子页面处理——全屏、带返回、隐藏底栏（见 SUB_PAGE_EXACT）。
  */
 
 /** 精确匹配的子页面（均自带返回头部）。 */
@@ -21,7 +23,8 @@ const SUB_PAGE_PREFIXES = ['/settings/', '/chat/users/', '/chat/groups/', '/even
 
 /**
  * 详情页基路径：/users/<id>、/groups/<id>、/moments/<id>。
- * 排除 `nearby` 段——它是顶层浏览页（无返回头部），不应隐藏导航。
+ * 排除 `nearby` 段——/users/nearby、/groups/nearby 不是实体详情页，
+ * 其子页面判定已由上面的 SUB_PAGE_EXACT 显式处理，这里不重复匹配。
  */
 const DETAIL_BASES = ['/users', '/groups', '/moments'];
 

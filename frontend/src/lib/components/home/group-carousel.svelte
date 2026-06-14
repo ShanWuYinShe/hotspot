@@ -48,7 +48,7 @@
           </div>
         </div>
       {/each}
-    {:else}
+    {:else if groups.length > 0}
       {#each groups as group (group.id)}
         <button
           class="flex-shrink-0 text-left"
@@ -114,6 +114,10 @@
           </div>
         </button>
       {/each}
+    {:else}
+      <p style="font-size: 12px; color: var(--text-secondary); padding: 2px;">
+        附近暂无群组，点右上「更多」浏览全部。
+      </p>
     {/if}
   </div>
 </div>

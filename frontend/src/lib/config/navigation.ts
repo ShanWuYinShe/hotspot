@@ -80,7 +80,9 @@ export const personalNavItems: NavItem[] = [
   {
     href: '/groups',
     labelKey: 'sidebar.myGroups',
-    icon: UsersRound,
+    // 用标准 `Users`（非圆头）与「附近群组」的 `UsersRound` 区分，避免同一侧边栏两项图标雷同；
+    // 同时与个人中心其它标准图标（Bell/Image/Heart/MessageCircle）风格统一。
+    icon: Users,
     requiresAuth: true,
     exact: true
   },

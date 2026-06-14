@@ -1,6 +1,7 @@
 <script lang="ts">
   import Radar from 'lucide-svelte/icons/radar';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
+  import StatSegments from '$lib/components/common/stat-segments.svelte';
 
   interface Props {
     people?: number;
@@ -62,26 +63,6 @@
     </div>
 
     <!-- Stats grid -->
-    <div
-      class="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-[14px]"
-      style="background: var(--border-theme);"
-    >
-      {#each stats as s (s.label)}
-        <div class="flex flex-col items-center py-2.5" style="background: var(--surface-bg);">
-          {#if loading}
-            <div
-              style="width: 28px; height: 19px; border-radius: 4px; background: var(--border-theme);"
-            ></div>
-          {:else}
-            <span style="font-size: 19px; font-weight: 600; line-height: 1; color: {s.color};"
-              >{s.value}</span
-            >
-          {/if}
-          <span style="font-size: 10px; color: var(--text-secondary); margin-top: 4px;"
-            >{s.label}</span
-          >
-        </div>
-      {/each}
-    </div>
+    <StatSegments layout="grid" {loading} {stats} class="mt-4" />
   </button>
 </div>

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { usersService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
+  import { formatHandle } from '$lib/utils/format';
   import type { MomentItem } from '$lib/types/api';
   import { authStore } from '$lib/stores/auth.svelte';
   import { toast } from '$lib/stores/toast.svelte';
@@ -421,7 +422,7 @@
         <div>
           <p style="font-size: 16px; color: var(--text-primary);">{p.nickname}</p>
           <p style="font-size: 12px; color: var(--text-secondary);">
-            @{p.nickname.toLowerCase().replace(/\s+/g, '.')}
+            @{formatHandle(p)}
           </p>
         </div>
       </div>
@@ -554,7 +555,7 @@
         <div>
           <p style="font-size: 20px; color: var(--text-primary);">{profile.nickname}</p>
           <p style="font-size: 12px; color: var(--text-secondary); margin-top: 1px;">
-            @{profile.nickname.toLowerCase().replace(/\s+/g, '.')}
+            @{formatHandle(profile)}
           </p>
         </div>
         <div class="flex gap-2.5">
@@ -626,8 +627,10 @@
             {/each}
           </div>
 
-          <!-- Personal hub -->
-          {@render hubCard()}
+          <!-- Personal hub — 仅宽屏平板需要；桌面已有侧边栏直达各项，避免重复入口 -->
+          {#if !platformStore.isDesktop}
+            {@render hubCard()}
+          {/if}
         </div>
 
         <!-- Right panel: tab bar + gallery -->
@@ -656,7 +659,7 @@
         <div>
           <p style="font-size: 18px; color: var(--text-primary);">{profile.nickname}</p>
           <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
-            @{profile.nickname.toLowerCase().replace(/\s+/g, '.')}
+            @{formatHandle(profile)}
           </p>
         </div>
         <div class="flex gap-2.5">

@@ -6,15 +6,14 @@
   import { mode, toggleMode } from 'mode-watcher';
   import { THEME_FAMILY_OPTIONS, themeStore, type ThemeFamily } from '$lib/stores/theme.svelte';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-  import { notificationStore } from '$lib/stores/notification.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
   import Search from 'lucide-svelte/icons/search';
   import Sun from 'lucide-svelte/icons/sun';
   import Moon from 'lucide-svelte/icons/moon';
-  import Bell from 'lucide-svelte/icons/bell';
   import Settings from 'lucide-svelte/icons/settings';
   import Palette from 'lucide-svelte/icons/palette';
   import Check from 'lucide-svelte/icons/check';
+  import Plus from 'lucide-svelte/icons/plus';
 
   const currentThemeFamily = $derived(themeStore.themeFamily);
   const currentMode = $derived(mode.current);
@@ -24,7 +23,7 @@
   }
 </script>
 
-<!-- Desktop top header — 52px (Figma Make), shared by all route groups -->
+<!-- Desktop top header — 52px，跨所有路由组共用 -->
 <header class="desktop-header">
   <!-- Logo -->
   <a href="/" class="mr-3 flex cursor-pointer items-center gap-2 select-none">
@@ -77,24 +76,7 @@
       onclick={() => uiStore.openCreateSheet()}
       aria-label={t('nav.publish')}
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="15"
-        height="15"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="var(--text-on-accent)"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg
-      >
-    </button>
-    <button
-      class="desktop-header__btn"
-      aria-label={t('sidebar.notifications')}
-      onclick={() => void goto('/notifications')}
-    >
-      <Bell size={17} color="var(--text-secondary)" />
+      <Plus size={15} color="var(--text-on-accent)" strokeWidth={2.5} />
     </button>
     <button
       class="desktop-header__btn"
@@ -106,7 +88,7 @@
     {#if authStore.isAuthenticated}
       <button
         type="button"
-        class="relative ml-1.5 cursor-pointer"
+        class="ml-1.5 cursor-pointer"
         style="width: 32px; height: 32px; padding: 0; border: none; background: none;"
         aria-label={t('nav.profile')}
         onclick={() => void goto('/profile')}
@@ -117,11 +99,15 @@
           alt={authStore.currentAccount?.nickname || 'Profile'}
           size={32}
         />
-        {#if notificationStore.unreadCount > 0}
-          <div class="desktop-header__badge" style="top: -3px; right: -3px;">
-            {notificationStore.unreadCount}
-          </div>
-        {/if}
+      </button>
+    {:else}
+      <button
+        type="button"
+        class="ml-1.5 rounded-full px-4 font-medium transition-transform duration-150 active:scale-95"
+        style="height: 32px; font-size: 13px; background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow);"
+        onclick={() => uiStore.openLoginModalWithRedirect({})}
+      >
+        {t('nav.loginRegister')}
       </button>
     {/if}
   </div>

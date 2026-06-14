@@ -1529,25 +1529,6 @@
     margin-bottom: clamp(16px, 2vw, 24px);
   }
 
-  /* Desktop header badge (Figma Make: 15x15, fontSize 8, fontWeight 700) */
-  .desktop-header__badge {
-    position: absolute;
-    min-width: 15px;
-    height: 15px;
-    padding: 0 3px;
-    font-size: 8px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 9999px;
-    background: var(--theme-accent-primary);
-    color: var(--theme-active-text);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-    border: 1.5px solid var(--page-bg);
-    pointer-events: none;
-  }
-
   /* Desktop header (Figma Make DesktopLayout) */
   .desktop-header {
     flex-shrink: 0;

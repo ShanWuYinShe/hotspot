@@ -13,6 +13,7 @@
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
   import LocationPickerModal from '$lib/components/common/location-picker-modal.svelte';
   import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
+  import StatSegments from '$lib/components/common/stat-segments.svelte';
   import type { UserItem } from '$lib/types/api';
   import BackButton from '$lib/components/common/back-button.svelte';
   import Search from 'lucide-svelte/icons/search';
@@ -158,20 +159,27 @@
             >
               <Radar size={19} strokeWidth={2} color="var(--text-on-accent)" />
             </div>
-            <div class="flex-1">
+            <div class="min-w-0 flex-1">
               <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">附近概览</p>
               <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-                <span style="color: var(--color-semantic-online);">{onlineCount} 人在线</span>
-                <span style="margin-left: 8px;">· 共 {pagination.items.length} 人</span>
+                实时统计当前浏览范围内的用户
               </p>
             </div>
+            <StatSegments
+              class="flex-shrink-0"
+              stats={[
+                { value: onlineCount, label: '在线', color: 'var(--semantic-online)' },
+                { value: pagination.items.length, label: '总数' },
+                { value: `${mapAnchorStore.radius}km`, label: '半径' }
+              ]}
+            />
           </div>
         </div>
       {:else}
         <div class="mb-4 flex items-center justify-between gap-3">
           <AnchorEntry variant="pill" onAdjust={() => (showLocationPicker = true)} />
           <p class="flex-shrink-0" style="font-size: 11px; color: var(--text-secondary);">
-            <span style="color: var(--color-semantic-online);">{onlineCount} 在线</span>
+            <span style="color: var(--semantic-online);">{onlineCount} 在线</span>
             <span style="margin-left: 6px;">· 共 {pagination.items.length} 人</span>
           </p>
         </div>
@@ -193,12 +201,14 @@
           description={pagination.error}
           actionText="重试"
           onAction={handleRetry}
+          fill
         />
       {:else if pagination.items.length === 0 && hasLoadedOnce}
         <EmptyState
           icon={Users}
           title="附近暂无其他用户"
           description="换个浏览位置或稍后再来看看。"
+          fill
         />
       {:else}
         <div class={!platformStore.isMobile ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>

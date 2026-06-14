@@ -11,6 +11,7 @@
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
   import CreateGroupModal from '$lib/components/common/create-group-modal.svelte';
   import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
+  import StatSegments from '$lib/components/common/stat-segments.svelte';
   import type { GroupItem } from '$lib/types/api';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
@@ -155,12 +156,19 @@
             >
               <UsersRound size={19} strokeWidth={2} color="var(--text-on-accent)" />
             </div>
-            <div class="flex-1">
+            <div class="min-w-0 flex-1">
               <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">附近概览</p>
               <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-                共 {pagination.items.length} 个群组
+                实时统计当前浏览范围内的群组
               </p>
             </div>
+            <StatSegments
+              class="flex-shrink-0"
+              stats={[
+                { value: pagination.items.length, label: '群组' },
+                { value: `${mapAnchorStore.radius}km`, label: '半径' }
+              ]}
+            />
           </div>
         </div>
       {:else}
@@ -188,15 +196,22 @@
           description={pagination.error}
           actionText="重试"
           onAction={handleRetry}
+          fill
         />
       {:else if pagination.items.length === 0 && hasLoadedOnce}
         <EmptyState
           icon={UsersRound}
           title="附近暂无群组"
           description="换个浏览位置或稍后再来看看。"
+          fill
         />
       {:else if filteredGroups.length === 0}
-        <EmptyState icon={UsersRound} title="没有匹配的群组" description="试试其他分类或关键词。" />
+        <EmptyState
+          icon={UsersRound}
+          title="没有匹配的群组"
+          description="试试其他分类或关键词。"
+          fill
+        />
       {:else}
         <div class={!platformStore.isMobile ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
           {#each filteredGroups as group (group.group.group_id)}

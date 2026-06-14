@@ -97,6 +97,24 @@ export function formatDistance(meters: number, locale: Locale = getLocale()): st
 }
 
 /**
+ * 生成用户 @handle（展示用，全站单一事实源）。
+ *
+ * 规则：优先取昵称小写、连续空白折叠为点号；昵称为空时回退到 user_id 前 8 位。
+ * 返回值不含前导 `@`，模板里保留字面量 `@`（如 `@{formatHandle(user)}`）。
+ *
+ * 注意：handle 仅用于展示，不保证全局唯一、不随昵称变化保持稳定，不可作为身份标识。
+ */
+export function formatHandle(user: { nickname?: string | null; user_id?: string | null }): string {
+  const nickname = user.nickname?.trim();
+  if (nickname) {
+    return nickname.toLowerCase().replace(/\s+/g, '.');
+  }
+  const id = user.user_id?.trim();
+  if (id) return id.slice(0, 8);
+  return 'user';
+}
+
+/**
  * 解析用户输入的标签字符串（支持逗号、中文逗号、空格分隔，自动去除 # 前缀）
  */
 export function parseTags(input: string, maxCount = 10): string[] {

@@ -15,7 +15,7 @@
   import UserPlus from 'lucide-svelte/icons/user-plus';
   import Plus from 'lucide-svelte/icons/plus';
   import Bell from 'lucide-svelte/icons/bell';
-  import MessageSquareDashed from 'lucide-svelte/icons/message-square-dashed';
+  import MessageCircle from 'lucide-svelte/icons/message-circle';
   import Avatar from '$lib/components/common/avatar.svelte';
 
   let currentTab = $state<'private' | 'group'>('private');
@@ -258,7 +258,7 @@
               {/each}
             {:else if filteredPrivateChats.length === 0}
               <div class="flex flex-col items-center justify-center gap-3 py-12">
-                <MessageSquareDashed
+                <MessageCircle
                   size={36}
                   strokeWidth={1.25}
                   color="var(--text-secondary)"
@@ -352,7 +352,7 @@
             {/each}
           {:else if filteredGroupChats.length === 0}
             <div class="flex flex-col items-center justify-center gap-3 py-12">
-              <MessageSquareDashed
+              <MessageCircle
                 size={36}
                 strokeWidth={1.25}
                 color="var(--text-secondary)"

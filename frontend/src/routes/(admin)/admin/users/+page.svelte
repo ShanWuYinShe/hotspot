@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { adminUsersService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import { toast } from '$lib/stores/toast.svelte';
@@ -24,6 +24,7 @@
   });
 
   let nickname = $state('');
+  let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
   function loadUsers(refresh = true) {
     pagination.load(
@@ -35,6 +36,14 @@
       refresh
     );
   }
+
+  // 输入即搜（防抖 350ms），与发现 / 附近的即时搜索保持一致
+  function handleSearchInput() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => loadUsers(), 350);
+  }
+
+  onDestroy(() => clearTimeout(searchTimer));
 
   $effect(() => {
     if (pagination.error) toast.error(pagination.error);
@@ -99,25 +108,24 @@
 
 <div class="page-pad">
   <div class="page-shell page-shell--wide space-y-6">
-    <!-- Search -->
-    <div class="flex gap-2">
-      <div class="input-surface relative flex-1 flex items-center gap-3 rounded-[18px] px-4 py-2.5">
-        <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
-        <input
-          type="search"
-          placeholder="搜索昵称..."
-          class="flex-1 bg-transparent outline-none"
-          style="font-size: 13px; color: var(--text-primary);"
-          autocomplete="off"
-          bind:value={nickname}
-          onkeydown={(e) => e.key === 'Enter' && loadUsers()}
-        />
-      </div>
-      <button
-        class="rounded-full px-4 py-2.5 outline-none"
-        style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
-        onclick={() => loadUsers()}>搜索</button
-      >
+    <!-- Search — 输入即搜（防抖），与全站搜索交互一致 -->
+    <div class="input-surface relative flex items-center gap-3 rounded-[18px] px-4 py-2.5">
+      <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
+      <input
+        type="search"
+        placeholder="搜索昵称..."
+        class="flex-1 bg-transparent outline-none"
+        style="font-size: 13px; color: var(--text-primary);"
+        autocomplete="off"
+        bind:value={nickname}
+        oninput={handleSearchInput}
+        onkeydown={(e) => {
+          if (e.key === 'Enter') {
+            clearTimeout(searchTimer);
+            loadUsers();
+          }
+        }}
+      />
     </div>
 
     <!-- Users table -->

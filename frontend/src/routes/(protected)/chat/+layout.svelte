@@ -1,7 +1,7 @@
 <script lang="ts">
   import { platformStore } from '$lib/stores/platform.svelte';
   import ChatListPanel from '$lib/components/chat/chat-list-panel.svelte';
-  import MessageSquareDashed from 'lucide-svelte/icons/message-square-dashed';
+  import MessageCircle from 'lucide-svelte/icons/message-circle';
   import { page } from '$app/stores';
   import type { Snippet } from 'svelte';
 
@@ -35,7 +35,7 @@
                 class="surface-flat flex items-center justify-center rounded-full"
                 style="width: 72px; height: 72px;"
               >
-                <MessageSquareDashed
+                <MessageCircle
                   size={28}
                   strokeWidth={1.25}
                   color="var(--text-secondary)"

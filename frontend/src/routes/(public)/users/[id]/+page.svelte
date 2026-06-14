@@ -3,6 +3,7 @@
   import { untrack } from 'svelte';
   import { usersService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
+  import { formatHandle } from '$lib/utils/format';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { toast } from '$lib/stores/toast.svelte';
@@ -317,7 +318,7 @@
             {user.user.nickname}
           </h2>
           <p style="font-size: 13px; color: var(--text-secondary); margin-top: 1px;">
-            @{user.user.nickname.toLowerCase().replace(/\s+/g, '.')}
+            @{formatHandle(user.user)}
           </p>
           {#if user.bio}
             <p

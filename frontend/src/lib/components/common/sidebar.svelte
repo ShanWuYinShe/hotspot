@@ -90,13 +90,6 @@
             >
               {badgeCount(item) > 99 ? '99+' : badgeCount(item)}
             </span>
-          {:else if !authStore.isAuthenticated && item.requiresAuth}
-            <span
-              class="ml-auto rounded-full px-2 py-0.5 text-xs"
-              style="background: var(--border-theme); color: var(--text-secondary);"
-            >
-              {t('sidebar.login')}
-            </span>
           {/if}
         </button>
       {/each}

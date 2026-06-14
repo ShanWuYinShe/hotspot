@@ -4,6 +4,7 @@
   import { usersService } from '$lib/api/services';
   import { mediaService } from '$lib/api/services/media';
   import { isSuccess } from '$lib/api/client';
+  import { formatHandle } from '$lib/utils/format';
   import { authStore } from '$lib/stores/auth.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import type { MyProfile } from '$lib/types/api';
@@ -230,7 +231,7 @@
         <div>
           <p style="font-size: 16px; color: var(--text-primary);">{profile.nickname}</p>
           <p style="font-size: 12px; color: var(--text-secondary);">
-            @{profile.nickname.toLowerCase().replace(/\s+/g, '.')}
+            @{formatHandle(profile)}
           </p>
         </div>
       </div>

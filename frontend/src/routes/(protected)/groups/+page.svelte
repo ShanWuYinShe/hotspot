@@ -26,6 +26,8 @@
   let processingInviteIds = $state<Set<string>>(new Set());
   let processingApplicationIds = $state<Set<string>>(new Set());
 
+  let anyLoading = $derived(isLoading || invitesLoading || applicationsLoading);
+
   async function loadGroups() {
     isLoading = true;
     try {
@@ -74,6 +76,12 @@
     } finally {
       applicationsLoading = false;
     }
+  }
+
+  // 页面级单一刷新入口：一并刷新「已加入群组 / 收到的邀请 / 我的申请」，
+  // 取代此前三个分散的刷新按钮（头部 + 邀请卡 + 申请卡）。
+  async function refreshAll() {
+    await Promise.all([loadGroups(), loadInvites(), loadApplications()]);
   }
 
   function setInviteProcessing(inviteId: string, processing: boolean) {
@@ -173,10 +181,10 @@
           <button
             class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
             style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
-            onclick={loadGroups}
-            disabled={isLoading}
+            onclick={refreshAll}
+            disabled={anyLoading}
           >
-            <RefreshCw size={13} class={isLoading ? 'animate-spin' : ''} />
+            <RefreshCw size={13} class={anyLoading ? 'animate-spin' : ''} />
             刷新
           </button>
           <button
@@ -213,9 +221,9 @@
           </div>
         </EmptyState>
       {:else}
-        <div class="columns-1 gap-4 sm:columns-2 xl:columns-3">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {#each groups as group (group.group.group_id)}
-            <div class="mb-4 break-inside-avoid">
+            <div>
               <a href="/groups/{group.group.group_id}" style="text-decoration: none;">
                 <div
                   class="flex items-center gap-4 rounded-[18px] p-4"
@@ -277,14 +285,6 @@
                 >收到的群邀请</span
               >
             </div>
-            <button
-              class="rounded-full px-3 py-1 text-xs outline-none"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary);"
-              onclick={loadInvites}
-              disabled={invitesLoading}
-            >
-              刷新
-            </button>
           </div>
           {#if invitesLoading && invites.length === 0}
             <p style="font-size: 13px; color: var(--text-secondary);">加载中...</p>
@@ -346,14 +346,6 @@
                 >我的入群申请</span
               >
             </div>
-            <button
-              class="rounded-full px-3 py-1 text-xs outline-none"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary);"
-              onclick={loadApplications}
-              disabled={applicationsLoading}
-            >
-              刷新
-            </button>
           </div>
           {#if applicationsLoading && applications.length === 0}
             <p style="font-size: 13px; color: var(--text-secondary);">加载中...</p>

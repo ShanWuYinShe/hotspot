@@ -3,16 +3,20 @@
   import { THEME_FAMILY_OPTIONS, themeStore, type ThemeFamily } from '$lib/stores/theme.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { platformStore } from '$lib/stores/platform.svelte';
+  import { formatHandle } from '$lib/utils/format';
   import ThemeToggle from '$lib/components/common/theme-toggle.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
   import User from 'lucide-svelte/icons/user';
   import Bell from 'lucide-svelte/icons/bell';
+  import SlidersHorizontal from 'lucide-svelte/icons/sliders-horizontal';
   import Shield from 'lucide-svelte/icons/shield';
   import Lock from 'lucide-svelte/icons/lock';
   import LogOut from 'lucide-svelte/icons/log-out';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Share2 from 'lucide-svelte/icons/share-2';
-  import ShieldAlert from 'lucide-svelte/icons/shield-alert';
+  import MonitorSmartphone from 'lucide-svelte/icons/monitor-smartphone';
+  import EyeOff from 'lucide-svelte/icons/eye-off';
+  import Flag from 'lucide-svelte/icons/flag';
   import Palette from 'lucide-svelte/icons/palette';
   import BackButton from '$lib/components/common/back-button.svelte';
   import Moon from 'lucide-svelte/icons/moon';
@@ -38,22 +42,19 @@
           icon: User,
           label: '个人资料',
           href: '/profile',
-          description: '修改头像、昵称、简介',
-          color: 'var(--brand)'
+          description: '修改头像、昵称、简介'
         },
         {
           icon: Lock,
           label: '修改密码',
           href: '/settings/password',
-          description: '更改登录密码',
-          color: 'var(--theme-warning)'
+          description: '更改登录密码'
         },
         {
-          icon: Shield,
+          icon: MonitorSmartphone,
           label: '会话管理',
           href: '/settings/sessions',
-          description: '管理登录设备',
-          color: 'var(--brand)'
+          description: '管理登录设备'
         }
       ]
     },
@@ -62,11 +63,10 @@
       icon: Shield,
       items: [
         {
-          icon: Shield,
+          icon: EyeOff,
           label: '隐私设置',
           href: '/settings/privacy',
-          description: '谁可以看到你的信息',
-          color: 'var(--text-tertiary)'
+          description: '谁可以看到你的信息'
         }
       ]
     },
@@ -78,8 +78,7 @@
           icon: Bell,
           label: '通知设置',
           href: '/settings/notifications',
-          description: '管理推送通知',
-          color: 'var(--brand)'
+          description: '管理推送通知'
         }
       ]
     },
@@ -91,15 +90,13 @@
           icon: Share2,
           label: '我的分享',
           href: '/settings/shares',
-          description: '查看并撤销已创建分享',
-          color: 'var(--theme-success)'
+          description: '查看并撤销已创建分享'
         },
         {
-          icon: ShieldAlert,
+          icon: Flag,
           label: '我的举报记录',
           href: '/settings/reports',
-          description: '跟踪举报处理进度',
-          color: 'var(--brand)'
+          description: '跟踪举报处理进度'
         }
       ]
     }
@@ -175,7 +172,7 @@
               {authStore.currentAccount.nickname || '用户'}
             </p>
             <p style="font-size: 11px; color: var(--text-secondary);">
-              @{authStore.currentAccount.user_id.slice(0, 8)}
+              @{formatHandle(authStore.currentAccount)}
             </p>
           </div>
         </div>
@@ -223,7 +220,7 @@
             : 'var(--text-primary)'};"
           onclick={() => (activeSection = 'notifications')}
         >
-          <Bell size={16} strokeWidth={1.5} />
+          <SlidersHorizontal size={16} strokeWidth={1.5} />
           <span style="font-size: 13px; font-weight: 500;">通知偏好</span>
         </button>
 
@@ -438,7 +435,7 @@
                     class="flex flex-shrink-0 items-center justify-center rounded-full"
                     style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
                   >
-                    <item.icon size={15} strokeWidth={1.5} color={item.color} />
+                    <item.icon size={15} strokeWidth={1.5} color="var(--text-secondary)" />
                   </div>
                   <div class="min-w-0 flex-1">
                     <p style="font-size: 14px; color: var(--text-primary);">{item.label}</p>
@@ -487,7 +484,7 @@
                 {authStore.currentAccount.nickname || '用户'}
               </p>
               <p style="font-size: 11px; color: var(--text-secondary);">
-                @{authStore.currentAccount.user_id.slice(0, 8)}
+                @{formatHandle(authStore.currentAccount)}
               </p>
             </div>
           </div>
@@ -618,7 +615,7 @@
                   class="flex flex-shrink-0 items-center justify-center rounded-full"
                   style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
                 >
-                  <item.icon size={15} strokeWidth={1.5} color={item.color} />
+                  <item.icon size={15} strokeWidth={1.5} color="var(--text-secondary)" />
                 </div>
                 <div class="min-w-0 flex-1">
                   <p style="font-size: 14px; color: var(--text-primary);">{item.label}</p>
