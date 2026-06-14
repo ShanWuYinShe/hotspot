@@ -16,11 +16,15 @@
   import Grid3X3 from 'lucide-svelte/icons/grid-3x3';
   import Bookmark from 'lucide-svelte/icons/bookmark';
   import Check from 'lucide-svelte/icons/check';
-  import Users from 'lucide-svelte/icons/users';
+  import UsersRound from 'lucide-svelte/icons/users-round';
+  import Bell from 'lucide-svelte/icons/bell';
+  import Shield from 'lucide-svelte/icons/shield';
+  import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Image from 'lucide-svelte/icons/image';
   import User from 'lucide-svelte/icons/user';
   import FileText from 'lucide-svelte/icons/file-text';
   import { platformStore } from '$lib/stores/platform.svelte';
+  import { adminPermissionsStore } from '$lib/stores/admin-permissions.svelte';
   import { goto } from '$app/navigation';
   import Avatar from '$lib/components/common/avatar.svelte';
 
@@ -166,15 +170,36 @@
     {
       icon: Image,
       label: '我的瞬间',
-      href: '/profile?section=moments',
+      href: '/moments',
       count: profile?.stats.moments_count ?? 0
     },
     {
-      icon: Users,
-      label: '好友',
+      icon: UsersRound,
+      label: '我的群组',
+      href: '/groups',
+      count: null
+    },
+    {
+      icon: Heart,
+      label: '关系',
       href: '/relations?tab=friends',
       count: profile?.stats.friends_count ?? 0
-    }
+    },
+    {
+      icon: Bell,
+      label: '通知',
+      href: '/notifications',
+      count: null
+    },
+    {
+      icon: Settings,
+      label: '设置',
+      href: '/settings',
+      count: null
+    },
+    ...(adminPermissionsStore.isAdmin
+      ? [{ icon: Shield, label: '管理后台', href: '/admin', count: null }]
+      : [])
   ]);
 </script>
 
@@ -230,13 +255,35 @@
     </div>
   {/snippet}
 
+  <!-- ═══ Shared personal hub (replaces the removed nav drawer on mobile/tablet) ═══ -->
+  {#snippet hubCard()}
+    <div class="w-full rounded-[18px] overflow-hidden surface-card">
+      {#each quickLinks as link (link.href)}
+        <a
+          href={link.href}
+          class="flex items-center gap-3 px-4 py-3 row-hover"
+          style="border-bottom: 1px solid var(--border-theme);"
+        >
+          <link.icon size={16} strokeWidth={1.5} color="var(--text-secondary)" />
+          <span class="flex-1" style="font-size: 13px; color: var(--text-primary);"
+            >{link.label}</span
+          >
+          {#if link.count != null}
+            <span style="font-size: 12px; color: var(--text-secondary);">{link.count}</span>
+          {/if}
+          <ChevronRight size={15} strokeWidth={1.5} color="var(--text-secondary)" />
+        </a>
+      {/each}
+    </div>
+  {/snippet}
+
   <!-- ═══ Shared gallery grid ═══ -->
   {#snippet galleryGrid()}
     {#if galleryMoments.length === 0}
       <div class="flex flex-col items-center justify-center py-12">
         <div
           class="flex items-center justify-center rounded-full"
-          style="width: 56px; height: 56px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+          style="width: 56px; height: 56px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
         >
           <Grid3X3
             size={22}
@@ -579,22 +626,8 @@
             {/each}
           </div>
 
-          <!-- Quick links -->
-          <div class="w-full rounded-[18px] overflow-hidden surface-card">
-            {#each quickLinks as link}
-              <a
-                href={link.href}
-                class="flex items-center gap-3 px-4 py-2.5 row-hover"
-                style="border-bottom: 1px solid var(--border-theme);"
-              >
-                <link.icon size={14} strokeWidth={1.5} color="var(--text-secondary)" />
-                <span class="flex-1" style="font-size: 13px; color: var(--text-secondary);"
-                  >{link.label}</span
-                >
-                <span style="font-size: 12px; color: var(--text-secondary);">{link.count}</span>
-              </a>
-            {/each}
-          </div>
+          <!-- Personal hub -->
+          {@render hubCard()}
         </div>
 
         <!-- Right panel: tab bar + gallery -->
@@ -685,6 +718,13 @@
           <div class="mb-5 px-5">
             {@render statsRowDisplay()}
           </div>
+
+          <!-- Personal hub -->
+          {#if !isEditing}
+            <div class="mb-5 px-5">
+              {@render hubCard()}
+            </div>
+          {/if}
 
           <!-- Tab bar -->
           {@render tabBar()}

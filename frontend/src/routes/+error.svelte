@@ -18,7 +18,7 @@
 >
   <div
     class="flex h-20 w-20 items-center justify-center rounded-[28px]"
-    style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+    style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
   >
     <TriangleAlert size={36} color={is404 ? 'var(--text-secondary)' : 'var(--theme-error)'} />
   </div>

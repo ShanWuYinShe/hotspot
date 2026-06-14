@@ -159,7 +159,7 @@
                 <div class="flex flex-wrap items-center gap-2">
                   <span
                     class="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium"
-                    style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); color: var(--text-secondary);"
+                    style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);"
                   >
                     {REPORT_TARGET_TYPE_LABEL[item.target_type]}
                   </span>
@@ -185,7 +185,7 @@
 
             <div
               class="mt-4 grid gap-3 rounded-[18px] px-4 py-3 text-sm sm:grid-cols-2 lg:grid-cols-3"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div>
                 <p style="font-size: 11px; color: var(--text-secondary);">提交时间</p>
@@ -216,7 +216,7 @@
             {#if item.description}
               <div
                 class="mt-3 rounded-[18px] px-4 py-3"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               >
                 <p style="font-size: 11px; color: var(--text-secondary);">补充说明</p>
                 <p

@@ -143,7 +143,7 @@
       <div class="mb-4 flex items-center gap-2">
         <div
           class="flex items-center justify-center rounded-full"
-          style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+          style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
         >
           <Bell size={15} strokeWidth={1.5} color="var(--brand)" />
         </div>
@@ -157,7 +157,7 @@
 
       <div
         class="flex items-center justify-between rounded-[18px] px-4 py-4"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <div>
           <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">当前未读通知</p>
@@ -209,7 +209,7 @@
       </div>
       <div
         class="rounded-[18px] px-4 py-3"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
           这些开关用于保留你在当前浏览器的通知偏好，并已按真实 NotificationType
@@ -237,7 +237,7 @@
         {#each preferenceItems as item (item.key)}
           <div
             class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
               <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
@@ -253,7 +253,7 @@
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={isGroupEnabled(item.key)
                 ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
-                : 'background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);'}
+                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => togglePreference(item.key, !isGroupEnabled(item.key))}
             >
               <span

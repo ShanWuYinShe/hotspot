@@ -243,7 +243,7 @@
                 >
                   <div
                     class="flex flex-shrink-0 items-center justify-center rounded-full"
-                    style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                    style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
                   >
                     <Shield size={15} strokeWidth={1.5} color="var(--brand)" />
                   </div>
@@ -398,7 +398,7 @@
         <span style="font-size: 12px; color: var(--text-primary);">分配权限</span>
         <div
           class="mt-1.5 max-h-60 space-y-3 overflow-y-auto rounded-[14px] p-3"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
         >
           {#each [...groupPermissions(permissions)] as [category, perms] (category)}
             <div>

@@ -167,7 +167,7 @@
                   {:else}
                     <span
                       class="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium"
-                      style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); color: var(--brand);"
+                      style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--brand);"
                     >
                       可访问
                     </span>
@@ -213,7 +213,7 @@
 
             <div
               class="mt-4 grid gap-3 rounded-[18px] px-4 py-3 text-sm sm:grid-cols-3"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div>
                 <p style="font-size: 11px; color: var(--text-secondary);">创建时间</p>

@@ -136,10 +136,7 @@
           </button>
 
           <!-- Info card -->
-          <div
-            class="rounded-[18px] p-4"
-            style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-          >
+          <div class="rounded-[18px] p-4" style="border: 1px solid var(--border-theme);">
             <p
               class="flex items-center gap-2"
               style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
@@ -171,10 +168,7 @@
             >
               位置说明
             </p>
-            <div
-              class="rounded-[14px] p-3"
-              style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-            >
+            <div class="rounded-[14px] p-3" style="border: 1px solid var(--border-theme);">
               <p style="font-size: 12px; color: var(--text-secondary);">
                 以「{payload.shared_location.location_name}」为中心区域进行浏览和推荐。
               </p>

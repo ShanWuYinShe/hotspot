@@ -1,6 +1,5 @@
 <script lang="ts">
   import { authStore } from '$lib/stores/auth.svelte';
-  import { uiStore } from '$lib/stores/ui.svelte';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import { t } from '$lib/i18n';
   import { usersService, feedService, groupsService } from '$lib/api/services';
@@ -57,10 +56,6 @@
     }))
   );
 
-  const followingIds = $derived(
-    new Set(nearbyUsers.filter((u) => u.relation?.is_following).map((u) => u.user.user_id))
-  );
-
   const carouselGroups = $derived(
     nearbyGroups.map((g) => ({
       id: g.group.group_id,
@@ -98,11 +93,6 @@
 
   function handleActivitySelect(id: string) {
     void goto(`/discover?tag=${encodeURIComponent(id)}`);
-  }
-
-  function handleFlatFollow(id: string) {
-    const user = nearbyUsers.find((u) => u.user.user_id === id);
-    if (user) handleFollowToggle(user);
   }
 
   function getAnchor() {
@@ -188,10 +178,6 @@
     void refreshHome();
   }
 
-  function handleLogin() {
-    uiStore.openLoginModalWithRedirect({});
-  }
-
   $effect(() => {
     const isAuthed = authStore.isAuthenticated;
     if (isAuthed === lastAuthState) return;
@@ -219,14 +205,6 @@
       }
     };
   });
-
-  function handleFollowToggle(user: UserItem) {
-    if (!authStore.isAuthenticated) {
-      uiStore.openLoginModalWithRedirect({});
-      return;
-    }
-    void goto(`/users/${user.user.user_id}`);
-  }
 </script>
 
 <svelte:head>
@@ -243,7 +221,7 @@
     >
       <div class="page-pad-x page-shell page-shell--narrow flex items-center justify-between">
         <div>
-          <h1 style="font-size: 22px; color: var(--text-primary);">{t('nav.nearby')}</h1>
+          <h1 style="font-size: 22px; color: var(--text-primary);">{t('sidebar.home')}</h1>
           <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
             {t('home.discoverNearbyPeopleAndThings')}
           </p>
@@ -298,16 +276,6 @@
         </div>
       </div>
 
-      {#if !authStore.isAuthenticated}
-        <button
-          class="mb-5 w-full rounded-[18px] py-3.5 font-medium outline-none transition-transform duration-150 active:scale-[0.97]"
-          style="background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 6px 18px var(--glow);"
-          onclick={handleLogin}
-        >
-          {t('nav.loginRegister')}
-        </button>
-      {/if}
-
       <!-- Nearby people -->
       {#if loadingNearby || radarUsers.length > 0}
         <div class="mb-5">
@@ -329,12 +297,7 @@
             onViewAll={() => void goto('/users/nearby')}
           />
           <div class="mt-3">
-            <NearbyUsersFlatList
-              users={flatUsers.slice(0, 5)}
-              loading={loadingNearby}
-              {followingIds}
-              onToggleFollow={handleFlatFollow}
-            />
+            <NearbyUsersFlatList users={flatUsers.slice(0, 5)} loading={loadingNearby} />
           </div>
         </div>
       {/if}
@@ -392,15 +355,6 @@
               >{onlineCount} {t('common.online')}</span
             >
           </button>
-          {#if !authStore.isAuthenticated}
-            <button
-              class="rounded-full px-4 py-1.5 font-medium outline-none transition-transform duration-150 active:scale-[0.96]"
-              style="background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 3px 10px var(--glow);"
-              onclick={handleLogin}
-            >
-              {t('nav.loginRegister')}
-            </button>
-          {/if}
         </div>
       </div>
     </div>
@@ -473,12 +427,7 @@
               onViewAll={() => void goto('/users/nearby')}
             />
             <div class="mt-4">
-              <NearbyUsersFlatList
-                users={flatUsers}
-                loading={loadingNearby}
-                {followingIds}
-                onToggleFollow={handleFlatFollow}
-              />
+              <NearbyUsersFlatList users={flatUsers} loading={loadingNearby} />
             </div>
           </div>
         {/if}

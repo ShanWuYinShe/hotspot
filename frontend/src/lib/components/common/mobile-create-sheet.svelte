@@ -60,7 +60,7 @@
       >
         <div
           class="flex items-center justify-center rounded-full"
-          style="width: 38px; height: 38px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+          style="width: 38px; height: 38px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
         >
           <Image size={16} strokeWidth={1.5} color="var(--brand)" />
         </div>
@@ -79,7 +79,7 @@
       >
         <div
           class="flex items-center justify-center rounded-full"
-          style="width: 38px; height: 38px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+          style="width: 38px; height: 38px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
         >
           <UsersRound size={16} strokeWidth={1.5} color="var(--text-tertiary)" />
         </div>

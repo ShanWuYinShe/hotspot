@@ -121,16 +121,16 @@
           >
             <div
               class="h-12 w-12 rounded-[12px]"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             ></div>
             <div class="flex-1 space-y-2">
               <div
                 class="h-4 w-48 rounded-[12px]"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               ></div>
               <div
                 class="h-3 w-64 rounded-[12px]"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               ></div>
             </div>
           </div>
@@ -143,7 +143,7 @@
       >
         <div
           class="flex items-center justify-center rounded-full mb-4"
-          style="width: 48px; height: 48px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+          style="width: 48px; height: 48px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
         >
           <Shield size={20} color="var(--text-secondary)" />
         </div>
@@ -159,7 +159,7 @@
             <div class="flex items-center gap-3 min-w-0">
               <div
                 class="flex flex-shrink-0 items-center justify-center rounded-full"
-                style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
               >
                 <Smartphone size={15} strokeWidth={1.5} color="var(--brand)" />
               </div>

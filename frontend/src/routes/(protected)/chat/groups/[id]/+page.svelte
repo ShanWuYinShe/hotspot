@@ -713,7 +713,7 @@
           <div class="text-center">
             <div
               class="mb-4 inline-flex items-center justify-center rounded-full"
-              style="width: 64px; height: 64px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+              style="width: 64px; height: 64px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
             >
               <MessageCircle size={28} color="var(--text-secondary)" strokeWidth={1.5} />
             </div>
@@ -740,7 +740,7 @@
               <div class="flex justify-center py-4">
                 <span
                   class="rounded-full px-3 py-1"
-                  style="font-size: 11px; font-weight: 500; color: var(--text-secondary); background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                  style="font-size: 11px; font-weight: 500; color: var(--text-secondary); background: var(--surface-bg); border: 1px solid var(--border-theme);"
                 >
                   {formatDateDivider(message.sent_at)}
                 </span>
@@ -751,7 +751,7 @@
               <div class="flex justify-center py-2">
                 <span
                   class="rounded-full px-3 py-1"
-                  style="font-size: 12px; color: var(--text-secondary); background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                  style="font-size: 12px; color: var(--text-secondary); background: var(--surface-bg); border: 1px solid var(--border-theme);"
                 >
                   {message.content}
                 </span>
@@ -793,7 +793,7 @@
                     class="relative {message.type === 'image' ? 'p-1' : 'px-4 py-2.5'}"
                     style={isMe
                       ? 'background: var(--brand); color: var(--text-on-accent); border-radius: var(--radius-md) var(--radius-md) 4px var(--radius-md);'
-                      : 'background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 4px; color: var(--text-primary);'}
+                      : 'background: var(--surface-bg); border: 1px solid var(--border-theme); border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 4px; color: var(--text-primary);'}
                   >
                     {#if message.recalled_at != null}
                       <p style="font-size: 13px; font-style: italic; opacity: 0.7;">消息已撤回</p>
@@ -904,14 +904,14 @@
     {#if !group?.my_state?.is_joined}
       <div
         class="rounded-[16px] px-4 py-3 text-center"
-        style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+        style="border: 1px solid var(--border-theme);"
       >
         <p style="font-size: 13px; color: var(--text-secondary);">你还不是群成员，无法发送消息</p>
       </div>
     {:else if group?.my_state?.is_muted}
       <div
         class="rounded-[16px] px-4 py-3 text-center"
-        style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+        style="border: 1px solid var(--border-theme);"
       >
         <p style="font-size: 13px; color: var(--text-secondary);">你已被禁言，无法发送消息</p>
       </div>

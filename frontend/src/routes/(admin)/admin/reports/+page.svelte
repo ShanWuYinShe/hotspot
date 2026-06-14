@@ -154,7 +154,7 @@
                   <div class="flex items-start gap-3">
                     <div
                       class="flex flex-shrink-0 items-center justify-center rounded-full"
-                      style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                      style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
                     >
                       <span style="font-size: 12px; color: var(--text-secondary);">?</span>
                     </div>

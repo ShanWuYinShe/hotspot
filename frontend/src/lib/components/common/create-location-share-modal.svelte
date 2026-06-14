@@ -99,7 +99,7 @@
         <DialogTitle class="flex items-center gap-3">
           <div
             class="flex items-center justify-center rounded-full"
-            style="width: 40px; height: 40px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            style="width: 40px; height: 40px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
           >
             <Share2 style="width: 20px; height: 20px; color: var(--brand);" />
           </div>
@@ -131,7 +131,7 @@
         <!-- 说明 -->
         <div
           class="rounded-[22px] p-4 space-y-2"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--theme-overlay-subtle); font-size: 13px;"
+          style="background: var(--surface-bg); border: 1px solid var(--theme-overlay-subtle); font-size: 13px;"
         >
           <p class="flex items-center gap-2" style="font-weight: 500; color: var(--brand);">
             <UsersRound style="width: 16px; height: 16px;" />
@@ -166,7 +166,7 @@
         <DialogTitle class="flex items-center gap-3" style="color: var(--success);">
           <div
             class="flex items-center justify-center rounded-full"
-            style="width: 40px; height: 40px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            style="width: 40px; height: 40px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
           >
             <Check style="width: 20px; height: 20px; color: var(--success);" />
           </div>

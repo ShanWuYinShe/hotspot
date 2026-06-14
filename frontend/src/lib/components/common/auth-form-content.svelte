@@ -433,7 +433,7 @@
       >
         <div
           class="rounded-[22px] p-3"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-secondary);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-secondary);"
         >
           {t('auth.guestModeHint')}
         </div>

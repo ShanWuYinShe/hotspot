@@ -14,8 +14,7 @@ import UsersRound from 'lucide-svelte/icons/users-round';
 import MessageCircle from 'lucide-svelte/icons/message-circle';
 import Bell from 'lucide-svelte/icons/bell';
 import Heart from 'lucide-svelte/icons/heart';
-import MapPin from 'lucide-svelte/icons/map-pin';
-import Menu from 'lucide-svelte/icons/menu';
+import User from 'lucide-svelte/icons/user';
 import LayoutDashboard from 'lucide-svelte/icons/layout-dashboard';
 import Users from 'lucide-svelte/icons/users';
 import Megaphone from 'lucide-svelte/icons/megaphone';
@@ -41,13 +40,12 @@ export interface NavItem {
   badge?: NavBadge;
 }
 
-/** 底部主标签：可为路由跳转（`href`）或特殊动作（`action`）。 */
+/** 底部主标签：路由跳转目的地。 */
 export interface BottomTab {
   key: string;
   labelKey: TranslationKey;
   icon: NavIcon;
   href?: string;
-  action?: 'menu';
   requiresAuth?: boolean;
   exact?: boolean;
   badge?: NavBadge;
@@ -58,8 +56,7 @@ export const discoverNavItems: NavItem[] = [
   { href: '/', labelKey: 'sidebar.home', icon: Home, exact: true },
   { href: '/discover', labelKey: 'nav.discover', icon: Compass },
   { href: '/users/nearby', labelKey: 'sidebar.nearbyPeople', icon: UsersRound },
-  { href: '/groups/nearby', labelKey: 'sidebar.nearbyGroups', icon: UsersRound },
-  { href: '/moments/nearby', labelKey: 'sidebar.nearbyMoments', icon: Image }
+  { href: '/groups/nearby', labelKey: 'sidebar.nearbyGroups', icon: UsersRound }
 ];
 
 /** 个人中心目的地（均需登录）。 */
@@ -102,12 +99,11 @@ export const adminNavItems: NavItem[] = [
 ];
 
 /**
- * 移动 / 平板底部主标签：3 个高频目的地 + 一个「菜单」入口。
- * 「菜单」打开导航抽屉（NavDrawer），抽屉内暴露与桌面侧边栏一致的全部路由，
- * 从而保证所有设备场景下路由集合一致。
+ * 移动 / 平板底部主标签：4 个高频顶层目的地（无「更多菜单」抽屉）。
+ * 二级 / 个人功能从「我的」(个人中心) 下钻进入，避免把不属于一级界面的功能塞进底栏。
  */
 export const bottomTabs: BottomTab[] = [
-  { key: 'nearby', href: '/', labelKey: 'nav.nearby', icon: MapPin, exact: true },
+  { key: 'home', href: '/', labelKey: 'sidebar.home', icon: Home, exact: true },
   { key: 'discover', href: '/discover', labelKey: 'nav.discover', icon: Compass },
   {
     key: 'messages',
@@ -117,7 +113,7 @@ export const bottomTabs: BottomTab[] = [
     requiresAuth: true,
     badge: 'inbox'
   },
-  { key: 'menu', action: 'menu', labelKey: 'nav.menu', icon: Menu }
+  { key: 'me', href: '/profile', labelKey: 'nav.me', icon: User, requiresAuth: true }
 ];
 
 /** 统一的高亮判定：`exact` 仅精确匹配，否则匹配自身或其子路径。 */

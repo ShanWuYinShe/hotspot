@@ -64,7 +64,7 @@
     <div class="flex flex-col items-center justify-center py-20 text-center">
       <div
         class="mb-4 flex items-center justify-center rounded-full"
-        style="width: 56px; height: 56px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+        style="width: 56px; height: 56px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
       >
         <Shield size={24} strokeWidth={1.5} style="color: var(--text-secondary);" />
       </div>
@@ -99,7 +99,7 @@
     <div class="flex flex-col items-center justify-center py-20 text-center">
       <div
         class="mb-4 flex items-center justify-center rounded-full"
-        style="width: 56px; height: 56px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+        style="width: 56px; height: 56px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
       >
         <Shield size={24} strokeWidth={1.5} style="color: var(--text-secondary);" />
       </div>

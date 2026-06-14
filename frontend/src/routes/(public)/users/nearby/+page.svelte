@@ -1,7 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { authStore } from '$lib/stores/auth.svelte';
-  import { uiStore } from '$lib/stores/ui.svelte';
   import { usersService } from '$lib/api/services';
   import { navigateToNearbyBackTarget } from '../../nearby-back';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
@@ -20,7 +19,6 @@
   import Radar from 'lucide-svelte/icons/radar';
   import Users from 'lucide-svelte/icons/users';
   import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
-  import LogIn from 'lucide-svelte/icons/log-in';
 
   const SORT_OPTIONS = ['距离', '在线', '共同好友'] as const;
   const FILTER_TAGS = ['全部', '摄影', '旅行', '美食', '户外', '城市', '咖啡', '音乐', '运动'];
@@ -189,23 +187,13 @@
           {/each}
         </div>
       {:else if pagination.error}
-        {#if !authStore.isAuthenticated}
-          <EmptyState
-            icon={LogIn}
-            title="登录后查看"
-            description="登录后即可浏览附近的人"
-            actionText="立即登录"
-            onAction={() => uiStore.openLoginModalWithRedirect({})}
-          />
-        {:else}
-          <EmptyState
-            icon={AlertTriangle}
-            title="加载失败"
-            description={pagination.error}
-            actionText="重试"
-            onAction={handleRetry}
-          />
-        {/if}
+        <EmptyState
+          icon={AlertTriangle}
+          title="加载失败"
+          description={pagination.error}
+          actionText="重试"
+          onAction={handleRetry}
+        />
       {:else if pagination.items.length === 0 && hasLoadedOnce}
         <EmptyState
           icon={Users}

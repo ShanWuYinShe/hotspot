@@ -15,15 +15,10 @@
   const currentPath = $derived(page.url.pathname);
 
   function isActive(tab: BottomTab) {
-    if (tab.action === 'menu') return uiStore.showNavDrawer;
     return isNavActive(tab.href, tab.exact, currentPath);
   }
 
   function navigate(tab: BottomTab) {
-    if (tab.action === 'menu') {
-      uiStore.toggleNavDrawer();
-      return;
-    }
     if (!tab.href) return;
     if (tab.requiresAuth && !authStore.isAuthenticated) {
       uiStore.openLoginModalWithRedirect({ url: tab.href });

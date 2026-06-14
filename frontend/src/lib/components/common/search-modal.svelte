@@ -312,7 +312,7 @@
     <div class="flex items-center gap-3 px-5 pt-5 pb-0">
       <div
         class="flex items-center justify-center rounded-full"
-        style="width: 40px; height: 40px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+        style="width: 40px; height: 40px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
       >
         <Search size={18} strokeWidth={1.5} color="var(--brand)" />
       </div>
@@ -446,7 +446,7 @@
                       {#if item.type === 'tag'}
                         <div
                           class="flex flex-shrink-0 items-center justify-center rounded-full"
-                          style="width: 34px; height: 34px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                          style="width: 34px; height: 34px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
                         >
                           <Hash size={14} strokeWidth={1.5} color="var(--brand)" />
                         </div>

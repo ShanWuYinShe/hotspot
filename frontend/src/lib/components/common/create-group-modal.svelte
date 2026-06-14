@@ -233,7 +233,7 @@
       <Dialog.Title class="flex items-center gap-3">
         <div
           class="flex items-center justify-center rounded-full"
-          style="width: 40px; height: 40px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+          style="width: 40px; height: 40px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
         >
           <UsersRound style="width: 20px; height: 20px; color: var(--brand);" />
         </div>
@@ -397,7 +397,7 @@
         </div>
         <div
           class="flex items-center justify-between rounded-[14px] px-4 py-2.5"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
         >
           <span>允许被搜索</span>
           <input type="checkbox" class="h-4 w-4" bind:checked={isSearchable} />

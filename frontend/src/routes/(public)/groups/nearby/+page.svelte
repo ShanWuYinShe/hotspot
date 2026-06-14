@@ -19,7 +19,6 @@
   import UsersRound from 'lucide-svelte/icons/users-round';
   import Plus from 'lucide-svelte/icons/plus';
   import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
-  import LogIn from 'lucide-svelte/icons/log-in';
 
   const CATEGORIES = ['全部', '摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏'];
 
@@ -183,23 +182,13 @@
           {/each}
         </div>
       {:else if pagination.error}
-        {#if !authStore.isAuthenticated}
-          <EmptyState
-            icon={LogIn}
-            title="登录后查看"
-            description="登录后即可浏览附近的群组"
-            actionText="立即登录"
-            onAction={() => uiStore.openLoginModalWithRedirect({})}
-          />
-        {:else}
-          <EmptyState
-            icon={AlertTriangle}
-            title="加载失败"
-            description={pagination.error}
-            actionText="重试"
-            onAction={handleRetry}
-          />
-        {/if}
+        <EmptyState
+          icon={AlertTriangle}
+          title="加载失败"
+          description={pagination.error}
+          actionText="重试"
+          onAction={handleRetry}
+        />
       {:else if pagination.items.length === 0 && hasLoadedOnce}
         <EmptyState
           icon={UsersRound}

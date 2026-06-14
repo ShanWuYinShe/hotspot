@@ -38,7 +38,7 @@
     <div class="mb-6 text-center">
       <div
         class="mx-auto mb-4 flex items-center justify-center rounded-full"
-        style="width: 48px; height: 48px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+        style="width: 48px; height: 48px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
       >
         <Shield size={19} color="var(--brand)" />
       </div>

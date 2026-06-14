@@ -53,14 +53,12 @@ class UIStore {
   #showCreateGroup = $state(false);
   #showSearchModal = $state(false);
   #showAuthPrompt = $state(false);
-  #showNavDrawer = $state(false);
 
   showCreateSheet = $derived(this.#showCreateSheet);
   showCreateMoment = $derived(this.#showCreateMoment);
   showCreateGroup = $derived(this.#showCreateGroup);
   showSearchModal = $derived(this.#showSearchModal);
   showAuthPrompt = $derived(this.#showAuthPrompt);
-  showNavDrawer = $derived(this.#showNavDrawer);
 
   /**
    * 显示内联登录提示，用户手动点击后跳转到登录页
@@ -181,20 +179,6 @@ class UIStore {
 
   closeSearchModal() {
     this.#showSearchModal = false;
-  }
-
-  /** 打开移动 / 平板全量导航抽屉 */
-  openNavDrawer() {
-    this.#showNavDrawer = true;
-  }
-
-  /** 关闭导航抽屉 */
-  closeNavDrawer() {
-    this.#showNavDrawer = false;
-  }
-
-  toggleNavDrawer() {
-    this.#showNavDrawer = !this.#showNavDrawer;
   }
 }
 

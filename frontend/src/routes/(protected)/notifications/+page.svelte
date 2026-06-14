@@ -597,7 +597,7 @@
                 {:else}
                   <div
                     class="flex items-center justify-center"
-                    style="width: 44px; height: 44px; border-radius: 9999px; background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                    style="width: 44px; height: 44px; border-radius: 9999px; background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
                   >
                     <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
                   </div>

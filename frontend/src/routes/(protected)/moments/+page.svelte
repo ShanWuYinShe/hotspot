@@ -119,7 +119,7 @@
                       {#if moment.images.length > 4}
                         <div
                           class="flex h-20 w-20 items-center justify-center rounded-[12px]"
-                          style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-secondary);"
+                          style="border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-secondary);"
                         >
                           +{moment.images.length - 4}
                         </div>

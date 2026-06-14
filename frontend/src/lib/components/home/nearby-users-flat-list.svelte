@@ -14,16 +14,9 @@
   interface Props {
     users?: NearbyUser[];
     loading?: boolean;
-    followingIds?: Set<string>;
-    onToggleFollow?: (id: string) => void;
   }
 
-  let {
-    users = [],
-    loading = false,
-    followingIds = new Set<string>(),
-    onToggleFollow
-  }: Props = $props();
+  let { users = [], loading = false }: Props = $props();
 </script>
 
 <div
@@ -49,7 +42,6 @@
     {/each}
   {:else}
     {#each users as user (user.id)}
-      {@const followed = followingIds.has(user.id)}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer"
@@ -87,20 +79,6 @@
             {/if}
           </div>
         </div>
-        {#if onToggleFollow}
-          <button
-            class="rounded-full px-3 py-1 outline-none transition-all"
-            style={followed
-              ? 'background: transparent; color: var(--text-secondary); border: 1px solid var(--border-theme); font-size: 11px;'
-              : 'background: var(--brand); color: var(--text-on-accent); border: 1px solid transparent; font-size: 11px;'}
-            onclick={(e) => {
-              e.stopPropagation();
-              onToggleFollow(user.id);
-            }}
-          >
-            {followed ? '已关注' : '关注'}
-          </button>
-        {/if}
       </div>
     {/each}
   {/if}

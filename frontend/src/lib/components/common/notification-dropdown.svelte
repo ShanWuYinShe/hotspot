@@ -201,7 +201,7 @@
       <div class="flex flex-col items-center justify-center py-12" role="status" aria-live="polite">
         <div
           class="rounded-full animate-pulse"
-          style="width: 32px; height: 32px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+          style="width: 32px; height: 32px; background: var(--surface-bg); box-shadow: var(--shadow-sm);"
         ></div>
         <p class="mt-3" style="font-size: 13px; color: var(--text-secondary);">
           {t('common.loading')}
@@ -211,7 +211,7 @@
       <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
         <div
           class="mb-3 flex items-center justify-center rounded-full"
-          style="width: 64px; height: 64px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+          style="width: 64px; height: 64px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
         >
           <Bell style="width: 32px; height: 32px; color: var(--text-secondary);" />
         </div>
@@ -229,7 +229,7 @@
       <div class="flex flex-col items-center justify-center py-12">
         <div
           class="mb-3 flex items-center justify-center rounded-full"
-          style="width: 64px; height: 64px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+          style="width: 64px; height: 64px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
         >
           <Bell style="width: 32px; height: 32px; color: var(--text-secondary);" />
         </div>
@@ -257,7 +257,7 @@
               >
                 <div
                   class="flex shrink-0 items-center justify-center rounded-full"
-                  style="width: 40px; height: 40px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                  style="width: 40px; height: 40px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
                 >
                   <Icon style="width: 20px; height: 20px; color: var(--brand);" />
                 </div>

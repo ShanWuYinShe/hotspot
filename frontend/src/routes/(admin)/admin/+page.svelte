@@ -76,7 +76,7 @@
         >
           <div
             class="mb-2 flex items-center justify-center rounded-full"
-            style="width: 36px; height: 36px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
           >
             <stat.icon size={16} strokeWidth={1.75} style="color: var(--brand);" />
           </div>
@@ -112,7 +112,7 @@
             <a
               href={action.href}
               class="flex items-center gap-3 rounded-[18px] p-4 transition-all duration-200"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-active);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-active);"
             >
               <div
                 class="flex items-center justify-center rounded-full"
@@ -146,7 +146,7 @@
             {#each healthStatus as svc (svc.key)}
               <div
                 class="flex items-center justify-between rounded-[18px] px-4 py-3"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-active);"
+                style="background: var(--surface-bg); border: 1px solid var(--border-active);"
               >
                 <span style="font-size: 14px; color: var(--text-primary);">{svc.label}</span>
                 <div class="flex items-center gap-2">
@@ -167,7 +167,7 @@
             {#each ['API 服务', '数据库', '缓存服务'] as service}
               <div
                 class="flex items-center justify-between rounded-[18px] px-4 py-3"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-active);"
+                style="background: var(--surface-bg); border: 1px solid var(--border-active);"
               >
                 <span style="font-size: 14px; color: var(--text-primary);">{service}</span>
                 <span style="font-size: 13px; color: var(--text-secondary);">检测中...</span>

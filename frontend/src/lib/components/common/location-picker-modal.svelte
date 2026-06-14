@@ -1977,13 +1977,13 @@
           </div>
         {/if}
 
-        <!-- 悬浮定位按钮 (移动端) -->
-        <div class="absolute right-3 top-4 z-10 flex flex-col gap-2 sm:hidden">
+        <!-- 悬浮定位按钮 (移动端) — 置于拇指可达的底部，收起态底栏(116px)之上 -->
+        <div class="absolute right-3 bottom-[132px] z-10 flex flex-col gap-2 sm:hidden">
           <Button
             size="icon"
             variant="ghost"
-            class="h-11 w-11 rounded-full backdrop-blur-sm transition"
-            style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+            class="h-12 w-12 rounded-full backdrop-blur-sm transition active:scale-95"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-md);"
             onclick={handleUseCurrentLocation}
             disabled={isLocating}
             aria-label="使用当前位置"
@@ -1998,8 +1998,8 @@
             <Button
               size="icon"
               variant="ghost"
-              class="h-11 w-11 rounded-full backdrop-blur-sm transition"
-              style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+              class="h-12 w-12 rounded-full backdrop-blur-sm transition active:scale-95"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-md);"
               onclick={handleBackToBrowseAnchor}
               aria-label="回到浏览锚点位置"
             >

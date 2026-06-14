@@ -10,7 +10,6 @@
   import SearchModal from '$lib/components/common/search-modal.svelte';
   import CreateMomentModal from '$lib/components/common/create-moment-modal.svelte';
   import CreateGroupModal from '$lib/components/common/create-group-modal.svelte';
-  import NavDrawer from '$lib/components/common/nav-drawer.svelte';
   import PageLoading from '$lib/components/common/page-loading.svelte';
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
@@ -244,6 +243,5 @@
 />
 <PageLoading />
 <AuthPrompt />
-<NavDrawer />
 
 {@render children()}

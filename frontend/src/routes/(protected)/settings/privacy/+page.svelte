@@ -95,7 +95,7 @@
           {#each Array(5) as _, i (i)}
             <div
               class="h-11 w-full rounded-[18px]"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             ></div>
           {/each}
         </div>
@@ -118,7 +118,7 @@
         <div class="space-y-3">
           <div
             class="rounded-[18px] p-4"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <label
               for="privacy-level"
@@ -138,7 +138,7 @@
 
           <div
             class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
               <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">位置可见</p>
@@ -152,7 +152,7 @@
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={locationVisible
                 ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
-                : 'background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);'}
+                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => (locationVisible = !locationVisible)}
             >
               <span
@@ -168,7 +168,7 @@
 
           <div
             class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
               <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
@@ -184,7 +184,7 @@
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={presenceVisible
                 ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
-                : 'background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);'}
+                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => (presenceVisible = !presenceVisible)}
             >
               <span
@@ -200,7 +200,7 @@
 
           <div
             class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
               <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
@@ -218,7 +218,7 @@
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={socialListsVisible
                 ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
-                : 'background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);'}
+                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => (socialListsVisible = !socialListsVisible)}
             >
               <span
@@ -251,7 +251,7 @@
         <div class="space-y-3">
           <div
             class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
               <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">允许关注</p>
@@ -265,7 +265,7 @@
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={allowFollow
                 ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
-                : 'background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);'}
+                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => (allowFollow = !allowFollow)}
             >
               <span
@@ -281,7 +281,7 @@
 
           <div
             class="rounded-[18px] p-4"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <label
               for="private-chat"
@@ -319,7 +319,7 @@
         <div class="space-y-3">
           <div
             class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
               <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
@@ -335,7 +335,7 @@
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={searchable
                 ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
-                : 'background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);'}
+                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => (searchable = !searchable)}
             >
               <span
@@ -351,7 +351,7 @@
 
           <div
             class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
               <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">附近可见</p>
@@ -365,7 +365,7 @@
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={locationSearchable
                 ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
-                : 'background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);'}
+                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => (locationSearchable = !locationSearchable)}
             >
               <span

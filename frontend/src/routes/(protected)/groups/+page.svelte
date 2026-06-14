@@ -269,7 +269,7 @@
             <div class="flex items-center gap-2">
               <div
                 class="flex items-center justify-center rounded-full"
-                style="width: 28px; height: 28px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                style="width: 28px; height: 28px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
               >
                 <Inbox size={12} color="var(--text-secondary)" strokeWidth={1.5} />
               </div>
@@ -293,10 +293,7 @@
           {:else}
             <div class="space-y-2">
               {#each invites as invite (invite.invite_id)}
-                <div
-                  class="rounded-[14px] p-3"
-                  style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-                >
+                <div class="rounded-[14px] p-3" style="border: 1px solid var(--border-theme);">
                   <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
                     {invite.group.name}
                   </p>
@@ -341,7 +338,7 @@
             <div class="flex items-center gap-2">
               <div
                 class="flex items-center justify-center rounded-full"
-                style="width: 28px; height: 28px; box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+                style="width: 28px; height: 28px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
               >
                 <CheckCircle2 size={12} color="var(--text-secondary)" strokeWidth={1.5} />
               </div>
@@ -365,10 +362,7 @@
           {:else}
             <div class="space-y-2">
               {#each applications as application (application.application_id)}
-                <div
-                  class="rounded-[14px] p-3"
-                  style="box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
-                >
+                <div class="rounded-[14px] p-3" style="border: 1px solid var(--border-theme);">
                   <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
                     群组申请
                   </p>

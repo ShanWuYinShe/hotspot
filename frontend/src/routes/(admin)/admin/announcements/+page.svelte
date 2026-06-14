@@ -177,7 +177,7 @@
           {#each Array(3) as _, i (i)}
             <div
               class="rounded-[18px] p-4"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-active);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-active);"
             >
               <div
                 style="width: 48px; height: 16px; background: var(--border-theme); border-radius: 4px; margin-bottom: 8px;"
@@ -201,7 +201,7 @@
             {@const badge = SEVERITY_BADGE[announcement.severity]}
             <div
               class="rounded-[18px] p-4"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-active);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-active);"
             >
               <div class="flex items-start justify-between gap-4">
                 <div class="flex-1">
