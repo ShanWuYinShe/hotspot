@@ -373,7 +373,7 @@ export struct NearbyPage {
       Column({ space: 2 }) {
         Text('首页')
           .fontSize(22)
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(FontWeight.Normal)
           .fontColor(this.getPalette().textPrimary)
 
         Text('发现周边的有趣人和事')

@@ -499,7 +499,7 @@ export struct MessagePage {
         Column({ space: 2 }) {
           Text('消息')
             .fontSize(22)
-            .fontWeight(FontWeight.Bold)
+            .fontWeight(FontWeight.Normal)
             .fontColor(this.getCurrentThemePalette().textPrimary)
           if (this.getTotalUnread() > 0) {
             Text(`${this.getTotalUnread()} 条未读`)
