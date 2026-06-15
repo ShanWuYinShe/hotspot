@@ -370,12 +370,18 @@ export struct NearbyPage {
   @Builder
   private buildStickyHeader() {
     Row() {
-      Text('首页')
-        .fontSize(20)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(this.getPalette().textPrimary)
+      Column({ space: 2 }) {
+        Text('首页')
+          .fontSize(22)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.getPalette().textPrimary)
 
-      Blank()
+        Text('发现周边的有趣人和事')
+          .fontSize(12)
+          .fontColor(this.getPalette().textSecondary)
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
 
       Row({ space: 6 }) {
         Text() {
@@ -472,35 +478,44 @@ export struct NearbyPage {
     .border({ width: 1, color: this.getPalette().borderColor })
   }
 
+  // ==================== 区块标题 (eyebrow) ====================
+
+  @Builder
+  private buildSectionHeader(title: string, linkText: string, onViewAll: () => void) {
+    Row() {
+      Text(title)
+        .fontSize(10)
+        .fontColor(this.getPalette().textSecondary)
+        .textCase(TextCase.UpperCase)
+        .letterSpacing(1.4)
+        .opacity(0.75)
+
+      Blank()
+
+      Row({ space: 2 }) {
+        Text(linkText)
+          .fontSize(12)
+          .fontColor(this.getPalette().accentBackground)
+        Text() {
+          SymbolSpan($r(AppIcon.ARROW_RIGHT))
+            .fontSize(13)
+            .fontColor([this.getPalette().accentBackground])
+        }
+      }
+      .onClick(onViewAll)
+    }
+    .width('100%')
+    .margin({ bottom: 12 })
+  }
+
   // ==================== 附近的人 ====================
 
   @Builder
   private buildNearbyPeople() {
     Column() {
-      Row() {
-        Text('附近的人')
-          .fontSize(16)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.getPalette().textPrimary)
-
-        Blank()
-
-        Row({ space: 2 }) {
-          Text('全部')
-            .fontSize(12)
-            .fontColor(this.getPalette().accentBackground)
-          Text() {
-            SymbolSpan($r(AppIcon.ARROW_RIGHT))
-              .fontSize(11)
-              .fontColor([this.getPalette().accentBackground])
-          }
-        }
-        .onClick(() => {
-          // navigate to nearby users
-        })
-      }
-      .width('100%')
-      .margin({ bottom: 12 })
+      this.buildSectionHeader('附近的人', '查看全部', () => {
+        // navigate to nearby users
+      })
 
       Scroll() {
         Row({ space: 12 }) {
@@ -588,27 +603,8 @@ export struct NearbyPage {
   @Builder
   private buildActivityGrid() {
     Column() {
-      Row() {
-        Text('附近活动')
-          .fontSize(16)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.getPalette().textPrimary)
-
-        Blank()
-
-        Row({ space: 2 }) {
-          Text('更多')
-            .fontSize(12)
-            .fontColor(this.getPalette().accentBackground)
-          Text() {
-            SymbolSpan($r(AppIcon.ARROW_RIGHT))
-              .fontSize(11)
-              .fontColor([this.getPalette().accentBackground])
-          }
-        }
-      }
-      .width('100%')
-      .margin({ bottom: 12 })
+      this.buildSectionHeader('附近活动', '查看全部', () => {
+      })
 
       Flex({ wrap: FlexWrap.Wrap }) {
         ForEach(this.groups.slice(0, 4), (group: GroupItem) => {
@@ -682,28 +678,8 @@ export struct NearbyPage {
   @Builder
   private buildMomentsSection() {
     Column() {
-      Row() {
-        Text('附近动态')
-          .fontSize(10)
-          .fontColor(this.getPalette().textTertiary)
-          .textCase(TextCase.UpperCase)
-          .letterSpacing(0.14 * 16)
-
-        Blank()
-
-        Row({ space: 2 }) {
-          Text('更多')
-            .fontSize(12)
-            .fontColor(this.getPalette().accentBackground)
-          Text() {
-            SymbolSpan($r(AppIcon.ARROW_RIGHT))
-              .fontSize(11)
-              .fontColor([this.getPalette().accentBackground])
-          }
-        }
-      }
-      .width('100%')
-      .margin({ bottom: 12 })
+      this.buildSectionHeader('附近动态', '查看全部', () => {
+      })
 
       Column({ space: 16 }) {
         ForEach(this.moments.slice(0, 5), (moment: MomentItem) => {

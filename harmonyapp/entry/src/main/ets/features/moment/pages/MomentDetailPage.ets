@@ -93,9 +93,10 @@ export struct MomentDetailPage {
 
   private calcImageGridHeight(imageCount: number): number {
     if (imageCount === 0) return 0;
-    const rows = Math.ceil(Math.min(imageCount, 9) / 3);
+    const cols = imageCount === 1 ? 1 : 2;
+    const rows = Math.ceil(Math.min(imageCount, 9) / cols);
     const gap = 8;
-    const itemHeight = 110;
+    const itemHeight = imageCount === 1 ? 240 : 180;
     return rows * itemHeight + (rows - 1) * gap;
   }
 
@@ -341,16 +342,15 @@ export struct MomentDetailPage {
                 .width('100%')
                 .height('100%')
                 .objectFit(ImageFit.Cover)
-                .borderRadius(DesignConstants.RADIUS.MD)
+                .borderRadius(14)
                 .backgroundColor(this.getSurfaceBackground())
                 .onClick(() => {
                   this.previewImage(imgIndex);
                 })
             }
-            .aspectRatio(1)
           }, (img: MomentImage, index: number) => `${img.url}_${index}`)
         }
-        .columnsTemplate('1fr 1fr 1fr')
+        .columnsTemplate(moment.images.length === 1 ? '1fr' : '1fr 1fr')
         .columnsGap(DesignConstants.SPACING.SM)
         .rowsGap(DesignConstants.SPACING.SM)
         .height(this.calcImageGridHeight(moment.images.length))

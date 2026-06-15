@@ -1426,6 +1426,21 @@ export struct ChatPage {
     .borderRadius(DesignConstants.RADIUS.LG)
   }
 
+  private getBubbleRadius(isSelf: boolean): BorderRadiuses {
+    const big: number = DesignConstants.CHAT.BUBBLE_RADIUS;
+    const notch: number = 4;
+    if (this.chatType === 'group_chat') {
+      // 群聊：缺角在底部
+      return isSelf
+        ? { topLeft: big, topRight: big, bottomLeft: big, bottomRight: notch }
+        : { topLeft: big, topRight: big, bottomLeft: notch, bottomRight: big };
+    }
+    // 私聊：缺角在顶部
+    return isSelf
+      ? { topLeft: big, topRight: notch, bottomLeft: big, bottomRight: big }
+      : { topLeft: notch, topRight: big, bottomLeft: big, bottomRight: big };
+  }
+
   @Builder
   buildMessageItem(msg: ChatMessage) {
     if (msg.isSystem) {
@@ -1472,7 +1487,7 @@ export struct ChatPage {
                 .width(200)
                 .objectFit(ImageFit.Cover)
                 .backgroundColor(this.getChatTheme().listBackground)
-                .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
+                .borderRadius(this.getBubbleRadius(msg.isSelf))
                 .shadow(this.getCurrentThemePalette().controlShadow)
                 .border({ width: 1, color: this.getChatTheme().divider })
                 .margin(DesignConstants.SPACING.XS)
@@ -1483,13 +1498,13 @@ export struct ChatPage {
                 .fontColor(msg.isSelf ? this.getChatTheme().sendButtonActiveText : this.getCurrentThemePalette().textPrimary)
                 .backgroundColor(msg.isSelf ? this.getChatTheme().bubbleSelf : this.getChatTheme().bubblePeer)
                 .padding({
-                  left: DesignConstants.CHAT.BUBBLE_PADDING_H + 2,
-                  right: DesignConstants.CHAT.BUBBLE_PADDING_H + 2,
-                  top: DesignConstants.CHAT.BUBBLE_PADDING_V + 1,
-                  bottom: DesignConstants.CHAT.BUBBLE_PADDING_V + 1
+                  left: 14,
+                  right: 14,
+                  top: 10,
+                  bottom: 10
                 })
-                .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
-                .constraintSize({ maxWidth: DesignConstants.CHAT.BUBBLE_MAX_WIDTH })
+                .borderRadius(this.getBubbleRadius(msg.isSelf))
+                .constraintSize({ maxWidth: this.chatType === 'group_chat' ? '70%' : '76%' })
                 .shadow(msg.isSelf ? this.getCurrentThemePalette().accentShadow : this.getCurrentThemePalette().controlShadow)
             }
           }

@@ -498,7 +498,7 @@ export struct MessagePage {
       Row() {
         Column({ space: 2 }) {
           Text('消息')
-            .fontSize(20)
+            .fontSize(22)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.getCurrentThemePalette().textPrimary)
           if (this.getTotalUnread() > 0) {

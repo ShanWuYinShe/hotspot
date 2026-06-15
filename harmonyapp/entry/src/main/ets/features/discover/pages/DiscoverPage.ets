@@ -197,7 +197,7 @@ export struct DiscoverPage {
       Column() {
         Row() {
           Text('发现')
-            .fontSize(20)
+            .fontSize(22)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.getCurrentThemePalette().textPrimary)
 
