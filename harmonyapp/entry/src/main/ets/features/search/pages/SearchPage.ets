@@ -405,15 +405,15 @@ export struct SearchPage {
           Tabs({ barPosition: BarPosition.Start, controller: this.controller, index: this.currentIndex }) {
             TabContent() {
               this.UserResultList()
-            }.tabBar(this.TabBuilder(0, '用户'))
-
-            TabContent() {
-              this.GroupResultList()
-            }.tabBar(this.TabBuilder(1, '群组'))
+            }.tabBar(this.TabBuilder(0, this.tabLabel('用户', this.userResults.length)))
 
             TabContent() {
               this.MomentResultList()
-            }.tabBar(this.TabBuilder(2, '瞬间'))
+            }.tabBar(this.TabBuilder(1, this.tabLabel('动态', this.momentResults.length)))
+
+            TabContent() {
+              this.GroupResultList()
+            }.tabBar(this.TabBuilder(2, this.tabLabel('群组', this.groupResults.length)))
           }
           .vertical(false)
           .barMode(BarMode.Scrollable)
@@ -493,6 +493,10 @@ export struct SearchPage {
     .shadow(this.getCurrentThemePalette().surfaceShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
     .onClick(() => this.handleSuggestItemTap(item))
+  }
+
+  private tabLabel(base: string, count: number): string {
+    return (this.hasSearched && count > 0) ? `${base} (${count})` : base;
   }
 
   @Builder TabBuilder(index: number, name: string) {
@@ -593,10 +597,12 @@ export struct SearchPage {
       Column({ space: 16 }) {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(48)
+            .fontSize(36)
             .fontColor([this.getCurrentThemePalette().textSecondary])
+            .opacity(0.4)
         }
-        Text('未找到相关结果').fontSize(DesignConstants.FONT.SIZE.LG).fontColor(this.getCurrentThemePalette().textSecondary)
+        Text('未找到相关内容').fontSize(15).fontColor(this.getCurrentThemePalette().textPrimary)
+        Text('尝试其他关键词').fontSize(13).fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
