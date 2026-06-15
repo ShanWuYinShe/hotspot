@@ -18,6 +18,7 @@ import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { LoginPromptView } from '../../../components/LoginPromptView';
 import { MyProfile, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest, UserItem, UserOpenTheDoorRequest, UserSharePayload } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -135,11 +136,15 @@ export struct ProfilePage {
   }
 
   private resolveHeaderTitle(): string {
-    if (!this.isExternalProfileMode()) {
-      return '个人中心';
+    if (this.isExternalProfileMode()) {
+      const nickname = this.viewedUserProfile?.user?.nickname ?? '';
+      return nickname.length > 0 ? nickname : '用户资料';
     }
-    const nickname = this.viewedUserProfile?.user?.nickname ?? '';
-    return nickname.length > 0 ? nickname : '用户资料';
+    // 已登录：展示昵称（与前端 profile header 对齐）
+    if (this.isLoggedIn && this.currentUser?.nickname) {
+      return this.currentUser.nickname;
+    }
+    return '个人中心';
   }
 
   private async loadViewedUserProfile(): Promise<void> {
@@ -619,70 +624,66 @@ export struct ProfilePage {
           .margin({ top: 64, right: 12 })
 
         Column() {
-          SystemPageHeader({
-            title: this.resolveHeaderTitle(),
-            showBackButton: this.isExternalProfileMode(),
-            onBack: this.isExternalProfileMode() ? () => { AppRouter.pop(); } : undefined,
-            action: (!this.isExternalProfileMode() && this.isLoggedIn && this.currentUser && !this.isEditing && !this.showUpgradeForm)
-              ? { label: '编辑', onClick: () => this.startEdit() }
-              : undefined
-          })
+          if (!this.isLoggedIn && !this.isExternalProfileMode() && !this.isLoading) {
+            // 未登录：全页面展示 LoginPromptView（与前端 protected route 对齐）
+            this.buildGuestView()
+          } else {
+            SystemPageHeader({
+              title: this.resolveHeaderTitle(),
+              showBackButton: this.isExternalProfileMode(),
+              onBack: this.isExternalProfileMode() ? () => { AppRouter.pop(); } : undefined,
+              action: (!this.isExternalProfileMode() && this.isLoggedIn && this.currentUser && !this.isEditing && !this.showUpgradeForm)
+                ? { label: '编辑', onClick: () => this.startEdit() }
+                : undefined
+            })
 
-          if (this.isExternalProfileMode()) {
-            Column() {
-              this.buildExternalProfileView()
-            }
-            .width('100%')
-            .justifyContent(FlexAlign.Start)
-            .alignItems(HorizontalAlign.Start)
-            .layoutWeight(1)
-            .transition(
-              TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-            )
-          } else if (this.isLoading) {
-            SystemLoadingView({ message: '正在更新...' })
+            if (this.isExternalProfileMode()) {
+              Column() {
+                this.buildExternalProfileView()
+              }
+              .width('100%')
+              .justifyContent(FlexAlign.Start)
+              .alignItems(HorizontalAlign.Start)
               .layoutWeight(1)
               .transition(
                 TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
                   .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
               )
-          } else if (!this.isLoggedIn) {
-            Column() {
-              this.buildGuestView()
+            } else if (this.isLoading) {
+              SystemLoadingView({ message: '正在更新...' })
+                .layoutWeight(1)
+                .transition(
+                  TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+                    .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+                )
+            } else if (this.showUpgradeForm) {
+              Column() {
+                this.buildUpgradeFormView()
+              }
+              .layoutWeight(1)
+              .transition(
+                TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+              )
+            } else if (this.userType === 'temp') {
+              Column() {
+                this.buildTempUserView()
+              }
+              .layoutWeight(1)
+              .transition(
+                TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+              )
+            } else {
+              Column() {
+                this.buildRegisteredUserView()
+              }
+              .layoutWeight(1)
+              .transition(
+                TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+              )
             }
-            .layoutWeight(1)
-            .transition(
-              TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-            )
-          } else if (this.showUpgradeForm) {
-            Column() {
-              this.buildUpgradeFormView()
-            }
-            .layoutWeight(1)
-            .transition(
-              TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-            )
-          } else if (this.userType === 'temp') {
-            Column() {
-              this.buildTempUserView()
-            }
-            .layoutWeight(1)
-            .transition(
-              TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-            )
-          } else {
-            Column() {
-              this.buildRegisteredUserView()
-            }
-            .layoutWeight(1)
-            .transition(
-              TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-            )
           }
         }
         .width('100%')
@@ -869,159 +870,11 @@ export struct ProfilePage {
   // ==================== 匿名用户 - 游客界面 ====================
   @Builder
   private buildGuestView() {
-    Scroll() {
-      Column({ space: DesignConstants.SPACING.LG }) {
-        Column({ space: DesignConstants.SPACING.LG }) {
-          Stack() {
-            Circle()
-              .width(this.getProfileVisualStyle().identity.avatarSize)
-              .height(this.getProfileVisualStyle().identity.avatarSize)
-              .fill(this.getSurfaceSubtle())
-              .shadow(this.getProfileVisualStyle().identity.haloShadow)
-            Text() {
-              SymbolSpan($r(AppIcon.PERSON))
-                .fontSize(this.getProfileVisualStyle().identity.avatarSize * 0.46)
-                .fontColor([this.getSecondaryTextColor()])
-            }
-          }
-
-          Column({ space: DesignConstants.SPACING.SM }) {
-            Text('游客模式')
-              .fontSize(this.getProfileVisualStyle().identity.titleFontSize)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(this.getPrimaryTextColor())
-              .textAlign(TextAlign.Center)
-
-            Text('先体验附近探索、内容发现与基础互动；登录后再保存资料、偏好与关系。')
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .lineHeight(24)
-              .fontColor(this.getSecondaryTextColor())
-              .textAlign(TextAlign.Center)
-          }
-          .width('100%')
-
-          Row({ space: DesignConstants.SPACING.SM }) {
-            this.buildGuestHighlight('无需注册', '先看再决定')
-            this.buildGuestHighlight('圆角轻界面', '统一视觉触感')
-          }
-          .width('100%')
-        }
-        .width('100%')
-        .padding(this.getProfileVisualStyle().card.padding)
-        .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-        .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
-        .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-        .shadow(this.getProfileVisualStyle().card.shadow)
-        .alignItems(HorizontalAlign.Center)
-
-        Column({ space: DesignConstants.SPACING.MD }) {
-          Text('可先体验这些能力')
-            .width('100%')
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(this.getPrimaryTextColor())
-
-          Grid() {
-            GridItem() {
-              this.buildFeatureCard($r(AppIcon.MAP), '附近', '发现附近热点与地图灵感', () => AppRouter.push(PageNames.SEARCH))
-            }
-            GridItem() {
-              this.buildFeatureCard($r(AppIcon.SEARCH), '发现', '找到兴趣用户与内容线索', () => AppRouter.push(PageNames.SEARCH))
-            }
-            GridItem() {
-              this.buildFeatureCard($r(AppIcon.MESSAGE), '消息', '登录后开启实时对话', () => {
-                if (this.isLoggedIn) {
-                  AppRouter.push(PageNames.CHAT);
-                } else {
-                  AppRouter.push(PageNames.LOGIN);
-                }
-              })
-            }
-            GridItem() {
-              this.buildFeatureCard($r(AppIcon.EDIT), '发布', '记录当下灵感与生活切片', () => {
-                if (this.isLoggedIn) {
-                  this.showCreateSheet();
-                } else {
-                  AppRouter.push(PageNames.LOGIN);
-                }
-              })
-            }
-          }
-          .columnsTemplate('1fr 1fr')
-          .rowsGap(DesignConstants.SPACING.MD)
-          .columnsGap(DesignConstants.SPACING.MD)
-          .width('100%')
-        }
-        .width('100%')
-        .padding(this.getProfileVisualStyle().card.padding)
-        .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-        .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
-        .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-        .shadow(this.getProfileVisualStyle().card.shadow)
-
-        Column({ space: DesignConstants.SPACING.SM }) {
-          Text('登录后可同步资料、保存偏好并开启完整互动。')
-            .width('100%')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .lineHeight(20)
-            .fontColor(this.getSecondaryTextColor())
-            .textAlign(TextAlign.Start)
-
-          Button('快速体验（无需注册）')
-            .type(ButtonType.Normal)
-            .width('100%')
-            .height(this.getProfileVisualStyle().primaryButton.height)
-            .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
-            .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(FontWeight.Bold)
-            .shadow(this.getProfileVisualStyle().primaryButton.shadow)
-            .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
-            .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
-            .padding({ left: this.getProfileVisualStyle().primaryButton.horizontalPadding, right: this.getProfileVisualStyle().primaryButton.horizontalPadding })
-            .onClick(() => {
-              this.showQuickStart = true;
-            })
-
-          Button('登录 / 注册')
-            .type(ButtonType.Normal)
-            .width('100%')
-            .height(this.getProfileVisualStyle().secondaryButton.height)
-            .backgroundColor(this.getProfileVisualStyle().secondaryButton.backgroundColor)
-            .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(FontWeight.Medium)
-            .shadow(this.getProfileVisualStyle().secondaryButton.shadow)
-            .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
-            .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
-            .padding({ left: this.getProfileVisualStyle().secondaryButton.horizontalPadding, right: this.getProfileVisualStyle().secondaryButton.horizontalPadding })
-            .onClick(() => {
-              AppRouter.push(PageNames.LOGIN);
-            })
-        }
-        .width('100%')
-        .padding(this.getProfileVisualStyle().card.padding)
-        .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-        .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
-        .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-        .shadow(this.getProfileVisualStyle().card.shadow)
-
-        this.MenuItemContent('设置', AppIcon.SETTINGS, () => {
-          AppRouter.push(PageNames.SETTINGS);
-        })
-      }
-      .width('100%')
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
-    }
-    .width('100%')
-    .layoutWeight(1)
-    .scrollBar(BarState.Auto)
-    .bindSheet($$this.showQuickStart, this.buildQuickStartSheet(), {
-      height: SheetSize.FIT_CONTENT,
-      showClose: true,
-      dragBar: true,
-      backgroundColor: this.getCurrentThemePalette().sheetBackground,
-      keyboardAvoidMode: SheetKeyboardAvoidMode.TRANSLATE_AND_SCROLL
+    LoginPromptView({
+      title: '个人中心需要登录',
+      subtitle: '登录后可管理资料、查看互动数据与收藏内容',
+      icon: AppIcon.PERSON,
+      loginAction: '查看个人中心'
     })
   }
 
