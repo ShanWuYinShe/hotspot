@@ -232,7 +232,7 @@ export struct ProfileEditPage {
             .padding({ left: DesignConstants.SPACING.LG })
 
             // 表单字段
-            this.buildInputField('姓名', '你的名字', this.nickname, MAX_NICKNAME, false, (v: string) => { this.nickname = v; })
+            this.buildInputField('昵称', '你的名字', this.nickname, MAX_NICKNAME, false, (v: string) => { this.nickname = v; })
 
             Column({ space: DesignConstants.SPACING.SM }) {
               Row({ space: 4 }) {
@@ -416,7 +416,7 @@ export struct ProfileEditPage {
       .width('100%')
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 10, bottom: 10 })
       .backgroundColor(this.getSurfaceSubtle())
-      .borderRadius(16)
+      .borderRadius(14)
     }
     .width('100%')
   }

@@ -13,7 +13,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
-import { AuthData, MyProfile, LoginRequest, RegisterRequest } from '../../../core/types/api';
+import { AuthData, MyProfile, LoginRequest, RegisterRequest, GuestRequest } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -46,10 +46,11 @@ export struct LoginPage {
   @State registerLoginId: string = '';
   @State registerPassword: string = '';
   @State registerPasswordConfirm: string = '';
+  @State guestNickname: string = '';
   @State isLoading: boolean = false;
   @State loadingStage: string = '';
   @State loadingProgress: number = 0;
-  @State loginMode: 'login' | 'register' = 'login';
+  @State loginMode: 'login' | 'register' | 'guest' = 'login';
   @State redirectUrl: string = '';
   @State redirectAction: string = '';
   @State restoreAction: string = '';
@@ -58,6 +59,7 @@ export struct LoginPage {
   @State isBackPressed: boolean = false;
   @State isLoginBtnPressed: boolean = false;
   @State isRegisterBtnPressed: boolean = false;
+  @State isGuestBtnPressed: boolean = false;
 
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
@@ -207,6 +209,7 @@ export struct LoginPage {
           Row({ space: DesignConstants.SPACING.SM }) {
             this.ModeTab('登录', 'login')
             this.ModeTab('注册', 'register')
+            this.ModeTab('访客', 'guest')
           }
           .backgroundColor(this.getSurfaceSubtle())
           .borderRadius(DesignConstants.RADIUS.XXL)
@@ -220,8 +223,10 @@ export struct LoginPage {
               Column() {
                 if (this.loginMode === 'login') {
                   this.buildLoginForm()
-                } else {
+                } else if (this.loginMode === 'register') {
                   this.buildRegisterForm()
+                } else {
+                  this.buildGuestForm()
                 }
               }
               .width('100%')
@@ -307,10 +312,18 @@ export struct LoginPage {
           this.registerLoginId = '';
           this.registerPassword = '';
           this.registerPasswordConfirm = '';
-        } else {
+        } else if (mode === 'register') {
           this.loginMode = 'register';
           this.loginId = '';
           this.password = '';
+        } else {
+          this.loginMode = 'guest';
+          this.loginId = '';
+          this.password = '';
+          this.registerNickname = '';
+          this.registerLoginId = '';
+          this.registerPassword = '';
+          this.registerPasswordConfirm = '';
         }
       })
   }
@@ -319,19 +332,19 @@ export struct LoginPage {
   private buildLoginForm() {
     Column({ space: DesignConstants.SPACING.LG }) {
       TextInput({ placeholder: '邮箱 / 用户名', text: $$this.loginId })
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .padding(DesignConstants.SPACING.LG)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
         .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.RADIUS.XL)
+        .borderRadius(14)
         .shadow(this.getCurrentThemePalette().controlShadow)
         .type(InputType.Email)
         .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
       TextInput({ placeholder: '密码', text: $$this.password })
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .padding(DesignConstants.SPACING.LG)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
         .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.RADIUS.XL)
+        .borderRadius(14)
         .shadow(this.getCurrentThemePalette().controlShadow)
         .type(InputType.Password)
         .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
@@ -385,36 +398,36 @@ export struct LoginPage {
   private buildRegisterForm() {
     Column({ space: DesignConstants.SPACING.LG }) {
       TextInput({ placeholder: '昵称（必填）', text: $$this.registerNickname })
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .padding(DesignConstants.SPACING.LG)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
         .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.RADIUS.XL)
+        .borderRadius(14)
         .shadow(this.getCurrentThemePalette().controlShadow)
         .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
       TextInput({ placeholder: '邮箱 / 用户名（登录凭证）', text: $$this.registerLoginId })
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .padding(DesignConstants.SPACING.LG)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
         .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.RADIUS.XL)
+        .borderRadius(14)
         .shadow(this.getCurrentThemePalette().controlShadow)
         .type(InputType.Email)
         .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
       TextInput({ placeholder: '密码（8-128位，含字母+数字）', text: $$this.registerPassword })
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .padding(DesignConstants.SPACING.LG)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
         .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.RADIUS.XL)
+        .borderRadius(14)
         .shadow(this.getCurrentThemePalette().controlShadow)
         .type(InputType.Password)
         .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
       TextInput({ placeholder: '确认密码', text: $$this.registerPasswordConfirm })
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .padding(DesignConstants.SPACING.LG)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
         .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.RADIUS.XL)
+        .borderRadius(14)
         .shadow(this.getCurrentThemePalette().controlShadow)
         .type(InputType.Password)
         .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
@@ -474,6 +487,105 @@ export struct LoginPage {
   }
 
   // ==================== 认证逻辑 ====================
+
+  @Builder
+  private buildGuestForm() {
+    Column({ space: DesignConstants.SPACING.LG }) {
+      Text('访客模式可快速体验，部分功能受限。')
+        .fontSize(13)
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+        .width('100%')
+        .padding(12)
+        .backgroundColor(this.getSurfaceBackground())
+        .borderRadius(DesignConstants.RADIUS.XXL)
+        .border({ width: 1, color: this.getSurfaceBorder() })
+
+      TextInput({ placeholder: '给自己起个名字', text: $$this.guestNickname })
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
+        .backgroundColor(this.getSurfaceSubtle())
+        .borderRadius(14)
+        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+
+      Button('访客登录')
+        .type(ButtonType.Normal)
+        .backgroundColor(this.isValidNickname(this.guestNickname)
+          ? this.getCurrentThemePalette().accentBackground
+          : this.getCurrentThemePalette().buttonSecondaryBackground)
+        .fontColor(this.isValidNickname(this.guestNickname)
+          ? this.getCurrentThemePalette().accentText
+          : this.getCurrentThemePalette().textSecondary)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .width('100%')
+        .height(48)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .shadow(this.getCurrentThemePalette().controlShadow)
+        .border({ width: 1, color: this.getSurfaceBorder() })
+        .enabled(this.isValidNickname(this.guestNickname))
+        .scale(this.isGuestBtnPressed ?
+          { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON } :
+          { x: 1, y: 1 })
+        .animation({
+          curve: curves.springMotion(
+            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+          )
+        })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.isGuestBtnPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.isGuestBtnPressed = false;
+          }
+        })
+        .onClick(() => this.userGuestLogin())
+
+      Text('随时可在「登录」或「注册」升级为正式账号')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+        .textAlign(TextAlign.Center)
+    }
+    .width('100%')
+    .transition(
+      TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+        .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+    )
+  }
+
+  private async userGuestLogin() {
+    const nickname = this.guestNickname.trim();
+    if (!this.isValidNickname(nickname)) {
+      SystemToast.showWarning('请输入有效昵称', this.getUIContext());
+      return;
+    }
+
+    this.isLoading = true;
+    this.loadingProgress = 0;
+
+    try {
+      await LoadingUtil.withMinimumTime(async () => {
+        this.loadingStage = '正在创建访客身份...';
+        this.loadingProgress = 40;
+
+        const request: GuestRequest = { nickname, client_type: 'app' };
+        const response = await ApiClient.createTempUser(request);
+        if (response.code === 0 && response.data) {
+          this.loadingStage = '创建成功，正在初始化...';
+          this.loadingProgress = 70;
+          await this.handleAuthSuccess(response.data);
+          this.loadingProgress = 100;
+        } else {
+          SystemToast.showError(getErrorMessage(response, '创建失败'), this.getUIContext());
+        }
+      }, LoadingUtil.DEFAULT_ACTION_MS);
+    } catch (error) {
+      SystemToast.showError(error instanceof Error ? error.message : '创建失败', this.getUIContext());
+    } finally {
+      this.isLoading = false;
+      this.loadingStage = '';
+      this.loadingProgress = 0;
+    }
+  }
 
   private async userLogin() {
     const trimmedLoginId = this.loginId.trim();
