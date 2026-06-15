@@ -62,16 +62,6 @@ export struct MomentFeedCard {
     return time.toLocaleDateString();
   }
 
-  private calcImageGridHeight(imageCount: number): number {
-    if (imageCount === 0) {
-      return 0;
-    }
-    const rows = Math.ceil(Math.min(imageCount, 9) / 3);
-    const gap = 8;
-    const itemHeight = 100;
-    return rows * itemHeight + (rows - 1) * gap;
-  }
-
   private onLikeClick(moment: MomentItem): void {
     interactionActions.toggleMomentLike(moment.moment_id);
   }
@@ -387,44 +377,71 @@ export struct MomentFeedCard {
 
   @Builder
   private imageGrid(): void {
-    Grid() {
-      ForEach((this.moment.images ?? []).slice(0, 9), (img: MomentImage, imgIndex: number) => {
-        GridItem() {
+    Scroll() {
+      Row({ space: 8 }) {
+        ForEach((this.moment.images ?? []).slice(0, 4), (img: MomentImage, imgIndex: number) => {
           Image(MediaUrlUtil.normalize(img.url))
-            .width('100%')
-            .height('100%')
+            .width(80)
+            .height(80)
             .objectFit(ImageFit.Cover)
-            .borderRadius(DesignConstants.RADIUS.MD)
+            .borderRadius(12)
+            .backgroundColor(this.getPalette().surfaceSubtle)
             .accessibilityText(`图片 ${imgIndex + 1}，共 ${(this.moment.images ?? []).length} 张`)
+            .geometryTransition('moment_img_' + this.moment.moment_id + '_' + imgIndex)
+            .onClick(() => {
+              if (this.onImagePreview) {
+                const urls = (this.moment.images ?? []).map((m: MomentImage) => m.url);
+                this.onImagePreview!(this.moment.moment_id, urls, imgIndex);
+              } else {
+                this.openMomentDetail(this.moment);
+              }
+            })
+        }, (img: MomentImage) => img.url)
+
+        if ((this.moment.images ?? []).length > 4) {
+          Text(`+${(this.moment.images ?? []).length - 4}`)
+            .width(80)
+            .height(80)
+            .textAlign(TextAlign.Center)
+            .fontSize(13)
+            .fontColor(this.getPalette().textSecondary)
+            .borderRadius(12)
+            .border({ width: 1, color: this.getPalette().borderColor })
+            .onClick(() => this.openMomentDetail(this.moment))
         }
-        .aspectRatio(1)
-        .geometryTransition('moment_img_' + this.moment.moment_id + '_' + imgIndex)
-        .onClick(() => {
-          if (this.onImagePreview) {
-            const urls = (this.moment.images ?? []).map((m: MomentImage) => m.url);
-            this.onImagePreview!(this.moment.moment_id, urls, imgIndex);
-          } else {
-            this.openMomentDetail(this.moment);
-          }
-        })
-      }, (img: MomentImage) => img.url)
+      }
     }
-    .columnsTemplate('1fr 1fr 1fr')
-    .columnsGap(8)
-    .rowsGap(8)
-    .height(this.calcImageGridHeight((this.moment.images ?? []).length))
+    .scrollable(ScrollDirection.Horizontal)
+    .scrollBar(BarState.Off)
+    .width('100%')
   }
 
   @Builder
   private imagePreview(): void {
     if (this.moment.images && this.moment.images.length > 0) {
-      Image(MediaUrlUtil.normalize(this.moment.images[0].url))
-        .width('100%')
-        .constraintSize({ maxHeight: 220 })
-        .objectFit(ImageFit.Cover)
-        .borderRadius(DesignConstants.RADIUS.LG)
-        .accessibilityText('动态图片')
-        .onClick(() => this.openMomentDetail(this.moment))
+      Stack({ alignContent: Alignment.BottomEnd }) {
+        Image(MediaUrlUtil.normalize(this.moment.images[0].url))
+          .width('100%')
+          .aspectRatio(1.6)
+          .objectFit(ImageFit.Cover)
+          .borderRadius(20)
+          .backgroundColor(this.getPalette().surfaceSubtle)
+          .accessibilityText('动态图片')
+
+        if (this.moment.images.length > 1) {
+          Text(`+${this.moment.images.length - 1}`)
+            .fontSize(11)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(Color.White)
+            .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .border({ width: 1, color: 'rgba(255,255,255,0.24)' })
+            .backgroundColor('rgba(15,23,42,0.58)')
+            .margin({ right: 10, bottom: 10 })
+        }
+      }
+      .width('100%')
+      .onClick(() => this.openMomentDetail(this.moment))
     }
   }
 
@@ -464,44 +481,54 @@ export struct MomentFeedCard {
 
   @Builder
   private actionBar(): void {
-    Row({ space: DesignConstants.SPACING.XL }) {
-      Row({ space: DesignConstants.SPACING.XS }) {
+    Row() {
+      Row({ space: DesignConstants.SPACING.XL }) {
+        Row({ space: DesignConstants.SPACING.XS }) {
+          IconButton({
+            icon: this.getMomentState()?.my_state?.is_liked ? AppIcon.HEART_FILL : AppIcon.HEART,
+            iconSize: IconSize.MEDIUM,
+            iconColor: this.getMomentState()?.my_state?.is_liked
+              ? this.getPalette().accentBackground
+              : this.getPalette().textSecondary,
+            onButtonClick: () => this.onLikeClick(this.moment)
+          })
+          Text(this.formatCount(this.getMomentState()?.likes_count ?? this.moment.likes_count))
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getPalette().textSecondary)
+        }
+
+        Row({ space: DesignConstants.SPACING.XS }) {
+          IconButton({
+            icon: AppIcon.MESSAGE,
+            iconSize: IconSize.MEDIUM,
+            iconColor: this.getPalette().textSecondary,
+            onButtonClick: () => this.openMomentDetail(this.moment)
+          })
+          Text(this.formatCount(this.getMomentState()?.comments_count ?? this.moment.comments_count))
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getPalette().textSecondary)
+        }
+      }
+
+      Blank()
+
+      Row({ space: DesignConstants.SPACING.MD }) {
         IconButton({
-          icon: AppIcon.HEART,
+          icon: this.getMomentState()?.my_state?.is_favorited ? AppIcon.STAR_FILL : AppIcon.STAR,
           iconSize: IconSize.MEDIUM,
-          iconColor: this.getMomentState()?.my_state?.is_liked
+          iconColor: this.getMomentState()?.my_state?.is_favorited
             ? this.getPalette().accentBackground
             : this.getPalette().textSecondary,
-          onButtonClick: () => this.onLikeClick(this.moment)
+          onButtonClick: () => this.onFavoriteClick(this.moment)
         })
-        Text(this.formatCount(this.getMomentState()?.likes_count ?? this.moment.likes_count))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getPalette().textSecondary)
-      }
-
-      Row({ space: DesignConstants.SPACING.XS }) {
-        IconButton({
-          icon: AppIcon.MESSAGE,
-          iconSize: IconSize.MEDIUM,
-          iconColor: this.getPalette().textSecondary,
-          onButtonClick: () => this.openMomentDetail(this.moment)
-        })
-        Text(this.formatCount(this.getMomentState()?.comments_count ?? this.moment.comments_count))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getPalette().textSecondary)
-      }
-
-      Row({ space: DesignConstants.SPACING.XS }) {
         IconButton({
           icon: AppIcon.SHARE,
           iconSize: IconSize.MEDIUM,
           iconColor: this.getPalette().textSecondary,
           onButtonClick: () => this.shareMoment(this.moment)
         })
-        Text(this.formatCount(this.getMomentState()?.shares_count ?? this.moment.shares_count))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getPalette().textSecondary)
       }
     }
+    .width('100%')
   }
 }
