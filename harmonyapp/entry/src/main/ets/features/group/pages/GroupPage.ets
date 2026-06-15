@@ -487,7 +487,7 @@ export struct GroupPage {
       Row() {
         Text('附近群组')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(600)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 

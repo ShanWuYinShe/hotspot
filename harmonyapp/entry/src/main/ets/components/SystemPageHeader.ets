@@ -111,7 +111,7 @@ export struct SystemPageHeader {
         // 标题：左对齐，对齐前端 H1 样式
         Text(this.title)
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(600)
           .fontColor(this.getPalette().textPrimary)
           .layoutWeight(1)
           .textAlign(TextAlign.Start)

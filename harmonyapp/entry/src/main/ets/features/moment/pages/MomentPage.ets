@@ -194,7 +194,7 @@ export struct MomentPage {
       Row() {
         Text('附近瞬间')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(600)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
@@ -286,7 +286,7 @@ export struct MomentPage {
             showTime: true,
             showFavorite: false,
             textMaxLines: 0,
-            textFontSize: DesignConstants.FONT.SIZE.LG,
+            textFontSize: DesignConstants.FONT.SIZE.MD,
             onImagePreview: (momentId: string, images: string[], index: number) => {
               this.previewImage(momentId, images, index);
             }
