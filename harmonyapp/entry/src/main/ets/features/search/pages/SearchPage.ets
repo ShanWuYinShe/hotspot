@@ -369,8 +369,8 @@ export struct SearchPage {
           }
           .layoutWeight(1)
           .height(38)
-          .borderRadius(18)
-          .padding({ left: 16, right: 16 })
+          .borderRadius(DesignConstants.SHAPE.INPUT)
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           .backgroundColor(this.getSurfaceBackground())
           .shadow(this.getCurrentThemePalette().surfaceShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })

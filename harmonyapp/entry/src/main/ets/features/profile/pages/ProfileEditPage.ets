@@ -159,26 +159,31 @@ export struct ProfileEditPage {
                   ]
                 })
 
-              Button() {
-                Row({ space: 4 }) {
-                  Text() {
-                    SymbolSpan($r(AppIcon.CAMERA))
+              // 更换横幅按钮：贴横幅右上角（用 alignContent 取代硬编码坐标）
+              Stack({ alignContent: Alignment.TopEnd }) {
+                Button() {
+                  Row({ space: 4 }) {
+                    Text() {
+                      SymbolSpan($r(AppIcon.CAMERA))
+                        .fontSize(12)
+                        .fontColor([Color.White])
+                    }
+                    Text('更换横幅')
                       .fontSize(12)
-                      .fontColor([Color.White])
+                      .fontColor(Color.White)
                   }
-                  Text('更换横幅')
-                    .fontSize(12)
-                    .fontColor(Color.White)
                 }
+                .type(ButtonType.Normal)
+                .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+                .borderRadius(14)
+                .backgroundColor(DesignConstants.COLOR.OVERLAY_STRONG)
+                .onClick(() => {
+                  SystemToast.show('横幅更换功能开发中', this.getUIContext());
+                })
               }
-              .type(ButtonType.Normal)
-              .padding({ left: 10, right: 10, top: 5, bottom: 5 })
-              .borderRadius(14)
-              .backgroundColor(DesignConstants.COLOR.OVERLAY_STRONG)
-              .position({ top: 10, right: 12 })
-              .onClick(() => {
-                SystemToast.show('横幅更换功能开发中', this.getUIContext());
-              })
+              .width('100%')
+              .height('100%')
+              .padding({ top: 10, right: 12 })
             }
             .width('100%')
             .height(140)

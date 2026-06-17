@@ -610,11 +610,11 @@ export struct MessagePage {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
-      .height(42)
-      .padding({ left: 16, right: 16 })
-      .margin({ left: 16, right: 16, bottom: 8 })
+      .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+      .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
       .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
-      .borderRadius(18)
+      .borderRadius(DesignConstants.SHAPE.INPUT)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .onClick(() => {
         AppRouter.push(PageNames.SEARCH);
