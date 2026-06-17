@@ -740,7 +740,7 @@ export struct MessagePage {
         Row({ space: 16 }) {
           ForEach(this.getOnlineChats(), (chat: ChatItem) => {
             Column({ space: 6 }) {
-              Stack() {
+              Stack({ alignContent: Alignment.Center }) {
                 SystemAvatar({
                   avatarUrl: chat.avatarUrl,
                   name: chat.name,
@@ -753,13 +753,17 @@ export struct MessagePage {
                 .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
                 .shadow(this.getCurrentThemePalette().controlShadow)
 
-                Row()
-                  .width(12)
-                  .height(12)
-                  .borderRadius(6)
-                  .backgroundColor(DesignConstants.COLOR.SUCCESS)
-                  .border({ width: 2, color: this.getCurrentThemePalette().surfaceBackground })
-                  .position({ x: 38, y: 38 })
+                // 在线状态点：贴头像右下角（用 alignContent 取代硬编码坐标）
+                Stack({ alignContent: Alignment.BottomEnd }) {
+                  Row()
+                    .width(12)
+                    .height(12)
+                    .borderRadius(6)
+                    .backgroundColor(DesignConstants.COLOR.SUCCESS)
+                    .border({ width: 2, color: this.getCurrentThemePalette().surfaceBackground })
+                }
+                .width('100%')
+                .height('100%')
               }
 
               Text(chat.name)

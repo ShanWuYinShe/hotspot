@@ -70,50 +70,53 @@ export struct DesktopLayout {
   }
 
   build() {
-    Stack({ alignContent: Alignment.Top }) {
-      Row() {
-        Column() {
-          this.LeftNavRail()
-        }
-          .width(192)
-          .height('100%')
-
-        Column() {
-          this.MainContent()
-        }
-          .layoutWeight(1)
-          .height('100%')
-
-        if (this.shouldShowRightPanel()) {
+    Stack() {
+      Column() {
+        // 通知 banner（流式排布，把下方内容往下推，不再浮盖）
+        if (this.visibleNotifications.length > 0) {
           Column() {
-            this.RightDetailPanel()
+            ForEach(this.visibleNotifications, (notification: SmartNotification) => {
+              NotificationBanner({
+                notification: notification,
+                onClose: () => NotificationRenderer.getInstance().hideNotification(notification.id, 'manual'),
+                onBannerClick: () => NotificationRenderer.getInstance().handleClick(notification),
+                onAction: (action: NotificationAction) => NotificationRenderer.getInstance().handleAction(action, notification)
+              })
+            }, (item: SmartNotification) => item.id)
           }
-            .width(280)
-            .height('100%')
+          .width('100%')
+          .padding({ top: 12, left: 16, right: 16 })
         }
+
+        Row() {
+          Column() {
+            this.LeftNavRail()
+          }
+            .width(192)
+            .height('100%')
+
+          Column() {
+            this.MainContent()
+          }
+            .layoutWeight(1)
+            .height('100%')
+
+          if (this.shouldShowRightPanel()) {
+            Column() {
+              this.RightDetailPanel()
+            }
+              .width(280)
+              .height('100%')
+          }
+        }
+        .layoutWeight(1)
+        .width('100%')
+        .backgroundColor($r('app.color.bg_primary'))
       }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('app.color.bg_primary'))
 
-      // 通知 banner overlay（顶部）
-      if (this.visibleNotifications.length > 0) {
-        Column() {
-          ForEach(this.visibleNotifications, (notification: SmartNotification) => {
-            NotificationBanner({
-              notification: notification,
-              onClose: () => NotificationRenderer.getInstance().hideNotification(notification.id, 'manual'),
-              onBannerClick: () => NotificationRenderer.getInstance().handleClick(notification),
-              onAction: (action: NotificationAction) => NotificationRenderer.getInstance().handleAction(action, notification)
-            })
-          }, (item: SmartNotification) => item.id)
-        }
-        .width('100%')
-        .padding({ top: 12, left: 16, right: 16 })
-        .position({ x: 0, y: 0 })
-      }
-
-      // 通知中心 overlay
+      // 通知中心 overlay（模态遮罩，保留叠加）
       if (this.showNotificationCenter) {
         Stack() {
           Column()
@@ -135,7 +138,7 @@ export struct DesktopLayout {
         .height('100%')
       }
 
-      // 性能详情 overlay
+      // 性能详情 overlay（模态，保留叠加）
       if (this.showPerformanceDetails) {
         Column() {
           PerformanceIndicator({ showDetails: true, compact: false })

@@ -37,6 +37,7 @@ export default class EntryAbility extends UIAbility {
   private windowStage: window.WindowStage | null = null;
   private mainWindow: window.Window | null = null;
   private avoidAreaCallback?: (options: window.AvoidAreaOptions) => void;
+  private windowSizeCallback?: (size: window.Size) => void;
   private cachedDensityScale: number = 0;
   private surfaceStyleUnsubscribe?: () => void;
   private currentSurfaceStyle: SystemSurfaceStyle = SystemUiThemeStore.getStyle();
@@ -97,6 +98,7 @@ export default class EntryAbility extends UIAbility {
   onWindowStageDestroy(): void {
     hilog.info(DOMAIN_NUMBER, TAG, 'WindowStage销毁');
     this.detachAvoidAreaListener();
+    this.detachWindowSizeListener();
     this.surfaceStyleUnsubscribe?.();
     this.surfaceStyleUnsubscribe = undefined;
     this.mainWindow = null;
@@ -240,6 +242,7 @@ export default class EntryAbility extends UIAbility {
 
       this.updateSafeAreaInsets(mainWindow, 'init');
       this.registerAvoidAreaListener(mainWindow);
+      this.registerWindowSizeListener(mainWindow);
       this.initializeSystemSurfaceSync(mainWindow);
 
       // 隐藏系统状态栏和导航栏（或设置为透明）
@@ -323,27 +326,53 @@ export default class EntryAbility extends UIAbility {
 
   /**
    * 计算并存储当前响应式断点到 AppStorage 'currentBreakpoint'
-   * - 读 display.getDefaultDisplaySync() 拿 width + densityDPI
-   * - 换算为 vp 后用 getBreakpointType() 算断点
-   * - 写入 AppStorage，Index.ets / PhoneLayout / DesktopLayout 读取
+   * - 优先使用传入的窗口宽度（vp）；否则回退到 display.getDefaultDisplaySync()
+   * - 用 getBreakpointType() 算断点；同步 'isTablet'（≥600vp 或平板设备 → 平板/宽屏形态）
+   * - 写入 AppStorage，Index.ets / PhoneLayout / DesktopLayout 读取，驱动手机/平板/桌面自适应
    */
-  private computeAndStoreBreakpoint(): void {
+  private computeAndStoreBreakpoint(widthVpOverride?: number): void {
     try {
-      const displayInfo = display.getDefaultDisplaySync();
-      const px = displayInfo.width;
-      const density = displayInfo.densityDPI;
-      if (px <= 0 || density <= 0) {
-        hilog.warn(DOMAIN_NUMBER, TAG, 'display 信息异常 (px=%{public}d, density=%{public}d)，breakpoint 保持默认 lg', px, density);
-        AppStorage.setOrCreate<BreakpointType>('currentBreakpoint', 'lg');
-        return;
+      let widthVp: number;
+      if (widthVpOverride !== undefined && widthVpOverride > 0) {
+        widthVp = widthVpOverride;
+      } else {
+        const displayInfo = display.getDefaultDisplaySync();
+        const px = displayInfo.width;
+        const density = displayInfo.densityDPI;
+        if (px <= 0 || density <= 0) {
+          hilog.warn(DOMAIN_NUMBER, TAG, 'display 信息异常 (px=%{public}d, density=%{public}d)，breakpoint 保持默认 lg', px, density);
+          AppStorage.setOrCreate<BreakpointType>('currentBreakpoint', 'lg');
+          return;
+        }
+        widthVp = Math.floor((px * 160) / density);
       }
-      const widthVp = Math.floor((px * 160) / density);
       const bp: BreakpointType = getBreakpointType(widthVp);
+      const isTablet: boolean = widthVp >= 600 || deviceInfo.deviceType === 'tablet';
       AppStorage.setOrCreate<BreakpointType>('currentBreakpoint', bp);
-      hilog.info(DOMAIN_NUMBER, TAG, '当前断点: %{public}s (px=%{public}d, density=%{public}d, vp=%{public}d)', bp, px, density, widthVp);
+      AppStorage.setOrCreate<boolean>('isTablet', isTablet);
+      hilog.info(DOMAIN_NUMBER, TAG, '当前断点: %{public}s (vp=%{public}d, isTablet=%{public}s)', bp, widthVp, String(isTablet));
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, '计算 breakpoint 失败，使用默认 lg: %{public}s', JSON.stringify(error));
       AppStorage.setOrCreate<BreakpointType>('currentBreakpoint', 'lg');
+    }
+  }
+
+  /**
+   * 从窗口实时宽度（px）换算 vp 并刷新断点。
+   * 比 display 整屏宽更准确：折叠屏 / 平行视界 / PC 自由窗口下窗口宽 ≠ 屏宽。
+   */
+  private refreshBreakpointFromWindow(mainWindow: window.Window, widthPx?: number): void {
+    try {
+      const px = widthPx && widthPx > 0
+        ? widthPx
+        : mainWindow.getWindowProperties().windowRect.width;
+      if (px <= 0) {
+        return;
+      }
+      const widthVp = Math.round(this.pxToVp(px));
+      this.computeAndStoreBreakpoint(widthVp);
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, '按窗口宽刷新断点失败: %{public}s', JSON.stringify(error));
     }
   }
 
@@ -386,6 +415,37 @@ export default class EntryAbility extends UIAbility {
       }
     }
     this.avoidAreaCallback = undefined;
+  }
+
+  /**
+   * 监听窗口尺寸变化（旋转 / 折叠屏展开 / 平板分屏 / PC 自由窗口缩放），
+   * 实时重算断点，驱动 Phone ↔ Desktop 布局热切换。
+   */
+  private registerWindowSizeListener(mainWindow: window.Window): void {
+    this.detachWindowSizeListener();
+    // 注册即用当前窗口宽刷新一次，确保初始布局基于窗口（而非整屏）尺寸
+    this.refreshBreakpointFromWindow(mainWindow);
+    const callback = (size: window.Size) => {
+      this.refreshBreakpointFromWindow(mainWindow, size?.width);
+    };
+    try {
+      mainWindow.on('windowSizeChange', callback);
+      this.windowSizeCallback = callback;
+      hilog.info(DOMAIN_NUMBER, TAG, '已监听 windowSizeChange 事件');
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, '注册 windowSizeChange 失败: %{public}s', JSON.stringify(error));
+    }
+  }
+
+  private detachWindowSizeListener(): void {
+    if (this.mainWindow && this.windowSizeCallback) {
+      try {
+        this.mainWindow.off('windowSizeChange', this.windowSizeCallback);
+      } catch (error) {
+        hilog.warn(DOMAIN_NUMBER, TAG, '移除 windowSizeChange 监听失败: %{public}s', JSON.stringify(error));
+      }
+    }
+    this.windowSizeCallback = undefined;
   }
 
   /**
@@ -495,6 +555,7 @@ export default class EntryAbility extends UIAbility {
         .then((mainWindow: window.Window) => {
           this.applySystemBarStyle(mainWindow, isDark, this.currentSurfaceStyle);
           this.updateSafeAreaInsets(mainWindow, 'config_change');
+          this.refreshBreakpointFromWindow(mainWindow);
         })
         .catch(() => {
           hilog.warn(DOMAIN_NUMBER, TAG, '更新系统栏样式失败');
@@ -584,6 +645,7 @@ export default class EntryAbility extends UIAbility {
   private async cleanup(): Promise<void> {
     try {
       this.detachAvoidAreaListener();
+      this.detachWindowSizeListener();
       this.surfaceStyleUnsubscribe?.();
       this.surfaceStyleUnsubscribe = undefined;
       // 清理智能服务

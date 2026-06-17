@@ -69,14 +69,6 @@ export struct DiscoverPage {
 
   private readonly TABS: string[] = ['热门', '附近', '活动', '关注'];
 
-  private getFilteredMoments(): MomentItem[] {
-    let filtered = this.hotMoments;
-    if (this.activeTag) {
-      filtered = filtered.filter((m: MomentItem) => (m.tags ?? []).indexOf(this.activeTag) >= 0);
-    }
-    return filtered;
-  }
-
   private getAvailableTags(): string[] {
     const tagSet = new Set<string>();
     for (const moment of this.hotMoments) {
@@ -198,14 +190,8 @@ export struct DiscoverPage {
         Row() {
           Text('发现')
             .fontSize(22)
-            .fontWeight(FontWeight.Normal)
+            .fontWeight(FontWeight.Medium)
             .fontColor(this.getCurrentThemePalette().textPrimary)
-
-          Blank()
-
-          Text(`${this.getFilteredMoments().length} 条内容`)
-            .fontSize(12)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
         .margin({ bottom: 10 })
@@ -224,10 +210,10 @@ export struct DiscoverPage {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
-        .height(42)
-        .padding({ left: 16, right: 16 })
+        .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
-        .borderRadius(18)
+        .borderRadius(DesignConstants.SHAPE.INPUT)
         .border({ width: 1, color: this.getSurfaceBorder() })
         .onClick(() => {
           AppRouter.push(PageNames.SEARCH);
@@ -357,39 +343,33 @@ export struct DiscoverPage {
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
 
-  // ==================== 标签栏 ====================
+  // ==================== 标签栏（下划线式，对齐前端 underline tabs）====================
   @Builder
   buildTabBar() {
-    Row({ space: 0 }) {
+    Row() {
       ForEach(this.TABS, (tab: string) => {
-        Column({ space: 8 }) {
-          Text(tab)
-            .fontSize(13)
-            .fontWeight(this.activeTab === tab ? FontWeight.Medium : FontWeight.Normal)
-            .fontColor(this.activeTab === tab
+        Text(tab)
+          .fontSize(14)
+          .fontWeight(this.activeTab === tab ? FontWeight.Medium : FontWeight.Normal)
+          .fontColor(this.activeTab === tab
+            ? this.getCurrentThemePalette().accentBackground
+            : this.getCurrentThemePalette().textSecondary)
+          .padding({ top: 6, bottom: 12 })
+          .margin({ right: 24 })
+          .border({
+            width: { bottom: 2 },
+            color: this.activeTab === tab
               ? this.getCurrentThemePalette().accentBackground
-              : this.getCurrentThemePalette().textSecondary)
-
-          if (this.activeTab === tab) {
-            Divider()
-              .strokeWidth(2)
-              .width('72%')
-              .color(this.getCurrentThemePalette().accentBackground)
-              .borderRadius(1)
-          } else {
-            Divider()
-              .strokeWidth(0)
-              .height(2)
-              .width('72%')
-          }
-        }
-        .padding({ left: 18, right: 18, top: 4, bottom: 12 })
-        .onClick(() => {
-          this.activeTab = tab;
-        })
+              : Color.Transparent
+          })
+          .animation({ duration: 180, curve: Curve.EaseInOut })
+          .onClick(() => {
+            this.activeTab = tab;
+          })
       }, (tab: string) => tab)
     }
     .width('100%')
+    .justifyContent(FlexAlign.Start)
   }
 
   // ==================== 标签药片条 ====================
@@ -488,7 +468,7 @@ export struct DiscoverPage {
   @Builder
   buildUserCard(user: UserItem) {
     Column({ space: 6 }) {
-      Stack() {
+      Stack({ alignContent: Alignment.Center }) {
         SystemAvatar({
           avatarUrl: user.user?.avatar_url ?? '',
           name: user.user?.nickname ?? '',
@@ -496,16 +476,20 @@ export struct DiscoverPage {
           shape: 'squircle'
         })
 
+        // 距离徽标：贴头像左下角（用 alignContent 取代硬编码坐标）
         if (user.location?.distance !== undefined && user.location?.distance !== null) {
-          Row() {
-            Text(LocationUtil.formatDistance(user.location.distance))
-              .fontSize(9)
-              .fontColor(Color.White)
+          Stack({ alignContent: Alignment.BottomStart }) {
+            Row() {
+              Text(LocationUtil.formatDistance(user.location.distance))
+                .fontSize(9)
+                .fontColor(Color.White)
+            }
+            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(this.getCurrentThemePalette().accentBackground)
           }
-          .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getCurrentThemePalette().accentBackground)
-          .position({ x: 6, y: 50 })
+          .width('100%')
+          .height('100%')
         }
       }
       .width(60)
@@ -530,15 +514,33 @@ export struct DiscoverPage {
         cardPadding: DesignConstants.SPACING.MD,
         variant: CardVariant.OUTLINED
       }) {
-        Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
-          ForEach(this.recommendedGroups.slice(0, 4), (group: GroupItem) => {
-            this.buildGroupCard(group)
-          }, (group: GroupItem) => group.group?.group_id ?? '')
+        Column({ space: DesignConstants.SPACING.MD }) {
+          this.buildGroupRow(this.recommendedGroups.slice(0, 2))
+          if (this.recommendedGroups.length > 2) {
+            this.buildGroupRow(this.recommendedGroups.slice(2, 4))
+          }
         }
         .width('100%')
       }
     }
     .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+  }
+
+  // 两列等宽群组卡片行（前端 grid-cols-2 的 ArkUI 等价：Row + layoutWeight，避开 calc）
+  @Builder
+  buildGroupRow(items: GroupItem[]) {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      ForEach(items, (group: GroupItem) => {
+        Column() {
+          this.buildGroupCard(group)
+        }
+        .layoutWeight(1)
+      }, (group: GroupItem) => group.group?.group_id ?? '')
+      if (items.length === 1) {
+        Column().layoutWeight(1)
+      }
+    }
+    .width('100%')
   }
 
   @Builder
@@ -555,7 +557,7 @@ export struct DiscoverPage {
       .height(48)
       .justifyContent(FlexAlign.Center)
       .backgroundColor(this.getCurrentThemePalette().accentMuted)
-      .borderRadius({ topLeft: 16, topRight: 16 })
+      .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
 
       Column({ space: 4 }) {
         Text(group.group?.name ?? '')
@@ -579,12 +581,11 @@ export struct DiscoverPage {
       .padding({ left: 10, right: 10, top: 8, bottom: 10 })
       .alignItems(HorizontalAlign.Start)
     }
-    .width('calc(50% - 6px)')
-    .borderRadius(16)
+    .width('100%')
+    .borderRadius(DesignConstants.RADIUS.LG)
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
     .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
     .shadow(this.getCurrentThemePalette().controlShadow)
-    .margin({ bottom: 8 })
     .onClick(() => { this.openGroupDetail(group); })
   }
 

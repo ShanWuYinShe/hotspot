@@ -1301,20 +1301,10 @@ export struct ProfilePage {
         .height(160)
         .justifyContent(FlexAlign.Center)
       } else {
-        Flex({ wrap: FlexWrap.Wrap }) {
-          ForEach(Array.from({ length: Math.min(this.myMomentsCount, 9) }, (_: Object, i: number) => i), (i: number) => {
-            Column() {
-              Column()
-                .width('100%')
-                .aspectRatio(1)
-                .borderRadius(16)
-                .backgroundColor(this.getSurfaceSubtle())
-                .border({ width: 1, color: this.getSurfaceBorder() })
-                .shadow(this.getCurrentThemePalette().controlShadow)
-            }
-            .width('calc(33.33% - 7vp)')
-            .margin({ left: 3.5, right: 3.5, top: 3.5, bottom: 3.5 })
-          })
+        Column({ space: DesignConstants.SPACING.SM }) {
+          ForEach(this.getMomentRows(), (row: number[], rowIndex: number) => {
+            this.buildMomentsRow(row, rowIndex)
+          }, (row: number[], rowIndex: number) => `${rowIndex}`)
         }
         .width('100%')
       }
@@ -1336,6 +1326,47 @@ export struct ProfilePage {
       .height(160)
       .justifyContent(FlexAlign.Center)
     }
+  }
+
+  // 我的瞬间九宫格：按 3 列分行（避开 ArkUI 不支持的 calc，用 Row + layoutWeight 等宽）
+  private getMomentRows(): number[][] {
+    const total = Math.min(this.myMomentsCount, 9);
+    const rows: number[][] = [];
+    for (let i = 0; i < total; i += 3) {
+      const row: number[] = [];
+      for (let j = i; j < Math.min(i + 3, total); j++) {
+        row.push(j);
+      }
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  @Builder
+  private buildMomentTile(index: number) {
+    Column() {
+      Column()
+        .width('100%')
+        .aspectRatio(1)
+        .borderRadius(DesignConstants.RADIUS.LG)
+        .backgroundColor(this.getSurfaceSubtle())
+        .border({ width: 1, color: this.getSurfaceBorder() })
+        .shadow(this.getCurrentThemePalette().controlShadow)
+    }
+    .layoutWeight(1)
+  }
+
+  @Builder
+  private buildMomentsRow(row: number[], rowIndex: number) {
+    Row({ space: DesignConstants.SPACING.SM }) {
+      ForEach(row, (i: number) => {
+        this.buildMomentTile(i)
+      }, (i: number) => `${i}`)
+      ForEach(Array.from({ length: 3 - row.length }, (_: Object, padIndex: number) => padIndex), (_: number) => {
+        Column().layoutWeight(1)
+      }, (_: number, padIndex: number) => `pad_${rowIndex}_${padIndex}`)
+    }
+    .width('100%')
   }
 
   // ==================== 升级表单界面 ====================

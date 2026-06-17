@@ -564,7 +564,7 @@ export struct NotificationCenter {
   private buildNotificationItem(notification: NotificationItem) {
     Row({ space: 14 }) {
       // 头像 + 类型图标徽章
-      Stack() {
+      Stack({ alignContent: Alignment.Center }) {
         if (notification.payload?.actor?.avatar_url) {
           Image(notification.payload.actor.avatar_url)
             .width(44)
@@ -586,21 +586,24 @@ export struct NotificationCenter {
           .backgroundColor(this.getTypeColor(notification.type) + '18')
         }
 
-        // 类型图标徽章
-        Row() {
-          Text() {
-            SymbolSpan($r(this.getNotificationIcon(notification.type)))
-              .fontSize(9)
-              .fontColor([Color.White])
+        // 类型图标徽章：贴头像右下角（用 alignContent 取代硬编码坐标）
+        Stack({ alignContent: Alignment.BottomEnd }) {
+          Row() {
+            Text() {
+              SymbolSpan($r(this.getNotificationIcon(notification.type)))
+                .fontSize(9)
+                .fontColor([Color.White])
+            }
           }
+          .width(18)
+          .height(18)
+          .borderRadius(9)
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor(this.getTypeColor(notification.type))
+          .border({ width: 2, color: this.getPalette().pageBackground })
         }
-        .width(18)
-        .height(18)
-        .borderRadius(9)
-        .justifyContent(FlexAlign.Center)
-        .backgroundColor(this.getTypeColor(notification.type))
-        .border({ width: 2, color: this.getPalette().pageBackground })
-        .position({ x: 30, y: 30 })
+        .width('100%')
+        .height('100%')
       }
 
       // 文本内容

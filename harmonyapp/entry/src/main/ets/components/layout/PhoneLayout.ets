@@ -76,62 +76,65 @@ export struct PhoneLayout {
   }
 
   build() {
-    Stack({ alignContent: Alignment.Top }) {
-      // 主体：Tabs + 5 TabContent（Nearby / Discover / Create / Message / Profile）
-      Tabs({ barPosition: BarPosition.End, controller: this.tabsController, index: this.currentTabIndex }) {
-        TabContent() { NearbyPage() }.tabBar(this.TabBarBuilder(0))
-        TabContent() { Stack() { DiscoverPage(); this.DiscoverNotificationButton() } }.tabBar(this.TabBarBuilder(1))
-        TabContent() { Column() {} }.tabBar(this.CreateTabBuilder())
-        TabContent() {
-          if (this.isLoggedIn) {
-            Column() {
-              if (this.showUpgradeBanner) { this.UpgradeBanner() }
-              MessagePage()
-            }.width('100%').height('100%')
-          } else {
-            LoginPromptView({
-              title: '消息功能需要登录',
-              subtitle: '登录后可与好友实时聊天、加入群组讨论'
-            })
+    Stack() {
+      Column() {
+        // 通知 banner（流式排布，把下方内容往下推，不再浮盖在页面之上）
+        if (this.visibleNotifications.length > 0) {
+          Column() {
+            ForEach(this.visibleNotifications, (notification: SmartNotification) => {
+              NotificationBanner({
+                notification: notification,
+                onClose: () => NotificationRenderer.getInstance().hideNotification(notification.id, 'manual'),
+                onBannerClick: () => NotificationRenderer.getInstance().handleClick(notification),
+                onAction: (action: NotificationAction) => NotificationRenderer.getInstance().handleAction(action, notification)
+              })
+            }, (item: SmartNotification) => item.id)
           }
-        }.tabBar(this.TabBarBuilder(3))
-        TabContent() { ProfilePage() }.tabBar(this.TabBarBuilder(4))
-      }
-      .barHeight(56)
-      .scrollable(false)
-      .barMode(BarMode.Fixed)
-      .divider({ strokeWidth: 0, color: Color.Transparent, startMargin: 0, endMargin: 0 })
-      .onChange((index: number) => {
-        if (index === CREATE_TAB_INDEX) {
-          this.showCreateSheet = true;
-          return;
+          .width('100%')
+          .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         }
-        this.currentTabIndex = index;
-      })
-      .barBackgroundColor(Color.Transparent)
-      .backgroundColor($r('app.color.bg_primary'))
+
+        // 主体：Tabs + 5 TabContent（Nearby / Discover / Create / Message / Profile）
+        Tabs({ barPosition: BarPosition.End, controller: this.tabsController, index: this.currentTabIndex }) {
+          TabContent() { NearbyPage() }.tabBar(this.TabBarBuilder(0))
+          TabContent() { DiscoverPage() }.tabBar(this.TabBarBuilder(1))
+          TabContent() { Column() {} }.tabBar(this.CreateTabBuilder())
+          TabContent() {
+            if (this.isLoggedIn) {
+              Column() {
+                if (this.showUpgradeBanner) { this.UpgradeBanner() }
+                MessagePage()
+              }.width('100%').height('100%')
+            } else {
+              LoginPromptView({
+                title: '消息功能需要登录',
+                subtitle: '登录后可与好友实时聊天、加入群组讨论'
+              })
+            }
+          }.tabBar(this.TabBarBuilder(3))
+          TabContent() { ProfilePage() }.tabBar(this.TabBarBuilder(4))
+        }
+        .barHeight(56)
+        .scrollable(false)
+        .barMode(BarMode.Fixed)
+        .divider({ strokeWidth: 0, color: Color.Transparent, startMargin: 0, endMargin: 0 })
+        .onChange((index: number) => {
+          if (index === CREATE_TAB_INDEX) {
+            this.showCreateSheet = true;
+            return;
+          }
+          this.currentTabIndex = index;
+        })
+        .barBackgroundColor(Color.Transparent)
+        .backgroundColor($r('app.color.bg_primary'))
+        .layoutWeight(1)
+        .padding({ bottom: this.safeAreaBottom })
+        .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
+      }
       .width('100%')
       .height('100%')
-      .padding({ bottom: this.safeAreaBottom })
-      .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
 
-      // 通知 banner overlay（顶部）
-      if (this.visibleNotifications.length > 0) {
-        Column() {
-          ForEach(this.visibleNotifications, (notification: SmartNotification) => {
-            NotificationBanner({
-              notification: notification,
-              onClose: () => NotificationRenderer.getInstance().hideNotification(notification.id, 'manual'),
-              onBannerClick: () => NotificationRenderer.getInstance().handleClick(notification),
-              onAction: (action: NotificationAction) => NotificationRenderer.getInstance().handleAction(action, notification)
-            })
-          }, (item: SmartNotification) => item.id)
-        }
-        .width('100%')
-        .padding({ top: 12, left: 16, right: 16 })
-      }
-
-      // 通知中心 overlay
+      // 通知中心 overlay（模态遮罩，保留在叠加层）
       if (this.showNotificationCenter) {
         Stack() {
           Column()
@@ -147,7 +150,7 @@ export struct PhoneLayout {
         .width('100%').height('100%')
       }
 
-      // 性能详情 overlay
+      // 性能详情 overlay（模态，保留在叠加层）
       if (this.showPerformanceDetails) {
         Column() {
           PerformanceIndicator({ showDetails: true, compact: false })
@@ -268,46 +271,6 @@ export struct PhoneLayout {
       this.currentTabIndex = CREATE_TAB_INDEX;
       this.showCreateSheet = true;
     })
-  }
-
-  @Builder DiscoverNotificationButton() {
-    Row() {
-      Blank().layoutWeight(1)
-      Stack({ alignContent: Alignment.TopEnd }) {
-        Button() {
-          Text() {
-            SymbolSpan(
-              this.unreadCount > 0
-                ? $r('sys.symbol.bell_fill')
-                : $r('sys.symbol.bell')
-            )
-              .fontSize(18)
-              .fontColor([$r('app.color.brand_primary')])
-          }
-      }
-        .type(ButtonType.Normal)
-        .width(40).height(40)
-        .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius($r('app.float.radius_full'))
-        .border({ width: 1, color: $r('app.color.divider') })
-        .scale(this.isNotifBtnPressed ? { x: 0.9, y: 0.9 } : { x: 1, y: 1 })
-        .onClick(() => { this.showNotificationCenter = true; })
-
-        if (this.unreadCount > 0) {
-          Text(this.unreadCount > 99 ? '99+' : `${this.unreadCount}`)
-            .fontSize(10)
-            .fontWeight(FontWeight.Bold)
-            .fontColor($r('app.color.bg_primary'))
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor($r('app.color.brand_primary'))
-            .borderRadius($r('app.float.radius_full'))
-            .translate({ x: 8, y: -6 })
-        }
-      }
-      .margin({ top: this.safeAreaTop > 0 ? this.safeAreaTop + 12 : 24, right: 16 })
-    }
-    .width('100%')
-    .position({ x: 0, y: 0 })
   }
 
   @Builder CreateSheetContent() {

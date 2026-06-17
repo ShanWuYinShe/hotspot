@@ -7,11 +7,11 @@
         "material": {
           "certpath": "/Users/liyou/.ohos/config/default_harmonyapp_hY-oXtHDp2vwW9ved-9DrO2wSbqWkgNnEiIM4ztl7Qo=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001BA26ED408929972C753D9E56A6FFC8AEA61D7186B1CEB45E30E19C9976D2195103AA5452E434E26",
+          "keyPassword": "0000001BD2A24DA29204ABA732A4FDFAD1889D09409FB1D155DFF34E976E51A044B3971BAA4697DDF39CA0",
           "profile": "/Users/liyou/.ohos/config/default_harmonyapp_hY-oXtHDp2vwW9ved-9DrO2wSbqWkgNnEiIM4ztl7Qo=.p7b",
           "signAlg": "SHA256withECDSA",
           "storeFile": "/Users/liyou/.ohos/config/default_harmonyapp_hY-oXtHDp2vwW9ved-9DrO2wSbqWkgNnEiIM4ztl7Qo=.p12",
-          "storePassword": "0000001B866ED4E7983FB705F77A32441BABE65D1A47131994292613ED93AA11D61504C4565C94D4304FC7"
+          "storePassword": "0000001BFCB9B2F88B3C68DA0D3E40C813E40EFD04F12199C93AA3796CD91AB0564DCB6B455C5E713D66C7"
         }
       }
     ],
