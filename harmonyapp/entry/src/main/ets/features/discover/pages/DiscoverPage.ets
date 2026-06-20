@@ -381,7 +381,7 @@ export struct DiscoverPage {
           Text(tag)
             .fontSize(12)
             .fontColor(this.activeTag === tag
-              ? Color.White
+              ? this.getCurrentThemePalette().accentText
               : this.getCurrentThemePalette().textSecondary)
             .backgroundColor(this.activeTag === tag
               ? this.getCurrentThemePalette().accentBackground
@@ -482,7 +482,7 @@ export struct DiscoverPage {
             Row() {
               Text(LocationUtil.formatDistance(user.location.distance))
                 .fontSize(9)
-                .fontColor(Color.White)
+                .fontColor(this.getCurrentThemePalette().accentText)
             }
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .borderRadius(DesignConstants.RADIUS.FULL)

@@ -335,7 +335,6 @@ export struct NearbyPage {
           this.buildMomentsSection()
         }
         .width('100%')
-        .constraintSize({ maxWidth: this.isTablet ? 680 : Infinity })
         .padding({ top: 16, bottom: 24 })
       }
       .layoutWeight(1)
@@ -582,7 +581,7 @@ export struct NearbyPage {
                       Row() {
                         Text(LocationUtil.formatDistance(user.location.distance))
                           .fontSize(9)
-                          .fontColor(Color.White)
+                          .fontColor(this.getPalette().accentText)
                       }
                       .padding({ left: 6, right: 6, top: 1, bottom: 1 })
                       .borderRadius(DesignConstants.RADIUS.FULL)
