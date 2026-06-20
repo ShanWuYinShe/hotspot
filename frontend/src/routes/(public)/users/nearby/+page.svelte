@@ -91,7 +91,7 @@
     class="sticky top-0 z-10 page-pad-x pt-3 pb-0"
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
-    <div class="page-shell">
+    <div class:page-shell={!platformStore.isDesktop}>
       <div class="mb-3 flex items-center gap-3">
         {#if !platformStore.isDesktop}
           <BackButton onclick={handleBack} size={36} />
@@ -145,7 +145,7 @@
 
   <!-- List -->
   <div class="w-full page-pad">
-    <div class="page-shell">
+    <div class:page-shell={!platformStore.isDesktop}>
       <!-- Summary — location/radius lives in the anchor entry, this only carries page stats -->
       {#if platformStore.isDesktop}
         <div class="ambient-glow mb-5">

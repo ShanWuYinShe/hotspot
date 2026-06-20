@@ -383,7 +383,7 @@
 
 <div class="flex" class:h-full={platformStore.isWide} class:overflow-hidden={platformStore.isWide}>
   <div
-    class="page-shell flex min-w-0 flex-1 flex-col"
+    class="flex min-w-0 flex-1 flex-col"
     class:overflow-y-auto={platformStore.isWide}
     class:no-scrollbar={platformStore.isWide}
   >
@@ -392,66 +392,73 @@
       class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
       style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          {#if !platformStore.isDesktop}
-            <BackButton onclick={() => window.history.back()} size={36} />
-          {/if}
-          <div>
-            <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
-              {t('notificationsPage.title')}
-            </h1>
-            {#if notificationStore.unreadCount > 0}
-              <p style="font-size: 12px; color: var(--text-secondary); margin-top: 1px;">
-                {notificationStore.unreadCount} 条未读
-              </p>
+      <div class="page-shell">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            {#if !platformStore.isDesktop}
+              <BackButton onclick={() => window.history.back()} size={36} />
             {/if}
+            <div>
+              <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
+                {t('notificationsPage.title')}
+              </h1>
+              {#if notificationStore.unreadCount > 0}
+                <p style="font-size: 12px; color: var(--text-secondary); margin-top: 1px;">
+                  {notificationStore.unreadCount} 条未读
+                </p>
+              {/if}
+            </div>
           </div>
+          {#if notificationStore.unreadCount > 0}
+            <button
+              class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none transition-transform duration-150 active:scale-[0.93]"
+              style="font-size: 12px; color: var(--brand);"
+              onclick={markAllRead}
+            >
+              <CheckCheck size={13} strokeWidth={2} />
+              {t('notificationDropdown.markAllRead')}
+            </button>
+          {/if}
         </div>
-        {#if notificationStore.unreadCount > 0}
-          <button
-            class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none transition-transform duration-150 active:scale-[0.93]"
-            style="font-size: 12px; color: var(--brand);"
-            onclick={markAllRead}
-          >
-            <CheckCheck size={13} strokeWidth={2} />
-            {t('notificationDropdown.markAllRead')}
-          </button>
-        {/if}
       </div>
     </div>
 
     <!-- Filter pills -->
-    <div class="flex gap-2 overflow-x-auto page-pad-x py-3" style="scrollbar-width: none;">
-      {#each Object.entries(filterLabels) as [key, label]}
-        <button
-          class="filter-chip"
-          class:filter-chip--active={activeFilter === key}
-          onclick={() => (activeFilter = key as FilterKey)}
-        >
-          {label}
-        </button>
-      {/each}
+    <div class="page-pad-x py-3" style="scrollbar-width: none;">
+      <div class="page-shell">
+        <div class="flex gap-2 overflow-x-auto">
+          {#each Object.entries(filterLabels) as [key, label]}
+            <button
+              class="filter-chip"
+              class:filter-chip--active={activeFilter === key}
+              onclick={() => (activeFilter = key as FilterKey)}
+            >
+              {label}
+            </button>
+          {/each}
+        </div>
+      </div>
     </div>
 
-    <div class="flex flex-col page-pad">
-      {#if pagination.loading}
-        <div class="flex justify-center py-12">
-          <Loader2 class="h-8 w-8 animate-spin" color="var(--text-secondary)" />
-        </div>
-      {:else if pagination.error}
-        <EmptyState icon={Bell} title={t('notificationsPage.loadFailed')} />
-        <div class="flex justify-center pt-2">
-          <button
-            class="surface-flat rounded-full px-5 py-2 outline-none"
-            style="color: var(--brand); font-size: 13px;"
-            onclick={() => loadNotifications(true)}>{t('common.retry')}</button
-          >
-        </div>
-      {:else if filteredItems.length === 0}
-        <EmptyState icon={Bell} title={t('notificationsPage.emptyTitle')} />
-      {:else}
-        <div class="space-y-2.5">
+    <div class="flex-1 page-pad">
+      <div class="page-shell">
+        {#if pagination.loading}
+          <div class="flex justify-center py-12">
+            <Loader2 class="h-8 w-8 animate-spin" color="var(--text-secondary)" />
+          </div>
+        {:else if pagination.error}
+          <EmptyState icon={Bell} title={t('notificationsPage.loadFailed')} />
+          <div class="flex justify-center pt-2">
+            <button
+              class="surface-flat rounded-full px-5 py-2 outline-none"
+              style="color: var(--brand); font-size: 13px;"
+              onclick={() => loadNotifications(true)}>{t('common.retry')}</button
+            >
+          </div>
+        {:else if filteredItems.length === 0}
+          <EmptyState icon={Bell} title={t('notificationsPage.emptyTitle')} />
+        {:else}
+          <div class="space-y-2.5">
           <!-- Unread group -->
           {#if unreadGroup.length > 0}
             <p
@@ -691,6 +698,7 @@
         {/if}
       {/if}
     </div>
+  </div>
   </div>
   {#if platformStore.isWide}
     <aside
