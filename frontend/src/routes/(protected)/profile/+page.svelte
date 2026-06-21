@@ -300,7 +300,7 @@
       </div>
     {:else}
       <div class="grid grid-cols-2 md:grid-cols-3" style="gap: 10px; width: 100%;">
-        {#each galleryMoments as moment}
+        {#each galleryMoments as moment (moment.moment_id)}
           {@const img = moment.images?.[0]}
           <div
             class="surface-flat relative cursor-pointer overflow-hidden rounded-[16px]"
@@ -350,7 +350,7 @@
       class="flex overflow-hidden rounded-[20px] surface-flat"
       style="border: 1px solid var(--border-theme);"
     >
-      {#each statsRow as stat, i}
+      {#each statsRow as stat, i (stat.label)}
         <div class="relative flex flex-1 flex-col items-center justify-center py-4">
           {#if i > 0}
             <div

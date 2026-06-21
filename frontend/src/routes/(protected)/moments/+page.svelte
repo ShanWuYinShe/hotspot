@@ -110,8 +110,10 @@
                     <div class="mt-3 flex gap-2 overflow-x-auto">
                       {#each moment.images.slice(0, 4) as image, i (image.url)}
                         <img
-                          src={image.url}
+                          src={image.thumbnail_url || image.url}
                           alt="图片 {i + 1}"
+                          loading="lazy"
+                          decoding="async"
                           class="h-20 w-20 rounded-[12px] object-cover"
                         />
                       {/each}
