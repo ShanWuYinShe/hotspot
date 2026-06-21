@@ -187,7 +187,7 @@
             </button>
             <button
               class="rounded-full px-5 py-2.5 font-medium outline-none"
-              style="color: var(--text-secondary); background: transparent;"
+              style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
               onclick={() => goto('/')}
             >
               返回首页

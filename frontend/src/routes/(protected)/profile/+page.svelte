@@ -298,11 +298,7 @@
         </p>
       </div>
     {:else}
-      <div
-        style="display: grid; grid-template-columns: repeat({platformStore.isTablet
-          ? 3
-          : 2}, 1fr); gap: 10px; width: 100%;"
-      >
+      <div class="grid grid-cols-2 md:grid-cols-3" style="gap: 10px; width: 100%;">
         {#each galleryMoments as moment}
           {@const img = moment.images?.[0]}
           <div

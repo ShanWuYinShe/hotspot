@@ -7,7 +7,7 @@
   import { goto } from '$app/navigation';
   import { t } from '$lib/i18n';
   import Home from 'lucide-svelte/icons/home';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
 
   const is404 = $derived(page.status === 404);
@@ -45,7 +45,7 @@
       onclick={() => history.back()}
       aria-label={t('errorPage.backAria')}
     >
-      <ArrowLeft size={16} />
+      <ChevronLeft size={16} />
       {t('errorPage.back')}
     </button>
     <button

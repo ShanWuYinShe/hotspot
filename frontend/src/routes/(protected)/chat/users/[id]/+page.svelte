@@ -388,7 +388,7 @@
 >
   <!-- Header -->
   <div
-    class="flex h-[60px] items-center gap-3 px-4"
+    class="flex h-16 shrink-0 items-center gap-3 px-4"
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     {#if !platformStore.isWide}
@@ -398,7 +398,7 @@
     {#if isLoading}
       <div
         class="rounded-full"
-        style="width: 38px; height: 38px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+        style="width: 40px; height: 40px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
       ></div>
       <div
         style="width: 96px; height: 20px; border-radius: 8px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"

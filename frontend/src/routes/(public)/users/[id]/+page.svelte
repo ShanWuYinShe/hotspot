@@ -9,7 +9,7 @@
   import { toast } from '$lib/stores/toast.svelte';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
   import type { UserItem, MomentItem, FollowerItem, FollowingItem } from '$lib/types/api';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import Image from 'lucide-svelte/icons/image';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
@@ -195,7 +195,7 @@
           style="background: var(--brand); color: var(--text-on-accent);"
           onclick={() => history.back()}
         >
-          <ArrowLeft size={16} />
+          <ChevronLeft size={16} />
           返回
         </button>
       </div>
@@ -227,23 +227,23 @@
         <div class="absolute left-0 right-0 top-0 flex items-center justify-between px-4 pt-4">
           <button
             class="flex items-center justify-center rounded-full outline-none"
-            style="width: 38px; height: 38px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);"
+            style="width: 38px; height: 38px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);"
             onclick={() => history.back()}
             aria-label="返回"
           >
-            <ArrowLeft size={15} color="var(--text-on-overlay)" strokeWidth={1.75} />
+            <ChevronLeft size={15} color="var(--text-on-overlay)" strokeWidth={1.75} />
           </button>
           <div class="flex gap-2">
             <button
               class="flex items-center justify-center rounded-full outline-none"
-              style="width: 38px; height: 38px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);"
+              style="width: 38px; height: 38px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);"
               aria-label="分享"
             >
               <Share2 size={14} color="var(--text-on-overlay)" strokeWidth={1.75} />
             </button>
             <button
               class="flex items-center justify-center rounded-full outline-none"
-              style="width: 38px; height: 38px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);"
+              style="width: 38px; height: 38px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);"
               aria-label="更多"
             >
               <MoreHorizontal size={14} color="var(--text-on-overlay)" strokeWidth={1.75} />

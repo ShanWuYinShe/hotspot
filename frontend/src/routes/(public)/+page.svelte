@@ -2,6 +2,7 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import { t } from '$lib/i18n';
+  import { formatDistance } from '$lib/utils/format';
   import { usersService, feedService, groupsService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import type { UserItem, TrendingTagItem, GroupItem } from '$lib/types/api';
@@ -102,12 +103,6 @@
       latitude: mapAnchorStore.latitude,
       longitude: mapAnchorStore.longitude
     };
-  }
-
-  function formatDistance(meters?: number): string {
-    if (meters == null) return '';
-    if (meters < 1000) return `${Math.round(meters)}m`;
-    return `${(meters / 1000).toFixed(1)}km`;
   }
 
   async function loadNearbyUsers() {
@@ -218,12 +213,12 @@
   <div class="flex flex-col">
     <!-- Sticky header -->
     <div
-      class="sticky top-0 z-10 py-3"
+      class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
       style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <div class="page-pad-x page-shell page-shell--narrow flex items-center justify-between">
+      <div class="page-shell page-shell--narrow flex items-center justify-between">
         <div>
-          <h1 style="font-size: 22px; color: var(--text-primary);">{t('sidebar.home')}</h1>
+          <h1 style="font-size: 24px; color: var(--text-primary);">{t('sidebar.home')}</h1>
           <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
             {t('home.discoverNearbyPeopleAndThings')}
           </p>
@@ -249,7 +244,7 @@
         <div class="absolute inset-0 flex items-center justify-center">
           <div
             class="flex items-center justify-center rounded-full"
-            style="width: 44px; height: 44px; background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1.5px solid rgba(255,255,255,0.35); box-shadow: 0 4px 16px rgba(0,0,0,0.18);"
+            style="width: 44px; height: 44px; background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1.5px solid var(--glass-border); box-shadow: 0 4px 16px rgba(0,0,0,0.18);"
           >
             <span
               class="rounded-full animate-pulse"
@@ -261,7 +256,7 @@
           {#each [Navigation2, Compass] as Icon}
             <button
               class="flex items-center justify-center rounded-xl outline-none"
-              style="width: 34px; height: 34px; background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.25); box-shadow: 2px 2px 6px rgba(0,0,0,0.15);"
+              style="width: 34px; height: 34px; background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid var(--glass-border); box-shadow: 2px 2px 6px rgba(0,0,0,0.15);"
             >
               <Icon size={14} strokeWidth={1.5} color="var(--text-primary)" />
             </button>
@@ -269,7 +264,7 @@
         </div>
         <div
           class="absolute bottom-3 left-3 flex items-center gap-1 rounded-full px-2.5 py-1"
-          style="background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2);"
+          style="background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid var(--glass-border);"
         >
           <span style="font-size: 11px; color: var(--brand); font-weight: 600;"
             >{nearbyUsers.length}</span
@@ -335,7 +330,7 @@
   <div class="flex h-full flex-col">
     <!-- Sticky header -->
     <div
-      class="sticky top-0 z-10 page-pad-x py-4"
+      class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
       style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
       <div class="page-shell page-shell--wide flex items-center justify-between">

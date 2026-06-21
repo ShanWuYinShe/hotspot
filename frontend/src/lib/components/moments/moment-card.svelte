@@ -405,7 +405,7 @@
     border-radius: 20px;
     aspect-ratio: var(--media-ratio);
     background: var(--border-theme);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, white 10%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 8%, transparent);
   }
 
   .moment-card--dense .moment-card__media {

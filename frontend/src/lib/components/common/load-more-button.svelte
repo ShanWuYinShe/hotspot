@@ -1,5 +1,6 @@
 <script lang="ts">
   import Loader2 from 'lucide-svelte/icons/loader-2';
+  import ArrowDown from 'lucide-svelte/icons/arrow-down';
   import { t } from '$lib/i18n';
 
   interface Props {
@@ -49,14 +50,7 @@
         onclick={onLoadMore}
         aria-label={t('common.loadMore')}
       >
-        <svg class="h-6 w-6 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M19 14l-7 7m0 0l-7-7m7 7V3"
-          />
-        </svg>
+        <ArrowDown class="h-6 w-6 animate-bounce" strokeWidth={2} />
         <span style="font-size: 11px; color: var(--text-secondary);"
           >{t('loadMoreIndicator.clickToLoad')}</span
         >

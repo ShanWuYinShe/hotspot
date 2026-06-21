@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import Calendar from 'lucide-svelte/icons/calendar';
   import Clock from 'lucide-svelte/icons/clock';
   import MapPin from 'lucide-svelte/icons/map-pin';
@@ -203,11 +203,11 @@
           <button
             type="button"
             class="flex items-center justify-center rounded-full outline-none"
-            style="width: 36px; height: 36px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);"
+            style="width: 38px; height: 38px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);"
             onclick={handleBack}
             aria-label="返回"
           >
-            <ArrowLeft size={15} strokeWidth={1.75} color="var(--text-on-accent)" />
+            <ChevronLeft size={15} strokeWidth={1.75} color="var(--text-on-overlay)" />
           </button>
         </div>
 
@@ -216,10 +216,10 @@
           <button
             type="button"
             class="flex items-center justify-center rounded-full outline-none"
-            style="width: 36px; height: 36px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);"
+            style="width: 38px; height: 38px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);"
             aria-label="分享"
           >
-            <Share2 size={14} strokeWidth={1.75} color="var(--text-on-accent)" />
+            <Share2 size={14} strokeWidth={1.75} color="var(--text-on-overlay)" />
           </button>
         </div>
 

@@ -11,7 +11,6 @@
   import X from 'lucide-svelte/icons/x';
   import Compass from 'lucide-svelte/icons/compass';
   import TrendingUp from 'lucide-svelte/icons/trending-up';
-  import Sparkles from 'lucide-svelte/icons/sparkles';
   import type { MomentItem, TrendingTagItem } from '$lib/types/api';
 
   const TABS = ['热门', '附近', '活动', '关注'];
@@ -101,7 +100,7 @@
 <!-- Shared header content (used by all platforms) -->
 {#snippet headerContent()}
   <div class="flex items-center justify-between mb-2">
-    <h1 style="font-size: 22px; color: var(--text-primary);">发现</h1>
+    <h1 style="font-size: 24px; color: var(--text-primary);">发现</h1>
     <span style="font-size: 12px; color: var(--text-secondary);"
       >{getFilteredItems().length} 条内容</span
     >
@@ -321,69 +320,11 @@
 {:else if platformStore.isTablet}
   <div class="flex h-full flex-col">
     <div
-      class="sticky top-0 z-10 flex-shrink-0 pt-4 pb-0"
+      class="sticky top-0 z-10 flex-shrink-0 feed-density-pad-x pt-3 pb-3"
       style="background: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <div class="feed-density-shell feed-density-shell--medium feed-density-pad-x">
-        <div class="flex items-center justify-between mb-2">
-          <h1 style="font-size: 24px; color: var(--text-primary);">发现</h1>
-          <div
-            class="flex items-center gap-1.5 rounded-full px-3 py-1.5"
-            style="background: var(--brand); box-shadow: 0 3px 10px var(--glow);"
-          >
-            <Sparkles size={11} strokeWidth={2} color="var(--text-on-accent)" />
-            <span style="font-size: 11px; color: var(--text-on-accent);">精选</span>
-          </div>
-        </div>
-        <div
-          class="input-surface flex items-center gap-3 rounded-[18px] px-4 py-2.5"
-          style="margin-bottom: 10px;"
-        >
-          <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
-          <input
-            type="text"
-            name="discover-search"
-            aria-label="搜索发现内容"
-            bind:value={searchVal}
-            placeholder="地点、人物、关键词…"
-            class="flex-1 bg-transparent outline-none"
-            style="font-size: 13px; color: var(--text-primary);"
-            onkeydown={(e) => e.key === 'Enter' && handleSearch()}
-          />
-          {#if searchVal.length > 0}
-            <button
-              type="button"
-              class="flex-shrink-0 outline-none"
-              onclick={() => (searchVal = '')}
-            >
-              <X size={13} strokeWidth={2} color="var(--text-secondary)" />
-            </button>
-          {/if}
-        </div>
-        <div
-          class="flex overflow-x-auto no-scrollbar"
-          style="border-bottom: 1px solid var(--border-theme);"
-        >
-          {#each TABS as tab (tab)}
-            <button
-              type="button"
-              class="relative flex-shrink-0 pb-3 pt-1 outline-none"
-              style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab
-                ? 'var(--brand)'
-                : 'var(--text-secondary)'}; font-weight: {activeTab === tab
-                ? 500
-                : 400}; font-size: 13px;"
-              onclick={() => (activeTab = tab)}
-            >
-              {tab}
-              {#if activeTab === tab}
-                <div
-                  style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--brand);"
-                ></div>
-              {/if}
-            </button>
-          {/each}
-        </div>
+      <div class="feed-density-shell feed-density-shell--medium">
+        {@render headerContent()}
       </div>
     </div>
 
@@ -397,10 +338,10 @@
 {:else}
   <div class="flex h-full flex-col">
     <div
-      class="sticky top-0 z-10 flex-shrink-0 pt-3 pb-0"
+      class="sticky top-0 z-10 flex-shrink-0 feed-density-pad-x pt-3 pb-3"
       style="background: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <div class="feed-density-shell feed-density-shell--narrow feed-density-pad-x">
+      <div class="feed-density-shell feed-density-shell--narrow">
         {@render headerContent()}
       </div>
     </div>

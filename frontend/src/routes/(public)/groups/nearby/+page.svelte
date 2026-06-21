@@ -90,7 +90,7 @@
 <div>
   <!-- Sticky header -->
   <div
-    class="sticky top-0 z-10 page-pad-x pt-3 pb-0"
+    class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     <div class:page-shell={!platformStore.isDesktop}>

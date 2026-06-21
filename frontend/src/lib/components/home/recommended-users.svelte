@@ -2,6 +2,7 @@
   import { dev } from '$app/environment';
   import { usersService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
+  import { formatDistance } from '$lib/utils/format';
   import { authStore } from '$lib/stores/auth.svelte';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import type { UserItem } from '$lib/types/api';
@@ -17,12 +18,6 @@
   let users = $state.raw<UserItem[]>([]);
   let loading = $state(false);
   let loadVersion = 0;
-
-  function formatDistance(meters?: number): string {
-    if (meters == null) return '';
-    if (meters < 1000) return `${Math.round(meters)}m`;
-    return `${(meters / 1000).toFixed(1)}km`;
-  }
 
   async function loadUsers() {
     const version = ++loadVersion;

@@ -149,7 +149,7 @@
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
     <div class="flex items-center gap-3">
-      <BackButton onclick={() => window.history.back()} size={36} />
+      <BackButton onclick={() => history.back()} size={36} />
       <h1 style="font-size: 18px; color: var(--text-primary);">编辑资料</h1>
     </div>
     <button

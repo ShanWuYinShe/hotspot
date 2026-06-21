@@ -396,7 +396,7 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
             {#if !platformStore.isDesktop}
-              <BackButton onclick={() => window.history.back()} size={36} />
+              <BackButton onclick={() => history.back()} size={36} />
             {/if}
             <div>
               <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
