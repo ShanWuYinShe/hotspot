@@ -27,7 +27,7 @@
   <!-- Backdrop -->
   <button
     class="fixed inset-0 z-40 cursor-default"
-    style="background: rgba(0,0,0,0.35); backdrop-filter: blur(3px);"
+    style="background: var(--overlay); backdrop-filter: blur(3px);"
     onclick={() => uiStore.closeCreateSheet()}
     aria-label="关闭"
     transition:fade={{ duration: 220 }}
@@ -81,7 +81,7 @@
           class="flex items-center justify-center rounded-full"
           style="width: 38px; height: 38px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
         >
-          <UsersRound size={16} strokeWidth={1.5} color="var(--text-tertiary)" />
+          <UsersRound size={16} strokeWidth={1.5} color="var(--brand)" />
         </div>
         <div>
           <p style="font-size: 13px; font-weight: 600; color: var(--text-primary);">

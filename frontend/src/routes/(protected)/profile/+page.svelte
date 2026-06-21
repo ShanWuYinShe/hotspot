@@ -8,6 +8,7 @@
   import { toast } from '$lib/stores/toast.svelte';
   import type { MyProfile } from '$lib/types/api';
   import Camera from 'lucide-svelte/icons/camera';
+  import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
   import Loader2 from 'lucide-svelte/icons/loader-2';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import Heart from 'lucide-svelte/icons/heart';
@@ -384,7 +385,7 @@
         ></div>
         <button
           class="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
-          style="padding: 6px 12px; background: rgba(0,0,0,0.45); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25); font-size: 12px; color: var(--text-on-overlay);"
+          style="padding: 6px 12px; background: var(--overlay); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); font-size: 12px; color: var(--text-on-accent);"
         >
           <Camera size={13} strokeWidth={1.75} />
           更换横幅
@@ -746,21 +747,7 @@
         class="mb-4 flex items-center justify-center rounded-full surface-flat"
         style="width: 64px; height: 64px;"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="var(--text-secondary)"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-          <path d="M12 9v4" />
-          <path d="M12 17h.01" />
-        </svg>
+        <TriangleAlert size={28} strokeWidth={1.5} color="var(--text-secondary)" />
       </div>
       <p style="font-size: 16px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">
         加载个人资料失败

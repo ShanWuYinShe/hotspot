@@ -16,7 +16,7 @@
     background: linear-gradient(
       90deg,
       var(--border-theme) 25%,
-      rgba(255, 255, 255, 0.1) 50%,
+      color-mix(in srgb, var(--text-primary) 8%, transparent) 50%,
       var(--border-theme) 75%
     );
     background-size: 200% 100%;

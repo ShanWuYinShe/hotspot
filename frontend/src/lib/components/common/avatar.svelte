@@ -34,7 +34,7 @@
     `width: ${size}px; height: ${size}px; border-radius: ${radius}; border: ${border ? '1.5px solid var(--border-theme)' : 'none'};`
   );
   const fallbackStyle = $derived(
-    `background: var(--surface-secondary); color: var(--text-tertiary); border-radius: ${radius};`
+    `background: var(--surface-secondary); color: var(--text-secondary); border-radius: ${radius};`
   );
 </script>
 

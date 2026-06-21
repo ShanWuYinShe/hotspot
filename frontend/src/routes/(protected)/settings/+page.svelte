@@ -18,6 +18,7 @@
   import EyeOff from 'lucide-svelte/icons/eye-off';
   import Flag from 'lucide-svelte/icons/flag';
   import Palette from 'lucide-svelte/icons/palette';
+  import Check from 'lucide-svelte/icons/check';
   import BackButton from '$lib/components/common/back-button.svelte';
   import Moon from 'lucide-svelte/icons/moon';
 
@@ -320,18 +321,7 @@
                     <div
                       style="display: flex; align-items: center; justify-content: center; border-radius: 50%; width: 20px; height: 20px; background: {accent};"
                     >
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="var(--text-on-accent)"
-                        stroke-width="3"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      >
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
+                      <Check size={12} strokeWidth={3} color="var(--text-on-accent)" />
                     </div>
                   {/if}
                 </button>
@@ -401,7 +391,7 @@
                   onclick={() => (notifications[item.key] = !notifications[item.key])}
                 >
                   <span
-                    style="position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 11px; background: var(--surface-bg); box-shadow: 0 1px 4px rgba(0,0,0,0.26); transition: transform 0.25s ease; left: {notifications[
+                    style="position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 11px; background: var(--surface-bg); box-shadow: var(--theme-switch-shadow); transition: transform 0.25s ease; left: {notifications[
                       item.key
                     ]
                       ? '25px'
@@ -555,18 +545,7 @@
                 <div
                   style="display: flex; align-items: center; justify-content: center; border-radius: 50%; width: 20px; height: 20px; background: {accent};"
                 >
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--text-on-accent)"
-                    stroke-width="3"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
+                  <Check size={12} strokeWidth={3} color="var(--text-on-accent)" />
                 </div>
               {/if}
             </button>
@@ -655,7 +634,7 @@
                 onclick={() => (notifications[item.key] = !notifications[item.key])}
               >
                 <span
-                  style="position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 11px; background: var(--surface-bg); box-shadow: 0 1px 4px rgba(0,0,0,0.26); transition: transform 0.25s ease; left: {notifications[
+                  style="position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 11px; background: var(--surface-bg); box-shadow: var(--theme-switch-shadow); transition: transform 0.25s ease; left: {notifications[
                     item.key
                   ]
                     ? '25px'

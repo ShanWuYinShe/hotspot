@@ -187,7 +187,7 @@
         ></div>
         <button
           class="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
-          style="padding: 6px 12px; background: rgba(0,0,0,0.45); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25); font-size: 12px; color: var(--text-on-overlay);"
+          style="padding: 6px 12px; background: var(--overlay); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); font-size: 12px; color: var(--text-on-accent);"
         >
           <Camera size={13} strokeWidth={1.75} />
           更换横幅

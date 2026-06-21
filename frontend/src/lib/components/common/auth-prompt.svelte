@@ -1,6 +1,7 @@
 <script lang="ts">
   import { uiStore } from '$lib/stores/ui.svelte';
   import { authStore } from '$lib/stores/auth.svelte';
+  import Lock from 'lucide-svelte/icons/lock';
 
   function handleLogin() {
     uiStore.navigateToAuth();
@@ -19,20 +20,7 @@
   <!-- 提示卡片 -->
   <div class="auth-prompt-card" role="alertdialog" aria-modal="true" aria-label="请先登录">
     <div class="auth-prompt-icon">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-        <path d="M7 11V7a5 0 0 1 10 0v4" />
-      </svg>
+      <Lock size={20} />
     </div>
     <div class="auth-prompt-content">
       <p class="auth-prompt-title">请先登录</p>

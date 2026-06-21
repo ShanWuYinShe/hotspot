@@ -4,7 +4,9 @@
   import { toast } from '$lib/stores/toast.svelte';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
-  import { MapPin, Share2, UsersRound } from 'lucide-svelte';
+  import MapPin from 'lucide-svelte/icons/map-pin';
+  import Share2 from 'lucide-svelte/icons/share-2';
+  import UsersRound from 'lucide-svelte/icons/users-round';
   import type {
     ShareDetail,
     LocationSharePayload,

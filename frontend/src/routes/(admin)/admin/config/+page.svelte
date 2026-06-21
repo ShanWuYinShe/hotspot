@@ -276,7 +276,7 @@
                     class="absolute top-1 rounded-full"
                     style="width: 16px; height: 16px; background: var(--surface-bg); transition: left 0.2s; left: {toggle.val
                       ? '23px'
-                      : '4px'}; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"
+                      : '4px'}; box-shadow: var(--theme-switch-shadow);"
                   ></div>
                 </button>
               </div>

@@ -7,6 +7,7 @@
 
 import { browser } from '$app/environment';
 import type { ClientConfig } from '$lib/types/api';
+import { isSuccess } from '$lib/api/client';
 import { systemService } from '$lib/api/services/system';
 
 class ConfigStore {
@@ -50,7 +51,7 @@ class ConfigStore {
 
     try {
       const res = await systemService.getClientConfig();
-      if (res.code === 0 && res.data) {
+      if (isSuccess(res) && res.data) {
         this.#config = res.data;
         this.#error = null;
       } else {

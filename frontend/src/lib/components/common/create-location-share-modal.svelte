@@ -2,7 +2,12 @@
   import { shareService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import { toast } from '$lib/stores/toast.svelte';
-  import { MapPin, Share2, Copy, Check, Loader2, UsersRound } from 'lucide-svelte';
+  import MapPin from 'lucide-svelte/icons/map-pin';
+  import Share2 from 'lucide-svelte/icons/share-2';
+  import Copy from 'lucide-svelte/icons/copy';
+  import Check from 'lucide-svelte/icons/check';
+  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import UsersRound from 'lucide-svelte/icons/users-round';
   import {
     Dialog,
     DialogContent,
