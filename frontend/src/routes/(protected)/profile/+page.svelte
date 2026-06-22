@@ -225,7 +225,7 @@
       </div>
       <button
         class="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none"
-        style="width: 26px; height: 26px; background: var(--brand); border: 2.5px solid var(--surface-bg); box-shadow: 0 2px 8px var(--glow);"
+        style="width: 26px; height: 26px; background: var(--brand); border: 2.5px solid var(--surface-bg); box-shadow: var(--shadow-brand-btn);"
         title="更换头像"
       >
         <Camera size={12} color="var(--text-on-accent)" strokeWidth={2} />
@@ -412,7 +412,7 @@
           </div>
           <button
             class="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"
-            style="width: 26px; height: 26px; background: var(--brand); border: 2px solid var(--surface-bg); box-shadow: 0 2px 8px var(--glow);"
+            style="width: 26px; height: 26px; background: var(--brand); border: 2px solid var(--surface-bg); box-shadow: var(--shadow-brand-btn);"
             title="更换头像"
           >
             <Camera size={12} color="var(--text-on-accent)" strokeWidth={2} />
@@ -516,7 +516,7 @@
           class="flex flex-1 items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none transition-all"
           style={saved
             ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
-            : 'background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px var(--glow); border: none;'}
+            : 'background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: var(--shadow-brand-btn); border: none;'}
           onclick={saveProfile}
           disabled={isSaving}
         >

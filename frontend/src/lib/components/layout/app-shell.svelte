@@ -61,7 +61,7 @@
     <p class="mb-6" style="color: var(--text-secondary);">{t('auth.loginRequiredDescription')}</p>
     <button
       class="rounded-[22px] px-8 py-3.5 font-medium transition-all"
-      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow);"
+      style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
       onclick={() => uiStore.openLoginModalWithRedirect({})}
     >
       {t('common.loginNow')}

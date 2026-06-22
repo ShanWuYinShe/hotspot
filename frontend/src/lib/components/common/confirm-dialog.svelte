@@ -46,7 +46,7 @@
 
 <Dialog bind:open>
   <DialogContent
-    class="sm:max-w-md rounded-[22px]"
+    class="sm:max-w-md"
     style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-lg);"
   >
     <DialogHeader>

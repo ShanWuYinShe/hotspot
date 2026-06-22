@@ -177,7 +177,7 @@
     </button>
     <button
       class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
+      style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
       onclick={openCreateRoleDialog}
     >
       <Plus size={14} strokeWidth={1.5} />
@@ -365,7 +365,7 @@
 <!-- Create/Edit role dialog -->
 <Dialog.Root bind:open={showRoleDialog}>
   <Dialog.Content
-    class="sm:max-w-lg rounded-[22px]"
+    class="sm:max-w-lg"
     style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-lg);"
   >
     <Dialog.Header>
@@ -437,7 +437,7 @@
       >
       <button
         class="rounded-full px-5 py-2 outline-none"
-        style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
+        style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
         onclick={handleSubmitRole}
         disabled={isSubmitting}
       >

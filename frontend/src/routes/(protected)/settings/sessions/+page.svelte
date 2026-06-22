@@ -171,7 +171,7 @@
                   {#if session.is_current}
                     <span
                       class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
+                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
                       >当前设备</span
                     >
                   {/if}

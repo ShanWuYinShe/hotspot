@@ -54,7 +54,7 @@
           </button>
           <button
             class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 2px 8px var(--glow);"
+            style="background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: var(--shadow-brand-btn);"
             onclick={() => (showCreateMoment = true)}
           >
             <Plus size={13} />

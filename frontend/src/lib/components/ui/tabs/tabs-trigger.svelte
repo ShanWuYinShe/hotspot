@@ -23,7 +23,7 @@
     className
   )}
   style="border-radius: 14px; color: var(--text-secondary);"
-  data-state-active-style="background: var(--brand); box-shadow: 0 2px 8px var(--glow);"
+  data-state-active-style="background: var(--brand); box-shadow: var(--shadow-brand-btn);"
   {value}
   {disabled}
   {...restProps}

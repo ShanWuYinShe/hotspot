@@ -157,7 +157,7 @@
       style={saved
         ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
         : canSave
-          ? 'background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 4px 14px var(--glow); border: none;'
+          ? 'background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn); border: none;'
           : 'background: var(--surface-secondary); color: var(--text-secondary); font-size: 13px; border: none; opacity: 0.5;'}
       onclick={saveProfile}
       disabled={!canSave}
@@ -214,7 +214,7 @@
           </div>
           <button
             class="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"
-            style="width: 26px; height: 26px; background: var(--brand); border: 2px solid var(--surface-bg); box-shadow: 0 2px 8px var(--glow);"
+            style="width: 26px; height: 26px; background: var(--brand); border: 2px solid var(--surface-bg); box-shadow: var(--shadow-brand-btn);"
             title="更换头像"
             onclick={handleAvatarClick}
           >
@@ -286,7 +286,7 @@
         style={saved
           ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
           : canSave
-            ? 'background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px var(--glow); border: none;'
+            ? 'background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: var(--shadow-brand-btn); border: none;'
             : 'background: var(--surface-secondary); color: var(--text-secondary); font-size: 14px; border: none; opacity: 0.5;'}
         onclick={saveProfile}
         disabled={!canSave}

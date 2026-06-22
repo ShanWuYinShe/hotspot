@@ -166,7 +166,7 @@
         <button
           type="submit"
           class="flex h-11 w-full items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-          style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+          style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
           disabled={isSaving}
         >
           {#if isSaving}

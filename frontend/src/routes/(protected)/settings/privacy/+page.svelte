@@ -151,7 +151,7 @@
               aria-label="位置可见"
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={locationVisible
-                ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
+                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
                 : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => (locationVisible = !locationVisible)}
             >
@@ -183,7 +183,7 @@
               aria-label="在线状态可见"
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={presenceVisible
-                ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
+                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
                 : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => (presenceVisible = !presenceVisible)}
             >
@@ -217,7 +217,7 @@
               aria-label="好友/关注/粉丝列表可见"
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={socialListsVisible
-                ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
+                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
                 : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => (socialListsVisible = !socialListsVisible)}
             >
@@ -264,7 +264,7 @@
               aria-label="允许关注"
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={allowFollow
-                ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
+                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
                 : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => (allowFollow = !allowFollow)}
             >
@@ -334,7 +334,7 @@
               aria-label="允许被搜索"
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={searchable
-                ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
+                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
                 : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => (searchable = !searchable)}
             >
@@ -364,7 +364,7 @@
               aria-label="附近可见"
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={locationSearchable
-                ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
+                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
                 : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => (locationSearchable = !locationSearchable)}
             >
@@ -383,7 +383,7 @@
 
       <button
         class="flex h-11 w-full items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+        style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
         onclick={saveSettings}
         disabled={isSaving}
       >

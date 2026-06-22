@@ -95,7 +95,7 @@
 
 <Dialog bind:open onOpenChange={(newOpen) => !newOpen && handleClose()}>
   <DialogContent
-    class="max-w-lg rounded-[22px]"
+    class="max-w-lg"
     style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-lg);"
   >
     {#if !shareCode}
@@ -152,7 +152,7 @@
         <!-- 操作按钮 -->
         <button
           class="rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
-          style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
+          style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
           onclick={handleSubmit}
           disabled={isSubmitting}
         >
@@ -215,7 +215,7 @@
 
         <button
           class="rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
-          style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
+          style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
           onclick={handleClose}
         >
           完成

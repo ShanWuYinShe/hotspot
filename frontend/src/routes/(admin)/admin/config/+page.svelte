@@ -220,7 +220,7 @@
             {/each}
             <button
               class="flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
-              style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
+              style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
               onclick={handleSaveUpload}
               disabled={isSaving}
             >
@@ -283,7 +283,7 @@
             {/each}
             <button
               class="flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
-              style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
+              style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
               onclick={handleSaveFeatures}
               disabled={isSaving}
             >
@@ -329,7 +329,7 @@
             {/each}
             <button
               class="flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
-              style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
+              style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
               onclick={handleSaveLimits}
               disabled={isSaving}
             >

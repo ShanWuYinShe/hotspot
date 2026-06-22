@@ -310,7 +310,7 @@
         <button
           type="submit"
           class="rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
-          style="background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 3px 10px var(--glow);"
+          style="background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: var(--shadow-brand-btn);"
           disabled={isLoading}
         >
           {#if isLoading}
@@ -414,7 +414,7 @@
         <button
           type="submit"
           class="rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
-          style="background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 3px 10px var(--glow);"
+          style="background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: var(--shadow-brand-btn);"
           disabled={isLoading}
         >
           {#if isLoading}
@@ -461,7 +461,7 @@
         <button
           type="submit"
           class="rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
-          style="background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 3px 10px var(--glow);"
+          style="background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: var(--shadow-brand-btn);"
           disabled={isLoading}
         >
           {#if isLoading}

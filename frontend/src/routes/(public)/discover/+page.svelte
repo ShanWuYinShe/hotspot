@@ -279,7 +279,7 @@
           <button
             type="button"
             class="flex-shrink-0 rounded-full px-2.5 py-1 outline-none"
-            style="background: var(--brand); font-size: 10px; color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
+            style="background: var(--brand); font-size: 10px; color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
           >
             关注
           </button>

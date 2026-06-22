@@ -316,7 +316,7 @@
                   {#if i === 0 && moment.tags && moment.tags.length > 0}
                     <div
                       class="absolute left-3 top-3 rounded-full px-2.5 py-0.5"
-                      style="background: var(--brand); box-shadow: 0 2px 8px var(--glow);"
+                      style="background: var(--brand); box-shadow: var(--shadow-brand-btn);"
                     >
                       <span style="font-size: 10px; color: var(--text-on-accent);"
                         >#{moment.tags[0]}</span
@@ -410,7 +410,7 @@
               />
               <button
                 class="ml-2 mr-1 flex items-center justify-center rounded-full outline-none"
-                style="width: 36px; height: 36px; background: var(--brand); box-shadow: 0 2px 8px var(--glow);"
+                style="width: 36px; height: 36px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
                 onclick={submitComment}
                 disabled={!commentText.trim() || isSubmitting}
               >

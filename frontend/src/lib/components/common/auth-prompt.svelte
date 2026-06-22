@@ -138,7 +138,7 @@
     font-size: 13px;
     font-weight: 600;
     color: var(--text-on-accent);
-    box-shadow: 0 3px 10px var(--glow);
+    box-shadow: var(--shadow-brand-btn);
     cursor: pointer;
     transition: all 0.15s;
   }

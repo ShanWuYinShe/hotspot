@@ -72,7 +72,7 @@
     </DropdownMenu.Root>
     <button
       class="mx-1.5 flex items-center justify-center rounded-full outline-none transition-shadow duration-200"
-      style="width: 32px; height: 32px; background: var(--brand); box-shadow: 0 4px 12px var(--glow);"
+      style="width: 32px; height: 32px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
       onclick={() => uiStore.openCreateSheet()}
       aria-label={t('nav.publish')}
     >
@@ -104,7 +104,7 @@
       <button
         type="button"
         class="ml-1.5 rounded-full px-4 font-medium transition-transform duration-150 active:scale-95"
-        style="height: 32px; font-size: 13px; background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow);"
+        style="height: 32px; font-size: 13px; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
         onclick={() => uiStore.openLoginModalWithRedirect({})}
       >
         {t('nav.loginRegister')}

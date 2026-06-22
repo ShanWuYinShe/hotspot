@@ -527,7 +527,7 @@
                     <div class="mt-2 flex gap-2">
                       <button
                         class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
+                        style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
                         disabled={isProcessing(item.notification_id)}
                         onclick={() => handleInviteAction(item, 'accept')}
                         >{t('common.accept')}</button
@@ -544,7 +544,7 @@
                     <div class="mt-2 flex gap-2">
                       <button
                         class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
+                        style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
                         disabled={isProcessing(item.notification_id)}
                         onclick={() => handleApplicationAction(item, 'approve')}
                         >{t('common.approve')}</button
@@ -644,7 +644,7 @@
                   <div class="mt-2 flex gap-2">
                     <button
                       class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
+                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
                       disabled={isProcessing(item.notification_id)}
                       onclick={() => handleInviteAction(item, 'accept')}
                       >{t('common.accept')}</button
@@ -661,7 +661,7 @@
                   <div class="mt-2 flex gap-2">
                     <button
                       class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
+                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
                       disabled={isProcessing(item.notification_id)}
                       onclick={() => handleApplicationAction(item, 'approve')}
                       >{t('common.approve')}</button

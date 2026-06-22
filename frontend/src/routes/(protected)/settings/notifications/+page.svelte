@@ -173,7 +173,7 @@
       <div class="mt-4 flex flex-col gap-3 sm:flex-row">
         <button
           class="flex h-11 flex-1 items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90"
-          style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+          style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
           onclick={() => goto('/notifications')}
         >
           <ExternalLink size={16} class="mr-2" />
@@ -252,7 +252,7 @@
               aria-label={item.title}
               class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
               style={isGroupEnabled(item.key)
-                ? 'background: var(--brand); box-shadow: 0 2px 8px var(--glow);'
+                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
                 : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
               onclick={() => togglePreference(item.key, !isGroupEnabled(item.key))}
             >
@@ -271,7 +271,7 @@
 
       <button
         class="mt-4 flex h-11 w-full items-center justify-center rounded-full text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+        style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
         onclick={savePreferences}
         disabled={isSaving}
       >

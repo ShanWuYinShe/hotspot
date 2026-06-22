@@ -50,7 +50,7 @@
     </button>
     <button
       class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
-      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+      style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
       onclick={() => goto('/')}
       aria-label={t('errorPage.homeAria')}
     >

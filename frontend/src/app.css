@@ -650,6 +650,9 @@
   --shadow-lg: 8px 8px 20px var(--shadow-dark), -8px -8px 20px var(--shadow-light);
   --shadow-xl: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
 
+  /* Brand CTA button shadow (unified glow for primary actions) */
+  --shadow-brand-btn: 0 4px 14px var(--glow);
+
   /* @deprecated — keep old shadow preset names for compatibility */
   --theme-shadow-inset: var(--shadow-inset);
   --theme-shadow-sm: var(--shadow-sm);

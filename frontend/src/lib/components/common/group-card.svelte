@@ -214,7 +214,7 @@
               {#if unreadCount > 0}
                 <div
                   class="absolute -top-1 -right-1 flex items-center justify-center rounded-full"
-                  style="width: 18px; height: 18px; background: var(--brand); color: var(--text-on-accent); font-size: 9px; font-weight: 600; box-shadow: 0 2px 6px var(--glow);"
+                  style="width: 18px; height: 18px; background: var(--brand); color: var(--text-on-accent); font-size: 9px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
                 >
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </div>
@@ -317,7 +317,7 @@
       {#if unreadCount > 0}
         <div
           class="flex flex-shrink-0 items-center justify-center rounded-full"
-          style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: 0 2px 6px var(--glow);"
+          style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
         >
           {unreadCount > 99 ? '99+' : unreadCount}
         </div>
@@ -368,7 +368,7 @@
         {#if unreadCount > 0}
           <div
             class="flex flex-shrink-0 items-center justify-center rounded-full"
-            style="width: 22px; height: 22px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: 0 2px 6px var(--glow);"
+            style="width: 22px; height: 22px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
           >
             {unreadCount > 99 ? '99+' : unreadCount}
           </div>

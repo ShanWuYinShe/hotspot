@@ -280,7 +280,7 @@
           {#if chat.unread_count > 0 && !selected}
             <div
               class="flex flex-shrink-0 items-center justify-center rounded-full"
-              style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--glow);"
+              style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
             >
               {chat.unread_count > 99 ? '99+' : chat.unread_count}
             </div>
@@ -359,7 +359,7 @@
         {#if (group.my_state?.unread_count ?? 0) > 0 && !selected}
           <div
             class="flex flex-shrink-0 items-center justify-center rounded-full"
-            style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--glow);"
+            style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
           >
             {(group.my_state?.unread_count ?? 0) > 99 ? '99+' : (group.my_state?.unread_count ?? 0)}
           </div>

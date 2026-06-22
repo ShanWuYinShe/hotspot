@@ -514,7 +514,7 @@
               style="max-width: 76%; padding: 10px 14px; border-radius: {isSelf(message)
                 ? '18px 4px 18px 18px'
                 : '4px 18px 18px 18px'}; {isSelf(message)
-                ? 'background: var(--brand); box-shadow: 0 4px 14px var(--glow);'
+                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
                 : ''}"
             >
               {#if message.recalled_at != null}
@@ -642,7 +642,7 @@
         class="flex shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
         class:surface-pressed={!messageText.trim()}
         style="width: 36px; height: 36px; {messageText.trim()
-          ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow);'
+          ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
           : 'color: var(--text-secondary);'}"
         onclick={sendMessage}
         onmousedown={(e) => e.preventDefault()}

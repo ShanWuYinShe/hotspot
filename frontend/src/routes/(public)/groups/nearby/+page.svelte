@@ -104,7 +104,7 @@
         {#if !platformStore.isDesktop}
           <button
             class="flex items-center justify-center rounded-full outline-none"
-            style="width: 36px; height: 36px; background: var(--brand); box-shadow: 0 3px 10px var(--glow);"
+            style="width: 36px; height: 36px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
             onclick={handleCreateGroup}
             aria-label="创建群组"
           >
@@ -152,7 +152,7 @@
           >
             <div
               class="flex flex-shrink-0 items-center justify-center rounded-full"
-              style="width: 44px; height: 44px; background: var(--brand); box-shadow: 0 4px 14px var(--glow);"
+              style="width: 44px; height: 44px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
             >
               <UsersRound size={19} strokeWidth={2} color="var(--text-on-accent)" />
             </div>

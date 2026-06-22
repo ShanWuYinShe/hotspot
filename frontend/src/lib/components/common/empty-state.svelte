@@ -44,7 +44,7 @@
     {#if actionText && onAction}
       <button
         class="mt-5 rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="font-size: 13px; font-weight: 500; background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+        style="font-size: 13px; font-weight: 500; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
         onclick={onAction}
       >
         {actionText}

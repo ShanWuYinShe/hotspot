@@ -305,7 +305,7 @@
 
 <Dialog.Root bind:open onOpenChange={setOpenState}>
   <Dialog.Content
-    class="flex max-h-[85vh] flex-col rounded-[22px] sm:max-w-3xl"
+    class="flex max-h-[85vh] flex-col sm:max-w-3xl"
     style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-lg);"
   >
     <!-- Header -->
@@ -357,7 +357,7 @@
         <button
           type="submit"
           class="flex items-center justify-center rounded-full outline-none"
-          style="width: 36px; height: 36px; background: var(--brand); box-shadow: 0 3px 10px var(--glow);"
+          style="width: 36px; height: 36px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
           disabled={!keyword.trim()}
           aria-label={t('searchModal.submit')}
         >

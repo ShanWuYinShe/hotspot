@@ -48,7 +48,7 @@
       <div class="flex items-center gap-2.5">
         <div
           class="flex items-center justify-center rounded-full"
-          style="width: 38px; height: 38px; background: var(--brand); box-shadow: 0 4px 14px var(--glow);"
+          style="width: 38px; height: 38px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
         >
           <Radar size={17} strokeWidth={2} color="var(--text-on-accent)" />
         </div>

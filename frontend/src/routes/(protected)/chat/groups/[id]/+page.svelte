@@ -862,7 +862,7 @@
     {#if showScrollButton}
       <button
         class="fixed bottom-24 right-6 z-10 flex items-center justify-center rounded-full outline-none"
-        style="width: 36px; height: 36px; background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow);"
+        style="width: 36px; height: 36px; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
         onclick={() => scrollToBottom(true)}
         aria-label="滚动到底部"
       >
@@ -942,7 +942,7 @@
         <button
           class="flex shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
           style="width: 36px; height: 36px; {messageText.trim()
-            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 3px 10px var(--glow);'
+            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
             : 'background: var(--surface-bg); color: var(--text-secondary); border: 1px solid var(--border-theme);'}"
           onclick={sendMessage}
           onmousedown={(e) => e.preventDefault()}

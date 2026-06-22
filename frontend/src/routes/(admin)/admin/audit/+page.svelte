@@ -70,7 +70,7 @@
       </div>
       <button
         class="rounded-full px-4 py-2.5 outline-none"
-        style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px var(--glow);"
+        style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
         onclick={() => loadLogs()}>筛选</button
       >
     </div>

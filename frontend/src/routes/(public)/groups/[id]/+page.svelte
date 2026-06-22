@@ -962,7 +962,7 @@
               {#if group.my_state?.is_joined}
                 <button
                   class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                  style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+                  style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
                   onclick={() => goto(`/chat/groups/${groupId}`)}
                 >
                   进入群聊
@@ -988,7 +988,7 @@
               {:else}
                 <button
                   class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                  style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+                  style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
                   onclick={openJoinDialog}
                   disabled={settings?.join_method === 'invite_only'}
                 >
@@ -1149,7 +1149,7 @@
               {:else}
                 <button
                   class="w-full rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                  style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+                  style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
                   onclick={openJoinDialog}
                 >
                   申请加入
@@ -1186,7 +1186,7 @@
             {#if canManageGroup}
               <button
                 class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+                style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
                 onclick={() => openAnnouncementDialog()}
               >
                 <Plus size={14} />
@@ -1567,7 +1567,7 @@
                     <div class="flex flex-wrap gap-2">
                       <button
                         class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow); font-size: 13px;"
+                        style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn); font-size: 13px;"
                         disabled={isApplicationHandling(application.application_id)}
                         onclick={() => handleApplicationDecision(application, 'approve')}
                       >
@@ -1612,7 +1612,7 @@
 <!-- Dialogs: kept with neumorphic inner styling -->
 <Dialog.Root bind:open={showJoinDialog}>
   <Dialog.Content
-    class="sm:max-w-lg rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    class="sm:max-w-lg border var(--surface-bg) shadow-xl backdrop-blur-md"
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
@@ -1668,7 +1668,7 @@
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+        style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
         onclick={handleJoin}
         disabled={isJoining}
       >
@@ -1681,7 +1681,7 @@
 
 <Dialog.Root bind:open={showAnnouncementDialog}>
   <Dialog.Content
-    class="sm:max-w-xl rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    class="sm:max-w-xl border var(--surface-bg) shadow-xl backdrop-blur-md"
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
@@ -1729,7 +1729,7 @@
         <button
           class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           style={announcementPinned
-            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow);'
+            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
             : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           onclick={() => (announcementPinned = !announcementPinned)}
         >
@@ -1745,7 +1745,7 @@
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+        style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
         onclick={submitAnnouncement}
         disabled={announcementSubmitting}
       >
@@ -1758,7 +1758,7 @@
 
 <Dialog.Root bind:open={showAnnouncementDeleteDialog}>
   <Dialog.Content
-    class="sm:max-w-md rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    class="sm:max-w-md border var(--surface-bg) shadow-xl backdrop-blur-md"
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
@@ -1788,7 +1788,7 @@
 
 <Dialog.Root bind:open={showMuteDialog}>
   <Dialog.Content
-    class="sm:max-w-md rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    class="sm:max-w-md border var(--surface-bg) shadow-xl backdrop-blur-md"
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
@@ -1804,7 +1804,7 @@
           <button
             class="rounded-full py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
             style={Number(muteDurationMinutes) === preset.value
-              ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow);'
+              ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
               : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
             onclick={() => (muteDurationMinutes = String(preset.value))}>{preset.label}</button
           >
@@ -1835,7 +1835,7 @@
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+        style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
         onclick={handleMuteMember}
         disabled={muteSubmitting}
       >
@@ -1848,7 +1848,7 @@
 
 <Dialog.Root bind:open={showRoleDialog}>
   <Dialog.Content
-    class="sm:max-w-md rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    class="sm:max-w-md border var(--surface-bg) shadow-xl backdrop-blur-md"
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
@@ -1865,7 +1865,7 @@
         <button
           class="rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           style={roleTarget?.role === 'admin'
-            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow);'
+            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
             : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           disabled={roleTarget?.role === 'admin' || roleSubmitting}
           onclick={() => handleSetRole('admin')}>设为管理员</button
@@ -1873,7 +1873,7 @@
         <button
           class="rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           style={roleTarget?.role === 'member'
-            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 12px var(--glow);'
+            ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
             : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           disabled={roleTarget?.role === 'member' || roleSubmitting}
           onclick={() => handleSetRole('member')}>设为成员</button
@@ -1892,7 +1892,7 @@
 
 <Dialog.Root bind:open={showRemoveDialog}>
   <Dialog.Content
-    class="sm:max-w-md rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    class="sm:max-w-md border var(--surface-bg) shadow-xl backdrop-blur-md"
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
@@ -1926,7 +1926,7 @@
 
 <Dialog.Root bind:open={showLeaveDialog}>
   <Dialog.Content
-    class="sm:max-w-md rounded-[22px] border var(--surface-bg) shadow-xl backdrop-blur-md"
+    class="sm:max-w-md border var(--surface-bg) shadow-xl backdrop-blur-md"
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>

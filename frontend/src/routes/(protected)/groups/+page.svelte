@@ -189,7 +189,7 @@
           </button>
           <button
             class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: 0 2px 8px var(--glow);"
+            style="background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: var(--shadow-brand-btn);"
             onclick={() => (showCreateGroup = true)}
           >
             <Plus size={13} />
@@ -215,7 +215,7 @@
             >
             <button
               class="rounded-full px-4 py-2 text-sm"
-              style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 8px var(--glow);"
+              style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
               onclick={() => (showCreateGroup = true)}>创建群组</button
             >
           </div>
@@ -247,7 +247,7 @@
                       {#if (group.my_state?.unread_count ?? 0) > 0}
                         <div
                           class="flex items-center justify-center rounded-full"
-                          style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px var(--glow);"
+                          style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
                         >
                           {(group.my_state?.unread_count ?? 0) > 99
                             ? '99+'
@@ -308,7 +308,7 @@
                   <div class="mt-2 flex gap-2">
                     <button
                       class="rounded-full px-3 py-1 text-xs outline-none"
-                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 2px 6px var(--glow);"
+                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
                       disabled={isInviteProcessing(invite.invite_id)}
                       onclick={() => handleInvite(invite, 'accept')}
                     >

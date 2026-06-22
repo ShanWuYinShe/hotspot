@@ -130,7 +130,7 @@
           <!-- Primary action button -->
           <button
             class="flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-semibold outline-none"
-            style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+            style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
             onclick={handleApply}
           >
             <MapPin size={20} />
@@ -214,7 +214,7 @@
         <div class="mt-4 space-y-3">
           <button
             class="w-full rounded-full py-3 font-medium outline-none"
-            style="background: var(--brand); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--glow);"
+            style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
             onclick={handleApply}
           >
             前去查看
