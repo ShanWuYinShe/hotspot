@@ -257,7 +257,7 @@
 
         <!-- Host card -->
         <div
-          class="mb-4 flex items-center gap-3 rounded-[20px] px-4 py-3.5"
+          class="mb-4 flex items-center gap-3 rounded-[22px] px-4 py-3.5"
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
           <div

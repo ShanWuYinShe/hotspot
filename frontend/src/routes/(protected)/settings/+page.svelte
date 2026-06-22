@@ -183,7 +183,7 @@
       <div class="flex flex-col gap-1">
         <button
           type="button"
-          class="flex items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-left transition-all"
+          class="flex items-center gap-2.5 rounded-[18px] px-3 py-2.5 text-left transition-all"
           style="background: {activeSection === 'appearance'
             ? 'var(--brand)'
             : 'transparent'}; color: {activeSection === 'appearance'
@@ -198,7 +198,7 @@
         {#each settingsSections as section (section.title)}
           <button
             type="button"
-            class="flex items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-left transition-all"
+            class="flex items-center gap-2.5 rounded-[18px] px-3 py-2.5 text-left transition-all"
             style="background: {activeSection === section.title
               ? 'var(--brand)'
               : 'transparent'}; color: {activeSection === section.title
@@ -213,7 +213,7 @@
 
         <button
           type="button"
-          class="flex items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-left transition-all"
+          class="flex items-center gap-2.5 rounded-[18px] px-3 py-2.5 text-left transition-all"
           style="background: {activeSection === 'notifications'
             ? 'var(--brand)'
             : 'transparent'}; color: {activeSection === 'notifications'
@@ -229,7 +229,7 @@
         <div style="margin-top: 12px; height: 1px; background: var(--border-theme);"></div>
         <button
           type="button"
-          class="flex items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-left transition-all"
+          class="flex items-center gap-2.5 rounded-[18px] px-3 py-2.5 text-left transition-all"
           style="color: var(--brand);"
           onclick={handleLogout}
         >
@@ -266,7 +266,7 @@
                 {@const isSelected = currentThemeFamily === option.family}
                 <button
                   type="button"
-                  class="relative flex flex-col items-center gap-3 rounded-[20px] py-4 text-center transition-all"
+                  class="relative flex flex-col items-center gap-3 rounded-[22px] py-4 text-center transition-all"
                   class:surface-flat={!isSelected}
                   style="background: var(--surface-bg); {isSelected
                     ? 'box-shadow: 0 0 0 2.5px ' +
@@ -493,7 +493,7 @@
             {@const isSelected = currentThemeFamily === option.family}
             <button
               type="button"
-              class="relative flex flex-1 flex-col items-center gap-3 rounded-[20px] py-4 text-center transition-all"
+              class="relative flex flex-1 flex-col items-center gap-3 rounded-[22px] py-4 text-center transition-all"
               class:surface-flat={!isSelected}
               style="background: var(--surface-bg); {isSelected
                 ? 'box-shadow: 0 0 0 2.5px ' +

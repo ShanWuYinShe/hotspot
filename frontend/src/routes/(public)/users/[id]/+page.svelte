@@ -351,7 +351,7 @@
         </div>
 
         <!-- Stats as single segmented bar -->
-        <div class="surface-flat mt-5 flex rounded-[20px] overflow-hidden">
+        <div class="surface-flat mt-5 flex rounded-[22px] overflow-hidden">
           {#each [{ label: '帖子', value: fmtNum(user.stats?.moments_count ?? 0) }, { label: '粉丝', value: fmtNum(user.stats?.followers_count ?? 0) }, { label: '关注', value: fmtNum(user.stats?.following_count ?? 0) }] as stat, i (stat.label)}
             <div class="relative flex flex-1 flex-col items-center py-4">
               {#if i > 0}

@@ -263,7 +263,7 @@
             bind:value={loginId}
             disabled={isLoading}
             onblur={() => markTouched('loginId')}
-            class="input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
+            class="input-base rounded-[18px] px-4 py-2.5 outline-none w-full"
             style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {loginIdError
               ? 'var(--error)'
               : 'var(--border-theme)'}; font-size: 13px;"
@@ -285,7 +285,7 @@
               bind:value={password}
               disabled={isLoading}
               onblur={() => markTouched('password')}
-              class="field-inset rounded-[14px] px-4 py-2.5 outline-none w-full pr-10"
+              class="field-inset rounded-[18px] px-4 py-2.5 outline-none w-full pr-10"
               class:field-error={passwordError}
               style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
             />
@@ -339,7 +339,7 @@
             bind:value={nickname}
             disabled={isLoading}
             onblur={() => markTouched('nickname')}
-            class="input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
+            class="input-base rounded-[18px] px-4 py-2.5 outline-none w-full"
             style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {nicknameError
               ? 'var(--error)'
               : 'var(--border-theme)'}; font-size: 13px;"
@@ -360,7 +360,7 @@
             bind:value={loginId}
             disabled={isLoading}
             onblur={() => markTouched('loginId')}
-            class="input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
+            class="input-base rounded-[18px] px-4 py-2.5 outline-none w-full"
             style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {loginIdError
               ? 'var(--error)'
               : 'var(--border-theme)'}; font-size: 13px;"
@@ -381,7 +381,7 @@
             bind:value={password}
             disabled={isLoading}
             onblur={() => markTouched('password')}
-            class="input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
+            class="input-base rounded-[18px] px-4 py-2.5 outline-none w-full"
             style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {passwordError
               ? 'var(--error)'
               : 'var(--border-theme)'}; font-size: 13px;"
@@ -402,7 +402,7 @@
             bind:value={confirmPassword}
             disabled={isLoading}
             onblur={() => markTouched('confirmPassword')}
-            class="input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
+            class="input-base rounded-[18px] px-4 py-2.5 outline-none w-full"
             style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {confirmPasswordError
               ? 'var(--error)'
               : 'var(--border-theme)'}; font-size: 13px;"
@@ -449,7 +449,7 @@
             bind:value={guestNickname}
             disabled={isLoading}
             onblur={() => markTouched('guestNickname')}
-            class="input-base rounded-[14px] px-4 py-2.5 outline-none w-full"
+            class="input-base rounded-[18px] px-4 py-2.5 outline-none w-full"
             style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {guestNicknameError
               ? 'var(--error)'
               : 'var(--border-theme)'}; font-size: 13px;"

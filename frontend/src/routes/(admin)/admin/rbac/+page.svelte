@@ -335,7 +335,7 @@
                   <div class="space-y-1">
                     {#each perms as perm (perm.key)}
                       <div
-                        class="flex items-center gap-2 rounded-[14px] px-2 py-1.5"
+                        class="flex items-center gap-2 rounded-[18px] px-2 py-1.5"
                         style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                       >
                         <Key size={13} strokeWidth={1.5} color="var(--text-secondary)" />
@@ -379,7 +379,7 @@
           placeholder="例如：内容审核员"
           bind:value={roleName}
           autocomplete="off"
-          class="field-inset mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
+          class="field-inset mt-1.5 w-full rounded-[18px] px-4 py-2.5 outline-none"
           style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
         />
       </div>
@@ -389,7 +389,7 @@
           id="role-desc"
           placeholder="描述该角色的职责"
           bind:value={roleDescription}
-          class="field-inset mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none resize-none"
+          class="field-inset mt-1.5 w-full rounded-[18px] px-4 py-2.5 outline-none resize-none"
           rows="3"
           style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
         ></textarea>
@@ -397,7 +397,7 @@
       <div>
         <span style="font-size: 12px; color: var(--text-primary);">分配权限</span>
         <div
-          class="mt-1.5 max-h-60 space-y-3 overflow-y-auto rounded-[14px] p-3"
+          class="mt-1.5 max-h-60 space-y-3 overflow-y-auto rounded-[18px] p-3"
           style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
         >
           {#each [...groupPermissions(permissions)] as [category, perms] (category)}

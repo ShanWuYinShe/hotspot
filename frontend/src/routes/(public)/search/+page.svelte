@@ -492,7 +492,7 @@
                 {#if isLoading && users.length === 0}
                   {#each Array(3) as _, i (i)}
                     <div
-                      class="h-16 animate-pulse rounded-[20px]"
+                      class="h-16 animate-pulse rounded-[22px]"
                       style="background: var(--border-theme);"
                     ></div>
                   {/each}
@@ -520,7 +520,7 @@
                 {#if isLoading && moments.length === 0}
                   {#each Array(3) as _, i (i)}
                     <div
-                      class="h-20 animate-pulse rounded-[20px]"
+                      class="h-20 animate-pulse rounded-[22px]"
                       style="background: var(--border-theme);"
                     ></div>
                   {/each}
@@ -548,7 +548,7 @@
                 {#if isLoading && groups.length === 0}
                   {#each Array(3) as _, i (i)}
                     <div
-                      class="h-16 animate-pulse rounded-[20px]"
+                      class="h-16 animate-pulse rounded-[22px]"
                       style="background: var(--border-theme);"
                     ></div>
                   {/each}

@@ -242,7 +242,7 @@
           <User style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
           <span class="eyebrow">昵称</span>
         </div>
-        <div class="input-surface rounded-[14px] px-4 py-3">
+        <div class="input-surface rounded-[18px] px-4 py-3">
           <input
             id="nickname"
             bind:value={nickname}
@@ -260,7 +260,7 @@
           <FileText style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
           <span class="eyebrow">简介</span>
         </div>
-        <div class="input-surface rounded-[14px] px-4 py-3">
+        <div class="input-surface rounded-[18px] px-4 py-3">
           <textarea
             id="bio"
             bind:value={bio}

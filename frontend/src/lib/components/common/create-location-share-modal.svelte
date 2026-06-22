@@ -196,11 +196,11 @@
               id="share-link-url"
               value={shareUrl ?? ''}
               readonly
-              class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 flex-1"
+              class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 flex-1"
               style="background: var(--surface-bg); color: var(--text-primary); font-size: 12px; font-family: monospace;"
             />
             <button
-              class="rounded-[14px] px-3 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] flex items-center justify-center"
+              class="rounded-[18px] px-3 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] flex items-center justify-center"
               style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
               onclick={copyToClipboard}
             >

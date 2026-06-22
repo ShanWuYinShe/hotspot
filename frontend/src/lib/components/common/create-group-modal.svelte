@@ -256,7 +256,7 @@
         >
         <input
           id="group-name"
-          class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+          class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
           class:field-error={nameError}
           style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
           placeholder="例如：城市漫步俱乐部"
@@ -285,7 +285,7 @@
         <textarea
           id="group-desc"
           placeholder="简单描述群组用途与氛围"
-          class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 w-full resize-none"
+          class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 w-full resize-none"
           class:field-error={groupDescriptionError}
           style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px; min-height: 100px;"
           bind:value={description}
@@ -312,7 +312,7 @@
         >
         <input
           id="group-tags"
-          class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+          class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
           style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
           placeholder="兴趣、城市、活动"
           bind:value={tagsInput}
@@ -341,7 +341,7 @@
           >
           <select
             id="join-method"
-            class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+            class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
             style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
             bind:value={joinMethod}
           >
@@ -356,7 +356,7 @@
           >
           <input
             id="group-password"
-            class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+            class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
             class:field-error={groupPasswordError}
             style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
             type="password"
@@ -381,7 +381,7 @@
           >
           <input
             id="max-members"
-            class="field-inset rounded-[14px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+            class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
             class:field-error={maxMembersError}
             style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
             type="number"
@@ -396,7 +396,7 @@
           {/if}
         </div>
         <div
-          class="flex items-center justify-between rounded-[14px] px-4 py-2.5"
+          class="flex items-center justify-between rounded-[18px] px-4 py-2.5"
           style="background: var(--surface-bg); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
         >
           <span>允许被搜索</span>

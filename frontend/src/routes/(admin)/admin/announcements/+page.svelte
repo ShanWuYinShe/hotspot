@@ -264,7 +264,7 @@
           placeholder="公告内容"
           rows="5"
           bind:value={content}
-          class="field-inset w-full rounded-[14px] px-4 py-2.5 outline-none resize-none"
+          class="field-inset w-full rounded-[18px] px-4 py-2.5 outline-none resize-none"
           style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
         ></textarea>
       </div>

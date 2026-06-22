@@ -349,7 +349,7 @@
   <!-- ═══ Shared stats row ═══ -->
   {#snippet statsRowDisplay()}
     <div
-      class="flex overflow-hidden rounded-[20px] surface-flat"
+      class="flex overflow-hidden rounded-[22px] surface-flat"
       style="border: 1px solid var(--border-theme);"
     >
       {#each statsRow as stat, i (stat.label)}
@@ -432,7 +432,7 @@
           <User style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
           <span class="eyebrow">姓名</span>
         </div>
-        <div class="input-surface rounded-[14px] px-4 py-3">
+        <div class="input-surface rounded-[18px] px-4 py-3">
           <input
             id="nickname"
             bind:value={nickname}
@@ -449,7 +449,7 @@
           <FileText style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
           <span class="eyebrow">个人简介</span>
         </div>
-        <div class="input-surface rounded-[14px] px-4 py-3">
+        <div class="input-surface rounded-[18px] px-4 py-3">
           <textarea
             id="bio"
             bind:value={bio}
@@ -475,7 +475,7 @@
             <MapPin style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
             <span class="eyebrow">所在地</span>
           </div>
-          <div class="input-surface rounded-[14px] px-4 py-3">
+          <div class="input-surface rounded-[18px] px-4 py-3">
             <input
               value={p.location.location_name}
               disabled

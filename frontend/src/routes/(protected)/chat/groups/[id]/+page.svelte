@@ -926,7 +926,7 @@
           bind:value={messageText}
           rows={1}
           maxlength={MESSAGE_CONTENT_MAX}
-          class="field-inset max-h-32 min-h-[42px] flex w-full resize-none rounded-[20px] px-4 py-2.5 text-[15px] outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          class="field-inset max-h-32 min-h-[42px] flex w-full resize-none rounded-[18px] px-4 py-2.5 text-[15px] outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50"
           style="background: var(--surface-bg); color: var(--text-primary);"
           disabled={isSending}
           oninput={() => {

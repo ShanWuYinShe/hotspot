@@ -173,7 +173,7 @@
                     style="height: 10px; width: 80px; background: var(--border-theme);"
                   ></div>
                   <div
-                    class="rounded-[14px]"
+                    class="rounded-[18px]"
                     style="height: 36px; width: 100%; background: var(--border-theme);"
                   ></div>
                 </div>
@@ -209,7 +209,7 @@
                   type="number"
                   value={field.value}
                   placeholder={field.placeholder}
-                  class="field-inset mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
+                  class="field-inset mt-1.5 w-full rounded-[18px] px-4 py-2.5 outline-none"
                   style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
                   oninput={(event) => field.set(event.currentTarget.value)}
                 />
@@ -321,7 +321,7 @@
                   type="number"
                   value={f.value}
                   placeholder={f.ph}
-                  class="field-inset mt-1.5 w-full rounded-[14px] px-4 py-2.5 outline-none"
+                  class="field-inset mt-1.5 w-full rounded-[18px] px-4 py-2.5 outline-none"
                   style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
                   oninput={(event) => f.set(event.currentTarget.value)}
                 />
