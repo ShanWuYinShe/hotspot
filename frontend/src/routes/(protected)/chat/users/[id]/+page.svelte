@@ -535,7 +535,13 @@
                   {message.content}
                 </p>
               {:else if message.type === 'image' && message.media}
-                <img src={message.media.url} alt="图片" class="max-w-[250px] rounded-[12px]" />
+                <img
+                  src={message.media.url}
+                  alt="图片"
+                  loading="lazy"
+                  decoding="async"
+                  class="max-w-[250px] rounded-[12px]"
+                />
               {:else}
                 <p
                   style="font-size: 14px; color: {isSelf(message)

@@ -310,6 +310,8 @@
               <img
                 src={img.thumbnail_url || img.url}
                 alt={moment.description}
+                loading="lazy"
+                decoding="async"
                 class="h-full w-full object-cover"
               />
               <div

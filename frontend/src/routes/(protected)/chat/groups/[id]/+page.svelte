@@ -814,6 +814,8 @@
                         <img
                           src={message.media.url}
                           alt="图片"
+                          loading="lazy"
+                          decoding="async"
                           class="max-h-[300px] max-w-[250px] object-cover"
                         />
                       </button>

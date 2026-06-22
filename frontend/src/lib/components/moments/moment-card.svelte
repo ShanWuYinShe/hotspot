@@ -169,6 +169,7 @@
         src={primaryImage}
         alt={moment.description || moment.tags?.[0] || '动态图片'}
         loading="lazy"
+        decoding="async"
       />
       <div class="moment-card__media-shade"></div>
       {#if imageCount > 1}

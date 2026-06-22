@@ -486,6 +486,8 @@
                     <img
                       src={avatarUrl}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
                       style="width: 44px; height: 44px; border-radius: 9999px; object-fit: cover; border: 1px solid var(--border-theme);"
                     />
                   {:else}
@@ -563,6 +565,8 @@
                     <img
                       src={thumbnailUrl}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
                       style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-theme);"
                     />
                   {/if}
@@ -599,6 +603,8 @@
                   <img
                     src={avatarUrl}
                     alt=""
+                    loading="lazy"
+                    decoding="async"
                     style="width: 44px; height: 44px; border-radius: 9999px; object-fit: cover; border: 1px solid var(--border-theme);"
                   />
                 {:else}
