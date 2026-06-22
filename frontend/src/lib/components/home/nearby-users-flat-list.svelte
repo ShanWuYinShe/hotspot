@@ -59,7 +59,7 @@
         }}
       >
         <div class="relative flex-shrink-0">
-          <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={38} />
+          <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={40} />
           {#if user.online}
             <span
               class="absolute bottom-0 right-0 rounded-full"

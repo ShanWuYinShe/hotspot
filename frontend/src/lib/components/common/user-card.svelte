@@ -207,7 +207,7 @@
           src={userInfo.avatar_url}
           name={userInfo.nickname}
           alt={userInfo.nickname}
-          size={46}
+          size={48}
         />
         {#if isOnline}
           <span
@@ -274,7 +274,7 @@
                 src={userInfo.avatar_url}
                 name={userInfo.nickname}
                 alt={userInfo.nickname}
-                size={46}
+                size={48}
               />
               {#if isOnline}
                 <span
@@ -368,7 +368,7 @@
             src={userInfo.avatar_url}
             name={userInfo.nickname}
             alt={userInfo.nickname}
-            size={52}
+            size={48}
           />
           {#if isOnline}
             <span

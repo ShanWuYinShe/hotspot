@@ -221,7 +221,7 @@
         class="surface-hero relative rounded-full"
         style="width: 96px; height: 96px; padding: 2px;"
       >
-        <Avatar src={p.avatar_url} name={p.nickname} alt={p.nickname} size={92} border={false} />
+        <Avatar src={p.avatar_url} name={p.nickname} alt={p.nickname} size={96} border={false} />
       </div>
       <button
         class="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none"

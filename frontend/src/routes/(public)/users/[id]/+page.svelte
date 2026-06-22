@@ -265,7 +265,7 @@
                 src={user.user.avatar_url}
                 name={user.user.nickname}
                 alt={user.user.nickname}
-                size={76}
+                size={72}
                 shape="rounded"
                 border={false}
               />

@@ -51,7 +51,7 @@
           style="cursor: pointer; width: 56px;"
         >
           <div style="position: relative; width: 56px; height: 56px;">
-            <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={56} />
+            <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={48} />
             {#if user.online}
               <div
                 style="position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; border-radius: 9999px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"

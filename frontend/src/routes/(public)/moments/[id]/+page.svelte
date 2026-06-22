@@ -393,7 +393,7 @@
               src={authStore.currentAccount?.avatar_url}
               name={authStore.currentAccount?.nickname}
               alt=""
-              size={34}
+              size={32}
             />
             <div
               class="input-surface flex flex-1 items-center"
@@ -485,7 +485,7 @@
                     src={comment.user.avatar_url}
                     name={comment.user.nickname}
                     alt={comment.user.nickname}
-                    size={34}
+                    size={32}
                   />
                 </a>
                 <div class="flex-1">

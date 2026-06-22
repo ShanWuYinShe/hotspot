@@ -414,7 +414,7 @@
               src={otherUser.avatar_url}
               name={otherUser.nickname}
               alt={otherUser.nickname}
-              size={38}
+              size={40}
               border={false}
             />
           </div>
