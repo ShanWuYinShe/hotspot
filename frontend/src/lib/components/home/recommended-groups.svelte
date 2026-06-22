@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { dev } from '$app/environment';
   import { groupsService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
+  import { useWidget } from '$lib/hooks/use-widget.svelte';
   import type { GroupItem } from '$lib/types/api';
   import Avatar from '$lib/components/common/avatar.svelte';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
@@ -13,42 +13,26 @@
 
   let { refreshTrigger = 0 }: Props = $props();
 
-  let groups = $state.raw<GroupItem[]>([]);
-  let loading = $state(false);
-  let loadVersion = 0;
-
-  async function loadGroups() {
-    const version = ++loadVersion;
-    loading = true;
-    try {
-      const response = await groupsService.search({
-        radius: mapAnchorStore.radius * 1000,
-        reference_point: {
-          latitude: mapAnchorStore.latitude,
-          longitude: mapAnchorStore.longitude
-        },
-        pagination: { limit: 6 }
-      });
-      if (version !== loadVersion) return;
-      if (isSuccess(response) && response.data) {
-        groups = response.data.items ?? [];
-      }
-    } catch (error) {
-      if (version !== loadVersion) return;
-      if (dev) console.error('Failed to load recommended groups:', error);
-    } finally {
-      if (version === loadVersion) loading = false;
-    }
-  }
+  const { data: groups, loading, reload } = useWidget<GroupItem[]>(async () => {
+    const response = await groupsService.search({
+      radius: mapAnchorStore.radius * 1000,
+      reference_point: {
+        latitude: mapAnchorStore.latitude,
+        longitude: mapAnchorStore.longitude
+      },
+      pagination: { limit: 6 }
+    });
+    if (!isSuccess(response) || !response.data) throw new Error('Failed to load recommended groups');
+    return response.data.items ?? [];
+  }, { locationAware: true });
 
   $effect(() => {
     refreshTrigger;
-    mapAnchorStore.anchor.updatedAt;
-    loadGroups();
+    reload();
   });
 </script>
 
-{#if groups.length > 0 || loading}
+{#if (groups?.length ?? 0) > 0 || loading}
   <div>
     <div class="mb-3 flex items-center justify-between">
       <p
@@ -92,7 +76,7 @@
       </div>
     {:else}
       <div class="flex flex-col gap-2.5">
-        {#each groups as group (group.group.group_id)}
+        {#each groups ?? [] as group (group.group.group_id)}
           <a
             href="/groups/{group.group.group_id}"
             class="flex items-center gap-3 rounded-[18px] px-4 py-3 row-hover transition-transform duration-150 active:scale-[0.98]"

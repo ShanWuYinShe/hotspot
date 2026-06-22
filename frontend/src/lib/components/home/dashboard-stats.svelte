@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { dev } from '$app/environment';
   import { usersService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
+  import { useWidget } from '$lib/hooks/use-widget.svelte';
   import type { MyProfile } from '$lib/types/api';
   import Heart from 'lucide-svelte/icons/heart';
   import Users from 'lucide-svelte/icons/users';
@@ -13,30 +13,15 @@
 
   let { refreshTrigger = 0 }: Props = $props();
 
-  let stats = $state<MyProfile['stats'] | null>(null);
-  let loading = $state(false);
-  let loadVersion = 0;
-
-  async function loadStats() {
-    const version = ++loadVersion;
-    loading = true;
-    try {
-      const response = await usersService.getMyProfile();
-      if (version !== loadVersion) return;
-      if (isSuccess(response) && response.data) {
-        stats = response.data.stats;
-      }
-    } catch (error) {
-      if (version !== loadVersion) return;
-      if (dev) console.error('Failed to load user stats:', error);
-    } finally {
-      if (version === loadVersion) loading = false;
-    }
-  }
+  const { data: stats, loading, reload } = useWidget<MyProfile['stats']>(async () => {
+    const response = await usersService.getMyProfile();
+    if (!isSuccess(response) || !response.data) throw new Error('Failed to load stats');
+    return response.data.stats;
+  });
 
   $effect(() => {
     refreshTrigger;
-    loadStats();
+    reload();
   });
 </script>
 

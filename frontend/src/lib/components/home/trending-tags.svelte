@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { dev } from '$app/environment';
   import { feedService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
+  import { useWidget } from '$lib/hooks/use-widget.svelte';
   import type { TagItem } from '$lib/types/api';
   import Hash from 'lucide-svelte/icons/hash';
 
@@ -11,30 +11,19 @@
 
   let { refreshTrigger = 0 }: Props = $props();
 
-  let tags = $state.raw<TagItem[]>([]);
-  let loadVersion = 0;
-
-  async function loadTags() {
-    const version = ++loadVersion;
-    try {
-      const response = await feedService.getTrending();
-      if (version !== loadVersion) return;
-      if (isSuccess(response) && response.data) {
-        tags = response.data.trending_tags ?? [];
-      }
-    } catch (error) {
-      if (version !== loadVersion) return;
-      if (dev) console.error('Failed to load trending tags:', error);
-    }
-  }
+  const { data: tags, reload } = useWidget<TagItem[]>(async () => {
+    const response = await feedService.getTrending();
+    if (!isSuccess(response) || !response.data) throw new Error('Failed to load trending');
+    return response.data.trending_tags ?? [];
+  });
 
   $effect(() => {
     refreshTrigger;
-    loadTags();
+    reload();
   });
 </script>
 
-{#if tags.length > 0}
+{#if (tags?.length ?? 0) > 0}
   <div>
     <div class="mb-2 flex items-center gap-1.5">
       <Hash size={13} color="var(--brand)" />
@@ -46,7 +35,7 @@
       </p>
     </div>
     <div class="flex flex-wrap gap-1.5">
-      {#each tags as tag (tag.name)}
+      {#each tags ?? [] as tag (tag.name)}
         <a href="/search?tag={encodeURIComponent(tag.name)}" class="tag-chip">
           #{tag.name}
           <span class="tag-chip__count">{tag.usage_count}</span>

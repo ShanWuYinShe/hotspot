@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { dev } from '$app/environment';
   import { usersService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import { formatDistance } from '$lib/utils/format';
   import { authStore } from '$lib/stores/auth.svelte';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
+  import { useWidget } from '$lib/hooks/use-widget.svelte';
   import type { UserItem } from '$lib/types/api';
   import Avatar from '$lib/components/common/avatar.svelte';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
@@ -15,44 +15,28 @@
 
   let { refreshTrigger = 0 }: Props = $props();
 
-  let users = $state.raw<UserItem[]>([]);
-  let loading = $state(false);
-  let loadVersion = 0;
-
-  async function loadUsers() {
-    const version = ++loadVersion;
-    loading = true;
-    try {
-      const response = await usersService.search({
-        radius: mapAnchorStore.radius * 1000,
-        reference_point: {
-          latitude: mapAnchorStore.latitude,
-          longitude: mapAnchorStore.longitude
-        },
-        pagination: { limit: 6 }
-      });
-      if (version !== loadVersion) return;
-      if (isSuccess(response) && response.data) {
-        const currentUserId = authStore.currentUserId;
-        const items = response.data.items ?? [];
-        users = currentUserId ? items.filter((item) => item.user.user_id !== currentUserId) : items;
-      }
-    } catch (error) {
-      if (version !== loadVersion) return;
-      if (dev) console.error('Failed to load recommended users:', error);
-    } finally {
-      if (version === loadVersion) loading = false;
-    }
-  }
+  const { data: users, loading, reload } = useWidget<UserItem[]>(async () => {
+    const response = await usersService.search({
+      radius: mapAnchorStore.radius * 1000,
+      reference_point: {
+        latitude: mapAnchorStore.latitude,
+        longitude: mapAnchorStore.longitude
+      },
+      pagination: { limit: 6 }
+    });
+    if (!isSuccess(response) || !response.data) throw new Error('Failed to load recommended users');
+    const currentUserId = authStore.currentUserId;
+    const items = response.data.items ?? [];
+    return currentUserId ? items.filter((item) => item.user.user_id !== currentUserId) : items;
+  }, { locationAware: true });
 
   $effect(() => {
     refreshTrigger;
-    mapAnchorStore.anchor.updatedAt;
-    loadUsers();
+    reload();
   });
 </script>
 
-{#if users.length > 0 || loading}
+{#if (users?.length ?? 0) > 0 || loading}
   <div>
     <div class="mb-3 flex items-center justify-between">
       <p
@@ -96,7 +80,7 @@
       </div>
     {:else}
       <div class="flex flex-col gap-2.5">
-        {#each users as user (user.user.user_id)}
+        {#each users ?? [] as user (user.user.user_id)}
           <a
             href="/users/{user.user.user_id}"
             class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 row-hover transition-transform duration-150 active:scale-[0.98]"
