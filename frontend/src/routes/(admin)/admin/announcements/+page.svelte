@@ -24,7 +24,8 @@
   // ============ 分页 ============
 
   const pagination = usePagination<SystemAnnouncementItem>({
-    uniqueKey: 'announcement_id'
+    uniqueKey: 'announcement_id',
+    onError: (msg) => toast.error(msg)
   });
 
   function loadAnnouncements(refresh = true) {
@@ -33,11 +34,6 @@
       refresh
     );
   }
-
-  // 错误提示
-  $effect(() => {
-    if (pagination.error) toast.error(pagination.error);
-  });
 
   // ============ 创建公告 ============
 

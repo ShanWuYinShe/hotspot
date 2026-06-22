@@ -20,7 +20,8 @@
   type AdminUserItem = UserItem & { status: 'normal' | 'banned' };
 
   const pagination = usePagination<AdminUserItem>({
-    uniqueKey: (item) => item.user.user_id
+    uniqueKey: (item) => item.user.user_id,
+    onError: (msg) => toast.error(msg)
   });
 
   let nickname = $state('');
@@ -44,10 +45,6 @@
   }
 
   onDestroy(() => clearTimeout(searchTimer));
-
-  $effect(() => {
-    if (pagination.error) toast.error(pagination.error);
-  });
 
   async function handleBan(userId: string) {
     try {

@@ -39,6 +39,12 @@ interface UsePaginationOptions<T> {
    * 如果不提供，则不去重（可能导致 duplicate key 错误）
    */
   uniqueKey?: keyof T | ((item: T) => string | number);
+
+  /**
+   * 加载失败回调（替代调用方监听 error 字段写 $effect）
+   * 每次加载失败时触发一次，参数为错误信息
+   */
+  onError?: (error: string) => void;
 }
 
 interface PaginationState<T> {
@@ -181,11 +187,13 @@ export function usePagination<T>(options?: UsePaginationOptions<T>): PaginationS
         error = null;
       } else {
         error = response.message || '加载失败';
+        options?.onError?.(error);
       }
     } catch (e) {
       // 竞态检查
       if (version !== loadVersion) return;
       error = e instanceof Error ? e.message : '加载失败';
+      options?.onError?.(error);
     } finally {
       // 仅最新请求负责重置 loading 状态
       if (version === loadVersion) {

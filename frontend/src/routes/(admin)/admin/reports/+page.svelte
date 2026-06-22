@@ -18,7 +18,10 @@
   import Check from 'lucide-svelte/icons/check';
   import X from 'lucide-svelte/icons/x';
 
-  const pagination = usePagination<ReportItem>({ uniqueKey: 'report_id' });
+  const pagination = usePagination<ReportItem>({
+    uniqueKey: 'report_id',
+    onError: (msg) => toast.error(msg)
+  });
   let statusFilter = $state<ReportStatus | 'all'>('pending');
 
   function loadReports(refresh = true) {
@@ -32,9 +35,6 @@
     );
   }
 
-  $effect(() => {
-    if (pagination.error) toast.error(pagination.error);
-  });
   $effect(() => {
     statusFilter;
     loadReports();

@@ -12,7 +12,10 @@
   import User from 'lucide-svelte/icons/user';
   import Clock from 'lucide-svelte/icons/clock';
 
-  const pagination = usePagination<AuditLogItem>({ uniqueKey: 'log_id' });
+  const pagination = usePagination<AuditLogItem>({
+    uniqueKey: 'log_id',
+    onError: (msg) => toast.error(msg)
+  });
   let actionFilter = $state('');
 
   function loadLogs(refresh = true) {
@@ -25,10 +28,6 @@
       refresh
     );
   }
-
-  $effect(() => {
-    if (pagination.error) toast.error(pagination.error);
-  });
 
   onMount(() => {
     loadLogs();

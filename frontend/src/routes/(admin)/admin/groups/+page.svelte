@@ -20,7 +20,8 @@
   import Lock from 'lucide-svelte/icons/lock';
 
   const pagination = usePagination<AdminGroupItem>({
-    uniqueKey: (item) => item.group.group_id
+    uniqueKey: (item) => item.group.group_id,
+    onError: (msg) => toast.error(msg)
   });
 
   let name = $state('');
@@ -37,10 +38,6 @@
       refresh
     );
   }
-
-  $effect(() => {
-    if (pagination.error) toast.error(pagination.error);
-  });
 
   function requestDissolve(groupId: string) {
     pendingDissolveId = groupId;
