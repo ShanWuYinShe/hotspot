@@ -371,7 +371,7 @@ export struct CreateGroupPage {
                 SystemAvatar({
                   avatarUrl: this.groupAvatarPreviewUrl,
                   name: this.groupName || '群组',
-                  avatarSize: 56,
+                  avatarSize: 48,
                   shape: 'squircle'
                 })
 

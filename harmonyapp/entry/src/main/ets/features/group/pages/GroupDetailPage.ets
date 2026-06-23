@@ -993,7 +993,7 @@ export struct GroupDetailPage {
                 SystemAvatar({
                   src: this.groupInfo?.group?.avatar_url ?? '',
                   name: this.groupInfo?.group?.name ?? '',
-                  avatarSize: 80
+                  avatarSize: 96
                 })
                 Text(this.groupInfo?.group?.name ?? '')
                   .fontSize(DesignConstants.FONT.SIZE.XL)

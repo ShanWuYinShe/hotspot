@@ -161,9 +161,11 @@ export interface MapMarkerColors {
 
 // ==================== 组件特定常量接口 ====================
 export interface AvatarSizes {
+  XS: number;
   SMALL: number;
   MEDIUM: number;
   LARGE: number;
+  XLARGE: number;
 }
 
 export interface ComponentConstants {
@@ -400,9 +402,11 @@ const EFFECT: MaterialEffectSystem = {
 
 const COMPONENT: ComponentConstants = {
   AVATAR_SIZE: {
+    XS: 32,
     SMALL: 40,
-    MEDIUM: 56,
+    MEDIUM: 48,
     LARGE: 80,
+    XLARGE: 96,
   },
   BUTTON_HEIGHT: 42,
   INPUT_HEIGHT: 42,

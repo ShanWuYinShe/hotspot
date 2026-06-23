@@ -744,7 +744,7 @@ export struct MessagePage {
                 SystemAvatar({
                   avatarUrl: chat.avatarUrl,
                   name: chat.name,
-                  avatarSize: 56,
+                  avatarSize: 40,
                   shape: 'circle'
                 })
                 .border({ width: 1.5, color: this.getCurrentThemePalette().accentBackground })

@@ -1005,7 +1005,7 @@ export struct ChatPage {
             SystemAvatar({
               avatarUrl: this.targetAvatar,
               name: this.title,
-              avatarSize: 40,
+              avatarSize: 48,
               shape: 'circle'
             })
               .margin({ left: DesignConstants.SPACING.XS })
