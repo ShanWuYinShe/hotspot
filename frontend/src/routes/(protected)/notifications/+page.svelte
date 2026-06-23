@@ -459,15 +459,134 @@
           <EmptyState icon={Bell} title={t('notificationsPage.emptyTitle')} />
         {:else}
           <div class="space-y-2.5">
-          <!-- Unread group -->
-          {#if unreadGroup.length > 0}
-            <p
-              class="uppercase mb-2"
-              style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
-            >
-              新消息
-            </p>
-            {#each unreadGroup as item (item.notification_id)}
+            <!-- Unread group -->
+            {#if unreadGroup.length > 0}
+              <p
+                class="uppercase mb-2"
+                style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
+              >
+                新消息
+              </p>
+              {#each unreadGroup as item (item.notification_id)}
+                {@const locale = getLocale()}
+                {@const typeColor = getTypeColor(item.type)}
+                {@const typeSoft = `color-mix(in srgb, ${typeColor} 7%, transparent)`}
+                {@const typeBorder = `color-mix(in srgb, ${typeColor} 18%, transparent)`}
+                {@const TypeIcon = getTypeIcon(item.type)}
+                {@const avatarUrl = getActorAvatar(item)}
+                {@const thumbnailUrl = getPostThumbnail(item)}
+                <div
+                  class="row-hover flex items-start gap-3.5 rounded-[var(--radius-md)] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
+                  style="background: {typeSoft};
+                border: 1px solid {typeBorder};"
+                >
+                  <!-- Avatar with type badge -->
+                  <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
+                    {#if avatarUrl}
+                      <img
+                        src={avatarUrl}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        style="width: 44px; height: 44px; border-radius: var(--radius-pill); object-fit: cover; border: 1px solid var(--border-theme);"
+                      />
+                    {:else}
+                      <div
+                        class="input-surface flex items-center justify-center"
+                        style="width: 44px; height: 44px; border-radius: var(--radius-pill);"
+                      >
+                        <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
+                      </div>
+                    {/if}
+                    <div
+                      class="absolute flex items-center justify-center"
+                      style="width: 18px; height: 18px; border-radius: var(--radius-pill); background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"
+                    >
+                      <TypeIcon size={10} strokeWidth={2} color="var(--text-on-accent)" />
+                    </div>
+                  </div>
+
+                  <div class="min-w-0 flex-1">
+                    <button
+                      class="w-full text-left outline-none"
+                      onclick={() => handleNotificationClick(item)}
+                    >
+                      <div
+                        style="font-size: 13px; color: var(--text-primary); font-weight: 500; line-height: 1.4;"
+                      >
+                        <span class="mr-1">{getNotificationTitle(item, locale)}</span>
+                        <span style="color: var(--text-secondary);"
+                          >{getNotificationContent(item, locale)}</span
+                        >
+                      </div>
+                      <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+                        {formatNotificationTimestamp(item.created_at, locale)}
+                      </p>
+                    </button>
+                    {#if canHandleGroupInvite(item)}
+                      <div class="mt-2 flex gap-2">
+                        <button
+                          class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                          style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
+                          disabled={isProcessing(item.notification_id)}
+                          onclick={() => handleInviteAction(item, 'accept')}
+                          >{t('common.accept')}</button
+                        >
+                        <button
+                          class="surface-flat rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                          style="color: var(--text-secondary);"
+                          disabled={isProcessing(item.notification_id)}
+                          onclick={() => handleInviteAction(item, 'reject')}
+                          >{t('common.reject')}</button
+                        >
+                      </div>
+                    {:else if canHandleGroupApplication(item)}
+                      <div class="mt-2 flex gap-2">
+                        <button
+                          class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                          style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
+                          disabled={isProcessing(item.notification_id)}
+                          onclick={() => handleApplicationAction(item, 'approve')}
+                          >{t('common.approve')}</button
+                        >
+                        <button
+                          class="surface-flat rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                          style="color: var(--text-secondary);"
+                          disabled={isProcessing(item.notification_id)}
+                          onclick={() => handleApplicationAction(item, 'reject')}
+                          >{t('common.reject')}</button
+                        >
+                      </div>
+                    {/if}
+                  </div>
+
+                  <div class="flex flex-shrink-0 flex-col items-center gap-1.5 pt-1">
+                    {#if thumbnailUrl}
+                      <img
+                        src={thumbnailUrl}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-theme);"
+                      />
+                    {/if}
+                    <div
+                      style="width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--brand);"
+                    ></div>
+                  </div>
+                </div>
+              {/each}
+              {#if readGroup.length > 0}
+                <p
+                  class="uppercase mt-4 mb-2"
+                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
+                >
+                  较早
+                </p>
+              {/if}
+            {/if}
+            <!-- Read group -->
+            {#each readGroup as item (item.notification_id)}
               {@const locale = getLocale()}
               {@const typeColor = getTypeColor(item.type)}
               {@const typeSoft = `color-mix(in srgb, ${typeColor} 7%, transparent)`}
@@ -477,10 +596,8 @@
               {@const thumbnailUrl = getPostThumbnail(item)}
               <div
                 class="row-hover flex items-start gap-3.5 rounded-[var(--radius-md)] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
-                style="background: {typeSoft};
-                border: 1px solid {typeBorder};"
+                style="background: {typeSoft}; border: 1px solid {typeBorder};"
               >
-                <!-- Avatar with type badge -->
                 <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
                   {#if avatarUrl}
                     <img
@@ -492,8 +609,8 @@
                     />
                   {:else}
                     <div
-                      class="input-surface flex items-center justify-center"
-                      style="width: 44px; height: 44px; border-radius: var(--radius-pill);"
+                      class="flex items-center justify-center"
+                      style="width: 44px; height: 44px; border-radius: var(--radius-pill); background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
                     >
                       <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
                     </div>
@@ -512,7 +629,7 @@
                     onclick={() => handleNotificationClick(item)}
                   >
                     <div
-                      style="font-size: 13px; color: var(--text-primary); font-weight: 500; line-height: 1.4;"
+                      style="font-size: 13px; color: var(--text-primary); font-weight: 400; line-height: 1.4;"
                     >
                       <span class="mr-1">{getNotificationTitle(item, locale)}</span>
                       <span style="color: var(--text-secondary);"
@@ -533,8 +650,8 @@
                         >{t('common.accept')}</button
                       >
                       <button
-                        class="surface-flat rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                        style="color: var(--text-secondary);"
+                        class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                         disabled={isProcessing(item.notification_id)}
                         onclick={() => handleInviteAction(item, 'reject')}
                         >{t('common.reject')}</button
@@ -550,8 +667,8 @@
                         >{t('common.approve')}</button
                       >
                       <button
-                        class="surface-flat rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                        style="color: var(--text-secondary);"
+                        class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
+                        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                         disabled={isProcessing(item.notification_id)}
                         onclick={() => handleApplicationAction(item, 'reject')}
                         >{t('common.reject')}</button
@@ -565,146 +682,31 @@
                     <img
                       src={thumbnailUrl}
                       alt=""
-                      loading="lazy"
-                      decoding="async"
                       style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-theme);"
                     />
                   {/if}
-                  <div
-                    style="width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--brand);"
-                  ></div>
                 </div>
               </div>
             {/each}
-            {#if readGroup.length > 0}
-              <p
-                class="uppercase mt-4 mb-2"
-                style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
-              >
-                较早
-              </p>
-            {/if}
-          {/if}
-          <!-- Read group -->
-          {#each readGroup as item (item.notification_id)}
-            {@const locale = getLocale()}
-            {@const typeColor = getTypeColor(item.type)}
-            {@const typeSoft = `color-mix(in srgb, ${typeColor} 7%, transparent)`}
-            {@const typeBorder = `color-mix(in srgb, ${typeColor} 18%, transparent)`}
-            {@const TypeIcon = getTypeIcon(item.type)}
-            {@const avatarUrl = getActorAvatar(item)}
-            {@const thumbnailUrl = getPostThumbnail(item)}
-            <div
-              class="row-hover flex items-start gap-3.5 rounded-[var(--radius-md)] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
-              style="background: {typeSoft}; border: 1px solid {typeBorder};"
-            >
-              <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
-                {#if avatarUrl}
-                  <img
-                    src={avatarUrl}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    style="width: 44px; height: 44px; border-radius: var(--radius-pill); object-fit: cover; border: 1px solid var(--border-theme);"
-                  />
-                {:else}
-                  <div
-                    class="flex items-center justify-center"
-                    style="width: 44px; height: 44px; border-radius: var(--radius-pill); background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
-                  >
-                    <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
-                  </div>
-                {/if}
-                <div
-                  class="absolute flex items-center justify-center"
-                  style="width: 18px; height: 18px; border-radius: var(--radius-pill); background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"
-                >
-                  <TypeIcon size={10} strokeWidth={2} color="var(--text-on-accent)" />
-                </div>
-              </div>
-
-              <div class="min-w-0 flex-1">
-                <button
-                  class="w-full text-left outline-none"
-                  onclick={() => handleNotificationClick(item)}
-                >
-                  <div
-                    style="font-size: 13px; color: var(--text-primary); font-weight: 400; line-height: 1.4;"
-                  >
-                    <span class="mr-1">{getNotificationTitle(item, locale)}</span>
-                    <span style="color: var(--text-secondary);"
-                      >{getNotificationContent(item, locale)}</span
-                    >
-                  </div>
-                  <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-                    {formatNotificationTimestamp(item.created_at, locale)}
-                  </p>
-                </button>
-                {#if canHandleGroupInvite(item)}
-                  <div class="mt-2 flex gap-2">
-                    <button
-                      class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
-                      disabled={isProcessing(item.notification_id)}
-                      onclick={() => handleInviteAction(item, 'accept')}
-                      >{t('common.accept')}</button
-                    >
-                    <button
-                      class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                      style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-                      disabled={isProcessing(item.notification_id)}
-                      onclick={() => handleInviteAction(item, 'reject')}
-                      >{t('common.reject')}</button
-                    >
-                  </div>
-                {:else if canHandleGroupApplication(item)}
-                  <div class="mt-2 flex gap-2">
-                    <button
-                      class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                      style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
-                      disabled={isProcessing(item.notification_id)}
-                      onclick={() => handleApplicationAction(item, 'approve')}
-                      >{t('common.approve')}</button
-                    >
-                    <button
-                      class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                      style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-                      disabled={isProcessing(item.notification_id)}
-                      onclick={() => handleApplicationAction(item, 'reject')}
-                      >{t('common.reject')}</button
-                    >
-                  </div>
-                {/if}
-              </div>
-
-              <div class="flex flex-shrink-0 flex-col items-center gap-1.5 pt-1">
-                {#if thumbnailUrl}
-                  <img
-                    src={thumbnailUrl}
-                    alt=""
-                    style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-theme);"
-                  />
-                {/if}
-              </div>
-            </div>
-          {/each}
-        </div>
-        {#if pagination.hasMore}
-          <div class="flex justify-center pt-4">
-            <button
-              class="surface-flat rounded-full px-5 py-2 outline-none transition-transform duration-150 active:scale-[0.97]"
-              style="color: var(--text-secondary); font-size: 13px;"
-              disabled={pagination.loadingMore}
-              onclick={() => loadNotifications(false)}
-            >
-              {#if pagination.loadingMore}<Loader2 class="mr-2 inline h-4 w-4 animate-spin" />{/if}
-              {t('common.loadMore')}
-            </button>
           </div>
+          {#if pagination.hasMore}
+            <div class="flex justify-center pt-4">
+              <button
+                class="surface-flat rounded-full px-5 py-2 outline-none transition-transform duration-150 active:scale-[0.97]"
+                style="color: var(--text-secondary); font-size: 13px;"
+                disabled={pagination.loadingMore}
+                onclick={() => loadNotifications(false)}
+              >
+                {#if pagination.loadingMore}<Loader2
+                    class="mr-2 inline h-4 w-4 animate-spin"
+                  />{/if}
+                {t('common.loadMore')}
+              </button>
+            </div>
+          {/if}
         {/if}
-      {/if}
+      </div>
     </div>
-  </div>
   </div>
   {#if platformStore.isWide}
     <aside

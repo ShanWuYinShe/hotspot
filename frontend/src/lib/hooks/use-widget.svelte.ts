@@ -33,10 +33,7 @@ interface UseWidgetOptions {
   initialLoading?: boolean;
 }
 
-export function useWidget<T>(
-  loadFn: () => Promise<T>,
-  options: UseWidgetOptions = {}
-) {
+export function useWidget<T>(loadFn: () => Promise<T>, options: UseWidgetOptions = {}) {
   const { locationAware = false, debounceMs = 500, initialLoading = false } = options;
 
   let data = $state<T | null>(null);

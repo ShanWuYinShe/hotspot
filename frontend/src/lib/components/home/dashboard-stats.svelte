@@ -13,7 +13,11 @@
 
   let { refreshTrigger = 0 }: Props = $props();
 
-  const { data: stats, loading, reload } = useWidget<MyProfile['stats']>(async () => {
+  const {
+    data: stats,
+    loading,
+    reload
+  } = useWidget<MyProfile['stats']>(async () => {
     const response = await usersService.getMyProfile();
     if (!isSuccess(response) || !response.data) throw new Error('Failed to load stats');
     return response.data.stats;

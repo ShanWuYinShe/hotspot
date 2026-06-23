@@ -218,7 +218,9 @@
     >
       <div class="page-shell page-shell--narrow flex items-center justify-between">
         <div>
-          <h1 style="font-size: 24px; font-weight: 600; color: var(--text-primary);">{t('sidebar.home')}</h1>
+          <h1 style="font-size: 24px; font-weight: 600; color: var(--text-primary);">
+            {t('sidebar.home')}
+          </h1>
           <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
             {t('home.discoverNearbyPeopleAndThings')}
           </p>

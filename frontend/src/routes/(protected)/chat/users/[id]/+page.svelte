@@ -518,10 +518,7 @@
                 isRecalled={message.recalled_at != null}
                 time={formatTime(message.sent_at)}
                 readReceipt={isSelf(message) &&
-                  message.message_id ===
-                    messages
-                      .filter((m) => isSelf(m))
-                      .at(-1)?.message_id}
+                  message.message_id === messages.filter((m) => isSelf(m)).at(-1)?.message_id}
               />
             </div>
           </div>

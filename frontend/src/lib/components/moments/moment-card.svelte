@@ -300,7 +300,9 @@
   }
 
   .moment-card:focus-visible {
-    box-shadow: 0 0 0 2px var(--glow), var(--hover-shadow-card);
+    box-shadow:
+      0 0 0 2px var(--glow),
+      var(--hover-shadow-card);
   }
 
   .moment-card--dense {

@@ -138,7 +138,10 @@
           </button>
 
           <!-- Info card -->
-          <div class="rounded-[var(--radius-md)] p-4" style="border: 1px solid var(--border-theme);">
+          <div
+            class="rounded-[var(--radius-md)] p-4"
+            style="border: 1px solid var(--border-theme);"
+          >
             <p
               class="flex items-center gap-2"
               style="font-weight: 500; font-size: 14px; color: var(--text-primary);"

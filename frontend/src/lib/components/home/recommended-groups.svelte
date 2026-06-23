@@ -13,18 +13,26 @@
 
   let { refreshTrigger = 0 }: Props = $props();
 
-  const { data: groups, loading, reload } = useWidget<GroupItem[]>(async () => {
-    const response = await groupsService.search({
-      radius: mapAnchorStore.radius * 1000,
-      reference_point: {
-        latitude: mapAnchorStore.latitude,
-        longitude: mapAnchorStore.longitude
-      },
-      pagination: { limit: 6 }
-    });
-    if (!isSuccess(response) || !response.data) throw new Error('Failed to load recommended groups');
-    return response.data.items ?? [];
-  }, { locationAware: true });
+  const {
+    data: groups,
+    loading,
+    reload
+  } = useWidget<GroupItem[]>(
+    async () => {
+      const response = await groupsService.search({
+        radius: mapAnchorStore.radius * 1000,
+        reference_point: {
+          latitude: mapAnchorStore.latitude,
+          longitude: mapAnchorStore.longitude
+        },
+        pagination: { limit: 6 }
+      });
+      if (!isSuccess(response) || !response.data)
+        throw new Error('Failed to load recommended groups');
+      return response.data.items ?? [];
+    },
+    { locationAware: true }
+  );
 
   $effect(() => {
     refreshTrigger;

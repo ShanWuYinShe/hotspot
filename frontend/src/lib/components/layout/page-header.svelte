@@ -12,8 +12,14 @@
     size?: 'default' | 'hero';
   }
 
-  let { title, description, actions, backHref, backLabel = '返回', size = 'default' }: Props =
-    $props();
+  let {
+    title,
+    description,
+    actions,
+    backHref,
+    backLabel = '返回',
+    size = 'default'
+  }: Props = $props();
 </script>
 
 <div
@@ -33,9 +39,12 @@
         </a>
       {/if}
       <h1
-        style="font-size: {size === 'hero' ? '24px' : '20px'}; font-weight: 600; color: var(--text-primary);"
-        >{title}</h1
+        style="font-size: {size === 'hero'
+          ? '24px'
+          : '20px'}; font-weight: 600; color: var(--text-primary);"
       >
+        {title}
+      </h1>
       {#if description}
         <p
           style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.6;"

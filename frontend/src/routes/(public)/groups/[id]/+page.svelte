@@ -1626,7 +1626,10 @@
     </Dialog.Header>
     <div class="space-y-4 py-4">
       {#if group?.has_password}
-        <div class="space-y-2 rounded-[var(--radius-md)] p-4" style="border: 1px solid var(--border-theme);">
+        <div
+          class="space-y-2 rounded-[var(--radius-md)] p-4"
+          style="border: 1px solid var(--border-theme);"
+        >
           <label
             for="group-password"
             style="font-size: 13px; font-weight: 500; color: var(--text-primary);">群组密码</label
@@ -1643,7 +1646,10 @@
         </div>
       {/if}
       {#if settings?.join_method === 'approval'}
-        <div class="space-y-2 rounded-[var(--radius-md)] p-4" style="border: 1px solid var(--border-theme);">
+        <div
+          class="space-y-2 rounded-[var(--radius-md)] p-4"
+          style="border: 1px solid var(--border-theme);"
+        >
           <label
             for="join-message"
             style="font-size: 13px; font-weight: 500; color: var(--text-primary);">申请理由</label
@@ -1689,7 +1695,10 @@
       <Dialog.Description>发布给所有成员的重要通知与群规提醒。</Dialog.Description>
     </Dialog.Header>
     <div class="space-y-4 py-4">
-      <div class="space-y-2 rounded-[var(--radius-md)] p-4" style="border: 1px solid var(--border-theme);">
+      <div
+        class="space-y-2 rounded-[var(--radius-md)] p-4"
+        style="border: 1px solid var(--border-theme);"
+      >
         <label
           for="announcement-title"
           style="font-size: 13px; font-weight: 500; color: var(--text-primary);">公告标题</label
@@ -1703,7 +1712,10 @@
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
         />
       </div>
-      <div class="space-y-2 rounded-[var(--radius-md)] p-4" style="border: 1px solid var(--border-theme);">
+      <div
+        class="space-y-2 rounded-[var(--radius-md)] p-4"
+        style="border: 1px solid var(--border-theme);"
+      >
         <label
           for="announcement-content"
           style="font-size: 13px; font-weight: 500; color: var(--text-primary);">公告内容</label
@@ -1933,7 +1945,10 @@
       <Dialog.Title>退出群组</Dialog.Title>
       <Dialog.Description>确认要退出该群组吗？退出后将无法查看群组内容。</Dialog.Description>
     </Dialog.Header>
-    <div class="rounded-[var(--radius-md)] px-4 py-3" style="border: 1px solid var(--border-theme);">
+    <div
+      class="rounded-[var(--radius-md)] px-4 py-3"
+      style="border: 1px solid var(--border-theme);"
+    >
       <div style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
         {group?.group.name ?? '群组'}
       </div>

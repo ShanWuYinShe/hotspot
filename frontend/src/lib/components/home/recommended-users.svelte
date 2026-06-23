@@ -15,20 +15,28 @@
 
   let { refreshTrigger = 0 }: Props = $props();
 
-  const { data: users, loading, reload } = useWidget<UserItem[]>(async () => {
-    const response = await usersService.search({
-      radius: mapAnchorStore.radius * 1000,
-      reference_point: {
-        latitude: mapAnchorStore.latitude,
-        longitude: mapAnchorStore.longitude
-      },
-      pagination: { limit: 6 }
-    });
-    if (!isSuccess(response) || !response.data) throw new Error('Failed to load recommended users');
-    const currentUserId = authStore.currentUserId;
-    const items = response.data.items ?? [];
-    return currentUserId ? items.filter((item) => item.user.user_id !== currentUserId) : items;
-  }, { locationAware: true });
+  const {
+    data: users,
+    loading,
+    reload
+  } = useWidget<UserItem[]>(
+    async () => {
+      const response = await usersService.search({
+        radius: mapAnchorStore.radius * 1000,
+        reference_point: {
+          latitude: mapAnchorStore.latitude,
+          longitude: mapAnchorStore.longitude
+        },
+        pagination: { limit: 6 }
+      });
+      if (!isSuccess(response) || !response.data)
+        throw new Error('Failed to load recommended users');
+      const currentUserId = authStore.currentUserId;
+      const items = response.data.items ?? [];
+      return currentUserId ? items.filter((item) => item.user.user_id !== currentUserId) : items;
+    },
+    { locationAware: true }
+  );
 
   $effect(() => {
     refreshTrigger;

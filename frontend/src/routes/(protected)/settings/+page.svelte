@@ -450,7 +450,9 @@
         style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
       >
         <BackButton onclick={() => history.back()} size={36} />
-        <h1 class="text-[20px] font-semibold tracking-tight" style="color: var(--text-primary);">设置</h1>
+        <h1 class="text-[20px] font-semibold tracking-tight" style="color: var(--text-primary);">
+          设置
+        </h1>
       </div>
 
       <div class="space-y-3">

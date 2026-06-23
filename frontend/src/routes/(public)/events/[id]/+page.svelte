@@ -236,7 +236,9 @@
 
       <!-- Content -->
       <div class="pt-4">
-        <h1 style="font-size: 24px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
+        <h1
+          style="font-size: 24px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;"
+        >
           {ev.title}
         </h1>
 

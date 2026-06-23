@@ -56,7 +56,9 @@
   <div class="page-shell page-shell--wide space-y-6">
     <!-- Search -->
     <div class="flex gap-2">
-      <div class="input-surface relative flex-1 flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-2.5">
+      <div
+        class="input-surface relative flex-1 flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-2.5"
+      >
         <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
         <input
           type="search"

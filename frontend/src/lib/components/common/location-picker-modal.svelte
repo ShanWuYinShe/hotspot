@@ -2080,7 +2080,10 @@
                 >
                   稍后再看
                 </Button>
-                <Button class="h-10 flex-1 rounded-[var(--radius-md)]" onclick={zoomToClusterPreview}>
+                <Button
+                  class="h-10 flex-1 rounded-[var(--radius-md)]"
+                  onclick={zoomToClusterPreview}
+                >
                   {clusterPreview.kind === 'overlap_group' ? '放大展开' : '继续放大'}
                 </Button>
               </div>
@@ -2361,7 +2364,9 @@
                           </div>
                         </div>
                       {:else if searchText.trim().length > 0 && !isSearching}
-                        <div class="rounded-[var(--radius-md)] border border-dashed px-4 py-6 text-center">
+                        <div
+                          class="rounded-[var(--radius-md)] border border-dashed px-4 py-6 text-center"
+                        >
                           <p class="text-sm font-semibold">没有找到匹配地点</p>
                           <p class="mt-1 text-xs">换个关键词试试，或者直接拖动地图到目标区域。</p>
                         </div>
@@ -2528,7 +2533,10 @@
                       >
                         稍后再看
                       </Button>
-                      <Button class="h-10 flex-1 rounded-[var(--radius-md)]" onclick={zoomToClusterPreview}>
+                      <Button
+                        class="h-10 flex-1 rounded-[var(--radius-md)]"
+                        onclick={zoomToClusterPreview}
+                      >
                         {clusterPreview.kind === 'overlap_group' ? '放大展开' : '继续放大'}
                       </Button>
                     </div>
@@ -2737,7 +2745,9 @@
                   class="flex w-full items-start gap-3 rounded-[var(--radius-md)] px-3 py-2 text-left text-xs transition-all hover:-translate-y-0.5"
                   onclick={() => selectSearchResult(result)}
                 >
-                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]">
+                  <div
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
+                  >
                     <MapPin class="h-4 w-4" />
                   </div>
                   <div class="min-w-0 flex-1">
@@ -2766,7 +2776,9 @@
                   class="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-left text-xs transition-all hover:-translate-y-0.5"
                   onclick={() => selectHistoryItem(item)}
                 >
-                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]">
+                  <div
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
+                  >
                     <Clock class="h-4 w-4" />
                   </div>
                   <div class="min-w-0 flex-1">
