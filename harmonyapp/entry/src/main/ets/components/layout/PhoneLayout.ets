@@ -188,7 +188,7 @@ export struct PhoneLayout {
             ])
         }
         Text(TAB_ITEMS[index].label)
-          .fontSize($r('app.float.font_size_xs'))
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(
             this.currentTabIndex === index
               ? $r('app.color.brand_primary')
@@ -244,7 +244,7 @@ export struct PhoneLayout {
           ? $r('app.color.brand_primary')
           : $r('app.color.bg_secondary')
       )
-      .borderRadius($r('app.float.radius_full'))
+      .borderRadius(DesignConstants.RADIUS.FULL)
       .border({ width: 1, color: $r('app.color.brand_primary') })
       .scale(
         this.isCreateTabPressed
@@ -276,7 +276,7 @@ export struct PhoneLayout {
   @Builder CreateSheetContent() {
     Column() {
       Text('发布动态')
-        .fontSize($r('app.float.font_size_lg'))
+        .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.brand_primary'))
         .margin({ top: 24, bottom: 16 })
@@ -285,7 +285,7 @@ export struct PhoneLayout {
         .width('90%').height(48)
         .backgroundColor($r('app.color.brand_primary'))
         .fontColor($r('app.color.bg_primary'))
-        .borderRadius($r('app.float.radius_md'))
+        .borderRadius(DesignConstants.RADIUS.MD)
         .margin({ bottom: 12 })
         .onClick(() => { this.showCreateSheet = false; })
       Button('发布图片动态')
@@ -293,7 +293,7 @@ export struct PhoneLayout {
         .width('90%').height(48)
         .backgroundColor($r('app.color.bg_secondary'))
         .fontColor($r('app.color.brand_primary'))
-        .borderRadius($r('app.float.radius_md'))
+        .borderRadius(DesignConstants.RADIUS.MD)
         .onClick(() => { this.showCreateSheet = false; })
     }
     .width('100%')
@@ -303,7 +303,7 @@ export struct PhoneLayout {
   @Builder UpgradeBanner() {
     Row() {
       Text('当前为临时用户，注册账号可保留所有数据')
-        .fontSize($r('app.float.font_size_sm'))
+        .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontColor($r('app.color.chip_inactive_text'))
         .layoutWeight(1)
         .maxLines(1)
@@ -311,10 +311,10 @@ export struct PhoneLayout {
       Button('去注册')
         .type(ButtonType.Normal)
         .height(28)
-        .fontSize($r('app.float.font_size_sm'))
+        .fontSize(DesignConstants.FONT.SIZE.MD)
         .backgroundColor($r('app.color.brand_primary'))
         .fontColor($r('app.color.bg_primary'))
-        .borderRadius($r('app.float.radius_sm'))
+        .borderRadius(DesignConstants.RADIUS.SM)
         .padding({ left: 12, right: 12 })
     }
     .width('100%')

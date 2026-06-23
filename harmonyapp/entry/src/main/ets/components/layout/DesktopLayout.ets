@@ -23,6 +23,7 @@ import {
   CONTAINER_MAX_WIDTH_VP,
   type BreakpointType
 } from '../../core/responsive/Breakpoint';
+import { DesignConstants } from '../../constants/DesignConstants';
 import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
 import { DiscoverPage } from '../../features/discover/pages/DiscoverPage';
 import { MessagePage } from '../../features/message/pages/MessagePage';
@@ -157,7 +158,7 @@ export struct DesktopLayout {
   LeftNavRail() {
     Column() {
       Text('HotSpot')
-        .fontSize($r('app.float.font_size_xl'))
+        .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.brand_primary'))
         .margin({ top: 24, bottom: 32 })
@@ -179,14 +180,14 @@ export struct DesktopLayout {
             .fontColor([$r('app.color.brand_primary')])
         }
         Text('通知')
-          .fontSize($r('app.float.font_size_base'))
+          .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontColor($r('app.color.brand_primary'))
           .margin({ left: 12 })
       }
       .width('100%')
       .height(44)
       .padding({ left: 12, right: 12 })
-      .borderRadius($r('app.float.radius_md'))
+      .borderRadius(DesignConstants.RADIUS.MD)
       .backgroundColor($r('app.color.chip_selected_bg'))
       .margin({ bottom: 24 })
       .onClick(() => {
@@ -212,7 +213,7 @@ export struct DesktopLayout {
           ])
       }
       Text(item.label)
-        .fontSize($r('app.float.font_size_base'))
+        .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontColor(
           this.currentRoute === item.route
             ? $r('app.color.brand_primary')
@@ -226,7 +227,7 @@ export struct DesktopLayout {
     .width('100%')
     .height(44)
     .padding({ left: 12, right: 12 })
-    .borderRadius($r('app.float.radius_md'))
+    .borderRadius(DesignConstants.RADIUS.MD)
     .backgroundColor(
       this.currentRoute === item.route ? $r('app.color.chip_selected_bg') : Color.Transparent
     )
@@ -241,7 +242,7 @@ export struct DesktopLayout {
       // 顶部应用栏（含标题 + 通知铃铛 badge）
       Row() {
         Text(this.getCurrentTitle())
-          .fontSize($r('app.float.font_size_2xl'))
+          .fontSize(DesignConstants.FONT.SIZE.XXL)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.brand_primary'))
 
@@ -249,7 +250,7 @@ export struct DesktopLayout {
 
         if (this.unreadCount > 0) {
           Text(`${this.unreadCount} 未读`)
-            .fontSize($r('app.float.font_size_sm'))
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor($r('app.color.chip_inactive_text'))
         }
       }
@@ -282,7 +283,7 @@ export struct DesktopLayout {
       } else {
         Column() {
           Text('未知路由')
-            .fontSize($r('app.float.font_size_lg'))
+            .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontColor($r('app.color.chip_inactive_text'))
         }
         .width('100%')
@@ -316,7 +317,7 @@ export struct DesktopLayout {
   RightDetailPanel() {
     Column() {
       Text('详情面板')
-        .fontSize($r('app.float.font_size_lg'))
+        .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.chip_inactive_text'))
     }
@@ -331,7 +332,7 @@ export struct DesktopLayout {
   UpgradeBanner() {
     Row() {
       Text('当前为临时用户，注册账号可保留所有数据')
-        .fontSize($r('app.float.font_size_sm'))
+        .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontColor($r('app.color.chip_inactive_text'))
         .layoutWeight(1)
         .maxLines(1)
@@ -340,10 +341,10 @@ export struct DesktopLayout {
       Button('去注册')
         .type(ButtonType.Normal)
         .height(28)
-        .fontSize($r('app.float.font_size_sm'))
+        .fontSize(DesignConstants.FONT.SIZE.MD)
         .backgroundColor($r('app.color.brand_primary'))
         .fontColor($r('app.color.bg_primary'))
-        .borderRadius($r('app.float.radius_sm'))
+        .borderRadius(DesignConstants.RADIUS.SM)
         .padding({ left: 12, right: 12 })
     }
     .width('100%')

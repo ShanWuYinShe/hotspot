@@ -11,11 +11,13 @@
  * 与 frontend /frontend/src/lib/components/ui/skeleton.tsx 对齐
  */
 
+import { DesignConstants } from '../../constants/DesignConstants';
+
 @Component
 export struct Skeleton {
   @Prop width: Length = '100%';
   @Prop height: Length = 16;
-  @Prop borderRadius: Length | string = $r('app.float.radius_sm');
+  @Prop borderRadius: Length | string = DesignConstants.RADIUS.SM;
   @Prop block: boolean = false;
 
   build() {

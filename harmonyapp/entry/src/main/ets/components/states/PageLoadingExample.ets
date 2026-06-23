@@ -29,6 +29,7 @@
  * 也可以直接 inline 此模式。本文件作为统一模式参考。
  */
 
+import { DesignConstants } from '../../constants/DesignConstants';
 import { Skeleton } from './Skeleton';
 import { SkeletonShimmer } from './SkeletonShimmer';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -50,11 +51,11 @@ export struct PageLoadingExample {
       // 加载态：SkeletonShimmer 包装 3 个 Skeleton 占位
       SkeletonShimmer({ active: true }) {
         Column({ space: 16 }) {
-          Skeleton({ width: '100%', height: 24, borderRadius: $r('app.float.radius_md') })
-          Skeleton({ width: '80%', height: 16, borderRadius: $r('app.float.radius_sm') })
-          Skeleton({ width: '90%', height: 16, borderRadius: $r('app.float.radius_sm') })
-          Skeleton({ width: '60%', height: 16, borderRadius: $r('app.float.radius_sm') })
-          Skeleton({ width: 200, height: 200, borderRadius: $r('app.float.radius_full') })
+          Skeleton({ width: '100%', height: 24, borderRadius: DesignConstants.RADIUS.MD })
+          Skeleton({ width: '80%', height: 16, borderRadius: DesignConstants.RADIUS.SM })
+          Skeleton({ width: '90%', height: 16, borderRadius: DesignConstants.RADIUS.SM })
+          Skeleton({ width: '60%', height: 16, borderRadius: DesignConstants.RADIUS.SM })
+          Skeleton({ width: 200, height: 200, borderRadius: DesignConstants.RADIUS.FULL })
         }
         .width('100%')
         .padding(16)

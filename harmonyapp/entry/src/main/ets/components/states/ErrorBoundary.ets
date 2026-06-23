@@ -21,6 +21,8 @@
  * 与 frontend /frontend/src/lib/components/ui/ErrorBoundary.tsx 对齐
  */
 
+import { DesignConstants } from '../../constants/DesignConstants';
+
 @Component
 export struct ErrorBoundary {
   @BuilderParam child: () => void = this.defaultChild;
@@ -42,12 +44,12 @@ export struct ErrorBoundary {
         }
 
         Text('加载失败')
-          .fontSize($r('app.float.font_size_lg'))
+          .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.brand_primary'))
 
         Text(this.err)
-          .fontSize($r('app.float.font_size_sm'))
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor($r('app.color.chip_inactive_text'))
           .textAlign(TextAlign.Center)
           .constraintSize({ maxWidth: 280 })
@@ -57,7 +59,7 @@ export struct ErrorBoundary {
           .height(40)
           .backgroundColor($r('app.color.brand_primary'))
           .fontColor($r('app.color.bg_primary'))
-          .borderRadius($r('app.float.radius_md'))
+          .borderRadius(DesignConstants.RADIUS.MD)
           .padding({ left: 24, right: 24 })
           .onClick(() => {
             this.onRetry();
