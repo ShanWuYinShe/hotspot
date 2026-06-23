@@ -212,7 +212,7 @@ export struct EventDetailPage {
         .type(ButtonType.Normal)
         .width(36)
         .height(36)
-        .borderRadius(18)
+        .borderRadius(DesignConstants.RADIUS.FULL)
         .backgroundColor(DesignConstants.COLOR.OVERLAY_LIGHT)
         .onClick(() => {
           AppRouter.pop();
@@ -229,7 +229,7 @@ export struct EventDetailPage {
         .type(ButtonType.Normal)
         .width(36)
         .height(36)
-        .borderRadius(18)
+        .borderRadius(DesignConstants.RADIUS.FULL)
         .backgroundColor(DesignConstants.COLOR.OVERLAY_LIGHT)
         .onClick(() => {
           SystemToast.show('分享功能开发中', this.getUIContext());
@@ -251,7 +251,7 @@ export struct EventDetailPage {
           .fontWeight(FontWeight.Medium)
           .padding({ left: 10, right: 10, top: 4, bottom: 4 })
           .backgroundColor(this.getCurrentEvent().tagColor)
-          .borderRadius(12)
+          .borderRadius(DesignConstants.SHAPE.CHIP)
       }
       .width('100%')
       .padding({ left: DesignConstants.SPACING.LG })
@@ -305,7 +305,7 @@ export struct EventDetailPage {
           }
           .padding({ left: 12, right: 14, top: 8, bottom: 8 })
           .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(14)
+          .borderRadius(DesignConstants.SHAPE.CHIP)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
         }, (item: string, index: number) => `${item}_${index}`)
@@ -330,7 +330,7 @@ export struct EventDetailPage {
       .width('100%')
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 10, bottom: 10 })
       .backgroundColor(this.getCurrentEvent().tagColor + '15')
-      .borderRadius(14)
+      .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
       .border({ width: 1, color: this.getCurrentEvent().tagColor + '30' })
     }
     .width('100%')
@@ -354,7 +354,7 @@ export struct EventDetailPage {
       }
       .width(28)
       .height(28)
-      .borderRadius(14)
+      .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.getCurrentEvent().tagColor + '18')
       .justifyContent(FlexAlign.Center)
 
@@ -401,13 +401,13 @@ export struct EventDetailPage {
         .fontColor(Color.White)
         .fontSize(12)
         .height(30)
-        .borderRadius(15)
+        .borderRadius(DesignConstants.SHAPE.BUTTON)
         .padding({ left: 12, right: 12 })
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 12, bottom: 12 })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(18)
+    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
@@ -430,7 +430,7 @@ export struct EventDetailPage {
       Column()
         .width('100%')
         .height(6)
-        .borderRadius(3)
+        .borderRadius(DesignConstants.RADIUS.FULL)
         .backgroundColor(this.getSurfaceBorder())
 
       Stack() {
@@ -438,7 +438,7 @@ export struct EventDetailPage {
         Column()
           .width(this.getFillRate().toString() + '%')
           .height(6)
-          .borderRadius(3)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentEvent().tagColor)
           .align(Alignment.Start)
       }
@@ -454,7 +454,7 @@ export struct EventDetailPage {
             Column()
               .width(32)
               .height(32)
-              .borderRadius(16)
+              .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor(this.getSurfaceSubtle())
               .border({ width: 2, color: this.getSurfaceBackground() })
           }
@@ -471,7 +471,7 @@ export struct EventDetailPage {
         }
         .width(32)
         .height(32)
-        .borderRadius(16)
+        .borderRadius(DesignConstants.RADIUS.FULL)
         .backgroundColor(this.getCurrentEvent().tagColor + '25')
         .border({ width: 2, color: this.getSurfaceBackground() })
         .margin({ left: -8 })
@@ -508,7 +508,7 @@ export struct EventDetailPage {
       .type(ButtonType.Normal)
       .width('100%')
       .height(52)
-      .borderRadius(26)
+      .borderRadius(DesignConstants.SHAPE.BUTTON)
       .backgroundColor(this.joined ? this.getSurfaceBackground() : this.getCurrentEvent().tagColor)
       .border({ width: this.joined ? 2 : 0, color: this.getCurrentEvent().tagColor })
       .shadow(this.getCurrentThemePalette().accentShadow)

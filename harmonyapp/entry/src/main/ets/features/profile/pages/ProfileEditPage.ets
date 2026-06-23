@@ -175,7 +175,7 @@ export struct ProfileEditPage {
                 }
                 .type(ButtonType.Normal)
                 .padding({ left: 10, right: 10, top: 5, bottom: 5 })
-                .borderRadius(14)
+                .borderRadius(DesignConstants.SHAPE.BUTTON)
                 .backgroundColor(DesignConstants.COLOR.OVERLAY_STRONG)
                 .onClick(() => {
                   SystemToast.show('横幅更换功能开发中', this.getUIContext());
@@ -210,7 +210,7 @@ export struct ProfileEditPage {
                 .type(ButtonType.Normal)
                 .width(26)
                 .height(26)
-                .borderRadius(13)
+                .borderRadius(DesignConstants.RADIUS.FULL)
                 .backgroundColor(this.getCurrentThemePalette().accentBackground)
                 .border({ width: 2.5, color: this.getSurfaceBackground() })
                 .onClick(() => {
@@ -276,7 +276,7 @@ export struct ProfileEditPage {
               .width('100%')
               .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
               .backgroundColor(this.getSurfaceSubtle())
-              .borderRadius(16)
+              .borderRadius(DesignConstants.SHAPE.INPUT)
             }
             .width('100%')
 
@@ -304,7 +304,7 @@ export struct ProfileEditPage {
                   }
                   .type(ButtonType.Normal)
                   .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-                  .borderRadius(16)
+                  .borderRadius(DesignConstants.SHAPE.BUTTON)
                   .backgroundColor(this.isTagSelected(tag) ? this.getCurrentThemePalette().accentBackground : this.getSurfaceBackground())
                   .border({ width: 1, color: this.isTagSelected(tag) ? Color.Transparent : this.getSurfaceBorder() })
                   .opacity(this.isTagDisabled(tag) ? 0.4 : 1.0)
@@ -421,7 +421,7 @@ export struct ProfileEditPage {
       .width('100%')
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 10, bottom: 10 })
       .backgroundColor(this.getSurfaceSubtle())
-      .borderRadius(14)
+      .borderRadius(DesignConstants.SHAPE.INPUT)
     }
     .width('100%')
   }

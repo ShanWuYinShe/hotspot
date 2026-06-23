@@ -489,7 +489,7 @@ export struct SearchPage {
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(20)
+    .borderRadius(DesignConstants.SHAPE.CARD)
     .shadow(this.getCurrentThemePalette().surfaceShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
     .onClick(() => this.handleSuggestItemTap(item))
@@ -764,7 +764,7 @@ export struct SearchPage {
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(20)
+    .borderRadius(DesignConstants.SHAPE.CARD)
     .shadow(this.getCurrentThemePalette().surfaceShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
@@ -864,7 +864,7 @@ export struct SearchPage {
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(20)
+    .borderRadius(DesignConstants.SHAPE.CARD)
     .shadow(this.getCurrentThemePalette().surfaceShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
   }

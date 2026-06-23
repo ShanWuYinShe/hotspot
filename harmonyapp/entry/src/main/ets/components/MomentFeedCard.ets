@@ -384,7 +384,7 @@ export struct MomentFeedCard {
             .width(80)
             .height(80)
             .objectFit(ImageFit.Cover)
-            .borderRadius(12)
+            .borderRadius(DesignConstants.RADIUS.MD)
             .backgroundColor(this.getPalette().surfaceSubtle)
             .accessibilityText(`图片 ${imgIndex + 1}，共 ${(this.moment.images ?? []).length} 张`)
             .geometryTransition('moment_img_' + this.moment.moment_id + '_' + imgIndex)
@@ -405,7 +405,7 @@ export struct MomentFeedCard {
             .textAlign(TextAlign.Center)
             .fontSize(13)
             .fontColor(this.getPalette().textSecondary)
-            .borderRadius(12)
+            .borderRadius(DesignConstants.RADIUS.MD)
             .border({ width: 1, color: this.getPalette().borderColor })
             .onClick(() => this.openMomentDetail(this.moment))
         }
@@ -424,7 +424,7 @@ export struct MomentFeedCard {
           .width('100%')
           .aspectRatio(1.6)
           .objectFit(ImageFit.Cover)
-          .borderRadius(20)
+          .borderRadius(DesignConstants.SHAPE.CARD)
           .backgroundColor(this.getPalette().surfaceSubtle)
           .accessibilityText('动态图片')
 

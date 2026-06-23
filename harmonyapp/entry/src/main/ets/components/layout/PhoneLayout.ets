@@ -201,7 +201,7 @@ export struct PhoneLayout {
       }
       .width(60)
       .padding({ top: 6, bottom: 6 })
-      .borderRadius(16)
+      .borderRadius(DesignConstants.RADIUS.LG)
       .backgroundColor(
         this.currentTabIndex === index
           ? this.getPalette().tabBarActiveBackground

@@ -343,7 +343,7 @@ export struct MomentDetailPage {
                 .width('100%')
                 .height('100%')
                 .objectFit(ImageFit.Cover)
-                .borderRadius(14)
+                .borderRadius(DesignConstants.RADIUS.LG)
                 .backgroundColor(this.getSurfaceBackground())
                 .onClick(() => {
                   this.previewImage(imgIndex);

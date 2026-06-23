@@ -423,13 +423,13 @@ export struct NearbyPage {
         Row()
           .width(14)
           .height(14)
-          .borderRadius(7)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getPalette().accentBackground)
           .shadow(this.getPalette().accentShadow)
       }
       .width(44)
       .height(44)
-      .borderRadius(22)
+      .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.getPalette().surfaceBackground)
       .border({ width: 1, color: this.getPalette().floatingBorderColor })
 
@@ -466,7 +466,7 @@ export struct NearbyPage {
     }
     .width('100%')
     .aspectRatio(2.4)
-    .borderRadius(24)
+    .borderRadius(DesignConstants.SHAPE.HERO_CARD)
     .clip(true)
     .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 20 })
     .border({ width: 1, color: this.getPalette().borderColor })
@@ -484,7 +484,7 @@ export struct NearbyPage {
     .width(34)
     .height(34)
     .justifyContent(FlexAlign.Center)
-    .borderRadius(12)
+    .borderRadius(DesignConstants.SHAPE.ICON_TILE)
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: 1, color: this.getPalette().floatingBorderColor })
   }
@@ -543,7 +543,7 @@ export struct NearbyPage {
                 Row()
                   .width(66)
                   .height(66)
-                  .borderRadius(20)
+                  .borderRadius(DesignConstants.RADIUS.FULL)
                   .backgroundColor(this.getPalette().surfaceSubtle)
               }
               .alignItems(HorizontalAlign.Center)
@@ -559,7 +559,7 @@ export struct NearbyPage {
                     shape: 'circle'
                   })
                   .border({ width: 2, color: this.getPalette().borderColor })
-                  .borderRadius(33)
+                  .borderRadius(DesignConstants.RADIUS.FULL)
 
                   // 在线状态点：贴头像右下角（用 alignContent 取代硬编码坐标）
                   if (user.presence_status === 'online') {
@@ -567,7 +567,7 @@ export struct NearbyPage {
                       Row()
                         .width(12)
                         .height(12)
-                        .borderRadius(6)
+                        .borderRadius(DesignConstants.RADIUS.FULL)
                         .backgroundColor(DesignConstants.COLOR.SUCCESS)
                         .border({ width: 2, color: this.getPalette().surfaceBackground })
                     }
@@ -747,7 +747,7 @@ export struct NearbyPage {
               Column()
                 .width('100%')
                 .height(96)
-                .borderRadius(22)
+                .borderRadius(DesignConstants.SHAPE.CARD)
                 .backgroundColor(this.getPalette().surfaceSubtle)
             }, (_: string) => _)
           }

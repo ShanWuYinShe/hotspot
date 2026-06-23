@@ -375,7 +375,7 @@ export struct NotificationCenter {
             .width(36)
             .height(36)
             .justifyContent(FlexAlign.Center)
-            .borderRadius(18)
+            .borderRadius(DesignConstants.RADIUS.FULL)
             .backgroundColor(this.getPalette().surfaceBackground)
             .shadow(this.getPalette().controlShadow)
             .border({ width: 1, color: this.getPalette().borderColor })
@@ -569,7 +569,7 @@ export struct NotificationCenter {
           Image(notification.payload.actor.avatar_url)
             .width(44)
             .height(44)
-            .borderRadius(22)
+            .borderRadius(DesignConstants.RADIUS.FULL)
             .objectFit(ImageFit.Cover)
         } else {
           Row() {
@@ -581,7 +581,7 @@ export struct NotificationCenter {
           }
           .width(44)
           .height(44)
-          .borderRadius(22)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getTypeColor(notification.type) + '18')
         }
@@ -597,7 +597,7 @@ export struct NotificationCenter {
           }
           .width(18)
           .height(18)
-          .borderRadius(9)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getTypeColor(notification.type))
           .border({ width: 2, color: this.getPalette().pageBackground })
@@ -686,14 +686,14 @@ export struct NotificationCenter {
         Row()
           .width(8)
           .height(8)
-          .borderRadius(4)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getTypeColor(notification.type))
       }
     }
     .width('100%')
     .padding({ left: 12, right: 12, top: 12, bottom: 12 })
     .backgroundColor(notification.is_read ? Color.Transparent : this.getTypeColor(notification.type) + '07')
-    .borderRadius(18)
+    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
     .border({
       width: 1,
       color: notification.is_read ? Color.Transparent : this.getTypeColor(notification.type) + '18'

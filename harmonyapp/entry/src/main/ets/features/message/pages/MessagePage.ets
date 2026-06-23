@@ -748,7 +748,7 @@ export struct MessagePage {
                   shape: 'circle'
                 })
                 .border({ width: 1.5, color: this.getCurrentThemePalette().accentBackground })
-                .borderRadius(26)
+                .borderRadius(DesignConstants.RADIUS.FULL)
                 .padding(2.5)
                 .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
                 .shadow(this.getCurrentThemePalette().controlShadow)
@@ -758,7 +758,7 @@ export struct MessagePage {
                   Row()
                     .width(12)
                     .height(12)
-                    .borderRadius(6)
+                    .borderRadius(DesignConstants.RADIUS.FULL)
                     .backgroundColor(DesignConstants.COLOR.SUCCESS)
                     .border({ width: 2, color: this.getCurrentThemePalette().surfaceBackground })
                 }
@@ -831,7 +831,7 @@ export struct MessagePage {
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-    .borderRadius(18)
+    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
     .backgroundColor(this.pressedChatKey === this.getChatKey(item)
       ? this.getCurrentThemePalette().surfaceSubtle
       : Color.Transparent)
