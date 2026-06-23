@@ -676,6 +676,8 @@
   --radius-pill: 40px;
   /* 主按钮圆角矩形(28px),对齐 harmonyapp SHAPE.BUTTON=28;与 chip/头像的 pill(全圆)区分 */
   --radius-button: 28px;
+  --radius-sm: 12px;
+  --radius-xs: 8px;
 
   /* Glass */
   --glass-blur: 28px;

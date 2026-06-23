@@ -9,6 +9,7 @@
   import type { SessionItem } from '$lib/types/api';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import Shield from 'lucide-svelte/icons/shield';
+import EmptyState from '$lib/components/common/empty-state.svelte';
   import Loader2 from 'lucide-svelte/icons/loader-2';
   import Smartphone from 'lucide-svelte/icons/smartphone';
 
@@ -120,16 +121,16 @@
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div
-              class="h-12 w-12 rounded-[12px]"
+              class="h-12 w-12 rounded-[var(--radius-sm)]"
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             ></div>
             <div class="flex-1 space-y-2">
               <div
-                class="h-4 w-48 rounded-[12px]"
+                class="h-4 w-48 rounded-[var(--radius-sm)]"
                 style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               ></div>
               <div
-                class="h-3 w-64 rounded-[12px]"
+                class="h-3 w-64 rounded-[var(--radius-sm)]"
                 style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               ></div>
             </div>
@@ -137,18 +138,7 @@
         {/each}
       </div>
     {:else if sessions.length === 0}
-      <div
-        class="flex flex-col items-center justify-center rounded-[var(--radius-lg)] py-12"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-      >
-        <div
-          class="flex items-center justify-center rounded-full mb-4"
-          style="width: 48px; height: 48px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
-        >
-          <Shield size={20} color="var(--text-secondary)" />
-        </div>
-        <p style="font-size: 14px; color: var(--text-secondary);">暂无会话记录</p>
-      </div>
+      <EmptyState icon={Shield} title="暂无会话记录" fill />
     {:else}
       <div class="space-y-3">
         {#each sessions as session (session.session_id)}

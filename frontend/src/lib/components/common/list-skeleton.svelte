@@ -47,7 +47,7 @@
       {:else if type === 'group'}
         <div class="flex items-center gap-3">
           <div
-            class="rounded-[12px]"
+            class="rounded-[var(--radius-sm)]"
             style="width: 44px; height: 44px; background: var(--border-theme);"
           ></div>
           <div class="flex-1 space-y-2">
@@ -126,7 +126,7 @@
       {:else if type === 'notification'}
         <div class="flex gap-3">
           <div
-            class="rounded-[12px]"
+            class="rounded-[var(--radius-sm)]"
             style="width: 36px; height: 36px; background: var(--border-theme);"
           ></div>
           <div class="flex-1 space-y-2">

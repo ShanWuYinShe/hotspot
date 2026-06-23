@@ -890,7 +890,7 @@
   <div class="page-shell page-shell--narrow space-y-5">
     {#if group && !wsGroupSubscription.state.isSubscribed}
       <div
-        class="flex items-center gap-2 rounded-[16px] px-4 py-2"
+        class="flex items-center gap-2 rounded-[var(--radius-md)] px-4 py-2"
         style="background: var(--surface-bg); border: 1px solid var(--theme-warning-border);"
       >
         <Loader2 size={14} class="animate-spin" style="color: var(--theme-warning);" />
@@ -1141,7 +1141,7 @@
                 </button>
               {:else if group.my_state?.is_joined}
                 <div
-                  class="rounded-[14px] px-3 py-2 text-center"
+                  class="rounded-[var(--radius-md)] px-3 py-2 text-center"
                   style="border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
                 >
                   你已加入该群组
@@ -1660,7 +1660,7 @@
             rows={3}
             bind:value={joinMessage}
             maxlength={GROUP_JOIN_MESSAGE_MAX}
-            class="w-full resize-none rounded-[14px] p-3 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+            class="w-full resize-none rounded-[var(--radius-md)] p-3 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
             style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
           ></textarea>
         </div>
@@ -1726,7 +1726,7 @@
           placeholder="输入公告内容"
           bind:value={announcementContent}
           maxlength={ANNOUNCEMENT_CONTENT_MAX}
-          class="w-full resize-none rounded-[14px] p-3 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+          class="w-full resize-none rounded-[var(--radius-md)] p-3 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
         ></textarea>
       </div>

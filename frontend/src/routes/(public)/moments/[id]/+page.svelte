@@ -275,7 +275,7 @@
             src={moment.user.avatar_url}
             name={moment.user.nickname}
             alt={moment.user.nickname}
-            size={44}
+            size={40}
           />
           <div>
             <p style="font-weight: 500; font-size: 15px; color: var(--text-primary);">
@@ -309,7 +309,7 @@
                   <img
                     src={image.url}
                     alt="图片 {i + 1}"
-                    class="w-full rounded-[14px]"
+                    class="w-full rounded-[var(--radius-md)]"
                     style="height: clamp(220px, 38vw, 380px); object-fit: cover;"
                     loading="lazy"
                   />

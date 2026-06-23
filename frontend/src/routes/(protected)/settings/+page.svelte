@@ -146,7 +146,7 @@
       {#if !platformStore.isDesktop}
         <!-- Tablet 没有侧边栏，设置是子页：自带返回头部，避免被困 -->
         <div class="mb-3 flex items-center gap-2.5">
-          <BackButton onclick={() => history.back()} size={36} />
+          <BackButton onclick={() => history.back()} size={40} />
           <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">设置</h1>
         </div>
       {/if}
@@ -164,7 +164,7 @@
               src={authStore.currentAccount.avatar_url}
               name={authStore.currentAccount.nickname}
               alt={authStore.currentAccount.nickname}
-              size={36}
+              size={40}
               border={false}
             />
           </div>
@@ -449,7 +449,7 @@
         class="sticky top-0 z-10 flex items-center gap-3 px-5 py-3"
         style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
       >
-        <BackButton onclick={() => history.back()} size={36} />
+        <BackButton onclick={() => history.back()} size={40} />
         <h1 class="text-[20px] font-semibold tracking-tight" style="color: var(--text-primary);">
           设置
         </h1>
@@ -467,7 +467,7 @@
                 src={authStore.currentAccount.avatar_url}
                 name={authStore.currentAccount.nickname}
                 alt={authStore.currentAccount.nickname}
-                size={44}
+                size={40}
                 border={false}
               />
             </div>

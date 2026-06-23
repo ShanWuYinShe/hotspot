@@ -46,7 +46,7 @@
     {#each Array(3) as _}
       <div class="flex items-center gap-3 px-4 py-3" style="background: var(--surface-bg);">
         <div
-          class="flex flex-shrink-0 items-center justify-center rounded-[10px]"
+          class="flex flex-shrink-0 items-center justify-center rounded-[var(--radius-xs)]"
           style="width: 34px; height: 34px; background: var(--border-theme);"
         ></div>
         <div class="flex-1">
@@ -70,7 +70,7 @@
         onclick={() => handleSelect(a.id)}
       >
         <div
-          class="flex flex-shrink-0 items-center justify-center rounded-[10px]"
+          class="flex flex-shrink-0 items-center justify-center rounded-[var(--radius-xs)]"
           style="width: 34px; height: 34px; background: {a.bg};"
         >
           <Icon size={16} strokeWidth={1.75} color={a.color} />

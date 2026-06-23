@@ -303,7 +303,7 @@
         {#each galleryMoments as moment (moment.moment_id)}
           {@const img = moment.images?.[0]}
           <div
-            class="surface-flat relative cursor-pointer overflow-hidden rounded-[16px]"
+            class="surface-flat relative cursor-pointer overflow-hidden rounded-[var(--radius-md)]"
             style="aspect-ratio: 1/1;"
           >
             {#if img}
@@ -405,7 +405,7 @@
               src={p.avatar_url}
               name={nickname}
               alt="avatar"
-              size={72}
+              size={80}
               shape="rounded"
               border={false}
             />

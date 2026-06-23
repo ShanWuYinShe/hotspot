@@ -6,7 +6,7 @@
     src?: string | null;
     name?: string | null;
     alt?: string;
-    size?: number;
+    size?: 32 | 40 | 48 | 64 | 80 | 96 | 128;
     type?: 'user' | 'group';
     shape?: 'circle' | 'rounded';
     class?: string;
@@ -28,7 +28,7 @@
   const label = $derived(name?.trim() ?? '');
   const initials = $derived(Array.from(label).slice(0, 2).join('').toUpperCase());
   const radius = $derived(
-    shape === 'circle' ? '9999px' : `${Math.max(12, Math.round(size * 0.28))}px`
+    shape === 'circle' ? '9999px' : 'var(--radius-md)'
   );
   const rootStyle = $derived(
     `width: ${size}px; height: ${size}px; border-radius: ${radius}; border: ${border ? '1.5px solid var(--border-theme)' : 'none'};`

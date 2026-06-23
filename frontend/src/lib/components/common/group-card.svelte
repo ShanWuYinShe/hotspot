@@ -208,7 +208,7 @@
                 src={groupInfo.avatar_url}
                 name={groupInfo.name}
                 alt={groupInfo.name}
-                size={44}
+                size={40}
                 type="group"
               />
               {#if unreadCount > 0}
@@ -284,7 +284,7 @@
           src={groupInfo.avatar_url}
           name={groupInfo.name}
           alt={groupInfo.name}
-          size={44}
+          size={40}
           type="group"
         />
       </div>

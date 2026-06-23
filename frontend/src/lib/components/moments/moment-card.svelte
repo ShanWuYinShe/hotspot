@@ -137,7 +137,7 @@
         src={moment.user.avatar_url}
         name={moment.user.nickname}
         alt={moment.user.nickname}
-        size={dense ? 34 : 38}
+        size={dense ? 32 : 40}
         border={false}
       />
     </a>

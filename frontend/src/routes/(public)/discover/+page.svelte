@@ -253,7 +253,7 @@
     {#each trendingTags as topic (topic.name)}
       <button
         type="button"
-        class="flex w-full items-center justify-between rounded-[12px] px-3 py-2.5 outline-none transition-colors"
+        class="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-3 py-2.5 outline-none transition-colors"
         onmouseenter={(e) => (e.currentTarget.style.background = 'var(--border-theme)')}
         onmouseleave={(e) => (e.currentTarget.style.background = 'transparent')}
         onclick={() => handleTrendingClick(`#${topic.name}`)}

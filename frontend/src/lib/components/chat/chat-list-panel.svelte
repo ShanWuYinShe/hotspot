@@ -165,7 +165,7 @@
                 src={chat.other_user.avatar_url}
                 name={chat.other_user.nickname}
                 alt={chat.other_user.nickname}
-                size={36}
+                size={40}
                 border={false}
               />
             </div>

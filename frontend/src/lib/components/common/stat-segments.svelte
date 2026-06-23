@@ -16,7 +16,7 @@
 </script>
 
 <div
-  class="items-stretch gap-px overflow-hidden rounded-[14px] {layout === 'grid'
+  class="items-stretch gap-px overflow-hidden rounded-[var(--radius-md)] {layout === 'grid'
     ? 'grid'
     : 'inline-flex'} {className}"
   style="background: var(--border-theme);{layout === 'grid'

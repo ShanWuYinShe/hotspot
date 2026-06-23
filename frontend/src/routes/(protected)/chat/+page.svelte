@@ -285,7 +285,7 @@
                           src={chat.other_user.avatar_url}
                           name={chat.other_user.nickname}
                           alt={chat.other_user.nickname}
-                          size={44}
+                          size={40}
                           border={false}
                         />
                       </div>
@@ -375,7 +375,7 @@
                       src={group.group.avatar_url}
                       name={group.group.name}
                       alt={group.group.name}
-                      size={44}
+                      size={40}
                       type="group"
                       border={false}
                     />

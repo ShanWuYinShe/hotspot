@@ -114,12 +114,12 @@
                           alt="图片 {i + 1}"
                           loading="lazy"
                           decoding="async"
-                          class="h-20 w-20 rounded-[12px] object-cover"
+                          class="h-20 w-20 rounded-[var(--radius-sm)] object-cover"
                         />
                       {/each}
                       {#if moment.images.length > 4}
                         <div
-                          class="flex h-20 w-20 items-center justify-center rounded-[12px]"
+                          class="flex h-20 w-20 items-center justify-center rounded-[var(--radius-sm)]"
                           style="border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-secondary);"
                         >
                           +{moment.images.length - 4}

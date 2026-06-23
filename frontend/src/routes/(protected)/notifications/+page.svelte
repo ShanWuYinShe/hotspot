@@ -342,7 +342,7 @@
     <span class="eyebrow">通知概览</span>
     <div class="grid grid-cols-2 gap-3" style="margin-top: 12px;">
       {#each overviewTiles as tile (tile.label)}
-        <div class="rounded-[16px]" style="background: var(--border-theme); padding: 12px;">
+        <div class="rounded-[var(--radius-md)]" style="background: var(--border-theme); padding: 12px;">
           <p
             style="font-size: 10px; color: var(--text-secondary); letter-spacing: 0.08em; text-transform: uppercase;"
           >
@@ -366,7 +366,7 @@
     <div class="flex flex-col" style="gap: 10px; margin-top: 12px;">
       {#each distributionRows as row (row.label)}
         <div
-          class="flex items-center justify-between rounded-[16px]"
+          class="flex items-center justify-between rounded-[var(--radius-md)]"
           style="background: var(--border-theme); padding: 10px 12px;"
         >
           <div class="flex items-center gap-2">

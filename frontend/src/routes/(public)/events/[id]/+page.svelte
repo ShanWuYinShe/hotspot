@@ -303,7 +303,7 @@
         >
           {#each ev.highlights as h, i (i)}
             <div
-              class="flex items-center gap-2.5 rounded-[16px] px-3.5 py-3"
+              class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3.5 py-3"
               style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
             >
               <div
@@ -374,7 +374,7 @@
 
         <!-- Distance info -->
         <div
-          class="flex items-center gap-2 rounded-[16px] px-4 py-3"
+          class="flex items-center gap-2 rounded-[var(--radius-md)] px-4 py-3"
           style="background: {accentFaint}; border: 1px solid {accentMedium};"
         >
           <MapPin size={14} color={ev.color} strokeWidth={1.5} />

@@ -863,7 +863,7 @@
 
     {#if !wsSubscription.state.isSubscribed && !isLoading}
       <div
-        class="rounded-[16px] px-4 py-3 text-center mb-3"
+        class="rounded-[var(--radius-md)] px-4 py-3 text-center mb-3"
         style="border: 1px solid var(--theme-warning-border); background: var(--theme-warning-border);"
       >
         <p
@@ -882,14 +882,14 @@
 
     {#if !group?.my_state?.is_joined}
       <div
-        class="rounded-[16px] px-4 py-3 text-center"
+        class="rounded-[var(--radius-md)] px-4 py-3 text-center"
         style="border: 1px solid var(--border-theme);"
       >
         <p style="font-size: 13px; color: var(--text-secondary);">你还不是群成员，无法发送消息</p>
       </div>
     {:else if group?.my_state?.is_muted}
       <div
-        class="rounded-[16px] px-4 py-3 text-center"
+        class="rounded-[var(--radius-md)] px-4 py-3 text-center"
         style="border: 1px solid var(--border-theme);"
       >
         <p style="font-size: 13px; color: var(--text-secondary);">你已被禁言，无法发送消息</p>
@@ -959,7 +959,7 @@
     <img
       src={selectedImage}
       alt="预览"
-      class="max-h-full max-w-full rounded-[12px] object-contain"
+      class="max-h-full max-w-full rounded-[var(--radius-sm)] object-contain"
       onclick={(e) => e.stopPropagation()}
       role="presentation"
     />

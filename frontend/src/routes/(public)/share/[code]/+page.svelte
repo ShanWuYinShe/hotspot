@@ -173,7 +173,7 @@
             >
               位置说明
             </p>
-            <div class="rounded-[14px] p-3" style="border: 1px solid var(--border-theme);">
+            <div class="rounded-[var(--radius-md)] p-3" style="border: 1px solid var(--border-theme);">
               <p style="font-size: 12px; color: var(--text-secondary);">
                 以「{payload.shared_location.location_name}」为中心区域进行浏览和推荐。
               </p>

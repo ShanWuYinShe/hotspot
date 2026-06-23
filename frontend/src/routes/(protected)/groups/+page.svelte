@@ -293,7 +293,7 @@
           {:else}
             <div class="space-y-2">
               {#each invites as invite (invite.invite_id)}
-                <div class="rounded-[14px] p-3" style="border: 1px solid var(--border-theme);">
+                <div class="rounded-[var(--radius-md)] p-3" style="border: 1px solid var(--border-theme);">
                   <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
                     {invite.group.name}
                   </p>
@@ -354,7 +354,7 @@
           {:else}
             <div class="space-y-2">
               {#each applications as application (application.application_id)}
-                <div class="rounded-[14px] p-3" style="border: 1px solid var(--border-theme);">
+                <div class="rounded-[var(--radius-md)] p-3" style="border: 1px solid var(--border-theme);">
                   <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
                     群组申请
                   </p>

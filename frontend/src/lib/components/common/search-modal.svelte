@@ -375,7 +375,7 @@
             <div class="space-y-2">
               {#each Array(3) as _, i (i)}
                 <div
-                  class="rounded-[14px]"
+                  class="rounded-[var(--radius-md)]"
                   style="height: 32px; background: var(--border-theme);"
                 ></div>
               {/each}
@@ -439,7 +439,7 @@
                     {@const p = getSuggestionPresentation(item)}
                     <button
                       type="button"
-                      class="flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left outline-none hover:bg-[var(--surface-secondary)] transition-colors duration-150"
+                      class="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left outline-none hover:bg-[var(--surface-secondary)] transition-colors duration-150"
                       style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
                       onclick={() => handleSuggestionClick(item)}
                     >
@@ -575,7 +575,7 @@
               <div class="space-y-2">
                 {#each Array(4) as _, i (i)}
                   <div
-                    class="rounded-[14px]"
+                    class="rounded-[var(--radius-md)]"
                     style="height: 28px; background: var(--border-theme);"
                   ></div>
                 {/each}
