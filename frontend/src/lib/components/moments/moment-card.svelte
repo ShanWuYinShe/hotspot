@@ -274,7 +274,7 @@
     flex-direction: column;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--border-theme) 82%, transparent);
-    border-radius: 26px;
+    border-radius: var(--radius-lg);
     background:
       linear-gradient(
         180deg,
@@ -282,9 +282,7 @@
         var(--surface-bg)
       ),
       var(--surface-bg);
-    box-shadow:
-      0 16px 36px color-mix(in srgb, var(--shadow-dark) 45%, transparent),
-      -8px -8px 22px color-mix(in srgb, var(--shadow-light) 68%, transparent);
+    box-shadow: none;
     outline: none;
     transition:
       transform 0.22s ease,
@@ -293,28 +291,23 @@
   }
 
   .moment-card:hover {
-    transform: translateY(-2px);
     border-color: color-mix(in srgb, var(--brand) 30%, var(--border-theme));
-    box-shadow:
-      0 20px 46px color-mix(in srgb, var(--shadow-dark) 54%, transparent),
-      -8px -8px 22px color-mix(in srgb, var(--shadow-light) 70%, transparent);
+    box-shadow: var(--hover-shadow-card);
   }
 
   .moment-card:active {
-    transform: translateY(0) scale(0.99);
+    transform: scale(0.99);
   }
 
   .moment-card:focus-visible {
-    box-shadow:
-      0 0 0 2px var(--glow),
-      0 18px 42px color-mix(in srgb, var(--shadow-dark) 50%, transparent);
+    box-shadow: 0 0 0 2px var(--glow), var(--hover-shadow-card);
   }
 
   .moment-card--dense {
     --card-pad-x: 14px;
     --card-pad-y: 12px;
     --media-ratio: 4 / 3;
-    border-radius: 22px;
+    border-radius: var(--radius-md);
   }
 
   .moment-card__header {
@@ -403,14 +396,14 @@
     position: relative;
     margin: 0 var(--card-pad-x);
     overflow: hidden;
-    border-radius: 20px;
+    border-radius: var(--radius-md);
     aspect-ratio: var(--media-ratio);
     background: var(--border-theme);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 8%, transparent);
   }
 
   .moment-card--dense .moment-card__media {
-    border-radius: 18px;
+    border-radius: var(--radius-md);
   }
 
   .moment-card__media-shade {
