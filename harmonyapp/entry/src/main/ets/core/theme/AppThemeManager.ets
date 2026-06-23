@@ -124,6 +124,10 @@ function buildPalette(
     controlShadow: shadows.control,
     tabBarShadow: shadows.tabBar,
     overlayStrong: colors.overlayStrong,
+    warning: colors.warning,
+    success: colors.success,
+    error: colors.error,
+    info: colors.info,
     visuals
   } as AppThemePalette;
 }

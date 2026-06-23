@@ -385,7 +385,7 @@ export struct EventDetailPage {
           Text() {
             SymbolSpan($r(AppIcon.STAR))
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor([DesignConstants.COLOR.WARNING])
+              .fontColor([this.getCurrentThemePalette().warning])
           }
           Text('活动发起人')
             .fontSize(DesignConstants.FONT.SIZE.XS)

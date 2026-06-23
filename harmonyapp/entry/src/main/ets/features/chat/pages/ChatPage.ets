@@ -1385,7 +1385,7 @@ export struct ChatPage {
         .width('100%')
         .height(44)
         .backgroundColor(this.getSurfaceSubtle())
-        .fontColor(DesignConstants.COLOR.ERROR)
+        .fontColor(this.getCurrentThemePalette().error)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .border({ width: 1, color: this.getSurfaceBorder() })
         .onClick(() => {

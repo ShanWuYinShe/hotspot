@@ -36,6 +36,11 @@ export interface ColorConfig {
   tabBarInactive: string;
   tabBarActiveBackground: string;
   isDarkTheme: boolean;
+  // 语义色(对齐前端每主题族值,随主题变)
+  warning: string;
+  success: string;
+  error: string;
+  info: string;
 }
 
 export interface ThemeShadows {
@@ -127,7 +132,11 @@ export class ThemeConstants {
     tabBarBackground: '#F9F9F5',
     tabBarInactive: '#566B5E',
     tabBarActiveBackground: '#F0F2F0',
-    isDarkTheme: false
+    isDarkTheme: false,
+    warning: '#D97706',
+    success: '#059669',
+    error: '#EF4444',
+    info: '#3D7A55'
   };
 
   static readonly DEFAULT_CLEAN_DARK_COLORS: ColorConfig = {
@@ -160,7 +169,11 @@ export class ThemeConstants {
     tabBarBackground: '#161A16',
     tabBarInactive: '#7A9080',
     tabBarActiveBackground: '#242624',
-    isDarkTheme: true
+    isDarkTheme: true,
+    warning: '#FBBF24',
+    success: '#34D399',
+    error: '#F87171',
+    info: '#52B878'
   };
 
   static readonly FIGMA_NEU_LIGHT_COLORS: ColorConfig = {
@@ -193,7 +206,11 @@ export class ThemeConstants {
     tabBarBackground: '#EFE7DA',
     tabBarInactive: '#65594A',
     tabBarActiveBackground: '#F4E9DE',
-    isDarkTheme: false
+    isDarkTheme: false,
+    warning: '#B8843F',
+    success: '#66835D',
+    error: '#C0392B',
+    info: '#66835D'
   };
 
   static readonly FIGMA_NEU_DARK_COLORS: ColorConfig = {
@@ -226,7 +243,11 @@ export class ThemeConstants {
     tabBarBackground: '#211B17',
     tabBarInactive: '#A99682',
     tabBarActiveBackground: '#2A231C',
-    isDarkTheme: true
+    isDarkTheme: true,
+    warning: '#D1A35D',
+    success: '#8CA877',
+    error: '#E06F6F',
+    info: '#8CA877'
   };
 
   static readonly SHADOWS: ThemeShadowRegistry = new ThemeShadowRegistry();
@@ -261,7 +282,11 @@ export class ThemeConstants {
     tabBarBackground: '#FAFAFE',
     tabBarInactive: '#5b5792',
     tabBarActiveBackground: '#EEF2FF',
-    isDarkTheme: false
+    isDarkTheme: false,
+    warning: '#F59E0B',
+    success: '#059669',
+    error: '#EF4444',
+    info: '#6366F1'
   };
 
   static readonly VIBRANT_DARK_COLORS: ColorConfig = {
@@ -294,6 +319,10 @@ export class ThemeConstants {
     tabBarBackground: '#141028',
     tabBarInactive: '#857FBD',
     tabBarActiveBackground: '#1E1840',
-    isDarkTheme: true
+    isDarkTheme: true,
+    warning: '#FBBF24',
+    success: '#34D399',
+    error: '#F87171',
+    info: '#818CF8'
   };
 }

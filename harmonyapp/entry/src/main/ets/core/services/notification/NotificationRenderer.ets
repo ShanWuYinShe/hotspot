@@ -513,20 +513,20 @@ export class NotificationRenderer extends BaseSingleton {
     // 根据类型调整颜色（信息 / 性能 / 社交 / 安全）
     switch (type) {
       case 'system':
-        borderColor = DesignConstants.COLOR.INFO;
-        iconColor = DesignConstants.COLOR.INFO;
+        borderColor = palette.info;
+        iconColor = palette.info;
         break;
       case 'performance':
-        borderColor = DesignConstants.COLOR.WARNING;
-        iconColor = DesignConstants.COLOR.WARNING;
+        borderColor = palette.warning;
+        iconColor = palette.warning;
         break;
       case 'social':
-        borderColor = DesignConstants.COLOR.SUCCESS;
-        iconColor = DesignConstants.COLOR.SUCCESS;
+        borderColor = palette.success;
+        iconColor = palette.success;
         break;
       case 'security':
-        borderColor = DesignConstants.COLOR.ERROR;
-        iconColor = DesignConstants.COLOR.ERROR;
+        borderColor = palette.error;
+        iconColor = palette.error;
         break;
     }
 
@@ -536,13 +536,13 @@ export class NotificationRenderer extends BaseSingleton {
         if (!isDark) {
           backgroundColor = DesignConstants.COLOR.SURFACE_DANGER_SOFT;
         }
-        borderColor = DesignConstants.COLOR.ERROR;
+        borderColor = palette.error;
         break;
       case 'high':
         if (!isDark) {
           backgroundColor = DesignConstants.COLOR.SURFACE_WARNING_SOFT;
         }
-        borderColor = DesignConstants.COLOR.WARNING;
+        borderColor = palette.warning;
         break;
     }
 

@@ -759,7 +759,7 @@ export struct MessagePage {
                     .width(12)
                     .height(12)
                     .borderRadius(DesignConstants.RADIUS.FULL)
-                    .backgroundColor(DesignConstants.COLOR.SUCCESS)
+                    .backgroundColor(this.getCurrentThemePalette().success)
                     .border({ width: 2, color: this.getCurrentThemePalette().surfaceBackground })
                 }
                 .width('100%')

@@ -324,9 +324,9 @@ export struct AnnouncementSummaryCard {
   private getSeverityColor(severity: string): ResourceColor {
     switch (severity) {
       case 'warning':
-        return DesignConstants.COLOR.WARNING;
+        return this.getPalette().warning;
       case 'error':
-        return DesignConstants.COLOR.ERROR;
+        return this.getPalette().error;
       default:
         return this.getPalette().accentBackground;
     }

@@ -568,7 +568,7 @@ export struct NearbyPage {
                         .width(12)
                         .height(12)
                         .borderRadius(DesignConstants.RADIUS.FULL)
-                        .backgroundColor(DesignConstants.COLOR.SUCCESS)
+                        .backgroundColor(this.getPalette().success)
                         .border({ width: 2, color: this.getPalette().surfaceBackground })
                     }
                     .width('100%')

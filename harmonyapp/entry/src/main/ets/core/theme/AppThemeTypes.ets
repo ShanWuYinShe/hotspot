@@ -115,6 +115,11 @@ export interface AppThemePalette {
   controlShadow: AppThemeShadow;
   tabBarShadow: AppThemeShadow;
   overlayStrong: string;
+  // 语义色(随主题族/明暗变,对齐前端)
+  warning: string;
+  success: string;
+  error: string;
+  info: string;
   visuals: AppThemeVisualTokens;
 }
 

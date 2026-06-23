@@ -343,7 +343,7 @@ export struct ProfileEditPage {
             .width('100%')
             .height(48)
             .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor(this.isSaved ? DesignConstants.COLOR.SUCCESS : this.getCurrentThemePalette().accentBackground)
+            .backgroundColor(this.isSaved ? this.getCurrentThemePalette().success : this.getCurrentThemePalette().accentBackground)
             .shadow(this.getCurrentThemePalette().accentShadow)
             .enabled(!this.isSaving && !this.isSaved)
             .onClick(() => this.handleSave())

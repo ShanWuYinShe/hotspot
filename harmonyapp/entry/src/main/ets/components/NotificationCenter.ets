@@ -735,11 +735,11 @@ export struct NotificationCenter {
       case 'social':
         return DesignConstants.COLOR.BRAND_PRIMARY;
       case 'interaction':
-        return DesignConstants.COLOR.ERROR;
+        return this.getPalette().error;
       case 'group':
-        return DesignConstants.COLOR.SUCCESS;
+        return this.getPalette().success;
       case 'system':
-        return DesignConstants.COLOR.WARNING;
+        return this.getPalette().warning;
       default:
         return DesignConstants.COLOR.BRAND_PRIMARY;
     }
