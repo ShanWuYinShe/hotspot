@@ -323,7 +323,9 @@ const SHAPE: ShapeSemanticTokens = {
   HERO_CARD: 24,
   COMPACT_CARD: 18,
   INPUT: 18,
-  BUTTON: RADIUS.FULL,
+  // 主按钮统一圆角矩形（28vp），对齐前端 SvelteKit Button base `rounded-[28px]`；
+  // 与 chip/头像的 RADIUS.FULL 胶囊区分，主操作走圆角矩形。
+  BUTTON: 28,
   CHIP: RADIUS.FULL,
   TAB_BAR: 24,
   PREVIEW_CARD: 22,

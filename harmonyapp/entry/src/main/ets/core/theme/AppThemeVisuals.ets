@@ -240,7 +240,7 @@ export class AppThemeVisuals {
       borderColor: palette.floatingBorderColor,
       borderWidth: 1,
       shadow: palette.visuals.effects.previewShadow,
-      borderRadius: Math.max(palette.visuals.shape.button - 2, DesignConstants.RADIUS.XL),
+      borderRadius: palette.visuals.shape.button,
       height: palette.visuals.metrics.actionButtonHeight,
       horizontalPadding: palette.visuals.metrics.secondaryButtonHorizontalPadding
     };
@@ -261,7 +261,7 @@ export class AppThemeVisuals {
       borderColor: palette.primaryButtonBorderColor,
       borderWidth: 1,
       shadow: palette.accentShadow,
-      borderRadius: Math.max(palette.visuals.shape.button - 2, DesignConstants.RADIUS.XL),
+      borderRadius: palette.visuals.shape.button,
       height: palette.visuals.metrics.profilePrimaryButtonHeight,
       horizontalPadding: palette.visuals.metrics.profilePrimaryButtonHorizontalPadding + DesignConstants.SPACING.XS
     };
