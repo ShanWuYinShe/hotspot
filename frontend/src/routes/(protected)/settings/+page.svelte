@@ -147,7 +147,7 @@
         <!-- Tablet 没有侧边栏，设置是子页：自带返回头部，避免被困 -->
         <div class="mb-3 flex items-center gap-2.5">
           <BackButton onclick={() => history.back()} size={36} />
-          <h1 style="font-size: 17px; font-weight: 600; color: var(--text-primary);">设置</h1>
+          <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">设置</h1>
         </div>
       {/if}
       <!-- User card -->
@@ -450,7 +450,7 @@
         style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
       >
         <BackButton onclick={() => history.back()} size={36} />
-        <h1 class="text-[18px] tracking-tight" style="color: var(--text-primary);">设置</h1>
+        <h1 class="text-[20px] font-semibold tracking-tight" style="color: var(--text-primary);">设置</h1>
       </div>
 
       <div class="space-y-3">

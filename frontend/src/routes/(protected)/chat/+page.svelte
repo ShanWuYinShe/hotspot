@@ -112,7 +112,7 @@
       <div class="page-shell page-shell--narrow">
         <div class="mb-3 flex items-center justify-between">
           <div>
-            <h1 style="font-size: 22px; color: var(--text-primary);">消息</h1>
+            <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">消息</h1>
             <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
               {totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}
             </p>

@@ -8,9 +8,12 @@
     actions?: Snippet;
     backHref?: string;
     backLabel?: string;
+    /** 标题字号档:default=20px(列表/钻取页)、hero=24px(门面页 home/discover/events) */
+    size?: 'default' | 'hero';
   }
 
-  let { title, description, actions, backHref, backLabel = '返回' }: Props = $props();
+  let { title, description, actions, backHref, backLabel = '返回', size = 'default' }: Props =
+    $props();
 </script>
 
 <div
@@ -29,7 +32,10 @@
           <span>{backLabel}</span>
         </a>
       {/if}
-      <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">{title}</h1>
+      <h1
+        style="font-size: {size === 'hero' ? '24px' : '20px'}; font-weight: 600; color: var(--text-primary);"
+        >{title}</h1
+      >
       {#if description}
         <p
           style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.6;"

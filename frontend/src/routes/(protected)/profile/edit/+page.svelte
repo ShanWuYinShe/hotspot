@@ -150,7 +150,7 @@
   >
     <div class="flex items-center gap-3">
       <BackButton onclick={() => history.back()} size={36} />
-      <h1 style="font-size: 18px; color: var(--text-primary);">编辑资料</h1>
+      <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">编辑资料</h1>
     </div>
     <button
       class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all"

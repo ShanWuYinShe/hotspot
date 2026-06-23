@@ -216,7 +216,7 @@
 >
   <div class="page-shell page-shell--narrow flex items-center gap-4">
     <BackButton onclick={handleBackClick} size={36} />
-    <h1 style="font-size: 16px; color: var(--text-primary);">瞬间详情</h1>
+    <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">瞬间详情</h1>
     {#if isOwner}
       <div class="ml-auto">
         <button

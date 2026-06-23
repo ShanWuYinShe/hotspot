@@ -399,7 +399,7 @@
               <BackButton onclick={() => history.back()} size={36} />
             {/if}
             <div>
-              <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
+              <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">
                 {t('notificationsPage.title')}
               </h1>
               {#if notificationStore.unreadCount > 0}

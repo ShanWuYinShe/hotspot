@@ -97,7 +97,7 @@
           <BackButton onclick={handleBack} size={36} />
         {/if}
         <div class="flex-1">
-          <h1 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">附近的人</h1>
+          <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">附近的人</h1>
         </div>
       </div>
 

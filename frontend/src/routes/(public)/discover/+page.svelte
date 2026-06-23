@@ -100,7 +100,7 @@
 <!-- Shared header content (used by all platforms) -->
 {#snippet headerContent()}
   <div class="flex items-center justify-between mb-2">
-    <h1 style="font-size: 24px; color: var(--text-primary);">发现</h1>
+    <h1 style="font-size: 24px; font-weight: 600; color: var(--text-primary);">发现</h1>
     <span style="font-size: 12px; color: var(--text-secondary);"
       >{getFilteredItems().length} 条内容</span
     >

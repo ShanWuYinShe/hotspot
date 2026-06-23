@@ -98,7 +98,7 @@
         {#if !platformStore.isDesktop}
           <BackButton onclick={handleBack} size={36} />
         {/if}
-        <h1 class="flex-1" style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
+        <h1 class="flex-1" style="font-size: 20px; font-weight: 600; color: var(--text-primary);">
           附近群组
         </h1>
         {#if !platformStore.isDesktop}
