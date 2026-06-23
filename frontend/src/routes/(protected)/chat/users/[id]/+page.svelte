@@ -37,7 +37,7 @@
   import Phone from 'lucide-svelte/icons/phone';
   import Video from 'lucide-svelte/icons/video';
   import Smile from 'lucide-svelte/icons/smile';
-  import CheckCheck from 'lucide-svelte/icons/check-check';
+  import ChatBubble from '$lib/components/chat/chat-bubble.svelte';
 
   const userId = $derived(page.params.id!);
 
@@ -509,66 +509,20 @@
             class="flex {isSelf(message) ? 'justify-end' : 'justify-start'} chat-msg-enter"
             {@attach observeMessage({ messageId: message.message_id, isSelf: isSelf(message) })}
           >
-            <div
-              class={isSelf(message) ? '' : 'surface-flat'}
-              style="max-width: 76%; padding: 10px 14px; border-radius: {isSelf(message)
-                ? '18px 4px 18px 18px'
-                : '4px 18px 18px 18px'}; {isSelf(message)
-                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
-                : ''}"
-            >
-              {#if message.recalled_at != null}
-                <p
-                  style="font-size: 14px; font-style: italic; opacity: 0.7; color: {isSelf(message)
-                    ? 'var(--text-on-accent)'
-                    : 'var(--text-primary)'};"
-                >
-                  消息已撤回
-                </p>
-              {:else if message.type === 'text'}
-                <p
-                  class="whitespace-pre-wrap"
-                  style="font-size: 13px; line-height: 1.55; color: {isSelf(message)
-                    ? 'var(--text-on-accent)'
-                    : 'var(--text-primary)'};"
-                >
-                  {message.content}
-                </p>
-              {:else if message.type === 'image' && message.media}
-                <img
-                  src={message.media.url}
-                  alt="图片"
-                  loading="lazy"
-                  decoding="async"
-                  class="max-w-[250px] rounded-[12px]"
-                />
-              {:else}
-                <p
-                  style="font-size: 14px; color: {isSelf(message)
-                    ? 'var(--text-on-accent)'
-                    : 'var(--text-primary)'};"
-                >
-                  [{message.type}]
-                </p>
-              {/if}
-              <p
-                style="font-size: 10px; margin-top: 4px; color: {isSelf(message)
-                  ? 'color-mix(in srgb, var(--text-on-accent) 65%, transparent)'
-                  : 'var(--text-secondary)'}; display: flex; align-items: center; gap: 3px; justify-content: {isSelf(
-                  message
-                )
-                  ? 'flex-end'
-                  : 'flex-start'};"
-              >
-                {formatTime(message.sent_at)}
-                {#if isSelf(message) && message.message_id === messages
+            <div style="max-width: 76%;">
+              <ChatBubble
+                isSelf={isSelf(message)}
+                type={message.type}
+                content={message.content}
+                media={message.media}
+                isRecalled={message.recalled_at != null}
+                time={formatTime(message.sent_at)}
+                readReceipt={isSelf(message) &&
+                  message.message_id ===
+                    messages
                       .filter((m) => isSelf(m))
                       .at(-1)?.message_id}
-                  <span style="display: inline-flex; width: 12px; height: 12px; opacity: 0.8;"
-                    ><CheckCheck size={12} color="var(--text-on-accent)" strokeWidth={2} /></span
-                  >
-                {/if}
-              </p>
+              />
             </div>
           </div>
         {/each}

@@ -30,6 +30,7 @@
   import MapPin from 'lucide-svelte/icons/map-pin';
   import ChevronDown from 'lucide-svelte/icons/chevron-down';
   import X from 'lucide-svelte/icons/x';
+  import ChatBubble from '$lib/components/chat/chat-bubble.svelte';
 
   const groupId = $derived(page.params.id!);
 
@@ -789,37 +790,15 @@
                     </span>
                   {/if}
 
-                  <div
-                    class="relative {message.type === 'image' ? 'p-1' : 'px-4 py-2.5'}"
-                    style={isMe
-                      ? 'background: var(--brand); color: var(--text-on-accent); border-radius: var(--radius-md) var(--radius-md) 4px var(--radius-md);'
-                      : 'background: var(--surface-bg); border: 1px solid var(--border-theme); border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 4px; color: var(--text-primary);'}
+                  <ChatBubble
+                    isSelf={isMe}
+                    type={message.type}
+                    content={message.content}
+                    media={message.media}
+                    isRecalled={message.recalled_at != null}
+                    onImageClick={openImagePreview}
                   >
-                    {#if message.recalled_at != null}
-                      <p style="font-size: 13px; font-style: italic; opacity: 0.7;">消息已撤回</p>
-                    {:else if message.type === 'text'}
-                      <p
-                        class="whitespace-pre-wrap wrap-break-word"
-                        style="font-size: 13px; line-height: 1.55;"
-                      >
-                        {message.content}
-                      </p>
-                    {:else if message.type === 'image' && message.media}
-                      <button
-                        type="button"
-                        class="block overflow-hidden rounded-[12px] border-none bg-transparent p-0 shadow-none outline-none"
-                        onclick={() => openImagePreview(message.media!.url)}
-                        aria-label="查看图片"
-                      >
-                        <img
-                          src={message.media.url}
-                          alt="图片"
-                          loading="lazy"
-                          decoding="async"
-                          class="max-h-[300px] max-w-[250px] object-cover"
-                        />
-                      </button>
-                    {:else if message.type === 'share' && message.share_code}
+                    {#if message.type === 'share' && message.share_code}
                       <div class="flex items-center gap-2" style="font-size: 13px;">
                         <MapPin size={14} style="flex-shrink: 0;" color="var(--text-secondary)" />
                         <div>
@@ -834,10 +813,8 @@
                           {/if}
                         </div>
                       </div>
-                    {:else}
-                      <p style="font-size: 13px; opacity: 0.7;">[{message.type}]</p>
                     {/if}
-                  </div>
+                  </ChatBubble>
 
                   {#if showAvatar}
                     <span
