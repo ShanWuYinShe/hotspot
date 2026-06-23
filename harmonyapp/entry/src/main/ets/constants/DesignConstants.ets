@@ -437,8 +437,8 @@ export class MasonryLayout {
   static readonly IMAGE_HEIGHT_DEFAULT: number = 180;
   static readonly IMAGE_HEIGHT_MAX: number = 280;
 
-  // 卡片圆角
-  static readonly CARD_RADIUS: number = 20;
+  // 卡片圆角(对齐前端瀑布流卡片 --radius-lg:22)
+  static readonly CARD_RADIUS: number = 22;
 
   // 预加载数量
   static readonly CACHED_COUNT: number = 8;

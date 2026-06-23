@@ -244,7 +244,7 @@ export struct MasonryCard {
   @BuilderParam content: () => void;
   @BuilderParam imageContent?: () => void;
 
-  @Prop cardRadius: number = DesignConstants.RADIUS.XL;
+  @Prop cardRadius: number = DesignConstants.SHAPE.CARD;
   @Prop shadowRadius: number = 6;
   @Prop shadowOpacity: number = 0.04;
   @Prop clickable: boolean = false;

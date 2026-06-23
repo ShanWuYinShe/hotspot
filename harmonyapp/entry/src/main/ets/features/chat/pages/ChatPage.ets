@@ -1498,10 +1498,10 @@ export struct ChatPage {
                 .fontColor(msg.isSelf ? this.getChatTheme().sendButtonActiveText : this.getCurrentThemePalette().textPrimary)
                 .backgroundColor(msg.isSelf ? this.getChatTheme().bubbleSelf : this.getChatTheme().bubblePeer)
                 .padding({
-                  left: 14,
-                  right: 14,
-                  top: 10,
-                  bottom: 10
+                  left: DesignConstants.CHAT.BUBBLE_PADDING_H,
+                  right: DesignConstants.CHAT.BUBBLE_PADDING_H,
+                  top: DesignConstants.CHAT.BUBBLE_PADDING_V,
+                  bottom: DesignConstants.CHAT.BUBBLE_PADDING_V
                 })
                 .borderRadius(this.getBubbleRadius(msg.isSelf))
                 .constraintSize({ maxWidth: this.chatType === 'group_chat' ? '70%' : '76%' })

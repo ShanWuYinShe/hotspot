@@ -66,7 +66,7 @@ export struct TabsPillGroup {
       .alignItems(VerticalAlign.Center)
       .width('100%')
       .height(34)
-      .borderRadius(DesignConstants.RADIUS.XL)
+      .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(isActiveTab ? this.getPalette().accentBackground : Color.Transparent)
       .shadow(isActiveTab ? this.getPalette().accentShadow : {
         radius: 0,
