@@ -11,7 +11,7 @@ export const buttonVariants = tv({
   base: cn(
     'inline-flex items-center justify-center gap-2',
     'whitespace-nowrap font-semibold select-none',
-    'rounded-[28px] border',
+    'rounded-[var(--radius-button)] border',
     'transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]',
     'focus-visible:outline-none focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]',
     'disabled:pointer-events-none disabled:opacity-50',
@@ -48,7 +48,7 @@ export const buttonVariants = tv({
     size: {
       default: 'h-11 px-6 py-3 text-sm',
       sm: 'h-9 px-4 py-2 text-xs',
-      lg: 'h-13 px-8 py-4 text-base rounded-[24px]',
+      lg: 'h-13 px-8 py-4 text-base rounded-[var(--radius-xl)]',
       icon: 'h-11 w-11'
     }
   },
