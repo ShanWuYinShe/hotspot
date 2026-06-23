@@ -31,7 +31,7 @@
   >
     <div
       class="mb-4 flex items-center justify-center rounded-full"
-      style="width: 72px; height: 72px; box-shadow: 8px 8px 18px var(--shadow-dark), -8px -8px 18px var(--shadow-light); border: 1px solid var(--border-theme);"
+      style="width: 72px; height: 72px; border: 1px solid var(--border-theme);"
     >
       <Icon size={28} strokeWidth={1.25} color="var(--text-secondary)" style="opacity: 0.5;" />
     </div>
