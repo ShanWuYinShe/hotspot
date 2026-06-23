@@ -198,7 +198,7 @@ export struct PerformanceIndicator {
           })
           
           Text(this.getPerformanceLevel().level)
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPerformanceLevel().color)
         }
       }
@@ -213,7 +213,7 @@ export struct PerformanceIndicator {
           })
 
           Text(this.alerts.length.toString())
-            .fontSize(11)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getPalette().accentBackground)
         }
       }
@@ -257,7 +257,7 @@ export struct PerformanceIndicator {
       // 标题栏
       Row() {
         Text('性能监控')
-          .fontSize(18)
+          .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.getPalette().textPrimary)
           .layoutWeight(1)
@@ -286,7 +286,7 @@ export struct PerformanceIndicator {
             .color(this.getPalette().accentBackground)
 
           Text('刷新中...')
-            .fontSize(14)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getPalette().textSecondary)
         }
       }
@@ -302,12 +302,12 @@ export struct PerformanceIndicator {
 
           Column({ space: 4 }) {
             Text('整体性能')
-              .fontSize(14)
+              .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontColor(this.getPalette().textSecondary)
               .alignSelf(ItemAlign.Start)
 
             Text(this.getPerformanceLevel().level)
-              .fontSize(20)
+              .fontSize(DesignConstants.FONT.SIZE.XL)
               .fontWeight(FontWeight.Bold)
               .fontColor(this.getPerformanceLevel().color)
               .alignSelf(ItemAlign.Start)
@@ -393,7 +393,7 @@ export struct PerformanceIndicator {
       if (this.alerts.length > 0) {
         Column({ space: 8 }) {
           Text(`性能告警 (${this.alerts.length})`)
-            .fontSize(16)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
             .fontColor(this.getPalette().textPrimary)
             .alignSelf(ItemAlign.Start)
@@ -408,12 +408,12 @@ export struct PerformanceIndicator {
 
               Column({ space: 4 }) {
                 Text(alert.message)
-                  .fontSize(14)
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontColor(this.getPalette().textPrimary)
                   .alignSelf(ItemAlign.Start)
 
                 Text(new Date(alert.timestamp).toLocaleString())
-                  .fontSize(12)
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getPalette().textSecondary)
                   .alignSelf(ItemAlign.Start)
               }
@@ -446,12 +446,12 @@ export struct PerformanceIndicator {
       })
 
       Text(value)
-        .fontSize(18)
+        .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Bold)
         .fontColor(color)
 
       Text(title)
-        .fontSize(12)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor(this.getPalette().textSecondary)
         .textAlign(TextAlign.Center)
     }
@@ -473,30 +473,30 @@ export struct PerformanceIndicator {
     Column({ space: 8 }) {
       if (this.metrics) {
         Text('性能概览')
-          .fontSize(14)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.getPalette().textPrimary)
 
         Row() {
           Text('内存:')
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().textSecondary)
             .width(60)
 
           Text(`${(this.metrics.memoryUsage * 100).toFixed(1)}%`)
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getMetricColor(this.metrics.memoryUsage, { good: 0.6, warning: 0.8 } as MetricThresholds))
         }
         .width('100%')
 
         Row() {
           Text('响应:')
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().textSecondary)
             .width(60)
 
           Text(`${this.metrics.averageResponseTime.toFixed(0)}ms`)
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getMetricColor(this.metrics.averageResponseTime, { good: 500, warning: 1000 } as MetricThresholds))
         }
         .width('100%')
@@ -507,7 +507,7 @@ export struct PerformanceIndicator {
             .margin({ top: 4, bottom: 4 })
 
           Text(`${this.alerts.length} 个告警`)
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().accentBackground)
         }
       }

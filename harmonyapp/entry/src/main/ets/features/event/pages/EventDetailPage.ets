@@ -205,7 +205,7 @@ export struct EventDetailPage {
         Button() {
           Text() {
             SymbolSpan($r(AppIcon.BACK))
-              .fontSize(16)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontColor([Color.White])
           }
         }
@@ -222,7 +222,7 @@ export struct EventDetailPage {
         Button() {
           Text() {
             SymbolSpan($r(AppIcon.SHARE))
-              .fontSize(14)
+              .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontColor([Color.White])
           }
         }
@@ -246,7 +246,7 @@ export struct EventDetailPage {
       // 标签徽章
       Row() {
         Text(this.getCurrentEvent().tag)
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(Color.White)
           .fontWeight(FontWeight.Medium)
           .padding({ left: 10, right: 10, top: 4, bottom: 4 })
@@ -267,7 +267,7 @@ export struct EventDetailPage {
     Column({ space: DesignConstants.SPACING.LG }) {
       // 标题
       Text(this.getCurrentEvent().title)
-        .fontSize(24)
+        .fontSize(DesignConstants.FONT.SIZE.XXL)
         .fontWeight(FontWeight.Bold)
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .width('100%')
@@ -285,7 +285,7 @@ export struct EventDetailPage {
 
       // 活动描述
       Text(this.getCurrentEvent().description)
-        .fontSize(14)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .lineHeight(24)
         .width('100%')
@@ -295,12 +295,12 @@ export struct EventDetailPage {
         ForEach(this.getCurrentEvent().highlights, (item: string, index: number) => {
           Row({ space: DesignConstants.SPACING.XS }) {
             Text('✓')
-              .fontSize(12)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.getCurrentEvent().tagColor)
               .fontWeight(FontWeight.Bold)
 
             Text(item)
-              .fontSize(12)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.getCurrentThemePalette().textPrimary)
           }
           .padding({ left: 12, right: 14, top: 8, bottom: 8 })
@@ -319,12 +319,12 @@ export struct EventDetailPage {
       Row({ space: DesignConstants.SPACING.SM }) {
         Text() {
           SymbolSpan($r(AppIcon.LOCATION))
-            .fontSize(14)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor([this.getCurrentEvent().tagColor])
         }
 
         Text(`距你 ${this.getCurrentEvent().distance}`)
-          .fontSize(13)
+          .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
           .fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%')
@@ -348,7 +348,7 @@ export struct EventDetailPage {
       Row() {
         Text() {
           SymbolSpan($r(icon))
-            .fontSize(13)
+            .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
             .fontColor([this.getCurrentEvent().tagColor])
         }
       }
@@ -359,7 +359,7 @@ export struct EventDetailPage {
       .justifyContent(FlexAlign.Center)
 
       Text(text)
-        .fontSize(13)
+        .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
         .fontColor(this.getCurrentThemePalette().textSecondary)
     }
     .width('100%')
@@ -377,18 +377,18 @@ export struct EventDetailPage {
 
       Column({ space: 2 }) {
         Text(this.getCurrentEvent().hostName)
-          .fontSize(14)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .fontWeight(FontWeight.Medium)
 
         Row({ space: 4 }) {
           Text() {
             SymbolSpan($r(AppIcon.STAR))
-              .fontSize(10)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor([DesignConstants.COLOR.WARNING])
           }
           Text('活动发起人')
-            .fontSize(11)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
       }
@@ -399,7 +399,7 @@ export struct EventDetailPage {
         .type(ButtonType.Normal)
         .backgroundColor(this.getCurrentEvent().tagColor)
         .fontColor(Color.White)
-        .fontSize(12)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .height(30)
         .borderRadius(DesignConstants.SHAPE.BUTTON)
         .padding({ left: 12, right: 12 })
@@ -416,12 +416,12 @@ export struct EventDetailPage {
     Column({ space: DesignConstants.SPACING.SM }) {
       Row() {
         Text(`参与者 · ${this.getCurrentEvent().participantsCount}/${this.getCurrentEvent().maxParticipants}`)
-          .fontSize(14)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
         Text('查看全部')
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().accentBackground)
       }
       .width('100%')
@@ -465,7 +465,7 @@ export struct EventDetailPage {
         // 剩余名额
         Row() {
           Text('+' + (this.getCurrentEvent().maxParticipants - this.getCurrentEvent().participantsCount).toString())
-            .fontSize(11)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentEvent().tagColor)
             .fontWeight(FontWeight.Bold)
         }
@@ -478,7 +478,7 @@ export struct EventDetailPage {
         .justifyContent(FlexAlign.Center)
 
         Text('已报名')
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().textSecondary)
           .margin({ left: DesignConstants.SPACING.SM })
       }
@@ -495,12 +495,12 @@ export struct EventDetailPage {
         Row({ space: DesignConstants.SPACING.SM }) {
           Text() {
             SymbolSpan($r(this.joined ? AppIcon.CHECK : AppIcon.ADD))
-              .fontSize(16)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontColor([this.joined ? this.getCurrentEvent().tagColor : Color.White])
           }
 
           Text(this.joined ? '已报名 · 点击取消' : '立即报名参加')
-            .fontSize(15)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontColor(this.joined ? this.getCurrentEvent().tagColor : Color.White)
             .fontWeight(FontWeight.Medium)
         }

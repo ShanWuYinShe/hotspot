@@ -165,11 +165,11 @@ export struct ProfileEditPage {
                   Row({ space: 4 }) {
                     Text() {
                       SymbolSpan($r(AppIcon.CAMERA))
-                        .fontSize(12)
+                        .fontSize(DesignConstants.FONT.SIZE.SM)
                         .fontColor([Color.White])
                     }
                     Text('更换横幅')
-                      .fontSize(12)
+                      .fontSize(DesignConstants.FONT.SIZE.SM)
                       .fontColor(Color.White)
                   }
                 }
@@ -203,7 +203,7 @@ export struct ProfileEditPage {
                 Button() {
                   Text() {
                     SymbolSpan($r(AppIcon.CAMERA))
-                      .fontSize(10)
+                      .fontSize(DesignConstants.FONT.SIZE.SM)
                       .fontColor([Color.White])
                   }
                 }
@@ -220,12 +220,12 @@ export struct ProfileEditPage {
 
               Column({ space: 2 }) {
                 Text(this.nickname || (this.currentUser?.nickname ?? ''))
-                  .fontSize(18)
+                  .fontSize(DesignConstants.FONT.SIZE.XL)
                   .fontWeight(FontWeight.Bold)
                   .fontColor(this.getCurrentThemePalette().textPrimary)
 
                 Text('@' + (this.currentUser?.user_id?.substring(0, 8) ?? 'user'))
-                  .fontSize(12)
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
               }
               .alignItems(HorizontalAlign.Start)
@@ -243,11 +243,11 @@ export struct ProfileEditPage {
               Row({ space: 4 }) {
                 Text() {
                   SymbolSpan($r(AppIcon.EDIT))
-                    .fontSize(12)
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor([this.getCurrentThemePalette().accentBackground])
                 }
                 Text('个人简介')
-                  .fontSize(11)
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .textCase(TextCase.UpperCase)
                   .letterSpacing(0.08 * 16)
@@ -256,7 +256,7 @@ export struct ProfileEditPage {
 
               Column() {
                 TextArea({ placeholder: '介绍一下自己…', text: this.bio })
-                  .fontSize(14)
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                   .backgroundColor(Color.Transparent)
                   .borderRadius(0)
@@ -265,7 +265,7 @@ export struct ProfileEditPage {
                   .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
                 Text(this.bio.length + '/' + MAX_BIO)
-                  .fontSize(11)
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
                   .fontColor(this.bio.length > MAX_BIO * 0.85
                     ? this.getCurrentThemePalette().accentBackground
                     : this.getCurrentThemePalette().textTertiary)
@@ -284,13 +284,13 @@ export struct ProfileEditPage {
             Column({ space: DesignConstants.SPACING.SM }) {
               Row({ space: 4 }) {
                 Text('兴趣标签')
-                  .fontSize(11)
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .textCase(TextCase.UpperCase)
                   .letterSpacing(0.08 * 16)
 
                 Text('(' + this.tags.length + '/' + MAX_TAGS + ')')
-                  .fontSize(11)
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
                   .fontColor(this.getCurrentThemePalette().textTertiary)
               }
               .width('100%')
@@ -299,7 +299,7 @@ export struct ProfileEditPage {
                 ForEach(TAG_OPTIONS, (tag: string) => {
                   Button() {
                     Text('#' + tag)
-                      .fontSize(12)
+                      .fontSize(DesignConstants.FONT.SIZE.SM)
                       .fontColor(this.isTagSelected(tag) ? Color.White : (this.isTagDisabled(tag) ? this.getCurrentThemePalette().textTertiary : this.getCurrentThemePalette().textSecondary))
                   }
                   .type(ButtonType.Normal)
@@ -325,15 +325,15 @@ export struct ProfileEditPage {
                 if (this.isSaved) {
                   Text() {
                     SymbolSpan($r(AppIcon.CHECK))
-                      .fontSize(16)
+                      .fontSize(DesignConstants.FONT.SIZE.LG)
                       .fontColor([Color.White])
                   }
                   Text('已保存')
-                    .fontSize(15)
+                    .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontColor(Color.White)
                 } else {
                   Text(this.isSaving ? '保存中...' : '保存')
-                    .fontSize(15)
+                    .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontColor(Color.White)
                     .fontWeight(FontWeight.Medium)
                 }
@@ -377,11 +377,11 @@ export struct ProfileEditPage {
       Row({ space: 4 }) {
         Text() {
           SymbolSpan($r(AppIcon.EDIT))
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor([this.getCurrentThemePalette().accentBackground])
         }
         Text(label)
-          .fontSize(11)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
           .fontColor(this.getCurrentThemePalette().textSecondary)
           .textCase(TextCase.UpperCase)
           .letterSpacing(0.08 * 16)
@@ -391,7 +391,7 @@ export struct ProfileEditPage {
       Column() {
         if (multiline) {
           TextArea({ placeholder: placeholder, text: value })
-            .fontSize(14)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .backgroundColor(Color.Transparent)
             .borderRadius(0)
@@ -400,7 +400,7 @@ export struct ProfileEditPage {
             .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
         } else {
           TextInput({ placeholder: placeholder, text: value })
-            .fontSize(14)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .backgroundColor(Color.Transparent)
             .borderRadius(0)
@@ -410,7 +410,7 @@ export struct ProfileEditPage {
         }
 
         Text(value.length + '/' + maxLen)
-          .fontSize(11)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
           .fontColor(value.length > maxLen * 0.85
             ? this.getCurrentThemePalette().accentBackground
             : this.getCurrentThemePalette().textTertiary)

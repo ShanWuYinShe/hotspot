@@ -368,7 +368,7 @@ export struct NotificationCenter {
             Row() {
               Text() {
                 SymbolSpan($r(AppIcon.BACK))
-                  .fontSize(15)
+                  .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontColor([this.getPalette().textSecondary])
               }
             }
@@ -388,12 +388,12 @@ export struct NotificationCenter {
 
           Column({ space: 1 }) {
             Text('通知')
-              .fontSize(20)
+              .fontSize(DesignConstants.FONT.SIZE.XL)
               .fontWeight(FontWeight.Bold)
               .fontColor(this.getPalette().textPrimary)
             if (this.getUnreadCount() > 0) {
               Text(`${this.getUnreadCount()} 条未读`)
-                .fontSize(12)
+                .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontColor(this.getPalette().textSecondary)
             }
           }
@@ -405,7 +405,7 @@ export struct NotificationCenter {
             .type(ButtonType.Normal)
             .backgroundColor(this.getPalette().surfaceBackground)
             .fontColor(this.getPalette().accentBackground)
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .borderRadius(DesignConstants.RADIUS.FULL)
             .padding({ left: 12, right: 12, top: 6, bottom: 6 })
             .shadow(this.getPalette().controlShadow)
@@ -421,7 +421,7 @@ export struct NotificationCenter {
         Row({ space: 8 }) {
           ForEach(this.filterOptions, (filter: NotificationFilterOption) => {
             Text(filter.label)
-              .fontSize(12)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.selectedFilter === filter.key
                 ? Color.White
                 : this.getPalette().textSecondary)
@@ -460,7 +460,7 @@ export struct NotificationCenter {
             .height(32)
             .color(this.getPalette().accentBackground)
           Text('加载中...')
-            .fontSize(14)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getPalette().textSecondary)
         }
         .width('100%')
@@ -474,7 +474,7 @@ export struct NotificationCenter {
             iconColor: this.getPalette().textSecondary
           })
           Text(this.errorMessage)
-            .fontSize(16)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontColor(this.getPalette().textSecondary)
             .textAlign(TextAlign.Center)
           Button('重试')
@@ -497,7 +497,7 @@ export struct NotificationCenter {
               iconColor: this.getPalette().textTertiary
             })
             Text('暂无通知')
-              .fontSize(16)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontColor(this.getPalette().textSecondary)
           }
           .width('100%')
@@ -575,7 +575,7 @@ export struct NotificationCenter {
           Row() {
             Text() {
               SymbolSpan($r(this.getNotificationIcon(notification.type)))
-                .fontSize(18)
+                .fontSize(DesignConstants.FONT.SIZE.XL)
                 .fontColor([this.getTypeColor(notification.type)])
             }
           }
@@ -591,7 +591,7 @@ export struct NotificationCenter {
           Row() {
             Text() {
               SymbolSpan($r(this.getNotificationIcon(notification.type)))
-                .fontSize(9)
+                .fontSize(DesignConstants.FONT.SIZE.XS)
                 .fontColor([Color.White])
             }
           }
@@ -610,11 +610,11 @@ export struct NotificationCenter {
       Column({ space: 2 }) {
         Text() {
           Span(this.buildNotificationTitle(notification))
-            .fontSize(13)
+            .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
             .fontColor(this.getPalette().textPrimary)
             .fontWeight(notification.is_read ? FontWeight.Normal : FontWeight.Medium)
           Span(' ' + this.buildNotificationMessage(notification))
-            .fontSize(13)
+            .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
             .fontColor(this.getPalette().textPrimary)
         }
         .maxLines(2)
@@ -622,7 +622,7 @@ export struct NotificationCenter {
         .lineHeight(18)
 
         Text(this.formatTimestamp(notification.created_at))
-          .fontSize(11)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
           .fontColor(this.getPalette().textSecondary)
           .margin({ top: 2 })
 
@@ -633,7 +633,7 @@ export struct NotificationCenter {
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().accentBackground)
               .fontColor(this.getPalette().accentText)
-              .fontSize(11)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
               .height(28)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .enabled(!this.isActionLoading(notification.notification_id))
@@ -643,7 +643,7 @@ export struct NotificationCenter {
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().surfaceSubtle)
               .fontColor(this.getPalette().textPrimary)
-              .fontSize(11)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
               .height(28)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .borderWidth(1)
@@ -658,7 +658,7 @@ export struct NotificationCenter {
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().accentBackground)
               .fontColor(this.getPalette().accentText)
-              .fontSize(11)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
               .height(28)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .enabled(!this.isActionLoading(notification.notification_id))
@@ -668,7 +668,7 @@ export struct NotificationCenter {
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().surfaceSubtle)
               .fontColor(this.getPalette().textPrimary)
-              .fontSize(11)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
               .height(28)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .borderWidth(1)
