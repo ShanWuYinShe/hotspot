@@ -1179,7 +1179,7 @@ export struct ProfilePage {
         SystemAvatar({
           avatarUrl: this.currentUser?.avatar_url || '',
           name: this.currentUser?.nickname || '',
-          avatarSize: 96,
+          avatarSize: 80,
           shape: 'circle'
         })
 

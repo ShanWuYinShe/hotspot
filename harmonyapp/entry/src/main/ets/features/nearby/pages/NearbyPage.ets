@@ -555,7 +555,7 @@ export struct NearbyPage {
                   SystemAvatar({
                     avatarUrl: user.user?.avatar_url ?? '',
                     name: user.user?.nickname ?? '',
-                    avatarSize: 66,
+                    avatarSize: 80,
                     shape: 'circle'
                   })
                   .border({ width: 2, color: this.getPalette().borderColor })

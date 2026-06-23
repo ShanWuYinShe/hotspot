@@ -897,7 +897,7 @@ export struct SearchPage {
         SystemAvatar({
           avatarUrl: item.user?.avatar_url ?? '',
           name: item.user?.nickname ?? '',
-          avatarSize: 18
+          avatarSize: 40
         })
 
         Text(item.user?.nickname ?? '')

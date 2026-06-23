@@ -195,7 +195,7 @@ export struct ProfileEditPage {
                 SystemAvatar({
                   avatarUrl: this.currentUser?.avatar_url ?? '',
                   name: this.nickname || this.currentUser?.nickname || '',
-                  avatarSize: 72,
+                  avatarSize: 80,
                   shape: 'squircle'
                 })
 

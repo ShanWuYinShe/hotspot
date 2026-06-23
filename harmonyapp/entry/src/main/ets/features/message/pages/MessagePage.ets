@@ -744,7 +744,7 @@ export struct MessagePage {
                 SystemAvatar({
                   avatarUrl: chat.avatarUrl,
                   name: chat.name,
-                  avatarSize: 52,
+                  avatarSize: 56,
                   shape: 'circle'
                 })
                 .border({ width: 1.5, color: this.getCurrentThemePalette().accentBackground })
@@ -798,7 +798,7 @@ export struct MessagePage {
         SystemAvatar({
           avatarUrl: item.avatarUrl,
           name: item.name,
-          avatarSize: 44,
+          avatarSize: 40,
           shape: item.type === 'group' ? 'squircle' : 'circle',
           inset: true
         })

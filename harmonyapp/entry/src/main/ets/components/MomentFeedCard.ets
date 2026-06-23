@@ -175,7 +175,7 @@ export struct MomentFeedCard {
             SystemAvatar({
               avatarUrl: this.moment.user?.avatar_url ?? '',
               name: this.moment.user?.nickname ?? '',
-              avatarSize: 22,
+              avatarSize: 40,
               shape: 'circle'
             })
 

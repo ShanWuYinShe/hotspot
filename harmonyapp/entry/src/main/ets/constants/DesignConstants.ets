@@ -164,7 +164,6 @@ export interface AvatarSizes {
   SMALL: number;
   MEDIUM: number;
   LARGE: number;
-  XLARGE: number;
 }
 
 export interface ComponentConstants {
@@ -404,7 +403,6 @@ const COMPONENT: ComponentConstants = {
     SMALL: 40,
     MEDIUM: 56,
     LARGE: 80,
-    XLARGE: 112,
   },
   BUTTON_HEIGHT: 42,
   INPUT_HEIGHT: 42,
