@@ -116,7 +116,7 @@
       <div class="space-y-3">
         {#each Array(4) as _, i (i)}
           <div
-            class="flex items-center gap-4 rounded-[22px] p-4"
+            class="flex items-center gap-4 rounded-[var(--radius-lg)] p-4"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div
@@ -138,7 +138,7 @@
       </div>
     {:else if sessions.length === 0}
       <div
-        class="flex flex-col items-center justify-center rounded-[22px] py-12"
+        class="flex flex-col items-center justify-center rounded-[var(--radius-lg)] py-12"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <div
@@ -153,7 +153,7 @@
       <div class="space-y-3">
         {#each sessions as session (session.session_id)}
           <div
-            class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
+            class="flex flex-col gap-3 rounded-[var(--radius-lg)] p-4 sm:flex-row sm:items-center sm:justify-between"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div class="flex items-center gap-3 min-w-0">
@@ -185,7 +185,7 @@
             </div>
             <div>
               <button
-                class="flex items-center rounded-[18px] px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
+                class="flex items-center rounded-[var(--radius-md)] px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
                 style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid {session.is_current
                   ? 'var(--border-theme)'
                   : 'var(--theme-error-border)'}; color: {session.is_current

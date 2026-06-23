@@ -230,7 +230,7 @@
     <div class="page-pad-x page-shell page-shell--narrow flex flex-col pt-4 pb-6">
       <!-- Map Card -->
       <div
-        class="surface-hero relative mb-5 w-full overflow-hidden rounded-[24px]"
+        class="surface-hero relative mb-5 w-full overflow-hidden rounded-[var(--radius-xl)]"
         style="aspect-ratio: 2.4/1;"
       >
         <div
@@ -348,7 +348,7 @@
             onclick={refreshAll}
           >
             <span
-              style="width: 7px; height: 7px; border-radius: 999px; background: var(--semantic-online); box-shadow: 0 0 0 3px color-mix(in srgb, var(--semantic-online) 22%, transparent);"
+              style="width: 7px; height: 7px; border-radius: var(--radius-pill); background: var(--semantic-online); box-shadow: 0 0 0 3px color-mix(in srgb, var(--semantic-online) 22%, transparent);"
             ></span>
             <span style="font-size: 11px; color: var(--text-secondary);"
               >{onlineCount} {t('common.online')}</span

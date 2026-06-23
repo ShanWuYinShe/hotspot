@@ -236,7 +236,7 @@
   <div class="page-shell page-shell--narrow space-y-6">
     {#if isLoading}
       <div
-        class="rounded-[22px] p-6 space-y-4"
+        class="rounded-[var(--radius-lg)] p-6 space-y-4"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <div class="flex items-center gap-3">
@@ -266,7 +266,7 @@
       </div>
     {:else if moment}
       <div
-        class="rounded-[22px] p-6"
+        class="rounded-[var(--radius-lg)] p-6"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <!-- Author -->
@@ -385,7 +385,7 @@
       <!-- Comment input -->
       {#if authStore.isAuthenticated}
         <div
-          class="rounded-[22px] p-4"
+          class="rounded-[var(--radius-lg)] p-4"
           style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <div class="flex items-center gap-3">
@@ -397,7 +397,7 @@
             />
             <div
               class="input-surface flex flex-1 items-center"
-              style="height: 38px; border-radius: 9999px;"
+              style="height: 38px; border-radius: var(--radius-pill);"
             >
               <input
                 type="text"
@@ -427,7 +427,7 @@
 
       <!-- Comments -->
       <div
-        class="rounded-[22px] p-6"
+        class="rounded-[var(--radius-lg)] p-6"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <p
@@ -514,7 +514,7 @@
       </div>
     {:else}
       <div
-        class="rounded-[22px] py-12 text-center"
+        class="rounded-[var(--radius-lg)] py-12 text-center"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <p style="color: var(--text-secondary);">瞬间不存在或已被删除</p>

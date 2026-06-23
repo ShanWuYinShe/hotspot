@@ -114,7 +114,7 @@
       </div>
 
       <!-- Search -->
-      <div class="input-surface mb-3 flex items-center gap-3 rounded-[18px] px-4 py-2.5">
+      <div class="input-surface mb-3 flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-2.5">
         <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
         <input
           type="text"
@@ -147,7 +147,7 @@
       {#if platformStore.isDesktop}
         <div class="ambient-glow mb-5">
           <div
-            class="surface-hero flex items-center gap-4 rounded-[22px]"
+            class="surface-hero flex items-center gap-4 rounded-[var(--radius-lg)]"
             style="padding: 14px 18px;"
           >
             <div
@@ -184,7 +184,7 @@
         <div class={!platformStore.isMobile ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
           {#each Array(6) as _, i (i)}
             <div
-              class="animate-pulse rounded-[22px]"
+              class="animate-pulse rounded-[var(--radius-lg)]"
               style="height: 84px; background: var(--border-theme);"
             ></div>
           {/each}

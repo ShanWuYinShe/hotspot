@@ -482,7 +482,7 @@
                 ></div>
               {/if}
               <div
-                class="rounded-[18px]"
+                class="rounded-[var(--radius-md)]"
                 style="width: 192px; height: 64px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
               ></div>
             </div>
@@ -581,7 +581,7 @@
         bind:value={messageText}
         rows={1}
         maxlength={MESSAGE_CONTENT_MAX}
-        class="field-inset min-h-[38px] flex w-full resize-none rounded-[18px] px-3 py-2 outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        class="field-inset min-h-[38px] flex w-full resize-none rounded-[var(--radius-md)] px-3 py-2 outline-none disabled:cursor-not-allowed disabled:opacity-50"
         style="font-size: 13px; background: var(--surface-bg); color: var(--text-primary);"
         disabled={isSending}
         oninput={handleInput}

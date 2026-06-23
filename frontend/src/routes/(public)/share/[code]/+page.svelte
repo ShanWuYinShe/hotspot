@@ -80,7 +80,7 @@
   <div class="page-shell page-shell--narrow">
     {#if !share}
       <div
-        class="rounded-[22px] p-6"
+        class="rounded-[var(--radius-lg)] p-6"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <h2 style="font-size: 18px; font-weight: 600; color: var(--theme-error);">无法加载分享</h2>
@@ -98,7 +98,7 @@
     {:else if share.share.share_type === 'location'}
       {@const payload = share.payload as LocationSharePayload}
       <div
-        class="overflow-hidden rounded-[22px]"
+        class="overflow-hidden rounded-[var(--radius-lg)]"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <!-- Header with creator info -->
@@ -138,7 +138,7 @@
           </button>
 
           <!-- Info card -->
-          <div class="rounded-[18px] p-4" style="border: 1px solid var(--border-theme);">
+          <div class="rounded-[var(--radius-md)] p-4" style="border: 1px solid var(--border-theme);">
             <p
               class="flex items-center gap-2"
               style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
@@ -200,7 +200,7 @@
     {:else}
       <!-- Other share types (user/group/moment) -->
       <div
-        class="rounded-[22px] p-6"
+        class="rounded-[var(--radius-lg)] p-6"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <h2 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">分享内容</h2>

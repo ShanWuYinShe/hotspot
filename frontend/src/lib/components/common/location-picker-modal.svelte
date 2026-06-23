@@ -1869,11 +1869,11 @@
         {#if showFilterPanel}
           <div
             bind:this={filterPanelElement}
-            class="absolute right-4 top-16 z-30 hidden w-40 select-none overflow-hidden rounded-[22px] p-2 backdrop-blur-md sm:block"
+            class="absolute right-4 top-16 z-30 hidden w-40 select-none overflow-hidden rounded-[var(--radius-lg)] p-2 backdrop-blur-md sm:block"
             style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
           >
             <button
-              class={`flex w-full items-center justify-between rounded-[18px] px-3 py-2.5 text-left text-sm font-medium transition`}
+              class={`flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-2.5 text-left text-sm font-medium transition`}
               style={showUsers
                 ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
                 : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary); box-shadow: var(--shadow-sm);'}
@@ -1889,7 +1889,7 @@
               ></span>
             </button>
             <button
-              class={`mt-1 flex w-full items-center justify-between rounded-[18px] px-3 py-2.5 text-left text-sm font-medium transition`}
+              class={`mt-1 flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-2.5 text-left text-sm font-medium transition`}
               style={showGroups
                 ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
                 : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary); box-shadow: var(--shadow-sm);'}
@@ -1907,7 +1907,7 @@
               ></span>
             </button>
             <button
-              class={`mt-1 flex w-full items-center justify-between rounded-[18px] px-3 py-2.5 text-left text-sm font-medium transition`}
+              class={`mt-1 flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-2.5 text-left text-sm font-medium transition`}
               style={showMoments
                 ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
                 : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary); box-shadow: var(--shadow-sm);'}
@@ -1936,14 +1936,14 @@
           >
             {#if placementHintVisible}
               <div
-                class="rounded-[18px] px-4 py-1.5 text-sm font-medium backdrop-blur-sm"
+                class="rounded-[var(--radius-md)] px-4 py-1.5 text-sm font-medium backdrop-blur-sm"
                 style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm); color: var(--text-primary);"
               >
                 {placementHintMessage}
               </div>
             {:else if gestureHintVisible}
               <div
-                class="pointer-events-auto inline-flex items-center gap-3 rounded-[18px] border border-dashed px-4 py-1.5 text-xs backdrop-blur-sm"
+                class="pointer-events-auto inline-flex items-center gap-3 rounded-[var(--radius-md)] border border-dashed px-4 py-1.5 text-xs backdrop-blur-sm"
                 style="border-color: var(--text-secondary); background: var(--surface-bg); color: var(--text-secondary);"
               >
                 <span>{gestureHintMessage}</span>
@@ -2011,7 +2011,7 @@
         {#if clusterPreview}
           <div class="absolute bottom-6 left-4 right-auto z-30 hidden w-100 select-none sm:block">
             <div
-              class="overflow-hidden rounded-[28px] backdrop-blur-md"
+              class="overflow-hidden rounded-[var(--radius-button)] backdrop-blur-md"
               style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
             >
               <div
@@ -2035,7 +2035,7 @@
                 <Button
                   variant="ghost"
                   size="sm"
-                  class="h-9 w-9 shrink-0 rounded-[18px] p-0"
+                  class="h-9 w-9 shrink-0 rounded-[var(--radius-md)] p-0"
                   style="background: var(--surface-bg);"
                   onclick={closeClusterPreview}
                 >
@@ -2048,7 +2048,7 @@
                 <div class="max-h-64 space-y-2 overflow-y-auto px-3 py-3">
                   {#each clusterPreview.items as previewItem (`preview_${previewItem.location.latitude}_${previewItem.location.longitude}_${previewItem.total_count}`)}
                     <button
-                      class="flex w-full items-start gap-3 rounded-[18px] px-3 py-3 text-left transition hover:-translate-y-0.5"
+                      class="flex w-full items-start gap-3 rounded-[var(--radius-md)] px-3 py-3 text-left transition hover:-translate-y-0.5"
                       style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                       onclick={() => focusPreviewEntity(previewItem)}
                     >
@@ -2075,12 +2075,12 @@
               <div class="flex gap-2 border-t px-4 py-3" style="border-color: var(--border-theme);">
                 <Button
                   variant="outline"
-                  class="h-10 flex-1 rounded-[18px]"
+                  class="h-10 flex-1 rounded-[var(--radius-md)]"
                   onclick={closeClusterPreview}
                 >
                   稍后再看
                 </Button>
-                <Button class="h-10 flex-1 rounded-[18px]" onclick={zoomToClusterPreview}>
+                <Button class="h-10 flex-1 rounded-[var(--radius-md)]" onclick={zoomToClusterPreview}>
                   {clusterPreview.kind === 'overlap_group' ? '放大展开' : '继续放大'}
                 </Button>
               </div>
@@ -2093,7 +2093,7 @@
             class="absolute bottom-6 left-1/2 right-auto z-30 hidden w-[420px] -translate-x-1/2 select-none sm:block"
           >
             <div
-              class="overflow-hidden rounded-[28px] backdrop-blur-md"
+              class="overflow-hidden rounded-[var(--radius-button)] backdrop-blur-md"
               style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
             >
               <div
@@ -2116,7 +2116,7 @@
                 <Button
                   variant="ghost"
                   size="sm"
-                  class="h-9 w-9 shrink-0 rounded-[18px] p-0"
+                  class="h-9 w-9 shrink-0 rounded-[var(--radius-md)] p-0"
                   style="background: var(--surface-bg);"
                   onclick={() => {
                     hotspotPreviewItems = [];
@@ -2131,7 +2131,7 @@
               <div class="max-h-72 space-y-2 overflow-y-auto px-3 py-3">
                 {#each hotspotPreviewItems as item (item.object_type + '_' + item.object_id)}
                   <button
-                    class="flex w-full items-start gap-3 rounded-[18px] px-3 py-3 text-left transition hover:-translate-y-0.5"
+                    class="flex w-full items-start gap-3 rounded-[var(--radius-md)] px-3 py-3 text-left transition hover:-translate-y-0.5"
                     style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                     onclick={() => {
                       hotspotPreviewItems = [];
@@ -2213,7 +2213,7 @@
 
                 {#if showSearch}
                   <div
-                    class="overflow-hidden rounded-[28px] backdrop-blur-md"
+                    class="overflow-hidden rounded-[var(--radius-button)] backdrop-blur-md"
                     style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
                   >
                     <div class="border-b px-4 py-3" style="border-color: var(--border-theme);">
@@ -2232,7 +2232,7 @@
                         <Button
                           variant="ghost"
                           size="sm"
-                          class="h-9 w-9 shrink-0 rounded-[18px] p-0"
+                          class="h-9 w-9 shrink-0 rounded-[var(--radius-md)] p-0"
                           onclick={toggleSearch}
                         >
                           <X class="h-4 w-4" />
@@ -2242,7 +2242,7 @@
                     </div>
                     <div class="space-y-3 px-4 py-3">
                       <div
-                        class="input-surface flex h-12 items-center gap-3 rounded-[18px] px-3"
+                        class="input-surface flex h-12 items-center gap-3 rounded-[var(--radius-md)] px-3"
                         style="background: var(--surface-bg);"
                       >
                         <Search
@@ -2302,11 +2302,11 @@
                         <div class="max-h-[38dvh] space-y-2 overflow-y-auto">
                           {#each searchResults as result (`sheet_${result.latitude}_${result.longitude}`)}
                             <button
-                              class="flex w-full items-start gap-3 rounded-[18px] px-4 py-3 text-left transition-all hover:-translate-y-0.5"
+                              class="flex w-full items-start gap-3 rounded-[var(--radius-md)] px-4 py-3 text-left transition-all hover:-translate-y-0.5"
                               onclick={() => selectSearchResult(result)}
                             >
                               <div
-                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px]"
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
                               >
                                 <MapPin class="h-4 w-4" />
                               </div>
@@ -2339,14 +2339,14 @@
                           <div class="max-h-[32dvh] space-y-2 overflow-y-auto">
                             {#each anchorHistory as item (item.timestamp)}
                               <button
-                                class="flex w-full items-center gap-3 rounded-[18px] px-4 py-3 text-left transition-all hover:-translate-y-0.5"
+                                class="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-4 py-3 text-left transition-all hover:-translate-y-0.5"
                                 onclick={() => {
                                   selectHistoryItem(item);
                                   showSearch = false;
                                 }}
                               >
                                 <div
-                                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px]"
+                                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
                                 >
                                   <Clock class="h-4 w-4" />
                                 </div>
@@ -2361,7 +2361,7 @@
                           </div>
                         </div>
                       {:else if searchText.trim().length > 0 && !isSearching}
-                        <div class="rounded-[18px] border border-dashed px-4 py-6 text-center">
+                        <div class="rounded-[var(--radius-md)] border border-dashed px-4 py-6 text-center">
                           <p class="text-sm font-semibold">没有找到匹配地点</p>
                           <p class="mt-1 text-xs">换个关键词试试，或者直接拖动地图到目标区域。</p>
                         </div>
@@ -2372,7 +2372,7 @@
 
                 {#if showFilterPanel}
                   <div
-                    class="overflow-hidden rounded-[28px] p-3 backdrop-blur-md"
+                    class="overflow-hidden rounded-[var(--radius-button)] p-3 backdrop-blur-md"
                     style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
                   >
                     <div class="mb-2 flex items-center justify-between px-1">
@@ -2390,7 +2390,7 @@
                       <Button
                         variant="ghost"
                         size="sm"
-                        class="h-9 w-9 rounded-[18px] p-0"
+                        class="h-9 w-9 rounded-[var(--radius-md)] p-0"
                         onclick={toggleFilterPanel}
                       >
                         <X class="h-4 w-4" />
@@ -2399,7 +2399,7 @@
                     </div>
                     <div class="space-y-2">
                       <button
-                        class={`flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left text-sm font-medium transition`}
+                        class={`flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-3 text-left text-sm font-medium transition`}
                         style={showUsers
                           ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
                           : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
@@ -2417,7 +2417,7 @@
                         ></span>
                       </button>
                       <button
-                        class={`flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left text-sm font-medium transition`}
+                        class={`flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-3 text-left text-sm font-medium transition`}
                         style={showGroups
                           ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
                           : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
@@ -2435,7 +2435,7 @@
                         ></span>
                       </button>
                       <button
-                        class={`flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left text-sm font-medium transition`}
+                        class={`flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-3 text-left text-sm font-medium transition`}
                         style={showMoments
                           ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
                           : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
@@ -2458,7 +2458,7 @@
 
                 {#if clusterPreview}
                   <div
-                    class="overflow-hidden rounded-[28px] backdrop-blur-md"
+                    class="overflow-hidden rounded-[var(--radius-button)] backdrop-blur-md"
                     style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
                   >
                     <div
@@ -2484,7 +2484,7 @@
                       <Button
                         variant="ghost"
                         size="sm"
-                        class="h-9 w-9 shrink-0 rounded-[18px] p-0"
+                        class="h-9 w-9 shrink-0 rounded-[var(--radius-md)] p-0"
                         onclick={closeClusterPreview}
                       >
                         <X class="h-4 w-4" />
@@ -2495,7 +2495,7 @@
                       <div class="max-h-[32dvh] space-y-2 overflow-y-auto px-3 py-3">
                         {#each clusterPreview.items as previewItem (`sheet_preview_${previewItem.location.latitude}_${previewItem.location.longitude}_${previewItem.total_count}`)}
                           <button
-                            class="flex w-full items-start gap-3 rounded-[18px] px-3 py-3 text-left transition hover:-translate-y-0.5"
+                            class="flex w-full items-start gap-3 rounded-[var(--radius-md)] px-3 py-3 text-left transition hover:-translate-y-0.5"
                             onclick={() => focusPreviewEntity(previewItem)}
                           >
                             <div
@@ -2523,12 +2523,12 @@
                     >
                       <Button
                         variant="outline"
-                        class="h-10 flex-1 rounded-[18px]"
+                        class="h-10 flex-1 rounded-[var(--radius-md)]"
                         onclick={closeClusterPreview}
                       >
                         稍后再看
                       </Button>
-                      <Button class="h-10 flex-1 rounded-[18px]" onclick={zoomToClusterPreview}>
+                      <Button class="h-10 flex-1 rounded-[var(--radius-md)]" onclick={zoomToClusterPreview}>
                         {clusterPreview.kind === 'overlap_group' ? '放大展开' : '继续放大'}
                       </Button>
                     </div>
@@ -2537,7 +2537,7 @@
 
                 {#if hotspotPreviewItems.length > 0}
                   <div
-                    class="overflow-hidden rounded-[28px] backdrop-blur-md"
+                    class="overflow-hidden rounded-[var(--radius-button)] backdrop-blur-md"
                     style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
                   >
                     <div
@@ -2560,7 +2560,7 @@
                       <Button
                         variant="ghost"
                         size="sm"
-                        class="h-9 w-9 shrink-0 rounded-[18px] p-0"
+                        class="h-9 w-9 shrink-0 rounded-[var(--radius-md)] p-0"
                         onclick={() => {
                           hotspotPreviewItems = [];
                           isBottomSheetExpanded = false;
@@ -2573,7 +2573,7 @@
                     <div class="max-h-[32dvh] space-y-2 overflow-y-auto px-3 py-3">
                       {#each hotspotPreviewItems as item (item.object_type + '_' + item.object_id)}
                         <button
-                          class="flex w-full items-start gap-3 rounded-[18px] px-3 py-3 text-left transition hover:-translate-y-0.5"
+                          class="flex w-full items-start gap-3 rounded-[var(--radius-md)] px-3 py-3 text-left transition hover:-translate-y-0.5"
                           onclick={() => {
                             hotspotPreviewItems = [];
                             if (item.object_type === 'user') {
@@ -2661,7 +2661,7 @@
             <Button
               variant="ghost"
               size="icon"
-              class="h-9 w-9 rounded-[18px] p-0"
+              class="h-9 w-9 rounded-[var(--radius-md)] p-0"
               onclick={() => (isFullscreen = !isFullscreen)}
               aria-pressed={isFullscreen}
               aria-label={isFullscreen ? '退出全屏' : '进入全屏'}
@@ -2680,7 +2680,7 @@
         <!-- 搜索与结果（桌面端常驻在信息栏中） -->
         <div class="space-y-2">
           <div
-            class="input-surface flex h-12 items-center gap-3 rounded-[18px] px-3 text-sm"
+            class="input-surface flex h-12 items-center gap-3 rounded-[var(--radius-md)] px-3 text-sm"
             style="background: var(--surface-bg);"
           >
             <Search class="h-4 w-4 shrink-0" color="var(--text-secondary)" strokeWidth={1.5} />
@@ -2734,10 +2734,10 @@
             {#if searchResults.length > 0}
               {#each searchResults as result (`desktop_${result.latitude}_${result.longitude}`)}
                 <button
-                  class="flex w-full items-start gap-3 rounded-[18px] px-3 py-2 text-left text-xs transition-all hover:-translate-y-0.5"
+                  class="flex w-full items-start gap-3 rounded-[var(--radius-md)] px-3 py-2 text-left text-xs transition-all hover:-translate-y-0.5"
                   onclick={() => selectSearchResult(result)}
                 >
-                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[18px]">
+                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]">
                     <MapPin class="h-4 w-4" />
                   </div>
                   <div class="min-w-0 flex-1">
@@ -2763,10 +2763,10 @@
               </div>
               {#each anchorHistory as item (item.timestamp)}
                 <button
-                  class="flex w-full items-center gap-3 rounded-[18px] px-3 py-2 text-left text-xs transition-all hover:-translate-y-0.5"
+                  class="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-left text-xs transition-all hover:-translate-y-0.5"
                   onclick={() => selectHistoryItem(item)}
                 >
-                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[18px]">
+                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]">
                     <Clock class="h-4 w-4" />
                   </div>
                   <div class="min-w-0 flex-1">
@@ -2778,7 +2778,7 @@
                 </button>
               {/each}
             {:else if searchText.trim().length > 0 && !isSearching}
-              <div class="rounded-[18px] border border-dashed px-3 py-4 text-[11px]">
+              <div class="rounded-[var(--radius-md)] border border-dashed px-3 py-4 text-[11px]">
                 没有找到匹配地点，换个关键词试试，或者直接拖动地图到目标区域。
               </div>
             {/if}
@@ -2899,7 +2899,7 @@
   :global(.map-render-marker-badge) {
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     padding: 0.2rem 0.46rem;
     font-size: 0.58rem;
     font-weight: 800;

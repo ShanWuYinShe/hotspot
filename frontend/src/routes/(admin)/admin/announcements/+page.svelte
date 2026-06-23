@@ -159,7 +159,7 @@
   <div class="page-shell page-shell--wide space-y-6">
     <!-- Announcements list -->
     <div
-      class="rounded-[22px] p-5"
+      class="rounded-[var(--radius-lg)] p-5"
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <!-- Section header -->
@@ -172,7 +172,7 @@
         <div class="space-y-4">
           {#each Array(3) as _, i (i)}
             <div
-              class="rounded-[18px] p-4"
+              class="rounded-[var(--radius-md)] p-4"
               style="background: var(--surface-bg); border: 1px solid var(--border-active);"
             >
               <div
@@ -196,7 +196,7 @@
           {#each pagination.items as announcement (announcement.announcement_id)}
             {@const badge = SEVERITY_BADGE[announcement.severity]}
             <div
-              class="rounded-[18px] p-4"
+              class="rounded-[var(--radius-md)] p-4"
               style="background: var(--surface-bg); border: 1px solid var(--border-active);"
             >
               <div class="flex items-start justify-between gap-4">
@@ -264,7 +264,7 @@
           placeholder="公告内容"
           rows="5"
           bind:value={content}
-          class="field-inset w-full rounded-[18px] px-4 py-2.5 outline-none resize-none"
+          class="field-inset w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none resize-none"
           style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
         ></textarea>
       </div>

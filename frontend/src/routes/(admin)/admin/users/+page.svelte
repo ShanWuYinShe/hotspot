@@ -106,7 +106,7 @@
 <div class="page-pad">
   <div class="page-shell page-shell--wide space-y-6">
     <!-- Search — 输入即搜（防抖），与全站搜索交互一致 -->
-    <div class="input-surface relative flex items-center gap-3 rounded-[18px] px-4 py-2.5">
+    <div class="input-surface relative flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-2.5">
       <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
       <input
         type="search"
@@ -127,7 +127,7 @@
 
     <!-- Users table -->
     <div
-      class="rounded-[22px] overflow-hidden"
+      class="rounded-[var(--radius-lg)] overflow-hidden"
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div
@@ -167,7 +167,7 @@
           <div class="space-y-2">
             {#each pagination.items as user (user.user.user_id)}
               <div
-                class="flex items-center gap-3 rounded-[18px] p-3"
+                class="flex items-center gap-3 rounded-[var(--radius-md)] p-3"
                 style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
               >
                 <Avatar

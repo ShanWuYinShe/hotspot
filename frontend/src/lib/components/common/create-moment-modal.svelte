@@ -359,7 +359,7 @@
 
       <!-- Text Area -->
       <div
-        class="rounded-[22px] p-4"
+        class="rounded-[var(--radius-lg)] p-4"
         style="box-shadow: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light); border: 1px solid {descriptionError
           ? 'var(--error)'
           : 'var(--border-active)'}; min-height: 130px; display: flex; flex-direction: column;"
@@ -420,7 +420,7 @@
         <div class="grid gap-3 sm:grid-cols-3">
           {#each selectedImages as image, index (image.previewUrl)}
             <div
-              class="group relative overflow-hidden rounded-[22px]"
+              class="group relative overflow-hidden rounded-[var(--radius-lg)]"
               style="height: 120px; box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light); border: 1px solid var(--border-theme);"
             >
               <img src={image.previewUrl} alt="预览图" class="w-full h-full object-cover" />
@@ -449,7 +449,7 @@
           <!-- Add more button -->
           {#if selectedImages.length < MAX_IMAGES}
             <label
-              class="flex flex-col items-center justify-center gap-1.5 rounded-[22px] outline-none cursor-pointer"
+              class="flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-lg)] outline-none cursor-pointer"
               style="height: 120px; box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light); border: 1.5px dashed var(--border-active);"
             >
               <ImagePlus
@@ -469,7 +469,7 @@
         </div>
       {:else}
         <label
-          class="flex flex-col items-center justify-center gap-1.5 rounded-[22px] outline-none cursor-pointer w-full"
+          class="flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-lg)] outline-none cursor-pointer w-full"
           style="height: 80px; box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light); border: 1.5px dashed var(--border-active);"
         >
           <ImagePlus
@@ -492,7 +492,7 @@
         <div class="grid gap-3 sm:grid-cols-3">
           {#each editMoment.images as image (image.thumbnail_url ?? image.url)}
             <div
-              class="overflow-hidden rounded-[22px]"
+              class="overflow-hidden rounded-[var(--radius-lg)]"
               style="border: 1px solid var(--border-theme); background: var(--surface-bg); height: 120px;"
             >
               <img
@@ -555,7 +555,7 @@
 
       <!-- Post Button -->
       <button
-        class="flex items-center justify-center gap-2 w-full py-3.5 rounded-[22px] text-[14px] outline-none transition-all duration-300 active:scale-[0.97]"
+        class="flex items-center justify-center gap-2 w-full py-3.5 rounded-[var(--radius-lg)] text-[14px] outline-none transition-all duration-300 active:scale-[0.97]"
         style={canPost && !isSubmitting
           ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn); border: 1px solid transparent;'
           : 'background: var(--surface-bg); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary); opacity: 0.6; cursor: not-allowed;'}

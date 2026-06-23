@@ -39,7 +39,7 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    border-radius: 9999px;
+    border-radius: var(--radius-pill);
     background: transparent;
     color: var(--text-secondary);
     outline: none;

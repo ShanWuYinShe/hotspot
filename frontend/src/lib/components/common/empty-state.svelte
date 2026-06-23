@@ -26,7 +26,7 @@
 
 {#snippet card()}
   <div
-    class="flex w-full flex-col items-center justify-center rounded-[22px] py-16 text-center {className}"
+    class="flex w-full flex-col items-center justify-center rounded-[var(--radius-lg)] py-16 text-center {className}"
     style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
   >
     <div

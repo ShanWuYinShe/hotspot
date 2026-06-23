@@ -93,7 +93,7 @@
     />
 
     <div
-      class="rounded-[22px] p-5"
+      class="rounded-[var(--radius-lg)] p-5"
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <p
@@ -118,7 +118,7 @@
             type="password"
             bind:value={oldPassword}
             onblur={() => markTouched('oldPassword')}
-            class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+            class="input-base w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none"
             style="border: 1px solid {oldPasswordError
               ? 'var(--theme-error)'
               : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
@@ -136,7 +136,7 @@
             type="password"
             bind:value={newPassword}
             onblur={() => markTouched('newPassword')}
-            class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+            class="input-base w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none"
             style="border: 1px solid {newPasswordError
               ? 'var(--theme-error)'
               : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
@@ -154,7 +154,7 @@
             type="password"
             bind:value={confirmPassword}
             onblur={() => markTouched('confirmPassword')}
-            class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+            class="input-base w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none"
             style="border: 1px solid {confirmPasswordError
               ? 'var(--theme-error)'
               : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"

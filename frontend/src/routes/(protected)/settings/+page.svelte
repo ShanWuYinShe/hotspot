@@ -153,7 +153,7 @@
       <!-- User card -->
       {#if authStore.currentAccount}
         <div
-          class="flex items-center gap-3 rounded-[18px] px-3.5 py-3"
+          class="flex items-center gap-3 rounded-[var(--radius-md)] px-3.5 py-3"
           style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); margin-bottom: 16px;"
         >
           <div
@@ -183,7 +183,7 @@
       <div class="flex flex-col gap-1">
         <button
           type="button"
-          class="flex items-center gap-2.5 rounded-[18px] px-3 py-2.5 text-left transition-all"
+          class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-all"
           style="background: {activeSection === 'appearance'
             ? 'var(--brand)'
             : 'transparent'}; color: {activeSection === 'appearance'
@@ -198,7 +198,7 @@
         {#each settingsSections as section (section.title)}
           <button
             type="button"
-            class="flex items-center gap-2.5 rounded-[18px] px-3 py-2.5 text-left transition-all"
+            class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-all"
             style="background: {activeSection === section.title
               ? 'var(--brand)'
               : 'transparent'}; color: {activeSection === section.title
@@ -213,7 +213,7 @@
 
         <button
           type="button"
-          class="flex items-center gap-2.5 rounded-[18px] px-3 py-2.5 text-left transition-all"
+          class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-all"
           style="background: {activeSection === 'notifications'
             ? 'var(--brand)'
             : 'transparent'}; color: {activeSection === 'notifications'
@@ -229,7 +229,7 @@
         <div style="margin-top: 12px; height: 1px; background: var(--border-theme);"></div>
         <button
           type="button"
-          class="flex items-center gap-2.5 rounded-[18px] px-3 py-2.5 text-left transition-all"
+          class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-all"
           style="color: var(--brand);"
           onclick={handleLogout}
         >
@@ -266,7 +266,7 @@
                 {@const isSelected = currentThemeFamily === option.family}
                 <button
                   type="button"
-                  class="relative flex flex-col items-center gap-3 rounded-[22px] py-4 text-center transition-all"
+                  class="relative flex flex-col items-center gap-3 rounded-[var(--radius-lg)] py-4 text-center transition-all"
                   class:surface-flat={!isSelected}
                   style="background: var(--surface-bg); {isSelected
                     ? 'box-shadow: 0 0 0 2.5px ' +
@@ -337,7 +337,7 @@
               深色模式
             </p>
             <div
-              class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
+              class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3.5"
               style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
             >
               <div class="flex items-center gap-3">
@@ -368,7 +368,7 @@
             <p style="font-size: 12px; color: var(--text-secondary);">管理你收到的通知类型</p>
           </div>
           <div
-            class="overflow-hidden rounded-[18px]"
+            class="overflow-hidden rounded-[var(--radius-md)]"
             style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
           >
             {#each notificationItems as item, i (item.key)}
@@ -413,7 +413,7 @@
               </h2>
             </div>
             <div
-              class="overflow-hidden rounded-[18px]"
+              class="overflow-hidden rounded-[var(--radius-md)]"
               style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
             >
               {#each section.items as item, i (item.href)}
@@ -456,7 +456,7 @@
       <div class="space-y-3">
         <!-- User card -->
         {#if authStore.currentAccount}
-          <div class="surface-flat flex items-center gap-3 rounded-[22px] px-4 py-3.5">
+          <div class="surface-flat flex items-center gap-3 rounded-[var(--radius-lg)] px-4 py-3.5">
             <div
               class="flex-shrink-0 overflow-hidden rounded-full"
               style="width: 50px; height: 50px; padding: 2px; border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
@@ -493,7 +493,7 @@
             {@const isSelected = currentThemeFamily === option.family}
             <button
               type="button"
-              class="relative flex flex-1 flex-col items-center gap-3 rounded-[22px] py-4 text-center transition-all"
+              class="relative flex flex-1 flex-col items-center gap-3 rounded-[var(--radius-lg)] py-4 text-center transition-all"
               class:surface-flat={!isSelected}
               style="background: var(--surface-bg); {isSelected
                 ? 'box-shadow: 0 0 0 2.5px ' +
@@ -559,7 +559,7 @@
         >
           外观
         </p>
-        <div class="surface-flat overflow-hidden rounded-[22px]">
+        <div class="surface-flat overflow-hidden rounded-[var(--radius-lg)]">
           <div class="flex items-center justify-between px-4 py-3.5">
             <div class="flex items-center gap-3">
               <div
@@ -584,7 +584,7 @@
           >
             {section.title}
           </p>
-          <div class="overflow-hidden rounded-[22px]" style="">
+          <div class="overflow-hidden rounded-[var(--radius-lg)]" style="">
             {#each section.items as item, i (item.href)}
               {#if i > 0}
                 <div class="mx-4" style="height: 1px; background: var(--border-theme);"></div>
@@ -613,7 +613,7 @@
         >
           通知偏好
         </p>
-        <div class="surface-flat overflow-hidden rounded-[22px]">
+        <div class="surface-flat overflow-hidden rounded-[var(--radius-lg)]">
           {#each notificationItems as item, i (item.key)}
             {#if i > 0}
               <div class="mx-4" style="height: 1px; background: var(--border-theme);"></div>
@@ -648,7 +648,7 @@
         <!-- Log Out -->
         <div class="mt-5">
           <button
-            class="surface-flat flex w-full items-center gap-3.5 rounded-[22px] px-4 py-3.5 text-left transition-colors"
+            class="surface-flat flex w-full items-center gap-3.5 rounded-[var(--radius-lg)] px-4 py-3.5 text-left transition-colors"
             onclick={handleLogout}
           >
             <div

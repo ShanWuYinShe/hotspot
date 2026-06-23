@@ -17,7 +17,7 @@
 </script>
 
 <div
-  class="rounded-[22px] p-4 sm:p-5"
+  class="rounded-[var(--radius-lg)] p-4 sm:p-5"
   style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
 >
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">

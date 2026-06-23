@@ -11,7 +11,7 @@
 
 <button
   type="button"
-  class="neu-small pill-hover rounded-[18px] p-4 text-left outline-none transition-[box-shadow,transform] duration-200 hover:scale-[1.02] active:scale-[0.97] {className}"
+  class="neu-small pill-hover rounded-[var(--radius-md)] p-4 text-left outline-none transition-[box-shadow,transform] duration-200 hover:scale-[1.02] active:scale-[0.97] {className}"
   {...rest}
 >
   <p style="font-size: 22px; font-weight: 700; color: var(--text-primary);">{value}</p>

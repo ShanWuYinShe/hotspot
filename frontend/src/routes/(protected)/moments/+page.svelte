@@ -92,7 +92,7 @@
           {#each pagination.items as moment (moment.moment_id)}
             <div class="mb-4 break-inside-avoid">
               <div
-                class="rounded-[22px] overflow-hidden"
+                class="rounded-[var(--radius-lg)] overflow-hidden"
                 style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
               >
                 <a

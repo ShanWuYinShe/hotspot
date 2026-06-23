@@ -51,7 +51,7 @@
         </p>
         <span
           class="flex-shrink-0"
-          style="font-size: 10px; line-height: 1.5; padding: 0 6px; border-radius: 999px; background: color-mix(in srgb, var(--brand) 12%, transparent); color: var(--brand);"
+          style="font-size: 10px; line-height: 1.5; padding: 0 6px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--brand) 12%, transparent); color: var(--brand);"
         >
           {mapAnchorStore.radius}km
         </span>

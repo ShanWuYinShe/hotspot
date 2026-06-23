@@ -52,7 +52,7 @@
 
 {#snippet loginRequired()}
   <div class="flex flex-col items-center justify-center py-20 text-center">
-    <div class="mb-4 rounded-[22px] neu-flat p-6">
+    <div class="mb-4 rounded-[var(--radius-lg)] neu-flat p-6">
       <Lock size={48} color="var(--text-secondary)" strokeWidth={2} />
     </div>
     <h2 class="mb-2 text-xl font-semibold" style="color: var(--text-primary);">
@@ -60,7 +60,7 @@
     </h2>
     <p class="mb-6" style="color: var(--text-secondary);">{t('auth.loginRequiredDescription')}</p>
     <button
-      class="rounded-[22px] px-8 py-3.5 font-medium transition-all"
+      class="rounded-[var(--radius-lg)] px-8 py-3.5 font-medium transition-all"
       style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
       onclick={() => uiStore.openLoginModalWithRedirect({})}
     >

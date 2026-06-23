@@ -86,7 +86,7 @@
 
     <!-- Filter Card -->
     <div
-      class="rounded-[22px] p-4"
+      class="rounded-[var(--radius-lg)] p-4"
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div class="mb-3">
@@ -151,7 +151,7 @@
       <div class="space-y-3">
         {#each pagination.items as item (item.report_id)}
           <div
-            class="rounded-[22px] p-4 sm:p-5"
+            class="rounded-[var(--radius-lg)] p-4 sm:p-5"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -184,7 +184,7 @@
             </div>
 
             <div
-              class="mt-4 grid gap-3 rounded-[18px] px-4 py-3 text-sm sm:grid-cols-2 lg:grid-cols-3"
+              class="mt-4 grid gap-3 rounded-[var(--radius-md)] px-4 py-3 text-sm sm:grid-cols-2 lg:grid-cols-3"
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div>
@@ -215,7 +215,7 @@
 
             {#if item.description}
               <div
-                class="mt-3 rounded-[18px] px-4 py-3"
+                class="mt-3 rounded-[var(--radius-md)] px-4 py-3"
                 style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               >
                 <p style="font-size: 11px; color: var(--text-secondary);">补充说明</p>

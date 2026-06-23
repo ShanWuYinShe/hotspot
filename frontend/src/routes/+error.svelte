@@ -17,7 +17,7 @@
   class="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center error-enter"
 >
   <div
-    class="flex h-20 w-20 items-center justify-center rounded-[28px]"
+    class="flex h-20 w-20 items-center justify-center rounded-[var(--radius-button)]"
     style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
   >
     <TriangleAlert size={36} color={is404 ? 'var(--text-secondary)' : 'var(--theme-error)'} />

@@ -115,7 +115,7 @@
   .auth-prompt-dismiss {
     height: 34px;
     padding: 0 14px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     border: 1px solid var(--border-theme);
     background: var(--surface-bg);
     font-size: 13px;
@@ -132,7 +132,7 @@
   .auth-prompt-login {
     height: 34px;
     padding: 0 18px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     border: none;
     background: var(--brand);
     font-size: 13px;

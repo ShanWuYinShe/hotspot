@@ -154,7 +154,7 @@
         </div>
 
         <!-- Search bar -->
-        <div class="input-surface flex items-center gap-3 rounded-[18px] px-4 py-2.5">
+        <div class="input-surface flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-2.5">
           <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
           <input
             type="text"
@@ -235,7 +235,7 @@
         </div>
 
         <!-- Chat list card -->
-        <div class="surface-card overflow-hidden rounded-[22px]">
+        <div class="surface-card overflow-hidden rounded-[var(--radius-lg)]">
           {#if currentTab === 'private'}
             {#if isLoadingPrivate}
               {#each Array(5) as _}
@@ -274,7 +274,7 @@
                 <div class="px-2 py-1">
                   <a
                     href="/chat/users/{chat.other_user.user_id}"
-                    class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all list-row-hover active:scale-[0.98]"
+                    class="flex items-center gap-3.5 rounded-[var(--radius-md)] px-4 py-3 transition-all list-row-hover active:scale-[0.98]"
                   >
                     <div class="relative flex-shrink-0">
                       <div
@@ -365,7 +365,7 @@
               <div class="px-2 py-1">
                 <a
                   href="/chat/groups/{group.group.group_id}"
-                  class="flex items-center gap-3.5 rounded-[18px] px-4 py-3 transition-all list-row-hover active:scale-[0.98]"
+                  class="flex items-center gap-3.5 rounded-[var(--radius-md)] px-4 py-3 transition-all list-row-hover active:scale-[0.98]"
                 >
                   <div
                     class="flex-shrink-0 overflow-hidden rounded-full"

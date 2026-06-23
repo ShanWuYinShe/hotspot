@@ -906,7 +906,7 @@
 
     {#if !group}
       <div
-        class="rounded-[22px] p-6"
+        class="rounded-[var(--radius-lg)] p-6"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <div class="flex flex-col items-center gap-4">
@@ -918,7 +918,7 @@
     {:else}
       <!-- Group profile card -->
       <div
-        class="rounded-[22px] p-6"
+        class="rounded-[var(--radius-lg)] p-6"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <div class="space-y-6">
@@ -1001,7 +1001,7 @@
           <!-- Stats row -->
           <div class="grid gap-3 sm:grid-cols-3">
             <div
-              class="rounded-[18px] p-4 text-left"
+              class="rounded-[var(--radius-md)] p-4 text-left"
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div
@@ -1018,7 +1018,7 @@
               </div>
             </div>
             <div
-              class="rounded-[18px] p-4 text-left"
+              class="rounded-[var(--radius-md)] p-4 text-left"
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div
@@ -1035,7 +1035,7 @@
               </div>
             </div>
             <div
-              class="rounded-[18px] p-4 text-left"
+              class="rounded-[var(--radius-md)] p-4 text-left"
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div
@@ -1073,7 +1073,7 @@
       {#if currentTab === 'overview'}
         <div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <div
-            class="rounded-[22px] p-5"
+            class="rounded-[var(--radius-lg)] p-5"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <h3
@@ -1099,7 +1099,7 @@
             {/if}
           </div>
           <div
-            class="rounded-[22px] p-5"
+            class="rounded-[var(--radius-lg)] p-5"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <h3
@@ -1164,7 +1164,7 @@
       {#if currentTab === 'announcements'}
         <!-- Announcements toolbar -->
         <div
-          class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
+          class="flex flex-col gap-3 rounded-[var(--radius-lg)] p-4 sm:flex-row sm:items-center sm:justify-between"
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
           <div>
@@ -1199,7 +1199,7 @@
           <div class="space-y-3">
             {#each Array(3) as _, i (i)}
               <div
-                class="rounded-[22px] p-4 space-y-2"
+                class="rounded-[var(--radius-lg)] p-4 space-y-2"
                 style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
               >
                 <div
@@ -1219,7 +1219,7 @@
           </div>
         {:else if announcementsPagination.items.length === 0}
           <div
-            class="rounded-[22px] py-10 text-center"
+            class="rounded-[var(--radius-lg)] py-10 text-center"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <p style="font-size: 14px; color: var(--text-secondary);">暂无公告</p>
@@ -1228,7 +1228,7 @@
           <div class="space-y-3">
             {#each announcementsPagination.items as announcement (announcement.announcement_id)}
               <div
-                class="rounded-[22px] p-4"
+                class="rounded-[var(--radius-lg)] p-4"
                 style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
               >
                 <div class="flex items-start justify-between gap-3">
@@ -1304,7 +1304,7 @@
       <!-- Tab: Members (abbreviated for neumorphic style) -->
       {#if currentTab === 'members'}
         <div
-          class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
+          class="flex flex-col gap-3 rounded-[var(--radius-lg)] p-4 sm:flex-row sm:items-center sm:justify-between"
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
           <div>
@@ -1336,7 +1336,7 @@
             {#each Array(6) as _, i (i)}
               <div class="mb-3 break-inside-avoid">
                 <div
-                  class="flex items-center gap-3 rounded-[22px] p-4"
+                  class="flex items-center gap-3 rounded-[var(--radius-lg)] p-4"
                   style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
                 >
                   <div
@@ -1359,7 +1359,7 @@
           </div>
         {:else if membersPagination.items.length === 0}
           <div
-            class="rounded-[22px] py-10 text-center"
+            class="rounded-[var(--radius-lg)] py-10 text-center"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <p style="font-size: 14px; color: var(--text-secondary);">暂无成员</p>
@@ -1369,7 +1369,7 @@
             {#each membersPagination.items as member (member.user.user_id)}
               <div class="mb-3 break-inside-avoid">
                 <div
-                  class="flex items-center gap-3 rounded-[22px] p-4 transition-all"
+                  class="flex items-center gap-3 rounded-[var(--radius-lg)] p-4 transition-all"
                   style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
                 >
                   <a
@@ -1483,7 +1483,7 @@
       {#if canManageGroup && currentTab === 'applications'}
         <div class="space-y-4">
           <div
-            class="flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center sm:justify-between"
+            class="flex flex-col gap-3 rounded-[var(--radius-lg)] p-4 sm:flex-row sm:items-center sm:justify-between"
             style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
           >
             <div>
@@ -1507,7 +1507,7 @@
             <div class="space-y-3">
               {#each Array(3) as _, i (i)}
                 <div
-                  class="rounded-[22px] p-4 space-y-2"
+                  class="rounded-[var(--radius-lg)] p-4 space-y-2"
                   style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
                 >
                   <div
@@ -1527,7 +1527,7 @@
             </div>
           {:else if applicationsPagination.items.length === 0}
             <div
-              class="rounded-[22px] py-10 text-center"
+              class="rounded-[var(--radius-lg)] py-10 text-center"
               style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
             >
               <p style="font-size: 14px; color: var(--text-secondary);">暂无待处理申请</p>
@@ -1536,7 +1536,7 @@
             <div class="space-y-3">
               {#each applicationsPagination.items as application (application.application_id)}
                 <div
-                  class="rounded-[22px] p-4"
+                  class="rounded-[var(--radius-lg)] p-4"
                   style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
                 >
                   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1626,7 +1626,7 @@
     </Dialog.Header>
     <div class="space-y-4 py-4">
       {#if group?.has_password}
-        <div class="space-y-2 rounded-[18px] p-4" style="border: 1px solid var(--border-theme);">
+        <div class="space-y-2 rounded-[var(--radius-md)] p-4" style="border: 1px solid var(--border-theme);">
           <label
             for="group-password"
             style="font-size: 13px; font-weight: 500; color: var(--text-primary);">群组密码</label
@@ -1643,7 +1643,7 @@
         </div>
       {/if}
       {#if settings?.join_method === 'approval'}
-        <div class="space-y-2 rounded-[18px] p-4" style="border: 1px solid var(--border-theme);">
+        <div class="space-y-2 rounded-[var(--radius-md)] p-4" style="border: 1px solid var(--border-theme);">
           <label
             for="join-message"
             style="font-size: 13px; font-weight: 500; color: var(--text-primary);">申请理由</label
@@ -1689,7 +1689,7 @@
       <Dialog.Description>发布给所有成员的重要通知与群规提醒。</Dialog.Description>
     </Dialog.Header>
     <div class="space-y-4 py-4">
-      <div class="space-y-2 rounded-[18px] p-4" style="border: 1px solid var(--border-theme);">
+      <div class="space-y-2 rounded-[var(--radius-md)] p-4" style="border: 1px solid var(--border-theme);">
         <label
           for="announcement-title"
           style="font-size: 13px; font-weight: 500; color: var(--text-primary);">公告标题</label
@@ -1703,7 +1703,7 @@
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
         />
       </div>
-      <div class="space-y-2 rounded-[18px] p-4" style="border: 1px solid var(--border-theme);">
+      <div class="space-y-2 rounded-[var(--radius-md)] p-4" style="border: 1px solid var(--border-theme);">
         <label
           for="announcement-content"
           style="font-size: 13px; font-weight: 500; color: var(--text-primary);">公告内容</label
@@ -1719,7 +1719,7 @@
         ></textarea>
       </div>
       <div
-        class="flex items-center justify-between rounded-[18px] px-4 py-3"
+        class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3"
         style="border: 1px solid var(--border-theme);"
       >
         <div>
@@ -1766,7 +1766,7 @@
       <Dialog.Description>删除后成员将无法再看到该公告。</Dialog.Description>
     </Dialog.Header>
     <div
-      class="rounded-[18px] px-4 py-3"
+      class="rounded-[var(--radius-md)] px-4 py-3"
       style="border: 1px solid var(--border-theme); font-size: 14px; color: var(--text-secondary);"
     >
       {announcementToDelete?.title ?? '该公告'}
@@ -1900,7 +1900,7 @@
       <Dialog.Description>确认将该成员移出群组吗？</Dialog.Description>
     </Dialog.Header>
     <div
-      class="rounded-[18px] px-4 py-3"
+      class="rounded-[var(--radius-md)] px-4 py-3"
       style="border: 1px solid var(--border-theme); font-size: 14px; color: var(--text-secondary);"
     >
       {removeTarget?.user.nickname ?? '-'}
@@ -1933,7 +1933,7 @@
       <Dialog.Title>退出群组</Dialog.Title>
       <Dialog.Description>确认要退出该群组吗？退出后将无法查看群组内容。</Dialog.Description>
     </Dialog.Header>
-    <div class="rounded-[18px] px-4 py-3" style="border: 1px solid var(--border-theme);">
+    <div class="rounded-[var(--radius-md)] px-4 py-3" style="border: 1px solid var(--border-theme);">
       <div style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
         {group?.group.name ?? '群组'}
       </div>

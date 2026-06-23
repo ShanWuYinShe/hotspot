@@ -338,7 +338,7 @@
 
 {#snippet overviewSidebar()}
   <!-- Overview stats -->
-  <div class="surface-flat rounded-[22px] p-4">
+  <div class="surface-flat rounded-[var(--radius-lg)] p-4">
     <span class="eyebrow">通知概览</span>
     <div class="grid grid-cols-2 gap-3" style="margin-top: 12px;">
       {#each overviewTiles as tile (tile.label)}
@@ -361,7 +361,7 @@
   </div>
 
   <!-- Type distribution -->
-  <div class="surface-flat rounded-[22px] p-4" style="margin-top: 16px;">
+  <div class="surface-flat rounded-[var(--radius-lg)] p-4" style="margin-top: 16px;">
     <span class="eyebrow">类型分布</span>
     <div class="flex flex-col" style="gap: 10px; margin-top: 12px;">
       {#each distributionRows as row (row.label)}
@@ -476,7 +476,7 @@
               {@const avatarUrl = getActorAvatar(item)}
               {@const thumbnailUrl = getPostThumbnail(item)}
               <div
-                class="row-hover flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
+                class="row-hover flex items-start gap-3.5 rounded-[var(--radius-md)] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
                 style="background: {typeSoft};
                 border: 1px solid {typeBorder};"
               >
@@ -488,19 +488,19 @@
                       alt=""
                       loading="lazy"
                       decoding="async"
-                      style="width: 44px; height: 44px; border-radius: 9999px; object-fit: cover; border: 1px solid var(--border-theme);"
+                      style="width: 44px; height: 44px; border-radius: var(--radius-pill); object-fit: cover; border: 1px solid var(--border-theme);"
                     />
                   {:else}
                     <div
                       class="input-surface flex items-center justify-center"
-                      style="width: 44px; height: 44px; border-radius: 9999px;"
+                      style="width: 44px; height: 44px; border-radius: var(--radius-pill);"
                     >
                       <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
                     </div>
                   {/if}
                   <div
                     class="absolute flex items-center justify-center"
-                    style="width: 18px; height: 18px; border-radius: 9999px; background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"
+                    style="width: 18px; height: 18px; border-radius: var(--radius-pill); background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"
                   >
                     <TypeIcon size={10} strokeWidth={2} color="var(--text-on-accent)" />
                   </div>
@@ -571,7 +571,7 @@
                     />
                   {/if}
                   <div
-                    style="width: 8px; height: 8px; border-radius: 9999px; background: var(--brand);"
+                    style="width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--brand);"
                   ></div>
                 </div>
               </div>
@@ -595,7 +595,7 @@
             {@const avatarUrl = getActorAvatar(item)}
             {@const thumbnailUrl = getPostThumbnail(item)}
             <div
-              class="row-hover flex items-start gap-3.5 rounded-[18px] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
+              class="row-hover flex items-start gap-3.5 rounded-[var(--radius-md)] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
               style="background: {typeSoft}; border: 1px solid {typeBorder};"
             >
               <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
@@ -605,19 +605,19 @@
                     alt=""
                     loading="lazy"
                     decoding="async"
-                    style="width: 44px; height: 44px; border-radius: 9999px; object-fit: cover; border: 1px solid var(--border-theme);"
+                    style="width: 44px; height: 44px; border-radius: var(--radius-pill); object-fit: cover; border: 1px solid var(--border-theme);"
                   />
                 {:else}
                   <div
                     class="flex items-center justify-center"
-                    style="width: 44px; height: 44px; border-radius: 9999px; background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+                    style="width: 44px; height: 44px; border-radius: var(--radius-pill); background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
                   >
                     <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
                   </div>
                 {/if}
                 <div
                   class="absolute flex items-center justify-center"
-                  style="width: 18px; height: 18px; border-radius: 9999px; background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"
+                  style="width: 18px; height: 18px; border-radius: var(--radius-pill); background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"
                 >
                   <TypeIcon size={10} strokeWidth={2} color="var(--text-on-accent)" />
                 </div>

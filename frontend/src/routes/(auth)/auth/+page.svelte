@@ -32,7 +32,7 @@
 
 <div class="flex min-h-screen items-center justify-center page-pad">
   <div
-    class="page-shell page-shell--form w-full rounded-[22px] p-6"
+    class="page-shell page-shell--form w-full rounded-[var(--radius-lg)] p-6"
     style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
   >
     <div class="mb-6 text-center">

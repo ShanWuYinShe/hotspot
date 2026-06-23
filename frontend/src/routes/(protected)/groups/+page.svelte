@@ -226,7 +226,7 @@
             <div>
               <a href="/groups/{group.group.group_id}" style="text-decoration: none;">
                 <div
-                  class="flex items-center gap-4 rounded-[18px] p-4"
+                  class="flex items-center gap-4 rounded-[var(--radius-md)] p-4"
                   style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
                 >
                   <Avatar
@@ -270,7 +270,7 @@
       <div class="grid gap-4 lg:grid-cols-2">
         <!-- Invites -->
         <div
-          class="rounded-[22px] p-4"
+          class="rounded-[var(--radius-lg)] p-4"
           style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <div class="flex items-center justify-between mb-3">
@@ -331,7 +331,7 @@
 
         <!-- Applications -->
         <div
-          class="rounded-[22px] p-4"
+          class="rounded-[var(--radius-lg)] p-4"
           style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <div class="flex items-center justify-between mb-3">

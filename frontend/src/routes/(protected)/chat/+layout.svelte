@@ -14,7 +14,7 @@
   <!-- Wide (desktop + 横屏/大尺寸平板): bounded split-pane master-detail workspace -->
   <div class="page-pad box-border h-full min-h-0">
     <div
-      class="page-shell page-shell--wide flex h-full min-h-0 overflow-hidden rounded-[28px]"
+      class="page-shell page-shell--wide flex h-full min-h-0 overflow-hidden rounded-[var(--radius-button)]"
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <!-- Left pane: chat list -->

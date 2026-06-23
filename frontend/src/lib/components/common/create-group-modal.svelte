@@ -249,14 +249,14 @@
     <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
       <!-- 群组名称 -->
       <div
-        class="rounded-[22px] p-4 space-y-2"
+        class="rounded-[var(--radius-lg)] p-4 space-y-2"
         style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
       >
         <label for="group-name" style="font-size: 12px; color: var(--text-primary);">群组名称</label
         >
         <input
           id="group-name"
-          class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+          class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
           class:field-error={nameError}
           style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
           placeholder="例如：城市漫步俱乐部"
@@ -277,7 +277,7 @@
 
       <!-- 群组介绍 -->
       <div
-        class="rounded-[22px] p-4 space-y-2"
+        class="rounded-[var(--radius-lg)] p-4 space-y-2"
         style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
       >
         <label for="group-desc" style="font-size: 12px; color: var(--text-primary);">群组介绍</label
@@ -285,7 +285,7 @@
         <textarea
           id="group-desc"
           placeholder="简单描述群组用途与氛围"
-          class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 w-full resize-none"
+          class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full resize-none"
           class:field-error={groupDescriptionError}
           style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px; min-height: 100px;"
           bind:value={description}
@@ -305,14 +305,14 @@
 
       <!-- 群组标签 -->
       <div
-        class="rounded-[22px] p-4 space-y-2"
+        class="rounded-[var(--radius-lg)] p-4 space-y-2"
         style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
       >
         <label for="group-tags" style="font-size: 12px; color: var(--text-primary);">群组标签</label
         >
         <input
           id="group-tags"
-          class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+          class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
           style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
           placeholder="兴趣、城市、活动"
           bind:value={tagsInput}
@@ -332,7 +332,7 @@
 
       <!-- 加入方式 & 口令 -->
       <div
-        class="grid gap-4 rounded-[22px] p-4 sm:grid-cols-2"
+        class="grid gap-4 rounded-[var(--radius-lg)] p-4 sm:grid-cols-2"
         style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
       >
         <div class="space-y-2">
@@ -341,7 +341,7 @@
           >
           <select
             id="join-method"
-            class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+            class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
             style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
             bind:value={joinMethod}
           >
@@ -356,7 +356,7 @@
           >
           <input
             id="group-password"
-            class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+            class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
             class:field-error={groupPasswordError}
             style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
             type="password"
@@ -372,7 +372,7 @@
 
       <!-- 最大成员数 & 搜索 -->
       <div
-        class="grid gap-4 rounded-[22px] p-4 sm:grid-cols-2"
+        class="grid gap-4 rounded-[var(--radius-lg)] p-4 sm:grid-cols-2"
         style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
       >
         <div class="space-y-2">
@@ -381,7 +381,7 @@
           >
           <input
             id="max-members"
-            class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+            class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
             class:field-error={maxMembersError}
             style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
             type="number"
@@ -396,7 +396,7 @@
           {/if}
         </div>
         <div
-          class="flex items-center justify-between rounded-[18px] px-4 py-2.5"
+          class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-2.5"
           style="background: var(--surface-bg); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
         >
           <span>允许被搜索</span>

@@ -102,7 +102,7 @@
 
     <!-- Reports list -->
     <div
-      class="rounded-[22px] overflow-hidden"
+      class="rounded-[var(--radius-lg)] overflow-hidden"
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div
@@ -117,7 +117,7 @@
           <div class="space-y-3">
             {#each Array(5) as _, i (i)}
               <div
-                class="rounded-[18px] p-3"
+                class="rounded-[var(--radius-md)] p-3"
                 style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
               >
                 <div class="flex items-center gap-3">
@@ -147,7 +147,7 @@
           <div class="space-y-3">
             {#each pagination.items as report (report.report_id)}
               <div
-                class="rounded-[18px] p-3"
+                class="rounded-[var(--radius-md)] p-3"
                 style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
               >
                 <div class="flex items-start justify-between gap-3">

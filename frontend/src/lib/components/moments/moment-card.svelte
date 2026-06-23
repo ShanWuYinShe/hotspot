@@ -325,7 +325,7 @@
     flex: 0 0 auto;
     overflow: hidden;
     border: 2px solid color-mix(in srgb, var(--brand) 18%, var(--border-theme));
-    border-radius: 9999px;
+    border-radius: var(--radius-pill);
     background: var(--surface-bg);
     box-shadow: var(--shadow-sm);
   }
@@ -376,7 +376,7 @@
     gap: 4px;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--border-theme));
-    border-radius: 9999px;
+    border-radius: var(--radius-pill);
     padding: 5px 8px;
     color: var(--brand);
     font-size: 11px;
@@ -420,7 +420,7 @@
     right: 10px;
     bottom: 10px;
     border: 1px solid rgba(255, 255, 255, 0.24);
-    border-radius: 9999px;
+    border-radius: var(--radius-pill);
     padding: 4px 8px;
     color: var(--text-on-overlay);
     font-size: 11px;
@@ -469,7 +469,7 @@
 
   .moment-card__tags span {
     border: 1px solid color-mix(in srgb, var(--brand) 20%, var(--border-theme));
-    border-radius: 9999px;
+    border-radius: var(--radius-pill);
     padding: 4px 8px;
     color: var(--brand);
     font-size: 11px;
@@ -504,7 +504,7 @@
     align-items: center;
     justify-content: center;
     border: 1px solid transparent;
-    border-radius: 9999px;
+    border-radius: var(--radius-pill);
     color: var(--text-secondary);
     background: transparent;
     outline: none;

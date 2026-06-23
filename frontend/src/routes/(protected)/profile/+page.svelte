@@ -259,7 +259,7 @@
 
   <!-- ═══ Shared personal hub (replaces the removed nav drawer on mobile/tablet) ═══ -->
   {#snippet hubCard()}
-    <div class="w-full rounded-[18px] overflow-hidden surface-card">
+    <div class="w-full rounded-[var(--radius-md)] overflow-hidden surface-card">
       {#each quickLinks as link (link.href)}
         <a
           href={link.href}
@@ -349,7 +349,7 @@
   <!-- ═══ Shared stats row ═══ -->
   {#snippet statsRowDisplay()}
     <div
-      class="flex overflow-hidden rounded-[22px] surface-flat"
+      class="flex overflow-hidden rounded-[var(--radius-lg)] surface-flat"
       style="border: 1px solid var(--border-theme);"
     >
       {#each statsRow as stat, i (stat.label)}
@@ -374,7 +374,7 @@
     <div class="flex flex-col gap-5 pt-4 pb-8">
       <!-- Banner -->
       <div
-        class="relative overflow-hidden rounded-[24px]"
+        class="relative overflow-hidden rounded-[var(--radius-xl)]"
         style="height: clamp(120px, 18vw, 160px);"
       >
         <div
@@ -398,7 +398,7 @@
       <div class="flex items-center gap-4 -mt-8 ml-2">
         <div class="relative flex-shrink-0">
           <div
-            class="overflow-hidden rounded-[22px]"
+            class="overflow-hidden rounded-[var(--radius-lg)]"
             style="width: 72px; height: 72px; border: 3px solid var(--surface-bg); box-shadow: var(--shadow-lg);"
           >
             <Avatar
@@ -432,7 +432,7 @@
           <User style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
           <span class="eyebrow">姓名</span>
         </div>
-        <div class="input-surface rounded-[18px] px-4 py-3">
+        <div class="input-surface rounded-[var(--radius-md)] px-4 py-3">
           <input
             id="nickname"
             bind:value={nickname}
@@ -449,7 +449,7 @@
           <FileText style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
           <span class="eyebrow">个人简介</span>
         </div>
-        <div class="input-surface rounded-[18px] px-4 py-3">
+        <div class="input-surface rounded-[var(--radius-md)] px-4 py-3">
           <textarea
             id="bio"
             bind:value={bio}
@@ -475,7 +475,7 @@
             <MapPin style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
             <span class="eyebrow">所在地</span>
           </div>
-          <div class="input-surface rounded-[18px] px-4 py-3">
+          <div class="input-surface rounded-[var(--radius-md)] px-4 py-3">
             <input
               value={p.location.location_name}
               disabled
@@ -513,7 +513,7 @@
       <!-- Action buttons -->
       <div class="flex gap-3 pt-2">
         <button
-          class="flex flex-1 items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none transition-all"
+          class="flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-lg)] px-4 py-3.5 outline-none transition-all"
           style={saved
             ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
             : 'background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: var(--shadow-brand-btn); border: none;'}
@@ -530,7 +530,7 @@
           {/if}
         </button>
         <button
-          class="flex flex-1 items-center justify-center gap-1.5 rounded-[22px] px-4 py-3.5 outline-none surface-flat"
+          class="flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-lg)] px-4 py-3.5 outline-none surface-flat"
           style="color: var(--text-primary); font-size: 14px;"
           onclick={cancelEdit}
           disabled={isSaving}
@@ -612,7 +612,7 @@
 
           <!-- Analytics card -->
           <div
-            class="w-full overflow-hidden rounded-[18px] mb-4 surface-flat"
+            class="w-full overflow-hidden rounded-[var(--radius-md)] mb-4 surface-flat"
             style="border: 1px solid var(--border-theme);"
           >
             {#each statsRow as stat}
@@ -758,7 +758,7 @@
         {data.error ?? '无法获取个人资料，请稍后重试'}
       </p>
       <button
-        class="rounded-[22px] px-5 py-3.5 outline-none surface-flat"
+        class="rounded-[var(--radius-lg)] px-5 py-3.5 outline-none surface-flat"
         style="color: var(--brand); font-size: 14px;"
         onclick={() => location.reload()}>重试</button
       >

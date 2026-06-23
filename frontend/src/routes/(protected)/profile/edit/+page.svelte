@@ -174,7 +174,7 @@
     <div class="page-shell page-shell--form flex flex-col gap-5">
       <!-- Banner -->
       <div
-        class="relative overflow-hidden rounded-[24px]"
+        class="relative overflow-hidden rounded-[var(--radius-xl)]"
         style="height: clamp(120px, 18vw, 160px);"
       >
         <div
@@ -198,7 +198,7 @@
       <div class="flex items-center gap-4 -mt-8 ml-2">
         <div class="relative flex-shrink-0">
           <div
-            class="overflow-hidden rounded-[22px]"
+            class="overflow-hidden rounded-[var(--radius-lg)]"
             style="width: 72px; height: 72px; border: 3px solid var(--surface-bg); box-shadow: var(--shadow-lg);"
           >
             {#if avatarUrl}
@@ -242,7 +242,7 @@
           <User style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
           <span class="eyebrow">昵称</span>
         </div>
-        <div class="input-surface rounded-[18px] px-4 py-3">
+        <div class="input-surface rounded-[var(--radius-md)] px-4 py-3">
           <input
             id="nickname"
             bind:value={nickname}
@@ -260,7 +260,7 @@
           <FileText style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
           <span class="eyebrow">简介</span>
         </div>
-        <div class="input-surface rounded-[18px] px-4 py-3">
+        <div class="input-surface rounded-[var(--radius-md)] px-4 py-3">
           <textarea
             id="bio"
             bind:value={bio}
@@ -282,7 +282,7 @@
 
       <!-- Save button (bottom) -->
       <button
-        class="flex w-full items-center justify-center gap-2 rounded-[22px] px-4 py-3.5 outline-none transition-all"
+        class="flex w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] px-4 py-3.5 outline-none transition-all"
         style={saved
           ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
           : canSave
@@ -309,7 +309,7 @@
     <div class="page-shell page-shell--form flex flex-col items-center justify-center py-16">
       <p style="font-size: 14px; color: var(--text-secondary);">加载失败</p>
       <button
-        class="rounded-[22px] px-5 py-3.5 outline-none surface-flat mt-4"
+        class="rounded-[var(--radius-lg)] px-5 py-3.5 outline-none surface-flat mt-4"
         style="color: var(--brand); font-size: 14px;"
         onclick={() => void goto('/profile')}
       >

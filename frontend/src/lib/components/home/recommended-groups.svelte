@@ -54,7 +54,7 @@
       <div class="flex flex-col gap-2.5">
         {#each Array(3) as _}
           <div
-            class="flex items-center gap-3 rounded-[18px] px-4 py-3"
+            class="flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-3"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div
@@ -79,7 +79,7 @@
         {#each groups ?? [] as group (group.group.group_id)}
           <a
             href="/groups/{group.group.group_id}"
-            class="flex items-center gap-3 rounded-[18px] px-4 py-3 row-hover transition-transform duration-150 active:scale-[0.98]"
+            class="flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-3 row-hover transition-transform duration-150 active:scale-[0.98]"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div class="flex-shrink-0">

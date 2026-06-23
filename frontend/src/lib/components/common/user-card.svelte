@@ -192,7 +192,7 @@
 </script>
 
 <div
-  class="card-hover cursor-pointer overflow-hidden rounded-[22px] outline-none transition-[box-shadow,outline,transform] duration-200 hover:scale-[1.008] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
+  class="card-hover cursor-pointer overflow-hidden rounded-[var(--radius-lg)] outline-none transition-[box-shadow,outline,transform] duration-200 hover:scale-[1.008] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
   style="background: var(--surface-bg); box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light); border: 1px solid var(--border-theme);"
   tabindex={0}
   role="link"
@@ -264,7 +264,7 @@
     <!-- Square: info-dense card -->
     <div class="p-4">
       <div
-        class="rounded-[18px] p-3"
+        class="rounded-[var(--radius-md)] p-3"
         style="background: var(--surface-bg); box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-theme);"
       >
         <div class="flex items-start justify-between gap-3">

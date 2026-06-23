@@ -328,7 +328,7 @@
     <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
       <!-- Search bar -->
       <form
-        class="input-surface flex items-center gap-3 rounded-[18px] px-4 py-2.5"
+        class="input-surface flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-2.5"
         onsubmit={(event) => {
           event.preventDefault();
           handleSearch();
@@ -368,7 +368,7 @@
       {#if trimmedKeyword}
         <!-- Search suggestions -->
         <div
-          class="rounded-[18px] p-4"
+          class="rounded-[var(--radius-md)] p-4"
           style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           {#if isSuggesting}
@@ -511,7 +511,7 @@
         <div class="grid gap-4 sm:grid-cols-2">
           <!-- Recent searches -->
           <div
-            class="rounded-[18px] p-4"
+            class="rounded-[var(--radius-md)] p-4"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div class="flex items-center justify-between mb-3">
@@ -562,7 +562,7 @@
 
           <!-- Trending tags -->
           <div
-            class="rounded-[18px] p-4"
+            class="rounded-[var(--radius-md)] p-4"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div class="flex items-center gap-1.5 mb-3">

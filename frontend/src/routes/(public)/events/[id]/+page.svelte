@@ -257,7 +257,7 @@
 
         <!-- Host card -->
         <div
-          class="mb-4 flex items-center gap-3 rounded-[22px] px-4 py-3.5"
+          class="mb-4 flex items-center gap-3 rounded-[var(--radius-lg)] px-4 py-3.5"
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
           <div
@@ -391,7 +391,7 @@
   >
     <button
       type="button"
-      class="flex w-full items-center justify-center gap-2 rounded-[22px] py-4 outline-none transition-all duration-300"
+      class="flex w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] py-4 outline-none transition-all duration-300"
       style={ctaStyle}
       onclick={toggleJoin}
     >

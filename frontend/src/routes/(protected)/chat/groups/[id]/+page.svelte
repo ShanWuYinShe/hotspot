@@ -683,7 +683,7 @@
                 style="width: 96px; height: 12px; border-radius: 6px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
               ></div>
               <div
-                class="max-w-xs rounded-[18px]"
+                class="max-w-xs rounded-[var(--radius-md)]"
                 style="width: 100%; height: 64px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
               ></div>
             </div>
@@ -903,7 +903,7 @@
           bind:value={messageText}
           rows={1}
           maxlength={MESSAGE_CONTENT_MAX}
-          class="field-inset max-h-32 min-h-[42px] flex w-full resize-none rounded-[18px] px-4 py-2.5 text-[15px] outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          class="field-inset max-h-32 min-h-[42px] flex w-full resize-none rounded-[var(--radius-md)] px-4 py-2.5 text-[15px] outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50"
           style="background: var(--surface-bg); color: var(--text-primary);"
           disabled={isSending}
           oninput={() => {

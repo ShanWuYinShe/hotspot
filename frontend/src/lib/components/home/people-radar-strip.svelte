@@ -40,7 +40,7 @@
       {#each Array(5) as _}
         <div class="flex flex-col items-center gap-1.5 flex-shrink-0">
           <div
-            style="width: 56px; height: 56px; border-radius: 9999px; border: 1.5px solid var(--border-theme); background: var(--border-theme);"
+            style="width: 56px; height: 56px; border-radius: var(--radius-pill); border: 1.5px solid var(--border-theme); background: var(--border-theme);"
           ></div>
         </div>
       {/each}
@@ -54,7 +54,7 @@
             <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={48} />
             {#if user.online}
               <div
-                style="position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; border-radius: 9999px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
+                style="position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; border-radius: var(--radius-pill); background: var(--semantic-online); border: 2px solid var(--surface-bg);"
               ></div>
             {/if}
           </div>
@@ -74,7 +74,7 @@
       <div class="flex flex-col items-center gap-1 flex-shrink-0" style="width: 56px;">
         <button
           class="flex items-center justify-center"
-          style="width: 56px; height: 56px; border-radius: 9999px; border: 1.5px dashed var(--border-active); background: transparent; cursor: pointer;"
+          style="width: 56px; height: 56px; border-radius: var(--radius-pill); border: 1.5px dashed var(--border-active); background: transparent; cursor: pointer;"
           onclick={onViewAll}
         >
           <ChevronRight size={18} strokeWidth={1.5} color="var(--text-secondary)" />

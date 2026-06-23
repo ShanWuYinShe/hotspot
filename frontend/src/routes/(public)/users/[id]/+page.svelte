@@ -258,7 +258,7 @@
           <!-- Avatar overlapping banner -->
           <div class="relative">
             <div
-              class="overflow-hidden rounded-[22px]"
+              class="overflow-hidden rounded-[var(--radius-lg)]"
               style="width: 76px; height: 76px; border: 3px solid var(--surface-bg); box-shadow: var(--shadow-lg);"
             >
               <Avatar
@@ -313,7 +313,7 @@
         </div>
 
         <!-- Profile card: name / handle / bio / tags -->
-        <div class="surface-flat rounded-[22px] px-5 py-4">
+        <div class="surface-flat rounded-[var(--radius-lg)] px-5 py-4">
           <h2 style="font-size: 20px; color: var(--text-primary);">
             {user.user.nickname}
           </h2>
@@ -351,7 +351,7 @@
         </div>
 
         <!-- Stats as single segmented bar -->
-        <div class="surface-flat mt-5 flex rounded-[22px] overflow-hidden">
+        <div class="surface-flat mt-5 flex rounded-[var(--radius-lg)] overflow-hidden">
           {#each [{ label: '帖子', value: fmtNum(user.stats?.moments_count ?? 0) }, { label: '粉丝', value: fmtNum(user.stats?.followers_count ?? 0) }, { label: '关注', value: fmtNum(user.stats?.following_count ?? 0) }] as stat, i (stat.label)}
             <div class="relative flex flex-1 flex-col items-center py-4">
               {#if i > 0}
@@ -478,7 +478,7 @@
             {#each followersPagination.items as follower (follower.user.user_id)}
               <a href="/users/{follower.user.user_id}">
                 <div
-                  class="surface-flat flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all active:scale-[0.98]"
+                  class="surface-flat flex cursor-pointer items-center gap-3 rounded-[var(--radius-lg)] p-4 transition-all active:scale-[0.98]"
                 >
                   <Avatar
                     src={follower.user.avatar_url}
@@ -540,7 +540,7 @@
             {#each followingPagination.items as follow (follow.user.user_id)}
               <a href="/users/{follow.user.user_id}">
                 <div
-                  class="surface-flat flex cursor-pointer items-center gap-3 rounded-[22px] p-4 transition-all active:scale-[0.98]"
+                  class="surface-flat flex cursor-pointer items-center gap-3 rounded-[var(--radius-lg)] p-4 transition-all active:scale-[0.98]"
                 >
                   <Avatar
                     src={follow.user.avatar_url}

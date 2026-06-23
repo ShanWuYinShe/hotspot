@@ -137,7 +137,7 @@
 
     <!-- Notification Status Card -->
     <div
-      class="rounded-[22px] p-5"
+      class="rounded-[var(--radius-lg)] p-5"
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div class="mb-4 flex items-center gap-2">
@@ -156,7 +156,7 @@
       </div>
 
       <div
-        class="flex items-center justify-between rounded-[18px] px-4 py-4"
+        class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-4"
         style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <div>
@@ -180,7 +180,7 @@
           进入通知中心
         </button>
         <button
-          class="flex h-11 flex-1 items-center justify-center rounded-[18px] text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+          class="flex h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
           style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-primary);"
           onclick={markAllRead}
           disabled={isMarkingAllRead || notificationStore.unreadCount === 0}
@@ -197,7 +197,7 @@
 
     <!-- Preference Explanation Card -->
     <div
-      class="rounded-[22px] p-5"
+      class="rounded-[var(--radius-lg)] p-5"
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div class="mb-3">
@@ -208,7 +208,7 @@
         </p>
       </div>
       <div
-        class="rounded-[18px] px-4 py-3"
+        class="rounded-[var(--radius-md)] px-4 py-3"
         style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
@@ -221,7 +221,7 @@
 
     <!-- Notification Preferences Card -->
     <div
-      class="rounded-[22px] p-5"
+      class="rounded-[var(--radius-lg)] p-5"
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div class="mb-4">
@@ -236,7 +236,7 @@
       <div class="space-y-3">
         {#each preferenceItems as item (item.key)}
           <div
-            class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
+            class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3.5"
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>

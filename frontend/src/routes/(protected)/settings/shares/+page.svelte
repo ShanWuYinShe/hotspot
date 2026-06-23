@@ -146,7 +146,7 @@
       <div class="space-y-3">
         {#each pagination.items as item (item.share_id)}
           <div
-            class="rounded-[22px] p-4 sm:p-5"
+            class="rounded-[var(--radius-lg)] p-4 sm:p-5"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -188,7 +188,7 @@
               <div class="flex shrink-0 flex-wrap gap-2">
                 <a href={getShareHref(item)} target="_blank" rel="noreferrer">
                   <button
-                    class="flex items-center rounded-[18px] px-4 py-2 text-sm transition-opacity hover:opacity-80"
+                    class="flex items-center rounded-[var(--radius-md)] px-4 py-2 text-sm transition-opacity hover:opacity-80"
                     style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
                   >
                     <ExternalLink size={14} class="mr-2" />
@@ -196,7 +196,7 @@
                   </button>
                 </a>
                 <button
-                  class="flex items-center rounded-[18px] px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
+                  class="flex items-center rounded-[var(--radius-md)] px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
                   style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--theme-error-border); color: var(--theme-error);"
                   onclick={() => revokeShare(item)}
                   disabled={item.is_revoked || revokingShareId === item.share_id}
@@ -212,7 +212,7 @@
             </div>
 
             <div
-              class="mt-4 grid gap-3 rounded-[18px] px-4 py-3 text-sm sm:grid-cols-3"
+              class="mt-4 grid gap-3 rounded-[var(--radius-md)] px-4 py-3 text-sm sm:grid-cols-3"
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div>

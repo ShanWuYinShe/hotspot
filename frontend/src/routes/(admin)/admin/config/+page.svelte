@@ -158,7 +158,7 @@
       <div class="grid gap-6 lg:grid-cols-2">
         {#each Array(3) as _, i (i)}
           <div
-            class="rounded-[22px] p-4"
+            class="rounded-[var(--radius-lg)] p-4"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <div class="space-y-3">
@@ -173,7 +173,7 @@
                     style="height: 10px; width: 80px; background: var(--border-theme);"
                   ></div>
                   <div
-                    class="rounded-[18px]"
+                    class="rounded-[var(--radius-md)]"
                     style="height: 36px; width: 100%; background: var(--border-theme);"
                   ></div>
                 </div>
@@ -186,7 +186,7 @@
       <div class="grid gap-6 lg:grid-cols-2">
         <!-- Upload settings -->
         <div
-          class="rounded-[22px] overflow-hidden"
+          class="rounded-[var(--radius-lg)] overflow-hidden"
           style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <div
@@ -209,7 +209,7 @@
                   type="number"
                   value={field.value}
                   placeholder={field.placeholder}
-                  class="field-inset mt-1.5 w-full rounded-[18px] px-4 py-2.5 outline-none"
+                  class="field-inset mt-1.5 w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none"
                   style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
                   oninput={(event) => field.set(event.currentTarget.value)}
                 />
@@ -235,7 +235,7 @@
 
         <!-- Feature toggles -->
         <div
-          class="rounded-[22px] overflow-hidden"
+          class="rounded-[var(--radius-lg)] overflow-hidden"
           style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <div
@@ -298,7 +298,7 @@
 
         <!-- Limits -->
         <div
-          class="rounded-[22px] overflow-hidden"
+          class="rounded-[var(--radius-lg)] overflow-hidden"
           style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <div
@@ -321,7 +321,7 @@
                   type="number"
                   value={f.value}
                   placeholder={f.ph}
-                  class="field-inset mt-1.5 w-full rounded-[18px] px-4 py-2.5 outline-none"
+                  class="field-inset mt-1.5 w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none"
                   style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
                   oninput={(event) => f.set(event.currentTarget.value)}
                 />

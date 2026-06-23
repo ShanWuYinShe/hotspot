@@ -28,7 +28,7 @@
   class={cn(
     'relative inline-flex items-center justify-center gap-2',
     'whitespace-nowrap font-semibold',
-    'overflow-hidden rounded-[28px]',
+    'overflow-hidden rounded-[var(--radius-button)]',
     'transition-all duration-180 ease-in-out',
     'focus-visible:outline-none focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]',
     'disabled:pointer-events-none disabled:opacity-50',

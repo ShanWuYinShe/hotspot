@@ -71,7 +71,7 @@
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {#each [{ icon: Users, label: '用户总数', value: userCount, sub: '注册用户数量' }, { icon: UsersRound, label: '群组总数', value: groupCount, sub: '创建的群组数量' }, { icon: Flag, label: '待处理举报', value: pendingReports, sub: '等待审核的举报' }, { icon: FileText, label: '审计日志', value: auditCount, sub: '今日操作记录' }] as stat}
         <div
-          class="flex flex-col items-center justify-center rounded-[22px] py-5"
+          class="flex flex-col items-center justify-center rounded-[var(--radius-lg)] py-5"
           style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
         >
           <div
@@ -97,7 +97,7 @@
     <div class="grid gap-6 lg:grid-cols-2">
       <!-- 快捷操作 -->
       <div
-        class="rounded-[22px] p-5"
+        class="rounded-[var(--radius-lg)] p-5"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <div class="mb-1" style="font-size: 16px; font-weight: 600; color: var(--text-primary);">
@@ -111,7 +111,7 @@
           {#each [{ href: '/admin/users', icon: Users, title: '用户管理', desc: '搜索、封禁、解封用户' }, { href: '/admin/reports', icon: Flag, title: '举报审核', desc: '处理用户举报' }] as action}
             <a
               href={action.href}
-              class="flex items-center gap-3 rounded-[18px] p-4 transition-all duration-200"
+              class="flex items-center gap-3 rounded-[var(--radius-md)] p-4 transition-all duration-200"
               style="background: var(--surface-bg); border: 1px solid var(--border-active);"
             >
               <div
@@ -133,7 +133,7 @@
 
       <!-- 系统状态 -->
       <div
-        class="rounded-[22px] p-5"
+        class="rounded-[var(--radius-lg)] p-5"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <div class="mb-1" style="font-size: 16px; font-weight: 600; color: var(--text-primary);">
@@ -145,7 +145,7 @@
           {#if healthStatus.length > 0}
             {#each healthStatus as svc (svc.key)}
               <div
-                class="flex items-center justify-between rounded-[18px] px-4 py-3"
+                class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3"
                 style="background: var(--surface-bg); border: 1px solid var(--border-active);"
               >
                 <span style="font-size: 14px; color: var(--text-primary);">{svc.label}</span>
@@ -166,7 +166,7 @@
           {:else}
             {#each ['API 服务', '数据库', '缓存服务'] as service}
               <div
-                class="flex items-center justify-between rounded-[18px] px-4 py-3"
+                class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3"
                 style="background: var(--surface-bg); border: 1px solid var(--border-active);"
               >
                 <span style="font-size: 14px; color: var(--text-primary);">{service}</span>

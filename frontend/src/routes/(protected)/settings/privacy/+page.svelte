@@ -88,13 +88,13 @@
 
     {#if isLoading}
       <div
-        class="rounded-[22px] p-5"
+        class="rounded-[var(--radius-lg)] p-5"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <div class="space-y-4">
           {#each Array(5) as _, i (i)}
             <div
-              class="h-11 w-full rounded-[18px]"
+              class="h-11 w-full rounded-[var(--radius-md)]"
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             ></div>
           {/each}
@@ -103,7 +103,7 @@
     {:else}
       <!-- Basic Visibility Card -->
       <div
-        class="rounded-[22px] p-5"
+        class="rounded-[var(--radius-lg)] p-5"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <p
@@ -117,7 +117,7 @@
 
         <div class="space-y-3">
           <div
-            class="rounded-[18px] p-4"
+            class="rounded-[var(--radius-md)] p-4"
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <label
@@ -127,7 +127,7 @@
             >
             <select
               id="privacy-level"
-              class="input-base w-full rounded-[18px] px-4 py-2.5 outline-none"
+              class="input-base w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none"
               style="border: 1px solid var(--border-theme); background: var(--surface-bg); color: var(--text-primary);"
               bind:value={privacyLevel}
             >
@@ -137,7 +137,7 @@
           </div>
 
           <div
-            class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
+            class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3.5"
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
@@ -167,7 +167,7 @@
           </div>
 
           <div
-            class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
+            class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3.5"
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
@@ -199,7 +199,7 @@
           </div>
 
           <div
-            class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
+            class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3.5"
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
@@ -236,7 +236,7 @@
 
       <!-- Social & Chat Card -->
       <div
-        class="rounded-[22px] p-5"
+        class="rounded-[var(--radius-lg)] p-5"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <p
@@ -250,7 +250,7 @@
 
         <div class="space-y-3">
           <div
-            class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
+            class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3.5"
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
@@ -280,7 +280,7 @@
           </div>
 
           <div
-            class="rounded-[18px] p-4"
+            class="rounded-[var(--radius-md)] p-4"
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <label
@@ -290,7 +290,7 @@
             >
             <select
               id="private-chat"
-              class="field-inset w-full rounded-[18px] px-4 py-2.5 outline-none"
+              class="field-inset w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none"
               style="background: var(--surface-bg); color: var(--text-primary);"
               bind:value={allowPrivateChat}
             >
@@ -304,7 +304,7 @@
 
       <!-- Search & Discovery Card -->
       <div
-        class="rounded-[22px] p-5"
+        class="rounded-[var(--radius-lg)] p-5"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <p
@@ -318,7 +318,7 @@
 
         <div class="space-y-3">
           <div
-            class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
+            class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3.5"
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
@@ -350,7 +350,7 @@
           </div>
 
           <div
-            class="flex items-center justify-between rounded-[18px] px-4 py-3.5"
+            class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3.5"
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>

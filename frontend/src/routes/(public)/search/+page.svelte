@@ -319,7 +319,7 @@
       <BackButton onclick={() => history.back()} size={36} />
 
       <div
-        class="flex-1 flex items-center gap-3 px-4 rounded-[18px] input-surface"
+        class="flex-1 flex items-center gap-3 px-4 rounded-[var(--radius-md)] input-surface"
         style="height: 38px;"
       >
         <Search size={15} style="flex-shrink: 0; color: var(--text-secondary);" strokeWidth={1.5} />
@@ -492,7 +492,7 @@
                 {#if isLoading && users.length === 0}
                   {#each Array(3) as _, i (i)}
                     <div
-                      class="h-16 animate-pulse rounded-[22px]"
+                      class="h-16 animate-pulse rounded-[var(--radius-lg)]"
                       style="background: var(--border-theme);"
                     ></div>
                   {/each}
@@ -520,7 +520,7 @@
                 {#if isLoading && moments.length === 0}
                   {#each Array(3) as _, i (i)}
                     <div
-                      class="h-20 animate-pulse rounded-[22px]"
+                      class="h-20 animate-pulse rounded-[var(--radius-lg)]"
                       style="background: var(--border-theme);"
                     ></div>
                   {/each}
@@ -548,7 +548,7 @@
                 {#if isLoading && groups.length === 0}
                   {#each Array(3) as _, i (i)}
                     <div
-                      class="h-16 animate-pulse rounded-[22px]"
+                      class="h-16 animate-pulse rounded-[var(--radius-lg)]"
                       style="background: var(--border-theme);"
                     ></div>
                   {/each}

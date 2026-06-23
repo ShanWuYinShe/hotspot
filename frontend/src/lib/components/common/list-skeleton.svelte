@@ -16,7 +16,7 @@
 <div class="{containerClass} {className}">
   {#each Array(count) as _, i (i)}
     <div
-      class="rounded-[22px] p-5"
+      class="rounded-[var(--radius-lg)] p-5"
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       {#if type === 'user'}
@@ -88,7 +88,7 @@
             </div>
           </div>
           <div
-            class="rounded-[18px]"
+            class="rounded-[var(--radius-md)]"
             style="height: 120px; width: 100%; background: var(--border-theme);"
           ></div>
           <div

@@ -118,7 +118,7 @@
       <div class="mt-4 space-y-4">
         <!-- 位置信息展示 -->
         <div
-          class="rounded-[22px] p-4 space-y-2"
+          class="rounded-[var(--radius-lg)] p-4 space-y-2"
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
           <div
@@ -135,7 +135,7 @@
 
         <!-- 说明 -->
         <div
-          class="rounded-[22px] p-4 space-y-2"
+          class="rounded-[var(--radius-lg)] p-4 space-y-2"
           style="background: var(--surface-bg); border: 1px solid var(--theme-overlay-subtle); font-size: 13px;"
         >
           <p class="flex items-center gap-2" style="font-weight: 500; color: var(--brand);">
@@ -185,7 +185,7 @@
       <div class="mt-4 space-y-4">
         <!-- 分享链接 -->
         <div
-          class="rounded-[22px] p-4 space-y-2"
+          class="rounded-[var(--radius-lg)] p-4 space-y-2"
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
           <label for="share-link-url" style="font-size: 12px; color: var(--text-secondary);"
@@ -196,11 +196,11 @@
               id="share-link-url"
               value={shareUrl ?? ''}
               readonly
-              class="field-inset rounded-[18px] px-4 py-2.5 outline-none transition-all duration-150 flex-1"
+              class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 flex-1"
               style="background: var(--surface-bg); color: var(--text-primary); font-size: 12px; font-family: monospace;"
             />
             <button
-              class="rounded-[18px] px-3 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] flex items-center justify-center"
+              class="rounded-[var(--radius-md)] px-3 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] flex items-center justify-center"
               style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
               onclick={copyToClipboard}
             >

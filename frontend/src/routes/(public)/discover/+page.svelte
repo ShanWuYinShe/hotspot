@@ -107,7 +107,7 @@
   </div>
   <!-- Search bar -->
   <div
-    class="input-surface flex items-center gap-3 rounded-[18px] px-4 py-2.5"
+    class="input-surface flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-2.5"
     style="margin-bottom: 10px;"
   >
     <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
@@ -176,7 +176,7 @@
     {#if mode === 'list'}
       <div class="feed-density-list">
         {#each Array(3) as _}
-          <div class="surface-flat rounded-[18px] overflow-hidden">
+          <div class="surface-flat rounded-[var(--radius-md)] overflow-hidden">
             <div style="aspect-ratio: 16/9; background: var(--border-theme);"></div>
             <div style="padding: 12px 16px;">
               <div
@@ -194,7 +194,7 @@
     {:else}
       <div class="feed-density-grid feed-density-grid--compact">
         {#each Array(4) as _}
-          <div class="surface-flat rounded-[18px] overflow-hidden">
+          <div class="surface-flat rounded-[var(--radius-md)] overflow-hidden">
             <div style="aspect-ratio: 16/9; background: var(--border-theme);"></div>
             <div style="padding: 12px 16px;">
               <div
