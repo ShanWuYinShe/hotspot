@@ -268,7 +268,6 @@ export struct PhoneLayout {
     .height(56)
     .justifyContent(FlexAlign.Center)
     .onClick(() => {
-      this.currentTabIndex = CREATE_TAB_INDEX;
       this.showCreateSheet = true;
     })
   }
