@@ -255,7 +255,7 @@ export struct DesktopLayout {
         }
       }
       .width('100%')
-      .height(64)
+      .height(52)
       .padding({ left: 24, right: 24 })
       .backgroundColor($r('app.color.bg_primary'))
 

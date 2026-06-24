@@ -52,7 +52,7 @@ export struct SkeletonShimmer {
   private startShimmer() {
     this.opacity = 1.0;
     animateTo({
-      duration: 750,
+      duration: 1500,
       curve: Curve.Smooth,
       iterations: -1,
       playMode: PlayMode.Alternate

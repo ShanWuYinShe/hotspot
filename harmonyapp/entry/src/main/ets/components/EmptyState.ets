@@ -31,13 +31,13 @@ export struct EmptyState {
             .height(64)
             .borderRadius(DesignConstants.RADIUS.FULL)
             .backgroundColor(this.getPalette().surfaceBackground)
-            .shadow(this.getPalette().controlShadow)
             .border({ width: 1, color: this.getPalette().floatingBorderColor })
 
           Text() {
             SymbolSpan($r(this.icon))
-              .fontSize(30)
-              .fontColor([this.getPalette().accentBackground])
+              .fontSize(28)
+              .fontColor([this.getPalette().textSecondary])
+              .opacity(0.5)
           }
         }
         .width(64)

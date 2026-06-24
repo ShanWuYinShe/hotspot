@@ -23,7 +23,7 @@ export struct MomentFeedCard {
   @Prop showLocationCard: boolean = false;
   @Prop showTime: boolean = false;
   @Prop showFavorite: boolean = true;
-  @Prop textMaxLines: number = 4;
+  @Prop textMaxLines: number = 3;
   @Prop textFontSize: number = DesignConstants.FONT.SIZE.MD;
   onOpenDetail?: (moment: MomentItem) => void;
   onImagePreview?: (momentId: string, images: string[], index: number) => void;
