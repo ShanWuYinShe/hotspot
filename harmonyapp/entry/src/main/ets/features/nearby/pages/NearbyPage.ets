@@ -525,7 +525,7 @@ export struct NearbyPage {
   private buildNearbyPeople() {
     Column() {
       this.buildSectionHeader('附近的人', '查看全部', () => {
-        // navigate to nearby users
+        AppRouter.push(PageNames.NEARBY_USERS);
       })
 
       if (!this.usersLoading && this.users.length === 0) {

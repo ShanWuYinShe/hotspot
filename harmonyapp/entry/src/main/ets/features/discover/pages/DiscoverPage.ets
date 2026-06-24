@@ -12,7 +12,8 @@ import { interactionActions } from '../../../core/state/InteractionActions';
 import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import {
   UserItem, GroupItem, TrendingTagItem, MomentItem, TrendingBundle,
-  SearchUsersRequest, SearchGroupsRequest, CreateReportRequest, Relationship
+  SearchUsersRequest, SearchGroupsRequest, CreateReportRequest, Relationship,
+  GetFeedMomentsRequest, FeedSource
 } from '../../../core/types/api';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -109,10 +110,50 @@ export struct DiscoverPage {
       this.recommendedGroups.length > 0 || this.hotMoments.length > 0;
   }
 
+  private async loadFeedMoments(source: FeedSource): Promise<void> {
+    const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
+    const request: GetFeedMomentsRequest = {
+      source: source,
+      reference_point: { latitude: refLoc?.latitude ?? 0, longitude: refLoc?.longitude ?? 0 },
+      pagination: { limit: 20 }
+    };
+    if (source === 'nearby') {
+      request.radius = DefaultConfig.NEARBY_RADIUS;
+    }
+    const response = await LoadingUtil.withMinimumTime(() => ApiClient.getFeedMoments(request));
+    if (this.isDestroyed) return;
+    if (response.code === 0) {
+      this.hotMoments = response.data?.items ?? [];
+      this.hotMomentsDataSource.setData(this.hotMoments);
+      this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
+      // 关注/附近为 feed 流，不展示聚合发现区块
+      this.trendingTags = [];
+      this.recommendedUsers = [];
+      this.recommendedGroups = [];
+      this.recommendedUsersDataSource.setData([]);
+    } else if (!this.hasAnyData()) {
+      this.errorMessage = response.message ?? '加载失败';
+    }
+  }
+
+  private getMomentsSectionTitle(): string {
+    if (this.activeTab === '关注') {
+      return '关注的动态';
+    }
+    if (this.activeTab === '附近') {
+      return '附近的动态';
+    }
+    return '热门动态';
+  }
+
   private async loadData(refresh: boolean = false): Promise<void> {
     if (!refresh) { this.isLoading = true; }
     this.errorMessage = '';
     try {
+      if (this.activeTab === '关注' || this.activeTab === '附近') {
+        await this.loadFeedMoments(this.activeTab === '关注' ? 'following' : 'nearby');
+        return;
+      }
       // 热门内容不依赖位置，推荐用户需要位置
       const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
       const trendingPromise = ApiClient.getFeedTrending({});
@@ -289,7 +330,7 @@ export struct DiscoverPage {
 
             // 动态流标题
             ListItem() {
-              this.buildSectionHeader('热门动态')
+              this.buildSectionHeader(this.getMomentsSectionTitle())
             }
 
             // 动态卡片列表（PostCard 风格）
@@ -365,6 +406,7 @@ export struct DiscoverPage {
           .animation({ duration: 180, curve: Curve.EaseInOut })
           .onClick(() => {
             this.activeTab = tab;
+            this.loadData(true);
           })
       }, (tab: string) => tab)
     }

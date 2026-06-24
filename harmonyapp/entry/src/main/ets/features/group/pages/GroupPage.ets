@@ -11,7 +11,7 @@ import {
   GroupApplicationItem,
   GroupInviteItem,
   GroupItem,
-  SearchGroupsRequest
+  MyGroupsRequest
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 
@@ -80,7 +80,7 @@ export struct GroupPage {
 
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
-    await this.loadNearbyGroups();
+    await this.loadMyGroups();
   }
 
   private getCurrentThemePalette() {
@@ -201,28 +201,15 @@ export struct GroupPage {
     this.joiningGroupIds = nextIds;
   }
 
-  private async loadNearbyGroups(refresh: boolean = false) {
-    const refLoc = this.getRefLocation();
-    if (!refLoc) {
-      this.isLoading = false;
-      this.isRefreshing = false;
-      return;
-    }
-
+  private async loadMyGroups(refresh: boolean = false) {
     if (!refresh) { this.isLoading = true; }
     this.errorMessage = '';
 
     try {
-      const request: SearchGroupsRequest = {
-        reference_point: {
-          latitude: refLoc.latitude,
-          longitude: refLoc.longitude
-        },
-        radius: DefaultConfig.NEARBY_RADIUS,
-        sort_by: 'distance',
+      const request: MyGroupsRequest = {
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
       };
-      const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchGroups(request));
+      const response = await LoadingUtil.withMinimumTime(() => ApiClient.getJoinedGroups(request));
       if (this.isDestroyed) return;
 
       if (response.code === 0) {
@@ -244,20 +231,13 @@ export struct GroupPage {
   }
 
   private async loadMoreGroups(): Promise<void> {
-    const refLoc = this.getRefLocation();
-    if (this.isLoadingMore || !this.hasMore || !refLoc) return;
+    if (this.isLoadingMore || !this.hasMore) return;
     this.isLoadingMore = true;
     try {
-      const request: SearchGroupsRequest = {
-        reference_point: {
-          latitude: refLoc.latitude,
-          longitude: refLoc.longitude
-        },
-        radius: DefaultConfig.NEARBY_RADIUS,
-        sort_by: 'distance',
+      const request: MyGroupsRequest = {
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
-      const response = await ApiClient.searchGroups(request);
+      const response = await ApiClient.getJoinedGroups(request);
       if (this.isDestroyed) return;
       if (response.code === 0) {
         const items = response.data?.items ?? [];
@@ -336,7 +316,7 @@ export struct GroupPage {
         this.invitesDataSource.setData(this.myInvites);
         SystemToast.showSuccess(action === 'accept' ? '已接受群邀请' : '已拒绝群邀请', this.getUIContext());
         if (action === 'accept') {
-          await this.loadNearbyGroups();
+          await this.loadMyGroups();
         }
       } else {
         SystemToast.showError(response.message || '处理邀请失败', this.getUIContext());
@@ -447,14 +427,14 @@ export struct GroupPage {
         if (response.data.status === 'joined') {
           SystemToast.show('加入群组成功', this.getUIContext());
           InteractionStateStore.getInstance().updateGroupMembership(groupId, { is_member: true });
-          await this.loadNearbyGroups();
+          await this.loadMyGroups();
         } else if (response.data.status === 'pending_approval') {
           SystemToast.show('已提交申请，等待管理员审批', this.getUIContext());
-          await this.loadNearbyGroups();
+          await this.loadMyGroups();
         }
       } else if (response.code === 10400) {
         SystemToast.show(response.message || '加入群组失败', this.getUIContext());
-        await this.loadNearbyGroups();
+        await this.loadMyGroups();
       } else {
         SystemToast.showError(response.message || '加入群组失败', this.getUIContext());
       }
@@ -485,7 +465,7 @@ export struct GroupPage {
     Column() {
       // 标题栏 - 使用 SafeArea 避免与状态栏重叠
       Row() {
-        Text('附近群组')
+        Text('我的群组')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(600)
           .fontColor(this.getCurrentThemePalette().textPrimary)
@@ -533,13 +513,13 @@ export struct GroupPage {
 
       // 内容区域
       if (this.isLoading) {
-        SystemLoadingView({ message: '正在加载附近群组...' })
+        SystemLoadingView({ message: '正在加载我的群组...' })
           .transition(
             TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
               .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
           )
       } else if (this.errorMessage && this.groups.length === 0) {
-        EmptyState({ icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadNearbyGroups(); } })
+        EmptyState({ icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadMyGroups(); } })
           .layoutWeight(1)
           .transition(
             TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
@@ -549,7 +529,7 @@ export struct GroupPage {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           EmptyState({ icon: AppIcon.GROUP, message: '附近暂无群组\n快来创建第一个吧！' })
         }
-        .onRefreshing(() => { this.loadNearbyGroups(true); })
+        .onRefreshing(() => { this.loadMyGroups(true); })
         .transition(
           TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
             .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
@@ -559,7 +539,7 @@ export struct GroupPage {
           this.buildGroupList()
         }
         .layoutWeight(1)
-        .onRefreshing(() => { this.loadNearbyGroups(true); })
+        .onRefreshing(() => { this.loadMyGroups(true); })
         .transition(
           TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
             .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))

@@ -83,6 +83,7 @@ export interface PageNamesType {
   SHARE_RESOLUTION: string;
   EVENT_DETAIL: string;
   PROFILE_EDIT: string;
+  NEARBY_USERS: string;
 }
 
 export const PageNames: PageNamesType = {
@@ -112,7 +113,8 @@ export const PageNames: PageNamesType = {
   MY_SHARES: 'MySharesPage',
   SHARE_RESOLUTION: 'ShareResolutionPage',
   EVENT_DETAIL: 'EventDetailPage',
-  PROFILE_EDIT: 'ProfileEditPage'
+  PROFILE_EDIT: 'ProfileEditPage',
+  NEARBY_USERS: 'NearbyUsersListPage'
 };
 
 // 默认配置（服务端 ClientConfig 加载前的回退值）

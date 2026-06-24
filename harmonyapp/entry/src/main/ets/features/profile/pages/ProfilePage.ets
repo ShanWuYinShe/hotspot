@@ -19,7 +19,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { LoginPromptView } from '../../../components/LoginPromptView';
-import { MyProfile, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest, UserItem, UserOpenTheDoorRequest, UserSharePayload } from '../../../core/types/api';
+import { MyProfile, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest, UserItem, UserOpenTheDoorRequest, UserSharePayload, MomentItem, UserMomentsRequest } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
@@ -75,6 +75,8 @@ export struct ProfilePage {
   @State isLoading: boolean = false;
   @State myMomentsCount: number = 0;
   @State myGroupsCount: number = 0;
+  @State myFriendsCount: number = 0;
+  @State myMoments: MomentItem[] = [];
   @State myFollowersCount: number = 0;
   @State myFollowingCount: number = 0;
   @State selectedTab: number = 0;
@@ -248,6 +250,7 @@ export struct ProfilePage {
       }
     }
     await this.loadUserStats();
+    await this.loadMyMoments();
     await this.refreshAdminPrivileges();
   }
 
@@ -308,9 +311,40 @@ export struct ProfilePage {
     if (this.currentUser.stats) {
       this.myMomentsCount = this.currentUser.stats.moments_count || 0;
       this.myGroupsCount = this.currentUser.stats.groups_count || 0;
+      this.myFriendsCount = this.currentUser.stats.friends_count || 0;
       this.myFollowersCount = this.currentUser.stats.followers_count || 0;
       this.myFollowingCount = this.currentUser.stats.following_count || 0;
     }
+  }
+
+  private async loadMyMoments(): Promise<void> {
+    if (!this.isLoggedIn || !this.currentUser) {
+      return;
+    }
+    try {
+      const response = await ApiClient.getUserMoments({
+        user_id: this.currentUser.user_id,
+        pagination: { limit: 9 }
+      });
+      if (response.code === 0) {
+        const items: MomentItem[] = response.data?.items ?? [];
+        this.myMoments = items.filter((m: MomentItem) => {
+          const imgs = m.images;
+          return imgs !== undefined && imgs !== null && imgs.length > 0;
+        });
+      }
+    } catch (error) {
+      // 静默失败，画廊降级为空占位
+    }
+  }
+
+  private momentThumb(moment: MomentItem): string {
+    const imgs = moment.images;
+    if (imgs !== undefined && imgs !== null && imgs.length > 0) {
+      const first = imgs[0];
+      return first.thumbnail_url || first.url;
+    }
+    return '';
   }
 
   private openMyMoments(): void {
@@ -1216,7 +1250,7 @@ export struct ProfilePage {
       ForEach([
         { label: '帖子', value: formatCount(this.myMomentsCount) },
         { label: '关注者', value: formatCount(this.myFollowersCount) },
-        { label: '足迹', value: formatCount(this.myGroupsCount) }
+        { label: '足迹', value: formatCount(this.myFriendsCount) }
       ] as StatItem[], (stat: StatItem, index: number) => {
         Row() {
           if (index > 0) {
@@ -1284,7 +1318,7 @@ export struct ProfilePage {
   private buildFigmaGallery() {
     if (this.selectedTab === 0) {
       // 帖子 tab
-      if (this.myMomentsCount === 0) {
+      if (this.myMoments.length === 0) {
         Column({ space: 12 }) {
           Text() {
             SymbolSpan($r(AppIcon.EMPTY))
@@ -1302,9 +1336,9 @@ export struct ProfilePage {
         .justifyContent(FlexAlign.Center)
       } else {
         Column({ space: DesignConstants.SPACING.SM }) {
-          ForEach(this.getMomentRows(), (row: number[], rowIndex: number) => {
+          ForEach(this.getMomentRows(), (row: MomentItem[], rowIndex: number) => {
             this.buildMomentsRow(row, rowIndex)
-          }, (row: number[], rowIndex: number) => `${rowIndex}`)
+          }, (row: MomentItem[], rowIndex: number) => `${rowIndex}`)
         }
         .width('100%')
       }
@@ -1329,39 +1363,34 @@ export struct ProfilePage {
   }
 
   // 我的瞬间九宫格：按 3 列分行（避开 ArkUI 不支持的 calc，用 Row + layoutWeight 等宽）
-  private getMomentRows(): number[][] {
-    const total = Math.min(this.myMomentsCount, 9);
-    const rows: number[][] = [];
-    for (let i = 0; i < total; i += 3) {
-      const row: number[] = [];
-      for (let j = i; j < Math.min(i + 3, total); j++) {
-        row.push(j);
-      }
-      rows.push(row);
+  private getMomentRows(): MomentItem[][] {
+    const items: MomentItem[] = this.myMoments.slice(0, 9);
+    const rows: MomentItem[][] = [];
+    for (let i = 0; i < items.length; i += 3) {
+      rows.push(items.slice(i, i + 3));
     }
     return rows;
   }
 
   @Builder
-  private buildMomentTile(index: number) {
+  private buildMomentTile(moment: MomentItem) {
     Column() {
-      Column()
+      Image(this.momentThumb(moment))
         .width('100%')
         .aspectRatio(1)
         .borderRadius(DesignConstants.RADIUS.LG)
-        .backgroundColor(this.getSurfaceSubtle())
+        .objectFit(ImageFit.Cover)
         .border({ width: 1, color: this.getSurfaceBorder() })
-        .shadow(this.getCurrentThemePalette().controlShadow)
     }
     .layoutWeight(1)
   }
 
   @Builder
-  private buildMomentsRow(row: number[], rowIndex: number) {
+  private buildMomentsRow(row: MomentItem[], rowIndex: number) {
     Row({ space: DesignConstants.SPACING.SM }) {
-      ForEach(row, (i: number) => {
-        this.buildMomentTile(i)
-      }, (i: number) => `${i}`)
+      ForEach(row, (m: MomentItem) => {
+        this.buildMomentTile(m)
+      }, (m: MomentItem) => m.moment_id)
       ForEach(Array.from({ length: 3 - row.length }, (_: Object, padIndex: number) => padIndex), (_: number) => {
         Column().layoutWeight(1)
       }, (_: number, padIndex: number) => `pad_${rowIndex}_${padIndex}`)

@@ -124,6 +124,11 @@
       "name": "ProfileEditPage",
       "pageSourceFile": "src/main/ets/features/profile/pages/ProfileEditPage.ets",
       "buildFunction": "ProfileEditPageBuilder"
+    },
+    {
+      "name": "NearbyUsersListPage",
+      "pageSourceFile": "src/main/ets/features/nearby/pages/NearbyUsersListPage.ets",
+      "buildFunction": "NearbyUsersListPageBuilder"
     }
   ]
 }
