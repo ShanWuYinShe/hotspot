@@ -114,7 +114,7 @@ export struct PhoneLayout {
           }.tabBar(this.TabBarBuilder(3))
           TabContent() { ProfilePage() }.tabBar(this.TabBarBuilder(4))
         }
-        .barHeight(56)
+        .barHeight(this.isTablet ? 0 : 56)
         .scrollable(false)
         .barMode(BarMode.Fixed)
         .divider({ strokeWidth: 0, color: Color.Transparent, startMargin: 0, endMargin: 0 })
@@ -126,10 +126,16 @@ export struct PhoneLayout {
           this.currentTabIndex = index;
         })
         .barBackgroundColor(Color.Transparent)
+        .backgroundBlurStyle(BlurStyle.Thin)
         .backgroundColor($r('app.color.bg_primary'))
         .layoutWeight(1)
         .padding({ bottom: this.safeAreaBottom })
         .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
+
+        // 平板浮动药丸底栏（Tabs 系统 bar 已隐藏，用自定义浮动药丸替代，对齐前端 TabletBottomNav）
+        if (this.isTablet) {
+          this.buildFloatingTabletNav()
+        }
       }
       .width('100%')
       .height('100%')
@@ -221,6 +227,78 @@ export struct PhoneLayout {
         this.tabsController.changeIndex(index);
         this.currentTabIndex = index;
       }
+    })
+  }
+
+  // 平板浮动药丸底栏（对齐前端 TabletBottomNav：max-width 520 + pill 圆角 + 玻璃 blur + safe-area）
+  @Builder buildFloatingTabletNav() {
+    Column() {
+      Row() {
+        this.FloatingTabItem(0)
+        this.FloatingTabItem(1)
+        this.FloatingFab()
+        this.FloatingTabItem(3)
+        this.FloatingTabItem(4)
+      }
+      .width('100%')
+      .constraintSize({ maxWidth: 520 })
+      .justifyContent(FlexAlign.SpaceAround)
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.getPalette().tabBarBackground)
+      .backgroundBlurStyle(BlurStyle.Thin)
+      .border({ width: 1, color: this.getPalette().floatingBorderColor })
+      .shadow(this.getPalette().elevatedShadow)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Center)
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: Math.max(this.safeAreaBottom, DesignConstants.SPACING.SM) })
+  }
+
+  @Builder FloatingTabItem(index: number) {
+    Column() {
+      Text() {
+        SymbolSpan(TAB_ITEMS[index].symbolId)
+          .fontSize(22)
+          .fontColor([
+            this.currentTabIndex === index
+              ? $r('app.color.brand_primary')
+              : $r('app.color.chip_inactive_text')
+          ])
+      }
+      Text(TAB_ITEMS[index].label)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(
+          this.currentTabIndex === index
+            ? $r('app.color.brand_primary')
+            : $r('app.color.chip_inactive_text')
+        )
+        .margin({ top: 2 })
+    }
+    .padding({ top: 6, bottom: 6 })
+    .justifyContent(FlexAlign.Center)
+    .onClick(() => {
+      this.tabsController.changeIndex(index);
+      this.currentTabIndex = index;
+    })
+  }
+
+  @Builder FloatingFab() {
+    Row() {
+      Text() {
+        SymbolSpan($r('sys.symbol.plus'))
+          .fontSize(22)
+          .fontColor([$r('app.color.bg_primary')])
+      }
+    }
+    .width(48)
+    .height(48)
+    .justifyContent(FlexAlign.Center)
+    .backgroundColor($r('app.color.brand_primary'))
+    .borderRadius(DesignConstants.RADIUS.FULL)
+    .shadow(this.getPalette().accentShadow)
+    .onClick(() => {
+      this.showCreateSheet = true;
     })
   }
 
