@@ -172,7 +172,7 @@
     <div class="page-shell">
       <div class="flex items-center justify-between">
         <div>
-          <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">我的群组</h1>
+          <h1 class="page-title" style="color: var(--text-primary);">我的群组</h1>
           <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
             管理已加入群组、邀请与申请
           </p>
@@ -221,7 +221,7 @@
           </div>
         </EmptyState>
       {:else}
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {#each groups as group (group.group.group_id)}
             <div>
               <a href="/groups/{group.group.group_id}" style="text-decoration: none;">
@@ -293,7 +293,10 @@
           {:else}
             <div class="space-y-2">
               {#each invites as invite (invite.invite_id)}
-                <div class="rounded-[var(--radius-md)] p-3" style="border: 1px solid var(--border-theme);">
+                <div
+                  class="rounded-[var(--radius-md)] p-3"
+                  style="border: 1px solid var(--border-theme);"
+                >
                   <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
                     {invite.group.name}
                   </p>
@@ -354,7 +357,10 @@
           {:else}
             <div class="space-y-2">
               {#each applications as application (application.application_id)}
-                <div class="rounded-[var(--radius-md)] p-3" style="border: 1px solid var(--border-theme);">
+                <div
+                  class="rounded-[var(--radius-md)] p-3"
+                  style="border: 1px solid var(--border-theme);"
+                >
                   <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
                     群组申请
                   </p>

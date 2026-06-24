@@ -109,7 +109,7 @@
     <div class="page-shell">
       <div class="flex items-center justify-between">
         <div>
-          <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">关系</h1>
+          <h1 class="page-title" style="color: var(--text-primary);">关系</h1>
           <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
             {activeMeta.subtitle}
           </p>

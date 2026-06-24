@@ -18,6 +18,7 @@
   import MapPin from 'lucide-svelte/icons/map-pin';
   import BackButton from '$lib/components/common/back-button.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
+  import SmartImage from '$lib/components/common/smart-image.svelte';
   import Send from 'lucide-svelte/icons/send';
   import Loader2 from 'lucide-svelte/icons/loader-2';
   import Pencil from 'lucide-svelte/icons/pencil';
@@ -306,12 +307,16 @@
             <div class="grid gap-2 {moment.images.length === 1 ? '' : 'grid-cols-2'}">
               {#each moment.images as image, i (image.url)}
                 <div class="relative">
-                  <img
+                  <SmartImage
                     src={image.url}
                     alt="图片 {i + 1}"
-                    class="w-full rounded-[var(--radius-md)]"
-                    style="height: clamp(220px, 38vw, 380px); object-fit: cover;"
-                    loading="lazy"
+                    thumbnail={image.thumbnail_url}
+                    width={image.width}
+                    height={image.height}
+                    sizes={moment.images.length === 1
+                      ? '(min-width: 720px) 720px, 100vw'
+                      : '(min-width: 768px) 360px, 50vw'}
+                    class="w-full rounded-[var(--radius-md)] h-[clamp(220px,38vw,380px)] object-cover"
                   />
                   {#if i === 0 && moment.tags && moment.tags.length > 0}
                     <div

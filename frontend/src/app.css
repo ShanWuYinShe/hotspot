@@ -2,6 +2,15 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* 触屏保护：重定义内置 hover variant，使全站所有 `hover:` 仅在「支持悬停的设备」+
+   `:hover` 时生效，从根上消除触屏点击后的 :hover 粘滞。一次性覆盖全站 98 处 `hover:`，
+   无需逐个迁移到新 variant（Tailwind 官方推荐的 sticky-hover 解法）。
+   语法：`&:hover`(选择器) 与 `@media (hover: hover)`(媒体) 必须并存 —— 若缺少
+   `&:hover`，会退化为「该设备下常驻」，丢失悬停条件（见 tailwindcss @custom-variant 解析）。
+   说明：app.css 内手写的 `.xxx-hover:hover` 工具类是原生 CSS，不受此重定义影响，
+   且均带 `:focus-visible` 兜底，触屏可访问性不受损。 */
+@custom-variant hover (&:hover, @media (hover: hover));
+
 @theme {
   /* Colors - using CSS custom properties for dark mode support */
   --color-background: var(--background);
@@ -1460,6 +1469,18 @@
           --narrow(详情阅读 720) / --form(表单 560)。
      详见 frontend/CLAUDE.md「页面布局规范」。
      ─────────────────────────────────────────────────────────────── */
+  /* 流式页面标题：字号随视口平滑缩放，替代散落各页的内联 `font-size: 20px/24px`。
+     对齐 CLAUDE.md「字号 / 字重」：列表 / 钻取页 18–20px，门面页(home)22–24px。
+     用 `<h1 class="page-title">` / `<h1 class="page-title page-title--hero">`。 */
+  .page-title {
+    font-size: clamp(1.125rem, 0.95rem + 0.5vw, 1.375rem);
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .page-title--hero {
+    font-size: clamp(1.25rem, 1rem + 0.8vw, 1.5rem);
+  }
+
   .page-shell {
     width: 100%;
     max-width: min(1180px, calc(100vw - 32px));

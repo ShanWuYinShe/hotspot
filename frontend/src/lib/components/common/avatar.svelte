@@ -27,9 +27,7 @@
   const imageSrc = $derived(src?.trim() ?? '');
   const label = $derived(name?.trim() ?? '');
   const initials = $derived(Array.from(label).slice(0, 2).join('').toUpperCase());
-  const radius = $derived(
-    shape === 'circle' ? '9999px' : 'var(--radius-md)'
-  );
+  const radius = $derived(shape === 'circle' ? '9999px' : 'var(--radius-md)');
   const rootStyle = $derived(
     `width: ${size}px; height: ${size}px; border-radius: ${radius}; border: ${border ? '1.5px solid var(--border-theme)' : 'none'};`
   );
@@ -44,7 +42,13 @@
   aria-hidden={alt === '' ? 'true' : undefined}
 >
   {#if imageSrc}
-    <img src={imageSrc} alt={alt ?? label} class="h-full w-full object-cover" loading="lazy" />
+    <img
+      src={imageSrc}
+      alt={alt ?? label}
+      class="h-full w-full object-cover"
+      loading="lazy"
+      decoding="async"
+    />
   {:else}
     <span class="flex h-full w-full items-center justify-center" style={fallbackStyle}>
       {#if initials}

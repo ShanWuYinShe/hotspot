@@ -13,6 +13,7 @@
   import Share2 from 'lucide-svelte/icons/share-2';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import Avatar from '$lib/components/common/avatar.svelte';
+  import SmartImage from '$lib/components/common/smart-image.svelte';
 
   interface Props {
     moment: MomentItem;
@@ -35,7 +36,7 @@
     onFalse: () => momentsService.unfavorite({ moment_id: moment.moment_id })
   });
 
-  const primaryImage = $derived(moment.images?.[0]?.url ?? '');
+  const primaryImage = $derived(moment.images?.[0]);
   const imageCount = $derived(moment.images?.length ?? 0);
   const visibleTags = $derived((moment.tags ?? []).slice(0, dense ? 2 : 3));
   const timeText = $derived(formatRelativeTime(moment.created_at));
@@ -165,11 +166,13 @@
 
   {#if primaryImage}
     <div class="moment-card__media">
-      <img
-        src={primaryImage}
+      <SmartImage
+        src={primaryImage.url}
         alt={moment.description || moment.tags?.[0] || '动态图片'}
-        loading="lazy"
-        decoding="async"
+        thumbnail={primaryImage.thumbnail_url}
+        width={primaryImage.width}
+        height={primaryImage.height}
+        sizes="(min-width: 1536px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
       />
       <div class="moment-card__media-shade"></div>
       {#if imageCount > 1}
@@ -337,8 +340,9 @@
     height: 34px;
   }
 
-  .moment-card__avatar img,
-  .moment-card__media img {
+  /* :global 穿透到子组件(Avatar / SmartImage)内的 <img>，否则 scoped CSS 不生效 */
+  .moment-card__avatar :global(img),
+  .moment-card__media :global(img) {
     width: 100%;
     height: 100%;
     object-fit: cover;

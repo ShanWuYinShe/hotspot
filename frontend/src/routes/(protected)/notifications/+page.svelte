@@ -342,7 +342,10 @@
     <span class="eyebrow">通知概览</span>
     <div class="grid grid-cols-2 gap-3" style="margin-top: 12px;">
       {#each overviewTiles as tile (tile.label)}
-        <div class="rounded-[var(--radius-md)]" style="background: var(--border-theme); padding: 12px;">
+        <div
+          class="rounded-[var(--radius-md)]"
+          style="background: var(--border-theme); padding: 12px;"
+        >
           <p
             style="font-size: 10px; color: var(--text-secondary); letter-spacing: 0.08em; text-transform: uppercase;"
           >
@@ -399,7 +402,7 @@
               <BackButton onclick={() => history.back()} size={36} />
             {/if}
             <div>
-              <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">
+              <h1 class="page-title" style="color: var(--text-primary);">
                 {t('notificationsPage.title')}
               </h1>
               {#if notificationStore.unreadCount > 0}
