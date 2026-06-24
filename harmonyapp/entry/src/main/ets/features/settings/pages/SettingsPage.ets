@@ -19,6 +19,7 @@ import { WebSocketService } from '../../../core/network/WebSocketService';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { AnnouncementSummaryCard, SettingsEntryItem, SettingsEntryRow, SettingsMetaCard, SettingsSectionCard, SupportConfigCard } from './SettingsSupport';
 import { AppIcon } from '../../../components/SystemIcon';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF27;
@@ -295,7 +296,7 @@ export struct SettingsPage {
 
         Refresh({ refreshing: $$this.metaRefreshing, builder: RefreshIndicator }) {
           Scroll() {
-            Column({ space: 0 }) {
+            ResponsiveContainer() {
               // === Section 1: 外观与主题 ===
               Column() {
                 SettingsSectionCard({ title: '外观与主题' }) {
@@ -400,10 +401,9 @@ export struct SettingsPage {
                   .onClick(() => { this.logout(); })
               }
             }
-            .width('100%')
-            .padding({ top: DesignConstants.SPACING.LG, bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
           }
           .scrollBar(BarState.Auto)
+          .padding({ top: DesignConstants.SPACING.LG, bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
         }
         .onRefreshing(() => {
           if (!this.metaRefreshing) {

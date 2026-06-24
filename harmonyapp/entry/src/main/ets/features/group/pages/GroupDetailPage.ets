@@ -8,6 +8,7 @@ import { MyProfile } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
@@ -901,6 +902,7 @@ export struct GroupDetailPage {
 
   build() {
     NavDestination() {
+    ResponsiveContainer({ fill: true }) {
     Column() {
       // 标题栏
       Row() {
@@ -1252,6 +1254,7 @@ export struct GroupDetailPage {
     .width('100%')
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

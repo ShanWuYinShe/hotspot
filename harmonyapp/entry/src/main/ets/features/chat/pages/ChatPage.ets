@@ -18,6 +18,7 @@ import type {
 } from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -986,6 +987,7 @@ export struct ChatPage {
 
   build() {
     NavDestination() {
+    ResponsiveContainer({ fill: true }) {
     Column() {
       Row() {
         Row() {
@@ -1293,6 +1295,7 @@ export struct ChatPage {
       dragBar: true,
       backgroundColor: this.getCurrentThemePalette().sheetBackground
     })
+    }
     }
     .hideTitleBar(true)
     .onBackPressed((): boolean => this.handleBackNavigation())
