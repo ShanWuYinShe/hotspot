@@ -42,10 +42,10 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: '首页', route: 'nearby', symbolId: $r('sys.symbol.house_fill') },
+  { label: '首页', route: 'nearby', symbolId: $r('sys.symbol.house') },
   { label: '发现', route: 'discover', symbolId: $r('sys.symbol.compass') },
-  { label: '消息', route: 'messages', symbolId: $r('sys.symbol.message_fill') },
-  { label: '我的', route: 'profile', symbolId: $r('sys.symbol.person_fill') }
+  { label: '消息', route: 'messages', symbolId: $r('sys.symbol.message') },
+  { label: '我的', route: 'profile', symbolId: $r('sys.symbol.person') }
 ];
 
 @Component

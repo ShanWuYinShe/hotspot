@@ -37,11 +37,11 @@ interface TabItem {
 }
 
 const TAB_ITEMS: TabItem[] = [
-  { label: '首页', symbolId: $r('sys.symbol.house_fill') },
+  { label: '首页', symbolId: $r('sys.symbol.house') },
   { label: '发现', symbolId: $r('sys.symbol.compass') },
   { label: '发布', symbolId: $r('sys.symbol.plus') },
-  { label: '消息', symbolId: $r('sys.symbol.message_fill') },
-  { label: '我的', symbolId: $r('sys.symbol.person_fill') }
+  { label: '消息', symbolId: $r('sys.symbol.message') },
+  { label: '我的', symbolId: $r('sys.symbol.person') }
 ];
 
 const CREATE_TAB_INDEX: number = 2;
@@ -229,23 +229,14 @@ export struct PhoneLayout {
       Row() {
         Text() {
           SymbolSpan($r('sys.symbol.plus'))
-            .fontSize(20)
-            .fontColor([
-              this.currentTabIndex === CREATE_TAB_INDEX
-                ? $r('app.color.bg_primary')
-                : $r('app.color.brand_primary')
-            ])
+            .fontSize(22)
+            .fontColor([$r('app.color.bg_primary')])
         }
       }
-      .width(40).height(40)
+      .width(52).height(52)
       .justifyContent(FlexAlign.Center)
-      .backgroundColor(
-        this.currentTabIndex === CREATE_TAB_INDEX
-          ? $r('app.color.brand_primary')
-          : $r('app.color.bg_secondary')
-      )
+      .backgroundColor($r('app.color.brand_primary'))
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .border({ width: 1, color: $r('app.color.brand_primary') })
       .scale(
         this.isCreateTabPressed
           ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON }
