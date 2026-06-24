@@ -430,7 +430,7 @@ export struct DiscoverPage {
   buildSectionHeader(title: string) {
     Row() {
       Text(title)
-        .fontSize(16)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontWeight(FontWeight.Bold)
         .fontColor(this.getCurrentThemePalette().textPrimary)
     }

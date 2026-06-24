@@ -15,6 +15,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppThemeVisuals';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
@@ -49,6 +50,7 @@ export struct SearchPage {
 
   @State currentIndex: number = 0;
   @State keyword: string = '';
+  @State isSearchFocused: boolean = false;
   @State isLoading: boolean = false;
   @State userResults: UserItem[] = [];
   private userResultsDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
@@ -93,6 +95,18 @@ export struct SearchPage {
 
   private getSurfaceBorder(): string {
     return this.getCurrentThemePalette().borderColor;
+  }
+
+  private fieldBorder(focused: boolean, hasError: boolean): InputBorderResolution {
+    return AppThemeVisuals.resolveInputBorder({
+      backgroundColor: this.getSurfaceBackground(),
+      borderColor: this.getSurfaceBorder(),
+      borderWidth: 1,
+      borderRadius: DesignConstants.SHAPE.INPUT,
+      shadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
+      height: 38,
+      horizontalPadding: DesignConstants.SPACING.LG
+    }, focused, hasError, this.resolvedThemeId);
   }
 
   private getReferencePoint(): GeoPoint | null {
@@ -354,9 +368,11 @@ export struct SearchPage {
               .height(38)
               .backgroundColor(Color.Transparent)
               .fontSize(13)
+              .placeholderColor(this.getCurrentThemePalette().textTertiary)
               .fontColor(this.getCurrentThemePalette().textPrimary)
               .border({ width: 0 })
               .padding(0)
+              .onFocus(() => { this.isSearchFocused = true; })
               .onChange((value) => {
                 this.keyword = value;
                 this.hasSearched = false;
@@ -365,15 +381,15 @@ export struct SearchPage {
               .onSubmit(() => {
                 this.doSearch();
               })
-              .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+              .onBlur(() => { this.isSearchFocused = false; KeyboardDismissManager.getInstance().dismiss(); })
           }
           .layoutWeight(1)
           .height(38)
           .borderRadius(DesignConstants.SHAPE.INPUT)
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           .backgroundColor(this.getSurfaceBackground())
-          .shadow(this.getCurrentThemePalette().surfaceShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .shadow(this.fieldBorder(this.isSearchFocused, false).shadow)
+          .border({ width: 1, color: this.fieldBorder(this.isSearchFocused, false).borderColor })
         }
         .width('100%')
         .padding({

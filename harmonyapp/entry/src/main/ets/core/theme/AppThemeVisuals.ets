@@ -32,6 +32,12 @@ export interface ThemeInputVisualStyle {
   horizontalPadding: number;
 }
 
+/** 输入框边框态解析结果（focus / error 态覆盖 borderColor + shadow） */
+export interface InputBorderResolution {
+  borderColor: ResourceColor;
+  shadow: ShadowOptions;
+}
+
 export interface ThemeMetricVisualStyle extends ThemeCardVisualStyle {
   iconColor: ResourceColor;
   valueFontSize: number;
@@ -487,5 +493,37 @@ export class AppThemeVisuals {
     };
     AppThemeVisuals.chatVisualCache.set(key, style);
     return style;
+  }
+
+  /**
+   * 输入框边框态解析，对齐前端 focus（borderColor=brand + glow）/ error（红边 + 红色软发光）。
+   * ArkUI 的 ShadowOptions 没有 spread 参数，无法表达 CSS `0 0 0 2px` 硬边环，
+   * 这里降级为「提色边框 + 软发光阴影」的组合，是最接近前端 focus 观感的写法。
+   */
+  static resolveInputBorder(base: ThemeInputVisualStyle, focused: boolean, error: boolean, themeId: string): InputBorderResolution {
+    const palette = AppThemeVisuals.getPalette(themeId);
+    if (error) {
+      return {
+        borderColor: palette.error,
+        shadow: { radius: 8, color: AppThemeVisuals.withAlpha(palette.error, 0.10), offsetX: 0, offsetY: 0 } as ShadowOptions
+      };
+    }
+    if (focused) {
+      return {
+        borderColor: palette.accentBackground,
+        shadow: { radius: 8, color: AppThemeVisuals.withAlpha(palette.accentBackground, 0.18), offsetX: 0, offsetY: 0 } as ShadowOptions
+      };
+    }
+    return {
+      borderColor: base.borderColor,
+      shadow: base.shadow
+    };
+  }
+
+  /** 把 #RRGGBB（6 位）拼接 alpha（0-1）→ #RRGGBBAA（8 位），用于 shadow 软发光色 */
+  private static withAlpha(hex: string, alpha: number): string {
+    const a: number = Math.round(alpha * 255);
+    const aHex: string = a < 16 ? '0' + a.toString(16).toUpperCase() : a.toString(16).toUpperCase();
+    return hex + aHex;
   }
 }

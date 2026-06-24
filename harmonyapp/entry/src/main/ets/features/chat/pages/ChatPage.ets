@@ -22,6 +22,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
+import { SoftDivider } from '../../../components/SoftDivider';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { MessageCacheService, MessageCacheItem } from '../../../core/database/MessageCacheService';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
@@ -1216,8 +1217,10 @@ export struct ChatPage {
           .maxLength(MESSAGE_CONTENT_MAX)
           .height(this.getChatVisualStyle().input.height)
           .backgroundColor(this.getChatTheme().inputFieldBg)
+          .placeholderColor(this.getCurrentThemePalette().textTertiary)
           .borderRadius(this.getChatVisualStyle().input.borderRadius)
-          .shadow(this.getChatVisualStyle().input.shadow)
+          .border({ width: 1, color: AppThemeVisuals.resolveInputBorder(this.getChatVisualStyle().input, this.isInputFocused, false, this.resolvedThemeId).borderColor })
+          .shadow(AppThemeVisuals.resolveInputBorder(this.getChatVisualStyle().input, this.isInputFocused, false, this.resolvedThemeId).shadow)
           .padding({ left: this.getChatVisualStyle().input.horizontalPadding, right: this.getChatVisualStyle().input.horizontalPadding })
           .onChange((value) => {
             this.inputText = value;
@@ -1320,7 +1323,7 @@ export struct ChatPage {
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor(this.getCurrentThemePalette().textSecondary)
 
-      Divider().color(this.getSurfaceBorder())
+      SoftDivider({ color: this.getSurfaceBorder() })
 
       if (this.chatType === 'private_chat' && this.targetId) {
         Button('查看个人主页')
@@ -1378,7 +1381,7 @@ export struct ChatPage {
           this.showConversationActionsSheet = false;
         })
 
-      Divider().color(this.getSurfaceBorder())
+      SoftDivider({ color: this.getSurfaceBorder() })
 
       Button('举报')
         .type(ButtonType.Normal)

@@ -26,6 +26,18 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppThemeVisuals';
+import { validateField, FieldRule } from '../../../core/util/FormValidator';
+
+const LOGIN_ID_RULES: FieldRule[] = [
+  { required: true, requiredMessage: '请输入账号' },
+  { minLength: 3, minLengthMessage: '账号需 3-64 个字符' },
+  { maxLength: 64, maxLengthMessage: '账号需 3-64 个字符' }
+];
+const NICKNAME_RULES: FieldRule[] = [
+  { required: true, requiredMessage: '请输入昵称' },
+  { maxLength: 30, maxLengthMessage: '昵称最多 30 个字符' }
+];
 
 const DOMAIN_NUMBER: number = 0xFF02;
 const TAG: string = 'LoginPage';
@@ -60,6 +72,20 @@ export struct LoginPage {
   @State isLoginBtnPressed: boolean = false;
   @State isRegisterBtnPressed: boolean = false;
   @State isGuestBtnPressed: boolean = false;
+  @State loginIdFocused: boolean = false;
+  @State passwordFocused: boolean = false;
+  @State registerNicknameFocused: boolean = false;
+  @State registerLoginIdFocused: boolean = false;
+  @State registerPasswordFocused: boolean = false;
+  @State registerPasswordConfirmFocused: boolean = false;
+  @State guestNicknameFocused: boolean = false;
+  @State loginIdTouched: boolean = false;
+  @State passwordTouched: boolean = false;
+  @State registerNicknameTouched: boolean = false;
+  @State registerLoginIdTouched: boolean = false;
+  @State registerPasswordTouched: boolean = false;
+  @State registerPasswordConfirmTouched: boolean = false;
+  @State guestNicknameTouched: boolean = false;
 
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
@@ -123,6 +149,68 @@ export struct LoginPage {
 
   private getSurfaceBorder(): string {
     return this.getCurrentThemePalette().borderColor;
+  }
+
+  private fieldBorder(focused: boolean, hasError: boolean): InputBorderResolution {
+    return AppThemeVisuals.resolveInputBorder({
+      backgroundColor: this.getSurfaceSubtle(),
+      borderColor: this.getSurfaceBorder(),
+      borderWidth: 1,
+      borderRadius: DesignConstants.SHAPE.INPUT,
+      shadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
+      height: DesignConstants.COMPONENT.INPUT_HEIGHT,
+      horizontalPadding: DesignConstants.SPACING.MD
+    }, focused, hasError, this.resolvedThemeId);
+  }
+
+  private getLoginIdError(): string | undefined {
+    return this.loginIdTouched ? validateField(this.loginId, LOGIN_ID_RULES) : undefined;
+  }
+
+  private getPasswordError(): string | undefined {
+    if (!this.passwordTouched) {
+      return undefined;
+    }
+    return validateField(this.password, [
+      { required: true, requiredMessage: '请输入密码' },
+      { minLength: 8, minLengthMessage: '密码需为 8-128 位且同时包含字母和数字' },
+      { maxLength: 128, maxLengthMessage: '密码需为 8-128 位且同时包含字母和数字' },
+      { custom: (v: string) => (v && !this.hasLetterAndDigit(v) ? '密码需为 8-128 位且同时包含字母和数字' : undefined) }
+    ]);
+  }
+
+  private getRegisterNicknameError(): string | undefined {
+    return this.registerNicknameTouched ? validateField(this.registerNickname, NICKNAME_RULES) : undefined;
+  }
+
+  private getRegisterLoginIdError(): string | undefined {
+    return this.registerLoginIdTouched ? validateField(this.registerLoginId, LOGIN_ID_RULES) : undefined;
+  }
+
+  private getRegisterPasswordError(): string | undefined {
+    if (!this.registerPasswordTouched) {
+      return undefined;
+    }
+    return validateField(this.registerPassword, [
+      { required: true, requiredMessage: '请输入密码' },
+      { minLength: 8, minLengthMessage: '密码需为 8-128 位且同时包含字母和数字' },
+      { maxLength: 128, maxLengthMessage: '密码需为 8-128 位且同时包含字母和数字' },
+      { custom: (v: string) => (v && !this.hasLetterAndDigit(v) ? '密码需为 8-128 位且同时包含字母和数字' : undefined) }
+    ]);
+  }
+
+  private getRegisterPasswordConfirmError(): string | undefined {
+    if (!this.registerPasswordConfirmTouched) {
+      return undefined;
+    }
+    return validateField(this.registerPasswordConfirm, [
+      { required: true, requiredMessage: '请确认密码' },
+      { custom: (v: string) => (v && v !== this.registerPassword ? '两次密码不一致' : undefined) }
+    ]);
+  }
+
+  private getGuestNicknameError(): string | undefined {
+    return this.guestNicknameTouched ? validateField(this.guestNickname, NICKNAME_RULES) : undefined;
   }
 
   build() {
@@ -333,21 +421,43 @@ export struct LoginPage {
     Column({ space: DesignConstants.SPACING.LG }) {
       TextInput({ placeholder: '邮箱 / 用户名', text: $$this.loginId })
         .fontSize(DesignConstants.FONT.SIZE.MD)
+        .placeholderColor(this.getCurrentThemePalette().textTertiary)
         .padding({ left: 14, right: 14, top: 11, bottom: 11 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
-        .shadow(this.getCurrentThemePalette().controlShadow)
+        .border({ width: 1, color: this.fieldBorder(this.loginIdFocused, this.getLoginIdError() !== undefined).borderColor })
+        .shadow(this.fieldBorder(this.loginIdFocused, this.getLoginIdError() !== undefined).shadow)
         .type(InputType.Email)
-        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+        .onFocus(() => { this.loginIdFocused = true; })
+        .onBlur(() => { this.loginIdFocused = false; this.loginIdTouched = true; KeyboardDismissManager.getInstance().dismiss(); })
+
+      if (this.getLoginIdError()) {
+        Text(this.getLoginIdError())
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().error)
+          .width('100%')
+          .padding({ left: 14 })
+      }
 
       TextInput({ placeholder: '密码', text: $$this.password })
         .fontSize(DesignConstants.FONT.SIZE.MD)
+        .placeholderColor(this.getCurrentThemePalette().textTertiary)
         .padding({ left: 14, right: 14, top: 11, bottom: 11 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
-        .shadow(this.getCurrentThemePalette().controlShadow)
+        .border({ width: 1, color: this.fieldBorder(this.passwordFocused, this.getPasswordError() !== undefined).borderColor })
+        .shadow(this.fieldBorder(this.passwordFocused, this.getPasswordError() !== undefined).shadow)
         .type(InputType.Password)
-        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+        .onFocus(() => { this.passwordFocused = true; })
+        .onBlur(() => { this.passwordFocused = false; this.passwordTouched = true; KeyboardDismissManager.getInstance().dismiss(); })
+
+      if (this.getPasswordError()) {
+        Text(this.getPasswordError())
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().error)
+          .width('100%')
+          .padding({ left: 14 })
+      }
 
       Button('登录')
         .type(ButtonType.Normal)
@@ -399,38 +509,82 @@ export struct LoginPage {
     Column({ space: DesignConstants.SPACING.LG }) {
       TextInput({ placeholder: '昵称（必填）', text: $$this.registerNickname })
         .fontSize(DesignConstants.FONT.SIZE.MD)
+        .placeholderColor(this.getCurrentThemePalette().textTertiary)
         .padding({ left: 14, right: 14, top: 11, bottom: 11 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
-        .shadow(this.getCurrentThemePalette().controlShadow)
-        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+        .border({ width: 1, color: this.fieldBorder(this.registerNicknameFocused, this.getRegisterNicknameError() !== undefined).borderColor })
+        .shadow(this.fieldBorder(this.registerNicknameFocused, this.getRegisterNicknameError() !== undefined).shadow)
+        .onFocus(() => { this.registerNicknameFocused = true; })
+        .onBlur(() => { this.registerNicknameFocused = false; this.registerNicknameTouched = true; KeyboardDismissManager.getInstance().dismiss(); })
+
+      if (this.getRegisterNicknameError()) {
+        Text(this.getRegisterNicknameError())
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().error)
+          .width('100%')
+          .padding({ left: 14 })
+      }
 
       TextInput({ placeholder: '邮箱 / 用户名（登录凭证）', text: $$this.registerLoginId })
         .fontSize(DesignConstants.FONT.SIZE.MD)
+        .placeholderColor(this.getCurrentThemePalette().textTertiary)
         .padding({ left: 14, right: 14, top: 11, bottom: 11 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
-        .shadow(this.getCurrentThemePalette().controlShadow)
+        .border({ width: 1, color: this.fieldBorder(this.registerLoginIdFocused, this.getRegisterLoginIdError() !== undefined).borderColor })
+        .shadow(this.fieldBorder(this.registerLoginIdFocused, this.getRegisterLoginIdError() !== undefined).shadow)
         .type(InputType.Email)
-        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+        .onFocus(() => { this.registerLoginIdFocused = true; })
+        .onBlur(() => { this.registerLoginIdFocused = false; this.registerLoginIdTouched = true; KeyboardDismissManager.getInstance().dismiss(); })
+
+      if (this.getRegisterLoginIdError()) {
+        Text(this.getRegisterLoginIdError())
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().error)
+          .width('100%')
+          .padding({ left: 14 })
+      }
 
       TextInput({ placeholder: '密码（8-128位，含字母+数字）', text: $$this.registerPassword })
         .fontSize(DesignConstants.FONT.SIZE.MD)
+        .placeholderColor(this.getCurrentThemePalette().textTertiary)
         .padding({ left: 14, right: 14, top: 11, bottom: 11 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
-        .shadow(this.getCurrentThemePalette().controlShadow)
+        .border({ width: 1, color: this.fieldBorder(this.registerPasswordFocused, this.getRegisterPasswordError() !== undefined).borderColor })
+        .shadow(this.fieldBorder(this.registerPasswordFocused, this.getRegisterPasswordError() !== undefined).shadow)
         .type(InputType.Password)
-        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+        .onFocus(() => { this.registerPasswordFocused = true; })
+        .onBlur(() => { this.registerPasswordFocused = false; this.registerPasswordTouched = true; KeyboardDismissManager.getInstance().dismiss(); })
+
+      if (this.getRegisterPasswordError()) {
+        Text(this.getRegisterPasswordError())
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().error)
+          .width('100%')
+          .padding({ left: 14 })
+      }
 
       TextInput({ placeholder: '确认密码', text: $$this.registerPasswordConfirm })
         .fontSize(DesignConstants.FONT.SIZE.MD)
+        .placeholderColor(this.getCurrentThemePalette().textTertiary)
         .padding({ left: 14, right: 14, top: 11, bottom: 11 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
-        .shadow(this.getCurrentThemePalette().controlShadow)
+        .border({ width: 1, color: this.fieldBorder(this.registerPasswordConfirmFocused, this.getRegisterPasswordConfirmError() !== undefined).borderColor })
+        .shadow(this.fieldBorder(this.registerPasswordConfirmFocused, this.getRegisterPasswordConfirmError() !== undefined).shadow)
         .type(InputType.Password)
-        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+        .onFocus(() => { this.registerPasswordConfirmFocused = true; })
+        .onBlur(() => { this.registerPasswordConfirmFocused = false; this.registerPasswordConfirmTouched = true; KeyboardDismissManager.getInstance().dismiss(); })
+
+      if (this.getRegisterPasswordConfirmError()) {
+        Text(this.getRegisterPasswordConfirmError())
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().error)
+          .width('100%')
+          .padding({ left: 14 })
+      }
 
       Button('注册')
         .type(ButtonType.Normal)
@@ -502,10 +656,22 @@ export struct LoginPage {
 
       TextInput({ placeholder: '给自己起个名字', text: $$this.guestNickname })
         .fontSize(DesignConstants.FONT.SIZE.MD)
+        .placeholderColor(this.getCurrentThemePalette().textTertiary)
         .padding({ left: 14, right: 14, top: 11, bottom: 11 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
-        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+        .border({ width: 1, color: this.fieldBorder(this.guestNicknameFocused, this.getGuestNicknameError() !== undefined).borderColor })
+        .shadow(this.fieldBorder(this.guestNicknameFocused, this.getGuestNicknameError() !== undefined).shadow)
+        .onFocus(() => { this.guestNicknameFocused = true; })
+        .onBlur(() => { this.guestNicknameFocused = false; this.guestNicknameTouched = true; KeyboardDismissManager.getInstance().dismiss(); })
+
+      if (this.getGuestNicknameError()) {
+        Text(this.getGuestNicknameError())
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().error)
+          .width('100%')
+          .padding({ left: 14 })
+      }
 
       Button('访客登录')
         .type(ButtonType.Normal)

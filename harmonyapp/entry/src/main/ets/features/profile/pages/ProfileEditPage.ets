@@ -17,11 +17,21 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { MyProfile } from '../../../core/types/api';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
+import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppThemeVisuals';
+import { validateField, FieldRule } from '../../../core/util/FormValidator';
 
 const TAG_OPTIONS: string[] = ['摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术', '科技', '游戏', '户外', '时尚', '电影'];
 const MAX_TAGS: number = 5;
 const MAX_NICKNAME: number = 30;
 const MAX_BIO: number = 150;
+
+const NICKNAME_RULES: FieldRule[] = [
+  { required: true, requiredMessage: '昵称不能为空' },
+  { maxLength: MAX_NICKNAME, maxLengthMessage: '昵称长度需在 1-30 字符之间' }
+];
+const BIO_RULES: FieldRule[] = [
+  { maxLength: MAX_BIO, maxLengthMessage: `个人简介不能超过 ${MAX_BIO} 字符` }
+];
 
 @Preview
 @Component
@@ -37,6 +47,10 @@ export struct ProfileEditPage {
   @State tags: string[] = [];
   @State isSaving: boolean = false;
   @State isSaved: boolean = false;
+  @State nicknameFocused: boolean = false;
+  @State bioFocused: boolean = false;
+  @State nicknameTouched: boolean = false;
+  @State bioTouched: boolean = false;
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
@@ -106,6 +120,8 @@ export struct ProfileEditPage {
   }
 
   private handleSave(): void {
+    this.nicknameTouched = true;
+    this.bioTouched = true;
     const trimmedNickname = this.nickname.trim();
     if (!trimmedNickname) {
       SystemToast.showWarning('昵称不能为空', this.getUIContext());
@@ -237,48 +253,9 @@ export struct ProfileEditPage {
             .padding({ left: DesignConstants.SPACING.LG })
 
             // 表单字段
-            this.buildInputField('昵称', '你的名字', this.nickname, MAX_NICKNAME, false, (v: string) => { this.nickname = v; })
+            this.buildInputField('昵称', '你的名字', this.nickname, MAX_NICKNAME, false, (v: string) => { this.nickname = v; }, this.nicknameFocused, this.getNicknameError() ?? '', () => { this.nicknameFocused = true; }, () => { this.nicknameFocused = false; this.nicknameTouched = true; })
 
-            Column({ space: DesignConstants.SPACING.SM }) {
-              Row({ space: 4 }) {
-                Text() {
-                  SymbolSpan($r(AppIcon.EDIT))
-                    .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor([this.getCurrentThemePalette().accentBackground])
-                }
-                Text('个人简介')
-                  .fontSize(DesignConstants.FONT.SIZE.XS)
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-                  .textCase(TextCase.UpperCase)
-                  .letterSpacing(0.08 * 16)
-              }
-              .width('100%')
-
-              Column() {
-                TextArea({ placeholder: '介绍一下自己…', text: this.bio })
-                  .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor(this.getCurrentThemePalette().textPrimary)
-                  .backgroundColor(Color.Transparent)
-                  .borderRadius(0)
-                  .maxLength(MAX_BIO)
-                  .onChange((v: string) => { this.bio = v; })
-                  .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
-
-                Text(this.bio.length + '/' + MAX_BIO)
-                  .fontSize(DesignConstants.FONT.SIZE.XS)
-                  .fontColor(this.bio.length > MAX_BIO * 0.85
-                    ? this.getCurrentThemePalette().accentBackground
-                    : this.getCurrentThemePalette().textTertiary)
-                  .width('100%')
-                  .textAlign(TextAlign.End)
-                  .margin({ top: 4 })
-              }
-              .width('100%')
-              .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-              .backgroundColor(this.getSurfaceSubtle())
-              .borderRadius(DesignConstants.SHAPE.INPUT)
-            }
-            .width('100%')
+            this.buildInputField('个人简介', '介绍一下自己…', this.bio, MAX_BIO, true, (v: string) => { this.bio = v; }, this.bioFocused, this.getBioError() ?? '', () => { this.bioFocused = true; }, () => { this.bioFocused = false; this.bioTouched = true; })
 
             // 兴趣标签
             Column({ space: DesignConstants.SPACING.SM }) {
@@ -371,8 +348,28 @@ export struct ProfileEditPage {
     })
   }
 
+  private getNicknameError(): string | undefined {
+    return this.nicknameTouched ? validateField(this.nickname, NICKNAME_RULES) : undefined;
+  }
+
+  private getBioError(): string | undefined {
+    return this.bioTouched ? validateField(this.bio, BIO_RULES) : undefined;
+  }
+
+  private fieldBorder(focused: boolean, hasError: boolean): InputBorderResolution {
+    return AppThemeVisuals.resolveInputBorder({
+      backgroundColor: this.getSurfaceSubtle(),
+      borderColor: this.getSurfaceBorder(),
+      borderWidth: 1,
+      borderRadius: DesignConstants.SHAPE.INPUT,
+      shadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
+      height: DesignConstants.COMPONENT.INPUT_HEIGHT,
+      horizontalPadding: DesignConstants.SPACING.MD
+    }, focused, hasError, this.resolvedThemeId);
+  }
+
   @Builder
-  private buildInputField(label: string, placeholder: string, value: string, maxLen: number, multiline: boolean, onChange: (v: string) => void) {
+  private buildInputField(label: string, placeholder: string, value: string, maxLen: number, multiline: boolean, onChange: (v: string) => void, focused: boolean, error: string, onFocus: () => void, onBlur: () => void) {
     Column({ space: DesignConstants.SPACING.SM }) {
       Row({ space: 4 }) {
         Text() {
@@ -393,20 +390,24 @@ export struct ProfileEditPage {
           TextArea({ placeholder: placeholder, text: value })
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getCurrentThemePalette().textPrimary)
+            .placeholderColor(this.getCurrentThemePalette().textTertiary)
             .backgroundColor(Color.Transparent)
             .borderRadius(0)
             .maxLength(maxLen)
             .onChange((v: string) => { onChange(v); })
-            .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+            .onFocus(() => { onFocus(); })
+            .onBlur(() => { onBlur(); KeyboardDismissManager.getInstance().dismiss(); })
         } else {
           TextInput({ placeholder: placeholder, text: value })
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getCurrentThemePalette().textPrimary)
+            .placeholderColor(this.getCurrentThemePalette().textTertiary)
             .backgroundColor(Color.Transparent)
             .borderRadius(0)
             .maxLength(maxLen)
             .onChange((v: string) => { onChange(v); })
-            .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+            .onFocus(() => { onFocus(); })
+            .onBlur(() => { onBlur(); KeyboardDismissManager.getInstance().dismiss(); })
         }
 
         Text(value.length + '/' + maxLen)
@@ -417,11 +418,21 @@ export struct ProfileEditPage {
           .width('100%')
           .textAlign(TextAlign.End)
           .margin({ top: 4 })
+
+        if (error.length > 0) {
+          Text(error)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getCurrentThemePalette().error)
+            .width('100%')
+            .margin({ top: DesignConstants.SPACING.XS })
+        }
       }
       .width('100%')
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 10, bottom: 10 })
       .backgroundColor(this.getSurfaceSubtle())
       .borderRadius(DesignConstants.SHAPE.INPUT)
+      .border({ width: 1, color: this.fieldBorder(focused, error.length > 0).borderColor })
+      .shadow(this.fieldBorder(focused, error.length > 0).shadow)
     }
     .width('100%')
   }

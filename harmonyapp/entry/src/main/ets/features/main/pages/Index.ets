@@ -71,7 +71,9 @@ struct Index {
   @StorageLink(STORAGE_KEY_VISIBLE_NOTIFICATIONS) visibleNotifications: SmartNotification[] = [];
   @StorageLink(STORAGE_KEY_OPEN_NOTIFICATION_CENTER) @Watch('onNotificationCenterRequested') openNotificationCenter: boolean = false;
   @StorageLink(STORAGE_KEY_OPEN_CREATE_SHEET) @Watch('onCreateSheetRequested') openCreateSheet: boolean = false;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) @Watch('onThemeChanged') resolvedThemeId: string = 'default_clean_light';
+  /** 主题切换淡入过渡用（ArkUI 无法对颜色插值，以整体 opacity 淡入缓和硬切，对齐前端 transition-colors 观感） */
+  @State themeFadeOpacity: number = 1;
   @StorageProp('isTablet') isTablet: boolean = false;
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'lg';
 
@@ -280,6 +282,17 @@ struct Index {
       this.lastError = errorMsg;
       this.isInitialized = true; 
     }
+  }
+
+  private onThemeChanged(): void {
+    // 主题已切换（resolvedThemeId 已更新为新主题）：整页微降后下一帧淡入，
+    // 缓和主题硬切（ArkUI 无法做颜色插值过渡，这是最接近前端 transition-colors 500ms 的观感妥协）。
+    this.themeFadeOpacity = 0.4;
+    setTimeout(() => {
+      this.getUIContext().animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+        this.themeFadeOpacity = 1;
+      });
+    }, 16);
   }
 
   private async onLoginStateChanged(): Promise<void> {
@@ -845,6 +858,7 @@ struct Index {
         }
       }
     }
+    .opacity(this.themeFadeOpacity)
   }
 
   /** 获取安全区域顶部内边距（状态栏高度 + 间距） */

@@ -12,7 +12,10 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { SoftDivider } from '../../../components/SoftDivider';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppThemeVisuals';
+import { validateField, FieldRule } from '../../../core/util/FormValidator';
 import { CreateGroupRequest, GeoPoint } from '../../../core/types/api';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppRouter, LoginRouteParam, GroupDetailRouteParam, LocationPickerRouteParam } from '../../../core/router/AppRouter';
@@ -30,6 +33,14 @@ const GROUP_PASSWORD_MIN: number = 4;
 const GROUP_PASSWORD_MAX: number = 32;
 const GROUP_MEMBERS_MIN: number = 2;
 const GROUP_MEMBERS_MAX: number = 2000;
+
+const GROUP_NAME_RULES: FieldRule[] = [
+  { required: true, requiredMessage: '请输入群组名称' },
+  { maxLength: GROUP_NAME_MAX, maxLengthMessage: `群组名称最多 ${GROUP_NAME_MAX} 字符` }
+];
+const GROUP_DESC_RULES: FieldRule[] = [
+  { maxLength: GROUP_DESCRIPTION_MAX, maxLengthMessage: `群组描述最多 ${GROUP_DESCRIPTION_MAX} 字符` }
+];
 const LOCATION_NAME_MAX: number = 100;
 
 @Preview
@@ -55,6 +66,13 @@ export struct CreateGroupPage {
   @State groupAvatarLocalUri: string = '';
   @State groupAvatarFileId: string = '';
   @State isGroupAvatarUploading: boolean = false;
+  @State groupNameFocused: boolean = false;
+  @State groupDescriptionFocused: boolean = false;
+  @State groupPasswordFocused: boolean = false;
+  @State maxMembersFocused: boolean = false;
+  @State groupNameTouched: boolean = false;
+  @State groupDescriptionTouched: boolean = false;
+  @State groupPasswordTouched: boolean = false;
 
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
@@ -103,6 +121,37 @@ export struct CreateGroupPage {
     return this.getCurrentThemePalette().borderColor;
   }
 
+  private fieldBorder(focused: boolean, hasError: boolean): InputBorderResolution {
+    return AppThemeVisuals.resolveInputBorder({
+      backgroundColor: this.getSurfaceSubtle(),
+      borderColor: this.getSurfaceBorder(),
+      borderWidth: 1,
+      borderRadius: DesignConstants.SHAPE.INPUT,
+      shadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
+      height: DesignConstants.COMPONENT.INPUT_HEIGHT,
+      horizontalPadding: DesignConstants.SPACING.MD
+    }, focused, hasError, this.resolvedThemeId);
+  }
+
+  private getGroupNameError(): string | undefined {
+    return this.groupNameTouched ? validateField(this.groupName, GROUP_NAME_RULES) : undefined;
+  }
+
+  private getGroupDescriptionError(): string | undefined {
+    return this.groupDescriptionTouched ? validateField(this.groupDescription, GROUP_DESC_RULES) : undefined;
+  }
+
+  private getGroupPasswordError(): string | undefined {
+    if (!this.isPasswordRequired || !this.groupPasswordTouched) {
+      return undefined;
+    }
+    return validateField(this.groupPassword, [
+      { required: true, requiredMessage: '请输入群组密码' },
+      { minLength: GROUP_PASSWORD_MIN, minLengthMessage: `群组密码长度需在 ${GROUP_PASSWORD_MIN}-${GROUP_PASSWORD_MAX} 字符之间` },
+      { maxLength: GROUP_PASSWORD_MAX, maxLengthMessage: `群组密码长度需在 ${GROUP_PASSWORD_MIN}-${GROUP_PASSWORD_MAX} 字符之间` }
+    ]);
+  }
+
   private async createGroup(): Promise<void> {
     const currentUser = this.stateManager.getCurrentUser();
     if (!currentUser) {
@@ -115,6 +164,11 @@ export struct CreateGroupPage {
       return;
     }
 
+    this.groupNameTouched = true;
+    this.groupDescriptionTouched = true;
+    if (this.isPasswordRequired) {
+      this.groupPasswordTouched = true;
+    }
     const trimmedName = this.groupName.trim();
     const trimmedDescription = this.groupDescription.trim();
     const trimmedPassword = this.groupPassword.trim();
@@ -312,16 +366,27 @@ export struct CreateGroupPage {
                   .margin({ bottom: 4 })
 
                 TextInput({ placeholder: '请输入群组名称', text: this.groupName })
+                  .placeholderColor(this.getCurrentThemePalette().textTertiary)
                   .onChange((value: string) => {
                     this.groupName = value;
                   })
                   .maxLength(GROUP_NAME_MAX)
                   .height(40)
                   .backgroundColor(this.getSurfaceSubtle())
-                  .shadow(this.getCurrentThemePalette().controlShadow)
+                  .border({ width: 1, color: this.fieldBorder(this.groupNameFocused, this.getGroupNameError() !== undefined).borderColor })
+                  .shadow(this.fieldBorder(this.groupNameFocused, this.getGroupNameError() !== undefined).shadow)
                   .borderRadius(DesignConstants.RADIUS.XL)
                   .padding({ left: DesignConstants.SPACING.MD })
-                  .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+                  .onFocus(() => { this.groupNameFocused = true; })
+                  .onBlur(() => { this.groupNameFocused = false; this.groupNameTouched = true; KeyboardDismissManager.getInstance().dismiss(); })
+
+                if (this.getGroupNameError()) {
+                  Text(this.getGroupNameError())
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .fontColor(this.getCurrentThemePalette().error)
+                    .width('100%')
+                    .margin({ top: DesignConstants.SPACING.XS })
+                }
               }
               .alignItems(HorizontalAlign.Start)
               .padding({
@@ -329,9 +394,7 @@ export struct CreateGroupPage {
                 top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
               })
 
-              Divider()
-                .strokeWidth(1)
-                .color(this.getSurfaceBorder())
+              SoftDivider({ color: this.getSurfaceBorder() })
                 .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
               Column() {
@@ -342,15 +405,27 @@ export struct CreateGroupPage {
                   .margin({ bottom: 4 })
 
                 TextArea({ placeholder: '请输入群组描述（可选）', text: this.groupDescription })
+                  .placeholderColor(this.getCurrentThemePalette().textTertiary)
                   .onChange((value: string) => {
                     this.groupDescription = value;
                   })
                   .maxLength(GROUP_DESCRIPTION_MAX)
                   .height(80)
                   .backgroundColor(this.getSurfaceSubtle())
-                  .shadow(this.getCurrentThemePalette().controlShadow)
+                  .border({ width: 1, color: this.fieldBorder(this.groupDescriptionFocused, this.getGroupDescriptionError() !== undefined).borderColor })
+                  .shadow(this.fieldBorder(this.groupDescriptionFocused, this.getGroupDescriptionError() !== undefined).shadow)
                   .borderRadius(DesignConstants.RADIUS.XL)
                   .padding(DesignConstants.SPACING.MD)
+                  .onFocus(() => { this.groupDescriptionFocused = true; })
+                  .onBlur(() => { this.groupDescriptionFocused = false; this.groupDescriptionTouched = true; KeyboardDismissManager.getInstance().dismiss(); })
+
+                if (this.getGroupDescriptionError()) {
+                  Text(this.getGroupDescriptionError())
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .fontColor(this.getCurrentThemePalette().error)
+                    .width('100%')
+                    .margin({ top: DesignConstants.SPACING.XS })
+                }
               }
               .alignItems(HorizontalAlign.Start)
               .padding({
@@ -516,9 +591,11 @@ export struct CreateGroupPage {
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .fontColor(this.getCurrentThemePalette().textPrimary)
                     .backgroundColor(this.getSurfaceSubtle())
-                    .shadow(this.getCurrentThemePalette().controlShadow)
+                    .border({ width: 1, color: this.fieldBorder(this.maxMembersFocused, false).borderColor })
+                    .shadow(this.fieldBorder(this.maxMembersFocused, false).shadow)
                     .borderRadius(DesignConstants.RADIUS.MD)
                     .padding(0)
+                    .onFocus(() => { this.maxMembersFocused = true; })
                     .onChange((value: string) => {
                       const num = parseInt(value);
                       if (!isNaN(num)) {
@@ -556,9 +633,7 @@ export struct CreateGroupPage {
                 top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
               })
 
-              Divider()
-                .strokeWidth(1)
-                .color(this.getSurfaceBorder())
+              SoftDivider({ color: this.getSurfaceBorder() })
                 .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
               Row() {
@@ -581,9 +656,7 @@ export struct CreateGroupPage {
               })
 
               if (this.isPasswordRequired) {
-                Divider()
-                  .strokeWidth(1)
-                  .color(this.getSurfaceBorder())
+                SoftDivider({ color: this.getSurfaceBorder() })
                   .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
                 Column() {
@@ -595,16 +668,27 @@ export struct CreateGroupPage {
 
                   TextInput({ placeholder: `请输入群组密码（${GROUP_PASSWORD_MIN}-${GROUP_PASSWORD_MAX}位）`, text: this.groupPassword })
                     .type(InputType.Password)
+                    .placeholderColor(this.getCurrentThemePalette().textTertiary)
                     .onChange((value: string) => {
                       this.groupPassword = value;
                     })
                     .maxLength(GROUP_PASSWORD_MAX)
                     .height(40)
                     .backgroundColor(this.getSurfaceSubtle())
-                    .shadow(this.getCurrentThemePalette().controlShadow)
+                    .border({ width: 1, color: this.fieldBorder(this.groupPasswordFocused, this.getGroupPasswordError() !== undefined).borderColor })
+                    .shadow(this.fieldBorder(this.groupPasswordFocused, this.getGroupPasswordError() !== undefined).shadow)
                     .borderRadius(DesignConstants.RADIUS.XL)
                     .padding({ left: DesignConstants.SPACING.MD })
-                    .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+                    .onFocus(() => { this.groupPasswordFocused = true; })
+                    .onBlur(() => { this.groupPasswordFocused = false; this.groupPasswordTouched = true; KeyboardDismissManager.getInstance().dismiss(); })
+
+                  if (this.getGroupPasswordError()) {
+                    Text(this.getGroupPasswordError())
+                      .fontSize(DesignConstants.FONT.SIZE.SM)
+                      .fontColor(this.getCurrentThemePalette().error)
+                      .width('100%')
+                      .margin({ top: DesignConstants.SPACING.XS })
+                  }
                 }
                 .alignItems(HorizontalAlign.Start)
                 .padding({
