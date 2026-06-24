@@ -101,6 +101,11 @@ export struct DesktopLayout {
           }
             .layoutWeight(1)
             .height('100%')
+            .padding({ top: 12, bottom: 12, left: 12, right: 12 })
+            .borderRadius(DesignConstants.SHAPE.HERO_CARD)
+            .backgroundColor($r('app.color.bg_primary'))
+            .border({ width: 1, color: $r('app.color.divider') })
+            .clip(true)
 
           if (this.shouldShowRightPanel()) {
             Column() {

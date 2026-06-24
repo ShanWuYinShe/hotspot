@@ -856,7 +856,7 @@ export struct GroupPage {
 
       Column({ space: 2 }) {
         Text(group.group.name)
-          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
