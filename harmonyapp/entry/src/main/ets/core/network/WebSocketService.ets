@@ -5,6 +5,8 @@
  */
 
 import { WebSocketUtil } from './WebSocketUtil';
+import { HttpUtil } from './HttpUtil';
+import { AppRouter, LoginRouteParam } from '../router/AppRouter';
 import { API_BASE_URL, StorageKeys, WS_BASE_URL } from '../../constants/AppConstants';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
@@ -14,6 +16,7 @@ import {
   ServerEvent,
   ConnectionEstablishedPayload,
   ErrorPayload,
+  AccountBannedPayload,
   FailedSubscriptionId,
   SubscribeAckPayload,
   SubscriptionItem,
@@ -126,6 +129,22 @@ export class WebSocketService {
       hilog.info(DOMAIN_NUMBER, TAG, 'WebSocket连接已断开');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `断开WebSocket连接失败: ${JSON.stringify(error)}`);
+    }
+  }
+
+  // 与 HttpUtil 的 10201 强制登出链路保持一致：清认证数据 + 跳登录页。
+  // 用于 WebSocket 通道收到的 fatal Error / AccountBanned（服务端主动断开场景），
+  // 确保 WS 侧的封禁/失效与 HTTP 侧处理一致，避免本地 token 残留导致状态错乱。
+  private async forceLogout(reason: string, action: string): Promise<void> {
+    try {
+      await HttpUtil.clearAuthData();
+      const param = new LoginRouteParam();
+      param.reason = reason;
+      param.action = action;
+      AppRouter.clear();
+      AppRouter.push('LoginPage', param);
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `强制登出失败: ${JSON.stringify(error)}`);
     }
   }
 
@@ -501,14 +520,17 @@ export class WebSocketService {
         const errPayload = event.payload as ErrorPayload;
         hilog.error(DOMAIN_NUMBER, TAG, `服务端错误: [${errPayload.code}] ${errPayload.message} severity=${errPayload.severity}`);
         if (errPayload.severity === 'fatal') {
-          hilog.error(DOMAIN_NUMBER, TAG, '收到致命错误，断开连接');
+          hilog.error(DOMAIN_NUMBER, TAG, '收到致命错误，断开连接并强制登出');
           this.disconnect();
+          this.forceLogout('banned', errPayload.message || '账号已被封禁');
         }
         break;
 
       case 'AccountBanned':
         hilog.error(DOMAIN_NUMBER, TAG, `账号被封禁: ${JSON.stringify(event.payload)}`);
         this.disconnect();
+        const bannedPayload = event.payload as AccountBannedPayload;
+        this.forceLogout('banned', `账号已被封禁：${bannedPayload.reason}`);
         break;
 
       // 多端同步事件（⏳ 延期实现，由 eventHandlers 分发处理）

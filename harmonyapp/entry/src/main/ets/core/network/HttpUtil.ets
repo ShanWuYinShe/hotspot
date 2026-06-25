@@ -237,7 +237,7 @@ export class HttpUtil {
     }
   }
 
-  private static async clearAuthData(): Promise<void> {
+  static async clearAuthData(): Promise<void> {
     try {
       await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
       await PreferencesUtil.remove(StorageKeys.AUTH_DATA);

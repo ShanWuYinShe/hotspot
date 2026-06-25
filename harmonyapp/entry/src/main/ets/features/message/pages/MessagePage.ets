@@ -672,13 +672,13 @@ export struct MessagePage {
 
               // 聊天列表卡片（单个大卡片包裹所有项）
               Column() {
-                ForEach(this.chatItems, (item: ChatItem, index?: number) => {
+                LazyForEach(this.chatListDataSource, (item: ChatItem, index: number) => {
                   Column() {
                     this.buildChatItem(item)
                   }
                   .padding({ left: 8, right: 8, top: 4, bottom: 4 })
 
-                  if ((index ?? 0) < this.chatItems.length - 1) {
+                  if (index < this.chatListDataSource.totalCount() - 1) {
                     Row()
                       .width('100%')
                       .height(0.5)
