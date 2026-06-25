@@ -231,18 +231,25 @@ export struct DiscoverPage {
   build() {
   ResponsiveContainer() {
     Column() {
-      // 粘性头部：标题 + 搜索栏 + 标签栏
+      // 粘性头部：标题 + 搜索栏 + 标签栏（对齐前端 discover/+page.svelte headerContent）
       Column() {
+        // 标题行：发现 + 内容数
         Row() {
           Text('发现')
             .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
             .fontWeight(FontWeight.Medium)
             .fontColor(this.getCurrentThemePalette().textPrimary)
+          Blank().layoutWeight(1)
+          if (this.hotMoments.length > 0) {
+            Text(`${this.hotMoments.length} 条内容`)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+          }
         }
         .width('100%')
         .margin({ bottom: 10 })
 
-        // 搜索栏
+        // 搜索栏（对齐前端：search icon + input + clear button）
         Row({ space: 10 }) {
           Text() {
             SymbolSpan($r(AppIcon.SEARCH))
@@ -261,12 +268,10 @@ export struct DiscoverPage {
         .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
         .borderRadius(DesignConstants.SHAPE.INPUT)
         .border({ width: 1, color: this.getSurfaceBorder() })
-        .onClick(() => {
-          AppRouter.push(PageNames.SEARCH);
-        })
+        .onClick(() => { AppRouter.push(PageNames.SEARCH); })
         .margin({ bottom: 10 })
 
-        // 标签栏
+        // 下划线式标签栏（热门/附近/活动/关注，对齐前端 TABS）
         this.buildTabBar()
       }
       .width('100%')
@@ -284,10 +289,8 @@ export struct DiscoverPage {
       if (this.isLoading) {
         SystemLoadingView({ message: '正在加载发现内容...' })
           .layoutWeight(1)
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-          )
+          .transition(TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn })))
       } else if (!this.hasAnyData() && this.errorMessage) {
         EmptyState({
           icon: AppIcon.WARNING,
@@ -296,97 +299,224 @@ export struct DiscoverPage {
           onAction: () => { this.loadData(); }
         })
         .layoutWeight(1)
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-        )
+        .transition(TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+          .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn })))
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          List() {
-            // 标签药片 — 热门话题
-            if (this.getAvailableTags().length > 0) {
-              ListItem() {
-                this.buildSectionHeader('热门话题')
-              }
-              ListItem() {
-                this.buildTagChipsStrip()
-              }
-            }
-
-            // 推荐用户
-            if (this.recommendedUsers.length > 0) {
-              ListItem() {
-                this.buildSectionHeader('推荐用户')
-              }
-              ListItem() {
-                this.buildRecommendedUsersSection()
-              }
-            }
-
-            // 推荐群组
-            if (this.recommendedGroups.length > 0) {
-              ListItem() {
-                this.buildSectionHeader('推荐群组')
-              }
-              ListItem() {
-                this.buildRecommendedGroupsSection()
-              }
-            }
-
-            // 动态流标题
-            ListItem() {
-              this.buildSectionHeader(this.getMomentsSectionTitle())
-            }
-
-            // 动态卡片列表（PostCard 风格）
-            LazyForEach(this.hotMomentsDataSource, (moment: MomentItem) => {
-              ListItem() {
+          if (isDesktopForm(this.currentBreakpoint)) {
+            // ======== 桌面端两栏布局（对齐前端 isDesktop 分支） ========
+            Row() {
+              // 左栏：标签药片 + 动态网格
+              Scroll() {
                 Column() {
-                  MomentFeedCard({
-                    moment: moment,
-                    variant: 'postCard',
-                    showFavorite: false,
-                    onOpenDetail: (item: MomentItem) => this.openMomentDetail(item)
-                  })
+                  this.buildTagChipsStrip()
+                  this.buildMomentFeed()
                 }
                 .width('100%')
-                .padding({
-                  left: DesignConstants.SPACING.LG,
-                  right: DesignConstants.SPACING.LG,
-                  top: 4,
-                  bottom: 4
-                })
+              }
+              .layoutWeight(1)
+              .scrollBar(BarState.Auto)
+
+              // 右栏：热门话题 + 活跃用户（对齐前端 rightSidebar，宽 220vp + border-left）
+              Column() {
+                this.buildRightSidebar()
+              }
+              .width(220)
+              .height('100%')
+              .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+              .border({ width: { left: 1 }, color: this.getSurfaceBorder() })
+            }
+            .layoutWeight(1)
+            .width('100%')
+          } else {
+            // ======== 移动端单栏布局（对齐前端 !isDesktop 分支） ========
+            Scroll() {
+              Column() {
+                this.buildTagChipsStrip()
+                this.buildMomentFeed()
               }
               .width('100%')
-            }, (moment: MomentItem) => moment.moment_id)
-
-            // 没有任何内容
-            if (this.hotMoments.length === 0) {
-              ListItem() {
-                EmptyState({ icon: AppIcon.RECOMMEND, message: '暂无推荐内容' })
-                  .height(300)
-              }
             }
+            .layoutWeight(1)
+            .scrollBar(BarState.Auto)
+            .padding({
+              bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
+            })
           }
-          .width('100%')
-          .lanes(isDesktopForm(this.currentBreakpoint) ? 2 : 1, 12)
-          .padding({
-            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
-          })
-          .scrollBar(BarState.Auto)
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.loadData(true); })
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-        )
+        .transition(TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+          .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn })))
       }
     }
     .width('100%')
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
+  }
+
+  // ==================== 动态列表/网格（对齐前端 feedGrid） ====================
+  @Builder
+  buildMomentFeed() {
+    Column() {
+      // section 标题
+      Row() {
+        Text(this.getMomentsSectionTitle())
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+      }
+      .width('100%')
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: 16,
+        bottom: 8
+      })
+
+      // Hero first card（对齐前端 ambient-glow 首个卡片突出）
+      if (this.hotMoments.length > 0) {
+        Column() {
+          MomentFeedCard({
+            moment: this.hotMoments[0],
+            variant: 'postCard',
+            showFavorite: false,
+            onOpenDetail: (item: MomentItem) => this.openMomentDetail(item)
+          })
+        }
+        .width('100%')
+        .padding({
+          left: DesignConstants.SPACING.LG,
+          right: DesignConstants.SPACING.LG,
+          bottom: 4
+        })
+      }
+
+      // 剩余动态用 LazyForEach 网格
+      if (this.hotMoments.length > 1) {
+        ForEach(this.hotMoments.slice(1), (moment: MomentItem) => {
+          MomentFeedCard({
+            moment: moment,
+            variant: 'postCard',
+            showFavorite: false,
+            onOpenDetail: (item: MomentItem) => this.openMomentDetail(item)
+          })
+          .padding({
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
+            top: 4,
+            bottom: 4
+          })
+        }, (moment: MomentItem) => moment.moment_id)
+      }
+
+      // 空态
+      if (this.hotMoments.length === 0) {
+        EmptyState({ icon: AppIcon.RECOMMEND, message: '暂无推荐内容' })
+          .height(200)
+          .width('100%')
+      }
+    }
+    .width('100%')
+  }
+
+  // ==================== 右侧栏（桌面端，对齐前端 rightSidebar） ====================
+  @Builder
+  buildRightSidebar() {
+    Column() {
+      // 热门话题（对齐前端 trending topics）
+      if (this.trendingTags.length > 0) {
+        Column() {
+          Row() {
+            Text() {
+              SymbolSpan($r(AppIcon.CHART))
+                .fontSize(DesignConstants.FONT.SIZE.MD)
+                .fontColor([this.getCurrentThemePalette().accentBackground])
+            }
+            Text('热门话题')
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+              .textCase(TextCase.UpperCase)
+              .letterSpacing(1.2)
+              .margin({ left: 6 })
+          }
+          .margin({ top: 20, bottom: 12 })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+
+          ForEach(this.trendingTags, (topic: TrendingTagItem) => {
+            Row() {
+              Text(`#${topic.name}`)
+                .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+                .fontColor(this.getCurrentThemePalette().textPrimary)
+                .layoutWeight(1)
+
+              Text(`${topic.usage_count}帖`)
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.getCurrentThemePalette().textSecondary)
+            }
+            .width('100%')
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 8, bottom: 8 })
+            .borderRadius(DesignConstants.RADIUS.SM)
+            .onClick(() => { this.activeTag = topic.name; })
+          }, (topic: TrendingTagItem) => topic.name)
+        }
+        .width('100%')
+
+        // 分隔线
+        Divider()
+          .width('85%')
+          .color(this.getSurfaceBorder())
+          .margin({ top: 12, bottom: 12 })
+      }
+
+      // 活跃用户（对齐前端 active users）
+      if (this.recommendedUsers.length > 0) {
+        Column() {
+          Text('活跃用户')
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+            .textCase(TextCase.UpperCase)
+            .letterSpacing(1.2)
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 12 })
+
+          ForEach(this.recommendedUsers.slice(0, 5), (user: UserItem) => {
+            Row() {
+              SystemAvatar({
+                avatarUrl: user.user?.avatar_url ?? '',
+                name: user.user?.nickname ?? '',
+                avatarSize: 32,
+                shape: 'circle'
+              })
+              Text(user.user?.nickname ?? '')
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.getCurrentThemePalette().textPrimary)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .layoutWeight(1)
+                .margin({ left: 8 })
+
+              Row() {
+                Text('关注')
+                  .fontSize(DesignConstants.FONT.SIZE.XS2)
+                  .fontColor(this.getCurrentThemePalette().accentText)
+              }
+              .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .backgroundColor(this.getCurrentThemePalette().accentBackground)
+              .onClick(() => { this.followUser(user); })
+            }
+            .width('100%')
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 6, bottom: 6 })
+          }, (user: UserItem) => user.user?.user_id ?? '')
+        }
+        .width('100%')
+      }
+
+      Blank().layoutWeight(1)
+    }
+    .width('100%')
+    .height('100%')
   }
 
   // ==================== 标签栏（下划线式，对齐前端 underline tabs）====================
