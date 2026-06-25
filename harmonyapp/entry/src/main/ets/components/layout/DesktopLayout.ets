@@ -1,29 +1,21 @@
 /**
- * DesktopLayout — 鸿蒙桌面 / 折叠屏 / PC 布局（完整版）
+ * DesktopLayout — 鸿蒙桌面 / 折叠屏 / PC 布局（对齐前端 app-shell 桌面分支）
  *
  * 适用断点：lg / xl / xxl（>= 840vp）
  *
- * 完整业务：
- * - 左侧 nav rail（4 路由：首页 / 发现 / 消息 / 我的），宽度 192vp 对齐前端侧边栏
- * - 中央主内容（按 currentRoute 切换）
- * - 右侧详情面板（xl/xxl 触发），宽度 280vp
- * - 通知中心 / 通知 banner overlay
- * - 性能详情 overlay
- * - Login Prompt 包装（未登录时）
- * - Upgrade Banner（临时用户时）
+ * 结构（对齐前端桌面）：
+ * - 顶栏（52vp）：Logo + 搜索 / 发布(brand 圆) / 设置 / 头像(或登录)，跨全宽
+ * - 侧边栏（192vp）：发现组 + 个人中心组 + 底部 AnchorEntry（浏览锚点卡片）
+ * - main card：内容区（页面自带 header，本布局不再叠加顶部应用栏）
  *
- * 状态传递：通过 @Link 接收 Index.ets 维护的 4 个 @State
- * 业务回调仍由 Index.ets 的 aboutToAppear 触发
- *
- * 注意：DesktopLayout 是普通 @Component，不能用 @Entry
- * 图标：使用系统 SymbolSpan
+ * 导航：核心 tab（首页 / 发现 / 消息）切换 currentRoute；其余项 push 或打开通知中心 overlay。
+ * sub-page（设置 / 通知 / 我的瞬间 / 我的群组 / 关系 等）push 全屏、自带返回。
  */
 
-import {
-  CONTAINER_MAX_WIDTH_VP,
-  type BreakpointType
-} from '../../core/responsive/Breakpoint';
+import { type BreakpointType } from '../../core/responsive/Breakpoint';
 import { DesignConstants } from '../../constants/DesignConstants';
+import { DESKTOP_DISCOVER_NAV, DESKTOP_PERSONAL_NAV, type AppNavItem } from '../../constants/AppNavigation';
+import { PageNames } from '../../constants/AppConstants';
 import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
 import { DiscoverPage } from '../../features/discover/pages/DiscoverPage';
 import { MessagePage } from '../../features/message/pages/MessagePage';
@@ -32,25 +24,23 @@ import { LoginPromptView } from '../LoginPromptView';
 import { NotificationCenter } from '../NotificationCenter';
 import { NotificationBanner } from '../NotificationBanner';
 import { PerformanceIndicator } from '../PerformanceIndicator';
+import { AnchorEntry } from '../AnchorEntry';
+import { SystemBadge } from '../SystemBadge';
+import { SystemAvatar } from '../SystemAvatar';
+import { SystemButton } from '../SystemButton';
+import { SurfaceIconButton } from '../SurfaceIconButton';
+import { AppIcon } from '../SystemIcon';
 import { NotificationRenderer } from '../../core/services/notification/NotificationRenderer';
 import { type SmartNotification, type NotificationAction } from '../../core/services/notification/NotificationDataManager';
-
-interface NavItem {
-  label: string;
-  route: string;
-  symbolId: Resource;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { label: '首页', route: 'nearby', symbolId: $r('sys.symbol.house') },
-  { label: '发现', route: 'discover', symbolId: $r('sys.symbol.compass') },
-  { label: '消息', route: 'messages', symbolId: $r('sys.symbol.message') },
-  { label: '我的', route: 'profile', symbolId: $r('sys.symbol.person') }
-];
+import { AppRouter, LoginRouteParam } from '../../core/router/AppRouter';
+import { GlobalStateManager, KEY_CURRENT_USER } from '../../core/state/GlobalStateManager';
+import { MyProfile } from '../../core/types/api';
+import { AppThemeManager } from '../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
 
 @Component
 export struct DesktopLayout {
-  // 来自父组件的核心状态
+  // 来自父组件（Index.ets）的核心状态
   @Link currentRoute: string;
   @Link showNotificationCenter: boolean;
   @Link showPerformanceDetails: boolean;
@@ -63,204 +53,325 @@ export struct DesktopLayout {
   @Prop userType: string = '';
   @Prop currentBreakpoint: BreakpointType = 'lg';
 
-  // 内部状态
+  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
   @State showUpgradeBanner: boolean = false;
 
   aboutToAppear() {
     this.showUpgradeBanner = this.isLoggedIn && this.userType === 'temp';
   }
 
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
   build() {
     Stack() {
       Column() {
-        // 通知 banner（流式排布，把下方内容往下推，不再浮盖）
-        if (this.visibleNotifications.length > 0) {
-          Column() {
-            ForEach(this.visibleNotifications, (notification: SmartNotification) => {
-              NotificationBanner({
-                notification: notification,
-                onClose: () => NotificationRenderer.getInstance().hideNotification(notification.id, 'manual'),
-                onBannerClick: () => NotificationRenderer.getInstance().handleClick(notification),
-                onAction: (action: NotificationAction) => NotificationRenderer.getInstance().handleAction(action, notification)
-              })
-            }, (item: SmartNotification) => item.id)
-          }
-          .width('100%')
-          .padding({ top: 12, left: 16, right: 16 })
-        }
+        // 顶栏（52vp，跨全宽）
+        this.TopBar()
 
-        Row() {
+        // body：侧边栏 + main card
+        Row({ space: DesignConstants.SPACING.LG }) {
           Column() {
-            this.LeftNavRail()
+            this.Sidebar()
           }
-            .width(192)
-            .height('100%')
+          .width(DesignConstants.LAYOUT.DESKTOP_SIDEBAR_WIDTH) // 192
+          .height('100%')
 
           Column() {
             this.MainContent()
           }
-            .layoutWeight(1)
-            .height('100%')
-            .padding({ top: 12, bottom: 12, left: 12, right: 12 })
-            .borderRadius(DesignConstants.SHAPE.HERO_CARD)
-            .backgroundColor($r('app.color.bg_primary'))
-            .border({ width: 1, color: $r('app.color.divider') })
-            .clip(true)
-
-      // 右侧面板（xl/xxl 宽屏时展示选中内容的详情）
-      // 当前路由页通过自己的 ResponsiveContainer 限宽，此处不再铺全宽面板，
-      // 避免页面内容与右侧空面板争夺横向空间（MateBook 2160px+ 场景）。
-      // 若未来有需要侧边详情页的场景（如选中某条动态），按路由透传数据填充。
+          .layoutWeight(1)
+          .height('100%')
+          .borderRadius(DesignConstants.SHAPE.HERO_CARD) // 24
+          .backgroundColor(this.getPalette().surfaceBackground)
+          .border({ width: 1, color: this.getPalette().borderColor })
+          .clip(true)
         }
         .layoutWeight(1)
         .width('100%')
-        .backgroundColor($r('app.color.bg_primary'))
+        .padding(DesignConstants.SPACING.LG) // p-4
       }
       .width('100%')
       .height('100%')
+      .backgroundColor(this.getPalette().pageBackground)
 
-      // 通知中心 overlay（模态遮罩，保留叠加）
+      // 通知中心 overlay
       if (this.showNotificationCenter) {
         Stack() {
           Column()
             .width('100%')
             .height('100%')
-            .backgroundColor('#66000000')
-            .onClick(() => { this.showNotificationCenter = false; })
-
-          Column() {
-            NotificationCenter({
-              onClose: () => { this.showNotificationCenter = false; }
+            .backgroundColor(this.getPalette().overlayStrong)
+            .onClick(() => {
+              this.showNotificationCenter = false;
             })
+          Column() {
+            NotificationCenter({ onClose: () => {
+              this.showNotificationCenter = false;
+            } })
           }
           .width('100%')
           .height('100%')
-          .backgroundColor($r('app.color.bg_primary'))
+          .backgroundColor(this.getPalette().surfaceBackground)
         }
         .width('100%')
         .height('100%')
       }
 
-      // 性能详情 overlay（模态，保留叠加）
+      // 性能详情 overlay
       if (this.showPerformanceDetails) {
         Column() {
           PerformanceIndicator({ showDetails: true, compact: false })
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('app.color.bg_primary'))
-        .onClick(() => { this.showPerformanceDetails = false; })
+        .backgroundColor(this.getPalette().surfaceBackground)
+        .onClick(() => {
+          this.showPerformanceDetails = false;
+        })
       }
     }
     .width('100%')
     .height('100%')
-  }
-
-  @Builder
-  LeftNavRail() {
-    Column() {
-      Text('HotSpot')
-        .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(FontWeight.Bold)
-        .fontColor($r('app.color.brand_primary'))
-        .margin({ top: 24, bottom: 32 })
-
-      ForEach(NAV_ITEMS, (item: NavItem) => {
-        this.NavItemBuilder(item)
-      }, (item: NavItem) => item.route)
-
-  // 通知铃铛入口
-      Blank().layoutWeight(1)
-      Row() {
-        Text() {
-          SymbolSpan(
-            this.unreadCount > 0
-              ? $r('sys.symbol.bell_fill')
-              : $r('sys.symbol.bell')
-          )
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontColor([$r('app.color.brand_primary')])
-        }
-        Text('通知')
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor($r('app.color.brand_primary'))
-          .margin({ left: 12 })
-      }
-      .width('100%')
-      .height(44)
-      .padding({ left: 12, right: 12 })
-      .borderRadius(DesignConstants.RADIUS.MD)
-      .margin({ bottom: 24 })
-      .onClick(() => {
-        this.showNotificationCenter = true;
-      })
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('app.color.bg_secondary'))
-    .padding({ left: 16, right: 16, top: 16 })
-  }
-
-  @Builder
-  NavItemBuilder(item: NavItem) {
-    Row() {
-      Text() {
-        SymbolSpan(item.symbolId)
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontColor([
-            this.currentRoute === item.route
-              ? $r('app.color.brand_primary')
-              : $r('app.color.chip_inactive_text')
-          ])
-      }
-      Text(item.label)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor(
-          this.currentRoute === item.route
-            ? $r('app.color.brand_primary')
-            : $r('app.color.chip_inactive_text')
-        )
-        .fontWeight(
-          this.currentRoute === item.route ? FontWeight.Medium : FontWeight.Regular
-        )
-        .margin({ left: 12 })
-    }
-    .width('100%')
-    .height(44)
-    .padding({ left: 12, right: 12 })
-    .borderRadius(DesignConstants.RADIUS.MD)
-    .backgroundColor(
-      this.currentRoute === item.route ? $r('app.color.chip_selected_bg') : DesignConstants.COLOR.TRANSPARENT
-    )
-    .onClick(() => {
-      this.currentRoute = item.route;
+    .bindSheet($$this.showCreateSheet, this.CreateSheetContent(), {
+      height: SheetSize.FIT_CONTENT,
+      dragBar: true,
+      showClose: true,
+      backgroundColor: this.getPalette().surfaceBackground
     })
   }
 
+  // ==================== 顶栏（对齐前端 desktop-header）====================
+  @Builder
+  TopBar() {
+    Row() {
+      // Logo
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Text() {
+          SymbolSpan($r(AppIcon.NEARBY))
+            .fontSize(22)
+            .fontColor([this.getPalette().accentBackground])
+        }
+        Text('HotSpot')
+          .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.getPalette().textPrimary)
+      }
+      .alignItems(VerticalAlign.Center)
+      .onClick(() => {
+        this.currentRoute = 'nearby';
+      })
+
+      Blank().layoutWeight(1)
+
+      // 右侧动作
+      Row({ space: DesignConstants.SPACING.XS }) {
+        SurfaceIconButton({
+          icon: AppIcon.SEARCH,
+          kind: 'neutral',
+          buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE, // 36
+          glyphSize: 17,
+          onPress: () => AppRouter.push(PageNames.SEARCH)
+        })
+
+        // 发布（brand 圆形按钮）
+        SurfaceIconButton({
+          icon: AppIcon.ADD,
+          kind: 'primary',
+          buttonSize: 32,
+          glyphSize: 15,
+          onPress: () => this.openCreate()
+        })
+
+        SurfaceIconButton({
+          icon: AppIcon.SETTINGS,
+          kind: 'neutral',
+          buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+          glyphSize: 17,
+          onPress: () => AppRouter.push(PageNames.SETTINGS)
+        })
+
+        // 头像 / 登录
+        if (this.isLoggedIn) {
+          Row() {
+            SystemAvatar({
+              avatarUrl: this.currentUser?.avatar_url ?? '',
+              name: this.currentUser?.nickname ?? '',
+              avatarSize: 32,
+              shape: 'circle'
+            })
+          }
+          .width(36)
+          .height(36)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .justifyContent(FlexAlign.Center)
+          .onClick(() => {
+            this.currentRoute = 'profile';
+          })
+        } else {
+          SystemButton({
+            label: '登录',
+            variant: 'primary',
+            buttonSize: 'small',
+            onPress: () => this.openLogin('')
+          })
+        }
+      }
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+    .height(DesignConstants.LAYOUT.DESKTOP_HEADER_HEIGHT) // 52
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+    .backgroundColor(this.getPalette().surfaceBackground)
+    .border({ width: { bottom: 1 }, color: this.getPalette().borderColor })
+  }
+
+  // ==================== 侧边栏（对齐前端 sidebar：发现组 + 个人组 + 底部 AnchorEntry）====================
+  @Builder
+  Sidebar() {
+    Column() {
+      // 发现组
+      Column({ space: 2 }) {
+        ForEach(DESKTOP_DISCOVER_NAV, (item: AppNavItem) => {
+          this.NavItemBuilder(item)
+        }, (item: AppNavItem) => item.label)
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+
+      // 分隔线
+      Divider()
+        .width('100%')
+        .color(this.getPalette().borderColor)
+        .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+
+      // 个人中心 section 标签
+      Text('个人中心')
+        .fontSize(DesignConstants.FONT.SIZE.XS2) // 10
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.getPalette().textSecondary)
+        .letterSpacing(1.2)
+        .margin({ left: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+
+      // 个人组
+      Column({ space: 2 }) {
+        ForEach(DESKTOP_PERSONAL_NAV, (item: AppNavItem) => {
+          this.NavItemBuilder(item)
+        }, (item: AppNavItem) => item.label)
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+
+      // 管理后台入口（移动端降级概览，对齐前端 admin 侧边栏项；点击进入概览页，复杂操作引导 Web）
+      Divider()
+        .width('100%')
+        .color(this.getPalette().borderColor)
+        .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+
+      Row() {
+        Text() {
+          SymbolSpan($r(AppIcon.SHIELD))
+            .fontSize(17)
+            .fontColor([this.getPalette().textSecondary])
+        }
+        Text('管理后台')
+          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13
+          .fontColor(this.getPalette().textPrimary)
+          .margin({ left: DesignConstants.SPACING.SM })
+        Blank().layoutWeight(1)
+      }
+      .width('100%')
+      .height(40)
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+      .borderRadius(DesignConstants.SHAPE.INPUT)
+      .alignItems(VerticalAlign.Center)
+      .onClick(() => {
+        if (this.isLoggedIn) {
+          AppRouter.push(PageNames.ADMIN_OVERVIEW);
+        } else {
+          this.openLogin('管理后台');
+        }
+      })
+
+      Blank().layoutWeight(1)
+
+      // 底部浏览锚点卡片
+      Column() {
+        AnchorEntry({ variant: 'card' })
+      }
+      .width('100%')
+      .padding({ top: DesignConstants.SPACING.SM })
+      .border({ width: { top: 1 }, color: this.getPalette().borderColor })
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.SM })
+  }
+
+  @Builder
+  NavItemBuilder(item: AppNavItem) {
+    Row() {
+      Text() {
+        SymbolSpan($r(item.icon))
+          .fontSize(17)
+          .fontColor([this.isItemActive(item) ? this.getPalette().accentBackground : this.getPalette().textSecondary])
+      }
+      Text(item.label)
+        .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13
+        .fontColor(this.isItemActive(item) ? this.getPalette().textPrimary : this.getPalette().textSecondary)
+        .fontWeight(this.isItemActive(item) ? FontWeight.Medium : FontWeight.Regular)
+        .margin({ left: DesignConstants.SPACING.SM })
+        .layoutWeight(1)
+
+      if (this.badgeCount(item) > 0) {
+        SystemBadge({ count: this.badgeCount(item) })
+      }
+    }
+    .width('100%')
+    .height(40)
+    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+    .borderRadius(DesignConstants.SHAPE.INPUT) // 18
+    .backgroundColor(this.isItemActive(item) ? this.getPalette().tabBarActiveBackground : DesignConstants.COLOR.TRANSPARENT)
+    .alignItems(VerticalAlign.Center)
+    .onClick(() => this.handleNavClick(item))
+  }
+
+  private isItemActive(item: AppNavItem): boolean {
+    return item.isTab && item.tabRoute === this.currentRoute;
+  }
+
+  private badgeCount(item: AppNavItem): number {
+    if (item.badge === 'messages') {
+      return this.unreadCount;
+    }
+    return 0;
+  }
+
+  private handleNavClick(item: AppNavItem): void {
+    if (item.openNotificationCenter) {
+      this.showNotificationCenter = true;
+      return;
+    }
+    if (item.isTab) {
+      this.currentRoute = item.tabRoute;
+      return;
+    }
+    if (item.requiresAuth && !this.isLoggedIn) {
+      this.openLogin(item.label);
+      return;
+    }
+    if (item.pageName.length > 0) {
+      AppRouter.push(item.pageName);
+    }
+  }
+
+  // ==================== 主内容区（页面自带 header）====================
   @Builder
   MainContent() {
     Column() {
-      // 顶部应用栏（含标题 + 通知铃铛 badge）
-      Row() {
-        Text(this.getCurrentTitle())
-          .fontSize(DesignConstants.FONT.SIZE.XXL)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.brand_primary'))
-
-        Blank().layoutWeight(1)
-
-        if (this.unreadCount > 0) {
-          Text(`${this.unreadCount} 未读`)
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('app.color.chip_inactive_text'))
-        }
-      }
-      .width('100%')
-      .height(52)
-      .padding({ left: 24, right: 24 })
-      .backgroundColor($r('app.color.bg_primary'))
-
-      // 主内容区
       if (this.currentRoute === 'nearby') {
         NearbyPage()
       } else if (this.currentRoute === 'discover') {
@@ -273,6 +384,8 @@ export struct DesktopLayout {
             }
             MessagePage()
           }
+          .width('100%')
+          .height('100%')
         } else {
           LoginPromptView({
             title: '消息功能需要登录',
@@ -285,7 +398,7 @@ export struct DesktopLayout {
         Column() {
           Text('未知路由')
             .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontColor($r('app.color.chip_inactive_text'))
+            .fontColor(this.getPalette().textSecondary)
         }
         .width('100%')
         .height('100%')
@@ -294,24 +407,6 @@ export struct DesktopLayout {
     }
     .width('100%')
     .height('100%')
-    .constraintSize({ maxWidth: this.getContainerMaxWidth() })
-  }
-
-  private getContainerMaxWidth(): string {
-    switch (this.currentBreakpoint) {
-      case 'md':
-        return `${CONTAINER_MAX_WIDTH_VP.md}vp`;
-      case 'lg':
-        return `${CONTAINER_MAX_WIDTH_VP.lg}vp`;
-      case 'xl':
-        return `${CONTAINER_MAX_WIDTH_VP.xl}vp`;
-      case 'xxl':
-        return `${CONTAINER_MAX_WIDTH_VP.xxl}vp`;
-      case 'xs':
-      case 'sm':
-      default:
-        return '100%';
-    }
   }
 
   @Builder
@@ -319,27 +414,87 @@ export struct DesktopLayout {
     Row() {
       Text('当前为临时用户，注册账号可保留所有数据')
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor($r('app.color.chip_inactive_text'))
+        .fontColor(this.getPalette().textSecondary)
         .layoutWeight(1)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-
       Button('去注册')
         .type(ButtonType.Normal)
         .height(28)
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .backgroundColor($r('app.color.brand_primary'))
-        .fontColor($r('app.color.bg_primary'))
+        .backgroundColor(this.getPalette().accentBackground)
+        .fontColor(this.getPalette().accentText)
         .borderRadius(DesignConstants.RADIUS.SM)
         .padding({ left: 12, right: 12 })
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-    .backgroundColor($r('app.color.chip_selected_bg'))
+    .backgroundColor(this.getPalette().accentMuted)
   }
 
-  getCurrentTitle(): string {
-    const item = NAV_ITEMS.find((it) => it.route === this.currentRoute);
-    return item ? item.label : 'HotSpot';
+  // ==================== 创建菜单（对齐前端 mobile-create-sheet 三项）====================
+  private openCreate(): void {
+    if (!this.isLoggedIn) {
+      this.openLogin('发布内容');
+      return;
+    }
+    this.showCreateSheet = true;
+  }
+
+  private openLogin(action: string): void {
+    const params = new LoginRouteParam();
+    params.reason = 'action_required';
+    params.action = action.length > 0 ? action : '登录';
+    AppRouter.push(PageNames.LOGIN, params);
+  }
+
+  @Builder
+  CreateSheetContent() {
+    Column() {
+      Text('创建')
+        .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.getPalette().textPrimary)
+        .margin({ top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.LG })
+
+      this.CreateSheetItem(AppIcon.PHOTO, '发布动态', () => {
+        this.showCreateSheet = false;
+        AppRouter.push(PageNames.CREATE_MOMENT);
+      })
+      this.CreateSheetItem(AppIcon.GROUP, '创建群组', () => {
+        this.showCreateSheet = false;
+        AppRouter.push(PageNames.CREATE_GROUP);
+      })
+      this.CreateSheetItem(AppIcon.LOCATION, '分享位置', () => {
+        this.showCreateSheet = false;
+        AppRouter.push(PageNames.LOCATION_PICKER);
+      })
+    }
+    .width('100%')
+    .padding({ bottom: DesignConstants.SPACING.XXL })
+    .alignItems(HorizontalAlign.Center)
+  }
+
+  @Builder
+  CreateSheetItem(icon: AppIcon, label: string, action: () => void) {
+    Row() {
+      Text() {
+        SymbolSpan($r(icon))
+          .fontSize(20)
+          .fontColor([this.getPalette().accentBackground])
+      }
+      Text(label)
+        .fontSize(DesignConstants.FONT.SIZE.MD) // 14
+        .fontColor(this.getPalette().textPrimary)
+        .margin({ left: DesignConstants.SPACING.MD })
+    }
+    .width('90%')
+    .height(52)
+    .padding({ left: DesignConstants.SPACING.LG })
+    .borderRadius(DesignConstants.SHAPE.INPUT)
+    .backgroundColor(this.getPalette().surfaceSubtle)
+    .alignItems(VerticalAlign.Center)
+    .margin({ bottom: DesignConstants.SPACING.SM })
+    .onClick(() => action())
   }
 }

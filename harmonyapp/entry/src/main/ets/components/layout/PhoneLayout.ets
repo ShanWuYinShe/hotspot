@@ -30,6 +30,10 @@ import { type SmartNotification, type NotificationAction } from '../../core/serv
 import { AppThemeManager } from '../../core/theme/AppThemeManager';
 import { DesignConstants } from '../../constants/DesignConstants';
 import { curves } from '@kit.ArkUI';
+import { SystemBadge } from '../SystemBadge';
+import { AppIcon } from '../SystemIcon';
+import { AppRouter } from '../../core/router/AppRouter';
+import { PageNames } from '../../constants/AppConstants';
 
 interface TabItem {
   label: string;
@@ -184,15 +188,24 @@ export struct PhoneLayout {
   @Builder TabBarBuilder(index: number) {
     Column() {
       Column() {
-        Text() {
-          SymbolSpan(TAB_ITEMS[index].symbolId)
-            .fontSize(DesignConstants.FONT.SIZE.XXL)
-            .fontColor([
-              this.currentTabIndex === index
-                ? $r('app.color.brand_primary')
-                : $r('app.color.chip_inactive_text')
-            ])
+        Stack({ alignContent: Alignment.TopEnd }) {
+          Text() {
+            SymbolSpan(TAB_ITEMS[index].symbolId)
+              .fontSize(DesignConstants.FONT.SIZE.XXL)
+              .fontColor([
+                this.currentTabIndex === index
+                  ? $r('app.color.brand_primary')
+                  : $r('app.color.chip_inactive_text')
+              ])
+          }
+          // 消息 tab（index 3）未读角标，对齐前端 inbox badge
+          if (index === 3 && this.unreadCount > 0) {
+            SystemBadge({ count: this.unreadCount })
+          }
         }
+        .width(36)
+        .height(36)
+        .alignContent(Alignment.TopEnd)
         Text(TAB_ITEMS[index].label)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(
@@ -343,29 +356,49 @@ export struct PhoneLayout {
 
   @Builder CreateSheetContent() {
     Column() {
-      Text('发布动态')
-        .fontSize(DesignConstants.FONT.SIZE.XL)
+      Text('创建')
+        .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
         .fontWeight(FontWeight.Medium)
-        .fontColor($r('app.color.brand_primary'))
-        .margin({ top: 24, bottom: 16 })
-      Button('发布文字动态')
-        .type(ButtonType.Normal)
-        .width('90%').height(48)
-        .backgroundColor($r('app.color.brand_primary'))
-        .fontColor($r('app.color.bg_primary'))
-        .borderRadius(DesignConstants.RADIUS.MD)
-        .margin({ bottom: 12 })
-        .onClick(() => { this.showCreateSheet = false; })
-      Button('发布图片动态')
-        .type(ButtonType.Normal)
-        .width('90%').height(48)
-        .backgroundColor($r('app.color.bg_secondary'))
-        .fontColor($r('app.color.brand_primary'))
-        .borderRadius(DesignConstants.RADIUS.MD)
-        .onClick(() => { this.showCreateSheet = false; })
+        .fontColor(this.getPalette().textPrimary)
+        .margin({ top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.LG })
+      this.CreateSheetItem(AppIcon.PHOTO, '发布动态', () => {
+        this.showCreateSheet = false;
+        AppRouter.push(PageNames.CREATE_MOMENT);
+      })
+      this.CreateSheetItem(AppIcon.GROUP, '创建群组', () => {
+        this.showCreateSheet = false;
+        AppRouter.push(PageNames.CREATE_GROUP);
+      })
+      this.CreateSheetItem(AppIcon.LOCATION, '分享位置', () => {
+        this.showCreateSheet = false;
+        AppRouter.push(PageNames.LOCATION_PICKER);
+      })
     }
     .width('100%')
-    .padding({ bottom: 24 })
+    .padding({ bottom: DesignConstants.SPACING.XXL })
+    .alignItems(HorizontalAlign.Center)
+  }
+
+  @Builder CreateSheetItem(icon: AppIcon, label: string, action: () => void) {
+    Row() {
+      Text() {
+        SymbolSpan($r(icon))
+          .fontSize(20)
+          .fontColor([this.getPalette().accentBackground])
+      }
+      Text(label)
+        .fontSize(DesignConstants.FONT.SIZE.MD) // 14
+        .fontColor(this.getPalette().textPrimary)
+        .margin({ left: DesignConstants.SPACING.MD })
+    }
+    .width('90%')
+    .height(52)
+    .padding({ left: DesignConstants.SPACING.LG })
+    .borderRadius(DesignConstants.SHAPE.INPUT) // 18
+    .backgroundColor(this.getPalette().surfaceSubtle)
+    .alignItems(VerticalAlign.Center)
+    .margin({ bottom: DesignConstants.SPACING.SM })
+    .onClick(() => action())
   }
 
   @Builder UpgradeBanner() {
