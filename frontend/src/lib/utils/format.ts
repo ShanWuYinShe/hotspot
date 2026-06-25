@@ -124,3 +124,12 @@ export function parseTags(input: string, maxCount = 10): string[] {
     .filter(Boolean)
     .slice(0, maxCount);
 }
+
+/**
+ * 计数缩写（展示用，全站单一事实源）。
+ *
+ * 规则：>=1000 显示为 `k`（保留 1 位小数，如 1.2k），否则原样。
+ */
+export function formatCount(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+}

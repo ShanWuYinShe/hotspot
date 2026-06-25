@@ -18,8 +18,8 @@ const SUB_PAGE_EXACT = new Set([
   '/groups/nearby'
 ]);
 
-/** 前缀匹配的子页面（设置子页、聊天会话、分享、活动详情）。 */
-const SUB_PAGE_PREFIXES = ['/settings/', '/chat/users/', '/chat/groups/', '/events/', '/share/'];
+/** 前缀匹配的子页面（设置子页、聊天会话、分享）。 */
+const SUB_PAGE_PREFIXES = ['/settings/', '/chat/users/', '/chat/groups/', '/share/'];
 
 /**
  * 详情页基路径：/users/<id>、/groups/<id>、/moments/<id>。

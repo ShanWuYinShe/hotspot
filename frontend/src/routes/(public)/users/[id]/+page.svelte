@@ -3,7 +3,7 @@
   import { untrack } from 'svelte';
   import { usersService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
-  import { formatHandle } from '$lib/utils/format';
+  import { formatHandle, formatCount } from '$lib/utils/format';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { toast } from '$lib/stores/toast.svelte';
@@ -65,10 +65,6 @@
     initialLoading: false,
     uniqueKey: (item) => item.user.user_id
   });
-
-  function fmtNum(n: number): string {
-    return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
-  }
 
   async function handleFollow() {
     if (!authStore.isAuthenticated) {
@@ -352,7 +348,7 @@
 
         <!-- Stats as single segmented bar -->
         <div class="surface-flat mt-5 flex rounded-[var(--radius-lg)] overflow-hidden">
-          {#each [{ label: '帖子', value: fmtNum(user.stats?.moments_count ?? 0) }, { label: '粉丝', value: fmtNum(user.stats?.followers_count ?? 0) }, { label: '关注', value: fmtNum(user.stats?.following_count ?? 0) }] as stat, i (stat.label)}
+          {#each [{ label: '帖子', value: formatCount(user.stats?.moments_count ?? 0) }, { label: '粉丝', value: formatCount(user.stats?.followers_count ?? 0) }, { label: '关注', value: formatCount(user.stats?.following_count ?? 0) }] as stat, i (stat.label)}
             <div class="relative flex flex-1 flex-col items-center py-4">
               {#if i > 0}
                 <div

@@ -34,7 +34,7 @@
 
   function handleSelect(id: string) {
     if (onSelect) onSelect(id);
-    else void goto(`/events/${id}`);
+    else void goto(`/discover?tag=${encodeURIComponent(id)}`);
   }
 </script>
 

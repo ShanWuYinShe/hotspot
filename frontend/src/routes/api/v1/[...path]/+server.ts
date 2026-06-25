@@ -1,10 +1,11 @@
 import { dev } from '$app/environment';
 import type { RequestHandler } from './$types';
-import { handleMockRequest } from '$lib/../mocks/handler';
 import { env } from '$env/dynamic/private';
 
 export const POST: RequestHandler = async ({ request, url }) => {
   if (dev) {
+    // 动态 import：mock 仅在 dev 分支加载，生产构建不打包 mocks/（避免假数据进入线上 SSR bundle）
+    const { handleMockRequest } = await import('$lib/../mocks/handler');
     const response = await handleMockRequest(request);
     if (response) {
       return response;
