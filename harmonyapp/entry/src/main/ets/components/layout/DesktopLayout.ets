@@ -107,13 +107,10 @@ export struct DesktopLayout {
             .border({ width: 1, color: $r('app.color.divider') })
             .clip(true)
 
-          if (this.shouldShowRightPanel()) {
-            Column() {
-              this.RightDetailPanel()
-            }
-              .width(280)
-              .height('100%')
-          }
+      // 右侧面板（xl/xxl 宽屏时展示选中内容的详情）
+      // 当前路由页通过自己的 ResponsiveContainer 限宽，此处不再铺全宽面板，
+      // 避免页面内容与右侧空面板争夺横向空间（MateBook 2160px+ 场景）。
+      // 若未来有需要侧边详情页的场景（如选中某条动态），按路由透传数据填充。
         }
         .layoutWeight(1)
         .width('100%')
@@ -172,7 +169,7 @@ export struct DesktopLayout {
         this.NavItemBuilder(item)
       }, (item: NavItem) => item.route)
 
-      // 通知铃铛入口
+  // 通知铃铛入口
       Blank().layoutWeight(1)
       Row() {
         Text() {
@@ -193,7 +190,6 @@ export struct DesktopLayout {
       .height(44)
       .padding({ left: 12, right: 12 })
       .borderRadius(DesignConstants.RADIUS.MD)
-      .backgroundColor($r('app.color.chip_selected_bg'))
       .margin({ bottom: 24 })
       .onClick(() => {
         this.showNotificationCenter = true;
@@ -319,21 +315,6 @@ export struct DesktopLayout {
   }
 
   @Builder
-  RightDetailPanel() {
-    Column() {
-      Text('详情面板')
-        .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(FontWeight.Medium)
-        .fontColor($r('app.color.chip_inactive_text'))
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('app.color.bg_secondary'))
-    .padding(16)
-    .justifyContent(FlexAlign.Start)
-  }
-
-  @Builder
   UpgradeBanner() {
     Row() {
       Text('当前为临时用户，注册账号可保留所有数据')
@@ -355,10 +336,6 @@ export struct DesktopLayout {
     .width('100%')
     .padding({ left: 16, right: 16, top: 8, bottom: 8 })
     .backgroundColor($r('app.color.chip_selected_bg'))
-  }
-
-  shouldShowRightPanel(): boolean {
-    return this.currentBreakpoint === 'xl' || this.currentBreakpoint === 'xxl';
   }
 
   getCurrentTitle(): string {
