@@ -503,7 +503,7 @@ export struct MessagePage {
             .fontColor(this.getCurrentThemePalette().textPrimary)
           if (this.getTotalUnread() > 0) {
             Text(`${this.getTotalUnread()} 条未读`)
-              .fontSize(12)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.getCurrentThemePalette().textSecondary)
           }
         }
@@ -767,7 +767,7 @@ export struct MessagePage {
               }
 
               Text(chat.name)
-                .fontSize(11)
+                .fontSize(DesignConstants.FONT.SIZE.XS)
                 .fontColor(this.getCurrentThemePalette().textSecondary)
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -807,7 +807,7 @@ export struct MessagePage {
       Column({ space: 2 }) {
         Row() {
           Text(item.name)
-            .fontSize(14)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontWeight(item.unreadCount > 0 ? FontWeight.Medium : FontWeight.Normal)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .layoutWeight(1)
@@ -815,13 +815,13 @@ export struct MessagePage {
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(this.formatTime(item.lastTime))
-            .fontSize(11)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
 
         Text(item.lastMessage || '')
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })

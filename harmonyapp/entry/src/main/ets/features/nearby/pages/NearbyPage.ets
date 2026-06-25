@@ -359,7 +359,7 @@ export struct NearbyPage {
           .fontColor(this.getPalette().textPrimary)
 
         Text('发现周边的有趣人和事')
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getPalette().textSecondary)
       }
       .alignItems(HorizontalAlign.Start)
@@ -368,12 +368,12 @@ export struct NearbyPage {
       Row({ space: 6 }) {
         Text() {
           SymbolSpan($r(AppIcon.LOCATION))
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor([this.getPalette().accentBackground])
         }
 
         Text(this.browseAnchor?.locationName ?? this.currentLocation?.locationName ?? '定位中...')
-          .fontSize(11)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
           .fontColor(this.getPalette().textSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -477,7 +477,7 @@ export struct NearbyPage {
     Row() {
       Text() {
         SymbolSpan($r(icon))
-          .fontSize(14)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor([this.getPalette().textPrimary])
       }
     }
@@ -505,7 +505,7 @@ export struct NearbyPage {
 
       Row({ space: 2 }) {
         Text(linkText)
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getPalette().accentBackground)
         Text() {
           SymbolSpan($r(AppIcon.ARROW_RIGHT))
@@ -530,7 +530,7 @@ export struct NearbyPage {
 
       if (!this.usersLoading && this.users.length === 0) {
         Text('附近暂无其他用户，可稍后再来或调整浏览位置。')
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getPalette().textSecondary)
           .width('100%')
           .margin({ top: 2 })
@@ -594,7 +594,7 @@ export struct NearbyPage {
                 }
 
                 Text(user.user?.nickname ?? '')
-                  .fontSize(12)
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getPalette().textPrimary)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -706,11 +706,11 @@ export struct NearbyPage {
 
         Row({ space: 6 }) {
           Text(`${formatCount(group.group?.members_count)} 人`)
-            .fontSize(11)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getPalette().textTertiary)
           if (group.location?.distance !== undefined) {
             Text(LocationUtil.formatDistance(group.location.distance))
-              .fontSize(11)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.getPalette().accentBackground)
           }
         }

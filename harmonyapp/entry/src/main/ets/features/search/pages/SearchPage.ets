@@ -359,7 +359,7 @@ export struct SearchPage {
           Row({ space: 10 }) {
             Text() {
               SymbolSpan($r(AppIcon.SEARCH))
-                .fontSize(14)
+                .fontSize(DesignConstants.FONT.SIZE.MD)
                 .fontColor([this.getCurrentThemePalette().textSecondary])
             }
 
@@ -518,7 +518,7 @@ export struct SearchPage {
   @Builder TabBuilder(index: number, name: string) {
     Text(name)
       .fontColor(this.currentIndex === index ? Color.White : this.getCurrentThemePalette().textSecondary)
-      .fontSize(12)
+      .fontSize(DesignConstants.FONT.SIZE.SM)
       .fontWeight(FontWeight.Medium)
       .padding({ left: 14, right: 14, top: 6, bottom: 6 })
       .borderRadius(DesignConstants.RADIUS.FULL)

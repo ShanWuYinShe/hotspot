@@ -1115,7 +1115,7 @@ export struct ProfilePage {
             // 简介
             if (this.currentUser?.bio) {
               Text(this.currentUser.bio)
-                .fontSize(12)
+                .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontColor(this.getSecondaryTextColor())
                 .textAlign(TextAlign.Center)
                 .lineHeight(20)
@@ -1127,11 +1127,11 @@ export struct ProfilePage {
               Row({ space: 4 }) {
                 Text() {
                   SymbolSpan($r(AppIcon.LOCATION))
-                    .fontSize(11)
+                    .fontSize(DesignConstants.FONT.SIZE.XS)
                     .fontColor([this.getAccentBackground()])
                 }
                 Text(this.currentUser.location.location_name)
-                  .fontSize(11)
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
                   .fontColor(this.getSecondaryTextColor())
               }
               .margin({ top: 8 })
@@ -1262,7 +1262,7 @@ export struct ProfilePage {
           }
           Column({ space: 4 }) {
             Text(stat.value)
-              .fontSize(24)
+              .fontSize(DesignConstants.FONT.SIZE.XXL)
               .fontWeight(FontWeight.Bold)
               .fontColor(this.getPrimaryTextColor())
             Text(stat.label)
@@ -1328,7 +1328,7 @@ export struct ProfilePage {
           .opacity(0.5)
 
           Text('还没有发布帖子')
-            .fontSize(14)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getSecondaryTextColor())
         }
         .width('100%')
@@ -1353,7 +1353,7 @@ export struct ProfilePage {
         .opacity(0.5)
 
         Text(this.selectedTab === 1 ? '喜欢的帖子将在这里展示' : '收藏的帖子将在这里展示')
-          .fontSize(14)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor(this.getSecondaryTextColor())
       }
       .width('100%')
