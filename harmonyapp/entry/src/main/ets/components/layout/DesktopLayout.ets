@@ -234,7 +234,7 @@ export struct DesktopLayout {
     .padding({ left: 12, right: 12 })
     .borderRadius(DesignConstants.RADIUS.MD)
     .backgroundColor(
-      this.currentRoute === item.route ? $r('app.color.chip_selected_bg') : Color.Transparent
+      this.currentRoute === item.route ? $r('app.color.chip_selected_bg') : DesignConstants.COLOR.TRANSPARENT
     )
     .onClick(() => {
       this.currentRoute = item.route;

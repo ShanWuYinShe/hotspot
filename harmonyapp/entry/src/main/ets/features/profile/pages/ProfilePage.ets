@@ -1060,26 +1060,26 @@ export struct ProfilePage {
         ListItem() {
           this.MenuItemContent('更新位置', AppIcon.LOCATION, () => this.updateLocation())
         }
-        .backgroundColor(Color.Transparent)
+        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
 
         ListItem() {
           this.MenuItemContent('设置', AppIcon.SETTINGS, () => {
             AppRouter.push(PageNames.SETTINGS);
           })
         }
-        .backgroundColor(Color.Transparent)
+        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
 
         if (this.isAdminUser()) {
           ListItem() {
             this.MenuItemContent('管理员工具台', AppIcon.SHIELD, () => this.openAdminPanel())
           }
-          .backgroundColor(Color.Transparent)
+          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
         }
 
         ListItem() {
           this.MenuItemContent('退出登录', AppIcon.CLOSE, () => this.logout())
         }
-        .backgroundColor(Color.Transparent)
+        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
       }
       .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder(), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
       .backgroundColor(this.getSurfaceBackground())
@@ -1222,7 +1222,7 @@ export struct ProfilePage {
           Text() {
             SymbolSpan($r(AppIcon.CAMERA))
               .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor([Color.White])
+              .fontColor([this.getCurrentThemePalette().accentText])
           }
         }
         .type(ButtonType.Normal)
@@ -1581,7 +1581,7 @@ export struct ProfilePage {
           })
         }
         .type(ButtonType.Normal)
-        .backgroundColor(Color.Transparent)
+        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
         .enabled(!this.isLoading && !this.isAvatarUploading)
         .opacity(this.isLoading || this.isAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
         .onClick(() => {
@@ -1621,7 +1621,7 @@ export struct ProfilePage {
       Row({ space: DesignConstants.SPACING.MD }) {
         Button('取消')
           .type(ButtonType.Normal)
-          .backgroundColor(Color.Transparent)
+          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
           .fontColor(this.getPrimaryTextColor())
           .layoutWeight(1)
           .borderRadius(this.getProfileVisualStyle().card.borderRadius)

@@ -203,7 +203,7 @@ export struct AccountsPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor(Color.Transparent)
+      .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
@@ -307,7 +307,7 @@ export struct AccountsPage {
                         .type(ButtonType.Capsule)
                         .fontSize(DesignConstants.FONT.SIZE.SM)
                         .height(32)
-                        .backgroundColor(Color.Transparent)
+                        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
                         .fontColor(this.getCurrentThemePalette().accentBackground)
                         .shadow(this.getCurrentThemePalette().controlShadow)
                         .border({ width: 1, color: this.getSurfaceBorder() })

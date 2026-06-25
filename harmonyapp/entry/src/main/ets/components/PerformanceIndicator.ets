@@ -237,7 +237,7 @@ export struct PerformanceIndicator {
     .bindPopup(this.isExpanded, {
       builder: this.buildPopupContent,
       placement: Placement.Bottom,
-      maskColor: Color.Transparent,
+      maskColor: DesignConstants.COLOR.TRANSPARENT,
       popupColor: this.getPalette().surfaceBackground,
       enableArrow: true,
       showInSubWindow: false

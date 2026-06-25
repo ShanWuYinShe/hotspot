@@ -85,7 +85,7 @@ export struct SystemCard {
 
     switch (this.variant) {
       case CardVariant.GLASS:
-        return Color.Transparent;
+        return DesignConstants.COLOR.TRANSPARENT;
       case CardVariant.FILLED:
         return this.getPalette().surfaceSubtle;
       case CardVariant.GLOW:
@@ -100,7 +100,7 @@ export struct SystemCard {
 
   private getShadow(): ShadowConfig {
     if (!this.showShadow) {
-      return { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 };
+      return { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 };
     }
 
     switch (this.variant) {
@@ -120,7 +120,7 @@ export struct SystemCard {
 
   private getBorder(): BorderConfig {
     if (!this.showBorder) {
-      return { width: 0, color: Color.Transparent };
+      return { width: 0, color: DesignConstants.COLOR.TRANSPARENT };
     }
     return { width: 1, color: (this.cardBorderColor || this.getPalette().floatingBorderColor || this.getPalette().borderColor) as ResourceColor };
   }

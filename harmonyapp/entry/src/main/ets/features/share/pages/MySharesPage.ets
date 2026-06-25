@@ -380,7 +380,7 @@ export struct MySharesPage {
         if (!share.is_revoked) {
           Button(this.revokingShareId === share.share_id ? '撤销中...' : '撤销分享')
             .type(ButtonType.Capsule)
-            .backgroundColor(Color.Transparent)
+            .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
             .fontColor(this.getCurrentThemePalette().accentBackground)
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .shadow(this.getCurrentThemePalette().controlShadow)

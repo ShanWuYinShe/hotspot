@@ -215,7 +215,7 @@ export struct EventDetailPage {
           Text() {
             SymbolSpan($r(AppIcon.BACK))
               .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([Color.White])
+              .fontColor([this.getCurrentThemePalette().accentText])
           }
         }
         .type(ButtonType.Normal)
@@ -232,7 +232,7 @@ export struct EventDetailPage {
           Text() {
             SymbolSpan($r(AppIcon.SHARE))
               .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor([Color.White])
+              .fontColor([this.getCurrentThemePalette().accentText])
           }
         }
         .type(ButtonType.Normal)
@@ -256,7 +256,7 @@ export struct EventDetailPage {
       Row() {
         Text(this.getCurrentEvent().tag)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(Color.White)
+          .fontColor(this.getCurrentThemePalette().accentText)
           .fontWeight(FontWeight.Medium)
           .padding({ left: 10, right: 10, top: 4, bottom: 4 })
           .backgroundColor(this.getCurrentEvent().tagColor)
@@ -407,7 +407,7 @@ export struct EventDetailPage {
       Button('关注')
         .type(ButtonType.Normal)
         .backgroundColor(this.getCurrentEvent().tagColor)
-        .fontColor(Color.White)
+        .fontColor(this.getCurrentThemePalette().accentText)
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .height(30)
         .borderRadius(DesignConstants.SHAPE.BUTTON)
@@ -505,12 +505,12 @@ export struct EventDetailPage {
           Text() {
             SymbolSpan($r(this.joined ? AppIcon.CHECK : AppIcon.ADD))
               .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([this.joined ? this.getCurrentEvent().tagColor : Color.White])
+              .fontColor([this.joined ? this.getCurrentEvent().tagColor : this.getCurrentThemePalette().accentText])
           }
 
           Text(this.joined ? '已报名 · 点击取消' : '立即报名参加')
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor(this.joined ? this.getCurrentEvent().tagColor : Color.White)
+            .fontColor(this.joined ? this.getCurrentEvent().tagColor : this.getCurrentThemePalette().accentText)
             .fontWeight(FontWeight.Medium)
         }
       }

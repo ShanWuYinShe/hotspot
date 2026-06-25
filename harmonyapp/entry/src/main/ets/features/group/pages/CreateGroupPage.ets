@@ -127,7 +127,7 @@ export struct CreateGroupPage {
       borderColor: this.getSurfaceBorder(),
       borderWidth: 1,
       borderRadius: DesignConstants.SHAPE.INPUT,
-      shadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
+      shadow: { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 },
       height: DesignConstants.COMPONENT.INPUT_HEIGHT,
       horizontalPadding: DesignConstants.SPACING.MD
     }, focused, hasError, this.resolvedThemeId);
@@ -327,7 +327,7 @@ export struct CreateGroupPage {
             icon: AppIcon.BACK,
             iconSize: IconSize.LARGE,
             iconColor: this.getCurrentThemePalette().textPrimary,
-            bgColor: Color.Transparent,
+            bgColor: DesignConstants.COLOR.TRANSPARENT,
             onButtonClick: () => {
               AppRouter.pop();
             }
@@ -349,7 +349,7 @@ export struct CreateGroupPage {
           top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
           bottom: DesignConstants.SPACING.SM
         })
-        .backgroundColor(Color.Transparent)
+        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
         // 表单内容
@@ -728,7 +728,7 @@ export struct CreateGroupPage {
         }
         .layoutWeight(1)
         .scrollBar(BarState.Off)
-        .backgroundColor(Color.Transparent)
+        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
       }
       .width('100%')
       .height('100%')

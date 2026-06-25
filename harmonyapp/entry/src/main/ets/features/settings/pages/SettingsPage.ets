@@ -392,7 +392,7 @@ export struct SettingsPage {
                 Button('退出登录')
                   .width('100%')
                   .height(50)
-                  .backgroundColor(Color.Transparent)
+                  .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
                   .fontColor(this.getCurrentThemePalette().accentBackground)
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .type(ButtonType.Normal)

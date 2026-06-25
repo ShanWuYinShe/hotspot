@@ -593,7 +593,7 @@ export struct MessagePage {
         top: this.getHeaderTopPadding(),
         bottom: 12
       })
-      .backgroundColor(Color.Transparent)
+      .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 搜索栏
@@ -834,7 +834,7 @@ export struct MessagePage {
     .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
     .backgroundColor(this.pressedChatKey === this.getChatKey(item)
       ? this.getCurrentThemePalette().surfaceSubtle
-      : Color.Transparent)
+      : DesignConstants.COLOR.TRANSPARENT)
     .opacity(this.isChatDeleting(item) ? DesignConstants.OPACITY.LOADING : 1)
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {

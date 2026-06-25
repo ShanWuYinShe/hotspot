@@ -6,6 +6,8 @@
  * 用法：SoftDivider({ color: this.getSurfaceBorder() })
  */
 
+import { DesignConstants } from '../constants/DesignConstants';
+
 @Component
 export struct SoftDivider {
   @Prop color: ResourceColor = '#00000014';
@@ -18,10 +20,10 @@ export struct SoftDivider {
       .linearGradient({
         direction: GradientDirection.Right,
         colors: [
-          [Color.Transparent, 0.0],
+          [DesignConstants.COLOR.TRANSPARENT, 0.0],
           [this.color, 0.2],
           [this.color, 0.8],
-          [Color.Transparent, 1.0]
+          [DesignConstants.COLOR.TRANSPARENT, 1.0]
         ]
       })
   }

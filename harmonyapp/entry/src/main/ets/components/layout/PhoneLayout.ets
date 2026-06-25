@@ -117,7 +117,7 @@ export struct PhoneLayout {
         .barHeight(this.isTablet ? 0 : 56)
         .scrollable(false)
         .barMode(BarMode.Fixed)
-        .divider({ strokeWidth: 0, color: Color.Transparent, startMargin: 0, endMargin: 0 })
+        .divider({ strokeWidth: 0, color: DesignConstants.COLOR.TRANSPARENT, startMargin: 0, endMargin: 0 })
         .onChange((index: number) => {
           if (index === CREATE_TAB_INDEX) {
             this.showCreateSheet = true;
@@ -125,7 +125,7 @@ export struct PhoneLayout {
           }
           this.currentTabIndex = index;
         })
-        .barBackgroundColor(Color.Transparent)
+        .barBackgroundColor(DesignConstants.COLOR.TRANSPARENT)
         .backgroundBlurStyle(BlurStyle.Thin)
         .backgroundColor($r('app.color.bg_primary'))
         .layoutWeight(1)
@@ -211,7 +211,7 @@ export struct PhoneLayout {
       .backgroundColor(
         this.currentTabIndex === index
           ? this.getPalette().tabBarActiveBackground
-          : Color.Transparent
+          : DesignConstants.COLOR.TRANSPARENT
       )
       .animation({
         curve: curves.springMotion(

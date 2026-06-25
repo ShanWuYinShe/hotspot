@@ -63,7 +63,7 @@ export struct AdvancedSettingsPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor(Color.Transparent)
+      .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       Column() {
@@ -86,7 +86,7 @@ export struct AdvancedSettingsPage {
       .width('100%')
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
-      .backgroundColor(Color.Transparent)
+      .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
     }
     .width('100%')
     .height('100%')

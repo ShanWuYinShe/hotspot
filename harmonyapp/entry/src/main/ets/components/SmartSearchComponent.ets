@@ -283,7 +283,7 @@ export struct SmartSearchComponent {
       .textAlign(TextAlign.Center)
       .backgroundColor(this.currentFilter === filter
         ? this.getPalette().accentBackground
-        : Color.Transparent)
+        : DesignConstants.COLOR.TRANSPARENT)
       .fontColor(this.currentFilter === filter
         ? this.getPalette().accentText
         : this.getPalette().textSecondary)
@@ -367,7 +367,7 @@ export struct SmartSearchComponent {
                     .width(24)
                     .height(24)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .backgroundColor(Color.Transparent)
+                    .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
                     .fontColor(this.getPalette().textSecondary)
                     .onClick(() => {
                       const index = this.searchHistory.indexOf(historyItem);

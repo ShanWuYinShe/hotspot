@@ -33,7 +33,7 @@ export struct PhotoPreviewPage {
 
   aboutToAppear(): void {
     SystemUiController.useSurface({
-      baseColor: '#000000',
+      baseColor: DesignConstants.COLOR.BLACK,
       overlayOpacity: 1,
       preferDarkContent: false
     });
@@ -46,7 +46,7 @@ export struct PhotoPreviewPage {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor(Color.Black)
+        .backgroundColor(DesignConstants.COLOR.BLACK)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
 
       // 图片轮播
@@ -167,7 +167,7 @@ export struct PhotoPreviewPage {
           icon: AppIcon.CLOSE,
           iconSize: IconSize.LARGE,
           iconColor: DesignConstants.COLOR.TEXT_PRIMARY_DARK,
-          bgColor: Color.Transparent,
+          bgColor: DesignConstants.COLOR.TRANSPARENT,
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -202,7 +202,7 @@ export struct PhotoPreviewPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(Color.Black)
+    .backgroundColor(DesignConstants.COLOR.BLACK)
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

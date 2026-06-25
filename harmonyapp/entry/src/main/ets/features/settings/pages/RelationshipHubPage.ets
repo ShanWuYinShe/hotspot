@@ -65,7 +65,7 @@ export struct RelationshipHubPage {
   @Builder
   private RelTab(index: number, label: string, count: number) {
     Text(count > 0 ? `${label} (${count})` : label)
-      .fontColor(this.activeRelTab === index ? Color.White : this.getPalette().textSecondary)
+      .fontColor(this.activeRelTab === index ? this.getPalette().accentText : this.getPalette().textSecondary)
       .fontSize(DesignConstants.FONT.SIZE.SM)
       .fontWeight(FontWeight.Medium)
       .padding({ left: 14, right: 14, top: 6, bottom: 6 })

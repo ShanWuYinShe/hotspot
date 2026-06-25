@@ -103,7 +103,7 @@ export struct SearchPage {
       borderColor: this.getSurfaceBorder(),
       borderWidth: 1,
       borderRadius: DesignConstants.SHAPE.INPUT,
-      shadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
+      shadow: { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 },
       height: 38,
       horizontalPadding: DesignConstants.SPACING.LG
     }, focused, hasError, this.resolvedThemeId);
@@ -366,7 +366,7 @@ export struct SearchPage {
             TextInput({ placeholder: '搜索用户、地点、话题…', text: this.keyword })
               .layoutWeight(1)
               .height(38)
-              .backgroundColor(Color.Transparent)
+              .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
               .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
               .placeholderColor(this.getCurrentThemePalette().textTertiary)
               .fontColor(this.getCurrentThemePalette().textPrimary)
@@ -398,7 +398,7 @@ export struct SearchPage {
           top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
           bottom: DesignConstants.SPACING.SM
         })
-        .backgroundColor(Color.Transparent)
+        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
         .border({ width: { bottom: 1 }, color: this.getSurfaceBorder() })
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
@@ -441,7 +441,7 @@ export struct SearchPage {
           })
           .width('100%')
           .layoutWeight(1)
-          .backgroundColor(Color.Transparent)
+          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
           .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 12, bottom: 0 })
         }
       }
@@ -517,7 +517,7 @@ export struct SearchPage {
 
   @Builder TabBuilder(index: number, name: string) {
     Text(name)
-      .fontColor(this.currentIndex === index ? Color.White : this.getCurrentThemePalette().textSecondary)
+      .fontColor(this.currentIndex === index ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary)
       .fontSize(DesignConstants.FONT.SIZE.SM)
       .fontWeight(FontWeight.Medium)
       .padding({ left: 14, right: 14, top: 6, bottom: 6 })
@@ -752,7 +752,7 @@ export struct SearchPage {
           .enabled(!this.isUserActionPending(item.user?.user_id ?? ''))
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isUserFollowing(item.user?.user_id ?? '') ? Color.Transparent : this.getCurrentThemePalette().accentBackground)
+          .backgroundColor(this.isUserFollowing(item.user?.user_id ?? '') ? DesignConstants.COLOR.TRANSPARENT : this.getCurrentThemePalette().accentBackground)
           .fontColor(this.isUserFollowing(item.user?.user_id ?? '') ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
           .borderWidth(this.isUserFollowing(item.user?.user_id ?? '') ? 1 : 0)
           .borderColor(this.getCurrentThemePalette().accentBackground)
@@ -852,7 +852,7 @@ export struct SearchPage {
           .enabled(!this.isGroupActionPending(item.group?.group_id ?? ''))
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isGroupJoined(item) ? Color.Transparent : this.getCurrentThemePalette().accentBackground)
+          .backgroundColor(this.isGroupJoined(item) ? DesignConstants.COLOR.TRANSPARENT : this.getCurrentThemePalette().accentBackground)
           .fontColor(this.isGroupJoined(item) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
           .borderWidth(this.isGroupJoined(item) ? 1 : 0)
           .borderColor(this.getCurrentThemePalette().accentBackground)

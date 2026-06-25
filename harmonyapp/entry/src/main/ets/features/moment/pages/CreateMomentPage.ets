@@ -382,7 +382,7 @@ export struct CreateMomentPage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor(Color.Transparent)
+      .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       List() {
@@ -576,14 +576,14 @@ export struct CreateMomentPage {
                 Row({ space: DesignConstants.SPACING.SM }) {
                   Button('选点')
                     .type(ButtonType.Capsule)
-                    .backgroundColor(Color.Transparent)
+                    .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
                     .fontColor(this.getCurrentThemePalette().accentBackground)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .onClick(() => this.openLocationPicker())
 
                   Button('刷新')
                     .type(ButtonType.Capsule)
-                    .backgroundColor(Color.Transparent)
+                    .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
                     .fontColor(this.getCurrentThemePalette().accentBackground)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .onClick(() => this.refreshLocation())
@@ -686,7 +686,7 @@ export struct CreateMomentPage {
       IconButton({
         icon: AppIcon.CLOSE,
         iconSize: IconSize.SMALL,
-        bgColor: Color.Transparent,
+        bgColor: DesignConstants.COLOR.TRANSPARENT,
         paddingSize: 2,
         onButtonClick: (): void => this.removeTag(index)
       })

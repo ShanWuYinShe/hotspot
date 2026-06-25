@@ -187,11 +187,11 @@ export struct ProfileEditPage {
                     Text() {
                       SymbolSpan($r(AppIcon.CAMERA))
                         .fontSize(DesignConstants.FONT.SIZE.SM)
-                        .fontColor([Color.White])
+                        .fontColor([this.getCurrentThemePalette().accentText])
                     }
                     Text('更换横幅')
                       .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .fontColor(Color.White)
+                      .fontColor(this.getCurrentThemePalette().accentText)
                   }
                 }
                 .type(ButtonType.Normal)
@@ -225,7 +225,7 @@ export struct ProfileEditPage {
                   Text() {
                     SymbolSpan($r(AppIcon.CAMERA))
                       .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .fontColor([Color.White])
+                      .fontColor([this.getCurrentThemePalette().accentText])
                   }
                 }
                 .type(ButtonType.Normal)
@@ -282,13 +282,13 @@ export struct ProfileEditPage {
                   Button() {
                     Text('#' + tag)
                       .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .fontColor(this.isTagSelected(tag) ? Color.White : (this.isTagDisabled(tag) ? this.getCurrentThemePalette().textTertiary : this.getCurrentThemePalette().textSecondary))
+                      .fontColor(this.isTagSelected(tag) ? this.getCurrentThemePalette().accentText : (this.isTagDisabled(tag) ? this.getCurrentThemePalette().textTertiary : this.getCurrentThemePalette().textSecondary))
                   }
                   .type(ButtonType.Normal)
                   .padding({ left: 12, right: 12, top: 6, bottom: 6 })
                   .borderRadius(DesignConstants.SHAPE.BUTTON)
                   .backgroundColor(this.isTagSelected(tag) ? this.getCurrentThemePalette().accentBackground : this.getSurfaceBackground())
-                  .border({ width: 1, color: this.isTagSelected(tag) ? Color.Transparent : this.getSurfaceBorder() })
+                  .border({ width: 1, color: this.isTagSelected(tag) ? DesignConstants.COLOR.TRANSPARENT : this.getSurfaceBorder() })
                   .opacity(this.isTagDisabled(tag) ? 0.4 : 1.0)
                   .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
                   .enabled(!this.isTagDisabled(tag))
@@ -308,15 +308,15 @@ export struct ProfileEditPage {
                   Text() {
                     SymbolSpan($r(AppIcon.CHECK))
                       .fontSize(DesignConstants.FONT.SIZE.LG)
-                      .fontColor([Color.White])
+                      .fontColor([this.getCurrentThemePalette().accentText])
                   }
                   Text('已保存')
                     .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontColor(Color.White)
+                    .fontColor(this.getCurrentThemePalette().accentText)
                 } else {
                   Text(this.isSaving ? '保存中...' : '保存')
                     .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontColor(Color.White)
+                    .fontColor(this.getCurrentThemePalette().accentText)
                     .fontWeight(FontWeight.Medium)
                 }
               }
@@ -367,7 +367,7 @@ export struct ProfileEditPage {
       borderColor: this.getSurfaceBorder(),
       borderWidth: 1,
       borderRadius: DesignConstants.SHAPE.INPUT,
-      shadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
+      shadow: { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 },
       height: DesignConstants.COMPONENT.INPUT_HEIGHT,
       horizontalPadding: DesignConstants.SPACING.MD
     }, focused, hasError, this.resolvedThemeId);
@@ -396,7 +396,7 @@ export struct ProfileEditPage {
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .placeholderColor(this.getCurrentThemePalette().textTertiary)
-            .backgroundColor(Color.Transparent)
+            .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
             .borderRadius(0)
             .maxLength(maxLen)
             .onChange((v: string) => { onChange(v); })
@@ -407,7 +407,7 @@ export struct ProfileEditPage {
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .placeholderColor(this.getCurrentThemePalette().textTertiary)
-            .backgroundColor(Color.Transparent)
+            .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
             .borderRadius(0)
             .maxLength(maxLen)
             .onChange((v: string) => { onChange(v); })

@@ -423,7 +423,7 @@ export struct NotificationCenter {
             Text(filter.label)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.selectedFilter === filter.key
-                ? Color.White
+                ? this.getPalette().accentText
                 : this.getPalette().textSecondary)
               .backgroundColor(this.selectedFilter === filter.key
                 ? this.getPalette().accentBackground
@@ -441,7 +441,7 @@ export struct NotificationCenter {
               .border({
                 width: 1,
                 color: this.selectedFilter === filter.key
-                  ? Color.Transparent
+                  ? DesignConstants.COLOR.TRANSPARENT
                   : this.getPalette().borderColor
               })
               .onClick(() => this.onFilterSelected(filter.key as NotificationFilterKey))
@@ -592,7 +592,7 @@ export struct NotificationCenter {
             Text() {
               SymbolSpan($r(this.getNotificationIcon(notification.type)))
                 .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor([Color.White])
+                .fontColor([this.getPalette().accentText])
             }
           }
           .width(18)
@@ -692,11 +692,11 @@ export struct NotificationCenter {
     }
     .width('100%')
     .padding({ left: 12, right: 12, top: 12, bottom: 12 })
-    .backgroundColor(notification.is_read ? Color.Transparent : this.getTypeColor(notification.type) + '07')
+    .backgroundColor(notification.is_read ? DesignConstants.COLOR.TRANSPARENT : this.getTypeColor(notification.type) + '07')
     .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
     .border({
       width: 1,
-      color: notification.is_read ? Color.Transparent : this.getTypeColor(notification.type) + '18'
+      color: notification.is_read ? DesignConstants.COLOR.TRANSPARENT : this.getTypeColor(notification.type) + '18'
     })
     .onClick(() => this.handleNotificationClick(notification))
     .accessibilityGroup(true)

@@ -175,7 +175,7 @@ function FilterMenuItem(props: FilterMenuItemProps) {
       .width(14)
       .height(14)
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(props.active ? props.accentColor : Color.Transparent)
+      .backgroundColor(props.active ? props.accentColor : DesignConstants.COLOR.TRANSPARENT)
       .border({ width: 1.5, color: props.accentColor })
   }
   .width('100%')
@@ -185,7 +185,7 @@ function FilterMenuItem(props: FilterMenuItemProps) {
   .alignItems(VerticalAlign.Center)
   .backgroundColor(props.active
     ? resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle
-    : Color.Transparent)
+    : DesignConstants.COLOR.TRANSPARENT)
   .borderRadius(DesignConstants.RADIUS.LG)
   .opacity(props.active ? 1.0 : DesignConstants.OPACITY.SUBTLE)
   .onClick(() => props.onToggle())

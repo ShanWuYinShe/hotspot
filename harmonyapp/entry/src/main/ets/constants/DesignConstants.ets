@@ -43,6 +43,10 @@ export interface ColorPalette {
   CHAT_TITLE_ICON_BG: string;
   OVERLAY_LIGHT: string;
   OVERLAY_STRONG: string;
+  // 系统常量色（所有主题一致，替代 Color.White/Transparent/Black）
+  WHITE: string;
+  TRANSPARENT: string;
+  BLACK: string;
 }
 
 // ==================== 字体系统接口 ====================
@@ -286,6 +290,9 @@ const COLOR: ColorPalette = {
   CHAT_TITLE_ICON_BG: '#F9F9F5',
   OVERLAY_LIGHT: '#59FFFFFF',
   OVERLAY_STRONG: '#80000000',
+  WHITE: '#FFFFFF',
+  TRANSPARENT: '#00000000',
+  BLACK: '#000000',
 };
 
 // ==================== 字体系统 ====================

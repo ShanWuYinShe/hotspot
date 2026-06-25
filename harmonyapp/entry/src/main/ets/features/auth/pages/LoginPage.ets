@@ -157,7 +157,7 @@ export struct LoginPage {
       borderColor: this.getSurfaceBorder(),
       borderWidth: 1,
       borderRadius: DesignConstants.SHAPE.INPUT,
-      shadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
+      shadow: { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 },
       height: DesignConstants.COMPONENT.INPUT_HEIGHT,
       horizontalPadding: DesignConstants.SPACING.MD
     }, focused, hasError, this.resolvedThemeId);
@@ -269,7 +269,7 @@ export struct LoginPage {
             top: this.getHeaderTopPadding(),
             bottom: DesignConstants.SPACING.SM
           })
-          .backgroundColor(Color.Transparent)
+          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
           .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
           // 标题区域（固定）
@@ -381,12 +381,12 @@ export struct LoginPage {
       .fontSize(DesignConstants.FONT.SIZE.MD)
       .fontWeight(this.loginMode === mode ? FontWeight.Bold : FontWeight.Medium)
       .fontColor(this.loginMode === mode ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().buttonSecondaryText)
-      .backgroundColor(this.loginMode === mode ? this.getCurrentThemePalette().accentBackground : Color.Transparent)
+      .backgroundColor(this.loginMode === mode ? this.getCurrentThemePalette().accentBackground : DesignConstants.COLOR.TRANSPARENT)
       .borderRadius(DesignConstants.RADIUS.XL)
       .height(36)
       .layoutWeight(1)
       .textAlign(TextAlign.Center)
-      .shadow(this.loginMode === mode ? this.getCurrentThemePalette().controlShadow : { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 })
+      .shadow(this.loginMode === mode ? this.getCurrentThemePalette().controlShadow : { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 })
       .animation({
         curve: curves.springMotion(
           DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,

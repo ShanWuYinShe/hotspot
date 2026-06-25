@@ -263,7 +263,7 @@ export struct MomentDetailPage {
       IconButton({
         icon: AppIcon.BACK,
         iconSize: IconSize.MEDIUM,
-        bgColor: Color.Transparent,
+        bgColor: DesignConstants.COLOR.TRANSPARENT,
         onButtonClick: () => {
           AppRouter.pop();
         }
@@ -292,7 +292,7 @@ export struct MomentDetailPage {
       top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
       bottom: DesignConstants.SPACING.SM
     })
-    .backgroundColor(Color.Transparent)
+    .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 

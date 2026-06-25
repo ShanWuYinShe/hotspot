@@ -1009,7 +1009,7 @@ export struct ChatPage {
           .type(ButtonType.Circle)
           .width(36)
           .height(36)
-          .backgroundColor(Color.Transparent)
+          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
           .onClick(() => this.handleBackNavigation())
 
           if (this.chatType === 'private_chat' && this.targetAvatar) {
@@ -1043,7 +1043,7 @@ export struct ChatPage {
         .type(ButtonType.Circle)
         .width(36)
         .height(36)
-        .backgroundColor(Color.Transparent)
+        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
         .onClick(() => this.openConversationActions())
       }
         .width('100%')

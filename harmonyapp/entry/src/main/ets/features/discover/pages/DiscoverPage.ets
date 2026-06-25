@@ -401,7 +401,7 @@ export struct DiscoverPage {
             width: { bottom: 2 },
             color: this.activeTab === tab
               ? this.getCurrentThemePalette().accentBackground
-              : Color.Transparent
+              : DesignConstants.COLOR.TRANSPARENT
           })
           .animation({ duration: 180, curve: Curve.EaseInOut })
           .onClick(() => {
@@ -446,7 +446,7 @@ export struct DiscoverPage {
             .border({
               width: 1,
               color: this.activeTag === tag
-                ? Color.Transparent
+                ? DesignConstants.COLOR.TRANSPARENT
                 : this.getSurfaceBorder()
             })
             .onClick(() => {

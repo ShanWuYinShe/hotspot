@@ -192,13 +192,13 @@ export struct SubscriptionsPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor(Color.Transparent)
+      .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.loading) {
         SystemLoadingView({ message: '加载订阅设置...' })
           .layoutWeight(1)
-          .backgroundColor(Color.Transparent)
+          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
       } else {
         List() {
           ListItem() {
@@ -224,7 +224,7 @@ export struct SubscriptionsPage {
         .scrollBar(BarState.Auto)
         .width('100%')
         .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
-        .backgroundColor(Color.Transparent)
+        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
       }
     }
     .width('100%')

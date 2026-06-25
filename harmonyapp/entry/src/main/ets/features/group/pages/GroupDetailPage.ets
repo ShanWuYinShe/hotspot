@@ -910,7 +910,7 @@ export struct GroupDetailPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: this.getCurrentThemePalette().textPrimary,
-          bgColor: Color.Transparent,
+          bgColor: DesignConstants.COLOR.TRANSPARENT,
           radius: DesignConstants.RADIUS.XL,
           minButtonSize: 42,
           paddingSize: 9,
@@ -930,7 +930,7 @@ export struct GroupDetailPage {
           icon: AppIcon.SHARE,
           iconSize: IconSize.LARGE,
           iconColor: this.getCurrentThemePalette().textPrimary,
-          bgColor: Color.Transparent,
+          bgColor: DesignConstants.COLOR.TRANSPARENT,
           radius: DesignConstants.RADIUS.XL,
           minButtonSize: 42,
           paddingSize: 9,
@@ -1343,7 +1343,7 @@ export struct GroupDetailPage {
                 })
               }
               .type(ButtonType.Normal)
-              .backgroundColor(Color.Transparent)
+              .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
               .onClick(() => this.selectEditGroupAvatar())
 
               Column({ space: DesignConstants.SPACING.SM }) {
@@ -1354,7 +1354,7 @@ export struct GroupDetailPage {
                 if (this.editGroupAvatarLocalUri) {
                   Button('恢复原头像')
                     .type(ButtonType.Normal)
-                    .backgroundColor(Color.Transparent)
+                    .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
                     .fontColor(this.getCurrentThemePalette().textSecondary)
                     .borderRadius(DesignConstants.RADIUS.XL)
                     .height(30)
