@@ -99,6 +99,7 @@ export struct EventDetailPage {
   private eventId: number = 1;
   @State joined: boolean = false;
   @State joinAnimating: boolean = false;
+  private joinAnimTimer: number = -1;
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
@@ -129,14 +130,22 @@ export struct EventDetailPage {
     this.joinAnimating = true;
     this.joined = !this.joined;
     SystemToast.show(this.joined ? '已报名参加活动' : '已取消报名', this.getUIContext());
-    setTimeout(() => {
+    this.joinAnimTimer = setTimeout(() => {
       this.joinAnimating = false;
+      this.joinAnimTimer = -1;
     }, 300);
   }
 
   private getFillRate(): number {
     const ev = this.getCurrentEvent();
     return Math.round((ev.participantsCount / ev.maxParticipants) * 100);
+  }
+
+  aboutToDisappear(): void {
+    if (this.joinAnimTimer !== -1) {
+      clearTimeout(this.joinAnimTimer);
+      this.joinAnimTimer = -1;
+    }
   }
 
   build() {

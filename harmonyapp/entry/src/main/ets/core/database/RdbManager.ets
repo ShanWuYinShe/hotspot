@@ -63,6 +63,19 @@ export class RdbManager {
     )
   `;
 
+  // 索引：覆盖高频查询路径，避免数据量增长后全表扫描。
+  // - messages: 按 chat_id 等值 + sent_at 排序（会话消息列表）
+  // - chats: 按 last_time 倒序（会话列表）
+  // - moments: 按 created_at 倒序（动态流）、user_id（个人主页）
+  private readonly SQL_CREATE_INDEX_MESSAGES_CHAT =
+    'CREATE INDEX IF NOT EXISTS idx_messages_chat_sent ON messages(chat_id, sent_at)';
+  private readonly SQL_CREATE_INDEX_CHATS_TIME =
+    'CREATE INDEX IF NOT EXISTS idx_chats_last_time ON chats(last_time)';
+  private readonly SQL_CREATE_INDEX_MOMENTS_CREATED =
+    'CREATE INDEX IF NOT EXISTS idx_moments_created ON moments(created_at)';
+  private readonly SQL_CREATE_INDEX_MOMENTS_USER =
+    'CREATE INDEX IF NOT EXISTS idx_moments_user ON moments(user_id)';
+
   private constructor() {}
 
   public static getInstance(): RdbManager {
@@ -100,6 +113,11 @@ export class RdbManager {
       await this.rdbStore.executeSql(this.SQL_CREATE_TABLE_MOMENTS);
       await this.rdbStore.executeSql(this.SQL_CREATE_TABLE_MESSAGES);
       await this.rdbStore.executeSql(this.SQL_CREATE_TABLE_CHATS);
+      // 索引（CREATE INDEX IF NOT EXISTS，老库升级安全）
+      await this.rdbStore.executeSql(this.SQL_CREATE_INDEX_MESSAGES_CHAT);
+      await this.rdbStore.executeSql(this.SQL_CREATE_INDEX_CHATS_TIME);
+      await this.rdbStore.executeSql(this.SQL_CREATE_INDEX_MOMENTS_CREATED);
+      await this.rdbStore.executeSql(this.SQL_CREATE_INDEX_MOMENTS_USER);
       hilog.info(DOMAIN_NUMBER, TAG, 'Tables created');
     } catch (err) {
       hilog.error(DOMAIN_NUMBER, TAG, `Create tables failed: ${JSON.stringify(err)}`);

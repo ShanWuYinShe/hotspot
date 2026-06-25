@@ -90,6 +90,7 @@ export struct CreateMomentPage {
       }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `请求权限失败: ${JSON.stringify(error)}`);
+      SystemToast.showError('权限请求失败，请重试', this.getUIContext());
     }
   }
 

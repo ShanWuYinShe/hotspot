@@ -106,6 +106,20 @@ export class MomentCacheService {
     }
   }
 
+  /**
+   * 清空全部瞬间缓存（登出 / 切账号时调用，避免跨账号数据残留）
+   */
+  public async clearAll(): Promise<void> {
+    const store = this.rdbManager.getStore();
+    if (!store) return;
+    try {
+      await store.executeSql('DELETE FROM moments');
+      hilog.info(DOMAIN_NUMBER, TAG, 'Cleared all moments cache');
+    } catch (err) {
+      hilog.error(DOMAIN_NUMBER, TAG, `Clear moments cache failed: ${JSON.stringify(err)}`);
+    }
+  }
+
   private normalizeMomentMediaUrls(moment: MomentItem): void {
     if (moment.user && moment.user.avatar_url) {
       moment.user.avatar_url = MediaUrlUtil.normalize(moment.user.avatar_url);

@@ -115,6 +115,7 @@ export struct ChatPage {
   private groupTypingTimers: Map<string, number> = new Map();
   private wsHasConnectedOnce: boolean = false;
   private isReconnectReconcileInFlight: boolean = false;
+  private scrollTimer: number = -1;
   private stableSafeAreaBottom: number = 0;
   private lastSendSignature: string = '';
   private lastSendAtMs: number = 0;
@@ -410,6 +411,10 @@ export struct ChatPage {
     this.applyKeyboardAvoidMode(UIContextKeyboardAvoidMode.OFFSET);
     this.isInputFocused = false;
     this.stopTyping();
+    if (this.scrollTimer !== -1) {
+      clearTimeout(this.scrollTimer);
+      this.scrollTimer = -1;
+    }
     MessageSyncManager.getInstance().leaveChat();
     if (this.chatType === 'private_chat' && this.targetId) {
       this.webSocketService.unsubscribeUsers([this.targetId]);
@@ -639,6 +644,7 @@ export struct ChatPage {
       this.messagesDataSource.setData(mergedMessages);
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, `重连后消息回补失败: ${JSON.stringify(error)}`);
+      SystemToast.show('部分消息可能未同步，下拉刷新', this.getUIContext());
     } finally {
       this.isReconnectReconcileInFlight = false;
     }
@@ -661,7 +667,9 @@ export struct ChatPage {
   }
 
   private scrollToBottom() {
-    setTimeout(() => {
+    if (this.scrollTimer !== -1) clearTimeout(this.scrollTimer);
+    this.scrollTimer = setTimeout(() => {
+      this.scrollTimer = -1;
       this.scroller.scrollEdge(Edge.Bottom);
     }, 100);
   }

@@ -49,6 +49,7 @@ export struct ProfileEditPage {
   @State isSaved: boolean = false;
   @State nicknameFocused: boolean = false;
   @State bioFocused: boolean = false;
+  private saveAnimTimer: number = -1;
   @State nicknameTouched: boolean = false;
   @State bioTouched: boolean = false;
 
@@ -64,6 +65,10 @@ export struct ProfileEditPage {
 
   aboutToDisappear(): void {
     KeyboardDismissManager.getInstance().dismiss();
+    if (this.saveAnimTimer !== -1) {
+      clearTimeout(this.saveAnimTimer);
+      this.saveAnimTimer = -1;
+    }
   }
 
   private getCurrentThemePalette() {
@@ -130,11 +135,11 @@ export struct ProfileEditPage {
 
     this.isSaving = true;
     // 模拟保存动画
-    setTimeout(() => {
+    this.saveAnimTimer = setTimeout(() => {
       this.isSaving = false;
       this.isSaved = true;
       SystemToast.showSuccess('资料已保存', this.getUIContext());
-      setTimeout(() => {
+      this.saveAnimTimer = setTimeout(() => {
         this.isSaved = false;
         AppRouter.pop();
       }, 600);

@@ -5,6 +5,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { MyProfile, ApiVersionMeta, ClientConfig, SystemAnnouncementItem } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
+import { MomentCacheService } from '../../../core/database/MomentCacheService';
 import { AppRouter, ProfileRouteParam, LoginRouteParam, AnnouncementsRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -156,6 +157,7 @@ export struct SettingsPage {
     try {
       this.webSocketService.disconnect();
       await MessageCacheService.getInstance().clearAll();
+      await MomentCacheService.getInstance().clearAll();
       await AuthAccountManager.lockCurrent();
       await HttpUtil.clearToken();
       this.stateManager.updateUser(null);

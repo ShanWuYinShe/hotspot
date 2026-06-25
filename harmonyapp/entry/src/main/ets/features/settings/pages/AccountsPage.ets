@@ -10,6 +10,7 @@ import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
+import { MomentCacheService } from '../../../core/database/MomentCacheService';
 import { MyProfile, AuthData } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
@@ -118,6 +119,7 @@ export struct AccountsPage {
     try {
       // 1) 清空缓存（避免串数据）
       await this.cache.clearAll();
+      await MomentCacheService.getInstance().clearAll();
 
       // 2) 切换 token
       const next = await AuthAccountManager.switchTo(auth.user_id);
@@ -159,6 +161,7 @@ export struct AccountsPage {
       if (this.currentUserId !== null && this.currentUserId === auth.user_id) {
         // 删除当前账号 => 锁定
         await this.cache.clearAll();
+        await MomentCacheService.getInstance().clearAll();
         this.ws.disconnect();
         this.stateManager.updateUser(null);
       }
