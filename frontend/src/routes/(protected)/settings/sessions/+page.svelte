@@ -8,8 +8,7 @@
   import PageHeader from '$lib/components/layout/page-header.svelte';
   import type { SessionItem } from '$lib/types/api';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
-  import Shield from 'lucide-svelte/icons/shield';
-import EmptyState from '$lib/components/common/empty-state.svelte';
+  import EmptyState from '$lib/components/common/empty-state.svelte';
   import Loader2 from 'lucide-svelte/icons/loader-2';
   import Smartphone from 'lucide-svelte/icons/smartphone';
 
@@ -138,7 +137,7 @@ import EmptyState from '$lib/components/common/empty-state.svelte';
         {/each}
       </div>
     {:else if sessions.length === 0}
-      <EmptyState icon={Shield} title="暂无会话记录" fill />
+      <EmptyState icon={Smartphone} title="暂无会话记录" fill />
     {:else}
       <div class="space-y-3">
         {#each sessions as session (session.session_id)}

@@ -222,7 +222,7 @@
                     <DropdownMenu.Item>
                       {#snippet child({ props })}
                         <a
-                          href="/admin/users/{user.user.user_id}/roles"
+                          href="/admin/rbac"
                           style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary);"
                           {...props}
                         >
