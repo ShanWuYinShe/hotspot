@@ -4,6 +4,7 @@
  */
 
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
 import { AppRouter } from '../../../core/router/AppRouter';
@@ -34,6 +35,7 @@ export struct AdvancedSettingsPage {
 
   build() {
     NavDestination() {
+  ResponsiveContainer() {
     Column() {
       // 标题栏
       Row() {
@@ -91,6 +93,7 @@ export struct AdvancedSettingsPage {
     .width('100%')
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

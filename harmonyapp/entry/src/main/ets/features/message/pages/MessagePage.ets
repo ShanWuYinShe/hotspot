@@ -5,6 +5,7 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_LAST_MESSAGE_SYNC_TIME } from '../../../core/state/GlobalStateManager';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ChatRouteParam } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -493,6 +494,7 @@ export struct MessagePage {
   }
 
   build() {
+  ResponsiveContainer() {
     Column() {
       // 粘性头部：标题 + 未读数 + 操作按钮
       Row() {
@@ -725,6 +727,7 @@ export struct MessagePage {
     .height('100%')
     .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
+  }
   }
 
   @Builder

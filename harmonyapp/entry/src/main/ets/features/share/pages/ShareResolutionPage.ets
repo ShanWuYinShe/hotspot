@@ -3,6 +3,7 @@
  * 接收 share_code → 调 API 获取详情 → 根据类型路由跳转
  */
 import { ApiClient } from '../../../core/api/ApiClient';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { ShareDetail, LocationSharePayload, UserSharePayload, GroupSharePayload, MomentSharePayload } from '../../../core/types/api';
 import { AppRouter, ProfileRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ShareResolutionRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
@@ -103,6 +104,7 @@ export struct ShareResolutionPage {
 
   build() {
     NavDestination() {
+    ResponsiveContainer() {
       Column() {
         if (this.isLoading) {
           SystemLoadingView({ message: '正在加载分享内容...' })
@@ -124,6 +126,7 @@ export struct ShareResolutionPage {
         bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, 0, 0)
       })
       .backgroundColor(this.getCurrentThemePalette().pageBackground)
+      }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

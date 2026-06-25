@@ -5,6 +5,7 @@
  * When backend spec defines subscription APIs, migrate to API calls.
  */
 import { StorageKeys, PageNames } from '../../../constants/AppConstants';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
@@ -163,6 +164,7 @@ export struct SubscriptionsPage {
 
   build() {
     NavDestination() {
+  ResponsiveContainer() {
     Column() {
       // 标题栏
       Row() {
@@ -230,6 +232,7 @@ export struct SubscriptionsPage {
     .width('100%')
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

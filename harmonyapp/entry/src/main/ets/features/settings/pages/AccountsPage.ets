@@ -7,6 +7,7 @@
  */
 
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
@@ -174,6 +175,7 @@ export struct AccountsPage {
 
   build() {
     NavDestination() {
+  ResponsiveContainer() {
     Column() {
       // 标题栏
       Row() {
@@ -350,6 +352,7 @@ export struct AccountsPage {
     .width('100%')
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

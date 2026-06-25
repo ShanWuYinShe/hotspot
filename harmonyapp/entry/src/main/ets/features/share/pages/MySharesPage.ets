@@ -1,4 +1,5 @@
 import { KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { ShareListItem, ShareListRequest, ShareType } from '../../../core/types/api';
 import { DefaultConfig, PageNames } from '../../../constants/AppConstants';
@@ -192,6 +193,7 @@ export struct MySharesPage {
 
   build() {
     NavDestination() {
+  ResponsiveContainer() {
     Column() {
       Row() {
         IconButton({
@@ -262,6 +264,7 @@ export struct MySharesPage {
     .width('100%')
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    }
     }
     .hideTitleBar(true)
   }

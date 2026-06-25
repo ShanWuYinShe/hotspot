@@ -5,6 +5,7 @@
  */
 
 import { GlobalStateManager } from '../../../core/state/GlobalStateManager';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
@@ -215,6 +216,7 @@ export struct LoginPage {
 
   build() {
     NavDestination() {
+    ResponsiveContainer() {
       Column() {
       if (this.isLoading) {
         SystemLoadingView({
@@ -345,6 +347,7 @@ export struct LoginPage {
     .width('100%')
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

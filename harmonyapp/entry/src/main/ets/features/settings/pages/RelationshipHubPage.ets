@@ -1,4 +1,5 @@
 import { AppRouter } from '../../../core/router/AppRouter';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -85,6 +86,7 @@ export struct RelationshipHubPage {
 
   build() {
     NavDestination() {
+    ResponsiveContainer() {
       Column() {
         SystemPageHeader({
           title: '关系',
@@ -153,6 +155,7 @@ export struct RelationshipHubPage {
       .width('100%')
       .height('100%')
       .backgroundColor(this.getPalette().pageBackground)
+    }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

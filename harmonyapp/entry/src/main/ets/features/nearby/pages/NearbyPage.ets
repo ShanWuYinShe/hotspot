@@ -4,6 +4,7 @@
  */
 
 import { GlobalStateManager, KEY_IS_LOGGED_IN, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ChatRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
@@ -322,6 +323,7 @@ export struct NearbyPage {
   // ==================== UI ====================
 
   build() {
+  ResponsiveContainer() {
     Column() {
       // 粘性头部
       this.buildStickyHeader()
@@ -345,6 +347,7 @@ export struct NearbyPage {
     .height('100%')
     .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
     .backgroundColor(this.getPalette().pageBackground)
+  }
   }
 
   // ==================== 粘性头部 ====================

@@ -1,4 +1,5 @@
 import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN, KEY_CLIENT_CONFIG } from '../../../core/state/GlobalStateManager';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
@@ -320,6 +321,7 @@ export struct SearchPage {
 
   build() {
     NavDestination() {
+    ResponsiveContainer() {
       Column() {
         // Search header — back button + search input (Figma Make: rounded back btn + neu-input-surface)
         Row({ space: 12 }) {
@@ -448,6 +450,7 @@ export struct SearchPage {
       .width('100%')
       .height('100%')
       .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

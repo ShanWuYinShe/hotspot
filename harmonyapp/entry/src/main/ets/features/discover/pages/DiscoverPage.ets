@@ -4,6 +4,7 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
@@ -225,6 +226,7 @@ export struct DiscoverPage {
   }
 
   build() {
+  ResponsiveContainer() {
     Column() {
       // 粘性头部：标题 + 搜索栏 + 标签栏
       Column() {
@@ -382,6 +384,7 @@ export struct DiscoverPage {
     .height('100%')
     .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
+  }
   }
 
   // ==================== 标签栏（下划线式，对齐前端 underline tabs）====================

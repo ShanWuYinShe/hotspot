@@ -4,6 +4,7 @@
  */
 
 import { ApiClient } from '../../../core/api/ApiClient';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { InteractionStateStore, MomentSocialState } from '../../../core/state/InteractionStateStore';
@@ -221,6 +222,7 @@ export struct MomentDetailPage {
 
   build() {
     NavDestination() {
+    ResponsiveContainer() {
       Column() {
         this.buildTopBar()
         if (this.isLoading) {
@@ -246,7 +248,8 @@ export struct MomentDetailPage {
       }
       .width('100%')
       .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+      .backgroundColor(this.getCurrentThemePalette().pageBackground)
+      }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

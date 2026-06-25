@@ -5,6 +5,7 @@
  */
 
 import { AppRouter } from '../../../core/router/AppRouter';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -156,6 +157,7 @@ export struct ProfileEditPage {
 
   build() {
     NavDestination() {
+    ResponsiveContainer() {
       Column() {
         SystemPageHeader({
           title: '编辑资料',
@@ -346,6 +348,7 @@ export struct ProfileEditPage {
       .width('100%')
       .height('100%')
       .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

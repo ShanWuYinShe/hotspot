@@ -5,6 +5,7 @@
  */
 
 import { GlobalStateManager, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
@@ -214,6 +215,7 @@ export struct NearbyUsersListPage {
 
   build() {
     NavDestination() {
+    ResponsiveContainer() {
       Column() {
         // 头部：返回 + 标题
         Row({ space: 8 }) {
@@ -289,6 +291,7 @@ export struct NearbyUsersListPage {
       .width('100%')
       .height('100%')
       .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    }
     }
     .hideTitleBar(true)
   }
