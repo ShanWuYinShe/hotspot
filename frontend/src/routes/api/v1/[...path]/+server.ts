@@ -3,8 +3,9 @@ import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 
 export const POST: RequestHandler = async ({ request, url }) => {
-  if (dev) {
-    // 动态 import：mock 仅在 dev 分支加载，生产构建不打包 mocks/（避免假数据进入线上 SSR bundle）
+  if (dev && env['USE_MOCK'] === 'true') {
+    // 显式设置 USE_MOCK=true 时启用 mock handler，默认不拦截（避免脏数据）
+    // mock 是动态 import，USE_MOCK 未设置时构建不打包 mocks/ 内容
     const { handleMockRequest } = await import('$lib/../mocks/handler');
     const response = await handleMockRequest(request);
     if (response) {
