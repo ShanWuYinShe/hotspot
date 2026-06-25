@@ -186,7 +186,7 @@ export struct PhoneLayout {
       Column() {
         Text() {
           SymbolSpan(TAB_ITEMS[index].symbolId)
-            .fontSize(24)
+            .fontSize(DesignConstants.FONT.SIZE.XXL)
             .fontColor([
               this.currentTabIndex === index
                 ? $r('app.color.brand_primary')
@@ -259,7 +259,7 @@ export struct PhoneLayout {
     Column() {
       Text() {
         SymbolSpan(TAB_ITEMS[index].symbolId)
-          .fontSize(22)
+          .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
           .fontColor([
             this.currentTabIndex === index
               ? $r('app.color.brand_primary')
@@ -287,7 +287,7 @@ export struct PhoneLayout {
     Row() {
       Text() {
         SymbolSpan($r('sys.symbol.plus'))
-          .fontSize(22)
+          .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
           .fontColor([$r('app.color.bg_primary')])
       }
     }
@@ -307,7 +307,7 @@ export struct PhoneLayout {
       Row() {
         Text() {
           SymbolSpan($r('sys.symbol.plus'))
-            .fontSize(22)
+            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
             .fontColor([$r('app.color.bg_primary')])
         }
       }

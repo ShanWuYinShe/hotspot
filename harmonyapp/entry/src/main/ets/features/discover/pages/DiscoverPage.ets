@@ -230,7 +230,7 @@ export struct DiscoverPage {
       Column() {
         Row() {
           Text('发现')
-            .fontSize(22)
+            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
             .fontWeight(FontWeight.Medium)
             .fontColor(this.getCurrentThemePalette().textPrimary)
         }
@@ -241,11 +241,11 @@ export struct DiscoverPage {
         Row({ space: 10 }) {
           Text() {
             SymbolSpan($r(AppIcon.SEARCH))
-              .fontSize(15)
+              .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text('地点、人物、关键词…')
-            .fontSize(13)
+            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .layoutWeight(1)
             .maxLines(1)
@@ -390,7 +390,7 @@ export struct DiscoverPage {
     Row() {
       ForEach(this.TABS, (tab: string) => {
         Text(tab)
-          .fontSize(14)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(this.activeTab === tab ? FontWeight.Medium : FontWeight.Normal)
           .fontColor(this.activeTab === tab
             ? this.getCurrentThemePalette().accentBackground
@@ -421,7 +421,7 @@ export struct DiscoverPage {
       Row({ space: 8 }) {
         ForEach(this.getAvailableTags(), (tag: string) => {
           Text(tag)
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.activeTag === tag
               ? this.getCurrentThemePalette().accentText
               : this.getCurrentThemePalette().textSecondary)
@@ -523,7 +523,7 @@ export struct DiscoverPage {
           Stack({ alignContent: Alignment.BottomStart }) {
             Row() {
               Text(LocationUtil.formatDistance(user.location.distance))
-                .fontSize(9)
+                .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
                 .fontColor(this.getCurrentThemePalette().accentText)
             }
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
@@ -538,7 +538,7 @@ export struct DiscoverPage {
       .height(64)
 
       Text(user.user?.nickname ?? '')
-        .fontSize(11)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -591,7 +591,7 @@ export struct DiscoverPage {
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.GROUP))
-            .fontSize(24)
+            .fontSize(DesignConstants.FONT.SIZE.XXL)
             .fontColor([this.getCurrentThemePalette().accentBackground])
         }
       }
@@ -603,7 +603,7 @@ export struct DiscoverPage {
 
       Column({ space: 4 }) {
         Text(group.group?.name ?? '')
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
@@ -611,11 +611,11 @@ export struct DiscoverPage {
 
         Row({ space: 6 }) {
           Text(`${group.group?.members_count ?? 0} 人`)
-            .fontSize(10)
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
             .fontColor(this.getCurrentThemePalette().textSecondary)
           if (group.location?.distance !== undefined) {
             Text(LocationUtil.formatDistance(group.location.distance))
-              .fontSize(10)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
               .fontColor(this.getCurrentThemePalette().accentBackground)
           }
         }

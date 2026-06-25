@@ -99,7 +99,7 @@ export struct LocationBar {
           Column() {
             Text() {
               SymbolSpan($r(AppIcon.LOCATION))
-                .fontSize(14)
+                .fontSize(DesignConstants.FONT.SIZE.MD)
                 .fontColor([this.getPalette().accentText as ResourceColor])
             }
           }
@@ -158,7 +158,7 @@ export struct LocationBar {
         // 右侧前进箭头（点击进入位置选择）
         Text() {
           SymbolSpan($r(AppIcon.FORWARD))
-            .fontSize(14)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor([this.getPalette().textTertiary])
         }
       }
@@ -194,7 +194,7 @@ export struct LocationBar {
     Column() {
       Text() {
         SymbolSpan($r(icon))
-          .fontSize(20)
+          .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontColor([this.getPalette().buttonSecondaryText])
       }
     }

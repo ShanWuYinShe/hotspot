@@ -327,7 +327,7 @@ export struct SearchPage {
           Button() {
             Text() {
               SymbolSpan($r(AppIcon.BACK))
-                .fontSize(15)
+                .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
                 .fontColor([this.getCurrentThemePalette().textSecondary])
             }
           }
@@ -367,7 +367,7 @@ export struct SearchPage {
               .layoutWeight(1)
               .height(38)
               .backgroundColor(Color.Transparent)
-              .fontSize(13)
+              .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
               .placeholderColor(this.getCurrentThemePalette().textTertiary)
               .fontColor(this.getCurrentThemePalette().textPrimary)
               .border({ width: 0 })
@@ -469,7 +469,7 @@ export struct SearchPage {
           SymbolSpan($r(
             item.type === 'tag' ? AppIcon.CHART : item.type === 'user' ? AppIcon.PERSON : item.type === 'group' ? AppIcon.GROUP : AppIcon.CAMERA
           ))
-            .fontSize(18)
+            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
             .fontColor([this.getCurrentThemePalette().accentBackground])
         }
       }
@@ -498,7 +498,7 @@ export struct SearchPage {
 
       Text() {
         SymbolSpan($r(AppIcon.ARROW_RIGHT))
-          .fontSize(16)
+          .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontColor([this.getCurrentThemePalette().textSecondary])
       }
     }
@@ -549,12 +549,12 @@ export struct SearchPage {
       Column({ space: 16 }) {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(36)
+            .fontSize(DesignConstants.FONT.SIZE.XXXL_PLUS)
             .fontColor([this.getCurrentThemePalette().textSecondary])
             .opacity(0.4)
         }
-        Text('未找到相关内容').fontSize(15).fontColor(this.getCurrentThemePalette().textPrimary)
-        Text('尝试其他关键词').fontSize(13).fontColor(this.getCurrentThemePalette().textSecondary)
+        Text('未找到相关内容').fontSize(DesignConstants.FONT.SIZE.MD_PLUS).fontColor(this.getCurrentThemePalette().textPrimary)
+        Text('尝试其他关键词').fontSize(DesignConstants.FONT.SIZE.SM_PLUS).fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
@@ -581,12 +581,12 @@ export struct SearchPage {
       Column({ space: 16 }) {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(36)
+            .fontSize(DesignConstants.FONT.SIZE.XXXL_PLUS)
             .fontColor([this.getCurrentThemePalette().textSecondary])
             .opacity(0.4)
         }
-        Text('未找到相关内容').fontSize(15).fontColor(this.getCurrentThemePalette().textPrimary)
-        Text('尝试其他关键词').fontSize(13).fontColor(this.getCurrentThemePalette().textSecondary)
+        Text('未找到相关内容').fontSize(DesignConstants.FONT.SIZE.MD_PLUS).fontColor(this.getCurrentThemePalette().textPrimary)
+        Text('尝试其他关键词').fontSize(DesignConstants.FONT.SIZE.SM_PLUS).fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
@@ -613,12 +613,12 @@ export struct SearchPage {
       Column({ space: 16 }) {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(36)
+            .fontSize(DesignConstants.FONT.SIZE.XXXL_PLUS)
             .fontColor([this.getCurrentThemePalette().textSecondary])
             .opacity(0.4)
         }
-        Text('未找到相关内容').fontSize(15).fontColor(this.getCurrentThemePalette().textPrimary)
-        Text('尝试其他关键词').fontSize(13).fontColor(this.getCurrentThemePalette().textSecondary)
+        Text('未找到相关内容').fontSize(DesignConstants.FONT.SIZE.MD_PLUS).fontColor(this.getCurrentThemePalette().textPrimary)
+        Text('尝试其他关键词').fontSize(DesignConstants.FONT.SIZE.SM_PLUS).fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {

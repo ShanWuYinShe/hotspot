@@ -52,7 +52,7 @@ export struct TabsPillGroup {
         if (tab.icon) {
           Text() {
             SymbolSpan($r(tab.icon))
-              .fontSize(14)
+              .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontColor(isActiveTab ? [this.getPalette().accentText] : [this.getPalette().tabBarInactive])
           }
         }

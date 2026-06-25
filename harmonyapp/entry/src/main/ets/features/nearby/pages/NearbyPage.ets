@@ -354,7 +354,7 @@ export struct NearbyPage {
     Row() {
       Column({ space: 2 }) {
         Text('首页')
-          .fontSize(22)
+          .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
           .fontWeight(FontWeight.Normal)
           .fontColor(this.getPalette().textPrimary)
 
@@ -452,7 +452,7 @@ export struct NearbyPage {
             .fontColor(this.getPalette().accentBackground)
             .fontWeight(FontWeight.Bold)
           Text('人附近')
-            .fontSize(10)
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
             .fontColor(this.getPalette().textSecondary)
         }
         .padding({ left: 10, right: 10, top: 4, bottom: 4 })
@@ -495,7 +495,7 @@ export struct NearbyPage {
   private buildSectionHeader(title: string, linkText: string, onViewAll: () => void) {
     Row() {
       Text(title)
-        .fontSize(10)
+        .fontSize(DesignConstants.FONT.SIZE.XS2)
         .fontColor(this.getPalette().textSecondary)
         .textCase(TextCase.UpperCase)
         .letterSpacing(1.4)
@@ -509,7 +509,7 @@ export struct NearbyPage {
           .fontColor(this.getPalette().accentBackground)
         Text() {
           SymbolSpan($r(AppIcon.ARROW_RIGHT))
-            .fontSize(13)
+            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
             .fontColor([this.getPalette().accentBackground])
         }
       }
@@ -580,7 +580,7 @@ export struct NearbyPage {
                     Stack({ alignContent: Alignment.Bottom }) {
                       Row() {
                         Text(LocationUtil.formatDistance(user.location.distance))
-                          .fontSize(9)
+                          .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
                           .fontColor(this.getPalette().accentText)
                       }
                       .padding({ left: 6, right: 6, top: 1, bottom: 1 })
@@ -686,7 +686,7 @@ export struct NearbyPage {
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.GROUP))
-            .fontSize(28)
+            .fontSize(DesignConstants.FONT.SIZE.XXL_PLUS)
             .fontColor([this.getPalette().accentBackground])
         }
       }
@@ -698,7 +698,7 @@ export struct NearbyPage {
 
       Column({ space: 4 }) {
         Text(group.group?.name ?? '')
-          .fontSize(13)
+          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.getPalette().textPrimary)
           .maxLines(1)

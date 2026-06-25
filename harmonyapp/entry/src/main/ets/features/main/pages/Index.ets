@@ -799,7 +799,7 @@ struct Index {
       } else if (this.lastError) {
         Column({ space: 16 }) {
           Text('应用初始化失败')
-            .fontSize(18)
+            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.getCurrentThemePalette().textPrimary)
           Text(this.lastError)

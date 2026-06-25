@@ -181,7 +181,7 @@ export struct DesktopLayout {
               ? $r('sys.symbol.bell_fill')
               : $r('sys.symbol.bell')
           )
-            .fontSize(20)
+            .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontColor([$r('app.color.brand_primary')])
         }
         Text('通知')
@@ -210,7 +210,7 @@ export struct DesktopLayout {
     Row() {
       Text() {
         SymbolSpan(item.symbolId)
-          .fontSize(20)
+          .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontColor([
             this.currentRoute === item.route
               ? $r('app.color.brand_primary')

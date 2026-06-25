@@ -35,7 +35,7 @@ export struct EmptyState {
 
           Text() {
             SymbolSpan($r(this.icon))
-              .fontSize(28)
+              .fontSize(DesignConstants.FONT.SIZE.XXL_PLUS)
               .fontColor([this.getPalette().textSecondary])
               .opacity(0.5)
           }

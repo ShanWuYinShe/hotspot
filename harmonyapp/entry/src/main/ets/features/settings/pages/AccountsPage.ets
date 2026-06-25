@@ -216,7 +216,7 @@ export struct AccountsPage {
         Column({ space: DesignConstants.SPACING.LG }) {
           Text() {
             SymbolSpan($r(AppIcon.WARNING))
-              .fontSize(48)
+              .fontSize(DesignConstants.FONT.SIZE.HERO)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text(this.errorMessage)
@@ -270,7 +270,7 @@ export struct AccountsPage {
                 Row() {
                   Text() {
                     SymbolSpan($r(AppIcon.PERSON))
-                      .fontSize(18)
+                      .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
                       .fontColor([this.getCurrentThemePalette().accentBackground])
                   }
                 }

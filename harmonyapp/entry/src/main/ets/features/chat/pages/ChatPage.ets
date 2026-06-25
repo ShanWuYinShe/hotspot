@@ -1002,7 +1002,7 @@ export struct ChatPage {
           Button() {
             Text() {
               SymbolSpan($r(AppIcon.BACK))
-                .fontSize(20)
+                .fontSize(DesignConstants.FONT.SIZE.XL)
                 .fontColor([this.getCurrentThemePalette().textPrimary])
             }
           }
@@ -1036,7 +1036,7 @@ export struct ChatPage {
         Button() {
           Text() {
             SymbolSpan($r(AppIcon.INFO))
-              .fontSize(20)
+              .fontSize(DesignConstants.FONT.SIZE.XL)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }
@@ -1076,7 +1076,7 @@ export struct ChatPage {
         Column({ space: DesignConstants.SPACING.LG }) {
           Text() {
             SymbolSpan($r(AppIcon.WARNING))
-              .fontSize(48)
+              .fontSize(DesignConstants.FONT.SIZE.HERO)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text(this.errorMessage)
@@ -1107,7 +1107,7 @@ export struct ChatPage {
         Column({ space: DesignConstants.SPACING.LG }) {
           Text() {
             SymbolSpan($r(AppIcon.MESSAGE))
-              .fontSize(48)
+              .fontSize(DesignConstants.FONT.SIZE.HERO)
               .fontColor([this.getCurrentThemePalette().textTertiary])
           }
           Text('暂无消息')
@@ -1208,7 +1208,7 @@ export struct ChatPage {
         Button() {
           Text() {
             SymbolSpan($r(AppIcon.ADD))
-              .fontSize(22)
+              .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }

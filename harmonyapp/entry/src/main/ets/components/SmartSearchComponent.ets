@@ -340,7 +340,7 @@ export struct SmartSearchComponent {
           if (this.searchText.trim() === '' && this.searchHistory.length > 0) {
             ListItem() {
               Text('搜索历史')
-                .fontSize(14)
+                .fontSize(DesignConstants.FONT.SIZE.MD)
                 .fontColor(this.getPalette().textSecondary)
                 .padding({
                   left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
@@ -353,20 +353,20 @@ export struct SmartSearchComponent {
                 Row() {
                   Text() {
                       SymbolSpan($r(AppIcon.TIME))
-                        .fontSize(16)
+                        .fontSize(DesignConstants.FONT.SIZE.LG)
                         .fontColor([this.getPalette().textSecondary])
                     }
                     .margin({ right: DesignConstants.SPACING.MD })
 
                   Text(historyItem)
-                    .fontSize(14)
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
                     .layoutWeight(1)
 
                   Button('✕')
                     .type(ButtonType.Capsule)
                     .width(24)
                     .height(24)
-                    .fontSize(12)
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
                     .backgroundColor(Color.Transparent)
                     .fontColor(this.getPalette().textSecondary)
                     .onClick(() => {
@@ -390,21 +390,21 @@ export struct SmartSearchComponent {
                 Row() {
                   Text() {
                       SymbolSpan($r(this.getResultIcon(result.type)))
-                        .fontSize(20)
+                        .fontSize(DesignConstants.FONT.SIZE.XL)
                         .fontColor([this.getPalette().textSecondary])
                     }
                     .margin({ right: DesignConstants.SPACING.MD })
 
                   Column() {
                     Text(result.title)
-                      .fontSize(14)
+                      .fontSize(DesignConstants.FONT.SIZE.MD)
                       .fontWeight(FontWeight.Medium)
                       .maxLines(1)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                       .alignSelf(ItemAlign.Start)
 
                     Text(result.subtitle)
-                      .fontSize(12)
+                      .fontSize(DesignConstants.FONT.SIZE.SM)
                       .fontColor(this.getPalette().textSecondary)
                       .maxLines(1)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -423,13 +423,13 @@ export struct SmartSearchComponent {
               Column() {
                 Text() {
                     SymbolSpan($r(AppIcon.EMPTY))
-                      .fontSize(32)
+                      .fontSize(DesignConstants.FONT.SIZE.XXXL)
                       .fontColor([this.getPalette().textTertiary])
                   }
                   .margin({ bottom: DesignConstants.SPACING.SM })
 
                 Text('未找到相关内容')
-                  .fontSize(14)
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontColor(this.getPalette().textSecondary)
               }
               .width('100%')

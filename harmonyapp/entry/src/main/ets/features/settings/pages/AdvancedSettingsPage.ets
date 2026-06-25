@@ -104,7 +104,7 @@ export struct AdvancedSettingsPage {
       Row() {
         Text() {
           SymbolSpan($r(icon))
-            .fontSize(18)
+            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
             .fontColor([this.getCurrentThemePalette().accentBackground])
         }
       }
@@ -132,7 +132,7 @@ export struct AdvancedSettingsPage {
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.ARROW_RIGHT))
-            .fontSize(15)
+            .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
             .fontColor([this.getCurrentThemePalette().textSecondary])
         }
       }

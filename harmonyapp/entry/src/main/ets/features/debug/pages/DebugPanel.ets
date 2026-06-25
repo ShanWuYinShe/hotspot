@@ -106,7 +106,7 @@ export struct DebugPanel {
           }) {
             Column({ space: 8 }) {
               Text('系统状态')
-                .fontSize(16)
+                .fontSize(DesignConstants.FONT.SIZE.LG)
                 .fontWeight(FontWeight.Bold)
               
               Text(`WebSocket: ${this.webSocketService.isConnected() ? '✅ 已连接' : '❌ 未连接'}`)
@@ -149,7 +149,7 @@ export struct DebugPanel {
 
           // 日志区域
           Text('日志')
-            .fontSize(16)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Bold)
             .width('100%')
             .margin({ top: 8 })
@@ -158,7 +158,7 @@ export struct DebugPanel {
             ForEach(this.logs, (log: string) => {
               ListItem() {
                 Text(log)
-                  .fontSize(12)
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontFamily('Monospace')
                   .width('100%')
               }

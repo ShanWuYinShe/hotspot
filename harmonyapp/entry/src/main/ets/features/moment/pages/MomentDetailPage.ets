@@ -429,7 +429,7 @@ export struct MomentDetailPage {
         Row({ space: 6 }) {
           Text() {
             SymbolSpan($r(this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART))
-              .fontSize(18)
+              .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
               .fontColor([this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary])
           }
           Text(this.likePending ? '处理中...' : (this.isMomentLiked(moment) ? '已点赞' : '点赞'))
@@ -453,7 +453,7 @@ export struct MomentDetailPage {
         Row({ space: 6 }) {
           Text() {
             SymbolSpan($r(this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR))
-              .fontSize(18)
+              .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
               .fontColor([this.isMomentFavorited(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary])
           }
           Text(this.favoritePending ? '处理中...' : (this.isMomentFavorited(moment) ? '已收藏' : '收藏'))
@@ -477,7 +477,7 @@ export struct MomentDetailPage {
         Row({ space: 6 }) {
           Text() {
             SymbolSpan($r(AppIcon.SHARE))
-              .fontSize(18)
+              .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text('分享')

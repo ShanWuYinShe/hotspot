@@ -1142,11 +1142,11 @@ export struct ProfilePage {
               Row({ space: 6 }) {
                 Text() {
                   SymbolSpan($r(AppIcon.EDIT))
-                    .fontSize(13)
+                    .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
                     .fontColor([this.getSecondaryTextColor()])
                 }
                 Text('编辑资料')
-                  .fontSize(13)
+                  .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
                   .fontColor(this.getSecondaryTextColor())
               }
             }
@@ -1221,7 +1221,7 @@ export struct ProfilePage {
         Button() {
           Text() {
             SymbolSpan($r(AppIcon.CAMERA))
-              .fontSize(10)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
               .fontColor([Color.White])
           }
         }
@@ -1237,7 +1237,7 @@ export struct ProfilePage {
       .margin({ top: 20, bottom: 12 })
 
       Text(this.currentUser?.nickname || '')
-        .fontSize(22)
+        .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
         .fontWeight(FontWeight.Bold)
         .fontColor(this.getPrimaryTextColor())
     }
@@ -1266,7 +1266,7 @@ export struct ProfilePage {
               .fontWeight(FontWeight.Bold)
               .fontColor(this.getPrimaryTextColor())
             Text(stat.label)
-              .fontSize(10)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
               .fontColor(this.getAccentBackground())
               .textCase(TextCase.UpperCase)
               .letterSpacing(0.10 * 16)
@@ -1298,7 +1298,7 @@ export struct ProfilePage {
             .margin({ left: 8, right: 8 })
         }
         Text(tab)
-          .fontSize(13)
+          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
           .fontColor(index === this.selectedTab ? this.getAccentBackground() : this.getSecondaryTextColor())
           .fontWeight(index === this.selectedTab ? FontWeight.Medium : FontWeight.Normal)
           .layoutWeight(1)
@@ -1322,7 +1322,7 @@ export struct ProfilePage {
         Column({ space: 12 }) {
           Text() {
             SymbolSpan($r(AppIcon.EMPTY))
-              .fontSize(22)
+              .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
               .fontColor([this.getSecondaryTextColor()])
           }
           .opacity(0.5)
@@ -1347,7 +1347,7 @@ export struct ProfilePage {
       Column({ space: 12 }) {
         Text() {
           SymbolSpan($r(this.selectedTab === 1 ? AppIcon.HEART : AppIcon.STAR))
-            .fontSize(22)
+            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
             .fontColor([this.getSecondaryTextColor()])
         }
         .opacity(0.5)
@@ -1665,7 +1665,7 @@ export struct ProfilePage {
       Column({ space: DesignConstants.SPACING.XS }) {
         Text() {
           SymbolSpan($r(icon))
-            .fontSize(16)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontColor([this.getAccentBackground()])
         }
         Text(value)
@@ -1733,7 +1733,7 @@ export struct ProfilePage {
         Row() {
           Text() {
             SymbolSpan($r(icon))
-              .fontSize(20)
+              .fontSize(DesignConstants.FONT.SIZE.XL)
               .fontColor([this.getAccentBackground()])
           }
         }

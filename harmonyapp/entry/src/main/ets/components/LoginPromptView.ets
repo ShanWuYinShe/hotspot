@@ -58,7 +58,7 @@ export struct LoginPromptView {
       // 图标
       Text() {
         SymbolSpan($r(this.icon))
-          .fontSize(56)
+          .fontSize(DesignConstants.FONT.SIZE.HERO_LARGE)
           .fontColor([this.getPalette().iconMuted])
       }
       .margin({ bottom: 4 })

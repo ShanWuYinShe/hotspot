@@ -960,7 +960,7 @@ export struct GroupDetailPage {
         Column() {
           Text() {
             SymbolSpan($r(AppIcon.WARNING))
-              .fontSize(48)
+              .fontSize(DesignConstants.FONT.SIZE.HERO)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           .margin({ bottom: DesignConstants.SPACING.MD })
@@ -1061,7 +1061,7 @@ export struct GroupDetailPage {
                 Row() {
                   Text() {
                     SymbolSpan($r(AppIcon.LOCATION))
-                      .fontSize(18)
+                      .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
                       .fontColor([this.getCurrentThemePalette().accentBackground])
                   }
                   Text('位置信息')
@@ -1209,7 +1209,7 @@ export struct GroupDetailPage {
                       .onChange((value: string) => {
                         this.joinPassword = value;
                       })
-                      .fontSize(15)
+                      .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
                       .padding(DesignConstants.SPACING.MD)
                       .backgroundColor(this.getSurfaceSubtle())
                       .shadow(this.getCurrentThemePalette().controlShadow)
@@ -1468,7 +1468,7 @@ export struct GroupDetailPage {
         Column({ space: DesignConstants.SPACING.LG }) {
           Text() {
             SymbolSpan($r(AppIcon.WARNING))
-              .fontSize(48)
+              .fontSize(DesignConstants.FONT.SIZE.HERO)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text(this.membersErrorMessage)
@@ -1553,7 +1553,7 @@ export struct GroupDetailPage {
         Column({ space: DesignConstants.SPACING.LG }) {
           Text() {
             SymbolSpan($r(AppIcon.WARNING))
-              .fontSize(48)
+              .fontSize(DesignConstants.FONT.SIZE.HERO)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text(this.applicationsErrorMessage)
@@ -1728,7 +1728,7 @@ export struct GroupDetailPage {
       if (this.buildMemberActionMenus(member).length > 0) {
         Text() {
           SymbolSpan($r(AppIcon.MORE))
-            .fontSize(18)
+            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
             .fontColor([this.getCurrentThemePalette().textSecondary])
         }
         .padding(DesignConstants.SPACING.SM)

@@ -156,7 +156,7 @@ export struct MomentFeedCard {
         Column() {
           if (this.moment.tags && this.moment.tags.length > 0) {
             Text(this.moment.tags[0])
-              .fontSize(10)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
               .fontColor(Color.White)
               .backgroundColor(this.getPalette().accentBackground)
               .borderRadius(DesignConstants.RADIUS.FULL)
@@ -190,11 +190,11 @@ export struct MomentFeedCard {
             if (this.moment.location?.location_name) {
               Text() {
                 SymbolSpan($r(AppIcon.LOCATION))
-                  .fontSize(9)
+                  .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
                   .fontColor([Color.White])
               }
               Text(this.moment.location.location_name)
-                .fontSize(10)
+                .fontSize(DesignConstants.FONT.SIZE.XS2)
                 .fontColor(Color.White)
                 .opacity(0.8)
                 .maxLines(1)
@@ -215,7 +215,7 @@ export struct MomentFeedCard {
 
       if (this.moment.description) {
         Text(this.moment.description)
-          .fontSize(13)
+          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
           .fontColor(this.getPalette().textSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -229,7 +229,7 @@ export struct MomentFeedCard {
           Row({ space: DesignConstants.SPACING.XS }) {
             Text() {
               SymbolSpan($r(AppIcon.HEART))
-                .fontSize(15)
+                .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
                 .fontColor([this.getMomentState()?.my_state?.is_liked
                   ? this.getPalette().accentBackground
                   : this.getPalette().textSecondary])
@@ -243,7 +243,7 @@ export struct MomentFeedCard {
           Row({ space: DesignConstants.SPACING.XS }) {
             Text() {
               SymbolSpan($r(AppIcon.MESSAGE))
-                .fontSize(15)
+                .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
                 .fontColor([this.getPalette().textSecondary])
             }
             .onClick(() => this.openMomentDetail(this.moment))
@@ -256,7 +256,7 @@ export struct MomentFeedCard {
         Row({ space: 12 }) {
           Text() {
             SymbolSpan($r(AppIcon.STAR_FILL))
-              .fontSize(15)
+              .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
               .fontColor([this.getMomentState()?.my_state?.is_favorited
                 ? this.getPalette().accentBackground
                 : this.getPalette().textSecondary])
@@ -265,7 +265,7 @@ export struct MomentFeedCard {
 
           Text() {
             SymbolSpan($r(AppIcon.SHARE))
-              .fontSize(15)
+              .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
               .fontColor([this.getPalette().textSecondary])
           }
           .onClick(() => this.shareMoment(this.moment))
@@ -403,7 +403,7 @@ export struct MomentFeedCard {
             .width(80)
             .height(80)
             .textAlign(TextAlign.Center)
-            .fontSize(13)
+            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
             .fontColor(this.getPalette().textSecondary)
             .borderRadius(DesignConstants.RADIUS.MD)
             .border({ width: 1, color: this.getPalette().borderColor })
@@ -430,7 +430,7 @@ export struct MomentFeedCard {
 
         if (this.moment.images.length > 1) {
           Text(`+${this.moment.images.length - 1}`)
-            .fontSize(11)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontWeight(FontWeight.Bold)
             .fontColor(Color.White)
             .padding({ left: 8, right: 8, top: 4, bottom: 4 })

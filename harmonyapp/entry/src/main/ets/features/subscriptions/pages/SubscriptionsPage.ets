@@ -252,7 +252,7 @@ export struct SubscriptionsPage {
       Row() {
         Text() {
           SymbolSpan($r(item.icon))
-            .fontSize(18)
+            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
             .fontColor([this.getCurrentThemePalette().accentBackground])
         }
       }

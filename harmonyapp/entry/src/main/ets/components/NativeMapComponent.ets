@@ -10,6 +10,7 @@ import { map, mapCommon, MapComponent } from '@kit.MapKit';
 import { AsyncCallback } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { image } from '@kit.ImageKit';
+import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
@@ -934,22 +935,22 @@ export struct NativeMapComponent {
         Column({ space: 12 }) {
           Text() {
             SymbolSpan($r(AppIcon.MAP))
-              .fontSize(48)
+              .fontSize(DesignConstants.FONT.SIZE.HERO)
               .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
           }
 
           Text('地图服务不可用')
-            .fontSize(16)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
           Text(this.mapError)
-            .fontSize(13)
+            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
 
           Text('请在 DevEco Studio 中配置项目签名\n并在 AppGallery Connect 中注册指纹、启用 Map Kit')
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
             .lineHeight(18)
@@ -982,7 +983,7 @@ export struct NativeMapComponent {
             .width(40)
             .height(40)
           Text('加载地图中...')
-            .fontSize(14)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
         .width('100%')

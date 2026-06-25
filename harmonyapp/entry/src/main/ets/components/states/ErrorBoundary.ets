@@ -39,7 +39,7 @@ export struct ErrorBoundary {
       Column({ space: 16 }) {
         Text() {
           SymbolSpan($r('sys.symbol.exclamationmark_triangle_fill'))
-            .fontSize(48)
+            .fontSize(DesignConstants.FONT.SIZE.HERO)
             .fontColor([$r('app.color.color_danger')])
         }
 

@@ -104,7 +104,7 @@ function TopBar(props: TopBarProps) {
     Row() {
       Text() {
         SymbolSpan($r(AppIcon.BACK))
-          .fontSize(22)
+          .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
           .fontColor([$r('sys.color.ohos_id_color_text_primary')])
       }
     }
@@ -118,7 +118,7 @@ function TopBar(props: TopBarProps) {
     Row({ space: 6 }) {
       Text() {
         SymbolSpan($r(AppIcon.FILTER))
-          .fontSize(16)
+          .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontColor([$r('sys.color.ohos_id_color_text_primary')])
       }
       Text('筛选')
@@ -371,7 +371,7 @@ struct SearchPanel {
                     Column() {
                       Text() {
                         SymbolSpan($r(AppIcon.LOCATION))
-                          .fontSize(18)
+                          .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
                           .fontColor([$r('sys.color.ohos_id_color_emphasize')])
                       }
                     }
@@ -448,7 +448,7 @@ struct SearchPanel {
                       Column() {
                         Text() {
                           SymbolSpan($r(AppIcon.TIME))
-                            .fontSize(18)
+                            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
                             .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
                         }
                       }

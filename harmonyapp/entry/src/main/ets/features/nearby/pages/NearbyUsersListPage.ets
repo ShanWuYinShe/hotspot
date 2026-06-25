@@ -198,7 +198,7 @@ export struct NearbyUsersListPage {
 
       Text() {
         SymbolSpan($r(AppIcon.ARROW_RIGHT))
-          .fontSize(14)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor([this.getCurrentThemePalette().textTertiary])
       }
     }
@@ -219,7 +219,7 @@ export struct NearbyUsersListPage {
         Row({ space: 8 }) {
           Text() {
             SymbolSpan($r(AppIcon.ARROW_LEFT))
-              .fontSize(22)
+              .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
               .fontColor([this.getCurrentThemePalette().textPrimary])
           }
           .onClick(() => AppRouter.pop())

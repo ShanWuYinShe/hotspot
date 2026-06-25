@@ -498,7 +498,7 @@ export struct MessagePage {
       Row() {
         Column({ space: 2 }) {
           Text('消息')
-            .fontSize(22)
+            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
             .fontWeight(FontWeight.Normal)
             .fontColor(this.getCurrentThemePalette().textPrimary)
           if (this.getTotalUnread() > 0) {
@@ -514,7 +514,7 @@ export struct MessagePage {
           Row() {
             Text() {
               SymbolSpan($r(AppIcon.ADD))
-                .fontSize(16)
+                .fontSize(DesignConstants.FONT.SIZE.LG)
                 .fontColor([this.getCurrentThemePalette().textSecondary])
             }
           }
@@ -571,7 +571,7 @@ export struct MessagePage {
           Row() {
             Text() {
               SymbolSpan($r(AppIcon.SEARCH))
-                .fontSize(16)
+                .fontSize(DesignConstants.FONT.SIZE.LG)
                 .fontColor([this.getCurrentThemePalette().textSecondary])
             }
           }
@@ -600,11 +600,11 @@ export struct MessagePage {
       Row({ space: 10 }) {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(15)
+            .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
             .fontColor([this.getCurrentThemePalette().textSecondary])
         }
         Text('搜索会话…')
-          .fontSize(13)
+          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
           .fontColor(this.getCurrentThemePalette().textSecondary)
           .layoutWeight(1)
           .maxLines(1)
@@ -659,7 +659,7 @@ export struct MessagePage {
 
               // "最近" 标签
               Text('最近')
-                .fontSize(10)
+                .fontSize(DesignConstants.FONT.SIZE.XS2)
                 .fontColor(this.getCurrentThemePalette().textSecondary)
                 .textCase(TextCase.UpperCase)
                 .letterSpacing(1.4)
@@ -731,7 +731,7 @@ export struct MessagePage {
   buildOnlineAvatarsStrip() {
     Column() {
       Text('在线')
-        .fontSize(10)
+        .fontSize(DesignConstants.FONT.SIZE.XS2)
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .textCase(TextCase.UpperCase)
         .padding({ left: DesignConstants.SPACING.LG, bottom: 10 })

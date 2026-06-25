@@ -54,6 +54,17 @@ export interface FontSizes {
   XL: number;
   XXL: number;
   XXXL: number;
+  // 扩展值（覆盖高频实际使用的字号）
+  XS_MINUS: number;
+  XS2: number;
+  SM_PLUS: number;
+  MD_PLUS: number;
+  LG_PLUS: number;
+  XL_PLUS: number;
+  XXL_PLUS: number;
+  XXXL_PLUS: number;
+  HERO: number;
+  HERO_LARGE: number;
 }
 
 export interface FontWeights {
@@ -288,6 +299,16 @@ const FONT: FontSystem = {
     XL: 20,
     XXL: 24,
     XXXL: 32,
+    XS_MINUS: 9,
+    XS2: 10,
+    SM_PLUS: 13,
+    MD_PLUS: 15,
+    LG_PLUS: 18,
+    XL_PLUS: 22,
+    XXL_PLUS: 28,
+    XXXL_PLUS: 36,
+    HERO: 48,
+    HERO_LARGE: 56,
   },
   WEIGHT: {
     LIGHT: 300,
