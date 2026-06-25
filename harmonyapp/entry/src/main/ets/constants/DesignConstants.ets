@@ -235,6 +235,40 @@ export interface MaterialEffectSystem {
   GLOW_STRONG: number;
 }
 
+// ==================== 页面布局系统接口（对齐前端 navigation chrome）====================
+export interface LayoutSystem {
+  /** 桌面顶栏高度（对齐前端 --desktop-header-height: 52px） */
+  DESKTOP_HEADER_HEIGHT: number;
+  /** 桌面常驻侧边栏宽度（对齐前端 --desktop-sidebar-width: 192px） */
+  DESKTOP_SIDEBAR_WIDTH: number;
+  /** feed 页右栏宽度（对齐前端发现等右栏 220px + border-left） */
+  RIGHT_SIDEBAR_WIDTH: number;
+  /** 移动端通栏底栏高度（对齐前端 MobileBottomNav） */
+  MOBILE_BOTTOM_NAV_HEIGHT: number;
+  /** 平板浮动玻璃药丸底栏最大宽度（对齐前端 TabletBottomNav） */
+  TABLET_NAV_MAX_WIDTH: number;
+  /** 中央发布 FAB 尺寸（对齐前端 52x52） */
+  FAB_SIZE: number;
+  /** 圆形图标按钮尺寸（对齐前端 36px，移动端可放大到 38px） */
+  ICON_BUTTON_SIZE: number;
+}
+
+// ==================== 页面内容栏档位接口（对齐前端 .page-shell / .feed-density-shell）====================
+export interface PageShellSystem {
+  /** 默认内容栏（feed/卡片列表/网格）— 对齐 .page-shell min(1180px, 100vw-32px) */
+  SHELL_DEFAULT_MAX: number;
+  /** 宽内容栏（数据表格/管理后台/仪表盘）— 对齐 .page-shell--wide min(1320px, ...) */
+  SHELL_WIDE_MAX: number;
+  /** 窄内容栏（详情/阅读/长文）— 对齐 .page-shell--narrow min(720px, ...) */
+  SHELL_NARROW_MAX: number;
+  /** 表单内容栏（设置/个人资料/编辑/搜索/登录）— 对齐 .page-shell--form min(560px, ...) */
+  SHELL_FORM_MAX: number;
+  /** feed 窄栏（discover/moments 移动·窄平板）— 对齐 .feed-density-shell--narrow 640px */
+  FEED_NARROW_MAX: number;
+  /** feed 中栏（discover/moments 宽平板）— 对齐 .feed-density-shell--medium 960px */
+  FEED_MEDIUM_MAX: number;
+}
+
 export interface DesignConstantsType {
   COLOR: ColorPalette;
   FONT: FontSystem;
@@ -249,6 +283,8 @@ export interface DesignConstantsType {
   CHAT: ChatLayoutConstants;
   OPACITY: OpacitySystem;
   MAP_MARKER: MapMarkerColors;
+  LAYOUT: LayoutSystem;
+  PAGE_SHELL: PageShellSystem;
 }
 
 // ==================== 颜色系统（forest 扁平风格，对齐前端设计系统）====================
@@ -452,6 +488,27 @@ const CHAT: ChatLayoutConstants = {
   AVATAR_SIZE: 40,
 };
 
+// ==================== 页面布局系统（对齐前端 navigation chrome）====================
+const LAYOUT: LayoutSystem = {
+  DESKTOP_HEADER_HEIGHT: 52,
+  DESKTOP_SIDEBAR_WIDTH: 192,
+  RIGHT_SIDEBAR_WIDTH: 220,
+  MOBILE_BOTTOM_NAV_HEIGHT: 56,
+  TABLET_NAV_MAX_WIDTH: 520,
+  FAB_SIZE: 52,
+  ICON_BUTTON_SIZE: 36,
+};
+
+// ==================== 页面内容栏档位（对齐前端 .page-shell / .feed-density-shell）====================
+const PAGE_SHELL: PageShellSystem = {
+  SHELL_DEFAULT_MAX: 1180,
+  SHELL_WIDE_MAX: 1320,
+  SHELL_NARROW_MAX: 720,
+  SHELL_FORM_MAX: 560,
+  FEED_NARROW_MAX: 640,
+  FEED_MEDIUM_MAX: 960,
+};
+
 // ==================== 小红书风格布局常量 ====================
 export class MasonryLayout {
   // 列宽配置
@@ -544,4 +601,6 @@ export const DesignConstants: DesignConstantsType = {
   CHAT,
   OPACITY,
   MAP_MARKER,
+  LAYOUT,
+  PAGE_SHELL,
 };

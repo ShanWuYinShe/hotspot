@@ -15,6 +15,8 @@ const DEFAULT_THEME_BG_SENTINEL: string = '__theme_bg_default__';
  */
 export enum AppIcon {
   // 导航图标
+  HOME = 'sys.symbol.house',
+  COMPASS = 'sys.symbol.compass',
   BACK = 'sys.symbol.chevron_left',
   FORWARD = 'sys.symbol.chevron_right',
   UP = 'sys.symbol.chevron_up',
@@ -123,6 +125,8 @@ export enum AppIcon {
 
 // AppIconMap 用于在运行时通过 AppIcon 枚举值获取对应的资源字符串
 export const AppIconMap: Map<AppIcon, string> = new Map<AppIcon, string>([
+  [AppIcon.HOME, 'house'],
+  [AppIcon.COMPASS, 'compass'],
   [AppIcon.BACK, 'chevron_left'],
   [AppIcon.FORWARD, 'chevron_right'],
   [AppIcon.UP, 'chevron_up'],
