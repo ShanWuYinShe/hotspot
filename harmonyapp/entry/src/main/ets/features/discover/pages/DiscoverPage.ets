@@ -5,6 +5,8 @@
 
 import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { isDesktopForm } from '../../../core/responsive/Breakpoint';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
@@ -53,6 +55,7 @@ export struct DiscoverPage {
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
   @StorageProp('isTablet') isTablet: boolean = false;
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
@@ -366,7 +369,7 @@ export struct DiscoverPage {
             }
           }
           .width('100%')
-          .lanes(this.isTablet ? 2 : 1, 12)
+          .lanes(isDesktopForm(this.currentBreakpoint) ? 2 : 1, 12)
           .padding({
             bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
           })
@@ -382,7 +385,6 @@ export struct DiscoverPage {
     }
     .width('100%')
     .height('100%')
-    .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
   }
