@@ -12,8 +12,13 @@ import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 @Component
 export struct EmptyState {
   @Prop icon: AppIcon = AppIcon.EMPTY;
+  /** 主标题（大字，对齐前端 EmptyState title） */
+  @Prop title: string = '';
+  /** 说明文字（小字，向后兼容：等价于前端 description） */
   @Prop message: string = '';
   @Prop actionLabel: string = '';
+  /** 整页空态：撑开 min-height 垂直居中（对齐前端 fill 模式，用于下方无并列内容的空态） */
+  @Prop fillMode: boolean = false;
   onAction?: () => void;
 
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
@@ -43,11 +48,23 @@ export struct EmptyState {
         .width(64)
         .height(64)
 
-        Text(this.message ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor(this.getPalette().textSecondary)
-          .textAlign(TextAlign.Center)
-          .lineHeight(24)
+        // 主标题（大字）—— 对齐前端 EmptyState title
+        if ((this.title ?? '').length > 0) {
+          Text(this.title)
+            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.getPalette().textPrimary)
+            .textAlign(TextAlign.Center)
+        }
+
+        // 说明文字（小字）
+        if ((this.message ?? '').length > 0) {
+          Text(this.message)
+            .fontSize(DesignConstants.FONT.SIZE.SM) // 12
+            .fontColor(this.getPalette().textSecondary)
+            .textAlign(TextAlign.Center)
+            .lineHeight(20)
+        }
 
         if ((this.actionLabel ?? '').length > 0 && this.onAction) {
           Button(this.actionLabel ?? '')
@@ -74,10 +91,12 @@ export struct EmptyState {
     }
     .width('100%')
     .height('100%')
+    .constraintSize({ minHeight: this.fillMode ? 420 : 0 })
     .justifyContent(FlexAlign.Center)
     .padding(DesignConstants.SPACING.XL)
   }
 }
+
 
 /**
  * 加载更多指示器

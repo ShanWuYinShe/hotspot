@@ -5,6 +5,7 @@ import { SystemAvatar } from './SystemAvatar';
 import { AppIcon, IconButton, IconSize } from './SystemIcon';
 import { DesignConstants } from '../constants/DesignConstants';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
+import { LocationUtil } from '../core/location/LocationUtil';
 import { SystemShareService } from '../core/services/SystemShareService';
 import { common } from '@kit.AbilityKit';
 import { AppRouter, MomentDetailRouteParam, ProfileRouteParam } from '../core/router/AppRouter';
@@ -29,6 +30,7 @@ export struct MomentFeedCard {
   onImagePreview?: (momentId: string, images: string[], index: number) => void;
   @StorageLink('interaction_moment_state') private momentStateMap: Record<string, MomentSocialState> = {};
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @State private isPressed: boolean = false;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -280,6 +282,17 @@ export struct MomentFeedCard {
     .backgroundColor(this.getPalette().surfaceBackground)
     .shadow(this.getPalette().elevatedShadow)
     .border({ width: 1, color: this.getPalette().borderColor })
+    .scale(this.isPressed
+      ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD }
+      : { x: 1, y: 1 })
+    .animation({ duration: 150, curve: Curve.EaseOut })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.isPressed = true;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.isPressed = false;
+      }
+    })
     .onClick(() => this.openMomentDetail(this.moment))
   }
 
@@ -323,27 +336,48 @@ export struct MomentFeedCard {
           .fontWeight(FontWeight.Medium)
           .fontColor(this.getPalette().textPrimary)
 
-        if (this.showTime && this.moment.created_at) {
-          Text(this.formatTime(this.moment.created_at))
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getPalette().textSecondary)
-        } else if (this.moment.location?.location_name) {
-          Text(this.moment.location.location_name)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getPalette().textSecondary)
+        // meta：时间 · 距离（对齐前端 moment-card__meta）
+        Row({ space: 4 }) {
+          if (this.showTime && this.moment.created_at) {
+            Text(this.formatTime(this.moment.created_at))
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.getPalette().textSecondary)
+          }
+          if (this.moment.location?.distance !== undefined && this.moment.location?.distance !== null) {
+            if (this.showTime && this.moment.created_at) {
+              Text('·')
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontColor(this.getPalette().textSecondary)
+            }
+            Text(LocationUtil.formatDistance(this.moment.location.distance))
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.getPalette().textSecondary)
+          }
         }
       }
       .layoutWeight(1)
 
-      if (this.showFavorite) {
-        IconButton({
-          icon: AppIcon.STAR_FILL,
-          iconSize: IconSize.MEDIUM,
-          iconColor: this.getMomentState()?.my_state?.is_favorited
-            ? this.getPalette().accentBackground
-            : this.getPalette().textSecondary,
-          onButtonClick: () => this.onFavoriteClick(this.moment)
-        })
+      // location pill（对齐前端 moment-card__location：品牌色胶囊 + MapPin + 地名）
+      if (this.moment.location?.location_name) {
+        Row({ space: 3 }) {
+          Text() {
+            SymbolSpan($r(AppIcon.LOCATION))
+              .fontSize(11)
+              .fontColor([this.getPalette().accentBackground])
+          }
+          Text(this.moment.location.location_name)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.getPalette().accentBackground)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .constraintSize({ maxWidth: 120 })
+        }
+        .padding({ left: 8, right: 8, top: 5, bottom: 5 })
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .border({ width: 1, color: this.getPalette().borderColor })
+        .backgroundColor(this.getPalette().accentMuted)
+        .alignItems(VerticalAlign.Center)
       }
     }
   }
