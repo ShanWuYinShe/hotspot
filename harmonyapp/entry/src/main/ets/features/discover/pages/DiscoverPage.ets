@@ -393,12 +393,12 @@ export struct DiscoverPage {
         })
       }
 
-      // 剩余动态用 LazyForEach 网格
+      // 剩余动态用紧凑卡片列表（对齐前端 feedGrid 的 dense 模式）
       if (this.hotMoments.length > 1) {
         ForEach(this.hotMoments.slice(1), (moment: MomentItem) => {
           MomentFeedCard({
             moment: moment,
-            variant: 'postCard',
+            variant: 'default',
             showFavorite: false,
             onOpenDetail: (item: MomentItem) => this.openMomentDetail(item)
           })
