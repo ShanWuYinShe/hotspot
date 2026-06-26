@@ -221,13 +221,13 @@
 <div class="mt-4">
   <!-- Tab bar -->
   <div
-    class="grid w-full grid-cols-3 rounded-[var(--radius-lg)] p-1.5"
+    class="grid w-full min-w-0 grid-cols-3 rounded-[var(--radius-lg)] p-1"
     style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
   >
     {#each [{ value: 'login', label: t('auth.login') }, { value: 'register', label: t('auth.register') }, { value: 'guest', label: t('auth.guest') }] as tab (tab.value)}
       <button
         type="button"
-        class="relative rounded-[var(--radius-md)] px-3 py-2 outline-none transition-all focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)]"
+        class="relative min-w-0 rounded-[var(--radius-md)] px-2 py-2 outline-none transition-all focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)]"
         style="background: {currentTab === tab.value
           ? 'var(--brand)'
           : 'transparent'}; color: {currentTab === tab.value

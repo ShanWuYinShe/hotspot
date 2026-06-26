@@ -361,7 +361,7 @@
     </div>
 
     <div class="flex min-h-0 flex-1">
-      <!-- Left column -->
+      <!-- Left column — overview: 概览/次路径（实时统计 + 群组） -->
       <div
         class="flex flex-col gap-6 overflow-y-auto no-scrollbar p-6"
         style="width: 340px; flex-shrink: 0; border-right: 1px solid var(--border-theme);"
@@ -376,29 +376,11 @@
           onclick={() => (showLocationPicker = true)}
         />
 
-        <!-- Nearby activity -->
-        {#if loadingNearby || activities.length > 0}
-          <div>
-            <div class="mb-3 flex items-center justify-between">
-              <span class="eyebrow">{t('home.nearbyActivity')}</span>
-              <button
-                class="flex items-center gap-0.5 outline-none"
-                style="color: var(--brand); font-size: 12px; background: none; border: none; cursor: pointer;"
-                onclick={() => void goto('/discover')}
-              >
-                {t('common.viewAll')}
-                <ChevronRight size={13} strokeWidth={1.5} />
-              </button>
-            </div>
-            <ActivityList {activities} loading={loadingNearby} onSelect={handleActivitySelect} />
-          </div>
-        {/if}
-
         <!-- Nearby groups -->
         <GroupCarousel groups={carouselGroups} loading={loadingNearby} />
       </div>
 
-      <!-- Right column -->
+      <!-- Right column — main feed: 主路径（附近的人 + 动态） -->
       <div class="flex flex-1 flex-col gap-6 overflow-y-auto no-scrollbar p-6">
         <!-- People radar -->
         {#if loadingNearby || radarUsers.length > 0}
@@ -439,6 +421,24 @@
               onAction={() => void goto('/users/nearby')}
               class="w-full"
             />
+          </div>
+        {/if}
+
+        <!-- Nearby activity (主路径右栏：与"人"组成主消费流) -->
+        {#if loadingNearby || activities.length > 0}
+          <div>
+            <div class="mb-3 flex items-center justify-between">
+              <span class="eyebrow">{t('home.nearbyActivity')}</span>
+              <button
+                class="flex items-center gap-0.5 outline-none"
+                style="color: var(--brand); font-size: 12px; background: none; border: none; cursor: pointer;"
+                onclick={() => void goto('/discover')}
+              >
+                {t('common.viewAll')}
+                <ChevronRight size={13} strokeWidth={1.5} />
+              </button>
+            </div>
+            <ActivityList {activities} loading={loadingNearby} onSelect={handleActivitySelect} />
           </div>
         {/if}
       </div>

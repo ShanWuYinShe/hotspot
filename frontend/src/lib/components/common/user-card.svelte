@@ -217,7 +217,7 @@
         {/if}
       </div>
       <div class="min-w-0 flex-1">
-        <p style="font-size: 14px; color: var(--text-primary);">{userInfo.nickname}</p>
+        <p class="truncate min-w-0" style="font-size: 14px; color: var(--text-primary);">{userInfo.nickname}</p>
         <div class="mt-0.5 flex items-center gap-1.5">
           <span
             style="font-size: 11px; color: {isOnline
@@ -234,7 +234,7 @@
           {/if}
         </div>
       </div>
-      <div class="flex flex-col items-end gap-2">
+      <div class="flex flex-shrink-0 flex-col items-end gap-2">
         {#if distance}
           <div class="flex items-center gap-0.5">
             <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
