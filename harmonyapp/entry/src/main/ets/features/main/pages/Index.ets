@@ -822,36 +822,44 @@ struct Index {
         .backgroundColor(this.getCurrentThemePalette().pageBackground)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       } else {
-        if (isMobileForm(this.currentBreakpoint)) {
-          PhoneLayout({
-            currentTabIndex: $currentTabIndex,
-            showCreateSheet: $showCreateSheet,
-            showNotificationCenter: $showNotificationCenter,
-            showPerformanceDetails: $showPerformanceDetails,
-            isCreateTabPressed: $isCreateTabPressed,
-            isNotifBtnPressed: $isNotifBtnPressed,
-            unreadCount: this.unreadCount.total_unread_count,
-            visibleNotifications: this.visibleNotifications,
-            isLoggedIn: this.isLoggedIn,
-            userType: this.userType,
-            safeAreaTop: this.safeAreaTop,
-            safeAreaBottom: this.safeAreaBottom,
-            isTablet: this.isTablet,
-            resolvedThemeId: this.resolvedThemeId
-          })
-        } else {
-          DesktopLayout({
-            currentRoute: $currentRoute,
-            showCreateSheet: $showCreateSheet,
-            showNotificationCenter: $showNotificationCenter,
-            showPerformanceDetails: $showPerformanceDetails,
-            unreadCount: this.unreadCount.total_unread_count,
-            visibleNotifications: this.visibleNotifications,
-            isLoggedIn: this.isLoggedIn,
-            userType: this.userType,
-            currentBreakpoint: this.currentBreakpoint
-          })
+        // Navigation 路由宿主：承载所有 AppRouter.push() 推入的页面。
+        // route_map.json 已注册全部 28 个路由 + *Builder，系统据此解析 NavDestination，
+        // 无需手写 .navDestination() 映射。根视图 = PhoneLayout / DesktopLayout（tab 容器）。
+        // 缺少此宿主时 pushPathByName 只填栈不渲染，导致除 tab 外所有菜单点击静默失效。
+        Navigation(this.navPathStack) {
+          if (isMobileForm(this.currentBreakpoint)) {
+            PhoneLayout({
+              currentTabIndex: $currentTabIndex,
+              showCreateSheet: $showCreateSheet,
+              showNotificationCenter: $showNotificationCenter,
+              showPerformanceDetails: $showPerformanceDetails,
+              isCreateTabPressed: $isCreateTabPressed,
+              isNotifBtnPressed: $isNotifBtnPressed,
+              unreadCount: this.unreadCount.total_unread_count,
+              visibleNotifications: this.visibleNotifications,
+              isLoggedIn: this.isLoggedIn,
+              userType: this.userType,
+              safeAreaTop: this.safeAreaTop,
+              safeAreaBottom: this.safeAreaBottom,
+              isTablet: this.isTablet,
+              resolvedThemeId: this.resolvedThemeId
+            })
+          } else {
+            DesktopLayout({
+              currentRoute: $currentRoute,
+              showCreateSheet: $showCreateSheet,
+              showNotificationCenter: $showNotificationCenter,
+              showPerformanceDetails: $showPerformanceDetails,
+              unreadCount: this.unreadCount.total_unread_count,
+              visibleNotifications: this.visibleNotifications,
+              isLoggedIn: this.isLoggedIn,
+              userType: this.userType,
+              currentBreakpoint: this.currentBreakpoint
+            })
+          }
         }
+        .hideTitleBar(true)
+        .mode(NavigationMode.Stack)
       }
     }
     .opacity(this.themeFadeOpacity)
