@@ -38,6 +38,9 @@ export struct NearbyGroupsListPage {
   @State hasMore: boolean = false;
   @State nextCursor: string = '';
   @State errorMessage: string = '';
+  @State keyword: string = '';
+  @State activeTag: string = '全部';
+  private readonly TAGS: string[] = ['全部', '摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏'];
   private groupsDataSource: BasicDataSource<GroupItem> = new BasicDataSource<GroupItem>([]);
   private isDestroyed: boolean = false;
 
@@ -84,6 +87,8 @@ export struct NearbyGroupsListPage {
         reference_point: ref,
         radius: DefaultConfig.NEARBY_RADIUS,
         sort_by: 'distance',
+        keyword: this.keyword || undefined,
+        tag: (this.activeTag !== '全部' ? this.activeTag : undefined) as string | undefined,
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchGroups(request));
@@ -227,6 +232,86 @@ export struct NearbyGroupsListPage {
         .alignItems(VerticalAlign.Center)
         .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.LG })
         .margin({ top: this.getHeaderTopPadding() })
+
+        // 搜索栏（对齐前端 /groups/nearby）
+        Row({ space: 10 }) {
+          Text() {
+            SymbolSpan($r(AppIcon.SEARCH))
+              .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
+              .fontColor([this.getCurrentThemePalette().textSecondary])
+          }
+          TextInput({ placeholder: '搜索群组', text: $$this.keyword })
+            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+            .placeholderColor(this.getCurrentThemePalette().textSecondary)
+            .layoutWeight(1)
+            .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+            .onSubmit(() => { this.loadGroups(true); })
+        }
+        .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+        .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
+        .borderRadius(DesignConstants.SHAPE.INPUT)
+        .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+
+        // 分类 chips（对齐前端 filter categories）
+        Row({ space: DesignConstants.SPACING.SM }) {
+          ForEach(this.TAGS, (tag: string) => {
+            Text(tag)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(tag === this.activeTag ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary)
+              .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+              .borderRadius(DesignConstants.SHAPE.CHIP)
+              .backgroundColor(tag === this.activeTag ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().surfaceSubtle)
+              .onClick(() => {
+                if (tag !== this.activeTag) {
+                  this.activeTag = tag;
+                  this.loadGroups(true);
+                }
+              })
+          }, (tag: string) => tag)
+        }
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+
+        // Hero 统计卡（对齐前端「附近概览」）
+        if (this.hasAnyData()) {
+          Row({ space: DesignConstants.SPACING.MD }) {
+            Column({ space: 2 }) {
+              Text(`${this.groups.length}`)
+                .fontSize(DesignConstants.FONT.SIZE.XL)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.getCurrentThemePalette().accentBackground)
+              Text('群组')
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.getCurrentThemePalette().textSecondary)
+            }
+            .alignItems(HorizontalAlign.Center)
+            .layoutWeight(1)
+
+            Column()
+              .width(1).height(28)
+              .backgroundColor(this.getCurrentThemePalette().borderColor)
+
+            Column({ space: 2 }) {
+              Text('5km')
+                .fontSize(DesignConstants.FONT.SIZE.XL)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.getCurrentThemePalette().accentBackground)
+              Text('半径')
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.getCurrentThemePalette().textSecondary)
+            }
+            .alignItems(HorizontalAlign.Center)
+            .layoutWeight(1)
+          }
+          .width('100%')
+          .padding(DesignConstants.SPACING.MD)
+          .borderRadius(DesignConstants.SHAPE.CARD)
+          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+          .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+        }
 
         // 内容区
         if (this.isLoading) {
