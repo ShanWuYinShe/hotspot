@@ -10,6 +10,7 @@ import { SystemAnnouncementItem } from '../../../core/types/api';
 import { AnnouncementSummaryCard, SettingsSectionCard } from './SettingsSupport';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { RefreshIndicator } from '../../../components/EmptyState';
+import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
 @Preview
@@ -71,6 +72,12 @@ export struct AnnouncementsPage {
           onBack: () => { AppRouter.pop(); }
         })
 
+        // 首次网络加载（无数据）时显示加载反馈，避免页面空白静默；下拉刷新由 Refresh 自身指示器反馈
+        if (this.loading && this.announcements.length === 0) {
+          SystemLoadingView({ message: '加载中...' })
+            .layoutWeight(1)
+            .width('100%')
+        } else {
         Refresh({ refreshing: $$this.refreshing, builder: RefreshIndicator }) {
           Scroll() {
             Column({ space: 0 }) {
@@ -95,6 +102,7 @@ export struct AnnouncementsPage {
         })
         .layoutWeight(1)
         .width('100%')
+        }
       }
       .width('100%')
       .height('100%')
