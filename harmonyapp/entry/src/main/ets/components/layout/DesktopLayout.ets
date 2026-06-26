@@ -460,7 +460,11 @@ export struct DesktopLayout {
       return;
     }
     if (item.pageName.length > 0) {
-      AppRouter.push(item.pageName);
+      try {
+        AppRouter.push(item.pageName);
+      } catch (e) {
+        SystemToast.showError(`导航到${item.label}失败`, this.getUIContext());
+      }
     }
   }
 
