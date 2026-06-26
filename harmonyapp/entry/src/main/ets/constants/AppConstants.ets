@@ -81,7 +81,6 @@ export interface PageNamesType {
   ACCOUNTS: string;
   MY_SHARES: string;
   SHARE_RESOLUTION: string;
-  EVENT_DETAIL: string;
   PROFILE_EDIT: string;
   NEARBY_USERS: string;
   ADMIN_OVERVIEW: string;
@@ -113,7 +112,6 @@ export const PageNames: PageNamesType = {
   ACCOUNTS: 'AccountsPage',
   MY_SHARES: 'MySharesPage',
   SHARE_RESOLUTION: 'ShareResolutionPage',
-  EVENT_DETAIL: 'EventDetailPage',
   PROFILE_EDIT: 'ProfileEditPage',
   NEARBY_USERS: 'NearbyUsersListPage',
   ADMIN_OVERVIEW: 'AdminOverviewPage'
