@@ -9,8 +9,8 @@
  * - openNotificationCenter=true：通知项，点击打开通知中心 overlay（而非 push）
  *
  * 图标方案（确保桌面侧边栏内唯一）：
- * 首页 house / 发现 compass / 消息 message / 通知 bell / 我的瞬间 picture /
- * 我的群组 person_2 / 关系 heart / 我的 person。附近的人 / 群组在桌面经发现页下钻进入。
+ * 首页 house / 发现 compass / 附近的人 person / 附近的群组 person_2(group) / 消息 message /
+ * 通知 bell / 我的瞬间 picture / 我的群组 person_2 / 关系 heart / 我的 person。
  */
 import { AppIcon } from '../components/SystemIcon';
 import { PageNames } from './AppConstants';
@@ -38,6 +38,14 @@ export const DESKTOP_DISCOVER_NAV: AppNavItem[] = [
   {
     label: '发现', icon: AppIcon.COMPASS, tabRoute: 'discover', pageName: '',
     isTab: true, requiresAuth: false, badge: 'none', openNotificationCenter: false
+  },
+  {
+    label: '附近的人', icon: AppIcon.PERSON, tabRoute: '', pageName: PageNames.NEARBY_USERS,
+    isTab: false, requiresAuth: false, badge: 'none', openNotificationCenter: false
+  },
+  {
+    label: '附近的群组', icon: AppIcon.GROUP, tabRoute: '', pageName: PageNames.NEARBY_GROUPS,
+    isTab: false, requiresAuth: false, badge: 'none', openNotificationCenter: false
   }
 ];
 

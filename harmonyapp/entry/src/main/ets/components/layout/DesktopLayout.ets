@@ -37,6 +37,9 @@ import { GlobalStateManager, KEY_CURRENT_USER } from '../../core/state/GlobalSta
 import { MyProfile } from '../../core/types/api';
 import { AppThemeManager } from '../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
+import { SystemUiController } from '../../core/utils/SystemUiController';
+import { SystemToast } from '../SystemToast';
+import { type ThemeMode, type ThemeOptionItem } from '../../core/theme/AppThemeTypes';
 
 @Component
 export struct DesktopLayout {
@@ -57,6 +60,7 @@ export struct DesktopLayout {
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   @State showUpgradeBanner: boolean = false;
+  @State showThemeSheet: boolean = false;
 
   aboutToAppear() {
     this.showUpgradeBanner = this.isLoggedIn && this.userType === 'temp';
@@ -64,6 +68,21 @@ export struct DesktopLayout {
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getCurrentThemeMode(): ThemeMode {
+    return AppThemeManager.getThemeMode();
+  }
+
+  private async handleThemeChange(mode: ThemeMode): Promise<void> {
+    if (mode === this.getCurrentThemeMode()) {
+      this.showThemeSheet = false;
+      return;
+    }
+    await AppThemeManager.setThemeMode(mode);
+    SystemUiController.syncWithCurrentTheme();
+    this.showThemeSheet = false;
+    SystemToast.show(`已切换为${AppThemeManager.getThemeLabel(mode)}`, this.getUIContext());
   }
 
   build() {
@@ -142,6 +161,12 @@ export struct DesktopLayout {
       showClose: true,
       backgroundColor: this.getPalette().surfaceBackground
     })
+    .bindSheet($$this.showThemeSheet, this.ThemeSheetContent(), {
+      height: SheetSize.FIT_CONTENT,
+      dragBar: true,
+      showClose: true,
+      backgroundColor: this.getPalette().surfaceBackground
+    })
   }
 
   // ==================== 顶栏（对齐前端 desktop-header）====================
@@ -187,6 +212,14 @@ export struct DesktopLayout {
         })
 
         SurfaceIconButton({
+          icon: AppIcon.PALETTE,
+          kind: 'neutral',
+          buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+          glyphSize: 17,
+          onPress: () => { this.showThemeSheet = true; }
+        })
+
+        SurfaceIconButton({
           icon: AppIcon.SETTINGS,
           kind: 'neutral',
           buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
@@ -227,6 +260,69 @@ export struct DesktopLayout {
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: { bottom: 1 }, color: this.getPalette().borderColor })
+  }
+
+  // ==================== 主题家族切换 sheet（顶栏 PALETTE 按钮）====================
+  @Builder
+  ThemeSheetContent() {
+    Column({ space: DesignConstants.SPACING.LG }) {
+      Text('外观主题')
+        .fontSize(DesignConstants.FONT.SIZE.XL)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(this.getPalette().textPrimary)
+        .width('100%')
+        .textAlign(TextAlign.Center)
+
+      Text('切换整体观感。当前已对齐前端的森林 / 暖砂 / 靛蓝三族主题。')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontColor(this.getPalette().textSecondary)
+        .width('100%')
+        .textAlign(TextAlign.Center)
+
+      Column({ space: DesignConstants.SPACING.SM }) {
+        ForEach(AppThemeManager.getThemeOptions(), (option: ThemeOptionItem) => {
+          this.ThemeOptionRow(option)
+        }, (option: ThemeOptionItem) => option.mode)
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.XXL
+    })
+    .backgroundColor(this.getPalette().surfaceBackground)
+  }
+
+  @Builder
+  private ThemeOptionRow(option: ThemeOptionItem) {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      Column({ space: 4 }) {
+        Text(option.label)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.getPalette().textPrimary)
+        Text(option.description)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.getPalette().textSecondary)
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+
+      Text(option.mode === this.getCurrentThemeMode() ? '当前' : '切换')
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(option.mode === this.getCurrentThemeMode() ? this.getPalette().accentText : this.getPalette().textSecondary)
+        .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+        .backgroundColor(option.mode === this.getCurrentThemeMode() ? this.getPalette().accentBackground : this.getPalette().surfaceSubtle)
+        .borderRadius(DesignConstants.SHAPE.CHIP)
+    }
+    .width('100%')
+    .padding(DesignConstants.SPACING.MD)
+    .borderRadius(DesignConstants.SHAPE.CARD)
+    .backgroundColor(this.getPalette().surfaceSubtle)
+    .onClick(() => { this.handleThemeChange(option.mode).catch(() => {}); })
   }
 
   // ==================== 侧边栏（对齐前端 sidebar：发现组 + 个人组 + 底部 AnchorEntry）====================

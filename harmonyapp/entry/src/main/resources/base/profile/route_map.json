@@ -126,6 +126,11 @@
       "buildFunction": "NearbyUsersListPageBuilder"
     },
     {
+      "name": "NearbyGroupsListPage",
+      "pageSourceFile": "src/main/ets/features/group/pages/NearbyGroupsListPage.ets",
+      "buildFunction": "NearbyGroupsListPageBuilder"
+    },
+    {
       "name": "AdminOverviewPage",
       "pageSourceFile": "src/main/ets/features/admin/pages/AdminOverviewPage.ets",
       "buildFunction": "AdminOverviewPageBuilder"

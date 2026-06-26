@@ -83,6 +83,7 @@ export enum AppIcon {
   RECOMMEND = 'sys.symbol.lightbulb',
   SYNC = 'sys.symbol.repeat',
   DISTRIBUTED = 'sys.symbol.wifi',
+  PALETTE = 'sys.symbol.paintpalette',
 
   // 箭头图标
   ARROW_UP = 'sys.symbol.chevron_up',
@@ -175,6 +176,7 @@ export const AppIconMap: Map<AppIcon, string> = new Map<AppIcon, string>([
   [AppIcon.RECOMMEND, 'lightbulb'],
   [AppIcon.SYNC, 'repeat'],
   [AppIcon.DISTRIBUTED, 'wifi'],
+  [AppIcon.PALETTE, 'paintpalette'],
   [AppIcon.ARROW_UP, 'chevron_up'],
   [AppIcon.ARROW_DOWN, 'chevron_down'],
   [AppIcon.ARROW_LEFT, 'chevron_left'],
