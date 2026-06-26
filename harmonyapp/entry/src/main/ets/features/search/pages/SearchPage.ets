@@ -456,6 +456,9 @@ export struct SearchPage {
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack;
       const params = context.pathInfo?.param as SearchRouteParam | undefined;
+      if (params && params.initialTab >= 0 && params.initialTab <= 2) {
+        this.currentIndex = params.initialTab;
+      }
       const initialKeyword = params?.keyword?.trim() ?? '';
       if (initialKeyword.length > 0) {
         this.keyword = initialKeyword;

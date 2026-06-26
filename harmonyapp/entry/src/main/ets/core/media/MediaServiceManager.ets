@@ -350,7 +350,10 @@ export class MediaServiceManager {
 
       // 5. 如果有大小限制且超出，递归降低质量 (简单实现)
       if (maxSize && data.byteLength > maxSize && quality > 10) {
+        // 递归前释放本轮资源，避免 fd/内存累积泄漏
         fileIo.closeSync(file);
+        imageSource.release();
+        imagePacker.release();
         return MediaServiceManager.compressImage(context, uri, quality - 10, maxSize);
       }
 

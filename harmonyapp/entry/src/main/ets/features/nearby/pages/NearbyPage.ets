@@ -7,7 +7,7 @@ import { GlobalStateManager, KEY_IS_LOGGED_IN, KEY_BROWSE_ANCHOR, KEY_CURRENT_LO
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { AppRouter, ChatRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam, SearchRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint,
@@ -439,8 +439,8 @@ export struct NearbyPage {
       // 右下控制按钮（定位 + 地图）：嵌套全屏 Stack 贴右下（ArkUI 不支持 calc，用 alignContent 对齐前端 bottom-3 right-3）
       Stack({ alignContent: Alignment.BottomEnd }) {
         Column({ space: DesignConstants.SPACING.SM }) {
-          this.buildMapIconButton(AppIcon.LOCATION)
-          this.buildMapIconButton(AppIcon.MAP)
+          this.buildMapIconButton(AppIcon.LOCATION, () => AppRouter.push(PageNames.LOCATION_PICKER))
+          this.buildMapIconButton(AppIcon.MAP, () => AppRouter.push(PageNames.LOCATION_PICKER))
         }
       }
       .width('100%')
@@ -476,7 +476,7 @@ export struct NearbyPage {
   }
 
   @Builder
-  private buildMapIconButton(icon: AppIcon) {
+  private buildMapIconButton(icon: AppIcon, action: () => void) {
     Row() {
       Text() {
         SymbolSpan($r(icon))
@@ -490,6 +490,7 @@ export struct NearbyPage {
     .borderRadius(DesignConstants.SHAPE.ICON_TILE)
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: 1, color: this.getPalette().floatingBorderColor })
+    .onClick(() => action())
   }
 
   // ==================== 区块标题 (eyebrow) ====================
@@ -531,7 +532,25 @@ export struct NearbyPage {
         AppRouter.push(PageNames.NEARBY_USERS);
       })
 
-      if (!this.usersLoading && this.users.length === 0) {
+      if (!this.usersLoading && this.usersError.length > 0) {
+        Column({ space: DesignConstants.SPACING.SM }) {
+          Text(this.usersError)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getPalette().textSecondary)
+            .width('100%')
+            .textAlign(TextAlign.Center)
+          Text('重试')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getPalette().accentText)
+            .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 6, bottom: 6 })
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .border({ width: 1, color: this.getPalette().accentText })
+            .onClick(() => this.loadNearbyUsers())
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Center)
+        .margin({ top: DesignConstants.SPACING.SM })
+      } else if (!this.usersLoading && this.users.length === 0) {
         Text('附近暂无其他用户，可稍后再来或调整浏览位置。')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getPalette().textSecondary)
@@ -634,6 +653,8 @@ export struct NearbyPage {
     if (this.groupsLoading || this.groups.length > 0) {
       Column() {
         this.buildSectionHeader('附近活动', '查看全部', () => {
+          const param: SearchRouteParam = { initialTab: 2 } as SearchRouteParam;
+          AppRouter.push(PageNames.SEARCH, param);
         })
 
         Column({ space: DesignConstants.SPACING.MD }) {
@@ -742,6 +763,7 @@ export struct NearbyPage {
     if (this.momentsLoading || this.moments.length > 0) {
       Column() {
         this.buildSectionHeader('附近动态', '查看全部', () => {
+          AppRouter.push(PageNames.MOMENT);
         })
 
         if (this.momentsLoading && this.moments.length === 0) {

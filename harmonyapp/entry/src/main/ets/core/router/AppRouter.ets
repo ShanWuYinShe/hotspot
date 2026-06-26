@@ -55,6 +55,8 @@ export class PhotoPreviewRouteParam {
 /** 搜索页参数 */
 export class SearchRouteParam {
   keyword: string = '';
+  /** 初始 tab 索引：0=用户 1=动态 2=群组 */
+  initialTab: number = 0;
 }
 
 /** 公告页参数 */

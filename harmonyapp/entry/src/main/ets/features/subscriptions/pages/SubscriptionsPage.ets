@@ -215,7 +215,7 @@ export struct SubscriptionsPage {
             (i.key as string) + '_v' + this.getValue(i.key) + '_s' + (this.savingKey === String(i.key)))
 
           ListItem() {
-            Text('提示：这里管理的是当前设备上的本地通知偏好；系统公告内容仍可在“系统公告”中统一查看。')
+            Text('本页开关仅保存在当前设备，不影响实际收到的通知（通知仍以服务端推送为准）。待服务端通知偏好协议落地后，将自动同步到所有设备。')
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })
