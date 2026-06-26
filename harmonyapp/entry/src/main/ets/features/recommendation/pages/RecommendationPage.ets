@@ -4,6 +4,7 @@
  */
 
 import { ApiClient } from '../../../core/api/ApiClient';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { UserItem, TrendingTagItem } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { SystemToast } from '../../../components/SystemToast';
@@ -119,6 +120,7 @@ export struct RecommendationPage {
 
   build() {
     NavDestination() {
+    ResponsiveContainer() {
     Column() {
       // 标题栏
       Row() {
@@ -322,6 +324,7 @@ export struct RecommendationPage {
         .width('100%')
         .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

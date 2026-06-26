@@ -18,6 +18,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemCard } from '../../../components/SystemCard';
 import { ApiResponse, CreateMomentRequest, MomentItem, GeoPoint, PrivacyLevel } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { AppRouter, LocationPickerRouteParam, EditMomentRouteParam } from '../../../core/router/AppRouter';
@@ -338,6 +339,7 @@ export struct CreateMomentPage {
 
   build() {
     NavDestination() {
+    ResponsiveContainer({ fill: true }) {
     Stack() {
       Column() {
       // 标题栏
@@ -640,6 +642,7 @@ export struct CreateMomentPage {
     }
     .width('100%')
     .height('100%')
+    }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

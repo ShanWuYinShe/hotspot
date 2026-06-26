@@ -15,6 +15,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { AppIcon } from '../../../components/SystemIcon';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SystemToast } from '../../../components/SystemToast';
@@ -312,7 +313,9 @@ export struct MomentPage {
 @Builder
 export function MomentPageBuilder() {
   NavDestination() {
-    MomentPage()
+    ResponsiveContainer({ fill: true }) {
+      MomentPage()
+    }
   }
   .hideTitleBar(true)
 }

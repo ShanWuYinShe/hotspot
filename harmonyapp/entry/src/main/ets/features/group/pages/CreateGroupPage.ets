@@ -9,6 +9,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemToast } from '../../../components/SystemToast';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -319,6 +320,7 @@ export struct CreateGroupPage {
 
   build() {
     NavDestination() {
+    ResponsiveContainer({ fill: true }) {
     Stack() {
       Column() {
         // 标题栏
@@ -744,6 +746,7 @@ export struct CreateGroupPage {
     }
     .width('100%')
     .height('100%')
+    }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
