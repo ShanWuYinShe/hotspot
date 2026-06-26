@@ -1,5 +1,6 @@
 import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN, KEY_CLIENT_CONFIG } from '../../../core/state/GlobalStateManager';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
@@ -19,6 +20,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppThemeVisuals';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
@@ -48,6 +50,7 @@ export struct SearchPage {
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 
   @State currentIndex: number = 0;
   @State keyword: string = '';
@@ -321,7 +324,7 @@ export struct SearchPage {
 
   build() {
     NavDestination() {
-    ResponsiveContainer() {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint }) {
       Column() {
         // Search header — back button + search input (Figma Make: rounded back btn + neu-input-surface)
         Row({ space: 12 }) {

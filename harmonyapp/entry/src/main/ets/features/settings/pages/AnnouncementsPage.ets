@@ -5,11 +5,12 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
+import { AppIcon } from '../../../components/SystemIcon';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemAnnouncementItem } from '../../../core/types/api';
 import { AnnouncementSummaryCard, SettingsSectionCard } from './SettingsSupport';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
-import { RefreshIndicator } from '../../../components/EmptyState';
+import { RefreshIndicator, EmptyState } from '../../../components/EmptyState';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
@@ -75,6 +76,15 @@ export struct AnnouncementsPage {
         // 首次网络加载（无数据）时显示加载反馈，避免页面空白静默；下拉刷新由 Refresh 自身指示器反馈
         if (this.loading && this.announcements.length === 0) {
           SystemLoadingView({ message: '加载中...' })
+            .layoutWeight(1)
+            .width('100%')
+        } else if (!this.loading && this.announcements.length === 0) {
+          EmptyState({
+            icon: AppIcon.NOTIFICATION,
+            message: '暂无系统公告',
+            actionLabel: '刷新',
+            onAction: () => { this.loadAnnouncements(true); }
+          })
             .layoutWeight(1)
             .width('100%')
         } else {
