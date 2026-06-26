@@ -16,6 +16,7 @@ import {
 import { SystemAvatar } from '../../../components/SystemAvatar';
 
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemToast } from '../../../components/SystemToast';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -908,7 +909,9 @@ export struct GroupPage {
 @Builder
 export function GroupPageBuilder() {
   NavDestination() {
-    GroupPage()
+    ResponsiveContainer({ fill: true }) {
+      GroupPage()
+    }
   }
   .hideTitleBar(true)
 }
