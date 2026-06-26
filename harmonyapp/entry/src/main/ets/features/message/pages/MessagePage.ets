@@ -817,17 +817,21 @@ export struct MessagePage {
 
   @Builder
   buildChatItem(item: ChatItem) {
-    Row({ space: 14 }) {
+    Row({ space: DesignConstants.SPACING.MD }) {
       Badge({
         count: item.unreadCount,
         maxCount: 99,
         position: BadgePosition.RightTop,
-        style: { badgeSize: 20, badgeColor: this.getCurrentThemePalette().accentBackground, fontSize: 10 }
+        style: {
+          badgeSize: 20,
+          badgeColor: this.getCurrentThemePalette().accentBackground,
+          fontSize: DesignConstants.FONT.SIZE.XS_MINUS
+        }
       }) {
         SystemAvatar({
           avatarUrl: item.avatarUrl,
           name: item.name,
-          avatarSize: 40,
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL, // 40
           shape: item.type === 'group' ? 'squircle' : 'circle',
           inset: true
         })
@@ -836,21 +840,21 @@ export struct MessagePage {
       Column({ space: 2 }) {
         Row() {
           Text(item.name)
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(item.unreadCount > 0 ? FontWeight.Medium : FontWeight.Normal)
+            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13 对齐前端 text-body
+            .fontWeight(item.unreadCount > 0 ? FontWeight.Medium : FontWeight.Regular)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .layoutWeight(1)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(this.formatTime(item.lastTime))
-            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-caption
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
 
         Text(item.lastMessage || '')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-meta
           .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -859,7 +863,13 @@ export struct MessagePage {
       .layoutWeight(1)
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    // 对齐前端 chat-list padding（10px 16px）+ radius-md
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.MD,
+      bottom: DesignConstants.SPACING.MD
+    })
     .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
     .backgroundColor(this.getChatItemBackground(item))
     .opacity(this.isChatDeleting(item) ? DesignConstants.OPACITY.LOADING : 1)

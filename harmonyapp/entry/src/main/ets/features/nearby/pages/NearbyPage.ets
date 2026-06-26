@@ -432,8 +432,51 @@ export struct NearbyPage {
 
   @Builder
   private buildHeroStats() {
-    // 实时附近统计卡（对齐前端 HeroStats：https://localhost:8888/ 首页桌面左栏）
+    // 实时附近统计卡（对齐前端 HeroStats：radar 图标 + 标题/范围 + 三段统计）
     Column() {
+      // Header row：图标 + 标题/范围 + 右箭头
+      Row() {
+        Row({ space: DesignConstants.SPACING.SM }) {
+          // brand 圆形图标（对齐前端 38px brand 圆 + shadow-brand-btn）
+          Row() {
+            Text() {
+              SymbolSpan($r(AppIcon.NEARBY))
+                .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
+                .fontColor([this.getPalette().accentText])
+            }
+          }
+          .width(38)
+          .height(38)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getPalette().accentBackground)
+          .justifyContent(FlexAlign.Center)
+
+          Column() {
+            Text('实时附近')
+              .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13 对齐前端 text-body
+              .fontWeight(FontWeight.Medium)
+              .fontColor(this.getPalette().textPrimary)
+            Text('持续更新')
+              .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-caption
+              .fontColor(this.getPalette().textSecondary)
+              .margin({ top: 1 })
+          }
+          .alignItems(HorizontalAlign.Start)
+        }
+        .alignItems(VerticalAlign.Center)
+
+        Blank()
+
+        Text() {
+          SymbolSpan($r(AppIcon.ARROW_RIGHT))
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor([this.getPalette().textSecondary])
+        }
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      // Stats grid：三段统计 + 竖分割线
       Row({ space: DesignConstants.SPACING.MD }) {
         // 人附近
         Column({ space: 2 }) {
@@ -487,18 +530,11 @@ export struct NearbyPage {
         .layoutWeight(1)
       }
       .width('100%')
-      .padding({ top: 16, bottom: 16 })
-
-      // 范围提示
-      Text('5km 内')
-        .fontSize(DesignConstants.FONT.SIZE.XS2)
-        .fontColor(this.getPalette().textTertiary)
-        .width('100%')
-        .textAlign(TextAlign.Center)
+      .margin({ top: DesignConstants.SPACING.LG })
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.LG)
-    .borderRadius(DesignConstants.SHAPE.CARD)
+    .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+    .borderRadius(DesignConstants.SHAPE.HERO_CARD)
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: 1, color: this.getPalette().borderColor })
     .onClick(() => AppRouter.push(PageNames.LOCATION_PICKER))

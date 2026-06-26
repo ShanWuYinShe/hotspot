@@ -357,19 +357,19 @@ export struct DiscoverPage {
   @Builder
   buildMomentFeed() {
     Column() {
-      // section 标题
+      // section 标题（对齐前端：eyebrow 小标 + 主标题层级）
       Row() {
         Text(this.getMomentsSectionTitle())
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(FontWeight.Bold)
+          .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18，对齐前端 page-title
+          .fontWeight(FontWeight.Medium)
           .fontColor(this.getCurrentThemePalette().textPrimary)
       }
       .width('100%')
       .padding({
         left: DesignConstants.SPACING.LG,
         right: DesignConstants.SPACING.LG,
-        top: 16,
-        bottom: 8
+        top: DesignConstants.SPACING.LG,
+        bottom: DesignConstants.SPACING.SM
       })
 
       // Hero first card（对齐前端 ambient-glow 首个卡片突出）
@@ -386,7 +386,7 @@ export struct DiscoverPage {
         .padding({
           left: DesignConstants.SPACING.LG,
           right: DesignConstants.SPACING.LG,
-          bottom: 4
+          bottom: DesignConstants.SPACING.XS
         })
       }
 
@@ -402,17 +402,24 @@ export struct DiscoverPage {
           .padding({
             left: DesignConstants.SPACING.LG,
             right: DesignConstants.SPACING.LG,
-            top: 4,
-            bottom: 4
+            top: DesignConstants.SPACING.XS,
+            bottom: DesignConstants.SPACING.XS
           })
         }, (moment: MomentItem) => moment.moment_id)
       }
 
-      // 空态
+      // 空态（对齐前端 EmptyState：图标 + 文案，不再裸灰块）
       if (this.hotMoments.length === 0) {
-        EmptyState({ icon: AppIcon.RECOMMEND, message: '暂无推荐内容' })
-          .height(200)
-          .width('100%')
+        Column() {
+          EmptyState({
+            icon: AppIcon.RECOMMEND,
+            message: '暂无推荐内容',
+            actionLabel: '刷新',
+            onAction: () => { this.loadData(true); }
+          })
+        }
+        .width('100%')
+        .padding({ top: DesignConstants.SPACING.XXL, bottom: DesignConstants.SPACING.XXL })
       }
     }
     .width('100%')
@@ -422,60 +429,72 @@ export struct DiscoverPage {
   @Builder
   buildRightSidebar() {
     Column() {
-      // 热门话题（对齐前端 trending topics）
+      // 热门话题（对齐前端 trending topics：eyebrow 标题 + 列表项）
       if (this.trendingTags.length > 0) {
         Column() {
           Row() {
             Text() {
               SymbolSpan($r(AppIcon.CHART))
-                .fontSize(DesignConstants.FONT.SIZE.MD)
+                .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontColor([this.getCurrentThemePalette().accentBackground])
             }
             Text('热门话题')
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .fontSize(DesignConstants.FONT.SIZE.XS2) // 10 eyebrow
+              .fontWeight(FontWeight.Medium)
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .textCase(TextCase.UpperCase)
               .letterSpacing(1.2)
-              .margin({ left: 6 })
+              .margin({ left: DesignConstants.SPACING.XS })
           }
-          .margin({ top: 20, bottom: 12 })
+          .alignItems(VerticalAlign.Center)
+          .margin({ top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.SM })
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
           ForEach(this.trendingTags, (topic: TrendingTagItem) => {
             Row() {
               Text(`#${topic.name}`)
-                .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+                .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13 对齐前端 text-body
                 .fontColor(this.getCurrentThemePalette().textPrimary)
                 .layoutWeight(1)
 
               Text(`${topic.usage_count}帖`)
-                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-caption
                 .fontColor(this.getCurrentThemePalette().textSecondary)
             }
             .width('100%')
-            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 8, bottom: 8 })
+            .padding({
+              left: DesignConstants.SPACING.LG,
+              right: DesignConstants.SPACING.LG,
+              top: DesignConstants.SPACING.SM,
+              bottom: DesignConstants.SPACING.SM
+            })
             .borderRadius(DesignConstants.RADIUS.SM)
             .onClick(() => { this.activeTag = topic.name; })
           }, (topic: TrendingTagItem) => topic.name)
         }
         .width('100%')
 
-        // 分隔线
+        // 分隔线（对齐前端 divider-soft）
         Divider()
           .width('85%')
           .color(this.getSurfaceBorder())
-          .margin({ top: 12, bottom: 12 })
+          .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
       }
 
-      // 活跃用户（对齐前端 active users）
+      // 活跃用户（对齐前端 active users：eyebrow + 列表项）
       if (this.recommendedUsers.length > 0) {
         Column() {
           Text('活跃用户')
             .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .fontWeight(FontWeight.Medium)
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .textCase(TextCase.UpperCase)
             .letterSpacing(1.2)
-            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 12 })
+            .padding({
+              left: DesignConstants.SPACING.LG,
+              right: DesignConstants.SPACING.LG,
+              bottom: DesignConstants.SPACING.SM
+            })
 
           ForEach(this.recommendedUsers.slice(0, 5), (user: UserItem) => {
             Row() {
@@ -486,25 +505,31 @@ export struct DiscoverPage {
                 shape: 'circle'
               })
               Text(user.user?.nickname ?? '')
-                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-meta
                 .fontColor(this.getCurrentThemePalette().textPrimary)
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
                 .layoutWeight(1)
-                .margin({ left: 8 })
+                .margin({ left: DesignConstants.SPACING.SM })
 
-              Row() {
-                Text('关注')
-                  .fontSize(DesignConstants.FONT.SIZE.XS2)
-                  .fontColor(this.getCurrentThemePalette().accentText)
-              }
-              .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor(this.getCurrentThemePalette().accentBackground)
-              .onClick(() => { this.followUser(user); })
+              Button('关注')
+                .type(ButtonType.Normal)
+                .fontSize(DesignConstants.FONT.SIZE.XS2)
+                .fontColor(this.getCurrentThemePalette().accentText)
+                .backgroundColor(this.getCurrentThemePalette().accentBackground)
+                .height(26)
+                .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .onClick(() => { this.followUser(user); })
             }
             .width('100%')
-            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 6, bottom: 6 })
+            .alignItems(VerticalAlign.Center)
+            .padding({
+              left: DesignConstants.SPACING.LG,
+              right: DesignConstants.SPACING.LG,
+              top: DesignConstants.SPACING.XS,
+              bottom: DesignConstants.SPACING.XS
+            })
           }, (user: UserItem) => user.user?.user_id ?? '')
         }
         .width('100%')
