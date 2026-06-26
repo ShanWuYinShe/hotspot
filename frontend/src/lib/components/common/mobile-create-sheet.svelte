@@ -44,10 +44,10 @@
       <div class="mx-auto mb-4 h-1 w-9 rounded-full" style="background: var(--border-theme);"></div>
     {/if}
     <div class="mb-5 text-center">
-      <h2 style="font-size: 17px; font-weight: 600; color: var(--text-primary);">
+      <h2 class="text-title" style="font-weight: 600; color: var(--text-primary)">
         {t('nav.createSheetTitle')}
       </h2>
-      <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+      <p class="text-meta" style="color: var(--text-secondary); margin-top: 4px">
         {t('nav.createSheetDescription')}
       </p>
     </div>
@@ -65,10 +65,12 @@
           <Image size={16} strokeWidth={1.5} color="var(--brand)" />
         </div>
         <div>
-          <p style="font-size: 13px; font-weight: 600; color: var(--text-primary);">
+          <p class="text-body" style="font-weight: 600; color: var(--text-primary)">
             {t('nav.postMoment')}
           </p>
-          <p style="font-size: 11px; color: var(--text-secondary);">{t('nav.createMomentHint')}</p>
+          <p class="text-caption" style="color: var(--text-secondary)">
+            {t('nav.createMomentHint')}
+          </p>
         </div>
       </button>
 
@@ -84,10 +86,12 @@
           <UsersRound size={16} strokeWidth={1.5} color="var(--brand)" />
         </div>
         <div>
-          <p style="font-size: 13px; font-weight: 600; color: var(--text-primary);">
+          <p class="text-body" style="font-weight: 600; color: var(--text-primary)">
             {t('nav.createGroup')}
           </p>
-          <p style="font-size: 11px; color: var(--text-secondary);">{t('nav.createGroupHint')}</p>
+          <p class="text-caption" style="color: var(--text-secondary)">
+            {t('nav.createGroupHint')}
+          </p>
         </div>
       </button>
     </div>

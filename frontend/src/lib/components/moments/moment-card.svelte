@@ -357,7 +357,7 @@
     display: block;
     overflow: hidden;
     color: var(--text-primary);
-    font-size: 14px;
+    font-size: var(--text-body-lg);
     font-weight: 650;
     line-height: 1.25;
     text-overflow: ellipsis;
@@ -370,7 +370,7 @@
     gap: 5px;
     margin-top: 3px;
     color: var(--text-secondary);
-    font-size: 11px;
+    font-size: var(--text-caption);
     line-height: 1.2;
   }
 
@@ -385,7 +385,7 @@
     border-radius: var(--radius-pill);
     padding: 5px 8px;
     color: var(--brand);
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 600;
     line-height: 1;
     background: color-mix(in srgb, var(--brand) 9%, var(--surface-bg));
@@ -429,7 +429,7 @@
     border-radius: var(--radius-pill);
     padding: 4px 8px;
     color: var(--text-on-overlay);
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 700;
     line-height: 1;
     background: rgba(15, 23, 42, 0.58);
@@ -461,7 +461,7 @@
   }
 
   .moment-card--dense .moment-card__description {
-    font-size: 12px;
+    font-size: var(--text-meta);
     line-height: 1.58;
     -webkit-line-clamp: 2;
     line-clamp: 2;
@@ -478,7 +478,7 @@
     border-radius: var(--radius-pill);
     padding: 4px 8px;
     color: var(--brand);
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 600;
     line-height: 1;
     background: color-mix(in srgb, var(--brand) 7%, transparent);
@@ -525,7 +525,7 @@
     gap: 5px;
     min-height: 32px;
     padding: 6px 9px;
-    font-size: 12px;
+    font-size: var(--text-meta);
     font-weight: 650;
   }
 

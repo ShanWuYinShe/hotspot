@@ -27,7 +27,7 @@
     inset && 'pl-8',
     className
   )}
-  style="border-radius: 14px; color: {hovered
+  style="border-radius: var(--radius-sm); color: {hovered
     ? 'var(--text-on-accent)'
     : 'var(--text-primary)'}; background: {hovered ? 'var(--brand)' : 'transparent'};"
   onmouseenter={() => (hovered = true)}

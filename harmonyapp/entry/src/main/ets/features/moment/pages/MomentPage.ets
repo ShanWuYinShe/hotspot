@@ -12,6 +12,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { MomentItem, SearchMomentsRequest } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { SystemPageHeader, PageHeaderAction } from '../../../components/SystemPageHeader';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -191,23 +192,13 @@ export struct MomentPage {
 
   build() {
     Column() {
-      // 标题栏
-      Row() {
-        Text('附近瞬间')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(600)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .layoutWeight(1)
-
-        Button('发布')
-          .type(ButtonType.Capsule)
-          .backgroundColor(this.getCurrentThemePalette().accentBackground)
-          .fontColor(this.getCurrentThemePalette().accentText)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .height(32)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
-          .onClick(async () => {
+      // 标题栏 —— 统一走 SystemPageHeader（透明背景 + 发布 action）
+      SystemPageHeader({
+        title: '附近瞬间',
+        backgroundVariant: 'transparent',
+        action: {
+          label: '发布',
+          onClick: async () => {
             const currentUser = this.stateManager.getCurrentUser();
             if (!currentUser) {
               SystemToast.showWarning('请先登录后再发布', this.getUIContext());
@@ -219,18 +210,9 @@ export struct MomentPage {
               return;
             }
             AppRouter.push(PageNames.CREATE_MOMENT);
-          })
-      }
-      .width('100%')
-      .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
-        bottom: DesignConstants.SPACING.SM
+          }
+        } as PageHeaderAction
       })
-      .backgroundColor(this.getSurfaceBackground())
-      .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
       if (this.isLoading) {

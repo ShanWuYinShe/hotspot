@@ -10,7 +10,7 @@
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AdminPermissions } from '../../../core/types/api';
 import { PageShellContainer } from '../../../components/PageShellContainer';
-import { BackButton } from '../../../components/BackButton';
+import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
 import { SystemToast } from '../../../components/SystemToast';
@@ -91,19 +91,14 @@ struct AdminOverviewPage {
   build() {
     NavDestination() {
       Column() {
-        // Header
-        Row() {
-          BackButton({ onBack: () => this.pathStack.pop() })
-          Text('管理后台')
-            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(this.getPalette().textPrimary)
-            .margin({ left: DesignConstants.SPACING.XS })
-        }
-        .width('100%')
-        .height(DesignConstants.LAYOUT.DESKTOP_HEADER_HEIGHT + this.safeAreaTop)
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: this.safeAreaTop })
-        .alignItems(VerticalAlign.Center)
+        // Header —— 统一走 SystemPageHeader（替代手搓 Row + BackButton）
+        SystemPageHeader({
+          title: '管理后台',
+          showBackButton: true,
+          onBack: () => { this.pathStack.pop(); },
+          titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
+          titleWeight: FontWeight.Medium
+        })
 
         if (this.isLoading) {
           SystemLoadingView({ message: '加载管理权限...' }).layoutWeight(1)
@@ -146,7 +141,7 @@ struct AdminOverviewPage {
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.SHIELD))
-            .fontSize(22)
+            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
             .fontColor([this.getPalette().accentText])
         }
       }
@@ -201,7 +196,7 @@ struct AdminOverviewPage {
       Row() {
         Text() {
           SymbolSpan($r(m.icon))
-            .fontSize(18)
+            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
             .fontColor([this.getPalette().accentBackground])
         }
       }
@@ -225,7 +220,7 @@ struct AdminOverviewPage {
 
       Text() {
         SymbolSpan($r(AppIcon.ARROW_RIGHT))
-          .fontSize(14)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor([this.getPalette().textSecondary])
       }
     }
@@ -246,7 +241,7 @@ struct AdminOverviewPage {
       Row({ space: DesignConstants.SPACING.XS }) {
         Text() {
           SymbolSpan($r(AppIcon.INFO))
-            .fontSize(14)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor([this.getPalette().textSecondary])
         }
         Text('完整管理请在 Web 端进行')

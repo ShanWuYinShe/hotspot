@@ -53,8 +53,8 @@
           <Radar size={17} strokeWidth={2} color="var(--text-on-accent)" />
         </div>
         <div>
-          <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">{title}</p>
-          <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+          <p class="text-body" style="font-weight: 500; color: var(--text-primary)">{title}</p>
+          <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
             {rangeLabel}
           </p>
         </div>

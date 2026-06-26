@@ -173,14 +173,14 @@
       <div class="flex items-center justify-between">
         <div>
           <h1 class="page-title" style="color: var(--text-primary);">我的群组</h1>
-          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+          <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
             管理已加入群组、邀请与申请
           </p>
         </div>
         <div class="flex gap-2">
           <button
-            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
+            class="text-meta flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary)"
             onclick={refreshAll}
             disabled={anyLoading}
           >
@@ -188,8 +188,8 @@
             刷新
           </button>
           <button
-            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: var(--shadow-brand-btn);"
+            class="text-meta flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+            style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
             onclick={() => (showCreateGroup = true)}
           >
             <Plus size={13} />
@@ -239,15 +239,15 @@
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center justify-between">
                       <p
-                        class="truncate"
-                        style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+                        class="text-body-lg truncate"
+                        style="font-weight: 500; color: var(--text-primary)"
                       >
                         {group.group.name}
                       </p>
                       {#if (group.my_state?.unread_count ?? 0) > 0}
                         <div
-                          class="flex items-center justify-center rounded-full"
-                          style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
+                          class="text-caption flex items-center justify-center rounded-full"
+                          style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-weight: 600; box-shadow: var(--shadow-brand-btn)"
                         >
                           {(group.my_state?.unread_count ?? 0) > 99
                             ? '99+'
@@ -255,7 +255,7 @@
                         </div>
                       {/if}
                     </div>
-                    <p style="font-size: 13px; color: var(--text-secondary);">
+                    <p class="text-body" style="color: var(--text-secondary)">
                       {group.group.members_count} 成员
                     </p>
                   </div>
@@ -281,15 +281,15 @@
               >
                 <Inbox size={12} color="var(--text-secondary)" strokeWidth={1.5} />
               </div>
-              <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);"
+              <span class="text-body-lg" style="font-weight: 600; color: var(--text-primary)"
                 >收到的群邀请</span
               >
             </div>
           </div>
           {#if invitesLoading && invites.length === 0}
-            <p style="font-size: 13px; color: var(--text-secondary);">加载中...</p>
+            <p class="text-body" style="color: var(--text-secondary)">加载中...</p>
           {:else if invites.length === 0}
-            <p style="font-size: 13px; color: var(--text-secondary);">暂无待处理邀请</p>
+            <p class="text-body" style="color: var(--text-secondary)">暂无待处理邀请</p>
           {:else}
             <div class="space-y-2">
               {#each invites as invite (invite.invite_id)}
@@ -297,14 +297,14 @@
                   class="rounded-[var(--radius-md)] p-3"
                   style="border: 1px solid var(--border-theme);"
                 >
-                  <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
+                  <p class="text-body" style="font-weight: 500; color: var(--text-primary)">
                     {invite.group.name}
                   </p>
-                  <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                  <p class="text-meta" style="color: var(--text-secondary); margin-top: 4px">
                     邀请人：{invite.inviter.nickname}
                   </p>
                   {#if invite.message}
-                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                    <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
                       {invite.message}
                     </p>
                   {/if}
@@ -345,15 +345,15 @@
               >
                 <CheckCircle2 size={12} color="var(--text-secondary)" strokeWidth={1.5} />
               </div>
-              <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);"
+              <span class="text-body-lg" style="font-weight: 600; color: var(--text-primary)"
                 >我的入群申请</span
               >
             </div>
           </div>
           {#if applicationsLoading && applications.length === 0}
-            <p style="font-size: 13px; color: var(--text-secondary);">加载中...</p>
+            <p class="text-body" style="color: var(--text-secondary)">加载中...</p>
           {:else if applications.length === 0}
-            <p style="font-size: 13px; color: var(--text-secondary);">暂无待处理申请</p>
+            <p class="text-body" style="color: var(--text-secondary)">暂无待处理申请</p>
           {:else}
             <div class="space-y-2">
               {#each applications as application (application.application_id)}
@@ -361,15 +361,15 @@
                   class="rounded-[var(--radius-md)] p-3"
                   style="border: 1px solid var(--border-theme);"
                 >
-                  <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
+                  <p class="text-body" style="font-weight: 500; color: var(--text-primary)">
                     群组申请
                   </p>
                   {#if application.message}
-                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                    <p class="text-meta" style="color: var(--text-secondary); margin-top: 4px">
                       {application.message}
                     </p>
                   {/if}
-                  <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                  <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
                     申请时间：{formatDateTime(application.created_at)}
                   </p>
                   <div class="mt-2 flex gap-2">

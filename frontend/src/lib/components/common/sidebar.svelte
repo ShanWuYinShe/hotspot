@@ -66,8 +66,8 @@
 
     <!-- Section 2 label -->
     <p
-      class="mb-2 px-3"
-      style="font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); opacity: 0.65;"
+      class="text-xs mb-2 px-3"
+      style="font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); opacity: 0.65"
     >
       {t('sidebar.personalCenter')}
     </p>
@@ -85,8 +85,8 @@
           </span>
           {#if badgeCount(item) > 0}
             <span
-              class="ml-auto flex items-center justify-center rounded-full text-on-accent"
-              style="min-width: 20px; height: 20px; font-size: 11px; font-weight: 600; background: var(--brand);"
+              class="text-caption ml-auto flex items-center justify-center rounded-full text-on-accent"
+              style="min-width: 20px; height: 20px; font-weight: 600; background: var(--brand)"
             >
               {badgeCount(item) > 99 ? '99+' : badgeCount(item)}
             </span>

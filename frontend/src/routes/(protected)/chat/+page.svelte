@@ -113,7 +113,7 @@
         <div class="mb-3 flex items-center justify-between">
           <div>
             <h1 class="page-title" style="color: var(--text-primary);">消息</h1>
-            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+            <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
               {totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}
             </p>
           </div>
@@ -127,8 +127,8 @@
               <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
               {#if notificationStore.unreadCount > 0}
                 <span
-                  class="absolute flex items-center justify-center rounded-full"
-                  style="top: -2px; right: -2px; height: 16px; min-width: 16px; padding: 0 4px; background: var(--brand); color: var(--text-on-accent); font-size: 10px; font-weight: 600; line-height: 16px; box-shadow: var(--shadow-brand-btn);"
+                  class="text-xs absolute flex items-center justify-center rounded-full"
+                  style="top: -2px; right: -2px; height: 16px; min-width: 16px; padding: 0 4px; background: var(--brand); color: var(--text-on-accent); font-weight: 600; line-height: 16px; box-shadow: var(--shadow-brand-btn)"
                 >
                   {notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount}
                 </span>
@@ -162,8 +162,8 @@
             aria-label="搜索会话"
             bind:value={searchVal}
             placeholder="搜索会话…"
-            class="flex-1 bg-transparent outline-none"
-            style="font-size: 13px; color: var(--text-primary);"
+            class="text-body flex-1 bg-transparent outline-none"
+            style="color: var(--text-primary)"
           />
         </div>
       </div>
@@ -176,8 +176,8 @@
         {#if onlineChats.length > 0}
           <div class="mb-4">
             <p
-              class="uppercase mb-2.5"
-              style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
+              class="text-xs uppercase mb-2.5"
+              style="letter-spacing: 0.14em; color: var(--text-secondary)"
             >
               在线
             </p>
@@ -205,7 +205,7 @@
                       style="width: 12px; height: 12px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
                     ></span>
                   </div>
-                  <span style="font-size: 11px; color: var(--text-secondary);"
+                  <span class="text-caption" style="color: var(--text-secondary)"
                     >{chat.other_user.nickname}</span
                   >
                 </a>
@@ -216,10 +216,7 @@
 
         <!-- Tab switcher -->
         <div class="mb-2.5 flex items-center gap-2">
-          <p
-            class="uppercase"
-            style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
-          >
+          <p class="text-xs uppercase" style="letter-spacing: 0.14em; color: var(--text-secondary)">
             最近
           </p>
           <div class="flex-1"></div>
@@ -264,7 +261,7 @@
                   color="var(--text-secondary)"
                   style="opacity: 0.5;"
                 />
-                <p style="font-size: 14px; color: var(--text-secondary);">没有找到会话</p>
+                <p class="text-body-lg" style="color: var(--text-secondary)">没有找到会话</p>
               </div>
             {:else}
               {#each filteredPrivateChats as chat, i (chat.other_user.user_id)}
@@ -299,27 +296,24 @@
                     <div class="min-w-0 flex-1">
                       <div class="mb-0.5 flex items-center justify-between">
                         <span
-                          style="font-size: 14px; color: var(--text-primary); font-weight: {chat.unread_count >
-                          0
+                          class="text-body-lg"
+                          style="color: var(--text-primary); font-weight: {chat.unread_count > 0
                             ? 600
-                            : 400};">{chat.other_user.nickname}</span
+                            : 400}">{chat.other_user.nickname}</span
                         >
-                        <span style="font-size: 11px; color: var(--text-secondary);"
+                        <span class="text-caption" style="color: var(--text-secondary)"
                           >{formatRelativeTime(chat.last_activity_at)}</span
                         >
                       </div>
-                      <p
-                        class="truncate pr-4"
-                        style="font-size: 12px; color: var(--text-secondary);"
-                      >
+                      <p class="text-meta truncate pr-4" style="color: var(--text-secondary)">
                         {#if chat.last_message}{chat.last_message.content ||
                             '[媒体消息]'}{:else}暂无消息{/if}
                       </p>
                     </div>
                     {#if chat.unread_count > 0}
                       <div
-                        class="flex flex-shrink-0 items-center justify-center rounded-full"
-                        style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
+                        class="text-caption flex flex-shrink-0 items-center justify-center rounded-full"
+                        style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-weight: 600; box-shadow: var(--shadow-brand-btn)"
                       >
                         {chat.unread_count > 99 ? '99+' : chat.unread_count}
                       </div>
@@ -358,7 +352,7 @@
                 color="var(--text-secondary)"
                 style="opacity: 0.5;"
               />
-              <p style="font-size: 14px; color: var(--text-secondary);">没有找到群聊</p>
+              <p class="text-body-lg" style="color: var(--text-secondary)">没有找到群聊</p>
             </div>
           {:else}
             {#each filteredGroupChats as group, i (group.group.group_id)}
@@ -382,14 +376,16 @@
                   </div>
                   <div class="min-w-0 flex-1">
                     <div class="mb-0.5 flex items-center justify-between">
-                      <span style="font-size: 14px; color: var(--text-primary); font-weight: 500;"
+                      <span
+                        class="text-body-lg"
+                        style="color: var(--text-primary); font-weight: 500"
                         >{group.group.name}</span
                       >
-                      <span style="font-size: 11px; color: var(--text-secondary);"
+                      <span class="text-caption" style="color: var(--text-secondary)"
                         >{group.group.members_count}人</span
                       >
                     </div>
-                    <p style="font-size: 12px; color: var(--text-secondary);">
+                    <p class="text-meta" style="color: var(--text-secondary)">
                       {formatRelativeTime(
                         group.last_activity_at ?? group.my_state?.joined_at ?? ''
                       )}
@@ -397,8 +393,8 @@
                   </div>
                   {#if (group.my_state?.unread_count ?? 0) > 0}
                     <div
-                      class="flex flex-shrink-0 items-center justify-center rounded-full"
-                      style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
+                      class="text-caption flex flex-shrink-0 items-center justify-center rounded-full"
+                      style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-weight: 600; box-shadow: var(--shadow-brand-btn)"
                     >
                       {(group.my_state?.unread_count ?? 0) > 99
                         ? '99+'

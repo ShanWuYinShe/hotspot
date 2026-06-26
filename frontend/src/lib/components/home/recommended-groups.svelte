@@ -43,10 +43,7 @@
 {#if (groups?.length ?? 0) > 0 || loading}
   <div>
     <div class="mb-3 flex items-center justify-between">
-      <p
-        class="uppercase"
-        style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
-      >
+      <p class="text-xs uppercase" style="letter-spacing: 0.14em; color: var(--text-secondary)">
         推荐群组
       </p>
       <a
@@ -54,7 +51,7 @@
         class="flex items-center gap-0.5 outline-none transition-transform duration-150 active:scale-[0.97]"
         style="color: var(--brand);"
       >
-        <span style="font-size: 12px;">查看更多</span>
+        <span class="text-meta">查看更多</span>
         <ChevronRight size={13} strokeWidth={1.5} />
       </a>
     </div>
@@ -100,8 +97,8 @@
               />
             </div>
             <div class="min-w-0 flex-1">
-              <p style="font-size: 13px; color: var(--text-primary);">{group.group.name}</p>
-              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+              <p class="text-body" style="color: var(--text-primary)">{group.group.name}</p>
+              <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
                 {group.group.members_count ?? 0}人
                 {#if group.location?.distance != null}· {Math.round(group.location.distance)}m{/if}
               </p>

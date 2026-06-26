@@ -1,6 +1,6 @@
 ---
 paths:
-  - "src/**/*.{svelte,css}"
+  - 'src/**/*.{svelte,css}'
 ---
 
 # 设计系统
@@ -27,13 +27,27 @@ paths:
 
 - 基础 `--radius: 0.625rem`
 - 卡片 `22px`、概览/主张卡 `24px`、输入/搜索 `18px`、小面 `16px`、chip/pill/头像 `999px`
+- **token 阶梯**（`--radius-*`，禁用魔法数）：`xs 8` / `sm 12` / `md 18` / `lg 22` / `xl 24` / `xxl 22`(对齐鸿蒙 `RADIUS.XXL`) / `pill 40` / `button 28`。原语内联 `border-radius:Npx` 必须改用 `var(--radius-*)` 或 `rounded-[var(--radius-*)]`。
 
 ## 字号 / 字重
 
-- H1 `18–24px`，`font-weight 600`
-- 正文 `13–14px`
-- 次要/说明 `11–13px`
-- eyebrow/分组标签 `10px` + `letter-spacing ~0.12em` + 大写
+- **token 阶梯**（`--text-*` 命名空间，自动生成 `text-*` 工具类；禁用内联 `font-size:Npx`）：
+
+  | token                    | class          | 用途                                                         |
+  | ------------------------ | -------------- | ------------------------------------------------------------ |
+  | `--text-xs` 10px         | `text-xs`      | eyebrow/micro（配 `.eyebrow` 类的 letter-spacing+uppercase） |
+  | `--text-caption` 11px    | `text-caption` | 时间戳/badge/小注                                            |
+  | `--text-meta` 12px       | `text-meta`    | 次要/说明                                                    |
+  | `--text-body` 13px       | `text-body`    | 正文（最高频）                                               |
+  | `--text-body-lg` 14px    | `text-body-lg` | 强调正文/主按钮                                              |
+  | `--text-title` 16px      | `text-title`   | 卡片/列表标题                                                |
+  | `--text-h2` 18px         | `text-h2`      | 页级标题（钻取/面板）                                        |
+  | `--text-h1` 20px         | `text-h1`      | 区块 H1/stat                                                 |
+  | `--text-display` 24px    | `text-display` | 门面页大标题/群组名（或流式 `.page-title--hero`）            |
+  | `--text-display-lg` 36px | —              | 错误页 hero                                                  |
+
+- **红线**：`.svelte` 内禁止内联 `style="font-size:Npx"`（已有 0 处）；scoped `<style>` 块与 JS 模板里用 `font-size: var(--text-*)` 引用。
+- H1 字重 `600`，正文/标题按需 `400–700`。
 
 ## 间距 / 节奏
 

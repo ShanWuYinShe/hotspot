@@ -107,11 +107,12 @@
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <p
-          style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px;"
+          class="text-xs"
+          style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px"
         >
           基础可见性
         </p>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">
+        <p class="text-meta" style="color: var(--text-secondary); margin-bottom: 16px">
           控制大部分信息默认可见范围
         </p>
 
@@ -122,7 +123,8 @@
           >
             <label
               for="privacy-level"
-              style="font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 8px;"
+              class="text-body"
+              style="color: var(--text-secondary); display: block; margin-bottom: 8px"
               >隐私级别</label
             >
             <select
@@ -141,8 +143,10 @@
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
-              <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">位置可见</p>
-              <p style="font-size: 12px; color: var(--text-secondary);">允许展示你的地理位置</p>
+              <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
+                位置可见
+              </p>
+              <p class="text-meta" style="color: var(--text-secondary)">允许展示你的地理位置</p>
             </div>
             <button
               type="button"
@@ -171,10 +175,10 @@
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
-              <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+              <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
                 在线状态可见
               </p>
-              <p style="font-size: 12px; color: var(--text-secondary);">允许显示在线/离线状态</p>
+              <p class="text-meta" style="color: var(--text-secondary)">允许显示在线/离线状态</p>
             </div>
             <button
               type="button"
@@ -203,10 +207,10 @@
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
-              <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+              <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
                 好友/关注/粉丝列表可见
               </p>
-              <p style="font-size: 12px; color: var(--text-secondary);">
+              <p class="text-meta" style="color: var(--text-secondary)">
                 控制你的社交列表是否对他人可见
               </p>
             </div>
@@ -240,11 +244,12 @@
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <p
-          style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px;"
+          class="text-xs"
+          style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px"
         >
           社交与私聊
         </p>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">
+        <p class="text-meta" style="color: var(--text-secondary); margin-bottom: 16px">
           管理关注与私聊权限
         </p>
 
@@ -254,8 +259,10 @@
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
-              <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">允许关注</p>
-              <p style="font-size: 12px; color: var(--text-secondary);">关闭后他人关注需审批</p>
+              <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
+                允许关注
+              </p>
+              <p class="text-meta" style="color: var(--text-secondary)">关闭后他人关注需审批</p>
             </div>
             <button
               type="button"
@@ -285,7 +292,8 @@
           >
             <label
               for="private-chat"
-              style="font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 8px;"
+              class="text-body"
+              style="color: var(--text-secondary); display: block; margin-bottom: 8px"
               >私聊权限</label
             >
             <select
@@ -308,11 +316,12 @@
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <p
-          style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px;"
+          class="text-xs"
+          style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px"
         >
           搜索与发现
         </p>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">
+        <p class="text-meta" style="color: var(--text-secondary); margin-bottom: 16px">
           控制你在搜索/附近中的展示
         </p>
 
@@ -322,10 +331,10 @@
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
-              <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+              <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
                 允许被搜索
               </p>
-              <p style="font-size: 12px; color: var(--text-secondary);">关闭后不会出现在搜索结果</p>
+              <p class="text-meta" style="color: var(--text-secondary)">关闭后不会出现在搜索结果</p>
             </div>
             <button
               type="button"
@@ -354,8 +363,10 @@
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
-              <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">附近可见</p>
-              <p style="font-size: 12px; color: var(--text-secondary);">允许出现在附近的人</p>
+              <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
+                附近可见
+              </p>
+              <p class="text-meta" style="color: var(--text-secondary)">允许出现在附近的人</p>
             </div>
             <button
               type="button"

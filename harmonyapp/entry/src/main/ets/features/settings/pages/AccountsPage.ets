@@ -15,6 +15,7 @@ import { MomentCacheService } from '../../../core/database/MomentCacheService';
 import { MyProfile, AuthData } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
@@ -177,36 +178,15 @@ export struct AccountsPage {
     NavDestination() {
   ResponsiveContainer() {
     Column() {
-      // 标题栏
-      Row() {
-        IconButton({
-          icon: AppIcon.BACK,
-          iconSize: IconSize.LARGE,
-          iconColor: this.getCurrentThemePalette().textPrimary,
-          bgColor: this.getSurfaceSubtle(),
-          onButtonClick: () => {
-            AppRouter.pop();
-          }
-        })
-
-        Text('账号管理')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-
-        Blank().width(48)
-      }
-      .width('100%')
-      .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
-        bottom: DesignConstants.SPACING.SM
+      // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回）
+      SystemPageHeader({
+        title: '账号管理',
+        showBackButton: true,
+        onBack: () => { AppRouter.pop(); },
+        titleAlign: TextAlign.Center,
+        titleWeight: FontWeight.Medium,
+        backgroundVariant: 'transparent'
       })
-      .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载账号列表...' })

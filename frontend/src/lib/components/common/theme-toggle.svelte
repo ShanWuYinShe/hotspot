@@ -40,8 +40,8 @@
     {/if}
   </button>
   <button
-    class="rounded-full px-3 py-1.5 outline-none transition-all duration-150 hover:scale-105 active:scale-95"
-    style="font-size: 11px; font-weight: 500; background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+    class="text-caption rounded-full px-3 py-1.5 outline-none transition-all duration-150 hover:scale-105 active:scale-95"
+    style="font-weight: 500; background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
     onclick={toggleThemeFamily}
   >
     {getThemeFamilyLabel(currentFamily)}

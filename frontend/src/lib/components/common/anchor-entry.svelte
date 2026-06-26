@@ -41,17 +41,18 @@
     </div>
     <div class="min-w-0 flex-1">
       <p
-        style="font-size: 10px; line-height: 1.4; color: var(--text-secondary); letter-spacing: 0.06em;"
+        class="text-xs"
+        style="line-height: 1.4; color: var(--text-secondary); letter-spacing: 0.06em"
       >
         {resolvedLabel}
       </p>
       <div class="flex items-center gap-1.5">
-        <p class="truncate" style="font-size: 13px; line-height: 1.4; color: var(--text-primary);">
+        <p class="text-body truncate" style="line-height: 1.4; color: var(--text-primary)">
           {mapAnchorStore.displayName}
         </p>
         <span
-          class="flex-shrink-0"
-          style="font-size: 10px; line-height: 1.5; padding: 0 6px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--brand) 12%, transparent); color: var(--brand);"
+          class="text-xs flex-shrink-0"
+          style="line-height: 1.5; padding: 0 6px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--brand) 12%, transparent); color: var(--brand)"
         >
           {mapAnchorStore.radius}km
         </span>
@@ -67,10 +68,10 @@
     aria-label={resolvedLabel}
   >
     <MapPin size={12} strokeWidth={1.5} color="var(--brand)" class="flex-shrink-0" />
-    <span class="truncate" style="font-size: 11px; color: var(--text-secondary);">
+    <span class="text-caption truncate" style="color: var(--text-secondary)">
       {mapAnchorStore.displayName}
     </span>
-    <span class="flex-shrink-0" style="font-size: 11px; color: var(--brand);">
+    <span class="text-caption flex-shrink-0" style="color: var(--brand)">
       · {mapAnchorStore.radius}km
     </span>
   </button>

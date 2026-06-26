@@ -19,14 +19,12 @@
   <div class="flex w-max items-center gap-1.5 px-4 py-2.5">
     {#each adminNavItems as item (item.href)}
       <button
-        class="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 outline-none transition-colors"
-        style="font-size: 13px; font-weight: {isActive(item) ? 600 : 400}; background: {isActive(
-          item
-        )
+        class="text-body flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 outline-none transition-colors"
+        style="font-weight: {isActive(item) ? 600 : 400}; background: {isActive(item)
           ? 'var(--brand)'
           : 'var(--theme-accent-soft)'}; color: {isActive(item)
           ? 'var(--text-on-accent)'
-          : 'var(--text-secondary)'};"
+          : 'var(--text-secondary)'}"
         onclick={() => void goto(item.href)}
       >
         <item.icon size={15} strokeWidth={isActive(item) ? 2 : 1.6} />

@@ -92,8 +92,8 @@
 <AdminPageHeader title="用户管理" description="搜索、封禁、解封用户">
   {#snippet actions()}
     <button
-      class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+      class="text-body flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary)"
       onclick={() => loadUsers()}
       disabled={pagination.loading}
     >
@@ -113,8 +113,8 @@
       <input
         type="search"
         placeholder="搜索昵称..."
-        class="flex-1 bg-transparent outline-none"
-        style="font-size: 13px; color: var(--text-primary);"
+        class="text-body flex-1 bg-transparent outline-none"
+        style="color: var(--text-primary)"
         autocomplete="off"
         bind:value={nickname}
         oninput={handleSearchInput}
@@ -137,7 +137,9 @@
         style="border-bottom: 1px solid var(--border-theme);"
       >
         <Users size={16} strokeWidth={1.5} color="var(--brand)" />
-        <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);">用户列表</span>
+        <span class="text-body-lg" style="font-weight: 500; color: var(--text-primary)"
+          >用户列表</span
+        >
       </div>
       <div class="p-4">
         {#if pagination.loading && pagination.items.length === 0}
@@ -162,7 +164,7 @@
             {/each}
           </div>
         {:else if pagination.items.length === 0}
-          <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
+          <p class="text-body py-8 text-center" style="color: var(--text-secondary)">
             暂无用户数据
           </p>
         {:else}
@@ -179,16 +181,16 @@
                   size={40}
                 />
                 <div class="min-w-0 flex-1">
-                  <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
+                  <span class="text-body" style="font-weight: 500; color: var(--text-primary)"
                     >{user.user.nickname}</span
                   >
-                  <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+                  <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
                     ID: {user.user.user_id}
                   </p>
                 </div>
                 <span
-                  class="rounded-full px-2 py-0.5"
-                  style="font-size: 10px; font-weight: 500; {user.status === 'banned'
+                  class="text-xs rounded-full px-2 py-0.5"
+                  style="font-weight: 500; {user.status === 'banned'
                     ? 'background: var(--theme-error); color: var(--text-on-accent);'
                     : 'background: var(--brand); color: var(--text-on-accent);'}"
                   >{STATUS_TEXT[user.status] ?? user.status}</span
@@ -211,7 +213,8 @@
                       {#snippet child({ props })}
                         <a
                           href="/users/{user.user.user_id}"
-                          style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary);"
+                          class="text-body"
+                          style="display: flex; align-items: center; gap: 6px; color: var(--text-primary)"
                           {...props}
                         >
                           <Eye size={14} strokeWidth={1.5} />
@@ -223,7 +226,8 @@
                       {#snippet child({ props })}
                         <a
                           href="/admin/rbac"
-                          style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary);"
+                          class="text-body"
+                          style="display: flex; align-items: center; gap: 6px; color: var(--text-primary)"
                           {...props}
                         >
                           <Shield size={14} strokeWidth={1.5} />
@@ -236,7 +240,8 @@
                       <DropdownMenu.Item>
                         {#snippet child({ props })}
                           <button
-                            style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary);"
+                            class="text-body"
+                            style="display: flex; align-items: center; gap: 6px; color: var(--text-primary)"
                             {...props}
                             onclick={() => handleUnban(user.user.user_id)}
                           >
@@ -249,7 +254,8 @@
                       <DropdownMenu.Item class="text-destructive">
                         {#snippet child({ props })}
                           <button
-                            style="display: flex; align-items: center; gap: 6px; font-size: 13px;"
+                            class="text-body"
+                            style="display: flex; align-items: center; gap: 6px"
                             {...props}
                             onclick={() => handleBan(user.user.user_id)}
                           >
@@ -266,8 +272,8 @@
           </div>
           {#if pagination.hasMore}
             <button
-              class="mt-4 w-full rounded-full py-2.5 outline-none"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+              class="text-body mt-4 w-full rounded-full py-2.5 outline-none"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary)"
               onclick={() => loadUsers(false)}>加载更多</button
             >
           {/if}

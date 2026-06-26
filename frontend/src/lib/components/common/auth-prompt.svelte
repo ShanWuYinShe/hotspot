@@ -55,7 +55,7 @@
     align-items: center;
     gap: 12px;
     padding: 14px 16px;
-    border-radius: 22px;
+    border-radius: var(--radius-lg);
     background: var(--surface-bg);
     border: 1px solid var(--border-theme);
     box-shadow: var(--shadow-lg);
@@ -80,7 +80,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 14px;
+    border-radius: var(--radius-sm);
     background: var(--surface-bg);
     border: 1px solid var(--border-theme);
     box-shadow:
@@ -95,13 +95,13 @@
   }
 
   .auth-prompt-title {
-    font-size: 14px;
+    font-size: var(--text-body-lg);
     font-weight: 600;
     color: var(--text-primary);
   }
 
   .auth-prompt-desc {
-    font-size: 12px;
+    font-size: var(--text-meta);
     color: var(--text-secondary);
     margin-top: 2px;
   }
@@ -118,7 +118,7 @@
     border-radius: var(--radius-pill);
     border: 1px solid var(--border-theme);
     background: var(--surface-bg);
-    font-size: 13px;
+    font-size: var(--text-body);
     font-weight: 500;
     color: var(--text-secondary);
     cursor: pointer;
@@ -135,7 +135,7 @@
     border-radius: var(--radius-pill);
     border: none;
     background: var(--brand);
-    font-size: 13px;
+    font-size: var(--text-body);
     font-weight: 600;
     color: var(--text-on-accent);
     box-shadow: var(--shadow-brand-btn);

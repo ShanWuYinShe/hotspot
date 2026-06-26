@@ -20,6 +20,7 @@ import {
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { MomentFeedCard } from '../../../components/MomentFeedCard';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -399,21 +400,15 @@ export struct NearbyPage {
 
   @Builder
   private buildStickyHeader() {
-    Row() {
-      Column({ space: 2 }) {
-        Text('首页')
-          .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
-          .fontWeight(FontWeight.Normal)
-          .fontColor(this.getPalette().textPrimary)
-
-        Text('发现周边的有趣人和事')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getPalette().textSecondary)
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-
-      Row({ space: 6 }) {
+    // 统一走 SystemPageHeader（标题 + 副标题 + 位置 chip trailing）
+    SystemPageHeader({
+      title: '首页',
+      subtitle: '发现周边的有趣人和事',
+      titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
+      titleWeight: FontWeight.Normal
+    }) {
+      // trailing: 位置 chip
+      Row({ space: DesignConstants.SPACING.XS }) {
         Text() {
           SymbolSpan($r(AppIcon.LOCATION))
             .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -426,15 +421,11 @@ export struct NearbyPage {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
-      .padding({ left: 12, right: 14, top: 6, bottom: 6 })
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
       .borderRadius(DesignConstants.RADIUS.FULL)
       .border({ width: 1, color: this.getPalette().borderColor })
       .backgroundColor(this.getPalette().surfaceBackground)
     }
-    .width('100%')
-    .padding({ left: 16, right: 16, top: this.getHeaderTopPadding(), bottom: 12 })
-    .backgroundColor(this.getPalette().pageBackground)
-    .border({ width: { bottom: 1 }, color: this.getPalette().borderColor })
   }
 
   // ==================== 地图卡片 ====================

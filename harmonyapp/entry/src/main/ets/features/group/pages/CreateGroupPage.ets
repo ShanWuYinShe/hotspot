@@ -11,6 +11,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SoftDivider } from '../../../components/SoftDivider';
@@ -323,36 +324,15 @@ export struct CreateGroupPage {
     ResponsiveContainer({ fill: true }) {
     Stack() {
       Column() {
-        // 标题栏
-        Row() {
-          IconButton({
-            icon: AppIcon.BACK,
-            iconSize: IconSize.LARGE,
-            iconColor: this.getCurrentThemePalette().textPrimary,
-            bgColor: DesignConstants.COLOR.TRANSPARENT,
-            onButtonClick: () => {
-              AppRouter.pop();
-            }
-          })
-
-          Text('创建群组')
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-            .layoutWeight(1)
-            .textAlign(TextAlign.Center)
-          
-          Blank().width(48)
-        }
-        .width('100%')
-        .padding({
-          left: DesignConstants.SPACING.LG,
-          right: DesignConstants.SPACING.LG,
-          top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
-          bottom: DesignConstants.SPACING.SM
+        // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回）
+        SystemPageHeader({
+          title: '创建群组',
+          showBackButton: true,
+          onBack: () => { AppRouter.pop(); },
+          titleAlign: TextAlign.Center,
+          titleWeight: FontWeight.Medium,
+          backgroundVariant: 'transparent'
         })
-        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
         // 表单内容
         Scroll() {

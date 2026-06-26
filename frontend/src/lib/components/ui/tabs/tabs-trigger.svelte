@@ -18,12 +18,15 @@
     'text-sm font-medium leading-5',
     'transition-all duration-200',
     'cursor-pointer outline-none',
+    'rounded-[var(--radius-sm)]',
     'disabled:pointer-events-none disabled:opacity-50',
-    'data-[state=active]:text-on-accent',
+    /* active 态：品牌色药丸（恢复被死属性 data-state-active-style 吞掉的意图）。
+       text-on-accent 走在 bg-brand 之上；shadow-brand-btn 给操作一致的浮起。 */
+    'data-[state=active]:bg-brand data-[state=active]:text-on-accent',
+    'data-[state=active]:shadow-[var(--shadow-brand-btn)]',
     className
   )}
-  style="border-radius: 14px; color: var(--text-secondary);"
-  data-state-active-style="background: var(--brand); box-shadow: var(--shadow-brand-btn);"
+  style="color: var(--text-secondary);"
   {value}
   {disabled}
   {...restProps}

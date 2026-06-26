@@ -217,18 +217,19 @@
         {/if}
       </div>
       <div class="min-w-0 flex-1">
-        <p class="truncate min-w-0" style="font-size: 14px; color: var(--text-primary);">{userInfo.nickname}</p>
+        <p class="text-body-lg truncate min-w-0" style="color: var(--text-primary)">
+          {userInfo.nickname}
+        </p>
         <div class="mt-0.5 flex items-center gap-1.5">
           <span
-            style="font-size: 11px; color: {isOnline
-              ? 'var(--semantic-online)'
-              : 'var(--text-secondary)'};"
+            class="text-caption"
+            style="color: {isOnline ? 'var(--semantic-online)' : 'var(--text-secondary)'}"
           >
             {isOnline ? '在线' : '离线'}
           </span>
           {#if displayTags.length > 0}
-            <span style="font-size: 10px; color: var(--text-secondary); opacity: 0.5;">·</span>
-            <span style="font-size: 11px; color: var(--brand); opacity: 0.8;"
+            <span class="text-xs" style="color: var(--text-secondary); opacity: 0.5">·</span>
+            <span class="text-caption" style="color: var(--brand); opacity: 0.8"
               >#{displayTags[0]}</span
             >
           {/if}
@@ -238,7 +239,7 @@
         {#if distance}
           <div class="flex items-center gap-0.5">
             <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
-            <span style="font-size: 12px; color: var(--brand);">{formatDistance(distance)}</span>
+            <span class="text-meta" style="color: var(--brand)">{formatDistance(distance)}</span>
           </div>
         {/if}
         {#if !isMe}
@@ -246,8 +247,8 @@
             data-card-action
             class="rounded-full px-3.5 py-1 outline-none transition-all"
             style={isFollowing
-              ? 'box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-active); color: var(--brand); background: var(--surface-bg); font-size: 11px;'
-              : 'box-shadow: 3px 3px 7px var(--shadow-dark), -3px -3px 7px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg); font-size: 11px;'}
+              ? 'box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-active); color: var(--brand); background: var(--surface-bg); font-size: var(--text-caption);'
+              : 'box-shadow: 3px 3px 7px var(--shadow-dark), -3px -3px 7px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg); font-size: var(--text-caption);'}
             onclick={handleFollow}
             disabled={isFollowPending}
           >
@@ -284,10 +285,10 @@
               {/if}
             </div>
             <div class="min-w-0 flex-1">
-              <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+              <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
                 {userInfo.nickname}
               </p>
-              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+              <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
                 {isOnline ? '在线' : '离线'}
               </p>
             </div>
@@ -295,20 +296,20 @@
           {#if distance}
             <div class="flex flex-shrink-0 items-center gap-0.5">
               <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
-              <span style="font-size: 10px; color: var(--brand);">{formatDistance(distance)}</span>
+              <span class="text-xs" style="color: var(--brand)">{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
 
         {#if showBio && 'bio' in user && user.bio}
           <p
-            class="mt-3 line-clamp-3"
-            style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;"
+            class="text-meta mt-3 line-clamp-3"
+            style="color: var(--text-secondary); line-height: 1.5"
           >
             {user.bio}
           </p>
         {:else if showBio}
-          <p style="font-size: 11px; color: var(--text-secondary); margin-top: 10px;">
+          <p class="text-caption" style="color: var(--text-secondary); margin-top: 10px">
             这个人很神秘，暂时还没有留下简介
           </p>
         {/if}
@@ -341,18 +342,18 @@
       </div>
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between">
-          <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+          <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
             {userInfo.nickname}
           </p>
           {#if distance}
             <div class="flex items-center gap-0.5">
               <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
-              <span style="font-size: 10px; color: var(--brand);">{formatDistance(distance)}</span>
+              <span class="text-xs" style="color: var(--brand)">{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
         {#if showBio && 'bio' in user && user.bio}
-          <p class="mt-0.5 truncate" style="font-size: 12px; color: var(--text-secondary);">
+          <p class="text-meta mt-0.5 truncate" style="color: var(--text-secondary)">
             {user.bio}
           </p>
         {/if}
@@ -378,19 +379,19 @@
           {/if}
         </div>
         <div class="min-w-0 flex-1">
-          <p style="font-size: 16px; font-weight: 600; color: var(--text-primary);">
+          <p class="text-title" style="font-weight: 600; color: var(--text-primary)">
             {userInfo.nickname}
           </p>
           {#if distance}
             <div class="mt-1 flex items-center gap-0.5">
               <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
-              <span style="font-size: 12px; color: var(--brand);">{formatDistance(distance)}</span>
+              <span class="text-meta" style="color: var(--brand)">{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
       </div>
       {#if showBio && 'bio' in user && user.bio}
-        <p class="mt-3" style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+        <p class="text-body mt-3" style="color: var(--text-secondary); line-height: 1.5">
           {user.bio}
         </p>
       {/if}
@@ -421,13 +422,13 @@
           {/if}
         </div>
         <div class="min-w-0 flex-1">
-          <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+          <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
             {userInfo.nickname}
           </p>
           {#if distance}
             <div class="mt-0.5 flex items-center gap-0.5">
               <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
-              <span style="font-size: 10px; color: var(--brand);">{formatDistance(distance)}</span>
+              <span class="text-xs" style="color: var(--brand)">{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
@@ -435,8 +436,8 @@
       </div>
       {#if showBio && 'bio' in user && user.bio}
         <p
-          class="mt-2.5 line-clamp-2"
-          style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;"
+          class="text-meta mt-2.5 line-clamp-2"
+          style="color: var(--text-secondary); line-height: 1.5"
         >
           {user.bio}
         </p>
@@ -462,7 +463,7 @@
           onclick={handleSendMessage}
         >
           <MessageCircle size={15} strokeWidth={1.5} />
-          <span style="font-size: 12px;">消息</span>
+          <span class="text-meta">消息</span>
         </button>
         <div class="flex items-center gap-2">
           <button
@@ -477,7 +478,7 @@
             {:else}
               <UserPlus size={15} strokeWidth={1.5} />
             {/if}
-            <span style="font-size: 11px;">{isFollowing ? '已关注' : '关注'}</span>
+            <span class="text-caption">{isFollowing ? '已关注' : '关注'}</span>
           </button>
           {#if showMenu}
             <DropdownMenu>

@@ -217,7 +217,7 @@
 >
   <div class="page-shell page-shell--narrow flex items-center gap-4">
     <BackButton onclick={handleBackClick} size={36} />
-    <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">瞬间详情</h1>
+    <h1 class="text-h1" style="font-weight: 600; color: var(--text-primary)">瞬间详情</h1>
     {#if isOwner}
       <div class="ml-auto">
         <button
@@ -279,13 +279,10 @@
             size={40}
           />
           <div>
-            <p style="font-weight: 500; font-size: 15px; color: var(--text-primary);">
+            <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
               {moment.user.nickname}
             </p>
-            <div
-              class="flex items-center gap-2"
-              style="font-size: 13px; color: var(--text-secondary);"
-            >
+            <div class="text-body flex items-center gap-2" style="color: var(--text-secondary)">
               <span>{formatTime(moment.created_at)}</span>
               {#if moment.location}
                 <span class="flex items-center gap-0.5">
@@ -323,7 +320,7 @@
                       class="absolute left-3 top-3 rounded-full px-2.5 py-0.5"
                       style="background: var(--brand); box-shadow: var(--shadow-brand-btn);"
                     >
-                      <span style="font-size: 10px; color: var(--text-on-accent);"
+                      <span class="text-xs" style="color: var(--text-on-accent)"
                         >#{moment.tags[0]}</span
                       >
                     </div>
@@ -337,8 +334,8 @@
             <div class="flex flex-wrap gap-2">
               {#each moment.tags.slice(1) as tag (tag)}
                 <span
-                  class="rounded-full px-2.5 py-1"
-                  style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                  class="text-caption rounded-full px-2.5 py-1"
+                  style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
                 >
                   #{tag}
                 </span>
@@ -359,14 +356,14 @@
               onclick={handleLike}
             >
               <Heart size={19} class={isLiked ? 'fill-current' : ''} />
-              <span style="font-size: 13px;">{likesCount}</span>
+              <span class="text-body">{likesCount}</span>
             </button>
             <button
               class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
               style="color: var(--text-secondary);"
             >
               <MessageCircle size={19} />
-              <span style="font-size: 13px;">{commentsCount}</span>
+              <span class="text-body">{commentsCount}</span>
             </button>
           </div>
           <div class="flex gap-2">
@@ -436,8 +433,8 @@
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
         <p
-          class="uppercase"
-          style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 16px;"
+          class="text-xs uppercase"
+          style="letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 16px"
         >
           评论 · {commentsCount}
         </p>
@@ -465,7 +462,7 @@
           </div>
         {:else if commentsError}
           <div class="flex flex-col items-center gap-3 py-8 text-center">
-            <p style="font-size: 14px; color: var(--text-secondary);">加载评论失败</p>
+            <p class="text-body-lg" style="color: var(--text-secondary)">加载评论失败</p>
             <button
               class="rounded-full px-4 py-2 font-medium outline-none"
               style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
@@ -497,17 +494,18 @@
                   <div class="flex items-center gap-2">
                     <a
                       href="/users/{comment.user.user_id}"
-                      style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
+                      class="text-body-lg"
+                      style="font-weight: 500; color: var(--text-primary)"
                     >
                       {comment.user.nickname}
                     </a>
-                    <span style="font-size: 12px; color: var(--text-secondary);">
+                    <span class="text-meta" style="color: var(--text-secondary)">
                       {formatTime(comment.created_at)}
                     </span>
                   </div>
                   <p
-                    class="mt-1 whitespace-pre-wrap"
-                    style="font-size: 14px; color: var(--text-primary);"
+                    class="text-body-lg mt-1 whitespace-pre-wrap"
+                    style="color: var(--text-primary)"
                   >
                     {comment.content}
                   </p>

@@ -1,6 +1,6 @@
 ---
 paths:
-  - "src/**/*.svelte"
+  - 'src/**/*.svelte'
 ---
 
 # UI 布局规范
@@ -34,8 +34,10 @@ paths:
 sticky 容器负责**全宽出血**（背景色 + `border-bottom` 通栏），内层用与正文**同档** `.page-shell` 收束内容，横向留白用 **`.page-pad-x`**：
 
 ```svelte
-<div class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
-  style="background: var(--surface-bg); border-bottom: 1px solid var(--border-theme);">
+<div
+  class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
+  style="background: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
+>
   <div class="page-shell">…标题 / 搜索 / 筛选…</div>
 </div>
 <div class="page-pad"><div class="page-shell">…列表 / 网格…</div></div>
@@ -49,14 +51,14 @@ sticky 容器负责**全宽出血**（背景色 + `border-bottom` 通栏），�
 
 ## 档位选择
 
-| 页面类型                                             | 档位                                                              |
-| ---------------------------------------------------- | ----------------------------------------------------------------- |
-| 发现 / 附近动态 / 好友 / 关注 / 粉丝 / 我的瞬间·群组 | 默认 `.page-shell`                                                |
-| 附近的人 / 附近群组（桌面端）                        | **无 shell**（`class:page-shell={!isDesktop}`）                   |
-| 附近的人 / 附近群组（移动/平板）                     | 默认 `.page-shell`                                                |
-| 瞬间详情 / 用户主页 / 群组详情 / 活动详情 / 分享页   | `.page-shell--narrow`                                             |
-| 设置全系 / 个人资料 / 编辑资料 / 搜索 / 登录         | `.page-shell--form`                                               |
-| 管理后台所有页（表格密集）                           | `.page-shell--wide`                                               |
+| 页面类型                                             | 档位                                            |
+| ---------------------------------------------------- | ----------------------------------------------- |
+| 发现 / 附近动态 / 好友 / 关注 / 粉丝 / 我的瞬间·群组 | 默认 `.page-shell`                              |
+| 附近的人 / 附近群组（桌面端）                        | **无 shell**（`class:page-shell={!isDesktop}`） |
+| 附近的人 / 附近群组（移动/平板）                     | 默认 `.page-shell`                              |
+| 瞬间详情 / 用户主页 / 群组详情 / 活动详情 / 分享页   | `.page-shell--narrow`                           |
+| 设置全系 / 个人资料 / 编辑资料 / 搜索 / 登录         | `.page-shell--form`                             |
+| 管理后台所有页（表格密集）                           | `.page-shell--wide`                             |
 
 ## 三档设备一致性
 

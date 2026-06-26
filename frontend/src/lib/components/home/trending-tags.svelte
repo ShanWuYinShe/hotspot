@@ -27,10 +27,7 @@
   <div>
     <div class="mb-2 flex items-center gap-1.5">
       <Hash size={13} color="var(--brand)" />
-      <p
-        class="uppercase"
-        style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
-      >
+      <p class="text-xs uppercase" style="letter-spacing: 0.14em; color: var(--text-secondary)">
         热门话题
       </p>
     </div>

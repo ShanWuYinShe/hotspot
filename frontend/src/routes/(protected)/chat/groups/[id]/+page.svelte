@@ -641,13 +641,10 @@
           type="group"
         />
         <div class="flex-1 overflow-hidden">
-          <div
-            class="truncate"
-            style="font-weight: 600; font-size: 15px; color: var(--text-primary);"
-          >
+          <div class="text-body-lg truncate" style="font-weight: 600; color: var(--text-primary)">
             {group.group.name}
           </div>
-          <div class="truncate" style="font-size: 11px; color: var(--text-secondary);">
+          <div class="text-caption truncate" style="color: var(--text-secondary)">
             {group.group.members_count} 位成员
           </div>
         </div>
@@ -719,11 +716,12 @@
               <MessageCircle size={28} color="var(--text-secondary)" strokeWidth={1.5} />
             </div>
             <p
-              style="font-weight: 500; font-size: 15px; color: var(--text-primary); margin-bottom: 4px;"
+              class="text-body-lg"
+              style="font-weight: 500; color: var(--text-primary); margin-bottom: 4px"
             >
               还没有消息
             </p>
-            <p style="font-size: 13px; color: var(--text-secondary);">发送第一条消息开始聊天</p>
+            <p class="text-body" style="color: var(--text-secondary)">发送第一条消息开始聊天</p>
           </div>
         </div>
       {:else}
@@ -740,8 +738,8 @@
             {#if showDateDivider}
               <div class="flex justify-center py-4">
                 <span
-                  class="rounded-full px-3 py-1"
-                  style="font-size: 11px; font-weight: 500; color: var(--text-secondary); background: var(--surface-bg); border: 1px solid var(--border-theme);"
+                  class="text-caption rounded-full px-3 py-1"
+                  style="font-weight: 500; color: var(--text-secondary); background: var(--surface-bg); border: 1px solid var(--border-theme)"
                 >
                   {formatDateDivider(message.sent_at)}
                 </span>
@@ -751,8 +749,8 @@
             {#if isSystemMessage(message)}
               <div class="flex justify-center py-2">
                 <span
-                  class="rounded-full px-3 py-1"
-                  style="font-size: 12px; color: var(--text-secondary); background: var(--surface-bg); border: 1px solid var(--border-theme);"
+                  class="text-meta rounded-full px-3 py-1"
+                  style="color: var(--text-secondary); background: var(--surface-bg); border: 1px solid var(--border-theme)"
                 >
                   {message.content}
                 </span>
@@ -783,8 +781,8 @@
                 <div class="flex max-w-[70%] flex-col gap-0.5 {isMe ? 'items-end' : 'items-start'}">
                   {#if !isMe && showName}
                     <span
-                      class="px-3"
-                      style="font-size: 12px; font-weight: 500; color: var(--text-secondary);"
+                      class="text-meta px-3"
+                      style="font-weight: 500; color: var(--text-secondary)"
                     >
                       {message.sender?.nickname}
                     </span>
@@ -799,14 +797,15 @@
                     onImageClick={openImagePreview}
                   >
                     {#if message.type === 'share' && message.share_code}
-                      <div class="flex items-center gap-2" style="font-size: 13px;">
+                      <div class="text-body flex items-center gap-2">
                         <MapPin size={14} style="flex-shrink: 0;" color="var(--text-secondary)" />
                         <div>
                           <p style="font-weight: 500;">分享消息</p>
                           {#if message.share_code}
                             <a
                               href="/share/{message.share_code}"
-                              style="font-size: 12px; opacity: 0.8; color: var(--brand);"
+                              class="text-meta"
+                              style="opacity: 0.8; color: var(--brand)"
                             >
                               查看分享内容
                             </a>
@@ -817,10 +816,7 @@
                   </ChatBubble>
 
                   {#if showAvatar}
-                    <span
-                      class="px-3"
-                      style="font-size: 10px; color: var(--text-secondary); opacity: 0.6;"
-                    >
+                    <span class="text-xs px-3" style="color: var(--text-secondary); opacity: 0.6">
                       {new Date(message.sent_at).toLocaleTimeString('zh-CN', {
                         hour: '2-digit',
                         minute: '2-digit'
@@ -855,7 +851,7 @@
   >
     {#if groupTypingUserIds.length > 0}
       <div class="mb-2 px-1">
-        <p style="font-size: 12px; color: var(--text-secondary);">
+        <p class="text-meta" style="color: var(--text-secondary)">
           {buildGroupTypingHintText()}
         </p>
       </div>
@@ -867,8 +863,8 @@
         style="border: 1px solid var(--theme-warning-border); background: var(--theme-warning-border);"
       >
         <p
-          class="flex items-center justify-center gap-2"
-          style="font-size: 13px; color: var(--text-secondary);"
+          class="text-body flex items-center justify-center gap-2"
+          style="color: var(--text-secondary)"
         >
           <Loader2 class="h-4 w-4 animate-spin" />
           {#if wsSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
@@ -885,14 +881,14 @@
         class="rounded-[var(--radius-md)] px-4 py-3 text-center"
         style="border: 1px solid var(--border-theme);"
       >
-        <p style="font-size: 13px; color: var(--text-secondary);">你还不是群成员，无法发送消息</p>
+        <p class="text-body" style="color: var(--text-secondary)">你还不是群成员，无法发送消息</p>
       </div>
     {:else if group?.my_state?.is_muted}
       <div
         class="rounded-[var(--radius-md)] px-4 py-3 text-center"
         style="border: 1px solid var(--border-theme);"
       >
-        <p style="font-size: 13px; color: var(--text-secondary);">你已被禁言，无法发送消息</p>
+        <p class="text-body" style="color: var(--text-secondary)">你已被禁言，无法发送消息</p>
       </div>
     {:else}
       <div class="flex items-end gap-2">

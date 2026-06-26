@@ -55,21 +55,21 @@
     </DialogHeader>
     <DialogFooter class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
       <button
-        class="rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px;"
+        class="text-body rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+        style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
         onclick={handleCancel}
         disabled={loading}
       >
         {cancelText}
       </button>
       <button
-        class="rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+        class="text-body rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
         style="background: {variant === 'destructive'
           ? 'var(--error)'
-          : 'var(--brand)'}; color: var(--text-on-accent); font-size: 13px; box-shadow: 0 3px 10px {variant ===
+          : 'var(--brand)'}; color: var(--text-on-accent); box-shadow: 0 3px 10px {variant ===
         'destructive'
           ? 'var(--theme-error-border)'
-          : 'var(--glow)'};"
+          : 'var(--glow)'}"
         onclick={handleConfirm}
         disabled={loading}
       >

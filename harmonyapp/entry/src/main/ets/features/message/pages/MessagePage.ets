@@ -22,6 +22,7 @@ import {
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { isWideForm } from '../../../core/responsive/Breakpoint';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
@@ -516,23 +517,16 @@ export struct MessagePage {
   build() {
   ResponsiveContainer() {
     Column() {
-      // 粘性头部：标题 + 未读数 + 操作按钮
-      Row() {
-        Column({ space: 2 }) {
-          Text('消息')
-            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
-            .fontWeight(FontWeight.Normal)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-          if (this.getTotalUnread() > 0) {
-            Text(`${this.getTotalUnread()} 条未读`)
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-          }
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-
-        Row({ space: 10 }) {
+      // 粘性头部 —— 统一走 SystemPageHeader（标题 + 未读副标题 + ADD/SEARCH trailing）
+      SystemPageHeader({
+        title: '消息',
+        subtitle: this.getTotalUnread() > 0 ? `${this.getTotalUnread()} 条未读` : '',
+        titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
+        titleWeight: FontWeight.Normal,
+        backgroundVariant: 'transparent'
+      }) {
+        // trailing: 添加(菜单) + 搜索
+        Row({ space: DesignConstants.SPACING.MD }) {
           Row() {
             Text() {
               SymbolSpan($r(AppIcon.ADD))
@@ -540,8 +534,8 @@ export struct MessagePage {
                 .fontColor([this.getCurrentThemePalette().textSecondary])
             }
           }
-          .width(36)
-          .height(36)
+          .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .justifyContent(FlexAlign.Center)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
@@ -597,8 +591,8 @@ export struct MessagePage {
                 .fontColor([this.getCurrentThemePalette().textSecondary])
             }
           }
-          .width(36)
-          .height(36)
+          .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .justifyContent(FlexAlign.Center)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
@@ -608,15 +602,6 @@ export struct MessagePage {
           })
         }
       }
-      .width('100%')
-      .padding({
-        left: 16,
-        right: 16,
-        top: this.getHeaderTopPadding(),
-        bottom: 12
-      })
-      .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 搜索栏
       Row({ space: 10 }) {

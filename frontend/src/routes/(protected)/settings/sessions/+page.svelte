@@ -154,7 +154,7 @@
               </div>
               <div>
                 <div class="flex items-center gap-2">
-                  <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+                  <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
                     {session.device_name || session.device_type || '未知设备'}
                   </p>
                   {#if session.is_current}
@@ -165,7 +165,7 @@
                     >
                   {/if}
                 </div>
-                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                <div class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
                   {session.ip_location || '未知位置'} · 最后活跃 {formatDateTime(
                     session.last_active_at
                   )}

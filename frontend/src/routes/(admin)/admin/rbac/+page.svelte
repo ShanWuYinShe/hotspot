@@ -167,8 +167,8 @@
 <AdminPageHeader title="权限管理" description="角色与权限管理">
   {#snippet actions()}
     <button
-      class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+      class="text-body flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary)"
       onclick={loadData}
       disabled={isLoading}
     >
@@ -176,8 +176,8 @@
       刷新
     </button>
     <button
-      class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
+      class="text-body flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+      style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
       onclick={openCreateRoleDialog}
     >
       <Plus size={14} strokeWidth={1.5} />
@@ -199,7 +199,7 @@
           style="border-bottom: 1px solid var(--border-theme);"
         >
           <Shield size={16} strokeWidth={1.5} color="var(--brand)" />
-          <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+          <span class="text-body-lg" style="font-weight: 500; color: var(--text-primary)"
             >角色列表</span
           >
         </div>
@@ -231,9 +231,7 @@
               {/each}
             </div>
           {:else if roles.length === 0}
-            <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
-              暂无角色
-            </p>
+            <p class="text-body py-8 text-center" style="color: var(--text-secondary)">暂无角色</p>
           {:else}
             <div class="space-y-2">
               {#each roles as role (role.role_id)}
@@ -248,17 +246,17 @@
                     <Shield size={15} strokeWidth={1.5} color="var(--brand)" />
                   </div>
                   <div class="min-w-0 flex-1">
-                    <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
+                    <p class="text-body" style="font-weight: 500; color: var(--text-primary)">
                       {role.name}
                     </p>
                     {#if role.description}
-                      <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+                      <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
                         {role.description}
                       </p>
                     {/if}
                     <div class="flex items-center gap-1 mt-1">
                       <Key size={11} strokeWidth={1.5} color="var(--text-secondary)" />
-                      <span style="font-size: 11px; color: var(--text-secondary);"
+                      <span class="text-caption" style="color: var(--text-secondary)"
                         >{role.permissions?.length || 0} 权限</span
                       >
                     </div>
@@ -298,7 +296,7 @@
           style="border-bottom: 1px solid var(--border-theme);"
         >
           <Key size={16} strokeWidth={1.5} color="var(--brand)" />
-          <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+          <span class="text-body-lg" style="font-weight: 500; color: var(--text-primary)"
             >权限列表</span
           >
         </div>
@@ -319,7 +317,7 @@
               {/each}
             </div>
           {:else if permissions.length === 0}
-            <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
+            <p class="text-body py-8 text-center" style="color: var(--text-secondary)">
               暂无权限数据
             </p>
           {:else}
@@ -327,8 +325,8 @@
               {#each [...groupPermissions(permissions)] as [category, perms] (category)}
                 <div>
                   <p
-                    class="uppercase"
-                    style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 6px;"
+                    class="text-xs uppercase"
+                    style="letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 6px"
                   >
                     {category}
                   </p>
@@ -340,11 +338,11 @@
                       >
                         <Key size={13} strokeWidth={1.5} color="var(--text-secondary)" />
                         <div class="flex-1">
-                          <p style="font-size: 12px; font-weight: 500; color: var(--text-primary);">
+                          <p class="text-meta" style="font-weight: 500; color: var(--text-primary)">
                             {perm.key}
                           </p>
                           {#if perm.description}
-                            <p style="font-size: 11px; color: var(--text-secondary);">
+                            <p class="text-caption" style="color: var(--text-secondary)">
                               {perm.description}
                             </p>
                           {/if}
@@ -373,29 +371,29 @@
     </Dialog.Header>
     <div class="space-y-4 py-4 px-1">
       <div>
-        <label for="role-name" style="font-size: 12px; color: var(--text-primary);">角色名称</label>
+        <label for="role-name" class="text-meta" style="color: var(--text-primary)">角色名称</label>
         <input
           id="role-name"
           placeholder="例如：内容审核员"
           bind:value={roleName}
           autocomplete="off"
-          class="field-inset mt-1.5 w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none"
-          style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
+          class="text-body field-inset mt-1.5 w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none"
+          style="background: var(--surface-bg); color: var(--text-primary)"
         />
       </div>
       <div>
-        <label for="role-desc" style="font-size: 12px; color: var(--text-primary);">角色描述</label>
+        <label for="role-desc" class="text-meta" style="color: var(--text-primary)">角色描述</label>
         <textarea
           id="role-desc"
           placeholder="描述该角色的职责"
           bind:value={roleDescription}
-          class="field-inset mt-1.5 w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none resize-none"
+          class="text-body field-inset mt-1.5 w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none resize-none"
           rows="3"
-          style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
+          style="background: var(--surface-bg); color: var(--text-primary)"
         ></textarea>
       </div>
       <div>
-        <span style="font-size: 12px; color: var(--text-primary);">分配权限</span>
+        <span class="text-meta" style="color: var(--text-primary)">分配权限</span>
         <div
           class="mt-1.5 max-h-60 space-y-3 overflow-y-auto rounded-[var(--radius-md)] p-3"
           style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
@@ -403,14 +401,16 @@
           {#each [...groupPermissions(permissions)] as [category, perms] (category)}
             <div>
               <p
-                class="uppercase"
-                style="font-size: 10px; letter-spacing: 0.12em; color: var(--text-secondary); margin-bottom: 4px;"
+                class="text-xs uppercase"
+                style="letter-spacing: 0.12em; color: var(--text-secondary); margin-bottom: 4px"
               >
                 {category}
               </p>
               <div class="space-y-1">
                 {#each perms as perm (perm.key)}
-                  <label class="flex cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1">
+                  <label
+                    class="flex cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1"
+                  >
                     <input
                       type="checkbox"
                       checked={rolePermissions.includes(perm.key)}
@@ -418,7 +418,7 @@
                       class="h-4 w-4 rounded"
                       style="accent-color: var(--brand);"
                     />
-                    <span style="font-size: 12px; color: var(--text-primary);"
+                    <span class="text-meta" style="color: var(--text-primary)"
                       >{perm.description || perm.key}</span
                     >
                   </label>
@@ -431,13 +431,13 @@
     </div>
     <Dialog.Footer>
       <button
-        class="rounded-full px-5 py-2 outline-none"
-        style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px;"
+        class="text-body rounded-full px-5 py-2 outline-none"
+        style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
         onclick={closeOverlayDialogs}>取消</button
       >
       <button
-        class="rounded-full px-5 py-2 outline-none"
-        style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
+        class="text-body rounded-full px-5 py-2 outline-none"
+        style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
         onclick={handleSubmitRole}
         disabled={isSubmitting}
       >

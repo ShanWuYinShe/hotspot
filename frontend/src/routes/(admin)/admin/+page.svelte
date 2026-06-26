@@ -80,14 +80,14 @@
           >
             <stat.icon size={16} strokeWidth={1.75} style="color: var(--brand);" />
           </div>
-          <span style="font-size: 22px; color: var(--text-primary); font-weight: 700;"
+          <span class="text-h1" style="color: var(--text-primary); font-weight: 700"
             >{stat.value}</span
           >
           <span
-            style="font-size: 11px; color: var(--text-primary); font-weight: 500; margin-top: 2px;"
-            >{stat.label}</span
+            class="text-caption"
+            style="color: var(--text-primary); font-weight: 500; margin-top: 2px">{stat.label}</span
           >
-          <span style="font-size: 10px; color: var(--text-secondary); margin-top: 2px;"
+          <span class="text-xs" style="color: var(--text-secondary); margin-top: 2px"
             >{stat.sub}</span
           >
         </div>
@@ -100,12 +100,10 @@
         class="rounded-[var(--radius-lg)] p-5"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
-        <div class="mb-1" style="font-size: 16px; font-weight: 600; color: var(--text-primary);">
+        <div class="text-title mb-1" style="font-weight: 600; color: var(--text-primary)">
           快捷操作
         </div>
-        <div class="mb-4" style="font-size: 12px; color: var(--text-secondary);">
-          常用管理功能入口
-        </div>
+        <div class="text-meta mb-4" style="color: var(--text-secondary)">常用管理功能入口</div>
         <div style="height: 1px; background: var(--border-theme); margin-bottom: 16px;"></div>
         <div class="space-y-3">
           {#each [{ href: '/admin/users', icon: Users, title: '用户管理', desc: '搜索、封禁、解封用户' }, { href: '/admin/reports', icon: Flag, title: '举报审核', desc: '处理用户举报' }] as action}
@@ -121,10 +119,10 @@
                 <action.icon size={16} strokeWidth={1.75} style="color: var(--brand);" />
               </div>
               <div>
-                <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+                <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
                   {action.title}
                 </p>
-                <p style="font-size: 12px; color: var(--text-secondary);">{action.desc}</p>
+                <p class="text-meta" style="color: var(--text-secondary)">{action.desc}</p>
               </div>
             </a>
           {/each}
@@ -136,10 +134,10 @@
         class="rounded-[var(--radius-lg)] p-5"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
-        <div class="mb-1" style="font-size: 16px; font-weight: 600; color: var(--text-primary);">
+        <div class="text-title mb-1" style="font-weight: 600; color: var(--text-primary)">
           系统状态
         </div>
-        <div class="mb-4" style="font-size: 12px; color: var(--text-secondary);">服务运行状态</div>
+        <div class="text-meta mb-4" style="color: var(--text-secondary)">服务运行状态</div>
         <div style="height: 1px; background: var(--border-theme); margin-bottom: 16px;"></div>
         <div class="space-y-4">
           {#if healthStatus.length > 0}
@@ -148,7 +146,7 @@
                 class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3"
                 style="background: var(--surface-bg); border: 1px solid var(--border-active);"
               >
-                <span style="font-size: 14px; color: var(--text-primary);">{svc.label}</span>
+                <span class="text-body-lg" style="color: var(--text-primary)">{svc.label}</span>
                 <div class="flex items-center gap-2">
                   <span
                     style="width: 8px; height: 8px; border-radius: 50%; background: {svc.ok
@@ -156,9 +154,9 @@
                       : 'var(--theme-error)'};"
                   ></span>
                   <span
-                    style="font-size: 13px; color: {svc.ok
-                      ? 'var(--theme-success)'
-                      : 'var(--theme-error)'};">{svc.ok ? '正常' : '异常'}</span
+                    class="text-body"
+                    style="color: {svc.ok ? 'var(--theme-success)' : 'var(--theme-error)'}"
+                    >{svc.ok ? '正常' : '异常'}</span
                   >
                 </div>
               </div>
@@ -169,8 +167,8 @@
                 class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3"
                 style="background: var(--surface-bg); border: 1px solid var(--border-active);"
               >
-                <span style="font-size: 14px; color: var(--text-primary);">{service}</span>
-                <span style="font-size: 13px; color: var(--text-secondary);">检测中...</span>
+                <span class="text-body-lg" style="color: var(--text-primary)">{service}</span>
+                <span class="text-body" style="color: var(--text-secondary)">检测中...</span>
               </div>
             {/each}
           {/if}

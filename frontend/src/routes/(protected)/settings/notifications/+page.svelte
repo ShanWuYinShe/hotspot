@@ -148,8 +148,8 @@
           <Bell size={15} strokeWidth={1.5} color="var(--brand)" />
         </div>
         <div>
-          <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">通知状态</p>
-          <p style="font-size: 12px; color: var(--text-secondary);">
+          <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">通知状态</p>
+          <p class="text-meta" style="color: var(--text-secondary)">
             快速查看当前未读情况，并进入通知中心处理通知。
           </p>
         </div>
@@ -160,12 +160,17 @@
         style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <div>
-          <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">当前未读通知</p>
-          <p style="font-size: 12px; color: var(--text-secondary);">
+          <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
+            当前未读通知
+          </p>
+          <p class="text-meta" style="color: var(--text-secondary)">
             未读数量会和通知下拉、通知列表保持一致
           </p>
         </div>
-        <div style="font-size: 24px; font-weight: 600; color: var(--brand);" class="tabular-nums">
+        <div
+          class="tabular-nums"
+          style="font-size: var(--text-display); font-weight: 600; color: var(--brand);"
+        >
           {notificationStore.unreadCount}
         </div>
       </div>
@@ -201,8 +206,8 @@
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div class="mb-3">
-        <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">偏好说明</p>
-        <p style="font-size: 12px; color: var(--text-secondary);">
+        <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">偏好说明</p>
+        <p class="text-meta" style="color: var(--text-secondary)">
           当前仓库尚未接入服务端通知偏好协议，所以这里先用本地持久化保存一个与 NotificationType
           对齐的偏好模型。
         </p>
@@ -211,7 +216,7 @@
         class="rounded-[var(--radius-md)] px-4 py-3"
         style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
-        <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+        <p class="text-body" style="color: var(--text-secondary); line-height: 1.6">
           这些开关用于保留你在当前浏览器的通知偏好，并已按真实 NotificationType
           存储，后续若接入服务端协议，可直接映射到服务端字段。真正收到的通知仍以服务端与 WebSocket
           推送为准。
@@ -225,10 +230,10 @@
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div class="mb-4">
-        <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">
+        <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">
           当前浏览器通知偏好
         </p>
-        <p style="font-size: 12px; color: var(--text-secondary);">
+        <p class="text-meta" style="color: var(--text-secondary)">
           本页设置仅保存在当前浏览器，用于保留你的本地通知偏好；不会影响其他设备。
         </p>
       </div>
@@ -240,10 +245,10 @@
             style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
-              <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+              <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
                 {item.title}
               </p>
-              <p style="font-size: 12px; color: var(--text-secondary);">{item.description}</p>
+              <p class="text-meta" style="color: var(--text-secondary)">{item.description}</p>
             </div>
             <button
               type="button"

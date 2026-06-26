@@ -128,15 +128,15 @@
             <MapPin style="width: 20px; height: 20px; color: var(--brand);" />
             {locationName}
           </div>
-          <div style="font-size: 12px; color: var(--text-secondary);">
+          <div class="text-meta" style="color: var(--text-secondary)">
             接收者将看到以此位置为中心的内容推荐。
           </div>
         </div>
 
         <!-- 说明 -->
         <div
-          class="rounded-[var(--radius-lg)] p-4 space-y-2"
-          style="background: var(--surface-bg); border: 1px solid var(--theme-overlay-subtle); font-size: 13px;"
+          class="text-body rounded-[var(--radius-lg)] p-4 space-y-2"
+          style="background: var(--surface-bg); border: 1px solid var(--theme-overlay-subtle)"
         >
           <p class="flex items-center gap-2" style="font-weight: 500; color: var(--brand);">
             <UsersRound style="width: 16px; height: 16px;" />
@@ -151,8 +151,8 @@
 
         <!-- 操作按钮 -->
         <button
-          class="rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
-          style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
+          class="text-body rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
+          style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
           onclick={handleSubmit}
           disabled={isSubmitting}
         >
@@ -188,7 +188,7 @@
           class="rounded-[var(--radius-lg)] p-4 space-y-2"
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
-          <label for="share-link-url" style="font-size: 12px; color: var(--text-secondary);"
+          <label for="share-link-url" class="text-meta" style="color: var(--text-secondary)"
             >分享链接</label
           >
           <div class="flex gap-2">
@@ -196,8 +196,8 @@
               id="share-link-url"
               value={shareUrl ?? ''}
               readonly
-              class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 flex-1"
-              style="background: var(--surface-bg); color: var(--text-primary); font-size: 12px; font-family: monospace;"
+              class="text-meta field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 flex-1"
+              style="background: var(--surface-bg); color: var(--text-primary); font-family: monospace"
             />
             <button
               class="rounded-[var(--radius-md)] px-3 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] flex items-center justify-center"
@@ -214,8 +214,8 @@
         </div>
 
         <button
-          class="rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
-          style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
+          class="text-body rounded-full px-5 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] w-full"
+          style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
           onclick={handleClose}
         >
           完成

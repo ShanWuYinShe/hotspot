@@ -97,7 +97,8 @@
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <p
-        style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px;"
+        class="text-body-lg"
+        style="font-weight: 600; color: var(--text-primary); margin-bottom: 16px"
       >
         账户安全
       </p>
@@ -110,7 +111,7 @@
         class="space-y-4"
       >
         <div class="space-y-2">
-          <label for="old-password" style="font-size: 13px; color: var(--text-secondary);"
+          <label for="old-password" class="text-body" style="color: var(--text-secondary)"
             >当前密码</label
           >
           <input
@@ -124,11 +125,11 @@
               : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
           />
           {#if oldPasswordError}
-            <p style="font-size: 12px; color: var(--theme-error);">{oldPasswordError}</p>
+            <p class="text-meta" style="color: var(--theme-error)">{oldPasswordError}</p>
           {/if}
         </div>
         <div class="space-y-2">
-          <label for="new-password" style="font-size: 13px; color: var(--text-secondary);"
+          <label for="new-password" class="text-body" style="color: var(--text-secondary)"
             >新密码</label
           >
           <input
@@ -142,11 +143,11 @@
               : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
           />
           {#if newPasswordError}
-            <p style="font-size: 12px; color: var(--theme-error);">{newPasswordError}</p>
+            <p class="text-meta" style="color: var(--theme-error)">{newPasswordError}</p>
           {/if}
         </div>
         <div class="space-y-2">
-          <label for="confirm-password" style="font-size: 13px; color: var(--text-secondary);"
+          <label for="confirm-password" class="text-body" style="color: var(--text-secondary)"
             >确认新密码</label
           >
           <input
@@ -160,7 +161,7 @@
               : 'var(--border-theme)'}; background: var(--surface-bg); color: var(--text-primary);"
           />
           {#if confirmPasswordError}
-            <p style="font-size: 12px; color: var(--theme-error);">{confirmPasswordError}</p>
+            <p class="text-meta" style="color: var(--theme-error)">{confirmPasswordError}</p>
           {/if}
         </div>
         <button

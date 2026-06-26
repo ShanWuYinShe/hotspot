@@ -28,7 +28,7 @@
   <!-- Logo -->
   <a href="/" class="mr-3 flex cursor-pointer items-center gap-2 select-none">
     <img src="/logo_32.png" alt="HotSpot" class="h-7 w-7 rounded-full object-cover" />
-    <span class="tracking-tight" style="font-size: 17px; color: var(--text-primary);">HotSpot</span>
+    <span class="text-title tracking-tight" style="color: var(--text-primary)">HotSpot</span>
   </a>
 
   <div class="flex-1"></div>
@@ -103,8 +103,8 @@
     {:else}
       <button
         type="button"
-        class="ml-1.5 rounded-full px-4 font-medium transition-transform duration-150 active:scale-95"
-        style="height: 32px; font-size: 13px; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
+        class="text-body ml-1.5 rounded-full px-4 font-medium transition-transform duration-150 active:scale-95"
+        style="height: 32px; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
         onclick={() => uiStore.openLoginModalWithRedirect({})}
       >
         {t('nav.loginRegister')}

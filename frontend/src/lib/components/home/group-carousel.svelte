@@ -25,7 +25,8 @@
   <div class="flex items-center justify-between mb-3">
     <span class="eyebrow">附近群组</span>
     <button
-      style="font-size: 12px; color: var(--brand); background: none; border: none; cursor: pointer;"
+      class="text-meta"
+      style="color: var(--brand); background: none; border: none; cursor: pointer"
       onclick={() => void goto('/groups/nearby')}
     >
       更多 →
@@ -90,7 +91,8 @@
             <!-- Distance badge -->
             {#if group.distance}
               <div
-                style="position: absolute; bottom: 6px; left: 6px; font-size: 9px; color: var(--text-on-overlay); background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); padding: 2px 6px; border-radius: 6px;"
+                class="text-xs"
+                style="position: absolute; bottom: 6px; left: 6px; color: var(--text-on-overlay); background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); padding: 2px 6px; border-radius: 6px"
               >
                 {group.distance}
               </div>
@@ -101,14 +103,15 @@
             style="padding: 8px 10px; border-radius: 0 0 14px 14px; background: var(--surface-bg); border: 1px solid var(--border-theme); border-top: none;"
           >
             <p
-              style="font-size: 12px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+              class="text-meta"
+              style="font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
             >
               {group.name}
             </p>
             {#if group.member_count}
               <div class="flex items-center gap-1" style="margin-top: 2px;">
                 <Users size={10} strokeWidth={1.5} color="var(--text-secondary)" />
-                <span style="font-size: 10px; color: var(--text-secondary);"
+                <span class="text-xs" style="color: var(--text-secondary)"
                   >{group.member_count}人</span
                 >
               </div>
@@ -117,7 +120,7 @@
         </button>
       {/each}
     {:else}
-      <p style="font-size: 12px; color: var(--text-secondary); padding: 2px;">
+      <p class="text-meta" style="color: var(--text-secondary); padding: 2px">
         附近暂无群组，点右上「更多」浏览全部。
       </p>
     {/if}

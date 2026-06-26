@@ -14,6 +14,6 @@
   class="neu-small pill-hover rounded-[var(--radius-md)] p-4 text-left outline-none transition-[box-shadow,transform] duration-200 hover:scale-[1.02] active:scale-[0.97] {className}"
   {...rest}
 >
-  <p style="font-size: 22px; font-weight: 700; color: var(--text-primary);">{value}</p>
-  <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">{label}</p>
+  <p class="text-h1" style="font-weight: 700; color: var(--text-primary)">{value}</p>
+  <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">{label}</p>
 </button>

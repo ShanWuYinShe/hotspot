@@ -76,8 +76,8 @@
           <Icon size={16} strokeWidth={1.75} color={a.color} />
         </div>
         <div class="min-w-0 flex-1">
-          <p style="font-size: 13px; color: var(--text-primary);">{a.title}</p>
-          <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+          <p class="text-body" style="color: var(--text-primary)">{a.title}</p>
+          <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
             {a.sub}
           </p>
         </div>

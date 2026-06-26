@@ -221,7 +221,7 @@
           <h1 class="page-title page-title--hero" style="color: var(--text-primary);">
             {t('sidebar.home')}
           </h1>
-          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+          <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
             {t('home.discoverNearbyPeopleAndThings')}
           </p>
         </div>
@@ -268,10 +268,10 @@
           class="absolute bottom-3 left-3 flex items-center gap-1 rounded-full px-2.5 py-1"
           style="background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid var(--glass-border);"
         >
-          <span style="font-size: 11px; color: var(--brand); font-weight: 600;"
+          <span class="text-caption" style="color: var(--brand); font-weight: 600"
             >{nearbyUsers.length}</span
           >
-          <span style="font-size: 10px; color: var(--text-secondary);">人附近</span>
+          <span class="text-xs" style="color: var(--text-secondary)">人附近</span>
         </div>
       </div>
 
@@ -281,8 +281,8 @@
           <span class="eyebrow">{t('sidebar.nearbyPeople')}</span>
           <a
             href="/users/nearby"
-            class="flex items-center gap-0.5 outline-none"
-            style="color: var(--brand); font-size: 12px;"
+            class="text-meta flex items-center gap-0.5 outline-none"
+            style="color: var(--brand)"
           >
             {t('common.viewAll')}
             <ChevronRight size={13} strokeWidth={1.5} />
@@ -299,7 +299,7 @@
             <NearbyUsersFlatList users={flatUsers.slice(0, 5)} loading={loadingNearby} />
           </div>
         {:else}
-          <p style="font-size: 12px; color: var(--text-secondary);">
+          <p class="text-meta" style="color: var(--text-secondary)">
             附近暂无其他用户，可稍后再来或调整浏览位置。
           </p>
         {/if}
@@ -311,8 +311,8 @@
           <div class="mb-3 flex items-center justify-between">
             <span class="eyebrow">{t('home.nearbyActivity')}</span>
             <button
-              class="flex items-center gap-0.5 outline-none"
-              style="color: var(--brand); font-size: 12px; background: none; border: none; cursor: pointer;"
+              class="text-meta flex items-center gap-0.5 outline-none"
+              style="color: var(--brand); background: none; border: none; cursor: pointer"
               onclick={() => void goto('/discover')}
             >
               {t('common.viewAll')}
@@ -340,7 +340,7 @@
           <h1 class="page-title page-title--hero" style="color: var(--text-primary);">
             {t('sidebar.home')}
           </h1>
-          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+          <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
             {t('home.discoverNearbyPeopleAndThings')}
           </p>
         </div>
@@ -352,7 +352,7 @@
             <span
               style="width: 7px; height: 7px; border-radius: var(--radius-pill); background: var(--semantic-online); box-shadow: 0 0 0 3px color-mix(in srgb, var(--semantic-online) 22%, transparent);"
             ></span>
-            <span style="font-size: 11px; color: var(--text-secondary);"
+            <span class="text-caption" style="color: var(--text-secondary)"
               >{onlineCount} {t('common.online')}</span
             >
           </button>
@@ -388,14 +388,14 @@
             <div class="mb-3 flex items-start justify-between">
               <div>
                 <span class="eyebrow">{t('sidebar.nearbyPeople')}</span>
-                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 3px;">
+                <p class="text-caption" style="color: var(--text-secondary); margin-top: 3px">
                   {t('home.rangeWithin')}
                 </p>
               </div>
               <a
                 href="/users/nearby"
-                class="flex items-center gap-0.5 outline-none"
-                style="color: var(--brand); font-size: 12px;"
+                class="text-meta flex items-center gap-0.5 outline-none"
+                style="color: var(--brand)"
               >
                 {t('common.viewAll')}
                 <ChevronRight size={13} strokeWidth={1.5} />
@@ -430,8 +430,8 @@
             <div class="mb-3 flex items-center justify-between">
               <span class="eyebrow">{t('home.nearbyActivity')}</span>
               <button
-                class="flex items-center gap-0.5 outline-none"
-                style="color: var(--brand); font-size: 12px; background: none; border: none; cursor: pointer;"
+                class="text-meta flex items-center gap-0.5 outline-none"
+                style="color: var(--brand); background: none; border: none; cursor: pointer"
                 onclick={() => void goto('/discover')}
               >
                 {t('common.viewAll')}

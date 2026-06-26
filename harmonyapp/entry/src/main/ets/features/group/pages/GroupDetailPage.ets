@@ -10,6 +10,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
@@ -904,50 +905,19 @@ export struct GroupDetailPage {
     NavDestination() {
     ResponsiveContainer({ fill: true }) {
     Column() {
-      // 标题栏
-      Row() {
-        IconButton({
-          icon: AppIcon.BACK,
-          iconSize: IconSize.LARGE,
-          iconColor: this.getCurrentThemePalette().textPrimary,
-          bgColor: DesignConstants.COLOR.TRANSPARENT,
-          radius: DesignConstants.RADIUS.XL,
-          minButtonSize: 42,
-          paddingSize: 9,
-          onButtonClick: () => {
-            AppRouter.pop();
-          }
-        })
-
-        Text('群组详情')
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-
-        IconButton({
+      // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回 + 分享）
+      SystemPageHeader({
+        title: '群组详情',
+        showBackButton: true,
+        onBack: () => { AppRouter.pop(); },
+        titleAlign: TextAlign.Center,
+        titleSize: DesignConstants.FONT.SIZE.LG,
+        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+        rightAction: {
           icon: AppIcon.SHARE,
-          iconSize: IconSize.LARGE,
-          iconColor: this.getCurrentThemePalette().textPrimary,
-          bgColor: DesignConstants.COLOR.TRANSPARENT,
-          radius: DesignConstants.RADIUS.XL,
-          minButtonSize: 42,
-          paddingSize: 9,
-          onButtonClick: () => this.shareGroup()
-        })
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-      .padding({
-        left: DesignConstants.SPACING.SM,
-        right: DesignConstants.SPACING.SM,
-        top: this.getHeaderTopPadding(),
-        bottom: DesignConstants.SPACING.XS
+          onClick: () => this.shareGroup()
+        }
       })
-      .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-      .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载群组信息中...' })

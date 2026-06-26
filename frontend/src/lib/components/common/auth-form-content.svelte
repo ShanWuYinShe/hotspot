@@ -227,14 +227,14 @@
     {#each [{ value: 'login', label: t('auth.login') }, { value: 'register', label: t('auth.register') }, { value: 'guest', label: t('auth.guest') }] as tab (tab.value)}
       <button
         type="button"
-        class="relative min-w-0 rounded-[var(--radius-md)] px-2 py-2 outline-none transition-all focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)]"
+        class="text-body relative min-w-0 rounded-[var(--radius-md)] px-2 py-2 outline-none transition-all focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)]"
         style="background: {currentTab === tab.value
           ? 'var(--brand)'
           : 'transparent'}; color: {currentTab === tab.value
           ? 'var(--text-on-accent)'
-          : 'var(--text-secondary)'}; font-size: 13px; font-weight: {currentTab === tab.value
+          : 'var(--text-secondary)'}; font-weight: {currentTab === tab.value
           ? 600
-          : 400}; box-shadow: {currentTab === tab.value ? '0 2px 8px var(--glow)' : 'none'};"
+          : 400}; box-shadow: {currentTab === tab.value ? '0 2px 8px var(--glow)' : 'none'}"
         onclick={() => (currentTab = tab.value)}
       >
         {tab.label}
@@ -252,7 +252,7 @@
         class="space-y-4 pt-4"
       >
         <div class="space-y-2">
-          <label for="auth-login-id" style="font-size: 12px; color: var(--text-primary);"
+          <label for="auth-login-id" class="text-meta" style="color: var(--text-primary)"
             >{t('auth.account')}</label
           >
           <input
@@ -263,17 +263,17 @@
             bind:value={loginId}
             disabled={isLoading}
             onblur={() => markTouched('loginId')}
-            class="input-base rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full"
+            class="text-body input-base rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full"
             style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {loginIdError
               ? 'var(--error)'
-              : 'var(--border-theme)'}; font-size: 13px;"
+              : 'var(--border-theme)'}"
           />
           {#if loginIdError}
-            <p style="font-size: 12px; color: var(--error);">{loginIdError}</p>
+            <p class="text-meta" style="color: var(--error)">{loginIdError}</p>
           {/if}
         </div>
         <div class="space-y-2">
-          <label for="auth-login-password" style="font-size: 12px; color: var(--text-primary);"
+          <label for="auth-login-password" class="text-meta" style="color: var(--text-primary)"
             >{t('auth.password')}</label
           >
           <div class="relative">
@@ -285,9 +285,9 @@
               bind:value={password}
               disabled={isLoading}
               onblur={() => markTouched('password')}
-              class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full pr-10"
+              class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full pr-10"
               class:field-error={passwordError}
-              style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
+              style="background: var(--surface-bg); color: var(--text-primary)"
             />
             <button
               type="button"
@@ -304,13 +304,13 @@
             </button>
           </div>
           {#if passwordError}
-            <p style="font-size: 12px; color: var(--error);">{passwordError}</p>
+            <p class="text-meta" style="color: var(--error)">{passwordError}</p>
           {/if}
         </div>
         <button
           type="submit"
-          class="rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
-          style="background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: var(--shadow-brand-btn);"
+          class="text-body-lg rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
+          style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
           disabled={isLoading}
         >
           {#if isLoading}
@@ -328,7 +328,7 @@
         class="space-y-4 pt-4"
       >
         <div class="space-y-2">
-          <label for="auth-register-nickname" style="font-size: 12px; color: var(--text-primary);"
+          <label for="auth-register-nickname" class="text-meta" style="color: var(--text-primary)"
             >{t('auth.nickname')}</label
           >
           <input
@@ -339,17 +339,17 @@
             bind:value={nickname}
             disabled={isLoading}
             onblur={() => markTouched('nickname')}
-            class="input-base rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full"
+            class="text-body input-base rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full"
             style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {nicknameError
               ? 'var(--error)'
-              : 'var(--border-theme)'}; font-size: 13px;"
+              : 'var(--border-theme)'}"
           />
           {#if nicknameError}
-            <p style="font-size: 12px; color: var(--error);">{nicknameError}</p>
+            <p class="text-meta" style="color: var(--error)">{nicknameError}</p>
           {/if}
         </div>
         <div class="space-y-2">
-          <label for="auth-register-id" style="font-size: 12px; color: var(--text-primary);"
+          <label for="auth-register-id" class="text-meta" style="color: var(--text-primary)"
             >{t('auth.account')}</label
           >
           <input
@@ -360,17 +360,17 @@
             bind:value={loginId}
             disabled={isLoading}
             onblur={() => markTouched('loginId')}
-            class="input-base rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full"
+            class="text-body input-base rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full"
             style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {loginIdError
               ? 'var(--error)'
-              : 'var(--border-theme)'}; font-size: 13px;"
+              : 'var(--border-theme)'}"
           />
           {#if loginIdError}
-            <p style="font-size: 12px; color: var(--error);">{loginIdError}</p>
+            <p class="text-meta" style="color: var(--error)">{loginIdError}</p>
           {/if}
         </div>
         <div class="space-y-2">
-          <label for="auth-register-password" style="font-size: 12px; color: var(--text-primary);"
+          <label for="auth-register-password" class="text-meta" style="color: var(--text-primary)"
             >{t('auth.password')}</label
           >
           <input
@@ -381,17 +381,17 @@
             bind:value={password}
             disabled={isLoading}
             onblur={() => markTouched('password')}
-            class="input-base rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full"
+            class="text-body input-base rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full"
             style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {passwordError
               ? 'var(--error)'
-              : 'var(--border-theme)'}; font-size: 13px;"
+              : 'var(--border-theme)'}"
           />
           {#if passwordError}
-            <p style="font-size: 12px; color: var(--error);">{passwordError}</p>
+            <p class="text-meta" style="color: var(--error)">{passwordError}</p>
           {/if}
         </div>
         <div class="space-y-2">
-          <label for="auth-register-confirm" style="font-size: 12px; color: var(--text-primary);"
+          <label for="auth-register-confirm" class="text-meta" style="color: var(--text-primary)"
             >{t('auth.confirmPassword')}</label
           >
           <input
@@ -402,19 +402,19 @@
             bind:value={confirmPassword}
             disabled={isLoading}
             onblur={() => markTouched('confirmPassword')}
-            class="input-base rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full"
+            class="text-body input-base rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full"
             style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {confirmPasswordError
               ? 'var(--error)'
-              : 'var(--border-theme)'}; font-size: 13px;"
+              : 'var(--border-theme)'}"
           />
           {#if confirmPasswordError}
-            <p style="font-size: 12px; color: var(--error);">{confirmPasswordError}</p>
+            <p class="text-meta" style="color: var(--error)">{confirmPasswordError}</p>
           {/if}
         </div>
         <button
           type="submit"
-          class="rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
-          style="background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: var(--shadow-brand-btn);"
+          class="text-body-lg rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
+          style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
           disabled={isLoading}
         >
           {#if isLoading}
@@ -432,13 +432,13 @@
         class="space-y-4 pt-4"
       >
         <div
-          class="rounded-[var(--radius-lg)] p-3"
-          style="background: var(--surface-bg); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-secondary);"
+          class="text-body rounded-[var(--radius-lg)] p-3"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary)"
         >
           {t('auth.guestModeHint')}
         </div>
         <div class="space-y-2">
-          <label for="auth-guest-nickname" style="font-size: 12px; color: var(--text-primary);"
+          <label for="auth-guest-nickname" class="text-meta" style="color: var(--text-primary)"
             >{t('auth.nickname')}</label
           >
           <input
@@ -449,19 +449,19 @@
             bind:value={guestNickname}
             disabled={isLoading}
             onblur={() => markTouched('guestNickname')}
-            class="input-base rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full"
+            class="text-body input-base rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full"
             style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid {guestNicknameError
               ? 'var(--error)'
-              : 'var(--border-theme)'}; font-size: 13px;"
+              : 'var(--border-theme)'}"
           />
           {#if guestNicknameError}
-            <p style="font-size: 12px; color: var(--error);">{guestNicknameError}</p>
+            <p class="text-meta" style="color: var(--error)">{guestNicknameError}</p>
           {/if}
         </div>
         <button
           type="submit"
-          class="rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
-          style="background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: var(--shadow-brand-btn);"
+          class="text-body-lg rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
+          style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
           disabled={isLoading}
         >
           {#if isLoading}

@@ -138,8 +138,8 @@
           {@const TriggerIcon = getNotificationBadgeIcon(notificationStore.unreadCount)}
           <TriggerIcon style="width: 20px; height: 20px; color: var(--text-primary);" />
           <span
-            class="absolute flex items-center justify-center rounded-full"
-            style="right: -4px; top: -4px; height: 20px; min-width: 20px; padding: 0 4px; background: var(--error); color: var(--text-on-accent); font-size: 10px; font-weight: 700; border: 2px solid var(--surface-bg);"
+            class="text-xs absolute flex items-center justify-center rounded-full"
+            style="right: -4px; top: -4px; height: 20px; min-width: 20px; padding: 0 4px; background: var(--error); color: var(--text-on-accent); font-weight: 700; border: 2px solid var(--surface-bg)"
           >
             {notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount}
           </span>
@@ -157,13 +157,13 @@
       style="border-bottom: 1px solid var(--border-theme);"
     >
       <div class="flex items-center gap-2">
-        <h3 style="font-size: 14px; font-weight: 600; color: var(--text-primary);">
+        <h3 class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">
           {t('notificationDropdown.title')}
         </h3>
         {#if notificationStore.unreadCount > 0}
           <span
-            class="rounded-full"
-            style="height: 20px; padding: 0 8px; font-size: 10px; line-height: 20px; background: var(--brand); color: var(--text-on-accent);"
+            class="text-xs rounded-full"
+            style="height: 20px; padding: 0 8px; line-height: 20px; background: var(--brand); color: var(--text-on-accent)"
           >
             {notificationStore.unreadCount}
           </span>
@@ -203,7 +203,7 @@
           class="rounded-full animate-pulse"
           style="width: 32px; height: 32px; background: var(--surface-bg); box-shadow: var(--shadow-sm);"
         ></div>
-        <p class="mt-3" style="font-size: 13px; color: var(--text-secondary);">
+        <p class="text-body mt-3" style="color: var(--text-secondary)">
           {t('common.loading')}
         </p>
       </div>
@@ -215,11 +215,13 @@
         >
           <Bell style="width: 32px; height: 32px; color: var(--text-secondary);" />
         </div>
-        <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">加载通知失败</p>
-        <p style="font-size: 12px; color: var(--text-secondary);">请稍后重试</p>
+        <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
+          加载通知失败
+        </p>
+        <p class="text-meta" style="color: var(--text-secondary)">请稍后重试</p>
         <button
-          class="mt-4 rounded-full px-5 py-2 outline-none transition-all duration-150 hover:scale-105 active:scale-[0.97]"
-          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px;"
+          class="text-body mt-4 rounded-full px-5 py-2 outline-none transition-all duration-150 hover:scale-105 active:scale-[0.97]"
+          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
           onclick={retryLoadRecent}
         >
           重试
@@ -233,10 +235,10 @@
         >
           <Bell style="width: 32px; height: 32px; color: var(--text-secondary);" />
         </div>
-        <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+        <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
           {t('notificationDropdown.emptyTitle')}
         </p>
-        <p style="font-size: 12px; color: var(--text-secondary);">
+        <p class="text-meta" style="color: var(--text-secondary)">
           {t('notificationDropdown.emptyDescription')}
         </p>
       </div>
@@ -263,18 +265,18 @@
                 </div>
                 <div class="min-w-0 flex-1 pr-8">
                   <div
-                    class="mb-0.5"
-                    style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+                    class="text-body-lg mb-0.5"
+                    style="font-weight: 500; color: var(--text-primary)"
                   >
                     {getNotificationTitle(item, locale)}
                   </div>
                   <p
-                    class="mb-1"
-                    style="font-size: 14px; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+                    class="text-body-lg mb-1"
+                    style="color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden"
                   >
                     {getNotificationContent(item, locale)}
                   </p>
-                  <span style="font-size: 12px; color: var(--text-secondary);">
+                  <span class="text-meta" style="color: var(--text-secondary)">
                     {formatNotificationTimestamp(item.created_at, locale)}
                   </span>
                 </div>
@@ -298,8 +300,8 @@
       <!-- Footer -->
       <div class="p-2" style="border-top: 1px solid var(--border-theme);">
         <button
-          class="w-full flex items-center justify-center rounded-full px-5 py-2 outline-none transition-all duration-150 hover:scale-105 active:scale-[0.97]"
-          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px;"
+          class="text-body w-full flex items-center justify-center rounded-full px-5 py-2 outline-none transition-all duration-150 hover:scale-105 active:scale-[0.97]"
+          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
           onclick={handleViewAll}
         >
           {hasMore

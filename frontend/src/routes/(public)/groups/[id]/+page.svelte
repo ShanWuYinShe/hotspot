@@ -878,8 +878,8 @@
   <div class="page-shell page-shell--narrow flex items-center gap-4">
     <BackButton onclick={() => history.back()} size={36} />
     <div>
-      <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">群组详情</h1>
-      <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+      <h1 class="text-h1" style="font-weight: 600; color: var(--text-primary)">群组详情</h1>
+      <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
         查看群信息、成员与公告管理
       </p>
     </div>
@@ -894,7 +894,7 @@
         style="background: var(--surface-bg); border: 1px solid var(--theme-warning-border);"
       >
         <Loader2 size={14} class="animate-spin" style="color: var(--theme-warning);" />
-        <span style="font-size: 14px; color: var(--theme-warning);">
+        <span class="text-body-lg" style="color: var(--theme-warning)">
           {#if wsGroupSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
             群组实时事件连接中…
           {:else}
@@ -934,7 +934,9 @@
               />
               <div>
                 <div class="flex items-center gap-2">
-                  <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary);">
+                  <h2
+                    style="font-size: var(--text-display); font-weight: 700; color: var(--text-primary);"
+                  >
                     {group.group.name}
                   </h2>
                   {#if group.has_password}
@@ -943,7 +945,8 @@
                 </div>
                 {#if group.description}
                   <p
-                    style="margin-top: 8px; max-width: 36rem; font-size: 14px; color: var(--text-secondary);"
+                    class="text-body-lg"
+                    style="margin-top: 8px; max-width: 36rem; color: var(--text-secondary)"
                   >
                     {group.description}
                   </p>
@@ -1005,14 +1008,14 @@
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div
-                class="flex items-center gap-2"
-                style="font-size: 14px; color: var(--text-secondary);"
+                class="text-body-lg flex items-center gap-2"
+                style="color: var(--text-secondary)"
               >
                 <Users size={16} />
                 成员数量
               </div>
               <div
-                style="margin-top: 8px; font-size: 24px; font-weight: 700; color: var(--text-primary);"
+                style="margin-top: 8px; font-size: var(--text-display); font-weight: 700; color: var(--text-primary);"
               >
                 {group.group.members_count}
               </div>
@@ -1022,14 +1025,15 @@
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div
-                class="flex items-center gap-2"
-                style="font-size: 14px; color: var(--text-secondary);"
+                class="text-body-lg flex items-center gap-2"
+                style="color: var(--text-secondary)"
               >
                 <Shield size={16} />
                 加入方式
               </div>
               <div
-                style="margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary);"
+                class="text-body-lg"
+                style="margin-top: 8px; font-weight: 600; color: var(--text-primary)"
               >
                 {getJoinMethodLabel(settings?.join_method)}
               </div>
@@ -1039,14 +1043,15 @@
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div
-                class="flex items-center gap-2"
-                style="font-size: 14px; color: var(--text-secondary);"
+                class="text-body-lg flex items-center gap-2"
+                style="color: var(--text-secondary)"
               >
                 <MapPin size={16} />
                 群组位置
               </div>
               <div
-                style="margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary);"
+                class="text-body-lg"
+                style="margin-top: 8px; font-weight: 600; color: var(--text-primary)"
               >
                 {group.location.location_name}
               </div>
@@ -1077,20 +1082,20 @@
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <h3
-              class="uppercase"
-              style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 12px;"
+              class="text-xs uppercase"
+              style="letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 12px"
             >
               群组说明
             </h3>
-            <p style="font-size: 14px; color: var(--text-secondary);">
+            <p class="text-body-lg" style="color: var(--text-secondary)">
               {group.description || '暂无群组简介，欢迎加入后一起完善。'}
             </p>
             {#if group.tags && group.tags.length > 0}
               <div class="mt-3 flex flex-wrap gap-2">
                 {#each group.tags as tag (tag)}
                   <span
-                    class="rounded-full px-2.5 py-1"
-                    style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                    class="text-caption rounded-full px-2.5 py-1"
+                    style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
                   >
                     #{tag}
                   </span>
@@ -1103,12 +1108,12 @@
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
             <h3
-              class="uppercase"
-              style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 12px;"
+              class="text-xs uppercase"
+              style="letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 12px"
             >
               加入须知
             </h3>
-            <div class="space-y-2" style="font-size: 14px; color: var(--text-secondary);">
+            <div class="text-body-lg space-y-2" style="color: var(--text-secondary)">
               <div class="flex items-center justify-between">
                 <span>加入方式</span>
                 <span style="font-weight: 500; color: var(--text-primary);"
@@ -1141,8 +1146,8 @@
                 </button>
               {:else if group.my_state?.is_joined}
                 <div
-                  class="rounded-[var(--radius-md)] px-3 py-2 text-center"
-                  style="border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
+                  class="text-meta rounded-[var(--radius-md)] px-3 py-2 text-center"
+                  style="border: 1px solid var(--border-theme); color: var(--text-secondary)"
                 >
                   你已加入该群组
                 </div>
@@ -1168,8 +1173,8 @@
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
           <div>
-            <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">群公告</p>
-            <p style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
+            <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">群公告</p>
+            <p class="text-meta" style="margin-top: 4px; color: var(--text-secondary)">
               重要通知与管理提示将展示在这里
             </p>
           </div>
@@ -1222,7 +1227,7 @@
             class="rounded-[var(--radius-lg)] py-10 text-center"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
-            <p style="font-size: 14px; color: var(--text-secondary);">暂无公告</p>
+            <p class="text-body-lg" style="color: var(--text-secondary)">暂无公告</p>
           </div>
         {:else}
           <div class="space-y-3">
@@ -1234,24 +1239,24 @@
                 <div class="flex items-start justify-between gap-3">
                   <div class="space-y-2">
                     <div class="flex items-center gap-2">
-                      <p style="font-weight: 500; font-size: 15px; color: var(--text-primary);">
+                      <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
                         {announcement.title}
                       </p>
                       {#if announcement.is_pinned}
                         <span
-                          class="rounded-full px-2 py-0.5"
-                          style="font-size: 10px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                          class="text-xs rounded-full px-2 py-0.5"
+                          style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
                           >置顶</span
                         >
                       {/if}
                     </div>
                     <p
-                      class="whitespace-pre-wrap"
-                      style="font-size: 14px; color: var(--text-secondary);"
+                      class="text-body-lg whitespace-pre-wrap"
+                      style="color: var(--text-secondary)"
                     >
                       {announcement.content}
                     </p>
-                    <div style="font-size: 12px; color: var(--text-secondary);">
+                    <div class="text-meta" style="color: var(--text-secondary)">
                       {formatDateTime(announcement.created_at)}
                     </div>
                   </div>
@@ -1308,8 +1313,10 @@
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
           <div>
-            <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">成员列表</p>
-            <p style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
+            <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">
+              成员列表
+            </p>
+            <p class="text-meta" style="margin-top: 4px; color: var(--text-secondary)">
               支持群主/管理员进行禁言与角色管理
             </p>
           </div>
@@ -1324,8 +1331,8 @@
             </button>
             {#if canManageGroup}
               <span
-                class="rounded-full px-3 py-1"
-                style="font-size: 11px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                class="text-caption rounded-full px-3 py-1"
+                style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
                 >可管理成员</span
               >
             {/if}
@@ -1362,7 +1369,7 @@
             class="rounded-[var(--radius-lg)] py-10 text-center"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
-            <p style="font-size: 14px; color: var(--text-secondary);">暂无成员</p>
+            <p class="text-body-lg" style="color: var(--text-secondary)">暂无成员</p>
           </div>
         {:else}
           <div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
@@ -1385,22 +1392,22 @@
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-2">
                         <p
-                          class="truncate"
-                          style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
+                          class="text-body-lg truncate"
+                          style="font-weight: 500; color: var(--text-primary)"
                         >
                           {member.user.nickname}
                         </p>
                         <span
-                          class="rounded-full px-2 py-0.5"
-                          style="font-size: 10px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                          class="text-xs rounded-full px-2 py-0.5"
+                          style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
                           >{getRoleLabel(member.role)}</span
                         >
                       </div>
-                      <p style="font-size: 12px; color: var(--text-secondary);">
+                      <p class="text-meta" style="color: var(--text-secondary)">
                         加入于 {formatDateTime(member.joined_at)}
                       </p>
                       {#if member.muted_until}
-                        <p style="font-size: 12px; color: var(--theme-error); opacity: 0.8;">
+                        <p class="text-meta" style="color: var(--theme-error); opacity: 0.8">
                           禁言至 {formatDateTime(member.muted_until)}
                         </p>
                       {/if}
@@ -1409,8 +1416,8 @@
                   <div class="flex items-center gap-2">
                     {#if member.muted_until}
                       <span
-                        class="rounded-full px-2 py-0.5"
-                        style="font-size: 10px; color: var(--text-secondary); background: var(--surface-bg); border: 1px solid var(--border-theme);"
+                        class="text-xs rounded-full px-2 py-0.5"
+                        style="color: var(--text-secondary); background: var(--surface-bg); border: 1px solid var(--border-theme)"
                         >已禁言</span
                       >
                     {/if}
@@ -1487,10 +1494,10 @@
             style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
           >
             <div>
-              <p style="font-size: 14px; font-weight: 600; color: var(--text-primary);">
+              <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">
                 待处理申请
               </p>
-              <p style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
+              <p class="text-meta" style="margin-top: 4px; color: var(--text-secondary)">
                 仅展示 pending 申请，处理后会自动移出列表
               </p>
             </div>
@@ -1530,7 +1537,7 @@
               class="rounded-[var(--radius-lg)] py-10 text-center"
               style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
             >
-              <p style="font-size: 14px; color: var(--text-secondary);">暂无待处理申请</p>
+              <p class="text-body-lg" style="color: var(--text-secondary)">暂无待处理申请</p>
             </div>
           {:else}
             <div class="space-y-3">
@@ -1549,33 +1556,33 @@
                           size={32}
                         />
                         <p
-                          class="truncate"
-                          style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+                          class="text-body-lg truncate"
+                          style="font-weight: 500; color: var(--text-primary)"
                         >
                           {application.applicant.nickname}
                         </p>
                       </div>
                       {#if application.message}
-                        <p style="font-size: 14px; color: var(--text-secondary);">
+                        <p class="text-body-lg" style="color: var(--text-secondary)">
                           {application.message}
                         </p>
                       {/if}
-                      <p style="font-size: 12px; color: var(--text-secondary);">
+                      <p class="text-meta" style="color: var(--text-secondary)">
                         申请时间：{formatDateTime(application.created_at)}
                       </p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                       <button
-                        class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                        style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn); font-size: 13px;"
+                        class="text-body rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                        style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
                         disabled={isApplicationHandling(application.application_id)}
                         onclick={() => handleApplicationDecision(application, 'approve')}
                       >
                         {isApplicationHandling(application.application_id) ? '处理中...' : '批准'}
                       </button>
                       <button
-                        class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg); font-size: 13px;"
+                        class="text-body rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg)"
                         disabled={isApplicationHandling(application.application_id)}
                         onclick={() => handleApplicationDecision(application, 'reject')}
                       >
@@ -1632,7 +1639,8 @@
         >
           <label
             for="group-password"
-            style="font-size: 13px; font-weight: 500; color: var(--text-primary);">群组密码</label
+            class="text-body"
+            style="font-weight: 500; color: var(--text-primary)">群组密码</label
           >
           <input
             id="group-password"
@@ -1652,7 +1660,8 @@
         >
           <label
             for="join-message"
-            style="font-size: 13px; font-weight: 500; color: var(--text-primary);">申请理由</label
+            class="text-body"
+            style="font-weight: 500; color: var(--text-primary)">申请理由</label
           >
           <textarea
             id="join-message"
@@ -1701,7 +1710,8 @@
       >
         <label
           for="announcement-title"
-          style="font-size: 13px; font-weight: 500; color: var(--text-primary);">公告标题</label
+          class="text-body"
+          style="font-weight: 500; color: var(--text-primary)">公告标题</label
         >
         <input
           id="announcement-title"
@@ -1718,7 +1728,8 @@
       >
         <label
           for="announcement-content"
-          style="font-size: 13px; font-weight: 500; color: var(--text-primary);">公告内容</label
+          class="text-body"
+          style="font-weight: 500; color: var(--text-primary)">公告内容</label
         >
         <textarea
           id="announcement-content"
@@ -1735,8 +1746,8 @@
         style="border: 1px solid var(--border-theme);"
       >
         <div>
-          <p style="font-weight: 500; font-size: 14px; color: var(--text-primary);">置顶公告</p>
-          <p style="font-size: 12px; color: var(--text-secondary);">置顶后将优先展示给成员</p>
+          <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">置顶公告</p>
+          <p class="text-meta" style="color: var(--text-secondary)">置顶后将优先展示给成员</p>
         </div>
         <button
           class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -1778,8 +1789,8 @@
       <Dialog.Description>删除后成员将无法再看到该公告。</Dialog.Description>
     </Dialog.Header>
     <div
-      class="rounded-[var(--radius-md)] px-4 py-3"
-      style="border: 1px solid var(--border-theme); font-size: 14px; color: var(--text-secondary);"
+      class="text-body-lg rounded-[var(--radius-md)] px-4 py-3"
+      style="border: 1px solid var(--border-theme); color: var(--text-secondary)"
     >
       {announcementToDelete?.title ?? '该公告'}
     </div>
@@ -1808,7 +1819,7 @@
       <Dialog.Description>被禁言成员仍可浏览，但无法发言。</Dialog.Description>
     </Dialog.Header>
     <div class="space-y-4 py-2">
-      <div style="font-size: 14px; color: var(--text-secondary);">
+      <div class="text-body-lg" style="color: var(--text-secondary)">
         成员：{muteTarget?.user.nickname ?? '-'}
       </div>
       <div class="grid grid-cols-2 gap-2">
@@ -1825,8 +1836,8 @@
       <div class="space-y-2">
         <label
           for="mute-duration"
-          style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
-          >自定义时长（分钟）</label
+          class="text-body"
+          style="font-weight: 500; color: var(--text-primary)">自定义时长（分钟）</label
         >
         <input
           id="mute-duration"
@@ -1870,7 +1881,7 @@
       >
     </Dialog.Header>
     <div class="space-y-4 py-2">
-      <div style="font-size: 14px; color: var(--text-secondary);">
+      <div class="text-body-lg" style="color: var(--text-secondary)">
         成员：{roleTarget?.user.nickname ?? '-'}
       </div>
       <div class="grid gap-2 sm:grid-cols-2">
@@ -1912,8 +1923,8 @@
       <Dialog.Description>确认将该成员移出群组吗？</Dialog.Description>
     </Dialog.Header>
     <div
-      class="rounded-[var(--radius-md)] px-4 py-3"
-      style="border: 1px solid var(--border-theme); font-size: 14px; color: var(--text-secondary);"
+      class="text-body-lg rounded-[var(--radius-md)] px-4 py-3"
+      style="border: 1px solid var(--border-theme); color: var(--text-secondary)"
     >
       {removeTarget?.user.nickname ?? '-'}
     </div>
@@ -1949,10 +1960,10 @@
       class="rounded-[var(--radius-md)] px-4 py-3"
       style="border: 1px solid var(--border-theme);"
     >
-      <div style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+      <div class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
         {group?.group.name ?? '群组'}
       </div>
-      <div style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
+      <div class="text-meta" style="margin-top: 4px; color: var(--text-secondary)">
         {group?.group.members_count ?? 0} 位成员
       </div>
     </div>

@@ -25,8 +25,8 @@
     <div class="flex items-center justify-between mb-3">
       <span class="eyebrow">附近的人</span>
       <button
-        class="flex items-center gap-0.5"
-        style="font-size: 12px; color: var(--brand); background: none; border: none; cursor: pointer;"
+        class="text-meta flex items-center gap-0.5"
+        style="color: var(--brand); background: none; border: none; cursor: pointer"
         onclick={onViewAll}
       >
         更多
@@ -59,11 +59,12 @@
             {/if}
           </div>
           <span
-            style="font-size: 12px; color: var(--text-primary); max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+            class="text-meta"
+            style="color: var(--text-primary); max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap"
             >{user.nickname}</span
           >
           {#if user.distance}
-            <span style="font-size: 10px; color: var(--brand); margin-top: -2px;"
+            <span class="text-xs" style="color: var(--brand); margin-top: -2px"
               >{user.distance}</span
             >
           {/if}

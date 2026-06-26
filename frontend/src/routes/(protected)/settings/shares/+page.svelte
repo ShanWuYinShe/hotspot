@@ -175,12 +175,12 @@
                 </div>
                 <div>
                   <h2
-                    style="font-size: 15px; font-weight: 600; color: var(--text-primary);"
-                    class="truncate"
+                    style="font-weight: 600; color: var(--text-primary)"
+                    class="text-body-lg truncate"
                   >
                     {getShareTitle(item)}
                   </h2>
-                  <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                  <p class="text-body" style="color: var(--text-secondary); margin-top: 4px">
                     {getShareSubtitle(item)}
                   </p>
                 </div>
@@ -216,28 +216,31 @@
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div>
-                <p style="font-size: 11px; color: var(--text-secondary);">创建时间</p>
+                <p class="text-caption" style="color: var(--text-secondary)">创建时间</p>
                 <p
-                  style="font-size: 13px; font-weight: 500; color: var(--text-primary); margin-top: 4px;"
+                  class="text-body"
+                  style="font-weight: 500; color: var(--text-primary); margin-top: 4px"
                 >
                   {formatRelativeTime(item.created_at)}
                 </p>
-                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+                <p class="text-caption" style="color: var(--text-secondary); margin-top: 2px">
                   {formatDateTime(item.created_at)}
                 </p>
               </div>
               <div>
-                <p style="font-size: 11px; color: var(--text-secondary);">分享码</p>
+                <p class="text-caption" style="color: var(--text-secondary)">分享码</p>
                 <p
-                  style="font-size: 13px; font-weight: 500; font-family: monospace; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-primary); margin-top: 4px;"
+                  class="text-body"
+                  style="font-weight: 500; font-family: monospace; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-primary); margin-top: 4px"
                 >
                   {item.share_code}
                 </p>
               </div>
               <div>
-                <p style="font-size: 11px; color: var(--text-secondary);">有效期</p>
+                <p class="text-caption" style="color: var(--text-secondary)">有效期</p>
                 <p
-                  style="font-size: 13px; font-weight: 500; color: var(--text-primary); margin-top: 4px;"
+                  class="text-body"
+                  style="font-weight: 500; color: var(--text-primary); margin-top: 4px"
                 >
                   {item.expires_at ? formatDateTime(item.expires_at) : '长期有效'}
                 </p>

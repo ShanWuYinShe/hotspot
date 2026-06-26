@@ -169,10 +169,10 @@
             />
           </div>
           <div class="min-w-0">
-            <p style="font-size: 14px; color: var(--text-primary); font-weight: 500;">
+            <p class="text-body-lg" style="color: var(--text-primary); font-weight: 500">
               {authStore.currentAccount.nickname || '用户'}
             </p>
-            <p style="font-size: 11px; color: var(--text-secondary);">
+            <p class="text-caption" style="color: var(--text-secondary)">
               @{formatHandle(authStore.currentAccount)}
             </p>
           </div>
@@ -192,7 +192,7 @@
           onclick={() => (activeSection = 'appearance')}
         >
           <Palette size={16} strokeWidth={1.5} />
-          <span style="font-size: 13px; font-weight: 500;">外观与主题</span>
+          <span class="text-body" style="font-weight: 500">外观与主题</span>
         </button>
 
         {#each settingsSections as section (section.title)}
@@ -207,7 +207,7 @@
             onclick={() => (activeSection = section.title)}
           >
             <section.icon size={16} strokeWidth={1.5} />
-            <span style="font-size: 13px; font-weight: 500;">{section.title}</span>
+            <span class="text-body" style="font-weight: 500">{section.title}</span>
           </button>
         {/each}
 
@@ -222,7 +222,7 @@
           onclick={() => (activeSection = 'notifications')}
         >
           <SlidersHorizontal size={16} strokeWidth={1.5} />
-          <span style="font-size: 13px; font-weight: 500;">通知偏好</span>
+          <span class="text-body" style="font-weight: 500">通知偏好</span>
         </button>
 
         <!-- Logout -->
@@ -234,7 +234,7 @@
           onclick={handleLogout}
         >
           <LogOut size={16} strokeWidth={1.5} />
-          <span style="font-size: 13px; font-weight: 500;">退出登录</span>
+          <span class="text-body" style="font-weight: 500">退出登录</span>
         </button>
       </div>
     </div>
@@ -246,17 +246,19 @@
           <!-- Appearance section -->
           <div class="mb-6">
             <h2
-              style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;"
+              class="text-h2"
+              style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px"
             >
               外观与主题
             </h2>
-            <p style="font-size: 12px; color: var(--text-secondary);">选择你喜欢的视觉风格</p>
+            <p class="text-meta" style="color: var(--text-secondary)">选择你喜欢的视觉风格</p>
           </div>
 
           <!-- Theme picker -->
           <div class="mb-6">
             <p
-              style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px;"
+              class="text-xs"
+              style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px"
             >
               主题风格
             </p>
@@ -308,11 +310,12 @@
                   <div
                     style="display: flex; flex-direction: column; align-items: center; gap: 2px;"
                   >
-                    <span style="font-size: 12px; color: {accent};"
+                    <span class="text-meta" style="color: {accent}"
                       >{THEME_NAMES[option.family]}</span
                     >
                     <span
-                      style="font-size: 10px; text-align: center; line-height: 1.4; color: {accent}99;"
+                      class="text-xs"
+                      style="text-align: center; line-height: 1.4; color: {accent}99"
                     >
                       {#if option.family === 'indigo'}霓虹活力{:else if option.family === 'forest'}森林极简{:else}柔和质感{/if}
                     </span>
@@ -332,7 +335,8 @@
           <!-- Dark mode toggle -->
           <div>
             <p
-              style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px;"
+              class="text-xs"
+              style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px"
             >
               深色模式
             </p>
@@ -348,8 +352,8 @@
                   <Moon size={15} strokeWidth={1.5} color="var(--brand)" />
                 </div>
                 <div>
-                  <p style="font-size: 14px; color: var(--text-primary);">深色模式</p>
-                  <p style="font-size: 11px; color: var(--text-secondary);">
+                  <p class="text-body-lg" style="color: var(--text-primary)">深色模式</p>
+                  <p class="text-caption" style="color: var(--text-secondary)">
                     跟随系统 / 浅色 / 深色
                   </p>
                 </div>
@@ -361,11 +365,12 @@
           <!-- Notifications section -->
           <div class="mb-6">
             <h2
-              style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;"
+              class="text-h2"
+              style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px"
             >
               通知偏好
             </h2>
-            <p style="font-size: 12px; color: var(--text-secondary);">管理你收到的通知类型</p>
+            <p class="text-meta" style="color: var(--text-secondary)">管理你收到的通知类型</p>
           </div>
           <div
             class="overflow-hidden rounded-[var(--radius-md)]"
@@ -376,7 +381,7 @@
                 <div class="mx-4" style="height: 1px; background: var(--border-theme);"></div>
               {/if}
               <div class="flex items-center justify-between px-4 py-3.5">
-                <span style="font-size: 14px; color: var(--text-primary);">{item.label}</span>
+                <span class="text-body-lg" style="color: var(--text-primary)">{item.label}</span>
                 <button
                   type="button"
                   role="switch"
@@ -407,7 +412,8 @@
           {#if section}
             <div class="mb-6">
               <h2
-                style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;"
+                class="text-h2"
+                style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px"
               >
                 {section.title}
               </h2>
@@ -428,8 +434,10 @@
                     <item.icon size={15} strokeWidth={1.5} color="var(--text-secondary)" />
                   </div>
                   <div class="min-w-0 flex-1">
-                    <p style="font-size: 14px; color: var(--text-primary);">{item.label}</p>
-                    <p style="font-size: 11px; color: var(--text-secondary);">{item.description}</p>
+                    <p class="text-body-lg" style="color: var(--text-primary)">{item.label}</p>
+                    <p class="text-caption" style="color: var(--text-secondary)">
+                      {item.description}
+                    </p>
                   </div>
                   <ChevronRight size={15} strokeWidth={1.5} color="var(--text-secondary)" />
                 </a>
@@ -470,10 +478,10 @@
               />
             </div>
             <div class="min-w-0">
-              <p style="font-size: 15px; color: var(--text-primary); font-weight: 500;">
+              <p class="text-body-lg" style="color: var(--text-primary); font-weight: 500">
                 {authStore.currentAccount.nickname || '用户'}
               </p>
-              <p style="font-size: 11px; color: var(--text-secondary);">
+              <p class="text-caption" style="color: var(--text-secondary)">
                 @{formatHandle(authStore.currentAccount)}
               </p>
             </div>
@@ -482,8 +490,8 @@
 
         <!-- Theme picker (standalone section, matching Figma Make) -->
         <p
-          class="px-1"
-          style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-top: 8px;"
+          class="text-xs px-1"
+          style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-top: 8px"
         >
           主题风格
         </p>
@@ -534,9 +542,10 @@
                 </div>
               </div>
               <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                <span style="font-size: 12px; color: {accent};">{THEME_NAMES[option.family]}</span>
+                <span class="text-meta" style="color: {accent}">{THEME_NAMES[option.family]}</span>
                 <span
-                  style="font-size: 10px; text-align: center; line-height: 1.4; color: {accent}99;"
+                  class="text-xs"
+                  style="text-align: center; line-height: 1.4; color: {accent}99"
                 >
                   {#if option.family === 'indigo'}霓虹活力{:else if option.family === 'forest'}森林极简{:else}柔和质感{/if}
                 </span>
@@ -554,8 +563,8 @@
 
         <!-- Appearance -->
         <p
-          class="px-1"
-          style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-top: 8px;"
+          class="text-xs px-1"
+          style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-top: 8px"
         >
           外观
         </p>
@@ -569,8 +578,10 @@
                 <Palette size={15} strokeWidth={1.5} color="var(--brand)" />
               </div>
               <div>
-                <p style="font-size: 14px; color: var(--text-primary);">深色模式</p>
-                <p style="font-size: 11px; color: var(--text-secondary);">跟随系统 / 浅色 / 深色</p>
+                <p class="text-body-lg" style="color: var(--text-primary)">深色模式</p>
+                <p class="text-caption" style="color: var(--text-secondary)">
+                  跟随系统 / 浅色 / 深色
+                </p>
               </div>
             </div>
             <ThemeToggle />
@@ -579,8 +590,8 @@
 
         {#each settingsSections as section (section.title)}
           <p
-            class="px-1"
-            style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-top: 8px;"
+            class="text-xs px-1"
+            style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-top: 8px"
           >
             {section.title}
           </p>
@@ -597,8 +608,10 @@
                   <item.icon size={15} strokeWidth={1.5} color="var(--text-secondary)" />
                 </div>
                 <div class="min-w-0 flex-1">
-                  <p style="font-size: 14px; color: var(--text-primary);">{item.label}</p>
-                  <p style="font-size: 11px; color: var(--text-secondary);">{item.description}</p>
+                  <p class="text-body-lg" style="color: var(--text-primary)">{item.label}</p>
+                  <p class="text-caption" style="color: var(--text-secondary)">
+                    {item.description}
+                  </p>
                 </div>
                 <ChevronRight size={15} strokeWidth={1.5} color="var(--text-secondary)" />
               </a>
@@ -608,8 +621,8 @@
 
         <!-- Notification toggles -->
         <p
-          class="px-1"
-          style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-top: 8px;"
+          class="text-xs px-1"
+          style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-top: 8px"
         >
           通知偏好
         </p>
@@ -619,7 +632,7 @@
               <div class="mx-4" style="height: 1px; background: var(--border-theme);"></div>
             {/if}
             <div class="flex items-center justify-between px-4 py-3.5">
-              <span style="font-size: 14px; color: var(--text-primary);">{item.label}</span>
+              <span class="text-body-lg" style="color: var(--text-primary)">{item.label}</span>
               <button
                 type="button"
                 role="switch"
@@ -657,7 +670,7 @@
             >
               <LogOut size={15} strokeWidth={1.5} color="var(--brand)" />
             </div>
-            <span style="font-size: 14px; color: var(--brand);">退出登录</span>
+            <span class="text-body-lg" style="color: var(--brand)">退出登录</span>
           </button>
         </div>
       </div>

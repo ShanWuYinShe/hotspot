@@ -165,7 +165,8 @@
       <!-- Section header -->
       <div class="mb-4 flex items-center gap-2">
         <Megaphone size={18} strokeWidth={1.75} style="color: var(--brand);" />
-        <span style="font-size: 16px; font-weight: 600; color: var(--text-primary);">公告列表</span>
+        <span class="text-title" style="font-weight: 600; color: var(--text-primary)">公告列表</span
+        >
       </div>
 
       {#if pagination.loading && pagination.items.length === 0}
@@ -188,9 +189,7 @@
           {/each}
         </div>
       {:else if pagination.items.length === 0}
-        <div class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
-          暂无公告
-        </div>
+        <div class="text-body py-8 text-center" style="color: var(--text-secondary)">暂无公告</div>
       {:else}
         <div class="space-y-4">
           {#each pagination.items as announcement (announcement.announcement_id)}
@@ -202,23 +201,23 @@
               <div class="flex items-start justify-between gap-4">
                 <div class="flex-1">
                   <div class="flex items-center gap-2">
-                    <span style="font-size: 15px; font-weight: 600; color: var(--text-primary);"
+                    <span class="text-body-lg" style="font-weight: 600; color: var(--text-primary)"
                       >{announcement.title}</span
                     >
                     <span
-                      class="rounded-full px-2.5 py-0.5"
-                      style="font-size: 11px; font-weight: 500; color: {badge.color}; background: {badge.color}15; border: 1px solid {badge.color}30;"
+                      class="text-caption rounded-full px-2.5 py-0.5"
+                      style="font-weight: 500; color: {badge.color}; background: {badge.color}15; border: 1px solid {badge.color}30"
                     >
                       {badge.text}
                     </span>
                   </div>
                   <p
-                    class="mt-2 whitespace-pre-wrap"
-                    style="font-size: 13px; color: var(--text-secondary);"
+                    class="text-body mt-2 whitespace-pre-wrap"
+                    style="color: var(--text-secondary)"
                   >
                     {announcement.content}
                   </p>
-                  <p class="mt-2" style="font-size: 11px; color: var(--text-secondary);">
+                  <p class="text-caption mt-2" style="color: var(--text-secondary)">
                     发布于 {formatDateTime(announcement.created_at)}
                   </p>
                 </div>
@@ -254,22 +253,22 @@
     </Dialog.Header>
     <div class="space-y-4 py-4">
       <div class="space-y-2">
-        <label for="title" style="font-size: 12px; color: var(--text-primary);">标题</label>
+        <label for="title" class="text-meta" style="color: var(--text-primary)">标题</label>
         <Input id="title" placeholder="公告标题" bind:value={title} autocomplete="off" />
       </div>
       <div class="space-y-2">
-        <label for="content" style="font-size: 12px; color: var(--text-primary);">内容</label>
+        <label for="content" class="text-meta" style="color: var(--text-primary)">内容</label>
         <textarea
           id="content"
           placeholder="公告内容"
           rows="5"
           bind:value={content}
-          class="field-inset w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none resize-none"
-          style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
+          class="text-body field-inset w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none resize-none"
+          style="background: var(--surface-bg); color: var(--text-primary)"
         ></textarea>
       </div>
       <div class="space-y-2">
-        <span style="font-size: 12px; color: var(--text-primary);">级别</span>
+        <span class="text-meta" style="color: var(--text-primary)">级别</span>
         <div class="flex gap-2">
           {#each [{ key: 'info', label: '通知', color: 'var(--brand)' }, { key: 'warning', label: '警告', color: 'var(--theme-warning)' }, { key: 'error', label: '紧急', color: 'var(--theme-error)' }] as opt}
             <Button

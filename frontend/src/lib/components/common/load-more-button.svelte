@@ -40,7 +40,7 @@
     {#if loading}
       <div class="flex items-center gap-2" role="status" aria-live="polite">
         <Loader2 size={18} strokeWidth={1.5} class="animate-spin" color="var(--text-secondary)" />
-        <span style="font-size: 13px; color: var(--text-secondary);">{t('common.loading')}</span>
+        <span class="text-body" style="color: var(--text-secondary)">{t('common.loading')}</span>
       </div>
     {:else}
       <button
@@ -51,7 +51,7 @@
         aria-label={t('common.loadMore')}
       >
         <ArrowDown class="h-6 w-6 animate-bounce" strokeWidth={2} />
-        <span style="font-size: 11px; color: var(--text-secondary);"
+        <span class="text-caption" style="color: var(--text-secondary)"
           >{t('loadMoreIndicator.clickToLoad')}</span
         >
       </button>

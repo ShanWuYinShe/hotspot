@@ -42,8 +42,8 @@
       >
         <Shield size={19} color="var(--brand)" />
       </div>
-      <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">登录后继续</h1>
-      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">
+      <h1 class="text-h1" style="font-weight: 600; color: var(--text-primary)">登录后继续</h1>
+      <p class="text-body" style="color: var(--text-secondary); margin-top: 6px">
         使用你的账号、注册新账号或继续访客体验
       </p>
     </div>

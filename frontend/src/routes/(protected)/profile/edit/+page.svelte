@@ -155,10 +155,10 @@
     <button
       class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all"
       style={saved
-        ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: 13px; box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
+        ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: var(--text-body); box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
         : canSave
-          ? 'background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn); border: none;'
-          : 'background: var(--surface-secondary); color: var(--text-secondary); font-size: 13px; border: none; opacity: 0.5;'}
+          ? 'background: var(--brand); color: var(--text-on-accent); font-size: var(--text-body); box-shadow: var(--shadow-brand-btn); border: none;'
+          : 'background: var(--surface-secondary); color: var(--text-secondary); font-size: var(--text-body); border: none; opacity: 0.5;'}
       onclick={saveProfile}
       disabled={!canSave}
     >
@@ -186,8 +186,8 @@
           style="background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.5));"
         ></div>
         <button
-          class="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
-          style="padding: 6px 12px; background: var(--overlay); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); font-size: 12px; color: var(--text-on-accent);"
+          class="text-meta absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
+          style="padding: 6px 12px; background: var(--overlay); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); color: var(--text-on-accent)"
         >
           <Camera size={13} strokeWidth={1.75} />
           更换横幅
@@ -205,8 +205,8 @@
               <img src={avatarUrl} alt="avatar" class="w-full h-full object-cover" />
             {:else}
               <div
-                class="flex h-full w-full items-center justify-center"
-                style="background: var(--surface-bg); font-size: 20px; color: var(--text-primary);"
+                class="text-h1 flex h-full w-full items-center justify-center"
+                style="background: var(--surface-bg); color: var(--text-primary)"
               >
                 {nickname.slice(0, 2)}
               </div>
@@ -229,8 +229,8 @@
           />
         </div>
         <div>
-          <p style="font-size: 16px; color: var(--text-primary);">{profile.nickname}</p>
-          <p style="font-size: 12px; color: var(--text-secondary);">
+          <p class="text-title" style="color: var(--text-primary)">{profile.nickname}</p>
+          <p class="text-meta" style="color: var(--text-secondary)">
             @{formatHandle(profile)}
           </p>
         </div>
@@ -248,8 +248,8 @@
             bind:value={nickname}
             placeholder="你的名字"
             maxlength={30}
-            class="w-full bg-transparent outline-none"
-            style="color: var(--text-primary); font-size: 14px;"
+            class="text-body-lg w-full bg-transparent outline-none"
+            style="color: var(--text-primary)"
           />
         </div>
       </div>
@@ -267,14 +267,14 @@
             placeholder="介绍一下自己..."
             rows="3"
             maxlength={150}
-            class="w-full bg-transparent outline-none resize-none"
-            style="color: var(--text-primary); font-size: 14px; line-height: 1.65;"
+            class="text-body-lg w-full bg-transparent outline-none resize-none"
+            style="color: var(--text-primary); line-height: 1.65"
           ></textarea>
           <div class="flex justify-end mt-1">
             <span
-              style="font-size: 11px; color: {bio.length > 150 * 0.85
-                ? 'var(--brand)'
-                : 'var(--text-secondary)'};">{bio.length}/150</span
+              class="text-caption"
+              style="color: {bio.length > 150 * 0.85 ? 'var(--brand)' : 'var(--text-secondary)'}"
+              >{bio.length}/150</span
             >
           </div>
         </div>
@@ -284,10 +284,10 @@
       <button
         class="flex w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] px-4 py-3.5 outline-none transition-all"
         style={saved
-          ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
+          ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: var(--text-body-lg); box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
           : canSave
-            ? 'background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: var(--shadow-brand-btn); border: none;'
-            : 'background: var(--surface-secondary); color: var(--text-secondary); font-size: 14px; border: none; opacity: 0.5;'}
+            ? 'background: var(--brand); color: var(--text-on-accent); font-size: var(--text-body-lg); box-shadow: var(--shadow-brand-btn); border: none;'
+            : 'background: var(--surface-secondary); color: var(--text-secondary); font-size: var(--text-body-lg); border: none; opacity: 0.5;'}
         onclick={saveProfile}
         disabled={!canSave}
       >
@@ -307,10 +307,10 @@
   <!-- Error state -->
   <div class="page-pad">
     <div class="page-shell page-shell--form flex flex-col items-center justify-center py-16">
-      <p style="font-size: 14px; color: var(--text-secondary);">加载失败</p>
+      <p class="text-body-lg" style="color: var(--text-secondary)">加载失败</p>
       <button
-        class="rounded-[var(--radius-lg)] px-5 py-3.5 outline-none surface-flat mt-4"
-        style="color: var(--brand); font-size: 14px;"
+        class="text-body-lg rounded-[var(--radius-lg)] px-5 py-3.5 outline-none surface-flat mt-4"
+        style="color: var(--brand)"
         onclick={() => void goto('/profile')}
       >
         返回个人资料

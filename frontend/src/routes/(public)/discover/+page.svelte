@@ -100,8 +100,8 @@
 <!-- Shared header content (used by all platforms) -->
 {#snippet headerContent()}
   <div class="flex items-center justify-between mb-2">
-    <h1 style="font-size: 24px; font-weight: 600; color: var(--text-primary);">发现</h1>
-    <span style="font-size: 12px; color: var(--text-secondary);"
+    <h1 class="page-title page-title--hero" style="color: var(--text-primary);">发现</h1>
+    <span class="text-meta" style="color: var(--text-secondary)"
       >{getFilteredItems().length} 条内容</span
     >
   </div>
@@ -117,8 +117,8 @@
       aria-label="搜索发现内容"
       bind:value={searchVal}
       placeholder="地点、人物、关键词…"
-      class="flex-1 bg-transparent outline-none"
-      style="font-size: 13px; color: var(--text-primary);"
+      class="text-body flex-1 bg-transparent outline-none"
+      style="color: var(--text-primary)"
       onkeydown={(e) => e.key === 'Enter' && handleSearch()}
     />
     {#if searchVal.length > 0}
@@ -135,12 +135,10 @@
     {#each TABS as tab (tab)}
       <button
         type="button"
-        class="relative flex-shrink-0 pb-3 pt-1 outline-none transition-colors"
+        class="text-body relative flex-shrink-0 pb-3 pt-1 outline-none transition-colors"
         style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab
           ? 'var(--brand)'
-          : 'var(--text-secondary)'}; font-weight: {activeTab === tab
-          ? 500
-          : 400}; font-size: 13px;"
+          : 'var(--text-secondary)'}; font-weight: {activeTab === tab ? 500 : 400}"
         onclick={() => (activeTab = tab)}
       >
         {tab}
@@ -258,8 +256,8 @@
         onmouseleave={(e) => (e.currentTarget.style.background = 'transparent')}
         onclick={() => handleTrendingClick(`#${topic.name}`)}
       >
-        <span style="font-size: 13px; color: var(--text-primary);">#{topic.name}</span>
-        <span style="font-size: 11px; color: var(--text-secondary);">{topic.usage_count}帖</span>
+        <span class="text-body" style="color: var(--text-primary)">#{topic.name}</span>
+        <span class="text-caption" style="color: var(--text-secondary)">{topic.usage_count}帖</span>
       </button>
     {/each}
   </div>
@@ -273,20 +271,20 @@
       {#each topUsers as user (user.id)}
         <div class="flex items-center gap-2.5">
           <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={32} />
-          <p class="min-w-0 flex-1 truncate" style="font-size: 12px; color: var(--text-primary);">
+          <p class="text-meta min-w-0 flex-1 truncate" style="color: var(--text-primary)">
             {user.nickname}
           </p>
           <button
             type="button"
-            class="flex-shrink-0 rounded-full px-2.5 py-1 outline-none"
-            style="background: var(--brand); font-size: 10px; color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
+            class="text-xs flex-shrink-0 rounded-full px-2.5 py-1 outline-none"
+            style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
           >
             关注
           </button>
         </div>
       {/each}
       {#if topUsers.length === 0}
-        <p style="font-size: 12px; color: var(--text-secondary);">附近暂无活跃用户</p>
+        <p class="text-meta" style="color: var(--text-secondary)">附近暂无活跃用户</p>
       {/if}
     </div>
   </div>

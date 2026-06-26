@@ -25,11 +25,11 @@
 
   <div class="space-y-2">
     <h1
-      style="font-size: 36px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em;"
+      style="font-size: var(--text-display-lg); font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em;"
     >
       {page.status}
     </h1>
-    <p style="font-size: 16px; color: var(--text-secondary);">
+    <p class="text-title" style="color: var(--text-secondary)">
       {#if is404}
         {t('errorPage.notFound')}
       {:else}

@@ -98,7 +98,7 @@
         {#if !platformStore.isDesktop}
           <BackButton onclick={handleBack} size={36} />
         {/if}
-        <h1 class="flex-1" style="font-size: 20px; font-weight: 600; color: var(--text-primary);">
+        <h1 class="text-h1 flex-1" style="font-weight: 600; color: var(--text-primary)">
           附近群组
         </h1>
         {#if !platformStore.isDesktop}
@@ -122,8 +122,8 @@
           type="text"
           bind:value={searchText}
           placeholder="搜索群组"
-          class="flex-1 bg-transparent outline-none"
-          style="font-size: 13px; color: var(--text-primary);"
+          class="text-body flex-1 bg-transparent outline-none"
+          style="color: var(--text-primary)"
         />
       </div>
 
@@ -159,8 +159,8 @@
               <UsersRound size={19} strokeWidth={2} color="var(--text-on-accent)" />
             </div>
             <div class="min-w-0 flex-1">
-              <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">附近概览</p>
-              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+              <p class="text-body" style="font-weight: 500; color: var(--text-primary)">附近概览</p>
+              <p class="text-caption" style="color: var(--text-secondary); margin-top: 2px">
                 实时统计当前浏览范围内的群组
               </p>
             </div>
@@ -176,7 +176,7 @@
       {:else}
         <div class="mb-4 flex items-center justify-between gap-3">
           <AnchorEntry variant="pill" />
-          <p class="flex-shrink-0" style="font-size: 11px; color: var(--text-secondary);">
+          <p class="text-caption flex-shrink-0" style="color: var(--text-secondary)">
             共 {pagination.items.length} 个群组
           </p>
         </div>

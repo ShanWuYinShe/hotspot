@@ -34,7 +34,7 @@
         class="h-8 w-8 animate-spin rounded-full"
         style="border: 4px solid var(--border-theme); border-top-color: var(--brand);"
       ></div>
-      <p style="font-size: 13px; color: var(--text-secondary);">
+      <p class="text-body" style="color: var(--text-secondary)">
         {t('admin.checkingPermissions')}
       </p>
     </div>
@@ -48,10 +48,10 @@
       >
         <Shield size={24} strokeWidth={1.5} style="color: var(--theme-error);" />
       </div>
-      <h2 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">
+      <h2 class="text-h1" style="font-weight: 600; color: var(--text-primary)">
         {t('admin.accessDenied')}
       </h2>
-      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
+      <p class="text-body" style="color: var(--text-secondary); margin-top: 8px">
         {t('admin.accessDeniedDescription')}
       </p>
       <Button variant="flat" class="mt-6" onclick={() => goto('/')}>
@@ -68,10 +68,10 @@
       >
         <Shield size={24} strokeWidth={1.5} style="color: var(--text-secondary);" />
       </div>
-      <h2 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">
+      <h2 class="text-h1" style="font-weight: 600; color: var(--text-primary)">
         {t('admin.permissionCheckFailed')}
       </h2>
-      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
+      <p class="text-body" style="color: var(--text-secondary); margin-top: 8px">
         {t('admin.permissionCheckFailedDescription')}
       </p>
       <div class="mt-6 flex gap-3">
@@ -91,7 +91,7 @@
         class="h-8 w-8 animate-spin rounded-full"
         style="border: 4px solid var(--border-theme); border-top-color: var(--brand);"
       ></div>
-      <p style="font-size: 13px; color: var(--text-secondary);">{t('auth.restoringSession')}</p>
+      <p class="text-body" style="color: var(--text-secondary)">{t('auth.restoringSession')}</p>
     </div>
   </AppShell>
 {:else}
@@ -103,10 +103,10 @@
       >
         <Shield size={24} strokeWidth={1.5} style="color: var(--text-secondary);" />
       </div>
-      <h2 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">
+      <h2 class="text-h1" style="font-weight: 600; color: var(--text-primary)">
         {t('auth.loginRequired')}
       </h2>
-      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
+      <p class="text-body" style="color: var(--text-secondary); margin-top: 8px">
         {t('admin.loginRequiredDescription')}
       </p>
       <Button variant="flat" class="mt-6" onclick={handleLoginClick}>

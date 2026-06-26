@@ -103,8 +103,8 @@
 <div class="flex-shrink-0 px-4 pt-4 pb-3" style="border-bottom: 1px solid var(--border-theme);">
   <div class="mb-3 flex items-center justify-between">
     <div>
-      <h1 style="font-size: 18px; color: var(--text-primary);">消息</h1>
-      <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+      <h1 class="text-h2" style="color: var(--text-primary)">消息</h1>
+      <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
         {totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}
       </p>
     </div>
@@ -132,8 +132,8 @@
       aria-label="搜索会话"
       bind:value={searchVal}
       placeholder="搜索…"
-      class="flex-1 bg-transparent outline-none"
-      style="font-size: 13px; color: var(--text-primary);"
+      class="text-body flex-1 bg-transparent outline-none"
+      style="color: var(--text-primary)"
     />
   </div>
 </div>
@@ -141,10 +141,7 @@
 <!-- Online strip -->
 {#if onlineChats.length > 0}
   <div class="flex-shrink-0 px-4 py-2.5" style="border-bottom: 1px solid var(--border-theme);">
-    <p
-      class="uppercase mb-2"
-      style="font-size: 9px; letter-spacing: 0.12em; color: var(--text-secondary);"
-    >
+    <p class="text-xs uppercase mb-2" style="letter-spacing: 0.12em; color: var(--text-secondary)">
       在线
     </p>
     <div class="flex gap-3 overflow-x-auto no-scrollbar">
@@ -174,7 +171,7 @@
               style="width: 8px; height: 8px; background: var(--semantic-online); border: 1.5px solid var(--surface-bg);"
             ></span>
           </div>
-          <span style="font-size: 10px; color: var(--text-secondary);"
+          <span class="text-xs" style="color: var(--text-secondary)"
             >{chat.other_user.nickname}</span
           >
         </a>
@@ -226,7 +223,7 @@
         <a
           href="/chat/users/{chat.other_user.user_id}"
           class="flex items-center gap-3.5 cursor-pointer transition-all row-hover"
-          style="padding: 10px 16px; border-radius: 18px; background: {selected
+          style="padding: 10px 16px; border-radius: var(--radius-md); background: {selected
             ? 'var(--brand)'
             : 'transparent'}; box-shadow: {selected
             ? '0 4px 16px var(--glow)'
@@ -257,30 +254,32 @@
           <div class="min-w-0 flex-1">
             <div class="mb-0.5 flex items-center justify-between">
               <span
-                style="font-size: 14px; color: {selected
+                class="text-body-lg"
+                style="color: {selected
                   ? 'var(--text-on-accent)'
-                  : 'var(--text-primary)'}; font-weight: {chat.unread_count > 0 ? 600 : 400};"
+                  : 'var(--text-primary)'}; font-weight: {chat.unread_count > 0 ? 600 : 400}"
                 >{chat.other_user.nickname}</span
               >
               <span
-                style="font-size: 11px; flex-shrink: 0; color: {selected
+                class="text-caption"
+                style="flex-shrink: 0; color: {selected
                   ? 'color-mix(in srgb, var(--text-on-accent) 70%, transparent)'
-                  : 'var(--text-secondary)'};">{formatRelativeTime(chat.last_activity_at)}</span
+                  : 'var(--text-secondary)'}">{formatRelativeTime(chat.last_activity_at)}</span
               >
             </div>
             <p
-              class="truncate pr-4"
-              style="font-size: 12px; color: {selected
+              class="text-meta truncate pr-4"
+              style="color: {selected
                 ? 'color-mix(in srgb, var(--text-on-accent) 80%, transparent)'
-                : 'var(--text-secondary)'};"
+                : 'var(--text-secondary)'}"
             >
               {#if chat.last_message}{chat.last_message.content || '[媒体消息]'}{:else}暂无消息{/if}
             </p>
           </div>
           {#if chat.unread_count > 0 && !selected}
             <div
-              class="flex flex-shrink-0 items-center justify-center rounded-full"
-              style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
+              class="text-caption flex flex-shrink-0 items-center justify-center rounded-full"
+              style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-weight: 600; box-shadow: var(--shadow-brand-btn)"
             >
               {chat.unread_count > 99 ? '99+' : chat.unread_count}
             </div>
@@ -313,7 +312,7 @@
       <a
         href="/chat/groups/{group.group.group_id}"
         class="flex items-center gap-3.5 cursor-pointer transition-all row-hover"
-        style="padding: 10px 16px; border-radius: 18px; background: {selected
+        style="padding: 10px 16px; border-radius: var(--radius-md); background: {selected
           ? 'var(--brand)'
           : 'transparent'}; box-shadow: {selected
           ? '0 4px 16px var(--glow)'
@@ -337,29 +336,31 @@
         <div class="min-w-0 flex-1">
           <div class="mb-0.5 flex items-center justify-between">
             <span
-              style="font-size: 14px; font-weight: 500; color: {selected
+              class="text-body-lg"
+              style="font-weight: 500; color: {selected
                 ? 'var(--text-on-accent)'
-                : 'var(--text-primary)'};">{group.group.name}</span
+                : 'var(--text-primary)'}">{group.group.name}</span
             >
             <span
-              style="font-size: 11px; flex-shrink: 0; color: {selected
+              class="text-caption"
+              style="flex-shrink: 0; color: {selected
                 ? 'color-mix(in srgb, var(--text-on-accent) 70%, transparent)'
-                : 'var(--text-secondary)'};">{group.group.members_count}人</span
+                : 'var(--text-secondary)'}">{group.group.members_count}人</span
             >
           </div>
           <p
-            class="truncate pr-4"
-            style="font-size: 12px; color: {selected
+            class="text-meta truncate pr-4"
+            style="color: {selected
               ? 'color-mix(in srgb, var(--text-on-accent) 80%, transparent)'
-              : 'var(--text-secondary)'};"
+              : 'var(--text-secondary)'}"
           >
             {formatRelativeTime(group.last_activity_at ?? group.my_state?.joined_at ?? '')}
           </p>
         </div>
         {#if (group.my_state?.unread_count ?? 0) > 0 && !selected}
           <div
-            class="flex flex-shrink-0 items-center justify-center rounded-full"
-            style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
+            class="text-caption flex flex-shrink-0 items-center justify-center rounded-full"
+            style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-weight: 600; box-shadow: var(--shadow-brand-btn)"
           >
             {(group.my_state?.unread_count ?? 0) > 99 ? '99+' : (group.my_state?.unread_count ?? 0)}
           </div>

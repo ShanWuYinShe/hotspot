@@ -77,8 +77,8 @@
 <AdminPageHeader title="群组管理" description="查看与管理群组">
   {#snippet actions()}
     <button
-      class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+      class="text-body flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary)"
       onclick={() => loadGroups()}
       disabled={pagination.loading}
     >
@@ -99,16 +99,16 @@
         <input
           type="search"
           placeholder="搜索群组名称..."
-          class="flex-1 bg-transparent outline-none"
-          style="font-size: 13px; color: var(--text-primary);"
+          class="text-body flex-1 bg-transparent outline-none"
+          style="color: var(--text-primary)"
           autocomplete="off"
           bind:value={name}
           onkeydown={(e) => e.key === 'Enter' && loadGroups()}
         />
       </div>
       <button
-        class="rounded-full px-4 py-2.5 outline-none"
-        style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
+        class="text-body rounded-full px-4 py-2.5 outline-none"
+        style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
         onclick={() => loadGroups()}>搜索</button
       >
     </div>
@@ -123,7 +123,9 @@
         style="border-bottom: 1px solid var(--border-theme);"
       >
         <UsersRound size={16} strokeWidth={1.5} color="var(--brand)" />
-        <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);">群组列表</span>
+        <span class="text-body-lg" style="font-weight: 500; color: var(--text-primary)"
+          >群组列表</span
+        >
       </div>
       <div class="p-4">
         {#if pagination.loading && pagination.items.length === 0}
@@ -148,7 +150,7 @@
             {/each}
           </div>
         {:else if pagination.items.length === 0}
-          <p class="py-8 text-center" style="font-size: 13px; color: var(--text-secondary);">
+          <p class="text-body py-8 text-center" style="color: var(--text-secondary)">
             暂无群组数据
           </p>
         {:else}
@@ -167,7 +169,7 @@
                 />
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-1">
-                    <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
+                    <span class="text-body" style="font-weight: 500; color: var(--text-primary)"
                       >{group.group.name}</span
                     >
                     {#if group.has_password}
@@ -177,21 +179,20 @@
                   <div class="flex items-center gap-2 mt-0.5">
                     <div class="flex items-center gap-0.5">
                       <Users size={11} strokeWidth={1.5} color="var(--text-secondary)" />
-                      <span style="font-size: 11px; color: var(--text-secondary);"
+                      <span class="text-caption" style="color: var(--text-secondary)"
                         >{group.group.members_count}</span
                       >
                     </div>
                     {#if group.created_at}
-                      <span style="font-size: 11px; color: var(--text-secondary);"
+                      <span class="text-caption" style="color: var(--text-secondary)"
                         >创建: {formatDate(group.created_at)}</span
                       >
                     {/if}
                   </div>
                 </div>
                 <span
-                  class="rounded-full px-2 py-0.5"
-                  style="font-size: 10px; background: var(--brand); color: var(--text-on-accent);"
-                  >正常</span
+                  class="text-xs rounded-full px-2 py-0.5"
+                  style="background: var(--brand); color: var(--text-on-accent)">正常</span
                 >
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger>
@@ -211,7 +212,8 @@
                       {#snippet child({ props })}
                         <a
                           href="/groups/{group.group.group_id}"
-                          style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary);"
+                          class="text-body"
+                          style="display: flex; align-items: center; gap: 6px; color: var(--text-primary)"
                           {...props}
                         >
                           <Eye size={14} strokeWidth={1.5} />
@@ -223,7 +225,8 @@
                     <DropdownMenu.Item class="text-destructive">
                       {#snippet child({ props })}
                         <button
-                          style="display: flex; align-items: center; gap: 6px; font-size: 13px;"
+                          class="text-body"
+                          style="display: flex; align-items: center; gap: 6px"
                           {...props}
                           onclick={() => requestDissolve(group.group.group_id)}
                         >
@@ -239,8 +242,8 @@
           </div>
           {#if pagination.hasMore}
             <button
-              class="mt-4 w-full rounded-full py-2.5 outline-none"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+              class="text-body mt-4 w-full rounded-full py-2.5 outline-none"
+              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary)"
               onclick={() => loadGroups(false)}>加载更多</button
             >
           {/if}

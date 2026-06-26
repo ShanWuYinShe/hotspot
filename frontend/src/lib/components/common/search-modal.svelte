@@ -317,10 +317,10 @@
         <Search size={18} strokeWidth={1.5} color="var(--brand)" />
       </div>
       <div>
-        <h2 style="font-size: 17px; font-weight: 600; color: var(--text-primary);">
+        <h2 class="text-title" style="font-weight: 600; color: var(--text-primary)">
           {t('searchModal.title')}
         </h2>
-        <p style="font-size: 12px; color: var(--text-secondary);">{t('searchModal.description')}</p>
+        <p class="text-meta" style="color: var(--text-secondary)">{t('searchModal.description')}</p>
       </div>
     </div>
 
@@ -341,8 +341,8 @@
           bind:value={keyword}
           autocomplete="off"
           aria-label={t('searchModal.inputAria')}
-          class="flex-1 bg-transparent outline-none"
-          style="font-size: 13px; color: var(--text-primary);"
+          class="text-body flex-1 bg-transparent outline-none"
+          style="color: var(--text-primary)"
         />
         {#if keyword}
           <button
@@ -381,7 +381,7 @@
               {/each}
             </div>
           {:else if !hasSuggestions}
-            <p style="font-size: 13px; color: var(--text-secondary);">
+            <p class="text-body" style="color: var(--text-secondary)">
               {t('searchModal.noSuggestions')}
             </p>
           {:else}
@@ -391,13 +391,13 @@
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1.5">
                       <Clock size={12} strokeWidth={1.5} color="var(--text-secondary)" />
-                      <span style="font-size: 11px; color: var(--text-secondary);"
+                      <span class="text-caption" style="color: var(--text-secondary)"
                         >{t('searchModal.matchedHistory')}</span
                       >
                     </div>
                     <button
-                      class="outline-none"
-                      style="font-size: 11px; color: var(--text-secondary);"
+                      class="text-caption outline-none"
+                      style="color: var(--text-secondary)"
                       onclick={clearAllRecent}
                     >
                       {t('searchModal.clearAll')}
@@ -407,8 +407,8 @@
                     {#each recentMatches as term (term)}
                       <div class="flex items-center gap-1">
                         <button
-                          class="rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
-                          style="font-size: 12px; color: var(--text-primary); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                          class="text-meta rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
+                          style="color: var(--text-primary); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
                           onclick={() => handleSearchNavigate(term)}
                         >
                           {term}
@@ -431,7 +431,7 @@
                 <div class="space-y-1">
                   <div class="flex items-center gap-1.5 mb-2">
                     <TrendingUp size={12} strokeWidth={1.5} color="var(--text-secondary)" />
-                    <span style="font-size: 11px; color: var(--text-secondary);"
+                    <span class="text-caption" style="color: var(--text-secondary)"
                       >{t('searchModal.suggestions')}</span
                     >
                   </div>
@@ -467,7 +467,8 @@
                               style="background: var(--surface-secondary);"
                             >
                               <span
-                                style="font-size: 12px; font-weight: 600; color: var(--text-tertiary);"
+                                class="text-meta"
+                                style="font-weight: 600; color: var(--text-tertiary)"
                                 >{p.avatarFallback ?? '?'}</span
                               >
                             </div>
@@ -477,20 +478,19 @@
                       <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2">
                           <span
-                            class="truncate"
-                            style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
-                            >{p.title}</span
+                            class="text-body truncate"
+                            style="font-weight: 500; color: var(--text-primary)">{p.title}</span
                           >
                           <span
-                            class="flex-shrink-0 rounded-full px-1.5 py-0.5"
-                            style="font-size: 9px; font-weight: 500; background: var(--brand); color: var(--text-on-accent);"
+                            class="text-xs flex-shrink-0 rounded-full px-1.5 py-0.5"
+                            style="font-weight: 500; background: var(--brand); color: var(--text-on-accent)"
                             >{p.badge}</span
                           >
                         </div>
                         {#if p.subtitle}
                           <p
-                            class="truncate"
-                            style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;"
+                            class="text-caption truncate"
+                            style="color: var(--text-secondary); margin-top: 1px"
                           >
                             {p.subtitle}
                           </p>
@@ -502,7 +502,7 @@
               {/if}
             </div>
           {/if}
-          <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+          <p class="text-caption" style="color: var(--text-secondary); margin-top: 8px">
             {t('searchModal.clickSearchIcon')}
           </p>
         </div>
@@ -517,14 +517,14 @@
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-1.5">
                 <Clock size={14} strokeWidth={1.5} color="var(--text-secondary)" />
-                <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
+                <span class="text-body" style="font-weight: 500; color: var(--text-primary)"
                   >{t('searchModal.recentSearches')}</span
                 >
               </div>
               {#if recentSearches.length > 0}
                 <button
-                  class="outline-none"
-                  style="font-size: 11px; color: var(--text-secondary);"
+                  class="text-caption outline-none"
+                  style="color: var(--text-secondary)"
                   onclick={clearAllRecent}
                 >
                   {t('searchModal.clearAll')}
@@ -532,7 +532,7 @@
               {/if}
             </div>
             {#if recentSearches.length === 0}
-              <p style="font-size: 12px; color: var(--text-secondary);">
+              <p class="text-meta" style="color: var(--text-secondary)">
                 {t('searchModal.noRecentSearches')}
               </p>
             {:else}
@@ -540,8 +540,8 @@
                 {#each recentSearches as term (term)}
                   <div class="flex items-center gap-1">
                     <button
-                      class="rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
-                      style="font-size: 12px; color: var(--text-primary); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                      class="text-meta rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
+                      style="color: var(--text-primary); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
                       onclick={() => handleRecentClick(term)}
                     >
                       {term}
@@ -567,7 +567,7 @@
           >
             <div class="flex items-center gap-1.5 mb-3">
               <TrendingUp size={14} strokeWidth={1.5} color="var(--text-secondary)" />
-              <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);"
+              <span class="text-body" style="font-weight: 500; color: var(--text-primary)"
                 >{t('searchModal.trendingTags')}</span
               >
             </div>
@@ -581,15 +581,15 @@
                 {/each}
               </div>
             {:else if trendingTags.length === 0}
-              <p style="font-size: 12px; color: var(--text-secondary);">
+              <p class="text-meta" style="color: var(--text-secondary)">
                 {t('searchModal.noTrendingTags')}
               </p>
             {:else}
               <div class="flex flex-wrap gap-2">
                 {#each trendingTags as tag (tag.name)}
                   <button
-                    class="flex items-center gap-1 rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
-                    style="font-size: 12px; color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                    class="text-meta flex items-center gap-1 rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
+                    style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
                     onclick={() => handleTagClick(tag.name)}
                     aria-label={t('searchModal.searchHotTag', { name: tag.name })}
                   >

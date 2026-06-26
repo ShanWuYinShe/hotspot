@@ -75,7 +75,27 @@
   --color-map-group: var(--map-group);
   --color-map-post: var(--map-post);
 
+  /* Status tokens —— 暴露为 @theme 工具类（bg-success/text-success 等），
+     供 badge 等组件用 token 取代 Tailwind 调色板（green-500 等）。 */
+  --color-success: var(--theme-success);
+
   --radius: 0.625rem;
+
+  /* ───────────────────────────────────────────────────────────────
+     字号 token —— --text-* 命名空间自动生成 text-* 工具类
+     消除散落各页的内联 `font-size:Npx`，对齐 .claude/rules/design-tokens.md。
+     频率实测：前 5 名(xs/caption/meta/body/body-lg) 覆盖 91% 用量。
+     ─────────────────────────────────────────────────────────────── */
+  --text-xs: 10px; /* eyebrow / micro —— 配合 .eyebrow 类的 letter-spacing+uppercase */
+  --text-caption: 11px; /* 时间戳 / badge / 小注 */
+  --text-meta: 12px; /* 次要 / 说明 / 副文本 */
+  --text-body: 13px; /* 正文（最高频） */
+  --text-body-lg: 14px; /* 强调正文 / 主按钮 */
+  --text-title: 16px; /* 卡片 / 列表标题 */
+  --text-h2: 18px; /* 页级标题（钻取/面板） */
+  --text-h1: 20px; /* 区块 H1 / stat 数字 */
+  --text-display: 24px; /* 门面页大标题 / 群组名 / 大 stat（流式页标题仍用 .page-title--hero） */
+  --text-display-lg: 36px; /* 错误页 hero 大字 */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -677,11 +697,13 @@
   --overlay-subtle: rgba(0, 0, 0, 0.05);
   --overlay-loading: rgba(255, 255, 255, 0.85);
 
-  /* Radius presets */
+  /* Radius presets —— 对齐 harmonyapp DesignConstants.RADIUS 阶梯。
+     --radius-xxl 曾为 32px（死 token，零引用）；harmonyapp RADIUS.XXL=22 才是真用的
+     （MomentFeedCard/LocationBar），此处对齐为 22，消除两端「XXL」语义歧义。 */
   --radius-md: 18px;
   --radius-lg: 22px;
   --radius-xl: 24px;
-  --radius-xxl: 32px;
+  --radius-xxl: 22px;
   --radius-pill: 40px;
   /* 主按钮圆角矩形(28px),对齐 harmonyapp SHAPE.BUTTON=28;与 chip/头像的 pill(全圆)区分 */
   --radius-button: 28px;

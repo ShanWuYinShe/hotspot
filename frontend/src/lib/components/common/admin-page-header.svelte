@@ -21,9 +21,9 @@
   <div class="page-shell page-shell--wide">
     <div class="flex items-center justify-between gap-4">
       <div class="min-w-0">
-        <h1 style="font-size: 20px; font-weight: 600; color: var(--text-primary);">{title}</h1>
+        <h1 class="text-h1" style="font-weight: 600; color: var(--text-primary)">{title}</h1>
         {#if description}
-          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+          <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
             {description}
           </p>
         {/if}

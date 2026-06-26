@@ -108,11 +108,12 @@
           />
         </span>
         <span
-          style="font-size: 11px; line-height: 1; color: {isActive(item)
+          class="text-caption"
+          style="line-height: 1; color: {isActive(item)
             ? 'var(--brand)'
             : 'var(--text-secondary)'}; font-weight: {isActive(item)
             ? 600
-            : 400}; transition: color 0.22s ease; letter-spacing: 0.02em; position: relative; z-index: 1;"
+            : 400}; transition: color 0.22s ease; letter-spacing: 0.02em; position: relative; z-index: 1"
         >
           {t(item.labelKey)}
         </span>
@@ -165,19 +166,20 @@
           />
           {#if tabBadge(item) > 0}
             <span
-              class="absolute flex items-center justify-center rounded-full"
-              style="top: -4px; right: -6px; height: 20px; min-width: 20px; padding: 0 6px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; line-height: 20px;"
+              class="text-caption absolute flex items-center justify-center rounded-full"
+              style="top: -4px; right: -6px; height: 20px; min-width: 20px; padding: 0 6px; background: var(--brand); color: var(--text-on-accent); font-weight: 600; line-height: 20px"
             >
               {tabBadge(item) > 99 ? '99+' : tabBadge(item)}
             </span>
           {/if}
         </span>
         <span
-          style="font-size: 11px; line-height: 1; color: {isActive(item)
+          class="text-caption"
+          style="line-height: 1; color: {isActive(item)
             ? 'var(--brand)'
             : 'var(--text-secondary)'}; font-weight: {isActive(item)
             ? 600
-            : 400}; transition: color 0.22s ease; letter-spacing: 0.02em; position: relative; z-index: 1;"
+            : 400}; transition: color 0.22s ease; letter-spacing: 0.02em; position: relative; z-index: 1"
         >
           {t(item.labelKey)}
         </span>

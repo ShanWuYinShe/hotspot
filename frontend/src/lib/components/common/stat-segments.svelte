@@ -34,11 +34,12 @@
         ></div>
       {:else}
         <span
-          style="font-size: 19px; font-weight: 600; line-height: 1; color: {s.color ??
-            'var(--text-primary)'};">{s.value}</span
+          class="text-h2"
+          style="font-weight: 600; line-height: 1; color: {s.color ?? 'var(--text-primary)'}"
+          >{s.value}</span
         >
       {/if}
-      <span style="font-size: 10px; color: var(--text-secondary); margin-top: 4px;">{s.label}</span>
+      <span class="text-xs" style="color: var(--text-secondary); margin-top: 4px">{s.label}</span>
     </div>
   {/each}
 </div>

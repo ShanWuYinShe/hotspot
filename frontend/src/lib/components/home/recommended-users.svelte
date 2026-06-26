@@ -47,10 +47,7 @@
 {#if (users?.length ?? 0) > 0 || loading}
   <div>
     <div class="mb-3 flex items-center justify-between">
-      <p
-        class="uppercase"
-        style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
-      >
+      <p class="text-xs uppercase" style="letter-spacing: 0.14em; color: var(--text-secondary)">
         推荐用户
       </p>
       <a
@@ -58,7 +55,7 @@
         class="flex items-center gap-0.5 outline-none"
         style="color: var(--brand);"
       >
-        <span style="font-size: 12px;">查看更多</span>
+        <span class="text-meta">查看更多</span>
         <ChevronRight size={13} strokeWidth={1.5} />
       </a>
     </div>
@@ -109,13 +106,13 @@
               {/if}
             </div>
             <div class="min-w-0 flex-1">
-              <p style="font-size: 13px; color: var(--text-primary);">{user.user.nickname}</p>
-              <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+              <p class="text-body" style="color: var(--text-primary)">{user.user.nickname}</p>
+              <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
                 {#if user.tags && user.tags.length > 0}{user.tags[0]}{/if}
               </p>
             </div>
             {#if user.location?.distance != null}
-              <span style="font-size: 12px; color: var(--brand);"
+              <span class="text-meta" style="color: var(--brand)"
                 >{formatDistance(user.location.distance)}</span
               >
             {/if}

@@ -18,6 +18,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -464,21 +465,19 @@ export struct GroupPage {
 
   build() {
     Column() {
-      // 标题栏 - 使用 SafeArea 避免与状态栏重叠
-      Row() {
-        Text('我的群组')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(600)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .layoutWeight(1)
-
-        Row({ space: 8 }) {
+      // 标题栏 —— 统一走 SystemPageHeader（标题 + 邀请/申请/创建 trailing）
+      SystemPageHeader({
+        title: '我的群组',
+        backgroundVariant: 'transparent'
+      }) {
+        // trailing: 三按钮簇（邀请/申请 次要 + 创建 主操作）
+        Row({ space: DesignConstants.SPACING.SM }) {
           Button('邀请')
             .type(ButtonType.Capsule)
             .backgroundColor(this.getSurfaceSubtle())
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .height(36)
+            .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
             .shadow(this.getCurrentThemePalette().controlShadow)
             .onClick(() => this.loadMyInvites())
 
@@ -487,7 +486,7 @@ export struct GroupPage {
             .backgroundColor(this.getSurfaceSubtle())
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .height(36)
+            .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
             .shadow(this.getCurrentThemePalette().controlShadow)
             .onClick(() => this.loadMyApplications())
 
@@ -496,21 +495,11 @@ export struct GroupPage {
             .backgroundColor(this.getCurrentThemePalette().accentBackground)
             .fontColor(this.getCurrentThemePalette().accentText)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .height(36)
+            .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
             .shadow(this.getCurrentThemePalette().controlShadow)
             .onClick(() => this.createGroup())
         }
       }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-      .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: this.getHeaderTopPadding(),
-        bottom: DesignConstants.SPACING.SM
-      })
-      .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
       if (this.isLoading) {

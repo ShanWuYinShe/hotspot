@@ -426,8 +426,8 @@
               <img src={image.previewUrl} alt="预览图" class="w-full h-full object-cover" />
               {#if image.isUploading}
                 <div
-                  class="absolute inset-0 flex items-center justify-center"
-                  style="background: var(--overlay); font-size: 12px; color: var(--text-on-overlay);"
+                  class="text-meta absolute inset-0 flex items-center justify-center"
+                  style="background: var(--overlay); color: var(--text-on-overlay)"
                 >
                   上传中 {Math.round(image.progress)}%
                 </div>
@@ -532,13 +532,13 @@
       <div class="flex gap-3">
         <input
           placeholder="标签（空格分隔）"
-          class="rounded-full px-4 py-2 outline-none flex-1"
-          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-active); font-size: 12px;"
+          class="text-meta rounded-full px-4 py-2 outline-none flex-1"
+          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-active)"
           bind:value={tagsInput}
         />
         <select
-          class="rounded-full px-3 py-2 outline-none"
-          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); border: 1px solid var(--border-theme); font-size: 12px;"
+          class="text-meta rounded-full px-3 py-2 outline-none"
+          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); border: 1px solid var(--border-theme)"
           bind:value={privacy}
         >
           <option value="public">公开</option>

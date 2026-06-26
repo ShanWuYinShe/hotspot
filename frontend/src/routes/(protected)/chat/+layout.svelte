@@ -42,8 +42,8 @@
                   style="opacity: 0.5;"
                 />
               </div>
-              <p style="font-size: 16px; color: var(--text-primary);">选择一个会话</p>
-              <p style="font-size: 13px; color: var(--text-secondary);">
+              <p class="text-title" style="color: var(--text-primary)">选择一个会话</p>
+              <p class="text-body" style="color: var(--text-secondary)">
                 从左侧列表中选择或开始新对话
               </p>
             </div>

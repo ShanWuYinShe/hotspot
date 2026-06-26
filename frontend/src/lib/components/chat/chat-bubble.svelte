@@ -58,9 +58,9 @@
     : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary); border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 4px;'}
 >
   {#if isRecalled}
-    <p style="font-size: 13px; font-style: italic; opacity: 0.7;">消息已撤回</p>
+    <p class="text-body" style="font-style: italic; opacity: 0.7">消息已撤回</p>
   {:else if type === 'text'}
-    <p class="whitespace-pre-wrap wrap-break-word" style="font-size: 13px; line-height: 1.55;">
+    <p class="text-body whitespace-pre-wrap wrap-break-word" style="line-height: 1.55">
       {content}
     </p>
   {:else if type === 'image' && media}
@@ -91,16 +91,17 @@
   {:else if children}
     {@render children()}
   {:else}
-    <p style="font-size: 13px; opacity: 0.7;">[{type}]</p>
+    <p class="text-body" style="opacity: 0.7">[{type}]</p>
   {/if}
 
   {#if time}
     <p
-      style="font-size: 10px; margin-top: 4px; color: {isSelf
+      class="text-xs"
+      style="margin-top: 4px; color: {isSelf
         ? 'color-mix(in srgb, var(--text-on-accent) 65%, transparent)'
         : 'var(--text-secondary)'}; display: flex; align-items: center; gap: 3px; justify-content: {isSelf
         ? 'flex-end'
-        : 'flex-start'};"
+        : 'flex-start'}"
     >
       {time}
       {#if readReceipt}

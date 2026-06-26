@@ -19,6 +19,7 @@ import {
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { EmptyState } from '../../../components/EmptyState';
 import { AppIcon, IconButton, IconSize } from '../../../components/SystemIcon';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -261,41 +262,17 @@ export struct MomentDetailPage {
 
   @Builder
   private buildTopBar() {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      IconButton({
-        icon: AppIcon.BACK,
-        iconSize: IconSize.MEDIUM,
-        bgColor: DesignConstants.COLOR.TRANSPARENT,
-        onButtonClick: () => {
-          AppRouter.pop();
-        }
-      })
-
-      Text('动态详情')
-        .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-        .layoutWeight(1)
-
-      if (this.isOwner()) {
-        IconButton({
-          icon: AppIcon.EDIT,
-          iconSize: IconSize.LARGE,
-          iconColor: this.getCurrentThemePalette().textPrimary,
-          bgColor: this.getSurfaceSubtle(),
-          onButtonClick: () => this.editMoment()
-        })
-      }
-    }
-    .width('100%')
-    .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
-      bottom: DesignConstants.SPACING.SM
+    // 统一走 SystemPageHeader（标题 + 返回 + 可选编辑 rightAction）
+    SystemPageHeader({
+      title: '动态详情',
+      showBackButton: true,
+      onBack: () => { AppRouter.pop(); },
+      titleWeight: FontWeight.Bold,
+      backgroundVariant: 'transparent',
+      rightAction: this.isOwner()
+        ? { icon: AppIcon.EDIT, onClick: () => this.editMoment() }
+        : null
     })
-    .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 
   @Builder

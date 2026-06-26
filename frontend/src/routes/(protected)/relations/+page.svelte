@@ -110,13 +110,13 @@
       <div class="flex items-center justify-between">
         <div>
           <h1 class="page-title" style="color: var(--text-primary);">关系</h1>
-          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+          <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
             {activeMeta.subtitle}
           </p>
         </div>
         <button
-          class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
+          class="text-meta flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary)"
           onclick={() => loadTab(activeTab, true)}
           disabled={activePg.loading}
         >

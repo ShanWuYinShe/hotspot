@@ -18,6 +18,7 @@ import type {
 } from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { ChatPageHeader } from '../../../components/ChatPageHeader';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
@@ -997,68 +998,14 @@ export struct ChatPage {
     NavDestination() {
     ResponsiveContainer({ fill: true }) {
     Column() {
-      Row() {
-        Row() {
-          Button() {
-            Text() {
-              SymbolSpan($r(AppIcon.BACK))
-                .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontColor([this.getCurrentThemePalette().textPrimary])
-            }
-          }
-          .type(ButtonType.Circle)
-          .width(36)
-          .height(36)
-          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-          .onClick(() => this.handleBackNavigation())
-
-          if (this.chatType === 'private_chat' && this.targetAvatar) {
-            SystemAvatar({
-              avatarUrl: this.targetAvatar,
-              name: this.title,
-              avatarSize: 48,
-              shape: 'circle'
-            })
-              .margin({ left: DesignConstants.SPACING.XS })
-          }
-
-          Text(this.title)
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .layoutWeight(1)
-            .margin({ left: DesignConstants.SPACING.SM })
-        }
-        .layoutWeight(1)
-
-        Button() {
-          Text() {
-            SymbolSpan($r(AppIcon.INFO))
-              .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
-        }
-        .type(ButtonType.Circle)
-        .width(36)
-        .height(36)
-        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-        .onClick(() => this.openConversationActions())
-      }
-        .width('100%')
-        .margin({
-          bottom: DesignConstants.SPACING.XS
-        })
-        .shadow(this.getCurrentThemePalette().elevatedShadow)
-        .border({ width: 1, color: this.getChatTheme().titleBarBorder })
-        .borderRadius(DesignConstants.RADIUS.XL)
-        .zIndex(1)
-        .onTouch((event: TouchEvent) => {
-          if (event.type === TouchType.Down) {
-            this.dismissKeyboardOnOutsideTap();
-          }
-        })
+      // 头部 —— 统一走 ChatPageHeader（浮动卡片 + 返回 + 头像 + 标题 + 信息操作）
+      ChatPageHeader({
+        title: this.title,
+        showAvatar: this.chatType === 'private_chat',
+        targetAvatar: this.targetAvatar ?? '',
+        onBack: () => this.handleBackNavigation(),
+        onTrailingAction: () => this.openConversationActions()
+      })
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载消息...' })

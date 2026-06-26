@@ -9,7 +9,7 @@
   let { class: className, ...restProps }: Props = $props();
 </script>
 
-<div class={cn('shimmer', className)} style="border-radius: 12px;" {...restProps}></div>
+<div class={cn('shimmer', 'rounded-[var(--radius-sm)]', className)} {...restProps}></div>
 
 <style>
   :global(.shimmer) {

@@ -213,8 +213,8 @@
               />
               {#if unreadCount > 0}
                 <div
-                  class="absolute -top-1 -right-1 flex items-center justify-center rounded-full"
-                  style="width: 18px; height: 18px; background: var(--brand); color: var(--text-on-accent); font-size: 9px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
+                  class="text-xs absolute -top-1 -right-1 flex items-center justify-center rounded-full"
+                  style="width: 18px; height: 18px; background: var(--brand); color: var(--text-on-accent); font-weight: 600; box-shadow: var(--shadow-brand-btn)"
                 >
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </div>
@@ -222,7 +222,7 @@
             </div>
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-1">
-                <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+                <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
                   {groupInfo.name}
                 </p>
                 {#if isPrivate}
@@ -232,7 +232,7 @@
               {#if showMembers}
                 <div class="mt-0.5 flex items-center gap-0.5">
                   <Users size={11} strokeWidth={1.5} color="var(--text-secondary)" />
-                  <span style="font-size: 11px; color: var(--text-secondary);"
+                  <span class="text-caption" style="color: var(--text-secondary)"
                     >{groupInfo.members_count}人</span
                   >
                 </div>
@@ -242,7 +242,7 @@
           {#if distance}
             <div class="flex flex-shrink-0 items-center gap-0.5">
               <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
-              <span style="font-size: 10px; color: var(--brand);">{formatDistance(distance)}</span>
+              <span class="text-xs" style="color: var(--brand)">{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
@@ -252,13 +252,13 @@
           {#if groupWithDesc.description}
             {@const desc = groupWithDesc.description}
             <p
-              class="mt-3 line-clamp-3"
-              style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;"
+              class="text-meta mt-3 line-clamp-3"
+              style="color: var(--text-secondary); line-height: 1.5"
             >
               {desc}
             </p>
           {:else}
-            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 10px;">
+            <p class="text-caption" style="color: var(--text-secondary); margin-top: 10px">
               群主很懒，还没有添加群组描述
             </p>
           {/if}
@@ -291,7 +291,7 @@
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-1">
-            <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+            <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
               {groupInfo.name}
             </p>
             {#if isPrivate}
@@ -301,14 +301,14 @@
           {#if distance}
             <div class="flex items-center gap-0.5">
               <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
-              <span style="font-size: 10px; color: var(--brand);">{formatDistance(distance)}</span>
+              <span class="text-xs" style="color: var(--brand)">{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
         {#if showMembers}
           <div class="mt-0.5 flex items-center gap-0.5">
             <Users size={11} strokeWidth={1.5} color="var(--text-secondary)" />
-            <span style="font-size: 11px; color: var(--text-secondary);"
+            <span class="text-caption" style="color: var(--text-secondary)"
               >{groupInfo.members_count}人</span
             >
           </div>
@@ -316,8 +316,8 @@
       </div>
       {#if unreadCount > 0}
         <div
-          class="flex flex-shrink-0 items-center justify-center rounded-full"
-          style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
+          class="text-caption flex flex-shrink-0 items-center justify-center rounded-full"
+          style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-weight: 600; box-shadow: var(--shadow-brand-btn)"
         >
           {unreadCount > 99 ? '99+' : unreadCount}
         </div>
@@ -340,7 +340,7 @@
         </div>
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-1">
-            <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">
+            <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
               {groupInfo.name}
             </p>
             {#if isPrivate}
@@ -351,7 +351,7 @@
             {#if showMembers}
               <div class="flex items-center gap-0.5">
                 <Users size={11} strokeWidth={1.5} color="var(--text-secondary)" />
-                <span style="font-size: 11px; color: var(--text-secondary);"
+                <span class="text-caption" style="color: var(--text-secondary)"
                   >{groupInfo.members_count}人</span
                 >
               </div>
@@ -359,16 +359,15 @@
             {#if distance}
               <div class="flex items-center gap-0.5">
                 <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
-                <span style="font-size: 10px; color: var(--brand);">{formatDistance(distance)}</span
-                >
+                <span class="text-xs" style="color: var(--brand)">{formatDistance(distance)}</span>
               </div>
             {/if}
           </div>
         </div>
         {#if unreadCount > 0}
           <div
-            class="flex flex-shrink-0 items-center justify-center rounded-full"
-            style="width: 22px; height: 22px; background: var(--brand); color: var(--text-on-accent); font-size: 11px; font-weight: 600; box-shadow: var(--shadow-brand-btn);"
+            class="text-caption flex flex-shrink-0 items-center justify-center rounded-full"
+            style="width: 22px; height: 22px; background: var(--brand); color: var(--text-on-accent); font-weight: 600; box-shadow: var(--shadow-brand-btn)"
           >
             {unreadCount > 99 ? '99+' : unreadCount}
           </div>
@@ -392,7 +391,7 @@
         {:else}
           <UserPlus size={15} strokeWidth={1.5} />
         {/if}
-        <span style="font-size: 12px;">
+        <span class="text-meta">
           {#if isJoining}加入中{:else if isJoined}进入群聊{:else}加入群组{/if}
         </span>
       </button>

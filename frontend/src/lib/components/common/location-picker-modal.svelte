@@ -2661,7 +2661,7 @@
             <p class="text-[11px]" style="color: var(--text-secondary);">
               {mapModeLabel} <span style="margin: 0 4px;">›</span>
             </p>
-            <p class="mt-0.5 truncate text-base font-bold" style="font-size: 18px;">
+            <p class="text-h2 mt-0.5 truncate text-base font-bold">
               {modalTitle}
             </p>
           </div>
@@ -2800,7 +2800,7 @@
         <!-- 当前位置摘要与操作 -->
         <div class="mt-auto space-y-3 border-t pt-3" style="border-color: var(--border-theme);">
           <div>
-            <p class="truncate font-semibold" style="font-size: 14px; color: var(--text-primary);">
+            <p class="text-body-lg truncate font-semibold" style="color: var(--text-primary)">
               {locationName || '拖动地图选择位置'}
             </p>
           </div>

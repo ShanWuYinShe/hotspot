@@ -10,6 +10,7 @@ import { Permissions } from '@kit.AbilityKit';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemPageHeader, PageHeaderAction } from '../../../components/SystemPageHeader';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { common } from '@kit.AbilityKit';
@@ -342,50 +343,20 @@ export struct CreateMomentPage {
     ResponsiveContainer({ fill: true }) {
     Stack() {
       Column() {
-      // 标题栏
-      Row() {
-        IconButton({
-          icon: AppIcon.BACK,
-          iconSize: IconSize.LARGE,
-          iconColor: this.getCurrentThemePalette().textPrimary,
-          bgColor: this.getSurfaceSubtle(),
-          onButtonClick: () => {
-            AppRouter.pop();
-          }
-        })
-
-        Text(this.isEditMode ? '编辑瞬间' : '发布瞬间')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-
-        Button(this.isEditMode ? '保存' : '发布')
-          .type(ButtonType.Capsule)
-          .backgroundColor(this.getCurrentThemePalette().accentBackground)
-          .fontColor(this.getCurrentThemePalette().accentText)
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .height(40)
-          .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .border({ width: 1, color: this.getSurfaceBorder() })
-          .shadow(this.getPrimaryButtonShadow())
-          .enabled(!this.isPublishing)
-          .opacity(this.isPublishing ? DesignConstants.OPACITY.LOADING : 1)
-          .animation({ duration: 200, curve: Curve.EaseInOut })
-          .onClick(() => this.publishMoment())
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-      .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: this.getHeaderTopPadding(),
-        bottom: DesignConstants.SPACING.SM
+      // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回 + 保存/发布 action）
+      SystemPageHeader({
+        title: this.isEditMode ? '编辑瞬间' : '发布瞬间',
+        showBackButton: true,
+        onBack: () => { AppRouter.pop(); },
+        titleAlign: TextAlign.Center,
+        titleWeight: FontWeight.Medium,
+        backgroundVariant: 'transparent',
+        action: {
+          label: this.isEditMode ? '保存' : '发布',
+          onClick: () => this.publishMoment(),
+          disabled: this.isPublishing
+        } as PageHeaderAction
       })
-      .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       List() {
         ListItem() {

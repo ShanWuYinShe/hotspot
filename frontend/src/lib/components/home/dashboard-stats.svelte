@@ -42,12 +42,11 @@
           style="width: 20px; height: 16px; background: var(--border-theme);"
         ></div>
       {:else}
-        <span style="font-size: 20px; color: var(--text-primary); font-weight: 700;"
+        <span class="text-h1" style="color: var(--text-primary); font-weight: 700"
           >{stat.value}</span
         >
       {/if}
-      <span style="font-size: 10px; color: var(--text-secondary); margin-top: 1px;"
-        >{stat.label}</span
+      <span class="text-xs" style="color: var(--text-secondary); margin-top: 1px">{stat.label}</span
       >
     </div>
   {/each}

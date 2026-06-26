@@ -26,8 +26,8 @@
 
     <!-- Section label -->
     <p
-      class="mb-2 px-3"
-      style="font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); opacity: 0.65;"
+      class="text-xs mb-2 px-3"
+      style="font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); opacity: 0.65"
     >
       {t('sidebar.adminPanel')}
     </p>

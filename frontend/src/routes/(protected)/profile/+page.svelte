@@ -239,10 +239,10 @@
       {#each tabs as tab (tab.id)}
         {@const isActive = activeTab === tab.id}
         <button
-          class="relative flex flex-1 items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none"
+          class="text-body relative flex flex-1 items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none"
           style="color: {isActive
             ? 'var(--brand)'
-            : 'var(--text-secondary)'}; font-size: 13px; font-weight: {isActive ? 500 : 400};"
+            : 'var(--text-secondary)'}; font-weight: {isActive ? 500 : 400}"
           onclick={() => (activeTab = tab.id)}
         >
           <tab.icon size={14} strokeWidth={isActive ? 2 : 1.5} />
@@ -267,11 +267,9 @@
           style="border-bottom: 1px solid var(--border-theme);"
         >
           <link.icon size={16} strokeWidth={1.5} color="var(--text-secondary)" />
-          <span class="flex-1" style="font-size: 13px; color: var(--text-primary);"
-            >{link.label}</span
-          >
+          <span class="text-body flex-1" style="color: var(--text-primary)">{link.label}</span>
           {#if link.count != null}
-            <span style="font-size: 12px; color: var(--text-secondary);">{link.count}</span>
+            <span class="text-meta" style="color: var(--text-secondary)">{link.count}</span>
           {/if}
           <ChevronRight size={15} strokeWidth={1.5} color="var(--text-secondary)" />
         </a>
@@ -294,7 +292,7 @@
             style="opacity: 0.5;"
           />
         </div>
-        <p style="font-size: 14px; color: var(--text-secondary); margin-top: 12px;">
+        <p class="text-body-lg" style="color: var(--text-secondary); margin-top: 12px">
           还没有发布帖子
         </p>
       </div>
@@ -318,7 +316,7 @@
                 class="absolute bottom-0 left-0 right-0 flex items-center gap-2 px-2 py-1.5"
                 style="background: linear-gradient(transparent, rgba(0,0,0,0.5));"
               >
-                <span style="font-size: 10px; color: var(--text-on-overlay);">
+                <span class="text-xs" style="color: var(--text-on-overlay)">
                   <Heart
                     size={10}
                     color="var(--text-on-overlay)"
@@ -360,7 +358,8 @@
               style="width: 1px; height: 32px; background: var(--border-theme);"
             ></div>
           {/if}
-          <span style="font-size: 24px; font-weight: 600; color: var(--text-primary);"
+          <span
+            style="font-size: var(--text-display); font-weight: 600; color: var(--text-primary);"
             >{stat.value}</span
           >
           <span class="eyebrow" style="margin-top: 4px;">{stat.label}</span>
@@ -386,8 +385,8 @@
           style="background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.5));"
         ></div>
         <button
-          class="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
-          style="padding: 6px 12px; background: var(--overlay); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); font-size: 12px; color: var(--text-on-accent);"
+          class="text-meta absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
+          style="padding: 6px 12px; background: var(--overlay); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); color: var(--text-on-accent)"
         >
           <Camera size={13} strokeWidth={1.75} />
           更换横幅
@@ -419,8 +418,8 @@
           </button>
         </div>
         <div>
-          <p style="font-size: 16px; color: var(--text-primary);">{p.nickname}</p>
-          <p style="font-size: 12px; color: var(--text-secondary);">
+          <p class="text-title" style="color: var(--text-primary)">{p.nickname}</p>
+          <p class="text-meta" style="color: var(--text-secondary)">
             @{formatHandle(p)}
           </p>
         </div>
@@ -437,8 +436,8 @@
             id="nickname"
             bind:value={nickname}
             placeholder="你的名字"
-            class="w-full bg-transparent outline-none"
-            style="color: var(--text-primary); font-size: 14px;"
+            class="text-body-lg w-full bg-transparent outline-none"
+            style="color: var(--text-primary)"
           />
         </div>
       </div>
@@ -455,14 +454,14 @@
             bind:value={bio}
             placeholder="介绍一下自己..."
             rows="3"
-            class="w-full bg-transparent outline-none resize-none"
-            style="color: var(--text-primary); font-size: 14px; line-height: 1.65;"
+            class="text-body-lg w-full bg-transparent outline-none resize-none"
+            style="color: var(--text-primary); line-height: 1.65"
           ></textarea>
           <div class="flex justify-end mt-1">
             <span
-              style="font-size: 11px; color: {bio.length > 150 * 0.85
-                ? 'var(--brand)'
-                : 'var(--text-secondary)'};">{bio.length}/150</span
+              class="text-caption"
+              style="color: {bio.length > 150 * 0.85 ? 'var(--brand)' : 'var(--text-secondary)'}"
+              >{bio.length}/150</span
             >
           </div>
         </div>
@@ -479,8 +478,8 @@
             <input
               value={p.location.location_name}
               disabled
-              class="w-full bg-transparent outline-none"
-              style="color: var(--text-secondary); font-size: 14px; opacity: 0.7;"
+              class="text-body-lg w-full bg-transparent outline-none"
+              style="color: var(--text-secondary); opacity: 0.7"
             />
           </div>
         </div>
@@ -490,7 +489,7 @@
       <div class="flex flex-col gap-2.5">
         <div class="flex items-center gap-1.5">
           <span class="eyebrow">兴趣标签</span>
-          <span style="font-size: 11px; color: var(--text-secondary); opacity: 0.6;"
+          <span class="text-caption" style="color: var(--text-secondary); opacity: 0.6"
             >({selectedInterestTags.size}/{MAX_INTEREST_TAGS})</span
           >
         </div>
@@ -515,8 +514,8 @@
         <button
           class="flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-lg)] px-4 py-3.5 outline-none transition-all"
           style={saved
-            ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: 14px; box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
-            : 'background: var(--brand); color: var(--text-on-accent); font-size: 14px; box-shadow: var(--shadow-brand-btn); border: none;'}
+            ? 'background: var(--theme-success); color: var(--text-on-accent); font-size: var(--text-body-lg); box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-success) 35%, transparent); border: none;'
+            : 'background: var(--brand); color: var(--text-on-accent); font-size: var(--text-body-lg); box-shadow: var(--shadow-brand-btn); border: none;'}
           onclick={saveProfile}
           disabled={isSaving}
         >
@@ -530,8 +529,8 @@
           {/if}
         </button>
         <button
-          class="flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-lg)] px-4 py-3.5 outline-none surface-flat"
-          style="color: var(--text-primary); font-size: 14px;"
+          class="text-body-lg flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-lg)] px-4 py-3.5 outline-none surface-flat"
+          style="color: var(--text-primary)"
           onclick={cancelEdit}
           disabled={isSaving}
         >
@@ -553,8 +552,8 @@
       >
         <div class="page-shell page-shell--form flex items-center justify-between">
           <div>
-            <p style="font-size: 20px; color: var(--text-primary);">{profile.nickname}</p>
-            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 1px;">
+            <p class="text-h1" style="color: var(--text-primary)">{profile.nickname}</p>
+            <p class="text-meta" style="color: var(--text-secondary); margin-top: 1px">
               @{formatHandle(profile)}
             </p>
           </div>
@@ -584,10 +583,11 @@
           style="width: 260px; border-right: 1px solid var(--border-theme); padding: 24px 20px;"
         >
           {@render avatarBlock(profile)}
-          <h2 style="font-size: 18px; color: var(--text-primary);">{profile.nickname}</h2>
+          <h2 class="text-h2" style="color: var(--text-primary)">{profile.nickname}</h2>
           {#if profile.bio}
             <p
-              style="font-size: 12px; color: var(--text-secondary); text-align: center; padding: 6px 8px; line-height: 1.5;"
+              class="text-meta"
+              style="color: var(--text-secondary); text-align: center; padding: 6px 8px; line-height: 1.5"
             >
               {profile.bio}
             </p>
@@ -595,15 +595,14 @@
           {#if profile.location?.location_name}
             <div class="flex items-center gap-1 mb-2">
               <MapPin size={11} strokeWidth={1.5} color="var(--brand)" />
-              <span style="font-size: 11px; color: var(--text-secondary);"
+              <span class="text-caption" style="color: var(--text-secondary)"
                 >{profile.location.location_name}</span
               >
             </div>
           {/if}
 
           <button
-            class="w-full flex items-center justify-center gap-2 rounded-full py-2.5 mb-5 outline-none surface-flat"
-            style="font-size: 13px;"
+            class="text-body w-full flex items-center justify-center gap-2 rounded-full py-2.5 mb-5 outline-none surface-flat"
             onclick={() => (isEditing = !isEditing)}
           >
             <Pencil size={13} strokeWidth={1.5} color="var(--text-secondary)" />
@@ -620,8 +619,8 @@
                 class="flex items-center justify-between px-4 py-3"
                 style="border-bottom: 1px solid var(--border-theme);"
               >
-                <span style="font-size: 13px; color: var(--text-secondary);">{stat.label}</span>
-                <span style="font-size: 17px; font-weight: 600; color: var(--text-primary);"
+                <span class="text-body" style="color: var(--text-secondary)">{stat.label}</span>
+                <span class="text-title" style="font-weight: 600; color: var(--text-primary)"
                   >{stat.value}</span
                 >
               </div>
@@ -658,8 +657,8 @@
         style="background: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
       >
         <div>
-          <p style="font-size: 18px; color: var(--text-primary);">{profile.nickname}</p>
-          <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+          <p class="text-h2" style="color: var(--text-primary)">{profile.nickname}</p>
+          <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
             @{formatHandle(profile)}
           </p>
         </div>
@@ -685,10 +684,11 @@
           <!-- Avatar section -->
           <div class="flex flex-col items-center px-5 pt-5 pb-4">
             {@render avatarBlock(profile)}
-            <h2 style="font-size: 22px; color: var(--text-primary);">{profile.nickname}</h2>
+            <h2 class="text-h1" style="color: var(--text-primary)">{profile.nickname}</h2>
             {#if profile.bio && !isEditing}
               <p
-                style="font-size: 12px; color: var(--text-secondary); text-align: center; padding: 8px 32px; line-height: 1.6;"
+                class="text-meta"
+                style="color: var(--text-secondary); text-align: center; padding: 8px 32px; line-height: 1.6"
               >
                 {profile.bio}
               </p>
@@ -696,15 +696,14 @@
             {#if profile.location?.location_name}
               <div class="flex items-center gap-1 mb-2">
                 <MapPin size={11} strokeWidth={1.5} color="var(--brand)" />
-                <span style="font-size: 11px; color: var(--text-secondary);"
+                <span class="text-caption" style="color: var(--text-secondary)"
                   >{profile.location.location_name}</span
                 >
               </div>
             {/if}
             {#if !isEditing}
               <button
-                class="flex items-center gap-2 rounded-full px-10 py-2.5 outline-none surface-flat"
-                style="font-size: 13px;"
+                class="text-body flex items-center gap-2 rounded-full px-10 py-2.5 outline-none surface-flat"
                 onclick={() => (isEditing = true)}
               >
                 <Pencil size={13} strokeWidth={1.5} color="var(--text-secondary)" />
@@ -751,15 +750,18 @@
       >
         <TriangleAlert size={28} strokeWidth={1.5} color="var(--text-secondary)" />
       </div>
-      <p style="font-size: 16px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">
+      <p
+        class="text-title"
+        style="font-weight: 500; color: var(--text-primary); margin-bottom: 8px"
+      >
         加载个人资料失败
       </p>
-      <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
+      <p class="text-body-lg" style="color: var(--text-secondary); margin-bottom: 16px">
         {data.error ?? '无法获取个人资料，请稍后重试'}
       </p>
       <button
-        class="rounded-[var(--radius-lg)] px-5 py-3.5 outline-none surface-flat"
-        style="color: var(--brand); font-size: 14px;"
+        class="text-body-lg rounded-[var(--radius-lg)] px-5 py-3.5 outline-none surface-flat"
+        style="color: var(--brand)"
         onclick={() => location.reload()}>重试</button
       >
     </div>

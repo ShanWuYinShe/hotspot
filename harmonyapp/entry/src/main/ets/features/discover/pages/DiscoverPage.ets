@@ -23,6 +23,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemCard, CardVariant } from '../../../components/SystemCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { MomentFeedCard } from '../../../components/MomentFeedCard';
@@ -231,23 +232,21 @@ export struct DiscoverPage {
   build() {
   ResponsiveContainer() {
     Column() {
-      // 粘性头部：标题 + 搜索栏 + 标签栏（对齐前端 discover/+page.svelte headerContent）
+      // 粘性头部：标题(走 SystemPageHeader) + 搜索栏 + 标签栏（对齐前端 discover/+page.svelte headerContent）
       Column() {
-        // 标题行：发现 + 内容数
-        Row() {
-          Text('发现')
-            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-          Blank().layoutWeight(1)
+        // 标题行 —— 统一走 SystemPageHeader（标题 + 内容数 trailing，透明背景自带安全区）
+        SystemPageHeader({
+          title: '发现',
+          titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
+          titleWeight: FontWeight.Medium,
+          backgroundVariant: 'transparent'
+        }) {
           if (this.hotMoments.length > 0) {
             Text(`${this.hotMoments.length} 条内容`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.getCurrentThemePalette().textSecondary)
           }
         }
-        .width('100%')
-        .margin({ bottom: 10 })
 
         // 搜索栏（对齐前端：search icon + input + clear button）
         Row({ space: 10 }) {
@@ -269,21 +268,19 @@ export struct DiscoverPage {
         .borderRadius(DesignConstants.SHAPE.INPUT)
         .border({ width: 1, color: this.getSurfaceBorder() })
         .onClick(() => { AppRouter.push(PageNames.SEARCH); })
-        .margin({ bottom: 10 })
+        .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
         // 下划线式标签栏（热门/附近/活动/关注，对齐前端 TABS）
         this.buildTabBar()
       }
       .width('100%')
       .padding({
-        left: 16,
-        right: 16,
-        top: this.getHeaderTopPadding(),
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
         bottom: 0
       })
       .backgroundColor(this.getCurrentThemePalette().pageBackground)
       .border({ width: { bottom: 1 }, color: this.getSurfaceBorder() })
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区
       if (this.isLoading) {

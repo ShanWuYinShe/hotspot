@@ -68,14 +68,14 @@
           {/if}
         </div>
         <div class="min-w-0 flex-1">
-          <p style="font-size: 13px; color: var(--text-primary);">{user.nickname}</p>
+          <p class="text-body" style="color: var(--text-primary)">{user.nickname}</p>
           <div class="flex items-center gap-1.5" style="margin-top: 2px;">
             {#if user.tag}
-              <span style="font-size: 10px; color: var(--brand);">#{user.tag}</span>
-              <span style="font-size: 10px; color: var(--text-secondary); opacity: 0.5;">·</span>
+              <span class="text-xs" style="color: var(--brand)">#{user.tag}</span>
+              <span class="text-xs" style="color: var(--text-secondary); opacity: 0.5">·</span>
             {/if}
             {#if user.distance}
-              <span style="font-size: 10px; color: var(--text-secondary);">{user.distance}</span>
+              <span class="text-xs" style="color: var(--text-secondary)">{user.distance}</span>
             {/if}
           </div>
         </div>

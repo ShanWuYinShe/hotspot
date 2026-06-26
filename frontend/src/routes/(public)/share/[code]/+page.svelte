@@ -83,8 +83,8 @@
         class="rounded-[var(--radius-lg)] p-6"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
-        <h2 style="font-size: 18px; font-weight: 600; color: var(--theme-error);">无法加载分享</h2>
-        <p style="font-size: 14px; color: var(--text-secondary); margin-top: 8px;">
+        <h2 class="text-h2" style="font-weight: 600; color: var(--theme-error)">无法加载分享</h2>
+        <p class="text-body-lg" style="color: var(--text-secondary); margin-top: 8px">
           {data.error || '此分享不存在或已被删除'}
         </p>
         <button
@@ -107,7 +107,7 @@
           style="border-bottom: 1px solid var(--border-theme);"
         >
           <div>
-            <h2 style="font-size: 20px; font-weight: 700; color: var(--text-primary);">
+            <h2 class="text-h1" style="font-weight: 700; color: var(--text-primary)">
               {payload.shared_location.location_name}
             </h2>
           </div>
@@ -118,7 +118,7 @@
               alt={share.share.creator.nickname}
               size={32}
             />
-            <span style="font-size: 13px; color: var(--text-secondary);">
+            <span class="text-body" style="color: var(--text-secondary)">
               <span style="font-weight: 500; color: var(--text-primary);"
                 >{share.share.creator.nickname}</span
               > 分享了此位置
@@ -143,13 +143,13 @@
             style="border: 1px solid var(--border-theme);"
           >
             <p
-              class="flex items-center gap-2"
-              style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
+              class="text-body-lg flex items-center gap-2"
+              style="font-weight: 500; color: var(--text-primary)"
             >
               <UsersRound size={16} />
               设置后你将看到
             </p>
-            <ul class="mt-3 space-y-2" style="font-size: 13px; color: var(--text-secondary);">
+            <ul class="text-body mt-3 space-y-2" style="color: var(--text-secondary)">
               <li class="flex items-start gap-2">
                 <span style="color: var(--brand);">•</span>
                 <span>这个区域附近的人</span>
@@ -168,13 +168,16 @@
           <!-- Location note -->
           <div>
             <p
-              class="uppercase"
-              style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 8px;"
+              class="text-xs uppercase"
+              style="letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 8px"
             >
               位置说明
             </p>
-            <div class="rounded-[var(--radius-md)] p-3" style="border: 1px solid var(--border-theme);">
-              <p style="font-size: 12px; color: var(--text-secondary);">
+            <div
+              class="rounded-[var(--radius-md)] p-3"
+              style="border: 1px solid var(--border-theme);"
+            >
+              <p class="text-meta" style="color: var(--text-secondary)">
                 以「{payload.shared_location.location_name}」为中心区域进行浏览和推荐。
               </p>
             </div>
@@ -206,8 +209,8 @@
         class="rounded-[var(--radius-lg)] p-6"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
-        <h2 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">分享内容</h2>
-        <p style="font-size: 14px; color: var(--text-secondary); margin-top: 8px;">
+        <h2 class="text-h2" style="font-weight: 600; color: var(--text-primary)">分享内容</h2>
+        <p class="text-body-lg" style="color: var(--text-secondary); margin-top: 8px">
           分享类型：{share.share.share_type === 'user'
             ? '用户'
             : share.share.share_type === 'group'

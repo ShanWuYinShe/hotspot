@@ -18,6 +18,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../components/EmptyState';
+import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
@@ -231,25 +232,14 @@ export struct NearbyUsersListPage {
     NavDestination() {
     ResponsiveContainer() {
       Column() {
-        // 头部：返回 + 标题
-        Row({ space: 8 }) {
-          Text() {
-            SymbolSpan($r(AppIcon.ARROW_LEFT))
-              .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
-              .fontColor([this.getCurrentThemePalette().textPrimary])
-          }
-          .onClick(() => AppRouter.pop())
-
-          Text('附近的人')
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-        }
-        .width('100%')
-        .height(48)
-        .alignItems(VerticalAlign.Center)
-        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.LG })
-        .margin({ top: this.getHeaderTopPadding() })
+        // 头部 —— 统一走 SystemPageHeader（返回 + 标题）
+        SystemPageHeader({
+          title: '附近的人',
+          showBackButton: true,
+          onBack: () => { AppRouter.pop(); },
+          titleWeight: FontWeight.Medium,
+          backgroundVariant: 'transparent'
+        })
 
         // 搜索栏（对齐前端 /users/nearby 搜索框）
         Row({ space: 10 }) {

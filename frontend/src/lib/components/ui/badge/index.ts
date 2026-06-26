@@ -36,11 +36,11 @@ export const badgeVariants = tv({
         'dark:hover:bg-accent/30 dark:hover:border-accent/80'
       ),
       success: cn(
-        'bg-green-500/10 border-green-500/30',
-        'dark:bg-green-500/20 dark:border-green-500/60',
-        'text-green-600 dark:text-green-400',
-        'hover:bg-green-500/20',
-        'dark:hover:bg-green-500/30 dark:hover:border-green-500/70'
+        'bg-success/10 border-success/30',
+        'dark:bg-success/20 dark:border-success/60',
+        'text-success',
+        'hover:bg-success/20',
+        'dark:hover:bg-success/30 dark:hover:border-success/70'
       ),
       destructive: cn(
         'bg-destructive/10 border-destructive/30',
@@ -50,7 +50,8 @@ export const badgeVariants = tv({
         'dark:hover:bg-destructive/30 dark:hover:border-destructive/70'
       ),
       outline: cn(
-        'bg-white/80 dark:bg-card/80',
+        /* surface-bg 替代 bg-white —— 在暗色/非默认主题族下不再失效 */
+        'bg-[var(--surface-bg)]/80',
         'border-muted-foreground/20 dark:border-muted-foreground/40',
         'text-foreground',
         'hover:bg-muted/50',

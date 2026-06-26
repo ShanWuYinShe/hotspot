@@ -6,6 +6,7 @@
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
+import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
@@ -37,36 +38,15 @@ export struct AdvancedSettingsPage {
     NavDestination() {
   ResponsiveContainer() {
     Column() {
-      // 标题栏
-      Row() {
-        IconButton({
-          icon: AppIcon.BACK,
-          iconSize: IconSize.LARGE,
-          iconColor: this.getCurrentThemePalette().textPrimary,
-          bgColor: this.getCurrentThemePalette().surfaceSubtle,
-          onButtonClick: () => {
-            AppRouter.pop();
-          }
-        })
-
-        Text('高级设置')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-
-        Blank().width(48)
-      }
-      .width('100%')
-      .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
-        bottom: DesignConstants.SPACING.SM
+      // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回）
+      SystemPageHeader({
+        title: '高级设置',
+        showBackButton: true,
+        onBack: () => { AppRouter.pop(); },
+        titleAlign: TextAlign.Center,
+        titleWeight: FontWeight.Medium,
+        backgroundVariant: 'transparent'
       })
-      .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       Column() {
         Column() {

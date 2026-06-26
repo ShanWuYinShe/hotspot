@@ -35,16 +35,16 @@
     >
       <Icon size={28} strokeWidth={1.25} color="var(--text-secondary)" style="opacity: 0.5;" />
     </div>
-    <p style="font-size: 16px; font-weight: 500; color: var(--text-primary);">{title}</p>
+    <p class="text-title" style="font-weight: 500; color: var(--text-primary)">{title}</p>
     {#if description}
-      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; max-width: 260px;">
+      <p class="text-body" style="color: var(--text-secondary); margin-top: 6px; max-width: 260px">
         {description}
       </p>
     {/if}
     {#if actionText && onAction}
       <button
-        class="mt-5 rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="font-size: 13px; font-weight: 500; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
+        class="text-body mt-5 rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+        style="font-weight: 500; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
         onclick={onAction}
       >
         {actionText}

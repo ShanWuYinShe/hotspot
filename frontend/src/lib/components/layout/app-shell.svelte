@@ -46,7 +46,7 @@
       class="h-8 w-8 animate-spin rounded-full"
       style="border: 4px solid var(--border-theme); border-top-color: var(--brand);"
     ></div>
-    <p style="font-size: 13px; color: var(--text-secondary);">{t('auth.restoringSession')}</p>
+    <p class="text-body" style="color: var(--text-secondary)">{t('auth.restoringSession')}</p>
   </div>
 {/snippet}
 

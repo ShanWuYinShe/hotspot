@@ -141,8 +141,8 @@
 <AdminPageHeader title="系统配置" description="系统参数配置">
   {#snippet actions()}
     <button
-      class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+      class="text-body flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
+      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary)"
       onclick={loadConfig}
       disabled={isLoading}
     >
@@ -194,14 +194,14 @@
             style="border-bottom: 1px solid var(--border-theme);"
           >
             <FileText size={16} strokeWidth={1.5} color="var(--brand)" />
-            <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+            <span class="text-body-lg" style="font-weight: 500; color: var(--text-primary)"
               >上传设置</span
             >
           </div>
           <div class="space-y-4 p-4">
             {#each [{ id: 'image-max-size', label: '图片最大大小 (字节)', value: imageMaxSize, placeholder: '5242880', set: (value: string) => (imageMaxSize = value) }, { id: 'video-max-size', label: '视频最大大小 (字节)', value: videoMaxSize, placeholder: '52428800', set: (value: string) => (videoMaxSize = value) }, { id: 'audio-max-size', label: '音频最大大小 (字节)', value: audioMaxSize, placeholder: '10485760', set: (value: string) => (audioMaxSize = value) }, { id: 'file-max-size', label: '文件最大大小 (字节)', value: fileMaxSize, placeholder: '10485760', set: (value: string) => (fileMaxSize = value) }] as field (field.id)}
               <div>
-                <label for={field.id} style="font-size: 12px; color: var(--text-primary);"
+                <label for={field.id} class="text-meta" style="color: var(--text-primary)"
                   >{field.label}</label
                 >
                 <input
@@ -209,18 +209,18 @@
                   type="number"
                   value={field.value}
                   placeholder={field.placeholder}
-                  class="field-inset mt-1.5 w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none"
-                  style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
+                  class="text-body field-inset mt-1.5 w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none"
+                  style="background: var(--surface-bg); color: var(--text-primary)"
                   oninput={(event) => field.set(event.currentTarget.value)}
                 />
-                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+                <p class="text-caption" style="color: var(--text-secondary); margin-top: 2px">
                   当前: {(Number(field.value || 0) / 1024 / 1024).toFixed(1)} MB
                 </p>
               </div>
             {/each}
             <button
-              class="flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
-              style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
+              class="text-body flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
+              style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
               onclick={handleSaveUpload}
               disabled={isSaving}
             >
@@ -243,7 +243,7 @@
             style="border-bottom: 1px solid var(--border-theme);"
           >
             <Lock size={16} strokeWidth={1.5} color="var(--brand)" />
-            <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+            <span class="text-body-lg" style="font-weight: 500; color: var(--text-primary)"
               >功能开关</span
             >
           </div>
@@ -251,8 +251,8 @@
             {#each [{ label: '允许新用户注册', desc: '关闭后新用户无法注册', val: enablePublicRegistration, key: 'reg' }, { label: '允许访客模式', desc: '允许用户以访客身份使用', val: enableGuestLogin, key: 'guest' }, { label: '启用动态功能', desc: '控制是否开放生活瞬间', val: enableMoments, key: 'moments' }, { label: '启用附近的人', desc: '是否展示附近用户', val: enableNearbyPeople, key: 'nearby' }] as toggle (toggle.key)}
               <div class="flex items-center justify-between gap-4">
                 <div>
-                  <p style="font-size: 13px; color: var(--text-primary);">{toggle.label}</p>
-                  <p style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+                  <p class="text-body" style="color: var(--text-primary)">{toggle.label}</p>
+                  <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
                     {toggle.desc}
                   </p>
                 </div>
@@ -282,8 +282,8 @@
               </div>
             {/each}
             <button
-              class="flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
-              style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
+              class="text-body flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
+              style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
               onclick={handleSaveFeatures}
               disabled={isSaving}
             >
@@ -306,14 +306,14 @@
             style="border-bottom: 1px solid var(--border-theme);"
           >
             <Bell size={16} strokeWidth={1.5} color="var(--brand)" />
-            <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);"
+            <span class="text-body-lg" style="font-weight: 500; color: var(--text-primary)"
               >限制设置</span
             >
           </div>
           <div class="space-y-4 p-4">
             {#each [{ id: 'max-tags', label: '动态最大标签数', value: maxMomentTags, ph: '10', set: (value: string) => (maxMomentTags = value) }, { id: 'max-images', label: '动态最大图片数', value: maxMomentImages, ph: '9', set: (value: string) => (maxMomentImages = value) }, { id: 'desc-max', label: '动态描述最大长度', value: momentDescriptionMaxLength, ph: '300', set: (value: string) => (momentDescriptionMaxLength = value) }, { id: 'comment-max', label: '评论最大长度', value: commentMaxLength, ph: '200', set: (value: string) => (commentMaxLength = value) }, { id: 'group-max', label: '群组最大成员数', value: maxGroupMembers, ph: '500', set: (value: string) => (maxGroupMembers = value) }, { id: 'radius-max', label: '搜索最大半径 (km)', value: searchRadiusMax, ph: '50', set: (value: string) => (searchRadiusMax = value) }] as f (f.id)}
               <div>
-                <label for={f.id} style="font-size: 12px; color: var(--text-primary);"
+                <label for={f.id} class="text-meta" style="color: var(--text-primary)"
                   >{f.label}</label
                 >
                 <input
@@ -321,15 +321,15 @@
                   type="number"
                   value={f.value}
                   placeholder={f.ph}
-                  class="field-inset mt-1.5 w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none"
-                  style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
+                  class="text-body field-inset mt-1.5 w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none"
+                  style="background: var(--surface-bg); color: var(--text-primary)"
                   oninput={(event) => f.set(event.currentTarget.value)}
                 />
               </div>
             {/each}
             <button
-              class="flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
-              style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
+              class="text-body flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
+              style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
               onclick={handleSaveLimits}
               disabled={isSaving}
             >

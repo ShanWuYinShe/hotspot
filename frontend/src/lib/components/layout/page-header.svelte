@@ -31,8 +31,8 @@
       {#if backHref}
         <a
           href={backHref}
-          class="mb-3 inline-flex items-center gap-1.5 outline-none"
-          style="font-size: 13px; color: var(--text-secondary);"
+          class="text-body mb-3 inline-flex items-center gap-1.5 outline-none"
+          style="color: var(--text-secondary)"
         >
           <ChevronLeft size={16} strokeWidth={1.5} />
           <span>{backLabel}</span>
@@ -47,7 +47,8 @@
       </h1>
       {#if description}
         <p
-          style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.6;"
+          class="text-body"
+          style="color: var(--text-secondary); margin-top: 4px; line-height: 1.6"
         >
           {description}
         </p>

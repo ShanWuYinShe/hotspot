@@ -277,8 +277,8 @@
           {#if authStore.isAuthenticated && authStore.currentUserId !== userId}
             <div class="flex gap-2 pb-1">
               <button
-                class="surface-flat flex items-center gap-1.5 rounded-full px-3.5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="font-size: 12px; color: var(--text-secondary);"
+                class="text-meta surface-flat flex items-center gap-1.5 rounded-full px-3.5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                style="color: var(--text-secondary)"
                 onclick={() => goto(`/chat/users/${userId}`)}
               >
                 <MessageCircle size={14} strokeWidth={1.5} />
@@ -289,8 +289,8 @@
                   ? 'surface-flat flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]'
                   : 'flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]'}
                 style={isFollowing
-                  ? 'border: 1.5px solid var(--brand); color: var(--brand); font-size: 12px;'
-                  : 'background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: var(--shadow-brand-btn); border: 1px solid transparent;'}
+                  ? 'border: 1.5px solid var(--brand); color: var(--brand); font-size: var(--text-meta);'
+                  : 'background: var(--brand); color: var(--text-on-accent); font-size: var(--text-meta); box-shadow: var(--shadow-brand-btn); border: 1px solid transparent;'}
                 onclick={handleFollow}
                 disabled={isActionLoading}
               >
@@ -310,15 +310,16 @@
 
         <!-- Profile card: name / handle / bio / tags -->
         <div class="surface-flat rounded-[var(--radius-lg)] px-5 py-4">
-          <h2 style="font-size: 20px; color: var(--text-primary);">
+          <h2 class="text-h1" style="color: var(--text-primary)">
             {user.user.nickname}
           </h2>
-          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 1px;">
+          <p class="text-body" style="color: var(--text-secondary); margin-top: 1px">
             @{formatHandle(user.user)}
           </p>
           {#if user.bio}
             <p
-              style="font-size: 13px; color: var(--text-secondary); line-height: 1.65; margin-top: 8px;"
+              class="text-body"
+              style="color: var(--text-secondary); line-height: 1.65; margin-top: 8px"
             >
               {user.bio}
             </p>
@@ -326,7 +327,7 @@
           {#if user.location}
             <div class="mt-2 flex items-center gap-1.5">
               <MapPin size={11} color="var(--brand)" strokeWidth={1.5} />
-              <span style="font-size: 11px; color: var(--text-secondary);"
+              <span class="text-caption" style="color: var(--text-secondary)"
                 >{user.location.location_name}</span
               >
             </div>
@@ -340,7 +341,7 @@
           {/if}
 
           {#if user.social_context?.mutual_friends_count}
-            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
+            <p class="text-body" style="color: var(--text-secondary); margin-top: 8px">
               你们有 {user.social_context.mutual_friends_count} 个共同好友
             </p>
           {/if}
@@ -356,10 +357,10 @@
                   style="width: 1px; height: 28px; background: var(--border-theme);"
                 ></div>
               {/if}
-              <span style="font-size: 22px; color: var(--text-primary);">{stat.value}</span>
+              <span class="text-h1" style="color: var(--text-primary)">{stat.value}</span>
               <span
-                class="mt-1 uppercase"
-                style="font-size: 9px; letter-spacing: 0.1em; color: var(--text-secondary);"
+                class="text-xs mt-1 uppercase"
+                style="letter-spacing: 0.1em; color: var(--text-secondary)"
               >
                 {stat.label}
               </span>
@@ -376,10 +377,10 @@
         {#each [{ id: 'moments' as const, icon: Grid3X3, label: '帖子' }, { id: 'followers' as const, icon: Heart, label: '喜欢' }, { id: 'following' as const, icon: Bookmark, label: '收藏' }] as tab (tab.id)}
           {@const active = currentTab === tab.id}
           <button
-            class="relative flex flex-1 items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none transition-all duration-150"
-            style="color: {active
-              ? 'var(--brand)'
-              : 'var(--text-secondary)'}; font-size: 13px; font-weight: {active ? 500 : 400};"
+            class="text-body relative flex flex-1 items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none transition-all duration-150"
+            style="color: {active ? 'var(--brand)' : 'var(--text-secondary)'}; font-weight: {active
+              ? 500
+              : 400}"
             onclick={() => handleTabChange(tab.id)}
           >
             <tab.icon size={13} strokeWidth={active ? 2 : 1.5} />
@@ -484,12 +485,12 @@
                   />
                   <div class="min-w-0">
                     <p
-                      class="truncate"
-                      style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
+                      class="text-body-lg truncate"
+                      style="font-weight: 500; color: var(--text-primary)"
                     >
                       {follower.user.nickname}
                     </p>
-                    <p style="font-size: 12px; color: var(--text-secondary);">查看主页</p>
+                    <p class="text-meta" style="color: var(--text-secondary)">查看主页</p>
                   </div>
                 </div>
               </a>
@@ -546,12 +547,12 @@
                   />
                   <div class="min-w-0">
                     <p
-                      class="truncate"
-                      style="font-weight: 500; font-size: 14px; color: var(--text-primary);"
+                      class="text-body-lg truncate"
+                      style="font-weight: 500; color: var(--text-primary)"
                     >
                       {follow.user.nickname}
                     </p>
-                    <p style="font-size: 12px; color: var(--text-secondary);">查看主页</p>
+                    <p class="text-meta" style="color: var(--text-secondary)">查看主页</p>
                   </div>
                 </div>
               </a>

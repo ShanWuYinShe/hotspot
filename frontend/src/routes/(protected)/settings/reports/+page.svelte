@@ -90,8 +90,8 @@
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div class="mb-3">
-        <p style="font-size: 13px; font-weight: 500; color: var(--text-primary);">筛选条件</p>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+        <p class="text-body" style="font-weight: 500; color: var(--text-primary)">筛选条件</p>
+        <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
           按状态和目标类型快速定位处理中的举报。
         </p>
       </div>
@@ -170,15 +170,15 @@
                   </span>
                 </div>
                 <div>
-                  <h2 style="font-size: 15px; font-weight: 600; color: var(--text-primary);">
+                  <h2 class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">
                     {REPORT_REASON_LABEL[item.reason]}
                   </h2>
-                  <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                  <p class="text-body" style="color: var(--text-secondary); margin-top: 4px">
                     目标 ID：{item.target_id}
                   </p>
                 </div>
               </div>
-              <div style="font-size: 13px; color: var(--text-secondary);">
+              <div class="text-body" style="color: var(--text-secondary)">
                 <p>{formatRelativeTime(item.created_at)}</p>
               </div>
             </div>
@@ -188,25 +188,28 @@
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div>
-                <p style="font-size: 11px; color: var(--text-secondary);">提交时间</p>
+                <p class="text-caption" style="color: var(--text-secondary)">提交时间</p>
                 <p
-                  style="font-size: 13px; font-weight: 500; color: var(--text-primary); margin-top: 4px;"
+                  class="text-body"
+                  style="font-weight: 500; color: var(--text-primary); margin-top: 4px"
                 >
                   {formatDateTime(item.created_at)}
                 </p>
               </div>
               <div>
-                <p style="font-size: 11px; color: var(--text-secondary);">处理时间</p>
+                <p class="text-caption" style="color: var(--text-secondary)">处理时间</p>
                 <p
-                  style="font-size: 13px; font-weight: 500; color: var(--text-primary); margin-top: 4px;"
+                  class="text-body"
+                  style="font-weight: 500; color: var(--text-primary); margin-top: 4px"
                 >
                   {item.handled_at ? formatDateTime(item.handled_at) : '尚未处理'}
                 </p>
               </div>
               <div>
-                <p style="font-size: 11px; color: var(--text-secondary);">举报编号</p>
+                <p class="text-caption" style="color: var(--text-secondary)">举报编号</p>
                 <p
-                  style="font-size: 12px; font-weight: 500; font-family: monospace; color: var(--text-primary); margin-top: 4px;"
+                  class="text-meta"
+                  style="font-weight: 500; font-family: monospace; color: var(--text-primary); margin-top: 4px"
                 >
                   {item.report_id}
                 </p>
@@ -218,9 +221,10 @@
                 class="mt-3 rounded-[var(--radius-md)] px-4 py-3"
                 style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               >
-                <p style="font-size: 11px; color: var(--text-secondary);">补充说明</p>
+                <p class="text-caption" style="color: var(--text-secondary)">补充说明</p>
                 <p
-                  style="font-size: 13px; line-height: 1.6; color: var(--text-primary); margin-top: 4px;"
+                  class="text-body"
+                  style="line-height: 1.6; color: var(--text-primary); margin-top: 4px"
                 >
                   {item.description}
                 </p>

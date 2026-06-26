@@ -420,13 +420,13 @@
           </div>
         </div>
         <div class="min-w-0">
-          <p class="truncate" style="font-size: 14px; color: var(--text-primary);">
+          <p class="text-body-lg truncate" style="color: var(--text-primary)">
             {otherUser.nickname}
           </p>
         </div>
       </div>
     {:else}
-      <span style="font-size: 13px; color: var(--text-secondary);">用户不存在或加载失败</span>
+      <span class="text-body" style="color: var(--text-secondary)">用户不存在或加载失败</span>
     {/if}
     <div class="ml-auto flex gap-1.5">
       <button
@@ -491,15 +491,15 @@
       </div>
     {:else if messages.length === 0}
       <div class="flex h-full items-center justify-center">
-        <p style="font-size: 14px; color: var(--text-secondary);">开始聊天吧</p>
+        <p class="text-body-lg" style="color: var(--text-secondary)">开始聊天吧</p>
       </div>
     {:else}
       <div class="space-y-3 px-4">
         <!-- Date pill -->
         <div class="mb-2 flex justify-center">
           <span
-            class="rounded-full px-3 py-1"
-            style="font-size: 10px; background: var(--surface-bg); color: var(--text-secondary); border: 1px solid var(--border-theme); letter-spacing: 0.05em; opacity: 0.8;"
+            class="text-xs rounded-full px-3 py-1"
+            style="background: var(--surface-bg); color: var(--text-secondary); border: 1px solid var(--border-theme); letter-spacing: 0.05em; opacity: 0.8"
           >
             今天
           </span>
@@ -534,8 +534,8 @@
   >
     {#if !websocketStore.isConnected && !isLoading}
       <div
-        class="flex items-center justify-center gap-1.5 mb-2"
-        style="font-size: 12px; color: var(--text-secondary);"
+        class="text-meta flex items-center justify-center gap-1.5 mb-2"
+        style="color: var(--text-secondary)"
       >
         <Loader2 class="h-3 w-3 animate-spin" />
         <span>实时消息连接中…</span>
@@ -543,8 +543,8 @@
     {/if}
     {#if websocketStore.isConnected && !wsSubscription.state.isSubscribed && !isLoading}
       <div
-        class="flex items-center justify-center gap-1.5 mb-2"
-        style="font-size: 12px; color: var(--text-secondary);"
+        class="text-meta flex items-center justify-center gap-1.5 mb-2"
+        style="color: var(--text-secondary)"
       >
         <Loader2 class="h-3 w-3 animate-spin" />
         <span>
@@ -558,7 +558,7 @@
     {/if}
 
     {#if isOtherUserTyping}
-      <div class="mb-2" style="font-size: 12px; color: var(--text-secondary);">
+      <div class="text-meta mb-2" style="color: var(--text-secondary)">
         {otherUser?.nickname ?? '对方'} 正在输入...
       </div>
     {/if}
@@ -578,8 +578,8 @@
         bind:value={messageText}
         rows={1}
         maxlength={MESSAGE_CONTENT_MAX}
-        class="field-inset min-h-[38px] flex w-full resize-none rounded-[var(--radius-md)] px-3 py-2 outline-none disabled:cursor-not-allowed disabled:opacity-50"
-        style="font-size: 13px; background: var(--surface-bg); color: var(--text-primary);"
+        class="text-body field-inset min-h-[38px] flex w-full resize-none rounded-[var(--radius-md)] px-3 py-2 outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        style="background: var(--surface-bg); color: var(--text-primary)"
         disabled={isSending}
         oninput={handleInput}
         onkeydown={(e) => {

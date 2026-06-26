@@ -14,6 +14,7 @@ import {
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { UserRelationState } from '../../../core/state/InteractionStateStore';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { SearchPageHeader } from '../../../components/SearchPageHeader';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -326,86 +327,19 @@ export struct SearchPage {
     NavDestination() {
     PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint }) {
       Column() {
-        // Search header — back button + search input (Figma Make: rounded back btn + neu-input-surface)
-        Row({ space: 12 }) {
-          // Circular back button with neumorphic shadow
-          Button() {
-            Text() {
-              SymbolSpan($r(AppIcon.BACK))
-                .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
-                .fontColor([this.getCurrentThemePalette().textSecondary])
-            }
-          }
-          .type(ButtonType.Circle)
-          .width(36)
-          .height(36)
-          .backgroundColor(this.getSurfaceBackground())
-          .shadow(this.getCurrentThemePalette().surfaceShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
-          .scale(this.isBackPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } : { x: 1, y: 1 })
-          .animation({
-            curve: curves.springMotion(
-              DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-              DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-            )
-          })
-          .onTouch((event: TouchEvent) => {
-            if (event.type === TouchType.Down) {
-              this.isBackPressed = true;
-            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-              this.isBackPressed = false;
-            }
-          })
-          .onClick(() => {
-            AppRouter.pop();
-          })
-
-          // Search input with inset neumorphic style
-          Row({ space: 10 }) {
-            Text() {
-              SymbolSpan($r(AppIcon.SEARCH))
-                .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor([this.getCurrentThemePalette().textSecondary])
-            }
-
-            TextInput({ placeholder: '搜索用户、地点、话题…', text: this.keyword })
-              .layoutWeight(1)
-              .height(38)
-              .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-              .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
-              .placeholderColor(this.getCurrentThemePalette().textTertiary)
-              .fontColor(this.getCurrentThemePalette().textPrimary)
-              .border({ width: 0 })
-              .padding(0)
-              .onFocus(() => { this.isSearchFocused = true; })
-              .onChange((value) => {
-                this.keyword = value;
-                this.hasSearched = false;
-                this.scheduleSuggest();
-              })
-              .onSubmit(() => {
-                this.doSearch();
-              })
-              .onBlur(() => { this.isSearchFocused = false; KeyboardDismissManager.getInstance().dismiss(); })
-          }
-          .layoutWeight(1)
-          .height(38)
-          .borderRadius(DesignConstants.SHAPE.INPUT)
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-          .backgroundColor(this.getSurfaceBackground())
-          .shadow(this.fieldBorder(this.isSearchFocused, false).shadow)
-          .border({ width: 1, color: this.fieldBorder(this.isSearchFocused, false).borderColor })
-        }
-        .width('100%')
-        .padding({
-          left: DesignConstants.SPACING.LG,
-          right: DesignConstants.SPACING.LG,
-          top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
-          bottom: DesignConstants.SPACING.SM
+        // Search header —— 统一走 SearchPageHeader（返回 + 内联搜索框）
+        SearchPageHeader({
+          keyword: this.keyword,
+          placeholder: '搜索用户、地点、话题…',
+          onBack: () => { AppRouter.pop(); },
+          onChange: (value: string) => {
+            this.keyword = value;
+            this.hasSearched = false;
+            this.scheduleSuggest();
+          },
+          onSubmit: () => { this.doSearch(); },
+          onFocusChange: (focused: boolean) => { this.isSearchFocused = focused; }
         })
-        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-        .border({ width: { bottom: 1 }, color: this.getSurfaceBorder() })
-        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
         if (this.isLoading) {
           SystemLoadingView({ message: '搜索中...' })

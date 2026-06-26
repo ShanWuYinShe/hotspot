@@ -239,7 +239,7 @@
         </div>
         <div>
           <div style="color: var(--text-primary); font-weight: 600;">创建群组</div>
-          <div style="font-size: 13px; font-weight: 400; color: var(--text-secondary);">
+          <div class="text-body" style="font-weight: 400; color: var(--text-secondary)">
             邀请伙伴一起交流
           </div>
         </div>
@@ -252,24 +252,24 @@
         class="rounded-[var(--radius-lg)] p-4 space-y-2"
         style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
       >
-        <label for="group-name" style="font-size: 12px; color: var(--text-primary);">群组名称</label
+        <label for="group-name" class="text-meta" style="color: var(--text-primary)">群组名称</label
         >
         <input
           id="group-name"
-          class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+          class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
           class:field-error={nameError}
-          style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
+          style="background: var(--surface-bg); color: var(--text-primary)"
           placeholder="例如：城市漫步俱乐部"
           bind:value={name}
           onblur={() => markTouched('name')}
         />
         <div class="flex items-center justify-between">
           {#if nameError}
-            <p style="font-size: 12px; color: var(--error);">{nameError}</p>
+            <p class="text-meta" style="color: var(--error)">{nameError}</p>
           {:else}
             <span></span>
           {/if}
-          <span style="font-size: 12px; color: var(--text-secondary);"
+          <span class="text-meta" style="color: var(--text-secondary)"
             >{name.length}/{GROUP_NAME_MAX}</span
           >
         </div>
@@ -280,24 +280,24 @@
         class="rounded-[var(--radius-lg)] p-4 space-y-2"
         style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
       >
-        <label for="group-desc" style="font-size: 12px; color: var(--text-primary);">群组介绍</label
+        <label for="group-desc" class="text-meta" style="color: var(--text-primary)">群组介绍</label
         >
         <textarea
           id="group-desc"
           placeholder="简单描述群组用途与氛围"
-          class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full resize-none"
+          class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full resize-none"
           class:field-error={groupDescriptionError}
-          style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px; min-height: 100px;"
+          style="background: var(--surface-bg); color: var(--text-primary); min-height: 100px"
           bind:value={description}
           onblur={() => markTouched('description')}
         ></textarea>
         <div class="flex items-center justify-between">
           {#if groupDescriptionError}
-            <p style="font-size: 12px; color: var(--error);">{groupDescriptionError}</p>
+            <p class="text-meta" style="color: var(--error)">{groupDescriptionError}</p>
           {:else}
             <span></span>
           {/if}
-          <span style="font-size: 12px; color: var(--text-secondary);"
+          <span class="text-meta" style="color: var(--text-secondary)"
             >{description.length}/{GROUP_DESCRIPTION_MAX}</span
           >
         </div>
@@ -308,12 +308,12 @@
         class="rounded-[var(--radius-lg)] p-4 space-y-2"
         style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
       >
-        <label for="group-tags" style="font-size: 12px; color: var(--text-primary);">群组标签</label
+        <label for="group-tags" class="text-meta" style="color: var(--text-primary)">群组标签</label
         >
         <input
           id="group-tags"
-          class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
-          style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
+          class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+          style="background: var(--surface-bg); color: var(--text-primary)"
           placeholder="兴趣、城市、活动"
           bind:value={tagsInput}
         />
@@ -321,9 +321,8 @@
           <div class="flex flex-wrap gap-2">
             {#each tags as tag (tag)}
               <span
-                class="rounded-full px-2.5 py-0.5"
-                style="font-size: 11px; background: var(--brand); color: var(--text-on-accent);"
-                >#{tag}</span
+                class="text-caption rounded-full px-2.5 py-0.5"
+                style="background: var(--brand); color: var(--text-on-accent)">#{tag}</span
               >
             {/each}
           </div>
@@ -336,13 +335,13 @@
         style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
       >
         <div class="space-y-2">
-          <label for="join-method" style="font-size: 12px; color: var(--text-primary);"
+          <label for="join-method" class="text-meta" style="color: var(--text-primary)"
             >加入方式</label
           >
           <select
             id="join-method"
-            class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
-            style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
+            class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+            style="background: var(--surface-bg); color: var(--text-primary)"
             bind:value={joinMethod}
           >
             <option value="open">自由加入</option>
@@ -351,21 +350,21 @@
           </select>
         </div>
         <div class="space-y-2">
-          <label for="group-password" style="font-size: 12px; color: var(--text-primary);"
+          <label for="group-password" class="text-meta" style="color: var(--text-primary)"
             >入群口令 (可选)</label
           >
           <input
             id="group-password"
-            class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+            class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
             class:field-error={groupPasswordError}
-            style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
+            style="background: var(--surface-bg); color: var(--text-primary)"
             type="password"
             placeholder="设置后需口令加入"
             bind:value={password}
             onblur={() => markTouched('password')}
           />
           {#if groupPasswordError}
-            <p style="font-size: 12px; color: var(--error);">{groupPasswordError}</p>
+            <p class="text-meta" style="color: var(--error)">{groupPasswordError}</p>
           {/if}
         </div>
       </div>
@@ -376,14 +375,14 @@
         style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
       >
         <div class="space-y-2">
-          <label for="max-members" style="font-size: 12px; color: var(--text-primary);"
+          <label for="max-members" class="text-meta" style="color: var(--text-primary)"
             >最大成员数 (可选)</label
           >
           <input
             id="max-members"
-            class="field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
+            class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
             class:field-error={maxMembersError}
-            style="background: var(--surface-bg); color: var(--text-primary); font-size: 13px;"
+            style="background: var(--surface-bg); color: var(--text-primary)"
             type="number"
             min="2"
             max="2000"
@@ -392,12 +391,12 @@
             onblur={() => markTouched('maxMembers')}
           />
           {#if maxMembersError}
-            <p style="font-size: 12px; color: var(--error);">{maxMembersError}</p>
+            <p class="text-meta" style="color: var(--error)">{maxMembersError}</p>
           {/if}
         </div>
         <div
-          class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-2.5"
-          style="background: var(--surface-bg); border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-primary);"
+          class="text-body flex items-center justify-between rounded-[var(--radius-md)] px-4 py-2.5"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary)"
         >
           <span>允许被搜索</span>
           <input type="checkbox" class="h-4 w-4" bind:checked={isSearchable} />
@@ -414,8 +413,8 @@
 
     <Dialog.Footer class="pt-2 flex gap-3 justify-end">
       <button
-        class="rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 13px;"
+        class="text-body rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+        style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
         onclick={() => {
           open = false;
           onOpenChange?.(false);
@@ -424,8 +423,8 @@
         取消
       </button>
       <button
-        class="rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--brand); color: var(--text-on-accent); font-size: 13px; box-shadow: var(--shadow-brand-btn);"
+        class="text-body rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+        style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
         onclick={handleSubmit}
         disabled={isSubmitting}
       >

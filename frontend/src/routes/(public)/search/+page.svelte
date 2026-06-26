@@ -326,8 +326,8 @@
         <input
           type="text"
           placeholder="搜索用户、地点、话题…"
-          class="flex-1 bg-transparent outline-none"
-          style="font-size: 13px; color: var(--text-primary);"
+          class="text-body flex-1 bg-transparent outline-none"
+          style="color: var(--text-primary)"
           autocomplete="off"
           bind:value={keywordInput}
           onkeydown={(e) => {
@@ -360,23 +360,23 @@
               <div class="flex items-center gap-1.5">
                 <Clock size={13} style="color: var(--text-secondary);" strokeWidth={1.5} />
                 <p
-                  class="uppercase"
-                  style="font-size: 10px; letter-spacing: 0.12em; color: var(--text-secondary);"
+                  class="text-xs uppercase"
+                  style="letter-spacing: 0.12em; color: var(--text-secondary)"
                 >
                   最近搜索
                 </p>
               </div>
               <button
-                class="outline-none transition-transform duration-150 active:scale-[0.93]"
-                style="font-size: 12px; color: var(--brand);"
+                class="text-meta outline-none transition-transform duration-150 active:scale-[0.93]"
+                style="color: var(--brand)"
                 onclick={clearRecent}>清空</button
               >
             </div>
             <div class="flex flex-wrap gap-2">
               {#each recentSearches as r (r)}
                 <button
-                  class="surface-flat flex items-center gap-1.5 px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
-                  style="font-size: 12px; color: var(--text-secondary);"
+                  class="text-meta surface-flat flex items-center gap-1.5 px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
+                  style="color: var(--text-secondary)"
                   onclick={() => searchFor(r)}
                 >
                   <Clock size={10} strokeWidth={1.5} />
@@ -392,8 +392,8 @@
           <div class="flex items-center gap-1.5 mb-2.5">
             <TrendingUp size={13} style="color: var(--brand);" strokeWidth={2} />
             <p
-              class="uppercase"
-              style="font-size: 10px; letter-spacing: 0.12em; color: var(--text-secondary);"
+              class="text-xs uppercase"
+              style="letter-spacing: 0.12em; color: var(--text-secondary)"
             >
               热门搜索
             </p>
@@ -407,14 +407,15 @@
               onclick={() => searchFor(h)}
             >
               <span
-                style="font-size: 14px; color: var(--brand); font-weight: 700; width: 20px; text-align: center;"
+                class="text-body-lg"
+                style="color: var(--brand); font-weight: 700; width: 20px; text-align: center"
                 >{i + 1}</span
               >
-              <span style="font-size: 14px; color: var(--text-primary);">{h}</span>
+              <span class="text-body-lg" style="color: var(--text-primary)">{h}</span>
               {#if i < 3}
                 <span
-                  class="ml-auto px-2 py-0.5 rounded-full"
-                  style="font-size: 10px; background: color-mix(in srgb, var(--theme-error) 12%, transparent); color: var(--theme-error);"
+                  class="text-xs ml-auto px-2 py-0.5 rounded-full"
+                  style="background: color-mix(in srgb, var(--theme-error) 12%, transparent); color: var(--theme-error)"
                   >热</span
                 >
               {/if}
@@ -427,8 +428,8 @@
           <div class="flex items-center gap-1.5 mb-2.5">
             <Hash size={13} style="color: var(--brand);" strokeWidth={2} />
             <p
-              class="uppercase"
-              style="font-size: 10px; letter-spacing: 0.12em; color: var(--text-secondary);"
+              class="text-xs uppercase"
+              style="letter-spacing: 0.12em; color: var(--text-secondary)"
             >
               热门话题
             </p>
@@ -436,8 +437,8 @@
           <div class="flex flex-wrap gap-2">
             {#each suggestedTags as tag (tag)}
               <button
-                class="surface-flat px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
-                style="color: var(--brand); font-size: 12px;"
+                class="text-meta surface-flat px-3.5 py-1.5 rounded-full outline-none transition-transform duration-150 active:scale-[0.93]"
+                style="color: var(--brand)"
                 onclick={() => searchTag(tag)}
               >
                 #{tag}
@@ -472,8 +473,8 @@
                 style="color: var(--text-secondary); opacity: 0.4;"
                 strokeWidth={1.25}
               />
-              <p style="font-size: 15px; color: var(--text-primary);">未找到相关内容</p>
-              <p style="font-size: 13px; color: var(--text-secondary);">尝试其他关键词</p>
+              <p class="text-body-lg" style="color: var(--text-primary)">未找到相关内容</p>
+              <p class="text-body" style="color: var(--text-secondary)">尝试其他关键词</p>
             </div>
           {/if}
 
@@ -482,8 +483,8 @@
             <div>
               {#if currentTab === 'all' && users.length > 0}
                 <p
-                  class="uppercase mb-2.5"
-                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
+                  class="text-xs uppercase mb-2.5"
+                  style="letter-spacing: 0.14em; color: var(--text-secondary)"
                 >
                   用户
                 </p>
@@ -510,8 +511,8 @@
             <div>
               {#if currentTab === 'all' && moments.length > 0}
                 <p
-                  class="uppercase mb-2.5"
-                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
+                  class="text-xs uppercase mb-2.5"
+                  style="letter-spacing: 0.14em; color: var(--text-secondary)"
                 >
                   动态
                 </p>
@@ -538,8 +539,8 @@
             <div>
               {#if currentTab === 'all' && groups.length > 0}
                 <p
-                  class="uppercase mb-2.5"
-                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
+                  class="text-xs uppercase mb-2.5"
+                  style="letter-spacing: 0.14em; color: var(--text-secondary)"
                 >
                   群组
                 </p>

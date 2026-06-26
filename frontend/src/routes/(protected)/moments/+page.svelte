@@ -44,8 +44,8 @@
         </div>
         <div class="flex gap-2">
           <button
-            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); font-size: 12px; color: var(--text-secondary);"
+            class="text-meta flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary)"
             onclick={() => loadMoments(true)}
             disabled={pagination.loading}
           >
@@ -53,8 +53,8 @@
             刷新
           </button>
           <button
-            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="background: var(--brand); color: var(--text-on-accent); font-size: 12px; box-shadow: var(--shadow-brand-btn);"
+            class="text-meta flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
+            style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
             onclick={() => (showCreateMoment = true)}
           >
             <Plus size={13} />
@@ -101,8 +101,8 @@
                   style="text-decoration: none;"
                 >
                   <p
-                    class="line-clamp-3 whitespace-pre-wrap"
-                    style="font-size: 14px; color: var(--text-primary);"
+                    class="text-body-lg line-clamp-3 whitespace-pre-wrap"
+                    style="color: var(--text-primary)"
                   >
                     {moment.description}
                   </p>
@@ -119,8 +119,8 @@
                       {/each}
                       {#if moment.images.length > 4}
                         <div
-                          class="flex h-20 w-20 items-center justify-center rounded-[var(--radius-sm)]"
-                          style="border: 1px solid var(--border-theme); font-size: 13px; color: var(--text-secondary);"
+                          class="text-body flex h-20 w-20 items-center justify-center rounded-[var(--radius-sm)]"
+                          style="border: 1px solid var(--border-theme); color: var(--text-secondary)"
                         >
                           +{moment.images.length - 4}
                         </div>
@@ -128,8 +128,8 @@
                     </div>
                   {/if}
                   <div
-                    class="mt-3 flex items-center gap-4"
-                    style="font-size: 12px; color: var(--text-secondary);"
+                    class="text-meta mt-3 flex items-center gap-4"
+                    style="color: var(--text-secondary)"
                   >
                     <span>{moment.likes_count} 点赞</span>
                     <span>{moment.comments_count} 评论</span>

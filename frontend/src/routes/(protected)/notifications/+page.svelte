@@ -347,7 +347,8 @@
           style="background: var(--border-theme); padding: 12px;"
         >
           <p
-            style="font-size: 10px; color: var(--text-secondary); letter-spacing: 0.08em; text-transform: uppercase;"
+            class="text-xs"
+            style="color: var(--text-secondary); letter-spacing: 0.08em; text-transform: uppercase"
           >
             {tile.label}
           </p>
@@ -375,9 +376,9 @@
           <div class="flex items-center gap-2">
             <span class="rounded-full" style="width: 8px; height: 8px; background: {row.color};"
             ></span>
-            <span style="font-size: 13px; color: var(--text-primary);">{row.label}</span>
+            <span class="text-body" style="color: var(--text-primary)">{row.label}</span>
           </div>
-          <span style="font-size: 12px; color: var(--text-secondary);">{row.value}</span>
+          <span class="text-meta" style="color: var(--text-secondary)">{row.value}</span>
         </div>
       {/each}
     </div>
@@ -406,7 +407,7 @@
                 {t('notificationsPage.title')}
               </h1>
               {#if notificationStore.unreadCount > 0}
-                <p style="font-size: 12px; color: var(--text-secondary); margin-top: 1px;">
+                <p class="text-meta" style="color: var(--text-secondary); margin-top: 1px">
                   {notificationStore.unreadCount} 条未读
                 </p>
               {/if}
@@ -414,8 +415,8 @@
           </div>
           {#if notificationStore.unreadCount > 0}
             <button
-              class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none transition-transform duration-150 active:scale-[0.93]"
-              style="font-size: 12px; color: var(--brand);"
+              class="text-meta surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none transition-transform duration-150 active:scale-[0.93]"
+              style="color: var(--brand)"
               onclick={markAllRead}
             >
               <CheckCheck size={13} strokeWidth={2} />
@@ -453,8 +454,8 @@
           <EmptyState icon={Bell} title={t('notificationsPage.loadFailed')} />
           <div class="flex justify-center pt-2">
             <button
-              class="surface-flat rounded-full px-5 py-2 outline-none"
-              style="color: var(--brand); font-size: 13px;"
+              class="text-body surface-flat rounded-full px-5 py-2 outline-none"
+              style="color: var(--brand)"
               onclick={() => loadNotifications(true)}>{t('common.retry')}</button
             >
           </div>
@@ -465,8 +466,8 @@
             <!-- Unread group -->
             {#if unreadGroup.length > 0}
               <p
-                class="uppercase mb-2"
-                style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
+                class="text-xs uppercase mb-2"
+                style="letter-spacing: 0.14em; color: var(--text-secondary)"
               >
                 新消息
               </p>
@@ -515,14 +516,15 @@
                       onclick={() => handleNotificationClick(item)}
                     >
                       <div
-                        style="font-size: 13px; color: var(--text-primary); font-weight: 500; line-height: 1.4;"
+                        class="text-body"
+                        style="color: var(--text-primary); font-weight: 500; line-height: 1.4"
                       >
                         <span class="mr-1">{getNotificationTitle(item, locale)}</span>
                         <span style="color: var(--text-secondary);"
                           >{getNotificationContent(item, locale)}</span
                         >
                       </div>
-                      <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+                      <p class="text-caption" style="color: var(--text-secondary); margin-top: 2px">
                         {formatNotificationTimestamp(item.created_at, locale)}
                       </p>
                     </button>
@@ -581,8 +583,8 @@
               {/each}
               {#if readGroup.length > 0}
                 <p
-                  class="uppercase mt-4 mb-2"
-                  style="font-size: 10px; letter-spacing: 0.14em; color: var(--text-secondary);"
+                  class="text-xs uppercase mt-4 mb-2"
+                  style="letter-spacing: 0.14em; color: var(--text-secondary)"
                 >
                   较早
                 </p>
@@ -632,14 +634,15 @@
                     onclick={() => handleNotificationClick(item)}
                   >
                     <div
-                      style="font-size: 13px; color: var(--text-primary); font-weight: 400; line-height: 1.4;"
+                      class="text-body"
+                      style="color: var(--text-primary); font-weight: 400; line-height: 1.4"
                     >
                       <span class="mr-1">{getNotificationTitle(item, locale)}</span>
                       <span style="color: var(--text-secondary);"
                         >{getNotificationContent(item, locale)}</span
                       >
                     </div>
-                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+                    <p class="text-caption" style="color: var(--text-secondary); margin-top: 2px">
                       {formatNotificationTimestamp(item.created_at, locale)}
                     </p>
                   </button>
@@ -695,8 +698,8 @@
           {#if pagination.hasMore}
             <div class="flex justify-center pt-4">
               <button
-                class="surface-flat rounded-full px-5 py-2 outline-none transition-transform duration-150 active:scale-[0.97]"
-                style="color: var(--text-secondary); font-size: 13px;"
+                class="text-body surface-flat rounded-full px-5 py-2 outline-none transition-transform duration-150 active:scale-[0.97]"
+                style="color: var(--text-secondary)"
                 disabled={pagination.loadingMore}
                 onclick={() => loadNotifications(false)}
               >
