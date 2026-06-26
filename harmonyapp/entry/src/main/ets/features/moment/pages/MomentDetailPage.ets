@@ -240,7 +240,6 @@ export struct MomentDetailPage {
           }
           .layoutWeight(1)
           .width('100%')
-          .constraintSize({ maxWidth: 720 })
           .align(Alignment.TopStart)
 
           this.buildActionBar(this.moment as MomentItem)

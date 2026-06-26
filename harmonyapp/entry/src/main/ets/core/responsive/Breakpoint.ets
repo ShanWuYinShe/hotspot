@@ -6,41 +6,53 @@
  *     GridCol({ span: { sm: 12, md: 6, lg: 4 } }) { ... }
  *   }
  *
- *   if (GRID_ROW_OPTIONS.currentBreakpoint === 'lg' || GRID_ROW_OPTIONS.currentBreakpoint === 'xl') {
- *     // desktop 布局
+ *   if (isDesktopForm(bp)) {
+ *     // 桌面 chrome（顶栏+侧边栏）
+ *   }
+ *   if (isWideForm(bp)) {
+ *     // 内容双栏 / master-detail（与 chrome 解耦）
  *   }
  *
- * 设计动机：
- *   - HarmonyOS 4+ 提供 GridRow/GridCol 声明式栅格（breakpoints / columns / gutter），
- *     内部自动响应屏幕尺寸变化，无需写 mediaQuery 监听
- *   - 与 frontend 768/1024/1280 断点风格对齐（lg 切桌面 = frontend `lg:` 断点），
- *     但用 HarmonyOS 标准命名 xs/sm/md/lg/xl/xxl 与原生栅格无缝集成
+ * 设计动机（对齐前端 platform.svelte.ts 三轴模型）：
+ *   - 底层 6 档（xs..xxl）供 ArkUI GridRow/ResponsiveContainer 栅格使用
+ *   - 业务语义三轴：
+ *       · isTablet（≥600vp，EntryAbility 维护）：PhoneLayout 内切药丸底栏（对齐前端 tablet 档）
+ *       · isWideForm（≥960vp）：内容区是否双栏 / master-detail（对齐前端 isWide=960）
+ *       · isDesktopForm（≥1280vp）：是否切桌面 chrome 顶栏+侧边栏（对齐前端 desktop=1280）
+ *   - 关键原则（对齐前端 ui-layout.md）：chrome 归 isDesktopForm，内容双栏归 isWideForm，
+ *     二者解耦——960–1279vp 是「平板药丸底栏 + 内容可双栏」，不是「桌面侧边栏」。
  *   - 旧版 mediaQuery 监听实现（BreakpointState.ets）已删除
  */
 
-// 断点阈值（vp）— 与 HarmonyOS ArkUI GridRow breakpoints 标准对齐
+// 底层断点阈值（vp）— 与 HarmonyOS ArkUI GridRow breakpoints 标准对齐
 export const BREAKPOINT_XS_MAX_VP: number = 319;   // < 320vp = xs
 export const BREAKPOINT_SM_MAX_VP: number = 599;   // 320-599vp = sm
 export const BREAKPOINT_MD_MAX_VP: number = 839;   // 600-839vp = md（手机横屏 / 平板竖屏）
-export const BREAKPOINT_LG_MAX_VP: number = 1199;  // 840-1199vp = lg（桌面 / 平板横屏）
-export const BREAKPOINT_XL_MAX_VP: number = 1599;  // 1200-1599vp = xl
+export const BREAKPOINT_LG_MAX_VP: number = 1199;  // 840-1199vp = lg（平板横屏 / 小尺寸桌面窗口）
+export const BREAKPOINT_XL_MAX_VP: number = 1599;  // 1200-1599vp = xl（桌面）
 // >= 1600vp = xxl（宽屏）
+
+// 业务语义阈值（vp）— 对齐前端 platform.svelte.ts
+// vp 与 CSS px 同为逻辑单位（EntryAbility 的 widthVp = px*160/densityDPI 即逻辑宽度），故 1:1 对应。
+export const WIDE_MIN_VP: number = 960;    // ≥960vp：内容区双栏 / master-detail（对齐前端 isWide=960）
+export const DESKTOP_MIN_VP: number = 1280; // ≥1280vp：桌面 chrome 顶栏+侧边栏（对齐前端 desktop=1280）
 
 /**
  * HarmonyOS 命名断点（与 ArkUI GridRow.currentBreakpoint 一致）
  * - xs: < 320vp（紧凑手机）
  * - sm: 320-599vp（标准手机竖屏）
  * - md: 600-839vp（手机横屏 / 平板竖屏）
- * - lg: 840-1199vp（**桌面** / 平板横屏，与 frontend `lg:` 断点对齐）
- * - xl: 1200-1599vp（宽屏桌面，与 frontend `xl:` 对齐）
+ * - lg: 840-1199vp（平板横屏 / 小尺寸桌面窗口）
+ * - xl: 1200-1599vp（宽屏桌面）
  * - xxl: >= 1600vp（超宽屏）
  */
 export type BreakpointType = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 
 /**
- * 业务视角的端形态
- * - MOBILE: xs / sm / md（手机，**含平板竖屏**，与 frontend TabletLayout 一致）
- * - DESKTOP: lg / xl / xxl（桌面 / 折叠屏 / PC）
+ * 业务视角的端形态（对齐前端 mobile/tablet/desktop 三档 platform）
+ * - MOBILE: xs / sm / md / lg（< 1280vp，手机 + 平板，走 PhoneLayout）
+ * - DESKTOP: xl / xxl 中 ≥1280vp（桌面 / PC，走 DesktopLayout）
+ * 注：lg(840-1199) 归 MOBILE 形态但 isTablet(≥600) 在其内切药丸底栏。
  */
 export type DeviceForm = 'mobile' | 'desktop';
 
@@ -53,12 +65,31 @@ export interface BreakpointNumberMap {
   xxl: number;
 }
 
+/** 手机/平板形态（< 1280vp）：走 PhoneLayout（含平板药丸底栏）。对齐前端 !isDesktop。 */
 export function isMobileForm(bp: BreakpointType): boolean {
-  return bp === 'xs' || bp === 'sm' || bp === 'md';
+  return !isDesktopForm(bp);
 }
 
+/** 桌面形态（≥ 1280vp）：走 DesktopLayout 顶栏+侧边栏。对齐前端 isDesktop(≥1280)。 */
 export function isDesktopForm(bp: BreakpointType): boolean {
-  return bp === 'lg' || bp === 'xl' || bp === 'xxl';
+  return bp === 'xl' || bp === 'xxl' || getBreakpointVp(bp) >= DESKTOP_MIN_VP;
+}
+
+/** 宽屏内容形态（≥ 960vp）：内容区双栏 / master-detail。对齐前端 isWide(≥960)。与 chrome 解耦。 */
+export function isWideForm(bp: BreakpointType): boolean {
+  return getBreakpointVp(bp) >= WIDE_MIN_VP;
+}
+
+/** 断点档位对应的最小 vp（用于语义阈值判断） */
+function getBreakpointVp(bp: BreakpointType): number {
+  switch (bp) {
+    case 'xxl': return 1600;
+    case 'xl': return 1200;
+    case 'lg': return 840;
+    case 'md': return 600;
+    case 'sm': return 320;
+    default: return 0; // xs
+  }
 }
 
 /**
@@ -86,8 +117,8 @@ export function getBreakpointType(widthVp: number): BreakpointType {
 }
 
 /**
- * ArkUI GridRow breakpoints 配置（vp 单位）
- * 与 frontend lg=1024 风格对齐：lg (840vp) 起视为桌面。
+ * ArkUI GridRow breakpoints 配置（vp 单位）— ArkUI 栅格标准档位。
+ * 业务语义阈值（isWideForm≥960 / isDesktopForm≥1280）见文件顶部常量。
  */
 export const GRID_BREAKPOINTS_VALUE: string[] = [
   '320vp',

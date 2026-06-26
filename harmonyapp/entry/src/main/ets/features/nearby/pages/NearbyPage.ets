@@ -5,6 +5,8 @@
 
 import { GlobalStateManager, KEY_IS_LOGGED_IN, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { isWideForm } from '../../../core/responsive/Breakpoint';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ChatRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam, SearchRouteParam } from '../../../core/router/AppRouter';
@@ -51,7 +53,7 @@ export struct NearbyPage {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
-  @StorageProp('isTablet') isTablet: boolean = false;
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 
   @State moments: MomentItem[] = [];
   @State users: UserItem[] = [];
@@ -328,24 +330,62 @@ export struct NearbyPage {
       // 粘性头部
       this.buildStickyHeader()
 
-      // 内容区
-      Scroll() {
-        Column() {
-          this.buildMapCard()
-          this.buildNearbyPeople()
-          this.buildActivityGrid()
-          this.buildMomentsSection()
+      if (isWideForm(this.currentBreakpoint)) {
+        // ======== 宽屏（≥960）：双栏工作区（对齐前端首页 isWide 分支）========
+        // 左栏：地图卡片 + 附近活动（群组）；右栏：附近的人 + 附近动态
+        Row() {
+          // 左栏
+          Scroll() {
+            Column({ space: DesignConstants.SPACING.LG }) {
+              this.buildMapCard()
+              this.buildActivityGrid()
+            }
+            .width('100%')
+            .padding({ top: 16, bottom: 24 })
+          }
+          .layoutWeight(1)
+          .scrollBar(BarState.Auto)
+          .align(Alignment.TopStart)
+
+          // 分割线
+          Column()
+            .width(1)
+            .height('100%')
+            .backgroundColor(this.getPalette().borderColor)
+
+          // 右栏（固定宽度，对齐前端右栏语义）
+          Scroll() {
+            Column({ space: DesignConstants.SPACING.LG }) {
+              this.buildNearbyPeople()
+              this.buildMomentsSection()
+            }
+            .width('100%')
+            .padding({ top: 16, bottom: 24 })
+          }
+          .width(420)
+          .scrollBar(BarState.Auto)
+          .align(Alignment.TopStart)
         }
-        .width('100%')
-        .padding({ top: 16, bottom: 24 })
+        .layoutWeight(1)
+      } else {
+        // ======== 窄屏（<960）：单栏纵向堆叠 ========
+        Scroll() {
+          Column() {
+            this.buildMapCard()
+            this.buildNearbyPeople()
+            this.buildActivityGrid()
+            this.buildMomentsSection()
+          }
+          .width('100%')
+          .padding({ top: 16, bottom: 24 })
+        }
+        .layoutWeight(1)
+        .scrollBar(BarState.Auto)
+        .align(Alignment.TopStart)
       }
-      .layoutWeight(1)
-      .scrollBar(BarState.Auto)
-      .align(Alignment.TopStart)
     }
     .width('100%')
     .height('100%')
-    .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
     .backgroundColor(this.getPalette().pageBackground)
   }
   }

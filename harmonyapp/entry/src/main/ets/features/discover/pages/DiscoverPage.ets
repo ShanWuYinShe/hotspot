@@ -5,7 +5,7 @@
 
 import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
-import { isDesktopForm } from '../../../core/responsive/Breakpoint';
+import { isWideForm } from '../../../core/responsive/Breakpoint';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
@@ -303,7 +303,7 @@ export struct DiscoverPage {
           .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn })))
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          if (isDesktopForm(this.currentBreakpoint)) {
+          if (isWideForm(this.currentBreakpoint)) {
             // ======== 桌面端两栏布局（对齐前端 isDesktop 分支） ========
             Row() {
               // 左栏：标签药片 + 动态网格

@@ -16,6 +16,8 @@ import { AppRouter, ChatRouteParam, LoginRouteParam } from '../../../core/router
 import { PageNames } from '../../../constants/AppConstants';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { isWideForm } from '../../../core/responsive/Breakpoint';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { LoginPromptView } from '../../../components/LoginPromptView';
@@ -62,7 +64,7 @@ export struct ProfilePage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
-  @StorageProp('isTablet') isTablet: boolean = false;
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 
   private stateManager = GlobalStateManager.getInstance();
   @State isEditing: boolean = false;
@@ -722,7 +724,7 @@ export struct ProfilePage {
         }
         .width('100%')
         .height('100%')
-        .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
+        .constraintSize({ maxWidth: isWideForm(this.currentBreakpoint) ? 720 : '100%' })
       }
       .width('100%')
       .height('100%')
@@ -1362,12 +1364,18 @@ export struct ProfilePage {
     }
   }
 
-  // 我的瞬间九宫格：按 3 列分行（避开 ArkUI 不支持的 calc，用 Row + layoutWeight 等宽）
+  // 我的瞬间九宫格：按列数分行（避开 ArkUI 不支持的 calc，用 Row + layoutWeight 等宽）。
+  // 列数随断点变化：宽屏(≥960) 3 列，窄屏 2 列（对齐前端 grid-cols-2 md:grid-cols-3）。
+  private getMomentColumns(): number {
+    return isWideForm(this.currentBreakpoint) ? 3 : 2;
+  }
+
   private getMomentRows(): MomentItem[][] {
-    const items: MomentItem[] = this.myMoments.slice(0, 9);
+    const cols: number = this.getMomentColumns();
+    const items: MomentItem[] = this.myMoments.slice(0, cols * 3); // 最多 3 行
     const rows: MomentItem[][] = [];
-    for (let i = 0; i < items.length; i += 3) {
-      rows.push(items.slice(i, i + 3));
+    for (let i = 0; i < items.length; i += cols) {
+      rows.push(items.slice(i, i + cols));
     }
     return rows;
   }
@@ -1391,7 +1399,7 @@ export struct ProfilePage {
       ForEach(row, (m: MomentItem) => {
         this.buildMomentTile(m)
       }, (m: MomentItem) => m.moment_id)
-      ForEach(Array.from({ length: 3 - row.length }, (_: Object, padIndex: number) => padIndex), (_: number) => {
+      ForEach(Array.from({ length: this.getMomentColumns() - row.length }, (_: Object, padIndex: number) => padIndex), (_: number) => {
         Column().layoutWeight(1)
       }, (_: number, padIndex: number) => `pad_${rowIndex}_${padIndex}`)
     }
