@@ -23,6 +23,8 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
+import { isWideForm } from '../../../core/responsive/Breakpoint';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -61,7 +63,7 @@ export struct MessagePage {
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
-  @StorageProp('isTablet') isTablet: boolean = false;
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 
   private chatListDataSource: BasicDataSource<ChatItem> = new BasicDataSource([]);
   private messageCacheService = MessageCacheService.getInstance();
@@ -74,6 +76,8 @@ export struct MessagePage {
   @State isLoading: boolean = true;
   @State isRefreshing: boolean = false;
   @State errorMessage: string = '';
+  // 桌面宽屏（≥960）master-detail：当前选中的会话 key，用于高亮列表项
+  @State selectedChatKey: string = '';
   @State hasData: boolean = false;
   // 分页状态：私聊
   private privateHasMore: boolean = false;
@@ -421,6 +425,8 @@ export struct MessagePage {
   }
 
   private enterChat(item: ChatItem) {
+    // 桌面宽屏（≥960）时记录选中项用于高亮，但依然 push 独立 ChatPage 保持聊天功能完整
+    this.selectedChatKey = this.getChatKey(item);
     const targetUserId = item.type === 'private' ? (item.data as PrivateChatItem).other_user?.user_id ?? item.id : item.id;
     const chatParams = new ChatRouteParam();
     chatParams.chatId = targetUserId;
@@ -438,6 +444,20 @@ export struct MessagePage {
 
   private isChatDeleting(item: ChatItem): boolean {
     return this.deletingChatKeys.indexOf(this.getChatKey(item)) >= 0;
+  }
+
+  private isChatSelected(item: ChatItem): boolean {
+    return isWideForm(this.currentBreakpoint) && this.selectedChatKey === this.getChatKey(item);
+  }
+
+  private getChatItemBackground(item: ChatItem): ResourceColor {
+    if (this.isChatSelected(item)) {
+      return this.getCurrentThemePalette().accentMuted;
+    }
+    if (this.pressedChatKey === this.getChatKey(item)) {
+      return this.getCurrentThemePalette().surfaceSubtle;
+    }
+    return DesignConstants.COLOR.TRANSPARENT;
   }
 
   private setChatDeleting(item: ChatItem, pending: boolean): void {
@@ -621,6 +641,28 @@ export struct MessagePage {
       .onClick(() => {
         AppRouter.push(PageNames.SEARCH);
       })
+
+      // 宽屏（≥960）提示：当前点击会话仍 push 独立页（保持聊天功能完整；详见阶段3评估）
+      if (isWideForm(this.currentBreakpoint)) {
+        Row({ space: DesignConstants.SPACING.SM }) {
+          Text() {
+            SymbolSpan($r(AppIcon.INFO))
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor([this.getCurrentThemePalette().accentText])
+          }
+          Text('宽屏模式：点击左侧会话将在新页面打开聊天窗口')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+            .layoutWeight(1)
+        }
+        .width('100%')
+        .padding({
+          left: DesignConstants.SPACING.LG,
+          right: DesignConstants.SPACING.LG,
+          top: DesignConstants.SPACING.XS,
+          bottom: DesignConstants.SPACING.SM
+        })
+      }
 
       // 内容区域
       if (this.isLoading) {
@@ -834,9 +876,7 @@ export struct MessagePage {
     .width('100%')
     .padding({ left: 16, right: 16, top: 12, bottom: 12 })
     .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-    .backgroundColor(this.pressedChatKey === this.getChatKey(item)
-      ? this.getCurrentThemePalette().surfaceSubtle
-      : DesignConstants.COLOR.TRANSPARENT)
+    .backgroundColor(this.getChatItemBackground(item))
     .opacity(this.isChatDeleting(item) ? DesignConstants.OPACITY.LOADING : 1)
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
