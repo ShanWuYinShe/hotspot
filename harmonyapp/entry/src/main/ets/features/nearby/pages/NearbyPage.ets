@@ -9,7 +9,7 @@ import { isWideForm } from '../../../core/responsive/Breakpoint';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { AppRouter, ChatRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam, SearchRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam, SearchRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint,
@@ -76,6 +76,11 @@ export struct NearbyPage {
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getOnlineCount(): number {
+    if (!this.users || this.users.length === 0) return 0;
+    return this.users.filter((u: UserItem) => u.presence_status === 'online').length;
   }
 
   async aboutToAppear() {
@@ -332,13 +337,13 @@ export struct NearbyPage {
 
       if (isWideForm(this.currentBreakpoint)) {
         // ======== 宽屏（≥960）：双栏工作区（对齐前端首页 isWide 分支）========
-        // 左栏：地图卡片 + 附近活动（群组）；右栏：附近的人 + 附近动态
+        // 左栏：HeroStats 统计 + 附近群组横滑
         Row() {
           // 左栏
           Scroll() {
             Column({ space: DesignConstants.SPACING.LG }) {
-              this.buildMapCard()
-              this.buildActivityGrid()
+              this.buildHeroStats()
+              this.buildGroupCarousel()
             }
             .width('100%')
             .padding({ top: 16, bottom: 24 })
@@ -371,9 +376,9 @@ export struct NearbyPage {
         // ======== 窄屏（<960）：单栏纵向堆叠 ========
         Scroll() {
           Column() {
-            this.buildMapCard()
+            this.buildHeroStats()
             this.buildNearbyPeople()
-            this.buildActivityGrid()
+            this.buildGroupCarousel()
             this.buildMomentsSection()
           }
           .width('100%')
@@ -435,104 +440,80 @@ export struct NearbyPage {
   // ==================== 地图卡片 ====================
 
   @Builder
-  private buildMapCard() {
-    Stack({ alignContent: Alignment.Center }) {
-      // 底层：135° 品牌微染 → 米白 对角渐变（对齐前端 surface-secondary → surface-bg）
-      Column()
-        .width('100%')
-        .height('100%')
-        .linearGradient({
-          angle: 135,
-          colors: [
-            [this.getPalette().heroGlow, 0.0],
-            [this.getPalette().surfaceBackground, 1.0]
-          ]
-        })
-
-      // 顶层：底部轻微加深，提升浮层对比
-      Column()
-        .width('100%')
-        .height('100%')
-        .linearGradient({
-          direction: GradientDirection.Bottom,
-          colors: [
-            ['rgba(0,0,0,0.00)', 0.45],
-            ['rgba(0,0,0,0.14)', 1.0]
-          ]
-        })
-
-      // 中心脉冲定位点（44 圈包 14 点）
-      Stack() {
-        Row()
-          .width(14)
-          .height(14)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getPalette().accentBackground)
-          .shadow(this.getPalette().accentShadow)
-      }
-      .width(44)
-      .height(44)
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.getPalette().surfaceBackground)
-      .border({ width: 1, color: this.getPalette().floatingBorderColor })
-
-      // 右下控制按钮（定位 + 地图）：嵌套全屏 Stack 贴右下（ArkUI 不支持 calc，用 alignContent 对齐前端 bottom-3 right-3）
-      Stack({ alignContent: Alignment.BottomEnd }) {
-        Column({ space: DesignConstants.SPACING.SM }) {
-          this.buildMapIconButton(AppIcon.LOCATION, () => AppRouter.push(PageNames.LOCATION_PICKER))
-          this.buildMapIconButton(AppIcon.MAP, () => AppRouter.push(PageNames.LOCATION_PICKER))
-        }
-      }
-      .width('100%')
-      .height('100%')
-      .padding({ right: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-
-      // 左下人数统计：嵌套全屏 Stack 贴左下（对齐前端 bottom-3 left-3）
-      Stack({ alignContent: Alignment.BottomStart }) {
-        Row({ space: DesignConstants.SPACING.XS }) {
+  private buildHeroStats() {
+    // 实时附近统计卡（对齐前端 HeroStats：https://localhost:8888/ 首页桌面左栏）
+    Column() {
+      Row({ space: DesignConstants.SPACING.MD }) {
+        // 人附近
+        Column({ space: 2 }) {
           Text(`${this.users.length}`)
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getPalette().accentBackground)
+            .fontSize(DesignConstants.FONT.SIZE.XXL)
             .fontWeight(FontWeight.Bold)
+            .fontColor(this.getPalette().accentBackground)
           Text('人附近')
-            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getPalette().textSecondary)
         }
-        .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .backgroundColor(this.getPalette().surfaceBackground)
-        .border({ width: 1, color: this.getPalette().floatingBorderColor })
+        .alignItems(HorizontalAlign.Center)
+        .layoutWeight(1)
+
+        // 分割竖线
+        Column()
+          .width(1)
+          .height(32)
+          .backgroundColor(this.getPalette().borderColor)
+
+        // 活动中
+        Column({ space: 2 }) {
+          Text(`${this.groups.length}`)
+            .fontSize(DesignConstants.FONT.SIZE.XXL)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(this.getPalette().warning)
+          Text('活动中')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getPalette().textSecondary)
+        }
+        .alignItems(HorizontalAlign.Center)
+        .layoutWeight(1)
+
+        // 分割竖线
+        Column()
+          .width(1)
+          .height(32)
+          .backgroundColor(this.getPalette().borderColor)
+
+        // 在线
+        Column({ space: 2 }) {
+          Text(`${this.getOnlineCount()}`)
+            .fontSize(DesignConstants.FONT.SIZE.XXL)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(this.getPalette().success)
+          Text('在线')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getPalette().textSecondary)
+        }
+        .alignItems(HorizontalAlign.Center)
+        .layoutWeight(1)
       }
       .width('100%')
-      .height('100%')
-      .padding({ left: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+      .padding({ top: 16, bottom: 16 })
+
+      // 范围提示
+      Text('5km 内')
+        .fontSize(DesignConstants.FONT.SIZE.XS2)
+        .fontColor(this.getPalette().textTertiary)
+        .width('100%')
+        .textAlign(TextAlign.Center)
     }
     .width('100%')
-    .aspectRatio(2.4)
-    .borderRadius(DesignConstants.SHAPE.HERO_CARD)
-    .clip(true)
-    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 20 })
+    .padding(DesignConstants.SPACING.LG)
+    .borderRadius(DesignConstants.SHAPE.CARD)
+    .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: 1, color: this.getPalette().borderColor })
+    .onClick(() => AppRouter.push(PageNames.LOCATION_PICKER))
   }
 
   @Builder
-  private buildMapIconButton(icon: AppIcon, action: () => void) {
-    Row() {
-      Text() {
-        SymbolSpan($r(icon))
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor([this.getPalette().textPrimary])
-      }
-    }
-    .width(34)
-    .height(34)
-    .justifyContent(FlexAlign.Center)
-    .borderRadius(DesignConstants.SHAPE.ICON_TILE)
-    .backgroundColor(this.getPalette().surfaceBackground)
-    .border({ width: 1, color: this.getPalette().floatingBorderColor })
-    .onClick(() => action())
-  }
-
   // ==================== 区块标题 (eyebrow) ====================
 
   @Builder
@@ -689,36 +670,40 @@ export struct NearbyPage {
   // ==================== 附近活动 ====================
 
   @Builder
-  private buildActivityGrid() {
+  private buildGroupCarousel() {
+    // 附近群组横滑条（对齐前端 GroupCarousel：水平滑动的群组卡片条）
     if (this.groupsLoading || this.groups.length > 0) {
       Column() {
-        this.buildSectionHeader('附近活动', '查看全部', () => {
+        this.buildSectionHeader('附近群组', '查看全部', () => {
           const param: SearchRouteParam = { initialTab: 2 } as SearchRouteParam;
           AppRouter.push(PageNames.SEARCH, param);
         })
 
-        Column({ space: DesignConstants.SPACING.MD }) {
-          if (this.groupsLoading && this.groups.length === 0) {
-            Row({ space: DesignConstants.SPACING.MD }) {
+        Scroll() {
+          Row({ space: DesignConstants.SPACING.SM }) {
+            if (this.groupsLoading && this.groups.length === 0) {
+              // loading skeleton
               Column()
-                .layoutWeight(1)
-                .height(120)
+                .width(140)
+                .height(140)
                 .borderRadius(DesignConstants.SHAPE.CARD)
                 .backgroundColor(this.getPalette().surfaceSubtle)
               Column()
-                .layoutWeight(1)
-                .height(120)
+                .width(140)
+                .height(140)
                 .borderRadius(DesignConstants.SHAPE.CARD)
                 .backgroundColor(this.getPalette().surfaceSubtle)
-            }
-            .width('100%')
-          } else {
-            this.buildActivityRow(this.groups.slice(0, 2))
-            if (this.groups.length > 2) {
-              this.buildActivityRow(this.groups.slice(2, 4))
+            } else {
+              ForEach(this.groups, (group: GroupItem) => {
+                this.buildGroupCarouselCard(group)
+              }, (group: GroupItem) => group.group?.group_id ?? '')
             }
           }
+          .width('100%')
+          .padding({ left: DesignConstants.SPACING.XS })
         }
+        .scrollBar(BarState.Auto)
+        .scrollable(ScrollDirection.Horizontal)
         .width('100%')
       }
       .width('100%')
@@ -727,70 +712,49 @@ export struct NearbyPage {
     }
   }
 
-  // 两列等宽卡片行（前端 grid-cols-2 的 ArkUI 等价：Row + layoutWeight，避开 ArkUI 不支持的 calc）
   @Builder
-  private buildActivityRow(items: GroupItem[]) {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      ForEach(items, (group: GroupItem) => {
-        Column() {
-          this.buildActivityCard(group)
-        }
-        .layoutWeight(1)
-      }, (group: GroupItem) => group.group?.group_id ?? '')
-      if (items.length === 1) {
-        Column().layoutWeight(1)
-      }
-    }
-    .width('100%')
-  }
-
-  @Builder
-  private buildActivityCard(group: GroupItem) {
-    Column() {
-      Row() {
+  private buildGroupCarouselCard(group: GroupItem) {
+    Column({ space: DesignConstants.SPACING.XS }) {
+      Column() {
         Text() {
           SymbolSpan($r(AppIcon.GROUP))
-            .fontSize(DesignConstants.FONT.SIZE.XXL_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.XXL)
             .fontColor([this.getPalette().accentBackground])
         }
       }
-      .width('100%')
-      .height(64)
+      .width(140)
+      .height(100)
       .justifyContent(FlexAlign.Center)
+      .borderRadius(DesignConstants.SHAPE.CARD)
       .backgroundColor(this.getPalette().accentMuted)
-      .borderRadius({ topLeft: DesignConstants.SHAPE.CARD, topRight: DesignConstants.SHAPE.CARD })
+      .clip(true)
 
-      Column({ space: 4 }) {
-        Text(group.group?.name ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.getPalette().textPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      Text(group.group?.name ?? '')
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(this.getPalette().textPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width(140)
 
-        Row({ space: 6 }) {
-          Text(`${formatCount(group.group?.members_count)} 人`)
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getPalette().textTertiary)
-          if (group.location?.distance !== undefined) {
-            Text(LocationUtil.formatDistance(group.location.distance))
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getPalette().accentBackground)
-          }
+      Row({ space: 4 }) {
+        Text(`${formatCount(group.group?.members_count ?? 0)} 人`)
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .fontColor(this.getPalette().textTertiary)
+        if (group.location?.distance !== undefined) {
+          Text(LocationUtil.formatDistance(group.location.distance))
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .fontColor(this.getPalette().accentText)
         }
       }
-      .padding({ left: 12, right: 12, top: 12, bottom: 12 })
-      .alignItems(HorizontalAlign.Start)
+      .width(140)
     }
-    .width('100%')
+    .alignItems(HorizontalAlign.Start)
     .borderRadius(DesignConstants.SHAPE.CARD)
-    .backgroundColor(this.getPalette().surfaceBackground)
-    .border({ width: 1, color: this.getPalette().borderColor })
-    .shadow(this.getPalette().elevatedShadow)
     .onClick(() => {
-      if (group.group?.group_id) {
-        const params = new GroupDetailParams();
-        params.groupId = group.group.group_id;
+      const groupId = group.group?.group_id;
+      if (groupId) {
+        const params = new GroupDetailRouteParam();
+        params.groupId = groupId;
         AppRouter.push(PageNames.GROUP_DETAIL, params);
       }
     })
