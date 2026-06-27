@@ -2,12 +2,12 @@
   import { platformStore } from '$lib/stores/platform.svelte';
   import ChatListPanel from '$lib/components/chat/chat-list-panel.svelte';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import type { Snippet } from 'svelte';
 
   let { children } = $props<{ children: Snippet }>();
 
-  const isOnChatRoot = $derived($page.url.pathname === '/chat');
+  const isOnChatRoot = $derived(page.url.pathname === '/chat');
 </script>
 
 {#if platformStore.useMasterDetail}

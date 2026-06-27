@@ -19,8 +19,6 @@
   import Share2 from 'lucide-svelte/icons/share-2';
   import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
   import Grid3X3 from 'lucide-svelte/icons/grid-3x3';
-  import Heart from 'lucide-svelte/icons/heart';
-  import Bookmark from 'lucide-svelte/icons/bookmark';
   import Avatar from '$lib/components/common/avatar.svelte';
   import type { PageData } from './$types';
 
@@ -374,7 +372,7 @@
         class="flex"
         style="border-bottom: 1px solid var(--border-theme); padding-left: 16px; padding-right: 16px;"
       >
-        {#each [{ id: 'moments' as const, icon: Grid3X3, label: '帖子' }, { id: 'followers' as const, icon: Heart, label: '喜欢' }, { id: 'following' as const, icon: Bookmark, label: '收藏' }] as tab (tab.id)}
+        {#each [{ id: 'moments' as const, icon: Grid3X3, label: '帖子' }, { id: 'followers' as const, icon: UserCheck, label: '粉丝' }, { id: 'following' as const, icon: UserPlus, label: '关注' }] as tab (tab.id)}
           {@const active = currentTab === tab.id}
           <button
             class="text-body relative flex flex-1 items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none transition-all duration-150"
@@ -452,7 +450,7 @@
         {/if}
       {/if}
 
-      <!-- Tab content: Followers (likes tab) -->
+      <!-- Tab content: Followers (粉丝) -->
       {#if currentTab === 'followers'}
         {#if followersPagination.loading}
           <div
@@ -467,7 +465,7 @@
           </div>
         {:else if followersPagination.items.length === 0}
           <div class="flex flex-col items-center justify-center py-12">
-            <Heart size={40} color="var(--text-secondary)" />
+            <UserCheck size={40} color="var(--text-secondary)" />
             <p style="margin-top: 16px; color: var(--text-secondary);">暂无粉丝</p>
           </div>
         {:else}
@@ -514,7 +512,7 @@
         {/if}
       {/if}
 
-      <!-- Tab content: Following (saved tab) -->
+      <!-- Tab content: Following (关注) -->
       {#if currentTab === 'following'}
         {#if followingPagination.loading}
           <div
@@ -529,7 +527,7 @@
           </div>
         {:else if followingPagination.items.length === 0}
           <div class="flex flex-col items-center justify-center py-12">
-            <Bookmark size={40} color="var(--text-secondary)" />
+            <UserPlus size={40} color="var(--text-secondary)" />
             <p style="margin-top: 16px; color: var(--text-secondary);">暂无关注</p>
           </div>
         {:else}

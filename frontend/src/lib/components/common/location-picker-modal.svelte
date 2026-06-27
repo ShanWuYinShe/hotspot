@@ -4,7 +4,9 @@
   import {
     mapService,
     groupOverlappingRenderItems,
-    isOverlapGroupRenderId
+    isOverlapGroupRenderId,
+    getFanOutOffset,
+    OVERLAP_CLUSTER_MAX_ZOOM
   } from '$lib/api/services/map';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import { locationStore } from '$lib/stores/location.svelte';
@@ -17,7 +19,8 @@
     MapHotspotsCanvas,
     MapViewport,
     MapCanvasRequest,
-    MapCanvasResponse
+    MapCanvasResponse,
+    HotspotObjectType
   } from '$lib/types/api';
   import {
     getAnchorHistory,
@@ -98,39 +101,10 @@
   let mapMoveFrame: number | null = null;
   let activeRenderRequestId = 0;
   let lastRenderedViewportSignature = '';
+  let lastHotspotsSignature = '';
   let lastMapZoom = 14;
   let renderMarkers: AMap.Marker[] = [];
 
-  interface AMapMarkerCluster {
-    clearMarkers?(): void;
-    setMap?(map: AMap.Map | null): void;
-  }
-
-  interface HotspotMarkerClusterContext {
-    count?: number;
-    markers?: AMap.Marker[];
-    clusterData?: AMap.Marker[];
-    marker: AMap.Marker;
-  }
-
-  interface AMapMarkerClusterConstructor {
-    new (
-      map: AMap.Map,
-      markers: AMap.Marker[],
-      options: {
-        gridSize?: number;
-        minClusterSize?: number;
-        maxZoom?: number;
-        renderClusterMarker?: (context: HotspotMarkerClusterContext) => void;
-      }
-    ): AMapMarkerCluster;
-  }
-
-  interface AMapMarkerClusterFactory {
-    MarkerClusterer?: AMapMarkerClusterConstructor;
-  }
-
-  let hotspotsClusterer: AMapMarkerCluster | null = null;
   let selectedMarker: AMap.Marker | null = null;
   let hasInit = $state(false);
   let hasSyncedFromAnchor = $state(false);
@@ -160,7 +134,6 @@
   const regionCenterPromiseCache = new Map<RegionKey, Promise<RegionMeta>>();
   let districtSearch: AMap.DistrictSearch | null = null;
 
-  type RenderMarkerKind = 'cluster';
   type ClusterPreviewKind = 'server_cluster' | 'overlap_group';
 
   type RenderItem = MapHeatBucket & { render_id: string };
@@ -307,16 +280,7 @@
     return `<div class="map-icon-marker"><img src="${svgUrl}" alt="" /></div>`;
   }
 
-  function disposeRenderMarkers(markers: AMap.Marker[], clusterer: AMapMarkerCluster | null) {
-    if (clusterer) {
-      try {
-        clusterer.clearMarkers?.();
-        clusterer.setMap?.(null);
-      } catch {
-        // 忽略清理异常，避免影响后续渲染
-      }
-    }
-
+  function disposeRenderMarkers(markers: AMap.Marker[]) {
     for (const marker of markers) {
       marker.setMap(null);
       marker.remove();
@@ -324,36 +288,25 @@
   }
 
   function clearRenderMarkers() {
-    disposeRenderMarkers(renderMarkers, hotspotsClusterer);
+    disposeRenderMarkers(renderMarkers);
     renderMarkers = [];
-    hotspotsClusterer = null;
     hotspotPreviewItems = [];
+    lastHotspotsSignature = '';
   }
 
-  function replaceRenderMarkers(
-    nextMarkers: AMap.Marker[],
-    options?: {
-      clusterer?: AMapMarkerCluster | null;
-      clearHotspotPreview?: boolean;
-    }
-  ) {
+  function replaceRenderMarkers(nextMarkers: AMap.Marker[], clearHotspotPreview = true) {
     const previousMarkers = renderMarkers;
-    const previousClusterer = hotspotsClusterer;
-    const nextClusterer = options?.clusterer ?? null;
 
     renderMarkers = nextMarkers;
-    hotspotsClusterer = nextClusterer;
-    if (options?.clearHotspotPreview ?? true) {
+    if (clearHotspotPreview) {
       hotspotPreviewItems = [];
     }
 
-    if (!nextClusterer) {
-      for (const marker of nextMarkers) {
-        marker.setMap(map);
-      }
+    for (const marker of nextMarkers) {
+      marker.setMap(map);
     }
 
-    disposeRenderMarkers(previousMarkers, previousClusterer);
+    disposeRenderMarkers(previousMarkers);
   }
 
   function ensureSelectedMarker() {
@@ -501,10 +454,8 @@
     return viewport;
   }
 
-  function getMarkerIconUrl(_kind: RenderMarkerKind): string {
-    // 仅 cluster 热力格网用于地图展示
-    return '/map/marker_mixed_cluster.svg';
-  }
+  // 热力格网聚合单元统一用混合类型图标展示
+  const CLUSTER_MARKER_ICON = '/map/marker_mixed_cluster.svg';
 
   function getHotspotMarkerIcon(item: MapHotspotItem): string {
     if (item.object_type === 'user') return '/map/marker_user.svg';
@@ -561,6 +512,7 @@
     if (kind === 'moment') showMoments = !showMoments;
 
     lastRenderedViewportSignature = '';
+    lastHotspotsSignature = '';
     if (!showUsers && !showGroups && !showMoments) {
       latestRenderItems = [];
       overlapGroupItems = new Map();
@@ -578,12 +530,43 @@
     return `${item.total_count} 个点`;
   }
 
-  function getItemTypeLabel(_item: RenderItem) {
-    return '内容';
+  /** 按 breakdown 推断该聚合项的主导类型，无 breakdown 时返回 null */
+  function getDominantType(item: RenderItem): HotspotObjectType | null {
+    const b = item.breakdown;
+    if (!b) return null;
+    const entries: Array<[HotspotObjectType, number]> = [
+      ['user', b.user ?? 0],
+      ['group', b.group ?? 0],
+      ['moment', b.moment ?? 0]
+    ];
+    entries.sort((a, z) => z[1] - a[1]);
+    return entries[0]![1] > 0 ? entries[0]![0] : null;
   }
 
-  function getItemBadgeClass(_item: RenderItem) {
-    return '';
+  function getItemTypeLabel(item: RenderItem) {
+    switch (getDominantType(item)) {
+      case 'user':
+        return '用户';
+      case 'group':
+        return '群组';
+      case 'moment':
+        return '动态';
+      default:
+        return '内容';
+    }
+  }
+
+  function getItemBadgeClass(item: RenderItem) {
+    switch (getDominantType(item)) {
+      case 'user':
+        return 'badge-user';
+      case 'group':
+        return 'badge-group';
+      case 'moment':
+        return 'badge-moment';
+      default:
+        return '';
+    }
   }
 
   function buildOverlapPreviewDescription(items: RenderItem[]) {
@@ -648,7 +631,7 @@
 
     const marker = new AMap.Marker({
       position,
-      content: createHotspotMarkerContent(getMarkerIconUrl('cluster')),
+      content: createHotspotMarkerContent(CLUSTER_MARKER_ICON),
       anchor: DEFAULT_MARKER_ANCHOR,
       offset,
       clickable: true,
@@ -857,7 +840,7 @@
       });
       markers.push(marker);
     }
-    replaceRenderMarkers(markers, { clearHotspotPreview: true });
+    replaceRenderMarkers(markers);
   }
 
   async function renderMapItems(items: RenderItem[]) {
@@ -877,7 +860,7 @@
     const nextMarkers = merged
       .map(({ item }) => createMarkerForItem(item, undefined, false))
       .filter((marker): marker is AMap.Marker => Boolean(marker));
-    replaceRenderMarkers(nextMarkers, { clearHotspotPreview: true });
+    replaceRenderMarkers(nextMarkers);
     updateSelectedMarker();
   }
 
@@ -920,6 +903,7 @@
       if (canvas.hotspots) {
         latestRenderItems = [];
         overlapGroupItems = new Map();
+
         const data = canvas.hotspots as MapHotspotsCanvas;
         const allItems: MapHotspotItem[] = data.items ?? [];
         const items: MapHotspotItem[] = allItems.filter((item: MapHotspotItem) => {
@@ -929,50 +913,66 @@
           return true;
         });
 
+        // 数据+zoom 签名——zoom 变化也会影响聚类结果（手动聚类不依赖 MarkerClusterer）。
+        const currentZoom = map.getZoom() ?? lastMapZoom;
+        const currentHotspotsSignature = `${currentZoom.toFixed(1)}::${items
+          .map((i) => `${i.object_type}|${i.object_id}|${i.location.latitude.toFixed(4)}|${i.location.longitude.toFixed(4)}`)
+          .join('::')}`;
+        if (currentHotspotsSignature === lastHotspotsSignature && renderMarkers.length > 0) {
+          return;
+        }
+        lastHotspotsSignature = currentHotspotsSignature;
+
         if (items.length > 0) {
-          await loadAMapPlugin(['AMap.MarkerClusterer']);
-          const markers: AMap.Marker[] = [];
+          // 按 ~11m 精度分组
+          const coordPrecision = 10000;
+          const coordGroups = new Map<string, MapHotspotItem[]>();
           for (const item of items) {
-            const [gcjLng, gcjLat] = toGcjLngLat({
-              latitude: item.location.latitude,
-              longitude: item.location.longitude
-            });
-            const marker = new AMap.Marker({
-              position: [gcjLng, gcjLat],
-              content: createHotspotMarkerContent(getHotspotMarkerIcon(item)),
-              anchor: DEFAULT_MARKER_ANCHOR,
-              clickable: true
-            });
-            (marker as unknown as Record<string, unknown>)['lnglat'] = marker.getPosition();
-            marker.setExtData?.(item);
-            marker.on('click', (event) => {
-              event.stopPropagation?.();
-              openHotspotPreview([item]);
-            });
-            markers.push(marker);
+            const key = `${Math.floor(item.location.latitude * coordPrecision)}_${Math.floor(item.location.longitude * coordPrecision)}`;
+            const group = coordGroups.get(key);
+            if (group) { group.push(item); } else { coordGroups.set(key, [item]); }
           }
-          const markerClusterFactory = AMap as unknown as AMapMarkerClusterFactory;
-          const MarkerClusterer = markerClusterFactory.MarkerClusterer;
-          if (!MarkerClusterer) {
-            clearRenderMarkers();
-            return;
-          }
-          const nextClusterer = new MarkerClusterer(map, markers, {
-            gridSize: 60,
-            minClusterSize: 2,
-            maxZoom: 18,
-            renderClusterMarker: (context) => {
-              const count = context.count ?? 0;
-              const children = context.markers ?? context.clusterData ?? [];
-              let hasUser = false;
-              let hasGroup = false;
-              let hasMoment = false;
-              for (const marker of children) {
-                const data = marker.getExtData?.() as MapHotspotItem | undefined;
-                if (!data) continue;
-                if (data.object_type === 'user') hasUser = true;
-                if (data.object_type === 'group') hasGroup = true;
-                if (data.object_type === 'moment') hasMoment = true;
+
+          const markers: AMap.Marker[] = [];
+          for (const [, groupItems] of coordGroups) {
+            const representative = groupItems[0];
+            if (!representative) continue;
+            const [gcjLng, gcjLat] = toGcjLngLat(representative.location);
+
+            if (groupItems.length === 1) {
+              // 单个 item：直接用类型 SVG 图标
+              const item = representative;
+              const marker = new AMap.Marker({
+                position: [gcjLng, gcjLat],
+                content: createHotspotMarkerContent(getHotspotMarkerIcon(item)),
+                anchor: DEFAULT_MARKER_ANCHOR,
+                clickable: true
+              });
+              marker.setExtData?.(item);
+              marker.on('click', () => openHotspotPreview([item]));
+              markers.push(marker);
+            } else if (currentZoom > OVERLAP_CLUSTER_MAX_ZOOM) {
+              // 高缩放级别：同点 items 像素偏移展开为独立标记
+              groupItems.forEach((item, index) => {
+                const offsetVal = getFanOutOffset(index, groupItems.length);
+                const marker = new AMap.Marker({
+                  position: [gcjLng, gcjLat],
+                  content: createHotspotMarkerContent(getHotspotMarkerIcon(item)),
+                  anchor: DEFAULT_MARKER_ANCHOR,
+                  offset: new AMap.Pixel(offsetVal[0], offsetVal[1]),
+                  clickable: true
+                });
+                marker.setExtData?.(item);
+                marker.on('click', () => openHotspotPreview([item]));
+                markers.push(marker);
+              });
+            } else {
+              // 低缩放级别：合并为聚合标记
+              let hasUser = false, hasGroup = false, hasMoment = false;
+              for (const gi of groupItems) {
+                if (gi.object_type === 'user') hasUser = true;
+                if (gi.object_type === 'group') hasGroup = true;
+                if (gi.object_type === 'moment') hasMoment = true;
               }
               let cls = 'map-render-marker-cluster';
               if (hasUser && !hasGroup && !hasMoment) cls = 'map-render-marker-user';
@@ -983,26 +983,22 @@
               div.className = `map-render-marker ${cls}`;
               const badge = document.createElement('div');
               badge.className = 'map-render-marker-badge';
-              badge.textContent = String(count);
+              badge.textContent = String(groupItems.length);
               div.appendChild(badge);
-              div.onclick = (event: MouseEvent) => {
-                event.stopPropagation();
-                const clusterItems: MapHotspotItem[] = [];
-                for (const marker of children) {
-                  const data = marker.getExtData?.() as MapHotspotItem | undefined;
-                  if (data) {
-                    clusterItems.push(data);
-                  }
-                }
-                openHotspotPreview(clusterItems);
-              };
-              context.marker.setContent?.(div);
+              const clusterItems = [...groupItems];
+
+              const marker = new AMap.Marker({
+                position: [gcjLng, gcjLat],
+                content: div.outerHTML,
+                anchor: DEFAULT_MARKER_ANCHOR,
+                clickable: true
+              });
+              marker.on('click', () => openHotspotPreview(clusterItems));
+              markers.push(marker);
             }
-          });
-          replaceRenderMarkers(markers, {
-            clusterer: nextClusterer,
-            clearHotspotPreview: true
-          });
+          }
+
+          replaceRenderMarkers(markers);
         } else {
           clearRenderMarkers();
         }
@@ -1507,6 +1503,7 @@
     overlapGroupItems = new Map();
     latestRenderItems = [];
     lastRenderedViewportSignature = '';
+    lastHotspotsSignature = '';
     map?.destroy();
     map = null;
     isMapAvailable = true;
@@ -1620,6 +1617,7 @@
   function cleanupClosedSession() {
     hasSyncedFromAnchor = false;
     lastRenderedViewportSignature = '';
+    lastHotspotsSignature = '';
     resetTransientUiState();
     resetPreviewUiState();
     hideGestureHint();
@@ -2927,8 +2925,8 @@
   }
 
   :global(.map-render-marker-user .map-render-marker-badge) {
-    background: #2563eb;
-    color: #fff;
+    background: var(--map-user);
+    color: var(--text-on-overlay);
   }
 
   :global(.map-render-marker-user::before) {
@@ -2940,8 +2938,8 @@
   }
 
   :global(.map-render-marker-group .map-render-marker-badge) {
-    background: #059669;
-    color: #fff;
+    background: var(--map-group);
+    color: var(--text-on-overlay);
   }
 
   :global(.map-render-marker-group::before) {
@@ -2953,8 +2951,8 @@
   }
 
   :global(.map-render-marker-moment .map-render-marker-badge) {
-    background: #ea580c;
-    color: #fff;
+    background: var(--map-post);
+    color: var(--text-on-overlay);
   }
 
   :global(.map-render-marker-moment::before) {
@@ -2966,11 +2964,27 @@
   }
 
   :global(.map-render-marker-cluster .map-render-marker-badge) {
-    background: #0f172a;
-    color: #fff;
+    background: var(--text-primary);
+    color: var(--text-on-overlay);
   }
 
   :global(.map-render-marker-cluster::before) {
     background-image: url('/map/marker_mixed_cluster.svg');
+  }
+
+  /* 聚合预览列表的类型标签，颜色随主题族变化（--map-* token） */
+  :global(.badge-user) {
+    background: var(--map-user);
+    color: var(--text-on-overlay);
+  }
+
+  :global(.badge-group) {
+    background: var(--map-group);
+    color: var(--text-on-overlay);
+  }
+
+  :global(.badge-moment) {
+    background: var(--map-post);
+    color: var(--text-on-overlay);
   }
 </style>

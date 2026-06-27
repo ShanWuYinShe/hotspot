@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { usersService } from '$lib/api/services';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
@@ -50,7 +50,7 @@
   }
 
   // 单一事实源 = URL 查询参数，支持深链与浏览器前进/后退。
-  const activeTab = $derived(parseTab($page.url.searchParams.get('tab')));
+  const activeTab = $derived(parseTab(page.url.searchParams.get('tab')));
   const activeMeta = $derived(TAB_META[activeTab]);
 
   const friendsPg = usePagination<FriendItem>({ uniqueKey: (item) => item.user.user_id });
