@@ -145,7 +145,9 @@
 
 HTTP API 返回的数据可能与 WebSocket 推送的事件重复。去重方式按资源主键执行（参见 `api_spec_base.md`）：
 
-- **持久化事件**：按业务主键或稳定组合键去重（如 `message_id`、`moment_id`、`comment_id`，或 `moment_id + actor.user_id + liked_at`）。
+- **持久化事件**：去重规则分两类：
+  - **通知类事件**（关注/瞬间互动/群邀请申请/系统公告）：payload 携带 `notification_id`，客户端按 `notification_id` 去重——它与 HTTP `notifications/list` 返回的 `NotificationItem.notification_id` 为同一主键（见 api_spec_notification.md）。
+  - **其它持久化事件**（消息等）：按业务主键或稳定组合键去重（如 `message_id`、`comment_id`）。
 - **状态快照事件**：直接覆盖（保留最新状态），无需去重。
 
 ---
@@ -234,7 +236,7 @@ type ClientWebSocketEvent = WebSocketEvent<ClientEventType, unknown>;
 
 **消息可靠性与去重**：
 - 基于 TCP：协议层保证消息不丢失、不乱序、不重复，应用层无需维护 seq。
-- **持久化事件**：按业务主键或稳定组合键去重（如 `message_id`、`comment_id`、`moment_id + actor.user_id + liked_at`）。
+- **持久化事件**：去重按事件性质——通知类事件按 `notification_id`（与 HTTP 通知 API 同主键），消息类事件按业务主键（`message_id` 等）。
 - **状态快照事件**：表示最新状态（如在线状态、输入状态、成员变更），按 `user_id + 事件类型` 或 `group_id + user_id + 事件类型` 覆盖即可。
 
 > 重连后的数据补拉与去重策略详见「连接与鉴权」中的「重连恢复策略」。
@@ -401,8 +403,15 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
 // 命名约定：
 // - actor: 执行操作的人（如关注者、点赞者、评论者），与 NotificationPayload.actor 语义一致
 // - user: 事件主体（如加入群的人、被操作的人），不一定是操作发起者
+//
+// 持久化通知类事件统一携带 notification_id：
+// - 下列"关注/瞬间互动/群邀请申请/系统公告"事件均会落库为通知记录（见 api_spec_notification.md）
+// - payload 首字段 notification_id 与 HTTP notifications/list 返回的 NotificationItem.notification_id 为同一主键
+// - 客户端据此在 WS 实时路径与 HTTP 补拉路径间精确去重（按 notification_id），无需依赖业务组合键
+// - 与瞬时状态事件（UserOnline/Typing 等，无 notification_id）形成明确区分
 
 interface NewFollowerPayload {
+  notification_id: string;
   actor: UserInfo;
   followed_at: string;
   
@@ -413,6 +422,7 @@ interface NewFollowerPayload {
 type NewFollowerEvent = { type: "NewFollower"; payload: NewFollowerPayload; };
 
 interface MutualFollowPayload {
+  notification_id: string;
   actor: UserInfo;
   mutual_at: string;
 }
@@ -424,6 +434,7 @@ type MutualFollowEvent = { type: "MutualFollow"; payload: MutualFollowPayload; }
 // MomentSummary 定义于 api_spec_types.md
 
 interface MomentLikedPayload {
+  notification_id: string;
   moment_id: string;
   moment_summary: MomentSummary;
   actor: UserInfo;
@@ -432,6 +443,7 @@ interface MomentLikedPayload {
 type MomentLikedEvent = { type: "MomentLiked"; payload: MomentLikedPayload; };
 
 interface MomentCommentedPayload {
+  notification_id: string;
   moment_id: string;
   moment_summary: MomentSummary;
   comment_id: string;
@@ -442,6 +454,7 @@ interface MomentCommentedPayload {
 type MomentCommentedEvent = { type: "MomentCommented"; payload: MomentCommentedPayload; };
 
 interface CommentLikedPayload {
+  notification_id: string;
   comment_id: string;
   moment_id: string;
   moment_summary: MomentSummary;
@@ -452,6 +465,7 @@ interface CommentLikedPayload {
 type CommentLikedEvent = { type: "CommentLiked"; payload: CommentLikedPayload; };
 
 interface CommentReplyPayload {
+  notification_id: string;
   moment_id: string;
   moment_summary: MomentSummary;
   comment_id: string;
@@ -464,6 +478,7 @@ interface CommentReplyPayload {
 type CommentReplyEvent = { type: "CommentReply"; payload: CommentReplyPayload; };
 
 interface MessageMentionedPayload {
+  notification_id: string;
   target_type: 'moment' | 'comment';
   moment_id: string;
   comment_id?: string;
@@ -579,6 +594,7 @@ interface GroupMemberJoinedPayload {
 type GroupMemberJoinedEvent = { type: "GroupMemberJoined"; payload: GroupMemberJoinedPayload; };
 
 interface GroupInviteReceivedPayload {
+  notification_id: string;
   invite_id: string;
   group: GroupInfo;  // 引用 api_spec_types.md
   inviter: UserInfo;
@@ -588,6 +604,7 @@ interface GroupInviteReceivedPayload {
 type GroupInviteReceivedEvent = { type: "GroupInviteReceived"; payload: GroupInviteReceivedPayload; };
 
 interface GroupInviteResponsePayload {
+  notification_id: string;
   invite_id: string;
   group_id: string;
   user: UserInfo;
@@ -597,6 +614,7 @@ interface GroupInviteResponsePayload {
 type GroupInviteResponseEvent = { type: "GroupInviteResponse"; payload: GroupInviteResponsePayload; };
 
 interface GroupApplicationReceivedPayload {
+  notification_id: string;
   application_id: string;
   group_id: string;
   applicant: UserInfo;
@@ -606,6 +624,7 @@ interface GroupApplicationReceivedPayload {
 type GroupApplicationReceivedEvent = { type: "GroupApplicationReceived"; payload: GroupApplicationReceivedPayload; };
 
 interface GroupApplicationResponsePayload {
+  notification_id: string;
   application_id: string;
   group: GroupInfo;  // 引用 api_spec_types.md
   status: 'accepted';  // 仅接受时推送，拒绝不通过 WebSocket 推送
@@ -702,7 +721,16 @@ type UserProfileUpdatedEvent = { type: "UserProfileUpdated"; payload: UserProfil
 
 **系统事件**：
 ```typescript
-type SystemAnnouncementPayload = SystemAnnouncementItem;
+// SystemAnnouncementItem 定义于 api_spec_types.md
+interface SystemAnnouncementPayload {
+  notification_id: string;
+  announcement_id: string;
+  title: string;
+  content: string;
+  severity: AnnouncementSeverity;
+  action_url?: string;
+  created_at: string;
+}
 type SystemAnnouncementEvent = { type: "SystemAnnouncement"; payload: SystemAnnouncementPayload; };
 
 // 错误严重程度

@@ -59,7 +59,7 @@
 **客户端处理约定**：
 - **实时路径**：在线时收到 WS 事件 → 直接更新本地通知列表/未读角标（无需立即拉 HTTP）
 - **补拉路径**：冷启动或 WS 断线超阈值时，调用 `notifications/list` + `notifications/unread_count` 校准
-- **去重**：WS 事件与 HTTP 补拉可能重叠，按 `notification_id` 去重（持久化事件）或按"最新状态覆盖"（状态快照）
+- **去重**：WS 通知类事件 payload 与 HTTP 通知记录**共用同一主键 `notification_id`**（WS payload 首字段即 `notification_id`）。客户端维护 `Set<notification_id>` 即可精确去重，无需依赖业务组合键。详见 `api_spec_websocket.md`「消息可靠性与去重」。
 - **WS 负载 ≠ 通知负载**：WS 事件字段以 `api_spec_websocket.md` 为准（含完整 content 等）；通知 `payload` 字段以本文件为准（含截断 preview）。两者结构不同，客户端不应混用
 
 ### 通知负载（按 type 区分的联合类型）
@@ -147,14 +147,20 @@ interface UnreadCountResult {
 
 批量标记指定通知为已读。
 
+**职责分工**（与 `mark_all_read` 区分）：
+- `mark_as_read`：精确标记少量已读（读详情后回标 / 滑动逐条标记），或按类型批量标记
+- `mark_all_read`：清空全部未读（"全部已读"按钮），走服务端全量更新
+
 - **认证**: 必须
 - **幂等**: 幂等语义（重复标记同一通知不产生错误）
 
 **Request**: `MarkAsReadRequest`
 ```typescript
 interface MarkAsReadRequest {
-  notification_ids: string[];  // 要标记为已读的通知 ID 列表（1-100 个，空数组或超过 100 个返回 10000）
+  notification_ids?: string[];       // 精确标记：要标记为已读的通知 ID（1-50 个，空数组或超过 50 个返回 10000）
+  type?: NotificationType;           // 按类型批量标记：将该类型的所有未读通知标记为已读
 }
+// 二选一：必须且只能传 notification_ids 或 type 其中之一；同时传或都不传返回 10000
 ```
 
 **非法 ID 处理**：不存在或不属于当前用户的 `notification_ids` 将被服务端静默忽略，不返回错误。
