@@ -71,13 +71,7 @@
 | `POST /api/v1/admin/audit/list` | 审计日志列表 | 必须 + `admin.audit.read` | 无 |
 | `POST /api/v1/admin/audit/open_the_door` | 审计日志详情 | 必须 + `admin.audit.read` | 无 |
 | `POST /api/v1/admin/app_config/get` | 获取完整应用配置 | 必须 + `admin.app_config.read` | 无 |
-| `POST /api/v1/admin/app_config/update_upload` | 更新上传策略 | 必须 + `admin.app_config.write` | 幂等语义 |
-| `POST /api/v1/admin/app_config/update_defaults` | 更新内容默认值 | 必须 + `admin.app_config.write` | 幂等语义 |
-| `POST /api/v1/admin/app_config/update_rate_limits` | 更新频率限制 | 必须 + `admin.app_config.write` | 幂等语义 |
-| `POST /api/v1/admin/app_config/update_response_defaults` | 更新响应默认值 | 必须 + `admin.app_config.write` | 幂等语义 |
-| `POST /api/v1/admin/app_config/update_features` | 更新功能开关 | 必须 + `admin.app_config.write` | 幂等语义 |
-| `POST /api/v1/admin/app_config/update_limits` | 更新应用限制 | 必须 + `admin.app_config.write` | 幂等语义 |
-| `POST /api/v1/admin/app_config/update_contact` | 更新联系信息 | 必须 + `admin.app_config.write` | 幂等语义 |
+| `POST /api/v1/admin/app_config/update` | 更新应用配置（按 section 部分更新） | 必须 + `admin.app_config.write` | 幂等语义 |
 
 ## 类型定义
 
@@ -510,14 +504,53 @@ interface AppConfig {
 
 ---
 
-### POST /api/v1/admin/app_config/update_upload
+### POST /api/v1/admin/app_config/update
 
-更新上传策略。
+更新应用配置（按 section 部分更新，Patch 语义）。
+
+**设计说明**：原 `update_upload`/`update_defaults`/`update_rate_limits`/`update_response_defaults`/`update_features`/`update_limits`/`update_contact` 七个端点已合并为单一 `update`。各 section 权限均为 `admin.app_config.write`（无差异化），合并消除了冗余的契约表面积；一次请求可更新单个或多个 section，未传的 section 保持不变。
 
 - **认证**: 必须 + `admin.app_config.write`
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
-**Request**: `UpdateUploadConfigRequest`
+**Request**: `UpdateAppConfigRequest`
+```typescript
+// AppConfig 各 section 的子类型（UploadConfig / ContentDefaults / RateLimitConfig / ResponseDefaults）
+// 见 api_spec_admin_core.md 上方「应用配置 API」开头的 AppConfig 定义；
+// FeatureSwitches / AppLimits / ContactInfo 定义于 api_spec_types.md
+interface UpdateAppConfigRequest {
+  // === 仅服务端使用 ===
+  upload?: Partial<UploadConfig>;              // 上传策略
+  defaults?: {                                 // 内容默认值（可单独更新子字段）
+    default_location?: Partial<Location>;
+    default_group_avatar?: string;
+    default_user_avatar?: string;
+    default_group_settings?: Partial<GroupSettings>;
+  };
+  rate_limits?: Partial<RateLimitConfig>;      // 频率限制（动态生效，无需重启；所有值须为正整数）
+  response_defaults?: Partial<ResponseDefaults>;  // 响应默认值（所有值须为正整数）
+  // === 客户端可见（构成 ClientConfig，通过 system/get_client_config 暴露）===
+  features?: Partial<FeatureSwitches>;         // 功能开关
+  limits?: Partial<AppLimits>;                 // 应用限制
+  contact?: Partial<ContactInfo>;              // 联系/合规信息
+}
+// 至少传一个 section，否则返回 10000；未传的 section 保持不变
+```
+
+**Response**: `ApiResponse`
+
+**验证规则**：
+- `rate_limits` / `response_defaults` 的数值字段必须为正整数
+- `contact` 的 `support_email` 须为有效 Email、`*_url` 须为有效 URL
+
+**错误码**: `10000` `10200`
+
+---
+
+### 应用配置子类型定义
+
+> 以下子类型构成 `AppConfig`，被 `app_config/update` 的各 section 引用。`FeatureSwitches`/`AppLimits`/`ContactInfo` 定义于 `api_spec_types.md`。
+
 ```typescript
 interface UploadConfig {
   image_max_size: number;
@@ -528,26 +561,6 @@ interface UploadConfig {
   allowed_video_types: string[];
 }
 
-interface UpdateUploadConfigRequest {
-  upload: Partial<UploadConfig>;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10200`
-
----
-
-### POST /api/v1/admin/app_config/update_defaults
-
-更新内容默认值。
-
-- **认证**: 必须 + `admin.app_config.write`
-- **幂等**: 幂等语义（重复请求返回一致结果）
-
-**Request**: `UpdateDefaultsRequest`
-```typescript
 interface ContentDefaults {
   default_location: Location;              // 默认位置（含坐标和名称），Location 定义于 api_spec_types.md
   default_group_avatar: string;
@@ -555,31 +568,6 @@ interface ContentDefaults {
   default_group_settings: GroupSettings;    // GroupSettings 定义于 api_spec_types.md
 }
 
-interface UpdateDefaultsRequest {
-  default_location?: Partial<Location>;    // 可单独更新 point 或 location_name
-  default_group_avatar?: string;
-  default_user_avatar?: string;
-  default_group_settings?: Partial<GroupSettings>;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10200`
-
----
-
-### POST /api/v1/admin/app_config/update_rate_limits
-
-更新频率限制配置。
-
-- **认证**: 必须 + `admin.app_config.write`
-- **幂等**: 幂等语义（重复请求返回一致结果）
-
-**说明**：动态调整 Rate Limit 策略，无需重启服务即可生效。
-
-**Request**: `UpdateRateLimitsRequest`
-```typescript
 interface RateLimitConfig {
   // 全局
   global_per_hour: number;
@@ -607,31 +595,6 @@ interface RateLimitConfig {
   admin_write_per_minute: number;
 }
 
-interface UpdateRateLimitsRequest {
-  rate_limits: Partial<RateLimitConfig>;
-}
-```
-
-**Response**: `ApiResponse`
-
-**验证规则**：
-- 所有值必须为正整数
-
-**错误码**: `10000` `10200`
-
----
-
-### POST /api/v1/admin/app_config/update_response_defaults
-
-更新响应默认值配置。
-
-控制非分页接口的服务端返回数量（如搜索建议条数、热门标签条数、聊天开门时的最近消息条数）。
-
-- **认证**: 必须 + `admin.app_config.write`
-- **幂等**: 幂等语义（重复请求返回一致结果）
-
-**Request**: `UpdateResponseDefaultsRequest`
-```typescript
 interface ResponseDefaults {
   search_suggest_count: number;       // 搜索建议返回条数，默认 5
   trending_tags_count: number;        // 热门标签返回条数（feed/list_trending），默认 10
@@ -640,88 +603,4 @@ interface ResponseDefaults {
   group_announcements_count: number;  // 群公告列表返回条数，默认 10
   system_announcements_count: number; // 系统公告列表返回条数（system/list_announcements），默认 10
 }
-
-interface UpdateResponseDefaultsRequest {
-  response_defaults: Partial<ResponseDefaults>;
-}
 ```
-
-**Response**: `ApiResponse`
-
-**验证规则**：
-- 所有值必须为正整数
-
-**错误码**: `10000` `10200`
-
----
-
-## 客户端可见配置管理
-
-**设计说明**：以下端点管理 `AppConfig` 中客户端可见的部分（`features`/`limits`/`contact`），这些字段构成 `ClientConfig`，通过公开端点 `system/get_client_config`（见 `api_spec_system.md`）暴露给客户端。
-
-> 统一使用 `admin.app_config.read` / `admin.app_config.write` 权限。
-> 客户端可通过公开端点 `system/get_client_config`（见 `api_spec_system.md`）获取 ClientConfig 投影，无需认证。
-
-### POST /api/v1/admin/app_config/update_features
-
-更新功能开关。
-
-- **认证**: 必须 + `admin.app_config.write`
-- **幂等**: 幂等语义（重复请求返回一致结果）
-
-**Request**: `UpdateFeaturesRequest`
-```typescript
-interface UpdateFeaturesRequest {
-  enable_public_registration?: boolean;
-  enable_guest_login?: boolean;
-  enable_moments?: boolean;
-  enable_nearby_people?: boolean;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10200`
-
----
-
-### POST /api/v1/admin/app_config/update_limits
-
-更新应用限制。
-
-- **认证**: 必须 + `admin.app_config.write`
-- **幂等**: 幂等语义（重复请求返回一致结果）
-
-**Request**: `UpdateLimitsRequest`
-```typescript
-interface UpdateLimitsRequest {
-  limits: Partial<AppLimits>;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10200`
-
----
-
-### POST /api/v1/admin/app_config/update_contact
-
-更新联系信息。
-
-- **认证**: 必须 + `admin.app_config.write`
-- **幂等**: 幂等语义（重复请求返回一致结果）
-
-**Request**: `UpdateContactRequest`
-```typescript
-interface UpdateContactRequest {
-  support_email?: string;
-  privacy_policy_url?: string;
-  terms_of_service_url?: string;
-  official_website?: string;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10200`
