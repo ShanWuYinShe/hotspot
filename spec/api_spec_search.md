@@ -25,6 +25,7 @@
 - `GeoPoint`
 - `RelativeLocation`
 - `UserInfo`
+- `GroupInfo`
 
 ## 端点详情
 
@@ -68,22 +69,17 @@ interface TagSuggestItem {
   usage_count: number;
 }
 
-// 用户建议项
+// 用户建议项（统一使用 UserInfo 嵌套，与 spec 全局类型约定一致）
 interface UserSuggestItem {
-  user_id: string;
-  nickname: string;
-  avatar_url?: string;
+  user: UserInfo;
   bio?: string;
   location?: RelativeLocation;
 }
 
-// 群组建议项
+// 群组建议项（统一使用 GroupInfo 嵌套）
 interface GroupSuggestItem {
-  group_id: string;
-  name: string;
-  avatar_url?: string;
+  group: GroupInfo;
   description?: string;
-  members_count: number;
   location?: RelativeLocation;
 }
 

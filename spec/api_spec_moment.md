@@ -67,7 +67,7 @@
   - `sort_by='relevance'`（默认）：按相关性优先；同分时按 `created_at` 倒序，再以 `moment_id ASC` 作为稳定 tie-breaker
   - `sort_by='distance'`：按距离由近到远（未提供 `radius` 时按默认 `5_000` 米计算）
   - `sort_by='newest'`：按发布时间倒序
-  - `sort_by='popular'`：按点赞/评论热度排序
+  - `sort_by='popular'`：按点赞/评论热度排序（含时间衰减因子，避免老内容长期占榜；具体衰减算法为服务端实现细节）
   - 一致性级别为弱一致（搜索场景允许短暂延迟）
 
 **Request**: `SearchMomentsRequest`
@@ -92,6 +92,8 @@ interface SearchMomentsRequest {
 ### POST /api/v1/moments/open_the_door
 
 获取瞬间详情。认证可选，字段可见性规则见 `api_spec_base.md`。
+
+**隐私说明**：`privacy_level='private'` 的瞬间仅拥有者可见；非拥有者（含未登录用户）访问 private 瞬间统一返回 `10300`（按不存在处理，不通过 10200 暴露瞬间存在性，与 base.md 隐私规则一致）。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -350,6 +352,7 @@ interface CommentItem {
   created_at: string;
   likes_count: number;
   replies_count: number;    // 子评论数量
+  is_deleted: boolean;      // 软删除标记；true 时 content 为空，客户端展示"该评论已删除"占位
   
   // === @auth-only 以下字段仅登录态返回 ===
   is_liked?: boolean;       // 当前用户是否已点赞该评论
@@ -362,8 +365,15 @@ interface CommentItem {
 
 删除评论。
 
+**删除语义（软删除，与微博/掘金等主流社交产品一致）**：
+- 评论**不物理删除**，标记为 `is_deleted=true`，`content` 清空（客户端展示"该评论已删除"占位）
+- **删除顶层评论**：该评论软删，但其下**子评论保留**（仍挂载在该顶层评论下，`list_replies` 继续返回；顶层显示为已删除占位，回复正常展示）
+- **删除回复**：仅该回复软删，不影响同层其它回复与顶层评论
+- 设计目的：保留对话上下文完整性，避免"删一条顶层评论导致整串回复消失"
+- 仅评论作者或系统管理员可删除（管理员删除记录审计日志）
+
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 幂等语义（重复请求返回一致结果；对已删除评论再次删除视为 no-op 成功）
 
 **Request**: `DeleteCommentRequest`
 ```typescript
