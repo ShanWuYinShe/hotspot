@@ -5,7 +5,6 @@
     mapService,
     groupOverlappingRenderItems,
     isOverlapGroupRenderId,
-    getFanOutOffset,
     OVERLAP_CLUSTER_MAX_ZOOM
   } from '$lib/api/services/map';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
@@ -230,6 +229,26 @@
 
   const DEFAULT_MARKER_ANCHOR: AMap.MarkerAnchor = 'bottom-center';
   const PLACEMENT_HINT_DEFAULT = '已定位到该位置';
+
+  // 同坐标重叠 marker 的处理阈值：
+  // - 个数 ≤ FAN_OUT_LIMIT 时，在高缩放下像素展开为独立 marker；
+  // - 超过则不再尝试展开（铺不开也读不清），统一合并为「数量气泡」聚合点。
+  const FAN_OUT_LIMIT = 6;
+
+  // 展开半径按 marker 真实宽度取值，确保相邻 marker 边缘不互相压叠。
+  function buildFanOutOffset(index: number, total: number): [number, number] {
+    if (total === 2) {
+      return index === 0 ? [0, -18] : [0, 18];
+    }
+    if (total === 3) {
+      if (index === 0) return [0, -20];
+      if (index === 1) return [0, 0];
+      return [0, 20];
+    }
+    const ringRadius = 30;
+    const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
+    return [Math.round(Math.cos(angle) * ringRadius), Math.round(Math.sin(angle) * ringRadius)];
+  }
 
   function showGestureHint(message = getGestureHintMessage()) {
     if (gestureHintDismissed) return;
@@ -951,10 +970,10 @@
               marker.setExtData?.(item);
               marker.on('click', () => openHotspotPreview([item]));
               markers.push(marker);
-            } else if (currentZoom > OVERLAP_CLUSTER_MAX_ZOOM) {
-              // 高缩放级别：同点 items 像素偏移展开为独立标记
+            } else if (groupItems.length <= FAN_OUT_LIMIT && currentZoom > OVERLAP_CLUSTER_MAX_ZOOM) {
+              // 高缩放 + 少量同点：像素展开为独立 marker（半径已按 marker 尺寸放大，不互相压叠）
               groupItems.forEach((item, index) => {
-                const offsetVal = getFanOutOffset(index, groupItems.length);
+                const offsetVal = buildFanOutOffset(index, groupItems.length);
                 const marker = new AMap.Marker({
                   position: [gcjLng, gcjLat],
                   content: createHotspotMarkerContent(getHotspotMarkerIcon(item)),
@@ -967,25 +986,27 @@
                 markers.push(marker);
               });
             } else {
-              // 低缩放级别：合并为聚合标记
-              let hasUser = false, hasGroup = false, hasMoment = false;
+              // 较多同点 / 低缩放：合并为「数量气泡」聚合点（固定 3 头像 SVG 与数量脱节，改为大号数字气泡）
+              const typeCount = { user: 0, group: 0, moment: 0 };
               for (const gi of groupItems) {
-                if (gi.object_type === 'user') hasUser = true;
-                if (gi.object_type === 'group') hasGroup = true;
-                if (gi.object_type === 'moment') hasMoment = true;
+                if (gi.object_type === 'user') typeCount.user++;
+                else if (gi.object_type === 'group') typeCount.group++;
+                else if (gi.object_type === 'moment') typeCount.moment++;
               }
-              let cls = 'map-render-marker-cluster';
-              if (hasUser && !hasGroup && !hasMoment) cls = 'map-render-marker-user';
-              else if (!hasUser && hasGroup && !hasMoment) cls = 'map-render-marker-group';
-              else if (!hasUser && !hasGroup && hasMoment) cls = 'map-render-marker-moment';
+              // 主导类型：数量最多的；多种则视为 mixed
+              const entries = Object.entries(typeCount) as Array<[string, number]>;
+              entries.sort((a, b) => b[1] - a[1]);
+              const [dominant, dominantCount] = entries[0]!;
+              const hasMixed = entries.filter(([, c]) => c > 0).length > 1;
+              const variant = dominantCount > 0 && !hasMixed ? dominant : 'mixed';
+              const clusterItems = [...groupItems];
 
               const div = document.createElement('div');
-              div.className = `map-render-marker ${cls}`;
-              const badge = document.createElement('div');
-              badge.className = 'map-render-marker-badge';
-              badge.textContent = String(groupItems.length);
-              div.appendChild(badge);
-              const clusterItems = [...groupItems];
+              div.className = `map-cluster-bubble map-cluster-bubble--${variant}`;
+              const num = document.createElement('span');
+              num.className = 'map-cluster-bubble__num';
+              num.textContent = String(groupItems.length);
+              div.appendChild(num);
 
               const marker = new AMap.Marker({
                 position: [gcjLng, gcjLat],
@@ -2885,91 +2906,73 @@
     background: transparent;
   }
 
-  :global(.map-render-marker) {
+  /* 同坐标重叠聚合点：数量气泡（替代旧的固定 3 头像 SVG）。
+     锚点为 bottom-center，气泡底部三角指向坐标点。 */
+  :global(.map-cluster-bubble) {
     position: relative;
-    width: 36px;
-    height: 48px;
-    cursor: pointer;
-  }
-
-  :global(.map-render-marker::before) {
-    content: '';
-    display: block;
-    width: 36px;
-    height: 48px;
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
-  }
-
-  :global(.map-render-marker-badge) {
-    position: absolute;
-    top: -4px;
-    right: -6px;
-    min-width: 18px;
-    height: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 8px;
     border-radius: 999px;
-    padding: 0 4px;
-    font-size: 10px;
-    font-weight: 800;
+    font-size: 14px;
+    font-weight: 700;
     line-height: 1;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-    z-index: 1;
+    cursor: pointer;
+    color: var(--text-on-overlay);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    border: 2px solid var(--surface-bg);
+    transition: transform 0.15s ease;
+    will-change: transform;
   }
 
-  :global(.map-render-marker-user) {
-    background: transparent !important;
+  :global(.map-cluster-bubble:hover) {
+    transform: scale(1.12);
+    z-index: 2;
   }
 
-  :global(.map-render-marker-user .map-render-marker-badge) {
+  /* 指向坐标点的三角指针 */
+  :global(.map-cluster-bubble::after) {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    width: 0;
+    height: 0;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 7px solid var(--surface-bg);
+  }
+
+  :global(.map-cluster-bubble--user) {
     background: var(--map-user);
-    color: var(--text-on-overlay);
+  }
+  :global(.map-cluster-bubble--user::after) {
+    border-top-color: var(--map-user);
   }
 
-  :global(.map-render-marker-user::before) {
-    background-image: url('/map/marker_user_cluster.svg');
-  }
-
-  :global(.map-render-marker-group) {
-    background: transparent !important;
-  }
-
-  :global(.map-render-marker-group .map-render-marker-badge) {
+  :global(.map-cluster-bubble--group) {
     background: var(--map-group);
-    color: var(--text-on-overlay);
+  }
+  :global(.map-cluster-bubble--group::after) {
+    border-top-color: var(--map-group);
   }
 
-  :global(.map-render-marker-group::before) {
-    background-image: url('/map/marker_group_cluster.svg');
-  }
-
-  :global(.map-render-marker-moment) {
-    background: transparent !important;
-  }
-
-  :global(.map-render-marker-moment .map-render-marker-badge) {
+  :global(.map-cluster-bubble--moment) {
     background: var(--map-post);
-    color: var(--text-on-overlay);
+  }
+  :global(.map-cluster-bubble--moment::after) {
+    border-top-color: var(--map-post);
   }
 
-  :global(.map-render-marker-moment::before) {
-    background-image: url('/map/marker_moment_cluster.svg');
+  :global(.map-cluster-bubble--mixed) {
+    background: var(--map-mixed);
   }
-
-  :global(.map-render-marker-cluster) {
-    background: transparent !important;
-  }
-
-  :global(.map-render-marker-cluster .map-render-marker-badge) {
-    background: var(--text-primary);
-    color: var(--text-on-overlay);
-  }
-
-  :global(.map-render-marker-cluster::before) {
-    background-image: url('/map/marker_mixed_cluster.svg');
+  :global(.map-cluster-bubble--mixed::after) {
+    border-top-color: var(--map-mixed);
   }
 
   /* 聚合预览列表的类型标签，颜色随主题族变化（--map-* token） */

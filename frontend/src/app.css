@@ -74,6 +74,7 @@
   --color-map-user: var(--map-user);
   --color-map-group: var(--map-group);
   --color-map-post: var(--map-post);
+  --color-map-mixed: var(--map-mixed);
 
   /* Status tokens —— 暴露为 @theme 工具类（bg-success/text-success 等），
      供 badge 等组件用 token 取代 Tailwind 调色板（green-500 等）。 */
@@ -125,6 +126,7 @@
   --map-user: #3d7a55;
   --map-group: #638b46;
   --map-post: #a57c38;
+  --map-mixed: #243d2e;
   --overlay-soft: rgba(27, 31, 27, 0.08);
   --overlay-strong: rgba(20, 28, 20, 0.42);
   --surface-image-scrim: linear-gradient(
@@ -213,6 +215,7 @@
   --map-user: #52b878;
   --map-group: #88b85a;
   --map-post: #c4a75a;
+  --map-mixed: #2f5740;
   --overlay-soft: rgba(220, 232, 222, 0.07);
   --overlay-strong: rgba(0, 0, 0, 0.54);
   --surface-image-scrim: linear-gradient(
@@ -305,6 +308,7 @@
   --map-user: #6366f1;
   --map-group: #10b981;
   --map-post: #f97316;
+  --map-mixed: #312e81;
   --overlay-soft: rgba(30, 27, 75, 0.08);
   --overlay-strong: rgba(14, 10, 35, 0.5);
   --surface-image-scrim: linear-gradient(
@@ -395,6 +399,7 @@
   --map-user: #818cf8;
   --map-group: #34d399;
   --map-post: #fb923c;
+  --map-mixed: #3730a3;
   --overlay-soft: rgba(234, 230, 255, 0.08);
   --overlay-strong: rgba(0, 0, 0, 0.6);
   --surface-image-scrim: linear-gradient(
@@ -496,6 +501,7 @@
   --map-user: #a97855;
   --map-group: #7b8a69;
   --map-post: #c97a55;
+  --map-mixed: #5a4632;
   --overlay-soft: rgba(63, 52, 42, 0.1);
   --overlay-strong: rgba(43, 33, 25, 0.46);
   --surface-image-scrim: linear-gradient(
@@ -587,6 +593,7 @@
   --map-user: #d18a5d;
   --map-group: #9aaf84;
   --map-post: #c87857;
+  --map-mixed: #6b4f38;
   --overlay-soft: rgba(241, 228, 210, 0.08);
   --overlay-strong: rgba(0, 0, 0, 0.56);
   --surface-image-scrim: linear-gradient(

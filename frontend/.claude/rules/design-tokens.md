@@ -15,7 +15,16 @@ paths:
 - 文字：`--text-primary`（标题/正文） / `--text-secondary`（次要/说明/占位） / `--text-on-accent`（品牌色上文字）
 - 品牌：`--brand` / `--glow` / `--theme-accent-soft` / `--theme-accent-soft-border`
 - 语义：`--color-semantic-online` / `--semantic-hot` / `--semantic-warning`
-- 地图：`--map-user` / `--map-group` / `--map-post`
+- 地图：`--map-user` / `--map-group` / `--map-post` / `--map-mixed`（多类型聚合，深饱和色不随明暗翻转）
+
+## 对比度 / 可访问性（WCAG）
+
+- **所有「文字 on 彩色块」必须满足 WCAG AA**：正文 ≥ 4.5:1，大号/粗体文字（≥14px/700）≥ 3:1。目标对比度用浏览器 DevTools 或脚本（相对亮度公式）核对。
+- **彩色背景上的文字统一用 `--text-on-overlay`（纯白）**，不要用 `--text-primary`：`--text-primary` 在 dark 模式下翻转为浅色，浅底浅字会失去对比度。
+- **填充色 token 分两类，按场景选用**：
+  - **随明暗翻转的语义色**（`--surface-bg` / `--text-primary` / `--border-theme`）→ 用于跟随主题的表面/文字。
+  - **不翻转的饱和色**（`--map-*` / `--brand` / `--semantic-*`）→ 用于需要稳定对比度的彩色块（地图 marker、徽章、按钮、图表）。`--map-*` 在 dark 模式下已自动取更亮的同色，确保深底可见。
+- **避免用 `--text-*` 当背景色**：文字 token 的明暗语义与背景相反，误用会导致对比度反转。地图聚合点等「白字彩底」元素，背景必须用饱和 token（`--map-*` / `--semantic-*` / `--brand`），不能用 `--text-primary`。
 
 ## 表面与质感
 
