@@ -209,7 +209,9 @@
         <EmptyState
           icon={Users}
           title="附近暂无其他用户"
-          description="换个浏览位置或稍后再来看看。"
+          description="换个浏览位置或稍后再来看看，也可以调整搜索范围。"
+          actionText="刷新"
+          onAction={handleRetry}
           fill
         />
       {:else}

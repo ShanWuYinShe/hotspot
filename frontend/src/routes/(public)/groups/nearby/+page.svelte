@@ -204,14 +204,21 @@
         <EmptyState
           icon={UsersRound}
           title="附近暂无群组"
-          description="换个浏览位置或稍后再来看看。"
+          description="换个浏览位置或稍后再来看看，也可以发起一个新群组。"
+          actionText="刷新"
+          onAction={handleRetry}
           fill
         />
       {:else if filteredGroups.length === 0}
         <EmptyState
           icon={UsersRound}
           title="没有匹配的群组"
-          description="试试其他分类或关键词。"
+          description="试试其他分类或关键词，或清除筛选条件。"
+          actionText="清除筛选"
+          onAction={() => {
+            activeCategory = '全部';
+            searchText = '';
+          }}
           fill
         />
       {:else}

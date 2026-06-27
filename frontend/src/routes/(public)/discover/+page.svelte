@@ -11,6 +11,7 @@
   import X from 'lucide-svelte/icons/x';
   import Compass from 'lucide-svelte/icons/compass';
   import TrendingUp from 'lucide-svelte/icons/trending-up';
+  import UsersRound from 'lucide-svelte/icons/users-round';
   import type { MomentItem, TrendingTagItem } from '$lib/types/api';
 
   const TABS = ['热门', '附近', '活动', '关注'];
@@ -209,7 +210,14 @@
       </div>
     {/if}
   {:else if getFilteredItems().length === 0}
-    <EmptyState icon={Compass} title="暂无内容" description="换个标签或关键词试试" />
+    <EmptyState
+      icon={Compass}
+      title="暂无内容"
+      description={activeTag
+        ? `「#${activeTag}」标签下还没有内容，换个标签或关键词试试吧。`
+        : '附近还没有动态，换个标签或关键词试试吧。'}
+      variant="inline"
+    />
   {:else}
     {@const items = getFilteredItems()}
     <!-- Hero first card -->
@@ -244,22 +252,39 @@
 {#snippet rightSidebar()}
   <!-- Trending topics -->
   <div class="mb-6">
-    <div class="flex items-center gap-1.5 mb-3">
-      <TrendingUp size={13} strokeWidth={2} color="var(--brand)" />
-      <span class="eyebrow">热门话题</span>
-    </div>
-    {#each trendingTags as topic (topic.name)}
-      <button
-        type="button"
-        class="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-3 py-2.5 outline-none transition-colors"
-        onmouseenter={(e) => (e.currentTarget.style.background = 'var(--border-theme)')}
-        onmouseleave={(e) => (e.currentTarget.style.background = 'transparent')}
-        onclick={() => handleTrendingClick(`#${topic.name}`)}
+    {#if trendingTags.length > 0}
+      <div class="flex items-center gap-1.5 mb-3">
+        <TrendingUp size={13} strokeWidth={2} color="var(--brand)" />
+        <span class="eyebrow">热门话题</span>
+      </div>
+      {#each trendingTags as topic (topic.name)}
+        <button
+          type="button"
+          class="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-3 py-2.5 outline-none transition-colors"
+          onmouseenter={(e) => (e.currentTarget.style.background = 'var(--border-theme)')}
+          onmouseleave={(e) => (e.currentTarget.style.background = 'transparent')}
+          onclick={() => handleTrendingClick(`#${topic.name}`)}
+        >
+          <span class="text-body" style="color: var(--text-primary)">#{topic.name}</span>
+          <span class="text-caption" style="color: var(--text-secondary)"
+            >{topic.usage_count}帖</span
+          >
+        </button>
+      {/each}
+    {:else}
+      <div
+        class="flex items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-2.5"
+        style="background: color-mix(in srgb, var(--page-bg) 50%, transparent);"
       >
-        <span class="text-body" style="color: var(--text-primary)">#{topic.name}</span>
-        <span class="text-caption" style="color: var(--text-secondary)">{topic.usage_count}帖</span>
-      </button>
-    {/each}
+        <div
+          class="flex flex-shrink-0 items-center justify-center rounded-full"
+          style="width: 32px; height: 32px; background: color-mix(in srgb, var(--brand) 10%, transparent);"
+        >
+          <TrendingUp size={15} strokeWidth={1.75} color="var(--brand)" />
+        </div>
+        <span class="text-meta" style="color: var(--text-secondary)">暂无热门话题</span>
+      </div>
+    {/if}
   </div>
 
   <div class="divider-soft mb-5"></div>
@@ -284,7 +309,18 @@
         </div>
       {/each}
       {#if topUsers.length === 0}
-        <p class="text-meta" style="color: var(--text-secondary)">附近暂无活跃用户</p>
+        <div
+          class="flex items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-2.5"
+          style="background: color-mix(in srgb, var(--page-bg) 50%, transparent);"
+        >
+          <div
+            class="flex flex-shrink-0 items-center justify-center rounded-full"
+            style="width: 32px; height: 32px; background: color-mix(in srgb, var(--brand) 10%, transparent);"
+          >
+            <UsersRound size={15} strokeWidth={1.75} color="var(--brand)" />
+          </div>
+          <span class="text-meta" style="color: var(--text-secondary)">附近暂无活跃用户</span>
+        </div>
       {/if}
     </div>
   </div>
