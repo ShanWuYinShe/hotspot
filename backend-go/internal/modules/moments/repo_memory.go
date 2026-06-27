@@ -319,14 +319,14 @@ func (r *InMemoryRepository) ListLikes(_ context.Context, momentID string, limit
 	}
 	items := make([]LikeItem, 0, len(userMap))
 	for uid, entry := range userMap {
-		items = append(items, LikeItem{UserID: uid, Nickname: entry.nickname, LikedAt: entry.likedAt})
+		items = append(items, LikeItem{User: UserInfo{UserID: uid, Nickname: entry.nickname}, LikedAt: entry.likedAt})
 	}
 	_ = cursor
 	if len(items) == 0 {
 		return []LikeItem{}, "", nil
 	}
 	if len(items) > limit {
-		return items[:limit], items[limit].UserID, nil
+		return items[:limit], items[limit].User.UserID, nil
 	}
 	return items, "", nil
 }

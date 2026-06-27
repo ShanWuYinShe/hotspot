@@ -21,9 +21,9 @@ alwaysApply: false
 |-----|------|------|------|
 | `POST /api/v1/users/search` | 搜索用户（支持关键字/标签/位置组合） | 可选 | 无 |
 | `POST /api/v1/users/open_the_door` | 用户资料详情 | 可选 | 无 |
-| `POST /api/v1/users/list_friends` | 好友列表（user_id 可选，默认=当前用户） | 可选 | 无 |
-| `POST /api/v1/users/list_following` | 关注列表（user_id 可选，默认=当前用户） | 可选 | 无 |
-| `POST /api/v1/users/list_followers` | 粉丝列表（user_id 可选，默认=当前用户） | 可选 | 无 |
+| `POST /api/v1/users/list_friends` | 好友列表（user_id 可选，默认=当前用户） | 条件必须 | 无 |
+| `POST /api/v1/users/list_following` | 关注列表（user_id 可选，默认=当前用户） | 条件必须 | 无 |
+| `POST /api/v1/users/list_followers` | 粉丝列表（user_id 可选，默认=当前用户） | 条件必须 | 无 |
 | `POST /api/v1/users/list_groups` | 用户群组列表 | 可选 | 无 |
 | `POST /api/v1/users/list_moments` | 用户瞬间历史 | 可选 | 无 |
 | `POST /api/v1/users/list_liked_moments` | 用户点赞瞬间列表 | 可选 | 无 |
@@ -104,6 +104,8 @@ interface SearchUsersRequest {
 
 获取用户资料详情。认证可选，字段可见性规则见 `@spec/api_spec_base.md`。
 
+**隐私说明**：用户存在但对其资料设置了完全隐藏（或调用方被对方拉黑等隐私限制）时，返回 `10200`（权限不足）；用户不存在时返回 `10300`。
+
 - **认证**: 可选
 - **幂等**: 无
 
@@ -126,7 +128,7 @@ interface UserOpenTheDoorRequest {
 
 **统一端点**：`user_id` 可选。不传或传入当前用户 ID 时查询自己的好友列表，返回 `@owner-only` 字段（如 `remark`）。传入其他用户 ID 时查询对方的好友列表，受 `social_lists_visible` 隐私设置控制。
 
-- **认证**: 可选（当 `user_id` 省略且未携带有效 Token 时，返回 `10100`）
+- **认证**: 条件必须（见 `@spec/api_spec_base.md` 认证档位说明：未指定 `user_id` 等价于查自己，必须登录；指定他人 ID 时为可选）
 - **幂等**: 无
 - **排序**: 默认按 `followed_back_at` **时间倒序**（最近成为好友在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
@@ -162,7 +164,7 @@ interface FriendItem {
 
 **统一端点**：`user_id` 可选。不传或传入当前用户 ID 时查询自己的关注列表。传入其他用户 ID 时查询对方的关注列表，受 `social_lists_visible` 隐私设置控制。
 
-- **认证**: 可选（当 `user_id` 省略且未携带有效 Token 时，返回 `10100`）
+- **认证**: 条件必须（见 `@spec/api_spec_base.md` 认证档位说明：未指定 `user_id` 等价于查自己，必须登录；指定他人 ID 时为可选）
 - **幂等**: 无
 - **排序**: 默认按 `followed_at` **时间倒序**（最近关注在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
@@ -197,7 +199,7 @@ interface FollowingItem {
 
 **统一端点**：`user_id` 可选。不传或传入当前用户 ID 时查询自己的粉丝列表。传入其他用户 ID 时查询对方的粉丝列表，受 `social_lists_visible` 隐私设置控制。
 
-- **认证**: 可选（当 `user_id` 省略且未携带有效 Token 时，返回 `10100`）
+- **认证**: 条件必须（见 `@spec/api_spec_base.md` 认证档位说明：未指定 `user_id` 等价于查自己，必须登录；指定他人 ID 时为可选）
 - **幂等**: 无
 - **排序**: 默认按 `followed_at` **时间倒序**（最近关注在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 

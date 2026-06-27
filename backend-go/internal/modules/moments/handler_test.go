@@ -1074,8 +1074,8 @@ func TestMomentHandlerListLikesReturnsSuccess(t *testing.T) {
 	if len(resp.Data.Items) != 1 {
 		t.Fatalf("expected 1 like item, got %d", len(resp.Data.Items))
 	}
-	if resp.Data.Items[0].UserID != "user_bob" {
-		t.Fatalf("expected user_bob, got %s", resp.Data.Items[0].UserID)
+	if resp.Data.Items[0].User.UserID != "user_bob" {
+		t.Fatalf("expected user_bob, got %s", resp.Data.Items[0].User.UserID)
 	}
 }
 

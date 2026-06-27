@@ -262,7 +262,7 @@ func TestServiceUnfavoriteDelegates(t *testing.T) {
 }
 
 func TestServiceListLikesNormalizesPagination(t *testing.T) {
-	repo := &stubMomentRepo{likesRes: []LikeItem{{UserID: "u2"}}, likesCursor: "c1"}
+	repo := &stubMomentRepo{likesRes: []LikeItem{{User: UserInfo{UserID: "u2"}}}, likesCursor: "c1"}
 	svc := NewServiceWithRepo(repo)
 	items, cursor, err := svc.ListLikes(context.Background(), ListLikesRequest{
 		MomentID:   "m1",

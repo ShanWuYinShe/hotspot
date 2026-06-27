@@ -1,5 +1,5 @@
 ---
-alwaysApply: false
+alwaysApply: true
 ---
 # HotSpot API - 通用类型定义
 
@@ -185,16 +185,21 @@ interface PaginatedData<T> {
 ### 媒体资源
 
 ```typescript
-// 消息附件/媒体信息
-interface MessageMedia {
+// 媒体资源基础信息（图片/视频等资源的展示与尺寸元数据）
+// 用途：MomentItem.images、MessageMedia 等媒体字段的共享基础类型
+interface MediaAsset {
   url: string;
   thumbnail_url?: string;
+  width?: number;
+  height?: number;
+  mime_type?: string;  // MIME 类型字符串，如 "image/jpeg"
+}
+
+// 消息附件/媒体信息（在 MediaAsset 基础上补充文件元数据）
+interface MessageMedia extends MediaAsset {
   file_name?: string;
   file_size?: number;
   duration?: number;
-  width?: number;
-  height?: number;
-  mime_type?: string;
 }
 ```
 
@@ -385,13 +390,7 @@ interface SystemAnnouncementItem {
 interface MomentItem {
   moment_id: string;
   description: string;
-  images?: {
-    url: string;
-    thumbnail_url?: string;   // 缩略图 URL（列表/Feed 场景使用）
-    width?: number;
-    height?: number;
-    mime_type?: string;
-  }[];
+  images?: MediaAsset[];
   tags: string[];
   mentions?: string[];
   created_at: string;
@@ -440,16 +439,19 @@ interface LikeItem {
 
 ### 消息 (Message)
 
-**MessageReplyTo**: 回复引用快照
+**MessageReplyTo**: 回复引用快照（用于消息回复时引用被回复消息的上下文）
 ```typescript
 interface MessageReplyTo {
   message_id: string;
-  user_id: string;
-  nickname: string;
-  content: string; // 文本预览
-  share_code?: string; // 若被回复的消息为 share 类型，则包含该 share_code
+  type: MessageType;       // 被回复消息的类型（决定前端渲染方式：text 显示文字预览，image/video 等显示对应占位，share 显示分享卡片）
+  sender: UserInfo;        // 被回复消息的发送者（嵌套 UserInfo，与 sender/actor 等用户引用保持一致）
+  content?: string;        // 文本预览（仅 text 类型有意义；非文本类型可省略）
+  share_code?: string;     // 若被回复的消息为 share 类型，则包含该 share_code
+  sent_at: string;         // 被回复消息的发送时间
 }
 ```
+
+> 设计说明：`sender` 采用嵌套 `UserInfo` 而非扁平 `user_id`/`nickname`，与 spec 中所有"对用户的引用"（`sender`/`actor`/`creator`/`applicant` 等）保持一致；`type` 字段是渲染回复引用的必需信息（区分文本/图片/分享等），扁平结构无法表达非文本消息的引用。
 
 **MessageSent**: 消息发送成功响应（私聊/群聊通用）
 ```typescript

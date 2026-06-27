@@ -38,6 +38,31 @@ alwaysApply: false
 
 `NotificationType` 定义于 `@spec/api_spec_types.md`。
 
+### 通知类型 ↔ WebSocket 事件 ↔ 补拉策略（契约级）
+
+通知中心（HTTP）与 WebSocket 实时事件存在大量语义重叠。客户端收到 WS 事件后，应据此更新通知列表/角标；冷启动或补拉则通过 HTTP 通知 API。两者**互相独立但语义对齐**。
+
+| `NotificationType` | 对应 WebSocket 事件 | 触发场景 |
+|-------------------|--------------------|---------|
+| `new_follower` | `NewFollower` | 被关注 |
+| `mutual_follow` | `MutualFollow` | 形成互相关注 |
+| `moment_liked` | `MomentLiked` | 瞬间被点赞 |
+| `moment_commented` | `MomentCommented` | 瞬间被评论 |
+| `comment_liked` | `CommentLiked` | 评论被点赞 |
+| `comment_reply` | `CommentReply` | 评论被回复 |
+| `mentioned` | `MessageMentioned` | 瞬间/评论中被 @ |
+| `group_invite_received` | `GroupInviteReceived` | 收到入群邀请 |
+| `group_invite_accepted` | `GroupInviteResponse` | 邀请被接受（邀请方收到） |
+| `group_application_received` | `GroupApplicationReceived` | 群主/管理员收到入群申请 |
+| `group_application_accepted` | `GroupApplicationResponse` | 申请被接受（申请方收到） |
+| `system_announcement` | `SystemAnnouncement` | 系统公告 |
+
+**客户端处理约定**：
+- **实时路径**：在线时收到 WS 事件 → 直接更新本地通知列表/未读角标（无需立即拉 HTTP）
+- **补拉路径**：冷启动或 WS 断线超阈值时，调用 `notifications/list` + `notifications/unread_count` 校准
+- **去重**：WS 事件与 HTTP 补拉可能重叠，按 `notification_id` 去重（持久化事件）或按"最新状态覆盖"（状态快照）
+- **WS 负载 ≠ 通知负载**：WS 事件字段以 `@spec/api_spec_websocket.md` 为准（含完整 content 等）；通知 `payload` 字段以本文件为准（含截断 preview）。两者结构不同，客户端不应混用
+
 ### 通知负载（按 type 区分的联合类型）
 
 ```typescript

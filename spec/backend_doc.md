@@ -1,9 +1,11 @@
 ---
-globs: backend/**
+globs: backend-go/**
 alwaysApply: false
 ---
 
 # HotSpot 后端文档（What）
+
+> 适用范围：本文件针对 `backend-go/`（Go 主后端）。历史 `backend/`（Rust/Axum）已暂停，不在本文档描述范围内。
 
 ## 文档定位（权威边界）
 

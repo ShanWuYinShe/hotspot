@@ -363,13 +363,12 @@ func (r *PostgresRepository) ListLikes(ctx context.Context, momentID string, lim
 	for rows.Next() {
 		var item LikeItem
 		var likedAt time.Time
-		if err := rows.Scan(&item.UserID, &likedAt); err != nil {
+		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &likedAt); err != nil {
 			return nil, "", err
 		}
 		item.LikedAt = likedAt.UTC().Format(time.RFC3339)
-		item.Nickname = item.UserID
 		items = append(items, item)
-		cursors = append(cursors, encodeMomentLikeCursor(item.LikedAt, item.UserID))
+		cursors = append(cursors, encodeMomentLikeCursor(item.LikedAt, item.User.UserID))
 		if len(items) == limit+1 {
 			return items[:limit], cursors[limit-1], nil
 		}

@@ -160,15 +160,16 @@ DELETE FROM moment_favorites
 WHERE user_id = $1 AND moment_id = $2`
 
 	queryListMomentLikes = `
-SELECT user_id, liked_at
-FROM moment_likes
-WHERE moment_id = $1
+SELECT ml.user_id, u.nickname, ml.liked_at
+FROM moment_likes ml
+LEFT JOIN users u ON u.user_id = ml.user_id
+WHERE ml.moment_id = $1
   AND (
     $2 IS NULL
-    OR liked_at < $2
-    OR (liked_at = $2 AND user_id > $3)
+    OR ml.liked_at < $2
+    OR (ml.liked_at = $2 AND ml.user_id > $3)
   )
-ORDER BY liked_at DESC, user_id ASC
+ORDER BY ml.liked_at DESC, ml.user_id ASC
 LIMIT $4`
 
 	queryListFavoriteMoments = `

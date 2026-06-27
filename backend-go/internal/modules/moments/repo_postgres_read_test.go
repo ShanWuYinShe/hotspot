@@ -371,7 +371,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(likedRows))
 		for _, row := range likedRows {
-			rows = append(rows, []any{row.userID, row.likedAt})
+			rows = append(rows, []any{row.userID, row.userID, row.likedAt})
 		}
 		return &rowsValues{rows: rows}, nil
 	case queryListFavoriteMoments:
@@ -649,7 +649,7 @@ func TestPostgresRepositoryListsLikesAndFavorites(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list likes: %v", err)
 	}
-	if len(likes) != 2 || likes[0].UserID != "user_bob" || likes[1].UserID != "user_carla" {
+	if len(likes) != 2 || likes[0].User.UserID != "user_bob" || likes[1].User.UserID != "user_carla" {
 		t.Fatalf("unexpected likes: %#v", likes)
 	}
 	if nextCursor == "" {
@@ -659,7 +659,7 @@ func TestPostgresRepositoryListsLikesAndFavorites(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list likes second page: %v", err)
 	}
-	if len(likes) != 1 || likes[0].UserID != "user_dan" || nextCursor != "" {
+	if len(likes) != 1 || likes[0].User.UserID != "user_dan" || nextCursor != "" {
 		t.Fatalf("unexpected second page likes: %#v next=%q", likes, nextCursor)
 	}
 

@@ -116,10 +116,8 @@ type ListLikesRequest struct {
 }
 
 type LikeItem struct {
-	UserID    string `json:"user_id"`
-	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatar_url,omitempty"`
-	LikedAt   string `json:"liked_at"`
+	User     UserInfo `json:"user"`
+	LikedAt  string   `json:"liked_at"`
 }
 
 type PaginatedLikes struct {

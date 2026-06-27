@@ -24,18 +24,30 @@ alwaysApply: false
 
 ## 端点总览
 
+### 私聊管理（`private_chats`）
+
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
 | `POST /api/v1/private_chats/me/list` | 私聊列表 | 必须 | 无 |
 | `POST /api/v1/private_chats/open_the_door` | 私聊详情 | 必须 | 幂等语义 |
 | `POST /api/v1/private_chats/me/update_settings` | 更新会话设置 | 必须 | 幂等语义 |
 | `POST /api/v1/private_chats/me/delete` | 删除私聊会话 | 必须 | 幂等语义 |
+
+### 私聊消息（`private_messages`）
+
+| 端点 | 说明 | 认证 | 幂等 |
+|-----|------|------|------|
 | `POST /api/v1/private_messages/send` | 发送私聊消息 | 必须 | MUST |
 | `POST /api/v1/private_messages/get_history` | 私聊消息历史 | 必须 | 无 |
 | `POST /api/v1/private_messages/update` | 编辑私聊消息 | 必须 | 幂等语义 |
 | `POST /api/v1/private_messages/recall` | 撤回私聊消息 | 必须 | 幂等语义 |
 | `POST /api/v1/private_messages/me/mark_as_read` | 标记指定私聊会话已读 | 必须 | 幂等语义 |
 | `POST /api/v1/private_messages/me/mark_all_read` | 标记所有私聊消息已读 | 必须 | 幂等语义 |
+
+### 群聊消息（`group_messages`）
+
+| 端点 | 说明 | 认证 | 幂等 |
+|-----|------|------|------|
 | `POST /api/v1/group_messages/send` | 发送群聊消息 | 必须 | MUST |
 | `POST /api/v1/group_messages/get_history` | 群聊消息历史 | 必须 | 无 |
 | `POST /api/v1/group_messages/update` | 编辑群聊消息 | 必须 | 幂等语义 |
