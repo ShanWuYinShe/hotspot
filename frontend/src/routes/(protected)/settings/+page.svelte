@@ -1,5 +1,6 @@
 <script lang="ts">
   import { authStore } from '$lib/stores/auth.svelte';
+  import { authService } from '$lib/api/services/auth';
   import { THEME_FAMILY_OPTIONS, themeStore, type ThemeFamily } from '$lib/stores/theme.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { platformStore } from '$lib/stores/platform.svelte';
@@ -121,7 +122,14 @@
 
   const currentThemeFamily = $derived(themeStore.themeFamily);
 
-  function handleLogout() {
+  async function handleLogout() {
+    // 先调后端 logout 清除 HttpOnly token Cookie（Set-Cookie Max-Age=0），
+    // 再清前端状态。否则 Cookie 仍在，刷新后会自动登录回来。
+    try {
+      await authService.logout();
+    } catch {
+      // 网络失败也继续清本地，避免用户被困在已失效会话里
+    }
     authStore.logout();
     toast.success('已退出登录');
   }

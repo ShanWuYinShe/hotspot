@@ -789,7 +789,8 @@ class WebSocketEventHandlers {
         // 先断开 WebSocket（设置 shouldReconnect=false，阻止自动重连），再登出
         websocketStore.disconnect();
         authStore.logout();
-        void goto('/auth');
+        // 与 HTTP 10201 路径一致：跳转封禁页并携带原因（而非 /auth）
+        window.location.href = `/banned?reason=${encodeURIComponent(payload.reason)}`;
       })
     );
 
