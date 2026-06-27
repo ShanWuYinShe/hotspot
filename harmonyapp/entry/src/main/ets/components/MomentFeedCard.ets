@@ -15,6 +15,7 @@ import { IntelligentLocationCard } from './IntelligentLocationCard';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
+@Reusable
 @Component
 export struct MomentFeedCard {
   @Prop moment: MomentItem;

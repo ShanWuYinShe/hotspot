@@ -425,7 +425,7 @@ export struct LoginPage {
       TextInput({ placeholder: '邮箱 / 用户名', text: $$this.loginId })
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .placeholderColor(this.getCurrentThemePalette().textTertiary)
-        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
         .border({ width: 1, color: this.fieldBorder(this.loginIdFocused, this.getLoginIdError() !== undefined).borderColor })
@@ -439,13 +439,13 @@ export struct LoginPage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
-          .padding({ left: 14 })
+          .padding({ left: DesignConstants.SPACING.MD })
       }
 
       TextInput({ placeholder: '密码', text: $$this.password })
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .placeholderColor(this.getCurrentThemePalette().textTertiary)
-        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
         .border({ width: 1, color: this.fieldBorder(this.passwordFocused, this.getPasswordError() !== undefined).borderColor })
@@ -459,7 +459,7 @@ export struct LoginPage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
-          .padding({ left: 14 })
+          .padding({ left: DesignConstants.SPACING.MD })
       }
 
       Button('登录')
@@ -513,7 +513,7 @@ export struct LoginPage {
       TextInput({ placeholder: '昵称（必填）', text: $$this.registerNickname })
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .placeholderColor(this.getCurrentThemePalette().textTertiary)
-        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
         .border({ width: 1, color: this.fieldBorder(this.registerNicknameFocused, this.getRegisterNicknameError() !== undefined).borderColor })
@@ -526,13 +526,13 @@ export struct LoginPage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
-          .padding({ left: 14 })
+          .padding({ left: DesignConstants.SPACING.MD })
       }
 
       TextInput({ placeholder: '邮箱 / 用户名（登录凭证）', text: $$this.registerLoginId })
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .placeholderColor(this.getCurrentThemePalette().textTertiary)
-        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
         .border({ width: 1, color: this.fieldBorder(this.registerLoginIdFocused, this.getRegisterLoginIdError() !== undefined).borderColor })
@@ -546,13 +546,13 @@ export struct LoginPage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
-          .padding({ left: 14 })
+          .padding({ left: DesignConstants.SPACING.MD })
       }
 
       TextInput({ placeholder: '密码（8-128位，含字母+数字）', text: $$this.registerPassword })
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .placeholderColor(this.getCurrentThemePalette().textTertiary)
-        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
         .border({ width: 1, color: this.fieldBorder(this.registerPasswordFocused, this.getRegisterPasswordError() !== undefined).borderColor })
@@ -566,13 +566,13 @@ export struct LoginPage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
-          .padding({ left: 14 })
+          .padding({ left: DesignConstants.SPACING.MD })
       }
 
       TextInput({ placeholder: '确认密码', text: $$this.registerPasswordConfirm })
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .placeholderColor(this.getCurrentThemePalette().textTertiary)
-        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
         .border({ width: 1, color: this.fieldBorder(this.registerPasswordConfirmFocused, this.getRegisterPasswordConfirmError() !== undefined).borderColor })
@@ -586,7 +586,7 @@ export struct LoginPage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
-          .padding({ left: 14 })
+          .padding({ left: DesignConstants.SPACING.MD })
       }
 
       Button('注册')
@@ -660,7 +660,7 @@ export struct LoginPage {
       TextInput({ placeholder: '给自己起个名字', text: $$this.guestNickname })
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .placeholderColor(this.getCurrentThemePalette().textTertiary)
-        .padding({ left: 14, right: 14, top: 11, bottom: 11 })
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.INPUT)
         .border({ width: 1, color: this.fieldBorder(this.guestNicknameFocused, this.getGuestNicknameError() !== undefined).borderColor })
@@ -673,7 +673,7 @@ export struct LoginPage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
-          .padding({ left: 14 })
+          .padding({ left: DesignConstants.SPACING.MD })
       }
 
       Button('访客登录')
