@@ -24,6 +24,10 @@
 
 以下类型定义于 `api_spec_types.md`：
 - `SystemAnnouncementItem`
+- `FeatureSwitches`
+- `AppLimits`
+- `ContactInfo`
+- `Location`
 
 ## 端点详情
 
@@ -133,34 +137,12 @@ interface HealthStatus {
 
 ```typescript
 // 客户端公开配置（AppConfig 的可见投影；客户端启动时获取并缓存）
+// FeatureSwitches / AppLimits / ContactInfo 定义于 api_spec_types.md
 interface ClientConfig {
   features: FeatureSwitches;
   limits: AppLimits;
   contact: ContactInfo;
   defaults: ClientDefaults;
-}
-
-interface FeatureSwitches {
-  enable_public_registration: boolean;
-  enable_guest_login: boolean;
-  enable_moments: boolean;
-  enable_nearby_people: boolean;
-}
-
-interface AppLimits {
-  max_group_members: number;
-  max_moment_tags: number;
-  max_moment_images: number;
-  moment_description_max_length: number;
-  comment_max_length: number;
-  search_radius_max: number;  // 搜索半径上限（米），用于搜索和 Feed 相关接口
-}
-
-interface ContactInfo {
-  support_email: string;
-  privacy_policy_url: string;
-  terms_of_service_url: string;
-  official_website: string;
 }
 
 // 客户端可见的默认值

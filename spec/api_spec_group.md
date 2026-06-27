@@ -459,7 +459,7 @@ interface BanMemberRequest {
 
 ### POST /api/v1/groups/members/unban
 
-解除封禁成员。
+解除封禁成员。仅对当前处于封禁状态的成员有效；对未封禁成员调用返回 `10400`（业务冲突），与 `members/ban` 配对。
 
 - **认证**: 必须
 - **幂等**: 幂等语义（重复请求返回一致结果）
@@ -474,7 +474,7 @@ interface UnbanMemberRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10000` `10200` `10300` `10400`
 
 ---
 

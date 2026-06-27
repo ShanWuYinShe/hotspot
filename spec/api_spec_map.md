@@ -30,6 +30,21 @@
 |------|------|------|------|
 | `POST /api/v1/map/canvas` | 根据视口返回统计或热点明细 | 可选 | 无 |
 
+## 端点详情
+
+### POST /api/v1/map/canvas
+
+根据视口范围和 S2 网格预聚合，自动返回热力统计（`heatmap`）或热点明细（`hotspots`）中的一种。
+
+- **认证**: 可选
+- **幂等**: 无
+
+**Request**: `MapCanvasRequest`
+
+**Response**: `ApiResponse<MapCanvasResponse>`
+
+> 类型定义见下方「类型定义」；服务端可观测行为见「行为约束」。`heatmap` 与 `hotspots` 互斥，同一次响应最多出现一个；无数据时两者均省略。
+
 ## 类型定义
 
 以下基础类型定义于 `api_spec_types.md`：
@@ -155,11 +170,11 @@ interface MapCanvasResponse {
 - 同一次响应中，`heatmap` 与 `hotspots` 最多出现一个字段：要么只返回统计，要么只返回明细，不会同时出现；
 - 当某类结果没有任何数据时，不返回对应字段：没有 bucket 就不返回 `heatmap`，没有热点对象就不返回 `hotspots`。
 
-## 行为约束（契约级）
+### 行为约束（契约级）
 
 服务端在实现 `/api/v1/map/canvas` 时，对客户端承诺以下**可观测行为**；具体 S2 层级选择、覆盖算法与内部阈值属于实现细节，不对外暴露。
 
-### 视口与结果类型选择
+#### 视口与结果类型选择
 
 - 服务端基于 `viewport.bounds` 计算视口物理跨度，并结合预估结果规模，自动决定返回统计还是明细
 - 对客户端而言行为稳定可预期：
@@ -168,17 +183,17 @@ interface MapCanvasResponse {
 - **互斥保证**：同一次响应中 `heatmap` 与 `hotspots` 最多出现一个字段，不会同时返回
 - 当视口范围内无任何已知对象时，既不返回 `heatmap` 也不返回 `hotspots`
 
-### 明细分页
+#### 明细分页
 
 - 仅在返回 `hotspots` 时支持游标分页（`pagination` 生效）
 - `limit` 默认 50，最大 200（由 `PaginationParams` 约束）；返回的明细条数受服务端单次上限裁剪
 
-### 实现中立
+#### 实现中立
 
 - 聚合与查询必须基于 S2 网格与视口范围，不得引入行政区 / region 概念作为契约维度
 - `cell_token`、`level` 对客户端是不透明标识，客户端不应依赖其具体含义或编码格式
 
-## 错误码
+### 错误码
 
 - `10000`：请求参数不合法，例如：
   - `viewport.bounds` 超出允许范围或 east/west 不满足约束；

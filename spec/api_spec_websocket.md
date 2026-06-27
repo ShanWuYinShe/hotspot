@@ -112,7 +112,13 @@
 
 ### 依赖说明
 
-- 公共基础类型定义于 `api_spec_types.md`
+以下类型定义于 `api_spec_types.md`，本模块事件负载直接引用：
+- `UserInfo`、`ClientType`、`MessageType`
+- `MessageMedia`、`MessageReplyTo`
+- `GroupInfo`、`GroupRole`、`GroupJoinMethod`、`GroupAnnouncementItem`
+- `SystemAnnouncementItem`、`MomentSummary`
+- `FollowSource`、`UserSettings`、`Location`
+
 - 错误码定义于 `api_spec_errors.md`
 - 所有事件类型和负载结构必须严格遵循本规范定义
 

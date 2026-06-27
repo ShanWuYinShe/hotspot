@@ -32,6 +32,7 @@
 - `UserInfo`
 - `Location`
 - `PaginationParams`
+- `ShareType`
 
 **说明**：`preview` 为展示用摘要。已撤销、已过期或目标不可访问时不返回 preview。
 
@@ -208,4 +209,6 @@ interface RevokeShareRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10000` `10300`
+
+> 隐私一致性：非创建者撤销（share 存在但无权限）统一返回 `10300`，与本模块「资源存在但不可访问按不存在处理」规则一致（见上方隐私规则），不通过 `10200` 泄露 share 的存在性。

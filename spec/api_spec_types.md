@@ -510,3 +510,35 @@ interface UserSettings {
   location_searchable: boolean;
 }
 ```
+
+### 应用配置 (AppConfig 相关)
+
+> 以下配置类型由 `system`（客户端可见投影 `ClientConfig`）与 `admin_core`（完整服务端配置 `AppConfig`）共用，故收归至此。
+
+```typescript
+// 功能开关（客户端可见，由管理员配置）
+interface FeatureSwitches {
+  enable_public_registration: boolean;
+  enable_guest_login: boolean;
+  enable_moments: boolean;
+  enable_nearby_people: boolean;
+}
+
+// 业务限额（客户端可见，用于前端校验/提示）
+interface AppLimits {
+  max_group_members: number;
+  max_moment_tags: number;
+  max_moment_images: number;
+  moment_description_max_length: number;
+  comment_max_length: number;
+  search_radius_max: number;  // 搜索半径上限（米），用于搜索和 Feed 相关接口
+}
+
+// 联系/合规信息（客户端可见）
+interface ContactInfo {
+  support_email: string;
+  privacy_policy_url: string;
+  terms_of_service_url: string;
+  official_website: string;
+}
+```

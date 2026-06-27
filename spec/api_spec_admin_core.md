@@ -17,7 +17,7 @@
   - 基础规范：`api_spec_base.md`
   - 通用类型：`api_spec_types.md`
   - 错误码：`api_spec_errors.md`
-  - 客户端配置类型：`api_spec_system.md`（`ClientConfig`、`FeatureSwitches`、`AppLimits`、`ContactInfo`）
+  - 客户端配置：`api_spec_system.md`（`ClientConfig` 为 `AppConfig` 的客户端可见投影）
 
 ## 统一访问控制
 
@@ -83,7 +83,11 @@
 
 以下类型定义于 `api_spec_types.md`：
 - `UserInfo`
+- `Location`
 - `GroupSettings`
+- `FeatureSwitches`
+- `AppLimits`
+- `ContactInfo`
 - `PaginationParams`
 - `PaginatedData<T>`
 
@@ -487,9 +491,9 @@ interface AuditLogOpenTheDoorRequest {
 // ClientConfig（见 api_spec_system.md）是 AppConfig 中客户端可见部分的投影
 interface AppConfig {
   // === 客户端可见配置（构成 ClientConfig） ===
-  features: FeatureSwitches;       // 定义于 api_spec_system.md
-  limits: AppLimits;               // 定义于 api_spec_system.md
-  contact: ContactInfo;            // 定义于 api_spec_system.md
+  features: FeatureSwitches;       // 定义于 api_spec_types.md
+  limits: AppLimits;               // 定义于 api_spec_types.md
+  contact: ContactInfo;            // 定义于 api_spec_types.md
   // === 仅服务端使用 ===
   upload: UploadConfig;
   defaults: ContentDefaults;
