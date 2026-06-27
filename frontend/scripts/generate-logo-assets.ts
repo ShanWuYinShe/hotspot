@@ -8,13 +8,11 @@ const assetsDir = join(projectRoot, 'assets', 'logo');
 const staticDir = join(projectRoot, 'static');
 const masterPath = join(assetsDir, 'logo-master.png');
 
-const webIconSizes = [16, 32, 48, 64, 180, 192, 256, 512];
 const pwaIcons = [192, 512];
 const namedOutputs: Array<{ size: number; file: string }> = [
   { size: 16, file: 'favicon-16x16.png' },
   { size: 32, file: 'favicon-32x32.png' },
-  { size: 180, file: 'apple-touch-icon.png' },
-  { size: 48, file: 'logo_48.png' }
+  { size: 180, file: 'apple-touch-icon.png' }
 ];
 
 async function ensureDirectories() {
@@ -49,9 +47,6 @@ async function generateFaviconIco() {
 
 async function main() {
   await ensureDirectories();
-  for (const size of webIconSizes) {
-    await generatePng(size, `logo_${size}.png`);
-  }
   for (const size of pwaIcons) {
     await generatePng(size, `android-chrome-${size}x${size}.png`);
   }

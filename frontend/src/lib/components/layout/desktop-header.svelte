@@ -27,7 +27,7 @@
 <header class="desktop-header">
   <!-- Logo -->
   <a href="/" class="mr-3 flex cursor-pointer items-center gap-2 select-none">
-    <img src="/logo_32.png" alt="HotSpot" class="h-7 w-7 rounded-full object-cover" />
+    <img src="/favicon-32x32.png" alt="HotSpot" class="h-7 w-7 rounded-full object-cover" />
     <span class="text-title tracking-tight" style="color: var(--text-primary)">HotSpot</span>
   </a>
 

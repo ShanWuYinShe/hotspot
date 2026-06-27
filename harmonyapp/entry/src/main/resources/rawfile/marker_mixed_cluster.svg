@@ -8,23 +8,23 @@
     </g>
     <g id="group-head-small">
       <circle cx="0" cy="0" r="7.2" fill="#102A43"/>
-      <circle cx="0" cy="0" r="4.8" fill="#00965E"/>
+      <circle cx="0" cy="0" r="4.8" fill="#059669"/>
       <circle cx="-1.8" cy="-1.2" r="1.2" fill="#FFFFFF"/>
       <circle cx="1.8" cy="-1.2" r="1.2" fill="#FFFFFF"/>
       <rect x="-2.4" y="0.9" width="4.8" height="2.4" rx="1.2" fill="#FFFFFF"/>
     </g>
     <g id="moment-head-small">
       <circle cx="0" cy="0" r="7.2" fill="#102A43"/>
-      <circle cx="0" cy="0" r="4.8" fill="#E65100"/>
+      <circle cx="0" cy="0" r="4.8" fill="#EA580C"/>
       <rect x="-3" y="-1.8" width="6" height="4.2" rx="0.9" fill="#FFFFFF"/>
       <rect x="0.6" y="-2.7" width="1.8" height="1.2" rx="0.3" fill="#FFFFFF"/>
-      <circle cx="0" cy="0.3" r="1.2" fill="#E65100"/>
+      <circle cx="0" cy="0.3" r="1.2" fill="#EA580C"/>
     </g>
   </defs>
   <rect x="16" y="24" width="4" height="19" rx="2" fill="#2563EB"/>
   <path d="M 18 24 L 18 12" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round"/>
-  <path d="M 18 24 L 9 18" stroke="#00965E" stroke-width="1.5" stroke-linecap="round"/>
-  <path d="M 18 24 L 27 18" stroke="#E65100" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M 18 24 L 9 18" stroke="#059669" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M 18 24 L 27 18" stroke="#EA580C" stroke-width="1.5" stroke-linecap="round"/>
   <use href="#user-head-small" transform="translate(18, 12)"/>
   <use href="#group-head-small" transform="translate(9, 18)"/>
   <use href="#moment-head-small" transform="translate(27, 18)"/>

@@ -21,7 +21,7 @@ const OVERLAP_GROUP_PREFIX = 'overlap_';
 
 // 当地图缩放级别小于等于该值时，仍将同一点附近的多个标记合并为“重叠 cluster”；
 // 当 zoom 大于该值时，改为在原位置周围打散为多个带像素偏移的独立标记，便于查看细节。
-const OVERLAP_CLUSTER_MAX_ZOOM = 15;
+export const OVERLAP_CLUSTER_MAX_ZOOM = 15;
 
 // 前端内部用于聚合展示的渲染项类型（在 MapHeatBucket 基础上增加本地标识符 render_id）
 export interface RenderItem extends MapHeatBucket {
@@ -44,7 +44,7 @@ export function isOverlapGroupRenderId(renderId: string): boolean {
   return renderId.startsWith(OVERLAP_GROUP_PREFIX);
 }
 
-function getFanOutOffset(index: number, total: number): [number, number] {
+export function getFanOutOffset(index: number, total: number): [number, number] {
   // 在高缩放级别下，为同一点的多个标记提供一个简单且“顺眼”的像素偏移方案：
   // - 2~3 个点时采用垂直堆叠，避免绕圈分布导致认知负担；
   // - 4~6 个点时围绕原点做小半径放射状布局；
