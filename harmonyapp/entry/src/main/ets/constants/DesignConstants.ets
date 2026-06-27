@@ -87,8 +87,11 @@ export interface FontSystem {
 
 // ==================== 间距系统接口 ====================
 export interface SpacingSystem {
+  HALF: number; // 2 — 极小内边距（badge/头像文字内）
   XS: number;
+  SM2: number; // 6 — 4 与 8 之间的微步（紧凑元素内边距）
   SM: number;
+  MD2: number; // 10 — 8 与 12 之间的微步
   MD: number;
   LG: number;
   XL: number;
@@ -362,10 +365,14 @@ const FONT: FontSystem = {
   },
 };
 
-// ==================== 间距系统（对齐前端 16px 移动端基线，4px 网格）====================
+// ==================== 间距系统（对齐前端 16px 移动端基线，4px 网格 + 微步）====================
+// HALF/SM2/MD2 为组件内部紧凑元素的精细内边距，消除散落的硬编码 2/6/10。
 const SPACING: SpacingSystem = {
+  HALF: 2,
   XS: 4,
+  SM2: 6,
   SM: 8,
+  MD2: 10,
   MD: 12,
   LG: 16,
   XL: 24,

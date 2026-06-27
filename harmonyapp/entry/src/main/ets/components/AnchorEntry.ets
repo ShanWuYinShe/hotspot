@@ -96,7 +96,7 @@ export struct AnchorEntry {
           Text(this.getRadiusText())
             .fontSize(DesignConstants.FONT.SIZE.XS2) // 10
             .fontColor(this.getPalette().accentBackground)
-            .padding({ left: 6, right: 6 })
+            .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2 })
             .borderRadius(DesignConstants.RADIUS.FULL)
             .backgroundColor(this.getPalette().accentMuted)
             .margin({ left: DesignConstants.SPACING.XS })
@@ -115,7 +115,7 @@ export struct AnchorEntry {
       }
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 10, bottom: 10 })
+    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
     .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.SHAPE.INPUT) // 18
     .border({ width: 1, color: this.getPalette().borderColor })
@@ -151,7 +151,7 @@ export struct AnchorEntry {
         .fontSize(DesignConstants.FONT.SIZE.XS) // 11
         .fontColor(this.getPalette().accentBackground)
     }
-    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 6, bottom: 6 })
+    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: 1, color: this.getPalette().borderColor })
     .borderRadius(DesignConstants.RADIUS.FULL)

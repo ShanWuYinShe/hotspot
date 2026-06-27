@@ -219,7 +219,7 @@ export struct PhoneLayout {
           .margin({ top: 2 })
       }
       .width(60)
-      .padding({ top: 6, bottom: 6 })
+      .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
       .borderRadius(DesignConstants.RADIUS.LG)
       .backgroundColor(
         this.currentTabIndex === index
@@ -288,7 +288,7 @@ export struct PhoneLayout {
         )
         .margin({ top: 2 })
     }
-    .padding({ top: 6, bottom: 6 })
+    .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
     .justifyContent(FlexAlign.Center)
     .onClick(() => {
       this.tabsController.changeIndex(index);

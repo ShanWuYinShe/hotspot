@@ -314,7 +314,7 @@ export struct DesktopLayout {
       Text(option.mode === this.getCurrentThemeMode() ? '当前' : '切换')
         .fontSize(DesignConstants.FONT.SIZE.XS)
         .fontColor(option.mode === this.getCurrentThemeMode() ? this.getPalette().accentText : this.getPalette().textSecondary)
-        .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+        .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
         .backgroundColor(option.mode === this.getCurrentThemeMode() ? this.getPalette().accentBackground : this.getPalette().surfaceSubtle)
         .borderRadius(DesignConstants.SHAPE.CHIP)
     }

@@ -162,7 +162,7 @@ export struct MomentFeedCard {
               .fontColor(DesignConstants.COLOR.WHITE)
               .backgroundColor(this.getPalette().accentBackground)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+              .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
               .shadow({
                 radius: 8,
                 color: this.getPalette().accentShadow.color,
@@ -209,7 +209,7 @@ export struct MomentFeedCard {
         }
         .width('100%')
         .height('100%')
-        .padding({ left: 0, right: 0, top: 10, bottom: 10 })
+        .padding({ left: 0, right: 0, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
       }
       .width('100%')
       .borderRadius({ topLeft: DesignConstants.RADIUS.XXL, topRight: DesignConstants.RADIUS.XXL })
@@ -275,7 +275,7 @@ export struct MomentFeedCard {
       }
       .width('100%')
       .justifyContent(FlexAlign.SpaceBetween)
-      .padding({ left: 16, right: 16, top: 4, bottom: 14 })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.MD })
     }
     .width('100%')
     .borderRadius(DesignConstants.RADIUS.XXL)
@@ -373,7 +373,7 @@ export struct MomentFeedCard {
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .constraintSize({ maxWidth: 120 })
         }
-        .padding({ left: 8, right: 8, top: 5, bottom: 5 })
+        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
         .borderRadius(DesignConstants.RADIUS.FULL)
         .border({ width: 1, color: this.getPalette().borderColor })
         .backgroundColor(this.getPalette().accentMuted)

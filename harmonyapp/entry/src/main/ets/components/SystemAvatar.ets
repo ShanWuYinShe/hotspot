@@ -101,7 +101,7 @@ export struct SystemAvatar {
           .fontColor(this.getPalette().textSecondary)
           .backgroundColor(this.getPalette().surfaceSubtle)
           .borderRadius(DesignConstants.RADIUS.SM)
-          .padding({ left: 2, right: 2 })
+          .padding({ left: DesignConstants.SPACING.HALF, right: DesignConstants.SPACING.HALF })
           .margin({ bottom: -2, right: -2 })
       }
     }

@@ -37,7 +37,7 @@ export struct SystemBadge {
         .fontColor(this.getPalette().accentText)
         .backgroundColor(this.getPalette().accentBackground)
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .padding({ left: 5, right: 5, top: 1, bottom: 1 })
+        .padding({ left: DesignConstants.SPACING.HALF, right: DesignConstants.SPACING.HALF, top: 1, bottom: 1 })
         .minFontScale(0.8)
         .maxLines(1)
     } else if (this.dotOnly) {

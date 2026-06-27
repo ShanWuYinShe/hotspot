@@ -288,7 +288,7 @@ export struct SmartSearchComponent {
         ? this.getPalette().accentText
         : this.getPalette().textSecondary)
       .borderRadius(DesignConstants.RADIUS.XL)
-      .padding({ left: 2, right: 2 })
+      .padding({ left: DesignConstants.SPACING.HALF, right: DesignConstants.SPACING.HALF })
       .onClick(() => {
         this.switchFilter(filter as 'all' | 'users' | 'groups' | 'moments');
       })

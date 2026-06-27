@@ -407,7 +407,7 @@ export struct NotificationCenter {
             .fontColor(this.getPalette().accentBackground)
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .borderRadius(DesignConstants.RADIUS.FULL)
-            .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+            .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
             .shadow(this.getPalette().controlShadow)
             .border({ width: 1, color: this.getPalette().borderColor })
             .onClick(() => this.onMarkAllRead())
@@ -429,7 +429,7 @@ export struct NotificationCenter {
                 ? this.getPalette().accentBackground
                 : this.getPalette().surfaceBackground)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .padding({ left: 14, right: 14, top: 6, bottom: 6 })
+              .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
               .shadow(this.selectedFilter === filter.key
                 ? {
                   radius: 10,
