@@ -647,7 +647,7 @@ interface GroupUpdatedPayload {
     join_method?: GroupJoinMethod;
     is_searchable?: boolean;
     max_members?: number;
-    has_password?: boolean;    // 只推送是否有密码，不暴露密码值
+    has_password?: boolean;    // 与 GroupItem 一致：仅群成员可见（GroupUpdated 推送目标为群成员）
     location?: Location;
   };
   updated_by: string;          // user_id（操作者）

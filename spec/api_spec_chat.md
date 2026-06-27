@@ -359,7 +359,7 @@ interface UpdatePrivateMessageRequest {
 
 ### POST /api/v1/private_messages/recall
 
-撤回私聊消息。发送者只能撤回 2 分钟内的消息。
+撤回私聊消息。发送者只能撤回撤回时间窗内的消息，窗口由 `AppConfig.limits.message_recall_window_seconds` 控制（客户端通过 `ClientConfig.limits` 读取），超时返回 `10400`。
 
 - **认证**: 必须
 - **幂等**: 幂等语义（重复请求返回一致结果）
@@ -486,7 +486,7 @@ interface UpdateGroupMessageRequest {
 
 ### POST /api/v1/group_messages/recall
 
-撤回群聊消息。发送者可撤回 2 分钟内消息，群组管理员/群主可撤回任何消息。
+撤回群聊消息。发送者可撤回撤回时间窗内的消息（窗口由 `AppConfig.limits.message_recall_window_seconds` 控制），群组管理员/群主可撤回任何消息，超时返回 `10400`。
 
 - **认证**: 必须
 - **幂等**: 幂等语义（重复请求返回一致结果）

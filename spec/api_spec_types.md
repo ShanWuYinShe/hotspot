@@ -304,23 +304,27 @@ interface GroupItem {
   group: GroupInfo;
   description?: string;
   tags?: string[];
-  has_password: boolean;
-  
+
+  // === @member-only 以下字段仅群成员视角返回 ===
+  // 设计说明：密码状态不对未加入的匿名/非成员暴露（避免向爬虫/爆破者提供精准线索）。
+  // 成员可见以便了解群组门槛；未加入用户通过 join 流程时才感知密码要求。
+  has_password?: boolean;
+
   // 位置信息：统一使用 RelativeLocation
   // - 列表/搜索/Feed 场景：distance / bearing_degrees 由服务端基于 reference_point 计算
   // - 详情场景（open_the_door）：distance / bearing_degrees 为 undefined
   location: RelativeLocation;
-  
+
   // 列表/详情页返回
   last_activity_at?: string;     // 最近活跃时间（最后消息/公告/成员变动等）
-  
+
   // 详情页返回，搜索/列表不返回
   created_at?: string;
   owner_id?: string;
-  
+
   // === @auth-only 以下字段仅登录态返回 ===
   my_state?: MyGroupState;
-  
+
   // Feed 场景返回（好友中有多少在该群组内）
   friends_in_group?: number;
 
@@ -532,6 +536,7 @@ interface AppLimits {
   moment_description_max_length: number;
   comment_max_length: number;
   search_radius_max: number;  // 搜索半径上限（米），用于搜索和 Feed 相关接口
+  message_recall_window_seconds: number;  // 消息撤回时间窗（秒），发送者仅可撤回该窗口内的消息；0 表示不允许撤回
 }
 
 // 联系/合规信息（客户端可见）
