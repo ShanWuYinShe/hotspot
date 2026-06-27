@@ -10,8 +10,9 @@
   const isOnChatRoot = $derived($page.url.pathname === '/chat');
 </script>
 
-{#if platformStore.isWide}
-  <!-- Wide (desktop + 横屏/大尺寸平板): bounded split-pane master-detail workspace -->
+{#if platformStore.useMasterDetail}
+  <!-- Wide (desktop + 横屏/大尺寸平板): split-pane master-detail 工作区。
+       会话列表常驻左栏，详情在右栏。窄屏（见 {:else}）退化为单列全屏导航。 -->
   <div class="page-pad box-border h-full min-h-0">
     <div
       class="page-shell page-shell--wide flex h-full min-h-0 overflow-hidden rounded-[var(--radius-button)]"

@@ -16,7 +16,7 @@ import { AppRouter, ChatRouteParam, LoginRouteParam } from '../../../core/router
 import { PageNames } from '../../../constants/AppConstants';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { SystemAvatar } from '../../../components/SystemAvatar';
-import { isWideForm } from '../../../core/responsive/Breakpoint';
+import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -724,7 +724,7 @@ export struct ProfilePage {
         }
         .width('100%')
         .height('100%')
-        .constraintSize({ maxWidth: isWideForm(this.currentBreakpoint) ? 720 : '100%' })
+        .constraintSize({ maxWidth: useMasterDetail(this.currentBreakpoint) ? 720 : '100%' })
       }
       .width('100%')
       .height('100%')
@@ -1098,7 +1098,7 @@ export struct ProfilePage {
     .scrollBar(BarState.Auto)
   }
 
-  // ==================== 注册用户界面 (Figma Make ProfileMobile 对齐) ====================
+  // ==================== 注册用户界面 ====================
   @Builder
   private buildRegisteredUserView() {
     Column() {
@@ -1365,9 +1365,9 @@ export struct ProfilePage {
   }
 
   // 我的瞬间九宫格：按列数分行（避开 ArkUI 不支持的 calc，用 Row + layoutWeight 等宽）。
-  // 列数随断点变化：宽屏(≥960) 3 列，窄屏 2 列（对齐前端 grid-cols-2 md:grid-cols-3）。
+  // 列数随断点变化：宽屏(master-detail) 3 列，窄屏 2 列（对齐前端 grid-cols-2 md:grid-cols-3）。
   private getMomentColumns(): number {
-    return isWideForm(this.currentBreakpoint) ? 3 : 2;
+    return useMasterDetail(this.currentBreakpoint) ? 3 : 2;
   }
 
   private getMomentRows(): MomentItem[][] {

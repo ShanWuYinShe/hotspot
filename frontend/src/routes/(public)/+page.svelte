@@ -208,8 +208,9 @@
   <title>{t('home.title')}</title>
 </svelte:head>
 
-{#if !platformStore.isWide}
-  <!-- Narrow (mobile + portrait/small tablet): centered single column -->
+{#if !platformStore.useMasterDetail}
+  <!-- Narrow (mobile + portrait/small tablet): centered single column
+       宽屏改用双栏工作区编排（见 {:else}）。信息架构级差异，容器查询无法消解。 -->
   <div class="flex flex-col">
     <!-- Sticky header -->
     <div

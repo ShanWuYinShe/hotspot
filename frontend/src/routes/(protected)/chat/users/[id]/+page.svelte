@@ -382,7 +382,7 @@
 
 <div
   class="flex min-w-0 flex-col overflow-hidden"
-  style="{platformStore.isWide
+  style="{platformStore.useMasterDetail
     ? 'height: 100%; width: 100%; flex: 1; border: 1px solid var(--border-theme);'
     : 'height: calc(100dvh - env(safe-area-inset-bottom, 0px)); width: 100%;'} background: var(--surface-bg);"
 >
@@ -391,7 +391,7 @@
     class="flex h-16 shrink-0 items-center gap-3 px-4"
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
-    {#if !platformStore.isWide}
+    {#if !platformStore.useMasterDetail}
       <BackButton onclick={handleBackClick} size={36} />
     {/if}
 

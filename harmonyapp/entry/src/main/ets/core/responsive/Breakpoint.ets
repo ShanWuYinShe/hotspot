@@ -80,6 +80,30 @@ export function isWideForm(bp: BreakpointType): boolean {
   return getBreakpointVp(bp) >= WIDE_MIN_VP;
 }
 
+// ── 语义化派生量：表达「布局意图」而非「设备类型」（对齐前端 platformStore 同名派生量）。
+//    业务页应优先引用这些语义名，而非裸用 isWideForm/isDesktopForm，让代码读起来是
+//    「我要双栏」而不是「我在桌面上」。
+
+/** 采用 master-detail 信息架构（双栏 / split-pane）。
+ *  对齐前端 platformStore.useMasterDetail（= isWide ≥960）。
+ *  用于 discover / message / nearby / profile 等存在「双栏 vs 单列」布局差异的页面。 */
+export function useMasterDetail(bp: BreakpointType): boolean {
+  return isWideForm(bp);
+}
+
+/** 采用常驻侧栏导航 chrome（桌面顶栏+侧边栏）。
+ *  对齐前端 platformStore.useSidebarChrome（= isDesktop ≥1280）。
+ *  用于 Layout / Index 的 chrome 装配分支。 */
+export function useSidebarChrome(bp: BreakpointType): boolean {
+  return isDesktopForm(bp);
+}
+
+/** 桌面侧栏已直达某入口，页面内隐藏冗余入口（返回/创建按钮等）。
+ *  对齐前端 platformStore.hideRedundantEntry（= isDesktop ≥1280）。 */
+export function hideRedundantEntry(bp: BreakpointType): boolean {
+  return isDesktopForm(bp);
+}
+
 /** 断点档位对应的最小 vp（用于语义阈值判断） */
 function getBreakpointVp(bp: BreakpointType): number {
   switch (bp) {
@@ -162,14 +186,15 @@ export const GRID_GUTTER_Y: BreakpointNumberMap = {
 };
 
 /**
- * 容器最大宽度（vp）— 与 frontend content max-width 对齐
- * 桌面端限制内容最大宽度，避免超宽屏铺满
+ * 容器最大宽度（vp）— 与 frontend app.css 布局 token 严格对齐：
+ *   --measure-narrow(720) / --measure-medium(960) / --measure-default(1180) / --measure-wide(1320)
+ * 桌面端限制内容最大宽度，避免超宽屏铺满。
  */
 export const CONTAINER_MAX_WIDTH_VP: BreakpointNumberMap = {
-  xs: 0,    // 充满
-  sm: 0,
-  md: 720,
-  lg: 960,
-  xl: 1200,
-  xxl: 1440
+  xs: 0,    // 充满（手机竖屏）
+  sm: 0,    // 充满
+  md: 720,  // 手机横屏 / 平板竖屏 → --measure-narrow
+  lg: 960,  // 平板横屏 → --measure-medium
+  xl: 1180, // 桌面 → --measure-default
+  xxl: 1320 // 宽屏桌面 → --measure-wide
 };

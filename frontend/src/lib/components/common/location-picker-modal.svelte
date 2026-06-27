@@ -303,13 +303,8 @@
     }, 2000);
   }
 
-  function createMarkerIcon(image: string): AMap.Icon {
-    return new AMap.Icon({
-      size: new AMap.Size(40, 50),
-      image,
-      imageSize: new AMap.Size(40, 50),
-      imageOffset: new AMap.Pixel(0, 0)
-    });
+  function createHotspotMarkerContent(svgUrl: string): string {
+    return `<div class="map-icon-marker"><img src="${svgUrl}" alt="" /></div>`;
   }
 
   function disposeRenderMarkers(markers: AMap.Marker[], clusterer: AMapMarkerCluster | null) {
@@ -369,7 +364,7 @@
     });
     selectedMarker = new AMap.Marker({
       position: [gcjLng, gcjLat],
-      icon: createMarkerIcon('/map/marker_center_pin.svg'),
+      content: createHotspotMarkerContent('/map/marker_center_pin.svg'),
       anchor: DEFAULT_MARKER_ANCHOR,
       offset: new AMap.Pixel(0, 0),
       clickable: false,
@@ -653,7 +648,7 @@
 
     const marker = new AMap.Marker({
       position,
-      icon: createMarkerIcon(getMarkerIconUrl('cluster')),
+      content: createHotspotMarkerContent(getMarkerIconUrl('cluster')),
       anchor: DEFAULT_MARKER_ANCHOR,
       offset,
       clickable: true,
@@ -836,7 +831,7 @@
       const position: [number, number] = [meta.center.lng, meta.center.lat];
       const marker = new AMap.Marker({
         position,
-        icon: createMarkerIcon('/map/marker_cluster.svg'),
+        content: createHotspotMarkerContent('/map/marker_mixed_cluster.svg'),
         anchor: DEFAULT_MARKER_ANCHOR,
         clickable: true
       });
@@ -944,10 +939,11 @@
             });
             const marker = new AMap.Marker({
               position: [gcjLng, gcjLat],
-              icon: createMarkerIcon(getHotspotMarkerIcon(item)),
+              content: createHotspotMarkerContent(getHotspotMarkerIcon(item)),
               anchor: DEFAULT_MARKER_ANCHOR,
               clickable: true
             });
+            (marker as unknown as Record<string, unknown>)['lnglat'] = marker.getPosition();
             marker.setExtData?.(item);
             marker.on('click', (event) => {
               event.stopPropagation?.();
@@ -2875,71 +2871,64 @@
     }
   }
 
-  :global(.map-render-marker) {
+  :global(.map-icon-marker) {
+    width: 36px;
+    height: 48px;
     display: flex;
-    min-width: 4.4rem;
-    max-width: 10rem;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.22rem;
-    border: 1px solid transparent;
-    border-radius: 1.15rem;
-    padding: 0.5rem 0.72rem 0.56rem;
-    font-size: 0.72rem;
-    font-weight: 700;
-    line-height: 1.1;
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.2);
+    align-items: flex-end;
+    justify-content: center;
+    background: transparent;
+  }
+
+  :global(.map-icon-marker img) {
+    display: block;
+    width: 36px;
+    height: 48px;
+    background: transparent;
+  }
+
+  :global(.map-render-marker) {
+    position: relative;
+    width: 36px;
+    height: 48px;
     cursor: pointer;
-    white-space: normal;
-    text-align: left;
-    backdrop-filter: blur(10px);
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
   }
 
   :global(.map-render-marker::before) {
     content: '';
     display: block;
-    width: 24px;
-    height: 32px;
+    width: 36px;
+    height: 48px;
     background-repeat: no-repeat;
-    background-position: left bottom;
+    background-position: center;
     background-size: contain;
   }
 
   :global(.map-render-marker-badge) {
-    display: inline-flex;
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    display: flex;
     align-items: center;
-    border-radius: var(--radius-pill);
-    padding: 0.2rem 0.46rem;
-    font-size: 0.58rem;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0 4px;
+    font-size: 10px;
     font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  :global(.map-render-marker-title) {
-    display: -webkit-box;
-    overflow: hidden;
-    max-width: 100%;
-    font-size: 0.76rem;
-    font-weight: 800;
-    line-height: 1.15;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    line-height: 1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    z-index: 1;
   }
 
   :global(.map-render-marker-user) {
-    background: rgba(255, 255, 255, 0.96);
-    color: rgb(15, 23, 42);
-    border: 1px solid rgba(148, 163, 184, 0.45);
+    background: transparent !important;
   }
 
   :global(.map-render-marker-user .map-render-marker-badge) {
-    background: rgba(15, 23, 42, 0.08);
-    color: rgba(15, 23, 42, 0.72);
+    background: #2563eb;
+    color: #fff;
   }
 
   :global(.map-render-marker-user::before) {
@@ -2947,13 +2936,12 @@
   }
 
   :global(.map-render-marker-group) {
-    background: linear-gradient(180deg, rgba(14, 165, 233, 0.98), rgba(2, 132, 199, 0.98));
-    color: var(--text-on-overlay);
+    background: transparent !important;
   }
 
   :global(.map-render-marker-group .map-render-marker-badge) {
-    background: rgba(255, 255, 255, 0.18);
-    color: rgba(255, 255, 255, 0.82);
+    background: #059669;
+    color: #fff;
   }
 
   :global(.map-render-marker-group::before) {
@@ -2961,13 +2949,12 @@
   }
 
   :global(.map-render-marker-moment) {
-    background: linear-gradient(180deg, rgba(249, 115, 22, 0.98), rgba(234, 88, 12, 0.98));
-    color: var(--text-on-overlay);
+    background: transparent !important;
   }
 
   :global(.map-render-marker-moment .map-render-marker-badge) {
-    background: rgba(255, 255, 255, 0.18);
-    color: rgba(255, 255, 255, 0.82);
+    background: #ea580c;
+    color: #fff;
   }
 
   :global(.map-render-marker-moment::before) {
@@ -2975,13 +2962,12 @@
   }
 
   :global(.map-render-marker-cluster) {
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96));
-    color: var(--text-on-overlay);
+    background: transparent !important;
   }
 
   :global(.map-render-marker-cluster .map-render-marker-badge) {
-    background: rgba(96, 165, 250, 0.2);
-    color: rgba(191, 219, 254, 0.95);
+    background: #0f172a;
+    color: #fff;
   }
 
   :global(.map-render-marker-cluster::before) {

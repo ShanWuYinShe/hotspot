@@ -5,7 +5,7 @@
 
 import { GlobalStateManager, KEY_IS_LOGGED_IN, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
-import { isWideForm } from '../../../core/responsive/Breakpoint';
+import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
@@ -336,8 +336,8 @@ export struct NearbyPage {
       // 粘性头部
       this.buildStickyHeader()
 
-      if (isWideForm(this.currentBreakpoint)) {
-        // ======== 宽屏（≥960）：双栏工作区（对齐前端首页 isWide 分支）========
+      if (useMasterDetail(this.currentBreakpoint)) {
+        // ======== 宽屏（master-detail）：双栏工作区（对齐前端 useMasterDetail）========
         // 左栏：HeroStats 统计 + 附近群组横滑
         Row() {
           // 左栏

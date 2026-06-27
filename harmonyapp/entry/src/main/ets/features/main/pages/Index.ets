@@ -37,7 +37,7 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
-import { isMobileForm, type BreakpointType } from '../../../core/responsive/Breakpoint';
+import { useSidebarChrome, type BreakpointType } from '../../../core/responsive/Breakpoint';
 import { PhoneLayout } from '../../../components/layout/PhoneLayout';
 import { DesktopLayout } from '../../../components/layout/DesktopLayout';
 import { curves } from '@kit.ArkUI';
@@ -827,7 +827,7 @@ struct Index {
         // 无需手写 .navDestination() 映射。根视图 = PhoneLayout / DesktopLayout（tab 容器）。
         // 缺少此宿主时 pushPathByName 只填栈不渲染，导致除 tab 外所有菜单点击静默失效。
         Navigation(this.navPathStack) {
-          if (isMobileForm(this.currentBreakpoint)) {
+          if (!useSidebarChrome(this.currentBreakpoint)) {
             PhoneLayout({
               currentTabIndex: $currentTabIndex,
               showCreateSheet: $showCreateSheet,

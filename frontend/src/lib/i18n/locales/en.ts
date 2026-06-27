@@ -11,6 +11,7 @@ export default {
     logout: 'Log Out',
     loginRegister: 'Sign In / Sign Up',
     loginOrRegister: 'Sign in or sign up',
+    login: 'Sign In',
     nearby: 'Nearby',
     discover: 'Discover',
     menu: 'Menu',

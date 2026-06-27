@@ -135,16 +135,18 @@
   <title>设置 - HotSpot</title>
 </svelte:head>
 
-{#if platformStore.isWide}
-  <!-- Wide (landscape/large tablet + desktop): two-column split layout -->
+{#if platformStore.useMasterDetail}
+  <!-- Wide (landscape/large tablet + desktop): master-detail 两栏
+       左栏导航 + 右栏按 section 切换。窄屏改用长滚动（见 {:else}），
+       这是信息架构级差异，非纯布局——容器查询无法消解。 -->
   <div class="flex h-full">
     <!-- Left navigation panel -->
     <div
       class="flex flex-shrink-0 flex-col overflow-y-auto no-scrollbar"
       style="width: 260px; border-right: 1px solid var(--border-theme); padding: 20px 16px;"
     >
-      {#if !platformStore.isDesktop}
-        <!-- Tablet 没有侧边栏，设置是子页：自带返回头部，避免被困 -->
+      {#if !platformStore.hideRedundantEntry}
+        <!-- 非桌面（无常驻侧栏）：设置是子页，自带返回头部，避免被困。 -->
         <div class="mb-3 flex items-center gap-2.5">
           <BackButton onclick={() => history.back()} size={40} />
           <h1 class="page-title" style="color: var(--text-primary);">设置</h1>
@@ -488,7 +490,7 @@
           </div>
         {/if}
 
-        <!-- Theme picker (standalone section, matching Figma Make) -->
+        <!-- Theme picker (standalone section) -->
         <p
           class="text-xs px-1"
           style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-top: 8px"

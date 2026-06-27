@@ -18,10 +18,9 @@
   interface Props {
     moment: MomentItem;
     class?: string;
-    dense?: boolean;
   }
 
-  let { moment, class: className = '', dense = false }: Props = $props();
+  let { moment, class: className = '' }: Props = $props();
 
   const likeAction = useOptimisticToggle({
     initialValue: () => moment.my_state?.is_liked ?? false,
@@ -38,7 +37,7 @@
 
   const primaryImage = $derived(moment.images?.[0]);
   const imageCount = $derived(moment.images?.length ?? 0);
-  const visibleTags = $derived((moment.tags ?? []).slice(0, dense ? 2 : 3));
+  const visibleTags = $derived((moment.tags ?? []).slice(0, 3));
   const timeText = $derived(formatRelativeTime(moment.created_at));
   const distanceText = $derived(
     moment.location?.distance != null ? formatDistance(moment.location.distance) : ''
@@ -114,7 +113,7 @@
 </script>
 
 <div
-  class="moment-card {dense ? 'moment-card--dense' : ''} {className}"
+  class="moment-card {className}"
   onclick={handleCardClick}
   role="link"
   tabindex={0}
@@ -138,7 +137,7 @@
         src={moment.user.avatar_url}
         name={moment.user.nickname}
         alt={moment.user.nickname}
-        size={dense ? 32 : 40}
+        size={40}
         border={false}
       />
     </a>
@@ -308,13 +307,6 @@
       var(--hover-shadow-card);
   }
 
-  .moment-card--dense {
-    --card-pad-x: 14px;
-    --card-pad-y: 12px;
-    --media-ratio: 4 / 3;
-    border-radius: var(--radius-md);
-  }
-
   .moment-card__header {
     display: flex;
     min-width: 0;
@@ -333,11 +325,6 @@
     border-radius: var(--radius-pill);
     background: var(--surface-bg);
     box-shadow: var(--shadow-sm);
-  }
-
-  .moment-card--dense .moment-card__avatar {
-    width: 34px;
-    height: 34px;
   }
 
   /* :global 穿透到子组件(Avatar / SmartImage)内的 <img>，否则 scoped CSS 不生效 */
@@ -408,10 +395,6 @@
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 8%, transparent);
   }
 
-  .moment-card--dense .moment-card__media {
-    border-radius: var(--radius-md);
-  }
-
   .moment-card__media-shade {
     position: absolute;
     inset: 0;
@@ -444,11 +427,6 @@
     padding: 12px var(--card-pad-x) 8px;
   }
 
-  .moment-card--dense .moment-card__body {
-    gap: 8px;
-    padding-top: 10px;
-  }
-
   .moment-card__description {
     display: -webkit-box;
     overflow: hidden;
@@ -458,13 +436,6 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
     line-clamp: 3;
-  }
-
-  .moment-card--dense .moment-card__description {
-    font-size: var(--text-meta);
-    line-height: 1.58;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
   }
 
   .moment-card__tags {

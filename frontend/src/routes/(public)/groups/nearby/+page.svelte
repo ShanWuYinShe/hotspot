@@ -93,15 +93,17 @@
     class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
-    <div class:page-shell={!platformStore.isDesktop}>
+    <!-- 桌面端（常驻侧栏档）内容区全宽出血、无 shell 收束；其余档 shell 居中。
+         这是 ui-layout.md 明确的视口级例外（nearby 桌面最大化空间利用）。 -->
+    <div class:page-shell={!platformStore.useSidebarChrome}>
       <div class="mb-3 flex items-center gap-3">
-        {#if !platformStore.isDesktop}
+        {#if !platformStore.hideRedundantEntry}
           <BackButton onclick={handleBack} size={36} />
         {/if}
         <h1 class="text-h1 flex-1" style="font-weight: 600; color: var(--text-primary)">
           附近群组
         </h1>
-        {#if !platformStore.isDesktop}
+        {#if !platformStore.hideRedundantEntry}
           <button
             class="flex items-center justify-center rounded-full outline-none"
             style="width: 36px; height: 36px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
@@ -144,9 +146,10 @@
 
   <!-- List -->
   <div class="w-full page-pad">
-    <div class:page-shell={!platformStore.isDesktop}>
-      <!-- Summary — location/radius lives in the anchor entry, this only carries page stats -->
-      {#if platformStore.isDesktop}
+    <div class:page-shell={!platformStore.useSidebarChrome}>
+      <!-- Summary — 桌面用 hero 统计卡（与全宽出血协调）；其余档用 anchor pill + 计数。
+           location/radius 已在 anchor entry，此处只承载页面统计。 -->
+      {#if platformStore.useSidebarChrome}
         <div class="ambient-glow mb-5">
           <div
             class="surface-hero flex items-center gap-4 rounded-[var(--radius-lg)]"
@@ -183,7 +186,7 @@
       {/if}
 
       {#if pagination.loading}
-        <div class={!platformStore.isMobile ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
+        <div class="density-grid">
           {#each Array(6) as _, i (i)}
             <div
               class="animate-pulse rounded-[var(--radius-lg)]"
@@ -222,7 +225,7 @@
           fill
         />
       {:else}
-        <div class={!platformStore.isMobile ? 'feed-density-grid' : 'flex flex-col gap-2.5'}>
+        <div class="density-grid">
           {#each filteredGroups as group (group.group.group_id)}
             <GroupCard {group} showDistance showMembers variant="default" class="overflow-hidden" />
           {/each}

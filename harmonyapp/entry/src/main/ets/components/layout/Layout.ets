@@ -17,7 +17,7 @@
  *        build() { Layout({ currentBreakpoint: this.currentBreakpoint }) }
  */
 
-import { type BreakpointType, isMobileForm } from '../../core/responsive/Breakpoint';
+import { type BreakpointType, useSidebarChrome } from '../../core/responsive/Breakpoint';
 import { PhoneLayout } from './PhoneLayout';
 import { DesktopLayout } from './DesktopLayout';
 
@@ -26,7 +26,7 @@ export struct Layout {
   @Prop currentBreakpoint: BreakpointType;
 
   build() {
-    if (isMobileForm(this.currentBreakpoint)) {
+    if (!useSidebarChrome(this.currentBreakpoint)) {
       PhoneLayout();
     } else {
       DesktopLayout();

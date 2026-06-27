@@ -67,7 +67,7 @@
   --color-theme-accent-soft: var(--theme-accent-soft);
   --color-theme-accent-soft-border: var(--theme-accent-soft-border);
 
-  /* Semantic + map tokens (match Figma Make design system) */
+  /* Semantic + map tokens */
   --color-semantic-online: var(--semantic-online);
   --color-semantic-hot: var(--semantic-hot);
   --color-semantic-warning: var(--semantic-warning);
@@ -459,7 +459,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Theme: sand — 暖砂 warm-sand ceramic (matches Figma Make "暖砂" default)
+   Theme: sand — 暖砂 warm-sand ceramic (default theme)
    Character: sun-warmed stone, ceramic tactility, low-contrast embossing.
    Light:  warm sand #EFE7DA canvas, terracotta #B86F4B accent
    Dark:   warm brown #211B17 canvas, ember #D18A5D accent
@@ -1289,6 +1289,25 @@
     --safe-area-inset-left: env(safe-area-inset-left, 0px);
     --desktop-header-height: 52px;
     --desktop-sidebar-width: 192px;
+
+    /* 测量栏宽度（.page-shell / .feed-density-shell 的最大内容栏）。
+       取自原 max-width 硬编码值，抽出为 token 以便跨页一致 & 鸿蒙端镜像。 */
+    --measure-default: 1180px; /* feed / 列表 */
+    --measure-wide: 1320px; /* 表格 / 管理后台 */
+    --measure-narrow: 720px; /* 详情 / 阅读 */
+    --measure-form: 560px; /* 表单 / 设置 / 资料 */
+    --measure-medium: 960px; /* feed 中等密度 */
+    --measure-snarrow: 640px; /* feed 窄 */
+    /* 防贴边留白（原 max-width 算式里的 - 32px / - 40px） */
+    --measure-gutter: 32px;
+    --measure-gutter-wide: 40px;
+
+    /* 容器查询断点：组件按自身容器宽度（非视口）自适应的阈值。
+       见 ui-layout.md「容器查询原语」。 */
+    --cq-compact: 360px; /* 卡片最小宽度（grid 列宽下限） */
+    --cq-compact-sm: 280px;
+    --cq-narrow: 520px; /* 单列 ↔ 多列切换点 */
+    --cq-sidebar: 720px; /* sidebar-layout 主栏+侧栏并排阈值 */
   }
 
   .safe-area-bottom {
@@ -1325,7 +1344,7 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Mobile bottom nav (Figma Make MainLayout — glassmorphic) */
+  /* Mobile bottom nav (glassmorphic) */
   .mobile-bottom-nav {
     flex-shrink: 0;
     width: 100%;
@@ -1505,17 +1524,18 @@
 
   .page-shell {
     width: 100%;
-    max-width: min(1180px, calc(100vw - 32px));
+    /* 100% 而非 100vw：放进 desktop-main-card 等容器内时按容器宽度收束，不溢出。 */
+    max-width: min(var(--measure-default), calc(100% - var(--measure-gutter)));
     margin-inline: auto;
   }
   .page-shell--wide {
-    max-width: min(1320px, calc(100vw - 32px));
+    max-width: min(var(--measure-wide), calc(100% - var(--measure-gutter)));
   }
   .page-shell--narrow {
-    max-width: min(720px, calc(100vw - 32px));
+    max-width: min(var(--measure-narrow), calc(100% - var(--measure-gutter)));
   }
   .page-shell--form {
-    max-width: min(560px, calc(100vw - 32px));
+    max-width: min(var(--measure-form), calc(100% - var(--measure-gutter)));
   }
 
   /* 响应式留白：横向随视口缩放，底部更宽以容纳加载更多/安全区 */
@@ -1535,25 +1555,24 @@
 
   .feed-density-shell {
     width: 100%;
-    max-width: min(1180px, calc(100vw - 32px));
+    max-width: min(var(--measure-default), calc(100% - var(--measure-gutter)));
     margin-inline: auto;
   }
 
   .feed-density-shell--narrow {
-    max-width: min(640px, calc(100vw - 32px));
+    max-width: min(var(--measure-snarrow), calc(100% - var(--measure-gutter)));
   }
 
   .feed-density-shell--medium {
-    max-width: min(960px, calc(100vw - 40px));
+    max-width: min(var(--measure-medium), calc(100% - var(--measure-gutter-wide)));
   }
 
+  /* feed-density-pad / -pad-x 与 .page-pad / .page-pad-x 逐字等价（已合并去重）。
+     保留类名作为别名，避免改动 discover / nearby 等现有页面。 */
   .feed-density-pad {
     padding: clamp(14px, 2vw, 24px) clamp(16px, 2.3vw, 28px) clamp(24px, 4vw, 40px);
   }
 
-  /* 仅横向留白，与 .feed-density-pad 的横向 clamp 完全一致。
-     用于 feed 类 sticky 头部：背景/分隔线全宽出血，内层 .feed-density-shell
-     收束内容，使头部与下方 feed 正文严格左对齐、共用同一测量栏宽度。 */
   .feed-density-pad-x {
     padding-inline: clamp(16px, 2.3vw, 28px);
   }
@@ -1579,7 +1598,108 @@
     margin-bottom: clamp(16px, 2vw, 24px);
   }
 
-  /* Desktop header (Figma Make DesktopLayout) */
+  /* ───────────────────────────────────────────────────────────────
+     容器查询布局原语（component-driven responsiveness）
+     组件按自身容器宽度自适应，零视口判断、零 platformStore 引用。
+     选用决策树见 .claude/rules/ui-layout.md「容器查询原语」。
+
+     设计参照：GitHub Primer「两层抽象」+ Josh Comeau 混合模式——
+     视口层只管导航 chrome（见 app-shell.svelte），组件层全部走本原语。
+     ─────────────────────────────────────────────────────────────── */
+
+  /* .switcher —— N 项水平排列，空间不够自动堆叠。
+     替代各页 `isWide ? 水平行 : 纵向堆叠` 的 JS 判断。
+     一行 flex+wrap 即可，无需 @container（浏览器按可用宽度自动换行）。 */
+  .switcher {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--switcher-gap, 1rem);
+  }
+  .switcher > * {
+    /* 每项至少这么宽，不够就换行；够宽就等分。 */
+    flex: 1 1 var(--switcher-threshold, var(--cq-compact));
+  }
+
+  /* .cluster —— 一组内联元素，够宽排一行、不够就换行（工具栏、标签组）。 */
+  .cluster {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--cluster-gap, 0.5rem);
+    align-items: center;
+  }
+  /* cluster 子项按内容尺寸，不强制等分（与 switcher 的区别）。 */
+  .cluster > * {
+    flex: 0 1 auto;
+  }
+
+  /* .density-grid —— 通用卡片网格，按容器宽度自动决定列数。
+     容器窄（<520px）单列；够宽则按卡片最小宽度自动铺列。
+     替代各页 `!isMobile ? 'feed-density-grid' : 'flex flex-col'` 的 class 切换。 */
+  .density-grid {
+    container-type: inline-size;
+    container-name: density;
+    display: grid;
+    gap: var(--density-gap, clamp(14px, 1.6vw, 22px));
+    /* 默认单列（窄容器兜底）。 */
+    grid-template-columns: 1fr;
+  }
+  @container density (min-width: 520px) {
+    .density-grid {
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--cq-compact)), 1fr));
+    }
+  }
+  /* --compact：更密的卡片网格（较小卡片最小宽度 + 更紧间距）。 */
+  .density-grid--compact {
+    --density-gap: clamp(12px, 1.4vw, 18px);
+  }
+  @container density (min-width: 520px) {
+    .density-grid--compact {
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--cq-compact-sm)), 1fr));
+    }
+  }
+  /* --list：强制单列纵列流（无论容器多宽），用于详情列表型场景。 */
+  .density-grid--list {
+    grid-template-columns: 1fr;
+  }
+
+  /* .sidebar-layout —— 主栏 + 固定宽侧栏，容器够宽才并排。
+     替代各页 settings/profile/chat 的 `260px 双栏 {#if isWide}` JS 分支。
+     第一个子元素是侧栏（固定宽），第二个是主内容（占满剩余、内部滚动）。
+     容器 < cq-sidebar 时自动堆叠为单列。 */
+  .sidebar-layout {
+    container-type: inline-size;
+    container-name: sidebar;
+    display: grid;
+    grid-template-columns: 1fr; /* 窄容器：单列堆叠 */
+    min-height: 0;
+  }
+  @container sidebar (min-width: 720px) {
+    .sidebar-layout {
+      grid-template-columns: var(--sidebar-width, 260px) 1fr;
+    }
+    /* 宽容器的两栏都各自滚动，避免整页滚动错位。 */
+    .sidebar-layout > * {
+      min-height: 0;
+      overflow-y: auto;
+    }
+  }
+  /* 侧栏分隔线：仅在并排时出现（堆叠态用 gap/分隔由页面控制）。 */
+  @container sidebar (min-width: 720px) {
+    .sidebar-layout > :first-child {
+      border-right: 1px solid var(--border-theme);
+    }
+  }
+
+  /* .back-on-wide —— 返回按钮：宽容器（双栏布局）下隐藏，窄容器显示。
+     用法：`<BackButton class="back-on-wide" />`（始终渲染，靠容器查询显隐）。
+     单个按钮节点极小，这是「少量双套渲染」的合理例外。 */
+  @container sidebar (min-width: 720px) {
+    .back-on-wide {
+      display: none;
+    }
+  }
+
+  /* Desktop header */
   .desktop-header {
     flex-shrink: 0;
     display: flex;
@@ -1616,7 +1736,7 @@
     outline-offset: 2px;
   }
 
-  /* Desktop sidebar (Figma Make) */
+  /* Desktop sidebar */
   .desktop-sidebar__nav-item {
     position: relative;
     display: flex;
@@ -1639,7 +1759,7 @@
     letter-spacing: 0.01em;
   }
 
-  /* Left accent indicator bar — only visible on hover (Figma Make) */
+  /* Left accent indicator bar — only visible on hover */
   .desktop-sidebar__nav-item::before {
     content: '';
     position: absolute;
@@ -1690,7 +1810,31 @@
     color: var(--theme-active-text);
   }
 
-  /* Desktop main content card (Figma Make) */
+  /* Sidebar current-page indicator — 当页面不在侧边栏导航体系内时，
+     在底部显示一个静默位置锚点，帮助用户保持方位感。
+     不触发任何 active/hover 样式，避免与正式导航项混淆。 */
+  .sidebar-current-page {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 4px;
+    padding: 6px 12px;
+    font-size: 11px;
+    color: var(--theme-text-muted);
+    opacity: 0.55;
+    user-select: none;
+    pointer-events: none;
+  }
+  .sidebar-current-page__dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--theme-text-muted);
+    flex-shrink: 0;
+    opacity: 0.55;
+  }
+
+  /* Desktop main content card */
   .desktop-main-card {
     flex: 1;
     overflow: hidden;
@@ -1724,7 +1868,7 @@
   background: rgba(255, 255, 255, 0.045);
 }
 
-/* Tablet glass-bg override (mobile=0.88, tablet=0.92 per Figma Make) */
+/* Tablet glass-bg override (mobile=0.88, tablet=0.92) */
 @media (min-width: 600px) and (max-width: 1279px) {
   :root,
   :root[data-theme-family='indigo']:not(.dark) {

@@ -385,11 +385,15 @@
   </div>
 {/snippet}
 
-<div class="flex" class:h-full={platformStore.isWide} class:overflow-hidden={platformStore.isWide}>
+<div
+  class="flex"
+  class:h-full={platformStore.useMasterDetail}
+  class:overflow-hidden={platformStore.useMasterDetail}
+>
   <div
     class="flex min-w-0 flex-1 flex-col"
-    class:overflow-y-auto={platformStore.isWide}
-    class:no-scrollbar={platformStore.isWide}
+    class:overflow-y-auto={platformStore.useMasterDetail}
+    class:no-scrollbar={platformStore.useMasterDetail}
   >
     <!-- Sticky header -->
     <div
@@ -399,7 +403,7 @@
       <div class="page-shell">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            {#if !platformStore.isDesktop}
+            {#if !platformStore.hideRedundantEntry}
               <BackButton onclick={() => history.back()} size={36} />
             {/if}
             <div>
@@ -714,7 +718,7 @@
       </div>
     </div>
   </div>
-  {#if platformStore.isWide}
+  {#if platformStore.useMasterDetail}
     <aside
       class="flex-shrink-0 overflow-y-auto no-scrollbar"
       style="width: 300px; border-left: 1px solid var(--border-theme); padding: 20px 16px;"

@@ -37,7 +37,7 @@ export struct ResponsiveContainer {
     .justifyContent(FlexAlign.Center)
   }
 
-  /** xs/sm 充满；md 起按断点限宽（720/960/1200/1440 vp）。 */
+  /** xs/sm 充满；md 起按断点限宽（720/960/1180/1320 vp，对齐 frontend --measure-* token）。 */
   private getContainerMaxWidth(): Length {
     switch (this.currentBreakpoint) {
       case 'md':

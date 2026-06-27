@@ -24,7 +24,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
-import { isWideForm } from '../../../core/responsive/Breakpoint';
+import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -448,7 +448,7 @@ export struct MessagePage {
   }
 
   private isChatSelected(item: ChatItem): boolean {
-    return isWideForm(this.currentBreakpoint) && this.selectedChatKey === this.getChatKey(item);
+    return useMasterDetail(this.currentBreakpoint) && this.selectedChatKey === this.getChatKey(item);
   }
 
   private getChatItemBackground(item: ChatItem): ResourceColor {
@@ -627,8 +627,8 @@ export struct MessagePage {
         AppRouter.push(PageNames.SEARCH);
       })
 
-      // 宽屏（≥960）提示：当前点击会话仍 push 独立页（保持聊天功能完整；详见阶段3评估）
-      if (isWideForm(this.currentBreakpoint)) {
+      // 宽屏（master-detail）提示：当前点击会话仍 push 独立页（保持聊天功能完整）
+      if (useMasterDetail(this.currentBreakpoint)) {
         Row({ space: DesignConstants.SPACING.SM }) {
           Text() {
             SymbolSpan($r(AppIcon.INFO))

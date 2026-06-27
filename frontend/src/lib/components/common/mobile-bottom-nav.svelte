@@ -10,8 +10,22 @@
   import { bottomTabs, isNavActive, type BottomTab } from '$lib/config/navigation';
   import Plus from 'lucide-svelte/icons/plus';
   import X from 'lucide-svelte/icons/x';
+  import LogIn from 'lucide-svelte/icons/log-in';
 
-  const navItems = bottomTabs;
+  // 未登录时隐藏需要登录的整页功能（消息/个人），用「登录」入口占位，
+  // 让未登录用户既能浏览、也能随时找到登录入口，而不会撞上用不了的 tab。
+  const loginTab: BottomTab = {
+    key: 'login',
+    labelKey: 'nav.login',
+    icon: LogIn,
+    href: '/auth'
+  };
+  const visibleTabs = $derived(
+    authStore.isAuthenticated
+      ? bottomTabs
+      : [...bottomTabs.filter((tab) => !tab.requiresAuth), loginTab]
+  );
+  const navItems = $derived(visibleTabs);
   const currentPath = $derived(page.url.pathname);
 
   function isActive(tab: BottomTab) {
@@ -20,8 +34,8 @@
 
   function navigate(tab: BottomTab) {
     if (!tab.href) return;
-    if (tab.requiresAuth && !authStore.isAuthenticated) {
-      uiStore.openLoginModalWithRedirect({ url: tab.href });
+    if (tab.key === 'login') {
+      uiStore.openLoginModalWithRedirect({});
       return;
     }
     void goto(tab.href);

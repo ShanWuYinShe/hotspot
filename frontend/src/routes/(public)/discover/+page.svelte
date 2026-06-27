@@ -169,46 +169,26 @@
   </div>
 {/snippet}
 
-<!-- Shared feed grid -->
-{#snippet feedGrid(mode: 'list' | 'grid2' | 'autofill')}
+<!-- Shared feed grid — 容器查询自适应列数，不再按设备档传 mode -->
+{#snippet feedGrid()}
   {#if feed.loading}
-    {#if mode === 'list'}
-      <div class="feed-density-list">
-        {#each Array(3) as _}
-          <div class="surface-flat rounded-[var(--radius-md)] overflow-hidden">
-            <div style="aspect-ratio: 16/9; background: var(--border-theme);"></div>
-            <div style="padding: 12px 16px;">
-              <div
-                class="rounded mb-2"
-                style="width: 80%; height: 12px; background: var(--border-theme);"
-              ></div>
-              <div
-                class="rounded"
-                style="width: 60%; height: 10px; background: var(--border-theme);"
-              ></div>
-            </div>
+    <div class="density-grid">
+      {#each Array(4) as _}
+        <div class="surface-flat rounded-[var(--radius-md)] overflow-hidden">
+          <div style="aspect-ratio: 16/9; background: var(--border-theme);"></div>
+          <div style="padding: 12px 16px;">
+            <div
+              class="rounded mb-2"
+              style="width: 80%; height: 12px; background: var(--border-theme);"
+            ></div>
+            <div
+              class="rounded"
+              style="width: 60%; height: 10px; background: var(--border-theme);"
+            ></div>
           </div>
-        {/each}
-      </div>
-    {:else}
-      <div class="feed-density-grid feed-density-grid--compact">
-        {#each Array(4) as _}
-          <div class="surface-flat rounded-[var(--radius-md)] overflow-hidden">
-            <div style="aspect-ratio: 16/9; background: var(--border-theme);"></div>
-            <div style="padding: 12px 16px;">
-              <div
-                class="rounded mb-2"
-                style="width: 80%; height: 12px; background: var(--border-theme);"
-              ></div>
-              <div
-                class="rounded"
-                style="width: 60%; height: 10px; background: var(--border-theme);"
-              ></div>
-            </div>
-          </div>
-        {/each}
-      </div>
-    {/if}
+        </div>
+      {/each}
+    </div>
   {:else if getFilteredItems().length === 0}
     <EmptyState
       icon={Compass}
@@ -226,20 +206,13 @@
         <MomentCard moment={items[0]} />
       </div>
     {/if}
-    <!-- Remaining items -->
-    {#if mode === 'list'}
-      <div class="feed-density-list">
-        {#each items.slice(1) as moment (moment.moment_id)}
-          <MomentCard {moment} />
-        {/each}
-      </div>
-    {:else}
-      <div class="feed-density-grid feed-density-grid--compact">
-        {#each items.slice(1) as moment (moment.moment_id)}
-          <MomentCard {moment} dense />
-        {/each}
-      </div>
-    {/if}
+    <!-- Remaining items — 统一 density-grid，卡片按容器列宽自适应（手机单列大卡、
+         平板两列、桌面多列），不再区分 list/grid2 mode 与 dense 变体。 -->
+    <div class="density-grid">
+      {#each items.slice(1) as moment (moment.moment_id)}
+        <MomentCard {moment} />
+      {/each}
+    </div>
     <LoadMoreButton
       loading={feed.loadingMore}
       hasMore={feed.hasMore}
@@ -326,7 +299,8 @@
   </div>
 {/snippet}
 
-{#if platformStore.isDesktop}
+{#if platformStore.useSidebarChrome}
+  <!-- Desktop（常驻侧栏档）：双栏 + 右侧 rightSidebar。rightSidebar 是桌面专属补充内容。 -->
   <div class="flex h-full flex-col">
     <div
       class="flex-shrink-0 px-6 pt-5 pb-0"
@@ -339,7 +313,7 @@
       <div class="flex-1 overflow-y-auto no-scrollbar feed-density-pad">
         <div class="feed-density-shell">
           {@render tagChips()}
-          {@render feedGrid('autofill')}
+          {@render feedGrid()}
         </div>
       </div>
 
@@ -351,40 +325,23 @@
       </div>
     </div>
   </div>
-{:else if platformStore.isTablet}
-  <div class="flex h-full flex-col">
-    <div
-      class="sticky top-0 z-10 flex-shrink-0 feed-density-pad-x pt-3 pb-3"
-      style="background: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
-    >
-      <div class="feed-density-shell feed-density-shell--medium">
-        {@render headerContent()}
-      </div>
-    </div>
-
-    <div
-      class="flex-1 overflow-y-auto no-scrollbar feed-density-shell feed-density-shell--medium feed-density-pad"
-    >
-      {@render tagChips()}
-      {@render feedGrid('grid2')}
-    </div>
-  </div>
 {:else}
+  <!-- Tablet + Mobile：统一单列 shell（自适应宽度）+ density-grid 自动列数。
+       不再区分 medium/narrow shell 与 grid2/list mode——density-grid 按容器宽度
+       自动决定手机单列 / 平板两列，卡片形态统一。 -->
   <div class="flex h-full flex-col">
     <div
       class="sticky top-0 z-10 flex-shrink-0 feed-density-pad-x pt-3 pb-3"
       style="background: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
-      <div class="feed-density-shell feed-density-shell--narrow">
+      <div class="feed-density-shell">
         {@render headerContent()}
       </div>
     </div>
 
-    <div
-      class="flex-1 overflow-y-auto no-scrollbar feed-density-shell feed-density-shell--narrow feed-density-pad"
-    >
+    <div class="flex-1 overflow-y-auto no-scrollbar feed-density-shell feed-density-pad">
       {@render tagChips()}
-      {@render feedGrid('list')}
+      {@render feedGrid()}
     </div>
   </div>
 {/if}

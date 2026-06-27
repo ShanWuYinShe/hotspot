@@ -68,11 +68,58 @@ sticky 容器负责**全宽出血**（背景色 + `border-bottom` 通栏），�
 
 **宽屏（`platformStore.isWide`，宽度 ≥960px）**：平板也要充分利用横向空间。内容密度优先用响应式宽度（`auto-fit` / `columns-*`），不用 `isDesktop` 把关多列。多列/两栏页面用 `isWide` 而非 `isDesktop`。master-detail 用 `isWide`。底栏不在 split-pane 里丢失。宽平板复用桌面分支时补齐导航 chrome。
 
+## 容器查询原语（component-driven responsiveness）
+
+组件按**自身容器宽度**自适应，零视口判断、零 `platformStore` 引用。设计参照 GitHub Primer「两层抽象」+ Josh Comeau 混合模式：视口层只管导航 chrome（见 `app-shell.svelte`），组件层全部走本原语。
+
+### 决策树：用哪个原语？
+
+| 场景 | 原语 | 说明 |
+| --- | --- | --- |
+| 卡片网格（列表/feed） | `.density-grid` | 容器窄单列，够宽按卡片最小宽自动铺列。替代 `!isMobile ? grid : flex`。`--compact` 更密，`--list` 强制单列 |
+| 主栏 + 固定宽侧栏（settings/profile/chat） | `.sidebar-layout` | 容器 ≥720px 并排，否则堆叠。第一子元素是侧栏，第二是主内容 |
+| N 项水平排列，不够就堆叠 | `.switcher` | 纯 flex+wrap，无需 `@container`。`--switcher-threshold` 控制换行阈值 |
+| 一组内联元素换行（标签/工具栏） | `.cluster` | 子项按内容尺寸不强制等分 |
+| 返回按钮宽屏隐藏 | `.back-on-wide` | 配合 `.sidebar-layout`：宽容器 `display:none` |
+
+### 用法
+
+```svelte
+<!-- 卡片网格：自动列数，无需任何 JS 判断 -->
+<div class="density-grid">
+  {#each items as item (item.id)}<Card {item} />{/each}
+</div>
+
+<!-- 主栏 + 侧栏：单一 DOM，容器查询切列 -->
+<div class="sidebar-layout" style="--sidebar-width: 260px;">
+  <aside><!-- 侧栏内容 --></aside>
+  <main><!-- 主内容（自动 overflow-y-auto）--></main>
+</div>
+```
+
+### 布局 token（app.css `:root`）
+
+测量栏宽度：`--measure-default`(1180) / `--measure-wide`(1320) / `--measure-narrow`(720) / `--measure-form`(560) / `--measure-medium`(960)。容器断点：`--cq-narrow`(520) / `--cq-sidebar`(720) / `--cq-compact`(360)。**禁止再硬编码这些数值**。
+
+## platformStore 语义化派生量
+
+业务页需要视口级判断时，**优先用语义化派生量**（表达「布局意图」而非「设备类型」），而非直接读 `isMobile/isTablet/isDesktop/isWide`：
+
+| 派生量 | 含义 | 典型场景 |
+| --- | --- | --- |
+| `useMasterDetail` | 宽屏采用 master-detail（左导航+右内容 / split-pane） | settings/profile/chat 的双栏 vs 长滚动 |
+| `useSidebarChrome` | 桌面常驻侧栏档（全宽内容区、rightSidebar） | nearby 全宽出血、discover 桌面双栏 |
+| `hideRedundantEntry` | 桌面侧栏已直达，页面内隐藏冗余入口（返回/创建按钮） | nearby/profile/notifications 的 BackButton |
+
+直接读 `isWide/isDesktop` 仅限：① `app-shell` 导航 chrome 装配 ② 上述派生量无法覆盖的特定视口行为。**纯布局密度差异必须走容器查询原语，不得用 JS 判断。**
+
 ## 红线
 
 - 禁止用 `max-w-3xl` / 内联 `max-width` 等各自为政——统一走 `.page-shell` 档位。
 - 禁止内容 `w-full` 平铺到容器边缘（无 max-width 又无 `page-pad`）。
 - 禁止 sticky 头部宽度与正文不一致。
-- 禁止 `isDesktop` 把关多列而把平板挤回单列——用 `!isMobile` / `isWide` / `auto-fit`。
+- **禁止业务页用 `platformStore.isMobile/isTablet/isDesktop/isWide` 切换纯布局密度**（多列/单列、grid/flex）——用 `.density-grid` 等容器查询原语。
+- 视口级判断（master-detail vs 长滚动、chrome 装配、入口去重）用语义化派生量（`useMasterDetail` / `useSidebarChrome` / `hideRedundantEntry`），禁止裸用 `isWide`。
+- 禁止硬编码测量栏宽度（1180/720/560…）与断点（600/960/1280…）——走布局 token。
 - 禁止在品牌色之上硬编码白字——用 `--text-on-accent`。例外：iOS 开关滑块、地图标记。
 - 改动布局后 `bun check` + `bun run build` 校验。

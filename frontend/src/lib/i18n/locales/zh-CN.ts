@@ -11,6 +11,7 @@ export default {
     logout: '退出登录',
     loginRegister: '登录 / 注册',
     loginOrRegister: '登录或注册',
+    login: '登录',
     nearby: '附近',
     discover: '发现',
     menu: '菜单',

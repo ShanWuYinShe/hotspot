@@ -2,7 +2,6 @@
   import { goto } from '$app/navigation';
   import { t } from '$lib/i18n';
   import { authStore } from '$lib/stores/auth.svelte';
-  import { uiStore } from '$lib/stores/ui.svelte';
   import { adminPermissionsStore } from '$lib/stores/admin-permissions.svelte';
   import AppShell from '$lib/components/layout/app-shell.svelte';
   import AdminSidebar from '$lib/components/common/admin-sidebar.svelte';
@@ -11,10 +10,6 @@
   import Shield from 'lucide-svelte/icons/shield';
 
   let { children } = $props();
-
-  function handleLoginClick() {
-    uiStore.openLoginModalWithRedirect({});
-  }
 </script>
 
 {#if authStore.isAuthenticated && adminPermissionsStore.isAdmin}
@@ -95,23 +90,6 @@
     </div>
   </AppShell>
 {:else}
-  <AppShell>
-    <div class="flex flex-col items-center justify-center py-20 text-center">
-      <div
-        class="mb-4 flex items-center justify-center rounded-full"
-        style="width: 56px; height: 56px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
-      >
-        <Shield size={24} strokeWidth={1.5} style="color: var(--text-secondary);" />
-      </div>
-      <h2 class="text-h1" style="font-weight: 600; color: var(--text-primary)">
-        {t('auth.loginRequired')}
-      </h2>
-      <p class="text-body" style="color: var(--text-secondary); margin-top: 8px">
-        {t('admin.loginRequiredDescription')}
-      </p>
-      <Button variant="flat" class="mt-6" onclick={handleLoginClick}>
-        {t('common.loginNow')}
-      </Button>
-    </div>
-  </AppShell>
+  <!-- 未登录：复用 AppShell 的统一整页登录占位（Lock 图标），与 (protected) 路由完全一致 -->
+  <AppShell requireAuth>{''}</AppShell>
 {/if}

@@ -541,9 +541,10 @@
   {/snippet}
 
   <!-- ═══════════════════════════════════════════════
-       WIDE (landscape/large tablet + desktop)
+       WIDE (landscape/large tablet + desktop): master-detail 双栏
+       窄屏改用长滚动（见 {:else}）。信息架构级差异，容器查询无法消解。
   ══════════════════════════════════════════════════ -->
-  {#if platformStore.isWide}
+  {#if platformStore.useMasterDetail}
     <div class="flex flex-col h-full">
       <!-- Sticky header -->
       <div
@@ -627,8 +628,8 @@
             {/each}
           </div>
 
-          <!-- Personal hub — 仅宽屏平板需要；桌面已有侧边栏直达各项，避免重复入口 -->
-          {#if !platformStore.isDesktop}
+          <!-- Personal hub — 仅宽屏平板（无侧栏直达）需要；桌面侧栏已直达各项，去重 -->
+          {#if !platformStore.hideRedundantEntry}
             {@render hubCard()}
           {/if}
         </div>

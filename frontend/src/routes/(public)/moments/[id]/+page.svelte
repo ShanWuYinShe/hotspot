@@ -21,6 +21,7 @@
   import SmartImage from '$lib/components/common/smart-image.svelte';
   import Send from 'lucide-svelte/icons/send';
   import Loader2 from 'lucide-svelte/icons/loader-2';
+  import LogIn from 'lucide-svelte/icons/log-in';
   import Pencil from 'lucide-svelte/icons/pencil';
   import CreateMomentModal from '$lib/components/common/create-moment-modal.svelte';
 
@@ -425,6 +426,22 @@
             </div>
           </div>
         </div>
+      {:else}
+        <!-- 未登录：不显示评论输入框，改为引导条，传递 submitComment 作为登录后补做动作 -->
+        <button
+          type="button"
+          class="flex w-full items-center gap-3 rounded-[var(--radius-lg)] p-4 text-left transition-colors"
+          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          onclick={() => uiStore.openLoginModal(submitComment)}
+        >
+          <span
+            class="flex flex-shrink-0 items-center justify-center rounded-full"
+            style="width: 32px; height: 32px; background: var(--brand); color: var(--text-on-accent);"
+          >
+            <LogIn size={16} />
+          </span>
+          <span class="text-sm" style="color: var(--text-secondary);">登录后评论</span>
+        </button>
       {/if}
 
       <!-- Comments -->

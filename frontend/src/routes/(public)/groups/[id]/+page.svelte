@@ -197,7 +197,6 @@
 
   function openAnnouncementDialog(announcement?: GroupAnnouncementItem) {
     if (!authStore.isAuthenticated) {
-      uiStore.saveRedirectUrl();
       uiStore.openLoginModal();
       return;
     }
@@ -217,7 +216,6 @@
 
   function openDeleteAnnouncement(announcement: GroupAnnouncementItem) {
     if (!authStore.isAuthenticated) {
-      uiStore.saveRedirectUrl();
       uiStore.openLoginModal();
       return;
     }
@@ -228,7 +226,6 @@
 
   async function submitAnnouncement() {
     if (!authStore.isAuthenticated) {
-      uiStore.saveRedirectUrl();
       uiStore.openLoginModal();
       return;
     }
@@ -301,7 +298,6 @@
 
   async function handleDeleteAnnouncement() {
     if (!authStore.isAuthenticated) {
-      uiStore.saveRedirectUrl();
       uiStore.openLoginModal();
       return;
     }
@@ -349,7 +345,6 @@
 
   async function handleMuteMember() {
     if (!authStore.isAuthenticated) {
-      uiStore.saveRedirectUrl();
       uiStore.openLoginModal();
       return;
     }
@@ -394,7 +389,6 @@
 
   async function handleUnmuteMember(member: GroupMemberItem) {
     if (!authStore.isAuthenticated) {
-      uiStore.saveRedirectUrl();
       uiStore.openLoginModal();
       return;
     }
@@ -428,7 +422,6 @@
 
   async function handleSetRole(role: SettableGroupRole) {
     if (!authStore.isAuthenticated) {
-      uiStore.saveRedirectUrl();
       uiStore.openLoginModal();
       return;
     }
@@ -469,7 +462,6 @@
 
   async function handleRemoveMember() {
     if (!authStore.isAuthenticated) {
-      uiStore.saveRedirectUrl();
       uiStore.openLoginModal();
       return;
     }
@@ -604,7 +596,6 @@
     action: 'approve' | 'reject'
   ) {
     if (!authStore.isAuthenticated) {
-      uiStore.saveRedirectUrl();
       uiStore.openLoginModal();
       return;
     }
@@ -641,7 +632,6 @@
 
   function openJoinDialog() {
     if (!authStore.isAuthenticated) {
-      uiStore.saveRedirectUrl();
       uiStore.openLoginModal();
       return;
     }
@@ -653,7 +643,6 @@
 
   async function handleJoin() {
     if (!authStore.isAuthenticated) {
-      uiStore.saveRedirectUrl();
       uiStore.openLoginModal();
       return;
     }
@@ -709,7 +698,6 @@
 
   function confirmLeave() {
     if (!authStore.isAuthenticated) {
-      uiStore.saveRedirectUrl();
       uiStore.openLoginModal();
       return;
     }
