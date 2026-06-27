@@ -77,7 +77,8 @@ interface RecommendationContext {
 // === 以下类型从各模块收归至此，作为跨模块共享的权威定义 ===
 
 // 性别枚举（原定义于 api_spec_user.md）
-type Gender = 'male' | 'female' | 'apache_helicopter';
+// 'other' 为包容性取值，覆盖非二元/不愿透露等场景，不使用任何特定梗或戏谑命名
+type Gender = 'male' | 'female' | 'other';
 
 // 私聊权限（原定义于 api_spec_user.md）
 // 注：'friends' 表示"仅好友"，好友 = 双方互相关注的用户
