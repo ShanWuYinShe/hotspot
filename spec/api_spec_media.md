@@ -49,7 +49,24 @@
 | `chat_image` | image/jpeg, image/png, image/webp, image/gif | 10MB | 聊天图片 |
 | `chat_video` | video/mp4, video/quicktime | 100MB | 聊天视频 |
 | `chat_audio` | audio/mpeg, audio/aac, audio/ogg | 20MB | 聊天语音 |
-| `chat_file` | 任意类型 | 100MB | 聊天文件 |
+| `chat_file` | 见下方黑名单约束 | 100MB | 聊天文件 |
+
+## 分类限制
+
+### chat_file 安全约束（黑名单）
+
+`chat_file` 允许传输用户自定义文件，但为防止恶意载荷（XSS、脚本注入、可执行攻击），服务端必须拒绝以下类型，返回 `10000`（参数错误）：
+
+| 禁止类型 | 原因 |
+|---------|------|
+| 可执行类（`.exe`/`.bat`/`.cmd`/`.sh`/`.app`/`.msi`/`.com`/`.scr` 等） | 防止恶意可执行文件传播 |
+| 脚本/标记类（`.html`/`.htm`/`.svg`/`.js`/`.xhtml`） | 防止客户端渲染时触发 XSS / 脚本注入（`.svg` 可内嵌 JS） |
+| 服务端脚本类（`.php`/`.jsp`/`.asp`/`.aspx`） | 防止误在服务端被解析执行 |
+
+**实现要求**：
+- 校验基于**文件扩展名 + MIME 类型双判定**（任一命中黑名单即拒绝），防止单纯改扩展名绕过
+- MIME 类型与扩展名不一致时返回 `10000`（如 `.png` 扩展名但 `text/html` MIME）
+- 未明确禁止的类型默认允许
 
 ## 端点详情
 
@@ -144,7 +161,10 @@ interface CompleteUploadRequest {
 }
 ```
 
-**幂等行为**：相同 `upload_id` + 相同 `Idempotency-Key` 的重复请求直接返回首次成功的完整响应；在上传已完成的情况下使用不同 `Idempotency-Key` 会触发 `10400`。
+**幂等行为**（遵循 `api_spec_base.md` 幂等契约，Key 绑定 `(user_id + endpoint + key)`）：
+- 相同 `Idempotency-Key` 的重试：直接返回首次成功的完整响应（缓存的 `file_id`）
+- **不同 `Idempotency-Key` 但同一 `upload_id` 已完成上传**：返回**成功**（缓存的 `file_id`），不报错——这是幂等成功语义，与 base.md 一致。`upload_id` 完成上传后即不可重复完成，重提只返回已有结果
+- `upload_id` 与 `Idempotency-Key` 不绑定：幂等键防的是"网络重试导致重复副作用"，不作为上传资源的占用锁
 
 **Response**: `ApiResponse<UploadedMedia>`
 ```typescript
@@ -162,5 +182,5 @@ interface UploadedMedia {
 **错误码**: `10000` `10300` `10400`
 
 **错误码说明**：
-- `10300`：upload_id 不存在（如恶意请求发送了不存在的 upload_id）
-- `10400`：业务冲突，包括：文件直传尚未完成（对象存储上传未到位）；或 `upload_id` 已完成上传，但使用不同 Idempotency-Key 再次提交（相同 Key 重试则返回缓存的成功响应）
+- `10300`：`upload_id` 不存在（如恶意请求发送了不存在的 upload_id）
+- `10400`：业务冲突——文件直传尚未完成（对象存储上传未到位），客户端应完成直传后重试

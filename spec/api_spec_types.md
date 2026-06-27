@@ -106,6 +106,14 @@ type NotificationType =
   | 'group_application_accepted'
   | 'system_announcement';
 
+// 通知分类（用于未读计数分组展示，见 api_spec_notification.md unread_count.by_type）
+// 映射为契约级，新增 NotificationType 时必须同步归类：
+// - social:        new_follower, mutual_follow
+// - interaction:   moment_liked, moment_commented, comment_liked, comment_reply, mentioned
+// - group:         group_invite_received, group_invite_accepted, group_application_received, group_application_accepted
+// - system:        system_announcement
+type NotificationCategory = 'social' | 'interaction' | 'group' | 'system';
+
 // 不可发消息原因（原定义于 api_spec_chat.md）
 // 设计说明：被拉黑场景统一返回 'privacy'，不暴露拉黑状态（隐私保护）
 type MessageBlockedReason =

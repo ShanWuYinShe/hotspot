@@ -28,6 +28,8 @@
 - `MomentSummary`
 - `FollowSource`
 - `AnnouncementSeverity`
+- `NotificationType`
+- `NotificationCategory`
 - `PaginationParams`
 - `PaginatedData`
 
@@ -131,20 +133,10 @@ interface NotificationListRequest {
 ```typescript
 interface UnreadCountResult {
   total: number;               // 总未读通知数
-  by_type: {                   // 按类型分类的未读数（映射关系见下表）
-    social: number;
-    interaction: number;
-    group: number;
-    system: number;
-  };
+  by_type: Record<NotificationCategory, number>;  // 按类型分类的未读数；NotificationCategory 与映射见 api_spec_types.md
 }
-// NotificationType -> by_type 映射（契约级，实现必须遵循）：
-// | by_type       | NotificationType                                                      |
-// |---------------|-----------------------------------------------------------------------|
-// | social        | new_follower, mutual_follow                                           |
-// | interaction   | moment_liked, moment_commented, comment_liked, comment_reply, mentioned|
-// | group         | group_invite_received, group_invite_accepted, group_application_received, group_application_accepted |
-// | system        | system_announcement                                                   |
+// by_type 的 key 为 NotificationCategory（定义于 api_spec_types.md），其与 NotificationType 的契约级映射亦在 types.md 中声明。
+// 新增 NotificationType 时必须在该映射中归类，否则 unread_count 分组计数会遗漏。
 ```
 
 **错误码**: `10000`
