@@ -279,9 +279,9 @@ interface SearchGroupMembersRequest {
 
 邀请成员。
 
-**重复邀请处理**：若对同一用户存在 pending 状态的邀请，返回已有邀请信息（不重复创建），避免重复通知骚扰。
-
-**边界情况**：被邀请用户已是群成员时，返回 `10400`（"用户已是群成员"）。
+**重复/已达目标状态处理**（幂等语义，与业界共识一致）：
+- 若对同一用户存在 pending 状态的邀请，返回已有邀请信息（不重复创建），避免重复通知骚扰。
+- 被邀请用户**已是群成员**时，视为目标已达，返回成功（no-op，不创建邀请、不报错）。
 
 - **认证**: 必须
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`，重复邀请同一用户返回首次成功的响应）
@@ -297,14 +297,14 @@ interface InviteMemberRequest {
 
 **Response**: `ApiResponse<Invitation>`
 ```typescript
-// 邀请响应
+// 邀请响应（被邀请者已是成员时，返回成功但不创建邀请，此时邀请信息可省略/为占位）
 interface Invitation {
   invite_id: string;
   expires_at: string;
 }
 ```
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10000` `10200` `10300` `10400`（`10400` 仅用于真正无法完成的冲突，如邀请已被封禁的用户）
 
 ---
 
@@ -372,10 +372,10 @@ interface RevokeSentInviteRequest {
 
 ### POST /api/v1/groups/members/set_role
 
-设置成员角色。
+设置成员角色。幂等语义：设置为目标角色与当前一致时视为 no-op，返回成功。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 幂等语义（重复请求返回一致结果；目标角色与当前一致时返回成功）
 
 **Request**: `SetMemberRoleRequest`
 ```typescript
@@ -388,7 +388,7 @@ interface SetMemberRoleRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10000` `10200` `10300` `10400`（`10400` 用于真正无法完成的状态冲突，如降级最后一个管理员等）
 
 ---
 
@@ -416,10 +416,10 @@ interface MuteMemberRequest {
 
 ### POST /api/v1/groups/members/unmute
 
-取消禁言成员。
+取消禁言成员。幂等语义：对当前未被禁言的成员调用视为 no-op，返回成功。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 幂等语义（重复请求返回一致结果；未禁言成员视为已达目标状态，返回成功）
 
 **Request**: `UnmuteMemberRequest`
 ```typescript
@@ -431,7 +431,7 @@ interface UnmuteMemberRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10000` `10200` `10300`
 
 ---
 
@@ -459,10 +459,10 @@ interface BanMemberRequest {
 
 ### POST /api/v1/groups/members/unban
 
-解除封禁成员。仅对当前处于封禁状态的成员有效；对未封禁成员调用返回 `10400`（业务冲突），与 `members/ban` 配对。
+解除封禁成员。幂等语义：对未处于封禁状态的成员调用视为 no-op，返回成功（不报错），与 Discord/Slack 等"幂等设状态操作重复达同状态应成功"的业界共识一致。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 幂等语义（重复请求返回一致结果；未封禁成员视为已达目标状态，返回成功）
 
 **Request**: `UnbanMemberRequest`
 ```typescript
@@ -474,7 +474,7 @@ interface UnbanMemberRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10000` `10200` `10300`
 
 ---
 

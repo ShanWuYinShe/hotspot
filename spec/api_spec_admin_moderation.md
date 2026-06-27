@@ -147,14 +147,13 @@ interface AdminBanUserRequest {
 
 ### POST /api/v1/admin/users/unban
 
-解封用户（管理员）。
+解封用户（管理员）。幂等语义：对未处于封禁状态的用户调用视为 no-op，返回成功（与 group `members/unban` 一致，遵循幂等设状态操作重复达同状态应成功的业界共识）。
 
 - **认证**: 必须 + `admin.users.write`
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 幂等语义（重复请求返回一致结果；未封禁用户视为已达目标状态，返回成功）
 
 **安全约束**：
-- 仅已封禁的用户可解封，未封禁时返回 `10400`
-- 解封操作会记录审计日志
+- 解封操作会记录审计日志（含 no-op 解封尝试，便于审计追溯）
 
 **Request**: `AdminUnbanUserRequest`
 ```typescript
@@ -166,7 +165,7 @@ interface AdminUnbanUserRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10000` `10200` `10300`
 
 ---
 

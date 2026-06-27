@@ -197,22 +197,22 @@ interface PrivateChatItem {
 
 ### POST /api/v1/private_chats/open_the_door
 
-获取私聊详情。
+获取私聊详情（纯查询，无创建副作用）。
 
-**简化设计**：
-- **唯一寻址**：使用 `target_user_id` 获取与指定用户的会话详情
-- **自动创建**：若会话不存在，自动创建空会话并返回（首次聊天更流畅）
-- **可选消息预加载**：支持一次请求获取会话详情和最近消息
+**设计原则**（lazy creation，与 Mattermost/WhatsApp/Telegram 等业界做法一致）：
+- **纯只读**：不创建会话，读操作无写副作用
+- **会话不存在时返回空态**：不落库，客户端据此渲染"发起聊天"入口
+- 会话的实际创建由 `private_messages/send` 即发即创承担（首次发消息时物化会话）
 
 **首次聊天流程**：
-1. 调用 `open_the_door` 检查或创建会话
-2. 自动返回会话详情（无论是否是首次聊天）
-3. 直接调用 `send` 发送消息
+1. 调用 `open_the_door` 查询会话状态
+2. 会话存在 → 返回详情 + 最近消息；会话不存在 → 返回空态（`chat` 为空态对象，`recent_messages.items` 为空数组）
+3. 客户端展示"发起聊天"入口，用户发送首条消息时调用 `send`（send 即发即创）
 
-响应始终包含最近消息列表（`PaginatedData<PrivateMessageItem>`），条数由 `AppConfig.response_defaults.chat_recent_messages_count` 控制。
+响应始终包含最近消息列表（`PaginatedData<PrivateMessageItem>`，会话不存在时为空），条数由 `AppConfig.response_defaults.chat_recent_messages_count` 控制。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（同一 `target_user_id` 的重复调用返回同一会话数据，不会重复创建会话）
+- **幂等**: 幂等语义（纯查询：同一 `target_user_id` 的重复调用返回一致结果，永不产生写入）
 
 **Request**: `PrivateChatOpenTheDoorRequest`
 ```typescript
@@ -225,8 +225,8 @@ interface PrivateChatOpenTheDoorRequest {
 
 ```typescript
 interface PrivateChatOpenResult {
-  chat: PrivateChatItem;
-  recent_messages: PaginatedData<PrivateMessageItem>;  // 始终返回，条数由 AppConfig.response_defaults.chat_recent_messages_count 控制
+  chat: PrivateChatItem;              // 会话不存在时返回空态对象（unread_count=0、is_muted/is_pinned=false、can_message 反映当下隐私校验）
+  recent_messages: PaginatedData<PrivateMessageItem>;  // 始终返回，会话不存在时 items 为空数组；条数由 AppConfig.response_defaults.chat_recent_messages_count 控制
 }
 ```
 
