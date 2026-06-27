@@ -25,8 +25,6 @@ target/
 frontend/node_modules/
 frontend/build/
 frontend/.svelte-kit/
-frontend_react/node_modules/
-frontend_react/build/
 backend-go/server
 
 # ============================================
