@@ -1,6 +1,6 @@
 /**
  * WebSocket Store - 连接管理、鉴权、心跳
- * 严格遵循 @spec/api_spec_websocket.md
+ * 严格遵循 spec/api_spec_websocket.md
  */
 
 import { browser, dev } from '$app/environment';

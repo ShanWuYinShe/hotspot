@@ -1,6 +1,3 @@
----
-alwaysApply: false
----
 # HotSpot API - 通知中心
 
 > 本文档定义 HotSpot 通知中心 (`notifications`) 相关的 RPC 接口。
@@ -11,9 +8,9 @@ alwaysApply: false
 - **命名空间**: `notifications`
 - **基础路径**: `/api/v1/notifications/`
 - **引用**: 
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`
-  - 错误码：`@spec/api_spec_errors.md`
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`
+  - 错误码：`api_spec_errors.md`
 
 ## 端点总览
 
@@ -26,7 +23,7 @@ alwaysApply: false
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下类型定义于 `api_spec_types.md`：
 - `UserInfo`
 - `MomentSummary`
 - `FollowSource`
@@ -36,7 +33,7 @@ alwaysApply: false
 
 ### 通知类型枚举
 
-`NotificationType` 定义于 `@spec/api_spec_types.md`。
+`NotificationType` 定义于 `api_spec_types.md`。
 
 ### 通知类型 ↔ WebSocket 事件 ↔ 补拉策略（契约级）
 
@@ -61,13 +58,13 @@ alwaysApply: false
 - **实时路径**：在线时收到 WS 事件 → 直接更新本地通知列表/未读角标（无需立即拉 HTTP）
 - **补拉路径**：冷启动或 WS 断线超阈值时，调用 `notifications/list` + `notifications/unread_count` 校准
 - **去重**：WS 事件与 HTTP 补拉可能重叠，按 `notification_id` 去重（持久化事件）或按"最新状态覆盖"（状态快照）
-- **WS 负载 ≠ 通知负载**：WS 事件字段以 `@spec/api_spec_websocket.md` 为准（含完整 content 等）；通知 `payload` 字段以本文件为准（含截断 preview）。两者结构不同，客户端不应混用
+- **WS 负载 ≠ 通知负载**：WS 事件字段以 `api_spec_websocket.md` 为准（含完整 content 等）；通知 `payload` 字段以本文件为准（含截断 preview）。两者结构不同，客户端不应混用
 
 ### 通知负载（按 type 区分的联合类型）
 
 ```typescript
 // 注意：NotificationPayload.type 必须与 NotificationItem.type 一致
-// 设计模式与 AuditDetails（见 @spec/api_spec_admin_core.md）保持一致
+// 设计模式与 AuditDetails（见 api_spec_admin_core.md）保持一致
 type NotificationPayload =
   | { type: 'new_follower'; actor: UserInfo; source?: FollowSource; source_moment_id?: string }
   | { type: 'mutual_follow'; actor: UserInfo }

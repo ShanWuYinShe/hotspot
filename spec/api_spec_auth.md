@@ -1,6 +1,3 @@
----
-alwaysApply: false
----
 # HotSpot API - 认证
 
 > 本文档定义 HotSpot 认证相关的 RPC 接口。
@@ -10,9 +7,9 @@ alwaysApply: false
 - **命名空间**: `auth`
 - **基础路径**: `/api/v1/auth/`
 - **引用**: 
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`
-  - 错误码：`@spec/api_spec_errors.md`
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`
+  - 错误码：`api_spec_errors.md`
 
 ## 端点总览
 
@@ -33,7 +30,7 @@ alwaysApply: false
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下类型定义于 `api_spec_types.md`：
 - `ClientType`
 
 ### 客户端类型与 Token 投递策略
@@ -50,7 +47,7 @@ alwaysApply: false
 // - 可变信息（nickname、头像等）应通过 /api/v1/users/me/profile/get 获取
 // - 避免 JWT 中的信息与实际数据不一致
 // - Token 失效通过黑名单机制实现（登出/撤销时写入黑名单，直至过期）
-type AuthTokenPairWeb = Record<string, never>; // Web 端 data 为空对象
+type AuthTokenPairWeb = {}; // Web 端 data 为空对象（Token 仅通过 HttpOnly Cookie 传递，响应体不含任何 token 字段）
 
 interface AuthTokenPairApp {
   user_id: string;

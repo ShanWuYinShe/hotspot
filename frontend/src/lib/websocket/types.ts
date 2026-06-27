@@ -1,6 +1,6 @@
 /**
  * WebSocket 类型定义
- * 严格遵循 @spec/api_spec_websocket.md
+ * 严格遵循 spec/api_spec_websocket.md
  */
 
 import type {

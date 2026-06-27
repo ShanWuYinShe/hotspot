@@ -1,6 +1,3 @@
----
-alwaysApply: true
----
 # HotSpot API 规范文档（契约唯一权威）
 
 > 本文档是跨端契约的唯一权威来源：HTTP 端点、请求/响应字段与类型、错误码、WebSocket 事件与负载、统一 envelope。
@@ -56,19 +53,27 @@ alwaysApply: true
 ## 权威边界与冲突处理
 
 - 本规范是 HotSpot 前后端交互契约的唯一权威（端点、字段、类型、错误码、事件、响应 envelope）
-- 若本规范与工程实现或其它 doc/rule 文件冲突，以本规范为准
+- 若本规范与工程实现或各子项目 `CLAUDE.md` 中的实现规范冲突，以本规范为准
 - 引用本规范时仅使用小节标题或锚点标题，禁止使用数字章节号（如“第X章/第X节”）
 
 **内部优先级**（本规范内部冲突时）：
-1. `@spec/api_spec_base.md`
-2. `@spec/api_spec_types.md`
-3. `@spec/api_spec_errors.md`
-4. 各模块 `@spec/api_spec_*.md`
+1. `api_spec_base.md`
+2. `api_spec_types.md`
+3. `api_spec_errors.md`
+4. 各模块 `api_spec_*.md`
 
 ## 文档说明
 
 - 本规范为 **Contract Only**：仅定义对外可观测的端点/字段/类型/错误码/事件；实现细节、自检与工程化约束不在本规范范围
-- 通用约定（时间格式、分页/幂等、Token 语义、`@auth-only` 等）统一见 `@spec/api_spec_base.md`，通用类型统一见 `@spec/api_spec_types.md`
+- 通用约定（时间格式、分页/幂等、Token 语义、`@auth-only` 等）统一见 `api_spec_base.md`，通用类型统一见 `api_spec_types.md`
+
+## 非目标（Out of scope）
+
+以下能力**不在本契约范围**内，本规范不为其定义端点：
+
+- 支付/交易能力
+- 端侧离线同步算法
+- 消息全文搜索
 
 ## 快速索引（按路径前缀）
 

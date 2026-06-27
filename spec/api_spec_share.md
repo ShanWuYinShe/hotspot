@@ -1,6 +1,3 @@
----
-alwaysApply: false
----
 # HotSpot API - 分享系统
 
 > 本文档定义 HotSpot 分享系统 (`share`) 相关的 RPC 接口。
@@ -10,9 +7,9 @@ alwaysApply: false
 - **命名空间**: `share`
 - **基础路径**: `/api/v1/share/`
 - **引用**: 
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`
-  - 错误码：`@spec/api_spec_errors.md`
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`
+  - 错误码：`api_spec_errors.md`
 
 ## 设计理念
 
@@ -31,7 +28,7 @@ alwaysApply: false
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下类型定义于 `api_spec_types.md`：
 - `UserInfo`
 - `Location`
 - `PaginationParams`
@@ -48,10 +45,10 @@ alwaysApply: false
 - **校验**：必须完全匹配字符集与长度，禁止空格、连字符、前后缀
 
 **反滥用要求（契约级）**：
-- `share/get` 为公开端点，必须启用多维度限流（IP 维度 + 用户维度），具体阈值由服务端 `RateLimitConfig` 配置（见 `@spec/api_spec_admin_core.md`），超限返回 `10500` 并携带 `Retry-After`
+- `share/get` 为公开端点，必须启用多维度限流（IP 维度 + 用户维度），具体阈值由服务端 `RateLimitConfig` 配置（见 `api_spec_admin_core.md`），超限返回 `10500` 并携带 `Retry-After`
 - 对连续失败（share_code 无效/过期）的访问需有递进式惩罚策略（如临时封禁或要求验证码），具体阈值由服务端安全策略决定
 - 失败请求应记录日志，用于离线分析潜在暴力破解行为
-- 限流策略统一遵循 `@spec/api_spec_base.md`「限流策略（契约级）」，不在本模块重复硬编码阈值
+- 限流策略统一遵循 `api_spec_base.md`「限流策略（契约级）」，不在本模块重复硬编码阈值
 
 ## 有效期规则
 
@@ -69,7 +66,7 @@ alwaysApply: false
 
 **Request**: `CreateShareRequest`
 ```typescript
-// ShareType 定义于 @spec/api_spec_types.md
+// ShareType 定义于 api_spec_types.md
 
 interface UserSharePayload {
   shared_user_id: string;
@@ -113,7 +110,7 @@ interface ShareCreated {
 - 校验 payload 与 share_type 匹配
 - 校验目标资源存在且可访问
 - 对于"资源存在但不可访问"场景，统一返回 `10300`（按资源不存在处理，避免泄漏隐私可见性）
-- `location`：校验经纬度范围；当 `share_type='location'` 时，`location_name` 约束覆盖为 **1-100 字符（必填）**，要求位置名称非空（全局默认 0-100，见 `@spec/api_spec_base.md` 字段校验约束）
+- `location`：校验经纬度范围；当 `share_type='location'` 时，`location_name` 约束覆盖为 **1-100 字符（必填）**，要求位置名称非空（全局默认 0-100，见 `api_spec_base.md` 字段校验约束）
 - `expires_in_seconds` 若提供，必须为正整数且不超过系统允许上限（默认上限=30天，即 2_592_000 秒；超过上限或 <=0 返回 `10000` 参数错误）
 
 **错误码**: `10000` `10300`

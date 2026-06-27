@@ -1,6 +1,3 @@
----
-alwaysApply: false
----
 # HotSpot API - 生活瞬间与评论
 
 > 本文档定义 HotSpot 生活瞬间 (`moment`) 和评论 (`comment`) 相关的 RPC 接口。
@@ -14,10 +11,10 @@ alwaysApply: false
   - `/api/v1/moments/`
   - `/api/v1/comments/`
 - **引用**:
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`
-  - 错误码：`@spec/api_spec_errors.md`
-  - 搜索建议：`@spec/api_spec_search.md`（per-module suggest 已移除，使用全局 `search/suggest`）
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`
+  - 错误码：`api_spec_errors.md`
+  - 搜索建议：`api_spec_search.md`（per-module suggest 已移除，使用全局 `search/suggest`）
 
 ## 端点总览
 
@@ -45,7 +42,7 @@ alwaysApply: false
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下类型定义于 `api_spec_types.md`：
 - `MomentItem`
 - `PrivacyLevel`
 - `Location`
@@ -58,7 +55,7 @@ alwaysApply: false
 
 ### 搜索与发现
 
-说明：生活瞬间支持 `privacy_level` 控制可见性（`public` / `private`）。未登录用户仅能访问 `public` 的瞬间；登录态可访问自己的所有瞬间（含 `private`）+ 所有 `public` 瞬间。认证可选，字段可见性规则见 `@spec/api_spec_base.md`。
+说明：生活瞬间支持 `privacy_level` 控制可见性（`public` / `private`）。未登录用户仅能访问 `public` 的瞬间；登录态可访问自己的所有瞬间（含 `private`）+ 所有 `public` 瞬间。认证可选，字段可见性规则见 `api_spec_base.md`。
 
 ### POST /api/v1/moments/search
 
@@ -94,7 +91,7 @@ interface SearchMomentsRequest {
 
 ### POST /api/v1/moments/open_the_door
 
-获取瞬间详情。认证可选，字段可见性规则见 `@spec/api_spec_base.md`。
+获取瞬间详情。认证可选，字段可见性规则见 `api_spec_base.md`。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -307,7 +304,7 @@ interface MomentLikesRequest {
 }
 ```
 
-**Response**: `ApiResponse<PaginatedData<LikeItem>>`（`LikeItem` 定义于 `@spec/api_spec_types.md`）
+**Response**: `ApiResponse<PaginatedData<LikeItem>>`（`LikeItem` 定义于 `api_spec_types.md`）
 
 **错误码**: `10000` `10300`
 
@@ -381,7 +378,7 @@ interface DeleteCommentRequest {
 
 ### POST /api/v1/comments/list
 
-获取指定瞬间的顶层评论列表。认证可选，字段可见性规则见 `@spec/api_spec_base.md`。
+获取指定瞬间的顶层评论列表。认证可选，字段可见性规则见 `api_spec_base.md`。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -401,7 +398,7 @@ interface CommentsRequest {
 
 ### POST /api/v1/comments/list_replies
 
-获取指定评论的子评论列表。认证可选，字段可见性规则见 `@spec/api_spec_base.md`。
+获取指定评论的子评论列表。认证可选，字段可见性规则见 `api_spec_base.md`。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -471,6 +468,6 @@ interface CommentLikesRequest {
 }
 ```
 
-**Response**: `ApiResponse<PaginatedData<LikeItem>>`（`LikeItem` 定义于 `@spec/api_spec_types.md`）
+**Response**: `ApiResponse<PaginatedData<LikeItem>>`（`LikeItem` 定义于 `api_spec_types.md`）
 
 **错误码**: `10000` `10300`

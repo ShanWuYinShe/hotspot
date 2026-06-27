@@ -1,20 +1,17 @@
----
-alwaysApply: false
----
 # HotSpot API - 搜索与发现
 
 > 本文档定义 HotSpot 全局搜索 (`search`) 和标签 (`tags`) 相关的 RPC 接口。
 > 旨在提供基于地理位置和语义的综合搜索与发现能力。
-> 管理员标签管理接口定义于 `@spec/api_spec_admin_moderation.md`。
+> 管理员标签管理接口定义于 `api_spec_admin_moderation.md`。
 
 ## 模块信息
 
 - **命名空间**: `search`
 - **基础路径**: `/api/v1/search/`
 - **引用**: 
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`
-  - 错误码：`@spec/api_spec_errors.md`
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`
+  - 错误码：`api_spec_errors.md`
 
 ## 端点总览
 
@@ -24,7 +21,7 @@ alwaysApply: false
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下类型定义于 `api_spec_types.md`：
 - `GeoPoint`
 - `RelativeLocation`
 - `UserInfo`
@@ -54,13 +51,13 @@ interface SearchSuggestRequest {
   prefix: string;
   reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
   types?: SearchSuggestType[];  // 可选：限定返回的类型（如 ['user', 'group']）。未提供或空数组均表示返回所有类型。
-  radius?: number;  // 搜索半径（米），约束见 @spec/api_spec_base.md 通用字段约束
+  radius?: number;  // 搜索半径（米），约束见 api_spec_base.md 通用字段约束
 }
 ```
 
 **半径与定位说明**：
 - `radius` 未提供时默认使用 `5_000` 米（5 km），并会被 `AppConfig.limits.search_radius_max` 上限裁剪。
-- 用户拒绝定位或无法获取实时位置时，客户端必须使用 `ClientConfig.defaults.default_location.point` 作为 `reference_point` fallback（参见 `@spec/api_spec_types.md` 请求位置要求）。
+- 用户拒绝定位或无法获取实时位置时，客户端必须使用 `ClientConfig.defaults.default_location.point` 作为 `reference_point` fallback（参见 `api_spec_types.md` 请求位置要求）。
 
 **Response**: `ApiResponse<SearchSuggestResponse>`
 
@@ -118,4 +115,4 @@ interface SearchSuggestResponse {
 
 ## 标签相关类型
 
-`TagItem`、`TagTrend` 已收归至 `@spec/api_spec_types.md`，本模块和其他模块统一引用。
+`TagItem`、`TagTrend` 已收归至 `api_spec_types.md`，本模块和其他模块统一引用。

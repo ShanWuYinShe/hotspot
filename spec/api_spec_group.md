@@ -1,20 +1,17 @@
----
-alwaysApply: false
----
 # HotSpot API - 群组管理
 
 > 本文档定义 HotSpot 群组管理 (`groups`) 相关的 RPC 接口，包括群组 CRUD、成员管理、申请/邀请管理和群公告。
-> 群聊消息 (`group_messages`) 接口定义在 `@spec/api_spec_chat.md`。
+> 群聊消息 (`group_messages`) 接口定义在 `api_spec_chat.md`。
 
 ## 模块信息
 
 - **命名空间**: `groups`
 - **基础路径**: `/api/v1/groups/`
 - **引用**: 
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`
-  - 错误码：`@spec/api_spec_errors.md`
-  - WebSocket：`@spec/api_spec_websocket.md`
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`
+  - 错误码：`api_spec_errors.md`
+  - WebSocket：`api_spec_websocket.md`
 
 ## 端点总览
 
@@ -57,7 +54,7 @@ alwaysApply: false
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下类型定义于 `api_spec_types.md`：
 - `GroupInfo`
 - `GroupItem`
 - `GroupSettings`
@@ -118,7 +115,7 @@ interface SearchGroupsRequest {
 
 ### POST /api/v1/groups/open_the_door
 
-获取群组详情。认证可选，字段可见性规则见 `@spec/api_spec_base.md`。
+获取群组详情。认证可选，字段可见性规则见 `api_spec_base.md`。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -553,7 +550,7 @@ interface GroupApplicationsRequest {
 
 **Response**: `ApiResponse<PaginatedData<GroupApplicationItem>>`
 ```typescript
-// ApplicationStatus 定义于 @spec/api_spec_types.md
+// ApplicationStatus 定义于 api_spec_types.md
 
 // 群组申请列表项
 interface GroupApplicationItem {

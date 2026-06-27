@@ -1,6 +1,3 @@
----
-alwaysApply: false
----
 # HotSpot API - 文件与媒体上传
 
 > 本文档定义 HotSpot 文件与媒体上传 (`media`) 相关的 RPC 接口。
@@ -10,9 +7,9 @@ alwaysApply: false
 - **命名空间**: `media`
 - **基础路径**: `/api/v1/media/`
 - **引用**: 
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`
-  - 错误码：`@spec/api_spec_errors.md`
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`
+  - 错误码：`api_spec_errors.md`
 
 ## 端点总览
 

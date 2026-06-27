@@ -1,6 +1,3 @@
----
-alwaysApply: false
----
 # HotSpot API - 系统与全局配置
 
 > 本文档定义 HotSpot 系统级公开接口，包括健康检查、版本元信息、客户端配置和系统公告。所有端点为公开资源，无需认证，统一在 `/api/v1/system/` 路径下。
@@ -10,9 +7,9 @@ alwaysApply: false
 - **命名空间**: `system`
 - **基础路径**: `/api/v1/system/`
 - **引用**: 
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`
-  - 错误码：`@spec/api_spec_errors.md`
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`
+  - 错误码：`api_spec_errors.md`
 
 ## 端点总览
 
@@ -25,7 +22,7 @@ alwaysApply: false
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下类型定义于 `api_spec_types.md`：
 - `SystemAnnouncementItem`
 
 ## 端点详情
@@ -111,7 +108,7 @@ interface HealthStatus {
 **说明**：
 - 返回当前有效的最新公告（"有效"= 未被管理员删除且状态为已发布），返回条数由服务端 `AppConfig.response_defaults.system_announcements_count` 控制，客户端不传数量参数
 - 普通用户只需获取最新的 N 条公告，无需分页翻阅历史
-- 管理员查看/搜索全部公告（含历史）请使用 `admin/announcements/search`（定义于 `@spec/api_spec_admin_moderation.md`）
+- 管理员查看/搜索全部公告（含历史）请使用 `admin/announcements/search`（定义于 `api_spec_admin_moderation.md`）
 - 按 `created_at` 倒序排列
 
 **错误码**: `10000`
@@ -126,7 +123,7 @@ interface HealthStatus {
 - **幂等**: 无
 
 **说明**：
-- 返回的 `ClientConfig` 由 `AppConfig`（见 `@spec/api_spec_admin_core.md`）投影得来，包含功能开关、输入限制、联系方式
+- 返回的 `ClientConfig` 由 `AppConfig`（见 `api_spec_admin_core.md`）投影得来，包含功能开关、输入限制、联系方式
 - 客户端应在启动时调用并缓存，配置变更频率低
 - `defaults.default_location` 必须满足 `Location` 类型约束（尤其 `location_name` 非空）
 
@@ -167,9 +164,9 @@ interface ContactInfo {
 }
 
 // 客户端可见的默认值
-// 由管理员在后台配置（见 @spec/api_spec_admin_core.md 中 ContentDefaults）
+// 由管理员在后台配置（见 api_spec_admin_core.md 中 ContentDefaults）
 interface ClientDefaults {
-  default_location: Location;    // 默认位置（必须满足 Location 约束），Location 定义于 @spec/api_spec_types.md
+  default_location: Location;    // 默认位置（必须满足 Location 约束），Location 定义于 api_spec_types.md
   default_user_avatar: string;   // 默认用户头像 URL
   default_group_avatar: string;  // 默认群组头像 URL
 }

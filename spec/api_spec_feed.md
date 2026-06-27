@@ -1,18 +1,15 @@
----
-alwaysApply: false
----
 # HotSpot API - 信息流
 
-> 本文档定义 HotSpot 信息流 (`feed`) 相关的 RPC 接口。标签相关 API 定义于 `@spec/api_spec_search.md`。
+> 本文档定义 HotSpot 信息流 (`feed`) 相关的 RPC 接口。标签相关 API 定义于 `api_spec_search.md`。
 
 ## 模块信息
 
 - **命名空间**: `feed`
 - **基础路径**: `/api/v1/feed/`
 - **引用**: 
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`
-  - 错误码：`@spec/api_spec_errors.md`
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`
+  - 错误码：`api_spec_errors.md`
 
 ## 端点总览
 
@@ -26,13 +23,13 @@ alwaysApply: false
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下类型定义于 `api_spec_types.md`：
 - `MomentItem`（Feed 场景下 `my_state` 和 `recommendation` 字段会被填充）
 - `GroupItem`（Feed 场景下 `my_state` 和 `friends_in_group` 字段会被填充）
 - `UserItem`（Feed 场景下 `relation` 和 `social_context` 字段会被填充）
 - `PaginationParams`
 - `GeoPoint`
-- `TagItem`、`TagTrend`（定义于 `@spec/api_spec_types.md`）
+- `TagItem`、`TagTrend`（定义于 `api_spec_types.md`）
 
 ## 端点详情
 
@@ -131,7 +128,7 @@ interface GetFeedUsersRequest {
 
 ### POST /api/v1/feed/list_trending
 
-获取热门内容。认证可选，字段可见性规则见 `@spec/api_spec_base.md`。
+获取热门内容。认证可选，字段可见性规则见 `api_spec_base.md`。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -150,7 +147,7 @@ interface TrendingBundle {
 }
 
 // TrendingTagItem 复用 TagItem 并扩展热门瞬间预览
-// TagItem 定义于 @spec/api_spec_types.md（含 name、usage_count、trend?）
+// TagItem 定义于 api_spec_types.md（含 name、usage_count、trend?）
 // 此处使用 extends Omit 是为了将 trend 从可选覆盖为必填，避免重复定义 TagItem 的所有字段
 interface TrendingTagItem extends Omit<TagItem, 'trend'> {
   trend: TagTrend;  // 必填（TagItem 中为可选，此处覆盖为必填）
@@ -160,7 +157,7 @@ interface TrendingTagItem extends Omit<TagItem, 'trend'> {
 
 **错误码**: `10000`
 
-> **注**：标签相关类型（`TagItem`、`TagTrend`）定义于 `@spec/api_spec_types.md`。
+> **注**：标签相关类型（`TagItem`、`TagTrend`）定义于 `api_spec_types.md`。
 
 ---
 

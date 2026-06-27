@@ -1,6 +1,3 @@
----
-alwaysApply: false
----
 # HotSpot API - 聊天
 
 > 本文档定义 HotSpot 私聊管理 (`private_chats`)、私聊消息 (`private_messages`) 和群聊消息 (`group_messages`) 相关的 RPC 接口。
@@ -16,11 +13,11 @@ alwaysApply: false
   - `/api/v1/private_messages/`
   - `/api/v1/group_messages/`
 - **引用**:
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`
-  - 错误码：`@spec/api_spec_errors.md`
-  - WebSocket：`@spec/api_spec_websocket.md`
-  - 群组管理：`@spec/api_spec_group.md`
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`
+  - 错误码：`api_spec_errors.md`
+  - WebSocket：`api_spec_websocket.md`
+  - 群组管理：`api_spec_group.md`
 
 ## 端点总览
 
@@ -66,7 +63,7 @@ alwaysApply: false
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下类型定义于 `api_spec_types.md`：
 - `UserInfo`
 - `MessageType`
 - `SendMessageType`
@@ -142,7 +139,7 @@ interface GroupMessageItem {
 
 ## 私聊管理 API
 
-私聊权限由用户设置 `allow_private_chat`（`PrivateChatPermission`，定义于 `@spec/api_spec_types.md`）控制；不可发消息原因见 `MessageBlockedReason`（同上）。
+私聊权限由用户设置 `allow_private_chat`（`PrivateChatPermission`，定义于 `api_spec_types.md`）控制；不可发消息原因见 `MessageBlockedReason`（同上）。
 
 ### POST /api/v1/private_chats/me/list
 
@@ -189,7 +186,7 @@ interface PrivateChatItem {
   message_blocked_reason?: MessageBlockedReason; // 仅 can_message=false 时返回
 }
 
-// MessageBlockedReason 定义于 @spec/api_spec_types.md
+// MessageBlockedReason 定义于 api_spec_types.md
 ```
 
 **说明**：`can_message` 仅反映调用当下的隐私校验结果；若对方后续修改隐私设置或拉黑，`private_messages/send` 仍可能失败，客户端需处理权限错误。

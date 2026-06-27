@@ -1,6 +1,3 @@
----
-alwaysApply: false
----
 # HotSpot API - WebSocket 实时事件定义
 
 > 本文档定义 HotSpot WebSocket 实时事件、连接与鉴权规范、订阅机制等。
@@ -71,9 +68,9 @@ alwaysApply: false
 | | `GroupUpdated` | 群组信息更新（名称/头像/描述等所有可修改字段） |
 | | `GroupDismissed` | 群组解散 |
 
-#### 多端同步事件（Self-Sync）
+#### 多端同步事件（Self-Sync）— ⏳ 延期实现 / Roadmap
 
-> ⏳ **延期实现**：以下事件用于同一用户多设备间的状态同步。当前阶段多端登录场景较少，客户端通过冷启动 HTTP API 补拉实现同步。
+> 🚧 **当前不实现**：以下事件用于同一用户多设备间的状态同步，属于 **Roadmap**，当前阶段不提供。多端登录场景较少时，客户端通过冷启动 HTTP API 补拉实现同步。详细 payload 见文末「[延期实现事件（Roadmap）](#延期实现事件roadmap)」小节。
 
 | 事件 | 说明 | 推送目标 |
 |------|------|---------|
@@ -115,8 +112,8 @@ alwaysApply: false
 
 ### 依赖说明
 
-- 公共基础类型定义于 `@spec/api_spec_types.md`
-- 错误码定义于 `@spec/api_spec_errors.md`
+- 公共基础类型定义于 `api_spec_types.md`
+- 错误码定义于 `api_spec_errors.md`
 - 所有事件类型和负载结构必须严格遵循本规范定义
 
 ### 鉴权机制
@@ -140,7 +137,7 @@ alwaysApply: false
 
 #### 3. 去重规则
 
-HTTP API 返回的数据可能与 WebSocket 推送的事件重复。去重方式按资源主键执行（参见 `@spec/api_spec_base.md`）：
+HTTP API 返回的数据可能与 WebSocket 推送的事件重复。去重方式按资源主键执行（参见 `api_spec_base.md`）：
 
 - **持久化事件**：按业务主键或稳定组合键去重（如 `message_id`、`moment_id`、`comment_id`，或 `moment_id + actor.user_id + liked_at`）。
 - **状态快照事件**：直接覆盖（保留最新状态），无需去重。
@@ -393,7 +390,7 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
 
 **关注关系事件**：
 ```typescript
-// FollowSource 定义于 @spec/api_spec_types.md
+// FollowSource 定义于 api_spec_types.md
 
 // 命名约定：
 // - actor: 执行操作的人（如关注者、点赞者、评论者），与 NotificationPayload.actor 语义一致
@@ -418,7 +415,7 @@ type MutualFollowEvent = { type: "MutualFollow"; payload: MutualFollowPayload; }
 
 **生活瞬间互动事件**：
 ```typescript
-// MomentSummary 定义于 @spec/api_spec_types.md
+// MomentSummary 定义于 api_spec_types.md
 
 interface MomentLikedPayload {
   moment_id: string;
@@ -569,7 +566,7 @@ type GroupUserTypingEvent = { type: "GroupUserTyping"; payload: GroupUserTypingP
 interface GroupMemberJoinedPayload {
   group_id: string;
   user: UserInfo;
-  role: GroupRole;  // 引用 @spec/api_spec_types.md
+  role: GroupRole;  // 引用 api_spec_types.md
   member_count: number; // 当前成员总数
   joined_at: string;
 }
@@ -577,7 +574,7 @@ type GroupMemberJoinedEvent = { type: "GroupMemberJoined"; payload: GroupMemberJ
 
 interface GroupInviteReceivedPayload {
   invite_id: string;
-  group: GroupInfo;  // 引用 @spec/api_spec_types.md
+  group: GroupInfo;  // 引用 api_spec_types.md
   inviter: UserInfo;
   message?: string;
   created_at: string;
@@ -604,7 +601,7 @@ type GroupApplicationReceivedEvent = { type: "GroupApplicationReceived"; payload
 
 interface GroupApplicationResponsePayload {
   application_id: string;
-  group: GroupInfo;  // 引用 @spec/api_spec_types.md
+  group: GroupInfo;  // 引用 api_spec_types.md
   status: 'accepted';  // 仅接受时推送，拒绝不通过 WebSocket 推送
   responded_at: string;
 }
@@ -709,7 +706,7 @@ type ErrorSeverity =
   | 'warning';     // 警告：仅提示（订阅失败、权限不足）
 
 interface ErrorPayload {
-  code: number;          // 错误码：WebSocket 业务期错误优先使用 20000-20999，幂等相关错误使用 22000-22099（详见 @spec/api_spec_errors.md）
+  code: number;          // 错误码：WebSocket 业务期错误优先使用 20000-20999，幂等相关错误使用 22000-22099（详见 api_spec_errors.md）
                          // 禁止使用 HTTP API 的 10000-19999 作为 WebSocket Error 事件 code
   message: string;       // 错误消息（用户友好，不泄露内部细节）
   
@@ -745,39 +742,12 @@ type AccountBannedEvent = { type: "AccountBanned"; payload: AccountBannedPayload
 ```
 
 **多端同步事件（⏳ 延期实现）**：
-```typescript
-// 已读状态同步：当某设备标记消息已读时，推送给该用户的其他设备
-interface SelfReadSyncPayload {
-  chat_type: 'private' | 'group';
-  target_id: string;         // private: target_user_id; group: group_id
-  up_to_message_id?: string; // 标记到哪条消息；不传表示全部
-}
 
-// 会话设置同步：静音/置顶变更
-interface SelfChatSettingsSyncPayload {
-  chat_type: 'private' | 'group';
-  target_id: string;
-  is_muted?: boolean;
-  is_pinned?: boolean;
-}
-
-// 用户设置同步：隐私等全局设置变更
-// UserSettings 定义于 @spec/api_spec_types.md
-interface SelfSettingsUpdatedPayload {
-  // 变更后的完整设置快照
-  settings: UserSettings;
-}
-
-// 关系变更同步：关注/取消关注/拉黑/解除拉黑
-interface SelfRelationSyncPayload {
-  action: 'follow' | 'unfollow' | 'block' | 'unblock';
-  target_user_id: string;
-}
-```
+> payload 定义见文末「[延期实现事件（Roadmap）](#延期实现事件roadmap)」小节。这些事件当前不实现，客户端通过冷启动 HTTP API 补拉实现多端同步。
 
 **错误码定义**：
 
-错误码定义以 `@spec/api_spec_errors.md` 为准（精简后每个类型仅一个错误码，具体场景通过 `message` 描述）。
+错误码定义以 `api_spec_errors.md` 为准（精简后每个类型仅一个错误码，具体场景通过 `message` 描述）。
 
 | 错误码 | 类型 | 严重性 | message 示例 |
 |-------|------|--------|-------------|
@@ -906,3 +876,39 @@ WebSocket 推送分为**自动推送**和**订阅推送**两种模式（详见�
 | 无权限（已被拉黑/群组已解散） | `denied` | 提示用户无权限 |
 | 超出订阅数量限制 | `limit_exceeded` | 提示用户取消部分订阅后再试 |
 | 服务端错误 | `error` | 延迟重试（Exponential Backoff） |
+
+---
+
+## 延期实现事件（Roadmap）
+
+> 🚧 **本小节事件当前不实现**，属于多端同步 Roadmap。事件类型已纳入 `ServerEventType` 枚举以预留，但服务端不推送、客户端无需处理。当前阶段客户端通过冷启动 HTTP API 补拉实现多端数据同步。
+
+```typescript
+// 已读状态同步：当某设备标记消息已读时，推送给该用户的其他设备
+interface SelfReadSyncPayload {
+  chat_type: 'private' | 'group';
+  target_id: string;         // private: target_user_id; group: group_id
+  up_to_message_id?: string; // 标记到哪条消息；不传表示全部
+}
+
+// 会话设置同步：静音/置顶变更
+interface SelfChatSettingsSyncPayload {
+  chat_type: 'private' | 'group';
+  target_id: string;
+  is_muted?: boolean;
+  is_pinned?: boolean;
+}
+
+// 用户设置同步：隐私等全局设置变更
+// UserSettings 定义于 api_spec_types.md
+interface SelfSettingsUpdatedPayload {
+  // 变更后的完整设置快照
+  settings: UserSettings;
+}
+
+// 关系变更同步：关注/取消关注/拉黑/解除拉黑
+interface SelfRelationSyncPayload {
+  action: 'follow' | 'unfollow' | 'block' | 'unblock';
+  target_user_id: string;
+}
+```

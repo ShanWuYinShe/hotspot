@@ -1,6 +1,3 @@
----
-alwaysApply: false
----
 # HotSpot API - 地图渲染
 
 > 本文档定义 HotSpot 地图渲染 (`map`) 相关的 RPC 接口。
@@ -10,9 +7,9 @@ alwaysApply: false
 - **命名空间**: `map`
 - **基础路径**: `/api/v1/map/`
 - **引用**: 
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`
-  - 错误码：`@spec/api_spec_errors.md`
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`
+  - 错误码：`api_spec_errors.md`
 
 ## 设计理念
 
@@ -35,7 +32,7 @@ alwaysApply: false
 
 ## 类型定义
 
-以下基础类型定义于 `@spec/api_spec_types.md`：
+以下基础类型定义于 `api_spec_types.md`：
 
 - `GeoPoint`
 - `PaginationParams`
@@ -160,7 +157,7 @@ interface MapCanvasResponse {
 
 ## 行为约束（契约级）
 
-服务端在实现 `/api/v1/map/canvas` 时，对客户端承诺以下**可观测行为**；具体 S2 层级选择、覆盖算法与内部阈值属于实现细节，见 `@spec/backend_rule.md`，不对外暴露。
+服务端在实现 `/api/v1/map/canvas` 时，对客户端承诺以下**可观测行为**；具体 S2 层级选择、覆盖算法与内部阈值属于实现细节，不对外暴露。
 
 ### 视口与结果类型选择
 

@@ -1,16 +1,13 @@
----
-alwaysApply: false
----
 # HotSpot API - 管理后台审核
 
 > 本文档定义 HotSpot 管理后台内容审核相关的 RPC 接口，包括用户管理、群组管理、举报审核、标签管理和系统公告管理。
-> 核心管理功能（RBAC、审计、配置）定义在 `@spec/api_spec_admin_core.md`。
+> 核心管理功能（RBAC、审计、配置）定义在 `api_spec_admin_core.md`。
 
 ## 模块信息
 
 - **命名空间**: `admin.users`、`admin.groups`、`admin.reports`、`admin.tags`、`admin.announcements`
 - **基础路径**: `/api/v1/admin/users/`、`/api/v1/admin/groups/`、`/api/v1/admin/reports/`、`/api/v1/admin/tags/`、`/api/v1/admin/announcements/`
-- **引用**: `@spec/api_spec_base.md`、`@spec/api_spec_types.md`（含 `UserItem`/`GroupItem`/`ReportItem` 等）、`@spec/api_spec_errors.md`、`@spec/api_spec_admin_core.md`、`@spec/api_spec_system.md`
+- **引用**: `api_spec_base.md`、`api_spec_types.md`（含 `UserItem`/`GroupItem`/`ReportItem` 等）、`api_spec_errors.md`、`api_spec_admin_core.md`、`api_spec_system.md`
 
 ## 端点总览
 
@@ -34,13 +31,12 @@ alwaysApply: false
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下类型定义于 `api_spec_types.md`：
 - `UserItem`
 - `GroupItem`
 - `SystemAnnouncementItem`
 - `PaginationParams`
 - `PaginatedData`
-- `UserAccountStatus`
 - `UserType`
 - `ReportStatus`
 - `ReportTargetType`
@@ -51,6 +47,13 @@ alwaysApply: false
 - `ReportItem`
 
 以下 Admin 扩展类型在通用类型基础上扩展管理员视角字段（部分使用 `extends`，部分为结构化扩展）。
+
+### 本模块类型
+
+```typescript
+// 账号状态（系统管理员视角）
+type UserAccountStatus = 'normal' | 'banned';
+```
 
 ## 端点详情
 
@@ -369,7 +372,7 @@ interface AdminDeleteTagRequest {
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `announcement_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致。
 
 **说明**：
-- 普通用户通过 `POST /api/v1/system/list_announcements`（定义于 `@spec/api_spec_system.md`）获取公开公告
+- 普通用户通过 `POST /api/v1/system/list_announcements`（定义于 `api_spec_system.md`）获取公开公告
 - 此端点返回 `AdminAnnouncementItem`（含 `created_by`、`view_count` 等管理员字段）
 
 **Request**: `AdminAnnouncementSearchRequest`

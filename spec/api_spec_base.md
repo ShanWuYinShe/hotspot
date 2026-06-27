@@ -1,6 +1,3 @@
----
-alwaysApply: true
----
 # HotSpot API - 基础原则与约束
 
 > 定义 HotSpot API 设计的基础原则、命名规范、全局约束、Token 语义、分页与排序、幂等性、安全性实践等核心内容。
@@ -52,7 +49,7 @@ alwaysApply: true
 ```typescript
 interface ApiResponse<T = void> {
   code: number;       // 0: Success, != 0: Error
-  message?: string;   // code != 0 时必填（详见 @spec/api_spec_errors.md），code == 0 时可选
+  message?: string;   // code != 0 时必填（详见 api_spec_errors.md），code == 0 时可选
   data?: T;           // code == 0 且 T != void 时必填；code != 0 时必须省略（除非端点显式声明错误时 data 的结构）
 }
 ```
@@ -75,7 +72,7 @@ interface ApiResponse<T = void> {
 | `10500` | 所有端点 |
 | `10600` | 所有端点 |
 
-各错误码的类型、客户端行为及 message 示例详见 `@spec/api_spec_errors.md`。
+各错误码的类型、客户端行为及 message 示例详见 `api_spec_errors.md`。
 
 因此，端点文档中的"**错误码**"字段仅需列出该端点**特有的业务错误码**（如 `10000`、`10200`、`10300`、`10400` 等）；隐含错误码（`10100`、`10201`、`10500`、`10600`）与幂等错误码（`22000`、`22001`、`22002`）无需重复列出。
 
@@ -318,7 +315,7 @@ App 端通过 Header 携带认证信息：
 ### 类型归属与复用规则（契约级）
 
 - **嵌套引用也算引用**：若类型 A 被共享类型 B 作为字段使用，则所有引用 B 的模块都视为引用 A
-- **多模块复用**：任一类型在 2 个及以上模块出现（直接或嵌套）必须定义在 `@spec/api_spec_types.md`
+- **多模块复用**：任一类型在 2 个及以上模块出现（直接或嵌套）必须定义在 `api_spec_types.md`
 - **单模块归属**：只在单模块使用的类型必须定义在该模块文档
 - **禁止同义重复**：已在 types 定义的类型，模块不得使用同义的字面量/结构硬编码
 - **新增通用类型**：先改 types，再在模块引用，避免分叉
@@ -357,7 +354,7 @@ App 端通过 Header 携带认证信息：
 
 本节定义跨模块复用的字段校验规则。各模块接口文档必须显式标注模块级校验约束。
 
-说明：以下约束值为系统默认值，管理员可通过 `AppConfig.limits`（见 `@spec/api_spec_admin_core.md`）动态调整部分限制，客户端通过 `ClientConfig.limits`（见 `@spec/api_spec_system.md`）获取生效后的值。
+说明：以下约束值为系统默认值，管理员可通过 `AppConfig.limits`（见 `api_spec_admin_core.md`）动态调整部分限制，客户端通过 `ClientConfig.limits`（见 `api_spec_system.md`）获取生效后的值。
 
 **模块级覆盖**：各模块可根据业务语义收窄（不可放宽）本节定义的全局约束。覆盖时必须在模块 spec 的接口说明中显式标注覆盖后的约束值及原因（如"分享场景 `location_name` 约束为 1-100 字符，必填"）。未显式标注的字段使用本节全局默认值。
 
@@ -404,7 +401,7 @@ App 端通过 Header 携带认证信息：
 |-----|------|------|
 | `keyword` | 1-100 字符 | 搜索关键字 |
 | `prefix` | 1-50 字符 | 搜索建议前缀 |
-| `radius` | 100-50000 米 | 搜索半径，上限由 `AppConfig.limits.search_radius_max` 控制（`AppConfig` 见 `@spec/api_spec_admin_core.md`，`AppLimits` 结构见 `@spec/api_spec_system.md`） |
+| `radius` | 100-50000 米 | 搜索半径，上限由 `AppConfig.limits.search_radius_max` 控制（`AppConfig` 见 `api_spec_admin_core.md`，`AppLimits` 结构见 `api_spec_system.md`） |
 | `zoom`（map） | 1-20 | 地图缩放级别 |
 
 ### 管理员字段约束
@@ -430,8 +427,8 @@ App 端通过 Header 携带认证信息：
 
 - 所有列表接口使用游标分页，禁止 offset 分页
 - `cursor` 为**完全不透明字符串**（客户端禁止解析/构造/修改，格式可能随版本变化）。服务端必须对 cursor 进行签名或加密处理，防止客户端篡改或解码以推测内部排序逻辑和 ID 范围
-- 无界列表接口统一使用 `PaginationParams` 与 `PaginatedData<T>` 进行游标分页（类型定义见 `@spec/api_spec_types.md`"分页与元数据"小节）
-- 有界/确定数量的数据（如搜索建议、热门标签、聊天最近消息）由服务端决定返回数量，具体值通过 `AppConfig.response_defaults` 配置（见 `@spec/api_spec_admin_core.md`），客户端不传分页或 limit 参数
+- 无界列表接口统一使用 `PaginationParams` 与 `PaginatedData<T>` 进行游标分页（类型定义见 `api_spec_types.md`"分页与元数据"小节）
+- 有界/确定数量的数据（如搜索建议、热门标签、聊天最近消息）由服务端决定返回数量，具体值通过 `AppConfig.response_defaults` 配置（见 `api_spec_admin_core.md`），客户端不传分页或 limit 参数
 - 任意使用 `PaginationParams` 的接口必须返回 `PaginatedData<T>`；不返回分页结构的接口不得使用 `PaginationParams`
 - **无更多数据**：当没有下一页时，响应中**省略 `next_cursor` 字段**（即 JSON 中不包含该 key）。客户端通过 `next_cursor` 字段是否存在来判断是否有更多数据，而非检查 `null`
 
@@ -478,7 +475,7 @@ App 端通过 Header 携带认证信息：
 | 管理员查询（`/admin/*` 读） | 用户 | 令牌桶 | 100次/分钟 | `admin_read_per_minute` |
 | 管理员写操作（`/admin/*` 写） | 用户 | 滑动窗口 | 30次/分钟 | `admin_write_per_minute` |
 
-> 各字段的完整定义和取值范围见 `@spec/api_spec_admin_core.md` 的 `RateLimitConfig`。
+> 各字段的完整定义和取值范围见 `api_spec_admin_core.md` 的 `RateLimitConfig`。
 
 **限流策略说明**：
 - **滑动窗口**：按实际时间窗口统计，平滑限流
@@ -544,7 +541,7 @@ App 端通过 Header 携带认证信息：
 - **收到 `22002`（处理中）**：等待 1-2 秒后使用相同 key 重试
 - **收到 `22001`（缓存失效）或 `22000`（不可恢复冲突）**：生成新 key 后重试
 - **收到缓存回放响应（命中已处理完成）**：视为成功，直接使用返回数据
-- 具体幂等错误码（`22000`/`22001`/`22002`）的定义与客户端行为详见 `@spec/api_spec_errors.md`
+- 具体幂等错误码（`22000`/`22001`/`22002`）的定义与客户端行为详见 `api_spec_errors.md`
 - **错误码约定**：凡文档中标记为“幂等: MUST”的端点，除特别说明外均可能返回 `22000`/`22001`/`22002`；各端点的“错误码”小节**不应重复列出**这三种幂等错误码，只需补充额外的业务错误码。
 
 #### 必须使用幂等键的接口（MUST）

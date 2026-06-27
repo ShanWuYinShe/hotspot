@@ -1,6 +1,3 @@
----
-alwaysApply: true
----
 # HotSpot API - 错误码定义
 
 > 本文档定义 HotSpot API 的所有错误码，包括 HTTP API 业务错误码、WebSocket 业务期错误码和幂等性相关错误码。

@@ -1,14 +1,11 @@
----
-alwaysApply: true
----
 # HotSpot API - 通用类型定义
 
 > 定义 HotSpot API 跨模块复用的基础值对象（Domain Primitives）和业务核心对象（Domain Entities）。
 
 ## 契约引用
 
-- 基础规范与约束：`@spec/api_spec_base.md`
-- 错误码：`@spec/api_spec_errors.md`
+- 基础规范与约束：`api_spec_base.md`
+- 错误码：`api_spec_errors.md`
 
 ---
 
@@ -26,7 +23,7 @@ type SendMessageType = Exclude<MessageType, 'system'>;
 // 用户类型枚举（仅表达账号生命周期，不含权限角色）
 // - 'temp': 临时用户（访客，未注册）
 // - 'normal': 正式用户（已注册）
-// 管理员身份由 RBAC 系统管理（见 @spec/api_spec_admin_core.md），不体现在 UserType 中
+// 管理员身份由 RBAC 系统管理（见 api_spec_admin_core.md），不体现在 UserType 中
 // 系统通知通过 MessageType = 'system' 和公告 API 处理，不需要"系统用户"类型
 type UserType = 'temp' | 'normal';
 
@@ -216,7 +213,7 @@ interface MessageMedia extends MediaAsset {
 **系统管理员可见性规则**：
 - 系统管理员使用普通 API 时与普通用户**无区别**：使用相同端点、获得相同响应形态
 - 其他用户可正常搜索到管理员用户、查看其资料；`UserInfo` 不包含管理员标识，普通用户无法通过任何普通 API 判断对方是否为管理员
-- 管理员身份**不通过 `UserType` 体现**（`UserType` 仅表达账号生命周期）；管理员通过 `admin/rbac/get_me`（见 `@spec/api_spec_admin_core.md`）获知自己的管理员身份和权限
+- 管理员身份**不通过 `UserType` 体现**（`UserType` 仅表达账号生命周期）；管理员通过 `admin/rbac/get_me`（见 `api_spec_admin_core.md`）获知自己的管理员身份和权限
 - 管理员专用字段（如 `status`、`login_id`、`register_ip` 等）不在本类型中定义，**仅在 `/admin/*` 路径下通过独立的 Admin 类型返回**
 - 设计专用接口用于用户联系系统管理员（如举报反馈、申诉等），此类接口中管理员身份匿名化，用户仅知道"对方是官方客服/管理员"
 
@@ -238,10 +235,8 @@ interface UserStats {
   following_count: number;
   groups_count: number;
 }
-
-// 账号状态（系统管理员视角）
-type UserAccountStatus = 'normal' | 'banned';
 ```
+
 
 **UserItem**: 用户统一数据类型（用于列表、搜索、详情、Feed 等所有场景）
 ```typescript
@@ -461,7 +456,7 @@ interface MessageSent {
 }
 ```
 
-私聊/群聊消息项类型定义在模块文档中：`@spec/api_spec_chat.md`。
+私聊/群聊消息项类型定义在模块文档中：`api_spec_chat.md`。
 
 ### 标签 (Tag)
 

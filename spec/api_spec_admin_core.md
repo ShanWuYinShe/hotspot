@@ -1,10 +1,7 @@
----
-alwaysApply: false
----
 # HotSpot API - 管理后台核心
 
 > 本文档定义 HotSpot 管理后台核心功能的 RPC 接口，包括权限管理（RBAC）、审计日志和全局配置。
-> 内容审核相关接口（用户/群组/举报/标签/公告管理）定义在 `@spec/api_spec_admin_moderation.md`。
+> 内容审核相关接口（用户/群组/举报/标签/公告管理）定义在 `api_spec_admin_moderation.md`。
 
 ## 模块信息
 
@@ -17,10 +14,10 @@ alwaysApply: false
   - `/api/v1/admin/audit/`
   - `/api/v1/admin/app_config/`
 - **引用**: 
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`
-  - 错误码：`@spec/api_spec_errors.md`
-  - 客户端配置类型：`@spec/api_spec_system.md`（`ClientConfig`、`FeatureSwitches`、`AppLimits`、`ContactInfo`）
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`
+  - 错误码：`api_spec_errors.md`
+  - 客户端配置类型：`api_spec_system.md`（`ClientConfig`、`FeatureSwitches`、`AppLimits`、`ContactInfo`）
 
 ## 统一访问控制
 
@@ -31,7 +28,7 @@ alwaysApply: false
 
 ## 幂等性（管理员写操作）
 
-管理员写操作的幂等性遵循 `@spec/api_spec_base.md` 的分级规则：
+管理员写操作的幂等性遵循 `api_spec_base.md` 的分级规则：
 - **MUST**：具有"创建/授权/封禁/解散/处理"语义的接口必须携带 `Idempotency-Key`（见各端点的幂等标记）
 - **幂等语义**：具有"更新/删除/撤销"语义的接口为天然幂等，重复请求返回一致结果，无需 `Idempotency-Key`
 
@@ -84,13 +81,13 @@ alwaysApply: false
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下类型定义于 `api_spec_types.md`：
 - `UserInfo`
 - `GroupSettings`
 - `PaginationParams`
 - `PaginatedData<T>`
 
-`ApiResponse<T>` 定义于 `@spec/api_spec_base.md`。
+`ApiResponse<T>` 定义于 `api_spec_base.md`。
 
 ## 端点详情
 
@@ -408,7 +405,7 @@ type AuditAction =
 type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'admin' | 'report' | 'tag' | 'config';
 
 // 注意：AuditDetails.type 必须与 AuditLogItem.action 一致（即每个 action 对应唯一的 details 变体）
-// ReportHandleAction 定义于 @spec/api_spec_types.md
+// ReportHandleAction 定义于 api_spec_types.md
 type AuditDetails = 
   | { type: 'user.ban'; reason?: string; duration_days?: number }
   | { type: 'user.unban'; reason?: string }
@@ -487,12 +484,12 @@ interface AuditLogOpenTheDoorRequest {
 
 ```typescript
 // AppConfig: 完整的应用配置，由管理员统一管理
-// ClientConfig（见 @spec/api_spec_system.md）是 AppConfig 中客户端可见部分的投影
+// ClientConfig（见 api_spec_system.md）是 AppConfig 中客户端可见部分的投影
 interface AppConfig {
   // === 客户端可见配置（构成 ClientConfig） ===
-  features: FeatureSwitches;       // 定义于 @spec/api_spec_system.md
-  limits: AppLimits;               // 定义于 @spec/api_spec_system.md
-  contact: ContactInfo;            // 定义于 @spec/api_spec_system.md
+  features: FeatureSwitches;       // 定义于 api_spec_system.md
+  limits: AppLimits;               // 定义于 api_spec_system.md
+  contact: ContactInfo;            // 定义于 api_spec_system.md
   // === 仅服务端使用 ===
   upload: UploadConfig;
   defaults: ContentDefaults;
@@ -548,10 +545,10 @@ interface UpdateUploadConfigRequest {
 **Request**: `UpdateDefaultsRequest`
 ```typescript
 interface ContentDefaults {
-  default_location: Location;              // 默认位置（含坐标和名称），Location 定义于 @spec/api_spec_types.md
+  default_location: Location;              // 默认位置（含坐标和名称），Location 定义于 api_spec_types.md
   default_group_avatar: string;
   default_user_avatar: string;
-  default_group_settings: GroupSettings;    // GroupSettings 定义于 @spec/api_spec_types.md
+  default_group_settings: GroupSettings;    // GroupSettings 定义于 api_spec_types.md
 }
 
 interface UpdateDefaultsRequest {
@@ -656,10 +653,10 @@ interface UpdateResponseDefaultsRequest {
 
 ## 客户端可见配置管理
 
-**设计说明**：以下端点管理 `AppConfig` 中客户端可见的部分（`features`/`limits`/`contact`），这些字段构成 `ClientConfig`，通过公开端点 `system/get_client_config`（见 `@spec/api_spec_system.md`）暴露给客户端。
+**设计说明**：以下端点管理 `AppConfig` 中客户端可见的部分（`features`/`limits`/`contact`），这些字段构成 `ClientConfig`，通过公开端点 `system/get_client_config`（见 `api_spec_system.md`）暴露给客户端。
 
 > 统一使用 `admin.app_config.read` / `admin.app_config.write` 权限。
-> 客户端可通过公开端点 `system/get_client_config`（见 `@spec/api_spec_system.md`）获取 ClientConfig 投影，无需认证。
+> 客户端可通过公开端点 `system/get_client_config`（见 `api_spec_system.md`）获取 ClientConfig 投影，无需认证。
 
 ### POST /api/v1/admin/app_config/update_features
 

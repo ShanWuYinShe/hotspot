@@ -1,6 +1,3 @@
----
-alwaysApply: false
----
 # HotSpot API - 用户
 
 > 本文档定义 HotSpot 用户相关的 RPC 接口。
@@ -10,10 +7,10 @@ alwaysApply: false
 - **命名空间**: `users`
 - **基础路径**: `/api/v1/users/`
 - **引用**: 
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`
-  - 错误码：`@spec/api_spec_errors.md`
-  - 搜索建议：`@spec/api_spec_search.md`（per-module suggest 已移除，使用全局 `search/suggest`）
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`
+  - 错误码：`api_spec_errors.md`
+  - 搜索建议：`api_spec_search.md`（per-module suggest 已移除，使用全局 `search/suggest`）
 
 ## 端点总览
 
@@ -47,7 +44,7 @@ alwaysApply: false
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下类型定义于 `api_spec_types.md`：
 - `PrivacyLevel`
 - `UserStats`
 - `UserItem`
@@ -102,7 +99,7 @@ interface SearchUsersRequest {
 
 ### POST /api/v1/users/open_the_door
 
-获取用户资料详情。认证可选，字段可见性规则见 `@spec/api_spec_base.md`。
+获取用户资料详情。认证可选，字段可见性规则见 `api_spec_base.md`。
 
 **隐私说明**：用户存在但对其资料设置了完全隐藏（或调用方被对方拉黑等隐私限制）时，返回 `10200`（权限不足）；用户不存在时返回 `10300`。
 
@@ -128,7 +125,7 @@ interface UserOpenTheDoorRequest {
 
 **统一端点**：`user_id` 可选。不传或传入当前用户 ID 时查询自己的好友列表，返回 `@owner-only` 字段（如 `remark`）。传入其他用户 ID 时查询对方的好友列表，受 `social_lists_visible` 隐私设置控制。
 
-- **认证**: 条件必须（见 `@spec/api_spec_base.md` 认证档位说明：未指定 `user_id` 等价于查自己，必须登录；指定他人 ID 时为可选）
+- **认证**: 条件必须（见 `api_spec_base.md` 认证档位说明：未指定 `user_id` 等价于查自己，必须登录；指定他人 ID 时为可选）
 - **幂等**: 无
 - **排序**: 默认按 `followed_back_at` **时间倒序**（最近成为好友在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
@@ -164,7 +161,7 @@ interface FriendItem {
 
 **统一端点**：`user_id` 可选。不传或传入当前用户 ID 时查询自己的关注列表。传入其他用户 ID 时查询对方的关注列表，受 `social_lists_visible` 隐私设置控制。
 
-- **认证**: 条件必须（见 `@spec/api_spec_base.md` 认证档位说明：未指定 `user_id` 等价于查自己，必须登录；指定他人 ID 时为可选）
+- **认证**: 条件必须（见 `api_spec_base.md` 认证档位说明：未指定 `user_id` 等价于查自己，必须登录；指定他人 ID 时为可选）
 - **幂等**: 无
 - **排序**: 默认按 `followed_at` **时间倒序**（最近关注在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
@@ -199,7 +196,7 @@ interface FollowingItem {
 
 **统一端点**：`user_id` 可选。不传或传入当前用户 ID 时查询自己的粉丝列表。传入其他用户 ID 时查询对方的粉丝列表，受 `social_lists_visible` 隐私设置控制。
 
-- **认证**: 条件必须（见 `@spec/api_spec_base.md` 认证档位说明：未指定 `user_id` 等价于查自己，必须登录；指定他人 ID 时为可选）
+- **认证**: 条件必须（见 `api_spec_base.md` 认证档位说明：未指定 `user_id` 等价于查自己，必须登录；指定他人 ID 时为可选）
 - **幂等**: 无
 - **排序**: 默认按 `followed_at` **时间倒序**（最近关注在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
@@ -256,7 +253,7 @@ interface UserGroupsRequest {
 
 获取指定用户生活瞬间历史。
 
-**说明**：生活瞬间支持 `privacy_level` 控制可见性（`public` / `private`）。未登录用户仅能访问 `public` 的瞬间；登录态可额外看到自己的所有瞬间（包括 `private`）。认证可选，字段可见性规则见 `@spec/api_spec_base.md`。
+**说明**：生活瞬间支持 `privacy_level` 控制可见性（`public` / `private`）。未登录用户仅能访问 `public` 的瞬间；登录态可额外看到自己的所有瞬间（包括 `private`）。认证可选，字段可见性规则见 `api_spec_base.md`。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -313,7 +310,7 @@ interface UserLikedMomentsRequest {
 
 **Response**: `ApiResponse<MyProfile>`
 ```typescript
-// Gender 定义于 @spec/api_spec_types.md
+// Gender 定义于 api_spec_types.md
 
 interface MyProfile {
   user_id: string;
@@ -415,7 +412,7 @@ interface UpgradeAccountRequest {
 
 **Response**: `ApiResponse<UserSettings>`
 
-`UserSettings` 定义于 `@spec/api_spec_types.md`。
+`UserSettings` 定义于 `api_spec_types.md`。
 
 **错误码**: `10000`
 

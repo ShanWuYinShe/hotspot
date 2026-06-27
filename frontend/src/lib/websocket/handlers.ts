@@ -1,7 +1,7 @@
 /**
  * WebSocket 事件处理器
  * 统一处理 WebSocket 推送的事件，更新应用状态
- * 严格遵循 @spec/api_spec_websocket.md
+ * 严格遵循 spec/api_spec_websocket.md
  */
 
 import { websocketStore } from './store.svelte';

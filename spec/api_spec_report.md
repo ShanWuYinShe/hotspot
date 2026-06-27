@@ -1,19 +1,16 @@
----
-alwaysApply: false
----
 # HotSpot API - 举报
 
-> 本文档定义 HotSpot 举报审核 (`reports`) 相关的 RPC 接口。管理员审核接口定义于 `@spec/api_spec_admin_moderation.md`。
+> 本文档定义 HotSpot 举报审核 (`reports`) 相关的 RPC 接口。管理员审核接口定义于 `api_spec_admin_moderation.md`。
 
 ## 模块信息
 
 - **命名空间**: `reports`
 - **基础路径**: `/api/v1/reports/`
 - **引用**: 
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`（`ReportTargetType`、`ReportStatus`、`PaginationParams`、`PaginatedData` 等枚举/工具类型）
-  - 错误码：`@spec/api_spec_errors.md`
-  - 管理员举报审核：`@spec/api_spec_admin_moderation.md`
+  - 基础规范：`api_spec_base.md`
+  - 通用类型：`api_spec_types.md`（`ReportTargetType`、`ReportStatus`、`PaginationParams`、`PaginatedData` 等枚举/工具类型）
+  - 错误码：`api_spec_errors.md`
+  - 管理员举报审核：`api_spec_admin_moderation.md`
 
 ## 端点总览
 
@@ -35,7 +32,7 @@ alwaysApply: false
 | `resolved` | 已处理（确认违规） | 已采取措施（封禁/删除内容） |
 | `dismissed` | 已驳回（无违规） | 审核结束，无需处理 |
 
-管理员审核流程（处理动作、内容快照机制等）详见 `@spec/api_spec_admin_moderation.md`。
+管理员审核流程（处理动作、内容快照机制等）详见 `api_spec_admin_moderation.md`。
 
 **不同 `ReportTargetType` 的处理逻辑**：
 
@@ -49,7 +46,7 @@ alwaysApply: false
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下类型定义于 `api_spec_types.md`：
 - `ReportTargetType`
 - `ReportReason`
 - `ReportStatus`
@@ -115,6 +112,6 @@ interface MyReportsRequest {
 
 **Response**: `ApiResponse<PaginatedData<ReportItem>>`
 
-`ReportItem` 定义于 `@spec/api_spec_types.md`。
+`ReportItem` 定义于 `api_spec_types.md`。
 
 **错误码**: `10000`
