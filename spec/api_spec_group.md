@@ -197,7 +197,9 @@ interface UpdateGroupRequest {
 
 ### POST /api/v1/groups/dismiss
 
-解散群组。
+解散群组（仅群主）。
+
+**解散行为**：解散后向所有在线群成员推送 WebSocket `GroupDismissed` 事件（`reason='owner_dismissed'`）。不暴露解散者身份（隐私保护，操作记录仅保留在审计日志）。
 
 - **认证**: 必须
 - **幂等**: SHOULD（建议客户端携带 `Idempotency-Key`）
@@ -206,6 +208,7 @@ interface UpdateGroupRequest {
 ```typescript
 interface DismissGroupRequest {
   group_id: string;
+  reason?: string;  // 解散说明（0-500 字符，仅进审计日志；成员收到的是 owner_dismissed 分类，不接收自由文本）
 }
 ```
 

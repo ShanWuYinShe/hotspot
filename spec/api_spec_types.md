@@ -558,6 +558,7 @@ interface AppLimits {
   comment_max_length: number;
   search_radius_max: number;  // 搜索半径上限（米），用于搜索和 Feed 相关接口
   message_recall_window_seconds: number;  // 消息撤回时间窗（秒），发送者仅可撤回该窗口内的消息；0 表示不允许撤回
+  stranger_message_daily_quota: number;   // 每日可向非互相关注（陌生人）用户发送的私聊消息上限；超过返回 MessageBlockedReason='stranger_quota_exceeded'，0 表示禁止任何陌生人消息
 }
 
 // 联系/合规信息（客户端可见）

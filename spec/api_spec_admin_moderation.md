@@ -230,8 +230,9 @@ interface AdminGroupOpenTheDoorRequest {
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
 **安全约束**：
-- 解散后群内所有成员收到 `GroupDismissed` WebSocket 事件（含 `policy_violation` 原因）
-- 解散操作会记录审计日志
+- 解散后群内所有成员收到 `GroupDismissed` WebSocket 事件（`reason='policy_violation'`，不暴露管理员身份）
+- 解散操作会记录审计日志（含完整 `reason` 自由文本）
+- **reason 可见性**：`reason` 自由文本仅进审计日志（管理员可见），不推送给群成员（成员只收到 `policy_violation` 分类，避免泄露具体处置细节与管理员存在）
 
 **Request**: `AdminDismissGroupRequest`
 ```typescript

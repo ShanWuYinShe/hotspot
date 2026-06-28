@@ -203,8 +203,10 @@ interface ShareListItem {
 **Request**: `RevokeShareRequest`
 ```typescript
 interface RevokeShareRequest {
-  share_id: string;
+  share_id?: string;    // 分享 ID（来自 share/create 或 share/me/list）
+  share_code?: string;  // 或分享码（创建者可能仅保留了复制出的链接码）
 }
+// 二选一：必须且只能传 share_id 或 share_code 其中之一；同时传或都不传返回 10000
 ```
 
 **Response**: `ApiResponse`
@@ -212,3 +214,4 @@ interface RevokeShareRequest {
 **错误码**: `10000` `10300`
 
 > 隐私一致性：非创建者撤销（share 存在但无权限）统一返回 `10300`，与本模块「资源存在但不可访问按不存在处理」规则一致（见上方隐私规则），不通过 `10200` 泄露 share 的存在性。
+> 设计说明：revoke 同时支持 share_id 与 share_code，消除"创建者只保留了链接码却无法撤销"的寻址不对称。

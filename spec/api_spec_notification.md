@@ -157,10 +157,11 @@ interface UnreadCountResult {
 **Request**: `MarkAsReadRequest`
 ```typescript
 interface MarkAsReadRequest {
-  notification_ids?: string[];       // 精确标记：要标记为已读的通知 ID（1-50 个，空数组或超过 50 个返回 10000）
+  notification_ids?: string[];       // 精确标记：要标记为已读的通知 ID（0-50 个；空数组视为 no-op 成功，不报错；超过 50 个返回 10000）
   type?: NotificationType;           // 按类型批量标记：将该类型的所有未读通知标记为已读
 }
 // 二选一：必须且只能传 notification_ids 或 type 其中之一；同时传或都不传返回 10000
+// 空数组 notification_ids: [] 对齐"已达目标状态→成功"的幂等哲学，不惩罚空选择的合法调用
 ```
 
 **非法 ID 处理**：不存在或不属于当前用户的 `notification_ids` 将被服务端静默忽略，不返回错误。

@@ -775,6 +775,7 @@ interface AccountBannedPayload {
   reason: string;              // 封禁原因
   duration_days: number;       // 封禁时长（天），0=永久
   banned_at: string;
+  banned_until?: string;       // 封禁到期时间（UTC ISO 8601）；不返回/省略表示永久封禁。客户端据此提示"何时可重新登录"，无需自行计算 banned_at + duration_days
 }
 type AccountBannedEvent = { type: "AccountBanned"; payload: AccountBannedPayload; };
 ```

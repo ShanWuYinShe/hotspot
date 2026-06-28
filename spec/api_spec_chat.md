@@ -291,7 +291,7 @@ interface DeletePrivateChatRequest {
 **安全性与权限**：
 - 必须校验接收方的隐私设置（`allow_private_chat`）
 - 必须校验黑名单关系
-- 陌生人消息限制
+- 陌生人消息限制：每日向非互相关注用户（陌生人）发送私聊消息的上限由 `AppConfig.limits.stranger_message_daily_quota` 控制（客户端通过 `ClientConfig.limits` 读取），超限返回 `10200` 且 `message_blocked_reason='stranger_quota_exceeded'`
 
 - **认证**: 必须
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
