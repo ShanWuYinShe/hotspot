@@ -60,317 +60,250 @@ func (s *Service) GetAppConfig(ctx context.Context) (AppConfig, *httpx.APIError,
 	return cfg, nil, nil
 }
 
-func (s *Service) UpdateUpload(ctx context.Context, req UpdateUploadConfigRequest) (*httpx.APIError, error) {
+func (s *Service) UpdateAppConfig(ctx context.Context, req UpdateAppConfigRequest) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
 	if apiErr != nil || err != nil {
 		return apiErr, err
+	}
+	// At least one section must be provided
+	if req.Upload == nil && req.Defaults == nil && req.RateLimits == nil && req.ResponseDefaults == nil && req.Features == nil && req.Limits == nil && req.Contact == nil {
+		return httpx.InvalidRequest("参数错误"), nil
 	}
 	before, err := s.provider.GetAppConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
 	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
-		if req.Upload.ImageMaxSize != nil {
-			if *req.Upload.ImageMaxSize <= 0 {
-				return AppConfig{}, httpx.InvalidRequest("参数错误")
+		if req.Upload != nil {
+			if err := applyUploadConfigPatch(&cfg.Upload, *req.Upload); err != nil {
+				return AppConfig{}, err
 			}
-			cfg.Upload.ImageMaxSize = *req.Upload.ImageMaxSize
 		}
-		if req.Upload.VideoMaxSize != nil {
-			if *req.Upload.VideoMaxSize <= 0 {
-				return AppConfig{}, httpx.InvalidRequest("参数错误")
+		if req.Defaults != nil {
+			if err := applyDefaultsPatch(&cfg.Defaults, *req.Defaults); err != nil {
+				return AppConfig{}, err
 			}
-			cfg.Upload.VideoMaxSize = *req.Upload.VideoMaxSize
 		}
-		if req.Upload.AudioMaxSize != nil {
-			if *req.Upload.AudioMaxSize <= 0 {
-				return AppConfig{}, httpx.InvalidRequest("参数错误")
+		if req.RateLimits != nil {
+			if err := applyRateLimitsPatch(&cfg.RateLimits, *req.RateLimits); err != nil {
+				return AppConfig{}, err
 			}
-			cfg.Upload.AudioMaxSize = *req.Upload.AudioMaxSize
 		}
-		if req.Upload.FileMaxSize != nil {
-			if *req.Upload.FileMaxSize <= 0 {
-				return AppConfig{}, httpx.InvalidRequest("参数错误")
+		if req.ResponseDefaults != nil {
+			if err := applyResponseDefaultsPatch(&cfg.ResponseDefaults, *req.ResponseDefaults); err != nil {
+				return AppConfig{}, err
 			}
-			cfg.Upload.FileMaxSize = *req.Upload.FileMaxSize
 		}
-		if req.Upload.AllowedImageTypes != nil {
-			cfg.Upload.AllowedImageTypes = sortAndUniqueStrings(req.Upload.AllowedImageTypes)
+		if req.Features != nil {
+			applyFeaturesPatch(&cfg.Features, *req.Features)
 		}
-		if req.Upload.AllowedVideoTypes != nil {
-			cfg.Upload.AllowedVideoTypes = sortAndUniqueStrings(req.Upload.AllowedVideoTypes)
+		if req.Limits != nil {
+			if err := applyLimitsPatch(&cfg.Limits, *req.Limits); err != nil {
+				return AppConfig{}, err
+			}
+		}
+		if req.Contact != nil {
+			if err := applyContactPatch(&cfg.Contact, *req.Contact); err != nil {
+				return AppConfig{}, err
+			}
 		}
 		return cfg, nil
 	})
 	if apiErr != nil || err != nil {
 		return apiErr, err
 	}
-	return nil, s.appendConfigAudit(ctx, actor, "upload", before.Upload, updated.Upload)
+	return nil, s.appendConfigAudit(ctx, actor, "app_config", before, updated)
 }
 
-func (s *Service) UpdateDefaults(ctx context.Context, req UpdateDefaultsRequest) (*httpx.APIError, error) {
-	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
-	if apiErr != nil || err != nil {
-		return apiErr, err
+
+// --- Patch helper functions for unified UpdateAppConfig ---
+
+func applyUploadConfigPatch(target *UploadConfig, patch PartialUploadConfig) *httpx.APIError {
+	if patch.ImageMaxSize != nil {
+		if *patch.ImageMaxSize <= 0 {
+			return httpx.InvalidRequest("参数错误")
+		}
+		target.ImageMaxSize = *patch.ImageMaxSize
 	}
-	before, err := s.provider.GetAppConfig(ctx)
-	if err != nil {
-		return nil, err
+	if patch.VideoMaxSize != nil {
+		if *patch.VideoMaxSize <= 0 {
+			return httpx.InvalidRequest("参数错误")
+		}
+		target.VideoMaxSize = *patch.VideoMaxSize
 	}
-	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
-		if req.DefaultLocation != nil {
-			if req.DefaultLocation.Point != nil {
-				cfg.Defaults.DefaultLocation.Point = *req.DefaultLocation.Point
+	if patch.AudioMaxSize != nil {
+		if *patch.AudioMaxSize <= 0 {
+			return httpx.InvalidRequest("参数错误")
+		}
+		target.AudioMaxSize = *patch.AudioMaxSize
+	}
+	if patch.FileMaxSize != nil {
+		if *patch.FileMaxSize <= 0 {
+			return httpx.InvalidRequest("参数错误")
+		}
+		target.FileMaxSize = *patch.FileMaxSize
+	}
+	if patch.AllowedImageTypes != nil {
+		target.AllowedImageTypes = sortAndUniqueStrings(patch.AllowedImageTypes)
+	}
+	if patch.AllowedVideoTypes != nil {
+		target.AllowedVideoTypes = sortAndUniqueStrings(patch.AllowedVideoTypes)
+	}
+	return nil
+}
+
+func applyDefaultsPatch(target *ContentDefaults, patch UpdateDefaultsPayload) *httpx.APIError {
+	if patch.DefaultLocation != nil {
+		if patch.DefaultLocation.Point != nil {
+			target.DefaultLocation.Point = *patch.DefaultLocation.Point
+		}
+		if patch.DefaultLocation.LocationName != nil {
+			if strings.TrimSpace(*patch.DefaultLocation.LocationName) == "" {
+				return httpx.InvalidRequest("参数错误")
 			}
-			if req.DefaultLocation.LocationName != nil {
-				if strings.TrimSpace(*req.DefaultLocation.LocationName) == "" {
-					return AppConfig{}, httpx.InvalidRequest("参数错误")
+			target.DefaultLocation.LocationName = strings.TrimSpace(*patch.DefaultLocation.LocationName)
+		}
+	}
+	if patch.DefaultGroupAvatar != nil {
+		target.DefaultGroupAvatar = strings.TrimSpace(*patch.DefaultGroupAvatar)
+	}
+	if patch.DefaultUserAvatar != nil {
+		target.DefaultUserAvatar = strings.TrimSpace(*patch.DefaultUserAvatar)
+	}
+	if patch.DefaultGroupSettings != nil {
+		gs := patch.DefaultGroupSettings
+		if gs.JoinMethod != nil {
+			if strings.TrimSpace(string(*gs.JoinMethod)) == "" {
+				return httpx.InvalidRequest("参数错误")
+			}
+			target.DefaultGroupSettings.JoinMethod = *gs.JoinMethod
+		}
+		if gs.IsSearchable != nil {
+			target.DefaultGroupSettings.IsSearchable = *gs.IsSearchable
+		}
+		if gs.MaxMembers != nil {
+			if *gs.MaxMembers <= 0 {
+				return httpx.InvalidRequest("参数错误")
+			}
+			target.DefaultGroupSettings.MaxMembers = *gs.MaxMembers
+		}
+		if gs.Location != nil {
+			if gs.Location.Point != nil {
+				target.DefaultGroupSettings.Location.Point = *gs.Location.Point
+			}
+			if gs.Location.LocationName != nil {
+				if strings.TrimSpace(*gs.Location.LocationName) == "" {
+					return httpx.InvalidRequest("参数错误")
 				}
-				cfg.Defaults.DefaultLocation.LocationName = strings.TrimSpace(*req.DefaultLocation.LocationName)
+				target.DefaultGroupSettings.Location.LocationName = strings.TrimSpace(*gs.Location.LocationName)
 			}
 		}
-		if req.DefaultGroupAvatar != nil {
-			cfg.Defaults.DefaultGroupAvatar = strings.TrimSpace(*req.DefaultGroupAvatar)
-		}
-		if req.DefaultUserAvatar != nil {
-			cfg.Defaults.DefaultUserAvatar = strings.TrimSpace(*req.DefaultUserAvatar)
-		}
-		if req.DefaultGroupSettings != nil {
-			if req.DefaultGroupSettings.JoinMethod != nil {
-				joinMethod := strings.TrimSpace(string(*req.DefaultGroupSettings.JoinMethod))
-				if joinMethod == "" {
-					return AppConfig{}, httpx.InvalidRequest("参数错误")
-				}
-				cfg.Defaults.DefaultGroupSettings.JoinMethod = *req.DefaultGroupSettings.JoinMethod
-			}
-			if req.DefaultGroupSettings.IsSearchable != nil {
-				cfg.Defaults.DefaultGroupSettings.IsSearchable = *req.DefaultGroupSettings.IsSearchable
-			}
-			if req.DefaultGroupSettings.MaxMembers != nil {
-				if *req.DefaultGroupSettings.MaxMembers <= 0 {
-					return AppConfig{}, httpx.InvalidRequest("参数错误")
-				}
-				cfg.Defaults.DefaultGroupSettings.MaxMembers = *req.DefaultGroupSettings.MaxMembers
-			}
-			if req.DefaultGroupSettings.Location != nil {
-				if req.DefaultGroupSettings.Location.Point != nil {
-					cfg.Defaults.DefaultGroupSettings.Location.Point = *req.DefaultGroupSettings.Location.Point
-				}
-				if req.DefaultGroupSettings.Location.LocationName != nil {
-					if strings.TrimSpace(*req.DefaultGroupSettings.Location.LocationName) == "" {
-						return AppConfig{}, httpx.InvalidRequest("参数错误")
-					}
-					cfg.Defaults.DefaultGroupSettings.Location.LocationName = strings.TrimSpace(*req.DefaultGroupSettings.Location.LocationName)
-				}
-			}
-		}
-		return cfg, nil
-	})
-	if apiErr != nil || err != nil {
-		return apiErr, err
 	}
-	return nil, s.appendConfigAudit(ctx, actor, "defaults", before.Defaults, updated.Defaults)
+	return nil
 }
 
-func (s *Service) UpdateRateLimits(ctx context.Context, req UpdateRateLimitsRequest) (*httpx.APIError, error) {
-	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
-	if apiErr != nil || err != nil {
-		return apiErr, err
+func applyRateLimitsPatch(target *RateLimitConfig, patch PartialRateLimitConfig) *httpx.APIError {
+	fields := []struct {
+		target *int
+		patch  *int
+	}{
+		{&target.GlobalPerHour, patch.GlobalPerHour},
+		{&target.UserPerHour, patch.UserPerHour},
+		{&target.AuthRegisterPer10Minutes, patch.AuthRegisterPer10Minutes},
+		{&target.AuthLoginPer10Minutes, patch.AuthLoginPer10Minutes},
+		{&target.AuthGuestPer10Minutes, patch.AuthGuestPer10Minutes},
+		{&target.AuthRefreshPer10Minutes, patch.AuthRefreshPer10Minutes},
+		{&target.AuthResetPer10Minutes, patch.AuthResetPer10Minutes},
+		{&target.SearchPerMinute, patch.SearchPerMinute},
+		{&target.WritePerMinute, patch.WritePerMinute},
+		{&target.MomentsCreatePerMinute, patch.MomentsCreatePerMinute},
+		{&target.CommentsCreatePerMinute, patch.CommentsCreatePerMinute},
+		{&target.ReportsCreatePerHour, patch.ReportsCreatePerHour},
+		{&target.UploadPresignPerHour, patch.UploadPresignPerHour},
+		{&target.WSSubscribePerSecond, patch.WSSubscribePerSecond},
+		{&target.AdminReadPerMinute, patch.AdminReadPerMinute},
+		{&target.AdminWritePerMinute, patch.AdminWritePerMinute},
 	}
-	before, err := s.provider.GetAppConfig(ctx)
-	if err != nil {
-		return nil, err
+	for _, f := range fields {
+		if apiErr := applyPositiveIntPatch(f.target, f.patch); apiErr != nil {
+			return apiErr
+		}
 	}
-	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
-		if err := applyPositiveIntPatch(&cfg.RateLimits.GlobalPerHour, req.RateLimits.GlobalPerHour); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.UserPerHour, req.RateLimits.UserPerHour); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.AuthRegisterPer10Minutes, req.RateLimits.AuthRegisterPer10Minutes); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.AuthLoginPer10Minutes, req.RateLimits.AuthLoginPer10Minutes); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.AuthGuestPer10Minutes, req.RateLimits.AuthGuestPer10Minutes); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.AuthRefreshPer10Minutes, req.RateLimits.AuthRefreshPer10Minutes); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.AuthResetPer10Minutes, req.RateLimits.AuthResetPer10Minutes); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.SearchPerMinute, req.RateLimits.SearchPerMinute); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.WritePerMinute, req.RateLimits.WritePerMinute); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.MomentsCreatePerMinute, req.RateLimits.MomentsCreatePerMinute); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.CommentsCreatePerMinute, req.RateLimits.CommentsCreatePerMinute); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.ReportsCreatePerHour, req.RateLimits.ReportsCreatePerHour); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.UploadPresignPerHour, req.RateLimits.UploadPresignPerHour); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.WSSubscribePerSecond, req.RateLimits.WSSubscribePerSecond); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.AdminReadPerMinute, req.RateLimits.AdminReadPerMinute); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.RateLimits.AdminWritePerMinute, req.RateLimits.AdminWritePerMinute); err != nil {
-			return AppConfig{}, err
-		}
-		return cfg, nil
-	})
-	if apiErr != nil || err != nil {
-		return apiErr, err
-	}
-	return nil, s.appendConfigAudit(ctx, actor, "rate_limits", before.RateLimits, updated.RateLimits)
+	return nil
 }
 
-func (s *Service) UpdateResponseDefaults(ctx context.Context, req UpdateResponseDefaultsRequest) (*httpx.APIError, error) {
-	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
-	if apiErr != nil || err != nil {
-		return apiErr, err
+func applyResponseDefaultsPatch(target *ResponseDefaults, patch PartialResponseDefaults) *httpx.APIError {
+	fields := []struct {
+		target *int
+		patch  *int
+	}{
+		{&target.SearchSuggestCount, patch.SearchSuggestCount},
+		{&target.TrendingTagsCount, patch.TrendingTagsCount},
+		{&target.HotMomentsCount, patch.HotMomentsCount},
+		{&target.ChatRecentMessagesCount, patch.ChatRecentMessagesCount},
+		{&target.GroupAnnouncementsCount, patch.GroupAnnouncementsCount},
+		{&target.SystemAnnouncementsCount, patch.SystemAnnouncementsCount},
 	}
-	before, err := s.provider.GetAppConfig(ctx)
-	if err != nil {
-		return nil, err
+	for _, f := range fields {
+		if apiErr := applyPositiveIntPatch(f.target, f.patch); apiErr != nil {
+			return apiErr
+		}
 	}
-	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
-		if err := applyPositiveIntPatch(&cfg.ResponseDefaults.SearchSuggestCount, req.ResponseDefaults.SearchSuggestCount); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.ResponseDefaults.TrendingTagsCount, req.ResponseDefaults.TrendingTagsCount); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.ResponseDefaults.HotMomentsCount, req.ResponseDefaults.HotMomentsCount); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.ResponseDefaults.ChatRecentMessagesCount, req.ResponseDefaults.ChatRecentMessagesCount); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.ResponseDefaults.GroupAnnouncementsCount, req.ResponseDefaults.GroupAnnouncementsCount); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.ResponseDefaults.SystemAnnouncementsCount, req.ResponseDefaults.SystemAnnouncementsCount); err != nil {
-			return AppConfig{}, err
-		}
-		return cfg, nil
-	})
-	if apiErr != nil || err != nil {
-		return apiErr, err
-	}
-	return nil, s.appendConfigAudit(ctx, actor, "response_defaults", before.ResponseDefaults, updated.ResponseDefaults)
+	return nil
 }
 
-func (s *Service) UpdateFeatures(ctx context.Context, req UpdateFeaturesRequest) (*httpx.APIError, error) {
-	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
-	if apiErr != nil || err != nil {
-		return apiErr, err
+func applyFeaturesPatch(target *FeatureSwitches, patch PartialFeatureSwitches) {
+	if patch.EnablePublicRegistration != nil {
+		target.EnablePublicRegistration = *patch.EnablePublicRegistration
 	}
-	before, err := s.provider.GetAppConfig(ctx)
-	if err != nil {
-		return nil, err
+	if patch.EnableGuestLogin != nil {
+		target.EnableGuestLogin = *patch.EnableGuestLogin
 	}
-	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
-		if req.EnablePublicRegistration != nil {
-			cfg.Features.EnablePublicRegistration = *req.EnablePublicRegistration
-		}
-		if req.EnableGuestLogin != nil {
-			cfg.Features.EnableGuestLogin = *req.EnableGuestLogin
-		}
-		if req.EnableMoments != nil {
-			cfg.Features.EnableMoments = *req.EnableMoments
-		}
-		if req.EnableNearbyPeople != nil {
-			cfg.Features.EnableNearbyPeople = *req.EnableNearbyPeople
-		}
-		return cfg, nil
-	})
-	if apiErr != nil || err != nil {
-		return apiErr, err
+	if patch.EnableMoments != nil {
+		target.EnableMoments = *patch.EnableMoments
 	}
-	return nil, s.appendConfigAudit(ctx, actor, "features", before.Features, updated.Features)
+	if patch.EnableNearbyPeople != nil {
+		target.EnableNearbyPeople = *patch.EnableNearbyPeople
+	}
 }
 
-func (s *Service) UpdateLimits(ctx context.Context, req UpdateLimitsRequest) (*httpx.APIError, error) {
-	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
-	if apiErr != nil || err != nil {
-		return apiErr, err
+func applyLimitsPatch(target *AppLimits, patch PartialAppLimits) *httpx.APIError {
+	fields := []struct {
+		target *int
+		patch  *int
+	}{
+		{&target.MaxGroupMembers, patch.MaxGroupMembers},
+		{&target.MaxMomentTags, patch.MaxMomentTags},
+		{&target.MaxMomentImages, patch.MaxMomentImages},
+		{&target.MomentDescriptionMaxLength, patch.MomentDescriptionMaxLength},
+		{&target.CommentMaxLength, patch.CommentMaxLength},
+		{&target.SearchRadiusMax, patch.SearchRadiusMax},
 	}
-	before, err := s.provider.GetAppConfig(ctx)
-	if err != nil {
-		return nil, err
+	for _, f := range fields {
+		if apiErr := applyPositiveIntPatch(f.target, f.patch); apiErr != nil {
+			return apiErr
+		}
 	}
-	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
-		if err := applyPositiveIntPatch(&cfg.Limits.MaxGroupMembers, req.Limits.MaxGroupMembers); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.Limits.MaxMomentTags, req.Limits.MaxMomentTags); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.Limits.MaxMomentImages, req.Limits.MaxMomentImages); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.Limits.MomentDescriptionMaxLength, req.Limits.MomentDescriptionMaxLength); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.Limits.CommentMaxLength, req.Limits.CommentMaxLength); err != nil {
-			return AppConfig{}, err
-		}
-		if err := applyPositiveIntPatch(&cfg.Limits.SearchRadiusMax, req.Limits.SearchRadiusMax); err != nil {
-			return AppConfig{}, err
-		}
-		return cfg, nil
-	})
-	if apiErr != nil || err != nil {
-		return apiErr, err
-	}
-	return nil, s.appendConfigAudit(ctx, actor, "limits", before.Limits, updated.Limits)
+	return nil
 }
 
-func (s *Service) UpdateContact(ctx context.Context, req UpdateContactRequest) (*httpx.APIError, error) {
-	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
-	if apiErr != nil || err != nil {
-		return apiErr, err
+func applyContactPatch(target *ContactInfo, patch PartialContactInfo) *httpx.APIError {
+	if patch.SupportEmail != nil {
+		if !strings.Contains(strings.TrimSpace(*patch.SupportEmail), "@") {
+			return httpx.InvalidRequest("参数错误")
+		}
+		target.SupportEmail = strings.TrimSpace(*patch.SupportEmail)
 	}
-	before, err := s.provider.GetAppConfig(ctx)
-	if err != nil {
-		return nil, err
+	if patch.PrivacyPolicyURL != nil {
+		target.PrivacyPolicyURL = strings.TrimSpace(*patch.PrivacyPolicyURL)
 	}
-	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
-		if req.SupportEmail != nil {
-			if !strings.Contains(strings.TrimSpace(*req.SupportEmail), "@") {
-				return AppConfig{}, httpx.InvalidRequest("参数错误")
-			}
-			cfg.Contact.SupportEmail = strings.TrimSpace(*req.SupportEmail)
-		}
-		if req.PrivacyPolicyURL != nil {
-			cfg.Contact.PrivacyPolicyURL = strings.TrimSpace(*req.PrivacyPolicyURL)
-		}
-		if req.TermsOfServiceURL != nil {
-			cfg.Contact.TermsOfServiceURL = strings.TrimSpace(*req.TermsOfServiceURL)
-		}
-		if req.OfficialWebsite != nil {
-			cfg.Contact.OfficialWebsite = strings.TrimSpace(*req.OfficialWebsite)
-		}
-		return cfg, nil
-	})
-	if apiErr != nil || err != nil {
-		return apiErr, err
+	if patch.TermsOfServiceURL != nil {
+		target.TermsOfServiceURL = strings.TrimSpace(*patch.TermsOfServiceURL)
 	}
-	return nil, s.appendConfigAudit(ctx, actor, "contact", before.Contact, updated.Contact)
+	if patch.OfficialWebsite != nil {
+		target.OfficialWebsite = strings.TrimSpace(*patch.OfficialWebsite)
+	}
+	return nil
 }
 
 func validateAuditFilter(req AuditLogListRequest) (AuditLogFilter, *httpx.APIError) {

@@ -20,6 +20,7 @@ type CommentItem struct {
 	CreatedAt    string          `json:"created_at"`
 	LikesCount   int             `json:"likes_count"`
 	RepliesCount int             `json:"replies_count"`
+	IsDeleted    bool            `json:"is_deleted"`
 	MyState      *MyCommentState `json:"my_state,omitempty"`
 }
 

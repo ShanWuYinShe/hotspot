@@ -1008,13 +1008,7 @@ async function handleApi(path: string, body: Record<string, unknown>): Promise<R
         },
         updated_at: new Date().toISOString()
       });
-    case '/api/v1/admin/app_config/update_upload':
-    case '/api/v1/admin/app_config/update_defaults':
-    case '/api/v1/admin/app_config/update_rate_limits':
-    case '/api/v1/admin/app_config/update_response_defaults':
-    case '/api/v1/admin/app_config/update_features':
-    case '/api/v1/admin/app_config/update_limits':
-    case '/api/v1/admin/app_config/update_contact':
+    case '/api/v1/admin/app_config/update':
       return ok({});
 
     case '/api/v1/share/create':

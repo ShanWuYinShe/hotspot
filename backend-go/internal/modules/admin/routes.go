@@ -25,13 +25,7 @@ func MountRoutes(r chi.Router, handler *Handler) {
 	})
 	r.Route("/app_config", func(appConfig chi.Router) {
 		appConfig.Post("/get", handler.GetAppConfig)
-		appConfig.Post("/update_upload", handler.UpdateUpload)
-		appConfig.Post("/update_defaults", handler.UpdateDefaults)
-		appConfig.Post("/update_rate_limits", handler.UpdateRateLimits)
-		appConfig.Post("/update_response_defaults", handler.UpdateResponseDefaults)
-		appConfig.Post("/update_features", handler.UpdateFeatures)
-		appConfig.Post("/update_limits", handler.UpdateLimits)
-		appConfig.Post("/update_contact", handler.UpdateContact)
+		appConfig.Post("/update", handler.UpdateAppConfig)
 	})
 	r.Route("/users", func(users chi.Router) {
 		users.Post("/search", handler.SearchUsers)

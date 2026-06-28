@@ -157,7 +157,7 @@
   --foreground: var(--theme-text);
   --card: var(--theme-bg);
   --card-foreground: var(--theme-text);
-  --popover: #f9f9f5;
+  --popover: #ffffff;
   --popover-foreground: var(--theme-text);
   --primary: var(--theme-accent-primary);
   --primary-foreground: #ffffff;
@@ -250,16 +250,16 @@
   --popover-foreground: var(--theme-text);
   --primary: var(--theme-accent-primary);
   --primary-foreground: #0f1115;
-  --secondary: #222733;
+  --secondary: #1a241d;
   --secondary-foreground: var(--theme-text);
-  --accent: #1d242d;
+  --accent: #1c241e;
   --accent-foreground: var(--theme-text);
-  --muted: #222733;
+  --muted: #1a241d;
   --muted-foreground: var(--theme-text-muted);
   --destructive: var(--theme-error);
   --destructive-foreground: #fff8f4;
   --border: var(--theme-border);
-  --input: #263040;
+  --input: #1a2a1e;
   --ring: var(--theme-accent-primary);
   --glow-primary: rgba(82, 184, 120, 0.18);
   --glow-accent: rgba(82, 184, 120, 0.12);
@@ -271,13 +271,13 @@
   --chart-3: oklch(0.985 0 0);
   --chart-4: oklch(0.806 0.204 91.732);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: #171a20;
+  --sidebar: #131a15;
   --sidebar-foreground: var(--theme-text);
   --sidebar-primary: #52b878;
   --sidebar-primary-foreground: #0f1115;
-  --sidebar-accent: #1d242d;
+  --sidebar-accent: #1c241e;
   --sidebar-accent-foreground: var(--theme-text);
-  --sidebar-border: #2d3544;
+  --sidebar-border: #243228;
   --sidebar-ring: #52b878;
 }
 
@@ -339,7 +339,7 @@
   --foreground: var(--theme-text);
   --card: var(--theme-bg);
   --card-foreground: var(--theme-text);
-  --popover: #fafafe;
+  --popover: #ffffff;
   --popover-foreground: var(--theme-text);
   --primary: var(--theme-accent-primary);
   --primary-foreground: #ffffff;
@@ -583,7 +583,7 @@
   --theme-warning-border: rgba(209, 163, 93, 0.3);
   --theme-fallback-bg: rgba(209, 138, 93, 0.15);
   --theme-fallback-text: #d18a5d;
-  --theme-active-text: #fff8f4;
+  --theme-active-text: #1a120c;
   --theme-glass-bg: rgba(33, 27, 23, 0.9);
   --theme-glass-border: rgba(255, 220, 183, 0.08);
   --theme-glass-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.28);
@@ -614,7 +614,7 @@
   --foreground: var(--theme-text);
   --card: var(--theme-bg);
   --card-foreground: var(--theme-text);
-  --popover: var(--theme-bg);
+  --popover: #28211c;
   --popover-foreground: var(--theme-text);
   --primary: var(--theme-accent-primary);
   --primary-foreground: #1a120c;
@@ -802,6 +802,11 @@
   .dark .custom-scrollbar::-webkit-scrollbar-thumb {
     @apply bg-primary/20;
     box-shadow: 0 0 8px var(--color-glow-primary);
+  }
+
+  /* 暗色模式加载遮罩：避免白色遮罩在深色背景下造成刺眼闪烁 */
+  .dark {
+    --overlay-loading: rgba(0, 0, 0, 0.85);
   }
 
   @media (prefers-reduced-motion: reduce) {

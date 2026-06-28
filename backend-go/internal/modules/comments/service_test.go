@@ -607,9 +607,74 @@ func TestServiceDeleteHappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("delete comment: %v", err)
 	}
-	_, found, _ := repo.Get(context.Background(), comment.CommentID)
-	if found {
-		t.Fatal("expected comment to be deleted")
+	updated, found, _ := repo.Get(context.Background(), comment.CommentID)
+	if !found {
+		t.Fatal("expected comment to still exist after soft delete")
+	}
+	if !updated.IsDeleted {
+		t.Fatal("expected comment to be marked as deleted")
+	}
+	if updated.Content != "" {
+		t.Fatal("expected comment content to be cleared after soft delete")
+	}
+}
+
+func TestServiceDeleteIdempotentNoOp(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
+	service := NewServiceWithDeps(repo, moments, notifications.NewService(), nil)
+	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "to be deleted"})
+	if err != nil {
+		t.Fatalf("create comment: %v", err)
+	}
+	// First delete
+	err = service.Delete(testCommentContext("user_alice"), DeleteCommentRequest{CommentID: comment.CommentID})
+	if err != nil {
+		t.Fatalf("first delete: %v", err)
+	}
+	// Second delete — should be no-op (not return ErrCommentNotFound)
+	err = service.Delete(testCommentContext("user_alice"), DeleteCommentRequest{CommentID: comment.CommentID})
+	if err != nil {
+		t.Fatalf("second delete should be no-op, got: %v", err)
+	}
+	// Still soft-deleted, not found
+	updated, found, _ := repo.Get(context.Background(), comment.CommentID)
+	if !found {
+		t.Fatal("expected comment to still exist after second delete")
+	}
+	if !updated.IsDeleted {
+		t.Fatal("expected comment to still be marked as deleted after second delete")
+	}
+}
+
+func TestServiceDeleteAllowsAdmin(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
+	service := NewServiceWithDeps(repo, moments, notifications.NewService(), nil)
+	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "alice comment"})
+	if err != nil {
+		t.Fatalf("create comment: %v", err)
+	}
+	// Admin deletes alice's comment — allowed
+	adminCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{
+		UserID:          "admin_1",
+		SessionID:       "sess_admin",
+		AdminMembership: &platformauth.AdminMembership{},
+	})
+	err = service.Delete(adminCtx, DeleteCommentRequest{CommentID: comment.CommentID})
+	if err != nil {
+		t.Fatalf("admin delete: %v", err)
+	}
+	updated, found, _ := repo.Get(context.Background(), comment.CommentID)
+	if !found {
+		t.Fatal("expected comment to exist after soft delete by admin")
+	}
+	if !updated.IsDeleted {
+		t.Fatal("expected comment to be marked as deleted after admin delete")
 	}
 }
 

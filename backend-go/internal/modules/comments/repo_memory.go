@@ -59,39 +59,30 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	return item, nil
 }
 
-func (r *InMemoryRepository) Delete(_ context.Context, commentID string) error {
+func (r *InMemoryRepository) SoftDelete(_ context.Context, commentID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	item, ok := r.byID[commentID]
 	if !ok {
 		return nil
 	}
+	// Already soft-deleted — no-op
+	if item.IsDeleted {
+		return nil
+	}
+	// Soft delete: mark as deleted, clear content
+	item.IsDeleted = true
+	item.Content = ""
+	r.byID[commentID] = item
+	// Update the moment-indexed copy too
 	for momentID, items := range r.comments {
 		for idx, it := range items {
 			if it.CommentID == commentID {
-				r.comments[momentID] = append(items[:idx], items[idx+1:]...)
+				r.comments[momentID][idx] = item
 				break
 			}
 		}
 	}
-	delete(r.byID, commentID)
-	if item.ParentID != "" {
-		children := r.byParent[item.ParentID]
-		for i, id := range children {
-			if id == commentID {
-				r.byParent[item.ParentID] = append(children[:i], children[i+1:]...)
-				break
-			}
-		}
-		if parent, ok := r.byID[item.ParentID]; ok {
-			parent.RepliesCount--
-			if parent.RepliesCount < 0 {
-				parent.RepliesCount = 0
-			}
-			r.byID[item.ParentID] = parent
-		}
-	}
-	delete(r.likes, commentID)
 	return nil
 }
 

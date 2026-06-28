@@ -454,7 +454,7 @@ func TestPersistenceModerationStoreDeleteTagQueryableDB(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	store := NewPersistenceModerationStore(factory, nil)
 
-	if err := store.DeleteTag(context.Background(), "hotspot"); err != nil {
+	if err := store.DeleteTag(context.Background(), "hotspot", false); err != nil {
 		t.Fatalf("delete tag: %v", err)
 	}
 	if _, ok := backend.blockedTags["hotspot"]; !ok {
@@ -471,7 +471,7 @@ func TestPersistenceModerationStoreDeleteTagReturnsNotFound(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	store := NewPersistenceModerationStore(factory, nil)
 
-	if err := store.DeleteTag(context.Background(), "missing"); !errors.Is(err, errTagNotFound) {
+	if err := store.DeleteTag(context.Background(), "missing", false); !errors.Is(err, errTagNotFound) {
 		t.Fatalf("expected tag not found, got %v", err)
 	}
 }

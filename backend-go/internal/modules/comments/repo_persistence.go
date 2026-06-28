@@ -16,8 +16,8 @@ func (r *PersistenceRepository) Create(ctx context.Context, userID string, req C
 	return r.impl.Create(ctx, userID, req)
 }
 
-func (r *PersistenceRepository) Delete(ctx context.Context, commentID string) error {
-	return r.impl.Delete(ctx, commentID)
+func (r *PersistenceRepository) SoftDelete(ctx context.Context, commentID string) error {
+	return r.impl.SoftDelete(ctx, commentID)
 }
 
 func (r *PersistenceRepository) List(ctx context.Context, momentID string, limit int, cursor string) (PaginatedComments, error) {

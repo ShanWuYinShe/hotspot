@@ -25,6 +25,7 @@ const (
 
 	ReportStatusPending   ReportStatus = "pending"
 	ReportStatusReviewing ReportStatus = "reviewing"
+	ReportStatusEscalated ReportStatus = "escalated"
 	ReportStatusResolved  ReportStatus = "resolved"
 	ReportStatusDismissed ReportStatus = "dismissed"
 )

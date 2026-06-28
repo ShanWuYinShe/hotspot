@@ -89,10 +89,10 @@ func (s *PersistenceModerationStore) GetTagDeleteState(ctx context.Context, name
 	return isBlocked, hasMomentRefs, nil
 }
 
-func (s *PersistenceModerationStore) DeleteTag(ctx context.Context, name string) error {
+func (s *PersistenceModerationStore) DeleteTag(ctx context.Context, name string, hardDelete bool) error {
 	queryable, ok := s.queryable()
 	if !ok {
-		return s.memory.DeleteTag(ctx, name)
+		return s.memory.DeleteTag(ctx, name, hardDelete)
 	}
 	tagName := normalizeTagName(name)
 	isBlocked, hasMomentRefs, err := s.GetTagDeleteState(ctx, tagName)
@@ -105,13 +105,13 @@ func (s *PersistenceModerationStore) DeleteTag(ctx context.Context, name string)
 	if isBlocked && !hasMomentRefs {
 		return nil
 	}
-	if err := queryable.Exec(ctx, queryBlockTag, tagName, time.Now().UTC()); err != nil {
-		return err
-	}
-	if hasMomentRefs {
+	if hardDelete {
 		if err := queryable.Exec(ctx, queryDeleteMomentTagAssignments, tagName); err != nil {
 			return err
 		}
+	}
+	if err := queryable.Exec(ctx, queryBlockTag, tagName, time.Now().UTC()); err != nil {
+		return err
 	}
 	return nil
 }

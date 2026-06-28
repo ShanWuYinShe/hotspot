@@ -438,13 +438,13 @@ func (h *Handler) GetAppConfig(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
 }
 
-func (h *Handler) UpdateUpload(w http.ResponseWriter, r *http.Request) {
-	var req UpdateUploadConfigRequest
+func (h *Handler) UpdateAppConfig(w http.ResponseWriter, r *http.Request) {
+	var req UpdateAppConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	apiErr, err := h.service.UpdateUpload(withRequest(r.Context(), r), req)
+	apiErr, err := h.service.UpdateAppConfig(withRequest(r.Context(), r), req)
 	if err != nil {
 		h.writeUnavailable(w, r)
 		return
@@ -456,113 +456,6 @@ func (h *Handler) UpdateUpload(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
-func (h *Handler) UpdateDefaults(w http.ResponseWriter, r *http.Request) {
-	var req UpdateDefaultsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
-		return
-	}
-	apiErr, err := h.service.UpdateDefaults(withRequest(r.Context(), r), req)
-	if err != nil {
-		h.writeUnavailable(w, r)
-		return
-	}
-	if apiErr != nil {
-		h.writeAPIError(w, r, apiErr)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
-}
-
-func (h *Handler) UpdateRateLimits(w http.ResponseWriter, r *http.Request) {
-	var req UpdateRateLimitsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
-		return
-	}
-	apiErr, err := h.service.UpdateRateLimits(withRequest(r.Context(), r), req)
-	if err != nil {
-		h.writeUnavailable(w, r)
-		return
-	}
-	if apiErr != nil {
-		h.writeAPIError(w, r, apiErr)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
-}
-
-func (h *Handler) UpdateResponseDefaults(w http.ResponseWriter, r *http.Request) {
-	var req UpdateResponseDefaultsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
-		return
-	}
-	apiErr, err := h.service.UpdateResponseDefaults(withRequest(r.Context(), r), req)
-	if err != nil {
-		h.writeUnavailable(w, r)
-		return
-	}
-	if apiErr != nil {
-		h.writeAPIError(w, r, apiErr)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
-}
-
-func (h *Handler) UpdateFeatures(w http.ResponseWriter, r *http.Request) {
-	var req UpdateFeaturesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
-		return
-	}
-	apiErr, err := h.service.UpdateFeatures(withRequest(r.Context(), r), req)
-	if err != nil {
-		h.writeUnavailable(w, r)
-		return
-	}
-	if apiErr != nil {
-		h.writeAPIError(w, r, apiErr)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
-}
-
-func (h *Handler) UpdateLimits(w http.ResponseWriter, r *http.Request) {
-	var req UpdateLimitsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
-		return
-	}
-	apiErr, err := h.service.UpdateLimits(withRequest(r.Context(), r), req)
-	if err != nil {
-		h.writeUnavailable(w, r)
-		return
-	}
-	if apiErr != nil {
-		h.writeAPIError(w, r, apiErr)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
-}
-
-func (h *Handler) UpdateContact(w http.ResponseWriter, r *http.Request) {
-	var req UpdateContactRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
-		return
-	}
-	apiErr, err := h.service.UpdateContact(withRequest(r.Context(), r), req)
-	if err != nil {
-		h.writeUnavailable(w, r)
-		return
-	}
-	if apiErr != nil {
-		h.writeAPIError(w, r, apiErr)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
-}
 
 func (h *Handler) SearchTags(w http.ResponseWriter, r *http.Request) {
 	var req AdminTagSearchRequest
@@ -588,7 +481,7 @@ func (h *Handler) DeleteTag(w http.ResponseWriter, r *http.Request) {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	apiErr, err := h.service.DeleteTag(withRequest(r.Context(), r), req.Name)
+	apiErr, err := h.service.DeleteTag(withRequest(r.Context(), r), req.Name, req.HardDelete)
 	if err != nil {
 		h.writeUnavailable(w, r)
 		return

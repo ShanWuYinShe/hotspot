@@ -333,6 +333,41 @@ export const adminTagsService = {
 };
 
 // ==================== 应用配置（统一 app_config） ====================
+// spec: 原 7 个 update_* 端点已合并为单一 update（Patch 语义）
+
+export interface UpdateAppConfigRequest {
+  upload?: Partial<UploadConfig>;
+  defaults?: {
+    default_location?: Partial<Location>;
+    default_group_avatar?: string;
+    default_user_avatar?: string;
+    default_group_settings?: Partial<GroupSettings>;
+  };
+  rate_limits?: Partial<RateLimitConfig>;
+  response_defaults?: Partial<ResponseDefaults>;
+  features?: Partial<{
+    enable_public_registration: boolean;
+    enable_guest_login: boolean;
+    enable_moments: boolean;
+    enable_nearby_people: boolean;
+  }>;
+  limits?: Partial<{
+    max_group_members: number;
+    max_moment_tags: number;
+    max_moment_images: number;
+    moment_description_max_length: number;
+    comment_max_length: number;
+    search_radius_max: number;
+    message_recall_window_seconds: number;
+    stranger_message_daily_quota: number;
+  }>;
+  contact?: Partial<{
+    support_email: string;
+    privacy_policy_url: string;
+    terms_of_service_url: string;
+    official_website: string;
+  }>;
+}
 
 export const adminAppConfigService = {
   /**
@@ -344,81 +379,10 @@ export const adminAppConfigService = {
   },
 
   /**
-   * 更新上传配置
-   * spec: Request = { upload: Partial<UploadConfig> }
+   * 更新应用配置（Patch 语义，按 section 部分更新）
+   * spec: Request = UpdateAppConfigRequest，至少传一个 section
    */
-  updateUpload(data: { upload: Partial<UploadConfig> }) {
-    return post<void>(ADMIN_APP_CONFIG.UPDATE_UPLOAD, data);
-  },
-
-  /**
-   * 更新默认配置
-   * spec: Request = UpdateDefaultsRequest
-   * default_location 为 Partial<Location>，即 { point?: GeoPoint; location_name?: string }
-   */
-  updateDefaults(data: {
-    default_location?: Partial<Location>;
-    default_group_avatar?: string;
-    default_user_avatar?: string;
-    default_group_settings?: Partial<GroupSettings>;
-  }) {
-    return post<void>(ADMIN_APP_CONFIG.UPDATE_DEFAULTS, data);
-  },
-
-  /**
-   * 更新频率限制
-   * spec: Request = { rate_limits: Partial<RateLimitConfig> }
-   */
-  updateRateLimits(data: { rate_limits: Partial<RateLimitConfig> }) {
-    return post<void>(ADMIN_APP_CONFIG.UPDATE_RATE_LIMITS, data);
-  },
-
-  /**
-   * 更新响应默认值
-   * spec: Request = { response_defaults: Partial<ResponseDefaults> }
-   */
-  updateResponseDefaults(data: { response_defaults: Partial<ResponseDefaults> }) {
-    return post<void>(ADMIN_APP_CONFIG.UPDATE_RESPONSE_DEFAULTS, data);
-  },
-
-  /**
-   * 更新功能开关
-   */
-  updateFeatures(data: {
-    enable_public_registration?: boolean;
-    enable_guest_login?: boolean;
-    enable_moments?: boolean;
-    enable_nearby_people?: boolean;
-  }) {
-    return post<void>(ADMIN_APP_CONFIG.UPDATE_FEATURES, data);
-  },
-
-  /**
-   * 更新限制配置
-   * spec: Request = { limits: Partial<AppLimits> }
-   */
-  updateLimits(data: {
-    limits: Partial<{
-      max_group_members: number;
-      max_moment_tags: number;
-      max_moment_images: number;
-      moment_description_max_length: number;
-      comment_max_length: number;
-      search_radius_max: number;
-    }>;
-  }) {
-    return post<void>(ADMIN_APP_CONFIG.UPDATE_LIMITS, data);
-  },
-
-  /**
-   * 更新联系信息
-   */
-  updateContact(data: {
-    support_email?: string;
-    privacy_policy_url?: string;
-    terms_of_service_url?: string;
-    official_website?: string;
-  }) {
-    return post<void>(ADMIN_APP_CONFIG.UPDATE_CONTACT, data);
+  update(data: UpdateAppConfigRequest) {
+    return post<void>(ADMIN_APP_CONFIG.UPDATE, data);
   }
 };

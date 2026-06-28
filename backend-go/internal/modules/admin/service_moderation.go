@@ -44,7 +44,7 @@ func (s *Service) SearchTags(ctx context.Context, req AdminTagSearchRequest) (Pa
 	return resp, nil, nil
 }
 
-func (s *Service) DeleteTag(ctx context.Context, name string) (*httpx.APIError, error) {
+func (s *Service) DeleteTag(ctx context.Context, name string, hardDelete bool) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionTagsWrite)
 	if apiErr != nil || err != nil {
 		return apiErr, err
@@ -57,14 +57,22 @@ func (s *Service) DeleteTag(ctx context.Context, name string) (*httpx.APIError, 
 	if err != nil {
 		return nil, err
 	}
-	if err := s.moderationStore.DeleteTag(ctx, tagName); err != nil {
+	if err := s.moderationStore.DeleteTag(ctx, tagName, hardDelete); err != nil {
 		if errors.Is(err, errTagNotFound) {
 			return &httpx.APIError{Code: 10300, Message: "标签不存在"}, nil
 		}
 		return nil, err
 	}
 	if !wasBlocked || hadRefs {
-		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionTagDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeTag, TargetID: tagName, TargetName: tagName, Details: AuditDetails{"type": string(AuditActionTagDelete), "name": tagName}}); err != nil {
+		deleteType := "soft_block"
+		if hardDelete {
+			deleteType = "hard_delete"
+		}
+		details := AuditDetails{"type": deleteType, "name": tagName}
+		if hardDelete && hadRefs {
+			details["warning"] = "该操作会从所有历史引用中移除标签，不可恢复"
+		}
+		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionTagDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeTag, TargetID: tagName, TargetName: tagName, Details: details}); err != nil {
 			return nil, err
 		}
 	}
@@ -433,7 +441,7 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 	if !found {
 		return &httpx.APIError{Code: 10300, Message: "举报不存在"}, nil
 	}
-	if record.Item.Status != ReportStatusPending && record.Item.Status != ReportStatusReviewing {
+	if record.Item.Status != ReportStatusPending && record.Item.Status != ReportStatusReviewing && record.Item.Status != ReportStatusEscalated {
 		return &httpx.APIError{Code: 10400, Message: "举报已处理"}, nil
 	}
 	if req.Action == ReportHandleResolve {
@@ -444,11 +452,6 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 					return apiErr, nil
 				}
 				return nil, err
-			}
-			if req.BanDurationDays != nil {
-				if apiErr, err := s.banUser(ctx, actor, record.TargetUser.UserID, req.Note, req.BanDurationDays, false); apiErr != nil || err != nil {
-					return apiErr, err
-				}
 			}
 		case ReportTargetTypeUser:
 			if req.BanDurationDays != nil {
@@ -507,7 +510,7 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 	if strings.TrimSpace(userID) == "" || len(reason) > 500 {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	if durationDays != nil && *durationDays < 0 {
+	if durationDays != nil && (*durationDays < 0 || *durationDays > 365) {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
 	if actor.UserID == userID {

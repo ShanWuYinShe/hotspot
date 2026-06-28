@@ -35,6 +35,9 @@ func (s *InMemoryModerationStore) SearchTags(_ context.Context, filter TagSearch
 	items := make([]TagRecord, 0, len(s.tags))
 	keyword := strings.ToLower(strings.TrimSpace(filter.Keyword))
 	for _, item := range s.tags {
+		if _, blocked := s.blockedTags[item.Name]; blocked {
+			continue
+		}
 		if keyword != "" && !strings.Contains(strings.ToLower(item.Name), keyword) {
 			continue
 		}
@@ -76,22 +79,26 @@ func (s *InMemoryModerationStore) GetTagDeleteState(_ context.Context, name stri
 	return isBlocked, hasRefs, nil
 }
 
-func (s *InMemoryModerationStore) DeleteTag(_ context.Context, name string) error {
+func (s *InMemoryModerationStore) DeleteTag(_ context.Context, name string, hardDelete bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	tagName := normalizeTagName(name)
 	if tagName == "" {
 		return errTagNotFound
 	}
-	if _, ok := s.tags[tagName]; ok {
+	_, hasRefs := s.tags[tagName]
+	_, isBlocked := s.blockedTags[tagName]
+	if !hasRefs && !isBlocked {
+		return errTagNotFound
+	}
+	if isBlocked && !hasRefs {
+		return nil
+	}
+	if hardDelete {
 		delete(s.tags, tagName)
-		s.blockedTags[tagName] = struct{}{}
-		return nil
 	}
-	if _, ok := s.blockedTags[tagName]; ok {
-		return nil
-	}
-	return errTagNotFound
+	s.blockedTags[tagName] = struct{}{}
+	return nil
 }
 
 func (s *InMemoryModerationStore) SearchAnnouncements(_ context.Context, filter systemmodule.AnnouncementSearchFilter) (systemmodule.AnnouncementPage, error) {

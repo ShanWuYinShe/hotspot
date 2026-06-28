@@ -11,12 +11,12 @@ export type SendMessageType = Exclude<MessageType, 'system'>;
 export type PrivacyLevel = 'public' | 'private';
 export type GroupRole = 'owner' | 'admin' | 'member';
 export type SettableGroupRole = 'admin' | 'member';
-export type Gender = 'male' | 'female' | 'apache_helicopter';
+export type Gender = 'male' | 'female' | 'other';
 export type ClientType = 'web' | 'app';
 export type UserPresenceStatus = 'online' | 'offline';
 export type UserAccountStatus = 'normal' | 'banned';
 export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
-export type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+export type ReportStatus = 'pending' | 'reviewing' | 'escalated' | 'resolved' | 'dismissed';
 export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
 export type ReportHandleAction = 'resolve' | 'dismiss' | 'escalate';
 export type ReportReason =
@@ -477,6 +477,7 @@ export interface CommentItem {
   comment_id: string;
   user: UserInfo;
   content: string;
+  is_deleted: boolean;
   parent_id?: string;
   mentions?: string[];
   created_at: string;
@@ -493,10 +494,11 @@ export interface CommentItem {
 /** 回复引用快照 */
 export interface MessageReplyTo {
   message_id: string;
-  user_id: string;
-  nickname: string;
-  content: string;
+  type: MessageType;
+  sender: UserInfo;
+  content?: string;
   share_code?: string;
+  sent_at: string;
 }
 
 /** 消息发送响应（私聊/群聊共用） */
@@ -667,7 +669,8 @@ export interface NotificationListRequest {
 }
 
 export interface MarkAsReadRequest {
-  notification_ids: string[];
+  notification_ids?: string[];
+  type?: NotificationType;
 }
 
 // ============================================================================
@@ -759,9 +762,7 @@ export interface TrendingBundle {
 }
 
 export interface UserSuggestItem {
-  user_id: string;
-  nickname: string;
-  avatar_url?: string;
+  user: UserInfo;
   bio?: string;
   location?: RelativeLocation;
 }
@@ -873,6 +874,7 @@ export interface ReportItem {
   status: ReportStatus;
   created_at: string;
   handled_at?: string;
+  message_snapshot?: MessageReportSnapshot;
 }
 
 // ============================================================================
@@ -1016,6 +1018,15 @@ export interface AdminGroupItem extends GroupItem {
   };
 }
 
+export interface MessageReportSnapshot {
+  chat_type: 'private' | 'group';
+  target_chat_id: string;
+  message_type: MessageType;
+  snapshot_content?: string;
+  snapshot_media?: MessageMedia;
+  sent_at: string;
+}
+
 export interface ReportTargetSnapshot {
   moment?: {
     description?: string;
@@ -1089,6 +1100,8 @@ export interface ClientConfig {
     max_moment_images: number;
     moment_description_max_length: number;
     comment_max_length: number;
+    message_recall_window_seconds: number;
+    stranger_message_daily_quota: number;
     search_radius_max: number;
   };
   contact: {

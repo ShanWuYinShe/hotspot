@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -651,7 +650,7 @@ func TestHandleGroupReportDismissesGroup(t *testing.T) {
 		t.Fatal("expected seed group_hotspot")
 	}
 
-	handleReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/handle", strings.NewReader(`{"report_id":"report_group","action":"resolve","note":"policy","ban_duration_days":7}`)), "admin", true)
+	handleReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/handle", strings.NewReader(`{"report_id":"report_group","action":"resolve","note":"policy"}`)), "admin", true)
 	handleReq.Header.Set("Idempotency-Key", "reportgroupabcd1234abcd1234abcd12")
 	handleRR := httptest.NewRecorder()
 	handler.HandleReport(handleRR, handleReq)
@@ -662,9 +661,9 @@ func TestHandleGroupReportDismissesGroup(t *testing.T) {
 	if _, ok := store.groups["group_hotspot"]; ok {
 		t.Fatalf("expected group to be dismissed, groups=%#v", store.groups)
 	}
-	state, ok, err := store.GetUserBanState(handleReq.Context(), "user_alice")
-	if err != nil || !ok || state.Status != UserAccountStatusBanned || state.DurationDays != 7 {
-		t.Fatalf("unexpected owner ban state after group handle: %#v ok=%v err=%v", state, ok, err)
+	_, ok, err := store.GetUserBanState(handleReq.Context(), "user_alice")
+	if err != nil || ok {
+		t.Fatalf("unexpected owner ban state after group handle: ok=%v err=%v", ok, err)
 	}
 }
 
@@ -1319,247 +1318,74 @@ func TestOpenAuditLogReturnsNotFoundForMissingLog(t *testing.T) {
 	}
 }
 
-// App Config updates
+// App Config update (unified endpoint, replacing 7 old endpoints)
 
-func TestUpdateUploadConfigSucceeds(t *testing.T) {
+func TestUpdateAppConfigSucceeds(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
-	newSize := 10 * 1024 * 1024
-	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_upload", strings.NewReader(`{"upload":{"image_max_size":`+fmt.Sprintf("%d", newSize)+`}}`)), "admin", true)
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update", strings.NewReader(`{"upload":{"image_max_size":10485760},"limits":{"max_group_members":500}}`)), "admin", true)
 	updateRR := httptest.NewRecorder()
-	handler.UpdateUpload(updateRR, updateReq)
+	handler.UpdateAppConfig(updateRR, updateReq)
 	updateResp := decodeResponse[struct{}](t, updateRR)
 	if updateResp.Code != 0 {
 		t.Fatalf("unexpected update response: %#v", updateResp)
 	}
-
 	foundAudit := false
 	for _, entry := range store.auditLogs {
-		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "upload" {
+		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "app_config" {
 			foundAudit = true
 			break
 		}
 	}
 	if !foundAudit {
-		t.Fatalf("expected config.update audit log for upload, got %#v", store.auditLogs)
+		t.Fatalf("expected config.update audit log, got %#v", store.auditLogs)
 	}
 }
 
-func TestUpdateUploadConfigRejectsNonPositiveValue(t *testing.T) {
+func TestUpdateAppConfigRejectsEmptySections(t *testing.T) {
 	handler := newTestHandler()
-	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_upload", strings.NewReader(`{"upload":{"image_max_size":0}}`)), "admin", true)
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update", strings.NewReader(`{}`)), "admin", true)
 	updateRR := httptest.NewRecorder()
-	handler.UpdateUpload(updateRR, updateReq)
+	handler.UpdateAppConfig(updateRR, updateReq)
 	updateResp := decodeResponse[struct{}](t, updateRR)
 	if updateResp.Code != 10000 || updateResp.Message != "参数错误" {
 		t.Fatalf("unexpected update response: %#v", updateResp)
 	}
 }
 
-func TestUpdateDefaultsSucceeds(t *testing.T) {
-	handler, store := newTestHandlerWithStore()
-	locationName := "Shanghai"
-	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_defaults", strings.NewReader(`{"default_location":{"location_name":"`+locationName+`"}}`)), "admin", true)
-	updateRR := httptest.NewRecorder()
-	handler.UpdateDefaults(updateRR, updateReq)
-	updateResp := decodeResponse[struct{}](t, updateRR)
-	if updateResp.Code != 0 {
-		t.Fatalf("unexpected update response: %#v", updateResp)
-	}
-
-	foundAudit := false
-	for _, entry := range store.auditLogs {
-		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "defaults" {
-			foundAudit = true
-			break
-		}
-	}
-	if !foundAudit {
-		t.Fatalf("expected config.update audit log for defaults, got %#v", store.auditLogs)
-	}
-}
-
-func TestUpdateResponseDefaultsSucceeds(t *testing.T) {
-	handler, store := newTestHandlerWithStore()
-	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_response_defaults", strings.NewReader(`{"response_defaults":{"hot_moments_count":20}}`)), "admin", true)
-	updateRR := httptest.NewRecorder()
-	handler.UpdateResponseDefaults(updateRR, updateReq)
-	updateResp := decodeResponse[struct{}](t, updateRR)
-	if updateResp.Code != 0 {
-		t.Fatalf("unexpected update response: %#v", updateResp)
-	}
-
-	foundAudit := false
-	for _, entry := range store.auditLogs {
-		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "response_defaults" {
-			foundAudit = true
-			break
-		}
-	}
-	if !foundAudit {
-		t.Fatalf("expected config.update audit log for response_defaults, got %#v", store.auditLogs)
-	}
-}
-
-func TestUpdateLimitsSucceeds(t *testing.T) {
-	handler, store := newTestHandlerWithStore()
-	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_limits", strings.NewReader(`{"limits":{"max_group_members":500}}`)), "admin", true)
-	updateRR := httptest.NewRecorder()
-	handler.UpdateLimits(updateRR, updateReq)
-	updateResp := decodeResponse[struct{}](t, updateRR)
-	if updateResp.Code != 0 {
-		t.Fatalf("unexpected update response: %#v", updateResp)
-	}
-
-	foundAudit := false
-	for _, entry := range store.auditLogs {
-		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "limits" {
-			foundAudit = true
-			break
-		}
-	}
-	if !foundAudit {
-		t.Fatalf("expected config.update audit log for limits, got %#v", store.auditLogs)
-	}
-}
-
-func TestUpdateContactSucceeds(t *testing.T) {
-	handler, store := newTestHandlerWithStore()
-	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_contact", strings.NewReader(`{"support_email":"support@example.com","official_website":"https://example.com"}`)), "admin", true)
-	updateRR := httptest.NewRecorder()
-	handler.UpdateContact(updateRR, updateReq)
-	updateResp := decodeResponse[struct{}](t, updateRR)
-	if updateResp.Code != 0 {
-		t.Fatalf("unexpected update response: %#v", updateResp)
-	}
-
-	foundAudit := false
-	for _, entry := range store.auditLogs {
-		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "contact" {
-			foundAudit = true
-			break
-		}
-	}
-	if !foundAudit {
-		t.Fatalf("expected config.update audit log for contact, got %#v", store.auditLogs)
-	}
-}
-
-func TestUpdateContactRejectsInvalidEmail(t *testing.T) {
+func TestUpdateAppConfigRejectsInvalidValue(t *testing.T) {
 	handler := newTestHandler()
-	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_contact", strings.NewReader(`{"support_email":"not-an-email"}`)), "admin", true)
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update", strings.NewReader(`{"upload":{"image_max_size":0}}`)), "admin", true)
 	updateRR := httptest.NewRecorder()
-	handler.UpdateContact(updateRR, updateReq)
+	handler.UpdateAppConfig(updateRR, updateReq)
 	updateResp := decodeResponse[struct{}](t, updateRR)
 	if updateResp.Code != 10000 || updateResp.Message != "参数错误" {
 		t.Fatalf("unexpected update response: %#v", updateResp)
 	}
 }
 
-// RateLimits & Features handler tests
-
-func TestAdminHandlerUpdateRateLimitsRejectsInvalidJSON(t *testing.T) {
+func TestUpdateAppConfigRejectsInvalidJSON(t *testing.T) {
 	handler := newTestHandler()
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_rate_limits", strings.NewReader(`{invalid`)), "admin", true)
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update", strings.NewReader(`{invalid`)), "admin", true)
 	rr := httptest.NewRecorder()
-
-	handler.UpdateRateLimits(rr, req)
-
+	handler.UpdateAppConfig(rr, req)
 	resp := decodeResponse[struct{}](t, rr)
 	if resp.Code != 10000 || resp.Message != "参数错误" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
 
-func TestAdminHandlerUpdateRateLimitsReturnsSuccess(t *testing.T) {
-	handler, store := newTestHandlerWithStore()
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_rate_limits", strings.NewReader(`{"rate_limits":{"global_per_hour":5000}}`)), "admin", true)
-	rr := httptest.NewRecorder()
-
-	handler.UpdateRateLimits(rr, req)
-
-	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 0 {
-		t.Fatalf("unexpected response: %#v", resp)
-	}
-
-	foundAudit := false
-	for _, entry := range store.auditLogs {
-		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "rate_limits" {
-			foundAudit = true
-			break
-		}
-	}
-	if !foundAudit {
-		t.Fatalf("expected config.update audit log for rate_limits, got %#v", store.auditLogs)
-	}
-}
-
-func TestAdminHandlerUpdateRateLimitsReturns10600OnError(t *testing.T) {
+func TestUpdateAppConfigReturns10600OnError(t *testing.T) {
 	module, _ := newTestModuleWithStore()
 	module.handler.service.provider = &failingProvider{}
-
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_rate_limits", strings.NewReader(`{"rate_limits":{"global_per_hour":5000}}`)), "admin", true)
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update", strings.NewReader(`{"rate_limits":{"global_per_hour":5000}}`)), "admin", true)
 	rr := httptest.NewRecorder()
-
-	module.handler.UpdateRateLimits(rr, req)
-
+	module.handler.UpdateAppConfig(rr, req)
 	resp := decodeResponse[struct{}](t, rr)
 	if resp.Code != 10600 || resp.Message != "服务暂时不可用" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
 
-func TestAdminHandlerUpdateFeaturesRejectsInvalidJSON(t *testing.T) {
-	handler := newTestHandler()
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_features", strings.NewReader(`{invalid`)), "admin", true)
-	rr := httptest.NewRecorder()
-
-	handler.UpdateFeatures(rr, req)
-
-	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 10000 || resp.Message != "参数错误" {
-		t.Fatalf("unexpected response: %#v", resp)
-	}
-}
-
-func TestAdminHandlerUpdateFeaturesReturnsSuccess(t *testing.T) {
-	handler, store := newTestHandlerWithStore()
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_features", strings.NewReader(`{"enable_moments":false}`)), "admin", true)
-	rr := httptest.NewRecorder()
-
-	handler.UpdateFeatures(rr, req)
-
-	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 0 {
-		t.Fatalf("unexpected response: %#v", resp)
-	}
-
-	foundAudit := false
-	for _, entry := range store.auditLogs {
-		if entry.Action == AuditActionConfigUpdate && entry.TargetID == "features" {
-			foundAudit = true
-			break
-		}
-	}
-	if !foundAudit {
-		t.Fatalf("expected config.update audit log for features, got %#v", store.auditLogs)
-	}
-}
-
-func TestAdminHandlerUpdateFeaturesReturns10600OnError(t *testing.T) {
-	module, _ := newTestModuleWithStore()
-	module.handler.service.provider = &failingProvider{}
-
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_features", strings.NewReader(`{"enable_moments":false}`)), "admin", true)
-	rr := httptest.NewRecorder()
-
-	module.handler.UpdateFeatures(rr, req)
-
-	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 10600 || resp.Message != "服务暂时不可用" {
-		t.Fatalf("unexpected response: %#v", resp)
-	}
-}
 
 // failingProvider is a Provider whose UpdateAppConfig always returns an error,
 // used to test the 10600 (服务暂时不可用) handler path.

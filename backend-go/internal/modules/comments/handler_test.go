@@ -36,7 +36,7 @@ type stubCommentRepo struct {
 func (r *stubCommentRepo) Create(_ context.Context, _ string, _ CreateCommentRequest) (CommentItem, error) {
 	return r.created, r.createErr
 }
-func (r *stubCommentRepo) Delete(_ context.Context, _ string) error { return r.deleteErr }
+func (r *stubCommentRepo) SoftDelete(_ context.Context, _ string) error { return r.deleteErr }
 func (r *stubCommentRepo) List(_ context.Context, _ string, _ int, _ string) (PaginatedComments, error) {
 	return r.listResult, r.listErr
 }

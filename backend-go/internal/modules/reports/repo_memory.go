@@ -56,7 +56,7 @@ func (r *InMemoryRepository) ExistsOpenReport(_ context.Context, targetType Repo
 	defer r.mu.RUnlock()
 	for _, items := range r.reports {
 		for _, item := range items {
-			if item.TargetType == targetType && item.TargetID == targetID && (item.Status == ReportStatusPending || item.Status == ReportStatusReviewing) {
+			if item.TargetType == targetType && item.TargetID == targetID && (item.Status == ReportStatusPending || item.Status == ReportStatusReviewing || item.Status == ReportStatusEscalated) {
 				return true, nil
 			}
 		}

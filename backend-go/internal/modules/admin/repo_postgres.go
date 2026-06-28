@@ -722,7 +722,7 @@ func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, 
 	case ReportHandleDismiss:
 		status = ReportStatusDismissed
 	case ReportHandleEscalate:
-		status = ReportStatusReviewing
+		status = ReportStatusEscalated
 	}
 	now := time.Now().UTC()
 	var handledByID any

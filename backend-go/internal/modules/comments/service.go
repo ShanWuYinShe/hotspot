@@ -59,9 +59,9 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 	}
 	if err := s.moments.IncrementCommentCount(ctx, normalizedReq.MomentID); err != nil {
 		observability.L().Error("comments.create increment comment count failed", "error", err, "moment_id", normalizedReq.MomentID, "comment_id", item.CommentID)
-		if rollbackErr := s.repo.Delete(ctx, item.CommentID); rollbackErr != nil {
-			observability.L().Error("comments.create rollback delete failed", "error", rollbackErr, "comment_id", item.CommentID)
-			return CommentItem{}, fmt.Errorf("increment comment count: %w; rollback delete comment: %v", err, rollbackErr)
+		if rollbackErr := s.repo.SoftDelete(ctx, item.CommentID); rollbackErr != nil {
+			observability.L().Error("comments.create rollback soft delete failed", "error", rollbackErr, "comment_id", item.CommentID)
+			return CommentItem{}, fmt.Errorf("increment comment count: %w; rollback soft delete comment: %v", err, rollbackErr)
 		}
 		return CommentItem{}, err
 	}
@@ -111,10 +111,16 @@ func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
 		return ErrCommentNotFound
 	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	if comment.User.UserID != principal.UserID {
+	isOwner := comment.User.UserID == principal.UserID
+	isAdmin := principal.IsAdmin()
+	if !isOwner && !isAdmin {
 		return ErrPermissionDenied
 	}
-	if err := s.repo.Delete(ctx, req.CommentID); err != nil {
+	// Already soft-deleted — no-op (idempotent)
+	if comment.IsDeleted {
+		return nil
+	}
+	if err := s.repo.SoftDelete(ctx, req.CommentID); err != nil {
 		return err
 	}
 	_ = s.moments.DecrementCommentCount(ctx, comment.MomentID)

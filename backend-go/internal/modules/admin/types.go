@@ -122,6 +122,7 @@ const (
 
 	ReportStatusPending   ReportStatus = "pending"
 	ReportStatusReviewing ReportStatus = "reviewing"
+		ReportStatusEscalated ReportStatus = "escalated"
 	ReportStatusResolved  ReportStatus = "resolved"
 	ReportStatusDismissed ReportStatus = "dismissed"
 
@@ -378,8 +379,35 @@ type AppConfig struct {
 	UpdatedByUserID  string           `json:"updated_by_user_id,omitempty"`
 }
 
-type UpdateUploadConfigRequest struct {
-	Upload PartialUploadConfig `json:"upload"`
+type UpdateAppConfigRequest struct {
+	Upload           *PartialUploadConfig      `json:"upload,omitempty"`
+	Defaults         *UpdateDefaultsPayload    `json:"defaults,omitempty"`
+	RateLimits       *PartialRateLimitConfig   `json:"rate_limits,omitempty"`
+	ResponseDefaults *PartialResponseDefaults  `json:"response_defaults,omitempty"`
+	Features         *PartialFeatureSwitches   `json:"features,omitempty"`
+	Limits           *PartialAppLimits         `json:"limits,omitempty"`
+	Contact          *PartialContactInfo       `json:"contact,omitempty"`
+}
+
+type UpdateDefaultsPayload struct {
+	DefaultLocation      *PartialLocation      `json:"default_location,omitempty"`
+	DefaultGroupAvatar   *string               `json:"default_group_avatar,omitempty"`
+	DefaultUserAvatar    *string               `json:"default_user_avatar,omitempty"`
+	DefaultGroupSettings *PartialGroupSettings `json:"default_group_settings,omitempty"`
+}
+
+type PartialFeatureSwitches struct {
+	EnablePublicRegistration *bool `json:"enable_public_registration,omitempty"`
+	EnableGuestLogin         *bool `json:"enable_guest_login,omitempty"`
+	EnableMoments            *bool `json:"enable_moments,omitempty"`
+	EnableNearbyPeople       *bool `json:"enable_nearby_people,omitempty"`
+}
+
+type PartialContactInfo struct {
+	SupportEmail      *string `json:"support_email,omitempty"`
+	PrivacyPolicyURL  *string `json:"privacy_policy_url,omitempty"`
+	TermsOfServiceURL *string `json:"terms_of_service_url,omitempty"`
+	OfficialWebsite   *string `json:"official_website,omitempty"`
 }
 
 type PartialUploadConfig struct {
@@ -391,12 +419,6 @@ type PartialUploadConfig struct {
 	AllowedVideoTypes []string `json:"allowed_video_types,omitempty"`
 }
 
-type UpdateDefaultsRequest struct {
-	DefaultLocation      *PartialLocation      `json:"default_location,omitempty"`
-	DefaultGroupAvatar   *string               `json:"default_group_avatar,omitempty"`
-	DefaultUserAvatar    *string               `json:"default_user_avatar,omitempty"`
-	DefaultGroupSettings *PartialGroupSettings `json:"default_group_settings,omitempty"`
-}
 
 type PartialLocation struct {
 	Point        *GeoPoint `json:"point,omitempty"`
@@ -410,9 +432,6 @@ type PartialGroupSettings struct {
 	Location     *PartialLocation              `json:"location,omitempty"`
 }
 
-type UpdateRateLimitsRequest struct {
-	RateLimits PartialRateLimitConfig `json:"rate_limits"`
-}
 
 type PartialRateLimitConfig struct {
 	GlobalPerHour            *int `json:"global_per_hour,omitempty"`
@@ -433,9 +452,6 @@ type PartialRateLimitConfig struct {
 	AdminWritePerMinute      *int `json:"admin_write_per_minute,omitempty"`
 }
 
-type UpdateResponseDefaultsRequest struct {
-	ResponseDefaults PartialResponseDefaults `json:"response_defaults"`
-}
 
 type PartialResponseDefaults struct {
 	SearchSuggestCount       *int `json:"search_suggest_count,omitempty"`
@@ -446,16 +462,7 @@ type PartialResponseDefaults struct {
 	SystemAnnouncementsCount *int `json:"system_announcements_count,omitempty"`
 }
 
-type UpdateFeaturesRequest struct {
-	EnablePublicRegistration *bool `json:"enable_public_registration,omitempty"`
-	EnableGuestLogin         *bool `json:"enable_guest_login,omitempty"`
-	EnableMoments            *bool `json:"enable_moments,omitempty"`
-	EnableNearbyPeople       *bool `json:"enable_nearby_people,omitempty"`
-}
 
-type UpdateLimitsRequest struct {
-	Limits PartialAppLimits `json:"limits"`
-}
 
 type PartialAppLimits struct {
 	MaxGroupMembers            *int `json:"max_group_members,omitempty"`
@@ -466,12 +473,6 @@ type PartialAppLimits struct {
 	SearchRadiusMax            *int `json:"search_radius_max,omitempty"`
 }
 
-type UpdateContactRequest struct {
-	SupportEmail      *string `json:"support_email,omitempty"`
-	PrivacyPolicyURL  *string `json:"privacy_policy_url,omitempty"`
-	TermsOfServiceURL *string `json:"terms_of_service_url,omitempty"`
-	OfficialWebsite   *string `json:"official_website,omitempty"`
-}
 
 type AdminTagItem struct {
 	Name       string `json:"name"`
@@ -492,6 +493,7 @@ type AdminTagSearchRequest struct {
 
 type AdminDeleteTagRequest struct {
 	Name string `json:"name"`
+	HardDelete bool   `json:"hard_delete,omitempty"`
 }
 
 type AdminAnnouncementItem struct {

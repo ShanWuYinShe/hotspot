@@ -16,7 +16,7 @@ ORDER BY created_at DESC, report_id DESC`
 	queryExistsOpenReport = `
 SELECT 1
 FROM reports
-WHERE target_type = $1 AND target_id = $2 AND status IN ('pending', 'reviewing')
+WHERE target_type = $1 AND target_id = $2 AND status IN ('pending', 'reviewing', 'escalated')
 LIMIT 1`
 
 	queryReportTargetOwnerUser = `

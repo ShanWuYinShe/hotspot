@@ -297,15 +297,10 @@ export const ADMIN_RBAC = {
 } as const;
 
 // 管理员 - 应用配置（spec 统一路径 admin/app_config/*）
+// 原 7 个独立 update_* 端点已合并为单一 update（见 spec commit 9c9d046e）
 export const ADMIN_APP_CONFIG = {
   GET: `${API_BASE}/admin/app_config/get`,
-  UPDATE_UPLOAD: `${API_BASE}/admin/app_config/update_upload`,
-  UPDATE_DEFAULTS: `${API_BASE}/admin/app_config/update_defaults`,
-  UPDATE_RATE_LIMITS: `${API_BASE}/admin/app_config/update_rate_limits`,
-  UPDATE_RESPONSE_DEFAULTS: `${API_BASE}/admin/app_config/update_response_defaults`,
-  UPDATE_FEATURES: `${API_BASE}/admin/app_config/update_features`,
-  UPDATE_LIMITS: `${API_BASE}/admin/app_config/update_limits`,
-  UPDATE_CONTACT: `${API_BASE}/admin/app_config/update_contact`
+  UPDATE: `${API_BASE}/admin/app_config/update`
 } as const;
 
 // 管理员 - 用户管理

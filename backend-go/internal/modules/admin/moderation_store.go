@@ -29,7 +29,7 @@ type TagSearchFilter struct {
 type ModerationStore interface {
 	SearchTags(context.Context, TagSearchFilter) (TagPage, error)
 	GetTagDeleteState(context.Context, string) (bool, bool, error)
-	DeleteTag(context.Context, string) error
+	DeleteTag(context.Context, string, bool) error
 	SearchAnnouncements(context.Context, systemmodule.AnnouncementSearchFilter) (systemmodule.AnnouncementPage, error)
 	GetAnnouncement(context.Context, string) (systemmodule.AnnouncementRecord, bool, error)
 	CreateAnnouncement(context.Context, systemmodule.AnnouncementCreateInput) (systemmodule.AnnouncementRecord, error)

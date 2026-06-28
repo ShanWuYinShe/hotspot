@@ -17,7 +17,7 @@ export const badgeVariants = tv({
       default: cn(
         'bg-transparent border-transparent',
         'dark:bg-transparent dark:border-transparent',
-        'text-primary dark:text-primary-foreground',
+        'text-primary',
         'hover:bg-primary/10 hover:border-primary/30',
         'dark:hover:bg-primary/20 dark:hover:border-primary/60'
       ),
@@ -31,7 +31,7 @@ export const badgeVariants = tv({
       accent: cn(
         'bg-accent/10 border-accent/30',
         'dark:bg-accent/20 dark:border-accent/70',
-        'text-accent dark:text-on-accent',
+        'text-accent',
         'hover:bg-accent/20 hover:border-accent/40',
         'dark:hover:bg-accent/30 dark:hover:border-accent/80'
       ),

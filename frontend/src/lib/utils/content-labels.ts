@@ -42,6 +42,7 @@ export const REPORT_TARGET_TYPE_LABEL: Record<ReportTargetType, string> = {
 export const REPORT_STATUS_LABEL: Record<ReportStatus, string> = {
   pending: '待处理',
   reviewing: '审核中',
+  escalated: '已升级',
   resolved: '已处理',
   dismissed: '已驳回'
 };
@@ -51,6 +52,8 @@ export const REPORT_STATUS_BADGE_CLASS: Record<ReportStatus, string> = {
     'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   reviewing:
     'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  escalated:
+    'border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   resolved:
     'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
   dismissed:
@@ -60,6 +63,7 @@ export const REPORT_STATUS_BADGE_CLASS: Record<ReportStatus, string> = {
 export const REPORT_STATUS_BADGE_VARIANT: Record<ReportStatus, BadgeVariant> = {
   pending: 'secondary',
   reviewing: 'default',
+  escalated: 'default',
   resolved: 'default',
   dismissed: 'outline'
 };

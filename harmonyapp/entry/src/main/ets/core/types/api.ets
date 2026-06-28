@@ -39,7 +39,7 @@ export type ClientType = 'web' | 'app';
 export type UserPresenceStatus = 'online' | 'offline';
 
 // 举报状态
-export type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+export type ReportStatus = 'pending' | 'reviewing' | 'escalated' | 'resolved' | 'dismissed';
 
 // 举报目标类型
 export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
@@ -291,10 +291,11 @@ export interface MomentItem {
 
 export interface MessageReplyTo {
   message_id: string;
-  user_id: string;
-  nickname: string;
-  content: string; // 文本预览
-  share_code?: string; // 若被回复的消息为 share 类型，则包含该 share_code
+  type: MessageType;
+  sender: UserInfo;
+  content?: string;
+  share_code?: string;
+  sent_at: string;
 }
 
 export interface MessageSent {
@@ -344,6 +345,7 @@ export interface CommentItem {
   likes_count: number;
   replies_count: number;
   is_liked?: boolean;
+  is_deleted: boolean;
 }
 
 export interface LikeItem {
@@ -461,7 +463,7 @@ export interface ChangePasswordRequest {
 
 // ==================== 用户API类型 ====================
 
-export type Gender = 'male' | 'female' | 'apache_helicopter';
+export type Gender = 'male' | 'female' | 'other';
 export type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
 export type MessageBlockedReason = 'privacy' | 'stranger_quota_exceeded' | 'account_suspended';
 export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
@@ -1180,6 +1182,15 @@ export interface MyReportsRequest {
   pagination?: PaginationParams;
 }
 
+export interface MessageReportSnapshot {
+  chat_type: 'private' | 'group';
+  target_chat_id: string;
+  message_type: MessageType;
+  snapshot_content?: string;
+  snapshot_media?: MessageMedia;
+  sent_at: string;
+}
+
 export interface ReportItem {
   report_id: string;
   target_type: ReportTargetType;
@@ -1189,6 +1200,7 @@ export interface ReportItem {
   status: ReportStatus;
   created_at: string;
   handled_at?: string;
+  message_snapshot?: MessageReportSnapshot;
 }
 
 // ==================== 信息流API类型 ====================
@@ -1253,9 +1265,7 @@ export interface SearchSuggestRequest {
 }
 
 export interface UserSuggestItem {
-  user_id: string;
-  nickname: string;
-  avatar_url?: string;
+  user: UserInfo;
   bio?: string;
   location?: RelativeLocation;
 }
@@ -1327,6 +1337,8 @@ export interface AppLimits {
   moment_description_max_length: number;
   comment_max_length: number;
   search_radius_max: number;
+  message_recall_window_seconds: number;
+  stranger_message_daily_quota: number;
 }
 
 export interface ContactInfo {
@@ -1938,5 +1950,6 @@ export interface NotificationListRequest {
 }
 
 export interface MarkAsReadRequest {
-  notification_ids: string[];
+  notification_ids?: string[];
+  type?: NotificationType;
 }

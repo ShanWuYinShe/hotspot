@@ -40,7 +40,7 @@
   function getSuggestionKey(item: SearchSuggestItem): string {
     switch (item.type) {
       case 'user':
-        return `user_${item.payload.user_id}`;
+        return `user_${item.payload.user.user_id}`;
       case 'group':
         return `group_${item.payload.group_id}`;
       case 'moment':
@@ -163,7 +163,7 @@
       const rawItems = isSuccess(response) && response.data ? response.data.items : [];
       const currentUserId = authStore.currentUserId;
       suggestions = currentUserId
-        ? rawItems.filter((item) => item.type !== 'user' || item.payload.user_id !== currentUserId)
+        ? rawItems.filter((item) => item.type !== 'user' || item.payload.user.user_id !== currentUserId)
         : rawItems;
     } catch {
       if (!controller.signal.aborted) suggestions = [];
@@ -197,8 +197,8 @@
       return;
     }
     closeModal();
-    if (item.type === 'user' && item.payload.user_id) {
-      goto(`/users/${item.payload.user_id}`);
+    if (item.type === 'user' && item.payload.user?.user_id) {
+      goto(`/users/${item.payload.user.user_id}`);
       return;
     }
     if (item.type === 'group' && item.payload.group_id) {
@@ -224,12 +224,12 @@
           avatarFallback: null
         };
       case 'user': {
-        const name = item.payload.nickname || unknownUser;
+        const name = item.payload.user?.nickname || unknownUser;
         return {
           title: name,
           subtitle: item.payload.bio || null,
           badge: t('searchModal.userBadge'),
-          avatarUrl: item.payload.avatar_url,
+          avatarUrl: item.payload.user?.avatar_url,
           avatarFallback: name.slice(0, 2)
         };
       }

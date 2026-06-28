@@ -306,35 +306,6 @@ func TestServiceGetAppConfigHappyPath(t *testing.T) {
 	_ = cfg
 }
 
-// --- UpdateFeatures ---
-
-func TestServiceUpdateFeaturesHappyPath(t *testing.T) {
-	svc, repo, _, _ := newTestService()
-	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	enabled := true
-	apiErr, err := svc.UpdateFeatures(adminCtx("admin1"), UpdateFeaturesRequest{EnableMoments: &enabled})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if apiErr != nil {
-		t.Fatalf("unexpected api error: %v", apiErr)
-	}
-}
-
-// --- UpdateRateLimits ---
-
-func TestServiceUpdateRateLimitsRejectsZero(t *testing.T) {
-	svc, repo, _, _ := newTestService()
-	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	zero := 0
-	apiErr, err := svc.UpdateRateLimits(adminCtx("admin1"), UpdateRateLimitsRequest{RateLimits: PartialRateLimitConfig{GlobalPerHour: &zero}})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if apiErr == nil || apiErr.Code != 10000 {
-		t.Fatalf("expected 10000, got %v", apiErr)
-	}
-}
 
 // --- SearchUsers ---
 
@@ -456,7 +427,7 @@ func TestServiceHandleReportRejectsInvalidAction(t *testing.T) {
 func TestServiceDeleteTagRejectsEmptyName(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	apiErr, err := svc.DeleteTag(adminCtx("admin1"), "")
+	apiErr, err := svc.DeleteTag(adminCtx("admin1"), "", false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -468,7 +439,7 @@ func TestServiceDeleteTagRejectsEmptyName(t *testing.T) {
 func TestServiceDeleteTagRejectsNotFound(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	apiErr, err := svc.DeleteTag(adminCtx("admin1"), "nonexistent")
+	apiErr, err := svc.DeleteTag(adminCtx("admin1"), "nonexistent", false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -646,40 +617,4 @@ func TestServiceHandleReportHappyPath(t *testing.T) {
 	}
 }
 
-// --- UpdateRateLimits happy path ---
 
-func TestServiceUpdateRateLimitsHappyPath(t *testing.T) {
-	svc, repo, _, _ := newTestService()
-	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	hundred := 100
-	apiErr, err := svc.UpdateRateLimits(adminCtx("admin1"), UpdateRateLimitsRequest{
-		RateLimits: PartialRateLimitConfig{GlobalPerHour: &hundred},
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if apiErr != nil {
-		t.Fatalf("unexpected api error: %v", apiErr)
-	}
-}
-
-// --- UpdateFeatures happy path (already exists, re-test with all flags) ---
-
-func TestServiceUpdateFeaturesAllFlags(t *testing.T) {
-	svc, repo, _, _ := newTestService()
-	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	enabled := true
-	disabled := false
-	apiErr, err := svc.UpdateFeatures(adminCtx("admin1"), UpdateFeaturesRequest{
-		EnablePublicRegistration: &enabled,
-		EnableGuestLogin:         &disabled,
-		EnableMoments:            &enabled,
-		EnableNearbyPeople:       &enabled,
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if apiErr != nil {
-		t.Fatalf("unexpected api error: %v", apiErr)
-	}
-}

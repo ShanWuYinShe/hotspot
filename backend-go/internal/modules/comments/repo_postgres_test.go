@@ -34,6 +34,10 @@ func (r rowValues) Scan(dest ...any) error {
 			case time.Time:
 				*d = v
 			}
+		case *bool:
+			if v, ok := r.values[i].(bool); ok {
+				*d = v
+			}
 		}
 	}
 	return nil
@@ -90,14 +94,16 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 		}
 		momentID := args[1].(string)
 		b.comments[momentID] = append(b.comments[momentID], item)
-	case queryDeleteComment:
+	case querySoftDeleteComment:
 		commentID := args[0].(string)
 		for momentID, items := range b.comments {
 			for idx, item := range items {
 				if item.CommentID != commentID {
 					continue
 				}
-				b.comments[momentID] = append(items[:idx], items[idx+1:]...)
+				item.IsDeleted = true
+				item.Content = ""
+				b.comments[momentID][idx] = item
 				break
 			}
 		}
@@ -112,7 +118,7 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 		for _, items := range b.comments {
 			for _, item := range items {
 				if item.CommentID == commentID {
-					return rowValues{values: []any{item.CommentID, item.MomentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount}}
+					return rowValues{values: []any{item.CommentID, item.MomentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted}}
 				}
 			}
 		}
@@ -160,7 +166,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.CommentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount})
+			rows = append(rows, []any{item.CommentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted})
 		}
 		return &rowsValues{rows: rows}, nil
 	case queryListCommentReplies:
@@ -199,7 +205,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.CommentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount})
+			rows = append(rows, []any{item.CommentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted})
 		}
 		return &rowsValues{rows: rows}, nil
 	default:

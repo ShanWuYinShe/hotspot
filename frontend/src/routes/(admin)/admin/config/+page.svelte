@@ -60,54 +60,22 @@
     }
   }
 
-  async function handleSaveUpload() {
+  async function handleSave() {
     isSaving = true;
     try {
-      const response = await adminAppConfigService.updateUpload({
+      const response = await adminAppConfigService.update({
         upload: {
           image_max_size: parseInt(imageMaxSize) || undefined,
           video_max_size: parseInt(videoMaxSize) || undefined,
           audio_max_size: parseInt(audioMaxSize) || undefined,
           file_max_size: parseInt(fileMaxSize) || undefined
-        }
-      });
-      if (isSuccess(response)) {
-        toast.success('上传配置已保存');
-      } else {
-        toast.error(response.message || '保存失败');
-      }
-    } catch {
-      toast.error('保存失败');
-    } finally {
-      isSaving = false;
-    }
-  }
-
-  async function handleSaveFeatures() {
-    isSaving = true;
-    try {
-      const response = await adminAppConfigService.updateFeatures({
-        enable_public_registration: enablePublicRegistration,
-        enable_guest_login: enableGuestLogin,
-        enable_moments: enableMoments,
-        enable_nearby_people: enableNearbyPeople
-      });
-      if (isSuccess(response)) {
-        toast.success('功能配置已保存');
-      } else {
-        toast.error(response.message || '保存失败');
-      }
-    } catch {
-      toast.error('保存失败');
-    } finally {
-      isSaving = false;
-    }
-  }
-
-  async function handleSaveLimits() {
-    isSaving = true;
-    try {
-      const response = await adminAppConfigService.updateLimits({
+        },
+        features: {
+          enable_public_registration: enablePublicRegistration,
+          enable_guest_login: enableGuestLogin,
+          enable_moments: enableMoments,
+          enable_nearby_people: enableNearbyPeople
+        },
         limits: {
           max_moment_tags: parseInt(maxMomentTags) || undefined,
           max_moment_images: parseInt(maxMomentImages) || undefined,
@@ -118,7 +86,7 @@
         }
       });
       if (isSuccess(response)) {
-        toast.success('限制配置已保存');
+        toast.success('配置已保存');
       } else {
         toast.error(response.message || '保存失败');
       }
@@ -221,7 +189,7 @@
             <button
               class="text-body flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
               style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
-              onclick={handleSaveUpload}
+              onclick={handleSave}
               disabled={isSaving}
             >
               {#if isSaving}<Loader2 size={14} strokeWidth={1.5} class="animate-spin" />{:else}<Save
@@ -284,7 +252,7 @@
             <button
               class="text-body flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
               style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
-              onclick={handleSaveFeatures}
+              onclick={handleSave}
               disabled={isSaving}
             >
               {#if isSaving}<Loader2 size={14} strokeWidth={1.5} class="animate-spin" />{:else}<Save
@@ -330,7 +298,7 @@
             <button
               class="text-body flex items-center gap-1.5 rounded-full px-5 py-2 outline-none"
               style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
-              onclick={handleSaveLimits}
+              onclick={handleSave}
               disabled={isSaving}
             >
               {#if isSaving}<Loader2 size={14} strokeWidth={1.5} class="animate-spin" />{:else}<Save

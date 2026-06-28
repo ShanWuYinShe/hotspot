@@ -51,7 +51,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	}, nil
 }
 
-func (r *PostgresRepository) Delete(ctx context.Context, commentID string) error {
+func (r *PostgresRepository) SoftDelete(ctx context.Context, commentID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented
 	}
@@ -59,7 +59,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, commentID string) error
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryDeleteComment, commentID)
+	return queryable.Exec(ctx, querySoftDeleteComment, commentID)
 }
 
 func (r *PostgresRepository) List(ctx context.Context, momentID string, limit int, cursor string) (PaginatedComments, error) {
@@ -85,7 +85,7 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 		var item CommentItem
 		var userID, parentID string
 		var createdAt time.Time
-		if err := rows.Scan(&item.CommentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount); err != nil {
+		if err := rows.Scan(&item.CommentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
 			return PaginatedComments{}, err
 		}
 		item.User = UserInfo{UserID: userID, Nickname: userID}
@@ -115,7 +115,7 @@ func (r *PostgresRepository) Get(ctx context.Context, commentID string) (Comment
 	var item CommentItem
 	var userID, parentID string
 	var createdAt time.Time
-	if err := row.Scan(&item.CommentID, &item.MomentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount); err != nil {
+	if err := row.Scan(&item.CommentID, &item.MomentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return CommentItem{}, false, nil
 		}
@@ -151,7 +151,7 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 		var item CommentItem
 		var userID, parentID string
 		var createdAt time.Time
-		if err := rows.Scan(&item.CommentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount); err != nil {
+		if err := rows.Scan(&item.CommentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
 			return PaginatedComments{}, err
 		}
 		item.User = UserInfo{UserID: userID, Nickname: userID}
