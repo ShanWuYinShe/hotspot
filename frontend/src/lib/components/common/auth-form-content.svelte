@@ -318,6 +318,15 @@
           {/if}
           {t('auth.login')}
         </button>
+        <div class="text-center pt-1">
+          <a
+            href="/auth/reset-password"
+            class="text-meta outline-none hover:underline"
+            style="color: var(--text-secondary)"
+          >
+            忘记密码？
+          </a>
+        </div>
       </form>
     {:else if currentTab === 'register'}
       <form

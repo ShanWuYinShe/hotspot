@@ -6,9 +6,7 @@
   import { usersService, feedService, groupsService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import type { UserItem, TrendingTagItem, GroupItem } from '$lib/types/api';
-  import Compass from 'lucide-svelte/icons/compass';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
-  import Navigation2 from 'lucide-svelte/icons/navigation-2';
   import Users from 'lucide-svelte/icons/users';
   import { goto } from '$app/navigation';
 
@@ -20,6 +18,7 @@
   import LocationPickerModal from '$lib/components/common/location-picker-modal.svelte';
   import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
   import EmptyState from '$lib/components/common/empty-state.svelte';
+  import MapCard from '$lib/components/common/map-card.svelte';
 
   import { platformStore } from '$lib/stores/platform.svelte';
 
@@ -232,49 +231,7 @@
 
     <div class="page-pad-x page-shell page-shell--narrow flex flex-col pt-4 pb-6">
       <!-- Map Card -->
-      <div
-        class="surface-hero relative mb-5 w-full overflow-hidden rounded-[var(--radius-xl)]"
-        style="aspect-ratio: 2.4/1;"
-      >
-        <div
-          class="absolute inset-0"
-          style="background: linear-gradient(135deg, var(--surface-secondary), var(--surface-bg));"
-        ></div>
-        <div
-          class="absolute inset-0"
-          style="background: linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.3) 100%);"
-        ></div>
-        <div class="absolute inset-0 flex items-center justify-center">
-          <div
-            class="flex items-center justify-center rounded-full"
-            style="width: 44px; height: 44px; background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1.5px solid var(--glass-border); box-shadow: 0 4px 16px rgba(0,0,0,0.18);"
-          >
-            <span
-              class="rounded-full animate-pulse"
-              style="width: 14px; height: 14px; background: var(--brand); box-shadow: 0 0 0 4px var(--glow);"
-            ></span>
-          </div>
-        </div>
-        <div class="absolute bottom-3 right-3 flex flex-col gap-2">
-          {#each [Navigation2, Compass] as Icon}
-            <button
-              class="flex items-center justify-center rounded-xl outline-none"
-              style="width: 34px; height: 34px; background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid var(--glass-border); box-shadow: 2px 2px 6px rgba(0,0,0,0.15);"
-            >
-              <Icon size={14} strokeWidth={1.5} color="var(--text-primary)" />
-            </button>
-          {/each}
-        </div>
-        <div
-          class="absolute bottom-3 left-3 flex items-center gap-1 rounded-full px-2.5 py-1"
-          style="background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid var(--glass-border);"
-        >
-          <span class="text-caption" style="color: var(--brand); font-weight: 600"
-            >{nearbyUsers.length}</span
-          >
-          <span class="text-xs" style="color: var(--text-secondary)">人附近</span>
-        </div>
-      </div>
+      <MapCard class="mb-5" />
 
       <!-- Nearby people -->
       <div class="mb-5">

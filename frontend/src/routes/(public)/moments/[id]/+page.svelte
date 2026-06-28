@@ -2,7 +2,7 @@
   import { page } from '$app/state';
   import { untrack } from 'svelte';
   import { withMinimumLoadingTime } from '$lib/utils/loading';
-  import { momentsService, commentsService } from '$lib/api/services';
+  import { momentsService, commentsService, shareService } from '$lib/api/services';
   import { formatDateTime } from '$lib/utils/format';
   import { isSuccess } from '$lib/api/client';
   import { authStore } from '$lib/stores/auth.svelte';
@@ -172,6 +172,29 @@
       toast.error('评论失败');
     } finally {
       isSubmitting = false;
+    }
+  }
+
+  async function handleShare() {
+    if (!authStore.isAuthenticated) {
+      uiStore.openLoginModalWithRedirect({ onSuccess: handleShare });
+      return;
+    }
+
+    try {
+      const response = await shareService.create({
+        share_type: 'moment',
+        payload: { shared_moment_id: momentId }
+      });
+      if (isSuccess(response) && response.data) {
+        const url = `${window.location.origin}/share/${response.data.share_code}`;
+        await navigator.clipboard.writeText(url);
+        toast.success('分享链接已复制到剪贴板');
+      } else {
+        toast.error(response.message || '创建分享失败');
+      }
+    } catch {
+      toast.error('创建分享失败');
     }
   }
 
@@ -378,6 +401,7 @@
             <button
               class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
               style="color: var(--text-secondary);"
+              onclick={handleShare}
             >
               <Share2 size={19} />
             </button>

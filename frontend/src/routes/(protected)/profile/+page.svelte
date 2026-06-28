@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { usersService } from '$lib/api/services';
+  import { usersService, momentsService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import { formatHandle } from '$lib/utils/format';
   import type { MomentItem } from '$lib/types/api';
@@ -29,6 +29,7 @@
   import { adminPermissionsStore } from '$lib/stores/admin-permissions.svelte';
   import { goto } from '$app/navigation';
   import Avatar from '$lib/components/common/avatar.svelte';
+  import { mediaService } from '$lib/api/services';
 
   const TAG_OPTIONS = [
     '摄影',
@@ -60,6 +61,13 @@
   let bio = $state('');
   let selectedInterestTags = $state<Set<string>>(new Set());
   let galleryMoments = $state<MomentItem[]>([]);
+  let likedMoments = $state<MomentItem[]>([]);
+  let savedMoments = $state<MomentItem[]>([]);
+  let loadingLiked = $state(false);
+  let loadingSaved = $state(false);
+  let bannerUploading = $state(false);
+  let bannerInputElement: HTMLInputElement | undefined = $state();
+  let avatarInputElement: HTMLInputElement | undefined = $state();
 
   function toggleInterestTag(t: string) {
     const next = new Set(selectedInterestTags);
@@ -99,6 +107,49 @@
       }
     } catch (_) {
       // 静默忽略
+    }
+  }
+
+  async function loadLikedMoments() {
+    if (!profile) return;
+    loadingLiked = true;
+    try {
+      const resp = await usersService.getLikedMoments({
+        user_id: profile.user_id,
+        pagination: { limit: 9 }
+      });
+      if (isSuccess(resp) && resp.data) {
+        likedMoments = resp.data.items ?? [];
+      }
+    } catch (_) {
+      // 静默忽略
+    } finally {
+      loadingLiked = false;
+    }
+  }
+
+  async function loadSavedMoments() {
+    loadingSaved = true;
+    try {
+      const resp = await momentsService.getMyFavorites({
+        pagination: { limit: 9 }
+      });
+      if (isSuccess(resp) && resp.data) {
+        savedMoments = resp.data.items ?? [];
+      }
+    } catch (_) {
+      // 静默忽略
+    } finally {
+      loadingSaved = false;
+    }
+  }
+
+  function handleTabChange(tab: 'posts' | 'liked' | 'saved') {
+    activeTab = tab;
+    if (tab === 'liked' && likedMoments.length === 0) {
+      loadLikedMoments();
+    } else if (tab === 'saved' && savedMoments.length === 0) {
+      loadSavedMoments();
     }
   }
 
@@ -154,6 +205,46 @@
       bio = profile.bio ?? '';
     }
     isEditing = false;
+  }
+
+  async function handleBannerUpload(file: File) {
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('横幅图不能超过 10MB');
+      return;
+    }
+    bannerUploading = true;
+    try {
+      await mediaService.uploadFile(file, 'avatar');
+      toast.success('横幅已更新');
+      const profileRes = await usersService.getMyProfile();
+      if (isSuccess(profileRes) && profileRes.data) {
+        profile = profileRes.data;
+        authStore.setProfile(profile);
+      }
+    } catch {
+      toast.error('上传横幅失败');
+    } finally {
+      bannerUploading = false;
+    }
+  }
+
+  async function handleAvatarUpload(file: File) {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('头像不能超过 5MB');
+      return;
+    }
+    try {
+      const result = await mediaService.uploadFile(file, 'avatar');
+      await usersService.updateMyProfile({ avatar_file_id: result.file_id });
+      const profileRes = await usersService.getMyProfile();
+      if (isSuccess(profileRes) && profileRes.data) {
+        profile = profileRes.data;
+        authStore.setProfile(profile);
+      }
+      toast.success('头像已更新');
+    } catch {
+      toast.error('上传头像失败');
+    }
   }
 
   const tabs = [
@@ -243,7 +334,7 @@
           style="color: {isActive
             ? 'var(--brand)'
             : 'var(--text-secondary)'}; font-weight: {isActive ? 500 : 400}"
-          onclick={() => (activeTab = tab.id)}
+          onclick={() => handleTabChange(tab.id)}
         >
           <tab.icon size={14} strokeWidth={isActive ? 2 : 1.5} />
           <span>{tab.label}</span>
@@ -279,68 +370,80 @@
 
   <!-- ═══ Shared gallery grid ═══ -->
   {#snippet galleryGrid()}
-    {#if galleryMoments.length === 0}
-      <div class="flex flex-col items-center justify-center py-12">
-        <div
-          class="flex items-center justify-center rounded-full"
-          style="width: 56px; height: 56px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
-        >
-          <Grid3X3
-            size={22}
-            color="var(--text-secondary)"
-            strokeWidth={1.25}
-            style="opacity: 0.5;"
-          />
-        </div>
-        <p class="text-body-lg" style="color: var(--text-secondary); margin-top: 12px">
-          还没有发布帖子
-        </p>
+    {#if activeTab === 'liked' && loadingLiked}
+      <div class="flex items-center justify-center py-12">
+        <Loader2 size={20} class="animate-spin" color="var(--text-secondary)" />
+      </div>
+    {:else if activeTab === 'saved' && loadingSaved}
+      <div class="flex items-center justify-center py-12">
+        <Loader2 size={20} class="animate-spin" color="var(--text-secondary)" />
       </div>
     {:else}
-      <div class="grid grid-cols-2 md:grid-cols-3" style="gap: 10px; width: 100%;">
-        {#each galleryMoments as moment (moment.moment_id)}
-          {@const img = moment.images?.[0]}
+      {@const items = activeTab === 'liked' ? likedMoments : activeTab === 'saved' ? savedMoments : galleryMoments}
+      {#if items.length === 0}
+        <div class="flex flex-col items-center justify-center py-12">
           <div
-            class="surface-flat relative cursor-pointer overflow-hidden rounded-[var(--radius-md)]"
-            style="aspect-ratio: 1/1;"
+            class="flex items-center justify-center rounded-full"
+            style="width: 56px; height: 56px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
           >
-            {#if img}
-              <img
-                src={img.thumbnail_url || img.url}
-                alt={moment.description}
-                loading="lazy"
-                decoding="async"
-                class="h-full w-full object-cover"
-              />
-              <div
-                class="absolute bottom-0 left-0 right-0 flex items-center gap-2 px-2 py-1.5"
-                style="background: linear-gradient(transparent, rgba(0,0,0,0.5));"
-              >
-                <span class="text-xs" style="color: var(--text-on-overlay)">
-                  <Heart
-                    size={10}
-                    color="var(--text-on-overlay)"
-                    style="display: inline; vertical-align: middle;"
-                  />
-                  {moment.likes_count}
-                </span>
-              </div>
-            {:else}
-              <div
-                class="flex h-full w-full items-center justify-center"
-                style="background: var(--surface-secondary);"
-              >
-                <Grid3X3
-                  size={20}
-                  color="var(--text-secondary)"
-                  strokeWidth={1.25}
-                  style="opacity: 0.3;"
-                />
-              </div>
-            {/if}
+            <Grid3X3
+              size={22}
+              color="var(--text-secondary)"
+              strokeWidth={1.25}
+              style="opacity: 0.5;"
+            />
           </div>
-        {/each}
-      </div>
+          <p class="text-body-lg" style="color: var(--text-secondary); margin-top: 12px">
+            {activeTab === 'liked' ? '还没有点赞过' : activeTab === 'saved' ? '还没有收藏' : '还没有发布帖子'}
+          </p>
+        </div>
+      {:else}
+        <div class="grid grid-cols-2 md:grid-cols-3" style="gap: 10px; width: 100%;">
+          {#each items as moment (moment.moment_id)}
+            {@const img = moment.images?.[0]}
+            <a
+              href="/moments/{moment.moment_id}"
+              class="surface-flat relative block overflow-hidden rounded-[var(--radius-md)]"
+              style="aspect-ratio: 1/1;"
+            >
+              {#if img}
+                <img
+                  src={img.thumbnail_url || img.url}
+                  alt={moment.description}
+                  loading="lazy"
+                  decoding="async"
+                  class="h-full w-full object-cover"
+                />
+                <div
+                  class="absolute bottom-0 left-0 right-0 flex items-center gap-2 px-2 py-1.5"
+                  style="background: linear-gradient(transparent, rgba(0,0,0,0.5));"
+                >
+                  <span class="text-xs" style="color: var(--text-on-overlay)">
+                    <Heart
+                      size={10}
+                      color="var(--text-on-overlay)"
+                      style="display: inline; vertical-align: middle;"
+                    />
+                    {moment.likes_count}
+                  </span>
+                </div>
+              {:else}
+                <div
+                  class="flex h-full w-full items-center justify-center"
+                  style="background: var(--surface-secondary);"
+                >
+                  <Grid3X3
+                    size={20}
+                    color="var(--text-secondary)"
+                    strokeWidth={1.25}
+                    style="opacity: 0.3;"
+                  />
+                </div>
+              {/if}
+            </a>
+          {/each}
+        </div>
+      {/if}
     {/if}
   {/snippet}
 
@@ -384,12 +487,26 @@
           class="absolute inset-0"
           style="background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.5));"
         ></div>
+        <input
+          type="file"
+          accept="image/*"
+          class="hidden"
+          bind:this={bannerInputElement}
+          onchange={() => {
+            if (bannerInputElement?.files?.[0]) {
+              handleBannerUpload(bannerInputElement.files[0]);
+              bannerInputElement.value = '';
+            }
+          }}
+        />
         <button
           class="text-meta absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
           style="padding: 6px 12px; background: var(--overlay); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); color: var(--text-on-accent)"
+          onclick={() => bannerInputElement?.click()}
+          disabled={bannerUploading}
         >
           <Camera size={13} strokeWidth={1.75} />
-          更换横幅
+          {bannerUploading ? '上传中...' : '更换横幅'}
         </button>
       </div>
 
@@ -409,10 +526,23 @@
               border={false}
             />
           </div>
+          <input
+            type="file"
+            accept="image/*"
+            class="hidden"
+            bind:this={avatarInputElement}
+            onchange={() => {
+              if (avatarInputElement?.files?.[0]) {
+                handleAvatarUpload(avatarInputElement.files[0]);
+                avatarInputElement.value = '';
+              }
+            }}
+          />
           <button
             class="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"
             style="width: 26px; height: 26px; background: var(--brand); border: 2px solid var(--surface-bg); box-shadow: var(--shadow-brand-btn);"
             title="更换头像"
+            onclick={() => avatarInputElement?.click()}
           >
             <Camera size={12} color="var(--text-on-accent)" strokeWidth={2} />
           </button>

@@ -32,7 +32,11 @@ import type {
   GroupUpdatedPayload,
   GroupDismissedPayload,
   AccountBannedPayload,
-  GroupMemberJoinedPayload
+  GroupMemberJoinedPayload,
+  SelfReadSyncPayload,
+  SelfChatSettingsSyncPayload,
+  SelfSettingsUpdatedPayload,
+  SelfRelationSyncPayload
 } from './types';
 
 // ============ 事件处理器类型 ============
@@ -843,23 +847,34 @@ class WebSocketEventHandlers {
 
     // 多端同步事件（⏳ 延期实现）
     this.cleanupFns.push(
-      websocketStore.on('SelfReadSync', (_payload) => {
-        // ⏳ 延期实现
+      websocketStore.on('SelfReadSync', (payload: SelfReadSyncPayload) => {
+        log('[WS] 多端同步：已读状态变更', payload);
+        // 当另一设备标记了消息已读时，清除本地对应会话的未读缓存
+        if (payload.chat_type === 'private' && payload.up_to_message_id) {
+          // 其他设备已阅读该会话，本地可主动刷新未读数
+          // ⏳ 待 chatStore 提供 refreshUnreadCount 接口后接入
+        }
       })
     );
     this.cleanupFns.push(
-      websocketStore.on('SelfChatSettingsSync', (_payload) => {
-        // ⏳ 延期实现
+      websocketStore.on('SelfChatSettingsSync', (payload: SelfChatSettingsSyncPayload) => {
+        log('[WS] 多端同步：会话设置变更', payload);
+        // 其他设备修改了会话的静音/置顶状态，本地应同步
+        // ⏳ 待 chatStore 提供 updateChatSettings 接口后接入
       })
     );
     this.cleanupFns.push(
-      websocketStore.on('SelfSettingsUpdated', (_payload) => {
-        // ⏳ 延期实现
+      websocketStore.on('SelfSettingsUpdated', (payload: SelfSettingsUpdatedPayload) => {
+        log('[WS] 多端同步：用户设置变更', payload);
+        // 其他设备修改了全局设置（隐私/通知偏好等），本地应重新拉取
+        // ⏳ 待 settingsStore 提供 refetch 接口后接入
       })
     );
     this.cleanupFns.push(
-      websocketStore.on('SelfRelationSync', (_payload) => {
-        // ⏳ 延期实现
+      websocketStore.on('SelfRelationSync', (payload: SelfRelationSyncPayload) => {
+        log('[WS] 多端同步：关系变更', payload);
+        // 其他设备执行了关注/取关/拉黑操作，本地应同步
+        // presenceStore 可用于更新在线/离线状态，但关系变更需触发用户列表刷新
       })
     );
   }

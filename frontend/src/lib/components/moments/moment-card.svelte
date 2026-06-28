@@ -2,7 +2,7 @@
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
-  import { momentsService } from '$lib/api/services';
+  import { momentsService, feedService } from '$lib/api/services';
   import { toast } from '$lib/stores/toast.svelte';
   import { useOptimisticToggle } from '$lib/hooks/use-optimistic.svelte';
   import { formatRelativeTime, formatDistance } from '$lib/utils/format';
@@ -12,15 +12,17 @@
   import Bookmark from 'lucide-svelte/icons/bookmark';
   import Share2 from 'lucide-svelte/icons/share-2';
   import MapPin from 'lucide-svelte/icons/map-pin';
+  import X from 'lucide-svelte/icons/x';
   import Avatar from '$lib/components/common/avatar.svelte';
   import SmartImage from '$lib/components/common/smart-image.svelte';
 
   interface Props {
     moment: MomentItem;
     class?: string;
+    onDismiss?: () => void;
   }
 
-  let { moment, class: className = '' }: Props = $props();
+  let { moment, class: className = '', onDismiss }: Props = $props();
 
   const likeAction = useOptimisticToggle({
     initialValue: () => moment.my_state?.is_liked ?? false,
@@ -110,6 +112,18 @@
     event.stopPropagation();
     void goto(`/users/${moment.user.user_id}`);
   }
+
+  async function handleDismiss(event: MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      await feedService.dismiss({ target_type: 'moment', target_id: moment.moment_id });
+      toast.success('已标记为不感兴趣');
+      onDismiss?.();
+    } catch {
+      toast.error('操作失败');
+    }
+  }
 </script>
 
 <div
@@ -160,6 +174,19 @@
         <MapPin size={12} strokeWidth={1.7} />
         <span>{moment.location.location_name}</span>
       </span>
+    {/if}
+
+    {#if onDismiss}
+      <button
+        type="button"
+        data-card-action
+        class="moment-card__dismiss"
+        onclick={handleDismiss}
+        aria-label="不感兴趣"
+        title="不感兴趣"
+      >
+        <X size={14} strokeWidth={1.7} />
+      </button>
     {/if}
   </header>
 
@@ -383,6 +410,37 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .moment-card__dismiss {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    color: var(--text-secondary);
+    background: transparent;
+    outline: none;
+    opacity: 0.55;
+    transition:
+      opacity 0.18s ease,
+      transform 0.15s ease,
+      color 0.18s ease,
+      background 0.18s ease;
+  }
+
+  .moment-card__dismiss:hover,
+  .moment-card__dismiss:focus-visible {
+    opacity: 1;
+    color: var(--text-secondary);
+    background: color-mix(in srgb, var(--text-secondary) 10%, transparent);
+  }
+
+  .moment-card__dismiss:active {
+    transform: scale(0.92);
   }
 
   .moment-card__media {

@@ -33,6 +33,7 @@
   let searchVal = $state('');
   let activeTab = $state('热门');
   let activeTag = $state<string | null>(null);
+  let dismissedIds = $state<Set<string>>(new Set());
 
   const feed = usePagination<MomentItem>({
     uniqueKey: 'moment_id',
@@ -56,6 +57,7 @@
   function getFilteredItems(): MomentItem[] {
     const q = searchVal.trim().toLowerCase();
     return feed.items.filter((item) => {
+      if (dismissedIds.has(item.moment_id)) return false;
       if (activeTag && !(item.tags && item.tags.includes(activeTag))) return false;
       if (q) {
         const text =
@@ -64,6 +66,10 @@
       }
       return true;
     });
+  }
+
+  function handleDismiss(momentId: string) {
+    dismissedIds = new Set([...dismissedIds, momentId]);
   }
 
   function handleTagClick(tag: string) {
@@ -202,15 +208,16 @@
     {@const items = getFilteredItems()}
     <!-- Hero first card -->
     {#if items[0]}
+      {@const firstItem = items[0]}
       <div class="ambient-glow mb-4">
-        <MomentCard moment={items[0]} />
+        <MomentCard moment={firstItem} onDismiss={() => handleDismiss(firstItem.moment_id)} />
       </div>
     {/if}
     <!-- Remaining items — 统一 density-grid，卡片按容器列宽自适应（手机单列大卡、
          平板两列、桌面多列），不再区分 list/grid2 mode 与 dense 变体。 -->
     <div class="density-grid">
       {#each items.slice(1) as moment (moment.moment_id)}
-        <MomentCard {moment} />
+        <MomentCard {moment} onDismiss={() => handleDismiss(moment.moment_id)} />
       {/each}
     </div>
     <LoadMoreButton
