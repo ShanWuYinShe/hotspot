@@ -81,6 +81,7 @@ interface AdminUserSearchRequest {
 ```typescript
 interface AdminUserItem extends UserItem {
   status: UserAccountStatus;
+  banned_until?: string;   // 封禁到期时间（UTC ISO 8601）；status='banned' 时返回，不传/不存在表示永久封禁
   created_at: string;
   last_active_at?: string;
   login_id: string;
@@ -344,15 +345,21 @@ interface AdminTagItem {
 
 ### POST /api/v1/admin/tags/delete
 
-删除/屏蔽标签（管理员）。删除后该标签将从所有引用中移除。
+屏蔽标签（管理员）。
+
+**删除语义（软屏蔽，保护历史数据完整性）**：
+- 默认**软屏蔽**：标签不再可被新建/搜索命中，但**已引用该标签的历史瞬间/群组/用户数据保留不变**（不回写改写历史记录），避免大范围不可逆的数据修改
+- 物理删除（从所有历史引用中移除）为**高危操作**，需在 Request 中显式传 `hard_delete: true` 确认；物理删除不可逆，会改写所有引用该标签的资源
+- 屏蔽后同名标签不可再次创建；如需恢复，管理员可通过独立流程取消屏蔽（本文档未定义取消屏蔽端点，待后续补充）
 
 - **认证**: 必须 + `admin.tags.write`
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 幂等语义（重复请求返回一致结果；对已屏蔽标签再次屏蔽视为 no-op 成功）
 
 **Request**: `AdminDeleteTagRequest`
 ```typescript
 interface AdminDeleteTagRequest {
-  name: string;  // 要删除的标签名
+  name: string;            // 要屏蔽/删除的标签名
+  hard_delete?: boolean;   // 默认 false（软屏蔽）；true 时物理删除（从所有历史引用移除，不可逆，慎用）
 }
 ```
 

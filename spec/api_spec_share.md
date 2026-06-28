@@ -34,7 +34,7 @@
 - `PaginationParams`
 - `ShareType`
 
-**说明**：`preview` 为展示用摘要。已撤销、已过期或目标不可访问时不返回 preview。
+**说明**：`preview` 为展示用摘要。分享存在但目标资源不可访问时（如目标被删除/隐私变更），不返回 `preview`，仅返回 `share` 与 `payload`（让客户端知道分享类型与目标 ID，可提示"内容已不可访问"）；分享本身已撤销/过期时整体返回 `10300`（见「有效期规则」）。
 
 ## 分享码规则
 
@@ -152,7 +152,7 @@ interface SharePreview {
 interface ShareDetail {
   share: ShareBase;
   payload: SharePayload;
-  preview?: SharePreview;
+  preview?: SharePreview;   // 目标资源不可访问时不返回（见本模块说明）；分享撤销/过期整体 10300
 }
 ```
 
