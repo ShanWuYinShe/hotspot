@@ -156,7 +156,8 @@ interface MapCanvasFilter {
 interface MapCanvasRequest {
   viewport: MapViewport;         // 覆盖区域由 bounds 决定
   filter?: MapCanvasFilter;
-  pagination?: PaginationParams; // 仅在返回 hotspots 时使用
+  // pagination 仅在返回 hotspots 时使用；limit 覆盖全局默认为 default=50、max=200（base.md 允许模块显式覆盖）
+  pagination?: PaginationParams;
 }
 
 interface MapCanvasResponse {
@@ -186,7 +187,7 @@ interface MapCanvasResponse {
 #### 明细分页
 
 - 仅在返回 `hotspots` 时支持游标分页（`pagination` 生效）
-- `limit` 默认 50，最大 200（由 `PaginationParams` 约束）；返回的明细条数受服务端单次上限裁剪
+- `limit` 默认 50、最大 200（本端点显式覆盖 base.md 的全局默认 20/100，因为地图热点明细单次需返回较多点位）；返回的明细条数受服务端单次上限裁剪
 
 #### 实现中立
 

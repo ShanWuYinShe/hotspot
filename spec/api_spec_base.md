@@ -247,6 +247,8 @@ App 端通过 Header 携带认证信息：
 
 仅群组管理员可见该字段（群组内 role 为 `owner` 或 `admin`，非该视角不返回）。
 
+**系统管理员豁免**：系统管理员通过 `/admin/*` 端点访问时（如 `AdminGroupItem`），视同拥有 `@group-admin-only`/`@member-only` 字段的查看权限，可完整返回这些字段。`@group-admin-only` 的成员资格限制仅约束普通用户视角的 API（群组内角色判定），不约束系统管理员的审计/管理视角。
+
 说明：用于群组内的管理类字段，如成员管理详情、申请审核信息等。
 
 #### @member-only

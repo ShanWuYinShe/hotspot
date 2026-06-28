@@ -38,6 +38,7 @@
 - `PaginationParams`
 - `PaginatedData`
 - `UserType`
+- `PrivacyLevel`
 - `ReportStatus`
 - `ReportTargetType`
 - `ReportHandleAction`
@@ -82,6 +83,7 @@ interface AdminUserSearchRequest {
 interface AdminUserItem extends UserItem {
   status: UserAccountStatus;
   banned_until?: string;   // 封禁到期时间（UTC ISO 8601）；status='banned' 时返回，不传/不存在表示永久封禁
+  privacy_level: PrivacyLevel;  // 用户的隐私等级（base.md：管理员可查看用户的 privacy_level）
   created_at: string;
   last_active_at?: string;
   login_id: string;

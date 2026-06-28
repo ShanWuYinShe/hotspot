@@ -656,17 +656,21 @@ interface GroupMemberRemovedPayload {
 type GroupMemberRemovedEvent = { type: "GroupMemberRemoved"; payload: GroupMemberRemovedPayload; };
 
 // 群组信息更新
+// 字段可见性：服务端按订阅者的群角色决定实际推送哪些字段，与 HTTP GroupItem 可见性规则一致（见 api_spec_types.md）：
+//   - 所有群成员可见：name/avatar_url/description/tags/location/has_password
+//   - 仅群管理员（owner/admin）可见：join_method/is_searchable/max_members
+//   非管理员成员不会收到 join_method/is_searchable/max_members 的变更（服务端过滤）
 interface GroupUpdatedPayload {
   group_id: string;
-  updated_fields: {            // 只包含变更的字段
+  updated_fields: {            // 只包含变更的字段；按上方可见性规则过滤后推送
     name?: string;
     avatar_url?: string;
     description?: string;
     tags?: string[];
-    join_method?: GroupJoinMethod;
-    is_searchable?: boolean;
-    max_members?: number;
-    has_password?: boolean;    // 与 GroupItem 一致：仅群成员可见（GroupUpdated 推送目标为群成员）
+    join_method?: GroupJoinMethod;   // @group-admin-only：仅推送给群管理员订阅者
+    is_searchable?: boolean;         // @group-admin-only：仅推送给群管理员订阅者
+    max_members?: number;            // @group-admin-only：仅推送给群管理员订阅者
+    has_password?: boolean;          // @member-only：推送给群成员订阅者
     location?: Location;
   };
   updated_by: string;          // user_id（操作者）
@@ -884,6 +888,7 @@ WebSocket 推送分为**自动推送**和**订阅推送**两种模式（详见�
 
 **隐私约束**：
 - `type: 'user'` 的订阅必须校验目标用户的 `presence_visible` 设置。若目标用户将在线状态对外隐藏（`presence_visible=false`），服务端必须拒绝该订阅项，并在 `SubscribeAck` 的 `failed_ids` 中返回 `reason='denied'`，同时不推送任何 UserOnline/UserOffline 事件。
+- `type: 'group'` 的订阅**必须校验成员资格**：仅当前已加入该群组的成员可订阅。非成员订阅返回 `reason='denied'`，不推送任何群消息/成员变动/`GroupUpdated`（含 `has_password`/`join_method` 等可见性受控字段）。这是群组事件可见性的前置门槛，确保 `has_password`（@member-only）与 `join_method`/`is_searchable`/`max_members`（@group-admin-only）不被非成员获取。
 
 **类型约束**：
 - 单次订阅请求仅允许一个 `type`，不同类型需分开请求
