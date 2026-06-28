@@ -49,7 +49,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
 			}
-			platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour, result.CSRFToken)
+			platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour)
 			return httpx.Success(AuthTokenPairWeb{})
 		})
 		return
@@ -116,7 +116,7 @@ func (h *Handler) Guest(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
 			}
-			platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour, result.CSRFToken)
+			platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour)
 			return httpx.Success(AuthTokenPairWeb{})
 		})
 		return
@@ -163,7 +163,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.ClientType == ClientTypeWeb {
-		platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour, result.CSRFToken)
+		platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour)
 		payload := AuthTokenPairWeb{}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
 		return
@@ -220,7 +220,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
 			}
-			platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour, result.CSRFToken)
+			platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour)
 			return httpx.Success(AuthTokenPairWeb{})
 		})
 		return
@@ -309,7 +309,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) writeAuthSuccess(w http.ResponseWriter, clientType ClientType, result platformauth.AuthResult) {
 	if clientType == ClientTypeWeb {
-		platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour, result.CSRFToken)
+		platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Success(AuthTokenPairWeb{}))
 		return
 	}

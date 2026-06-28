@@ -2,7 +2,6 @@ package auth
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -86,14 +85,6 @@ func GenerateOpaqueToken() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(buf), nil
-}
-
-func GenerateCSRFToken() (string, error) {
-	buf := make([]byte, 32)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
-	}
-	return base64.RawURLEncoding.EncodeToString(buf), nil
 }
 
 func NewSessionID() (string, error) {

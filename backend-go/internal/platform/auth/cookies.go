@@ -9,8 +9,6 @@ import (
 const (
 	AccessTokenCookieName  = "access_token"
 	RefreshTokenCookieName = "refresh_token"
-	CSRFCookieName         = "hs_csrf_token"
-	CSRFHeaderName         = "X-CSRF-Token"
 )
 
 func isDev() bool {
@@ -28,7 +26,7 @@ func cookieSameSite() http.SameSite {
 	return http.SameSiteStrictMode
 }
 
-func SetAuthCookies(w http.ResponseWriter, accessToken string, accessTTL time.Duration, refreshToken string, refreshTTL time.Duration, csrfToken string) {
+func SetAuthCookies(w http.ResponseWriter, accessToken string, accessTTL time.Duration, refreshToken string, refreshTTL time.Duration) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     AccessTokenCookieName,
 		Value:    accessToken,
@@ -47,22 +45,12 @@ func SetAuthCookies(w http.ResponseWriter, accessToken string, accessTTL time.Du
 		SameSite: cookieSameSite(),
 		MaxAge:   int(refreshTTL.Seconds()),
 	})
-	http.SetCookie(w, &http.Cookie{
-		Name:     CSRFCookieName,
-		Value:    csrfToken,
-		Path:     "/",
-		HttpOnly: false,
-		Secure:   cookieSecure(),
-		SameSite: cookieSameSite(),
-		MaxAge:   int(accessTTL.Seconds()),
-	})
 }
 
 func ClearAuthCookies(w http.ResponseWriter) {
 	for _, cookie := range []*http.Cookie{
 		{Name: AccessTokenCookieName, Path: "/", HttpOnly: true, Secure: cookieSecure(), SameSite: cookieSameSite(), MaxAge: 0},
 		{Name: RefreshTokenCookieName, Path: "/api/v1/auth/refresh_token", HttpOnly: true, Secure: cookieSecure(), SameSite: cookieSameSite(), MaxAge: 0},
-		{Name: CSRFCookieName, Path: "/", HttpOnly: false, Secure: cookieSecure(), SameSite: cookieSameSite(), MaxAge: 0},
 	} {
 		http.SetCookie(w, cookie)
 	}

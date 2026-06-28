@@ -3,8 +3,7 @@
  *
  * 特性：
  * - 所有请求使用 POST 方法
- * - 自动注入 Authorization Token
- * - 自动注入 CSRF Token (Web 端)
+ * - Token 通过 HttpOnly Cookie 自动携带（credentials: 'include'），不手动注入 Authorization
  * - code=10100 时自动刷新 Token 并重试
  * - 幂等性支持 (Idempotency-Key)
  * - 业务成功判断: code === 0
@@ -39,24 +38,6 @@ const DEFAULT_RETRY_AFTER_SECONDS = 5;
 let isRefreshing = false;
 // 等待刷新 Token 完成的 Promise
 let refreshPromise: Promise<boolean> | null = null;
-
-/**
- * 从 Cookie 中读取指定名称的值
- */
-function getCookie(name: string): string | null {
-  if (typeof document === 'undefined') return null;
-
-  const cookies = document.cookie.split(';');
-  for (const cookie of cookies) {
-    const trimmed = cookie.trim();
-    const separatorIndex = trimmed.indexOf('=');
-    if (separatorIndex < 0) continue;
-    const key = trimmed.slice(0, separatorIndex);
-    if (key !== name) continue;
-    return trimmed.slice(separatorIndex + 1);
-  }
-  return null;
-}
 
 export interface RequestOptions {
   /** 自定义请求头 */
@@ -202,15 +183,9 @@ async function refreshToken(): Promise<boolean> {
   const refreshTimeoutId = setTimeout(() => refreshController.abort(), 10000);
 
   try {
-    const csrfToken = getCookie('hs_csrf_token');
-
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
-
-    if (csrfToken) {
-      headers['X-CSRF-Token'] = csrfToken;
-    }
 
     const response = await fetch(`${cfg.baseUrl}${AUTH.REFRESH_TOKEN}`, {
       method: 'POST',
@@ -288,12 +263,6 @@ async function request<T>(
 
   // spec: Web 端禁止使用 Authorization Header
   // Token 通过 HttpOnly Cookie 自动传递（credentials: 'include'）
-
-  // 注入 CSRF Token (Web 端需要)
-  const csrfToken = getCookie('hs_csrf_token');
-  if (csrfToken) {
-    headers['X-CSRF-Token'] = csrfToken;
-  }
 
   // 幂等键
   if (options.idempotencyKey) {

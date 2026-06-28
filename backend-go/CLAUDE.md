@@ -88,10 +88,10 @@ Handler -> Service -> Repository
 ## 认证与会话
 
 - **JWT 仅包含 user_id**，禁止写入可变字段或会话标识
-- Web 端通过 HttpOnly Cookie（`access_token` / `refresh_token` / `hs_csrf_token`）；App 端通过 `Authorization: Bearer`
+- Web 端通过 HttpOnly Cookie（`access_token` / `refresh_token`）；App 端通过 `Authorization: Bearer`
 - 鉴权中间件：`platformauth.OptionalAuth` / `RequiredAuth` / `AdminAuth`
 - Principal 通过 `platformauth.PrincipalFromContext(ctx)` 获取
-- **CSRF**：Web 端 `RequiredAuth` 会校验 `X-CSRF-Token` header 与 `hs_csrf_token` cookie 一致
+- **CSRF 防护**：完全依赖 auth Cookie 的 `SameSite=Strict` 属性，不使用 CSRF Token（Double Submit Cookie 已移除，因 SameSite=Strict 已覆盖经典 CSRF 威胁）
 - **失效机制**：登出/撤销写入黑名单，校验时必须检查黑名单
 - 黑名单条目 TTL 不得短于 Token 过期时间
 - 刷新 Token 必须轮转；旧 refresh_token 进入宽限期（30 秒内仍可使用，返回与首次刷新相同的新 token 对），宽限期后加入黑名单（详见 `spec/api_spec_auth.md` 并发刷新策略）

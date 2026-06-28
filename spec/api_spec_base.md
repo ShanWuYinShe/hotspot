@@ -158,39 +158,12 @@ Web 端使用以下**固定名称**的 HttpOnly Cookie 携带认证信息（**�
 
 #### CSRF 防护（Web 端）
 
-Web 端使用 CSRF Token 防止跨站请求伪造攻击：
+Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**，不使用额外的 CSRF Token（Double Submit Cookie）机制。
 
-| 项目 | 值 |
-|------|-----|
-| Cookie 名称 | `hs_csrf_token`（`hs_` 为 HotSpot 缩写，用于避免与第三方 Cookie 冲突） |
-| Header 名称 | `X-CSRF-Token` |
-| 适用范围 | 所有标记为“认证: 必须”的 POST 请求必须携带；公开/匿名端点可由服务端按需校验 |
-| Cookie 属性 | `Secure; SameSite=Strict`（非 HttpOnly，前端需读取） |
-
-**防护模式**：Double Submit Cookie（OWASP 推荐方案之一），结合 auth Cookie 的 `SameSite=Strict` 属性形成纵深防御。
-
-**工作流程**：
-- 服务端在设置 auth Cookie（登录/刷新 Token）时，生成密码学安全的随机 Token（≥32 字节），设置到 `hs_csrf_token` Cookie
-- 每次刷新 Token 时重新生成 CSRF Token（per-session 级别，不要求 per-request）
-- 前端在每个 POST 请求中读取 `hs_csrf_token` Cookie 值，并添加到请求头 `X-CSRF-Token`
-- 服务端验证 `X-CSRF-Token` header 与 `hs_csrf_token` Cookie 是否一致，不一致则拒绝请求
-- 登出时服务端通过 `Max-Age=0` 清除 `hs_csrf_token` Cookie
-
-**适用范围说明**：
-- 所有标记为“认证: 必须”的 POST 请求缺少或校验失败的 CSRF Token 都会被拒绝（与 `10100` 等认证错误一致），不得继续处理业务逻辑。
-- 认证可选或公开端点（如 `auth/register`、`auth/login`、`auth/guest`、`auth/request_password_reset`、`auth/reset_password`）默认可跳过 CSRF 校验，以免阻塞匿名访问；若业务要求可显式开启。
-- `hs_csrf_token` 在登录/注册/访客创建/刷新 Token 成功时与 auth Cookie 同步下发或更新，登出时与 auth Cookie 一并清空。
-- Web 客户端读取 `hs_csrf_token` Cookie 并写入 `X-CSRF-Token` Header；App 端无 Cookie，不参与 CSRF 防护。
-
-**安全原理**：
-- 攻击者可以诱导浏览器自动携带 Cookie，但**无法跨域读取 Cookie 值**（同源策略保护）
-- 攻击者**无法跨域设置自定义 Header**（`X-CSRF-Token`），因此校验必然失败
-- 即使在不支持 `SameSite` 的旧浏览器中，Double Submit Cookie 仍可独立防御 CSRF
-
-**说明**：
-- Token 必须使用密码学安全的随机数生成器（如 CSPRNG），长度不低于 32 字节
-- App 端不使用 Cookie，因此不受 CSRF 攻击影响，无需 CSRF Token
-- `hs_csrf_token` 是**固定的 Cookie 名称**，前后端必须一致使用
+**设计依据**：
+- `SameSite=Strict` 在所有现代浏览器中阻断跨站带凭证的 POST 请求，从根本上防御经典 CSRF（OWASP / Security StackExchange 共识）
+- App 端无 Cookie，不受 CSRF 影响
+- 此前的 Double Submit Cookie（`hs_csrf_token` / `X-CSRF-Token`）方案经评估为冗余——它防御的是已被 `SameSite=Strict` 中和的威胁，却带来每请求 header 注入、Cookie 生命周期管理、CSRF 不匹配误报等额外复杂度，故移除
 
 #### App 端 Header 认证
 

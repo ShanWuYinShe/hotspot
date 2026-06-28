@@ -22,7 +22,6 @@ type AuthResult struct {
 	RefreshToken   string
 	AccessExpires  time.Time
 	RefreshExpires time.Time
-	CSRFToken      string
 }
 
 // SessionMeta carries request-derived session metadata for auditing and UX.
@@ -96,10 +95,6 @@ func (s *Service) IssueSessionWithMeta(userID string, meta SessionMeta) (AuthRes
 	if err != nil {
 		return AuthResult{}, err
 	}
-	csrfToken, err := GenerateCSRFToken()
-	if err != nil {
-		return AuthResult{}, err
-	}
 	refreshExpires := time.Now().UTC().Add(s.refreshTTL)
 	if err := s.sessions.Save(SessionRecord{
 		SessionID:    sessionID,
@@ -116,7 +111,7 @@ func (s *Service) IssueSessionWithMeta(userID string, meta SessionMeta) (AuthRes
 	if err := s.refreshes.Save(RefreshSession{UserID: userID, SessionID: sessionID, RefreshToken: refreshToken, ExpiresAt: refreshExpires}); err != nil {
 		return AuthResult{}, err
 	}
-	return AuthResult{Principal: newPrincipal(userID, sessionID, ""), AccessToken: accessToken, RefreshToken: refreshToken, AccessExpires: accessExp, RefreshExpires: refreshExpires, CSRFToken: csrfToken}, nil
+	return AuthResult{Principal: newPrincipal(userID, sessionID, ""), AccessToken: accessToken, RefreshToken: refreshToken, AccessExpires: accessExp, RefreshExpires: refreshExpires}, nil
 }
 
 func bearerToken(header string) string {

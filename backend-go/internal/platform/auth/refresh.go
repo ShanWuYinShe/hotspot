@@ -35,10 +35,6 @@ func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
 			if err != nil {
 				return AuthResult{}, err
 			}
-			csrfToken, err := GenerateCSRFToken()
-			if err != nil {
-				return AuthResult{}, err
-			}
 			principal := newPrincipal(rotated.UserID, rotated.SessionID, "")
 			return AuthResult{
 				Principal:      principal,
@@ -46,7 +42,6 @@ func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
 				RefreshToken:   rotated.RefreshToken,
 				AccessExpires:  accessExp,
 				RefreshExpires: rotated.ExpiresAt,
-				CSRFToken:      csrfToken,
 			}, nil
 		}
 		return AuthResult{}, errors.New("expired refresh rotation window")
@@ -56,10 +51,6 @@ func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
 		return AuthResult{}, err
 	}
 	newAccessToken, accessExp, err := s.tokens.MintAccessToken(session.UserID, session.SessionID, s.accessTTL)
-	if err != nil {
-		return AuthResult{}, err
-	}
-	csrfToken, err := GenerateCSRFToken()
 	if err != nil {
 		return AuthResult{}, err
 	}
@@ -79,6 +70,5 @@ func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
 		RefreshToken:   newRefreshToken,
 		AccessExpires:  accessExp,
 		RefreshExpires: next.ExpiresAt,
-		CSRFToken:      csrfToken,
 	}, nil
 }

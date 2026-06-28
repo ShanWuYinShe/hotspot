@@ -34,11 +34,3 @@ func TestTokenManagerRejectsLegacyStyleToken(t *testing.T) {
 		t.Fatalf("expected invalid legacy token, got %v", err)
 	}
 }
-
-func TestValidateCSRF(t *testing.T) {
-	req := newRequestWithCookie(CSRFCookieName, "token-1")
-	req.Header.Set(CSRFHeaderName, "token-1")
-	if !ValidateCSRF(req) {
-		t.Fatal("expected csrf to validate")
-	}
-}
