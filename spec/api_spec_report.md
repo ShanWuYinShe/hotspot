@@ -21,16 +21,22 @@
 
 ## 举报审核流程说明
 
-举报处理的状态流转为：`pending` 进入 `reviewing`，最终为 `resolved` 或 `dismissed`。
+举报处理的状态流转为：`pending` 进入 `reviewing`，可 `escalate` 升级为 `escalated` 等待更高级管理员接手，最终为 `resolved` 或 `dismissed`。
 
 **状态流转**：
 
 | 状态 | 说明 | 可执行操作 |
 |-----|------|-----------|
-| `pending` | 待审核 | 管理员可开始审核 |
-| `reviewing` | 审核中 | 管理员可处理或升级 |
+| `pending` | 待审核 | 管理员可开始审核（→ `reviewing`），或直接处理/升级 |
+| `reviewing` | 审核中（某管理员已认领） | 管理员可处理（→ `resolved`/`dismissed`）或升级（→ `escalated`） |
+| `escalated` | 已升级，等待更高级管理员接手 | 更高级权限管理员可认领（→ `reviewing`）后处理；避免举报卡死，应配置升级超时回退机制（见下方说明） |
 | `resolved` | 已处理（确认违规） | 已采取措施（封禁/删除内容） |
 | `dismissed` | 已驳回（无违规） | 审核结束，无需处理 |
+
+**`escalated` 防卡死设计**：
+- `escalated` 与 `reviewing` 语义区分：`reviewing` = 某管理员正在审核；`escalated` = 已升级但尚未被更高级管理员认领
+- 升级后由更高级权限管理员通过 `handle`（action=`escalate` 之外的动作，或新增认领动作）接手，状态回到 `reviewing`
+- **超时回退**（契约级要求）：升级后若超过服务端配置时长（建议 72 小时，可由 `AppConfig` 调整）无人认领，服务端自动回退为 `pending` 重新进入待审队列，避免升级后无更高级管理员时举报永久卡死
 
 管理员审核流程（处理动作、内容快照机制等）详见 `api_spec_admin_moderation.md`。
 
@@ -42,7 +48,7 @@
 | `moment` | 删除瞬间 + 警告/封禁发布者 |
 | `comment` | 删除评论 + 警告发布者 |
 | `message` | 删除消息 + 警告/封禁发送者 |
-| `group` | 解散群组 + 封禁群主 |
+| `group` | 解散群组（群违规统一走解散，不连坐封禁群主；若群主本人违规，由管理员单独对其发起封禁） |
 
 ## 类型定义
 
@@ -71,8 +77,9 @@
 **业务规则**：
 - 禁止自举报：当 `target_type='user'` 且 `target_id` 为当前用户时，返回 `10400`
 - 当 `target_type='moment'`/`'comment'`/`'message'` 且目标资源属于当前用户时，返回 `10400`
-- 重复举报：同一 `target_type + target_id` 已存在 `pending` 或 `reviewing` 记录时，返回 `10400`
+- 重复举报：同一 `target_type + target_id` 已存在 `pending`、`reviewing` 或 `escalated` 记录时，返回 `10400`
 - 若该目标历史举报均已进入终态（`resolved` / `dismissed`），允许再次举报（视为新举报单）
+- **消息举报快照**（隐私边界）：当 `target_type='message'` 时，`message_snapshot` 为**必填**——举报人必须提交举报时的消息内容快照。服务端原样存储，管理员审核**基于快照**判断，不直接查询私聊消息库。这既保证管理员有足够信息审核，又避免管理员随意翻阅用户私聊内容的隐私风险。缺少 `message_snapshot` 或快照不完整时返回 `10000`。
 
 **Request**: `CreateReportRequest`
 ```typescript
@@ -81,6 +88,7 @@ interface CreateReportRequest {
   target_id: string;            // 统一为 string（user_id 需转为字符串格式）
   reason: ReportReason;         // 举报原因（从枚举中选取）
   description?: string;         // 举报详细说明（0-1000 字符），reason 为 'other' 时建议填写
+  message_snapshot?: MessageReportSnapshot;  // target_type='message' 时必填：消息内容快照（见 MessageReportSnapshot，定义于 api_spec_types.md）
 }
 ```
 

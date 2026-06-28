@@ -41,7 +41,7 @@ type ClientType = 'web' | 'app';
 // === 状态枚举 ===
 // 用户在线状态（当前仅支持 online/offline，后续可扩展更多状态）
 type UserPresenceStatus = 'online' | 'offline';
-type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+type ReportStatus = 'pending' | 'reviewing' | 'escalated' | 'resolved' | 'dismissed';
 
 // === 业务操作类型 ===
 type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
@@ -498,6 +498,18 @@ interface ReportItem {
   status: ReportStatus;
   created_at: string;
   handled_at?: string;
+  message_snapshot?: MessageReportSnapshot;  // 仅 target_type='message'：举报时的消息内容快照，供管理员审核
+}
+
+// 消息举报快照（隐私边界设计：管理员基于快照审核，不直接查询私聊消息库）
+// 举报人在 reports/create 时提交，服务端原样存储，审核方据此判断举报是否成立
+interface MessageReportSnapshot {
+  chat_type: 'private' | 'group';   // 会话类型
+  target_chat_id: string;           // private: target_user_id；group: group_id
+  message_type: MessageType;        // 消息类型（text/image 等，决定 snapshot_content 的含义）
+  snapshot_content?: string;        // 文本内容（text 类型）；非文本类型为空
+  snapshot_media?: MessageMedia;    // 媒体引用（图片/视频等）；文本类型为空
+  sent_at: string;                  // 消息发送时间（快照基准）
 }
 ```
 

@@ -283,13 +283,13 @@ interface AdminReportItem extends ReportItem {
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
 **安全约束**：
-- 仅 `pending` 或 `reviewing` 状态的举报可处理，已处理的举报返回 `10400`
+- 仅 `pending`、`reviewing` 或 `escalated` 状态的举报可处理，已终态（`resolved`/`dismissed`）的举报返回 `10400`
 - 处理操作会记录审计日志
 
 **动作语义**：
 - `resolve`：确认举报有效，执行处理（如封禁用户、删除内容），状态变更为 `resolved`
 - `dismiss`：驳回举报，不执行任何处理，状态变更为 `dismissed`
-- `escalate`：升级举报，转交更高权限管理员继续审核，状态变更为 `reviewing`
+- `escalate`：升级举报，转交更高权限管理员，状态变更为 `escalated`（等待更高级管理员认领；与 `reviewing` 区分：`reviewing` = 已认领正在审，`escalated` = 已升级待接手，见 `api_spec_report.md` 防卡死设计）
 
 **Request**: `AdminReportHandleRequest`
 ```typescript
@@ -299,9 +299,11 @@ interface AdminReportHandleRequest {
   note?: string;                // 处理备注（0-500 字符）
   ban_duration_days?: number;   // action=resolve 时可选：封禁天数（0=永久），不提供则仅标记处理不执行封禁。
                                 // target_type='user': 直接封禁该用户
-                                // target_type='group': 封禁群主
                                 // target_type='moment'/'comment'/'message': 封禁内容发布者/发送者
-                                // 封禁对象始终为人（用户），不是内容本身
+                                //   （封禁对象始终为人，不是内容本身）
+                                // target_type='group': 不封禁群主（避免连坐无辜），群违规统一走解散群处理；
+                                //   管理员对群组违规应调用 admin/groups/dismiss 解散，而非通过本字段封禁群主。
+                                //   若群主本人确为违规者，由管理员单独对其发起 users/ban。
 }
 ```
 
