@@ -1,4 +1,4 @@
-# CLAUDE.md
+# HotSpot Backend (Rust, 已暂停)
 
 **本项目已暂停开发**，仅保留代码。当前所有后端开发在 `backend-go/` 进行。
 

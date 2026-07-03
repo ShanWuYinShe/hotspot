@@ -1,4 +1,4 @@
-# CLAUDE.md
+# HotSpot Backend (Go)
 
 ## 功能边界
 

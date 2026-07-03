@@ -1,4 +1,4 @@
-# CLAUDE.md
+# HotSpot HarmonyOS App
 
 ## 功能边界
 

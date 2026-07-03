@@ -1,4 +1,4 @@
-# CLAUDE.md
+# HotSpot Frontend (SvelteKit)
 
 > **注意**：本项目为 **主前端**（SvelteKit），当前所有前端开发在此进行，**同时是 UI/UX 与设计系统的唯一事实源**。改前端样式前先阅读 `.claude/rules/` 下的设计规范。
 

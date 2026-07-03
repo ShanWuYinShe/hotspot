@@ -11,13 +11,13 @@
 
 ## 验证与协作
 
-- 仓库级 workflow、skill 入口和风险边界以根目录 [CLAUDE.md](../CLAUDE.md) 为准。
+- 仓库级 workflow、skill 入口和风险边界以根目录 [AGENTS.md](../AGENTS.md) 为准。
 - 普通分析、代码阅读、局部低副作用开发动作通常可以直接完成。
 - 页面/UI/交互的最终确认应在 Docker 隔离环境中执行。
 - 验证截图、调试输出和中间文件默认写到当前 worktree 的 `.local/`。
 
 ## 规范与文档
 
-- 完整协作规范见 [CLAUDE.md](CLAUDE.md)
-- 本地 workflow 见根目录 [CLAUDE.md](../CLAUDE.md)
+- 完整协作规范见 [AGENTS.md](AGENTS.md)
+- 本地 workflow 见根目录 [AGENTS.md](../AGENTS.md)
 - API 规范见 [spec/](../spec/)
