@@ -63,7 +63,8 @@ func TestSuggestRejectsEmptyPrefix(t *testing.T) {
 	}
 }
 
-func TestSuggestRejectsMissingReferencePoint(t *testing.T) {
+func TestSuggestAcceptsMissingReferencePoint(t *testing.T) {
+	// reference_point 现在可选:缺失时服务端按回退链解析(见 api_spec_types.md)
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	req := httptest.NewRequest(http.MethodPost, "/suggest", strings.NewReader(`{"prefix":"hot"}`))
 	rr := httptest.NewRecorder()
@@ -75,12 +76,13 @@ func TestSuggestRejectsMissingReferencePoint(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10000 {
-		t.Fatalf("unexpected response: %#v", resp)
+	if resp.Code != 0 {
+		t.Fatalf("missing reference_point should be accepted (fallback), got code %d", resp.Code)
 	}
 }
 
-func TestSuggestRejectsReferencePointWithoutCoordinates(t *testing.T) {
+func TestSuggestAcceptsPartialReferencePoint(t *testing.T) {
+	// 部分 reference_point(缺经度或纬度)也走回退,不报错
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	cases := []string{
 		`{"prefix":"hot","reference_point":{}}`,
@@ -99,8 +101,8 @@ func TestSuggestRejectsReferencePointWithoutCoordinates(t *testing.T) {
 		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 			t.Fatalf("decode response: %v", err)
 		}
-		if resp.Code != 10000 {
-			t.Fatalf("unexpected response for %s: %#v", body, resp)
+		if resp.Code != 0 {
+			t.Fatalf("partial reference_point should be accepted (fallback) for %s, got code %d", body, resp.Code)
 		}
 	}
 }

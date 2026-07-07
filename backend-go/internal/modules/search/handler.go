@@ -30,14 +30,18 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if body.Prefix == "" || len(body.Prefix) > 50 || body.ReferencePoint == nil || body.ReferencePoint.Latitude == nil || body.ReferencePoint.Longitude == nil {
+	if body.Prefix == "" || len(body.Prefix) > 50 {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	point := GeoPoint{Latitude: *body.ReferencePoint.Latitude, Longitude: *body.ReferencePoint.Longitude}
-	if !isValidGeoPoint(point) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-		return
+	// reference_point 可选:缺失时由 service 按回退链解析(见 api_spec_types.md)
+	var point GeoPoint
+	if body.ReferencePoint != nil && body.ReferencePoint.Latitude != nil && body.ReferencePoint.Longitude != nil {
+		point = GeoPoint{Latitude: *body.ReferencePoint.Latitude, Longitude: *body.ReferencePoint.Longitude}
+		if !isValidGeoPoint(point) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			return
+		}
 	}
 	if body.Radius != 0 && body.Radius < 100 {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))

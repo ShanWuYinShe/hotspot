@@ -47,6 +47,8 @@ func NewServiceWithSearchers(repo Repository, source appconfig.Source, userSearc
 }
 
 func (s *Service) Suggest(ctx context.Context, req SearchSuggestRequest) (SearchSuggestResponse, error) {
+	// reference_point 缺失时回退到 default_location(见 api_spec_types.md)
+	req.ReferencePoint = s.resolveReferencePoint(ctx, req.ReferencePoint)
 	req.Radius = normalizeSuggestRadius(s.appConfig.Get(ctx).Limits.SearchRadiusMax, req.Radius)
 	resp, err := s.repo.Suggest(ctx, req)
 	if err != nil {
@@ -59,6 +61,8 @@ func (s *Service) Suggest(ctx context.Context, req SearchSuggestRequest) (Search
 }
 
 func (s *Service) SearchAll(ctx context.Context, req SearchAllRequest) (SearchAllResult, error) {
+	// reference_point 缺失(零值)时回退到 default_location
+	req.ReferencePoint = s.resolveReferencePoint(ctx, req.ReferencePoint)
 	perType := s.appConfig.Get(ctx).ResponseDefaults.SearchAllCountPerType
 	if perType <= 0 {
 		perType = 10
@@ -129,6 +133,25 @@ func normalizeSuggestRadius(configMax, radius int) int {
 		radius = configMax
 	}
 	return radius
+}
+
+// resolveReferencePoint:reference_point 缺失(零值)时回退到 default_location。
+// search 模块无用户位置访问,仅回退到 default_location(回退链第 3 级)。
+func (s *Service) resolveReferencePoint(ctx context.Context, ref GeoPoint) GeoPoint {
+	if ref.Latitude != 0 || ref.Longitude != 0 {
+		return ref
+	}
+	return s.defaultReferencePoint(ctx)
+}
+
+func (s *Service) defaultReferencePoint(ctx context.Context) GeoPoint {
+	lat, lng := 35.154922, 112.682524
+	if s.appConfig != nil {
+		defaults := s.appConfig.Get(ctx).Defaults
+		lat = defaults.DefaultLocation.Point.Latitude
+		lng = defaults.DefaultLocation.Point.Longitude
+	}
+	return GeoPoint{Latitude: lat, Longitude: lng}
 }
 
 func isValidGeoPoint(point GeoPoint) bool {

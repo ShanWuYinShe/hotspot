@@ -19,10 +19,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if req.ReferencePoint == (GeoPoint{}) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-		return
-	}
+	// reference_point 可选:缺失时由 service 按回退链解析(见 api_spec_types.md)
 	list, err := h.service.Search(r.Context(), req)
 	if err != nil {
 		h.writeServiceError(w, r, "Search", err)

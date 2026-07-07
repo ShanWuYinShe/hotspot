@@ -138,6 +138,8 @@ func (s *Service) contactChangeUnavailable(ctx context.Context, message string) 
 func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (PaginatedUsers, error) {
 	startedAt := time.Now()
 	observability.L().Info("users.search started")
+	// reference_point 缺失时按回退链解析:用户存储位置 → default_location
+	req.ReferencePoint = s.resolveReferencePoint(ctx, req.ReferencePoint)
 	profiles, err := s.repo.SearchProfiles(ctx, req)
 	if err != nil {
 		observability.L().Error("users.search failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -345,6 +347,33 @@ func (s *Service) defaultProfile(ctx context.Context, userID string) MyProfile {
 		locName = defaults.DefaultLocation.LocationName
 	}
 	return MyProfile{UserID: userID, Nickname: userID, UserType: UserTypeTemp, Location: Location{Point: GeoPoint{Latitude: lat, Longitude: lng}, LocationName: locName}, PresenceStatus: UserPresenceOffline, LastOnline: now, CreatedAt: now, Stats: UserStats{}}
+}
+
+// resolveReferencePoint 实现 reference_point 回退链(api_spec_types.md):
+// 1. 显式传入(非零值) → 直接使用
+// 2. 已登录用户最近一次 users/me/location/update 的位置
+// 3. ClientConfig.defaults.default_location.point
+func (s *Service) resolveReferencePoint(ctx context.Context, ref GeoPoint) GeoPoint {
+	if ref.Latitude != 0 || ref.Longitude != 0 {
+		return ref
+	}
+	// 回退 2:已登录用户的存储位置
+	if principal, ok := platformauth.PrincipalFromContext(ctx); ok && principal.UserID != "" {
+		if profile, ok, err := s.repo.GetProfile(ctx, principal.UserID); err == nil && ok {
+			if profile.Location.Point.Latitude != 0 || profile.Location.Point.Longitude != 0 {
+				return profile.Location.Point
+			}
+		}
+	}
+	// 回退 3:default_location
+	lat := 35.154922
+	lng := 112.682524
+	if s.appConfig != nil {
+		defaults := s.appConfig.Get(ctx).Defaults
+		lat = defaults.DefaultLocation.Point.Latitude
+		lng = defaults.DefaultLocation.Point.Longitude
+	}
+	return GeoPoint{Latitude: lat, Longitude: lng}
 }
 
 func defaultSettings() UserSettings {
