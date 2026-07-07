@@ -320,6 +320,7 @@ export interface MyGroupState {
   is_joined: boolean;
   unread_count: number;
   is_muted: boolean;
+  muted_until?: string;
   is_pinned: boolean;
   joined_at?: string;
 }
@@ -485,6 +486,25 @@ export interface CommentItem {
   replies_count: number;
   // @auth-only
   is_liked?: boolean;
+  // 顶层评论列表场景(comments/list)返回前 N 条回复预览，消除展开回复的 N+1
+  top_replies?: CommentItem[];
+}
+
+export interface UserProfileBundle {
+  user: UserItem;
+  recent_moments: PaginatedData<MomentItem>;
+}
+
+export interface SearchAllRequest {
+  keyword: string;
+  reference_point?: GeoPoint;
+  pagination?: PaginationParams;
+}
+
+export interface SearchAllResult {
+  users: PaginatedData<UserItem>;
+  groups: PaginatedData<GroupItem>;
+  moments: PaginatedData<MomentItem>;
 }
 
 // ============================================================================
@@ -1165,6 +1185,9 @@ export interface ResponseDefaults {
   chat_recent_messages_count: number;
   group_announcements_count: number;
   system_announcements_count: number;
+  comment_top_replies_count: number;
+  user_profile_moments_count: number;
+  search_all_count_per_type: number;
 }
 
 export interface ServerConfig {

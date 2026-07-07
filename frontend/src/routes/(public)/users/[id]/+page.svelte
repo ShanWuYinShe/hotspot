@@ -41,9 +41,13 @@
       momentsPagination.reset();
       followersPagination.reset();
       followingPagination.reset();
-      // 首次加载 moments（仅当 user 数据可用时）
+      // 首屏优先使用 getProfile 返回的近期瞬间预览，避免额外请求
       if (user) {
-        loadMoments(true);
+        if (data.recentMoments && data.recentMoments.items.length > 0) {
+          momentsPagination.setItems(data.recentMoments.items);
+        } else {
+          loadMoments(true);
+        }
       }
     });
   });

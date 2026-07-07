@@ -66,6 +66,10 @@ func (r *stubGroupMessageRepo) MarkAllRead(_ context.Context, _ string) error {
 	return r.markAllErr
 }
 
+func (r *stubGroupMessageRepo) MemberMuteStatus(_ context.Context, _ string, _ string) (bool, string, bool, error) {
+	return false, "", true, nil
+}
+
 // --- helpers ---
 
 func gmCtx(userID string) *http.Request {

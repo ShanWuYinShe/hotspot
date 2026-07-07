@@ -47,6 +47,19 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 				logBusinessError(r, "Send", 10400, "不是群组成员")
 				return httpx.ApiResponse[MessageSent]{Code: 10400, Message: "不是群组成员"}
 			}
+			if errors.Is(err, ErrUserMuted) {
+				mutedUntil := ""
+				var mutedErr *MutedError
+				if errors.As(err, &mutedErr) {
+					mutedUntil = mutedErr.MutedUntil
+				}
+				message := "您已被禁言"
+				if mutedUntil != "" {
+					message = "您已被禁言，截至时间：" + mutedUntil
+				}
+				logBusinessError(r, "Send", 10400, message)
+				return httpx.ApiResponse[MessageSent]{Code: 10400, Message: message}
+			}
 			logServerError(r, "Send", err)
 			return httpx.ApiResponse[MessageSent]{Code: 10600, Message: "服务暂时不可用"}
 		}

@@ -353,9 +353,14 @@ interface CommentItem {
   likes_count: number;
   replies_count: number;    // 子评论数量
   is_deleted: boolean;      // 软删除标记；true 时 content 为空，客户端展示"该评论已删除"占位
-  
+
   // === @auth-only 以下字段仅登录态返回 ===
   is_liked?: boolean;       // 当前用户是否已点赞该评论
+
+  // 顶层评论列表场景（comments/list）返回前 N 条回复预览，消除展开回复的 N+1；
+  // comments/list_replies 返回的回复项不返回此字段（避免递归嵌套）。
+  // 条数由 AppConfig.response_defaults.comment_top_replies_count 控制（默认 3）
+  top_replies?: CommentItem[];
 }
 ```
 

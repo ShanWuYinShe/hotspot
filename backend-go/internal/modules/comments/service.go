@@ -10,6 +10,7 @@ import (
 
 	"hotspot/backend-go/internal/modules/notifications"
 	"hotspot/backend-go/internal/platform/actor"
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -22,6 +23,7 @@ type Service struct {
 	moments       MomentProvider
 	notifications commentNotificationWriter
 	users         actor.Provider
+	appConfig     appconfig.Source
 }
 
 type commentNotificationWriter interface {
@@ -32,11 +34,11 @@ type commentNotificationWriter interface {
 }
 
 func NewService(repo Repository, moments MomentProvider) *Service {
-	return NewServiceWithDeps(repo, moments, notifications.NewService(), nil)
+	return NewServiceWithDeps(repo, moments, notifications.NewService(), nil, nil)
 }
 
-func NewServiceWithDeps(repo Repository, moments MomentProvider, notificationWriter commentNotificationWriter, actorProvider actor.Provider) *Service {
-	return &Service{repo: repo, moments: moments, notifications: notificationWriter, users: actorProvider}
+func NewServiceWithDeps(repo Repository, moments MomentProvider, notificationWriter commentNotificationWriter, actorProvider actor.Provider, appConfig appconfig.Source) *Service {
+	return &Service{repo: repo, moments: moments, notifications: notificationWriter, users: actorProvider, appConfig: appConfig}
 }
 
 func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (CommentItem, error) {
@@ -99,7 +101,32 @@ func (s *Service) List(ctx context.Context, req ListCommentsRequest) (PaginatedC
 		}
 		cursor = req.Pagination.Cursor
 	}
-	return s.repo.List(ctx, req.MomentID, limit, cursor)
+	result, err := s.repo.List(ctx, req.MomentID, limit, cursor)
+	if err != nil {
+		return PaginatedComments{}, err
+	}
+	s.fillTopReplies(ctx, result.Items)
+	return result, nil
+}
+
+func (s *Service) fillTopReplies(ctx context.Context, items []CommentItem) {
+	topLimit := 3
+	if s.appConfig != nil {
+		if n := s.appConfig.Get(ctx).ResponseDefaults.CommentTopRepliesCount; n > 0 {
+			topLimit = n
+		}
+	}
+	for i := range items {
+		if items[i].RepliesCount <= 0 {
+			continue
+		}
+		replies, err := s.repo.ListReplies(ctx, items[i].CommentID, topLimit, "")
+		if err != nil {
+			observability.L().Error("comments.fill_top_replies failed", "error", err, "comment_id", items[i].CommentID)
+			continue
+		}
+		items[i].TopReplies = replies.Items
+	}
 }
 
 func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {

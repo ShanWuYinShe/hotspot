@@ -82,6 +82,9 @@ type ResponseDefaults struct {
 	ChatRecentMessagesCount  int `json:"chat_recent_messages_count"`
 	GroupAnnouncementsCount  int `json:"group_announcements_count"`
 	SystemAnnouncementsCount int `json:"system_announcements_count"`
+	CommentTopRepliesCount   int `json:"comment_top_replies_count"`
+	UserProfileMomentsCount  int `json:"user_profile_moments_count"`
+	SearchAllCountPerType    int `json:"search_all_count_per_type"`
 }
 
 type AppConfig struct {

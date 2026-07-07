@@ -12,7 +12,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { AppRouter, ChatRouteParam, LoginRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, LoginRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -97,6 +97,7 @@ export struct ProfilePage {
   @State pressedMenuItemKey: string = '';
   @State viewedUserId: string = '';
   @State viewedUserProfile: UserItem | null = null;
+  @State viewedUserMoments: MomentItem[] = [];
   @State viewedUserLoading: boolean = false;
   @State viewedUserError: string = '';
   private isDestroyed: boolean = false;
@@ -158,13 +159,15 @@ export struct ProfilePage {
     this.viewedUserLoading = true;
     this.viewedUserError = '';
     this.viewedUserProfile = null;
+    this.viewedUserMoments = [];
     try {
       const response = await LoadingUtil.withMinimumTime(() =>
-        ApiClient.getUserProfile({ user_id: this.viewedUserId } as UserOpenTheDoorRequest),
+        ApiClient.getUserProfileBundle({ user_id: this.viewedUserId } as UserOpenTheDoorRequest),
       DesignConstants.ANIMATION.DURATION_CONTENT_SWITCH);
       if (this.isDestroyed) return;
-      if (response.code === 0 && response.data?.user?.user_id) {
-        this.viewedUserProfile = response.data;
+      if (response.code === 0 && response.data?.user?.user?.user_id) {
+        this.viewedUserProfile = response.data.user;
+        this.viewedUserMoments = response.data.recent_moments?.items ?? [];
       } else {
         this.viewedUserError = response.message || '无法获取该用户资料';
       }
@@ -885,6 +888,28 @@ export struct ProfilePage {
               })
           }
           .width('100%')
+
+          // 近期瞬间九宫格
+          if (this.viewedUserMoments.length > 0) {
+            Column({ space: DesignConstants.SPACING.SM }) {
+              Text('近期瞬间')
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontColor(this.getSecondaryTextColor())
+
+              Grid() {
+                ForEach(this.viewedUserMoments, (moment: MomentItem) => {
+                  GridItem() {
+                    this.buildViewedMomentThumb(moment)
+                  }
+                }, (moment: MomentItem) => moment.moment_id)
+              }
+              .columnsTemplate('1fr 1fr 1fr')
+              .columnsGap(DesignConstants.SPACING.SM)
+              .rowsGap(DesignConstants.SPACING.SM)
+              .width('100%')
+            }
+            .width('100%')
+          }
         }
         .width('100%')
         .justifyContent(FlexAlign.Start)
@@ -901,6 +926,45 @@ export struct ProfilePage {
       .align(Alignment.TopStart)
       .scrollBar(BarState.Auto)
     }
+  }
+
+  @Builder
+  private buildViewedMomentThumb(moment: MomentItem) {
+    Stack() {
+      if (moment.images && moment.images.length > 0) {
+        Image(moment.images[0].url)
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.Cover)
+          .borderRadius(DesignConstants.RADIUS.LG)
+      } else {
+        Column() {
+          Text(moment.description)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getSecondaryTextColor())
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .textAlign(TextAlign.Center)
+        }
+        .width('100%')
+        .height('100%')
+        .padding(DesignConstants.SPACING.XS)
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor(this.getSurfaceSubtle())
+        .borderRadius(DesignConstants.RADIUS.LG)
+      }
+    }
+    .aspectRatio(1)
+    .width('100%')
+    .borderRadius(DesignConstants.RADIUS.LG)
+    .border({ width: 1, color: this.getSurfaceBorder() })
+    .onClick(() => {
+      if (moment.moment_id) {
+        const params = new MomentDetailRouteParam();
+        params.momentId = moment.moment_id;
+        AppRouter.push(PageNames.MOMENT_DETAIL, params);
+      }
+    })
   }
 
   // ==================== 匿名用户 - 游客界面 ====================

@@ -36,8 +36,10 @@ type inMemoryApplicationRecord struct {
 }
 
 type inMemoryMembership struct {
-	Role     GroupRole
-	JoinedAt string
+	Role       GroupRole
+	JoinedAt   string
+	IsMuted    bool
+	MutedUntil string
 }
 
 type InMemoryRepository struct {
@@ -675,6 +677,18 @@ func (r *InMemoryRepository) MuteMember(_ context.Context, userID string, req Mu
 	if _, ok := r.groups[req.GroupID]; !ok {
 		return ErrGroupNotFound
 	}
+	members, ok := r.members[req.GroupID]
+	if !ok {
+		return ErrNotMember
+	}
+	membership, ok := members[req.UserID]
+	if !ok {
+		return ErrNotMember
+	}
+	membership.IsMuted = true
+	mutedUntil := time.Now().UTC().Add(time.Duration(req.DurationMinutes) * time.Minute)
+	membership.MutedUntil = mutedUntil.Format(time.RFC3339)
+	members[req.UserID] = membership
 	_ = userID
 	return nil
 }
@@ -685,6 +699,17 @@ func (r *InMemoryRepository) UnmuteMember(_ context.Context, userID string, req 
 	if _, ok := r.groups[req.GroupID]; !ok {
 		return ErrGroupNotFound
 	}
+	members, ok := r.members[req.GroupID]
+	if !ok {
+		return ErrNotMember
+	}
+	membership, ok := members[req.UserID]
+	if !ok {
+		return ErrNotMember
+	}
+	membership.IsMuted = false
+	membership.MutedUntil = ""
+	members[req.UserID] = membership
 	_ = userID
 	return nil
 }
@@ -748,7 +773,7 @@ func (r *InMemoryRepository) cloneGroupForUser(group GroupItem, userID string) G
 	if memberships, ok := r.members[group.Group.GroupID]; ok {
 		cloned.Group.MembersCount = len(memberships)
 		if membership, joined := memberships[userID]; joined {
-			state := &MyGroupState{Role: membership.Role, IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: membership.JoinedAt}
+			state := &MyGroupState{Role: membership.Role, IsJoined: true, UnreadCount: 0, IsMuted: membership.IsMuted, MutedUntil: membership.MutedUntil, IsPinned: false, JoinedAt: membership.JoinedAt}
 			cloned.MyState = state
 		} else {
 			cloned.MyState = nil

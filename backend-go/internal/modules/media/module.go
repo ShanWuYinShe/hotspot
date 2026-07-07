@@ -38,6 +38,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/presign_upload", m.handler.PresignUpload)
 			group.Post("/batch_presign_upload", m.handler.BatchPresignUpload)
 			group.Post("/complete_upload", m.handler.CompleteUpload)
+			group.Post("/complete_upload/batch", m.handler.CompleteUploadBatch)
 		})
 	})
 }

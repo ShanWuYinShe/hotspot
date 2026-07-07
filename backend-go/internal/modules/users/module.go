@@ -33,6 +33,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(idempotency.Middleware)
 			group.Post("/search", m.handler.Search)
 			group.Post("/open_the_door", m.handler.OpenTheDoor)
+			group.Post("/profile_get", m.handler.GetProfile)
 			group.Post("/list_friends", m.handler.ListFriends)
 			group.Post("/list_following", m.handler.ListFollowing)
 			group.Post("/list_followers", m.handler.ListFollowers)

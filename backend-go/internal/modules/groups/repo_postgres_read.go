@@ -166,13 +166,15 @@ func loadGroupMembership(ctx context.Context, queryable persistence.QueryableDB,
 	}
 	var role string
 	var joinedAt time.Time
-	if err := queryable.QueryRow(ctx, queryGetGroupMembership, groupID, userID).Scan(&role, &joinedAt); err != nil {
+	var isMuted bool
+	var mutedUntil *time.Time
+	if err := queryable.QueryRow(ctx, queryGetGroupMembership, groupID, userID).Scan(&role, &joinedAt, &isMuted, &mutedUntil); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return &MyGroupState{Role: GroupRole(role), IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: joinedAt.UTC().Format(time.RFC3339)}, nil
+	return &MyGroupState{Role: GroupRole(role), IsJoined: true, UnreadCount: 0, IsMuted: isMuted, MutedUntil: formatMutedUntil(mutedUntil), IsPinned: false, JoinedAt: joinedAt.UTC().Format(time.RFC3339)}, nil
 }
 
 func loadGroupMemberships(ctx context.Context, queryable persistence.QueryableDB, groupIDs []string, userID string) (map[string]*MyGroupState, error) {
@@ -188,15 +190,24 @@ func loadGroupMemberships(ctx context.Context, queryable persistence.QueryableDB
 	for rows.Next() {
 		var groupID, role string
 		var joinedAt time.Time
-		if err := rows.Scan(&groupID, &role, &joinedAt); err != nil {
+		var isMuted bool
+		var mutedUntil *time.Time
+		if err := rows.Scan(&groupID, &role, &joinedAt, &isMuted, &mutedUntil); err != nil {
 			return nil, err
 		}
-		result[groupID] = &MyGroupState{Role: GroupRole(role), IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: joinedAt.UTC().Format(time.RFC3339)}
+		result[groupID] = &MyGroupState{Role: GroupRole(role), IsJoined: true, UnreadCount: 0, IsMuted: isMuted, MutedUntil: formatMutedUntil(mutedUntil), IsPinned: false, JoinedAt: joinedAt.UTC().Format(time.RFC3339)}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	return result, nil
+}
+
+func formatMutedUntil(value *time.Time) string {
+	if value == nil {
+		return ""
+	}
+	return value.UTC().Format(time.RFC3339)
 }
 
 func countGroupMembers(ctx context.Context, queryable persistence.QueryableDB, groupID string) (int, error) {

@@ -142,6 +142,18 @@ type MessageBlockedReason =
 - 更新/Patch 类 Request 中 `Location` 可为可选字段（如 `groups/update`、`moments/update`），允许仅更新其他字段而不修改位置；管理员配置中的 `Partial<Location>` 同理
 - 若用户拒绝定位或无法获取精确位置，客户端必须使用 `ClientConfig.defaults.default_location` 填充 `Location`
 
+**`reference_point` 解析规则（契约级）**：
+
+发现类与搜索类接口（所有 `feed/*`、`search/*` 及各资源 `search` 端点）的 `reference_point` 字段统一为**可选**（`reference_point?: GeoPoint`）。当客户端不传时，服务端按以下回退链解析浏览锚点位置：
+
+1. 请求显式传入的 `reference_point`（如地图浏览场景传地图中心点）
+2. 已登录用户最近一次 `users/me/location/update` 的位置（匿名或未更新过位置时跳过）
+3. `ClientConfig.defaults.default_location.point`
+
+设计目的：让 App 端绝大多数请求无需自行管理定位状态机——服务端自动复用用户已知位置；只有"地图浏览"等需要显式锚点的场景，客户端才传入 `reference_point`。
+
+不适用：`map/canvas` 等 map 模块端点用 `viewport.bounds` 锚定视口，无 `reference_point` 字段，不经此规则。
+
 ```typescript
 // 基础坐标点 (经纬度)
 interface GeoPoint {
@@ -361,6 +373,7 @@ interface MyGroupState {
   is_joined: boolean;
   unread_count: number;
   is_muted: boolean;
+  muted_until?: string;           // 禁言截止时间（UTC ISO 8601）；is_muted=true 时有值，客户端据此展示剩余时间并预判输入框可用性
   is_pinned: boolean;
   joined_at?: string;
 }

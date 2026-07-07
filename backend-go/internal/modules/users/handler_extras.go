@@ -49,6 +49,24 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(item))
 }
 
+func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	var req UserProfileBundleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UserID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	bundle, ok, err := h.service.GetProfileBundle(r.Context(), req)
+	if err != nil {
+		h.writeServiceError(w, r, "GetProfile", err)
+		return
+	}
+	if !ok {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "用户不存在"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(bundle))
+}
+
 func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
 	var req UpdateLocationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Location.LocationName == "" {

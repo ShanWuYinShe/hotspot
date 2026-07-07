@@ -194,6 +194,10 @@ func (r *InMemoryRepository) IsMember(_ context.Context, _ string, _ string) (bo
 	return true, nil
 }
 
+func (r *InMemoryRepository) MemberMuteStatus(_ context.Context, _ string, _ string) (bool, string, bool, error) {
+	return false, "", true, nil
+}
+
 func (r *InMemoryRepository) markMessageRead(groupID, messageID string) {
 	if r.readCount[groupID] == nil {
 		r.readCount[groupID] = make(map[string]int)

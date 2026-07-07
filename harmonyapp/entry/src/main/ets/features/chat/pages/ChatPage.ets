@@ -102,6 +102,8 @@ export struct ChatPage {
   @State showConversationActionsSheet: boolean = false;
   @State targetAvatar: string = '';
   @State isMuted: boolean = false;
+  @State isGroupServerMuted: boolean = false;
+  @State groupMutedUntil: string = '';
 
   private chatId: string = '';
   private chatType: 'private_chat' | 'group_chat' = 'private_chat';
@@ -175,6 +177,19 @@ export struct ChatPage {
   private getComposerBottomPadding(): number {
     const stableInset = this.getStableBottomInset();
     return SafeAreaUtils.resolveBottomPadding(stableInset, 0, DesignConstants.SPACING.SM);
+  }
+
+  private formatMutedUntil(isoString: string): string {
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) {
+      return isoString;
+    }
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const pad = (n: number): string => (n < 10 ? `0${n}` : `${n}`);
+    return `${pad(month)}-${pad(day)} ${pad(hours)}:${pad(minutes)}`;
   }
 
   private dismissKeyboardOnOutsideTap(): void {
@@ -455,6 +470,17 @@ export struct ChatPage {
           if (response.code === 0) {
             items = response.data?.items ?? [];
             nextCursor = response.data?.next_cursor;
+          }
+
+          // 获取群组详情中的 my_state，填充服务端禁言状态
+          try {
+            const groupResp = await ApiClient.getGroupDetail({ group_id: this.chatId });
+            if (groupResp.code === 0 && groupResp.data?.my_state) {
+              this.isGroupServerMuted = groupResp.data.my_state.is_muted;
+              this.groupMutedUntil = groupResp.data.my_state.muted_until ?? '';
+            }
+          } catch (e) {
+            hilog.warn(DOMAIN_NUMBER, TAG, `加载群组禁言状态失败: ${JSON.stringify(e)}`);
           }
         }
 
@@ -1151,6 +1177,23 @@ export struct ChatPage {
         })
       }
 
+      // 服务端禁言横幅
+      if (this.isGroupServerMuted) {
+        Row({ space: DesignConstants.SPACING.XS }) {
+          Text() {
+            SymbolSpan($r(AppIcon.WARNING))
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor([this.getCurrentThemePalette().error])
+          }
+          Text(this.groupMutedUntil ? `你已被禁言，解除时间：${this.formatMutedUntil(this.groupMutedUntil)}` : '你已被禁言')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getCurrentThemePalette().error)
+        }
+        .width('100%')
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+        .justifyContent(FlexAlign.Center)
+      }
+
       Row() {
         Button() {
           Text() {
@@ -1198,12 +1241,12 @@ export struct ChatPage {
         Button(this.isSending ? '发送中...' : '发送')
           .type(ButtonType.Normal)
           .backgroundColor(
-            this.isSending || this.inputText.trim().length === 0
+            this.isSending || this.inputText.trim().length === 0 || this.isGroupServerMuted
               ? this.getChatTheme().sendButtonDisabled
               : this.getChatTheme().sendButtonActive
           )
           .fontColor(
-            this.isSending || this.inputText.trim().length === 0
+            this.isSending || this.inputText.trim().length === 0 || this.isGroupServerMuted
               ? this.getCurrentThemePalette().textSecondary
               : this.getChatTheme().sendButtonActiveText
           )
@@ -1213,8 +1256,8 @@ export struct ChatPage {
           .border({ width: 1, color: this.getChatTheme().inputBorder })
           .padding({ left: this.getChatVisualStyle().sendButton.horizontalPadding, right: this.getChatVisualStyle().sendButton.horizontalPadding })
           .margin({ left: DesignConstants.SPACING.MD })
-          .opacity(this.isSending || this.inputText.trim().length === 0 ? DesignConstants.OPACITY.PRESSED : 1)
-          .enabled(!this.isSending && this.inputText.trim().length > 0)
+          .opacity(this.isSending || this.inputText.trim().length === 0 || this.isGroupServerMuted ? DesignConstants.OPACITY.PRESSED : 1)
+          .enabled(!this.isSending && this.inputText.trim().length > 0 && !this.isGroupServerMuted)
           .onClick(() => this.sendMessage())
       }
       .width('100%')

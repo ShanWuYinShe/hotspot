@@ -205,6 +205,15 @@ type UserMomentsRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
+type UserProfileBundleRequest struct {
+	UserID string `json:"user_id"`
+}
+
+type UserProfileBundle struct {
+	User          UserItem                     `json:"user"`
+	RecentMoments momenttypes.PaginatedMoments `json:"recent_moments"`
+}
+
 type MyBlockedRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }

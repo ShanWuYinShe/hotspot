@@ -40,6 +40,10 @@ func (r *PersistenceRepository) IsMember(ctx context.Context, groupID, userID st
 	return r.impl.IsMember(ctx, groupID, userID)
 }
 
+func (r *PersistenceRepository) MemberMuteStatus(ctx context.Context, groupID, userID string) (bool, string, bool, error) {
+	return r.impl.MemberMuteStatus(ctx, groupID, userID)
+}
+
 func (r *PersistenceRepository) GetMessageForReply(ctx context.Context, messageID string) (map[string]any, bool, error) {
 	return r.impl.GetMessageForReply(ctx, messageID)
 }

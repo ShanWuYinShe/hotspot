@@ -238,6 +238,27 @@ func (s *Service) ListMoments(ctx context.Context, req UserMomentsRequest) (mome
 	return result, nil
 }
 
+func (s *Service) GetProfileBundle(ctx context.Context, req UserProfileBundleRequest) (UserProfileBundle, bool, error) {
+	user, ok, err := s.OpenTheDoor(ctx, req.UserID)
+	if err != nil {
+		return UserProfileBundle{}, false, err
+	}
+	if !ok {
+		return UserProfileBundle{}, false, nil
+	}
+	momentLimit := 6
+	if s.appConfig != nil {
+		if n := s.appConfig.Get(ctx).ResponseDefaults.UserProfileMomentsCount; n > 0 {
+			momentLimit = n
+		}
+	}
+	moments, err := s.ListMoments(ctx, UserMomentsRequest{UserID: req.UserID, Pagination: &PaginationParams{Limit: momentLimit}})
+	if err != nil {
+		return UserProfileBundle{}, false, err
+	}
+	return UserProfileBundle{User: user, RecentMoments: moments}, true, nil
+}
+
 func normalizePagination(p *PaginationParams) (int, string) {
 	limit := 20
 	cursor := ""

@@ -60,6 +60,10 @@ func (r *stubRepo) IsMember(_ context.Context, _ string, _ string) (bool, error)
 	return true, nil
 }
 
+func (r *stubRepo) MemberMuteStatus(_ context.Context, _ string, _ string) (bool, string, bool, error) {
+	return false, "", true, nil
+}
+
 func gmAuthCtx(userID string) context.Context {
 	return platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: userID})
 }

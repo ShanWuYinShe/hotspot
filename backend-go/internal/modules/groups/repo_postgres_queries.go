@@ -16,12 +16,12 @@ const (
 	WHERE g.deleted_at IS NULL`
 
 	queryGetGroupMembership = `
-SELECT role, joined_at
+SELECT role, joined_at, is_muted, muted_until
 FROM group_members
 WHERE group_id = $1 AND user_id = $2`
 
 	queryGetGroupMemberships = `
-SELECT group_id, role, joined_at
+SELECT group_id, role, joined_at, is_muted, muted_until
 FROM group_members
 WHERE user_id = $1 AND group_id = ANY($2)`
 
@@ -38,7 +38,7 @@ ORDER BY joined_at ASC, user_id ASC`
 
 	queryListMyGroups = `
 		SELECT g.group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}'),
-		       gm.role, gm.joined_at
+		       gm.role, gm.joined_at, gm.is_muted, gm.muted_until
 		FROM groups g
 	JOIN group_members gm ON gm.group_id = g.group_id
 WHERE gm.user_id = $1 AND g.deleted_at IS NULL

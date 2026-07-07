@@ -201,6 +201,7 @@ export interface MyGroupState {
   is_joined: boolean;
   unread_count: number;
   is_muted: boolean;
+  muted_until?: string;
   is_pinned: boolean;
   joined_at?: string;
 }
@@ -346,6 +347,25 @@ export interface CommentItem {
   replies_count: number;
   is_liked?: boolean;
   is_deleted: boolean;
+  // 顶层评论列表场景(comments/list)返回前 N 条回复预览
+  top_replies?: CommentItem[];
+}
+
+export interface UserProfileBundle {
+  user: UserItem;
+  recent_moments: PaginatedData<MomentItem>;
+}
+
+export interface SearchAllRequest {
+  keyword: string;
+  reference_point?: GeoPoint;
+  pagination?: PaginationParams;
+}
+
+export interface SearchAllResult {
+  users: PaginatedData<UserItem>;
+  groups: PaginatedData<GroupItem>;
+  moments: PaginatedData<MomentItem>;
 }
 
 export interface LikeItem {
@@ -1410,6 +1430,14 @@ export interface BatchPresignedUpload {
 
 export interface CompleteUploadRequest {
   upload_id: string;
+}
+
+export interface BatchCompleteUploadRequest {
+  upload_ids: string[];
+}
+
+export interface BatchCompleteUpload {
+  uploads: UploadedMedia[];
 }
 
 export interface UploadedMedia {

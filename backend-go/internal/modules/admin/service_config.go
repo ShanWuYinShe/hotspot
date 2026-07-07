@@ -243,6 +243,9 @@ func applyResponseDefaultsPatch(target *ResponseDefaults, patch PartialResponseD
 		{&target.ChatRecentMessagesCount, patch.ChatRecentMessagesCount},
 		{&target.GroupAnnouncementsCount, patch.GroupAnnouncementsCount},
 		{&target.SystemAnnouncementsCount, patch.SystemAnnouncementsCount},
+		{&target.CommentTopRepliesCount, patch.CommentTopRepliesCount},
+		{&target.UserProfileMomentsCount, patch.UserProfileMomentsCount},
+		{&target.SearchAllCountPerType, patch.SearchAllCountPerType},
 	}
 	for _, f := range fields {
 		if apiErr := applyPositiveIntPatch(f.target, f.patch); apiErr != nil {
