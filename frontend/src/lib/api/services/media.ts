@@ -45,6 +45,13 @@ export const mediaService = {
   },
 
   /**
+   * 批量完成上传
+   */
+  batchCompleteUpload(data: { upload_ids: string[] }) {
+    return post<{ uploads: UploadedMedia[] }>(MEDIA.COMPLETE_UPLOAD_BATCH, data);
+  },
+
+  /**
    * 上传文件（封装完整流程）
    */
   async uploadFile(

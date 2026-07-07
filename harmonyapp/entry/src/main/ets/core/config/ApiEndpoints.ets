@@ -62,6 +62,7 @@ class UserMeEndpoints {
 class UserEndpoints {
   readonly SEARCH: string = '/api/v1/users/search';
   readonly OPEN_THE_DOOR: string = '/api/v1/users/open_the_door';
+  readonly PROFILE_GET: string = '/api/v1/users/profile_get';
   readonly LIST_FRIENDS: string = '/api/v1/users/list_friends';
   readonly LIST_FOLLOWING: string = '/api/v1/users/list_following';
   readonly LIST_FOLLOWERS: string = '/api/v1/users/list_followers';
@@ -204,6 +205,7 @@ class ChatEndpoints {
 // Search
 class SearchEndpoints {
   readonly SUGGEST: string = '/api/v1/search/suggest';
+  readonly ALL: string = '/api/v1/search/all';
 }
 
 // Feed
@@ -220,6 +222,7 @@ class UploadEndpoints {
   readonly PRESIGN_UPLOAD: string = '/api/v1/media/presign_upload';
   readonly BATCH_PRESIGN_UPLOAD: string = '/api/v1/media/batch_presign_upload';
   readonly COMPLETE_UPLOAD: string = '/api/v1/media/complete_upload';
+  readonly COMPLETE_UPLOAD_BATCH: string = '/api/v1/media/complete_upload/batch';
 }
 
 // System

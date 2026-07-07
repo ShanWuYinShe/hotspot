@@ -40,6 +40,14 @@ type CompleteUploadRequest struct {
 	UploadID string `json:"upload_id"`
 }
 
+type BatchCompleteUploadRequest struct {
+	UploadIDs []string `json:"upload_ids"`
+}
+
+type BatchCompleteUpload struct {
+	Uploads []UploadedMedia `json:"uploads"`
+}
+
 type UploadedMedia struct {
 	FileID       string `json:"file_id"`
 	ThumbnailURL string `json:"thumbnail_url,omitempty"`

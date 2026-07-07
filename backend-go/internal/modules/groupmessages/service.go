@@ -13,6 +13,23 @@ import (
 
 var ErrNotGroupMember = errors.New("groupmessages: not a group member")
 
+var ErrUserMuted = errors.New("groupmessages: user is muted")
+
+type MutedError struct {
+	MutedUntil string
+}
+
+func (e *MutedError) Error() string {
+	if e == nil {
+		return "groupmessages: user is muted"
+	}
+	return "groupmessages: user is muted"
+}
+
+func (e *MutedError) Unwrap() error {
+	return ErrUserMuted
+}
+
 type userReader interface {
 	OpenTheDoor(context.Context, string) (users.UserItem, bool, error)
 }
@@ -36,6 +53,12 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 	}
 	if err := s.ensureMember(ctx, req.GroupID, userID); err != nil {
 		return MessageSent{}, err
+	}
+	if isMuted, mutedUntil, found, err := s.repo.MemberMuteStatus(ctx, req.GroupID, userID); err != nil {
+		observability.L().Error("groupmessages.send mute check failed", "error", err, "group_id", req.GroupID)
+		return MessageSent{}, err
+	} else if found && isMuted {
+		return MessageSent{}, &MutedError{MutedUntil: mutedUntil}
 	}
 	msg, err := s.repo.Send(ctx, req)
 	if err != nil {

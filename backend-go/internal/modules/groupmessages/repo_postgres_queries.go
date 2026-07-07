@@ -75,6 +75,10 @@ const (
 	queryCheckGroupMembership = `
 SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2`
 
+	queryMemberMuteStatus = `
+SELECT is_muted, COALESCE(TO_CHAR(muted_until AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), '')
+FROM group_members WHERE group_id = $1 AND user_id = $2`
+
 	queryMarkAllGroupMessagesRead = `
 	INSERT INTO group_message_read_state (group_id, user_id, last_read_message_id, last_read_sent_at, updated_at)
 	SELECT members.group_id, members.user_id, latest.message_id, latest.sent_at, NOW()

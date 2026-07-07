@@ -256,6 +256,9 @@ func defaultConfig(runtime config.Config) AppConfig {
 			ChatRecentMessagesCount:  20,
 			GroupAnnouncementsCount:  10,
 			SystemAnnouncementsCount: 10,
+			CommentTopRepliesCount:   3,
+			UserProfileMomentsCount:  6,
+			SearchAllCountPerType:    10,
 		},
 	}
 }

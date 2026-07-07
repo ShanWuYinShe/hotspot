@@ -19,7 +19,8 @@ import type {
   FollowSource,
   PaginationParams,
   GeoPoint,
-  VerificationSent
+  VerificationSent,
+  UserProfileBundle
 } from '$lib/types/api';
 
 export const usersService = {
@@ -34,7 +35,7 @@ export const usersService = {
       tag?: string;
       radius?: number;
       sort_by?: 'relevance' | 'distance' | 'newest';
-      reference_point: GeoPoint;
+      reference_point?: GeoPoint;
       pagination?: PaginationParams;
     },
     options?: RequestOptions
@@ -49,6 +50,13 @@ export const usersService = {
    */
   getUser(data: { user_id: string }, options?: RequestOptions) {
     return post<UserItem>(USERS.OPEN_THE_DOOR, data, options);
+  },
+
+  /**
+   * 获取用户资料聚合（含近期瞬间预览）
+   */
+  getProfile(data: { user_id: string }, options?: RequestOptions) {
+    return post<UserProfileBundle>(USERS.PROFILE_GET, data, options);
   },
 
   /**

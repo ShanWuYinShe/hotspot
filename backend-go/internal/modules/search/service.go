@@ -15,8 +15,11 @@ const (
 )
 
 type Service struct {
-	repo      Repository
-	appConfig appconfig.Source
+	repo          Repository
+	appConfig     appconfig.Source
+	userSearcher  Searcher
+	groupSearcher Searcher
+	momentSearcher Searcher
 }
 
 func NewService(source appconfig.Source) *Service {
@@ -35,6 +38,14 @@ func NewServiceWithSource(repo Repository, source appconfig.Source) *Service {
 	return &Service{repo: repo, appConfig: source}
 }
 
+func NewServiceWithSearchers(repo Repository, source appconfig.Source, userSearcher, groupSearcher, momentSearcher Searcher) *Service {
+	svc := NewServiceWithSource(repo, source)
+	svc.userSearcher = userSearcher
+	svc.groupSearcher = groupSearcher
+	svc.momentSearcher = momentSearcher
+	return svc
+}
+
 func (s *Service) Suggest(ctx context.Context, req SearchSuggestRequest) (SearchSuggestResponse, error) {
 	req.Radius = normalizeSuggestRadius(s.appConfig.Get(ctx).Limits.SearchRadiusMax, req.Radius)
 	resp, err := s.repo.Suggest(ctx, req)
@@ -45,6 +56,66 @@ func (s *Service) Suggest(ctx context.Context, req SearchSuggestRequest) (Search
 	limit := s.appConfig.Get(ctx).ResponseDefaults.SearchSuggestCount
 	resp.Items = slicex.LimitCopy(resp.Items, limit)
 	return resp, nil
+}
+
+func (s *Service) SearchAll(ctx context.Context, req SearchAllRequest) (SearchAllResult, error) {
+	perType := s.appConfig.Get(ctx).ResponseDefaults.SearchAllCountPerType
+	if perType <= 0 {
+		perType = 10
+	}
+	limit := perType
+	cursor := ""
+	if req.Pagination != nil {
+		if req.Pagination.Limit > 0 {
+			limit = req.Pagination.Limit
+		}
+		cursor = req.Pagination.Cursor
+	}
+	params := SearchParams{
+		Keyword:        req.Keyword,
+		Tag:            req.Tag,
+		Radius:         req.Radius,
+		SortBy:         req.SortBy,
+		ReferencePoint: req.ReferencePoint,
+		Limit:          limit,
+		Cursor:         cursor,
+	}
+	result := SearchAllResult{}
+	var firstErr error
+	if s.userSearcher != nil {
+		if r, err := s.userSearcher.Search(ctx, params); err != nil {
+			observability.L().Error("search.all users failed", "error", err)
+			if firstErr == nil {
+				firstErr = err
+			}
+		} else {
+			result.Users = SearchCategoryResult{Items: r.Items, NextCursor: r.NextCursor}
+		}
+	}
+	if s.groupSearcher != nil {
+		if r, err := s.groupSearcher.Search(ctx, params); err != nil {
+			observability.L().Error("search.all groups failed", "error", err)
+			if firstErr == nil {
+				firstErr = err
+			}
+		} else {
+			result.Groups = SearchCategoryResult{Items: r.Items, NextCursor: r.NextCursor}
+		}
+	}
+	if s.momentSearcher != nil {
+		if r, err := s.momentSearcher.Search(ctx, params); err != nil {
+			observability.L().Error("search.all moments failed", "error", err)
+			if firstErr == nil {
+				firstErr = err
+			}
+		} else {
+			result.Moments = SearchCategoryResult{Items: r.Items, NextCursor: r.NextCursor}
+		}
+	}
+	if firstErr != nil {
+		return SearchAllResult{}, firstErr
+	}
+	return result, nil
 }
 
 func normalizeSuggestRadius(configMax, radius int) int {

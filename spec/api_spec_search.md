@@ -18,6 +18,7 @@
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
 | `POST /api/v1/search/suggest` | 综合搜索建议 | 可选 | 无 |
+| `POST /api/v1/search/all` | 综合搜索（用户+群组+瞬间首屏聚合） | 可选 | 无 |
 
 ## 类型定义
 
@@ -102,6 +103,42 @@ type SearchSuggestItem =
 
 interface SearchSuggestResponse {
   items: SearchSuggestItem[];
+}
+```
+
+**错误码**: `10000`
+
+---
+
+### POST /api/v1/search/all
+
+综合搜索：一次请求返回用户、群组、瞬间三个分类的首屏结果。用于搜索结果页的 tab 切换 / 合并展示，消除分别调用 `users/search`、`groups/search`、`moments/search` 的三次往返。
+
+- **认证**: 可选
+- **幂等**: 无
+- **排序**: 各分类内部排序与对应资源 `search` 接口一致（默认按相关性）
+
+**设计要点**：
+- 聚焦 `keyword` 搜索，不支持 `tag` / `radius` 组合（那是各资源 `search` 的能力，综合搜索负责首屏聚合）
+- 各分类条数受 `AppConfig.response_defaults.search_all_count_per_type` 控制（默认 10）
+- `pagination` 三类共用同一请求参数；响应中各分类的 `next_cursor` **各自独立**。客户端翻页某个分类时，应切换到该分类的独立 `search` 端点继续分页
+- `reference_point` 可选——不传时服务端按回退链解析（见 `api_spec_types.md`「`reference_point` 解析规则」）
+
+**Request**: `SearchAllRequest`
+```typescript
+interface SearchAllRequest {
+  keyword: string;
+  reference_point?: GeoPoint;   // 可选；不传时服务端按回退链解析（见 api_spec_types.md）
+  pagination?: PaginationParams; // 三类共用；响应的 next_cursor 各自独立
+}
+```
+
+**Response**: `ApiResponse<SearchAllResult>`
+```typescript
+interface SearchAllResult {
+  users: PaginatedData<UserItem>;
+  groups: PaginatedData<GroupItem>;
+  moments: PaginatedData<MomentItem>;
 }
 ```
 

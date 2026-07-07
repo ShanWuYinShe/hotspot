@@ -888,7 +888,12 @@
         class="rounded-[var(--radius-md)] px-4 py-3 text-center"
         style="border: 1px solid var(--border-theme);"
       >
-        <p class="text-body" style="color: var(--text-secondary)">你已被禁言，无法发送消息</p>
+        <p class="text-body" style="color: var(--text-secondary)">
+          你已被禁言，无法发送消息
+          {#if group?.my_state?.muted_until}
+            （至 {new Date(group.my_state.muted_until).toLocaleString()}）
+          {/if}
+        </p>
       </div>
     {:else}
       <div class="flex items-end gap-2">

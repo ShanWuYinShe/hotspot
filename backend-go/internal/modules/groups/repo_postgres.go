@@ -201,11 +201,13 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 		lastActivityAt *time.Time
 		tags           []string
 		joinedAt       time.Time
+		isMuted        bool
+		mutedUntil     *time.Time
 	}
 	scanned := make([]scannedItem, 0)
 	for rows.Next() {
 		var s scannedItem
-		if err := rows.Scan(&s.item.Group.GroupID, &s.item.Group.Name, &s.item.Group.AvatarURL, &s.item.Description, &s.item.HasPassword, &s.locationName, &s.latitude, &s.longitude, &s.joinMethod, &s.item.IsSearchable, &s.item.MaxMembers, &s.item.OwnerID, &s.createdAt, &s.lastActivityAt, &s.tags, &s.roleText, &s.joinedAt); err != nil {
+		if err := rows.Scan(&s.item.Group.GroupID, &s.item.Group.Name, &s.item.Group.AvatarURL, &s.item.Description, &s.item.HasPassword, &s.locationName, &s.latitude, &s.longitude, &s.joinMethod, &s.item.IsSearchable, &s.item.MaxMembers, &s.item.OwnerID, &s.createdAt, &s.lastActivityAt, &s.tags, &s.roleText, &s.joinedAt, &s.isMuted, &s.mutedUntil); err != nil {
 			rows.Close()
 			return nil, "", err
 		}
@@ -225,7 +227,7 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 		s.item.JoinMethod = GroupJoinMethod(s.joinMethod)
 		s.item.CreatedAt = formatOptionalTime(s.createdAt)
 		s.item.LastActivityAt = formatOptionalTime(s.lastActivityAt)
-		s.item.MyState = &MyGroupState{Role: GroupRole(s.roleText), IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: s.joinedAt.UTC().Format(time.RFC3339)}
+		s.item.MyState = &MyGroupState{Role: GroupRole(s.roleText), IsJoined: true, UnreadCount: 0, IsMuted: s.isMuted, MutedUntil: formatMutedUntil(s.mutedUntil), IsPinned: false, JoinedAt: s.joinedAt.UTC().Format(time.RFC3339)}
 		count, err := countGroupMembers(ctx, queryable, s.item.Group.GroupID)
 		if err != nil {
 			return nil, "", err

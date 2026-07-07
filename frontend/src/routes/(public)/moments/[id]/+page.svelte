@@ -198,6 +198,22 @@
     }
   }
 
+  async function loadAllReplies(commentId: string) {
+    try {
+      const response = await commentsService.getReplies({ comment_id: commentId });
+      if (isSuccess(response) && response.data) {
+        const replies = response.data.items;
+        comments = comments.map((c) =>
+          c.comment_id === commentId ? { ...c, top_replies: replies, replies_count: replies.length } : c
+        );
+      } else {
+        toast.error(response.message || '加载回复失败');
+      }
+    } catch {
+      toast.error('加载回复失败');
+    }
+  }
+
   function formatTime(dateStr: string): string {
     return formatDateTime(dateStr);
   }
@@ -550,6 +566,42 @@
                   >
                     {comment.content}
                   </p>
+
+                  <!-- top_replies 预览 -->
+                  {#if comment.top_replies && comment.top_replies.length > 0}
+                    <div class="mt-2 space-y-2">
+                      {#each comment.top_replies as reply (reply.comment_id)}
+                        <div class="flex items-start gap-2">
+                          <a href="/users/{reply.user.user_id}" class="shrink-0">
+                            <Avatar
+                              src={reply.user.avatar_url}
+                              name={reply.user.nickname}
+                              alt={reply.user.nickname}
+                              size={24}
+                            />
+                          </a>
+                          <p class="text-body" style="color: var(--text-secondary)">
+                            <a
+                              href="/users/{reply.user.user_id}"
+                              style="font-weight: 500; color: var(--text-primary)"
+                            >
+                              {reply.user.nickname}
+                            </a>
+                            {reply.content}
+                          </p>
+                        </div>
+                      {/each}
+                      {#if comment.replies_count > (comment.top_replies?.length ?? 0)}
+                        <button
+                          class="text-meta outline-none"
+                          style="color: var(--brand)"
+                          onclick={() => loadAllReplies(comment.comment_id)}
+                        >
+                          查看全部 {comment.replies_count} 条回复
+                        </button>
+                      {/if}
+                    </div>
+                  {/if}
                 </div>
               </div>
             {/each}

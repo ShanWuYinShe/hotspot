@@ -423,6 +423,8 @@ interface MarkPrivateMessagesReadRequest {
 - **认证**: 必须
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
+**禁言处理**：被禁言成员发消息返回 `10400`，`message` 含禁言截止时间（如"您已被禁言至 2024-01-15T08:30:00.000Z"）。客户端可据 `MyGroupState.is_muted` + `muted_until`（见 `api_spec_types.md`）预判，禁用群聊输入框并展示剩余时间，避免必失败的请求。
+
 **Request**: `SendGroupMessageRequest`
 ```typescript
 interface SendGroupMessageRequest {

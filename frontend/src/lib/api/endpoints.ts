@@ -36,6 +36,7 @@ export const USERS = {
   SEARCH: `${API_BASE}/users/search`,
   // 获取指定用户信息
   OPEN_THE_DOOR: `${API_BASE}/users/open_the_door`,
+  PROFILE_GET: `${API_BASE}/users/profile_get`,
   LIST_FRIENDS: `${API_BASE}/users/list_friends`,
   LIST_FOLLOWING: `${API_BASE}/users/list_following`,
   LIST_FOLLOWERS: `${API_BASE}/users/list_followers`,
@@ -217,7 +218,8 @@ export const FEED = {
 // 搜索 API（spec/openapi/paths/search.yaml）
 // ============================================================================
 export const SEARCH = {
-  SUGGEST: `${API_BASE}/search/suggest`
+  SUGGEST: `${API_BASE}/search/suggest`,
+  ALL: `${API_BASE}/search/all`
 } as const;
 
 // ============================================================================
@@ -243,7 +245,8 @@ export const SHARE = {
 export const MEDIA = {
   PRESIGN_UPLOAD: `${API_BASE}/media/presign_upload`,
   BATCH_PRESIGN_UPLOAD: `${API_BASE}/media/batch_presign_upload`,
-  COMPLETE_UPLOAD: `${API_BASE}/media/complete_upload`
+  COMPLETE_UPLOAD: `${API_BASE}/media/complete_upload`,
+  COMPLETE_UPLOAD_BATCH: `${API_BASE}/media/complete_upload/batch`
 } as const;
 
 // ============================================================================

@@ -25,7 +25,7 @@ export const momentsService = {
       tag?: string;
       radius?: number;
       sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
-      reference_point: GeoPoint;
+      reference_point?: GeoPoint;
       pagination?: PaginationParams;
     },
     options?: RequestOptions

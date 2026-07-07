@@ -27,19 +27,24 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 	sharedAppConfig := appconfig.NewPersistenceSource(cfg, factory)
 	ratelimit.SetSource(sharedAppConfig)
 	usersModule := users.NewModule(factory, sharedAppConfig)
+	groupsModule := groups.NewModule(factory, usersModule.Service)
+	momentsModule := moments.NewModule(factory, usersModule.Service, sharedAppConfig)
+	userSearcher := users.NewSearchAdapter(usersModule.Service)
+	groupSearcher := groups.NewSearchAdapter(groupsModule.Service)
+	momentSearcher := moments.NewSearchAdapter(momentsModule.Service)
 	return []modulekit.Module{
 		admin.NewModule(factory, sharedAppConfig),
 		auth.NewModule(cfg, factory, sharedAppConfig),
 		feed.NewModule(factory, sharedAppConfig),
 		groupmessages.NewModule(factory, usersModule.Service),
-		groups.NewModule(factory, usersModule.Service),
+		groupsModule,
 		mapmodule.NewModule(factory),
 		media.NewModule(cfg, factory),
-		moments.NewModule(factory, usersModule.Service),
+		momentsModule,
 		notifications.NewModule(factory),
 		privatechats.NewModule(factory, sharedAppConfig),
 		reports.NewModule(factory),
-		search.NewModule(factory, sharedAppConfig),
+		search.NewModuleWithSearchers(factory, sharedAppConfig, userSearcher, groupSearcher, momentSearcher),
 		share.NewModule(factory),
 		system.NewModule(factory, sharedAppConfig),
 		usersModule,

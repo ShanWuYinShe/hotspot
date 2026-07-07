@@ -18,6 +18,7 @@
 |-----|------|------|------|
 | `POST /api/v1/users/search` | 搜索用户（支持关键字/标签/位置组合） | 可选 | 无 |
 | `POST /api/v1/users/open_the_door` | 用户资料详情 | 可选 | 无 |
+| `POST /api/v1/users/profile_get` | 用户主页聚合（资料 + 近期瞬间，首屏骨架） | 可选 | 无 |
 | `POST /api/v1/users/list_friends` | 好友列表（user_id 可选，默认=当前用户） | 条件必须 | 无 |
 | `POST /api/v1/users/list_following` | 关注列表（user_id 可选，默认=当前用户） | 条件必须 | 无 |
 | `POST /api/v1/users/list_followers` | 粉丝列表（user_id 可选，默认=当前用户） | 条件必须 | 无 |
@@ -114,6 +115,38 @@ interface UserOpenTheDoorRequest {
 ```
 
 **Response**: `ApiResponse<UserItem>`
+
+**错误码**: `10000` `10200` `10300`
+
+---
+
+### POST /api/v1/users/profile_get
+
+获取用户主页首屏聚合数据（资料 + 近期瞬间）。一次请求拿到主页骨架，消除"资料 + 瞬间"的多次往返。
+
+- **认证**: 可选（与 `users/open_the_door` 对齐，字段可见性规则见 `api_spec_base.md`）
+- **幂等**: 无
+- **排序**: `recent_moments` 内部按 `created_at DESC`（最新在前），与 `users/list_moments` 一致
+
+**设计要点**：
+- `user.stats` 始终返回（含 `moments_count`/`friends_count`/`followers_count`/`following_count`/`groups_count`），客户端据此渲染主页各 tab 的数量角标，无需单独拉取列表
+- 好友/关注/粉丝/群组的**明细列表**仍用现有 `users/list_friends`、`users/list_following` 等按需懒加载（用户点进对应 tab 时再拉）
+- `recent_moments` 条数受 `AppConfig.response_defaults.user_profile_moments_count` 控制（默认 6）；客户端翻页加载更多瞬间时切换到 `users/list_moments`
+
+**Request**: `UserProfileBundleRequest`
+```typescript
+interface UserProfileBundleRequest {
+  user_id: string;
+}
+```
+
+**Response**: `ApiResponse<UserProfileBundle>`
+```typescript
+interface UserProfileBundle {
+  user: UserItem;                                  // 资料 + stats（stats 始终返回）
+  recent_moments: PaginatedData<MomentItem>;       // 近期瞬间首屏；条数受 response_defaults.user_profile_moments_count 控制
+}
+```
 
 **错误码**: `10000` `10200` `10300`
 

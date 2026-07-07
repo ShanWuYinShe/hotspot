@@ -50,6 +50,7 @@ type MyGroupState struct {
 	IsJoined    bool      `json:"is_joined"`
 	UnreadCount int       `json:"unread_count"`
 	IsMuted     bool      `json:"is_muted"`
+	MutedUntil  string    `json:"muted_until,omitempty"`
 	IsPinned    bool      `json:"is_pinned"`
 	JoinedAt    string    `json:"joined_at,omitempty"`
 }

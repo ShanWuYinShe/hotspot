@@ -2,9 +2,11 @@ package groupmessages
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
@@ -151,6 +153,20 @@ func (r *PostgresRepository) IsMember(ctx context.Context, groupID, userID strin
 		return false, nil
 	}
 	return true, nil
+}
+
+func (r *PostgresRepository) MemberMuteStatus(ctx context.Context, groupID, userID string) (isMuted bool, mutedUntil string, found bool, err error) {
+	queryable, ok := r.getQueryable()
+	if !ok {
+		return false, "", false, persistence.ErrNotImplemented
+	}
+	if err := queryable.QueryRow(ctx, queryMemberMuteStatus, groupID, userID).Scan(&isMuted, &mutedUntil); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, "", false, nil
+		}
+		return false, "", false, err
+	}
+	return isMuted, mutedUntil, true, nil
 }
 
 func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID string) (map[string]any, bool, error) {

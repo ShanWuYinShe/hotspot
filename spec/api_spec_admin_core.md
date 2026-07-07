@@ -602,5 +602,8 @@ interface ResponseDefaults {
   chat_recent_messages_count: number; // open_the_door 返回的最近消息条数，默认 20
   group_announcements_count: number;  // 群公告列表返回条数，默认 10
   system_announcements_count: number; // 系统公告列表返回条数（system/list_announcements），默认 10
+  comment_top_replies_count: number;  // 顶层评论内嵌的前 N 条回复（comments/list 场景），默认 3；消除展开回复的 N+1
+  user_profile_moments_count: number; // 用户主页聚合（users/profile_get）返回的近期瞬间条数，默认 6
+  search_all_count_per_type: number;  // 综合搜索（search/all）每个分类返回的首屏条数，默认 10
 }
 ```

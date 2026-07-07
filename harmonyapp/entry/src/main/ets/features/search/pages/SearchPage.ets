@@ -204,33 +204,27 @@ export struct SearchPage {
 
     try {
       await LoadingUtil.withMinimumTime(async () => {
-        const p1 = ApiClient.searchUsers({ keyword: trimmedKeyword, reference_point: referencePoint });
-        const p2 = ApiClient.searchGroups({ keyword: trimmedKeyword, reference_point: referencePoint });
-        const p3 = ApiClient.searchMoments({ keyword: trimmedKeyword, reference_point: referencePoint });
-
-        const results = await Promise.all([p1, p2, p3]);
+        const resp = await ApiClient.searchAll({
+          keyword: trimmedKeyword,
+          reference_point: referencePoint
+        });
         if (this.isDestroyed) return;
-        const res1 = results[0];
-        const res2 = results[1];
-        const res3 = results[2];
 
-        const myId = await AuthAccountManager.getCurrentUserId();
-        if (res1.code === 0) {
-          const items = res1.data?.items ?? [];
-          const validUsers = items.filter((u: UserItem) => u.user?.user_id);
+        if (resp.code === 0 && resp.data) {
+          const myId = await AuthAccountManager.getCurrentUserId();
+          const users = resp.data.users?.items ?? [];
+          const validUsers = users.filter((u: UserItem) => u.user?.user_id);
           this.userResults = (myId !== null && typeof myId === 'string')
             ? validUsers.filter((u: UserItem) => u.user.user_id !== myId)
             : validUsers;
           this.userResultsDataSource.setData(this.userResults);
-        }
-        if (res2.code === 0) {
-          const items = res2.data?.items ?? [];
-          this.groupResults = items.filter((g: GroupItem) => g.group?.group_id);
+
+          const groups = resp.data.groups?.items ?? [];
+          this.groupResults = groups.filter((g: GroupItem) => g.group?.group_id);
           this.groupResultsDataSource.setData(this.groupResults);
-        }
-        if (res3.code === 0) {
-          const items = res3.data?.items ?? [];
-          this.momentResults = items.filter((m: MomentItem) => m.moment_id && m.user);
+
+          const moments = resp.data.moments?.items ?? [];
+          this.momentResults = moments.filter((m: MomentItem) => m.moment_id && m.user);
           this.momentResultsDataSource.setData(this.momentResults);
         }
       });

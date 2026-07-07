@@ -16,6 +16,8 @@ import {
   PresignedUpload,
   CompleteUploadRequest,
   UploadedMedia,
+  BatchCompleteUploadRequest,
+  BatchCompleteUpload,
   MediaCategory,
   BatchPresignUploadRequest,
   BatchPresignedUpload,
@@ -63,6 +65,7 @@ import {
   UserMomentsRequest,
   UserLikedMomentsRequest,
   GroupItem,
+  UserProfileBundle,
 
   // 生活瞬间
   MomentItem,
@@ -179,6 +182,8 @@ import {
 	// 搜索
 	SearchSuggestRequest,
 	SearchSuggestResponse,
+	SearchAllRequest,
+	SearchAllResult,
 
 	// 地图
 	MapHeatCanvas,
@@ -289,6 +294,10 @@ export class ApiClient {
 
   static async completeUpload(params: CompleteUploadRequest): Promise<ApiResponse<UploadedMedia>> {
     return HttpUtil.post<ApiResponse<UploadedMedia>, CompleteUploadRequest>(ApiEndpoints.UPLOAD.COMPLETE_UPLOAD, params);
+  }
+
+  static async batchCompleteUpload(params: BatchCompleteUploadRequest): Promise<ApiResponse<BatchCompleteUpload>> {
+    return HttpUtil.post<ApiResponse<BatchCompleteUpload>, BatchCompleteUploadRequest>(ApiEndpoints.UPLOAD.COMPLETE_UPLOAD_BATCH, params);
   }
 
   static async uploadFile(
@@ -445,6 +454,10 @@ export class ApiClient {
 
   static async getUserProfile(params: UserOpenTheDoorRequest): Promise<ApiResponse<UserItem>> {
     return HttpUtil.post<ApiResponse<UserItem>, UserOpenTheDoorRequest>(ApiEndpoints.USER.OPEN_THE_DOOR, params);
+  }
+
+  static async getUserProfileBundle(params: UserOpenTheDoorRequest): Promise<ApiResponse<UserProfileBundle>> {
+    return HttpUtil.post<ApiResponse<UserProfileBundle>, UserOpenTheDoorRequest>(ApiEndpoints.USER.PROFILE_GET, params);
   }
 
   static async getUserGroups(params: UserGroupsRequest): Promise<ApiResponse<PaginatedData<GroupItem>>> {
@@ -849,6 +862,10 @@ export class ApiClient {
 
   static async searchSuggest(params: SearchSuggestRequest): Promise<ApiResponse<SearchSuggestResponse>> {
     return HttpUtil.post<ApiResponse<SearchSuggestResponse>, SearchSuggestRequest>(ApiEndpoints.SEARCH.SUGGEST, params);
+  }
+
+  static async searchAll(params: SearchAllRequest): Promise<ApiResponse<SearchAllResult>> {
+    return HttpUtil.post<ApiResponse<SearchAllResult>, SearchAllRequest>(ApiEndpoints.SEARCH.ALL, params);
   }
 
 	// ==================== 地图 API ====================

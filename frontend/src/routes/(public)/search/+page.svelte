@@ -4,7 +4,7 @@
   import { browser } from '$app/environment';
   import { t } from '$lib/i18n';
   import { withMinimumLoadingTime } from '$lib/utils/loading';
-  import { usersService, momentsService, groupsService } from '$lib/api/services';
+  import { usersService, momentsService, groupsService, searchService } from '$lib/api/services';
   import { feedService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
@@ -164,44 +164,69 @@
 
     try {
       const signal = controller.signal;
-      const request =
-        mode === 'tag'
-          ? { tag: normalized, reference_point: getReferencePoint() }
-          : { keyword: normalized, reference_point: getReferencePoint() };
 
-      const [usersRes, momentsRes, groupsRes] = await withMinimumLoadingTime(() =>
-        Promise.all([
-          usersService.search(request, { signal }),
-          momentsService.search(request, { signal }),
-          groupsService.search(request, { signal })
-        ])
-      );
+      if (mode === 'keyword') {
+        // keyword 模式：一次聚合请求拿到用户/群组/瞬间
+        const allRes = await withMinimumLoadingTime(() =>
+          searchService.all(
+            { keyword: normalized, reference_point: getReferencePoint() },
+            { signal }
+          )
+        );
 
-      if (signal.aborted) return;
+        if (signal.aborted) return;
 
-      const nextUsers = isSuccess(usersRes) && usersRes.data ? usersRes.data.items : [];
-      const nextMoments = isSuccess(momentsRes) && momentsRes.data ? momentsRes.data.items : [];
-      const nextGroups = isSuccess(groupsRes) && groupsRes.data ? groupsRes.data.items : [];
-      const nextError = !isSuccess(usersRes)
-        ? (usersRes.message ?? null)
-        : !isSuccess(momentsRes)
-          ? (momentsRes.message ?? null)
-          : !isSuccess(groupsRes)
-            ? (groupsRes.message ?? null)
-            : null;
+        const nextUsers = isSuccess(allRes) && allRes.data ? allRes.data.users.items : [];
+        const nextMoments = isSuccess(allRes) && allRes.data ? allRes.data.moments.items : [];
+        const nextGroups = isSuccess(allRes) && allRes.data ? allRes.data.groups.items : [];
+        const nextError = !isSuccess(allRes) ? (allRes.message ?? null) : null;
 
-      users = nextUsers;
-      moments = nextMoments;
-      groups = nextGroups;
-      searchError = nextError;
+        users = nextUsers;
+        moments = nextMoments;
+        groups = nextGroups;
+        searchError = nextError;
 
-      if (
-        nextError &&
-        nextUsers.length === 0 &&
-        nextMoments.length === 0 &&
-        nextGroups.length === 0
-      ) {
-        toast.error(nextError);
+        if (nextError && nextUsers.length === 0 && nextMoments.length === 0 && nextGroups.length === 0) {
+          toast.error(nextError);
+        }
+      } else {
+        // tag 模式：三个独立 search 端点
+        const request = { tag: normalized, reference_point: getReferencePoint() };
+
+        const [usersRes, momentsRes, groupsRes] = await withMinimumLoadingTime(() =>
+          Promise.all([
+            usersService.search(request, { signal }),
+            momentsService.search(request, { signal }),
+            groupsService.search(request, { signal })
+          ])
+        );
+
+        if (signal.aborted) return;
+
+        const nextUsers = isSuccess(usersRes) && usersRes.data ? usersRes.data.items : [];
+        const nextMoments = isSuccess(momentsRes) && momentsRes.data ? momentsRes.data.items : [];
+        const nextGroups = isSuccess(groupsRes) && groupsRes.data ? groupsRes.data.items : [];
+        const nextError = !isSuccess(usersRes)
+          ? (usersRes.message ?? null)
+          : !isSuccess(momentsRes)
+            ? (momentsRes.message ?? null)
+            : !isSuccess(groupsRes)
+              ? (groupsRes.message ?? null)
+              : null;
+
+        users = nextUsers;
+        moments = nextMoments;
+        groups = nextGroups;
+        searchError = nextError;
+
+        if (
+          nextError &&
+          nextUsers.length === 0 &&
+          nextMoments.length === 0 &&
+          nextGroups.length === 0
+        ) {
+          toast.error(nextError);
+        }
       }
     } catch {
       if (!controller.signal.aborted) {

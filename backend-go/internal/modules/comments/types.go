@@ -22,6 +22,8 @@ type CommentItem struct {
 	RepliesCount int             `json:"replies_count"`
 	IsDeleted    bool            `json:"is_deleted"`
 	MyState      *MyCommentState `json:"my_state,omitempty"`
+	// TopReplies 仅在 comments/list 返回的顶层评论中填充(前 N 条回复预览)。
+	TopReplies []CommentItem `json:"top_replies,omitempty"`
 }
 
 type CreateCommentRequest struct {
