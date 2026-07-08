@@ -133,8 +133,10 @@ const (
 		       COALESCE(pm.content, ''),
 		       COALESCE(pm.share_code, '')
 		FROM private_messages pm
+		JOIN private_chats pc ON pc.chat_key = pm.chat_key
 		LEFT JOIN users u ON u.user_id = pm.sender_user_id
-		WHERE pm.message_id = $1`
+		WHERE pm.message_id = $1
+		  AND (pc.user_a_id = $2 OR pc.user_b_id = $2)`
 
 	queryGetMediaFileForMessage = `
 		SELECT file_id,
@@ -143,5 +145,5 @@ const (
 		       declared_file_size,
 		       declared_mime_type
 		FROM media_upload_sessions
-		WHERE file_id = $1 AND status = 'completed'`
+		WHERE file_id = $1 AND status = 'completed' AND user_id = $2`
 )

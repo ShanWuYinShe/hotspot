@@ -31,6 +31,6 @@ type Repository interface {
 	Recall(context.Context, string, RecallPrivateMessageRequest) (MessageEventMeta, error)
 	MarkAsRead(context.Context, string, MarkPrivateMessagesReadRequest) (MessageEventMeta, error)
 	MarkAllRead(context.Context, string) error
-	GetMessageForReply(context.Context, string) (map[string]any, bool, error)
-	GetMediaForMessage(context.Context, string) (map[string]any, bool, error)
+	GetMessageForReply(context.Context, string, string) (map[string]any, bool, error)
+	GetMediaForMessage(context.Context, string, string) (map[string]any, bool, error)
 }

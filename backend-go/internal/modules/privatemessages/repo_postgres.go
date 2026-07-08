@@ -154,13 +154,13 @@ func stringOrNil(value string) any {
 	return value
 }
 
-func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID string) (map[string]any, bool, error) {
+func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID, viewerUserID string) (map[string]any, bool, error) {
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
 		return nil, false, persistence.ErrNotImplemented
 	}
 	var senderUserID, nickname, content, shareCode string
-	err := queryable.QueryRow(ctx, queryGetPrivateMessageForReply, messageID).Scan(&senderUserID, &nickname, &content, &shareCode)
+	err := queryable.QueryRow(ctx, queryGetPrivateMessageForReply, messageID, viewerUserID).Scan(&senderUserID, &nickname, &content, &shareCode)
 	if err != nil {
 		return nil, false, nil
 	}
@@ -176,14 +176,14 @@ func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID s
 	return result, true, nil
 }
 
-func (r *PostgresRepository) GetMediaForMessage(ctx context.Context, fileID string) (map[string]any, bool, error) {
+func (r *PostgresRepository) GetMediaForMessage(ctx context.Context, fileID, ownerUserID string) (map[string]any, bool, error) {
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
 		return nil, false, persistence.ErrNotImplemented
 	}
 	var fileIDFound, storageKey, fileName, mimeType string
 	var fileSize int
-	err := queryable.QueryRow(ctx, queryGetMediaFileForMessage, fileID).Scan(&fileIDFound, &storageKey, &fileName, &fileSize, &mimeType)
+	err := queryable.QueryRow(ctx, queryGetMediaFileForMessage, fileID, ownerUserID).Scan(&fileIDFound, &storageKey, &fileName, &fileSize, &mimeType)
 	if err != nil {
 		return nil, false, nil
 	}
