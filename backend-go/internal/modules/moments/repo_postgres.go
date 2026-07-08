@@ -214,6 +214,14 @@ func buildSearchMomentsQuery(bounds geo.Bounds, keyword *string, tag *string, so
 		builder.WriteString(" ORDER BY created_at DESC, moment_id DESC")
 		args = append(args, limit)
 		builder.WriteString(fmt.Sprintf(" LIMIT $%d", len(args)))
+	} else {
+		// Non-newest sorts rank in Go after the geo radius prefilter, so we
+		// cannot push the page LIMIT to the DB. Cap the scan with a hard
+		// ceiling so a dense viewport can never pull the whole table into
+		// memory. The ceiling comfortably covers a page plus headroom for the
+		// radius filter to discard candidates.
+		args = append(args, maxSearchScanRows)
+		builder.WriteString(fmt.Sprintf(" LIMIT $%d", len(args)))
 	}
 	return builder.String(), args
 }
@@ -440,6 +448,13 @@ func normalizeMomentInteractionLimit(limit int) int {
 		return limit
 	}
 }
+
+// maxSearchScanRows bounds the worst-case number of rows a geo/ranking search
+// loads into memory before the Go-side radius prefilter and sort. It is a
+// safety ceiling against unbounded scans in dense viewports, not the page size
+// (which is applied after sorting). 500 comfortably exceeds any single result
+// page while keeping memory predictable.
+const maxSearchScanRows = 500
 
 func encodeMomentLikeCursor(likedAt, userID string) string {
 	blob, err := json.Marshal(momentInteractionCursor{At: likedAt, ID: userID})
