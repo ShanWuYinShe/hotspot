@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -267,49 +268,42 @@ func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error 
 }
 
 func (r *PostgresRepository) Like(ctx context.Context, userID string, momentID string) (bool, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return false, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return false, persistence.ErrNotImplemented
 	}
-	exists, err := momentLikeExists(ctx, queryable, momentID, userID)
-	if err != nil {
-		return false, err
-	}
-	if exists {
-		return false, nil
-	}
+	// Single atomic statement: insert the like row and bump the counter only if
+	// the insert was real (not a conflict). The existence check used to live in
+	// a separate query, leaving a window where two concurrent likes could both
+	// pass it and double-increment the counter.
 	now := time.Now().UTC()
-	if err := queryable.Exec(ctx, queryInsertMomentLike, momentID, userID, now); err != nil {
+	var inserted bool
+	if err := queryable.QueryRow(ctx, queryInsertMomentLikeAndCount, momentID, userID, now).Scan(&inserted); err != nil {
+		// On conflict the UPDATE matches no rows and returns no row; treat that
+		// (pgx.ErrNoRows) as "already liked" rather than an error.
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
 		return false, err
 	}
-	if err := queryable.Exec(ctx, queryIncrementMomentLikeCount, momentID); err != nil {
-		return false, err
-	}
-	return true, nil
+	return inserted, nil
 }
 
 func (r *PostgresRepository) Unlike(ctx context.Context, userID string, momentID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	exists, err := momentLikeExists(ctx, queryable, momentID, userID)
-	if err != nil {
+	// Single atomic statement: delete the like row and decrement only if a row
+	// was actually removed, so repeated unlikes never undercount.
+	var deleted bool
+	if err := queryable.QueryRow(ctx, queryDeleteMomentLikeAndCount, momentID, userID).Scan(&deleted); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
 		return err
 	}
-	if !exists {
-		return nil
-	}
-	if err := queryable.Exec(ctx, queryDeleteMomentLike, momentID, userID); err != nil {
-		return err
-	}
-	return queryable.Exec(ctx, queryDecrementMomentLikeCount, momentID)
+	return nil
 }
 
 func (r *PostgresRepository) Favorite(ctx context.Context, userID string, momentID string) error {
@@ -499,18 +493,6 @@ func decodeMomentFavoriteCursor(cursor string) (any, string, error) {
 		return nil, "", ErrInvalidCursor
 	}
 	return favoritedAt.UTC(), decoded.ID, nil
-}
-
-func momentLikeExists(ctx context.Context, queryable persistence.QueryableDB, momentID, userID string) (bool, error) {
-	var marker int
-	err := queryable.QueryRow(ctx, queryGetMomentLike, momentID, userID).Scan(&marker)
-	if err == nil {
-		return true, nil
-	}
-	if err == pgx.ErrNoRows {
-		return false, nil
-	}
-	return false, err
 }
 
 // queryable resolves the Queryable to use for this request: an in-flight
