@@ -104,6 +104,23 @@ func (r *stubGroupsRepo) Dismiss(_ context.Context, _ string) error { return r.d
 func (r *stubGroupsRepo) ListMembers(_ context.Context, _ string, _ *GroupRole, _ int, _ string) ([]GroupMemberItem, string, error) {
 	return r.members, r.membersCur, r.membersErr
 }
+func (r *stubGroupsRepo) IsMember(_ context.Context, _ string, userID string) (bool, error) {
+	for _, m := range r.members {
+		if m.User.UserID == userID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+func (r *stubGroupsRepo) GetApplication(_ context.Context, applicationID string) (GroupApplicationItem, bool, error) {
+	// Read from the `apps` field that existing tests populate.
+	for _, a := range r.apps {
+		if a.ApplicationID == applicationID {
+			return a, true, nil
+		}
+	}
+	return GroupApplicationItem{}, false, nil
+}
 func (r *stubGroupsRepo) SearchMembers(_ context.Context, _ string, _ string, _ *GroupRole, _ int, _ string) ([]GroupMemberItem, string, error) {
 	return r.searchMemResult, r.searchMemCur, r.searchMemErr
 }
@@ -770,8 +787,9 @@ func TestServiceListMyInvitesNormalizesLimit(t *testing.T) {
 func TestServiceApproveApplicationHappyPath(t *testing.T) {
 	pending := ApplicationStatusPending
 	repo := &stubGroupsRepo{
-		myGroups: []GroupItem{ownerGroup()},
-		apps:     []GroupApplicationItem{{ApplicationID: "app1", Status: pending, Applicant: UserInfo{UserID: "u3"}}},
+		getResult: ownerGroup(),
+		getFound:  true,
+		apps:      []GroupApplicationItem{{ApplicationID: "app1", GroupID: "g1", Status: pending, Applicant: UserInfo{UserID: "u3"}}},
 	}
 	svc := NewServiceWithRepo(repo)
 	err := svc.ApproveApplication(grpCtx("u1"), ApproveGroupApplicationRequest{ApplicationID: "app1"})
@@ -795,8 +813,9 @@ func TestServiceApproveApplicationRejectsNotFound(t *testing.T) {
 func TestServiceApproveApplicationPropagatesRepoError(t *testing.T) {
 	pending := ApplicationStatusPending
 	repo := &stubGroupsRepo{
-		myGroups:   []GroupItem{ownerGroup()},
-		apps:       []GroupApplicationItem{{ApplicationID: "app1", Status: pending, Applicant: UserInfo{UserID: "u3"}}},
+		getResult:  ownerGroup(),
+		getFound:   true,
+		apps:       []GroupApplicationItem{{ApplicationID: "app1", GroupID: "g1", Status: pending, Applicant: UserInfo{UserID: "u3"}}},
 		approveErr: errors.New("db error"),
 	}
 	svc := NewServiceWithRepo(repo)
@@ -826,8 +845,9 @@ func TestServiceRejectApplicationRejectsNotFound(t *testing.T) {
 func TestServiceRejectApplicationHappyPath(t *testing.T) {
 	pending := ApplicationStatusPending
 	repo := &stubGroupsRepo{
-		myGroups: []GroupItem{ownerGroup()},
-		apps:     []GroupApplicationItem{{ApplicationID: "app1", Status: pending, Applicant: UserInfo{UserID: "u3"}}},
+		getResult: ownerGroup(),
+		getFound:  true,
+		apps:      []GroupApplicationItem{{ApplicationID: "app1", GroupID: "g1", Status: pending, Applicant: UserInfo{UserID: "u3"}}},
 	}
 	svc := NewServiceWithRepo(repo)
 	reason := "not suitable"
@@ -840,8 +860,9 @@ func TestServiceRejectApplicationHappyPath(t *testing.T) {
 func TestServiceRejectApplicationPropagatesRepoError(t *testing.T) {
 	pending := ApplicationStatusPending
 	repo := &stubGroupsRepo{
-		myGroups:  []GroupItem{ownerGroup()},
-		apps:      []GroupApplicationItem{{ApplicationID: "app1", Status: pending, Applicant: UserInfo{UserID: "u3"}}},
+		getResult: ownerGroup(),
+		getFound:  true,
+		apps:      []GroupApplicationItem{{ApplicationID: "app1", GroupID: "g1", Status: pending, Applicant: UserInfo{UserID: "u3"}}},
 		rejectErr: errors.New("db error"),
 	}
 	svc := NewServiceWithRepo(repo)

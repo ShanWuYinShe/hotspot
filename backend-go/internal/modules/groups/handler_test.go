@@ -59,6 +59,17 @@ func (r *groupErrorRepo) Dismiss(context.Context, string) error {
 func (r *groupErrorRepo) ListMembers(context.Context, string, *GroupRole, int, string) ([]GroupMemberItem, string, error) {
 	return nil, "", r.listMembersErr
 }
+func (r *groupErrorRepo) IsMember(context.Context, string, string) (bool, error) {
+	return false, nil
+}
+func (r *groupErrorRepo) GetApplication(_ context.Context, applicationID string) (GroupApplicationItem, bool, error) {
+	for _, a := range r.listApplicationsItems {
+		if a.ApplicationID == applicationID {
+			return a, true, nil
+		}
+	}
+	return GroupApplicationItem{}, false, nil
+}
 func (r *groupErrorRepo) SearchMembers(context.Context, string, string, *GroupRole, int, string) ([]GroupMemberItem, string, error) {
 	return nil, "", r.searchMembersErr
 }
@@ -411,12 +422,12 @@ func TestApproveApplicationHandlerMapsSpecificErrors(t *testing.T) {
 		},
 		{
 			name:     "access restricted",
-			repo:     &groupErrorRepo{listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}}}, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", Status: ApplicationStatusPending}}},
+			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusPending}}},
 			expected: 10200,
 		},
 		{
 			name:     "already processed",
-			repo:     &groupErrorRepo{listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}}}, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", Status: ApplicationStatusAccepted}}},
+			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusAccepted}}},
 			expected: 10400,
 		},
 	}
@@ -447,12 +458,12 @@ func TestRejectApplicationHandlerMapsSpecificErrors(t *testing.T) {
 		},
 		{
 			name:     "access restricted",
-			repo:     &groupErrorRepo{listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}}}, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", Status: ApplicationStatusPending}}},
+			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusPending}}},
 			expected: 10200,
 		},
 		{
 			name:     "already processed",
-			repo:     &groupErrorRepo{listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}}}, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", Status: ApplicationStatusRejected}}},
+			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusRejected}}},
 			expected: 10400,
 		},
 	}

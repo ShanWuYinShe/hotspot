@@ -80,6 +80,15 @@ func (s stubGroupRepo) ListMembers(_ context.Context, groupID string, limit int,
 	return append([]string(nil), items[start:end]...), nextCursor, nil
 }
 
+func (s stubGroupRepo) IsMember(_ context.Context, groupID, userID string) (bool, error) {
+	for _, id := range s.members[groupID] {
+		if id == userID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func newRealtimeHandlerForTest(authService *platformauth.Service) *Handler {
 	return NewHandler(
 		authService,

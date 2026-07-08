@@ -142,6 +142,44 @@ func (r *PostgresRepository) ListMembers(ctx context.Context, groupID string, ro
 	return items, "", nil
 }
 
+// IsMember is a direct membership probe (single indexed lookup) used on hot
+// paths such as realtime authorization. It replaces the previous pattern of
+// paging through the whole member list to answer a yes/no question.
+func (r *PostgresRepository) IsMember(ctx context.Context, groupID, userID string) (bool, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return false, persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return false, persistence.ErrNotImplemented
+	}
+	var role string
+	if err := queryable.QueryRow(ctx, queryGetGroupMembership, groupID, userID).Scan(&role, new(time.Time), new(bool), new(*time.Time)); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// GetApplication loads a single application by ID. Used to replace the O(groups
+// × applications) scan in findApplicationForApprover with a single lookup
+// followed by an admin-rights check.
+func (r *PostgresRepository) GetApplication(ctx context.Context, applicationID string) (GroupApplicationItem, bool, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return GroupApplicationItem{}, false, persistence.ErrNotImplemented
+	}
+	item, err := r.loadApplication(ctx, applicationID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return GroupApplicationItem{}, false, nil
+		}
+		return GroupApplicationItem{}, false, err
+	}
+	return item, true, nil
+}
+
 func (r *PostgresRepository) SearchMembers(ctx context.Context, groupID string, keyword string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return nil, "", persistence.ErrNotImplemented

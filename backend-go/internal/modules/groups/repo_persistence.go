@@ -40,6 +40,14 @@ func (r *PersistenceRepository) SearchMembers(ctx context.Context, groupID strin
 	return r.impl.SearchMembers(ctx, groupID, keyword, role, limit, cursor)
 }
 
+func (r *PersistenceRepository) IsMember(ctx context.Context, groupID, userID string) (bool, error) {
+	return r.impl.IsMember(ctx, groupID, userID)
+}
+
+func (r *PersistenceRepository) GetApplication(ctx context.Context, applicationID string) (GroupApplicationItem, bool, error) {
+	return r.impl.GetApplication(ctx, applicationID)
+}
+
 func (r *PersistenceRepository) ListMyGroups(ctx context.Context, userID string, limit int, cursor string) ([]GroupItem, string, error) {
 	return r.impl.ListMyGroups(ctx, userID, limit, cursor)
 }

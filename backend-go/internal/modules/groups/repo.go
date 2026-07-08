@@ -10,6 +10,8 @@ type Repository interface {
 	Dismiss(context.Context, string) error
 	ListMembers(context.Context, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)
 	SearchMembers(context.Context, string, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)
+	IsMember(context.Context, string, string) (bool, error)
+	GetApplication(context.Context, string) (GroupApplicationItem, bool, error)
 	ListMyGroups(context.Context, string, int, string) ([]GroupItem, string, error)
 	JoinGroup(context.Context, string, string, *string, *string) (JoinGroupResult, error)
 	CreateAnnouncement(context.Context, string, CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error)
