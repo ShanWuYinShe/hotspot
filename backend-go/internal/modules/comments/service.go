@@ -3,7 +3,6 @@ package comments
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -24,6 +24,7 @@ type Service struct {
 	notifications commentNotificationWriter
 	users         actor.Provider
 	appConfig     appconfig.Source
+	runInTx       persistence.TxRunner // optional; nil => no transaction wrapping
 }
 
 type commentNotificationWriter interface {
@@ -34,11 +35,11 @@ type commentNotificationWriter interface {
 }
 
 func NewService(repo Repository, moments MomentProvider) *Service {
-	return NewServiceWithDeps(repo, moments, notifications.NewService(), nil, nil)
+	return NewServiceWithDeps(repo, moments, notifications.NewService(), nil, nil, nil)
 }
 
-func NewServiceWithDeps(repo Repository, moments MomentProvider, notificationWriter commentNotificationWriter, actorProvider actor.Provider, appConfig appconfig.Source) *Service {
-	return &Service{repo: repo, moments: moments, notifications: notificationWriter, users: actorProvider, appConfig: appConfig}
+func NewServiceWithDeps(repo Repository, moments MomentProvider, notificationWriter commentNotificationWriter, actorProvider actor.Provider, appConfig appconfig.Source, runInTx persistence.TxRunner) *Service {
+	return &Service{repo: repo, moments: moments, notifications: notificationWriter, users: actorProvider, appConfig: appConfig, runInTx: runInTx}
 }
 
 func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (CommentItem, error) {
@@ -54,19 +55,42 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 	if hasReplyTarget && replyTarget.ParentID != "" {
 		normalizedReq.ParentID = replyTarget.ParentID
 	}
-	item, err := s.repo.Create(ctx, principal.UserID, normalizedReq)
-	if err != nil {
-		observability.L().Error("comments.create repo create failed", "error", err)
-		return CommentItem{}, err
-	}
-	if err := s.moments.IncrementCommentCount(ctx, normalizedReq.MomentID); err != nil {
-		observability.L().Error("comments.create increment comment count failed", "error", err, "moment_id", normalizedReq.MomentID, "comment_id", item.CommentID)
-		if rollbackErr := s.repo.SoftDelete(ctx, item.CommentID); rollbackErr != nil {
-			observability.L().Error("comments.create rollback soft delete failed", "error", rollbackErr, "comment_id", item.CommentID)
-			return CommentItem{}, fmt.Errorf("increment comment count: %w; rollback soft delete comment: %v", err, rollbackErr)
+
+	// Insert the comment and bump the moment's comment counter inside a single
+	// transaction so that a counter failure rolls the insert back atomically
+	// (rather than the old SoftDelete, which left a stub List still returned).
+	createAndCount := func(ctx context.Context) (CommentItem, error) {
+		item, err := s.repo.Create(ctx, principal.UserID, normalizedReq)
+		if err != nil {
+			observability.L().Error("comments.create repo create failed", "error", err)
+			return CommentItem{}, err
 		}
-		return CommentItem{}, err
+		if err := s.moments.IncrementCommentCount(ctx, normalizedReq.MomentID); err != nil {
+			observability.L().Error("comments.create increment comment count failed", "error", err, "moment_id", normalizedReq.MomentID, "comment_id", item.CommentID)
+			return CommentItem{}, err
+		}
+		return item, nil
 	}
+
+	var item CommentItem
+	if s.runInTx != nil {
+		err = s.runInTx(ctx, func(txCtx context.Context) error {
+			var txErr error
+			item, txErr = createAndCount(txCtx)
+			return txErr
+		})
+		if err != nil {
+			return CommentItem{}, err
+		}
+	} else {
+		item, err = createAndCount(ctx)
+		if err != nil {
+			return CommentItem{}, err
+		}
+	}
+
+	// Notifications are side-effects: they run after commit and must not roll
+	// the comment back if they fail.
 	momentContext, ok, err := s.moments.NotificationContext(ctx, normalizedReq.MomentID)
 	if err != nil {
 		observability.L().Error("comments.create load moment notification context failed", "error", err, "moment_id", normalizedReq.MomentID, "comment_id", item.CommentID)

@@ -107,7 +107,7 @@ func (s *stubNotifWriter) AppendMentioned(_ context.Context, _ string, _ map[str
 // --- helpers ---
 
 func newTestHandler(repo *stubCommentRepo, moments *stubMomentProvider) *Handler {
-	svc := NewServiceWithDeps(repo, moments, &stubNotifWriter{}, nil, nil)
+	svc := NewServiceWithDeps(repo, moments, &stubNotifWriter{}, nil, nil, nil)
 	return NewHandler(svc)
 }
 

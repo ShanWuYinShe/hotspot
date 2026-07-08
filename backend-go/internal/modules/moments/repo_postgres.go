@@ -88,10 +88,7 @@ func lookupUserNickname(ctx context.Context, queryable persistence.QueryableDB, 
 }
 
 func (r *PostgresRepository) IncrementCommentCount(ctx context.Context, momentID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -99,10 +96,7 @@ func (r *PostgresRepository) IncrementCommentCount(ctx context.Context, momentID
 }
 
 func (r *PostgresRepository) DecrementCommentCount(ctx context.Context, momentID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -517,4 +511,18 @@ func momentLikeExists(ctx context.Context, queryable persistence.QueryableDB, mo
 		return false, nil
 	}
 	return false, err
+}
+
+// queryable resolves the Queryable to use for this request: an in-flight
+// transaction bound to ctx when present, otherwise the shared pool. Returns
+// ok=false when persistence is not configured (in-memory mode).
+func queryable(ctx context.Context, factory *persistence.Factory) (persistence.Queryable, bool) {
+	if q, ok := persistence.QueryableFromContext(ctx); ok {
+		return q, true
+	}
+	if factory == nil || factory.DB == nil || factory.Config.PostgresDSN == "" {
+		return nil, false
+	}
+	q, ok := factory.DB.(persistence.QueryableDB)
+	return q, ok
 }

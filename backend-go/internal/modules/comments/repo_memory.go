@@ -6,6 +6,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"hotspot/backend-go/internal/platform/persistence"
 )
 
 type likeEntry struct {
@@ -31,7 +33,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 	}
 }
 
-func (r *InMemoryRepository) Create(_ context.Context, userID string, req CreateCommentRequest) (CommentItem, error) {
+func (r *InMemoryRepository) Create(ctx context.Context, userID string, req CreateCommentRequest) (CommentItem, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := time.Now().UTC()
@@ -49,12 +51,52 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	}
 	r.comments[req.MomentID] = append(r.comments[req.MomentID], item)
 	r.byID[item.CommentID] = item
+	hadParentEntry := false
+	var parentRepliesCountBefore int
 	if req.ParentID != "" {
 		r.byParent[req.ParentID] = append(r.byParent[req.ParentID], item.CommentID)
 		if parent, ok := r.byID[req.ParentID]; ok {
+			hadParentEntry = true
+			parentRepliesCountBefore = parent.RepliesCount
 			parent.RepliesCount++
 			r.byID[req.ParentID] = parent
 		}
+	}
+	// Enroll an undo so a transaction rollback fully removes the comment
+	// (rather than leaving a soft-deleted stub that List would still surface).
+	if tx, ok := persistence.MemoryTxFromContext(ctx); ok {
+		commentID := item.CommentID
+		momentID := req.MomentID
+		parentID := req.ParentID
+		tx.RecordUndo(func(_ context.Context) {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+			delete(r.byID, commentID)
+			if items, ok := r.comments[momentID]; ok {
+				for i, it := range items {
+					if it.CommentID == commentID {
+						r.comments[momentID] = append(items[:i], items[i+1:]...)
+						break
+					}
+				}
+			}
+			if parentID != "" {
+				if ids, ok := r.byParent[parentID]; ok {
+					for i, id := range ids {
+						if id == commentID {
+							r.byParent[parentID] = append(ids[:i], ids[i+1:]...)
+							break
+						}
+					}
+				}
+				if hadParentEntry {
+					if parent, ok := r.byID[parentID]; ok {
+						parent.RepliesCount = parentRepliesCountBefore
+						r.byID[parentID] = parent
+					}
+				}
+			}
+		})
 	}
 	return item, nil
 }

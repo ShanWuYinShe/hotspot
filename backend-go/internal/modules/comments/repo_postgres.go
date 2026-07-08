@@ -22,10 +22,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 }
 
 func (r *PostgresRepository) Create(ctx context.Context, userID string, req CreateCommentRequest) (CommentItem, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return CommentItem{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return CommentItem{}, persistence.ErrNotImplemented
 	}
@@ -52,10 +49,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 }
 
 func (r *PostgresRepository) SoftDelete(ctx context.Context, commentID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -63,10 +57,7 @@ func (r *PostgresRepository) SoftDelete(ctx context.Context, commentID string) e
 }
 
 func (r *PostgresRepository) List(ctx context.Context, momentID string, limit int, cursor string) (PaginatedComments, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return PaginatedComments{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return PaginatedComments{}, persistence.ErrNotImplemented
 	}
@@ -104,10 +95,7 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 }
 
 func (r *PostgresRepository) Get(ctx context.Context, commentID string) (CommentItem, bool, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return CommentItem{}, false, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return CommentItem{}, false, persistence.ErrNotImplemented
 	}
@@ -129,10 +117,7 @@ func (r *PostgresRepository) Get(ctx context.Context, commentID string) (Comment
 }
 
 func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, limit int, cursor string) (PaginatedComments, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return PaginatedComments{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return PaginatedComments{}, persistence.ErrNotImplemented
 	}
@@ -170,10 +155,7 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 }
 
 func (r *PostgresRepository) Like(ctx context.Context, commentID string, userID string) (bool, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return false, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return false, persistence.ErrNotImplemented
 	}
@@ -194,10 +176,7 @@ func (r *PostgresRepository) Like(ctx context.Context, commentID string, userID 
 }
 
 func (r *PostgresRepository) Unlike(ctx context.Context, commentID string, userID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -208,10 +187,7 @@ func (r *PostgresRepository) Unlike(ctx context.Context, commentID string, userI
 }
 
 func (r *PostgresRepository) ListLikes(ctx context.Context, commentID string, limit int, cursor string) ([]CommentLikeItem, string, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, "", persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return nil, "", persistence.ErrNotImplemented
 	}
@@ -247,6 +223,21 @@ func (r *PostgresRepository) ListLikes(ctx context.Context, commentID string, li
 type commentCursor struct {
 	At string `json:"at"`
 	ID string `json:"id"`
+}
+
+// queryable resolves the Queryable to use for this request: an in-flight
+// transaction bound to ctx when present, otherwise the shared pool. Returns
+// ok=false when persistence is not configured (in-memory mode), in which case
+// callers surface ErrNotImplemented.
+func queryable(ctx context.Context, factory *persistence.Factory) (persistence.Queryable, bool) {
+	if q, ok := persistence.QueryableFromContext(ctx); ok {
+		return q, true
+	}
+	if factory == nil || factory.DB == nil || factory.Config.PostgresDSN == "" {
+		return nil, false
+	}
+	q, ok := factory.DB.(persistence.QueryableDB)
+	return q, ok
 }
 
 func normalizeCommentLimit(limit int) int {
