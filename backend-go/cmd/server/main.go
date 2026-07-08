@@ -15,6 +15,9 @@ import (
 
 func main() {
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("invalid config: %v", err)
+	}
 	app, err := bootstrap.NewApp(cfg)
 	if err != nil {
 		log.Fatalf("bootstrap app: %v", err)

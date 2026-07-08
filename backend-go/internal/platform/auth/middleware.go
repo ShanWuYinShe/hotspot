@@ -8,7 +8,7 @@ import (
 	"hotspot/backend-go/internal/platform/observability"
 )
 
-var defaultService = NewService(config.Config{AuthTokenSecret: "dev-secret-change-me"})
+var defaultService = NewService(config.Config{AuthTokenSecret: config.DevDefaultAuthTokenSecret()})
 
 func SetDefaultService(service *Service) {
 	if service != nil {

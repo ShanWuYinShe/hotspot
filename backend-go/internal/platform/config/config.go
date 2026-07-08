@@ -1,6 +1,11 @@
 package config
 
-import "os"
+import (
+	"errors"
+	"fmt"
+	"os"
+	"strings"
+)
 
 type Config struct {
 	AppName                string
@@ -36,7 +41,7 @@ func Load() Config {
 		Host:                   envOrDefault("APP_HOST", "0.0.0.0"),
 		Port:                   envOrDefault("APP_PORT", "8081"),
 		PostgresDSN:            os.Getenv("POSTGRES_DSN"),
-		AuthTokenSecret:        envOrDefault("AUTH_TOKEN_SECRET", "dev-secret-change-me"),
+		AuthTokenSecret:        envOrDefault("AUTH_TOKEN_SECRET", devDefaultAuthTokenSecret),
 		SupportEmail:           envOrDefault("APP_SUPPORT_EMAIL", "support@example.com"),
 		PrivacyPolicyURL:       envOrDefault("APP_PRIVACY_POLICY_URL", ""),
 		TermsOfServiceURL:      envOrDefault("APP_TERMS_OF_SERVICE_URL", ""),
@@ -73,4 +78,46 @@ func envBoolOrDefault(key string, fallback bool) bool {
 		return fallback
 	}
 	return value == "1" || value == "true" || value == "TRUE" || value == "True"
+}
+
+// devDefaultAuthTokenSecret is the well-known key used only as a local-dev
+// fallback. Validate() rejects it (and any empty value) in production so the
+// process never starts with a secret an attacker could read from source.
+const devDefaultAuthTokenSecret = "dev-secret-change-me"
+
+// DevDefaultAuthTokenSecret exposes the dev fallback so other packages (e.g.
+// auth.NewTokenManager) reference the same value instead of re-hardcoding it.
+func DevDefaultAuthTokenSecret() string { return devDefaultAuthTokenSecret }
+
+// knownWeakSecrets are values that must never sign production tokens because
+// they appear in source control and are therefore publicly readable.
+var knownWeakSecrets = map[string]struct{}{
+	devDefaultAuthTokenSecret: {},
+}
+
+// Validate enforces configuration invariants required for a safe production
+// deployment. It is intentionally lenient in development so local workflows
+// keep working without setting every env var. Call it once at startup; a
+// returned error means the process must refuse to serve traffic.
+func (c Config) Validate() error {
+	if c.isProductionLike() {
+		if c.AuthTokenSecret == "" {
+			return errors.New("AUTH_TOKEN_SECRET must be set in production (refusing to start with no token secret)")
+		}
+		if _, weak := knownWeakSecrets[c.AuthTokenSecret]; weak {
+			return fmt.Errorf("AUTH_TOKEN_SECRET must be changed from the built-in dev default %q (refusing to start with a publicly-known token secret)", devDefaultAuthTokenSecret)
+		}
+		if len(c.AuthTokenSecret) < 32 {
+			return fmt.Errorf("AUTH_TOKEN_SECRET must be at least 32 bytes in production (got %d); use a high-entropy random value", len(c.AuthTokenSecret))
+		}
+	}
+	return nil
+}
+
+// isProductionLike reports whether the environment is not explicitly a
+// development or test environment. Anything unset defaults to "production"
+// (see Load), so an operator who forgets APP_ENV gets the safe (strict) path.
+func (c Config) isProductionLike() bool {
+	env := strings.ToLower(strings.TrimSpace(c.AppEnv))
+	return env == "" || env == "production" || env == "prod" || env == "staging" || env == "stage"
 }
