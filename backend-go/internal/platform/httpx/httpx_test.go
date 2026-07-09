@@ -87,11 +87,20 @@ func TestDecodeStrictJSONHappyPath(t *testing.T) {
 func TestRequireEmptyObject(t *testing.T) {
 	good := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{}`))
 	if err := RequireEmptyObject(good); err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("unexpected error for empty object: %v", err)
 	}
-	bad := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"x":1}`))
-	if err := RequireEmptyObject(bad); err == nil || err.Code != 10000 {
-		t.Fatalf("expected invalid request, got %v", err)
+	// Per api_spec_base.md, empty-object endpoints must silently ignore unknown
+	// fields (SDK telemetry/gateway-injected keys), so {"x":1} is accepted.
+	withUnknown := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"x":1,"telemetry":"abc"}`))
+	if err := RequireEmptyObject(withUnknown); err != nil {
+		t.Fatalf("unknown fields should be ignored, got %v", err)
+	}
+	// Non-object bodies (arrays, strings, numbers) are rejected.
+	for _, body := range []string{`[]`, `"str"`, `42`} {
+		bad := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+		if err := RequireEmptyObject(bad); err == nil || err.Code != 10000 {
+			t.Fatalf("body %q should be rejected as non-object, got %v", body, err)
+		}
 	}
 }
 

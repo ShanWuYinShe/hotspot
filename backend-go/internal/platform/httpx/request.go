@@ -21,13 +21,16 @@ func DecodeStrictJSON(r *http.Request, dest any) *APIError {
 	return nil
 }
 
+// RequireEmptyObject validates that the request body is a JSON object (per
+// api_spec_base.md 空请求体约定). It deliberately does NOT reject unknown
+// fields: the spec mandates empty-object endpoints silently ignore unknown
+// keys so SDK telemetry/gateway-injected fields don't hard-fail. It only
+// rejects non-object bodies (arrays, strings, etc.) and malformed JSON.
 func RequireEmptyObject(r *http.Request) *APIError {
+	defer r.Body.Close()
 	var payload map[string]json.RawMessage
-	if err := DecodeStrictJSON(r, &payload); err != nil {
-		return InvalidRequest("请求体必须是 JSON 空对象 {}")
-	}
-	if len(payload) != 0 {
-		return InvalidRequest("请求体必须是 JSON 空对象 {}")
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		return InvalidRequest("请求体必须是 JSON 对象")
 	}
 	return nil
 }

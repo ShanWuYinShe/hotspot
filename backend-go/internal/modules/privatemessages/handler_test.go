@@ -444,9 +444,18 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		assertPrivateMessageCode(t, rr, 10000)
 	})
 
-	t.Run("mark all read requires empty object", func(t *testing.T) {
+	t.Run("mark all read ignores unknown fields", func(t *testing.T) {
+		// Per api_spec_base.md, empty-object endpoints silently ignore unknown
+		// fields; {"extra":true} is accepted, not rejected.
 		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{}, &privateMessageUserStub{}))
 		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_all_read", strings.NewReader(`{"extra":true}`)))
+		rr := httptest.NewRecorder()
+		handler.MarkAllRead(rr, req)
+		assertPrivateMessageCode(t, rr, 0)
+	})
+	t.Run("mark all read rejects non-object body", func(t *testing.T) {
+		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{}, &privateMessageUserStub{}))
+		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_all_read", strings.NewReader(`[1,2]`)))
 		rr := httptest.NewRecorder()
 		handler.MarkAllRead(rr, req)
 		assertPrivateMessageCode(t, rr, 10000)
