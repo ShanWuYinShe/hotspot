@@ -210,6 +210,40 @@ func (r *InMemoryRepository) ListReplies(_ context.Context, commentID string, li
 	return PaginatedComments{Items: page, NextCursor: nextCursor}, nil
 }
 
+// ListTopRepliesByParentIDs returns up to `limit` newest replies per parent in
+// one pass (single lock acquisition), mirroring the Postgres batch query so the
+// service can avoid an N+1 of ListReplies calls.
+func (r *InMemoryRepository) ListTopRepliesByParentIDs(_ context.Context, parentIDs []string, limit int) (map[string][]CommentItem, error) {
+	result := make(map[string][]CommentItem, len(parentIDs))
+	if limit <= 0 {
+		return result, nil
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, parentID := range parentIDs {
+		childIDs := r.byParent[parentID]
+		items := make([]CommentItem, 0, len(childIDs))
+		for _, id := range childIDs {
+			if item, ok := r.byID[id]; ok {
+				items = append(items, item)
+			}
+		}
+		// newest first (matches ListReplies ordering inverted to ListReplies'
+		// ASC — here we want DESC for "top replies"), then take `limit`.
+		sort.Slice(items, func(i, j int) bool {
+			if items[i].CreatedAt == items[j].CreatedAt {
+				return items[i].CommentID > items[j].CommentID
+			}
+			return items[i].CreatedAt > items[j].CreatedAt
+		})
+		if len(items) > limit {
+			items = items[:limit]
+		}
+		result[parentID] = items
+	}
+	return result, nil
+}
+
 func (r *InMemoryRepository) Like(_ context.Context, commentID string, userID string) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

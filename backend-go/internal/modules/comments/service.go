@@ -156,16 +156,26 @@ func (s *Service) fillTopReplies(ctx context.Context, items []CommentItem) {
 			topLimit = n
 		}
 	}
+	// Collect parent IDs that have replies, then fetch their top replies in a
+	// single batched query (avoids an N+1 of ListReplies per top-level comment).
+	parentIDs := make([]string, 0, len(items))
+	for _, item := range items {
+		if item.RepliesCount > 0 {
+			parentIDs = append(parentIDs, item.CommentID)
+		}
+	}
+	if len(parentIDs) == 0 {
+		return
+	}
+	repliesByParent, err := s.repo.ListTopRepliesByParentIDs(ctx, parentIDs, topLimit)
+	if err != nil {
+		observability.L().Error("comments.fill_top_replies batch failed", "error", err)
+		return
+	}
 	for i := range items {
-		if items[i].RepliesCount <= 0 {
-			continue
+		if items[i].RepliesCount > 0 {
+			items[i].TopReplies = repliesByParent[items[i].CommentID]
 		}
-		replies, err := s.repo.ListReplies(ctx, items[i].CommentID, topLimit, "")
-		if err != nil {
-			observability.L().Error("comments.fill_top_replies failed", "error", err, "comment_id", items[i].CommentID)
-			continue
-		}
-		items[i].TopReplies = replies.Items
 	}
 }
 

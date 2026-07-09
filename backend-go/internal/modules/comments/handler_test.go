@@ -46,6 +46,9 @@ func (r *stubCommentRepo) Get(_ context.Context, _ string) (CommentItem, bool, e
 func (r *stubCommentRepo) ListReplies(_ context.Context, _ string, _ int, _ string) (PaginatedComments, error) {
 	return r.repliesRes, r.repliesErr
 }
+func (r *stubCommentRepo) ListTopRepliesByParentIDs(_ context.Context, _ []string, _ int) (map[string][]CommentItem, error) {
+	return map[string][]CommentItem{}, nil
+}
 func (r *stubCommentRepo) Like(_ context.Context, _ string, _ string) (bool, error) {
 	return r.likeNew, r.likeErr
 }

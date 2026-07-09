@@ -154,6 +154,42 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 	return PaginatedComments{Items: items}, nil
 }
 
+// ListTopRepliesByParentIDs fetches up to `limit` newest replies for each of the
+// given parent comment IDs in a single query, returning a parentID->replies
+// map. It replaces the N+1 of calling ListReplies once per top-level comment.
+func (r *PostgresRepository) ListTopRepliesByParentIDs(ctx context.Context, parentIDs []string, limit int) (map[string][]CommentItem, error) {
+	result := make(map[string][]CommentItem, len(parentIDs))
+	if len(parentIDs) == 0 || limit <= 0 {
+		return result, nil
+	}
+	queryable, ok := queryable(ctx, r.factory)
+	if !ok {
+		return result, persistence.ErrNotImplemented
+	}
+	rows, err := queryable.Query(ctx, queryListTopRepliesByParentIDs, parentIDs, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var item CommentItem
+		var userID, parentID string
+		var createdAt time.Time
+		if err := rows.Scan(&item.CommentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
+			return nil, err
+		}
+		item.User = UserInfo{UserID: userID, Nickname: userID}
+		item.ParentID = parentID
+		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+		item.MyState = &MyCommentState{IsLiked: false}
+		result[parentID] = append(result[parentID], item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func (r *PostgresRepository) Like(ctx context.Context, commentID string, userID string) (bool, error) {
 	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
