@@ -2,28 +2,35 @@ package auth
 
 import (
 	"net/http"
+	"sync/atomic"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 )
 
-var defaultService = NewService(config.Config{AuthTokenSecret: config.DevDefaultAuthTokenSecret()})
+// defaultService is written once at boot and read on every request, so guard
+// it with an atomic pointer instead of a bare package global (which races).
+var defaultService atomic.Pointer[Service]
+
+func init() {
+	defaultService.Store(NewService(config.Config{AuthTokenSecret: config.DevDefaultAuthTokenSecret()}))
+}
 
 func SetDefaultService(service *Service) {
 	if service != nil {
-		defaultService = service
+		defaultService.Store(service)
 	}
 }
 
 func DefaultService() *Service {
-	return defaultService
+	return defaultService.Load()
 }
 
 func OptionalAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := WithPlatform(r.Context(), detectPlatform(r))
-		if principal, expiresAt, ok := defaultService.AuthenticateRequest(ctx, r.Header.Get("Authorization"), readCookie(r, AccessTokenCookieName)); ok {
+		if principal, expiresAt, ok := defaultService.Load().AuthenticateRequest(ctx, r.Header.Get("Authorization"), readCookie(r, AccessTokenCookieName)); ok {
 			ctx = WithPrincipal(ctx, principal)
 			ctx = WithAccessExpiry(ctx, expiresAt)
 			r = r.WithContext(ctx)
@@ -41,7 +48,7 @@ func OptionalAuth(next http.Handler) http.Handler {
 func RequiredAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := WithPlatform(r.Context(), detectPlatform(r))
-		principal, expiresAt, ok := defaultService.AuthenticateRequest(ctx, r.Header.Get("Authorization"), readCookie(r, AccessTokenCookieName))
+		principal, expiresAt, ok := defaultService.Load().AuthenticateRequest(ctx, r.Header.Get("Authorization"), readCookie(r, AccessTokenCookieName))
 		if !ok {
 			hasHeader := r.Header.Get("Authorization") != ""
 			hasCookie := readCookie(r, AccessTokenCookieName) != ""

@@ -3,6 +3,7 @@ package resourceguard
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -112,21 +113,27 @@ func cacheKey(kind ResourceKind, id string) string {
 	return string(kind) + ":" + id
 }
 
-var defaultChecker Checker = NoopChecker{}
+// defaultChecker is written once at boot and read on every request; guard it
+// with an atomic pointer to avoid the data race a bare global would have.
+var defaultChecker atomic.Pointer[Checker]
+
+func init() {
+	noop := Checker(NoopChecker{})
+	defaultChecker.Store(&noop)
+}
 
 func SetDefaultChecker(checker Checker) {
 	if checker == nil {
-		defaultChecker = NoopChecker{}
-		return
+		checker = NoopChecker{}
 	}
-	defaultChecker = checker
+	defaultChecker.Store(&checker)
 }
 
 func DefaultChecker() Checker {
-	if defaultChecker == nil {
-		return NoopChecker{}
+	if c := defaultChecker.Load(); c != nil {
+		return *c
 	}
-	return defaultChecker
+	return NoopChecker{}
 }
 
 func RecordUser(ctx context.Context, userID string) {

@@ -3,16 +3,28 @@ package idempotency
 import (
 	"encoding/json"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"hotspot/backend-go/internal/platform/httpx"
 )
 
-var defaultStore Store = NewInMemoryStore()
+// defaultStore is read on every request and written once at boot, so guard it
+// with an atomic pointer instead of a bare global (which would race under
+// -race and on reconfigure).
+var defaultStore atomic.Pointer[InMemoryStore]
+
+func init() {
+	defaultStore.Store(NewInMemoryStore())
+}
+
+// currentStore returns the active store. Reserved for future swap-in of a
+// distributed store; today it's always the in-memory one.
+func currentStore() Store { return defaultStore.Load() }
 
 func SetStore(store Store) {
-	if store != nil {
-		defaultStore = store
+	if s, ok := store.(*InMemoryStore); ok && s != nil {
+		defaultStore.Store(s)
 	}
 }
 
@@ -25,12 +37,12 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 	}
 
 	expiresAt := time.Now().Add(24 * time.Hour)
-	scopeKey := scope + "::" + key
+	store := currentStore()
 
-	store := defaultStore.(*InMemoryStore)
-	store.mu.Lock()
-	if existing, ok := store.records[scopeKey]; ok {
-		store.mu.Unlock()
+	// Reserve atomically: returns (record, true) when we claimed it (now
+	// processing), or (existing, false) when a record already exists.
+	existing, claimed := store.Reserve(scope, key, expiresAt)
+	if !claimed {
 		if existing.Status == StatusCompleted {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
@@ -40,15 +52,10 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(22002, "请求正在处理中，请稍后重试"))
 		return true
 	}
-	store.records[scopeKey] = Record{
-		Key: key, Scope: scope, Status: StatusProcessing,
-		ExpiresAt: expiresAt,
-	}
-	store.mu.Unlock()
 
 	payload := producer()
 	blob, _ := json.Marshal(payload)
-	defaultStore.Save(Record{Key: key, Scope: scope, Status: StatusCompleted, Response: append(blob, '\n'), ExpiresAt: expiresAt})
+	store.Save(Record{Key: key, Scope: scope, Status: StatusCompleted, Response: append(blob, '\n'), ExpiresAt: expiresAt})
 	httpx.WriteJSON(w, http.StatusOK, payload)
 	return true
 }
