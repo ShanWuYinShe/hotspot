@@ -35,6 +35,8 @@ func (r rowValues) Scan(dest ...any) error {
 			case string:
 				*d = 1
 			}
+		case *bool:
+			*d = r.values[i].(bool)
 		case *float64:
 			*d = r.values[i].(float64)
 		case *time.Time:
@@ -208,6 +210,43 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 			}
 		}
 		return rowValues{err: pgx.ErrNoRows}
+	case queryInsertMomentLikeAndCount:
+		// Mirror the real CTE: insert the like row (no-op on conflict) and bump
+		// the counter only when the row was actually inserted, returning whether
+		// it was new. This lets the idempotency test prove the counter cannot
+		// double-increment on a duplicate like.
+		momentID := args[0].(string)
+		userID := args[1].(string)
+		likedAt := args[2].(time.Time).UTC().Format(time.RFC3339)
+		if b.likes[momentID] == nil {
+			b.likes[momentID] = make(map[string]string)
+		}
+		if _, exists := b.likes[momentID][userID]; exists {
+			return rowValues{err: pgx.ErrNoRows}
+		}
+		b.likes[momentID][userID] = likedAt
+		item := b.moments[momentID]
+		item.LikesCount++
+		b.moments[momentID] = item
+		return rowValues{values: []any{true}}
+	case queryDeleteMomentLikeAndCount:
+		// Mirror the real CTE: delete the like row (no-op when absent) and
+		// decrement only when a row was actually removed.
+		momentID := args[0].(string)
+		userID := args[1].(string)
+		if b.likes[momentID] == nil {
+			return rowValues{err: pgx.ErrNoRows}
+		}
+		if _, exists := b.likes[momentID][userID]; !exists {
+			return rowValues{err: pgx.ErrNoRows}
+		}
+		delete(b.likes[momentID], userID)
+		item := b.moments[momentID]
+		if item.LikesCount > 0 {
+			item.LikesCount--
+		}
+		b.moments[momentID] = item
+		return rowValues{values: []any{true}}
 	default:
 		return rowValues{err: persistence.ErrNotImplemented}
 	}
@@ -217,7 +256,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 	if b.queryErr != nil {
 		return nil, b.queryErr
 	}
-	if strings.Contains(query, "FROM moments") && strings.Contains(query, "privacy_level <>") && strings.Contains(query, "unnest($1::bigint[], $2::bigint[])") {
+	if strings.Contains(query, "FROM moments") && strings.Contains(query, "privacy_level =") && strings.Contains(query, "unnest($1::bigint[], $2::bigint[])") {
 		argIndex := 2
 		var keywordStr string
 		if len(args) > argIndex {
@@ -239,7 +278,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		items := make([]MomentItem, 0)
 		for _, item := range b.moments {
-			if item.PrivacyLevel == "private" {
+			if item.PrivacyLevel != "public" {
 				continue
 			}
 			if keywordStr != "" && !containsTagInDescription(item.Description, keywordStr) {
@@ -433,7 +472,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		items := make([]MomentItem, 0)
 		for _, item := range b.moments {
-			if item.PrivacyLevel == "private" {
+			if item.PrivacyLevel != "public" {
 				continue
 			}
 			if keywordStr != "" && !containsTagInDescription(item.Description, keywordStr) {
@@ -605,14 +644,33 @@ func TestPostgresRepositoryLikeAndUnlikeAreIdempotent(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	if _, err := repo.Like(context.Background(), "user_bob", "moment_1"); err != nil {
+	// First like is genuinely new: counter bumps and newlyLiked is true.
+	newlyLiked, err := repo.Like(context.Background(), "user_bob", "moment_1")
+	if err != nil {
 		t.Fatalf("first like: %v", err)
 	}
-	if _, err := repo.Like(context.Background(), "user_bob", "moment_1"); err != nil {
+	if !newlyLiked {
+		t.Fatalf("first like should report newlyLiked=true")
+	}
+	// A duplicate like must not double-increment the counter nor report a new
+	// like. The atomic INSERT...ON CONFLICT + conditional UPDATE guarantees this
+	// even under concurrency (the check-then-act window the old code had).
+	newlyLiked, err = repo.Like(context.Background(), "user_bob", "moment_1")
+	if err != nil {
 		t.Fatalf("second like: %v", err)
+	}
+	if newlyLiked {
+		t.Fatalf("duplicate like should report newlyLiked=false")
 	}
 	if got := backend.moments["moment_1"].LikesCount; got != 1 {
 		t.Fatalf("expected likes_count=1 after duplicate like, got %d", got)
+	}
+	// Distinct users each contribute one; counter tracks the real like count.
+	if _, err := repo.Like(context.Background(), "user_carla", "moment_1"); err != nil {
+		t.Fatalf("second user like: %v", err)
+	}
+	if got := backend.moments["moment_1"].LikesCount; got != 2 {
+		t.Fatalf("expected likes_count=2 after two distinct likers, got %d", got)
 	}
 
 	if err := repo.Unlike(context.Background(), "user_bob", "moment_1"); err != nil {
@@ -621,8 +679,15 @@ func TestPostgresRepositoryLikeAndUnlikeAreIdempotent(t *testing.T) {
 	if err := repo.Unlike(context.Background(), "user_bob", "moment_1"); err != nil {
 		t.Fatalf("second unlike: %v", err)
 	}
+	if got := backend.moments["moment_1"].LikesCount; got != 1 {
+		t.Fatalf("expected likes_count=1 after duplicate unlike, got %d", got)
+	}
+	// Removing the last like brings the counter to zero.
+	if err := repo.Unlike(context.Background(), "user_carla", "moment_1"); err != nil {
+		t.Fatalf("third unlike: %v", err)
+	}
 	if got := backend.moments["moment_1"].LikesCount; got != 0 {
-		t.Fatalf("expected likes_count=0 after duplicate unlike, got %d", got)
+		t.Fatalf("expected likes_count=0 after all unliked, got %d", got)
 	}
 }
 

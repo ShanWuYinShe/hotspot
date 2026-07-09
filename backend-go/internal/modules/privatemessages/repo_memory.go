@@ -289,10 +289,10 @@ func otherUserID(chatKey, userID string) string {
 	return parts[0]
 }
 
-func (r *InMemoryRepository) GetMessageForReply(ctx context.Context, messageID string) (map[string]any, bool, error) {
+func (r *InMemoryRepository) GetMessageForReply(ctx context.Context, messageID, viewerUserID string) (map[string]any, bool, error) {
 	return nil, false, nil
 }
 
-func (r *InMemoryRepository) GetMediaForMessage(ctx context.Context, fileID string) (map[string]any, bool, error) {
+func (r *InMemoryRepository) GetMediaForMessage(ctx context.Context, fileID, ownerUserID string) (map[string]any, bool, error) {
 	return nil, false, nil
 }

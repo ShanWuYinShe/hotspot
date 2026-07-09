@@ -90,12 +90,12 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 		payload["share_code"] = req.ShareCode
 	}
 	if req.ReplyToMessageID != "" {
-		if replyTo := s.buildReplyTo(ctx, req.ReplyToMessageID); replyTo != nil {
+		if replyTo := s.buildReplyTo(ctx, req.ReplyToMessageID, principal.UserID); replyTo != nil {
 			payload["reply_to"] = replyTo
 		}
 	}
 	if req.FileID != "" {
-		if media := s.buildMedia(ctx, req.FileID); media != nil {
+		if media := s.buildMedia(ctx, req.FileID, principal.UserID); media != nil {
 			payload["media"] = media
 		}
 	}
@@ -245,16 +245,16 @@ func (s *Service) resolveUserInfo(ctx context.Context, userID string) map[string
 	return info
 }
 
-func (s *Service) buildReplyTo(ctx context.Context, messageID string) map[string]any {
-	info, ok, err := s.repo.GetMessageForReply(ctx, messageID)
+func (s *Service) buildReplyTo(ctx context.Context, messageID, viewerUserID string) map[string]any {
+	info, ok, err := s.repo.GetMessageForReply(ctx, messageID, viewerUserID)
 	if err != nil || !ok {
 		return nil
 	}
 	return info
 }
 
-func (s *Service) buildMedia(ctx context.Context, fileID string) map[string]any {
-	info, ok, err := s.repo.GetMediaForMessage(ctx, fileID)
+func (s *Service) buildMedia(ctx context.Context, fileID, ownerUserID string) map[string]any {
+	info, ok, err := s.repo.GetMediaForMessage(ctx, fileID, ownerUserID)
 	if err != nil || !ok {
 		return nil
 	}

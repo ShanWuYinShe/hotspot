@@ -19,7 +19,10 @@
   let showCreateMoment = $state(false);
 
   async function loadMoments(refresh = false) {
-    await pagination.load(() => momentsService.getMyMoments(), refresh);
+    await pagination.load(
+      (cursor) => momentsService.getMyMoments({ pagination: { limit: 12, cursor } }),
+      refresh
+    );
   }
 
   onMount(() => {

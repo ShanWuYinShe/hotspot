@@ -57,10 +57,10 @@ func (r *stubMsgRepo) MarkAsRead(_ context.Context, _ string, _ MarkPrivateMessa
 func (r *stubMsgRepo) MarkAllRead(_ context.Context, _ string) error {
 	return r.markAllErr
 }
-func (r *stubMsgRepo) GetMessageForReply(_ context.Context, _ string) (map[string]any, bool, error) {
+func (r *stubMsgRepo) GetMessageForReply(_ context.Context, _ string, _ string) (map[string]any, bool, error) {
 	return nil, false, nil
 }
-func (r *stubMsgRepo) GetMediaForMessage(_ context.Context, _ string) (map[string]any, bool, error) {
+func (r *stubMsgRepo) GetMediaForMessage(_ context.Context, _ string, _ string) (map[string]any, bool, error) {
 	return nil, false, nil
 }
 

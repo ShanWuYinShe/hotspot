@@ -93,3 +93,65 @@ func TestLoadCarriesS3PublicEndpointSettings(t *testing.T) {
 		t.Fatal("expected s3 public force path style to be false")
 	}
 }
+
+func TestValidateRejectsDefaultSecretInProduction(t *testing.T) {
+	// Load() falls back to the built-in dev secret when AUTH_TOKEN_SECRET is
+	// unset; Validate must refuse to ship that in production.
+	t.Setenv("AUTH_TOKEN_SECRET", "")
+	cfg := Config{AppEnv: "production", AuthTokenSecret: devDefaultAuthTokenSecret}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected error when production uses the dev default secret")
+	}
+}
+
+func TestValidateRejectsEmptySecretInProduction(t *testing.T) {
+	cfg := Config{AppEnv: "production", AuthTokenSecret: ""}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected error when production secret is empty")
+	}
+}
+
+func TestValidateRejectsShortSecretInProduction(t *testing.T) {
+	cfg := Config{AppEnv: "production", AuthTokenSecret: "short-but-nondefault-key"}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected error when production secret is shorter than 32 bytes")
+	}
+}
+
+func TestValidateAcceptsStrongSecretInProduction(t *testing.T) {
+	cfg := Config{AppEnv: "production", AuthTokenSecret: stringOfLen(48)}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected no error for strong production secret, got %v", err)
+	}
+}
+
+func TestValidateAcceptsDevDefaultInDevelopment(t *testing.T) {
+	// Local dev must keep working without forcing operators to set a secret.
+	cfg := Config{AppEnv: "development", AuthTokenSecret: devDefaultAuthTokenSecret}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected no error in development, got %v", err)
+	}
+}
+
+func TestValidateTreatsUnsetEnvAsProduction(t *testing.T) {
+	// An operator who forgets APP_ENV gets the strict (safe) path.
+	cfg := Config{AppEnv: "", AuthTokenSecret: devDefaultAuthTokenSecret}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected error when AppEnv is unset (defaults to production semantics)")
+	}
+}
+
+func TestValidateAcceptsStagingWithStrongSecret(t *testing.T) {
+	cfg := Config{AppEnv: "staging", AuthTokenSecret: stringOfLen(40)}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected no error for staging with strong secret, got %v", err)
+	}
+}
+
+func stringOfLen(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = 'a'
+	}
+	return string(b)
+}

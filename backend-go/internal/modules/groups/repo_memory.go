@@ -272,6 +272,40 @@ func (r *InMemoryRepository) ListMembers(_ context.Context, groupID string, role
 	return items, "", nil
 }
 
+// IsMember is a direct membership probe used on hot paths (realtime authz),
+// replacing the prior pattern of paging the whole member list.
+func (r *InMemoryRepository) IsMember(_ context.Context, groupID, userID string) (bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if members, ok := r.members[groupID]; ok {
+		_, isMember := members[userID]
+		return isMember, nil
+	}
+	return false, nil
+}
+
+// GetApplication loads a single application by ID (O(1) map lookup) for paths
+// that previously scanned all of an approver's groups and each group's
+// applications to find one record.
+func (r *InMemoryRepository) GetApplication(_ context.Context, applicationID string) (GroupApplicationItem, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	record, ok := r.applications[applicationID]
+	if !ok {
+		return GroupApplicationItem{}, false, nil
+	}
+	return GroupApplicationItem{
+		ApplicationID: record.ApplicationID,
+		GroupID:       record.GroupID,
+		Applicant:     UserInfo{UserID: record.ApplicantID, Nickname: record.ApplicantID},
+		Message:       record.Message,
+		Status:        record.Status,
+		CreatedAt:     record.CreatedAt,
+		HandledAt:     record.HandledAt,
+		HandledBy:     record.HandledBy,
+	}, true, nil
+}
+
 func (r *InMemoryRepository) SearchMembers(_ context.Context, groupID string, keyword string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
 	items, _, err := r.ListMembers(context.Background(), groupID, role, limit, cursor)
 	if err != nil {

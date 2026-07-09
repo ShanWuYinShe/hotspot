@@ -24,7 +24,7 @@ func NewModule(factory *persistence.Factory, actorProvider actor.Provider, appCo
 	momentRepo := NewPersistenceRepository(factory)
 	notificationService := notifications.NewServiceWithRepo(notifications.NewPersistenceRepository(factory))
 	momentService := NewServiceWithDeps(momentRepo, notificationService, actorProvider)
-	commentService := comments.NewServiceWithDeps(comments.NewPersistenceRepository(factory), momentService, notificationService, actorProvider, appConfig)
+	commentService := comments.NewServiceWithDeps(comments.NewPersistenceRepository(factory), momentService, notificationService, actorProvider, appConfig, persistence.NewTxRunner(factory))
 	return &Module{
 		momentsHandler:  NewHandler(momentService),
 		commentsHandler: comments.NewHandler(commentService),

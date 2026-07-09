@@ -107,7 +107,7 @@ DELETE FROM moments WHERE moment_id = $1`
 SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
 FROM moments m
 LEFT JOIN users u ON u.user_id = m.user_id
-WHERE m.privacy_level != 'private'
+WHERE m.privacy_level = 'public'
   AND ($1::text IS NULL OR m.description ILIKE '%' || $1 || '%')
   AND ($2::text IS NULL OR m.moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $2))
 ORDER BY m.created_at DESC, m.moment_id DESC
@@ -117,7 +117,7 @@ LIMIT $3`
 SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
 FROM moments m
 LEFT JOIN users u ON u.user_id = m.user_id
-WHERE m.privacy_level != 'private'
+WHERE m.privacy_level = 'public'
   AND ($1::text IS NULL OR m.description ILIKE '%' || $1 || '%')
   AND ($2::text IS NULL OR m.moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $2))`
 
@@ -134,6 +134,40 @@ WHERE moment_id = $1 AND user_id = $2`
 SELECT 1
 FROM moment_likes
 WHERE moment_id = $1 AND user_id = $2`
+
+	// queryInsertMomentLikeAndCount atomically inserts a like row and bumps the
+	// moment's like counter only when the row was actually inserted (i.e. not
+	// absorbed by the uniqueness conflict). The CTE surfaces `inserted` (bool)
+	// so callers learn whether this is a genuinely new like without a separate
+	// existence check — eliminating the check-then-act window under which two
+	// concurrent likes could both pass the check and double-increment.
+	queryInsertMomentLikeAndCount = `
+WITH ins AS (
+  INSERT INTO moment_likes (moment_id, user_id, liked_at)
+  VALUES ($1, $2, $3)
+  ON CONFLICT (moment_id, user_id) DO NOTHING
+  RETURNING moment_id
+)
+UPDATE moments
+SET likes_count = likes_count + 1
+WHERE moment_id = $1
+  AND EXISTS (SELECT 1 FROM ins)
+RETURNING EXISTS (SELECT 1 FROM ins) AS inserted`
+
+	// queryDeleteMomentLikeAndCount atomically removes a like row and decrements
+	// the counter only when a row was actually deleted, so repeated unlikes
+	// cannot drive the counter below the real like count.
+	queryDeleteMomentLikeAndCount = `
+WITH del AS (
+  DELETE FROM moment_likes
+  WHERE moment_id = $1 AND user_id = $2
+  RETURNING moment_id
+)
+UPDATE moments
+SET likes_count = GREATEST(likes_count - 1, 0)
+WHERE moment_id = $1
+  AND EXISTS (SELECT 1 FROM del)
+RETURNING EXISTS (SELECT 1 FROM del) AS deleted`
 
 	queryIncrementMomentLikeCount = `
 UPDATE moments

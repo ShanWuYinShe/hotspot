@@ -109,7 +109,7 @@ func queryMapUsers(ctx context.Context, queryable persistence.QueryableDB, query
 	if len(mins) == 0 {
 		return nil, nil
 	}
-	rows, err := queryable.Query(ctx, queryMapCanvasUsers, mins, maxs)
+	rows, err := queryable.Query(ctx, queryMapCanvasUsers, mins, maxs, maxMapScanRows)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func queryMapGroups(ctx context.Context, queryable persistence.QueryableDB, quer
 	if len(mins) == 0 {
 		return nil, nil
 	}
-	rows, err := queryable.Query(ctx, queryMapCanvasGroups, mins, maxs)
+	rows, err := queryable.Query(ctx, queryMapCanvasGroups, mins, maxs, maxMapScanRows)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func queryMapMoments(ctx context.Context, queryable persistence.QueryableDB, que
 	if len(mins) == 0 {
 		return nil, nil
 	}
-	rows, err := queryable.Query(ctx, queryMapCanvasMoments, mins, maxs)
+	rows, err := queryable.Query(ctx, queryMapCanvasMoments, mins, maxs, maxMapScanRows)
 	if err != nil {
 		return nil, err
 	}

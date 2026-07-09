@@ -274,17 +274,11 @@ func (s *Service) TransferOwnership(ctx context.Context, req TransferOwnershipRe
 		return ErrAccessRestricted
 	}
 
-	members, _, err := s.repo.ListMembers(ctx, req.GroupID, nil, 1000, "")
+	// Direct membership probe instead of paging up to 1000 members and linear
+	// scanning for the target user.
+	isMember, err := s.repo.IsMember(ctx, req.GroupID, req.NewOwnerID)
 	if err != nil {
 		return err
-	}
-
-	isMember := false
-	for _, m := range members {
-		if m.User.UserID == req.NewOwnerID {
-			isMember = true
-			break
-		}
 	}
 	if !isMember {
 		return ErrTargetNotMember
@@ -295,26 +289,30 @@ func (s *Service) TransferOwnership(ctx context.Context, req TransferOwnershipRe
 }
 
 func (s *Service) findApplicationForApprover(ctx context.Context, approverUserID string, applicationID string) (GroupApplicationItem, GroupItem, error) {
-	groups, _, err := s.repo.ListMyGroups(ctx, approverUserID, 1000, "")
+	// Direct application lookup (single indexed query) instead of the previous
+	// O(approver's groups × each group's applications) nested scan that could
+	// touch up to 10^6 rows to locate one record.
+	item, found, err := s.repo.GetApplication(ctx, applicationID)
 	if err != nil {
 		return GroupApplicationItem{}, GroupItem{}, err
 	}
-	for _, group := range groups {
-		items, _, err := s.repo.ListApplications(ctx, group.Group.GroupID, nil, 1000, "")
-		if err != nil {
-			return GroupApplicationItem{}, GroupItem{}, err
-		}
-		for _, item := range items {
-			if item.ApplicationID == applicationID {
-				if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-					return GroupApplicationItem{}, GroupItem{}, ErrAccessRestricted
-				}
-				if item.Status != ApplicationStatusPending {
-					return GroupApplicationItem{}, GroupItem{}, ErrAlreadyProcessed
-				}
-				return item, group, nil
-			}
-		}
+	if !found {
+		return GroupApplicationItem{}, GroupItem{}, ErrGroupNotFound
 	}
-	return GroupApplicationItem{}, GroupItem{}, ErrGroupNotFound
+	// Get loads the approver's MyState (role) from the auth context, so we can
+	// authorize without paging member lists.
+	group, groupFound, err := s.repo.Get(ctx, item.GroupID)
+	if err != nil {
+		return GroupApplicationItem{}, GroupItem{}, err
+	}
+	if !groupFound {
+		return GroupApplicationItem{}, GroupItem{}, ErrGroupNotFound
+	}
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		return GroupApplicationItem{}, GroupItem{}, ErrAccessRestricted
+	}
+	if item.Status != ApplicationStatusPending {
+		return GroupApplicationItem{}, GroupItem{}, ErrAlreadyProcessed
+	}
+	return item, group, nil
 }

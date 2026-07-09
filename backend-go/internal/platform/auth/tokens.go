@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+
+	"hotspot/backend-go/internal/platform/config"
 )
 
 type TokenManager struct {
@@ -27,7 +29,9 @@ type jwtAccessClaims struct {
 
 func NewTokenManager(secret string) *TokenManager {
 	if secret == "" {
-		secret = "dev-secret-change-me"
+		// Local-dev fallback only; config.Validate() refuses to start the
+		// server in production with this (or any empty) secret.
+		secret = config.DevDefaultAuthTokenSecret()
 	}
 	return &TokenManager{secret: []byte(secret)}
 }

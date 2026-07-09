@@ -13,6 +13,7 @@ import (
 	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
@@ -156,7 +157,7 @@ func TestCreateCommentDoesNotIncrementMomentCountWhenCounterFails(t *testing.T) 
 	momentService := NewServiceWithRepo(momentRepo)
 	counter := &failingMomentCounter{repo: momentRepo, failErr: errors.New("update failed")}
 	commentRepo := comments.NewInMemoryRepository()
-	commentService := comments.NewService(commentRepo, counter)
+	commentService := comments.NewServiceWithDeps(commentRepo, counter, notifications.NewService(), nil, nil, persistence.NewMemoryTxRunner())
 	commentHandler := comments.NewHandler(commentService)
 	momentHandler := NewHandler(momentService)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})

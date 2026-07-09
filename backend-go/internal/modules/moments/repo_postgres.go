@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -88,10 +89,7 @@ func lookupUserNickname(ctx context.Context, queryable persistence.QueryableDB, 
 }
 
 func (r *PostgresRepository) IncrementCommentCount(ctx context.Context, momentID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -99,10 +97,7 @@ func (r *PostgresRepository) IncrementCommentCount(ctx context.Context, momentID
 }
 
 func (r *PostgresRepository) DecrementCommentCount(ctx context.Context, momentID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -205,7 +200,7 @@ func buildSearchMomentsQuery(bounds geo.Bounds, keyword *string, tag *string, so
 	}
 	args := make([]any, 0, 6)
 	var builder strings.Builder
-	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level <> 'private' AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`)
+	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level = 'public' AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`)
 	args = append(args, mins, maxs)
 	if keyword != nil && *keyword != "" {
 		args = append(args, *keyword)
@@ -218,6 +213,14 @@ func buildSearchMomentsQuery(bounds geo.Bounds, keyword *string, tag *string, so
 	if sortBy == "newest" {
 		builder.WriteString(" ORDER BY created_at DESC, moment_id DESC")
 		args = append(args, limit)
+		builder.WriteString(fmt.Sprintf(" LIMIT $%d", len(args)))
+	} else {
+		// Non-newest sorts rank in Go after the geo radius prefilter, so we
+		// cannot push the page LIMIT to the DB. Cap the scan with a hard
+		// ceiling so a dense viewport can never pull the whole table into
+		// memory. The ceiling comfortably covers a page plus headroom for the
+		// radius filter to discard candidates.
+		args = append(args, maxSearchScanRows)
 		builder.WriteString(fmt.Sprintf(" LIMIT $%d", len(args)))
 	}
 	return builder.String(), args
@@ -273,49 +276,42 @@ func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error 
 }
 
 func (r *PostgresRepository) Like(ctx context.Context, userID string, momentID string) (bool, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return false, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return false, persistence.ErrNotImplemented
 	}
-	exists, err := momentLikeExists(ctx, queryable, momentID, userID)
-	if err != nil {
-		return false, err
-	}
-	if exists {
-		return false, nil
-	}
+	// Single atomic statement: insert the like row and bump the counter only if
+	// the insert was real (not a conflict). The existence check used to live in
+	// a separate query, leaving a window where two concurrent likes could both
+	// pass it and double-increment the counter.
 	now := time.Now().UTC()
-	if err := queryable.Exec(ctx, queryInsertMomentLike, momentID, userID, now); err != nil {
+	var inserted bool
+	if err := queryable.QueryRow(ctx, queryInsertMomentLikeAndCount, momentID, userID, now).Scan(&inserted); err != nil {
+		// On conflict the UPDATE matches no rows and returns no row; treat that
+		// (pgx.ErrNoRows) as "already liked" rather than an error.
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
 		return false, err
 	}
-	if err := queryable.Exec(ctx, queryIncrementMomentLikeCount, momentID); err != nil {
-		return false, err
-	}
-	return true, nil
+	return inserted, nil
 }
 
 func (r *PostgresRepository) Unlike(ctx context.Context, userID string, momentID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	exists, err := momentLikeExists(ctx, queryable, momentID, userID)
-	if err != nil {
+	// Single atomic statement: delete the like row and decrement only if a row
+	// was actually removed, so repeated unlikes never undercount.
+	var deleted bool
+	if err := queryable.QueryRow(ctx, queryDeleteMomentLikeAndCount, momentID, userID).Scan(&deleted); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
 		return err
 	}
-	if !exists {
-		return nil
-	}
-	if err := queryable.Exec(ctx, queryDeleteMomentLike, momentID, userID); err != nil {
-		return err
-	}
-	return queryable.Exec(ctx, queryDecrementMomentLikeCount, momentID)
+	return nil
 }
 
 func (r *PostgresRepository) Favorite(ctx context.Context, userID string, momentID string) error {
@@ -453,6 +449,13 @@ func normalizeMomentInteractionLimit(limit int) int {
 	}
 }
 
+// maxSearchScanRows bounds the worst-case number of rows a geo/ranking search
+// loads into memory before the Go-side radius prefilter and sort. It is a
+// safety ceiling against unbounded scans in dense viewports, not the page size
+// (which is applied after sorting). 500 comfortably exceeds any single result
+// page while keeping memory predictable.
+const maxSearchScanRows = 500
+
 func encodeMomentLikeCursor(likedAt, userID string) string {
 	blob, err := json.Marshal(momentInteractionCursor{At: likedAt, ID: userID})
 	if err != nil {
@@ -507,14 +510,16 @@ func decodeMomentFavoriteCursor(cursor string) (any, string, error) {
 	return favoritedAt.UTC(), decoded.ID, nil
 }
 
-func momentLikeExists(ctx context.Context, queryable persistence.QueryableDB, momentID, userID string) (bool, error) {
-	var marker int
-	err := queryable.QueryRow(ctx, queryGetMomentLike, momentID, userID).Scan(&marker)
-	if err == nil {
-		return true, nil
+// queryable resolves the Queryable to use for this request: an in-flight
+// transaction bound to ctx when present, otherwise the shared pool. Returns
+// ok=false when persistence is not configured (in-memory mode).
+func queryable(ctx context.Context, factory *persistence.Factory) (persistence.Queryable, bool) {
+	if q, ok := persistence.QueryableFromContext(ctx); ok {
+		return q, true
 	}
-	if err == pgx.ErrNoRows {
-		return false, nil
+	if factory == nil || factory.DB == nil || factory.Config.PostgresDSN == "" {
+		return nil, false
 	}
-	return false, err
+	q, ok := factory.DB.(persistence.QueryableDB)
+	return q, ok
 }

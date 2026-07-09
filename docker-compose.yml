@@ -71,7 +71,7 @@ services:
       APP_PORT: "8081"
       POSTGRES_DSN: postgres://postgres:${POSTGRES_PASSWORD:-change-me}@postgres:5432/hotspot?sslmode=disable
       REDIS_URL: redis://redis:6379/0
-      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-change-me}
+      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:?AUTH_TOKEN_SECRET must be set to a high-entropy value (>=32 bytes) in production}
       APP_NAME: hotspot-backend-go
       S3_ENDPOINT: http://seaweedfs:8333
       S3_PUBLIC_ENDPOINT: http://localhost:${NGINX_PORT:-8888}/s3

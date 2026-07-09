@@ -25,6 +25,7 @@ type userRelationAuthorizer interface {
 
 type groupMembershipAuthorizer interface {
 	ListMembers(context.Context, string, int, string) ([]string, string, error)
+	IsMember(context.Context, string, string) (bool, error)
 }
 
 type Handler struct {
@@ -273,22 +274,14 @@ func (h *Handler) isGroupMember(ctx context.Context, viewerUserID, groupID strin
 	if viewerUserID == "" || groupID == "" || h.groupRepo == nil {
 		return false
 	}
-	cursor := ""
-	for {
-		members, nextCursor, err := h.groupRepo.ListMembers(ctx, groupID, 100, cursor)
-		if err != nil {
-			return false
-		}
-		for _, userID := range members {
-			if userID == viewerUserID {
-				return true
-			}
-		}
-		if nextCursor == "" || nextCursor == cursor {
-			return false
-		}
-		cursor = nextCursor
+	// Single indexed lookup. The previous implementation paged through the
+	// entire member list (100 per page) to answer a yes/no question, which on a
+	// 10k-member group meant ~100 DB round trips per WS message.
+	ok, err := h.groupRepo.IsMember(ctx, groupID, viewerUserID)
+	if err != nil {
+		return false
 	}
+	return ok
 }
 
 func detectPlatform(r *http.Request, clientType string) string {

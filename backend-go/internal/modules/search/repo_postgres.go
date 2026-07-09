@@ -103,7 +103,7 @@ func normalizeSuggestTypes(types []string) map[string]bool {
 }
 
 func queryTagSuggestions(ctx context.Context, queryable persistence.QueryableDB, prefix string) ([]scoredSuggestItem, error) {
-	rows, err := queryable.Query(ctx, querySearchSuggestTags, prefix)
+	rows, err := queryable.Query(ctx, querySearchSuggestTags, prefix, maxSuggestRows)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func queryTagSuggestions(ctx context.Context, queryable persistence.QueryableDB,
 }
 
 func queryUserSuggestions(ctx context.Context, queryable persistence.QueryableDB, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
-	rows, err := queryable.Query(ctx, querySearchSuggestUsers, prefix)
+	rows, err := queryable.Query(ctx, querySearchSuggestUsers, prefix, maxSuggestRows)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func queryUserSuggestions(ctx context.Context, queryable persistence.QueryableDB
 }
 
 func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableDB, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
-	rows, err := queryable.Query(ctx, querySearchSuggestGroups, prefix)
+	rows, err := queryable.Query(ctx, querySearchSuggestGroups, prefix, maxSuggestRows)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableD
 }
 
 func queryMomentSuggestions(ctx context.Context, queryable persistence.QueryableDB, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
-	rows, err := queryable.Query(ctx, querySearchSuggestMoments, prefix)
+	rows, err := queryable.Query(ctx, querySearchSuggestMoments, prefix, maxSuggestRows)
 	if err != nil {
 		return nil, err
 	}
