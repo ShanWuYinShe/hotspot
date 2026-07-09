@@ -5,12 +5,10 @@ import (
 
 	private_messages "hotspot/backend-go/internal/modules/privatemessages"
 	platformcursor "hotspot/backend-go/internal/platform/cursor"
+	"hotspot/backend-go/internal/platform/types"
 )
 
-type PaginationParams struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
+type PaginationParams = types.PaginationParams
 
 type chatCursor struct {
 	LastActivityAt string `json:"last_activity_at"`

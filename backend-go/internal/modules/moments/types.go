@@ -1,5 +1,7 @@
 package moments
 
+import "hotspot/backend-go/internal/platform/types"
+
 type UserInfo struct {
 	UserID    string `json:"user_id"`
 	Nickname  string `json:"nickname"`
@@ -75,10 +77,7 @@ type GeoPoint struct {
 	Longitude float64 `json:"longitude"`
 }
 
-type PaginationParams struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
+type PaginationParams = types.PaginationParams
 
 type EditMomentRequest struct {
 	MomentID     string    `json:"moment_id"`

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"hotspot/backend-go/internal/platform/types"
 )
 
 const (
@@ -70,10 +72,7 @@ type ShareDetail struct {
 	Preview *SharePreview  `json:"preview,omitempty"`
 }
 
-type PaginationParams struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
+type PaginationParams = types.PaginationParams
 
 type ShareListRequest struct {
 	ShareType  string            `json:"share_type,omitempty"`

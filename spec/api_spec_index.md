@@ -83,15 +83,15 @@
 | `/api/v1/me/profile/`, `/api/v1/me/settings/`, `/api/v1/me/account/`, `/api/v1/me/contact/`, `/api/v1/me/location/`, `/api/v1/me/blocked/` | `api_spec_user.md` |
 | `/api/v1/users/` | `api_spec_user.md`（含 follow/block 等对用户的动作 + users/moments/list 等） |
 | `/api/v1/moments/`, `/api/v1/comments/`, `/api/v1/me/moments/` | `api_spec_moment.md` |
-| `/api/v1/chats/`, `/api/v1/me/chats/` | `api_spec_chat.md` |
+| `/api/v1/private_chats/`, `/api/v1/private_messages/`, `/api/v1/group_messages/` | `api_spec_chat.md` |
 | `/api/v1/groups/`, `/api/v1/me/groups/` | `api_spec_group.md` |
-| `/api/v1/discover/feed/`, `/api/v1/discover/trending/` | `api_spec_feed.md` |
-| `/api/v1/discover/search/` | `api_spec_search.md` |
-| `/api/v1/discover/map/` | `api_spec_map.md` |
-| `/api/v1/shares/`, `/api/v1/me/shares/` | `api_spec_share.md` |
+| `/api/v1/feed/` | `api_spec_feed.md` |
+| `/api/v1/search/` | `api_spec_search.md` |
+| `/api/v1/map/` | `api_spec_map.md` |
+| `/api/v1/share/` | `api_spec_share.md` |
 | `/api/v1/media/` | `api_spec_media.md` |
-| `/api/v1/reports/`, `/api/v1/me/reports/` | `api_spec_report.md` |
-| `/api/v1/me/notifications/` | `api_spec_notification.md` |
+| `/api/v1/reports/` | `api_spec_report.md` |
+| `/api/v1/notifications/` | `api_spec_notification.md` |
 | `/api/v1/system/` | `api_spec_system.md` |
-| `/api/v1/admin/me/`, `/api/v1/admin/rbac/`, `/api/v1/admin/audit/`, `/api/v1/admin/config/` | `api_spec_admin_core.md` |
+| `/api/v1/admin/app_config/`, `/api/v1/admin/rbac/`, `/api/v1/admin/audit/` | `api_spec_admin_core.md` |
 | `/api/v1/admin/users/`, `/api/v1/admin/groups/`, `/api/v1/admin/reports/`, `/api/v1/admin/tags/`, `/api/v1/admin/announcements/` | `api_spec_admin_moderation.md` |

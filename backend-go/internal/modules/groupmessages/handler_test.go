@@ -424,10 +424,22 @@ func TestHandlerMarkAsReadMapsNotFound(t *testing.T) {
 
 // --- MarkAllRead tests ---
 
-func TestHandlerMarkAllReadRequiresEmptyObject(t *testing.T) {
+func TestHandlerMarkAllReadIgnoresUnknownFields(t *testing.T) {
+	// Per api_spec_base.md, empty-object endpoints silently ignore unknown
+	// fields; {"unexpected":true} is accepted, not rejected.
 	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
 	req := gmCtx("u1")
 	req.Body = io.NopCloser(strings.NewReader(`{"unexpected":true}`))
+
+	rr := httptest.NewRecorder()
+	handler.MarkAllRead(rr, req)
+	gmAssertCode(t, rr, 0)
+}
+
+func TestHandlerMarkAllReadRejectsNonObjectBody(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`[1,2]`))
 
 	rr := httptest.NewRecorder()
 	handler.MarkAllRead(rr, req)

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+
+	"hotspot/backend-go/internal/platform/types"
 )
 
 const (
@@ -39,10 +41,7 @@ type UnreadCountResult struct {
 	ByType UnreadCountByType `json:"by_type"`
 }
 
-type PaginationParams struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
+type PaginationParams = types.PaginationParams
 
 type NotificationListRequest struct {
 	Type       string            `json:"type,omitempty"`

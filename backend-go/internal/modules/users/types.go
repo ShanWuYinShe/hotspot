@@ -1,6 +1,9 @@
 package users
 
-import momenttypes "hotspot/backend-go/internal/modules/moments"
+import (
+	momenttypes "hotspot/backend-go/internal/modules/moments"
+	"hotspot/backend-go/internal/platform/types"
+)
 
 type UserType string
 
@@ -103,10 +106,7 @@ type UpdateSettingsRequest struct {
 	Settings PartialUserSettings `json:"settings"`
 }
 
-type PaginationParams struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
+type PaginationParams = types.PaginationParams
 
 type UserLikedMomentsRequest struct {
 	UserID     string                        `json:"user_id"`

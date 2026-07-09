@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type GeoPoint struct {
@@ -18,10 +20,7 @@ type RelativeLocation struct {
 	BearingDegrees int      `json:"bearing_degrees,omitempty"`
 }
 
-type PaginationParams struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
+type PaginationParams = types.PaginationParams
 
 type ListFeedMomentsRequest struct {
 	Source         string            `json:"source"`

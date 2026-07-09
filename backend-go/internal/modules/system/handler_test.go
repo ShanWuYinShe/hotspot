@@ -15,7 +15,10 @@ import (
 	"hotspot/backend-go/internal/platform/httpx"
 )
 
-func TestGetMetaRejectsNonEmptyBody(t *testing.T) {
+func TestGetMetaIgnoresUnknownFields(t *testing.T) {
+	// Per api_spec_base.md, empty-object endpoints must silently ignore unknown
+	// fields so SDK telemetry/gateway keys don't hard-fail. {"foo":"bar"} is
+	// accepted (the unknown field is dropped), returning a normal success.
 	handler := NewHandler(NewService(appconfig.NewStaticSource(config.Load())))
 	req := httptest.NewRequest(http.MethodPost, "/get_meta", strings.NewReader(`{"foo":"bar"}`))
 	rr := httptest.NewRecorder()
@@ -30,8 +33,25 @@ func TestGetMetaRejectsNonEmptyBody(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
+	if code, ok := resp["code"].(float64); !ok || int(code) != 0 {
+		t.Fatalf("unknown fields should be ignored (code 0), got: %#v", resp["code"])
+	}
+}
+
+func TestGetMetaRejectsNonObjectBody(t *testing.T) {
+	// Non-object bodies (arrays) are still rejected as 参数错误.
+	handler := NewHandler(NewService(appconfig.NewStaticSource(config.Load())))
+	req := httptest.NewRequest(http.MethodPost, "/get_meta", strings.NewReader(`[1,2,3]`))
+	rr := httptest.NewRecorder()
+
+	handler.GetMeta(rr, req)
+
+	var resp map[string]any
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
 	if code, ok := resp["code"].(float64); !ok || int(code) != 10000 {
-		t.Fatalf("unexpected code: %#v", resp["code"])
+		t.Fatalf("non-object body should be rejected (code 10000), got: %#v", resp["code"])
 	}
 }
 

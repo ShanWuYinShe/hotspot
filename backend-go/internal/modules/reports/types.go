@@ -1,5 +1,7 @@
 package reports
 
+import "hotspot/backend-go/internal/platform/types"
+
 type ReportTargetType string
 
 type ReportReason string
@@ -30,10 +32,7 @@ const (
 	ReportStatusDismissed ReportStatus = "dismissed"
 )
 
-type PaginationParams struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
+type PaginationParams = types.PaginationParams
 
 type CreateReportRequest struct {
 	TargetType  ReportTargetType `json:"target_type"`
