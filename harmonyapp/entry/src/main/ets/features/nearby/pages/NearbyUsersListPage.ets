@@ -135,7 +135,8 @@ export struct NearbyUsersListPage {
       const request: SearchUsersRequest = {
         reference_point: ref,
         radius: DefaultConfig.NEARBY_RADIUS,
-        sort_by: 'distance',
+        sort_by: this.activeSort as 'distance' | 'relevance' | 'newest',
+        keyword: this.keyword || undefined,
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
       const response = await ApiClient.searchUsers(request);
