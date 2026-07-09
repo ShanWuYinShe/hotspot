@@ -34,8 +34,14 @@ export struct ShareResolutionPage {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
+  private isDestroyed: boolean = false;
+
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
+  }
+
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
   }
 
   private getCurrentThemePalette() {
@@ -43,6 +49,7 @@ export struct ShareResolutionPage {
   }
 
   private async resolveShare(): Promise<void> {
+    if (this.isDestroyed) return;
     if (!this.shareCode) {
       this.errorMessage = '缺少分享码';
       this.isLoading = false;
@@ -51,6 +58,7 @@ export struct ShareResolutionPage {
 
     try {
       const response = await ApiClient.getShare({ share_code: this.shareCode });
+      if (this.isDestroyed) return;
       if (response.code === 0 && response.data) {
         this.routeByType(response.data);
       } else {

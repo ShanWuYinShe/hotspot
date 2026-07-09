@@ -58,6 +58,8 @@ export struct CreateMomentPage {
   @State existingImageUrls: string[] = [];
   @State privacyLevel: string = 'public';
 
+  private isDestroyed: boolean = false;
+
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
     await this.requestPermissions();
@@ -75,7 +77,12 @@ export struct CreateMomentPage {
     this.initDefaultLocation();
   }
 
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
+  }
+
   private async requestPermissions(): Promise<void> {
+    if (this.isDestroyed) return;
     try {
       const permissionManager = PermissionManager.getInstance();
       const permissions: Permissions[] = [
@@ -87,6 +94,7 @@ export struct CreateMomentPage {
       ];
       
       const granted = await permissionManager.requestPermissions(permissions);
+      if (this.isDestroyed) return;
       if (!granted) {
         SystemToast.showWarning('部分权限未授予，可能影响功能使用', this.getUIContext());
       }
@@ -163,6 +171,7 @@ export struct CreateMomentPage {
   }
 
   private async selectImages(): Promise<void> {
+    if (this.isDestroyed) return;
     try {
       const maxCount = 9 - this.imageUrls.length;
       if (maxCount <= 0) {
@@ -171,6 +180,7 @@ export struct CreateMomentPage {
       }
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       const selectedImages = await MediaServiceManager.selectImages(context, maxCount);
+      if (this.isDestroyed) return;
       for (const imageUri of selectedImages) {
         this.imageUrls.push(imageUri);
       }
@@ -184,6 +194,7 @@ export struct CreateMomentPage {
   }
 
   private async capturePhoto(): Promise<void> {
+    if (this.isDestroyed) return;
     try {
       if (this.imageUrls.length >= DefaultConfig.MAX_MOMENT_IMAGES) {
         SystemToast.show('最多只能选择9张图片', this.getUIContext());
@@ -191,6 +202,7 @@ export struct CreateMomentPage {
       }
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       const result = await MediaServiceManager.takePhoto(context);
+      if (this.isDestroyed) return;
       if (result && result.uri) {
         this.imageUrls.push(result.uri);
         SystemToast.show('拍照成功', this.getUIContext());
@@ -206,6 +218,7 @@ export struct CreateMomentPage {
   }
 
   private async publishMoment(): Promise<void> {
+    if (this.isDestroyed) return;
     if (!this.description.trim()) {
       SystemToast.show('请输入瞬间描述', this.getUIContext());
       return;
@@ -220,6 +233,7 @@ export struct CreateMomentPage {
     this.publishingMessage = '正在处理图片...';
     
     try {
+      if (this.isDestroyed) return;
       await LoadingUtil.withMinimumTime(async () => {
         const imageFileIds: string[] = []; 
         const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
@@ -313,8 +327,10 @@ export struct CreateMomentPage {
   }
 
   private async refreshLocation(): Promise<void> {
+    if (this.isDestroyed) return;
     try {
       const location = await LocationUtil.getCurrentLocation();
+      if (this.isDestroyed) return;
       if (location) {
         this.localLocation = {
           latitude: location.latitude,
@@ -329,6 +345,7 @@ export struct CreateMomentPage {
   }
 
   private async openLocationPicker(): Promise<void> {
+    if (this.isDestroyed) return;
     try {
       const param = new LocationPickerRouteParam();
       param.mode = 'location_pick';

@@ -27,13 +27,20 @@ export struct DebugPanel {
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   private webSocketService = WebSocketService.getInstance();
 
+  private isDestroyed: boolean = false;
+
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
     const uid = await AuthAccountManager.getCurrentUserId();
+    if (this.isDestroyed) return;
     this.currentUserId = uid !== null ? String(uid) : null;
     this.addLog('DebugPanel initialized');
     this.addLog(`User: ${this.currentUser?.nickname || 'Not logged in'}`);
     this.addLog(`WS Status: ${this.webSocketService.isConnected() ? 'Connected' : 'Disconnected'}`);
+  }
+
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
   }
 
   private addLog(log: string) {
@@ -127,6 +134,7 @@ export struct DebugPanel {
                   this.webSocketService.disconnect();
                   this.addLog('WS Disconnected');
                   setTimeout(() => {
+                    if (this.isDestroyed) return;
                     // re-connect requires token, assuming handle in service or simple toggle
                     // For debug, just show toast
                     SystemToast.show('Reconnect triggered', this.getUIContext());

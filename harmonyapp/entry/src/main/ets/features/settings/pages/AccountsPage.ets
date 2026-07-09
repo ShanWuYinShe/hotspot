@@ -45,9 +45,15 @@ export struct AccountsPage {
   private ws = WebSocketService.getInstance();
   private cache = MessageCacheService.getInstance();
 
+  private isDestroyed: boolean = false;
+
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
     await this.load();
+  }
+
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
   }
 
   private getCurrentThemePalette() {
@@ -67,10 +73,12 @@ export struct AccountsPage {
   }
 
   private async load() {
+    if (this.isDestroyed) return;
     this.isLoading = true;
     this.errorMessage = '';
     try {
       await LoadingUtil.withMinimumTime(async () => {
+        if (this.isDestroyed) return;
         this.accounts = await AuthAccountManager.listAccounts();
         const uid = await AuthAccountManager.getCurrentUserId();
         this.currentUserId = uid !== null ? String(uid) : null;
@@ -118,6 +126,7 @@ export struct AccountsPage {
   }
 
   private async switchTo(auth: AuthData) {
+    if (this.isDestroyed) return;
     try {
       // 1) 清空缓存（避免串数据）
       await this.cache.clearAll();
@@ -158,6 +167,7 @@ export struct AccountsPage {
   }
 
   private async remove(auth: AuthData) {
+    if (this.isDestroyed) return;
     try {
       await AuthAccountManager.removeAccount(auth.user_id);
       if (this.currentUserId !== null && this.currentUserId === auth.user_id) {

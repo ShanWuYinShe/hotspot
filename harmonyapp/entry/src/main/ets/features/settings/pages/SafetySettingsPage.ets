@@ -25,9 +25,15 @@ export struct SafetySettingsPage {
   @State newPassword: string = '';
   @State sessions: SessionItem[] = [];
 
+  private isDestroyed: boolean = false;
+
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
     this.loadSessions();
+  }
+
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
   }
 
   private getPalette() {
@@ -35,8 +41,10 @@ export struct SafetySettingsPage {
   }
 
   private async loadSessions(): Promise<void> {
+    if (this.isDestroyed) return;
     try {
       const response = await ApiClient.getSessions({});
+      if (this.isDestroyed) return;
       if (response.code === 0 && response.data) {
         this.sessions = response.data.items ?? [];
       }
@@ -46,12 +54,14 @@ export struct SafetySettingsPage {
   }
 
   private async changePassword(): Promise<void> {
+    if (this.isDestroyed) return;
     const request: ChangePasswordRequest = {
       old_password: this.oldPassword,
       new_password: this.newPassword
     };
     try {
       const response = await ApiClient.changePassword(request);
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         this.oldPassword = '';
         this.newPassword = '';
@@ -65,8 +75,10 @@ export struct SafetySettingsPage {
   }
 
   private async revokeSession(item: SessionItem): Promise<void> {
+    if (this.isDestroyed) return;
     try {
       const response = await ApiClient.revokeSession({ session_id: item.session_id });
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         SystemToast.showSuccess('会话已撤销', this.getUIContext());
         this.loadSessions();
@@ -79,8 +91,10 @@ export struct SafetySettingsPage {
   }
 
   private async revokeAll(): Promise<void> {
+    if (this.isDestroyed) return;
     try {
       const response = await ApiClient.revokeAllSessions();
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         SystemToast.showSuccess('其他会话已全部下线', this.getUIContext());
         this.loadSessions();

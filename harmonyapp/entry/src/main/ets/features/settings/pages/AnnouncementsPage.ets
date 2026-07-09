@@ -24,8 +24,14 @@ export struct AnnouncementsPage {
   @State refreshing: boolean = false;
   private focusAnnouncementId: string = '';
 
+  private isDestroyed: boolean = false;
+
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
+  }
+
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
   }
 
   private getPalette() {
@@ -44,12 +50,14 @@ export struct AnnouncementsPage {
   }
 
   private async loadAnnouncements(force: boolean): Promise<void> {
+    if (this.isDestroyed) return;
     if (this.loading && !force) {
       return;
     }
     this.loading = true;
     try {
       const response = await ApiClient.getSystemAnnouncements({});
+      if (this.isDestroyed) return;
       if (response.code === 0 && response.data) {
         this.announcements = this.applyAnnouncementFocus(response.data.items ?? []);
       } else {

@@ -53,8 +53,14 @@ struct AdminOverviewPage {
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
 
+  private isDestroyed: boolean = false;
+
   async aboutToAppear() {
     await this.loadPermissions();
+  }
+
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
   }
 
   private getPalette() {
@@ -62,10 +68,12 @@ struct AdminOverviewPage {
   }
 
   private async loadPermissions() {
+    if (this.isDestroyed) return;
     this.isLoading = true;
     this.errorMessage = '';
     try {
       const resp = await ApiClient.getMyAdminPermissions();
+      if (this.isDestroyed) return;
       if (resp.code === 0 && resp.data) {
         const data = resp.data as AdminPermissions;
         this.permissions = data.permissions ?? [];
