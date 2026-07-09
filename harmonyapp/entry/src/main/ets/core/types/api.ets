@@ -1285,7 +1285,9 @@ export interface SearchSuggestRequest {
 }
 
 export interface UserSuggestItem {
-  user: UserInfo;
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
   bio?: string;
   location?: RelativeLocation;
 }

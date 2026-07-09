@@ -63,20 +63,20 @@ func (s *Service) DeleteTag(ctx context.Context, name string, hardDelete bool) (
 		}
 		return nil, err
 	}
-	if !wasBlocked || hadRefs {
-		deleteType := "soft_block"
-		if hardDelete {
-			deleteType = "hard_delete"
+		if !wasBlocked {
+			deleteType := "soft_block"
+			if hardDelete {
+				deleteType = "hard_delete"
+			}
+			details := AuditDetails{"type": string(AuditActionTagDelete), "name": tagName, "method": deleteType}
+			if hardDelete && hadRefs {
+				details["warning"] = "该操作会从所有历史引用中移除标签，不可恢复"
+			}
+			if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionTagDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeTag, TargetID: tagName, TargetName: tagName, Details: details}); err != nil {
+				return nil, err
+			}
 		}
-		details := AuditDetails{"type": deleteType, "name": tagName}
-		if hardDelete && hadRefs {
-			details["warning"] = "该操作会从所有历史引用中移除标签，不可恢复"
-		}
-		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionTagDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeTag, TargetID: tagName, TargetName: tagName, Details: details}); err != nil {
-			return nil, err
-		}
-	}
-	return nil, nil
+		return nil, nil
 }
 
 func (s *Service) SearchAnnouncements(ctx context.Context, req AdminAnnouncementSearchRequest) (PaginatedAdminAnnouncements, *httpx.APIError, error) {

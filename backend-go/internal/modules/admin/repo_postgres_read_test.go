@@ -447,7 +447,7 @@ func TestPostgresRepositoryReturnsErrorOnQueryFailure(t *testing.T) {
 	}
 }
 
-func TestPersistenceModerationStoreDeleteTagQueryableDB(t *testing.T) {
+func TestPersistenceModerationStoreDeleteTagSoftBlockKeepsAssignments(t *testing.T) {
 	backend := newAdminBackendStub()
 	backend.momentTags["hotspot"] = struct{}{}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
@@ -460,8 +460,23 @@ func TestPersistenceModerationStoreDeleteTagQueryableDB(t *testing.T) {
 	if _, ok := backend.blockedTags["hotspot"]; !ok {
 		t.Fatalf("expected blocked tag marker, got %#v", backend.blockedTags)
 	}
+	if _, ok := backend.momentTags["hotspot"]; !ok {
+		t.Fatalf("expected moment tag assignments to survive soft block, got %#v", backend.momentTags)
+	}
+}
+
+func TestPersistenceModerationStoreDeleteTagHardDeleteRemovesMomentAssignments(t *testing.T) {
+	backend := newAdminBackendStub()
+	backend.momentTags["hotspot"] = struct{}{}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	store := NewPersistenceModerationStore(factory, nil)
+
+	if err := store.DeleteTag(context.Background(), "hotspot", true); err != nil {
+		t.Fatalf("hard delete tag: %v", err)
+	}
 	if _, ok := backend.momentTags["hotspot"]; ok {
-		t.Fatalf("expected moment tag assignments removed, got %#v", backend.momentTags)
+		t.Fatalf("expected moment tag assignments removed after hard delete, got %#v", backend.momentTags)
 	}
 }
 

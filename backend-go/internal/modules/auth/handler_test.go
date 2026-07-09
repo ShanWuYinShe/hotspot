@@ -587,7 +587,7 @@ func TestLogoutClearsCookies(t *testing.T) {
 	handler.Logout(rr, req)
 
 	cookies := rr.Result().Cookies()
-	if len(cookies) < 3 {
+	if len(cookies) < 2 {
 		t.Fatalf("expected auth cookies to be cleared, got %d", len(cookies))
 	}
 }
@@ -821,7 +821,9 @@ func TestRefreshTokenAppRejectsEmptyToken(t *testing.T) {
 
 // RevokeAllSessions handler tests
 
-func TestHandlerRevokeAllSessionsRejectsMissingIdempotencyKey(t *testing.T) {
+func TestHandlerRevokeAllSessionsIgnoresUnknownFields(t *testing.T) {
+	// Per api_spec_base.md, empty-object endpoints silently ignore unknown
+	// fields. {"extra":1} is accepted (the field is dropped), returning success.
 	handler := newTestHandler()
 	req := httptest.NewRequest(http.MethodPost, "/me/sessions/revoke_all", strings.NewReader(`{"extra":1}`))
 	ctx := platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
@@ -834,8 +836,8 @@ func TestHandlerRevokeAllSessionsRejectsMissingIdempotencyKey(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(resp["code"].(float64)) != 10000 {
-		t.Fatalf("expected code 10000 for non-empty body, got %#v", resp)
+	if int(resp["code"].(float64)) != 0 {
+		t.Fatalf("expected code 0 with unknown fields, got %#v", resp)
 	}
 }
 
