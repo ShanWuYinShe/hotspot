@@ -20,6 +20,14 @@ type Point struct {
 	Longitude float64
 }
 
+// IsValidPoint reports whether a geographic coordinate is within the valid
+// WGS-84 range. Out-of-range values flow into s2.CellIDFromLatLng and produce
+// invalid/zero cell IDs, silently corrupting the geo index — so callers must
+// reject them before indexing.
+func IsValidPoint(p Point) bool {
+	return p.Latitude >= -90 && p.Latitude <= 90 && p.Longitude >= -180 && p.Longitude <= 180
+}
+
 func ValidateBounds(b Bounds) error {
 	if b.North < b.South || b.East < b.West {
 		return fmt.Errorf("invalid bounds")

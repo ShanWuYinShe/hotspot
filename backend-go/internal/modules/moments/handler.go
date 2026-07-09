@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/observability"
@@ -35,6 +36,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Description == "" || (req.Location.Point.Latitude == 0 && req.Location.Point.Longitude == 0 && req.Location.LocationName == "") {
 		logBusinessError(r, "Create", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	// Reject out-of-range coordinates before they corrupt the S2 index.
+	if !geo.IsValidPoint(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}) {
+		logBusinessError(r, "Create", 10000, "参数错误: 经纬度超出有效范围")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误: 经纬度超出有效范围"))
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "moments/create", func() httpx.ApiResponse[MomentItem] {
