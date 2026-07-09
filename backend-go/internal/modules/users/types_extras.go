@@ -3,6 +3,7 @@ package users
 import (
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type Relationship struct {
@@ -17,18 +18,9 @@ var (
 	RelationshipBlocked   = Relationship{IsBlocked: true}
 )
 
-type RelativeLocation struct {
-	Point          GeoPoint `json:"point"`
-	LocationName   string   `json:"location_name"`
-	Distance       int      `json:"distance,omitempty"`
-	BearingDegrees int      `json:"bearing_degrees,omitempty"`
-}
+type RelativeLocation = types.RelativeLocation
 
-type UserInfo struct {
-	UserID    string `json:"user_id"`
-	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatar_url,omitempty"`
-}
+type UserInfo = types.UserInfo
 
 type SocialContext struct {
 	MutualFriendsCount   int        `json:"mutual_friends_count"`

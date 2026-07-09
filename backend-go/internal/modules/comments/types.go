@@ -2,11 +2,7 @@ package comments
 
 import "hotspot/backend-go/internal/platform/types"
 
-type UserInfo struct {
-	UserID    string `json:"user_id"`
-	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatar_url,omitempty"`
-}
+type UserInfo = types.UserInfo
 
 type MyCommentState struct {
 	IsLiked bool `json:"is_liked"`

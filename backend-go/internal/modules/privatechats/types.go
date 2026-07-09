@@ -38,11 +38,7 @@ func decodeChatCursor(value string) (time.Time, string, error) {
 	return parsed.UTC(), decoded.UserID, nil
 }
 
-type UserInfo struct {
-	UserID    string `json:"user_id"`
-	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatar_url,omitempty"`
-}
+type UserInfo = types.UserInfo
 
 type LastMessage struct {
 	MessageID string   `json:"message_id"`

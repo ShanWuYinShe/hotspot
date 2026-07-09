@@ -1,5 +1,7 @@
 package system
 
+import "hotspot/backend-go/internal/platform/types"
+
 type ApiVersionStatus string
 
 const (
@@ -24,10 +26,7 @@ const (
 	AnnouncementSeverityError   AnnouncementSeverity = "error"
 )
 
-type GeoPoint struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
+type GeoPoint = types.GeoPoint
 
 type Location struct {
 	Point        GeoPoint `json:"point"`
