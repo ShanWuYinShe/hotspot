@@ -21,7 +21,12 @@ type CommentItem struct {
 	LikesCount   int             `json:"likes_count"`
 	RepliesCount int             `json:"replies_count"`
 	IsDeleted    bool            `json:"is_deleted"`
-	MyState      *MyCommentState `json:"my_state,omitempty"`
+	// IsLiked is the spec-defined top-level @auth-only field (api_spec_moment.md
+	// CommentItem.is_liked). It mirrors MyState.IsLiked so clients reading
+	// comment.is_liked per the contract get the value. Kept as a pointer so it
+	// omits when nil (unauthenticated / no state), matching the `?` optional.
+	IsLiked     *bool            `json:"is_liked,omitempty"`
+	MyState     *MyCommentState  `json:"my_state,omitempty"`
 	// TopReplies 仅在 comments/list 返回的顶层评论中填充(前 N 条回复预览)。
 	TopReplies []CommentItem `json:"top_replies,omitempty"`
 }

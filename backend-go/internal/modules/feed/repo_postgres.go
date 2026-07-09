@@ -176,9 +176,11 @@ func (r *PostgresRepository) loadGroupCandidates(ctx context.Context, queryable 
 			continue
 		}
 		item := GroupItem{
-			Group:          GroupInfo{GroupID: groupID, Name: name, AvatarURL: avatarURL, MembersCount: membersCount},
-			Description:    strings.TrimSpace(description),
-			HasPassword:    hasPassword,
+			Group:       GroupInfo{GroupID: groupID, Name: name, AvatarURL: avatarURL, MembersCount: membersCount},
+			Description: strings.TrimSpace(description),
+			// has_password is @member-only per spec; don't surface it to viewers
+			// who haven't joined (avoid tipping off crawlers/brute-forcers).
+			HasPassword:    hasPassword && isJoined,
 			Location:       RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: distance, BearingDegrees: bearing},
 			MyState:        &MyGroupState{IsJoined: isJoined},
 			FriendsInGroup: friendsInGroup,

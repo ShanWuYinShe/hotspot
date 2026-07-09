@@ -23,14 +23,8 @@ func (s *Service) ListApplications(ctx context.Context, req GroupApplicationsReq
 		}
 		return nil, "", ErrAccessRestricted
 	}
-	limit := req.Limit
-	if limit == 0 {
-		limit = 20
-	}
-	if limit > 100 {
-		limit = 100
-	}
-	return s.repo.ListApplications(ctx, req.GroupID, req.Status, limit, req.Cursor)
+	limit := req.Pagination.limit(20, 100)
+	return s.repo.ListApplications(ctx, req.GroupID, req.Status, limit, req.Pagination.cursor())
 }
 
 func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplicationRequest) error {
@@ -205,15 +199,9 @@ func (s *Service) ListBannedMembers(ctx context.Context, req BannedMembersReques
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
 		return nil, "", ErrAccessRestricted
 	}
-	limit := req.Limit
-	if limit == 0 {
-		limit = 20
-	}
-	if limit > 100 {
-		limit = 100
-	}
+	limit := req.Pagination.limit(20, 100)
 	_ = principal
-	return s.repo.ListBannedMembers(ctx, req.GroupID, limit, req.Cursor)
+	return s.repo.ListBannedMembers(ctx, req.GroupID, limit, req.Pagination.cursor())
 }
 
 func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) error {

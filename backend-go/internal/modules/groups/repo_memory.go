@@ -146,7 +146,7 @@ func (r *InMemoryRepository) Search(ctx context.Context, req SearchGroupsRequest
 		}
 	}
 	sortGroupsForSearch(items, metas, req.SortBy)
-	cursor, err := decodeSearchCursor(req.Cursor)
+	cursor, err := decodeSearchCursor(req.Pagination.cursor())
 	if err != nil {
 		return PaginatedGroups{}, err
 	}
@@ -159,10 +159,7 @@ func (r *InMemoryRepository) Search(ctx context.Context, req SearchGroupsRequest
 		}
 		items = filtered
 	}
-	limit := req.Limit
-	if limit <= 0 {
-		limit = defaultSearchLimit
-	}
+	limit := req.Pagination.limit(defaultSearchLimit, maxSearchLimit)
 	response := PaginatedGroups{}
 	if len(items) <= limit {
 		response.Items = items

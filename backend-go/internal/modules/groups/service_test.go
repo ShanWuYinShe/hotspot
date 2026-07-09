@@ -333,7 +333,7 @@ func TestServiceListMembersRejectsNotFound(t *testing.T) {
 func TestServiceListMembersNormalizesLimit(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, members: []GroupMemberItem{{User: UserInfo{UserID: "u2"}}}}
 	svc := NewServiceWithRepo(repo)
-	items, _, err := svc.ListMembers(context.Background(), GroupMembersRequest{GroupID: "g1", Limit: 150})
+	items, _, err := svc.ListMembers(context.Background(), GroupMembersRequest{GroupID: "g1", Pagination: &PaginationParams{Limit: 150}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -604,7 +604,7 @@ func TestServiceRemoveMemberRequiresAdmin(t *testing.T) {
 func TestServiceListMyGroupsNormalizesLimit(t *testing.T) {
 	repo := &stubGroupsRepo{myGroups: []GroupItem{ownerGroup()}}
 	svc := NewServiceWithRepo(repo)
-	items, _, err := svc.ListMyGroups(grpCtx("u1"), MyGroupsRequest{Limit: 150})
+	items, _, err := svc.ListMyGroups(grpCtx("u1"), MyGroupsRequest{Pagination: &PaginationParams{Limit: 150}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -769,7 +769,7 @@ func TestServiceListMyInvitesNormalizesLimit(t *testing.T) {
 		myInvites: []GroupInviteItem{{InviteID: "inv1"}},
 	}
 	svc := NewServiceWithRepo(repo)
-	items, _, err := svc.ListMyInvites(grpCtx("u1"), MyInvitesRequest{Limit: 150})
+	items, _, err := svc.ListMyInvites(grpCtx("u1"), MyInvitesRequest{Pagination: &PaginationParams{Limit: 150}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1088,7 +1088,7 @@ func TestServiceListMyApplicationsNormalizesLimit(t *testing.T) {
 		myApps: []GroupApplicationItem{{ApplicationID: "app1"}},
 	}
 	svc := NewServiceWithRepo(repo)
-	items, _, err := svc.ListMyApplications(grpCtx("u1"), MyApplicationsRequest{Limit: 150})
+	items, _, err := svc.ListMyApplications(grpCtx("u1"), MyApplicationsRequest{Pagination: &PaginationParams{Limit: 150}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

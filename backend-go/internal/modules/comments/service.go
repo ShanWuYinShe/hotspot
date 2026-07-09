@@ -107,6 +107,7 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 		s.notifyMomentAuthor(ctx, momentContext, actor, item, mentionTargets)
 	}
 	s.notifyMentionedUsers(ctx, momentContext, actor, item, mentionTargets)
+	syncIsLiked([]CommentItem{item})
 	return item, nil
 }
 
@@ -130,7 +131,22 @@ func (s *Service) List(ctx context.Context, req ListCommentsRequest) (PaginatedC
 		return PaginatedComments{}, err
 	}
 	s.fillTopReplies(ctx, result.Items)
+	syncIsLiked(result.Items)
 	return result, nil
+}
+
+// syncIsLiked copies each comment's MyState.IsLiked onto the top-level IsLiked
+// field so the wire shape matches the spec (CommentItem.is_liked is a
+// top-level @auth-only field, not nested under my_state). A nil IsLiked here
+// is fine — it omits from JSON for unauthenticated requests.
+func syncIsLiked(items []CommentItem) {
+	for i := range items {
+		if items[i].MyState != nil {
+			liked := items[i].MyState.IsLiked
+			items[i].IsLiked = &liked
+		}
+		syncIsLiked(items[i].TopReplies)
+	}
 }
 
 func (s *Service) fillTopReplies(ctx context.Context, items []CommentItem) {
@@ -197,7 +213,12 @@ func (s *Service) ListReplies(ctx context.Context, req CommentRepliesRequest) (P
 		}
 		cursor = req.Pagination.Cursor
 	}
-	return s.repo.ListReplies(ctx, req.CommentID, limit, cursor)
+	result, err := s.repo.ListReplies(ctx, req.CommentID, limit, cursor)
+	if err != nil {
+		return PaginatedComments{}, err
+	}
+	syncIsLiked(result.Items)
+	return result, nil
 }
 
 func (s *Service) Like(ctx context.Context, req LikeCommentRequest) error {
