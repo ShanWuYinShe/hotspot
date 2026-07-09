@@ -1,5 +1,7 @@
 package comments
 
+import "hotspot/backend-go/internal/platform/types"
+
 type UserInfo struct {
 	UserID    string `json:"user_id"`
 	Nickname  string `json:"nickname"`
@@ -52,10 +54,7 @@ type DeleteCommentRequest struct {
 	CommentID string `json:"comment_id"`
 }
 
-type PaginationParams struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
+type PaginationParams = types.PaginationParams
 
 type CommentRepliesRequest struct {
 	CommentID  string            `json:"comment_id"`

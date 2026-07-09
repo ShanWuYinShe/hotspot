@@ -1,5 +1,7 @@
 package search
 
+import "hotspot/backend-go/internal/platform/types"
+
 type GeoPoint struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
@@ -52,10 +54,7 @@ type SearchSuggestResponse struct {
 	Items []SearchSuggestItem `json:"items"`
 }
 
-type PaginationParams struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
+type PaginationParams = types.PaginationParams
 
 type SearchAllRequest struct {
 	Keyword        string            `json:"keyword,omitempty"`

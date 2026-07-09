@@ -1,5 +1,7 @@
 package groups
 
+import "hotspot/backend-go/internal/platform/types"
+
 type GroupJoinMethod string
 
 type GroupRole string
@@ -8,16 +10,16 @@ type ApplicationStatus string
 
 type JoinGroupStatus string
 
-// PaginationParams mirrors api_spec_base.md PaginationParams so group request
-// bodies use the nested {"pagination":{"limit","cursor"}} shape the spec and
-// clients expect (previously these were flat top-level limit/cursor fields).
-type PaginationParams struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
+// PaginationParams aliases the shared request-pagination shape
+// (api_spec_base.md PaginationParams) so group request bodies use the nested
+// {"pagination":{"limit","cursor"}} shape the spec and clients expect
+// (previously these were flat top-level limit/cursor fields).
+type PaginationParams = types.PaginationParams
 
-// limit returns the page size, defaulting to fallback when unset or out of range.
-func (p *PaginationParams) limit(fallback, max int) int {
+// paginationLimit returns the page size, defaulting to fallback when unset or
+// out of range. Free function because methods cannot be defined on a type
+// aliased from another package.
+func paginationLimit(p *PaginationParams, fallback, max int) int {
 	if p == nil || p.Limit <= 0 {
 		return fallback
 	}
@@ -27,8 +29,8 @@ func (p *PaginationParams) limit(fallback, max int) int {
 	return p.Limit
 }
 
-// cursor returns the pagination cursor (empty when unset).
-func (p *PaginationParams) cursor() string {
+// paginationCursor returns the pagination cursor (empty when unset).
+func paginationCursor(p *PaginationParams) string {
 	if p == nil {
 		return ""
 	}

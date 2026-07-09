@@ -191,8 +191,8 @@ func (s *Service) ListMembers(ctx context.Context, req GroupMembersRequest) ([]G
 		observability.L().Warn("groups.list_members not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", ErrGroupNotFound
 	}
-	limit := req.Pagination.limit(20, 100)
-	items, cursor, err := s.repo.ListMembers(ctx, req.GroupID, req.Role, limit, req.Pagination.cursor())
+	limit := paginationLimit(req.Pagination, 20, 100)
+	items, cursor, err := s.repo.ListMembers(ctx, req.GroupID, req.Role, limit, paginationCursor(req.Pagination))
 	if err != nil {
 		observability.L().Error("groups.list_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", err
@@ -213,8 +213,8 @@ func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersReque
 		observability.L().Warn("groups.search_members not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", ErrGroupNotFound
 	}
-	limit := req.Pagination.limit(20, 100)
-	items, cursor, err := s.repo.SearchMembers(ctx, req.GroupID, req.Keyword, req.Role, limit, req.Pagination.cursor())
+	limit := paginationLimit(req.Pagination, 20, 100)
+	items, cursor, err := s.repo.SearchMembers(ctx, req.GroupID, req.Keyword, req.Role, limit, paginationCursor(req.Pagination))
 	if err != nil {
 		observability.L().Error("groups.search_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", err
@@ -227,8 +227,8 @@ func (s *Service) ListMyGroups(ctx context.Context, req MyGroupsRequest) ([]Grou
 	startedAt := time.Now()
 	observability.L().Info("groups.list_my_groups started")
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	limit := req.Pagination.limit(20, 100)
-	items, cursor, err := s.repo.ListMyGroups(ctx, principal.UserID, limit, req.Pagination.cursor())
+	limit := paginationLimit(req.Pagination, 20, 100)
+	items, cursor, err := s.repo.ListMyGroups(ctx, principal.UserID, limit, paginationCursor(req.Pagination))
 	if err != nil {
 		observability.L().Error("groups.list_my_groups failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", err
@@ -388,8 +388,8 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 
 func (s *Service) ListMyApplications(ctx context.Context, req MyApplicationsRequest) ([]GroupApplicationItem, string, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	limit := req.Pagination.limit(20, 100)
-	return s.repo.ListMyApplications(ctx, principal.UserID, req.Status, limit, req.Pagination.cursor())
+	limit := paginationLimit(req.Pagination, 20, 100)
+	return s.repo.ListMyApplications(ctx, principal.UserID, req.Status, limit, paginationCursor(req.Pagination))
 }
 
 func (s *Service) CancelApplication(ctx context.Context, req CancelApplicationRequest) error {

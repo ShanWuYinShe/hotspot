@@ -1,11 +1,13 @@
 package admin
 
 import (
+	"time"
+
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
 	reportsmodule "hotspot/backend-go/internal/modules/reports"
 	systemmodule "hotspot/backend-go/internal/modules/system"
+	"hotspot/backend-go/internal/platform/types"
 	usersmodule "hotspot/backend-go/internal/modules/users"
-	"time"
 )
 
 type UserInfo = usersmodule.UserInfo
@@ -27,10 +29,7 @@ const (
 	AnnouncementSeverityError   = systemmodule.AnnouncementSeverityError
 )
 
-type PaginationParams struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
+type PaginationParams = types.PaginationParams
 
 type AdminRoleBasic struct {
 	RoleID string `json:"role_id"`

@@ -4,12 +4,10 @@ import (
 	"time"
 
 	platformcursor "hotspot/backend-go/internal/platform/cursor"
+	"hotspot/backend-go/internal/platform/types"
 )
 
-type PaginationParams struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
+type PaginationParams = types.PaginationParams
 
 type messageCursor struct {
 	SentAt    string `json:"sent_at"`

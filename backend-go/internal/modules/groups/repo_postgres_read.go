@@ -240,8 +240,8 @@ func formatOptionalTime(value *time.Time) *string {
 }
 
 func buildGroupSearchQuery(req SearchGroupsRequest) (string, []any, int, groupSearchCursor, error) {
-	limit := req.Pagination.limit(defaultSearchLimit, maxSearchLimit)
-	cursor, err := decodeSearchCursor(req.Pagination.cursor())
+	limit := paginationLimit(req.Pagination, defaultSearchLimit, maxSearchLimit)
+	cursor, err := decodeSearchCursor(paginationCursor(req.Pagination))
 	if err != nil {
 		return "", nil, 0, groupSearchCursor{}, err
 	}

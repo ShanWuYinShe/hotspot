@@ -1,5 +1,7 @@
 package mapmodule
 
+import "hotspot/backend-go/internal/platform/types"
+
 type Bounds struct {
 	North float64 `json:"north"`
 	South float64 `json:"south"`
@@ -21,10 +23,7 @@ type MapCanvasFilter struct {
 	TimeRange *TimeRangeParams `json:"time_range,omitempty"`
 }
 
-type PaginationParams struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
+type PaginationParams = types.PaginationParams
 
 type MapCanvasRequest struct {
 	Viewport   MapViewport       `json:"viewport"`
