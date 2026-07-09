@@ -53,12 +53,12 @@
   }
 
   async function loadUsers(refresh = false) {
-    await pagination.load(async (cursor) => {
+    await pagination.load(async (cursor, opts) => {
       const response = await usersService.search({
         radius: mapAnchorStore.radius * 1000,
         reference_point: getAnchor(),
         pagination: { limit: 20, cursor }
-      });
+      }, opts);
       const currentUserId = authStore.currentUserId;
       if (currentUserId && response.data?.items) {
         response.data.items = response.data.items.filter(
@@ -220,15 +220,17 @@
       {:else}
         <div class="density-grid">
           {#each pagination.items as user (user.user.user_id)}
-            <UserCard
-              {user}
-              showDistance
-              showBio
-              showTags
-              showOnlineStatus
-              variant="nearby-row"
-              class="overflow-hidden"
-            />
+            <div style="content-visibility: auto; contain-intrinsic-size: 100px;">
+              <UserCard
+                {user}
+                showDistance
+                showBio
+                showTags
+                showOnlineStatus
+                variant="nearby-row"
+                class="overflow-hidden"
+              />
+            </div>
           {/each}
         </div>
 

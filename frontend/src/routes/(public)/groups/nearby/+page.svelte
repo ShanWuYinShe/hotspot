@@ -61,12 +61,12 @@
 
   async function loadGroups(refresh = false) {
     await pagination.load(
-      (cursor) =>
+      (cursor, opts) =>
         groupsService.search({
           radius: mapAnchorStore.radius * 1000,
           reference_point: getAnchor(),
           pagination: { limit: 20, cursor }
-        }),
+        }, opts),
       refresh
     );
     hasLoadedOnce = true;
@@ -227,7 +227,9 @@
       {:else}
         <div class="density-grid">
           {#each filteredGroups as group (group.group.group_id)}
-            <GroupCard {group} showDistance showMembers variant="default" class="overflow-hidden" />
+            <div style="content-visibility: auto; contain-intrinsic-size: 120px;">
+              <GroupCard {group} showDistance showMembers variant="default" class="overflow-hidden" />
+            </div>
           {/each}
         </div>
 
