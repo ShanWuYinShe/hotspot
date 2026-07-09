@@ -19,10 +19,7 @@ const (
 	UserPresenceOffline UserPresenceStatus = "offline"
 )
 
-type GeoPoint struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
+type GeoPoint = types.GeoPoint
 
 type Location struct {
 	Point        GeoPoint `json:"point"`

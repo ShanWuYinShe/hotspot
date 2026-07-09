@@ -56,10 +56,35 @@ const (
 	SELECT 1 FROM comment_likes WHERE comment_id = $1 AND user_id = $2`
 
 	queryIncrementCommentLikeCount = `
-	UPDATE comments SET likes_count = likes_count + 1 WHERE comment_id = $1`
+UPDATE comments SET likes_count = likes_count + 1 WHERE comment_id = $1`
 
 	queryDecrementCommentLikeCount = `
-	UPDATE comments SET likes_count = GREATEST(likes_count - 1, 0) WHERE comment_id = $1`
+UPDATE comments SET likes_count = GREATEST(likes_count - 1, 0) WHERE comment_id = $1`
+
+	queryInsertCommentLikeAndCount = `
+WITH ins AS (
+  INSERT INTO comment_likes (comment_id, user_id, liked_at)
+  VALUES ($1, $2, $3)
+  ON CONFLICT (comment_id, user_id) DO NOTHING
+  RETURNING comment_id
+)
+UPDATE comments
+SET likes_count = likes_count + 1
+WHERE comment_id = $1
+  AND EXISTS (SELECT 1 FROM ins)
+RETURNING EXISTS (SELECT 1 FROM ins) AS inserted`
+
+	queryDeleteCommentLikeAndCount = `
+WITH del AS (
+  DELETE FROM comment_likes
+  WHERE comment_id = $1 AND user_id = $2
+  RETURNING comment_id
+)
+UPDATE comments
+SET likes_count = GREATEST(likes_count - 1, 0)
+WHERE comment_id = $1
+  AND EXISTS (SELECT 1 FROM del)
+RETURNING EXISTS (SELECT 1 FROM del) AS deleted`
 
 	queryListCommentLikes = `
 	SELECT cl.user_id, u.nickname, cl.liked_at

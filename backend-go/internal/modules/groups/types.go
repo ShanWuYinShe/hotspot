@@ -125,10 +125,7 @@ type SearchGroupsRequest struct {
 	Pagination     *PaginationParams `json:"pagination,omitempty"`
 }
 
-type GeoPoint struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
+type GeoPoint = types.GeoPoint
 
 type UpdateGroupRequest struct {
 	GroupID       string           `json:"group_id"`
@@ -170,11 +167,7 @@ const (
 	UserPresenceOffline UserPresenceStatus = "offline"
 )
 
-type UserInfo struct {
-	UserID    string `json:"user_id"`
-	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatar_url,omitempty"`
-}
+type UserInfo = types.UserInfo
 
 type SearchGroupMembersRequest struct {
 	GroupID    string            `json:"group_id"`

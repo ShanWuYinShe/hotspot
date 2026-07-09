@@ -117,17 +117,17 @@ export const momentsService = {
 
   // ==================== 当前用户 ====================
 
-  /**
-   * 获取我的瞬间列表
-   */
-  getMyMoments(params?: { pagination?: PaginationParams }) {
-    return paginate<MomentItem>(MOMENTS.ME.LIST, params);
-  },
+	  /**
+	   * 获取我的瞬间列表
+	   */
+	  getMyMoments(params?: { pagination?: PaginationParams }, options?: RequestOptions) {
+	    return paginate<MomentItem>(MOMENTS.ME.LIST, params, options);
+	  },
 
-  /**
-   * 获取我的收藏
-   */
-  getMyFavorites(params?: { pagination?: PaginationParams }) {
-    return paginate<MomentItem>(MOMENTS.ME.LIST_FAVORITES, params);
-  }
+	  /**
+	   * 获取我的收藏
+	   */
+	  getMyFavorites(params?: { pagination?: PaginationParams }, options?: RequestOptions) {
+	    return paginate<MomentItem>(MOMENTS.ME.LIST_FAVORITES, params, options);
+	  }
 };

@@ -2,17 +2,9 @@ package search
 
 import "hotspot/backend-go/internal/platform/types"
 
-type GeoPoint struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
+type GeoPoint = types.GeoPoint
 
-type RelativeLocation struct {
-	Point          GeoPoint `json:"point"`
-	LocationName   string   `json:"location_name"`
-	Distance       int      `json:"distance,omitempty"`
-	BearingDegrees int      `json:"bearing_degrees,omitempty"`
-}
+type RelativeLocation = types.RelativeLocation
 
 type SearchSuggestRequest struct {
 	Prefix         string   `json:"prefix"`

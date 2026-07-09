@@ -8,17 +8,9 @@ import (
 	"hotspot/backend-go/internal/platform/types"
 )
 
-type GeoPoint struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
+type GeoPoint = types.GeoPoint
 
-type RelativeLocation struct {
-	Point          GeoPoint `json:"point"`
-	LocationName   string   `json:"location_name"`
-	Distance       int      `json:"distance,omitempty"`
-	BearingDegrees int      `json:"bearing_degrees,omitempty"`
-}
+type RelativeLocation = types.RelativeLocation
 
 type PaginationParams = types.PaginationParams
 
@@ -41,11 +33,7 @@ type ListFeedUsersRequest struct {
 	Pagination     *PaginationParams `json:"pagination,omitempty"`
 }
 
-type UserInfo struct {
-	UserID    string `json:"user_id"`
-	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatar_url,omitempty"`
-}
+type UserInfo = types.UserInfo
 
 type UserRelation struct {
 	IsFollowing  bool `json:"is_following"`

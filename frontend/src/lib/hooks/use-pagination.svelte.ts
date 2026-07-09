@@ -24,9 +24,10 @@
  * ```
  */
 
-import { isSuccess } from '$lib/api/client';
-import type { ApiResponse, PaginatedData } from '$lib/types/api';
-import { withMinimumLoadingTime } from '$lib/utils/loading';
+	import { isSuccess } from '$lib/api/client';
+	import type { ApiResponse, PaginatedData } from '$lib/types/api';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
+	import type { RequestOptions } from '$lib/api/client';
 
 interface UsePaginationOptions<T> {
   /**
@@ -73,15 +74,15 @@ interface PaginationState<T> {
    */
   readonly error: string | null;
 
-  /**
-   * 加载数据
-   * @param fetcher 数据获取函数
-   * @param refresh 是否刷新（清空现有数据）
-   */
-  load: (
-    fetcher: (cursor?: string) => Promise<ApiResponse<PaginatedData<T>>>,
-    refresh?: boolean
-  ) => Promise<void>;
+	  /**
+	   * 加载数据
+	   * @param fetcher 数据获取函数 (cursor, opts?) => Promise
+	   * @param refresh 是否刷新（清空现有数据）
+	   */
+	  load: (
+	    fetcher: (cursor?: string, opts?: { signal?: AbortSignal }) => Promise<ApiResponse<PaginatedData<T>>>,
+	    refresh?: boolean
+	  ) => Promise<void>;
 
   /**
    * 重置状态
@@ -125,40 +126,46 @@ export function usePagination<T>(options?: UsePaginationOptions<T>): PaginationS
   let hasMore = $state(true);
   let error = $state<string | null>(null);
 
-  // 竞态保护：仅最新请求的结果会被写入状态
-  let loadVersion = 0;
-  let isLoadingMore = false; // 仅限制"加载更多"并发
+	// 竞态保护：仅最新请求的结果会被写入状态
+	let loadVersion = 0;
+	let isLoadingMore = false; // 仅限制"加载更多"并发
+	let currentAbortController: AbortController | undefined;
 
-  async function load(
-    fetcher: (cursor?: string) => Promise<ApiResponse<PaginatedData<T>>>,
-    refresh = false
-  ) {
-    if (!refresh) {
-      // 加载更多：防止并发（连续点击"加载更多"按钮）
-      if (isLoadingMore) return;
-      isLoadingMore = true;
-    }
+	async function load(
+	  fetcher: (cursor?: string, opts?: { signal?: AbortSignal }) => Promise<ApiResponse<PaginatedData<T>>>,
+	  refresh = false
+	) {
+	  // 取消上一轮未完成的请求
+	  currentAbortController?.abort();
+	  currentAbortController = new AbortController();
+	  const signal = currentAbortController.signal;
 
-    // 刷新：递增版本号，后续用于丢弃过期响应
-    const version = ++loadVersion;
+	  if (!refresh) {
+	    // 加载更多：防止并发（连续点击"加载更多"按钮）
+	    if (isLoadingMore) return;
+	    isLoadingMore = true;
+	  }
 
-    if (refresh) {
-      items = [];
-      cursor = undefined;
-      hasMore = true;
-      loading = true;
-      error = null;
-    } else {
-      loadingMore = true;
-    }
+	  // 刷新：递增版本号，后续用于丢弃过期响应
+	  const version = ++loadVersion;
 
-    try {
-      const response = refresh
-        ? await withMinimumLoadingTime(() => fetcher(undefined))
-        : await fetcher(cursor);
+	  if (refresh) {
+	    items = [];
+	    cursor = undefined;
+	    hasMore = true;
+	    loading = true;
+	    error = null;
+	  } else {
+	    loadingMore = true;
+	  }
 
-      // 竞态检查：丢弃非最新请求的结果
-      if (version !== loadVersion) return;
+	  try {
+	    const response = refresh
+	      ? await withMinimumLoadingTime(() => fetcher(undefined, { signal }))
+	      : await fetcher(cursor, { signal });
+
+	    // 竞态检查：丢弃非最新请求的结果
+	    if (version !== loadVersion) return;
 
       if (isSuccess(response) && response.data) {
         const newItems = response.data.items ?? [];

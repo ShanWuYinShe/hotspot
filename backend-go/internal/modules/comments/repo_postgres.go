@@ -195,20 +195,15 @@ func (r *PostgresRepository) Like(ctx context.Context, commentID string, userID 
 	if !ok {
 		return false, persistence.ErrNotImplemented
 	}
-	var exists int
-	if err := queryable.QueryRow(ctx, queryCheckCommentLike, commentID, userID).Scan(&exists); err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return false, err
-	} else if err == nil {
-		return false, nil
-	}
 	now := time.Now().UTC()
-	if err := queryable.Exec(ctx, queryInsertCommentLike, commentID, userID, now); err != nil {
+	var inserted bool
+	if err := queryable.QueryRow(ctx, queryInsertCommentLikeAndCount, commentID, userID, now).Scan(&inserted); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
 		return false, err
 	}
-	if err := queryable.Exec(ctx, queryIncrementCommentLikeCount, commentID); err != nil {
-		return false, err
-	}
-	return true, nil
+	return inserted, nil
 }
 
 func (r *PostgresRepository) Unlike(ctx context.Context, commentID string, userID string) error {
@@ -216,10 +211,14 @@ func (r *PostgresRepository) Unlike(ctx context.Context, commentID string, userI
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	if err := queryable.Exec(ctx, queryDeleteCommentLike, commentID, userID); err != nil {
+	var deleted bool
+	if err := queryable.QueryRow(ctx, queryDeleteCommentLikeAndCount, commentID, userID).Scan(&deleted); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
 		return err
 	}
-	return queryable.Exec(ctx, queryDecrementCommentLikeCount, commentID)
+	return nil
 }
 
 func (r *PostgresRepository) ListLikes(ctx context.Context, commentID string, limit int, cursor string) ([]CommentLikeItem, string, error) {
