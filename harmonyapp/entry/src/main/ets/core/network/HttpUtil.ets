@@ -507,12 +507,20 @@ export class HttpUtil {
             idempotencyRetryCount + 1, omitAuthHeader, rateLimitRetryCount
           );
         }
-        if (
-          resultCode === IDEMPOTENCY_KEY_CONFLICT_CODE ||
-          resultCode === IDEMPOTENCY_CACHE_EXPIRED_CODE
-        ) {
+        // 22000 CONFLICT：同一个幂等键被复用于不同请求体 → 必须换新键重试
+        if (resultCode === IDEMPOTENCY_KEY_CONFLICT_CODE) {
+          hilog.warn(DOMAIN_NUMBER, TAG, `收到 ${IDEMPOTENCY_KEY_CONFLICT_CODE} 幂等键冲突，换新键重试`);
           return await HttpUtil.request<TResponse, TRequest>(
             url, method, data, retried, generateIdempotencyKey(),
+            idempotencyRetryCount + 1, omitAuthHeader, rateLimitRetryCount
+          );
+        }
+        // 22001 CACHE_EXPIRED：仅缓存响应过期，原始请求未产生副作用 →
+        // 必须用「同一个键」重试一次以保留去重语义，避免新生成键导致重复创建资源
+        if (resultCode === IDEMPOTENCY_CACHE_EXPIRED_CODE) {
+          hilog.warn(DOMAIN_NUMBER, TAG, `收到 ${IDEMPOTENCY_CACHE_EXPIRED_CODE} 幂等缓存过期，以同键重试一次`);
+          return await HttpUtil.request<TResponse, TRequest>(
+            url, method, data, retried, currentIdempotencyKey,
             idempotencyRetryCount + 1, omitAuthHeader, rateLimitRetryCount
           );
         }
