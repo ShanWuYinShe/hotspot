@@ -256,7 +256,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 	if b.queryErr != nil {
 		return nil, b.queryErr
 	}
-	if strings.Contains(query, "FROM moments") && strings.Contains(query, "privacy_level <>") && strings.Contains(query, "unnest($1::bigint[], $2::bigint[])") {
+	if strings.Contains(query, "FROM moments") && strings.Contains(query, "privacy_level =") && strings.Contains(query, "unnest($1::bigint[], $2::bigint[])") {
 		argIndex := 2
 		var keywordStr string
 		if len(args) > argIndex {
@@ -278,7 +278,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		items := make([]MomentItem, 0)
 		for _, item := range b.moments {
-			if item.PrivacyLevel == "private" {
+			if item.PrivacyLevel != "public" {
 				continue
 			}
 			if keywordStr != "" && !containsTagInDescription(item.Description, keywordStr) {
@@ -472,7 +472,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		items := make([]MomentItem, 0)
 		for _, item := range b.moments {
-			if item.PrivacyLevel == "private" {
+			if item.PrivacyLevel != "public" {
 				continue
 			}
 			if keywordStr != "" && !containsTagInDescription(item.Description, keywordStr) {

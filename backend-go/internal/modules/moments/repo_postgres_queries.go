@@ -107,7 +107,7 @@ DELETE FROM moments WHERE moment_id = $1`
 SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
 FROM moments m
 LEFT JOIN users u ON u.user_id = m.user_id
-WHERE m.privacy_level != 'private'
+WHERE m.privacy_level = 'public'
   AND ($1::text IS NULL OR m.description ILIKE '%' || $1 || '%')
   AND ($2::text IS NULL OR m.moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $2))
 ORDER BY m.created_at DESC, m.moment_id DESC
@@ -117,7 +117,7 @@ LIMIT $3`
 SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
 FROM moments m
 LEFT JOIN users u ON u.user_id = m.user_id
-WHERE m.privacy_level != 'private'
+WHERE m.privacy_level = 'public'
   AND ($1::text IS NULL OR m.description ILIKE '%' || $1 || '%')
   AND ($2::text IS NULL OR m.moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $2))`
 

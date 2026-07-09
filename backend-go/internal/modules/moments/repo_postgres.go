@@ -200,7 +200,7 @@ func buildSearchMomentsQuery(bounds geo.Bounds, keyword *string, tag *string, so
 	}
 	args := make([]any, 0, 6)
 	var builder strings.Builder
-	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level <> 'private' AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`)
+	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level = 'public' AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`)
 	args = append(args, mins, maxs)
 	if keyword != nil && *keyword != "" {
 		args = append(args, *keyword)
