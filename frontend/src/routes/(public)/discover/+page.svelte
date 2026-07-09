@@ -85,7 +85,12 @@
     void loadFeed(true);
   }
 
+  // 首次挂载加载一次；后续刷新由 handleSearch / handleTrendingClick 等显式触发，
+  // 避免顶级 $effect 重跑导致重叠 loadFeed(true) 调用堆叠
+  let initialized = false;
   $effect(() => {
+    if (initialized) return;
+    initialized = true;
     void loadFeed(true);
     void loadTrending();
   });
