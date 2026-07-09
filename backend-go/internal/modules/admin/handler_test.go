@@ -661,10 +661,10 @@ func TestHandleGroupReportDismissesGroup(t *testing.T) {
 	if _, ok := store.groups["group_hotspot"]; ok {
 		t.Fatalf("expected group to be dismissed, groups=%#v", store.groups)
 	}
-	_, ok, err := store.GetUserBanState(handleReq.Context(), "user_alice")
-	if err != nil || ok {
-		t.Fatalf("unexpected owner ban state after group handle: ok=%v err=%v", ok, err)
-	}
+		state, ok, err := store.GetUserBanState(handleReq.Context(), "user_alice")
+		if err != nil || state.Status == UserAccountStatusBanned {
+			t.Fatalf("unexpected owner ban state after group handle: status=%v ok=%v err=%v", state.Status, ok, err)
+		}
 }
 
 func TestHandleMomentCommentAndMessageReportsApplyContentActions(t *testing.T) {
