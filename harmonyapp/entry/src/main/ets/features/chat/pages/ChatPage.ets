@@ -403,9 +403,8 @@ export struct ChatPage {
       return;
     }
 
-    const nextMessages = this.messages.concat([newMessage]);
-    this.messages = nextMessages;
-    this.messagesDataSource.setData(nextMessages);
+    this.messages.push(newMessage);
+    this.messagesDataSource.addData([newMessage]);
     this.scrollToBottom();
 
     if (!newMessage.isSelf) {
