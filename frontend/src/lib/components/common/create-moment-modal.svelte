@@ -6,6 +6,7 @@
   import { validateField } from '$lib/utils/form-validation';
   import type { FieldRule } from '$lib/utils/form-validation';
   import { authStore } from '$lib/stores/auth.svelte';
+  import { configStore } from '$lib/stores/config.svelte';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { toast } from '$lib/stores/toast.svelte';
@@ -63,17 +64,19 @@
     }[]
   >([]);
 
-  const MAX_IMAGES = 9;
-  const DESCRIPTION_MAX = 2000;
+  // 上传/输入限制：优先使用服务端 ClientConfig 派生值，未加载时回退到默认
+  const MAX_IMAGES = $derived(configStore.maxMomentImages);
+  const DESCRIPTION_MAX = $derived(configStore.momentDescriptionMaxLength);
+  const MAX_TAGS = $derived(configStore.maxMomentTags);
 
   const tags = $derived(parseTags(tagsInput));
 
   const canPost = $derived(description.trim().length > 0);
 
-  const descriptionRules: FieldRule[] = [
+  const descriptionRules = $derived<FieldRule[]>([
     { required: true, requiredMessage: '请输入动态内容' },
     { maxLength: DESCRIPTION_MAX, maxLengthMessage: `动态内容最多 ${DESCRIPTION_MAX} 字符` }
-  ];
+  ]);
   let descriptionError = $derived(
     touched['description'] ? validateField(description, descriptionRules) : undefined
   );
@@ -83,6 +86,11 @@
     if (next.has(tag)) {
       next.delete(tag);
     } else {
+      // 标签总数（解析标签 + 氛围标签）不超过服务端配置上限
+      if (tags.length + next.size >= MAX_TAGS) {
+        toast.error(`最多添加 ${MAX_TAGS} 个标签`);
+        return;
+      }
       next.add(tag);
     }
     selectedVibes = next;
@@ -151,42 +159,49 @@
   async function uploadImages(): Promise<string[]> {
     if (selectedImages.length === 0) return [];
     isUploadingImages = true;
-    const uploadedIds: string[] = [];
 
-    for (let i = 0; i < selectedImages.length; i += 1) {
-      const image = selectedImages[i]!;
+    // 并行上传：每张图片独立走 presign+PUT+complete，互不阻塞
+    const tasks = selectedImages.map((image, i) => {
       if (image.uploadedId) {
-        uploadedIds.push(image.uploadedId);
-        continue;
+        return Promise.resolve({ index: i, fileId: image.uploadedId });
       }
 
       selectedImages = selectedImages.map((item, idx) =>
         idx === i ? { ...item, isUploading: true, progress: 0 } : item
       );
 
-      try {
-        const uploaded = await mediaService.uploadFile(image.file, 'moment_image', (progress) => {
+      return mediaService
+        .uploadFile(image.file, 'moment_image', (progress) => {
           selectedImages = selectedImages.map((item, idx) =>
             idx === i ? { ...item, progress } : item
           );
+        })
+        .then((uploaded) => {
+          selectedImages = selectedImages.map((item, idx) =>
+            idx === i
+              ? { ...item, uploadedId: uploaded.file_id, isUploading: false, progress: 100 }
+              : item
+          );
+          return { index: i, fileId: uploaded.file_id };
+        })
+        .catch((err) => {
+          selectedImages = selectedImages.map((item, idx) =>
+            idx === i ? { ...item, isUploading: false } : item
+          );
+          throw err;
         });
-        selectedImages = selectedImages.map((item, idx) =>
-          idx === i
-            ? { ...item, uploadedId: uploaded.file_id, isUploading: false, progress: 100 }
-            : item
-        );
-        uploadedIds.push(uploaded.file_id);
-      } catch {
-        selectedImages = selectedImages.map((item, idx) =>
-          idx === i ? { ...item, isUploading: false } : item
-        );
-        isUploadingImages = false;
-        throw new Error('图片上传失败');
-      }
-    }
+    });
 
-    isUploadingImages = false;
-    return uploadedIds;
+    try {
+      const results = await Promise.all(tasks);
+      // 按原始顺序返回 file_id
+      const uploadedIds = results.sort((a, b) => a.index - b.index).map((r) => r.fileId);
+      isUploadingImages = false;
+      return uploadedIds;
+    } catch {
+      isUploadingImages = false;
+      throw new Error('图片上传失败');
+    }
   }
 
   async function handleSubmit() {

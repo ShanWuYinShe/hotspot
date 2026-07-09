@@ -69,6 +69,7 @@ export struct MessagePage {
   private chatListDataSource: BasicDataSource<ChatItem> = new BasicDataSource([]);
   private messageCacheService = MessageCacheService.getInstance();
   private isDestroyed: boolean = false;
+  private loadVersion: number = 0;
 
   private getHeaderTopPadding(): number {
     return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
@@ -145,6 +146,8 @@ export struct MessagePage {
       await this.loadFromCache();
     }
 
+    // 请求版本号：每次进入递增，避免较慢的旧请求解析后覆盖较新的结果
+    const capturedVersion = ++this.loadVersion;
     if (!refresh) { this.isLoading = true; }
     this.errorMessage = '';
 
@@ -153,6 +156,8 @@ export struct MessagePage {
         Promise.allSettled([this.loadPrivateChats(), this.loadGroupChats()])
       );
       if (this.isDestroyed) return;
+      // 旧请求晚于新请求返回：丢弃结果，避免覆盖最新数据
+      if (capturedVersion !== this.loadVersion) return;
       const privateChatsResult = results[0];
       const groupChatsResult = results[1];
 
@@ -179,16 +184,22 @@ export struct MessagePage {
       this.updateCache(allChats);
     } catch {
       hilog.error(DOMAIN_NUMBER, TAG, '加载消息失败');
-      if (this.chatListDataSource.totalCount() === 0) {
-        this.errorMessage = '加载消息失败，请检查网络';
-        this.hasData = false;
-      }
-      if (this.isRefreshing) {
-        VibrationUtil.startFail();
+      // 仅当当前请求仍为最新时才上报错误/清空数据
+      if (capturedVersion === this.loadVersion) {
+        if (this.chatListDataSource.totalCount() === 0) {
+          this.errorMessage = '加载消息失败，请检查网络';
+          this.hasData = false;
+        }
+        if (this.isRefreshing) {
+          VibrationUtil.startFail();
+        }
       }
     } finally {
-      this.isLoading = false;
-      this.isRefreshing = false;
+      // 仅当前最新请求可重置加载态，否则会把新请求的 loading 提前置 false
+      if (capturedVersion === this.loadVersion) {
+        this.isLoading = false;
+        this.isRefreshing = false;
+      }
     }
   }
 

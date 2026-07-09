@@ -94,3 +94,53 @@ func TestRequireEmptyObject(t *testing.T) {
 		t.Fatalf("expected invalid request, got %v", err)
 	}
 }
+
+func TestRecovererReturnsEnvelopeOnPanic(t *testing.T) {
+	handler := Recoverer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		panic("boom")
+	}))
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 envelope, got status %d", rr.Code)
+	}
+	var resp ApiResponse[struct{}]
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Code != 10600 {
+		t.Fatalf("expected code 10600, got %d", resp.Code)
+	}
+	if strings.Contains(rr.Body.String(), "runtime/debug") || strings.Contains(rr.Body.String(), "goroutine") {
+		t.Fatalf("response leaked stack trace: %s", rr.Body.String())
+	}
+}
+
+func TestNotFoundHandlerReturnsEnvelope(t *testing.T) {
+	rr := httptest.NewRecorder()
+	NotFoundHandler(rr, httptest.NewRequest(http.MethodGet, "/nope", nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	var resp ApiResponse[struct{}]
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Code != 10300 {
+		t.Fatalf("expected code 10300, got %d", resp.Code)
+	}
+}
+
+func TestLimitRequestBodyRejectsOversize(t *testing.T) {
+	handler := LimitRequestBody(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Attempting to read past the limit must surface http.MaxBytesError.
+		buf := make([]byte, MaxRequestBodyBytes+1)
+		if _, err := r.Body.Read(buf); err == nil {
+			t.Fatal("expected error reading oversize body, got nil")
+		}
+	}))
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(strings.Repeat("x", MaxRequestBodyBytes+1024)))
+	handler.ServeHTTP(rr, req)
+}

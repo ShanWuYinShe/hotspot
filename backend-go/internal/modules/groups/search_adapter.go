@@ -32,8 +32,7 @@ func (a *SearchAdapter) Search(ctx context.Context, params search.SearchParams) 
 			Latitude:  params.ReferencePoint.Latitude,
 			Longitude: params.ReferencePoint.Longitude,
 		},
-		Limit:  params.Limit,
-		Cursor: params.Cursor,
+		Pagination: &PaginationParams{Limit: params.Limit, Cursor: params.Cursor},
 	}
 	result, err := a.service.Search(ctx, req)
 	if err != nil {

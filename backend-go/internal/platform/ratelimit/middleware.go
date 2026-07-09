@@ -26,6 +26,43 @@ var (
 	tokens        = map[string]*tokenBucket{}
 )
 
+// sweepCadence controls how often the background sweeper drops expired entries
+// from the windows/tokens maps. Without it, keys for one-off IPs/users would
+// accumulate for the process lifetime (unbounded memory growth).
+const sweepCadence = 5 * time.Minute
+
+func init() {
+	go sweepStores()
+}
+
+func sweepStores() {
+	ticker := time.NewTicker(sweepCadence)
+	defer ticker.Stop()
+	for range ticker.C {
+		cutoff := time.Now().UTC().Add(-time.Hour) // keep up to 1h (longest window)
+		storeMu.Lock()
+		for key, events := range windows {
+			kept := events[:0]
+			for _, ts := range events {
+				if ts.After(cutoff) {
+					kept = append(kept, ts)
+				}
+			}
+			if len(kept) == 0 {
+				delete(windows, key)
+			} else {
+				windows[key] = kept
+			}
+		}
+		for key, bucket := range tokens {
+			if bucket.LastRefill.Before(cutoff) {
+				delete(tokens, key)
+			}
+		}
+		storeMu.Unlock()
+	}
+}
+
 type tokenBucket struct {
 	Tokens     float64
 	LastRefill time.Time

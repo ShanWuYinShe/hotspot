@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"hotspot/backend-go/internal/platform/cors"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/observability"
 )
@@ -25,6 +26,12 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger) htt
 	if logger != nil {
 		r.Use(observability.RequestLoggerMiddleware(logger))
 	}
+	// Catch panics into a JSON envelope (never leak a stack trace) and cap
+	// request bodies before they reach handlers.
+	r.Use(httpx.Recoverer)
+	r.Use(httpx.LimitRequestBody)
+	r.NotFound(httpx.NotFoundHandler)
+	r.MethodNotAllowed(httpx.MethodNotAllowedHandler)
 	for _, module := range modules {
 		module.Mount(r)
 	}

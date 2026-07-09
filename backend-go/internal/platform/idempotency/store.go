@@ -22,6 +22,11 @@ type Record struct {
 
 type Store interface {
 	Get(scope, key string) (Record, bool)
+	// Reserve atomically inserts a "processing" record when none exists; it
+	// returns the existing record if one is already present. This lets the
+	// replay path decide replay-vs-in-flight without a separate check-then-act
+	// (and without unsafe type assertions on the concrete store type).
+	Reserve(scope, key string, expiresAt time.Time) (Record, bool)
 	Save(record Record)
 }
 
@@ -40,6 +45,19 @@ func (s *InMemoryStore) Get(scope, key string) (Record, bool) {
 	record, ok := s.records[composite(scope, key)]
 	return record, ok
 }
+
+func (s *InMemoryStore) Reserve(scope, key string, expiresAt time.Time) (Record, bool) {
+	k := composite(scope, key)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if existing, ok := s.records[k]; ok {
+		return existing, false
+	}
+	rec := Record{Key: key, Scope: scope, Status: StatusProcessing, ExpiresAt: expiresAt}
+	s.records[k] = rec
+	return rec, true
+}
+
 func (s *InMemoryStore) Save(record Record) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -32,6 +32,10 @@ func (r *PersistenceRepository) ListReplies(ctx context.Context, commentID strin
 	return r.impl.ListReplies(ctx, commentID, limit, cursor)
 }
 
+func (r *PersistenceRepository) ListTopRepliesByParentIDs(ctx context.Context, parentIDs []string, limit int) (map[string][]CommentItem, error) {
+	return r.impl.ListTopRepliesByParentIDs(ctx, parentIDs, limit)
+}
+
 func (r *PersistenceRepository) Like(ctx context.Context, commentID string, userID string) (bool, error) {
 	return r.impl.Like(ctx, commentID, userID)
 }

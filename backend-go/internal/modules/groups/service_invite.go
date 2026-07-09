@@ -10,14 +10,8 @@ import (
 
 func (s *Service) ListMyInvites(ctx context.Context, req MyInvitesRequest) ([]GroupInviteItem, string, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	limit := req.Limit
-	if limit == 0 {
-		limit = 20
-	}
-	if limit > 100 {
-		limit = 100
-	}
-	return s.repo.ListMyInvites(ctx, principal.UserID, req.Status, limit, req.Cursor)
+	limit := req.Pagination.limit(20, 100)
+	return s.repo.ListMyInvites(ctx, principal.UserID, req.Status, limit, req.Pagination.cursor())
 }
 
 func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) error {
@@ -83,14 +77,8 @@ func (s *Service) ListSentInvites(ctx context.Context, req GroupSentInvitesReque
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
 		return nil, "", ErrAccessRestricted
 	}
-	limit := req.Limit
-	if limit == 0 {
-		limit = 20
-	}
-	if limit > 100 {
-		limit = 100
-	}
-	return s.repo.ListSentInvites(ctx, req.GroupID, req.Status, limit, req.Cursor)
+	limit := req.Pagination.limit(20, 100)
+	return s.repo.ListSentInvites(ctx, req.GroupID, req.Status, limit, req.Pagination.cursor())
 }
 
 func (s *Service) RevokeInvite(ctx context.Context, req RevokeSentInviteRequest) error {

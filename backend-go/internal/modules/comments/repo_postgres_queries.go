@@ -31,6 +31,18 @@ const (
 	ORDER BY created_at DESC, comment_id DESC
 	LIMIT $4`
 
+	// queryListTopRepliesByParentIDs fetches up to $2 newest replies per parent
+	// in a single query using row_number(), eliminating the N+1 of calling
+	// ListReplies once per top-level comment.
+	queryListTopRepliesByParentIDs = `
+	SELECT comment_id, user_id, COALESCE(parent_id, ''), content, created_at, likes_count, replies_count, is_deleted
+	FROM (
+	  SELECT c.*, ROW_NUMBER() OVER (PARTITION BY parent_id ORDER BY created_at DESC, comment_id DESC) AS rn
+	  FROM comments c
+	  WHERE parent_id = ANY($1::text[])
+	) ranked
+	WHERE rn <= $2`
+
 	queryInsertCommentLike = `
 	INSERT INTO comment_likes (comment_id, user_id, liked_at)
 	VALUES ($1, $2, $3)

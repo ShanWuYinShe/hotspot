@@ -8,6 +8,33 @@ type ApplicationStatus string
 
 type JoinGroupStatus string
 
+// PaginationParams mirrors api_spec_base.md PaginationParams so group request
+// bodies use the nested {"pagination":{"limit","cursor"}} shape the spec and
+// clients expect (previously these were flat top-level limit/cursor fields).
+type PaginationParams struct {
+	Limit  int    `json:"limit,omitempty"`
+	Cursor string `json:"cursor,omitempty"`
+}
+
+// limit returns the page size, defaulting to fallback when unset or out of range.
+func (p *PaginationParams) limit(fallback, max int) int {
+	if p == nil || p.Limit <= 0 {
+		return fallback
+	}
+	if p.Limit > max {
+		return max
+	}
+	return p.Limit
+}
+
+// cursor returns the pagination cursor (empty when unset).
+func (p *PaginationParams) cursor() string {
+	if p == nil {
+		return ""
+	}
+	return p.Cursor
+}
+
 const (
 	GroupJoinMethodOpen       GroupJoinMethod = "open"
 	GroupJoinMethodApproval   GroupJoinMethod = "approval"
@@ -59,7 +86,7 @@ type GroupItem struct {
 	Group          GroupInfo        `json:"group"`
 	Description    string           `json:"description,omitempty"`
 	Tags           []string         `json:"tags,omitempty"`
-	HasPassword    bool             `json:"has_password"`
+	HasPassword    bool             `json:"has_password,omitempty"`
 	Location       RelativeLocation `json:"location"`
 	MyState        *MyGroupState    `json:"my_state,omitempty"`
 	FriendsInGroup int              `json:"friends_in_group,omitempty"`
@@ -88,13 +115,12 @@ type GroupOpenTheDoorRequest struct {
 }
 
 type SearchGroupsRequest struct {
-	Keyword        string   `json:"keyword,omitempty"`
-	Tag            string   `json:"tag,omitempty"`
-	Radius         *int     `json:"radius,omitempty"`
-	SortBy         string   `json:"sort_by,omitempty"`
-	ReferencePoint GeoPoint `json:"reference_point"`
-	Limit          int      `json:"limit,omitempty"`
-	Cursor         string   `json:"cursor,omitempty"`
+	Keyword        string            `json:"keyword,omitempty"`
+	Tag            string            `json:"tag,omitempty"`
+	Radius         *int              `json:"radius,omitempty"`
+	SortBy         string            `json:"sort_by,omitempty"`
+	ReferencePoint GeoPoint          `json:"reference_point"`
+	Pagination     *PaginationParams `json:"pagination,omitempty"`
 }
 
 type GeoPoint struct {
@@ -121,10 +147,9 @@ type DismissGroupRequest struct {
 }
 
 type GroupMembersRequest struct {
-	GroupID string     `json:"group_id"`
-	Role    *GroupRole `json:"role,omitempty"`
-	Limit   int        `json:"limit,omitempty"`
-	Cursor  string     `json:"cursor,omitempty"`
+	GroupID    string            `json:"group_id"`
+	Role       *GroupRole        `json:"role,omitempty"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
 type GroupMemberItem struct {
@@ -150,11 +175,10 @@ type UserInfo struct {
 }
 
 type SearchGroupMembersRequest struct {
-	GroupID string     `json:"group_id"`
-	Keyword string     `json:"keyword"`
-	Role    *GroupRole `json:"role,omitempty"`
-	Limit   int        `json:"limit,omitempty"`
-	Cursor  string     `json:"cursor,omitempty"`
+	GroupID    string            `json:"group_id"`
+	Keyword    string            `json:"keyword"`
+	Role       *GroupRole        `json:"role,omitempty"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
 type InviteMemberRequest struct {
@@ -169,10 +193,9 @@ type Invitation struct {
 }
 
 type GroupSentInvitesRequest struct {
-	GroupID string             `json:"group_id"`
-	Status  *ApplicationStatus `json:"status,omitempty"`
-	Limit   int                `json:"limit,omitempty"`
-	Cursor  string             `json:"cursor,omitempty"`
+	GroupID    string             `json:"group_id"`
+	Status     *ApplicationStatus `json:"status,omitempty"`
+	Pagination *PaginationParams  `json:"pagination,omitempty"`
 }
 
 type GroupSentInviteItem struct {
@@ -220,9 +243,8 @@ type UnbanMemberRequest struct {
 }
 
 type BannedMembersRequest struct {
-	GroupID string `json:"group_id"`
-	Limit   int    `json:"limit,omitempty"`
-	Cursor  string `json:"cursor,omitempty"`
+	GroupID    string            `json:"group_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
 type BannedMemberItem struct {
@@ -239,9 +261,8 @@ type RemoveMemberRequest struct {
 
 type GroupApplicationsRequest struct {
 	GroupID string             `json:"group_id"`
-	Status  *ApplicationStatus `json:"status,omitempty"`
-	Limit   int                `json:"limit,omitempty"`
-	Cursor  string             `json:"cursor,omitempty"`
+	Status     *ApplicationStatus `json:"status,omitempty"`
+	Pagination *PaginationParams  `json:"pagination,omitempty"`
 }
 
 type GroupApplicationItem struct {
@@ -323,14 +344,12 @@ type TransferOwnershipRequest struct {
 }
 
 type MyGroupsRequest struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
 type MyApplicationsRequest struct {
-	Status *ApplicationStatus `json:"status,omitempty"`
-	Limit  int                `json:"limit,omitempty"`
-	Cursor string             `json:"cursor,omitempty"`
+	Status     *ApplicationStatus `json:"status,omitempty"`
+	Pagination *PaginationParams  `json:"pagination,omitempty"`
 }
 
 type CancelApplicationRequest struct {
@@ -338,9 +357,8 @@ type CancelApplicationRequest struct {
 }
 
 type MyInvitesRequest struct {
-	Status *ApplicationStatus `json:"status,omitempty"`
-	Limit  int                `json:"limit,omitempty"`
-	Cursor string             `json:"cursor,omitempty"`
+	Status     *ApplicationStatus `json:"status,omitempty"`
+	Pagination *PaginationParams  `json:"pagination,omitempty"`
 }
 
 type GroupInviteItem struct {

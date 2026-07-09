@@ -59,16 +59,6 @@ func normalizedSearchSort(sortBy string) string {
 	}
 }
 
-func normalizeSearchLimit(limit int) int {
-	if limit <= 0 {
-		return defaultSearchLimit
-	}
-	if limit > maxSearchLimit {
-		return maxSearchLimit
-	}
-	return limit
-}
-
 func normalizedSearchRequest(req SearchGroupsRequest) SearchGroupsRequest {
 	req.Keyword = strings.TrimSpace(req.Keyword)
 	req.Tag = strings.TrimSpace(req.Tag)
@@ -80,7 +70,6 @@ func normalizedSearchRequest(req SearchGroupsRequest) SearchGroupsRequest {
 		radius := defaultSearchRadius
 		req.Radius = &radius
 	}
-	req.Limit = normalizeSearchLimit(req.Limit)
 	return req
 }
 

@@ -37,7 +37,27 @@ type Handler struct {
 }
 
 func NewHandler(auth *platformauth.Service, userService userPresenceAuthorizer, userRepo userRelationAuthorizer, groupRepo groupMembershipAuthorizer) *Handler {
-	return &Handler{auth: auth, users: userService, userRepo: userRepo, groupRepo: groupRepo}
+	h := &Handler{auth: auth, users: userService, userRepo: userRepo, groupRepo: groupRepo}
+	go h.sweepTypingThrottle()
+	return h
+}
+
+// sweepTypingThrottle periodically drops stale typing-throttle entries so the
+// sync.Map doesn't grow unboundedly with each unique (user,target) pair over
+// the process lifetime. The throttle window is 3s; entries older than a minute
+// are dead.
+func (h *Handler) sweepTypingThrottle() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		cutoff := time.Now().Add(-time.Minute)
+		h.typingThrottle.Range(func(key, value any) bool {
+			if value.(time.Time).Before(cutoff) {
+				h.typingThrottle.Delete(key)
+			}
+			return true
+		})
+	}
 }
 
 var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}

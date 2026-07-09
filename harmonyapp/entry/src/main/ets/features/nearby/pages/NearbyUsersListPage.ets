@@ -44,6 +44,7 @@ export struct NearbyUsersListPage {
   @State onlineCount: number = 0;
   private usersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
   private isDestroyed: boolean = false;
+  private loadVersion: number = 0;
 
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -90,6 +91,8 @@ export struct NearbyUsersListPage {
       this.errorMessage = '位置信息不可用，请在首页选择浏览位置';
       return;
     }
+    // 请求版本号：每次进入递增，避免较慢的旧请求解析后覆盖较新的结果
+    const capturedVersion = ++this.loadVersion;
     if (!refresh) { this.isLoading = true; }
     this.errorMessage = '';
     try {
@@ -104,6 +107,8 @@ export struct NearbyUsersListPage {
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchUsers(request));
       if (this.isDestroyed) return;
+      // 旧请求晚于新请求返回：丢弃结果，避免覆盖最新数据
+      if (capturedVersion !== this.loadVersion) return;
       if (response.code === 0) {
         const items = (response.data?.items ?? []).filter((u: UserItem) => u.user?.user_id);
         this.users = typeof myId === 'string'
@@ -119,10 +124,16 @@ export struct NearbyUsersListPage {
         this.usersDataSource.clear();
       }
     } catch (error) {
-      this.errorMessage = '加载附近用户失败';
+      // 仅当当前请求仍为最新时才上报错误
+      if (capturedVersion === this.loadVersion) {
+        this.errorMessage = '加载附近用户失败';
+      }
     } finally {
-      this.isLoading = false;
-      this.isRefreshing = false;
+      // 仅当前最新请求可重置加载态，否则会把新请求的 loading 提前置 false
+      if (capturedVersion === this.loadVersion) {
+        this.isLoading = false;
+        this.isRefreshing = false;
+      }
     }
   }
 
@@ -135,7 +146,8 @@ export struct NearbyUsersListPage {
       const request: SearchUsersRequest = {
         reference_point: ref,
         radius: DefaultConfig.NEARBY_RADIUS,
-        sort_by: 'distance',
+        sort_by: this.activeSort as 'distance' | 'relevance' | 'newest',
+        keyword: this.keyword || undefined,
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
       const response = await ApiClient.searchUsers(request);

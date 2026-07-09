@@ -86,7 +86,7 @@ type MyGroupState struct {
 type GroupItem struct {
 	Group          GroupInfo        `json:"group"`
 	Description    string           `json:"description,omitempty"`
-	HasPassword    bool             `json:"has_password"`
+	HasPassword    bool             `json:"has_password,omitempty"`
 	Location       RelativeLocation `json:"location"`
 	MyState        *MyGroupState    `json:"my_state,omitempty"`
 	FriendsInGroup int              `json:"friends_in_group,omitempty"`
