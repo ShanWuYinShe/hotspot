@@ -161,8 +161,12 @@ func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (Paginated
 		isSelf := hasPrincipal && principal.UserID == profile.UserID
 		item := userItemFromProfile(profile, nil, isSelf || settings.PresenceVisible, isSelf || settings.LocationVisible, false)
 		if item.Location != nil {
-			item.Location.Distance, item.Location.BearingDegrees = computeRelativeDistance(req.ReferencePoint, profile.Location.Point)
-		}
+				d, b := computeRelativeDistance(req.ReferencePoint, profile.Location.Point)
+				d64 := float64(d)
+				b64 := float64(b)
+				item.Location.Distance = &d64
+				item.Location.BearingDegrees = &b64
+			}
 		if hasPrincipal && principal.UserID != "" && !isSelf {
 			relation, err := s.repo.Relationship(ctx, principal.UserID, profile.UserID)
 			if err != nil {

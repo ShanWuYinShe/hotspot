@@ -53,6 +53,8 @@ export struct SubscriptionsPage {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
+  private isDestroyed: boolean = false;
+
   private items: SubscriptionItem[] = [
     { key: 'new_follower_enabled', icon: AppIcon.PERSON, title: '新关注者', description: '有人关注你时通知' },
     { key: 'mutual_follow_enabled', icon: AppIcon.HEART, title: '互相关注', description: '成为好友时通知' },
@@ -72,6 +74,10 @@ export struct SubscriptionsPage {
     this.ensureAuthAndLoad();
   }
 
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
+  }
+
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
@@ -89,8 +95,10 @@ export struct SubscriptionsPage {
   }
 
   private async ensureAuthAndLoad(): Promise<void> {
+    if (this.isDestroyed) return;
     try {
       const token = await PreferencesUtil.get<string>(StorageKeys.ACCESS_TOKEN, '');
+      if (this.isDestroyed) return;
       if (!token) {
         // 未登录时直接返回上一页（登录检测应在跳转源头完成）
         AppRouter.pop();
@@ -104,9 +112,11 @@ export struct SubscriptionsPage {
   }
 
   private async load(): Promise<void> {
+    if (this.isDestroyed) return;
     this.loading = true;
     try {
       const stored = await PreferencesUtil.getObject<LocalSubscriptionPrefs>(SUBSCRIPTIONS_STORAGE_KEY);
+      if (this.isDestroyed) return;
       this.data = stored ?? this.getDefaultPrefs();
     } catch (e) {
       this.data = this.getDefaultPrefs();
@@ -145,6 +155,7 @@ export struct SubscriptionsPage {
   }
 
   private async update(key: keyof LocalSubscriptionPrefs, value: boolean): Promise<void> {
+    if (this.isDestroyed) return;
     if (!this.data) return;
     if (this.savingKey) return;
 
@@ -154,6 +165,7 @@ export struct SubscriptionsPage {
 
     try {
       await PreferencesUtil.setObject(SUBSCRIPTIONS_STORAGE_KEY, this.data);
+      if (this.isDestroyed) return;
       SystemToast.showSuccess('已保存', this.getUIContext());
     } catch (e) {
       this.setValue(key, prev);

@@ -32,9 +32,15 @@ export struct PrivacySettingsPage {
   @State settings: UserSettings | null = null;
   @State loading: boolean = false;
 
+  private isDestroyed: boolean = false;
+
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
     this.loadSettings();
+  }
+
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
   }
 
   private getPalette() {
@@ -42,9 +48,11 @@ export struct PrivacySettingsPage {
   }
 
   private async loadSettings(): Promise<void> {
+    if (this.isDestroyed) return;
     this.loading = true;
     try {
       const response = await ApiClient.getSettings();
+      if (this.isDestroyed) return;
       if (response.code === 0 && response.data) {
         this.settings = response.data;
       } else {
@@ -106,6 +114,7 @@ export struct PrivacySettingsPage {
   }
 
   private async updateSetting(key: keyof UserSettings, value: boolean): Promise<void> {
+    if (this.isDestroyed) return;
     if (!this.settings) {
       return;
     }
@@ -113,6 +122,7 @@ export struct PrivacySettingsPage {
     this.settings = next;
     try {
       const response = await ApiClient.updateSettings({ settings: next });
+      if (this.isDestroyed) return;
       if (response.code !== 0) {
         throw new Error(response.message || '保存失败');
       }

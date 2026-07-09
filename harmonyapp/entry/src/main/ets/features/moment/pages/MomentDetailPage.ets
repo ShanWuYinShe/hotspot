@@ -63,8 +63,14 @@ export struct MomentDetailPage {
   @State favoritePending: boolean = false;
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
 
+  private isDestroyed: boolean = false;
+
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
+  }
+
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
   }
 
   private getCurrentThemePalette() {
@@ -103,6 +109,7 @@ export struct MomentDetailPage {
   }
 
   private async loadMomentDetail(): Promise<void> {
+    if (this.isDestroyed) return;
     if (!this.momentId) {
       this.errorMessage = '缺少动态ID';
       this.isLoading = false;
@@ -113,6 +120,7 @@ export struct MomentDetailPage {
     this.errorMessage = '';
     try {
       const response = await ApiClient.getMomentDetail({ moment_id: this.momentId });
+      if (this.isDestroyed) return;
       if (response.code === 0 && response.data) {
         this.moment = response.data;
         InteractionStateStore.getInstance().patchMomentFromItem(response.data);
@@ -128,11 +136,13 @@ export struct MomentDetailPage {
   }
 
   private async toggleLike(): Promise<void> {
+    if (this.isDestroyed) return;
     if (!this.moment) return;
     if (this.likePending) return;
     this.likePending = true;
     try {
       const success = await interactionActions.toggleMomentLike(this.moment.moment_id);
+      if (this.isDestroyed) return;
       if (!success) {
         SystemToast.showError('点赞操作失败', this.getUIContext());
       }
@@ -142,11 +152,13 @@ export struct MomentDetailPage {
   }
 
   private async toggleFavorite(): Promise<void> {
+    if (this.isDestroyed) return;
     if (!this.moment) return;
     if (this.favoritePending) return;
     this.favoritePending = true;
     try {
       const success = await interactionActions.toggleMomentFavorite(this.moment.moment_id);
+      if (this.isDestroyed) return;
       if (!success) {
         SystemToast.showError('收藏操作失败', this.getUIContext());
       }
@@ -156,6 +168,7 @@ export struct MomentDetailPage {
   }
 
   private async shareMoment(): Promise<void> {
+    if (this.isDestroyed) return;
     if (!this.moment) return;
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;

@@ -10,6 +10,12 @@ type FanoutSink interface {
 	Close() error
 }
 
+// maxConnectionsPerBroadcast caps the pre-allocation in deliverAllLocal to
+// prevent a sudden allocation spike when broadcasting to a hub with a very
+// large number of connections. BroadcastToAll is rare (system events only),
+// so the O(n) iteration is acceptable.
+const maxConnectionsPerBroadcast = 1000
+
 type Hub struct {
 	mu             sync.RWMutex
 	byUser         map[string][]FanoutSink
@@ -159,14 +165,26 @@ func (h *Hub) deliverGroupLocal(groupID string, event Event) {
 	}
 }
 
+// BroadcastToAll sends event to every connected session. It is O(n) for all
+// connections — it collects a snapshot of all sinks under RLock then iterates
+// outside the lock. This is used for rare system-wide events only; it should
+// not be called on hot paths.
 func (h *Hub) BroadcastToAll(event Event) {
 	h.deliverAllLocal(event)
 	h.publish("all", event)
 }
 
+// deliverAllLocal collects a snapshot of every connected sink under RLock and
+// then delivers to each outside the lock. The pre-allocation is capped at
+// maxConnectionsPerBroadcast to avoid unbounded allocation spikes. This is
+// O(n) for all active connections.
 func (h *Hub) deliverAllLocal(event Event) {
 	h.mu.RLock()
-	sinks := make([]FanoutSink, 0, len(h.bySession))
+	n := len(h.bySession)
+	if n > maxConnectionsPerBroadcast {
+		n = maxConnectionsPerBroadcast
+	}
+	sinks := make([]FanoutSink, 0, n)
 	for _, sessionSinks := range h.bySession {
 		sinks = append(sinks, sessionSinks...)
 	}

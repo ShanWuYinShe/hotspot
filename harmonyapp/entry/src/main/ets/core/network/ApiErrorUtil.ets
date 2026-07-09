@@ -1,3 +1,5 @@
+import { ErrorCode } from '../constants/ErrorCodes';
+
 /**
  * API 错误码判断工具
  *
@@ -38,36 +40,36 @@ export function extractApiErrorSnapshot(result: Object, responseCode?: number): 
 
 /** 认证失败（token 无效/过期/缺失），客户端应尝试刷新 token */
 export function isAuthErrorCode(code: number): boolean {
-  return code === 10100;
+  return code === ErrorCode.AUTH_FAILED;
 }
 
 /** 账号被封禁，客户端必须强制登出并显示封禁页 */
 export function isAccountBannedCode(code: number): boolean {
-  return code === 10201;
+  return code === ErrorCode.ACCOUNT_BANNED;
 }
 
 export function isBadRequestCode(code: number): boolean {
-  return code === 10000;
+  return code === ErrorCode.PARAM_ERROR;
 }
 
 export function isForbiddenCode(code: number): boolean {
-  return code === 10200;
+  return code === ErrorCode.PERMISSION_DENIED;
 }
 
 export function isNotFoundCode(code: number): boolean {
-  return code === 10300;
+  return code === ErrorCode.RESOURCE_NOT_FOUND;
 }
 
 export function isConflictCode(code: number): boolean {
-  return code === 10400;
+  return code === ErrorCode.BUSINESS_CONFLICT;
 }
 
 export function isRateLimitCode(code: number): boolean {
-  return code === 10500;
+  return code === ErrorCode.RATE_LIMITED;
 }
 
 export function isServerErrorCode(code: number): boolean {
-  return code === 10600;
+  return code === ErrorCode.SERVICE_UNAVAILABLE;
 }
 
 function isSafeUserMessage(message: Object): boolean {

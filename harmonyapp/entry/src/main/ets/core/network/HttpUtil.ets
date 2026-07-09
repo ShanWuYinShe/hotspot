@@ -18,8 +18,8 @@ import { ApiEndpoints } from '../config/ApiEndpoints';
 import { ApiResponse, AuthData, HealthStatus, MediaCategory, UploadedMedia } from '../types/api';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import {
-  extractApiErrorSnapshot,
+import { ErrorCode } from '../constants/ErrorCodes';
+import { extractApiErrorSnapshot,
   guessUserMessageFromSnapshot,
   isAuthErrorCode,
   isAccountBannedCode,
@@ -101,9 +101,6 @@ const TOKEN_OPTIONAL_ENDPOINTS: string[] = [
 const DOMAIN_NUMBER: number = 0xFF08;
 const TAG: string = 'HttpUtil';
 const IDEMPOTENCY_CLIENT_ID: string = util.generateRandomUUID(false).split('-').join('').substring(0, 8);
-const IDEMPOTENCY_KEY_CONFLICT_CODE = 22000;
-const IDEMPOTENCY_CACHE_EXPIRED_CODE = 22001;
-const IDEMPOTENCY_IN_PROGRESS_CODE = 22002;
 const MAX_IDEMPOTENCY_RETRY_COUNT = 1;
 const MEDIA_URL_FIELDS: string[] = ['url', 'avatar_url', 'thumbnail_url', 'cover_url'];
 
@@ -500,7 +497,7 @@ export class HttpUtil {
 
       // 幂等错误自动重试（仅 MUST 幂等端点）
       if (isMustIdempotentEndpoint && idempotencyRetryCount < MAX_IDEMPOTENCY_RETRY_COUNT) {
-        if (resultCode === IDEMPOTENCY_IN_PROGRESS_CODE) {
+        if (resultCode === ErrorCode.IDEMPOTENCY_IN_FLIGHT) {
           await new Promise<void>((resolve) => setTimeout(resolve, 1200));
           return await HttpUtil.request<TResponse, TRequest>(
             url, method, data, retried, currentIdempotencyKey,
@@ -508,8 +505,8 @@ export class HttpUtil {
           );
         }
         // 22000 CONFLICT：同一个幂等键被复用于不同请求体 → 必须换新键重试
-        if (resultCode === IDEMPOTENCY_KEY_CONFLICT_CODE) {
-          hilog.warn(DOMAIN_NUMBER, TAG, `收到 ${IDEMPOTENCY_KEY_CONFLICT_CODE} 幂等键冲突，换新键重试`);
+        if (resultCode === ErrorCode.IDEMPOTENCY_KEY_CONFLICT) {
+          hilog.warn(DOMAIN_NUMBER, TAG, `收到 ${ErrorCode.IDEMPOTENCY_KEY_CONFLICT} 幂等键冲突，换新键重试`);
           return await HttpUtil.request<TResponse, TRequest>(
             url, method, data, retried, generateIdempotencyKey(),
             idempotencyRetryCount + 1, omitAuthHeader, rateLimitRetryCount
@@ -517,8 +514,8 @@ export class HttpUtil {
         }
         // 22001 CACHE_EXPIRED：仅缓存响应过期，原始请求未产生副作用 →
         // 必须用「同一个键」重试一次以保留去重语义，避免新生成键导致重复创建资源
-        if (resultCode === IDEMPOTENCY_CACHE_EXPIRED_CODE) {
-          hilog.warn(DOMAIN_NUMBER, TAG, `收到 ${IDEMPOTENCY_CACHE_EXPIRED_CODE} 幂等缓存过期，以同键重试一次`);
+        if (resultCode === ErrorCode.IDEMPOTENCY_CACHE_EXPIRED) {
+          hilog.warn(DOMAIN_NUMBER, TAG, `收到 ${ErrorCode.IDEMPOTENCY_CACHE_EXPIRED} 幂等缓存过期，以同键重试一次`);
           return await HttpUtil.request<TResponse, TRequest>(
             url, method, data, retried, currentIdempotencyKey,
             idempotencyRetryCount + 1, omitAuthHeader, rateLimitRetryCount

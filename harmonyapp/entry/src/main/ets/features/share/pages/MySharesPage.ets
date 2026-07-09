@@ -38,6 +38,8 @@ export struct MySharesPage {
   @State private revokingShareId: string = '';
   private readonly pageLimit: number = DefaultConfig.PAGE_SIZE;
 
+  private isDestroyed: boolean = false;
+
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
     if (this.isLoggedIn) {
@@ -47,7 +49,12 @@ export struct MySharesPage {
     }
   }
 
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
+  }
+
   private async onLoginStateChanged() {
+    if (this.isDestroyed) return;
     if (this.isLoggedIn) {
       await this.loadShares();
     } else {
@@ -87,6 +94,7 @@ export struct MySharesPage {
   }
 
   private async loadShares(refresh: boolean = false): Promise<void> {
+    if (this.isDestroyed) return;
     if (!this.isLoggedIn) {
       this.resetState();
       return;
@@ -104,6 +112,7 @@ export struct MySharesPage {
         }
       };
       const response = await ApiClient.listMyShares(request);
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         const items = response.data?.items ?? [];
         this.shares = items;
@@ -129,6 +138,7 @@ export struct MySharesPage {
   }
 
   private async refreshShares(): Promise<void> {
+    if (this.isDestroyed) return;
     if (this.isRefreshing) {
       return;
     }
@@ -137,6 +147,7 @@ export struct MySharesPage {
   }
 
   private async loadMoreShares(): Promise<void> {
+    if (this.isDestroyed) return;
     if (!this.isLoggedIn || !this.hasMore || this.isLoadingMore) {
       return;
     }
@@ -150,6 +161,7 @@ export struct MySharesPage {
         }
       };
       const response = await ApiClient.listMyShares(request);
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         const items = response.data?.items ?? [];
         if (items.length > 0) {
@@ -170,6 +182,7 @@ export struct MySharesPage {
   }
 
   private async revokeShare(share: ShareListItem): Promise<void> {
+    if (this.isDestroyed) return;
     if (!this.isLoggedIn || this.revokingShareId === share.share_id) {
       return;
     }
@@ -177,6 +190,7 @@ export struct MySharesPage {
     this.revokingShareId = share.share_id;
     try {
       const response = await ApiClient.revokeShare({ share_id: share.share_id });
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         this.shares = this.shares.filter(item => item.share_id !== share.share_id);
         this.sharesDataSource.setData(this.shares);

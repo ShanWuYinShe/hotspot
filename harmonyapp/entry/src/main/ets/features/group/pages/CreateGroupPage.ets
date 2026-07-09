@@ -76,6 +76,8 @@ export struct CreateGroupPage {
   @State groupDescriptionTouched: boolean = false;
   @State groupPasswordTouched: boolean = false;
 
+  private isDestroyed: boolean = false;
+
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
     // 优先消费“地图选点”结果（从 LocationPickerPage 返回时会写入）
@@ -154,7 +156,12 @@ export struct CreateGroupPage {
     ]);
   }
 
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
+  }
+
   private async createGroup(): Promise<void> {
+    if (this.isDestroyed) return;
     const currentUser = this.stateManager.getCurrentUser();
     if (!currentUser) {
       SystemToast.showWarning('请先登录后再创建群组', this.getUIContext());
@@ -212,6 +219,7 @@ export struct CreateGroupPage {
     }
     this.isCreating = true;
     try {
+      if (this.isDestroyed) return;
       await LoadingUtil.withMinimumTime(async () => {
         const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
         const avatarFileId = await this.ensureGroupAvatarUploaded(context);
@@ -251,8 +259,10 @@ export struct CreateGroupPage {
   }
 
   private async refreshLocation(): Promise<void> {
+    if (this.isDestroyed) return;
     try {
       const location = await LocationUtil.getCurrentLocation();
+      if (this.isDestroyed) return;
       if (location) {
         this.localLocation = {
           latitude: location.latitude,
@@ -273,12 +283,14 @@ export struct CreateGroupPage {
   }
 
   private async selectGroupAvatar(): Promise<void> {
+    if (this.isDestroyed) return;
     if (this.isCreating || this.isGroupAvatarUploading) {
       return;
     }
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       const selectedUris = await MediaServiceManager.selectImages(context, 1);
+      if (this.isDestroyed) return;
       if (selectedUris.length === 0) {
         return;
       }
@@ -298,6 +310,7 @@ export struct CreateGroupPage {
   }
 
   private async ensureGroupAvatarUploaded(context: common.UIAbilityContext): Promise<string | undefined> {
+    if (this.isDestroyed) return undefined;
     if (!this.groupAvatarLocalUri) {
       return undefined;
     }
@@ -307,8 +320,11 @@ export struct CreateGroupPage {
     this.isGroupAvatarUploading = true;
     try {
       const compressedPath = await MediaServiceManager.compressImage(context, this.groupAvatarLocalUri, 80, 1024 * 1024 * 2);
+      if (this.isDestroyed) return undefined;
       const uploadUri = await MediaServiceManager.prepareFileForUpload(context, compressedPath);
+      if (this.isDestroyed) return undefined;
       const uploadResult = await ApiClient.uploadFile(context, uploadUri, 'group_avatar');
+      if (this.isDestroyed) return undefined;
       if (!uploadResult.file_id) {
         throw new Error('群头像上传失败');
       }

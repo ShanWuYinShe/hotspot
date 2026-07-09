@@ -23,9 +23,15 @@ export struct RelationshipHubPage {
   @State blocked: BlockedUserItem[] = [];
   @State activeRelTab: number = 0;
 
+  private isDestroyed: boolean = false;
+
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
     this.loadAll();
+  }
+
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
   }
 
   private getPalette() {
@@ -33,6 +39,7 @@ export struct RelationshipHubPage {
   }
 
   private async loadAll(): Promise<void> {
+    if (this.isDestroyed) return;
     try {
       const results = await Promise.all([
         ApiClient.getFriendsList({ pagination: { limit: 20 } }),
@@ -40,6 +47,7 @@ export struct RelationshipHubPage {
         ApiClient.getFollowersList({ pagination: { limit: 20 } }),
         ApiClient.getBlockedList({ pagination: { limit: 20 } })
       ]);
+      if (this.isDestroyed) return;
       this.friends = results[0].data?.items ?? [];
       this.following = results[1].data?.items ?? [];
       this.followers = results[2].data?.items ?? [];
@@ -50,8 +58,10 @@ export struct RelationshipHubPage {
   }
 
   private async unblock(userId: string): Promise<void> {
+    if (this.isDestroyed) return;
     try {
       const response = await ApiClient.unblockUser({ user_id: userId });
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         SystemToast.showSuccess('已解除拉黑', this.getUIContext());
         this.loadAll();

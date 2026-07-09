@@ -94,13 +94,15 @@ func TestServiceListMomentsRejectsInvalidSource(t *testing.T) {
 	}
 }
 
-func TestServiceListUsersRejectsMissingReferencePoint(t *testing.T) {
+func TestServiceListUsersFallsBackToDefaultLocation(t *testing.T) {
+	// api_spec_types.md: reference_point is optional, server falls back to
+	// ClientConfig.defaults.default_location.point when omitted.
 	service := NewServiceWithRepo(&stubRepository{})
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u1"})
 
 	_, err := service.ListUsers(ctx, ListFeedUsersRequest{})
-	if !errors.Is(err, ErrInvalidFeedRequest) {
-		t.Fatalf("expected invalid request, got %v", err)
+	if err == ErrInvalidFeedRequest {
+		t.Fatalf("missing reference_point should fall back to default, got %v", err)
 	}
 }
 
