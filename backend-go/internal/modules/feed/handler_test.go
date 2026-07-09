@@ -21,14 +21,16 @@ func TestListMomentsRejectsInvalidJSON(t *testing.T) {
 	assertFeedCode(t, rr, 10000)
 }
 
-func TestListMomentsRejectsMissingReferencePoint(t *testing.T) {
+func TestListMomentsUsesDefaultLocationWhenMissingReferencePoint(t *testing.T) {
+	// Per api_spec_types.md, reference_point is optional; when omitted the
+	// server falls back to ClientConfig.defaults.default_location.point.
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/list_moments", strings.NewReader(`{"source":"following"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
 	handler.ListMoments(rr, req)
-	assertFeedCode(t, rr, 10000)
+	assertFeedCode(t, rr, 0)
 }
 
 func TestListMomentsRejectsInvalidSource(t *testing.T) {

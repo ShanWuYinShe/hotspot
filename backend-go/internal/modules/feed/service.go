@@ -115,7 +115,8 @@ func (s *Service) Dismiss(ctx context.Context, req DismissFeedItemRequest) error
 }
 
 func (s *Service) newMomentsQuery(ctx context.Context, viewerUserID string, req ListFeedMomentsRequest) (momentsQuery, error) {
-	if req.ReferencePoint == nil || !isValidGeoPoint(*req.ReferencePoint) {
+	refPt := s.resolveReferencePoint(ctx, req.ReferencePoint)
+	if refPt == nil {
 		return momentsQuery{}, ErrInvalidFeedRequest
 	}
 	source := normalizeFeedSource(req.Source)
@@ -125,7 +126,7 @@ func (s *Service) newMomentsQuery(ctx context.Context, viewerUserID string, req 
 	return momentsQuery{
 		ViewerUserID:   viewerUserID,
 		Source:         source,
-		ReferencePoint: *req.ReferencePoint,
+		ReferencePoint: *refPt,
 		Radius:         s.normalizeRadius(ctx, req.Radius),
 		Limit:          normalizeFeedLimit(req.Pagination),
 		Cursor:         paginationCursor(req.Pagination),
@@ -133,12 +134,13 @@ func (s *Service) newMomentsQuery(ctx context.Context, viewerUserID string, req 
 }
 
 func (s *Service) newGroupsQuery(ctx context.Context, viewerUserID string, req ListFeedGroupsRequest) (groupsQuery, error) {
-	if req.ReferencePoint == nil || !isValidGeoPoint(*req.ReferencePoint) {
+	refPt := s.resolveReferencePoint(ctx, req.ReferencePoint)
+	if refPt == nil {
 		return groupsQuery{}, ErrInvalidFeedRequest
 	}
 	return groupsQuery{
 		ViewerUserID:   viewerUserID,
-		ReferencePoint: *req.ReferencePoint,
+		ReferencePoint: *refPt,
 		Radius:         s.normalizeRadius(ctx, req.Radius),
 		Limit:          normalizeFeedLimit(req.Pagination),
 		Cursor:         paginationCursor(req.Pagination),
@@ -146,12 +148,13 @@ func (s *Service) newGroupsQuery(ctx context.Context, viewerUserID string, req L
 }
 
 func (s *Service) newUsersQuery(ctx context.Context, viewerUserID string, req ListFeedUsersRequest) (usersQuery, error) {
-	if req.ReferencePoint == nil || !isValidGeoPoint(*req.ReferencePoint) {
+	refPt := s.resolveReferencePoint(ctx, req.ReferencePoint)
+	if refPt == nil {
 		return usersQuery{}, ErrInvalidFeedRequest
 	}
 	return usersQuery{
 		ViewerUserID:   viewerUserID,
-		ReferencePoint: *req.ReferencePoint,
+		ReferencePoint: *refPt,
 		Radius:         s.normalizeRadius(ctx, req.Radius),
 		Limit:          normalizeFeedLimit(req.Pagination),
 		Cursor:         paginationCursor(req.Pagination),
@@ -211,4 +214,28 @@ func (s *Service) newDismissCommand(viewerUserID string, req DismissFeedItemRequ
 
 func isValidGeoPoint(point GeoPoint) bool {
 	return point.Latitude >= -90 && point.Latitude <= 90 && point.Longitude >= -180 && point.Longitude <= 180
+}
+
+// resolveReferencePoint implements the reference_point fallback chain from
+// api_spec_types.md: when the request omits reference_point (nil), use the
+// user's stored location from config defaults. Returns nil when no fallback
+// is available (caller treats as invalid feed request).
+func (s *Service) resolveReferencePoint(ctx context.Context, ref *GeoPoint) *GeoPoint {
+	// Provided but invalid → reject.
+	if ref != nil && !isValidGeoPoint(*ref) {
+		return nil
+	}
+	// Provided and valid → use as-is.
+	if ref != nil {
+		return ref
+	}
+	// Not provided → fall back to config defaults.
+	if s.appConfig == nil {
+		return nil
+	}
+	def := s.appConfig.Get(ctx).Defaults.DefaultLocation
+	if def.Point.Latitude != 0 || def.Point.Longitude != 0 {
+		return &GeoPoint{Latitude: def.Point.Latitude, Longitude: def.Point.Longitude}
+	}
+	return nil
 }
