@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -582,5 +583,33 @@ func TestRealtimeAllowsGroupSubscriptionAndTypingBeyondFirstHundredMembers(t *te
 	if typing.Type != "GroupUserTyping" {
 		payload, _ := json.Marshal(typing)
 		t.Fatalf("unexpected typing event: %s", payload)
+	}
+}
+
+func TestSameOriginAllowsAbsentAndMatching(t *testing.T) {
+	// Non-browser clients send no Origin header — allow.
+	if !sameOrigin(httptest.NewRequest(http.MethodGet, "https://host.example/ws", nil)) {
+		t.Fatal("absent Origin should be allowed (native client)")
+	}
+	// Same-origin browser request — allow.
+	req := httptest.NewRequest(http.MethodGet, "https://host.example/ws", nil)
+	req.Header.Set("Origin", "https://host.example")
+	if !sameOrigin(req) {
+		t.Fatal("same-origin should be allowed")
+	}
+}
+
+func TestSameOriginBlocksCrossOrigin(t *testing.T) {
+	// Cross-origin browser request (CSWSH vector) — block.
+	req := httptest.NewRequest(http.MethodGet, "https://host.example/ws", nil)
+	req.Header.Set("Origin", "https://evil.example")
+	if sameOrigin(req) {
+		t.Fatal("cross-origin should be blocked")
+	}
+	// Unparseable origin — block.
+	req = httptest.NewRequest(http.MethodGet, "https://host.example/ws", nil)
+	req.Header.Set("Origin", "://bad")
+	if sameOrigin(req) {
+		t.Fatal("malformed origin should be blocked")
 	}
 }

@@ -81,6 +81,11 @@ func (a *App) Shutdown() {
 	if a.bridge != nil {
 		a.bridge.Close()
 	}
+	// Close the Postgres pool too — otherwise a graceful shutdown leaks the
+	// pool and its connections until process exit.
+	if a.persistence != nil && a.persistence.DB != nil {
+		_ = a.persistence.DB.Close()
+	}
 }
 
 func ensureSchema(cfg config.Config, factory *persistence.Factory) error {

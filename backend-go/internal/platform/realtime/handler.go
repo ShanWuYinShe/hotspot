@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -60,7 +61,27 @@ func (h *Handler) sweepTypingThrottle() {
 	}
 }
 
-var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
+// upgrader validates the WebSocket Origin against the request Host. WS auth is
+// cookie-based, so a permissive CheckOrigin would enable cross-site WebSocket
+// hijacking (a malicious page opens a WS to the legit server riding the
+// victim's cookies). Same-origin is the safe default for browser clients;
+// native clients (HarmonyOS) don't send a browser-style Origin header.
+var upgrader = websocket.Upgrader{CheckOrigin: sameOrigin}
+
+// sameOrigin allows the upgrade when the Origin header is absent (non-browser
+// client) or matches the request's own scheme+host. It blocks cross-origin
+// browser WebSocket connections, which is the cookie-theft vector for CSWSH.
+func sameOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true // native/non-browser client
+	}
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	return u.Host == r.Host
+}
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
