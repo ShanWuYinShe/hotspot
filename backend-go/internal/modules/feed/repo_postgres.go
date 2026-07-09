@@ -125,19 +125,21 @@ func (r *PostgresRepository) loadUserCandidates(ctx context.Context, queryable p
 		if userID == query.ViewerUserID {
 			continue
 		}
-		distance, bearing, ok := plan.Match(geo.Point{Latitude: latitude, Longitude: longitude})
-		if !ok {
-			continue
-		}
-		item := UserItem{
-			User: UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
-			Bio:  strings.TrimSpace(bio),
-			Location: &RelativeLocation{
-				Point:          GeoPoint{Latitude: latitude, Longitude: longitude},
-				LocationName:   locationName,
-				Distance:       distance,
-				BearingDegrees: bearing,
-			},
+			distance, bearing, ok := plan.Match(geo.Point{Latitude: latitude, Longitude: longitude})
+			if !ok {
+				continue
+			}
+			d := float64(distance)
+			b := float64(bearing)
+			item := UserItem{
+				User: UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
+				Bio:  strings.TrimSpace(bio),
+				Location: &RelativeLocation{
+					Point:          GeoPoint{Latitude: latitude, Longitude: longitude},
+					LocationName:   locationName,
+					Distance:       &d,
+					BearingDegrees: &b,
+				},
 			Relation:      &UserRelation{IsFollowing: isFollowing, IsFollowedBy: isFollowedBy, IsBlocked: false},
 			SocialContext: &UserSocialContext{MutualFriendsCount: mutualFriendsCount, CommonGroupsCount: commonGroupsCount},
 		}
@@ -171,17 +173,19 @@ func (r *PostgresRepository) loadGroupCandidates(ctx context.Context, queryable 
 		if err := rows.Scan(&groupID, &name, &avatarURL, &description, &hasPassword, &locationName, &latitude, &longitude, &membersCount, &isJoined, &friendsInGroup); err != nil {
 			return nil, err
 		}
-		distance, bearing, ok := plan.Match(geo.Point{Latitude: latitude, Longitude: longitude})
-		if !ok {
-			continue
-		}
-		item := GroupItem{
-			Group:       GroupInfo{GroupID: groupID, Name: name, AvatarURL: avatarURL, MembersCount: membersCount},
-			Description: strings.TrimSpace(description),
-			// has_password is @member-only per spec; don't surface it to viewers
-			// who haven't joined (avoid tipping off crawlers/brute-forcers).
-			HasPassword:    hasPassword && isJoined,
-			Location:       RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: distance, BearingDegrees: bearing},
+			distance, bearing, ok := plan.Match(geo.Point{Latitude: latitude, Longitude: longitude})
+			if !ok {
+				continue
+			}
+			d := float64(distance)
+			b := float64(bearing)
+			item := GroupItem{
+				Group:       GroupInfo{GroupID: groupID, Name: name, AvatarURL: avatarURL, MembersCount: membersCount},
+				Description: strings.TrimSpace(description),
+				// has_password is @member-only per spec; don't surface it to viewers
+				// who haven't joined (avoid tipping off crawlers/brute-forcers).
+				HasPassword:    hasPassword && isJoined,
+				Location:       RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
 			MyState:        &MyGroupState{IsJoined: isJoined},
 			FriendsInGroup: friendsInGroup,
 		}
@@ -243,10 +247,12 @@ func (r *PostgresRepository) loadMomentCandidates(ctx context.Context, queryable
 			continue
 		}
 		if query.Source == "following" {
-			distance = geo.DistanceMeters(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, geo.Point{Latitude: latitude, Longitude: longitude})
-			bearing = geo.BearingDegrees(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, geo.Point{Latitude: latitude, Longitude: longitude})
-		}
-		score := likesCount + commentsCount + sharesCount
+				distance = geo.DistanceMeters(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, geo.Point{Latitude: latitude, Longitude: longitude})
+				bearing = geo.BearingDegrees(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, geo.Point{Latitude: latitude, Longitude: longitude})
+			}
+			d := float64(distance)
+			b := float64(bearing)
+			score := likesCount + commentsCount + sharesCount
 		if isFollowing {
 			score += 1000
 		}
@@ -261,7 +267,7 @@ func (r *PostgresRepository) loadMomentCandidates(ctx context.Context, queryable
 			CommentsCount: commentsCount,
 			SharesCount:   sharesCount,
 			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
-			Location:      RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: distance, BearingDegrees: bearing},
+				Location:      RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
 			MyState:       &MyMomentState{IsLiked: isLiked, IsFavorited: isFavorited},
 		}
 		reasonType := "trending"
