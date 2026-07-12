@@ -107,6 +107,12 @@ func (p *ObjectStorageProvider) presignURLWithEndpoint(ctx context.Context, meth
 	dateStamp := now.Format("20060102")
 	credentialScope := dateStamp + "/" + region + "/s3/aws4_request"
 	host := endpoint.Host
+	// The canonical URI signed here is the path the S3 server actually
+	// receives. When a reverse proxy (e.g. nginx) mounts the S3 endpoint
+	// under a subpath such as /s3 and strips it before forwarding, the
+	// server sees only /<bucket>/<key>, so the proxy mount must NOT be
+	// part of the signed canonical URI. The client-facing URL below still
+	// keeps endpoint.Path so the request is routed to the proxy correctly.
 	canonicalURI := canonicalURIForEndpoint(endpoint, strings.TrimSpace(p.cfg.S3Bucket), storageKey, forcePathStyle)
 	signedHeaders := "host"
 	query := url.Values{}
@@ -133,7 +139,7 @@ func (p *ObjectStorageProvider) presignURLWithEndpoint(ctx context.Context, meth
 	signature := hex.EncodeToString(hmacSHA256(p.signingKey(dateStamp, region), stringToSign))
 	query.Set("X-Amz-Signature", signature)
 	presignedURL := *endpoint
-	presignedURL.Path = canonicalURI
+	presignedURL.Path = strings.TrimSuffix(endpoint.Path, "/") + canonicalURI
 	presignedURL.RawQuery = query.Encode()
 	return presignedURL.String(), nil
 }
@@ -175,8 +181,10 @@ func (p *ObjectStorageProvider) clientFacingEndpoint() (*url.URL, bool, error) {
 func canonicalURIForEndpoint(endpoint *url.URL, bucket, storageKey string, forcePathStyle bool) string {
 	cleanKey := path.Clean("/" + strings.TrimLeft(storageKey, "/"))
 	if forcePathStyle || strings.Contains(endpoint.Host, ":") || endpoint.Host == "localhost" {
-		basePath := strings.TrimSuffix(endpoint.Path, "/")
-		return basePath + "/" + bucket + cleanKey
+		// Server-relative path only (/<bucket>/<key>). The proxy mount
+		// (endpoint.Path) is intentionally excluded because the S3 server
+		// receives the path after the proxy strips its mount prefix.
+		return "/" + bucket + cleanKey
 	}
 	return cleanKey
 }
