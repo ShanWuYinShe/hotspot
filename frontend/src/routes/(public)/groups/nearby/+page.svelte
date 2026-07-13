@@ -21,8 +21,6 @@
   import Plus from 'lucide-svelte/icons/plus';
   import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
 
-  const CATEGORIES = ['全部', '摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏'];
-
   const pagination = usePagination<GroupItem>({
     uniqueKey: (item) => item.group.group_id
   });
@@ -31,6 +29,17 @@
   let showCreateGroup = $state(false);
   let searchText = $state('');
   let activeCategory = $state('全部');
+
+  // 从已加载的群组数据中动态提取标签,替代硬编码分类
+  const availableCategories = $derived.by(() => {
+    const tagSet = new Set<string>();
+    for (const item of pagination.items) {
+      for (const tag of item.tags ?? []) {
+        tagSet.add(tag);
+      }
+    }
+    return ['全部', ...Array.from(tagSet).sort()];
+  });
 
   const returnTarget = $derived(page.url.searchParams.get('from') || '/search');
 
@@ -129,9 +138,9 @@
         />
       </div>
 
-      <!-- Category chips -->
+      <!-- Category chips (sourced from actual group tags) -->
       <div class="no-scrollbar mb-3 flex gap-2 overflow-x-auto">
-        {#each CATEGORIES as c (c)}
+        {#each availableCategories as c (c)}
           <button
             class="filter-chip"
             class:filter-chip--active={activeCategory === c}

@@ -15,7 +15,6 @@
   import type { MomentItem, TrendingTagItem } from '$lib/types/api';
 
   const TABS = ['热门', '附近', '活动', '关注'];
-  const TAGS = ['自然', '城市', '美食', '音乐', '活动', '摄影', '生活', '旅行'];
 
   let trendingTags: TrendingTagItem[] = $state([]);
 
@@ -164,20 +163,22 @@
   </div>
 {/snippet}
 
-<!-- Shared tag chips -->
+<!-- Shared tag chips (sourced from server trending tags) -->
 {#snippet tagChips()}
-  <div class="mb-5 flex flex-wrap gap-2">
-    {#each TAGS as tag (tag)}
-      <button
-        type="button"
-        class="filter-chip"
-        class:filter-chip--active={activeTag === tag}
-        onclick={() => handleTagClick(tag)}
-      >
-        {tag}
-      </button>
-    {/each}
-  </div>
+  {#if trendingTags.length > 0}
+    <div class="mb-5 flex flex-wrap gap-2">
+      {#each trendingTags as topic (topic.name)}
+        <button
+          type="button"
+          class="filter-chip"
+          class:filter-chip--active={activeTag === topic.name}
+          onclick={() => handleTagClick(topic.name)}
+        >
+          #{topic.name}
+        </button>
+      {/each}
+    </div>
+  {/if}
 {/snippet}
 
 <!-- Shared feed grid — 容器查询自适应列数，不再按设备档传 mode -->

@@ -22,7 +22,6 @@
   import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
 
   const SORT_OPTIONS = ['距离', '在线', '共同好友'] as const;
-  const FILTER_TAGS = ['全部', '摄影', '旅行', '美食', '户外', '城市', '咖啡', '音乐', '运动'];
 
   const pagination = usePagination<UserItem>({
     uniqueKey: (item) => item.user.user_id
@@ -31,7 +30,6 @@
   let hasLoadedOnce = $state(false);
   let searchText = $state('');
   let activeSort = $state<string>('距离');
-  let activeTag = $state<string>('全部');
   let showLocationPicker = $state(false);
 
   const returnTarget = $derived(page.url.searchParams.get('from') || '/search');
@@ -119,7 +117,7 @@
         />
       </div>
 
-      <!-- Sort tabs + Filter tags -->
+      <!-- Sort tabs -->
       <div class="no-scrollbar mb-3 flex items-center gap-2 overflow-x-auto">
         {#each SORT_OPTIONS as s (s)}
           <button
@@ -128,19 +126,6 @@
             onclick={() => (activeSort = s)}
           >
             {s}
-          </button>
-        {/each}
-        <div
-          class="mx-1 flex-shrink-0"
-          style="width: 1px; height: 18px; background: var(--border-theme);"
-        ></div>
-        {#each FILTER_TAGS as t (t)}
-          <button
-            class="filter-chip"
-            class:filter-chip--active={activeTag === t && t !== '全部'}
-            onclick={() => (activeTag = t)}
-          >
-            {t}
           </button>
         {/each}
       </div>
