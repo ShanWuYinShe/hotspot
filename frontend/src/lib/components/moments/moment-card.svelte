@@ -347,7 +347,7 @@
     width: 38px;
     height: 38px;
     flex: 0 0 auto;
-    overflow: hidden;
+    overflow: clip;
     border: 2px solid color-mix(in srgb, var(--brand) 18%, var(--border-theme));
     border-radius: var(--radius-pill);
     background: var(--surface-bg);
@@ -369,7 +369,7 @@
 
   .moment-card__author a {
     display: block;
-    overflow: hidden;
+    overflow: clip;
     color: var(--text-primary);
     font-size: var(--text-body-lg);
     font-weight: 650;
@@ -394,7 +394,7 @@
     flex: 0 1 auto;
     align-items: center;
     gap: 4px;
-    overflow: hidden;
+    overflow: clip;
     border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--border-theme));
     border-radius: var(--radius-pill);
     padding: 5px 8px;
@@ -407,7 +407,7 @@
 
   .moment-card__location span {
     min-width: 0;
-    overflow: hidden;
+    overflow: clip;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -446,7 +446,7 @@
   .moment-card__media {
     position: relative;
     margin: 0 var(--card-pad-x);
-    overflow: hidden;
+    overflow: clip;
     border-radius: var(--radius-md);
     aspect-ratio: var(--media-ratio);
     background: var(--border-theme);
@@ -487,7 +487,7 @@
 
   .moment-card__description {
     display: -webkit-box;
-    overflow: hidden;
+    overflow: clip;
     color: var(--text-primary);
     font-size: clamp(13px, 1.2vw, 14px);
     line-height: 1.65;
