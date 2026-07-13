@@ -124,6 +124,33 @@ func (r *PostgresRepository) Complete(ctx context.Context, uploadID string, file
 	return r.Get(ctx, uploadID)
 }
 
+func (r *PostgresRepository) ResolveByFileIDs(ctx context.Context, fileIDs []string, userID string, category MediaCategory) (map[string]MediaAsset, error) {
+	queryable, err := r.queryable()
+	if err != nil {
+		return nil, err
+	}
+	if len(fileIDs) == 0 {
+		return map[string]MediaAsset{}, nil
+	}
+	rows, err := queryable.Query(ctx, queryResolveByFileIDs, fileIDs, userID, string(category))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	assets := make(map[string]MediaAsset, len(fileIDs))
+	for rows.Next() {
+		var asset MediaAsset
+		if err := rows.Scan(&asset.FileID, &asset.StorageKey, &asset.ThumbnailURL, &asset.Width, &asset.Height, &asset.MimeType); err != nil {
+			return nil, err
+		}
+		assets[asset.FileID] = asset
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return assets, nil
+}
+
 func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return nil, persistence.ErrNotImplemented

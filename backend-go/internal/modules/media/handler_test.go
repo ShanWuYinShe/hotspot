@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
@@ -26,6 +27,9 @@ func (r *mediaErrorRepo) Get(context.Context, string) (pendingUpload, bool, erro
 func (r *mediaErrorRepo) Complete(context.Context, string, UploadedMedia, string) (pendingUpload, bool, error) {
 	return pendingUpload{}, false, r.completeErr
 }
+func (r *mediaErrorRepo) ResolveByFileIDs(context.Context, []string, string, MediaCategory) (map[string]MediaAsset, error) {
+	return nil, r.getErr
+}
 
 type mediaStubProvider struct {
 	presignResp PresignedUpload
@@ -36,6 +40,9 @@ type mediaStubProvider struct {
 
 func (p *mediaStubProvider) Presign(context.Context, PresignUploadRequest, string) (PresignedUpload, error) {
 	return p.presignResp, p.presignErr
+}
+func (p *mediaStubProvider) PresignGet(context.Context, string, time.Duration) (string, error) {
+	return "https://storage.example.com/presigned-get", nil
 }
 func (p *mediaStubProvider) Head(context.Context, string) (ObjectMetadata, error) {
 	return p.headResp, p.headErr

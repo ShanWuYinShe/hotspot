@@ -73,4 +73,17 @@ SET status = $2,
     completed_idempotency_key = $10,
     completed_at = $11
 WHERE upload_id = $1`
+
+	queryResolveByFileIDs = `
+SELECT file_id,
+       storage_key,
+       COALESCE(thumbnail_url, ''),
+       COALESCE(width, 0),
+       COALESCE(height, 0),
+       COALESCE(final_mime_type, '')
+FROM media_upload_sessions
+WHERE file_id = ANY($1)
+  AND user_id = $2
+  AND category = $3
+  AND status = 'completed'`
 )

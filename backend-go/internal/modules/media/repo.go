@@ -22,4 +22,9 @@ type Repository interface {
 	Save(context.Context, pendingUpload) error
 	Get(context.Context, string) (pendingUpload, bool, error)
 	Complete(context.Context, string, UploadedMedia, string) (pendingUpload, bool, error)
+	// ResolveByFileIDs returns the completed uploads owned by userID for the
+	// given file_ids, filtered to the given category. Only rows with
+	// status='completed' are returned. Unmatched file_ids are simply absent
+	// from the result; callers treat absence as an authorization failure.
+	ResolveByFileIDs(context.Context, []string, string, MediaCategory) (map[string]MediaAsset, error)
 }

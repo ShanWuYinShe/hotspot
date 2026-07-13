@@ -16,6 +16,7 @@ import (
 
 type Module struct {
 	handler *Handler
+	Service *Service
 }
 
 func NewModule(cfg config.Config, factory *persistence.Factory) *Module {
@@ -25,7 +26,8 @@ func NewModule(cfg config.Config, factory *persistence.Factory) *Module {
 		panic("media object storage not configured")
 	}
 	provider := NewObjectStorageProvider(cfg)
-	return &Module{handler: NewHandler(NewServiceWithRepoAndProvider(repo, provider))}
+	service := NewServiceWithRepoAndProvider(repo, provider)
+	return &Module{handler: NewHandler(service), Service: service}
 }
 
 func (m *Module) Mount(r chi.Router) {

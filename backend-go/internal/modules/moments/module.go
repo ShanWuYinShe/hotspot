@@ -20,10 +20,10 @@ type Module struct {
 	Service         *Service
 }
 
-func NewModule(factory *persistence.Factory, actorProvider actor.Provider, appConfig appconfig.Source) *Module {
+func NewModule(factory *persistence.Factory, actorProvider actor.Provider, appConfig appconfig.Source, imageResolver ImageResolver) *Module {
 	momentRepo := NewPersistenceRepository(factory)
 	notificationService := notifications.NewServiceWithRepo(notifications.NewPersistenceRepository(factory))
-	momentService := NewServiceWithDeps(momentRepo, notificationService, actorProvider)
+	momentService := NewServiceWithDepsAndImages(momentRepo, notificationService, actorProvider, imageResolver)
 	commentService := comments.NewServiceWithDeps(comments.NewPersistenceRepository(factory), momentService, notificationService, actorProvider, appConfig, persistence.NewTxRunner(factory))
 	return &Module{
 		momentsHandler:  NewHandler(momentService),

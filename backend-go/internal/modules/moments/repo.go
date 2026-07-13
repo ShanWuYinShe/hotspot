@@ -20,4 +20,7 @@ type Repository interface {
 	ListLikes(context.Context, string, int, string) ([]LikeItem, string, error)
 	ListFavorites(context.Context, string, int, string) (PaginatedMoments, error)
 	LoadMyState(context.Context, string, string) *MyMomentState
+	// FetchMomentImageRows loads ordered image rows for the given moment IDs
+	// (used by the service-layer image hydration helper).
+	FetchMomentImageRows(context.Context, []string) (map[string][]momentImageRow, error)
 }

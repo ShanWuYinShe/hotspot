@@ -86,6 +86,11 @@ func (r *stubMomentRepo) ListFavorites(_ context.Context, _ string, _ int, _ str
 func (r *stubMomentRepo) LoadMyState(ctx context.Context, a, b string) *MyMomentState {
 	return r.myState
 }
+
+func (r *stubMomentRepo) FetchMomentImageRows(_ context.Context, _ []string) (map[string][]momentImageRow, error) {
+	return map[string][]momentImageRow{}, nil
+}
+
 func momentCtx(userID string) context.Context {
 	return platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: userID})
 }

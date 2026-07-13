@@ -20,8 +20,6 @@
   import Send from 'lucide-svelte/icons/send';
   import X from 'lucide-svelte/icons/x';
   import MapPin from 'lucide-svelte/icons/map-pin';
-  import Smile from 'lucide-svelte/icons/smile';
-  import Hash from 'lucide-svelte/icons/hash';
 
   interface Props {
     open: boolean;
@@ -314,278 +312,163 @@
   }}
 >
   <Dialog.Content
-    class="flex max-h-[85vh] flex-col sm:max-w-2xl"
-    style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-lg); border-radius: var(--radius-lg);"
+    hideClose
+    class="compose compose-dialog flex max-h-[85vh] flex-col"
   >
-    <!-- Header: drag handle + title + close -->
-    <div class="flex-shrink-0 px-5 pt-4 pb-3" style="border-bottom: 1px solid var(--border-theme);">
-      <div class="flex justify-center mb-4">
-        <div
-          class="rounded-full"
-          style="width: 36px; height: 4px; background: var(--border-active);"
-        ></div>
+    <!-- Header: title + close (fixed, no drag handle) -->
+    <div class="compose__header">
+      <div class="compose__titles">
+        <h1 class="compose__title">{dialogTitle}</h1>
+        <p class="compose__subtitle">{dialogSubtitle}</p>
       </div>
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-[20px] tracking-tight" style="color: var(--text-primary);">
-            {dialogTitle}
-          </h1>
-          <p class="text-[12px] mt-0.5" style="color: var(--text-secondary);">
-            {dialogSubtitle}
-          </p>
-        </div>
-        <button
-          class="flex items-center justify-center rounded-full outline-none"
-          style="width: 38px; height: 38px; background: var(--surface-bg); box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light); border: 1px solid var(--border-theme);"
-          onclick={() => {
-            open = false;
-            onOpenChange?.(false);
-          }}
-          aria-label="关闭"
-        >
-          <X style="width: 16px; height: 16px; color: var(--text-secondary);" strokeWidth={1.75} />
-        </button>
-      </div>
+      <button class="compose__close" onclick={() => { open = false; onOpenChange?.(false); }} aria-label="关闭">
+        <X size={18} color="var(--text-secondary)" strokeWidth={1.75} />
+      </button>
     </div>
 
     <!-- Scrollable Body -->
-    <div class="flex-1 overflow-y-auto no-scrollbar px-5 py-4 flex flex-col gap-4 min-h-0">
-      <!-- Author Row -->
-      <div class="flex items-center gap-3">
+    <div class="compose__body no-scrollbar">
+      <!-- Author + location context -->
+      <div class="compose__author">
         <Avatar
           src={authStore.currentAccount?.avatar_url}
           name={authStore.currentAccount?.nickname}
           alt="You"
-          size={40}
-          class="shadow-[4px_4px_8px_var(--shadow-dark),-4px_-4px_8px_var(--shadow-light)]"
+          size={36}
         />
-        <div>
-          <p class="text-[13px]" style="color: var(--text-primary);">
-            {authStore.currentAccount?.nickname || '我'}
-          </p>
-          <div class="flex items-center gap-1">
-            <MapPin style="width: 11px; height: 11px; color: var(--brand);" strokeWidth={1.5} />
-            <span class="text-[11px]" style="color: var(--text-secondary);">
-              {selectedLocation.locationName || '定位中...'}
-            </span>
-          </div>
+        <div class="compose__author-info">
+          <span class="compose__author-name">{authStore.currentAccount?.nickname || '我'}</span>
+          <span class="compose__author-loc">
+            <MapPin size={11} color="var(--brand)" strokeWidth={1.5} />
+            {selectedLocation.locationName || '定位中...'}
+          </span>
         </div>
       </div>
 
-      <!-- Text Area -->
-      <div
-        class="rounded-[var(--radius-lg)] p-4"
-        style="box-shadow: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light); border: 1px solid {descriptionError
-          ? 'var(--error)'
-          : 'var(--border-active)'}; min-height: 130px; display: flex; flex-direction: column;"
-      >
+      <!-- Textarea -->
+      <div class="compose__textarea-wrap input-surface" class:compose__textarea-wrap--error={descriptionError}>
         <textarea
           id="moment-description"
           placeholder="写点什么吧..."
-          class="w-full flex-1 bg-transparent outline-none resize-none text-[13px]"
-          style="color: var(--text-primary); min-height: 90px; line-height: 1.6;"
+          class="compose__textarea"
           bind:value={description}
           onblur={() => markTouched('description')}
         ></textarea>
-        <div class="flex justify-between items-center mt-2">
-          <div class="flex gap-2">
-            <button
-              class="flex items-center justify-center rounded-full outline-none"
-              style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary);"
-              aria-label="表情"
-            >
-              <Smile style="width: 15px; height: 15px;" strokeWidth={1.5} />
-            </button>
-            <button
-              class="flex items-center justify-center rounded-full outline-none"
-              style="width: 30px; height: 30px; background: var(--surface-bg); box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary);"
-              aria-label="标签"
-            >
-              <Hash style="width: 15px; height: 15px;" strokeWidth={1.5} />
-            </button>
-          </div>
-          <span
-            class="text-[11px]"
-            style="color: {description.length > DESCRIPTION_MAX * 0.9
-              ? 'var(--brand)'
-              : 'var(--text-secondary)'};"
-          >
+        <div class="compose__textarea-footer">
+          {#if descriptionError}
+            <span class="compose__error">{descriptionError}</span>
+          {/if}
+          <span class="compose__counter" class:compose__counter--warn={description.length > DESCRIPTION_MAX * 0.9}>
             {description.length}/{DESCRIPTION_MAX}
           </span>
         </div>
-        {#if descriptionError}
-          <p class="text-[11px] mt-1" style="color: var(--error);">{descriptionError}</p>
+      </div>
+
+      <!-- Parsed tag chips -->
+      {#if tags.length > 0}
+        <div class="compose__tag-chips">
+          {#each tags as tag (tag)}
+            <span class="compose__tag-chip">#{tag}</span>
+          {/each}
+        </div>
+      {/if}
+
+      <!-- Image upload grid -->
+      <div class="compose__media">
+        <div class="compose__section-label">
+          <span>照片</span>
+          <span class="compose__section-count">{selectedImages.length}/{MAX_IMAGES}</span>
+        </div>
+        {#if selectedImages.length > 0}
+          <div class="compose__image-grid">
+            {#each selectedImages as image, index (image.previewUrl)}
+              <div class="compose__image-tile surface-flat">
+                <img src={image.previewUrl} alt="预览图" class="compose__image-img" />
+                {#if image.isUploading}
+                  <div class="compose__image-overlay">
+                    上传中 {Math.round(image.progress)}%
+                  </div>
+                {/if}
+                <button type="button" class="compose__image-remove" onclick={() => removeImage(index)} aria-label="删除">
+                  <X size={14} color="var(--text-on-overlay)" strokeWidth={2} />
+                </button>
+              </div>
+            {/each}
+            {#if selectedImages.length < MAX_IMAGES}
+              <label class="compose__image-add surface-flat">
+                <ImagePlus size={20} color="var(--text-secondary)" strokeWidth={1.25} />
+                <input type="file" accept="image/*" multiple class="hidden" onchange={handleImageChange} />
+              </label>
+            {/if}
+          </div>
+        {:else}
+          <label class="compose__image-empty surface-flat">
+            <ImagePlus size={22} color="var(--text-secondary)" strokeWidth={1.25} />
+            <span>添加照片</span>
+            <input type="file" accept="image/*" multiple class="hidden" onchange={handleImageChange} disabled={selectedImages.length >= MAX_IMAGES} />
+          </label>
+        {/if}
+        {#if isEditMode && editMoment?.images && editMoment.images.length > 0}
+          <div class="compose__image-grid compose__image-grid--existing">
+            {#each editMoment.images as image (image.thumbnail_url ?? image.url)}
+              <div class="compose__image-tile compose__image-tile--existing surface-flat">
+                <img src={image.thumbnail_url ?? image.url} alt="已有图片" class="compose__image-img" />
+              </div>
+            {/each}
+          </div>
         {/if}
       </div>
 
-      <!-- Tags input (inline with textarea area) -->
-      {#if tags.length > 0}
-        <div class="flex flex-wrap gap-2">
-          {#each tags as tag (tag)}
-            <span
-              class="rounded-full px-2.5 py-0.5 text-[11px]"
-              style="background: var(--brand); color: var(--text-on-accent);">#{tag}</span
-            >
-          {/each}
-        </div>
-      {/if}
-
-      <!-- Image Upload -->
-      {#if selectedImages.length > 0}
-        <div class="grid gap-3 sm:grid-cols-3">
-          {#each selectedImages as image, index (image.previewUrl)}
-            <div
-              class="group relative overflow-hidden rounded-[var(--radius-lg)]"
-              style="height: 120px; box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light); border: 1px solid var(--border-theme);"
-            >
-              <img src={image.previewUrl} alt="预览图" class="w-full h-full object-cover" />
-              {#if image.isUploading}
-                <div
-                  class="text-meta absolute inset-0 flex items-center justify-center"
-                  style="background: var(--overlay); color: var(--text-on-overlay)"
-                >
-                  上传中 {Math.round(image.progress)}%
-                </div>
-              {/if}
-              <button
-                type="button"
-                class="absolute top-2.5 right-2.5 rounded-full flex items-center justify-center outline-none"
-                style="width: 26px; height: 26px; background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);"
-                onclick={() => removeImage(index)}
-              >
-                <X
-                  style="width: 14px; height: 14px; color: var(--text-on-overlay);"
-                  strokeWidth={2}
-                />
-              </button>
-            </div>
-          {/each}
-
-          <!-- Add more button -->
-          {#if selectedImages.length < MAX_IMAGES}
-            <label
-              class="flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-lg)] outline-none cursor-pointer"
-              style="height: 120px; box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light); border: 1.5px dashed var(--border-active);"
-            >
-              <ImagePlus
-                style="width: 22px; height: 22px; color: var(--text-secondary);"
-                strokeWidth={1.25}
-              />
-              <span class="text-[12px]" style="color: var(--text-secondary);">添加更多</span>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                class="hidden"
-                onchange={handleImageChange}
-              />
-            </label>
-          {/if}
-        </div>
-      {:else}
-        <label
-          class="flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-lg)] outline-none cursor-pointer w-full"
-          style="height: 80px; box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light); border: 1.5px dashed var(--border-active);"
-        >
-          <ImagePlus
-            style="width: 22px; height: 22px; color: var(--text-secondary);"
-            strokeWidth={1.25}
-          />
-          <span class="text-[12px]" style="color: var(--text-secondary);">添加照片</span>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            class="hidden"
-            onchange={handleImageChange}
-            disabled={selectedImages.length >= MAX_IMAGES}
-          />
-        </label>
-      {/if}
-
-      {#if isEditMode && editMoment?.images && editMoment.images.length > 0}
-        <div class="grid gap-3 sm:grid-cols-3">
-          {#each editMoment.images as image (image.thumbnail_url ?? image.url)}
-            <div
-              class="overflow-hidden rounded-[var(--radius-lg)]"
-              style="border: 1px solid var(--border-theme); background: var(--surface-bg); height: 120px;"
-            >
-              <img
-                src={image.thumbnail_url ?? image.url}
-                alt="已有图片"
-                class="w-full h-full object-cover"
-                style="opacity: 0.75;"
-              />
-            </div>
-          {/each}
-        </div>
-      {/if}
-
-      <!-- Vibe Tags -->
-      <div>
-        <p
-          class="text-[11px] uppercase tracking-widest mb-2.5"
-          style="color: var(--text-secondary);"
-        >
-          氛围
-        </p>
-        <div class="flex flex-wrap gap-2">
+      <!-- Vibe tags -->
+      <div class="compose__vibes">
+        <span class="compose__section-label"><span>氛围</span></span>
+        <div class="compose__vibe-list">
           {#each VIBE_TAGS as tag (tag)}
-            {@const active = selectedVibes.has(tag)}
-            <button
-              class="filter-chip"
-              class:filter-chip--active={active}
-              onclick={() => toggleVibe(tag)}
-            >
+            <button class="filter-chip" class:filter-chip--active={selectedVibes.has(tag)} onclick={() => toggleVibe(tag)}>
               {tag}
             </button>
           {/each}
         </div>
       </div>
 
-      <!-- Tags input + Privacy (compact row) -->
-      <div class="flex gap-3">
+      <!-- Tags input -->
+      <div class="compose__tags">
+        <span class="compose__section-label"><span>标签</span></span>
         <input
           placeholder="标签（空格分隔）"
-          class="text-meta rounded-full px-4 py-2 outline-none flex-1"
-          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-active)"
+          class="compose__tags-input input-surface"
           bind:value={tagsInput}
         />
-        <select
-          class="text-meta rounded-full px-3 py-2 outline-none"
-          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); border: 1px solid var(--border-theme)"
-          bind:value={privacy}
-        >
-          <option value="public">公开</option>
-          <option value="private">仅自己</option>
-        </select>
       </div>
 
+      <!-- Location -->
       <AnchorSummaryCard
         label="发布位置"
         description="发布将使用该位置，可单独选点且不修改浏览锚点"
         overrideName={selectedLocation.locationName}
         onAdjust={() => (showLocationPicker = true)}
       />
+    </div>
 
-      <!-- Post Button -->
+    <!-- Footer: privacy + submit (fixed, not scrolling) -->
+    <div class="compose__footer">
+      <select class="compose__privacy" bind:value={privacy}>
+        <option value="public">公开</option>
+        <option value="private">仅自己</option>
+      </select>
       <button
-        class="flex items-center justify-center gap-2 w-full py-3.5 rounded-[var(--radius-lg)] text-[14px] outline-none transition-all duration-300 active:scale-[0.97]"
-        style={canPost && !isSubmitting
-          ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn); border: 1px solid transparent;'
-          : 'background: var(--surface-bg); box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary); opacity: 0.6; cursor: not-allowed;'}
+        class="compose__submit"
+        class:compose__submit--disabled={!canPost || isSubmitting}
         onclick={handleSubmit}
         disabled={!canPost || isSubmitting || isUploadingImages}
       >
         {#if isSubmitting}
-          <Loader2 style="width: 16px; height: 16px;" class="inline-block" />
+          <Loader2 size={16} class="compose__spinner" />
         {:else}
-          <Send style="width: 16px; height: 16px;" strokeWidth={1.75} />
+          <Send size={16} strokeWidth={1.75} />
         {/if}
         <span>{isEditMode ? '保存' : '发布'}</span>
       </button>
-
-      <div style="height: 8px;"></div>
     </div>
   </Dialog.Content>
 </Dialog.Root>
@@ -608,3 +491,339 @@
     };
   }}
 />
+
+<svelte:head>
+  <style>
+  /* Injected via <svelte:head> to bypass Svelte's CSS tree-shaking, which
+     marks portaled Dialog.Content selectors as "(unused)" and strips them.
+     All selectors are qualified under .compose to avoid leaking globally. */
+
+  /* ── Dialog width override (desktop wider than the 32rem default) ── */
+  .dialog-responsive-position.compose-dialog {
+    max-width: 640px;
+  }
+  @media (min-width: 1024px) {
+    .dialog-responsive-position.compose-dialog {
+      max-width: 720px;
+    }
+  }
+
+  .compose {
+    background: var(--surface-bg);
+    border: 1px solid var(--border-theme);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    color: var(--text-primary);
+    gap: 0;
+    padding: 0;
+  }
+
+  /* ── Header (fixed) ─────────────────────────────────────── */
+  .compose .compose__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border-theme);
+    flex-shrink: 0;
+  }
+  .compose .compose__titles { min-width: 0; }
+  .compose .compose__title {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    margin: 0;
+  }
+  .compose .compose__subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 2px 0 0;
+  }
+  .compose .compose__close {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    outline: none;
+    transition: background 0.16s ease, border-color 0.16s ease;
+  }
+  .compose .compose__close:hover {
+    background: var(--border-theme);
+    border-color: var(--border-theme);
+  }
+
+  /* ── Body (scrollable) ──────────────────────────────────── */
+  .compose .compose__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Author row */
+  .compose .compose__author {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .compose .compose__author-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .compose .compose__author-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  .compose .compose__author-loc {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  /* Textarea */
+  .compose .compose__textarea-wrap {
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .compose .compose__textarea-wrap--error {
+    border-color: var(--error);
+  }
+  .compose .compose__textarea {
+    flex: 1;
+    width: 100%;
+    min-height: 80px;
+    resize: none;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 13px;
+    line-height: 1.6;
+    font-family: inherit;
+  }
+  .compose .compose__textarea::placeholder { color: var(--text-secondary); }
+  .compose .compose__textarea-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+  }
+  .compose .compose__error {
+    font-size: 11px;
+    color: var(--error);
+    margin-right: auto;
+  }
+  .compose .compose__counter {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .compose .compose__counter--warn { color: var(--brand); }
+
+  /* Parsed tag chips */
+  .compose .compose__tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: -8px;
+  }
+  .compose .compose__tag-chip {
+    display: inline-flex;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: var(--radius-pill);
+    background: var(--brand);
+    color: var(--text-on-accent);
+  }
+
+  /* Section label */
+  .compose .compose__section-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+  .compose .compose__section-count {
+    text-transform: none;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Image grid */
+  .compose .compose__image-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .compose .compose__image-grid--existing { margin-top: 8px; }
+  .compose .compose__image-tile {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+  }
+  .compose .compose__image-tile--existing { opacity: 0.75; }
+  .compose .compose__image-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .compose .compose__image-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--overlay);
+    color: var(--text-on-overlay);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .compose .compose__image-remove {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-pill);
+    border: none;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+    outline: none;
+  }
+  .compose .compose__image-add {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: 1.5px dashed var(--border-active) !important;
+    cursor: pointer;
+    transition: border-color 0.16s ease;
+  }
+  .compose .compose__image-add:hover { border-color: var(--brand) !important; }
+  .compose .compose__image-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 72px;
+    border-radius: var(--radius-md);
+    border: 1.5px dashed var(--border-active) !important;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 12px;
+    transition: border-color 0.16s ease;
+  }
+  .compose .compose__image-empty:hover { border-color: var(--brand) !important; }
+
+  /* Vibe tags */
+  .compose .compose__vibes { display: flex; flex-direction: column; }
+  .compose .compose__vibe-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Tags input */
+  .compose .compose__tags { display: flex; flex-direction: column; }
+  .compose .compose__tags-input {
+    border-radius: var(--radius-md);
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-primary);
+    outline: none;
+    width: 100%;
+    font-family: inherit;
+  }
+  .compose .compose__tags-input::placeholder { color: var(--text-secondary); }
+
+  /* ── Footer (fixed) ─────────────────────────────────────── */
+  .compose .compose__footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px 16px;
+    border-top: 1px solid var(--border-theme);
+    flex-shrink: 0;
+  }
+  .compose .compose__privacy {
+    padding: 7px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-theme);
+    background: var(--surface-bg);
+    color: var(--text-primary);
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+  }
+  .compose .compose__submit {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    background: var(--brand);
+    color: var(--text-on-accent);
+    font-size: 14px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    box-shadow: var(--shadow-brand-btn);
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+  .compose .compose__submit:active { transform: scale(0.97); }
+  .compose .compose__submit--disabled {
+    background: var(--surface-bg);
+    color: var(--text-secondary);
+    border-color: var(--border-theme);
+    box-shadow: none;
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .compose .compose__spinner { animation: compose-spin 0.8s linear infinite; }
+  @keyframes compose-spin { to { transform: rotate(360deg); } }
+
+  /* Mobile: tighter padding */
+  @media (max-width: 639px) {
+    .compose .compose__body { padding: 14px 16px; }
+    .compose .compose__header { padding: 14px 16px 12px; }
+    .compose .compose__footer { padding: 10px 16px 14px; }
+  }
+  </style>
+</svelte:head>

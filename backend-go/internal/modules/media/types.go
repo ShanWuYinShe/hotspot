@@ -62,3 +62,14 @@ type ObjectMetadata struct {
 	FileSize int
 	MimeType string
 }
+
+// MediaAsset is the resolved view of a completed upload, used by other modules
+// (e.g. moments) to attach media to their entities and to presign read URLs.
+type MediaAsset struct {
+	FileID       string
+	StorageKey   string
+	ThumbnailURL string
+	Width        int
+	Height       int
+	MimeType     string
+}

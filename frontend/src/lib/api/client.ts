@@ -132,6 +132,13 @@ function resolveApiOrigin(baseUrl: string): string {
   return window.location.origin;
 }
 
+/**
+ * normalizeMediaUrl ensures media URLs are absolute. Per the API contract
+ * (api_spec_base.md) the backend must return absolute URLs for all *_url
+ * fields. The /s3/ prefix rewrite below is a defensive fallback for any
+ * legacy path that still returns a server-relative /s3/... URL; it prepends
+ * the API origin so the request routes through the nginx /s3/ proxy.
+ */
 function normalizeMediaUrl(raw: string, origin: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return trimmed;

@@ -101,6 +101,15 @@ func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
 	return queryable, nil
 }
 
+// FetchMomentImageRows loads ordered image rows for the given moment IDs.
+func (r *PostgresRepository) FetchMomentImageRows(ctx context.Context, momentIDs []string) (map[string][]momentImageRow, error) {
+	queryable, err := r.queryable()
+	if err != nil {
+		return map[string][]momentImageRow{}, nil
+	}
+	return FetchMomentImageRows(ctx, queryable, momentIDs)
+}
+
 func (r *PostgresRepository) loadUserCandidates(ctx context.Context, queryable persistence.QueryableDB, query usersQuery) ([]userCandidate, error) {
 	bounds := geo.BoundsAround(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius)
 	mins, maxs := geo.CoveringArrays(bounds)

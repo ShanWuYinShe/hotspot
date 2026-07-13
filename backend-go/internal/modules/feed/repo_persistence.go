@@ -31,3 +31,7 @@ func (r *PersistenceRepository) ListTrending(ctx context.Context, viewerUserID s
 func (r *PersistenceRepository) Dismiss(ctx context.Context, cmd dismissCommand) error {
 	return r.impl.Dismiss(ctx, cmd)
 }
+
+func (r *PersistenceRepository) FetchMomentImageRows(ctx context.Context, momentIDs []string) (map[string][]momentImageRow, error) {
+	return r.impl.FetchMomentImageRows(ctx, momentIDs)
+}

@@ -15,9 +15,9 @@ type Module struct {
 	handler *Handler
 }
 
-func NewModule(factory *persistence.Factory, source appconfig.Source) *Module {
+func NewModule(factory *persistence.Factory, source appconfig.Source, imageResolver ImageResolver) *Module {
 	repo := NewPersistenceRepository(factory)
-	return &Module{handler: NewHandler(NewServiceWithSource(repo, source))}
+	return &Module{handler: NewHandler(NewServiceWithSourceAndImages(repo, source, imageResolver))}
 }
 
 func (m *Module) Mount(r chi.Router) {

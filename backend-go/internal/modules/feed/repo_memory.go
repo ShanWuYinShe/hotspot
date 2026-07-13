@@ -46,6 +46,11 @@ func (r *InMemoryRepository) Dismiss(_ context.Context, cmd dismissCommand) erro
 	return nil
 }
 
+// FetchMomentImageRows returns no rows for the in-memory repo.
+func (r *InMemoryRepository) FetchMomentImageRows(_ context.Context, _ []string) (map[string][]momentImageRow, error) {
+	return map[string][]momentImageRow{}, nil
+}
+
 func (r *InMemoryRepository) dismissTargetExists(targetType, targetID string) bool {
 	if _, ok := r.targets[targetType+":"+targetID]; ok {
 		return true

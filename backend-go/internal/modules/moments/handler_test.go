@@ -1220,6 +1220,9 @@ func (r *errorRepo) ListFavorites(context.Context, string, int, string) (Paginat
 	return PaginatedMoments{}, nil
 }
 func (r *errorRepo) LoadMyState(context.Context, string, string) *MyMomentState { return nil }
+func (r *errorRepo) FetchMomentImageRows(context.Context, []string) (map[string][]momentImageRow, error) {
+	return map[string][]momentImageRow{}, nil
+}
 func (r *errorRepo) NotificationContext(context.Context, string) (MomentItem, bool, error) {
 	return MomentItem{}, false, nil
 }

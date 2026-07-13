@@ -50,6 +50,10 @@ func (r *stubRepository) Dismiss(_ context.Context, cmd dismissCommand) error {
 	return r.err
 }
 
+func (r *stubRepository) FetchMomentImageRows(_ context.Context, _ []string) (map[string][]momentImageRow, error) {
+	return map[string][]momentImageRow{}, nil
+}
+
 func TestServiceListMomentsAppliesDefaultsAndPagination(t *testing.T) {
 	repo := &stubRepository{}
 	service := NewServiceWithRepo(repo)

@@ -6,6 +6,7 @@
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
   import CreateMomentModal from '$lib/components/common/create-moment-modal.svelte';
+  import SmartImage from '$lib/components/common/smart-image.svelte';
   import type { MomentItem } from '$lib/types/api';
   import { formatDate } from '$lib/utils/format';
   import Plus from 'lucide-svelte/icons/plus';
@@ -112,11 +113,13 @@
                   {#if moment.images && moment.images.length > 0}
                     <div class="mt-3 flex gap-2 overflow-x-auto">
                       {#each moment.images.slice(0, 4) as image, i (image.url)}
-                        <img
-                          src={image.thumbnail_url || image.url}
+                        <SmartImage
+                          src={image.url}
+                          thumbnail={image.thumbnail_url}
                           alt="图片 {i + 1}"
-                          loading="lazy"
-                          decoding="async"
+                          width={image.width || 80}
+                          height={image.height || 80}
+                          sizes="80px"
                           class="h-20 w-20 rounded-[var(--radius-sm)] object-cover"
                         />
                       {/each}

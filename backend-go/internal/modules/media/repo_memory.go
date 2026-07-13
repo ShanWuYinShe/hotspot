@@ -44,3 +44,33 @@ func (r *InMemoryRepository) Complete(ctx context.Context, uploadID string, file
 	r.uploads[uploadID] = upload
 	return upload, true, nil
 }
+
+func (r *InMemoryRepository) ResolveByFileIDs(_ context.Context, fileIDs []string, userID string, category MediaCategory) (map[string]MediaAsset, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	want := make(map[string]struct{}, len(fileIDs))
+	for _, id := range fileIDs {
+		want[id] = struct{}{}
+	}
+	assets := make(map[string]MediaAsset)
+	for _, upload := range r.uploads {
+		if !upload.Completed || upload.UserID != userID || upload.Category != category {
+			continue
+		}
+		if upload.File.FileID == "" {
+			continue
+		}
+		if _, ok := want[upload.File.FileID]; !ok {
+			continue
+		}
+		assets[upload.File.FileID] = MediaAsset{
+			FileID:       upload.File.FileID,
+			StorageKey:   upload.StorageKey,
+			ThumbnailURL: upload.File.ThumbnailURL,
+			Width:        upload.File.Width,
+			Height:       upload.File.Height,
+			MimeType:     upload.File.MimeType,
+		}
+	}
+	return assets, nil
+}

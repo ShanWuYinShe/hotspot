@@ -13,22 +13,27 @@ import (
 type Service struct {
 	repo      Repository
 	appConfig appconfig.Source
+	images    ImageResolver
 }
 
 func NewService(source appconfig.Source) *Service {
-	return NewServiceWithSource(NewPersistenceRepository(nil), source)
+	return NewServiceWithSourceAndImages(NewPersistenceRepository(nil), source, nil)
 }
 
-func NewServiceWithRepo(repo Repository) *Service { return NewServiceWithSource(repo, nil) }
+func NewServiceWithRepo(repo Repository) *Service { return NewServiceWithSourceAndImages(repo, nil, nil) }
 
 func NewServiceWithSource(repo Repository, source appconfig.Source) *Service {
+	return NewServiceWithSourceAndImages(repo, source, nil)
+}
+
+func NewServiceWithSourceAndImages(repo Repository, source appconfig.Source, images ImageResolver) *Service {
 	if repo == nil {
 		repo = NewPersistenceRepository(nil)
 	}
 	if source == nil {
 		source = appconfig.NewStaticSource(config.Config{})
 	}
-	return &Service{repo: repo, appConfig: source}
+	return &Service{repo: repo, appConfig: source, images: images}
 }
 
 func (s *Service) ListMoments(ctx context.Context, req ListFeedMomentsRequest) (PaginatedMoments, error) {
@@ -45,7 +50,29 @@ func (s *Service) ListMoments(ctx context.Context, req ListFeedMomentsRequest) (
 		observability.L().Error("feed.list_moments failed", "error", err)
 		return PaginatedMoments{}, err
 	}
+	s.hydrateImages(ctx, items.Items)
 	return items, nil
+}
+
+// hydrateImages fills the Images field on each moment in place via a single
+// batched query, presigning read URLs through the image resolver. No-op when
+// no resolver is configured (e.g. in tests).
+func (s *Service) hydrateImages(ctx context.Context, items []MomentItem) {
+	if s.images == nil || len(items) == 0 {
+		return
+	}
+	momentIDs := make([]string, 0, len(items))
+	for _, it := range items {
+		if it.MomentID != "" {
+			momentIDs = append(momentIDs, it.MomentID)
+		}
+	}
+	rowsByMoment, err := s.repo.FetchMomentImageRows(ctx, momentIDs)
+	if err != nil {
+		observability.L().Error("feed.hydrate_images fetch failed", "error", err)
+		return
+	}
+	hydrateMomentImages(ctx, s.images, rowsByMoment, items)
 }
 
 func (s *Service) ListGroups(ctx context.Context, req ListFeedGroupsRequest) (PaginatedGroups, error) {
@@ -95,6 +122,7 @@ func (s *Service) ListTrending(ctx context.Context) (TrendingBundle, error) {
 	cfg := s.appConfig.Get(ctx)
 	bundle.TrendingTags = slicex.LimitCopy(bundle.TrendingTags, cfg.ResponseDefaults.TrendingTagsCount)
 	bundle.HotMoments = slicex.LimitCopy(bundle.HotMoments, cfg.ResponseDefaults.HotMomentsCount)
+	s.hydrateImages(ctx, bundle.HotMoments)
 	return bundle, nil
 }
 

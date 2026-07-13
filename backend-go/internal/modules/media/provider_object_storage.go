@@ -81,6 +81,13 @@ func (p *ObjectStorageProvider) Head(ctx context.Context, storageKey string) (Ob
 	return ObjectMetadata{FileSize: size, MimeType: mimeType}, nil
 }
 
+// PresignGet returns a client-facing absolute URL that grants short-term
+// read access to the object at storageKey. The URL is signed against the
+// public (client-facing) endpoint so it is valid through the reverse proxy.
+func (p *ObjectStorageProvider) PresignGet(ctx context.Context, storageKey string, ttl time.Duration) (string, error) {
+	return p.presignURL(ctx, http.MethodGet, storageKey, ttl)
+}
+
 func (p *ObjectStorageProvider) presignURL(ctx context.Context, method, storageKey string, ttl time.Duration) (string, error) {
 	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.clientFacingEndpoint)
 }

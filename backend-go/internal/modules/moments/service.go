@@ -18,6 +18,7 @@ type Service struct {
 	repo          Repository
 	notifications momentNotificationWriter
 	users         actor.Provider
+	images        ImageResolver
 }
 
 type momentNotificationWriter interface {
@@ -26,19 +27,28 @@ type momentNotificationWriter interface {
 }
 
 func NewService() *Service {
-	return NewServiceWithDeps(NewInMemoryRepository(), notifications.NewService(), nil)
+	return NewServiceWithDepsAndImages(NewInMemoryRepository(), notifications.NewService(), nil, nil)
 }
 
 func NewServiceWithRepo(repo Repository) *Service {
-	return NewServiceWithDeps(repo, notifications.NewService(), nil)
+	return NewServiceWithDepsAndImages(repo, notifications.NewService(), nil, nil)
 }
 
 func NewServiceWithDeps(repo Repository, notificationWriter momentNotificationWriter, actorProvider actor.Provider) *Service {
-	return &Service{repo: repo, notifications: notificationWriter, users: actorProvider}
+	return NewServiceWithDepsAndImages(repo, notificationWriter, actorProvider, nil)
+}
+
+// NewServiceWithDepsAndImages wires an image resolver for presigning moment
+// image read URLs and validating image ownership on create/update.
+func NewServiceWithDepsAndImages(repo Repository, notificationWriter momentNotificationWriter, actorProvider actor.Provider, images ImageResolver) *Service {
+	return &Service{repo: repo, notifications: notificationWriter, users: actorProvider, images: images}
 }
 
 func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (MomentItem, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if err := s.validateImageOwnership(ctx, principal.UserID, req.ImageFileIDs); err != nil {
+		return MomentItem{}, err
+	}
 	item, err := s.repo.Create(ctx, principal.UserID, req)
 	if err != nil {
 		observability.L().Error("moments.create failed", "error", err)
@@ -46,6 +56,7 @@ func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (MomentIt
 	}
 	resourceguard.RecordMoment(ctx, item.MomentID)
 	s.notifyMomentMentions(ctx, principal.UserID, item)
+	s.hydrateImages(ctx, &item)
 	return item, nil
 }
 
@@ -65,6 +76,7 @@ func (s *Service) OpenTheDoor(ctx context.Context, momentID string) (MomentItem,
 	if principal.UserID != "" {
 		item.MyState = s.repo.LoadMyState(ctx, momentID, principal.UserID)
 	}
+	s.hydrateImages(ctx, &item)
 	return item, true, nil
 }
 
@@ -95,7 +107,12 @@ func (s *Service) ListMine(ctx context.Context, req MyMomentsRequest) (Paginated
 		}
 		cursor = req.Pagination.Cursor
 	}
-	return s.repo.ListMine(ctx, principal.UserID, limit, cursor)
+	result, err := s.repo.ListMine(ctx, principal.UserID, limit, cursor)
+	if err != nil {
+		return result, err
+	}
+	s.hydrateImagesBatch(ctx, result.Items)
+	return result, nil
 }
 
 func (s *Service) Exists(ctx context.Context, momentID string) (bool, error) {
@@ -127,7 +144,12 @@ func (s *Service) IncrementSharesCount(ctx context.Context, momentID string) err
 }
 
 func (s *Service) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
-	return s.repo.Search(ctx, req)
+	result, err := s.repo.Search(ctx, req)
+	if err != nil {
+		return result, err
+	}
+	s.hydrateImagesBatch(ctx, result.Items)
+	return result, nil
 }
 
 func (s *Service) Update(ctx context.Context, req EditMomentRequest) (MomentItem, error) {
@@ -142,6 +164,9 @@ func (s *Service) Update(ctx context.Context, req EditMomentRequest) (MomentItem
 	if item.User.UserID != principal.UserID {
 		return MomentItem{}, ErrPermissionDenied
 	}
+	if err := s.validateImageOwnership(ctx, principal.UserID, req.ImageFileIDs); err != nil {
+		return MomentItem{}, err
+	}
 	if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
 		observability.L().Error("moments.update failed", "error", err, "moment_id", req.MomentID)
 		return MomentItem{}, err
@@ -152,6 +177,7 @@ func (s *Service) Update(ctx context.Context, req EditMomentRequest) (MomentItem
 		return MomentItem{}, err
 	}
 	s.notifyMomentMentions(ctx, principal.UserID, updated)
+	s.hydrateImages(ctx, &updated)
 	return updated, nil
 }
 
@@ -283,7 +309,42 @@ func (s *Service) ListFavorites(ctx context.Context, req MyFavoritesRequest) (Pa
 	if req.Pagination != nil {
 		cursor = req.Pagination.Cursor
 	}
-	return s.repo.ListFavorites(ctx, principal.UserID, limit, cursor)
+	result, err := s.repo.ListFavorites(ctx, principal.UserID, limit, cursor)
+	if err != nil {
+		return result, err
+	}
+	s.hydrateImagesBatch(ctx, result.Items)
+	return result, nil
+}
+
+// validateImageOwnership ensures every file_id in the list belongs to userID,
+// has category 'moment_image' and is completed. A nil slice (no update) and an
+// empty slice (clear) are both valid. Returns ErrImagesNotOwned on mismatch.
+func (s *Service) validateImageOwnership(ctx context.Context, userID string, fileIDs []string) error {
+	if s.images == nil || len(fileIDs) == 0 {
+		return nil
+	}
+	if _, err := s.images.ResolveMomentImages(ctx, fileIDs, userID); err != nil {
+		observability.L().Warn("moments.image_ownership denied", "error", err, "user_id", userID)
+		return ErrImagesNotOwned
+	}
+	return nil
+}
+
+// hydrateImages fills a single moment's images in place via the shared helper.
+func (s *Service) hydrateImages(ctx context.Context, item *MomentItem) {
+	if s.images == nil || item == nil {
+		return
+	}
+	HydrateSingleMoment(ctx, s.repo, s.images, item)
+}
+
+// hydrateImagesBatch fills a slice of moments' images in place via one query.
+func (s *Service) hydrateImagesBatch(ctx context.Context, items []MomentItem) {
+	if s.images == nil || len(items) == 0 {
+		return
+	}
+	HydrateMomentImages(ctx, s.repo, s.images, items)
 }
 
 func (s *Service) buildMomentActor(ctx context.Context, userID string) (map[string]any, error) {

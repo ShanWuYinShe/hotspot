@@ -79,3 +79,7 @@ func (r *PersistenceRepository) ListFavorites(ctx context.Context, userID string
 func (r *PersistenceRepository) LoadMyState(ctx context.Context, momentID, userID string) *MyMomentState {
 	return r.impl.LoadMyState(ctx, momentID, userID)
 }
+
+func (r *PersistenceRepository) FetchMomentImageRows(ctx context.Context, momentIDs []string) (map[string][]momentImageRow, error) {
+	return r.impl.FetchMomentImageRows(ctx, momentIDs)
+}

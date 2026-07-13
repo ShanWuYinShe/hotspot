@@ -439,3 +439,9 @@ func relevanceScore(m MomentItem, keyword, tag string) int {
 	}
 	return score
 }
+
+// FetchMomentImageRows returns no rows for the in-memory repo, which does not
+// persist image associations. Image hydration is a no-op in memory-backed tests.
+func (r *InMemoryRepository) FetchMomentImageRows(_ context.Context, _ []string) (map[string][]momentImageRow, error) {
+	return map[string][]momentImageRow{}, nil
+}

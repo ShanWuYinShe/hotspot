@@ -53,6 +53,11 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if err := replaceMomentMentions(ctx, queryable, momentID, normalizedMentions, now); err != nil {
 		return MomentItem{}, err
 	}
+	if len(req.ImageFileIDs) > 0 {
+		if err := insertMomentImages(ctx, queryable, momentID, req.ImageFileIDs, now); err != nil {
+			return MomentItem{}, err
+		}
+	}
 	nickname, err := lookupUserNickname(ctx, queryable, userID)
 	if err != nil {
 		return MomentItem{}, err
@@ -258,6 +263,11 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Edit
 	}
 	if req.Mentions != nil {
 		if err := replaceMomentMentions(ctx, queryable, req.MomentID, req.Mentions, time.Now().UTC()); err != nil {
+			return err
+		}
+	}
+	if req.ImageFileIDs != nil {
+		if err := replaceMomentImages(ctx, queryable, req.MomentID, req.ImageFileIDs, time.Now().UTC()); err != nil {
 			return err
 		}
 	}

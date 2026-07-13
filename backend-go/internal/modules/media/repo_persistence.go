@@ -23,3 +23,7 @@ func (r *PersistenceRepository) Get(ctx context.Context, uploadID string) (pendi
 func (r *PersistenceRepository) Complete(ctx context.Context, uploadID string, file UploadedMedia, idempotencyKey string) (pendingUpload, bool, error) {
 	return r.impl.Complete(ctx, uploadID, file, idempotencyKey)
 }
+
+func (r *PersistenceRepository) ResolveByFileIDs(ctx context.Context, fileIDs []string, userID string, category MediaCategory) (map[string]MediaAsset, error) {
+	return r.impl.ResolveByFileIDs(ctx, fileIDs, userID, category)
+}

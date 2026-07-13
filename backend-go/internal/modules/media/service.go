@@ -22,6 +22,7 @@ var (
 	ErrUploadNotFound      = errors.New("media: upload not found")
 	ErrUploadNotReady      = errors.New("media: upload not ready")
 	ErrUploadConflict      = errors.New("media: upload conflict")
+	ErrMediaNotOwned       = errors.New("media: file not owned by user or not ready")
 )
 
 type Service struct {
@@ -152,6 +153,33 @@ func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia,
 		return UploadedMedia{}, ErrUploadNotFound
 	}
 	return completed.File, nil
+}
+
+// ResolveMomentImages resolves the given file_ids to their stored media assets,
+// enforcing that every id belongs to userID, has category 'moment_image' and is
+// completed. The returned map is keyed by file_id. If any requested file_id is
+// missing (not owned / wrong category / not completed) ErrMediaNotOwned is
+// returned — callers must treat attachment as all-or-nothing.
+func (s *Service) ResolveMomentImages(ctx context.Context, fileIDs []string, userID string) (map[string]MediaAsset, error) {
+	if len(fileIDs) == 0 {
+		return map[string]MediaAsset{}, nil
+	}
+	assets, err := s.repo.ResolveByFileIDs(ctx, fileIDs, userID, CategoryMomentImage)
+	if err != nil {
+		observability.L().Error("media.resolve_moment_images failed", "error", err)
+		return nil, err
+	}
+	for _, id := range fileIDs {
+		if _, ok := assets[id]; !ok {
+			return nil, ErrMediaNotOwned
+		}
+	}
+	return assets, nil
+}
+
+// PresignGet signs a short-term client-facing read URL for the given storage key.
+func (s *Service) PresignGet(ctx context.Context, storageKey string, ttl time.Duration) (string, error) {
+	return s.provider.PresignGet(ctx, storageKey, ttl)
 }
 
 func validatePresignUploadRequest(req PresignUploadRequest) error {
