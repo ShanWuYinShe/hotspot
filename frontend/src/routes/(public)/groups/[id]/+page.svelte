@@ -875,7 +875,7 @@
 </div>
 
 <div class="page-pad">
-  <div class="page-shell page-shell--narrow space-y-5">
+  <div class="page-shell space-y-5">
     {#if group && !wsGroupSubscription.state.isSubscribed}
       <div
         class="flex items-center gap-2 rounded-[var(--radius-md)] px-4 py-2"
@@ -1327,9 +1327,9 @@
           </div>
         </div>
         {#if membersPagination.loading && membersPagination.items.length === 0}
-          <div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
+          <div class="density-grid density-grid--compact">
             {#each Array(6) as _, i (i)}
-              <div class="mb-3 break-inside-avoid">
+              <div>
                 <div
                   class="flex items-center gap-3 rounded-[var(--radius-lg)] p-4"
                   style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
@@ -1360,9 +1360,9 @@
             <p class="text-body-lg" style="color: var(--text-secondary)">暂无成员</p>
           </div>
         {:else}
-          <div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
+          <div class="density-grid density-grid--compact">
             {#each membersPagination.items as member (member.user.user_id)}
-              <div class="mb-3 break-inside-avoid">
+              <div>
                 <div
                   class="flex items-center gap-3 rounded-[var(--radius-lg)] p-4 transition-all"
                   style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"

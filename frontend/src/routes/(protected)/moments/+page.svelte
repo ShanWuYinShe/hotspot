@@ -92,9 +92,9 @@
           fill
         />
       {:else}
-        <div class="columns-1 gap-4 sm:columns-2 xl:columns-3">
+        <div class="density-grid">
           {#each pagination.items as moment (moment.moment_id)}
-            <div class="mb-4 break-inside-avoid" style="content-visibility: auto; contain-intrinsic-size: 300px;">
+            <div style="content-visibility: auto; contain-intrinsic-size: 300px;">
               <div
                 class="rounded-[var(--radius-lg)] overflow-hidden"
                 style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"

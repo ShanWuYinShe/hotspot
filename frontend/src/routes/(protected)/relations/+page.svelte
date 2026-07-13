@@ -154,11 +154,9 @@
       {:else if activePg.items.length === 0}
         <EmptyState icon={activeMeta.emptyIcon} title={activeMeta.emptyTitle} fill />
       {:else}
-        <div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
+        <div class="density-grid density-grid--compact">
           {#each activePg.items as item (item.user.user_id)}
-            <div class="mb-3 break-inside-avoid">
-              <UserCard user={item.user} showBio showTags variant="square" />
-            </div>
+            <UserCard user={item.user} showBio showTags variant="square" />
           {/each}
         </div>
         <LoadMoreButton

@@ -184,7 +184,7 @@
 </svelte:head>
 
 <div class="page-pad">
-  <div class="page-shell page-shell--narrow min-h-screen">
+  <div class="page-shell page-shell--narrow min-h-full">
     {#if !user}
       <div class="flex flex-col items-center justify-center px-4 py-20">
         <p style="color: var(--text-secondary);">{data.error || '用户不存在'}</p>

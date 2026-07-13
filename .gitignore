@@ -60,3 +60,4 @@ __pycache__/
 .claude/settings.local.json
 browser-data/
 docs/superpowers/
+.zcode/

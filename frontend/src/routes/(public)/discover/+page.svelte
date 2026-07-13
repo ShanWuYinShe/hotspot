@@ -323,17 +323,18 @@
 
     <div class="flex flex-1 min-h-0 overflow-hidden">
       <div class="flex-1 overflow-y-auto no-scrollbar feed-density-pad">
-        <div class="feed-density-shell">
-          {@render tagChips()}
-          {@render feedGrid()}
+        <div class="flex gap-0">
+          <div class="feed-density-shell flex-1 min-w-0">
+            {@render tagChips()}
+            {@render feedGrid()}
+          </div>
+          <div
+            class="flex-shrink-0"
+            style="width: 220px; border-left: 1px solid var(--border-theme); padding: 20px 16px; position: sticky; top: 0; align-self: flex-start;"
+          >
+            {@render rightSidebar()}
+          </div>
         </div>
-      </div>
-
-      <div
-        class="flex-shrink-0 overflow-y-auto no-scrollbar"
-        style="width: 220px; border-left: 1px solid var(--border-theme); padding: 20px 16px;"
-      >
-        {@render rightSidebar()}
       </div>
     </div>
   </div>

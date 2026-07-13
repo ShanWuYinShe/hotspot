@@ -221,47 +221,45 @@
           </div>
         </EmptyState>
       {:else}
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="density-grid">
           {#each groups as group (group.group.group_id)}
-            <div>
-              <a href="/groups/{group.group.group_id}" style="text-decoration: none;">
-                <div
-                  class="flex items-center gap-4 rounded-[var(--radius-md)] p-4"
-                  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-                >
-                  <Avatar
-                    src={group.group.avatar_url}
-                    name={group.group.name}
-                    alt={group.group.name}
-                    size={48}
-                    type="group"
-                  />
-                  <div class="min-w-0 flex-1">
-                    <div class="flex items-center justify-between">
-                      <p
-                        class="text-body-lg truncate"
-                        style="font-weight: 500; color: var(--text-primary)"
-                      >
-                        {group.group.name}
-                      </p>
-                      {#if (group.my_state?.unread_count ?? 0) > 0}
-                        <div
-                          class="text-caption flex items-center justify-center rounded-full"
-                          style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-weight: 600; box-shadow: var(--shadow-brand-btn)"
-                        >
-                          {(group.my_state?.unread_count ?? 0) > 99
-                            ? '99+'
-                            : (group.my_state?.unread_count ?? 0)}
-                        </div>
-                      {/if}
-                    </div>
-                    <p class="text-body" style="color: var(--text-secondary)">
-                      {group.group.members_count} 成员
+            <a href="/groups/{group.group.group_id}" style="text-decoration: none;">
+              <div
+                class="flex items-center gap-4 rounded-[var(--radius-md)] p-4"
+                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+              >
+                <Avatar
+                  src={group.group.avatar_url}
+                  name={group.group.name}
+                  alt={group.group.name}
+                  size={48}
+                  type="group"
+                />
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between">
+                    <p
+                      class="text-body-lg truncate"
+                      style="font-weight: 500; color: var(--text-primary)"
+                    >
+                      {group.group.name}
                     </p>
+                    {#if (group.my_state?.unread_count ?? 0) > 0}
+                      <div
+                        class="text-caption flex items-center justify-center rounded-full"
+                        style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-weight: 600; box-shadow: var(--shadow-brand-btn)"
+                      >
+                        {(group.my_state?.unread_count ?? 0) > 99
+                          ? '99+'
+                          : (group.my_state?.unread_count ?? 0)}
+                      </div>
+                    {/if}
                   </div>
+                  <p class="text-body" style="color: var(--text-secondary)">
+                    {group.group.members_count} 成员
+                  </p>
                 </div>
-              </a>
-            </div>
+              </div>
+            </a>
           {/each}
         </div>
       {/if}

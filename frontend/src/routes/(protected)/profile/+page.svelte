@@ -766,7 +766,7 @@
 
         <!-- Right panel: tab bar + gallery -->
         <div class="flex-1 overflow-y-auto no-scrollbar page-pad">
-          <div class="page-shell page-shell--form">
+          <div class="page-shell page-shell--narrow">
             <div class="pt-2">
               {@render tabBar()}
             </div>

@@ -251,7 +251,7 @@
 
     <!-- Right content panel -->
     <div class="flex-1 overflow-y-auto no-scrollbar page-pad">
-      <div class="page-shell page-shell--form">
+      <div class="page-shell page-shell--narrow">
         {#if activeSection === 'appearance'}
           <!-- Appearance section -->
           <div class="mb-6">
