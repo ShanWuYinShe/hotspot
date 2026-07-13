@@ -301,7 +301,7 @@
     min-width: 0;
     cursor: pointer;
     flex-direction: column;
-    overflow: hidden;
+    overflow: clip;
     border: 1px solid color-mix(in srgb, var(--border-theme) 82%, transparent);
     border-radius: var(--radius-lg);
     background:
