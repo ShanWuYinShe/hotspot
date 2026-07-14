@@ -6,6 +6,7 @@
   import { notificationStore } from '$lib/stores/notification.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import PageHeader from '$lib/components/layout/page-header.svelte';
+  import { Switch } from '$lib/components/ui/switch';
   import Bell from 'lucide-svelte/icons/bell';
   import CheckCheck from 'lucide-svelte/icons/check-check';
   import ExternalLink from 'lucide-svelte/icons/external-link';
@@ -250,26 +251,11 @@
               </p>
               <p class="text-meta" style="color: var(--text-secondary)">{item.description}</p>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={isGroupEnabled(item.key)}
+            <Switch
+              checked={isGroupEnabled(item.key)}
+              onchange={(checked) => togglePreference(item.key, checked)}
               aria-label={item.title}
-              class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
-              style={isGroupEnabled(item.key)
-                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
-                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
-              onclick={() => togglePreference(item.key, !isGroupEnabled(item.key))}
-            >
-              <span
-                class="block h-5 w-5 rounded-full transition-transform"
-                style="background: {isGroupEnabled(item.key)
-                  ? 'white'
-                  : 'var(--text-secondary)'}; transform: translateX({isGroupEnabled(item.key)
-                  ? '22px'
-                  : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
-              ></span>
-            </button>
+            />
           </div>
         {/each}
       </div>

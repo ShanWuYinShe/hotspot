@@ -13,6 +13,7 @@
   import LocationPickerModal from './location-picker-modal.svelte';
   import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
+  import SmartImage from '$lib/components/common/smart-image.svelte';
   import type { PrivacyLevel, MomentItem } from '$lib/types/api';
   import { untrack } from 'svelte';
   import ImagePlus from 'lucide-svelte/icons/image-plus';
@@ -412,7 +413,7 @@
           <div class="compose__image-grid compose__image-grid--existing">
             {#each editMoment.images as image (image.thumbnail_url ?? image.url)}
               <div class="compose__image-tile compose__image-tile--existing surface-flat">
-                <img src={image.thumbnail_url ?? image.url} alt="已有图片" class="compose__image-img" />
+                <SmartImage src={image.url} thumbnail={image.thumbnail_url} alt="已有图片" width={image.width} height={image.height} class="compose__image-img" />
               </div>
             {/each}
           </div>

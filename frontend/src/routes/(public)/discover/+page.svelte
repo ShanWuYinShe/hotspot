@@ -14,7 +14,12 @@
   import UsersRound from 'lucide-svelte/icons/users-round';
   import type { MomentItem, TrendingTagItem } from '$lib/types/api';
 
-  const TABS = ['热门', '附近', '活动', '关注'];
+  const TABS = [
+    { id: 'all', label: '热门' },
+    { id: 'nearby', label: '附近' },
+    { id: 'activity', label: '活动' },
+    { id: 'following', label: '关注' }
+  ];
 
   let trendingTags: TrendingTagItem[] = $state([]);
 
@@ -30,7 +35,7 @@
   }
 
   let searchVal = $state('');
-  let activeTab = $state('热门');
+  let activeTab = $state('all');
   let activeTag = $state<string | null>(null);
   let dismissedIds = $state<Set<string>>(new Set());
 
@@ -46,7 +51,7 @@
           latitude: mapAnchorStore.latitude,
           longitude: mapAnchorStore.longitude
         },
-        source: activeTab === '关注' ? 'following' : 'all',
+        source: activeTab === 'following' ? 'following' : 'all',
         radius: mapAnchorStore.radius * 1000,
         pagination: { limit: 20, cursor }
       });
@@ -143,17 +148,17 @@
     class="flex overflow-x-auto no-scrollbar"
     style="border-bottom: 1px solid var(--border-theme);"
   >
-    {#each TABS as tab (tab)}
+    {#each TABS as tab (tab.id)}
       <button
         type="button"
         class="text-body relative flex-shrink-0 pb-3 pt-1 outline-none transition-colors"
-        style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab
+        style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab.id
           ? 'var(--brand)'
-          : 'var(--text-secondary)'}; font-weight: {activeTab === tab ? 500 : 400}"
-        onclick={() => (activeTab = tab)}
+          : 'var(--text-secondary)'}; font-weight: {activeTab === tab.id ? 500 : 400}"
+        onclick={() => (activeTab = tab.id)}
       >
-        {tab}
-        {#if activeTab === tab}
+        {tab.label}
+        {#if activeTab === tab.id}
           <div
             style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--brand);"
           ></div>

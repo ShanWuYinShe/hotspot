@@ -5,6 +5,7 @@
   import { isSuccess } from '$lib/api/client';
   import { toast } from '$lib/stores/toast.svelte';
   import PageHeader from '$lib/components/layout/page-header.svelte';
+  import { Switch } from '$lib/components/ui/switch';
   import Loader2 from 'lucide-svelte/icons/loader-2';
   import type { PrivacyLevel, PrivateChatPermission, UserSettings } from '$lib/types/api';
 
@@ -148,26 +149,7 @@
               </p>
               <p class="text-meta" style="color: var(--text-secondary)">允许展示你的地理位置</p>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={locationVisible}
-              aria-label="位置可见"
-              class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
-              style={locationVisible
-                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
-                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
-              onclick={() => (locationVisible = !locationVisible)}
-            >
-              <span
-                class="block h-5 w-5 rounded-full transition-transform"
-                style="background: {locationVisible
-                  ? 'white'
-                  : 'var(--text-secondary)'}; transform: translateX({locationVisible
-                  ? '22px'
-                  : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
-              ></span>
-            </button>
+            <Switch bind:checked={locationVisible} aria-label="位置可见" />
           </div>
 
           <div
@@ -180,26 +162,7 @@
               </p>
               <p class="text-meta" style="color: var(--text-secondary)">允许显示在线/离线状态</p>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={presenceVisible}
-              aria-label="在线状态可见"
-              class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
-              style={presenceVisible
-                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
-                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
-              onclick={() => (presenceVisible = !presenceVisible)}
-            >
-              <span
-                class="block h-5 w-5 rounded-full transition-transform"
-                style="background: {presenceVisible
-                  ? 'white'
-                  : 'var(--text-secondary)'}; transform: translateX({presenceVisible
-                  ? '22px'
-                  : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
-              ></span>
-            </button>
+            <Switch bind:checked={presenceVisible} aria-label="在线状态可见" />
           </div>
 
           <div
@@ -214,26 +177,7 @@
                 控制你的社交列表是否对他人可见
               </p>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={socialListsVisible}
-              aria-label="好友/关注/粉丝列表可见"
-              class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
-              style={socialListsVisible
-                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
-                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
-              onclick={() => (socialListsVisible = !socialListsVisible)}
-            >
-              <span
-                class="block h-5 w-5 rounded-full transition-transform"
-                style="background: {socialListsVisible
-                  ? 'white'
-                  : 'var(--text-secondary)'}; transform: translateX({socialListsVisible
-                  ? '22px'
-                  : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
-              ></span>
-            </button>
+            <Switch bind:checked={socialListsVisible} aria-label="好友/关注/粉丝列表可见" />
           </div>
         </div>
       </div>
@@ -264,26 +208,7 @@
               </p>
               <p class="text-meta" style="color: var(--text-secondary)">关闭后他人关注需审批</p>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={allowFollow}
-              aria-label="允许关注"
-              class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
-              style={allowFollow
-                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
-                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
-              onclick={() => (allowFollow = !allowFollow)}
-            >
-              <span
-                class="block h-5 w-5 rounded-full transition-transform"
-                style="background: {allowFollow
-                  ? 'white'
-                  : 'var(--text-secondary)'}; transform: translateX({allowFollow
-                  ? '22px'
-                  : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
-              ></span>
-            </button>
+            <Switch bind:checked={allowFollow} aria-label="允许关注" />
           </div>
 
           <div
@@ -336,26 +261,7 @@
               </p>
               <p class="text-meta" style="color: var(--text-secondary)">关闭后不会出现在搜索结果</p>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={searchable}
-              aria-label="允许被搜索"
-              class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
-              style={searchable
-                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
-                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
-              onclick={() => (searchable = !searchable)}
-            >
-              <span
-                class="block h-5 w-5 rounded-full transition-transform"
-                style="background: {searchable
-                  ? 'white'
-                  : 'var(--text-secondary)'}; transform: translateX({searchable
-                  ? '22px'
-                  : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
-              ></span>
-            </button>
+            <Switch bind:checked={searchable} aria-label="允许被搜索" />
           </div>
 
           <div
@@ -368,26 +274,7 @@
               </p>
               <p class="text-meta" style="color: var(--text-secondary)">允许出现在附近的人</p>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={locationSearchable}
-              aria-label="附近可见"
-              class="relative flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
-              style={locationSearchable
-                ? 'background: var(--brand); box-shadow: var(--shadow-brand-btn);'
-                : 'background: var(--surface-bg); border: 1px solid var(--border-theme);'}
-              onclick={() => (locationSearchable = !locationSearchable)}
-            >
-              <span
-                class="block h-5 w-5 rounded-full transition-transform"
-                style="background: {locationSearchable
-                  ? 'white'
-                  : 'var(--text-secondary)'}; transform: translateX({locationSearchable
-                  ? '22px'
-                  : '4px'}); box-shadow: 0 1px 3px var(--theme-switch-shadow);"
-              ></span>
-            </button>
+            <Switch bind:checked={locationSearchable} aria-label="附近可见" />
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { authStore } from '$lib/stores/auth.svelte';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
+  import { toast } from '$lib/stores/toast.svelte';
   import { t } from '$lib/i18n';
   import { formatDistance } from '$lib/utils/format';
   import { usersService, feedService, groupsService } from '$lib/api/services';
@@ -120,7 +121,7 @@
           : items;
       }
     } catch {
-      // ignore
+      toast.error('加载失败，请稍后重试');
     } finally {
       loadingNearby = false;
     }
@@ -133,7 +134,7 @@
         trendingTags = result.data?.trending_tags ?? [];
       }
     } catch {
-      // non-critical, silently fail
+      toast.error('加载失败，请稍后重试');
     }
   }
 
@@ -149,7 +150,7 @@
         nearbyGroups = response.data.items ?? [];
       }
     } catch {
-      // non-critical, silently fail
+      toast.error('加载失败，请稍后重试');
     }
   }
 

@@ -6,6 +6,7 @@
   import { toast } from '$lib/stores/toast.svelte';
   import type { AppConfig } from '$lib/types/api';
   import AdminPageHeader from '$lib/components/common/admin-page-header.svelte';
+  import { Switch } from '$lib/components/ui/switch';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import Save from 'lucide-svelte/icons/save';
   import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -224,29 +225,16 @@
                     {toggle.desc}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={toggle.val}
-                  aria-label={toggle.label}
-                  class="relative rounded-full outline-none"
-                  style="width: 44px; height: 24px; transition: background 0.2s; {toggle.val
-                    ? 'background: var(--brand);'
-                    : 'background: var(--border-theme);'}"
-                  onclick={() => {
-                    if (toggle.key === 'reg') enablePublicRegistration = !enablePublicRegistration;
-                    else if (toggle.key === 'guest') enableGuestLogin = !enableGuestLogin;
-                    else if (toggle.key === 'moments') enableMoments = !enableMoments;
-                    else enableNearbyPeople = !enableNearbyPeople;
+                <Switch
+                  checked={toggle.val}
+                  onchange={(checked) => {
+                    if (toggle.key === 'reg') enablePublicRegistration = checked;
+                    else if (toggle.key === 'guest') enableGuestLogin = checked;
+                    else if (toggle.key === 'moments') enableMoments = checked;
+                    else enableNearbyPeople = checked;
                   }}
-                >
-                  <div
-                    class="absolute top-1 rounded-full"
-                    style="width: 16px; height: 16px; background: var(--surface-bg); transition: left 0.2s; left: {toggle.val
-                      ? '23px'
-                      : '4px'}; box-shadow: var(--theme-switch-shadow);"
-                  ></div>
-                </button>
+                  aria-label={toggle.label}
+                />
               </div>
             {/each}
             <button
