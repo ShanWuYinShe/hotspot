@@ -5,6 +5,7 @@
   import { isSuccess } from '$lib/api/client';
   import { toast } from '$lib/stores/toast.svelte';
   import { formatDateTime } from '$lib/utils/format';
+  import { t } from '$lib/i18n';
   import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import CreateGroupModal from '$lib/components/common/create-group-modal.svelte';
@@ -38,7 +39,7 @@
         groups = response.data.items;
       }
     } catch {
-      toast.error('加载失败');
+      toast.error(t('groupsMine.loadFailed'));
     } finally {
       isLoading = false;
     }
@@ -55,7 +56,7 @@
         invites = response.data.items;
       }
     } catch {
-      toast.error('加载群邀请失败');
+      toast.error(t('groupsMine.invitesLoadFailed'));
     } finally {
       invitesLoading = false;
     }
@@ -72,7 +73,7 @@
         applications = response.data.items;
       }
     } catch {
-      toast.error('加载群申请失败');
+      toast.error(t('groupsMine.applicationsLoadFailed'));
     } finally {
       applicationsLoading = false;
     }
@@ -116,15 +117,15 @@
           : await groupsService.rejectInvite({ invite_id: invite.invite_id });
       if (isSuccess(response)) {
         invites = invites.filter((item) => item.invite_id !== invite.invite_id);
-        toast.success(action === 'accept' ? '已接受群邀请' : '已拒绝群邀请');
+        toast.success(action === 'accept' ? t('groupsMine.inviteAccepted') : t('groupsMine.inviteRejected'));
         if (action === 'accept') {
           await loadGroups();
         }
       } else {
-        toast.error(response.message || '操作失败');
+        toast.error(response.message || t('groupsMine.operationFailed'));
       }
     } catch {
-      toast.error('操作失败');
+      toast.error(t('groupsMine.operationFailed'));
     } finally {
       setInviteProcessing(invite.invite_id, false);
     }
@@ -141,12 +142,12 @@
         applications = applications.filter(
           (item) => item.application_id !== application.application_id
         );
-        toast.success('已取消申请');
+        toast.success(t('groupsMine.applicationCanceled'));
       } else {
-        toast.error(response.message || '取消申请失败');
+        toast.error(response.message || t('groupsMine.cancelFailed'));
       }
     } catch {
-      toast.error('取消申请失败');
+      toast.error(t('groupsMine.cancelFailed'));
     } finally {
       setApplicationProcessing(application.application_id, false);
     }
@@ -160,7 +161,7 @@
 </script>
 
 <svelte:head>
-  <title>我的群组 - HotSpot</title>
+  <title>{t('groupsMine.title')} - HotSpot</title>
 </svelte:head>
 
 <div class="flex flex-col">
@@ -172,9 +173,9 @@
     <div class="page-shell">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="page-title" style="color: var(--text-primary);">我的群组</h1>
+          <h1 class="page-title" style="color: var(--text-primary);">{t('groupsMine.title')}</h1>
           <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
-            管理已加入群组、邀请与申请
+            {t('groupsMine.subtitle')}
           </p>
         </div>
         <div class="flex gap-2">
@@ -185,7 +186,7 @@
             disabled={anyLoading}
           >
             <RefreshCw size={13} class={anyLoading ? 'animate-spin' : ''} />
-            刷新
+            {t('groupsMine.refresh')}
           </button>
           <button
             class="text-meta flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
@@ -193,7 +194,7 @@
             onclick={() => (showCreateGroup = true)}
           >
             <Plus size={13} />
-            创建群组
+            {t('groupsMine.createGroup')}
           </button>
         </div>
       </div>
@@ -205,18 +206,18 @@
       {#if isLoading}
         <ListSkeleton type="group" count={6} layout="grid" />
       {:else if groups.length === 0}
-        <EmptyState icon={Users} title="还没有加入群组" description="去探索或创建一个群组吧">
+        <EmptyState icon={Users} title={t('groupsMine.emptyTitle')} description={t('groupsMine.emptyDesc')}>
           <div class="mt-4 flex gap-3">
             <a
               href="/groups/nearby"
               class="rounded-full px-4 py-2 text-sm"
               style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary); text-decoration: none;"
-              >发现附近群组</a
+              >{t('groupsMine.discoverNearby')}</a
             >
             <button
               class="rounded-full px-4 py-2 text-sm"
               style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
-              onclick={() => (showCreateGroup = true)}>创建群组</button
+              onclick={() => (showCreateGroup = true)}>{t('groupsMine.createGroup')}</button
             >
           </div>
         </EmptyState>
@@ -249,13 +250,13 @@
                         style="width: 20px; height: 20px; background: var(--brand); color: var(--text-on-accent); font-weight: 600; box-shadow: var(--shadow-brand-btn)"
                       >
                         {(group.my_state?.unread_count ?? 0) > 99
-                          ? '99+'
+                          ? t('groupsMine.unreadMax')
                           : (group.my_state?.unread_count ?? 0)}
                       </div>
                     {/if}
                   </div>
                   <p class="text-body" style="color: var(--text-secondary)">
-                    {group.group.members_count} 成员
+                    {t('groupsMine.membersCount', { count: group.group.members_count })}
                   </p>
                 </div>
               </div>
@@ -280,14 +281,14 @@
                 <Inbox size={12} color="var(--text-secondary)" strokeWidth={1.5} />
               </div>
               <span class="text-body-lg" style="font-weight: 600; color: var(--text-primary)"
-                >收到的群邀请</span
+                >{t('groupsMine.invitesTitle')}</span
               >
             </div>
           </div>
           {#if invitesLoading && invites.length === 0}
-            <p class="text-body" style="color: var(--text-secondary)">加载中...</p>
+            <p class="text-body" style="color: var(--text-secondary)">{t('groupsMine.loading')}</p>
           {:else if invites.length === 0}
-            <p class="text-body" style="color: var(--text-secondary)">暂无待处理邀请</p>
+            <p class="text-body" style="color: var(--text-secondary)">{t('groupsMine.noInvites')}</p>
           {:else}
             <div class="space-y-2">
               {#each invites as invite (invite.invite_id)}
@@ -299,7 +300,7 @@
                     {invite.group.name}
                   </p>
                   <p class="text-meta" style="color: var(--text-secondary); margin-top: 4px">
-                    邀请人：{invite.inviter.nickname}
+                    {t('groupsMine.inviter', { nickname: invite.inviter.nickname })}
                   </p>
                   {#if invite.message}
                     <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
@@ -313,7 +314,7 @@
                       disabled={isInviteProcessing(invite.invite_id)}
                       onclick={() => handleInvite(invite, 'accept')}
                     >
-                      接受
+                      {t('groupsMine.accept')}
                     </button>
                     <button
                       class="rounded-full px-3 py-1 text-xs outline-none"
@@ -321,7 +322,7 @@
                       disabled={isInviteProcessing(invite.invite_id)}
                       onclick={() => handleInvite(invite, 'reject')}
                     >
-                      拒绝
+                      {t('groupsMine.reject')}
                     </button>
                   </div>
                 </div>
@@ -344,14 +345,14 @@
                 <CheckCircle2 size={12} color="var(--text-secondary)" strokeWidth={1.5} />
               </div>
               <span class="text-body-lg" style="font-weight: 600; color: var(--text-primary)"
-                >我的入群申请</span
+                >{t('groupsMine.applicationsTitle')}</span
               >
             </div>
           </div>
           {#if applicationsLoading && applications.length === 0}
-            <p class="text-body" style="color: var(--text-secondary)">加载中...</p>
+            <p class="text-body" style="color: var(--text-secondary)">{t('groupsMine.loading')}</p>
           {:else if applications.length === 0}
-            <p class="text-body" style="color: var(--text-secondary)">暂无待处理申请</p>
+            <p class="text-body" style="color: var(--text-secondary)">{t('groupsMine.noApplications')}</p>
           {:else}
             <div class="space-y-2">
               {#each applications as application (application.application_id)}
@@ -360,7 +361,7 @@
                   style="border: 1px solid var(--border-theme);"
                 >
                   <p class="text-body" style="font-weight: 500; color: var(--text-primary)">
-                    群组申请
+                    {t('groupsMine.applicationItemTitle')}
                   </p>
                   {#if application.message}
                     <p class="text-meta" style="color: var(--text-secondary); margin-top: 4px">
@@ -368,7 +369,7 @@
                     </p>
                   {/if}
                   <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
-                    申请时间：{formatDateTime(application.created_at)}
+                    {t('groupsMine.applicationTime', { time: formatDateTime(application.created_at) })}
                   </p>
                   <div class="mt-2 flex gap-2">
                     <button
@@ -377,7 +378,7 @@
                       disabled={isApplicationProcessing(application.application_id)}
                       onclick={() => handleCancelApplication(application)}
                     >
-                      取消申请
+                      {t('groupsMine.cancelApplication')}
                     </button>
                   </div>
                 </div>

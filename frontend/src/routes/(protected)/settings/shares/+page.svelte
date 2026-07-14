@@ -9,6 +9,7 @@
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { isSuccess } from '$lib/api/client';
+  import { t } from '$lib/i18n';
   import { SHARE_TYPE_BADGE_CLASS, SHARE_TYPE_LABEL } from '$lib/utils/content-labels';
   import type { ShareListItem, ShareType } from '$lib/types/api';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
@@ -18,13 +19,13 @@
   import ExternalLink from 'lucide-svelte/icons/external-link';
   import Loader2 from 'lucide-svelte/icons/loader-2';
 
-  const shareTypeOptions: Array<{ value: ShareType | 'all'; label: string }> = [
-    { value: 'all', label: '全部' },
+  const shareTypeOptions = $derived<Array<{ value: ShareType | 'all'; label: string }>>([
+    { value: 'all', label: t('settings.filterAll') },
     { value: 'user', label: SHARE_TYPE_LABEL.user },
     { value: 'group', label: SHARE_TYPE_LABEL.group },
     { value: 'moment', label: SHARE_TYPE_LABEL.moment },
     { value: 'location', label: SHARE_TYPE_LABEL.location }
-  ];
+  ]);
 
   const pagination = usePagination<ShareListItem>({
     uniqueKey: (item) => item.share_id
@@ -34,11 +35,11 @@
   let revokingShareId = $state<string | null>(null);
 
   function getShareTitle(item: ShareListItem): string {
-    return item.preview?.title || `${SHARE_TYPE_LABEL[item.share_type]}分享`;
+    return item.preview?.title || t('settings.shareTitleFallback', { type: SHARE_TYPE_LABEL[item.share_type] });
   }
 
   function getShareSubtitle(item: ShareListItem): string {
-    return item.preview?.subtitle || `分享码 ${item.share_code}`;
+    return item.preview?.subtitle || t('settings.shareSubtitleFallback', { code: item.share_code });
   }
 
   function getShareHref(item: ShareListItem): string {
@@ -65,12 +66,12 @@
         pagination.updateItem((current) =>
           current.share_id === item.share_id ? { ...current, is_revoked: true } : current
         );
-        toast.success('已撤销分享');
+        toast.success(t('settings.revokeShareSuccess'));
       } else {
-        toast.error(response.message || '撤销失败');
+        toast.error(response.message || t('settings.revokeShareFailed'));
       }
     } catch {
-      toast.error('撤销失败');
+      toast.error(t('settings.revokeShareFailed'));
     } finally {
       revokingShareId = null;
     }
@@ -82,16 +83,16 @@
 </script>
 
 <svelte:head>
-  <title>我的分享 - HotSpot</title>
+  <title>{t('settings.sharesPageTitle')}</title>
 </svelte:head>
 
 <div class="page-pad">
   <div class="page-shell space-y-5">
     <PageHeader
-      title="我的分享"
-      description="查看你创建过的分享，并管理其可访问状态"
+      title={t('settings.sharesHeader')}
+      description={t('settings.sharesHeaderDesc')}
       backHref="/settings"
-      backLabel="返回设置"
+      backLabel={t('settings.backToSettings')}
     >
       {#snippet actions()}
         <button
@@ -101,7 +102,7 @@
           disabled={pagination.loading}
         >
           <RefreshCw size={14} class="mr-2 {pagination.loading ? 'animate-spin' : ''}" />
-          刷新
+          {t('settings.refresh')}
         </button>
       {/snippet}
     </PageHeader>
@@ -129,18 +130,18 @@
     {:else if pagination.error}
       <EmptyState
         icon={AlertTriangle}
-        title="加载分享失败"
+        title={t('settings.loadSharesFailed')}
         description={pagination.error}
-        actionText="重试"
+        actionText={t('settings.retry')}
         onAction={() => loadShares(true)}
       />
     {:else if pagination.items.length === 0}
       <EmptyState
         icon={Share2}
-        title="还没有分享记录"
+        title={t('settings.sharesHeader')}
         description={activeType === 'all'
-          ? '你创建过的分享会显示在这里。'
-          : `当前筛选下暂无${shareTypeOptions.find((option) => option.value === activeType)?.label ?? ''}分享。`}
+          ? t('settings.noSharesAll')
+          : t('settings.noSharesFiltered', { type: shareTypeOptions.find((option) => option.value === activeType)?.label ?? '' })}
       />
     {:else}
       <div class="space-y-3">
@@ -162,14 +163,14 @@
                       class="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium"
                       style="border: 1px solid var(--theme-error-border); color: var(--theme-error);"
                     >
-                      已撤销
+                      {t('settings.shareRevoked')}
                     </span>
                   {:else}
                     <span
                       class="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium"
                       style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--brand);"
                     >
-                      可访问
+                      {t('settings.shareAccessible')}
                     </span>
                   {/if}
                 </div>
@@ -192,7 +193,7 @@
                     style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
                   >
                     <ExternalLink size={14} class="mr-2" />
-                    查看
+                    {t('settings.viewShare')}
                   </button>
                 </a>
                 <button
@@ -206,7 +207,7 @@
                   {:else}
                     <Ban size={14} class="mr-2" />
                   {/if}
-                  撤销
+                  {t('settings.revokeShare')}
                 </button>
               </div>
             </div>
@@ -216,7 +217,7 @@
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div>
-                <p class="text-caption" style="color: var(--text-secondary)">创建时间</p>
+                <p class="text-caption" style="color: var(--text-secondary)">{t('settings.createdAt')}</p>
                 <p
                   class="text-body"
                   style="font-weight: 500; color: var(--text-primary); margin-top: 4px"
@@ -228,7 +229,7 @@
                 </p>
               </div>
               <div>
-                <p class="text-caption" style="color: var(--text-secondary)">分享码</p>
+                <p class="text-caption" style="color: var(--text-secondary)">{t('settings.shareCode')}</p>
                 <p
                   class="text-body"
                   style="font-weight: 500; font-family: monospace; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-primary); margin-top: 4px"
@@ -237,12 +238,12 @@
                 </p>
               </div>
               <div>
-                <p class="text-caption" style="color: var(--text-secondary)">有效期</p>
+                <p class="text-caption" style="color: var(--text-secondary)">{t('settings.validity')}</p>
                 <p
                   class="text-body"
                   style="font-weight: 500; color: var(--text-primary); margin-top: 4px"
                 >
-                  {item.expires_at ? formatDateTime(item.expires_at) : '长期有效'}
+                  {item.expires_at ? formatDateTime(item.expires_at) : t('settings.validityPermanent')}
                 </p>
               </div>
             </div>

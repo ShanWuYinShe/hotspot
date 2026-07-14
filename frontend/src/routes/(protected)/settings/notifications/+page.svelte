@@ -5,6 +5,7 @@
   import type { NotificationType } from '$lib/types/api';
   import { notificationStore } from '$lib/stores/notification.svelte';
   import { toast } from '$lib/stores/toast.svelte';
+  import { t } from '$lib/i18n';
   import PageHeader from '$lib/components/layout/page-header.svelte';
   import { Switch } from '$lib/components/ui/switch';
   import Bell from 'lucide-svelte/icons/bell';
@@ -49,16 +50,30 @@
     system: ['system_announcement']
   };
 
-  const preferenceItems: Array<{
-    key: NotificationPreferenceGroup;
-    title: string;
-    description: string;
-  }> = [
-    { key: 'social', title: '社交关系提醒', description: '新关注、互相关注等社交关系变动' },
-    { key: 'interaction', title: '互动提醒', description: '点赞、评论、回复、提及等互动通知' },
-    { key: 'group', title: '群组提醒', description: '群邀请、入群申请和群组相关通知' },
-    { key: 'system', title: '系统公告', description: '平台公告、维护提醒和系统消息' }
-  ];
+  const preferenceItems = $derived<
+    Array<{ key: NotificationPreferenceGroup; title: string; description: string }>
+  >([
+    {
+      key: 'social',
+      title: t('settings.preferenceGroupSocial'),
+      description: t('settings.preferenceGroupSocialDesc')
+    },
+    {
+      key: 'interaction',
+      title: t('settings.preferenceGroupInteraction'),
+      description: t('settings.preferenceGroupInteractionDesc')
+    },
+    {
+      key: 'group',
+      title: t('settings.preferenceGroupGroup'),
+      description: t('settings.preferenceGroupGroupDesc')
+    },
+    {
+      key: 'system',
+      title: t('settings.preferenceGroupSystem'),
+      description: t('settings.preferenceGroupSystemDesc')
+    }
+  ]);
 
   let preferences = $state<NotificationPreferenceMap>({ ...DEFAULT_PREFERENCES });
   let isSaving = $state(false);
@@ -93,9 +108,9 @@
     isSaving = true;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
-      toast.success('通知偏好已保存到当前浏览器');
+      toast.success(t('settings.savePreferencesSuccess'));
     } catch {
-      toast.error('保存通知偏好失败');
+      toast.error(t('settings.savePreferencesFailed'));
     } finally {
       isSaving = false;
     }
@@ -106,12 +121,12 @@
     try {
       const ok = await notificationStore.markAllAsRead();
       if (ok) {
-        toast.success('已将全部通知标记为已读');
+        toast.success(t('settings.markAllReadSuccess'));
       } else {
-        toast.error('标记全部已读失败');
+        toast.error(t('settings.markAllReadFailed'));
       }
     } catch {
-      toast.error('标记全部已读失败');
+      toast.error(t('settings.markAllReadFailed'));
     } finally {
       isMarkingAllRead = false;
     }
@@ -124,16 +139,16 @@
 </script>
 
 <svelte:head>
-  <title>通知设置 - HotSpot</title>
+  <title>{t('settings.notificationsPageHead')}</title>
 </svelte:head>
 
 <div class="page-pad">
   <div class="page-shell page-shell--form space-y-5">
     <PageHeader
-      title="通知设置"
-      description="管理通知偏好、未读状态和通知中心入口"
+      title={t('settings.notificationsPageTitle')}
+      description={t('settings.notificationsPageDesc')}
       backHref="/settings"
-      backLabel="返回设置"
+      backLabel={t('settings.backToSettings')}
     />
 
     <!-- Notification Status Card -->
@@ -149,9 +164,9 @@
           <Bell size={15} strokeWidth={1.5} color="var(--brand)" />
         </div>
         <div>
-          <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">通知状态</p>
+          <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">{t('settings.notificationsStatus')}</p>
           <p class="text-meta" style="color: var(--text-secondary)">
-            快速查看当前未读情况，并进入通知中心处理通知。
+            {t('settings.notificationsStatusDesc')}
           </p>
         </div>
       </div>
@@ -162,10 +177,10 @@
       >
         <div>
           <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
-            当前未读通知
+            {t('settings.currentUnread')}
           </p>
           <p class="text-meta" style="color: var(--text-secondary)">
-            未读数量会和通知下拉、通知列表保持一致
+            {t('settings.currentUnreadDesc')}
           </p>
         </div>
         <div
@@ -183,7 +198,7 @@
           onclick={() => goto('/notifications')}
         >
           <ExternalLink size={16} class="mr-2" />
-          进入通知中心
+          {t('settings.enterNotificationCenter')}
         </button>
         <button
           class="flex h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
@@ -196,7 +211,7 @@
           {:else}
             <CheckCheck size={16} class="mr-2" />
           {/if}
-          全部标记为已读
+          {t('settings.markAllRead')}
         </button>
       </div>
     </div>
@@ -207,10 +222,9 @@
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div class="mb-3">
-        <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">偏好说明</p>
+        <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">{t('settings.preferenceExplanation')}</p>
         <p class="text-meta" style="color: var(--text-secondary)">
-          当前仓库尚未接入服务端通知偏好协议，所以这里先用本地持久化保存一个与 NotificationType
-          对齐的偏好模型。
+          {t('settings.preferenceExplanationDesc')}
         </p>
       </div>
       <div
@@ -218,9 +232,7 @@
         style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <p class="text-body" style="color: var(--text-secondary); line-height: 1.6">
-          这些开关用于保留你在当前浏览器的通知偏好，并已按真实 NotificationType
-          存储，后续若接入服务端协议，可直接映射到服务端字段。真正收到的通知仍以服务端与 WebSocket
-          推送为准。
+          {t('settings.preferenceExplanationDetail')}
         </p>
       </div>
     </div>
@@ -232,10 +244,10 @@
     >
       <div class="mb-4">
         <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">
-          当前浏览器通知偏好
+          {t('settings.browserPreference')}
         </p>
         <p class="text-meta" style="color: var(--text-secondary)">
-          本页设置仅保存在当前浏览器，用于保留你的本地通知偏好；不会影响其他设备。
+          {t('settings.browserPreferenceDesc')}
         </p>
       </div>
 
@@ -269,7 +281,7 @@
         {#if isSaving}
           <Loader2 size={16} class="mr-2 animate-spin" />
         {/if}
-        保存通知偏好
+        {t('settings.savePreferences')}
       </button>
     </div>
   </div>

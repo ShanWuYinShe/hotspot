@@ -10,6 +10,7 @@
  */
 
 import { dev } from '$app/environment';
+import { t } from '$lib/i18n';
 import type { ApiResponse, PaginatedData } from '$lib/types/api';
 import { AUTH } from './endpoints';
 
@@ -217,7 +218,7 @@ async function refreshToken(): Promise<boolean> {
     cfg.onRefreshFail();
     return false;
   } catch (error) {
-    if (dev) console.error('[TokenRefresh] Token 刷新异常:', error);
+    if (dev) console.error('[TokenRefresh]', t('errors.tokenRefreshError') + ':', error);
     cfg.onRefreshFail();
     return false;
   } finally {
@@ -323,7 +324,7 @@ async function request<T>(
     } catch (parseError) {
       return {
         code: -1,
-        message: `响应解析失败: ${response.statusText}`,
+        message: `${t('errors.parseFailed')}: ${response.statusText}`,
         request_id: response.headers.get('X-Request-ID') || ''
       };
     }
@@ -332,7 +333,7 @@ async function request<T>(
 
     // 账号封禁拦截（spec 10201：强制登出 + 封禁页）
     if (data.code === 10201) {
-      cfg.onAccountBanned?.(data.message || '账号被封禁');
+      cfg.onAccountBanned?.(data.message || t('errors.accountBanned'));
       return data;
     }
 
@@ -395,13 +396,13 @@ async function request<T>(
         if (options.signal?.aborted) {
           return {
             code: -1,
-            message: '请求已取消',
+            message: t('errors.requestCanceled'),
             request_id: ''
           };
         } else {
           return {
             code: -1,
-            message: `请求超时（${timeout / 1000}秒）`,
+            message: t('errors.requestTimeout'),
             request_id: ''
           };
         }
@@ -411,7 +412,7 @@ async function request<T>(
       if (dev) console.error('[API] Request error:', error);
       return {
         code: -1,
-        message: error.message || '请求失败',
+        message: error.message || t('errors.requestFailed'),
         request_id: ''
       };
     }
@@ -419,7 +420,7 @@ async function request<T>(
     // 网络错误或未知错误
     return {
       code: -1,
-      message: '网络请求失败',
+      message: t('errors.networkError'),
       request_id: ''
     };
   } finally {
@@ -501,7 +502,7 @@ export class ApiError extends Error {
   original: ClientApiResponse<unknown>;
 
   constructor(response: ClientApiResponse<unknown>) {
-    super(response.message || '操作失败');
+    super(response.message || t('errors.operationFailed'));
     this.name = 'ApiError';
     this.code = response.code;
     this.requestId = response.request_id ?? '';

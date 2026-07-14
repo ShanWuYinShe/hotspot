@@ -16,6 +16,7 @@
   import { PAGE_SIZE } from '$lib/config/pagination';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
+  import { t } from '$lib/i18n';
   import BackButton from '$lib/components/common/back-button.svelte';
   import Search from 'lucide-svelte/icons/search';
   import UsersRound from 'lucide-svelte/icons/users-round';
@@ -94,7 +95,7 @@
 </script>
 
 <svelte:head>
-  <title>附近群组 - HotSpot</title>
+  <title>{t('groupsNearby.title')} - HotSpot</title>
 </svelte:head>
 
 <div>
@@ -111,14 +112,14 @@
           <BackButton onclick={handleBack} size={36} />
         {/if}
         <h1 class="text-h1 flex-1" style="font-weight: 600; color: var(--text-primary)">
-          附近群组
+          {t('groupsNearby.title')}
         </h1>
         {#if !platformStore.hideRedundantEntry}
           <button
             class="flex items-center justify-center rounded-full outline-none"
             style="width: 36px; height: 36px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
             onclick={handleCreateGroup}
-            aria-label="创建群组"
+            aria-label={t('groupsNearby.createGroup')}
           >
             <Plus size={16} strokeWidth={2} color="var(--text-on-accent)" />
           </button>
@@ -133,7 +134,7 @@
         <input
           type="text"
           bind:value={searchText}
-          placeholder="搜索群组"
+          placeholder={t('groupsNearby.searchPlaceholder')}
           class="text-body flex-1 bg-transparent outline-none"
           style="color: var(--text-primary)"
         />
@@ -172,16 +173,16 @@
               <UsersRound size={19} strokeWidth={2} color="var(--text-on-accent)" />
             </div>
             <div class="min-w-0 flex-1">
-              <p class="text-body" style="font-weight: 500; color: var(--text-primary)">附近概览</p>
+              <p class="text-body" style="font-weight: 500; color: var(--text-primary)">{t('groupsNearby.overviewTitle')}</p>
               <p class="text-caption" style="color: var(--text-secondary); margin-top: 2px">
-                实时统计当前浏览范围内的群组
+                {t('groupsNearby.overviewDesc')}
               </p>
             </div>
             <StatSegments
               class="flex-shrink-0"
               stats={[
-                { value: pagination.items.length, label: '群组' },
-                { value: `${mapAnchorStore.radius}km`, label: '半径' }
+                { value: pagination.items.length, label: t('groupsNearby.groupCountLabel') },
+                { value: `${mapAnchorStore.radius}km`, label: t('groupsNearby.radiusLabel') }
               ]}
             />
           </div>
@@ -190,7 +191,7 @@
         <div class="mb-4 flex items-center justify-between gap-3">
           <AnchorEntry variant="pill" />
           <p class="text-caption flex-shrink-0" style="color: var(--text-secondary)">
-            共 {pagination.items.length} 个群组
+            {t('groupsNearby.totalCount', { count: pagination.items.length })}
           </p>
         </div>
       {/if}
@@ -207,27 +208,27 @@
       {:else if pagination.error}
         <EmptyState
           icon={AlertTriangle}
-          title="加载失败"
+          title={t('groupsNearby.loadFailed')}
           description={pagination.error}
-          actionText="重试"
+          actionText={t('groupsNearby.retry')}
           onAction={handleRetry}
           fill
         />
       {:else if pagination.items.length === 0 && hasLoadedOnce}
         <EmptyState
           icon={UsersRound}
-          title="附近暂无群组"
-          description="换个浏览位置或稍后再来看看，也可以发起一个新群组。"
-          actionText="刷新"
+          title={t('groupsNearby.emptyTitle')}
+          description={t('groupsNearby.emptyDesc')}
+          actionText={t('groupsNearby.refresh')}
           onAction={handleRetry}
           fill
         />
       {:else if filteredGroups.length === 0}
         <EmptyState
           icon={UsersRound}
-          title="没有匹配的群组"
-          description="试试其他分类或关键词，或清除筛选条件。"
-          actionText="清除筛选"
+          title={t('groupsNearby.noMatchTitle')}
+          description={t('groupsNearby.noMatchDesc')}
+          actionText={t('groupsNearby.clearFilter')}
           onAction={() => {
             activeCategory = '全部';
             searchText = '';

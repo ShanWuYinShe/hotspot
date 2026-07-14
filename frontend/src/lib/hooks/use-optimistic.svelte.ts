@@ -1,6 +1,7 @@
 import { untrack } from 'svelte';
 import { toast } from '$lib/stores/toast.svelte';
 import { isSuccess, type ApiResponse } from '$lib/api/client';
+import { t } from '$lib/i18n';
 
 interface OptimisticOptions<T> {
   /** Initial value (can be a getter for reactivity) */
@@ -82,7 +83,7 @@ export function useOptimisticToggle<T>(options: OptimisticOptions<T>) {
       // Rollback
       isOn = previousIsOn;
       count = previousCount;
-      toast.error(options.errorMessage || (error instanceof Error ? error.message : '操作失败'));
+      toast.error(options.errorMessage || (error instanceof Error ? error.message : t('errors.operationFailed')));
     } finally {
       if (alive) isLoading = false;
     }

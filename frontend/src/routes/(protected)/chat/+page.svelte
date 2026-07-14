@@ -6,6 +6,7 @@
   import { privateChatsService, groupsService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import { toast } from '$lib/stores/toast.svelte';
+  import { t } from '$lib/i18n';
   import { presenceStore } from '$lib/stores/presence.svelte';
   import { messageStore } from '$lib/stores/message.svelte';
   import { notificationStore } from '$lib/stores/notification.svelte';
@@ -37,7 +38,7 @@
         messageStore.syncFromChatList(privateChats, []);
       }
     } catch {
-      toast.error('加载失败');
+      toast.error(t('chat.loadFailed'));
     } finally {
       isLoadingPrivate = false;
     }
@@ -56,7 +57,7 @@
         messageStore.syncFromChatList(privateChats, groupChats);
       }
     } catch {
-      toast.error('加载群聊失败');
+      toast.error(t('chat.loadGroupsFailed'));
     } finally {
       isLoadingGroup = false;
     }
@@ -95,7 +96,7 @@
 </script>
 
 <svelte:head>
-  <title>消息 - HotSpot</title>
+  <title>{t('chat.pageTitle')}</title>
 </svelte:head>
 
 {#if platformStore.useMasterDetail}
@@ -112,16 +113,16 @@
       <div class="page-shell page-shell--narrow">
         <div class="mb-3 flex items-center justify-between">
           <div>
-            <h1 class="page-title" style="color: var(--text-primary);">消息</h1>
+            <h1 class="page-title" style="color: var(--text-primary);">{t('chat.title')}</h1>
             <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
-              {totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}
+              {totalUnread > 0 ? t('chat.unreadCount', { count: totalUnread }) : t('chat.allRead')}
             </p>
           </div>
           <div class="flex gap-2.5">
             <button
               class="relative flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9] surface-flat"
               style="width: 38px; height: 38px;"
-              aria-label="通知"
+              aria-label={t('chat.notificationsAria')}
               onclick={() => goto('/notifications')}
             >
               <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
@@ -137,7 +138,7 @@
             <button
               class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9] surface-flat"
               style="width: 38px; height: 38px;"
-              aria-label="发起私聊"
+              aria-label={t('chat.startPrivateChatAria')}
               onclick={() => goto('/users/nearby')}
             >
               <UserPlus size={16} strokeWidth={1.5} color="var(--text-secondary)" />
@@ -145,7 +146,7 @@
             <button
               class="flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9] surface-flat"
               style="width: 38px; height: 38px;"
-              aria-label="发现群聊"
+              aria-label={t('chat.discoverGroupsAria')}
               onclick={() => goto('/groups/nearby')}
             >
               <Plus size={16} strokeWidth={1.5} color="var(--text-secondary)" />
@@ -159,9 +160,9 @@
           <input
             type="text"
             name="chat-search"
-            aria-label="搜索会话"
+            aria-label={t('chat.searchAria')}
             bind:value={searchVal}
-            placeholder="搜索会话…"
+            placeholder={t('chat.searchPlaceholder')}
             class="text-body flex-1 bg-transparent outline-none"
             style="color: var(--text-primary)"
           />
@@ -179,7 +180,7 @@
               class="text-xs uppercase mb-2.5"
               style="letter-spacing: 0.14em; color: var(--text-secondary)"
             >
-              在线
+              {t('common.online')}
             </p>
             <div class="flex gap-4 overflow-x-auto no-scrollbar pb-1">
               {#each onlineChats as chat (chat.other_user.user_id)}
@@ -217,10 +218,10 @@
         <!-- Tab switcher -->
         <div class="mb-2.5 flex items-center gap-2">
           <p class="text-xs uppercase" style="letter-spacing: 0.14em; color: var(--text-secondary)">
-            最近
+            {t('chat.recent')}
           </p>
           <div class="flex-1"></div>
-          {#each [{ id: 'private', label: '私聊' }, { id: 'group', label: '群聊' }] as tab (tab.id)}
+          {#each [{ id: 'private', label: t('chat.privateChats') }, { id: 'group', label: t('chat.groupChats') }] as tab (tab.id)}
             <button
               class="filter-chip"
               class:filter-chip--active={currentTab === tab.id}
@@ -261,7 +262,7 @@
                   color="var(--text-secondary)"
                   style="opacity: 0.5;"
                 />
-                <p class="text-body-lg" style="color: var(--text-secondary)">没有找到会话</p>
+                <p class="text-body-lg" style="color: var(--text-secondary)">{t('chat.noChatsFound')}</p>
               </div>
             {:else}
               {#each filteredPrivateChats as chat, i (chat.other_user.user_id)}
@@ -307,7 +308,7 @@
                       </div>
                       <p class="text-meta truncate pr-4" style="color: var(--text-secondary)">
                         {#if chat.last_message}{chat.last_message.content ||
-                            '[媒体消息]'}{:else}暂无消息{/if}
+                            t('chat.mediaMessage')}{:else}{t('chat.noMessages')}{/if}
                       </p>
                     </div>
                     {#if chat.unread_count > 0}
@@ -352,7 +353,7 @@
                 color="var(--text-secondary)"
                 style="opacity: 0.5;"
               />
-              <p class="text-body-lg" style="color: var(--text-secondary)">没有找到群聊</p>
+              <p class="text-body-lg" style="color: var(--text-secondary)">{t('chat.noGroupsFound')}</p>
             </div>
           {:else}
             {#each filteredGroupChats as group, i (group.group.group_id)}
@@ -382,7 +383,7 @@
                         >{group.group.name}</span
                       >
                       <span class="text-caption" style="color: var(--text-secondary)"
-                        >{group.group.members_count}人</span
+                        >{t('chat.membersCount', { count: group.group.members_count })}</span
                       >
                     </div>
                     <p class="text-meta" style="color: var(--text-secondary)">

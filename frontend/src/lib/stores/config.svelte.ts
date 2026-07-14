@@ -9,6 +9,7 @@ import { browser } from '$app/environment';
 import type { ClientConfig } from '$lib/types/api';
 import { isSuccess } from '$lib/api/client';
 import { systemService } from '$lib/api/services/system';
+import { t } from '$lib/i18n';
 
 class ConfigStore {
   #config = $state.raw<ClientConfig | null>(null);
@@ -55,10 +56,10 @@ class ConfigStore {
         this.#config = res.data;
         this.#error = null;
       } else {
-        this.#error = res.message || '获取配置失败';
+        this.#error = res.message || t('errors.configFetchFailed');
       }
     } catch (e) {
-      this.#error = e instanceof Error ? e.message : '获取配置失败';
+      this.#error = e instanceof Error ? e.message : t('errors.configFetchFailed');
     } finally {
       this.#loaded = true;
     }

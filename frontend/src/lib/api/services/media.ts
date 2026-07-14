@@ -4,6 +4,7 @@
 
 import { post, generateIdempotencyKey } from '../client';
 import { MEDIA } from '../endpoints';
+import { t } from '$lib/i18n';
 import type { MediaCategory, PresignedUpload, UploadedMedia } from '$lib/types/api';
 
 export const mediaService = {
@@ -68,7 +69,7 @@ export const mediaService = {
     });
 
     if (presignResponse.code !== 0 || !presignResponse.data) {
-      throw new Error(presignResponse.message || '获取上传地址失败');
+      throw new Error(presignResponse.message || t('errors.uploadUrlFailed'));
     }
 
     const { upload_id, upload_url, headers } = presignResponse.data;
@@ -87,12 +88,12 @@ export const mediaService = {
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
         } else {
-          reject(new Error(`上传失败: ${xhr.status}`));
+          reject(new Error(`${t('errors.uploadFailed')}: ${xhr.status}`));
         }
       });
 
       xhr.addEventListener('error', () => {
-        reject(new Error('上传失败'));
+        reject(new Error(t('errors.uploadFailed')));
       });
 
       xhr.open('PUT', upload_url);
@@ -106,7 +107,7 @@ export const mediaService = {
     const completeResponse = await this.completeUpload({ upload_id });
 
     if (completeResponse.code !== 0 || !completeResponse.data) {
-      throw new Error(completeResponse.message || '完成上传失败');
+      throw new Error(completeResponse.message || t('errors.uploadCompleteFailed'));
     }
 
     return completeResponse.data;

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
+  import { t } from '$lib/i18n';
   import { usersService } from '$lib/api/services';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
   import UserCard from '$lib/components/common/user-card.svelte';
@@ -25,26 +26,27 @@
   }
 
   const TAB_ORDER: RelTab[] = ['friends', 'following', 'followers'];
-  const TAB_META: Record<RelTab, TabMeta> = {
+  // $derived 以便 t() 在 locale 切换时响应式更新
+  const TAB_META = $derived<Record<RelTab, TabMeta>>({
     friends: {
-      label: '好友',
-      subtitle: '你们的互相关注列表',
+      label: t('relations.friends'),
+      subtitle: t('relations.friendsSubtitle'),
       emptyIcon: Heart,
-      emptyTitle: '暂无好友'
+      emptyTitle: t('relations.noFriends')
     },
     following: {
-      label: '关注',
-      subtitle: '你正在关注的用户',
+      label: t('relations.following'),
+      subtitle: t('relations.followingSubtitle'),
       emptyIcon: UserCheck,
-      emptyTitle: '暂无关注'
+      emptyTitle: t('relations.noFollowing')
     },
     followers: {
-      label: '粉丝',
-      subtitle: '关注你的用户',
+      label: t('relations.followers'),
+      subtitle: t('relations.followersSubtitle'),
       emptyIcon: UserPlus,
-      emptyTitle: '暂无粉丝'
+      emptyTitle: t('relations.noFollowers')
     }
-  };
+  });
 
   function parseTab(value: string | null): RelTab {
     return value === 'following' || value === 'followers' ? value : 'friends';
@@ -98,7 +100,7 @@
 </script>
 
 <svelte:head>
-  <title>关系 - HotSpot</title>
+  <title>{t('relations.browserTitle')}</title>
 </svelte:head>
 
 <div class="flex flex-col">
@@ -110,7 +112,7 @@
     <div class="page-shell">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="page-title" style="color: var(--text-primary);">关系</h1>
+          <h1 class="page-title" style="color: var(--text-primary);">{t('relations.title')}</h1>
           <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
             {activeMeta.subtitle}
           </p>
@@ -122,7 +124,7 @@
           disabled={activePg.loading}
         >
           <RefreshCw size={13} class={activePg.loading ? 'animate-spin' : ''} />
-          刷新
+          {t('common.refresh')}
         </button>
       </div>
       <div class="mt-3 flex items-center gap-2">
@@ -147,9 +149,9 @@
       {:else if activePg.error}
         <EmptyState
           icon={AlertTriangle}
-          title="加载失败"
+          title={t('relations.loadFailed')}
           description={activePg.error}
-          actionText="重试"
+          actionText={t('common.retry')}
           onAction={() => loadTab(activeTab, true)}
         />
       {:else if activePg.items.length === 0}

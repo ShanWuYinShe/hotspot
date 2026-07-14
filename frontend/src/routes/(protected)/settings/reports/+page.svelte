@@ -13,27 +13,28 @@
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
+  import { t } from '$lib/i18n';
   import type { ReportItem, ReportStatus, ReportTargetType } from '$lib/types/api';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
   import ShieldAlert from 'lucide-svelte/icons/shield-alert';
 
-  const statusOptions: Array<{ value: ReportStatus | 'all'; label: string }> = [
-    { value: 'all', label: '全部状态' },
-    { value: 'pending', label: '待处理' },
-    { value: 'reviewing', label: '审核中' },
-    { value: 'resolved', label: '已处理' },
-    { value: 'dismissed', label: '已驳回' }
-  ];
+  const statusOptions = $derived<Array<{ value: ReportStatus | 'all'; label: string }>>([
+    { value: 'all', label: t('settings.statusAll') },
+    { value: 'pending', label: t('settings.statusPending') },
+    { value: 'reviewing', label: t('settings.statusReviewing') },
+    { value: 'resolved', label: t('settings.statusResolved') },
+    { value: 'dismissed', label: t('settings.statusDismissed') }
+  ]);
 
-  const targetTypeOptions: Array<{ value: ReportTargetType | 'all'; label: string }> = [
-    { value: 'all', label: '全部类型' },
+  const targetTypeOptions = $derived<Array<{ value: ReportTargetType | 'all'; label: string }>>([
+    { value: 'all', label: t('settings.typeAll') },
     { value: 'user', label: REPORT_TARGET_TYPE_LABEL.user },
     { value: 'moment', label: REPORT_TARGET_TYPE_LABEL.moment },
     { value: 'comment', label: REPORT_TARGET_TYPE_LABEL.comment },
     { value: 'message', label: REPORT_TARGET_TYPE_LABEL.message },
     { value: 'group', label: REPORT_TARGET_TYPE_LABEL.group }
-  ];
+  ]);
 
   const pagination = usePagination<ReportItem>({
     uniqueKey: (item) => item.report_id
@@ -60,16 +61,16 @@
 </script>
 
 <svelte:head>
-  <title>我的举报记录 - HotSpot</title>
+  <title>{t('settings.reportsPageTitle')}</title>
 </svelte:head>
 
 <div class="page-pad">
   <div class="page-shell space-y-5">
     <PageHeader
-      title="我的举报记录"
-      description="查看你提交过的举报，以及当前处理进度"
+      title={t('settings.reportsHeader')}
+      description={t('settings.reportsHeaderDesc')}
       backHref="/settings"
-      backLabel="返回设置"
+      backLabel={t('settings.backToSettings')}
     >
       {#snippet actions()}
         <button
@@ -79,7 +80,7 @@
           disabled={pagination.loading}
         >
           <RefreshCw size={14} class="mr-2 {pagination.loading ? 'animate-spin' : ''}" />
-          刷新
+          {t('settings.refresh')}
         </button>
       {/snippet}
     </PageHeader>
@@ -90,9 +91,9 @@
       style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
     >
       <div class="mb-3">
-        <p class="text-body" style="font-weight: 500; color: var(--text-primary)">筛选条件</p>
+        <p class="text-body" style="font-weight: 500; color: var(--text-primary)">{t('settings.filterConditions')}</p>
         <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
-          按状态和目标类型快速定位处理中的举报。
+          {t('settings.filterConditionsDesc')}
         </p>
       </div>
       <div class="space-y-3">
@@ -136,16 +137,16 @@
     {:else if pagination.error}
       <EmptyState
         icon={AlertTriangle}
-        title="加载举报记录失败"
+        title={t('settings.loadReportsFailed')}
         description={pagination.error}
-        actionText="重试"
+        actionText={t('settings.retry')}
         onAction={() => loadReports(true)}
       />
     {:else if pagination.items.length === 0}
       <EmptyState
         icon={ShieldAlert}
-        title="还没有举报记录"
-        description="你提交过的举报会显示在这里，方便随时查看处理进度。"
+        title={t('settings.noReports')}
+        description={t('settings.noReportsDesc')}
       />
     {:else}
       <div class="space-y-3">
@@ -174,7 +175,7 @@
                     {REPORT_REASON_LABEL[item.reason]}
                   </h2>
                   <p class="text-body" style="color: var(--text-secondary); margin-top: 4px">
-                    目标 ID：{item.target_id}
+                    {t('settings.targetId', { id: item.target_id })}
                   </p>
                 </div>
               </div>
@@ -188,7 +189,7 @@
               style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div>
-                <p class="text-caption" style="color: var(--text-secondary)">提交时间</p>
+                <p class="text-caption" style="color: var(--text-secondary)">{t('settings.submittedAt')}</p>
                 <p
                   class="text-body"
                   style="font-weight: 500; color: var(--text-primary); margin-top: 4px"
@@ -197,16 +198,16 @@
                 </p>
               </div>
               <div>
-                <p class="text-caption" style="color: var(--text-secondary)">处理时间</p>
+                <p class="text-caption" style="color: var(--text-secondary)">{t('settings.handledAt')}</p>
                 <p
                   class="text-body"
                   style="font-weight: 500; color: var(--text-primary); margin-top: 4px"
                 >
-                  {item.handled_at ? formatDateTime(item.handled_at) : '尚未处理'}
+                  {item.handled_at ? formatDateTime(item.handled_at) : t('settings.notHandled')}
                 </p>
               </div>
               <div>
-                <p class="text-caption" style="color: var(--text-secondary)">举报编号</p>
+                <p class="text-caption" style="color: var(--text-secondary)">{t('settings.reportId')}</p>
                 <p
                   class="text-meta"
                   style="font-weight: 500; font-family: monospace; color: var(--text-primary); margin-top: 4px"
@@ -221,7 +222,7 @@
                 class="mt-3 rounded-[var(--radius-md)] px-4 py-3"
                 style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               >
-                <p class="text-caption" style="color: var(--text-secondary)">补充说明</p>
+                <p class="text-caption" style="color: var(--text-secondary)">{t('settings.supplementaryNote')}</p>
                 <p
                   class="text-body"
                   style="line-height: 1.6; color: var(--text-primary); margin-top: 4px"

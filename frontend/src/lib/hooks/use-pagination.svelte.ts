@@ -28,6 +28,7 @@
 	import type { ApiResponse, PaginatedData } from '$lib/types/api';
 	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import type { RequestOptions } from '$lib/api/client';
+	import { t } from '$lib/i18n';
 
 interface UsePaginationOptions<T> {
   /**
@@ -193,13 +194,13 @@ export function usePagination<T>(options?: UsePaginationOptions<T>): PaginationS
         cursor = response.data.next_cursor;
         error = null;
       } else {
-        error = response.message || '加载失败';
+        error = response.message || t('errors.loadFailed');
         options?.onError?.(error);
       }
     } catch (e) {
       // 竞态检查
       if (version !== loadVersion) return;
-      error = e instanceof Error ? e.message : '加载失败';
+      error = e instanceof Error ? e.message : t('errors.loadFailed');
       options?.onError?.(error);
     } finally {
       // 仅最新请求负责重置 loading 状态

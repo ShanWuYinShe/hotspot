@@ -17,12 +17,19 @@
   import type { UserItem } from '$lib/types/api';
   import { PAGE_SIZE } from '$lib/config/pagination';
   import BackButton from '$lib/components/common/back-button.svelte';
+  import { t } from '$lib/i18n';
+  import type { TranslationKey } from '$lib/i18n';
   import Search from 'lucide-svelte/icons/search';
   import Radar from 'lucide-svelte/icons/radar';
   import Users from 'lucide-svelte/icons/users';
   import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
 
-  const SORT_OPTIONS = ['距离', '在线', '共同好友'] as const;
+  const SORT_OPTIONS = ['distance', 'online', 'mutual'] as const;
+  const SORT_LABELS: Record<string, TranslationKey> = {
+    distance: 'usersNearby.sortDistance',
+    online: 'usersNearby.sortOnline',
+    mutual: 'usersNearby.sortMutual'
+  };
 
   const pagination = usePagination<UserItem>({
     uniqueKey: (item) => item.user.user_id
@@ -30,7 +37,7 @@
 
   let hasLoadedOnce = $state(false);
   let searchText = $state('');
-  let activeSort = $state<string>('距离');
+  let activeSort = $state<string>('distance');
   let showLocationPicker = $state(false);
 
   const returnTarget = $derived(page.url.searchParams.get('from') || '/search');
@@ -81,7 +88,7 @@
 </script>
 
 <svelte:head>
-  <title>附近的人 - HotSpot</title>
+  <title>{t('usersNearby.title')} - HotSpot</title>
 </svelte:head>
 
 <div>
@@ -98,7 +105,7 @@
           <BackButton onclick={handleBack} size={36} />
         {/if}
         <div class="flex-1">
-          <h1 class="text-h1" style="font-weight: 600; color: var(--text-primary)">附近的人</h1>
+          <h1 class="text-h1" style="font-weight: 600; color: var(--text-primary)">{t('usersNearby.title')}</h1>
         </div>
       </div>
 
@@ -110,9 +117,9 @@
         <input
           type="text"
           name="nearby-users-search"
-          aria-label="搜索附近用户"
+          aria-label={t('usersNearby.searchAriaLabel')}
           bind:value={searchText}
-          placeholder="搜索附近用户"
+          placeholder={t('usersNearby.searchPlaceholder')}
           class="text-body flex-1 bg-transparent outline-none"
           style="color: var(--text-primary)"
         />
@@ -126,7 +133,7 @@
             class:filter-chip--active={activeSort === s}
             onclick={() => (activeSort = s)}
           >
-            {s}
+            {t(SORT_LABELS[s])}
           </button>
         {/each}
       </div>
@@ -151,17 +158,17 @@
               <Radar size={19} strokeWidth={2} color="var(--text-on-accent)" />
             </div>
             <div class="min-w-0 flex-1">
-              <p class="text-body" style="font-weight: 500; color: var(--text-primary)">附近概览</p>
+              <p class="text-body" style="font-weight: 500; color: var(--text-primary)">{t('usersNearby.overviewTitle')}</p>
               <p class="text-caption" style="color: var(--text-secondary); margin-top: 2px">
-                实时统计当前浏览范围内的用户
+                {t('usersNearby.overviewDesc')}
               </p>
             </div>
             <StatSegments
               class="flex-shrink-0"
               stats={[
-                { value: onlineCount, label: '在线', color: 'var(--semantic-online)' },
-                { value: pagination.items.length, label: '总数' },
-                { value: `${mapAnchorStore.radius}km`, label: '半径' }
+                { value: onlineCount, label: t('usersNearby.onlineLabel'), color: 'var(--semantic-online)' },
+                { value: pagination.items.length, label: t('usersNearby.totalLabel') },
+                { value: `${mapAnchorStore.radius}km`, label: t('usersNearby.radiusLabel') }
               ]}
             />
           </div>
@@ -170,8 +177,8 @@
         <div class="mb-4 flex items-center justify-between gap-3">
           <AnchorEntry variant="pill" onAdjust={() => (showLocationPicker = true)} />
           <p class="text-caption flex-shrink-0" style="color: var(--text-secondary)">
-            <span style="color: var(--semantic-online);">{onlineCount} 在线</span>
-            <span style="margin-left: 6px;">· 共 {pagination.items.length} 人</span>
+            <span style="color: var(--semantic-online);">{t('usersNearby.onlineCount', { count: onlineCount })}</span>
+            <span style="margin-left: 6px;">· {t('usersNearby.totalCount', { count: pagination.items.length })}</span>
           </p>
         </div>
       {/if}
@@ -188,18 +195,18 @@
       {:else if pagination.error}
         <EmptyState
           icon={AlertTriangle}
-          title="加载失败"
+          title={t('usersNearby.loadFailed')}
           description={pagination.error}
-          actionText="重试"
+          actionText={t('usersNearby.retry')}
           onAction={handleRetry}
           fill
         />
       {:else if pagination.items.length === 0 && hasLoadedOnce}
         <EmptyState
           icon={Users}
-          title="附近暂无其他用户"
-          description="换个浏览位置或稍后再来看看，也可以调整搜索范围。"
-          actionText="刷新"
+          title={t('usersNearby.emptyTitle')}
+          description={t('usersNearby.emptyDesc')}
+          actionText={t('usersNearby.refresh')}
           onAction={handleRetry}
           fill
         />

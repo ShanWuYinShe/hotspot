@@ -6,6 +6,7 @@
   import { privateChatsService, groupsService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import { toast } from '$lib/stores/toast.svelte';
+  import { t } from '$lib/i18n';
   import { presenceStore } from '$lib/stores/presence.svelte';
   import { messageStore } from '$lib/stores/message.svelte';
   import type { PrivateChatItem, GroupItem } from '$lib/types/api';
@@ -33,7 +34,7 @@
         messageStore.syncFromChatList(privateChats, []);
       }
     } catch {
-      toast.error('加载失败');
+      toast.error(t('chat.loadFailed'));
     } finally {
       isLoadingPrivate = false;
     }
@@ -52,7 +53,7 @@
         messageStore.syncFromChatList(privateChats, groupChats);
       }
     } catch {
-      toast.error('加载群聊失败');
+      toast.error(t('chat.loadGroupsFailed'));
     } finally {
       isLoadingGroup = false;
     }
@@ -104,9 +105,9 @@
 <div class="flex-shrink-0 px-4 pt-4 pb-3" style="border-bottom: 1px solid var(--border-theme);">
   <div class="mb-3 flex items-center justify-between">
     <div>
-      <h1 class="text-h2" style="color: var(--text-primary)">消息</h1>
+      <h1 class="text-h2" style="color: var(--text-primary)">{t('chat.title')}</h1>
       <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
-        {totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}
+        {totalUnread > 0 ? t('chat.unreadCount', { count: totalUnread }) : t('chat.allRead')}
       </p>
     </div>
     <div class="flex gap-1.5">
@@ -130,9 +131,9 @@
     <input
       type="text"
       name="chat-list-search"
-      aria-label="搜索会话"
+      aria-label={t('chat.searchAria')}
       bind:value={searchVal}
-      placeholder="搜索…"
+      placeholder={t('chat.searchPlaceholderShort')}
       class="text-body flex-1 bg-transparent outline-none"
       style="color: var(--text-primary)"
     />
@@ -143,7 +144,7 @@
 {#if onlineChats.length > 0}
   <div class="flex-shrink-0 px-4 py-2.5" style="border-bottom: 1px solid var(--border-theme);">
     <p class="text-xs uppercase mb-2" style="letter-spacing: 0.12em; color: var(--text-secondary)">
-      在线
+      {t('common.online')}
     </p>
     <div class="flex gap-3 overflow-x-auto no-scrollbar">
       {#each onlineChats as chat (chat.other_user.user_id)}
@@ -183,7 +184,7 @@
 
 <!-- Tab pills -->
 <div class="flex-shrink-0 flex items-center gap-2 px-4 pt-2 pb-1">
-  {#each [{ id: 'private', label: '私聊' }, { id: 'group', label: '群聊' }] as tab (tab.id)}
+  {#each [{ id: 'private', label: t('chat.privateChats') }, { id: 'group', label: t('chat.groupChats') }] as tab (tab.id)}
     <button
       class="filter-chip"
       class:filter-chip--active={currentTab === tab.id}
@@ -274,7 +275,8 @@
                 ? 'color-mix(in srgb, var(--text-on-accent) 80%, transparent)'
                 : 'var(--text-secondary)'}"
             >
-              {#if chat.last_message}{chat.last_message.content || '[媒体消息]'}{:else}暂无消息{/if}
+              {#if chat.last_message}{chat.last_message.content ||
+                t('chat.mediaMessage')}{:else}{t('chat.noMessages')}{/if}
             </p>
           </div>
           {#if chat.unread_count > 0 && !selected}
@@ -346,7 +348,7 @@
               class="text-caption"
               style="flex-shrink: 0; color: {selected
                 ? 'color-mix(in srgb, var(--text-on-accent) 70%, transparent)'
-                : 'var(--text-secondary)'}">{group.group.members_count}人</span
+                : 'var(--text-secondary)'}">{t('chat.membersCount', { count: group.group.members_count })}</span
             >
           </div>
           <p

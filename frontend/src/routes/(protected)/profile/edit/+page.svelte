@@ -8,6 +8,7 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import type { MyProfile } from '$lib/types/api';
+  import { t } from '$lib/i18n';
   import BackButton from '$lib/components/common/back-button.svelte';
   import Camera from 'lucide-svelte/icons/camera';
   import User from 'lucide-svelte/icons/user';
@@ -37,11 +38,11 @@
         avatarUrl = response.data.avatar_url ?? '';
         authStore.setProfile(response.data);
       } else {
-        toast.error(response.message || '加载失败');
+        toast.error(response.message || t('profileEdit.loadFailed'));
         void goto('/profile');
       }
     } catch {
-      toast.error('加载失败');
+      toast.error(t('profileEdit.loadFailed'));
       void goto('/profile');
     } finally {
       isLoading = false;
@@ -58,12 +59,12 @@
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error('请选择图片文件');
+      toast.error(t('profileEdit.avatarInvalidType'));
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('图片大小不能超过 10MB');
+      toast.error(t('profileEdit.avatarTooLarge'));
       return;
     }
 
@@ -71,9 +72,9 @@
       const uploaded = await mediaService.uploadFile(file, 'avatar');
       avatarUrl = uploaded.thumbnail_url ?? '';
       avatarFileId = uploaded.file_id;
-      toast.success('头像已更新，保存后生效');
+      toast.success(t('profileEdit.avatarUpdated'));
     } catch {
-      toast.error('头像上传失败');
+      toast.error(t('profileEdit.avatarUploadFailed'));
     }
 
     input.value = '';
@@ -84,15 +85,15 @@
     const trimmedBio = bio.trim();
 
     if (!trimmedNickname) {
-      toast.error('昵称不能为空');
+      toast.error(t('profileEdit.nicknameEmpty'));
       return;
     }
     if (trimmedNickname.length > 30) {
-      toast.error('昵称长度需在 1-30 字符之间');
+      toast.error(t('profileEdit.nicknameLengthError'));
       return;
     }
     if (trimmedBio.length > 500) {
-      toast.error('个人简介不能超过 500 字符');
+      toast.error(t('profileEdit.bioTooLong'));
       return;
     }
 
@@ -120,10 +121,10 @@
           void goto('/profile');
         }, 800);
       } else {
-        toast.error(response.message || '保存失败');
+        toast.error(response.message || t('profileEdit.saveFailed'));
       }
     } catch {
-      toast.error('保存失败');
+      toast.error(t('profileEdit.saveFailed'));
     } finally {
       isSaving = false;
     }
@@ -133,7 +134,7 @@
 </script>
 
 <svelte:head>
-  <title>编辑资料 - HotSpot</title>
+  <title>{t('profileEdit.title')} - HotSpot</title>
 </svelte:head>
 
 {#if isLoading}
@@ -150,7 +151,7 @@
   >
     <div class="flex items-center gap-3">
       <BackButton onclick={() => history.back()} size={36} />
-      <h1 class="page-title" style="color: var(--text-primary);">编辑资料</h1>
+      <h1 class="page-title" style="color: var(--text-primary);">{t('profileEdit.title')}</h1>
     </div>
     <button
       class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all"
@@ -165,7 +166,7 @@
       {#if saved}
         <Check size={14} color="var(--text-on-accent)" strokeWidth={2.5} />
       {:else}
-        保存
+        {t('profileEdit.save')}
       {/if}
     </button>
   </div>
@@ -190,7 +191,7 @@
           style="padding: 6px 12px; background: var(--overlay); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); color: var(--text-on-accent)"
         >
           <Camera size={13} strokeWidth={1.75} />
-          更换横幅
+          {t('profileEdit.changeBanner')}
         </button>
       </div>
 
@@ -214,8 +215,8 @@
           </div>
           <button
             class="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"
-            style="width: 26px; height: 26px; background: var(--brand); border: 2px solid var(--surface-bg); box-shadow: var(--shadow-brand-btn);"
-            title="更换头像"
+            style="width: 26px; height: 26px; background: var(--brand); border: 2 solid var(--surface-bg); box-shadow: var(--shadow-brand-btn);"
+            title={t('profileEdit.changeAvatar')}
             onclick={handleAvatarClick}
           >
             <Camera size={12} color="var(--text-on-accent)" strokeWidth={2} />
@@ -240,13 +241,13 @@
       <div class="flex flex-col gap-1.5">
         <div class="flex items-center gap-1.5">
           <User style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
-          <span class="eyebrow">昵称</span>
+          <span class="eyebrow">{t('profileEdit.nicknameLabel')}</span>
         </div>
         <div class="input-surface rounded-[var(--radius-md)] px-4 py-3">
           <input
             id="nickname"
             bind:value={nickname}
-            placeholder="你的名字"
+            placeholder={t('profileEdit.nicknamePlaceholder')}
             maxlength={30}
             class="text-body-lg w-full bg-transparent outline-none"
             style="color: var(--text-primary)"
@@ -258,13 +259,13 @@
       <div class="flex flex-col gap-1.5">
         <div class="flex items-center gap-1.5">
           <FileText style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
-          <span class="eyebrow">简介</span>
+          <span class="eyebrow">{t('profileEdit.bioLabel')}</span>
         </div>
         <div class="input-surface rounded-[var(--radius-md)] px-4 py-3">
           <textarea
             id="bio"
             bind:value={bio}
-            placeholder="介绍一下自己..."
+            placeholder={t('profileEdit.bioPlaceholder')}
             rows="3"
             maxlength={150}
             class="text-body-lg w-full bg-transparent outline-none resize-none"
@@ -293,12 +294,12 @@
       >
         {#if saved}
           <Check size={16} color="var(--text-on-accent)" strokeWidth={2.5} />
-          已保存
+          {t('profileEdit.saved')}
         {:else if isSaving}
           <Loader2 class="h-4 w-4 animate-spin" />
-          保存中...
+          {t('profileEdit.saving')}
         {:else}
-          保存
+          {t('profileEdit.save')}
         {/if}
       </button>
     </div>
@@ -307,13 +308,13 @@
   <!-- Error state -->
   <div class="page-pad">
     <div class="page-shell page-shell--form flex flex-col items-center justify-center py-16">
-      <p class="text-body-lg" style="color: var(--text-secondary)">加载失败</p>
+      <p class="text-body-lg" style="color: var(--text-secondary)">{t('profileEdit.loadFailed')}</p>
       <button
         class="text-body-lg rounded-[var(--radius-lg)] px-5 py-3.5 outline-none surface-flat mt-4"
         style="color: var(--brand)"
         onclick={() => void goto('/profile')}
       >
-        返回个人资料
+        {t('profileEdit.backToProfile')}
       </button>
     </div>
   </div>

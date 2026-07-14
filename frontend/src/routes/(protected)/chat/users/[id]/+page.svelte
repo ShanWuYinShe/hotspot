@@ -10,6 +10,7 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import { messageStore } from '$lib/stores/message.svelte';
   import { toast } from '$lib/stores/toast.svelte';
+  import { t } from '$lib/i18n';
   import { websocketStore, eventHandlers } from '$lib/websocket';
   import type { PrivateMessageNewPayload } from '$lib/websocket/types';
   import { useBatchMarkRead } from '$lib/hooks/use-batch-mark-read.svelte';
@@ -106,7 +107,7 @@
         }
       });
     } catch {
-      if (isMounted) toast.error('加载失败');
+      if (isMounted) toast.error(t('chat.loadFailed'));
     } finally {
       if (isMounted) isLoading = false;
     }
@@ -131,7 +132,7 @@
     const text = messageText.trim();
     if (!text || !canSendMessage) return;
     if (text.length > MESSAGE_CONTENT_MAX) {
-      toast.error(`消息内容最多 ${MESSAGE_CONTENT_MAX} 字符`);
+      toast.error(t('chat.contentMaxLength', { count: MESSAGE_CONTENT_MAX }));
       return;
     }
 
@@ -147,7 +148,7 @@
 
       if (!isSuccess(response)) {
         messageText = text;
-        toast.error(response.message || '发送失败');
+        toast.error(response.message || t('chat.sendFailed'));
       } else {
         // 发送成功后重新聚焦输入框
         shouldFocusInput++; // 触发重新聚焦
@@ -155,7 +156,7 @@
       // ✅ 不在本地添加消息，等待 WebSocket 推送（规范要求）
     } catch {
       messageText = text;
-      toast.error('发送失败');
+      toast.error(t('chat.sendFailed'));
     } finally {
       isSending = false;
     }
@@ -163,21 +164,21 @@
 
   async function deleteChat() {
     if (isDeletingChat) return;
-    if (!confirm('删除后仅清空你的会话视图，不会影响对方。确认删除吗？')) return;
+    if (!confirm(t('chat.deleteConfirm'))) return;
 
     isDeletingChat = true;
     try {
       const response = await privateChatsService.deleteChat({ target_user_id: userId });
       if (!isSuccess(response)) {
-        toast.error(response.message || '删除会话失败');
+        toast.error(response.message || t('chat.deleteChatFailed'));
         return;
       }
       messageStore.markConversationAsRead(`private_${userId}`);
       eventHandlers.cancelAllTyping();
-      toast.success('会话已删除');
+      toast.success(t('chat.chatDeleted'));
       await goto('/chat');
     } catch {
-      toast.error('删除会话失败');
+      toast.error(t('chat.deleteChatFailed'));
     } finally {
       isDeletingChat = false;
     }
@@ -366,7 +367,7 @@
       onSubscribeFailed: () => {
         if (cancelled) return;
         if (dev) console.warn('[Chat] ❌ 订阅失败，将在重连后重试');
-        toast.warning('消息订阅失败，正在重试...');
+        toast.warning(t('chat.subscribeFailedRetrying'));
       }
     });
 
@@ -377,7 +378,7 @@
 </script>
 
 <svelte:head>
-  <title>与 {otherUser?.nickname ?? '用户'} 的对话 - HotSpot</title>
+  <title>{t('chat.privateChatPageTitle', { name: otherUser?.nickname ?? t('chat.user') })}</title>
 </svelte:head>
 
 <div
@@ -426,20 +427,20 @@
         </div>
       </div>
     {:else}
-      <span class="text-body" style="color: var(--text-secondary)">用户不存在或加载失败</span>
+      <span class="text-body" style="color: var(--text-secondary)">{t('chat.userNotFound')}</span>
     {/if}
     <div class="ml-auto flex gap-1.5">
       <button
         class="surface-flat flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
         style="width: 36px; height: 36px;"
-        aria-label="语音通话"
+        aria-label={t('chat.voiceCallAria')}
       >
         <Phone size={14} color="var(--text-secondary)" strokeWidth={1.5} />
       </button>
       <button
         class="surface-flat flex items-center justify-center rounded-full outline-none active:scale-[0.88]"
         style="width: 36px; height: 36px;"
-        aria-label="视频通话"
+        aria-label={t('chat.videoCallAria')}
       >
         <Video size={14} color="var(--text-secondary)" strokeWidth={1.5} />
       </button>
@@ -448,7 +449,7 @@
           <button
             class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
             style="width: 36px; height: 36px;"
-            aria-label="更多选项"
+            aria-label={t('chat.moreOptionsAria')}
           >
             <MoreHorizontal size={15} strokeWidth={1.5} color="var(--text-secondary)" />
           </button>
@@ -457,10 +458,10 @@
           <DropdownMenuItem onclick={deleteChat} disabled={isDeletingChat} class="text-destructive">
             {#if isDeletingChat}
               <Loader2 class="h-4 w-4 animate-spin" />
-              <span>删除中...</span>
+              <span>{t('chat.deleting')}</span>
             {:else}
               <Trash2 class="h-4 w-4" />
-              <span>删除会话</span>
+              <span>{t('chat.deleteChat')}</span>
             {/if}
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -491,7 +492,7 @@
       </div>
     {:else if messages.length === 0}
       <div class="flex h-full items-center justify-center">
-        <p class="text-body-lg" style="color: var(--text-secondary)">开始聊天吧</p>
+        <p class="text-body-lg" style="color: var(--text-secondary)">{t('chat.startChat')}</p>
       </div>
     {:else}
       <div class="space-y-3 px-4">
@@ -501,7 +502,7 @@
             class="text-xs rounded-full px-3 py-1"
             style="background: var(--surface-bg); color: var(--text-secondary); border: 1px solid var(--border-theme); letter-spacing: 0.05em; opacity: 0.8"
           >
-            今天
+            {t('chat.today')}
           </span>
         </div>
         {#each messages as message (message.message_id)}
@@ -538,7 +539,7 @@
         style="color: var(--text-secondary)"
       >
         <Loader2 class="h-3 w-3 animate-spin" />
-        <span>实时消息连接中…</span>
+        <span>{t('chat.realtimeConnecting')}</span>
       </div>
     {/if}
     {#if websocketStore.isConnected && !wsSubscription.state.isSubscribed && !isLoading}
@@ -549,9 +550,9 @@
         <Loader2 class="h-3 w-3 animate-spin" />
         <span>
           {#if wsSubscription.state.isAttemptingSubscribe}
-            输入状态订阅中（不影响消息收发）
+            {t('chat.typingSubscribing')}
           {:else}
-            输入状态订阅重试中（不影响消息收发）
+            {t('chat.typingSubscribingRetrying')}
           {/if}
         </span>
       </div>
@@ -559,7 +560,7 @@
 
     {#if isOtherUserTyping}
       <div class="text-meta mb-2" style="color: var(--text-secondary)">
-        {otherUser?.nickname ?? '对方'} 正在输入...
+        {t('chat.typing', { name: otherUser?.nickname ?? t('chat.otherParty') })}
       </div>
     {/if}
 
@@ -567,14 +568,14 @@
       <button
         class="surface-flat flex shrink-0 items-center justify-center rounded-full outline-none active:scale-[0.88]"
         style="width: 36px; height: 36px;"
-        aria-label="表情"
+        aria-label={t('chat.emojiAria')}
       >
         <Smile size={15} color="var(--text-secondary)" strokeWidth={1.5} />
       </button>
       <textarea
         {@attach autofocus(shouldFocusInput)}
         {@attach useKeyboardFocus()}
-        placeholder="输入消息..."
+        placeholder={t('chat.inputPlaceholder')}
         bind:value={messageText}
         rows={1}
         maxlength={MESSAGE_CONTENT_MAX}
@@ -598,7 +599,7 @@
         onclick={sendMessage}
         onmousedown={(e) => e.preventDefault()}
         disabled={!messageText.trim() || isSending}
-        aria-label="发送消息"
+        aria-label={t('chat.sendAria')}
       >
         {#if isSending}
           <Loader2 class="h-5 w-5 animate-spin" />

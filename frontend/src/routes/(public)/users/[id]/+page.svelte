@@ -20,6 +20,7 @@
   import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
   import Grid3X3 from 'lucide-svelte/icons/grid-3x3';
   import Avatar from '$lib/components/common/avatar.svelte';
+  import { t } from '$lib/i18n';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
@@ -87,9 +88,9 @@
               relation: user.relation ? { ...user.relation, is_following: false } : undefined
             };
           }
-          toast.success('已取消关注');
+          toast.success(t('userProfile.unfollowed'));
         } else {
-          toast.error(response.message || '操作失败');
+          toast.error(response.message || t('userProfile.operationFailed'));
         }
       } else {
         const response = await usersService.follow({ user_id: userId });
@@ -104,14 +105,14 @@
                 : { is_following: true, is_followed_by: false, is_blocked: false }
             };
           }
-          toast.success('关注成功');
+          toast.success(t('userProfile.followSuccess'));
         } else {
           // 统一使用 response.message 展示错误（spec 哲学：code 驱动行为，message 描述上下文）
-          toast.error(response.message || '操作失败');
+          toast.error(response.message || t('userProfile.operationFailed'));
         }
       }
     } catch {
-      toast.error('操作失败');
+      toast.error(t('userProfile.operationFailed'));
     } finally {
       isActionLoading = false;
     }
@@ -129,7 +130,7 @@
     );
 
     if (momentsPagination.error) {
-      toast.error('加载瞬间失败');
+      toast.error(t('userProfile.loadMomentsFailed'));
     }
   }
 
@@ -144,7 +145,7 @@
     );
 
     if (followersPagination.error) {
-      toast.error('加载粉丝失败');
+      toast.error(t('userProfile.loadFollowersFailed'));
     }
   }
 
@@ -159,7 +160,7 @@
     );
 
     if (followingPagination.error) {
-      toast.error('加载关注失败');
+      toast.error(t('userProfile.loadFollowingFailed'));
     }
   }
 
@@ -180,21 +181,21 @@
 </script>
 
 <svelte:head>
-  <title>{user?.user.nickname ?? '用户'} - HotSpot</title>
+  <title>{user?.user.nickname ?? t('userProfile.titleDefault')} - HotSpot</title>
 </svelte:head>
 
 <div class="page-pad">
   <div class="page-shell page-shell--narrow min-h-full">
     {#if !user}
       <div class="flex flex-col items-center justify-center px-4 py-20">
-        <p style="color: var(--text-secondary);">{data.error || '用户不存在'}</p>
+        <p style="color: var(--text-secondary);">{data.error || t('userProfile.userNotExist')}</p>
         <button
           class="mt-4 flex items-center gap-2 rounded-full px-5 py-2 font-medium outline-none"
           style="background: var(--brand); color: var(--text-on-accent);"
           onclick={() => history.back()}
         >
           <ChevronLeft size={16} />
-          返回
+          {t('userProfile.back')}
         </button>
       </div>
     {:else}
@@ -227,7 +228,7 @@
             class="flex items-center justify-center rounded-full outline-none"
             style="width: 38px; height: 38px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);"
             onclick={() => history.back()}
-            aria-label="返回"
+            aria-label={t('userProfile.backAria')}
           >
             <ChevronLeft size={15} color="var(--text-on-overlay)" strokeWidth={1.75} />
           </button>
@@ -235,14 +236,14 @@
             <button
               class="flex items-center justify-center rounded-full outline-none"
               style="width: 38px; height: 38px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);"
-              aria-label="分享"
+              aria-label={t('userProfile.shareAria')}
             >
               <Share2 size={14} color="var(--text-on-overlay)" strokeWidth={1.75} />
             </button>
             <button
               class="flex items-center justify-center rounded-full outline-none"
               style="width: 38px; height: 38px; background: rgba(0,0,0,0.35); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);"
-              aria-label="更多"
+              aria-label={t('userProfile.moreAria')}
             >
               <MoreHorizontal size={14} color="var(--text-on-overlay)" strokeWidth={1.75} />
             </button>
@@ -284,7 +285,7 @@
                 onclick={() => goto(`/chat/users/${userId}`)}
               >
                 <MessageCircle size={14} strokeWidth={1.5} />
-                私信
+                {t('userProfile.message')}
               </button>
               <button
                 class={isFollowing
@@ -300,10 +301,10 @@
                   <Loader2 size={14} class="animate-spin" />
                 {:else if isFollowing}
                   <UserCheck size={14} strokeWidth={1.5} />
-                  已关注
+                  {t('userProfile.following')}
                 {:else}
                   <UserPlus size={14} strokeWidth={1.5} />
-                  关注
+                  {t('userProfile.follow')}
                 {/if}
               </button>
             </div>
@@ -344,14 +345,14 @@
 
           {#if user.social_context?.mutual_friends_count}
             <p class="text-body" style="color: var(--text-secondary); margin-top: 8px">
-              你们有 {user.social_context.mutual_friends_count} 个共同好友
+              {t('userProfile.mutualFriends', { count: user.social_context.mutual_friends_count })}
             </p>
           {/if}
         </div>
 
         <!-- Stats as single segmented bar -->
         <div class="surface-flat mt-5 flex rounded-[var(--radius-lg)] overflow-hidden">
-          {#each [{ label: '帖子', value: formatCount(user.stats?.moments_count ?? 0) }, { label: '粉丝', value: formatCount(user.stats?.followers_count ?? 0) }, { label: '关注', value: formatCount(user.stats?.following_count ?? 0) }] as stat, i (stat.label)}
+          {#each [{ label: t('userProfile.statPosts'), value: formatCount(user.stats?.moments_count ?? 0) }, { label: t('userProfile.statFollowers'), value: formatCount(user.stats?.followers_count ?? 0) }, { label: t('userProfile.statFollowing'), value: formatCount(user.stats?.following_count ?? 0) }] as stat, i (stat.label)}
             <div class="relative flex flex-1 flex-col items-center py-4">
               {#if i > 0}
                 <div
@@ -376,7 +377,7 @@
         class="flex"
         style="border-bottom: 1px solid var(--border-theme); padding-left: 16px; padding-right: 16px;"
       >
-        {#each [{ id: 'moments' as const, icon: Grid3X3, label: '帖子' }, { id: 'followers' as const, icon: UserCheck, label: '粉丝' }, { id: 'following' as const, icon: UserPlus, label: '关注' }] as tab (tab.id)}
+        {#each [{ id: 'moments' as const, icon: Grid3X3, label: t('userProfile.tabMoments') }, { id: 'followers' as const, icon: UserCheck, label: t('userProfile.tabFollowers') }, { id: 'following' as const, icon: UserPlus, label: t('userProfile.tabFollowing') }] as tab (tab.id)}
           {@const active = currentTab === tab.id}
           <button
             class="text-body relative flex flex-1 items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none transition-all duration-150"
@@ -413,7 +414,7 @@
         {:else if momentsPagination.items.length === 0}
           <div class="flex flex-col items-center justify-center py-12">
             <Image size={40} color="var(--text-secondary)" />
-            <p style="margin-top: 16px; color: var(--text-secondary);">TA 还没有发布瞬间</p>
+            <p style="margin-top: 16px; color: var(--text-secondary);">{t('userProfile.noMoments')}</p>
           </div>
         {:else}
           <!-- 3-column gallery grid from moments' images -->
@@ -447,7 +448,7 @@
                 {#if momentsPagination.loadingMore}
                   <Loader2 size={16} class="animate-spin" />
                 {/if}
-                加载更多
+                {t('userProfile.loadMore')}
               </button>
             </div>
           {/if}
@@ -470,7 +471,7 @@
         {:else if followersPagination.items.length === 0}
           <div class="flex flex-col items-center justify-center py-12">
             <UserCheck size={40} color="var(--text-secondary)" />
-            <p style="margin-top: 16px; color: var(--text-secondary);">暂无粉丝</p>
+            <p style="margin-top: 16px; color: var(--text-secondary);">{t('userProfile.noFollowers')}</p>
           </div>
         {:else}
           <div class="grid gap-3 p-4 sm:grid-cols-2">
@@ -492,7 +493,7 @@
                     >
                       {follower.user.nickname}
                     </p>
-                    <p class="text-meta" style="color: var(--text-secondary)">查看主页</p>
+                    <p class="text-meta" style="color: var(--text-secondary)">{t('userProfile.viewProfile')}</p>
                   </div>
                 </div>
               </a>
@@ -509,7 +510,7 @@
                 {#if followersPagination.loadingMore}
                   <Loader2 size={16} class="animate-spin" />
                 {/if}
-                加载更多
+                {t('userProfile.loadMore')}
               </button>
             </div>
           {/if}
@@ -532,7 +533,7 @@
         {:else if followingPagination.items.length === 0}
           <div class="flex flex-col items-center justify-center py-12">
             <UserPlus size={40} color="var(--text-secondary)" />
-            <p style="margin-top: 16px; color: var(--text-secondary);">暂无关注</p>
+            <p style="margin-top: 16px; color: var(--text-secondary);">{t('userProfile.noFollowing')}</p>
           </div>
         {:else}
           <div class="grid gap-3 p-4 sm:grid-cols-2">
@@ -554,7 +555,7 @@
                     >
                       {follow.user.nickname}
                     </p>
-                    <p class="text-meta" style="color: var(--text-secondary)">查看主页</p>
+                    <p class="text-meta" style="color: var(--text-secondary)">{t('userProfile.viewProfile')}</p>
                   </div>
                 </div>
               </a>
@@ -571,7 +572,7 @@
                 {#if followingPagination.loadingMore}
                   <Loader2 size={16} class="animate-spin" />
                 {/if}
-                加载更多
+                {t('userProfile.loadMore')}
               </button>
             </div>
           {/if}

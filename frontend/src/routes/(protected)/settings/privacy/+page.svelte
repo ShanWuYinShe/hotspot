@@ -4,6 +4,7 @@
   import { usersService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import { toast } from '$lib/stores/toast.svelte';
+  import { t } from '$lib/i18n';
   import PageHeader from '$lib/components/layout/page-header.svelte';
   import { Switch } from '$lib/components/ui/switch';
   import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -38,7 +39,7 @@
         socialListsVisible = settings.social_lists_visible;
       }
     } catch {
-      toast.error('加载隐私设置失败');
+      toast.error(t('settings.loadPrivacyFailed'));
     } finally {
       isLoading = false;
     }
@@ -58,12 +59,12 @@
         social_lists_visible: socialListsVisible
       });
       if (isSuccess(response)) {
-        toast.success('隐私设置已保存');
+        toast.success(t('settings.privacySaveSuccess'));
       } else {
-        toast.error(response.message || '保存失败');
+        toast.error(response.message || t('settings.privacySaveFailed'));
       }
     } catch {
-      toast.error('保存失败');
+      toast.error(t('settings.privacySaveFailed'));
     } finally {
       isSaving = false;
     }
@@ -75,16 +76,16 @@
 </script>
 
 <svelte:head>
-  <title>隐私设置 - HotSpot</title>
+  <title>{t('settings.privacyPageTitle')}</title>
 </svelte:head>
 
 <div class="page-pad">
   <div class="page-shell page-shell--form space-y-5">
     <PageHeader
-      title="隐私设置"
-      description="控制你在 HotSpot 的可见范围与互动权限"
+      title={t('settings.privacyHeader')}
+      description={t('settings.privacyHeaderDesc')}
       backHref="/settings"
-      backLabel="返回设置"
+      backLabel={t('settings.backToSettings')}
     />
 
     {#if isLoading}
@@ -111,10 +112,10 @@
           class="text-xs"
           style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px"
         >
-          基础可见性
+          {t('settings.basicVisibility')}
         </p>
         <p class="text-meta" style="color: var(--text-secondary); margin-bottom: 16px">
-          控制大部分信息默认可见范围
+          {t('settings.basicVisibilityDesc')}
         </p>
 
         <div class="space-y-3">
@@ -126,7 +127,7 @@
               for="privacy-level"
               class="text-body"
               style="color: var(--text-secondary); display: block; margin-bottom: 8px"
-              >隐私级别</label
+              >{t('settings.privacyLevel')}</label
             >
             <select
               id="privacy-level"
@@ -134,8 +135,8 @@
               style="border: 1px solid var(--border-theme); background: var(--surface-bg); color: var(--text-primary);"
               bind:value={privacyLevel}
             >
-              <option value="public">公开</option>
-              <option value="private">仅自己</option>
+              <option value="public">{t('settings.privacyLevelPublic')}</option>
+              <option value="private">{t('settings.privacyLevelPrivate')}</option>
             </select>
           </div>
 
@@ -145,11 +146,11 @@
           >
             <div>
               <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
-                位置可见
+                {t('settings.locationVisible')}
               </p>
-              <p class="text-meta" style="color: var(--text-secondary)">允许展示你的地理位置</p>
+              <p class="text-meta" style="color: var(--text-secondary)">{t('settings.locationVisibleDesc')}</p>
             </div>
-            <Switch bind:checked={locationVisible} aria-label="位置可见" />
+            <Switch bind:checked={locationVisible} aria-label={t('settings.locationVisibleAria')} />
           </div>
 
           <div
@@ -158,11 +159,11 @@
           >
             <div>
               <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
-                在线状态可见
+                {t('settings.presenceVisible')}
               </p>
-              <p class="text-meta" style="color: var(--text-secondary)">允许显示在线/离线状态</p>
+              <p class="text-meta" style="color: var(--text-secondary)">{t('settings.presenceVisibleDesc')}</p>
             </div>
-            <Switch bind:checked={presenceVisible} aria-label="在线状态可见" />
+            <Switch bind:checked={presenceVisible} aria-label={t('settings.presenceVisibleAria')} />
           </div>
 
           <div
@@ -171,13 +172,13 @@
           >
             <div>
               <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
-                好友/关注/粉丝列表可见
+                {t('settings.socialListsVisible')}
               </p>
               <p class="text-meta" style="color: var(--text-secondary)">
-                控制你的社交列表是否对他人可见
+                {t('settings.socialListsVisibleDesc')}
               </p>
             </div>
-            <Switch bind:checked={socialListsVisible} aria-label="好友/关注/粉丝列表可见" />
+            <Switch bind:checked={socialListsVisible} aria-label={t('settings.socialListsVisibleAria')} />
           </div>
         </div>
       </div>
@@ -191,10 +192,10 @@
           class="text-xs"
           style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px"
         >
-          社交与私聊
+          {t('settings.socialAndChat')}
         </p>
         <p class="text-meta" style="color: var(--text-secondary); margin-bottom: 16px">
-          管理关注与私聊权限
+          {t('settings.socialAndChatDesc')}
         </p>
 
         <div class="space-y-3">
@@ -204,11 +205,11 @@
           >
             <div>
               <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
-                允许关注
+                {t('settings.allowFollow')}
               </p>
-              <p class="text-meta" style="color: var(--text-secondary)">关闭后他人关注需审批</p>
+              <p class="text-meta" style="color: var(--text-secondary)">{t('settings.allowFollowDesc')}</p>
             </div>
-            <Switch bind:checked={allowFollow} aria-label="允许关注" />
+            <Switch bind:checked={allowFollow} aria-label={t('settings.allowFollowAria')} />
           </div>
 
           <div
@@ -219,7 +220,7 @@
               for="private-chat"
               class="text-body"
               style="color: var(--text-secondary); display: block; margin-bottom: 8px"
-              >私聊权限</label
+              >{t('settings.privateChatPermission')}</label
             >
             <select
               id="private-chat"
@@ -227,9 +228,9 @@
               style="background: var(--surface-bg); color: var(--text-primary);"
               bind:value={allowPrivateChat}
             >
-              <option value="everyone">所有人可私聊</option>
-              <option value="friends">仅好友可私聊</option>
-              <option value="nobody">不允许私聊</option>
+              <option value="everyone">{t('settings.privateChatEveryone')}</option>
+              <option value="friends">{t('settings.privateChatFriends')}</option>
+              <option value="nobody">{t('settings.privateChatNobody')}</option>
             </select>
           </div>
         </div>
@@ -244,10 +245,10 @@
           class="text-xs"
           style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px"
         >
-          搜索与发现
+          {t('settings.searchAndDiscovery')}
         </p>
         <p class="text-meta" style="color: var(--text-secondary); margin-bottom: 16px">
-          控制你在搜索/附近中的展示
+          {t('settings.searchAndDiscoveryDesc')}
         </p>
 
         <div class="space-y-3">
@@ -257,11 +258,11 @@
           >
             <div>
               <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
-                允许被搜索
+                {t('settings.searchable')}
               </p>
-              <p class="text-meta" style="color: var(--text-secondary)">关闭后不会出现在搜索结果</p>
+              <p class="text-meta" style="color: var(--text-secondary)">{t('settings.searchableDesc')}</p>
             </div>
-            <Switch bind:checked={searchable} aria-label="允许被搜索" />
+            <Switch bind:checked={searchable} aria-label={t('settings.searchableAria')} />
           </div>
 
           <div
@@ -270,11 +271,11 @@
           >
             <div>
               <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
-                附近可见
+                {t('settings.nearbyVisible')}
               </p>
-              <p class="text-meta" style="color: var(--text-secondary)">允许出现在附近的人</p>
+              <p class="text-meta" style="color: var(--text-secondary)">{t('settings.nearbyVisibleDesc')}</p>
             </div>
-            <Switch bind:checked={locationSearchable} aria-label="附近可见" />
+            <Switch bind:checked={locationSearchable} aria-label={t('settings.nearbyVisibleAria')} />
           </div>
         </div>
       </div>
@@ -288,7 +289,7 @@
         {#if isSaving}
           <Loader2 size={16} class="mr-2 animate-spin" />
         {/if}
-        保存设置
+        {t('settings.saveSettings')}
       </button>
     {/if}
   </div>

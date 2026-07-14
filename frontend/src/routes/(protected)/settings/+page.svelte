@@ -5,6 +5,7 @@
   import { toast } from '$lib/stores/toast.svelte';
   import { platformStore } from '$lib/stores/platform.svelte';
   import { formatHandle } from '$lib/utils/format';
+  import { t } from '$lib/i18n';
   import ThemeToggle from '$lib/components/common/theme-toggle.svelte';
   import { Switch } from '$lib/components/ui/switch';
   import Avatar from '$lib/components/common/avatar.svelte';
@@ -30,87 +31,97 @@
     sand: '#D4845A'
   };
 
-  const THEME_NAMES: Record<ThemeFamily, string> = {
-    indigo: '活力',
-    forest: '自然',
-    sand: '质感'
-  };
+  const THEME_NAMES = $derived<Record<ThemeFamily, string>>({
+    indigo: t('settings.themeNameIndigo'),
+    forest: t('settings.themeNameForest'),
+    sand: t('settings.themeNameSand')
+  });
 
-  const settingsSections = [
+  const THEME_DESC = $derived<Record<ThemeFamily, string>>({
+    indigo: t('settings.themeDescIndigo'),
+    forest: t('settings.themeDescForest'),
+    sand: t('settings.themeDescSand')
+  });
+
+  const settingsSections = $derived([
     {
-      title: '账户',
+      id: 'account',
+      title: t('settings.sectionAccount'),
       icon: User,
       items: [
         {
           icon: User,
-          label: '个人资料',
+          label: t('settings.accountProfile'),
           href: '/profile',
-          description: '修改头像、昵称、简介'
+          description: t('settings.accountProfileDesc')
         },
         {
           icon: Lock,
-          label: '修改密码',
+          label: t('settings.changePassword'),
           href: '/settings/password',
-          description: '更改登录密码'
+          description: t('settings.changePasswordDesc')
         },
         {
           icon: MonitorSmartphone,
-          label: '会话管理',
+          label: t('settings.sessionsManagement'),
           href: '/settings/sessions',
-          description: '管理登录设备'
+          description: t('settings.sessionsManagementDesc')
         }
       ]
     },
     {
-      title: '隐私',
+      id: 'privacy',
+      title: t('settings.sectionPrivacy'),
       icon: Shield,
       items: [
         {
           icon: EyeOff,
-          label: '隐私设置',
+          label: t('settings.privacySettings'),
           href: '/settings/privacy',
-          description: '谁可以看到你的信息'
+          description: t('settings.privacySettingsDesc')
         }
       ]
     },
     {
-      title: '通知',
+      id: 'notifications',
+      title: t('settings.sectionNotifications'),
       icon: Bell,
       items: [
         {
           icon: Bell,
-          label: '通知设置',
+          label: t('settings.notificationSettings'),
           href: '/settings/notifications',
-          description: '管理推送通知'
+          description: t('settings.notificationSettingsDesc')
         }
       ]
     },
     {
-      title: '记录与分享',
+      id: 'records',
+      title: t('settings.sectionRecordsAndSharing'),
       icon: Share2,
       items: [
         {
           icon: Share2,
-          label: '我的分享',
+          label: t('settings.myShares'),
           href: '/settings/shares',
-          description: '查看并撤销已创建分享'
+          description: t('settings.mySharesDesc')
         },
         {
           icon: Flag,
-          label: '我的举报记录',
+          label: t('settings.myReports'),
           href: '/settings/reports',
-          description: '跟踪举报处理进度'
+          description: t('settings.myReportsDesc')
         }
       ]
     }
-  ];
+  ]);
 
-  const notificationItems = [
-    { key: 'like', label: '点赞通知' },
-    { key: 'follow', label: '关注通知' },
-    { key: 'comment', label: '评论通知' },
-    { key: 'nearby', label: '附近动态' }
-  ];
+  const notificationItems = $derived([
+    { key: 'like', label: t('settings.notificationLike') },
+    { key: 'follow', label: t('settings.notificationFollow') },
+    { key: 'comment', label: t('settings.notificationComment') },
+    { key: 'nearby', label: t('settings.notificationNearby') }
+  ]);
 
   let notifications = $state<Record<string, boolean>>({
     like: true,
@@ -132,7 +143,7 @@
       // 网络失败也继续清本地，避免用户被困在已失效会话里
     }
     authStore.logout();
-    toast.success('已退出登录');
+    toast.success(t('settings.logoutSuccess'));
   }
 
   function setThemeFamily(themeFamily: ThemeFamily) {
@@ -141,7 +152,7 @@
 </script>
 
 <svelte:head>
-  <title>设置 - HotSpot</title>
+  <title>{t('settings.title')} - HotSpot</title>
 </svelte:head>
 
 {#if platformStore.useMasterDetail}
@@ -158,7 +169,7 @@
         <!-- 非桌面（无常驻侧栏）：设置是子页，自带返回头部，避免被困。 -->
         <div class="mb-3 flex items-center gap-2.5">
           <BackButton onclick={() => history.back()} size={40} />
-          <h1 class="page-title" style="color: var(--text-primary);">设置</h1>
+          <h1 class="page-title" style="color: var(--text-primary);">{t('settings.title')}</h1>
         </div>
       {/if}
       <!-- User card -->
@@ -181,7 +192,7 @@
           </div>
           <div class="min-w-0">
             <p class="text-body-lg" style="color: var(--text-primary); font-weight: 500">
-              {authStore.currentAccount.nickname || '用户'}
+              {authStore.currentAccount.nickname || t('settings.guestFallback')}
             </p>
             <p class="text-caption" style="color: var(--text-secondary)">
               @{formatHandle(authStore.currentAccount)}
@@ -203,19 +214,19 @@
           onclick={() => (activeSection = 'appearance')}
         >
           <Palette size={16} strokeWidth={1.5} />
-          <span class="text-body" style="font-weight: 500">外观与主题</span>
+          <span class="text-body" style="font-weight: 500">{t('settings.appearanceAndTheme')}</span>
         </button>
 
-        {#each settingsSections as section (section.title)}
+        {#each settingsSections as section (section.id)}
           <button
             type="button"
             class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-all"
-            style="background: {activeSection === section.title
+            style="background: {activeSection === section.id
               ? 'var(--brand)'
-              : 'transparent'}; color: {activeSection === section.title
+              : 'transparent'}; color: {activeSection === section.id
               ? 'var(--text-on-accent)'
               : 'var(--text-primary)'};"
-            onclick={() => (activeSection = section.title)}
+            onclick={() => (activeSection = section.id)}
           >
             <section.icon size={16} strokeWidth={1.5} />
             <span class="text-body" style="font-weight: 500">{section.title}</span>
@@ -233,7 +244,7 @@
           onclick={() => (activeSection = 'notifications')}
         >
           <SlidersHorizontal size={16} strokeWidth={1.5} />
-          <span class="text-body" style="font-weight: 500">通知偏好</span>
+          <span class="text-body" style="font-weight: 500">{t('settings.notificationsPreference')}</span>
         </button>
 
         <!-- Logout -->
@@ -245,7 +256,7 @@
           onclick={handleLogout}
         >
           <LogOut size={16} strokeWidth={1.5} />
-          <span class="text-body" style="font-weight: 500">退出登录</span>
+          <span class="text-body" style="font-weight: 500">{t('settings.logout')}</span>
         </button>
       </div>
     </div>
@@ -260,9 +271,9 @@
               class="text-h2"
               style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px"
             >
-              外观与主题
+              {t('settings.appearanceAndTheme')}
             </h2>
-            <p class="text-meta" style="color: var(--text-secondary)">选择你喜欢的视觉风格</p>
+            <p class="text-meta" style="color: var(--text-secondary)">{t('settings.appearanceAndThemeDesc')}</p>
           </div>
 
           <!-- Theme picker -->
@@ -271,7 +282,7 @@
               class="text-xs"
               style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px"
             >
-              主题风格
+              {t('settings.themeStyle')}
             </p>
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
               {#each THEME_FAMILY_OPTIONS as option (option.family)}
@@ -328,7 +339,7 @@
                       class="text-xs"
                       style="text-align: center; line-height: 1.4; color: {accent}99"
                     >
-                      {#if option.family === 'indigo'}霓虹活力{:else if option.family === 'forest'}森林极简{:else}柔和质感{/if}
+                      {THEME_DESC[option.family]}
                     </span>
                   </div>
                   {#if isSelected}
@@ -349,7 +360,7 @@
               class="text-xs"
               style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px"
             >
-              深色模式
+              {t('settings.darkMode')}
             </p>
             <div
               class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3.5"
@@ -363,9 +374,9 @@
                   <Moon size={15} strokeWidth={1.5} color="var(--brand)" />
                 </div>
                 <div>
-                  <p class="text-body-lg" style="color: var(--text-primary)">深色模式</p>
+                  <p class="text-body-lg" style="color: var(--text-primary)">{t('settings.darkMode')}</p>
                   <p class="text-caption" style="color: var(--text-secondary)">
-                    跟随系统 / 浅色 / 深色
+                    {t('settings.darkModeDesc')}
                   </p>
                 </div>
               </div>
@@ -379,9 +390,9 @@
               class="text-h2"
               style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px"
             >
-              通知偏好
+              {t('settings.notificationsPreference')}
             </h2>
-            <p class="text-meta" style="color: var(--text-secondary)">管理你收到的通知类型</p>
+            <p class="text-meta" style="color: var(--text-secondary)">{t('settings.notificationsPreferenceDesc')}</p>
           </div>
           <div
             class="overflow-hidden rounded-[var(--radius-md)]"
@@ -402,7 +413,7 @@
           </div>
         {:else}
           <!-- Dynamic section based on activeSection -->
-          {@const section = settingsSections.find((s) => s.title === activeSection)}
+          {@const section = settingsSections.find((s) => s.id === activeSection)}
           {#if section}
             <div class="mb-6">
               <h2
@@ -452,7 +463,7 @@
         style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
       >
         <BackButton onclick={() => history.back()} size={40} />
-        <h1 class="page-title" style="color: var(--text-primary);">设置</h1>
+        <h1 class="page-title" style="color: var(--text-primary);">{t('settings.title')}</h1>
       </div>
 
       <div class="space-y-3">
@@ -473,7 +484,7 @@
             </div>
             <div class="min-w-0">
               <p class="text-body-lg" style="color: var(--text-primary); font-weight: 500">
-                {authStore.currentAccount.nickname || '用户'}
+                {authStore.currentAccount.nickname || t('settings.guestFallback')}
               </p>
               <p class="text-caption" style="color: var(--text-secondary)">
                 @{formatHandle(authStore.currentAccount)}
@@ -487,7 +498,7 @@
           class="text-xs px-1"
           style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-top: 8px"
         >
-          主题风格
+          {t('settings.themeStyle')}
         </p>
         <div class="flex gap-2.5">
           {#each THEME_FAMILY_OPTIONS as option (option.family)}
@@ -541,7 +552,7 @@
                   class="text-xs"
                   style="text-align: center; line-height: 1.4; color: {accent}99"
                 >
-                  {#if option.family === 'indigo'}霓虹活力{:else if option.family === 'forest'}森林极简{:else}柔和质感{/if}
+                  {THEME_DESC[option.family]}
                 </span>
               </div>
               {#if isSelected}
@@ -560,7 +571,7 @@
           class="text-xs px-1"
           style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-top: 8px"
         >
-          外观
+          {t('settings.appearanceSection')}
         </p>
         <div class="surface-flat overflow-hidden rounded-[var(--radius-lg)]">
           <div class="flex items-center justify-between px-4 py-3.5">
@@ -572,9 +583,9 @@
                 <Palette size={15} strokeWidth={1.5} color="var(--brand)" />
               </div>
               <div>
-                <p class="text-body-lg" style="color: var(--text-primary)">深色模式</p>
+                <p class="text-body-lg" style="color: var(--text-primary)">{t('settings.darkMode')}</p>
                 <p class="text-caption" style="color: var(--text-secondary)">
-                  跟随系统 / 浅色 / 深色
+                  {t('settings.darkModeDesc')}
                 </p>
               </div>
             </div>
@@ -618,7 +629,7 @@
           class="text-xs px-1"
           style="letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); margin-top: 8px"
         >
-          通知偏好
+          {t('settings.notificationsPreference')}
         </p>
         <div class="surface-flat overflow-hidden rounded-[var(--radius-lg)]">
           {#each notificationItems as item, i (item.key)}
@@ -664,7 +675,7 @@
             >
               <LogOut size={15} strokeWidth={1.5} color="var(--brand)" />
             </div>
-            <span class="text-body-lg" style="color: var(--brand)">退出登录</span>
+            <span class="text-body-lg" style="color: var(--brand)">{t('settings.logout')}</span>
           </button>
         </div>
       </div>

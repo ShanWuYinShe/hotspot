@@ -5,6 +5,7 @@
   import { authService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import { toast } from '$lib/stores/toast.svelte';
+  import { t } from '$lib/i18n';
   import PageHeader from '$lib/components/layout/page-header.svelte';
   import type { SessionItem } from '$lib/types/api';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
@@ -25,7 +26,7 @@
         sessions = response.data.items;
       }
     } catch {
-      toast.error('加载会话失败');
+      toast.error(t('settings.loadSessionsFailed'));
     } finally {
       isLoading = false;
     }
@@ -37,12 +38,12 @@
       const response = await authService.revokeSession({ session_id: sessionId });
       if (isSuccess(response)) {
         sessions = sessions.filter((item) => item.session_id !== sessionId);
-        toast.success('已撤销会话');
+        toast.success(t('settings.revokeSuccess'));
       } else {
-        toast.error(response.message || '撤销失败');
+        toast.error(response.message || t('settings.revokeFailed'));
       }
     } catch {
-      toast.error('撤销失败');
+      toast.error(t('settings.revokeFailed'));
     } finally {
       isRevoking = null;
     }
@@ -56,14 +57,16 @@
       if (isSuccess(response)) {
         const revokedCount = response.data?.revoked_count ?? 0;
         toast.success(
-          revokedCount > 0 ? `已撤销 ${revokedCount} 个其他设备会话` : '没有其他设备会话需要撤销'
+          revokedCount > 0
+            ? t('settings.revokeOthersSuccess', { count: revokedCount })
+            : t('settings.revokeOthersNoOthers')
         );
         await loadSessions();
       } else {
-        toast.error(response.message || '撤销其他设备失败');
+        toast.error(response.message || t('settings.revokeOthersFailed'));
       }
     } catch {
-      toast.error('撤销其他设备失败');
+      toast.error(t('settings.revokeOthersFailed'));
     } finally {
       isRevokingOthers = false;
     }
@@ -75,16 +78,16 @@
 </script>
 
 <svelte:head>
-  <title>会话管理 - HotSpot</title>
+  <title>{t('settings.sessionsPageTitle')}</title>
 </svelte:head>
 
 <div class="page-pad">
   <div class="page-shell page-shell--form space-y-5">
     <PageHeader
-      title="会话管理"
-      description="查看并管理已登录设备，仅保留当前设备在线"
+      title={t('settings.sessionsHeader')}
+      description={t('settings.sessionsHeaderDesc')}
       backHref="/settings"
-      backLabel="返回设置"
+      backLabel={t('settings.backToSettings')}
     >
       {#snippet actions()}
         <div class="flex flex-wrap items-center gap-2">
@@ -95,7 +98,7 @@
             disabled={isLoading}
           >
             <RefreshCw size={14} class="mr-2 {isLoading ? 'animate-spin' : ''}" />
-            刷新
+            {t('settings.refresh')}
           </button>
           <button
             class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
@@ -106,7 +109,7 @@
             {#if isRevokingOthers}
               <Loader2 size={14} class="mr-2 animate-spin" />
             {/if}
-            撤销其他设备
+            {t('settings.revokeOthers')}
           </button>
         </div>
       {/snippet}
@@ -137,7 +140,7 @@
         {/each}
       </div>
     {:else if sessions.length === 0}
-      <EmptyState icon={Smartphone} title="暂无会话记录" fill />
+      <EmptyState icon={Smartphone} title={t('settings.noSessions')} fill />
     {:else}
       <div class="space-y-3">
         {#each sessions as session (session.session_id)}
@@ -155,18 +158,18 @@
               <div>
                 <div class="flex items-center gap-2">
                   <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
-                    {session.device_name || session.device_type || '未知设备'}
+                    {session.device_name || session.device_type || t('settings.unknownDevice')}
                   </p>
                   {#if session.is_current}
                     <span
                       class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                       style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
-                      >当前设备</span
+                      >{t('settings.currentDevice')}</span
                     >
                   {/if}
                 </div>
                 <div class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
-                  {session.ip_location || '未知位置'} · 最后活跃 {formatDateTime(
+                  {session.ip_location || t('settings.unknownLocation')} · {t('settings.lastActive')} {formatDateTime(
                     session.last_active_at
                   )}
                 </div>
@@ -186,7 +189,7 @@
                 {#if isRevoking === session.session_id}
                   <Loader2 size={14} class="mr-2 animate-spin" />
                 {/if}
-                撤销
+                {t('settings.revoke')}
               </button>
             </div>
           </div>

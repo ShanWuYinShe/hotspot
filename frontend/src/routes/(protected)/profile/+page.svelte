@@ -27,6 +27,7 @@
   import FileText from 'lucide-svelte/icons/file-text';
   import { platformStore } from '$lib/stores/platform.svelte';
   import { adminPermissionsStore } from '$lib/stores/admin-permissions.svelte';
+  import { t } from '$lib/i18n';
   import { goto } from '$app/navigation';
   import Avatar from '$lib/components/common/avatar.svelte';
   import { mediaService } from '$lib/api/services';
@@ -159,15 +160,15 @@
     const uniqueTags = [...new Set(Array.from(selectedInterestTags))];
 
     if (!trimmedNickname) {
-      toast.error('昵称不能为空');
+      toast.error(t('profile.nicknameEmpty'));
       return;
     }
     if (trimmedNickname.length > 30) {
-      toast.error('昵称长度需在 1-30 字符之间');
+      toast.error(t('profile.nicknameLengthError'));
       return;
     }
     if (trimmedBio.length > 500) {
-      toast.error('个人简介不能超过 500 字符');
+      toast.error(t('profile.bioTooLong'));
       return;
     }
 
@@ -190,10 +191,10 @@
           isEditing = false;
         }, 800);
       } else {
-        toast.error(response.message || '保存失败');
+        toast.error(response.message || t('profile.saveFailed'));
       }
     } catch {
-      toast.error('保存失败');
+      toast.error(t('profile.saveFailed'));
     } finally {
       isSaving = false;
     }
@@ -209,20 +210,20 @@
 
   async function handleBannerUpload(file: File) {
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('横幅图不能超过 10MB');
+      toast.error(t('profile.bannerTooLarge'));
       return;
     }
     bannerUploading = true;
     try {
       await mediaService.uploadFile(file, 'avatar');
-      toast.success('横幅已更新');
+      toast.success(t('profile.bannerUpdated'));
       const profileRes = await usersService.getMyProfile();
       if (isSuccess(profileRes) && profileRes.data) {
         profile = profileRes.data;
         authStore.setProfile(profile);
       }
     } catch {
-      toast.error('上传横幅失败');
+      toast.error(t('profile.bannerUploadFailed'));
     } finally {
       bannerUploading = false;
     }
@@ -230,7 +231,7 @@
 
   async function handleAvatarUpload(file: File) {
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('头像不能超过 5MB');
+      toast.error(t('profile.avatarTooLarge'));
       return;
     }
     try {
@@ -241,63 +242,63 @@
         profile = profileRes.data;
         authStore.setProfile(profile);
       }
-      toast.success('头像已更新');
+      toast.success(t('profile.avatarUpdated'));
     } catch {
-      toast.error('上传头像失败');
+      toast.error(t('profile.avatarUploadFailed'));
     }
   }
 
   const tabs = [
-    { id: 'posts' as const, icon: Grid3X3, label: '帖子' },
-    { id: 'liked' as const, icon: Heart, label: '喜欢' },
-    { id: 'saved' as const, icon: Bookmark, label: '收藏' }
+    { id: 'posts' as const, icon: Grid3X3, label: t('profile.tabPosts') },
+    { id: 'liked' as const, icon: Heart, label: t('profile.tabLiked') },
+    { id: 'saved' as const, icon: Bookmark, label: t('profile.tabSaved') }
   ];
 
   const statsRow = $derived([
-    { label: '帖子', value: profile?.stats.moments_count ?? 0 },
-    { label: '关注者', value: profile?.stats.followers_count ?? 0 },
-    { label: '足迹', value: profile?.stats.friends_count ?? 0 }
+    { label: t('profile.statPosts'), value: profile?.stats.moments_count ?? 0 },
+    { label: t('profile.statFollowers'), value: profile?.stats.followers_count ?? 0 },
+    { label: t('profile.statFootprint'), value: profile?.stats.friends_count ?? 0 }
   ]);
 
   const quickLinks = $derived([
     {
       icon: Image,
-      label: '我的瞬间',
+      label: t('profile.linkMoments'),
       href: '/moments',
       count: profile?.stats.moments_count ?? 0
     },
     {
       icon: UsersRound,
-      label: '我的群组',
+      label: t('profile.linkGroups'),
       href: '/groups',
       count: null
     },
     {
       icon: Heart,
-      label: '关系',
+      label: t('profile.linkRelations'),
       href: '/relations?tab=friends',
       count: profile?.stats.friends_count ?? 0
     },
     {
       icon: Bell,
-      label: '通知',
+      label: t('profile.linkNotifications'),
       href: '/notifications',
       count: null
     },
     {
       icon: Settings,
-      label: '设置',
+      label: t('profile.linkSettings'),
       href: '/settings',
       count: null
     },
     ...(adminPermissionsStore.isAdmin
-      ? [{ icon: Shield, label: '管理后台', href: '/admin', count: null }]
+      ? [{ icon: Shield, label: t('profile.linkAdmin'), href: '/admin', count: null }]
       : [])
   ]);
 </script>
 
 <svelte:head>
-  <title>个人资料 - HotSpot</title>
+  <title>{t('profile.title')} - HotSpot</title>
 </svelte:head>
 
 {#if profile}
@@ -317,7 +318,7 @@
       <button
         class="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none"
         style="width: 26px; height: 26px; background: var(--brand); border: 2.5px solid var(--surface-bg); box-shadow: var(--shadow-brand-btn);"
-        title="更换头像"
+        title={t('profile.changeAvatar')}
       >
         <Camera size={12} color="var(--text-on-accent)" strokeWidth={2} />
       </button>
@@ -394,7 +395,7 @@
             />
           </div>
           <p class="text-body-lg" style="color: var(--text-secondary); margin-top: 12px">
-            {activeTab === 'liked' ? '还没有点赞过' : activeTab === 'saved' ? '还没有收藏' : '还没有发布帖子'}
+            {activeTab === 'liked' ? t('profile.emptyLiked') : activeTab === 'saved' ? t('profile.emptySaved') : t('profile.emptyPosts')}
           </p>
         </div>
       {:else}
@@ -506,7 +507,7 @@
           disabled={bannerUploading}
         >
           <Camera size={13} strokeWidth={1.75} />
-          {bannerUploading ? '上传中...' : '更换横幅'}
+          {bannerUploading ? t('profile.uploading') : t('profile.changeBanner')}
         </button>
       </div>
 
@@ -540,8 +541,8 @@
           />
           <button
             class="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"
-            style="width: 26px; height: 26px; background: var(--brand); border: 2px solid var(--surface-bg); box-shadow: var(--shadow-brand-btn);"
-            title="更换头像"
+            style="width: 26px; height: 26px; background: var(--brand); border: 2 solid var(--surface-bg); box-shadow: var(--shadow-brand-btn);"
+            title={t('profile.changeAvatar')}
             onclick={() => avatarInputElement?.click()}
           >
             <Camera size={12} color="var(--text-on-accent)" strokeWidth={2} />
@@ -559,13 +560,13 @@
       <div class="flex flex-col gap-1.5">
         <div class="flex items-center gap-1.5">
           <User style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
-          <span class="eyebrow">姓名</span>
+          <span class="eyebrow">{t('profile.nameFieldLabel')}</span>
         </div>
         <div class="input-surface rounded-[var(--radius-md)] px-4 py-3">
           <input
             id="nickname"
             bind:value={nickname}
-            placeholder="你的名字"
+            placeholder={t('profile.nameFieldPlaceholder')}
             class="text-body-lg w-full bg-transparent outline-none"
             style="color: var(--text-primary)"
           />
@@ -576,13 +577,13 @@
       <div class="flex flex-col gap-1.5">
         <div class="flex items-center gap-1.5">
           <FileText style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
-          <span class="eyebrow">个人简介</span>
+          <span class="eyebrow">{t('profile.bioFieldLabel')}</span>
         </div>
         <div class="input-surface rounded-[var(--radius-md)] px-4 py-3">
           <textarea
             id="bio"
             bind:value={bio}
-            placeholder="介绍一下自己..."
+            placeholder={t('profile.bioFieldPlaceholder')}
             rows="3"
             class="text-body-lg w-full bg-transparent outline-none resize-none"
             style="color: var(--text-primary); line-height: 1.65"
@@ -602,7 +603,7 @@
         <div class="flex flex-col gap-1.5">
           <div class="flex items-center gap-1.5">
             <MapPin style="width: 13px; height: 13px; color: var(--brand);" strokeWidth={1.75} />
-            <span class="eyebrow">所在地</span>
+            <span class="eyebrow">{t('profile.locationFieldLabel')}</span>
           </div>
           <div class="input-surface rounded-[var(--radius-md)] px-4 py-3">
             <input
@@ -618,7 +619,7 @@
       <!-- Interest tags -->
       <div class="flex flex-col gap-2.5">
         <div class="flex items-center gap-1.5">
-          <span class="eyebrow">兴趣标签</span>
+          <span class="eyebrow">{t('profile.interestTagsLabel')}</span>
           <span class="text-caption" style="color: var(--text-secondary); opacity: 0.6"
             >({selectedInterestTags.size}/{MAX_INTEREST_TAGS})</span
           >
@@ -653,9 +654,9 @@
             <Check size={14} color="var(--text-on-accent)" strokeWidth={2.5} />
           {:else if isSaving}
             <Loader2 class="h-4 w-4 animate-spin" />
-            保存中...
+            {t('profile.saving')}
           {:else}
-            保存
+            {t('profile.save')}
           {/if}
         </button>
         <button
@@ -664,7 +665,7 @@
           onclick={cancelEdit}
           disabled={isSaving}
         >
-          取消
+          {t('profile.cancel')}
         </button>
       </div>
     </div>
@@ -737,7 +738,7 @@
             onclick={() => (isEditing = !isEditing)}
           >
             <Pencil size={13} strokeWidth={1.5} color="var(--text-secondary)" />
-            <span style="color: var(--text-secondary);">编辑资料</span>
+            <span style="color: var(--text-secondary);">{t('profile.editProfile')}</span>
           </button>
 
           <!-- Analytics card -->
@@ -838,7 +839,7 @@
                 onclick={() => (isEditing = true)}
               >
                 <Pencil size={13} strokeWidth={1.5} color="var(--text-secondary)" />
-                <span style="color: var(--text-secondary);">编辑资料</span>
+                <span style="color: var(--text-secondary);">{t('profile.editProfile')}</span>
               </button>
             {/if}
           </div>
@@ -885,15 +886,15 @@
         class="text-title"
         style="font-weight: 500; color: var(--text-primary); margin-bottom: 8px"
       >
-        加载个人资料失败
+        {t('profile.loadProfileFailed')}
       </p>
       <p class="text-body-lg" style="color: var(--text-secondary); margin-bottom: 16px">
-        {data.error ?? '无法获取个人资料，请稍后重试'}
+        {data.error ?? t('profile.loadProfileError')}
       </p>
       <button
         class="text-body-lg rounded-[var(--radius-lg)] px-5 py-3.5 outline-none surface-flat"
         style="color: var(--brand)"
-        onclick={() => location.reload()}>重试</button
+        onclick={() => location.reload()}>{t('profile.retry')}</button
       >
     </div>
   </div>

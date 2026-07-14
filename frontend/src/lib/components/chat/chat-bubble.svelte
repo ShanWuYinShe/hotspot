@@ -31,6 +31,7 @@
 
 <script lang="ts">
   import { CheckCheck } from 'lucide-svelte';
+  import { t } from '$lib/i18n';
 
   let {
     isSelf,
@@ -58,7 +59,7 @@
     : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary); border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 4px;'}
 >
   {#if isRecalled}
-    <p class="text-body" style="font-style: italic; opacity: 0.7">消息已撤回</p>
+    <p class="text-body" style="font-style: italic; opacity: 0.7">{t('chat.messageRecalled')}</p>
   {:else if type === 'text'}
     <p class="text-body whitespace-pre-wrap wrap-break-word" style="line-height: 1.55">
       {content}
@@ -69,11 +70,11 @@
         type="button"
         class="block overflow-hidden rounded-[var(--radius-md)] border-none bg-transparent p-0 shadow-none outline-none"
         onclick={() => onImageClick(media!.url)}
-        aria-label="查看图片"
+        aria-label={t('chat.viewImageAria')}
       >
         <img
           src={media.url}
-          alt="图片"
+          alt={t('chat.image')}
           loading="lazy"
           decoding="async"
           class="max-h-[300px] max-w-[250px] object-cover"
@@ -82,7 +83,7 @@
     {:else}
       <img
         src={media.url}
-        alt="图片"
+        alt={t('chat.image')}
         loading="lazy"
         decoding="async"
         class="max-w-[250px] rounded-[var(--radius-md)]"

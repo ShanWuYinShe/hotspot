@@ -9,6 +9,7 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import { messageStore } from '$lib/stores/message.svelte';
   import { toast } from '$lib/stores/toast.svelte';
+  import { t } from '$lib/i18n';
   import { websocketStore, eventHandlers } from '$lib/websocket';
   import type { GroupMessageNewPayload } from '$lib/websocket/types';
   import { useBatchMarkRead } from '$lib/hooks/use-batch-mark-read.svelte';
@@ -102,7 +103,7 @@
       if (nickname) return nickname;
     }
     const suffix = userId.slice(-4);
-    return `成员${suffix || userId}`;
+    return t('chat.memberSuffix', { suffix: suffix || userId });
   }
 
   function buildGroupTypingHintText(): string {
@@ -112,12 +113,12 @@
       .slice(0, GROUP_TYPING_NAME_PREVIEW_LIMIT)
       .map((id) => resolveGroupTypingDisplayName(id));
     if (count === 1) {
-      return `${previewNames[0]} 正在输入...`;
+      return t('chat.typing', { name: previewNames[0] });
     }
     if (count <= GROUP_TYPING_NAME_PREVIEW_LIMIT) {
-      return `${previewNames.join('、')} 正在输入...`;
+      return t('chat.typingMany', { names: previewNames.join('、') });
     }
-    return `${previewNames.join('、')} 等 ${count} 人正在输入...`;
+    return t('chat.typingMore', { names: previewNames.join('、'), count });
   }
 
   // ✨ 批量已读逻辑
@@ -140,10 +141,10 @@
       if (isSuccess(response) && response.data) {
         group = response.data;
       } else {
-        toast.error(response.message || '群组不存在');
+        toast.error(response.message || t('chat.groupNotFound'));
       }
     } catch {
-      if (isMounted) toast.error('加载群组失败');
+      if (isMounted) toast.error(t('chat.loadGroupFailed'));
     }
   }
 
@@ -191,7 +192,7 @@
         // ✅ 不再立即标记已读，等待消息可见时自动标记
       }
     } catch {
-      if (isMounted) toast.error('加载消息失败');
+      if (isMounted) toast.error(t('chat.loadMessagesFailed'));
     } finally {
       if (loadMore) {
         isLoadingMore = false;
@@ -220,7 +221,7 @@
     const text = messageText.trim();
     if (!text || !canSendMessage) return;
     if (text.length > MESSAGE_CONTENT_MAX) {
-      toast.error(`消息内容最多 ${MESSAGE_CONTENT_MAX} 字符`);
+      toast.error(t('chat.contentMaxLength', { count: MESSAGE_CONTENT_MAX }));
       return;
     }
 
@@ -231,7 +232,7 @@
       const mentions = extractMentions(text);
       if (mentions.length > MESSAGE_MENTIONS_MAX) {
         messageText = text;
-        toast.error(`@ 提及最多 ${MESSAGE_MENTIONS_MAX} 人`);
+        toast.error(t('chat.mentionsMax', { count: MESSAGE_MENTIONS_MAX }));
         return;
       }
 
@@ -244,7 +245,7 @@
 
       if (!isSuccess(response)) {
         messageText = text;
-        toast.error(response.message || '发送失败');
+        toast.error(response.message || t('chat.sendFailed'));
       } else {
         // 发送成功后滚动到底部并重新聚焦输入框
         await tick();
@@ -253,7 +254,7 @@
       }
     } catch {
       messageText = text;
-      toast.error('发送失败');
+      toast.error(t('chat.sendFailed'));
     } finally {
       eventHandlers.sendGroupTyping(groupId, false);
       isSending = false;
@@ -283,13 +284,13 @@
     const now = new Date();
 
     if (date.toDateString() === now.toDateString()) {
-      return '今天';
+      return t('chat.today');
     }
 
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
     if (date.toDateString() === yesterday.toDateString()) {
-      return '昨天';
+      return t('chat.yesterday');
     }
 
     return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -458,7 +459,7 @@
 
     const unsubscribeMemberJoined = websocketStore.on('GroupMemberJoined', (payload) => {
       if (payload.group_id === groupId) {
-        toast.success(`${payload.user.nickname} 加入了群组`);
+        toast.success(t('chat.memberJoined', { nickname: payload.user.nickname }));
         if (group) {
           group = { ...group, group: { ...group.group, members_count: payload.member_count } };
         }
@@ -590,7 +591,7 @@
       onSubscribeFailed: () => {
         if (cancelled) return;
         if (dev) console.warn('[GroupChat] ❌ 订阅失败，将在重连后重试');
-        toast.warning('消息订阅失败，正在重试...');
+        toast.warning(t('chat.subscribeFailedRetrying'));
       }
     });
 
@@ -601,7 +602,7 @@
 </script>
 
 <svelte:head>
-  <title>{group?.group.name ?? '群聊'} - HotSpot</title>
+  <title>{t('chat.groupPageTitle', { name: group?.group.name ?? t('chat.groupChat') })}</title>
 </svelte:head>
 
 <!-- 聊天容器 - Neumorphic 风格 -->
@@ -645,7 +646,7 @@
             {group.group.name}
           </div>
           <div class="text-caption truncate" style="color: var(--text-secondary)">
-            {group.group.members_count} 位成员
+            {t('chat.memberCountFull', { count: group.group.members_count })}
           </div>
         </div>
       </a>
@@ -654,7 +655,7 @@
     <button
       class="surface-flat flex shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
       style="width: 36px; height: 36px;"
-      aria-label="更多选项"
+      aria-label={t('chat.moreOptionsAria')}
     >
       <MoreVertical size={15} strokeWidth={1.5} color="var(--text-secondary)" />
     </button>
@@ -695,7 +696,7 @@
             style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary);"
             onclick={() => loadMessages(true)}
           >
-            加载更多消息
+            {t('chat.loadMoreMessages')}
           </button>
         </div>
       {/if}
@@ -719,9 +720,9 @@
               class="text-body-lg"
               style="font-weight: 500; color: var(--text-primary); margin-bottom: 4px"
             >
-              还没有消息
+              {t('chat.noMessagesYet')}
             </p>
-            <p class="text-body" style="color: var(--text-secondary)">发送第一条消息开始聊天</p>
+            <p class="text-body" style="color: var(--text-secondary)">{t('chat.sendFirstMessage')}</p>
           </div>
         </div>
       {:else}
@@ -800,14 +801,14 @@
                       <div class="text-body flex items-center gap-2">
                         <MapPin size={14} style="flex-shrink: 0;" color="var(--text-secondary)" />
                         <div>
-                          <p style="font-weight: 500;">分享消息</p>
+                          <p style="font-weight: 500;">{t('chat.shareMessage')}</p>
                           {#if message.share_code}
                             <a
                               href="/share/{message.share_code}"
                               class="text-meta"
                               style="opacity: 0.8; color: var(--brand)"
                             >
-                              查看分享内容
+                              {t('chat.viewShare')}
                             </a>
                           {/if}
                         </div>
@@ -837,7 +838,7 @@
         class="fixed bottom-24 right-6 z-10 flex items-center justify-center rounded-full outline-none"
         style="width: 36px; height: 36px; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
         onclick={() => scrollToBottom(true)}
-        aria-label="滚动到底部"
+        aria-label={t('chat.scrollToBottomAria')}
       >
         <ChevronDown size={20} />
       </button>
@@ -868,9 +869,9 @@
         >
           <Loader2 class="h-4 w-4 animate-spin" />
           {#if wsSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
-            实时消息连接中（不影响发送）
+            {t('chat.realtimeConnectingFull')}
           {:else}
-            实时订阅重试中（不影响发送）
+            {t('chat.realtimeRetryingFull')}
           {/if}
         </p>
       </div>
@@ -881,7 +882,7 @@
         class="rounded-[var(--radius-md)] px-4 py-3 text-center"
         style="border: 1px solid var(--border-theme);"
       >
-        <p class="text-body" style="color: var(--text-secondary)">你还不是群成员，无法发送消息</p>
+        <p class="text-body" style="color: var(--text-secondary)">{t('chat.notMember')}</p>
       </div>
     {:else if group?.my_state?.is_muted}
       <div
@@ -889,9 +890,9 @@
         style="border: 1px solid var(--border-theme);"
       >
         <p class="text-body" style="color: var(--text-secondary)">
-          你已被禁言，无法发送消息
+          {t('chat.mutedCannotSend')}
           {#if group?.my_state?.muted_until}
-            （至 {new Date(group.my_state.muted_until).toLocaleString()}）
+            {t('chat.mutedUntilSuffix', { time: new Date(group.my_state.muted_until).toLocaleString() })}
           {/if}
         </p>
       </div>
@@ -900,7 +901,7 @@
         <textarea
           {@attach autofocus(shouldFocusInput)}
           {@attach useKeyboardFocus()}
-          placeholder="发送消息..."
+          placeholder={t('chat.sendPlaceholder')}
           bind:value={messageText}
           rows={1}
           maxlength={MESSAGE_CONTENT_MAX}
@@ -925,7 +926,7 @@
           onclick={sendMessage}
           onmousedown={(e) => e.preventDefault()}
           disabled={!messageText.trim() || isSending}
-          aria-label="发送消息"
+          aria-label={t('chat.sendAria')}
         >
           {#if isSending}
             <Loader2 class="h-5 w-5 animate-spin" />
@@ -953,13 +954,13 @@
       class="absolute right-4 top-4 flex items-center justify-center rounded-full outline-none"
       style="width: 40px; height: 40px; background: var(--theme-surface-glass); color: var(--text-on-overlay);"
       onclick={closeImagePreview}
-      aria-label="关闭图片预览"
+      aria-label={t('chat.closeImagePreviewAria')}
     >
       <X size={24} />
     </button>
     <img
       src={selectedImage}
-      alt="预览"
+      alt={t('chat.preview')}
       class="max-h-full max-w-full rounded-[var(--radius-sm)] object-contain"
       onclick={(e) => e.stopPropagation()}
       role="presentation"

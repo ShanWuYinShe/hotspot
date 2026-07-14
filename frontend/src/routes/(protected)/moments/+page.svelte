@@ -9,6 +9,7 @@
   import SmartImage from '$lib/components/common/smart-image.svelte';
   import type { MomentItem } from '$lib/types/api';
   import { formatDate } from '$lib/utils/format';
+  import { t } from '$lib/i18n';
   import Plus from 'lucide-svelte/icons/plus';
   import Image from 'lucide-svelte/icons/image';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
@@ -32,7 +33,7 @@
 </script>
 
 <svelte:head>
-  <title>我的瞬间 - HotSpot</title>
+  <title>{t('momentsMine.title')} - HotSpot</title>
 </svelte:head>
 
 <div class="flex flex-col">
@@ -44,7 +45,7 @@
     <div class="page-shell">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="page-title" style="color: var(--text-primary);">我的瞬间</h1>
+          <h1 class="page-title" style="color: var(--text-primary);">{t('momentsMine.title')}</h1>
         </div>
         <div class="flex gap-2">
           <button
@@ -54,7 +55,7 @@
             disabled={pagination.loading}
           >
             <RefreshCw size={13} class={pagination.loading ? 'animate-spin' : ''} />
-            刷新
+            {t('momentsMine.refresh')}
           </button>
           <button
             class="text-meta flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
@@ -62,7 +63,7 @@
             onclick={() => (showCreateMoment = true)}
           >
             <Plus size={13} />
-            发布
+            {t('momentsMine.publish')}
           </button>
         </div>
       </div>
@@ -76,18 +77,18 @@
       {:else if pagination.error}
         <EmptyState
           icon={AlertTriangle}
-          title="加载失败"
+          title={t('momentsMine.loadFailed')}
           description={pagination.error}
-          actionText="重试"
+          actionText={t('momentsMine.retry')}
           onAction={() => loadMoments(true)}
           fill
         />
       {:else if pagination.items.length === 0}
         <EmptyState
           icon={Image}
-          title="还没有瞬间"
-          description="发布你的第一个瞬间吧"
-          actionText="发布瞬间"
+          title={t('momentsMine.emptyTitle')}
+          description={t('momentsMine.emptyDesc')}
+          actionText={t('momentsMine.publishMoment')}
           onAction={() => (showCreateMoment = true)}
           fill
         />
@@ -116,7 +117,7 @@
                         <SmartImage
                           src={image.url}
                           thumbnail={image.thumbnail_url}
-                          alt="图片 {i + 1}"
+                          alt={t('momentsMine.imageAlt', { index: i + 1 })}
                           width={image.width || 80}
                           height={image.height || 80}
                           sizes="80px"
@@ -137,9 +138,9 @@
                     class="text-meta mt-3 flex items-center gap-4"
                     style="color: var(--text-secondary)"
                   >
-                    <span>{moment.likes_count} 点赞</span>
-                    <span>{moment.comments_count} 评论</span>
-                    <span>{moment.shares_count} 分享</span>
+                    <span>{moment.likes_count} {t('momentsMine.likesLabel')}</span>
+                    <span>{moment.comments_count} {t('momentsMine.commentsLabel')}</span>
+                    <span>{moment.shares_count} {t('momentsMine.sharesLabel')}</span>
                     <span>{formatDate(moment.created_at)}</span>
                   </div>
                 </a>
