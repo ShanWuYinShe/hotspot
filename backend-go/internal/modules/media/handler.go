@@ -1,7 +1,6 @@
 package media
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -28,7 +27,7 @@ func logBusinessError(r *http.Request, method string, code int, message string) 
 
 func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
 	var req PresignUploadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		logBusinessError(r, "PresignUpload", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -49,7 +48,7 @@ func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) BatchPresignUpload(w http.ResponseWriter, r *http.Request) {
 	var req BatchPresignUploadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || len(req.Files) == 0 || len(req.Files) > 9 {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || len(req.Files) == 0 || len(req.Files) > 9 {
 		logBusinessError(r, "BatchPresignUpload", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -75,7 +74,7 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req CompleteUploadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UploadID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UploadID == "" {
 		logBusinessError(r, "CompleteUpload", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return

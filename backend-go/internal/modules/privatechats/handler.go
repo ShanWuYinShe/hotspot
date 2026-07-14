@@ -1,7 +1,6 @@
 package privatechats
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -22,7 +21,7 @@ func NewHandler(service *Service, appConfig appconfig.Source) *Handler {
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req MyPrivateChatsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -41,7 +40,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	var req OpenTheDoorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.TargetUserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetUserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -56,7 +55,7 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	var req UpdatePrivateChatSettingsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.TargetUserID == "" || (req.IsMuted == nil && req.IsPinned == nil) {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetUserID == "" || (req.IsMuted == nil && req.IsPinned == nil) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -69,7 +68,7 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	var req DeletePrivateChatRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.TargetUserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetUserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}

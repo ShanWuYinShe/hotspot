@@ -1,7 +1,6 @@
 package comments
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -25,7 +24,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req CreateCommentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" || req.Content == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" || req.Content == "" {
 		logBusinessError(r, "Create", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -50,7 +49,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req ListCommentsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
 		logBusinessError(r, "List", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -71,7 +70,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	var req DeleteCommentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.CommentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.CommentID == "" {
 		logBusinessError(r, "Delete", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -97,7 +96,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListReplies(w http.ResponseWriter, r *http.Request) {
 	var req CommentRepliesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.CommentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.CommentID == "" {
 		logBusinessError(r, "ListReplies", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -118,7 +117,7 @@ func (h *Handler) ListReplies(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Like(w http.ResponseWriter, r *http.Request) {
 	var req LikeCommentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.CommentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.CommentID == "" {
 		logBusinessError(r, "Like", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -139,7 +138,7 @@ func (h *Handler) Like(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Unlike(w http.ResponseWriter, r *http.Request) {
 	var req UnlikeCommentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.CommentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.CommentID == "" {
 		logBusinessError(r, "Unlike", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -160,7 +159,7 @@ func (h *Handler) Unlike(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListLikes(w http.ResponseWriter, r *http.Request) {
 	var req CommentLikesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.CommentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.CommentID == "" {
 		logBusinessError(r, "ListLikes", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return

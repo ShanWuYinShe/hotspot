@@ -1,7 +1,6 @@
 package moments
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/geo"
@@ -33,7 +32,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req CreateMomentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Description == "" || (req.Location.Point.Latitude == 0 && req.Location.Point.Longitude == 0 && req.Location.LocationName == "") {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Description == "" || (req.Location.Point.Latitude == 0 && req.Location.Point.Longitude == 0 && req.Location.LocationName == "") {
 		logBusinessError(r, "Create", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -56,7 +55,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	var req MomentOpenTheDoorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
 		logBusinessError(r, "OpenTheDoor", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -77,7 +76,7 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 	var req MyMomentsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		logBusinessError(r, "ListMine", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -93,7 +92,7 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	var req SearchMomentsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		logBusinessError(r, "Search", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -123,7 +122,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var req EditMomentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
 		logBusinessError(r, "Update", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -149,7 +148,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	var req DeleteMomentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
 		logBusinessError(r, "Delete", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -174,7 +173,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Like(w http.ResponseWriter, r *http.Request) {
 	var req LikeMomentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
 		logBusinessError(r, "Like", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -194,7 +193,7 @@ func (h *Handler) Like(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Unlike(w http.ResponseWriter, r *http.Request) {
 	var req UnlikeMomentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
 		logBusinessError(r, "Unlike", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -214,7 +213,7 @@ func (h *Handler) Unlike(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Favorite(w http.ResponseWriter, r *http.Request) {
 	var req FavoriteMomentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
 		logBusinessError(r, "Favorite", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -234,7 +233,7 @@ func (h *Handler) Favorite(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Unfavorite(w http.ResponseWriter, r *http.Request) {
 	var req UnfavoriteMomentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
 		logBusinessError(r, "Unfavorite", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -254,7 +253,7 @@ func (h *Handler) Unfavorite(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListLikes(w http.ResponseWriter, r *http.Request) {
 	var req ListLikesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
 		logBusinessError(r, "ListLikes", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -275,7 +274,7 @@ func (h *Handler) ListLikes(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListFavorites(w http.ResponseWriter, r *http.Request) {
 	var req MyFavoritesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		logBusinessError(r, "ListFavorites", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return

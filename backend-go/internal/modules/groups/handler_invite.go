@@ -1,7 +1,6 @@
 package groups
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -10,7 +9,7 @@ import (
 
 func (h *Handler) ListMyInvites(w http.ResponseWriter, r *http.Request) {
 	var req MyInvitesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -32,7 +31,7 @@ func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req AcceptInviteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.InviteID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.InviteID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -53,7 +52,7 @@ func (h *Handler) RejectInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req RejectInviteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.InviteID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.InviteID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -77,7 +76,7 @@ func (h *Handler) InviteMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req InviteMemberRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.UserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -101,7 +100,7 @@ func (h *Handler) InviteMember(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListSentInvites(w http.ResponseWriter, r *http.Request) {
 	var req GroupSentInvitesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -127,7 +126,7 @@ func (h *Handler) ListSentInvites(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 	var req RevokeSentInviteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.InviteID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.InviteID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}

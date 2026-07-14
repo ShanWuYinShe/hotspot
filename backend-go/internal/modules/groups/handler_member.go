@@ -1,7 +1,6 @@
 package groups
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -10,7 +9,7 @@ import (
 
 func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	var req GroupApplicationsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -40,7 +39,7 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req ApproveGroupApplicationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ApplicationID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.ApplicationID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -67,7 +66,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req RejectGroupApplicationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ApplicationID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.ApplicationID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -90,7 +89,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
 	var req SetMemberRoleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.UserID == "" || req.Role == "" || (req.Role != GroupRoleAdmin && req.Role != GroupRoleMember) {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" || req.Role == "" || (req.Role != GroupRoleAdmin && req.Role != GroupRoleMember) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -111,7 +110,7 @@ func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) MuteMember(w http.ResponseWriter, r *http.Request) {
 	var req MuteMemberRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.UserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -132,7 +131,7 @@ func (h *Handler) MuteMember(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UnmuteMember(w http.ResponseWriter, r *http.Request) {
 	var req UnmuteMemberRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.UserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -157,7 +156,7 @@ func (h *Handler) BanMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req BanMemberRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.UserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -177,7 +176,7 @@ func (h *Handler) BanMember(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UnbanMember(w http.ResponseWriter, r *http.Request) {
 	var req UnbanMemberRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.UserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -198,7 +197,7 @@ func (h *Handler) UnbanMember(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListBannedMembers(w http.ResponseWriter, r *http.Request) {
 	var req BannedMembersRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -224,7 +223,7 @@ func (h *Handler) ListBannedMembers(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	var req RemoveMemberRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.UserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -245,7 +244,7 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) TransferOwnership(w http.ResponseWriter, r *http.Request) {
 	var req TransferOwnershipRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.NewOwnerID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.NewOwnerID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}

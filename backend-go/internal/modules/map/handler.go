@@ -1,7 +1,6 @@
 package mapmodule
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -29,7 +28,7 @@ func isValidMapDataType(dataType string) bool {
 
 func (h *Handler) Canvas(w http.ResponseWriter, r *http.Request) {
 	var req MapCanvasRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}

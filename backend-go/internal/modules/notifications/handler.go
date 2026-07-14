@@ -1,7 +1,6 @@
 package notifications
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -19,7 +18,7 @@ func NewHandler(service *Service) *Handler {
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req NotificationListRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -60,7 +59,7 @@ func (h *Handler) UnreadCount(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	var req MarkAsReadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || len(req.NotificationIDs) == 0 || len(req.NotificationIDs) > 100 {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || len(req.NotificationIDs) == 0 || len(req.NotificationIDs) > 100 {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}

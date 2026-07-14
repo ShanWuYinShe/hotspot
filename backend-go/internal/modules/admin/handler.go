@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -73,7 +72,7 @@ func (h *Handler) CreateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req AdminRbacRoleCreateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -93,7 +92,7 @@ func (h *Handler) CreateRole(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 	var req AdminRbacRoleUpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -111,7 +110,7 @@ func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 	var req AdminRbacRoleDeleteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -129,7 +128,7 @@ func (h *Handler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SetRolePermissions(w http.ResponseWriter, r *http.Request) {
 	var req AdminRbacRoleSetPermissionsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -147,7 +146,7 @@ func (h *Handler) SetRolePermissions(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListAdmins(w http.ResponseWriter, r *http.Request) {
 	var req AdminRbacAdminsListRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -169,7 +168,7 @@ func (h *Handler) GrantAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req AdminRbacGrantAdminRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -189,7 +188,7 @@ func (h *Handler) GrantAdmin(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) RevokeAdmin(w http.ResponseWriter, r *http.Request) {
 	var req AdminRbacRevokeAdminRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -207,7 +206,7 @@ func (h *Handler) RevokeAdmin(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListAuditLogs(w http.ResponseWriter, r *http.Request) {
 	var req AuditLogListRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -225,7 +224,7 @@ func (h *Handler) ListAuditLogs(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) OpenAuditLog(w http.ResponseWriter, r *http.Request) {
 	var req AuditLogOpenTheDoorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -243,7 +242,7 @@ func (h *Handler) OpenAuditLog(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	var req AdminUserSearchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -261,7 +260,7 @@ func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) OpenAdminUser(w http.ResponseWriter, r *http.Request) {
 	var req AdminUserOpenTheDoorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -283,7 +282,7 @@ func (h *Handler) BanUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req AdminBanUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -303,7 +302,7 @@ func (h *Handler) BanUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UnbanUser(w http.ResponseWriter, r *http.Request) {
 	var req AdminUnbanUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -321,7 +320,7 @@ func (h *Handler) UnbanUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SearchGroups(w http.ResponseWriter, r *http.Request) {
 	var req AdminGroupSearchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -339,7 +338,7 @@ func (h *Handler) SearchGroups(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) OpenAdminGroup(w http.ResponseWriter, r *http.Request) {
 	var req AdminGroupOpenTheDoorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -361,7 +360,7 @@ func (h *Handler) DismissGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req AdminDismissGroupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -381,7 +380,7 @@ func (h *Handler) DismissGroup(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SearchReports(w http.ResponseWriter, r *http.Request) {
 	var req AdminReportSearchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -403,7 +402,7 @@ func (h *Handler) HandleReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req AdminReportHandleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -440,7 +439,7 @@ func (h *Handler) GetAppConfig(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateAppConfig(w http.ResponseWriter, r *http.Request) {
 	var req UpdateAppConfigRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -459,7 +458,7 @@ func (h *Handler) UpdateAppConfig(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SearchTags(w http.ResponseWriter, r *http.Request) {
 	var req AdminTagSearchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -477,7 +476,7 @@ func (h *Handler) SearchTags(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteTag(w http.ResponseWriter, r *http.Request) {
 	var req AdminDeleteTagRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -495,7 +494,7 @@ func (h *Handler) DeleteTag(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SearchAnnouncements(w http.ResponseWriter, r *http.Request) {
 	var req AdminAnnouncementSearchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -517,7 +516,7 @@ func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req CreateAnnouncementRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -538,7 +537,7 @@ func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	var req UpdateAnnouncementRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
@@ -556,7 +555,7 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 	var req DeleteAnnouncementRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}

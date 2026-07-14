@@ -1,7 +1,6 @@
 package users
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -11,7 +10,7 @@ import (
 
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	var req SearchUsersRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -30,7 +29,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	var req UserOpenTheDoorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -48,7 +47,7 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	var req UserProfileBundleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -66,7 +65,7 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
 	var req UpdateLocationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Location.LocationName == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Location.LocationName == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -169,7 +168,7 @@ func (h *Handler) ConfirmPhoneChange(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
 	var req UpgradeAccountRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.LoginID == "" || req.Password == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.LoginID == "" || req.Password == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -199,7 +198,7 @@ func isValidLoginID(loginID string) bool {
 
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	var req DeleteAccountRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Confirmation != "DELETE_MY_ACCOUNT" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Confirmation != "DELETE_MY_ACCOUNT" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -212,7 +211,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 	var req FollowRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -227,7 +226,7 @@ func (h *Handler) Unfollow(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Handler) Block(w http.ResponseWriter, r *http.Request) {
 	var req BlockRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -242,7 +241,7 @@ func (h *Handler) Unblock(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Handler) ListBlocked(w http.ResponseWriter, r *http.Request) {
 	var req MyBlockedRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -255,7 +254,7 @@ func (h *Handler) ListBlocked(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Handler) SetRemark(w http.ResponseWriter, r *http.Request) {
 	var req SetRemarkRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -268,7 +267,7 @@ func (h *Handler) SetRemark(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListLikedMoments(w http.ResponseWriter, r *http.Request) {
 	var req UserLikedMomentsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -282,7 +281,7 @@ func (h *Handler) ListLikedMoments(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListFriends(w http.ResponseWriter, r *http.Request) {
 	var req ListFriendsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -296,7 +295,7 @@ func (h *Handler) ListFriends(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListFollowing(w http.ResponseWriter, r *http.Request) {
 	var req ListFollowingRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -310,7 +309,7 @@ func (h *Handler) ListFollowing(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListFollowers(w http.ResponseWriter, r *http.Request) {
 	var req ListFollowersRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -324,7 +323,7 @@ func (h *Handler) ListFollowers(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListGroups(w http.ResponseWriter, r *http.Request) {
 	var req UserGroupsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -338,7 +337,7 @@ func (h *Handler) ListGroups(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListMoments(w http.ResponseWriter, r *http.Request) {
 	var req UserMomentsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -352,7 +351,7 @@ func (h *Handler) ListMoments(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) toggleUser(r *http.Request, w http.ResponseWriter, method string, fn func(string) error) {
 	var req ToggleUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}

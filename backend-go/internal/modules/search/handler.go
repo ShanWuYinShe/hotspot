@@ -1,7 +1,6 @@
 package search
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -26,7 +25,7 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 		Types  []string `json:"types,omitempty"`
 		Radius int      `json:"radius,omitempty"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &body); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -74,7 +73,7 @@ func (h *Handler) SearchAll(w http.ResponseWriter, r *http.Request) {
 		ReferencePoint *GeoPoint `json:"reference_point"`
 		Pagination     *PaginationParams `json:"pagination,omitempty"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &body); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}

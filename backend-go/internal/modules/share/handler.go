@@ -1,7 +1,6 @@
 package share
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -29,7 +28,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req CreateShareRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		logBusinessError(r, "Create", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -53,7 +52,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	var req GetShareRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		logBusinessError(r, "Get", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -78,7 +77,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req ShareListRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		logBusinessError(r, "List", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -100,7 +99,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Revoke(w http.ResponseWriter, r *http.Request) {
 	var req RevokeShareRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		logBusinessError(r, "Revoke", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return

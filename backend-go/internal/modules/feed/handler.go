@@ -1,7 +1,6 @@
 package feed
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -18,7 +17,7 @@ func NewHandler(service *Service) *Handler {
 
 func (h *Handler) ListMoments(w http.ResponseWriter, r *http.Request) {
 	var req ListFeedMomentsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -32,7 +31,7 @@ func (h *Handler) ListMoments(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListGroups(w http.ResponseWriter, r *http.Request) {
 	var req ListFeedGroupsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -46,7 +45,7 @@ func (h *Handler) ListGroups(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	var req ListFeedUsersRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -60,7 +59,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListTrending(w http.ResponseWriter, r *http.Request) {
 	var req struct{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -74,7 +73,7 @@ func (h *Handler) ListTrending(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Dismiss(w http.ResponseWriter, r *http.Request) {
 	var req DismissFeedItemRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}

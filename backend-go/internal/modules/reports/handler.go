@@ -1,7 +1,6 @@
 package reports
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -28,7 +27,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req CreateReportRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.TargetType == "" || req.TargetID == "" || req.Reason == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetType == "" || req.TargetID == "" || req.Reason == "" {
 		logBusinessError(r, "Create", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -57,7 +56,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req MyReportsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		logBusinessError(r, "List", 10000, "请求体格式错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return

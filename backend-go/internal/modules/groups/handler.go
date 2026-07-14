@@ -1,7 +1,6 @@
 package groups
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -24,7 +23,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req CreateGroupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" || req.Location.LocationName == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Name == "" || req.Location.LocationName == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -39,7 +38,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	var req GroupOpenTheDoorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -62,7 +61,7 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	var req SearchGroupsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -98,7 +97,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var req UpdateGroupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -127,7 +126,7 @@ func (h *Handler) Dismiss(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req DismissGroupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -147,7 +146,7 @@ func (h *Handler) Dismiss(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	var req GroupMembersRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -169,7 +168,7 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 	var req SearchGroupMembersRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.Keyword == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.Keyword == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -191,7 +190,7 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListMyGroups(w http.ResponseWriter, r *http.Request) {
 	var req MyGroupsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -213,7 +212,7 @@ func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req JoinGroupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -247,7 +246,7 @@ func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req CreateGroupAnnouncementRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.Title == "" || req.Content == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.Title == "" || req.Content == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -268,7 +267,7 @@ func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 	var req GroupAnnouncementsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -287,7 +286,7 @@ func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	var req UpdateGroupAnnouncementRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.AnnouncementID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.AnnouncementID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -308,7 +307,7 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 	var req DeleteGroupAnnouncementRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.AnnouncementID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.AnnouncementID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -329,7 +328,7 @@ func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
 	var req UpdateGroupMySettingsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -354,7 +353,7 @@ func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) LeaveGroup(w http.ResponseWriter, r *http.Request) {
 	var req LeaveGroupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -379,7 +378,7 @@ func (h *Handler) LeaveGroup(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListMyApplications(w http.ResponseWriter, r *http.Request) {
 	var req MyApplicationsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -397,7 +396,7 @@ func (h *Handler) ListMyApplications(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 	var req CancelApplicationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ApplicationID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.ApplicationID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
