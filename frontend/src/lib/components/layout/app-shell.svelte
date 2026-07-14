@@ -126,9 +126,7 @@
 
       <!-- Main content card -->
       <main class="desktop-main-card page-enter">
-        <div class="h-full overflow-y-auto no-scrollbar">
-          {@render gated()}
-        </div>
+        {@render gated()}
       </main>
     </div>
   </div>
