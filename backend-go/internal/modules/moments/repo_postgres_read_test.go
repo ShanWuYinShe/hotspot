@@ -134,34 +134,6 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 		item := b.moments[momentID]
 		item.SharesCount++
 		b.moments[momentID] = item
-	case queryInsertMomentLike:
-		momentID := args[0].(string)
-		userID := args[1].(string)
-		likedAt := args[2].(time.Time).UTC().Format(time.RFC3339)
-		if b.likes[momentID] == nil {
-			b.likes[momentID] = make(map[string]string)
-		}
-		if _, exists := b.likes[momentID][userID]; !exists {
-			b.likes[momentID][userID] = likedAt
-		}
-	case queryDeleteMomentLike:
-		momentID := args[0].(string)
-		userID := args[1].(string)
-		if b.likes[momentID] != nil {
-			delete(b.likes[momentID], userID)
-		}
-	case queryIncrementMomentLikeCount:
-		momentID := args[0].(string)
-		item := b.moments[momentID]
-		item.LikesCount++
-		b.moments[momentID] = item
-	case queryDecrementMomentLikeCount:
-		momentID := args[0].(string)
-		item := b.moments[momentID]
-		if item.LikesCount > 0 {
-			item.LikesCount--
-		}
-		b.moments[momentID] = item
 	case queryInsertMomentFavorite:
 		userID := args[0].(string)
 		momentID := args[1].(string)
@@ -451,50 +423,6 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		for _, row := range favoriteRows {
 			item := row.moment
 			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, row.favoritedAt})
-		}
-		return &rowsValues{rows: rows}, nil
-	case querySearchMoments, querySearchMomentsAll:
-		var keywordStr string
-		if args[0] != nil {
-			if kp, ok := args[0].(*string); ok && kp != nil {
-				keywordStr = *kp
-			}
-		}
-		var tagFilter string
-		if args[1] != nil {
-			if tp, ok := args[1].(*string); ok && tp != nil {
-				tagFilter = *tp
-			}
-		}
-		limit := -1
-		if query == querySearchMoments {
-			limit = args[2].(int)
-		}
-		items := make([]MomentItem, 0)
-		for _, item := range b.moments {
-			if item.PrivacyLevel != "public" {
-				continue
-			}
-			if keywordStr != "" && !containsTagInDescription(item.Description, keywordStr) {
-				continue
-			}
-			if tagFilter != "" && !containsTag(item.Tags, tagFilter) {
-				continue
-			}
-			items = append(items, item)
-		}
-		sort.Slice(items, func(i, j int) bool {
-			if items[i].CreatedAt == items[j].CreatedAt {
-				return items[i].MomentID > items[j].MomentID
-			}
-			return items[i].CreatedAt > items[j].CreatedAt
-		})
-		if limit >= 0 && len(items) > limit {
-			items = items[:limit]
-		}
-		rows := make([][]any, 0, len(items))
-		for _, item := range items {
-			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel})
 		}
 		return &rowsValues{rows: rows}, nil
 	default:

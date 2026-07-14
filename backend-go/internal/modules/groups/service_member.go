@@ -16,11 +16,7 @@ func (s *Service) ListApplications(ctx context.Context, req GroupApplicationsReq
 	if !ok {
 		return nil, "", ErrGroupNotFound
 	}
-	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		if principal.UserID == "" {
-			return nil, "", ErrAccessRestricted
-		}
 		return nil, "", ErrAccessRestricted
 	}
 	limit := paginationLimit(req.Pagination, 20, 100)
@@ -68,7 +64,6 @@ func (s *Service) SetMemberRole(ctx context.Context, req SetMemberRoleRequest) e
 	if req.Role != GroupRoleAdmin && req.Role != GroupRoleMember {
 		return ErrAccessRestricted
 	}
-	_ = principal
 	return s.repo.SetMemberRole(ctx, principal.UserID, req)
 }
 
@@ -87,7 +82,6 @@ func (s *Service) MuteMember(ctx context.Context, req MuteMemberRequest) error {
 	if req.DurationMinutes < 1 || req.DurationMinutes > MaxMuteDurationMinutes {
 		return ErrAccessRestricted
 	}
-	_ = principal
 	if err := s.repo.MuteMember(ctx, principal.UserID, req); err != nil {
 		return err
 	}
@@ -118,7 +112,6 @@ func (s *Service) UnmuteMember(ctx context.Context, req UnmuteMemberRequest) err
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
 		return ErrAccessRestricted
 	}
-	_ = principal
 	if err := s.repo.UnmuteMember(ctx, principal.UserID, req); err != nil {
 		return err
 	}
@@ -151,7 +144,6 @@ func (s *Service) BanMember(ctx context.Context, req BanMemberRequest) error {
 	if req.UserID == principal.UserID {
 		return ErrAccessRestricted
 	}
-	_ = principal
 	if err := s.repo.BanMember(ctx, principal.UserID, req); err != nil {
 		return err
 	}
@@ -183,12 +175,10 @@ func (s *Service) UnbanMember(ctx context.Context, req UnbanMemberRequest) error
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
 		return ErrAccessRestricted
 	}
-	_ = principal
 	return s.repo.UnbanMember(ctx, principal.UserID, req)
 }
 
 func (s *Service) ListBannedMembers(ctx context.Context, req BannedMembersRequest) ([]BannedMemberItem, string, error) {
-	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if !ok {
 		if err != nil {
@@ -200,7 +190,6 @@ func (s *Service) ListBannedMembers(ctx context.Context, req BannedMembersReques
 		return nil, "", ErrAccessRestricted
 	}
 	limit := paginationLimit(req.Pagination, 20, 100)
-	_ = principal
 	return s.repo.ListBannedMembers(ctx, req.GroupID, limit, paginationCursor(req.Pagination))
 }
 
@@ -219,7 +208,6 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 	if req.UserID == principal.UserID {
 		return ErrAccessRestricted
 	}
-	_ = principal
 	if err := s.repo.RemoveMember(ctx, principal.UserID, req); err != nil {
 		return err
 	}
@@ -272,7 +260,6 @@ func (s *Service) TransferOwnership(ctx context.Context, req TransferOwnershipRe
 		return ErrTargetNotMember
 	}
 
-	_ = principal
 	return s.repo.TransferOwnership(ctx, principal.UserID, req)
 }
 
