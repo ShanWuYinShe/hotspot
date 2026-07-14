@@ -66,10 +66,7 @@
         class="text-body rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
         style="background: {variant === 'destructive'
           ? 'var(--error)'
-          : 'var(--brand)'}; color: var(--text-on-accent); box-shadow: 0 3px 10px {variant ===
-        'destructive'
-          ? 'var(--theme-error-border)'
-          : 'var(--glow)'}"
+          : 'var(--brand)'}; color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
         onclick={handleConfirm}
         disabled={loading}
       >

@@ -9,6 +9,7 @@
   import { presenceStore } from '$lib/stores/presence.svelte';
   import { messageStore } from '$lib/stores/message.svelte';
   import type { PrivateChatItem, GroupItem } from '$lib/types/api';
+  import { PAGE_SIZE } from '$lib/config/pagination';
   import Search from 'lucide-svelte/icons/search';
   import UserPlus from 'lucide-svelte/icons/user-plus';
   import Plus from 'lucide-svelte/icons/plus';
@@ -25,7 +26,7 @@
   async function loadPrivateChats() {
     try {
       const response = await withMinimumLoadingTime(() =>
-        privateChatsService.getChats({ pagination: { limit: 50 } })
+        privateChatsService.getChats({ pagination: { limit: PAGE_SIZE.chat } })
       );
       if (isSuccess(response) && response.data) {
         privateChats = response.data.items;
@@ -43,7 +44,7 @@
     isLoadingGroup = true;
     try {
       const response = await withMinimumLoadingTime(() =>
-        groupsService.getMyGroups({ pagination: { limit: 50 } })
+        groupsService.getMyGroups({ pagination: { limit: PAGE_SIZE.chat } })
       );
       if (isSuccess(response) && response.data) {
         groupChats = response.data.items;
@@ -110,14 +111,14 @@
     </div>
     <div class="flex gap-1.5">
       <button
-        class="flex items-center justify-center rounded-full outline-none"
-        style="width: 32px; height: 32px; background: var(--surface-bg); box-shadow: 4px 4px 9px var(--shadow-dark), -4px -4px 9px var(--shadow-light); border: 1px solid var(--border-theme);"
+        class="surface-flat flex items-center justify-center rounded-full outline-none"
+        style="width: 32px; height: 32px;"
       >
         <UserPlus size={14} strokeWidth={1.5} color="var(--text-secondary)" />
       </button>
       <button
-        class="flex items-center justify-center rounded-full outline-none"
-        style="width: 32px; height: 32px; background: var(--surface-bg); box-shadow: 4px 4px 9px var(--shadow-dark), -4px -4px 9px var(--shadow-light); border: 1px solid var(--border-theme);"
+        class="surface-flat flex items-center justify-center rounded-full outline-none"
+        style="width: 32px; height: 32px;"
       >
         <Plus size={14} strokeWidth={1.5} color="var(--text-secondary)" />
       </button>

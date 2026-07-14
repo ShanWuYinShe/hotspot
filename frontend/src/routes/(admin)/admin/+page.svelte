@@ -9,6 +9,7 @@
     adminAuditService
   } from '$lib/api/services/admin';
   import AdminPageHeader from '$lib/components/common/admin-page-header.svelte';
+  import { PAGE_SIZE } from '$lib/config/pagination';
   import Users from 'lucide-svelte/icons/users';
   import UsersRound from 'lucide-svelte/icons/users-round';
   import FileText from 'lucide-svelte/icons/file-text';
@@ -22,28 +23,28 @@
 
   async function loadStats() {
     const [usersRes, groupsRes, reportsRes, auditRes, healthRes] = await Promise.allSettled([
-      adminUsersService.search({ pagination: { limit: 50 } }),
-      adminGroupsService.search({ pagination: { limit: 50 } }),
-      adminReportsService.search({ status: 'pending', pagination: { limit: 50 } }),
-      adminAuditService.getList({ pagination: { limit: 50 } }),
+      adminUsersService.search({ pagination: { limit: PAGE_SIZE.admin } }),
+      adminGroupsService.search({ pagination: { limit: PAGE_SIZE.admin } }),
+      adminReportsService.search({ status: 'pending', pagination: { limit: PAGE_SIZE.admin } }),
+      adminAuditService.getList({ pagination: { limit: PAGE_SIZE.admin } }),
       systemService.health()
     ]);
 
     if (usersRes.status === 'fulfilled' && isSuccess(usersRes.value)) {
       const items = usersRes.value.data?.items;
-      userCount = items ? `${items.length}${items.length >= 50 ? '+' : ''}` : '--';
+      userCount = items ? `${items.length}${items.length >= PAGE_SIZE.admin ? '+' : ''}` : '--';
     }
     if (groupsRes.status === 'fulfilled' && isSuccess(groupsRes.value)) {
       const items = groupsRes.value.data?.items;
-      groupCount = items ? `${items.length}${items.length >= 50 ? '+' : ''}` : '--';
+      groupCount = items ? `${items.length}${items.length >= PAGE_SIZE.admin ? '+' : ''}` : '--';
     }
     if (reportsRes.status === 'fulfilled' && isSuccess(reportsRes.value)) {
       const items = reportsRes.value.data?.items;
-      pendingReports = items ? `${items.length}${items.length >= 50 ? '+' : ''}` : '--';
+      pendingReports = items ? `${items.length}${items.length >= PAGE_SIZE.admin ? '+' : ''}` : '--';
     }
     if (auditRes.status === 'fulfilled' && isSuccess(auditRes.value)) {
       const items = auditRes.value.data?.items;
-      auditCount = items ? `${items.length}${items.length >= 50 ? '+' : ''}` : '--';
+      auditCount = items ? `${items.length}${items.length >= PAGE_SIZE.admin ? '+' : ''}` : '--';
     }
     if (healthRes.status === 'fulfilled' && isSuccess(healthRes.value)) {
       const h = healthRes.value.data;

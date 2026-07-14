@@ -13,6 +13,7 @@
   import TrendingUp from 'lucide-svelte/icons/trending-up';
   import UsersRound from 'lucide-svelte/icons/users-round';
   import type { MomentItem, TrendingTagItem } from '$lib/types/api';
+  import { PAGE_SIZE } from '$lib/config/pagination';
 
   const TABS = [
     { id: 'all', label: '热门' },
@@ -53,7 +54,7 @@
         },
         source: activeTab === 'following' ? 'following' : 'all',
         radius: mapAnchorStore.radius * 1000,
-        pagination: { limit: 20, cursor }
+        pagination: { limit: PAGE_SIZE.default, cursor }
       });
     }, refresh);
   }

@@ -11,6 +11,7 @@
   import { notificationStore } from '$lib/stores/notification.svelte';
   import { platformStore } from '$lib/stores/platform.svelte';
   import type { PrivateChatItem, GroupItem } from '$lib/types/api';
+  import { PAGE_SIZE } from '$lib/config/pagination';
   import Search from 'lucide-svelte/icons/search';
   import UserPlus from 'lucide-svelte/icons/user-plus';
   import Plus from 'lucide-svelte/icons/plus';
@@ -29,7 +30,7 @@
   async function loadPrivateChats() {
     try {
       const response = await withMinimumLoadingTime(() =>
-        privateChatsService.getChats({ pagination: { limit: 50 } })
+        privateChatsService.getChats({ pagination: { limit: PAGE_SIZE.chat } })
       );
       if (isSuccess(response) && response.data) {
         privateChats = response.data.items;
@@ -47,7 +48,7 @@
     isLoadingGroup = true;
     try {
       const response = await withMinimumLoadingTime(() =>
-        groupsService.getMyGroups({ pagination: { limit: 50 } })
+        groupsService.getMyGroups({ pagination: { limit: PAGE_SIZE.chat } })
       );
       if (isSuccess(response) && response.data) {
         groupChats = response.data.items;

@@ -15,6 +15,7 @@
   import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
   import StatSegments from '$lib/components/common/stat-segments.svelte';
   import type { UserItem } from '$lib/types/api';
+  import { PAGE_SIZE } from '$lib/config/pagination';
   import BackButton from '$lib/components/common/back-button.svelte';
   import Search from 'lucide-svelte/icons/search';
   import Radar from 'lucide-svelte/icons/radar';
@@ -55,7 +56,7 @@
       const response = await usersService.search({
         radius: mapAnchorStore.radius * 1000,
         reference_point: getAnchor(),
-        pagination: { limit: 20, cursor }
+        pagination: { limit: PAGE_SIZE.default, cursor }
       }, opts);
       const currentUserId = authStore.currentUserId;
       if (currentUserId && response.data?.items) {

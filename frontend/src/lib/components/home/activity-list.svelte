@@ -63,10 +63,7 @@
     {#each activities as a (a.id)}
       {@const Icon = ICON_MAP[a.icon] ?? Coffee}
       <button
-        class="flex items-center gap-3 px-4 py-3 text-left transition-colors"
-        style="background: var(--surface-bg);"
-        onmouseenter={(e) => (e.currentTarget.style.background = 'var(--border-theme)')}
-        onmouseleave={(e) => (e.currentTarget.style.background = 'var(--surface-bg)')}
+        class="hover-row flex items-center gap-3 px-4 py-3 text-left transition-colors w-full"
         onclick={() => handleSelect(a.id)}
       >
         <div
@@ -86,3 +83,12 @@
     {/each}
   {/if}
 </div>
+
+<style>
+  .hover-row {
+    background-color: var(--surface-bg);
+  }
+  .hover-row:hover {
+    background-color: var(--border-theme);
+  }
+</style>

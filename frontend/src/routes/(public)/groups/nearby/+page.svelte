@@ -13,6 +13,7 @@
   import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
   import StatSegments from '$lib/components/common/stat-segments.svelte';
   import type { GroupItem } from '$lib/types/api';
+  import { PAGE_SIZE } from '$lib/config/pagination';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import BackButton from '$lib/components/common/back-button.svelte';
@@ -74,7 +75,7 @@
         groupsService.search({
           radius: mapAnchorStore.radius * 1000,
           reference_point: getAnchor(),
-          pagination: { limit: 20, cursor }
+          pagination: { limit: PAGE_SIZE.default, cursor }
         }, opts),
       refresh
     );

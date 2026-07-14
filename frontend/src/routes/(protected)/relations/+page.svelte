@@ -8,6 +8,7 @@
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
   import type { FriendItem, FollowingItem, FollowerItem } from '$lib/types/api';
+  import { PAGE_SIZE } from '$lib/config/pagination';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import Heart from 'lucide-svelte/icons/heart';
   import UserCheck from 'lucide-svelte/icons/user-check';
@@ -66,17 +67,17 @@
   async function loadTab(tab: RelTab, refresh = false) {
     if (tab === 'friends') {
       await friendsPg.load(
-        (cursor) => usersService.getFriends({ pagination: { limit: 24, cursor } }),
+        (cursor) => usersService.getFriends({ pagination: { limit: PAGE_SIZE.relations, cursor } }),
         refresh
       );
     } else if (tab === 'following') {
       await followingPg.load(
-        (cursor) => usersService.getFollowing({ pagination: { limit: 24, cursor } }),
+        (cursor) => usersService.getFollowing({ pagination: { limit: PAGE_SIZE.relations, cursor } }),
         refresh
       );
     } else {
       await followersPg.load(
-        (cursor) => usersService.getFollowers({ pagination: { limit: 24, cursor } }),
+        (cursor) => usersService.getFollowers({ pagination: { limit: PAGE_SIZE.relations, cursor } }),
         refresh
       );
     }

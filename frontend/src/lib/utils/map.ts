@@ -1,7 +1,8 @@
 import type { Map, Marker, MarkerOptions } from 'leaflet';
 
-// Default center: Xuzhou, Jiangsu
-export const DEFAULT_CENTER: [number, number] = [34.2618, 117.1859];
+// Default center — must match the map-anchor fallback (and backend default),
+// see FALLBACK_DEFAULTS in src/lib/stores/map-anchor.svelte.ts.
+export const DEFAULT_CENTER: [number, number] = [35.154922, 112.682524];
 export const DEFAULT_ZOOM = 14;
 
 let L: typeof import('leaflet') | null = null;

@@ -44,12 +44,9 @@
     {#each users as user (user.id)}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
-        class="flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer"
-        style="background: var(--surface-bg);"
+        class="hover-row flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer"
         role="button"
         tabindex="0"
-        onmouseenter={(e) => (e.currentTarget.style.background = 'var(--border-theme)')}
-        onmouseleave={(e) => (e.currentTarget.style.background = 'var(--surface-bg)')}
         onclick={() => void goto(`/users/${user.id}`)}
         onkeydown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -83,3 +80,12 @@
     {/each}
   {/if}
 </div>
+
+<style>
+  .hover-row {
+    background-color: var(--surface-bg);
+  }
+  .hover-row:hover {
+    background-color: var(--border-theme);
+  }
+</style>
