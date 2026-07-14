@@ -48,7 +48,7 @@ func normalizeMomentMentions(mentions []string) []string {
 	return result
 }
 
-func filterAllowedMomentTags(ctx context.Context, queryable persistence.QueryableDB, tags []string) ([]string, error) {
+func filterAllowedMomentTags(ctx context.Context, queryable persistence.Queryable, tags []string) ([]string, error) {
 	if len(tags) == 0 {
 		return nil, nil
 	}
@@ -71,7 +71,7 @@ func filterAllowedMomentTags(ctx context.Context, queryable persistence.Queryabl
 	return allowed, nil
 }
 
-func insertMomentTags(ctx context.Context, queryable persistence.QueryableDB, momentID string, tags []string, createdAt time.Time) error {
+func insertMomentTags(ctx context.Context, queryable persistence.Queryable, momentID string, tags []string, createdAt time.Time) error {
 	allowed, err := filterAllowedMomentTags(ctx, queryable, tags)
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func insertMomentTags(ctx context.Context, queryable persistence.QueryableDB, mo
 	return nil
 }
 
-func replaceMomentMentions(ctx context.Context, queryable persistence.QueryableDB, momentID string, mentions []string, createdAt time.Time) error {
+func replaceMomentMentions(ctx context.Context, queryable persistence.Queryable, momentID string, mentions []string, createdAt time.Time) error {
 	if err := queryable.Exec(ctx, queryDeleteMomentMentionsByMomentID, momentID); err != nil {
 		return err
 	}

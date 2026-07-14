@@ -200,7 +200,9 @@ func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
 	if err := s.repo.SoftDelete(ctx, req.CommentID); err != nil {
 		return err
 	}
-	_ = s.moments.DecrementCommentCount(ctx, comment.MomentID)
+	if err := s.moments.DecrementCommentCount(ctx, comment.MomentID); err != nil {
+		observability.L().Warn("comments.delete decrement count failed", "error", err, "moment_id", comment.MomentID)
+	}
 	return nil
 }
 

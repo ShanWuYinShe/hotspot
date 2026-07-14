@@ -7,9 +7,11 @@ import (
 
 	"hotspot/backend-go/internal/modules/comments"
 	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/actor"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
@@ -19,6 +21,8 @@ type Service struct {
 	notifications momentNotificationWriter
 	users         actor.Provider
 	images        ImageResolver
+	appConfig     appconfig.Source
+	runInTx       persistence.TxRunner
 }
 
 type momentNotificationWriter interface {
@@ -27,21 +31,25 @@ type momentNotificationWriter interface {
 }
 
 func NewService() *Service {
-	return NewServiceWithDepsAndImages(NewInMemoryRepository(), notifications.NewService(), nil, nil)
+	return NewServiceWithDepsAndImagesAndConfig(NewInMemoryRepository(), notifications.NewService(), nil, nil, nil, nil)
 }
 
 func NewServiceWithRepo(repo Repository) *Service {
-	return NewServiceWithDepsAndImages(repo, notifications.NewService(), nil, nil)
+	return NewServiceWithDepsAndImagesAndConfig(repo, notifications.NewService(), nil, nil, nil, nil)
 }
 
 func NewServiceWithDeps(repo Repository, notificationWriter momentNotificationWriter, actorProvider actor.Provider) *Service {
-	return NewServiceWithDepsAndImages(repo, notificationWriter, actorProvider, nil)
+	return NewServiceWithDepsAndImagesAndConfig(repo, notificationWriter, actorProvider, nil, nil, nil)
 }
 
-// NewServiceWithDepsAndImages wires an image resolver for presigning moment
-// image read URLs and validating image ownership on create/update.
 func NewServiceWithDepsAndImages(repo Repository, notificationWriter momentNotificationWriter, actorProvider actor.Provider, images ImageResolver) *Service {
-	return &Service{repo: repo, notifications: notificationWriter, users: actorProvider, images: images}
+	return NewServiceWithDepsAndImagesAndConfig(repo, notificationWriter, actorProvider, images, nil, nil)
+}
+
+// NewServiceWithDepsAndImagesAndConfig wires all dependencies including app
+// config for moment image limits and a transaction runner for atomic updates.
+func NewServiceWithDepsAndImagesAndConfig(repo Repository, notificationWriter momentNotificationWriter, actorProvider actor.Provider, images ImageResolver, cfg appconfig.Source, runInTx persistence.TxRunner) *Service {
+	return &Service{repo: repo, notifications: notificationWriter, users: actorProvider, images: images, appConfig: cfg, runInTx: runInTx}
 }
 
 func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (MomentItem, error) {
@@ -167,9 +175,19 @@ func (s *Service) Update(ctx context.Context, req EditMomentRequest) (MomentItem
 	if err := s.validateImageOwnership(ctx, principal.UserID, req.ImageFileIDs); err != nil {
 		return MomentItem{}, err
 	}
-	if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
-		observability.L().Error("moments.update failed", "error", err, "moment_id", req.MomentID)
-		return MomentItem{}, err
+	updateFn := func(ctx context.Context) error {
+		return s.repo.Update(ctx, principal.UserID, req)
+	}
+	if s.runInTx != nil {
+		if err := s.runInTx(ctx, updateFn); err != nil {
+			observability.L().Error("moments.update failed", "error", err, "moment_id", req.MomentID)
+			return MomentItem{}, err
+		}
+	} else {
+		if err := updateFn(ctx); err != nil {
+			observability.L().Error("moments.update failed", "error", err, "moment_id", req.MomentID)
+			return MomentItem{}, err
+		}
 	}
 	updated, _, err := s.repo.Get(ctx, req.MomentID)
 	if err != nil {
@@ -318,10 +336,20 @@ func (s *Service) ListFavorites(ctx context.Context, req MyFavoritesRequest) (Pa
 }
 
 // validateImageOwnership ensures every file_id in the list belongs to userID,
-// has category 'moment_image' and is completed. A nil slice (no update) and an
-// empty slice (clear) are both valid. Returns ErrImagesNotOwned on mismatch.
+// has category 'moment_image' and is completed, and that the count does not
+// exceed the configured max. A nil slice (no update) and an empty slice
+// (clear) are both valid. Returns ErrImagesNotOwned on mismatch.
 func (s *Service) validateImageOwnership(ctx context.Context, userID string, fileIDs []string) error {
-	if s.images == nil || len(fileIDs) == 0 {
+	if len(fileIDs) == 0 {
+		return nil
+	}
+	if s.appConfig != nil {
+		maxImages := s.appConfig.Get(ctx).Limits.MaxMomentImages
+		if maxImages > 0 && len(fileIDs) > maxImages {
+			return ErrTooManyImages
+		}
+	}
+	if s.images == nil {
 		return nil
 	}
 	if _, err := s.images.ResolveMomentImages(ctx, fileIDs, userID); err != nil {

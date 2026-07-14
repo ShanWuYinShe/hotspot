@@ -232,10 +232,7 @@ func buildSearchMomentsQuery(bounds geo.Bounds, keyword *string, tag *string, so
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, userID string, req EditMomentRequest) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	q, ok := queryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -250,24 +247,24 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Edit
 		id := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
 		s2CellID = &id
 	}
-	if err := queryable.Exec(ctx, queryUpdateMoment, req.MomentID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr, s2CellID); err != nil {
+	if err := q.Exec(ctx, queryUpdateMoment, req.MomentID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr, s2CellID); err != nil {
 		return err
 	}
 	if req.Tags != nil {
-		if err := queryable.Exec(ctx, queryDeleteMomentTagsByMomentID, req.MomentID); err != nil {
+		if err := q.Exec(ctx, queryDeleteMomentTagsByMomentID, req.MomentID); err != nil {
 			return err
 		}
-		if err := insertMomentTags(ctx, queryable, req.MomentID, req.Tags, time.Now().UTC()); err != nil {
+		if err := insertMomentTags(ctx, q, req.MomentID, req.Tags, time.Now().UTC()); err != nil {
 			return err
 		}
 	}
 	if req.Mentions != nil {
-		if err := replaceMomentMentions(ctx, queryable, req.MomentID, req.Mentions, time.Now().UTC()); err != nil {
+		if err := replaceMomentMentions(ctx, q, req.MomentID, req.Mentions, time.Now().UTC()); err != nil {
 			return err
 		}
 	}
 	if req.ImageFileIDs != nil {
-		if err := replaceMomentImages(ctx, queryable, req.MomentID, req.ImageFileIDs, time.Now().UTC()); err != nil {
+		if err := replaceMomentImages(ctx, q, req.MomentID, req.ImageFileIDs, time.Now().UTC()); err != nil {
 			return err
 		}
 	}

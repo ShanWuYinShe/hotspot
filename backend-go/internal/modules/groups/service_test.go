@@ -1110,7 +1110,11 @@ func TestServiceListMyApplicationsPropagatesError(t *testing.T) {
 }
 
 func TestServiceCancelApplicationDelegatesToRepo(t *testing.T) {
-	repo := &stubGroupsRepo{}
+	repo := &stubGroupsRepo{
+		apps: []GroupApplicationItem{
+			{ApplicationID: "app1", Applicant: UserInfo{UserID: "u1"}},
+		},
+	}
 	svc := NewServiceWithRepo(repo)
 	err := svc.CancelApplication(grpCtx("u1"), CancelApplicationRequest{ApplicationID: "app1"})
 	if err != nil {
@@ -1119,7 +1123,12 @@ func TestServiceCancelApplicationDelegatesToRepo(t *testing.T) {
 }
 
 func TestServiceCancelApplicationPropagatesError(t *testing.T) {
-	repo := &stubGroupsRepo{cancelErr: errors.New("db error")}
+	repo := &stubGroupsRepo{
+		cancelErr: errors.New("db error"),
+		apps: []GroupApplicationItem{
+			{ApplicationID: "app1", Applicant: UserInfo{UserID: "u1"}},
+		},
+	}
 	svc := NewServiceWithRepo(repo)
 	err := svc.CancelApplication(grpCtx("u1"), CancelApplicationRequest{ApplicationID: "app1"})
 	if err == nil {

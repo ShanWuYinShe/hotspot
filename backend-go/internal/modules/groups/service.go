@@ -393,6 +393,14 @@ func (s *Service) ListMyApplications(ctx context.Context, req MyApplicationsRequ
 }
 
 func (s *Service) CancelApplication(ctx context.Context, req CancelApplicationRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	application, ok, err := s.repo.GetApplication(ctx, req.ApplicationID)
+	if err != nil {
+		return err
+	}
+	if !ok || application.Applicant.UserID != principal.UserID {
+		return ErrApplicationNotFound
+	}
 	return s.repo.CancelApplication(ctx, req.ApplicationID)
 }
 

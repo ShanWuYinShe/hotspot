@@ -1377,7 +1377,11 @@ func TestHandlerListMyApplicationsRejectsInvalidJSON(t *testing.T) {
 }
 
 func TestHandlerCancelApplicationReturnsSuccess(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{
+		listApplicationsItems: []GroupApplicationItem{
+			{ApplicationID: "app_1", Applicant: UserInfo{UserID: "user_alice"}},
+		},
+	}))
 	req := httptest.NewRequest(http.MethodPost, "/me/applications/cancel", strings.NewReader(`{"application_id":"app_1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()

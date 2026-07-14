@@ -17,4 +17,5 @@ var (
 	ErrGroupFull        = errors.New("群组已满")
 	ErrInviteExpired    = errors.New("邀请已过期")
 	ErrTargetNotMember  = errors.New("目标用户不是群成员")
+	ErrApplicationNotFound = errors.New("申请不存在")
 )

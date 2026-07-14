@@ -46,7 +46,6 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 	if s.notifications != nil {
 		if err := s.notifications.AppendNewFollower(ctx, targetUserID, actor, sourceValue, sourceMomentID); err != nil {
 			observability.L().Error("users.follow notification append failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-			return err
 		}
 	}
 	newFollowerPayload := map[string]any{"actor": actor, "followed_at": followedAt}
@@ -67,11 +66,9 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 		if s.notifications != nil {
 			if err := s.notifications.AppendMutualFollow(ctx, principal.UserID, actor); err != nil {
 				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", principal.UserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-				return err
 			}
 			if err := s.notifications.AppendMutualFollow(ctx, targetUserID, actor); err != nil {
 				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-				return err
 			}
 		}
 		mutualPayload := map[string]any{"actor": actor, "mutual_at": mutualAt}
