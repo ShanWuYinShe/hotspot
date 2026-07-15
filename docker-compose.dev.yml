@@ -42,8 +42,8 @@ services:
     pull_policy: missing
     user: root
     working_dir: /app
-    ports:
-      - "5173:5173"   # Vite dev server（HMR + 静态资源），不再代理 /api 与 /ws
+    # 不暴露 5173 到宿主机：开发统一从 nginx(8888) 进入，确保 /api 与 /ws 一律走 nginx 代理。
+    # Vite HMR 的 WebSocket 也由 nginx.dev.conf 的 Upgrade/Connection 透传，无需直连。
     # 源码 + node_modules 双向隔离
     volumes:
       - ./frontend:/app                 # 源码 mount（Vite HMR 热重载）

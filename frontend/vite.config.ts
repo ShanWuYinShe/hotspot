@@ -22,9 +22,6 @@ export default defineConfig({
           if (id.includes('node_modules/lucide-svelte/')) {
             return 'lucide';
           }
-          if (id.includes('node_modules/leaflet/')) {
-            return 'leaflet';
-          }
         }
       }
     }
