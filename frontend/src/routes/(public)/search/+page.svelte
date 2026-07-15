@@ -350,6 +350,7 @@
         <Search size={15} style="flex-shrink: 0; color: var(--text-secondary);" strokeWidth={1.5} />
         <input
           type="text"
+          name="global-search"
           placeholder="搜索用户、地点、话题…"
           class="text-body flex-1 bg-transparent outline-none"
           style="color: var(--text-primary)"

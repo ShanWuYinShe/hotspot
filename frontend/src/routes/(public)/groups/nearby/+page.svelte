@@ -133,6 +133,7 @@
         <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
         <input
           type="text"
+          name="nearby-groups-search"
           bind:value={searchText}
           placeholder={t('groupsNearby.searchPlaceholder')}
           class="text-body flex-1 bg-transparent outline-none"
