@@ -688,11 +688,6 @@ export interface NotificationListRequest {
   pagination?: PaginationParams;
 }
 
-export interface MarkAsReadRequest {
-  notification_ids?: string[];
-  type?: NotificationType;
-}
-
 // ============================================================================
 // 地图类型（map.yaml）
 // ============================================================================
@@ -856,11 +851,6 @@ export interface RegisterRequest {
 export interface GuestRequest {
   nickname: string;
   client_type: ClientType;
-}
-
-export interface RefreshTokenRequest {
-  client_type: ClientType;
-  refresh_token?: string;
 }
 
 export interface AuthStatus {
@@ -1188,15 +1178,6 @@ export interface ResponseDefaults {
   comment_top_replies_count: number;
   user_profile_moments_count: number;
   search_all_count_per_type: number;
-}
-
-export interface ServerConfig {
-  upload: UploadConfig;
-  defaults: ContentDefaults;
-  rate_limits: RateLimitConfig;
-  response_defaults: ResponseDefaults;
-  updated_at?: string;
-  updated_by_user_id?: string;
 }
 
 /**
