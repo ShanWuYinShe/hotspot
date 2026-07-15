@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { toast } from '$lib/stores/toast.svelte';
+  import { t } from '$lib/i18n';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
   import MapPin from 'lucide-svelte/icons/map-pin';
@@ -28,9 +29,9 @@
     const url = window.location.href;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('分享链接已复制到剪贴板');
+      toast.success(t('share.linkCopied'));
     } catch (err) {
-      toast.error('复制失败，请手动复制');
+      toast.error(t('share.copyFailed'));
     }
   }
 
@@ -44,7 +45,7 @@
     if (share_type === 'location') {
       const loc = (payload as LocationSharePayload).shared_location;
       mapAnchorStore.setAnchor(loc.point.latitude, loc.point.longitude, loc.location_name);
-      toast.success('浏览锚点已更新！');
+      toast.success(t('share.anchorUpdated'));
       navigationTimer = setTimeout(() => goto('/'), 500);
     } else if (share_type === 'user') {
       goto(`/users/${(payload as UserSharePayload).shared_user_id}`);
@@ -72,7 +73,7 @@
     >{share?.share.share_type === 'location' &&
     (share.payload as LocationSharePayload).shared_location?.location_name
       ? (share.payload as LocationSharePayload).shared_location.location_name
-      : '探索新区域'} - HotSpot</title
+      : t('share.titleExplore')} - HotSpot</title
   >
 </svelte:head>
 
@@ -83,16 +84,16 @@
         class="rounded-[var(--radius-lg)] p-6"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
-        <h2 class="text-h2" style="font-weight: 600; color: var(--theme-error)">无法加载分享</h2>
+        <h2 class="text-h2" style="font-weight: 600; color: var(--theme-error)">{t('share.loadFailed')}</h2>
         <p class="text-body-lg" style="color: var(--text-secondary); margin-top: 8px">
-          {data.error || '此分享不存在或已被删除'}
+          {data.error || t('share.notExist')}
         </p>
         <button
           class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none"
           style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
           onclick={() => goto('/')}
         >
-          返回首页
+          {t('share.backHome')}
         </button>
       </div>
     {:else if share.share.share_type === 'location'}
@@ -121,7 +122,7 @@
             <span class="text-body" style="color: var(--text-secondary)">
               <span style="font-weight: 500; color: var(--text-primary);"
                 >{share.share.creator.nickname}</span
-              > 分享了此位置
+              > {t('share.sharedLocation')}
             </span>
           </div>
         </div>
@@ -134,7 +135,7 @@
             onclick={handleApply}
           >
             <MapPin size={20} />
-            设为浏览锚点
+            {t('share.setAsAnchor')}
           </button>
 
           <!-- Info card -->
@@ -147,20 +148,20 @@
               style="font-weight: 500; color: var(--text-primary)"
             >
               <UsersRound size={16} />
-              设置后你将看到
+              {t('share.willSeeTitle')}
             </p>
             <ul class="text-body mt-3 space-y-2" style="color: var(--text-secondary)">
               <li class="flex items-start gap-2">
                 <span style="color: var(--brand);">•</span>
-                <span>这个区域附近的人</span>
+                <span>{t('share.willSeePeople')}</span>
               </li>
               <li class="flex items-start gap-2">
                 <span style="color: var(--brand);">•</span>
-                <span>这个区域的附近群组和活跃社区</span>
+                <span>{t('share.willSeeGroups')}</span>
               </li>
               <li class="flex items-start gap-2">
                 <span style="color: var(--brand);">•</span>
-                <span>这个区域的最新动态和精彩内容</span>
+                <span>{t('share.willSeeMoments')}</span>
               </li>
             </ul>
           </div>
@@ -171,14 +172,14 @@
               class="text-xs uppercase"
               style="letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 8px"
             >
-              位置说明
+              {t('share.locationNote')}
             </p>
             <div
               class="rounded-[var(--radius-md)] p-3"
               style="border: 1px solid var(--border-theme);"
             >
               <p class="text-meta" style="color: var(--text-secondary)">
-                以「{payload.shared_location.location_name}」为中心区域进行浏览和推荐。
+                {t('share.locationNoteDesc', { name: payload.shared_location.location_name })}
               </p>
             </div>
           </div>
