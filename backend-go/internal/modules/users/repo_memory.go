@@ -84,6 +84,19 @@ func (r *InMemoryRepository) GetSettings(_ context.Context, userID string) (User
 	settings, ok := r.settings[userID]
 	return settings, ok, nil
 }
+func (r *InMemoryRepository) GetSettingsBatch(ctx context.Context, userIDs []string) (map[string]UserSettings, error) {
+	result := make(map[string]UserSettings, len(userIDs))
+	for _, userID := range userIDs {
+		settings, ok, err := r.GetSettings(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			result[userID] = settings
+		}
+	}
+	return result, nil
+}
 func (r *InMemoryRepository) PutSettings(_ context.Context, userID string, settings UserSettings) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

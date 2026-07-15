@@ -12,6 +12,7 @@ type Repository interface {
 	PutProfile(context.Context, MyProfile) error
 	DeleteProfile(context.Context, string) error
 	GetSettings(context.Context, string) (UserSettings, bool, error)
+	GetSettingsBatch(context.Context, []string) (map[string]UserSettings, error)
 	PutSettings(context.Context, string, UserSettings) error
 	SearchProfiles(context.Context, SearchUsersRequest) (PaginatedProfiles, error)
 	Follow(context.Context, string, string, FollowSource, string) error

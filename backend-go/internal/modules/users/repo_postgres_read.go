@@ -66,6 +66,39 @@ func (r *PostgresRepository) GetSettings(ctx context.Context, userID string) (Us
 	return settings, true, nil
 }
 
+func (r *PostgresRepository) GetSettingsBatch(ctx context.Context, userIDs []string) (map[string]UserSettings, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return nil, persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	result := make(map[string]UserSettings, len(userIDs))
+	if len(userIDs) == 0 {
+		return result, nil
+	}
+	rows, err := queryable.Query(ctx, queryGetUserSettingsBatch, userIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var userID string
+		var settings UserSettings
+		var allowPrivateChat string
+		if err := rows.Scan(&userID, &settings.PrivacyLevel, &settings.LocationVisible, &settings.PresenceVisible, &settings.SocialListsVisible, &settings.GroupsVisible, &settings.LikedMomentsVisible, &settings.StatsVisible, &settings.AllowFollow, &allowPrivateChat, &settings.Searchable, &settings.PhoneSearchable, &settings.NicknameSearchable, &settings.LocationSearchable); err != nil {
+			return nil, err
+		}
+		settings.AllowPrivateChat = PrivateChatPermission(allowPrivateChat)
+		result[userID] = settings
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsersRequest) (PaginatedProfiles, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return PaginatedProfiles{}, persistence.ErrNotImplemented

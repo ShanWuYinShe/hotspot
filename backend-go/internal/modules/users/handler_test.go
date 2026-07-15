@@ -55,6 +55,9 @@ func (invalidCursorRepo) DeleteProfile(context.Context, string) error { return n
 func (invalidCursorRepo) GetSettings(context.Context, string) (UserSettings, bool, error) {
 	return UserSettings{}, false, nil
 }
+func (invalidCursorRepo) GetSettingsBatch(context.Context, []string) (map[string]UserSettings, error) {
+	return map[string]UserSettings{}, nil
+}
 func (invalidCursorRepo) PutSettings(context.Context, string, UserSettings) error { return nil }
 func (invalidCursorRepo) SearchProfiles(context.Context, SearchUsersRequest) (PaginatedProfiles, error) {
 	return PaginatedProfiles{InvalidCursor: true}, nil
@@ -102,6 +105,9 @@ func (r *userErrorRepo) PutProfile(context.Context, MyProfile) error { return r.
 func (r *userErrorRepo) DeleteProfile(context.Context, string) error { return r.deleteErr }
 func (r *userErrorRepo) GetSettings(context.Context, string) (UserSettings, bool, error) {
 	return UserSettings{}, false, r.getSettingsErr
+}
+func (r *userErrorRepo) GetSettingsBatch(context.Context, []string) (map[string]UserSettings, error) {
+	return map[string]UserSettings{}, r.getSettingsErr
 }
 func (r *userErrorRepo) PutSettings(context.Context, string, UserSettings) error {
 	return r.putSettingsErr

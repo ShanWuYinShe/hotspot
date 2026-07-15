@@ -53,6 +53,11 @@ SELECT privacy_level, location_visible, presence_visible, social_lists_visible, 
 FROM user_settings
 WHERE user_id = $1`
 
+	queryGetUserSettingsBatch = `
+SELECT user_id, privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, liked_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable
+FROM user_settings
+WHERE user_id = ANY($1)`
+
 	queryUpsertUserSettings = `
 INSERT INTO user_settings (user_id, privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, liked_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)

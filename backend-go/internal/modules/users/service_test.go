@@ -77,6 +77,18 @@ func (r *stubUserRepo) DeleteProfile(_ context.Context, _ string) error { return
 func (r *stubUserRepo) GetSettings(_ context.Context, _ string) (UserSettings, bool, error) {
 	return r.settings, r.settingsFound, r.settingsErr
 }
+func (r *stubUserRepo) GetSettingsBatch(_ context.Context, userIDs []string) (map[string]UserSettings, error) {
+	result := make(map[string]UserSettings, len(userIDs))
+	if r.settingsErr != nil {
+		return result, r.settingsErr
+	}
+	if r.settingsFound {
+		for _, id := range userIDs {
+			result[id] = r.settings
+		}
+	}
+	return result, nil
+}
 func (r *stubUserRepo) PutSettings(_ context.Context, _ string, _ UserSettings) error {
 	return r.putSettingsErr
 }

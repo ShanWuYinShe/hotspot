@@ -26,6 +26,9 @@ func (r *PersistenceRepository) DeleteProfile(ctx context.Context, userID string
 func (r *PersistenceRepository) GetSettings(ctx context.Context, userID string) (UserSettings, bool, error) {
 	return r.impl.GetSettings(ctx, userID)
 }
+func (r *PersistenceRepository) GetSettingsBatch(ctx context.Context, userIDs []string) (map[string]UserSettings, error) {
+	return r.impl.GetSettingsBatch(ctx, userIDs)
+}
 func (r *PersistenceRepository) PutSettings(ctx context.Context, userID string, settings UserSettings) error {
 	return r.impl.PutSettings(ctx, userID, settings)
 }

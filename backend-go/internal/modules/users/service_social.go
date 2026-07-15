@@ -241,6 +241,11 @@ func (s *Service) buildSocialContext(ctx context.Context, viewerUserID string, t
 }
 
 func collectMutualFriends(ctx context.Context, repo Repository, viewerUserID, targetUserID string) ([]FriendItem, error) {
+	// TODO(perf): this still paginates each user's entire friend list in memory and
+	// intersects them in Go. It should be replaced by a single SQL-based mutual-friends
+	// query (self-join on user_relations) that returns the intersection directly. Until
+	// that lands, mutualFriendsScanCap bounds the number of friends scanned per user so
+	// very large friend lists cannot blow up into unbounded pagination.
 	viewerFriends, err := collectFriendsByUser(ctx, repo, viewerUserID)
 	if err != nil {
 		return nil, err
@@ -262,16 +267,25 @@ func collectMutualFriends(ctx context.Context, repo Repository, viewerUserID, ta
 	return mutual, nil
 }
 
+// mutualFriendsScanCap is a temporary upper bound on how many friend rows are
+// scanned per user when computing mutual friends. See collectMutualFriends.
+const mutualFriendsScanCap = 500
+
 func collectFriendsByUser(ctx context.Context, repo Repository, userID string) ([]FriendItem, error) {
 	items := make([]FriendItem, 0)
 	cursor := ""
+	pageSize := 100
 	for {
-		page, err := repo.ListFriends(ctx, userID, 100, cursor)
+		page, err := repo.ListFriends(ctx, userID, pageSize, cursor)
 		if err != nil {
 			return nil, err
 		}
 		items = append(items, page.Items...)
-		if page.NextCursor == "" {
+		// Stop once we've scanned the cap or there are no more pages.
+		if page.NextCursor == "" || len(items) >= mutualFriendsScanCap {
+			if len(items) > mutualFriendsScanCap {
+				items = items[:mutualFriendsScanCap]
+			}
 			break
 		}
 		cursor = page.NextCursor
@@ -315,8 +329,9 @@ func minInt(a, b int) int {
 }
 
 func applyPresenceVisibilityToFriends(ctx context.Context, repo Repository, items []FriendItem) {
+	hidden := hiddenPresenceUserIDs(ctx, repo, len(items), func(i int) string { return items[i].User.UserID })
 	for i := range items {
-		if !isPresenceVisible(ctx, repo, items[i].User.UserID) {
+		if hidden[items[i].User.UserID] {
 			items[i].PresenceStatus = nil
 			items[i].LastOnline = nil
 		}
@@ -324,8 +339,9 @@ func applyPresenceVisibilityToFriends(ctx context.Context, repo Repository, item
 }
 
 func applyPresenceVisibilityToFollowing(ctx context.Context, repo Repository, items []FollowingItem) {
+	hidden := hiddenPresenceUserIDs(ctx, repo, len(items), func(i int) string { return items[i].User.UserID })
 	for i := range items {
-		if !isPresenceVisible(ctx, repo, items[i].User.UserID) {
+		if hidden[items[i].User.UserID] {
 			items[i].PresenceStatus = nil
 			items[i].LastOnline = nil
 		}
@@ -333,23 +349,42 @@ func applyPresenceVisibilityToFollowing(ctx context.Context, repo Repository, it
 }
 
 func applyPresenceVisibilityToFollowers(ctx context.Context, repo Repository, items []FollowerItem) {
+	hidden := hiddenPresenceUserIDs(ctx, repo, len(items), func(i int) string { return items[i].User.UserID })
 	for i := range items {
-		if !isPresenceVisible(ctx, repo, items[i].User.UserID) {
+		if hidden[items[i].User.UserID] {
 			items[i].PresenceStatus = nil
 			items[i].LastOnline = nil
 		}
 	}
 }
 
-func isPresenceVisible(ctx context.Context, repo Repository, userID string) bool {
-	settings, ok, err := repo.GetSettings(ctx, userID)
+// hiddenPresenceUserIDs resolves each item's user ID against a single
+// GetSettingsBatch call and returns the set of IDs whose presence must be
+// hidden. On settings-read error or when a user has no stored settings, the
+// previous per-item behavior is preserved: presence stays visible (not hidden).
+func hiddenPresenceUserIDs(ctx context.Context, repo Repository, count int, userIDAt func(i int) string) map[string]bool {
+	hidden := make(map[string]bool, count)
+	if count == 0 {
+		return hidden
+	}
+	userIDs := make([]string, 0, count)
+	for i := 0; i < count; i++ {
+		userIDs = append(userIDs, userIDAt(i))
+	}
+	settingsByUserID, err := repo.GetSettingsBatch(ctx, userIDs)
 	if err != nil {
-		return true
+		return hidden
 	}
-	if !ok {
-		settings = defaultSettings()
+	for _, userID := range userIDs {
+		settings, ok := settingsByUserID[userID]
+		if !ok {
+			settings = defaultSettings()
+		}
+		if !settings.PresenceVisible {
+			hidden[userID] = true
+		}
 	}
-	return settings.PresenceVisible
+	return hidden
 }
 
 func ensureSocialListsVisible(ctx context.Context, repo Repository, userID string, isSelf bool) error {

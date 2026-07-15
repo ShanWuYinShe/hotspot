@@ -150,11 +150,17 @@ func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (Paginated
 	}
 	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
 	items := make([]UserItem, 0, len(profiles.Items))
+	// Batch-load settings once for the whole page to avoid an N+1 of GetSettings calls.
+	searchUserIDs := make([]string, 0, len(profiles.Items))
 	for _, profile := range profiles.Items {
-		settings, ok, err := s.repo.GetSettings(ctx, profile.UserID)
-		if err != nil {
-			return PaginatedUsers{}, err
-		}
+		searchUserIDs = append(searchUserIDs, profile.UserID)
+	}
+	settingsByUserID, err := s.repo.GetSettingsBatch(ctx, searchUserIDs)
+	if err != nil {
+		return PaginatedUsers{}, err
+	}
+	for _, profile := range profiles.Items {
+		settings, ok := settingsByUserID[profile.UserID]
 		if !ok {
 			settings = defaultSettings()
 		}
