@@ -11,12 +11,6 @@ declare global {
       /** 错误描述 */
       message: string;
     }
-
-    // interface Locals {}
-
-    // interface PageData {}
-    // interface PageState {}
-    // interface Platform {}
   }
 }
 

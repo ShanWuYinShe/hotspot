@@ -40,7 +40,9 @@
   const primaryImage = $derived(moment.images?.[0]);
   const imageCount = $derived(moment.images?.length ?? 0);
   const visibleTags = $derived((moment.tags ?? []).slice(0, 3));
-  const timeText = $derived(formatRelativeTime(moment.created_at));
+  const timeText = $derived(
+    formatRelativeTime(moment.created_at, undefined, { fallback: 'date' })
+  );
   const distanceText = $derived(
     moment.location?.distance != null ? formatDistance(moment.location.distance) : ''
   );

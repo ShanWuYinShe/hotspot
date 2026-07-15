@@ -10,5 +10,9 @@
  *    解析错误（SvelteKit dev/prod 均复现），刷新公开页面渲染出错误路由内容。
  *
  * 统一 CSR 消除此问题，且不影响任何功能。
+ *
+ * 配合 adapter-static 的 fallback: 'index.html'：所有路由（含动态路由）
+ * 在浏览器渲染，非文件请求由 nginx/SvelteKit fallback 统一返回 index.html。
  */
 export const ssr = false;
+export const prerender = false;
