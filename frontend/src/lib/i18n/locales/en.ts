@@ -1067,7 +1067,8 @@ export default {
       'Are you sure you want to leave this group? You will no longer see its content.',
     leaveDialogMemberCount: '{count} members',
     leaveDialogFallback: 'Group',
-    confirmLeave: 'Confirm leave'
+    confirmLeave: 'Confirm leave',
+    loadFailed: 'Failed to load'
   },
   momentDetail: {
     pageTitle: 'Moment',

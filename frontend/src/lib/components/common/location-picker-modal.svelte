@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, tick, untrack } from 'svelte';
+  import { t } from '$lib/i18n';
   import { assertSuccess } from '$lib/api/client';
   import {
     mapService,
@@ -111,9 +112,9 @@
   const LONG_PRESS_DURATION_MS = 700;
   const GESTURE_HINT_DURATION_MS = 4000;
   const MAP_RENDER_IDLE_MS = 250;
-  const GESTURE_HINT_COMBINED = '双击、右键或长按地图可快速定位';
-  const GESTURE_HINT_TOUCH = '长按地图可快速定位';
-  const GESTURE_HINT_POINTER = '双击或右键地图可快速定位';
+  const GESTURE_HINT_COMBINED = $derived(t('locationPicker.gestureHintCombined'));
+  const GESTURE_HINT_TOUCH = $derived(t('locationPicker.gestureHintTouch'));
+  const GESTURE_HINT_POINTER = $derived(t('locationPicker.gestureHintPointer'));
   const currentMode = $derived(themeMode.current);
   let suppressNextMapClick = false;
 
@@ -211,11 +212,11 @@
   let gestureHintDismissed = $state(false);
 
   const isAnchorMode = $derived(mode === 'anchor');
-  const modalTitle = $derived(isAnchorMode ? '设置浏览锚点' : '选择位置');
-  const confirmButtonText = $derived(isAnchorMode ? '设为浏览锚点' : '使用此位置');
-  const confirmSuccessText = $derived(isAnchorMode ? '浏览锚点已更新' : '位置已选定');
-  const selectionDescription = $derived(isAnchorMode ? '用于浏览锚点的位置' : '用于当前操作的位置');
-  const mapModeLabel = $derived(isAnchorMode ? '浏览锚点' : '位置选择');
+  const modalTitle = $derived(isAnchorMode ? t('locationPicker.modalTitleAnchor') : t('locationPicker.modalTitleLocation'));
+  const confirmButtonText = $derived(isAnchorMode ? t('locationPicker.confirmButtonAnchor') : t('locationPicker.confirmButtonLocation'));
+  const confirmSuccessText = $derived(isAnchorMode ? t('locationPicker.confirmSuccessAnchor') : t('locationPicker.confirmSuccessLocation'));
+  const selectionDescription = $derived(isAnchorMode ? t('locationPicker.selectionDescriptionAnchor') : t('locationPicker.selectionDescriptionLocation'));
+  const mapModeLabel = $derived(isAnchorMode ? t('locationPicker.mapModeAnchor') : t('locationPicker.mapModeLocation'));
   const activeFilterCount = $derived([showUsers, showGroups, showMoments].filter(Boolean).length);
 
   interface SearchResultItem {
@@ -228,7 +229,7 @@
   type MapClickEvent = AMap.MapClickEvent;
 
   const DEFAULT_MARKER_ANCHOR: AMap.MarkerAnchor = 'bottom-center';
-  const PLACEMENT_HINT_DEFAULT = '已定位到该位置';
+  const PLACEMENT_HINT_DEFAULT = $derived(t('locationPicker.placementHintDefault'));
 
   // 同坐标重叠 marker 的处理阈值：
   // - 个数 ≤ FAN_OUT_LIMIT 时，在高缩放下像素展开为独立 marker；
@@ -546,7 +547,7 @@
   }
 
   function getMarkerBadgeText(item: RenderItem) {
-    return `${item.total_count} 个点`;
+    return t('locationPicker.itemsCount', { count: item.total_count });
   }
 
   /** 按 breakdown 推断该聚合项的主导类型，无 breakdown 时返回 null */
@@ -565,13 +566,13 @@
   function getItemTypeLabel(item: RenderItem) {
     switch (getDominantType(item)) {
       case 'user':
-        return '用户';
+        return t('locationPicker.itemLabelUser');
       case 'group':
-        return '群组';
+        return t('locationPicker.itemLabelGroup');
       case 'moment':
-        return '动态';
+        return t('locationPicker.itemLabelMoment');
       default:
-        return '内容';
+        return t('locationPicker.itemLabelDefault');
     }
   }
 
@@ -590,7 +591,7 @@
 
   function buildOverlapPreviewDescription(items: RenderItem[]) {
     const total = items.reduce((sum, item) => sum + item.total_count, 0);
-    return `${total} 个内容`;
+    return t('locationPicker.contentCount', { count: total });
   }
 
   function openClusterPreview(item: RenderItem) {
@@ -604,10 +605,10 @@
     clusterPreview = {
       kind: isOverlapGroup ? 'overlap_group' : 'server_cluster',
       render_id: item.render_id,
-      title: `${baseCount} 个内容`,
+      title: t('locationPicker.contentCount', { count: baseCount }),
       description: isOverlapGroup
-        ? `${buildOverlapPreviewDescription(overlapItems)}。继续放大后会拆成单独单元。`
-        : '当前层级仍在聚合显示，继续放大后会拆成更细的区域。',
+        ? `${buildOverlapPreviewDescription(overlapItems)}。${t('locationPicker.overlapDescSuffix')}`
+        : t('locationPicker.clusterDesc'),
       count: baseCount,
       latitude: item.location.latitude,
       longitude: item.location.longitude,
@@ -627,7 +628,7 @@
     map.setCenter([gcjLng, gcjLat]);
     map.setZoom(clusterPreview.zoomTarget);
     showPlacementHint(
-      clusterPreview.kind === 'overlap_group' ? '已放大到同点内容展开层级' : '已放大到更细地图层级'
+      clusterPreview.kind === 'overlap_group' ? t('locationPicker.placementHintOverlapExpanded') : t('locationPicker.placementHintClusterExpanded')
     );
     closeClusterPreview();
   }
@@ -677,7 +678,7 @@
     showFilterPanel = false;
     // 仅展示聚合预览信息，不移动相机
     openClusterPreview(item);
-    showPlacementHint(`已聚焦 ${item.total_count} 个内容，双击或长按可设为选中位置`);
+    showPlacementHint(t('locationPicker.placementHintFocusedSelectable', { count: item.total_count }));
   }
 
   function focusRenderItem(item: RenderItem) {
@@ -689,7 +690,7 @@
       longitude: item.location.longitude
     });
     map?.setCenter([gcjLng, gcjLat]);
-    showPlacementHint(`已聚焦 ${item.total_count} 个内容`);
+    showPlacementHint(t('locationPicker.placementHintFocused', { count: item.total_count }));
   }
 
   async function resolveClusterRegion(item: RenderItem): Promise<RegionKey | null> {
@@ -838,15 +839,15 @@
         clickable: true
       });
       marker.setLabel?.({
-        content: `${meta.name} ${group.total} 个内容`,
+        content: `${meta.name} ${t('locationPicker.contentCount', { count: group.total })}`,
         direction: 'top'
       });
       marker.on('click', () => {
         clusterPreview = {
           kind: 'server_cluster',
           render_id: key,
-          title: `${meta.name} ${group.total} 个内容`,
-          description: '当前层级按城市/区域聚合显示，继续放大后可查看更精细内容。',
+          title: `${meta.name} ${t('locationPicker.contentCount', { count: group.total })}`,
+          description: t('locationPicker.regionClusterDesc'),
           count: group.total,
           latitude: group.items[0]?.location.latitude ?? 0,
           longitude: group.items[0]?.location.longitude ?? 0,
@@ -1036,7 +1037,7 @@
       }
     } catch {
       if (requestId === activeRenderRequestId) {
-        toast.error('地图渲染数据加载失败');
+        toast.error(t('locationPicker.renderLoadFailed'));
       }
     }
   }
@@ -1098,7 +1099,7 @@
     longPressTimer = window.setTimeout(() => {
       if (touchMovedDuringLongPress || !lastTouchLngLat) return;
       void moveToCoordinate(lastTouchLngLat.lat, lastTouchLngLat.lng, {
-        hintMessage: isAnchorMode ? '已定位，请点击下方按钮确认' : '已定位到该位置'
+        hintMessage: isAnchorMode ? t('locationPicker.placementHintLocatedConfirm') : t('locationPicker.placementHintDefault')
       });
     }, LONG_PRESS_DURATION_MS);
   };
@@ -1248,13 +1249,13 @@
       if (results.length > 0) {
         searchResults = results;
       } else {
-        toast.error('未找到该地点，请换个关键词试试');
+        toast.error(t('locationPicker.searchNotFound'));
       }
     } catch {
       if (requestId !== activeSearchRequestId) {
         return;
       }
-      toast.error('搜索失败，请稍后重试');
+      toast.error(t('locationPicker.searchFailed'));
     } finally {
       if (requestId === activeSearchRequestId) {
         isSearching = false;
@@ -1282,7 +1283,7 @@
     map?.setCenter([gcjLng, gcjLat]);
     showSearch = false;
     isBottomSheetExpanded = false;
-    showPlacementHint('已定位到搜索结果');
+    showPlacementHint(t('locationPicker.placementHintSearchResult'));
     searchText = '';
     searchResults = [];
   }
@@ -1306,7 +1307,7 @@
     });
     map?.setCenter([gcjLng, gcjLat]);
     isBottomSheetExpanded = false;
-    showPlacementHint('已回到最近使用的位置');
+    showPlacementHint(t('locationPicker.placementHintHistory'));
   }
 
   function handleClearHistory() {
@@ -1319,8 +1320,8 @@
       await ensureGeocoder();
       const currentGeocoder = geocoder;
       if (!currentGeocoder) {
-        locationName = '自定义位置';
-        return '自定义位置';
+        locationName = t('locationPicker.customLocation');
+        return locationName;
       }
       const [gcjLng, gcjLat] = toGcjLngLat({
         latitude: lat,
@@ -1332,19 +1333,19 @@
           (status: string, result: AMap.GeocodeResult) => {
             if (status === 'complete' && result.regeocode) {
               const poiName = result.regeocode.pois?.[0]?.name;
-              const resolved = poiName || result.regeocode.formattedAddress || '自定义位置';
+              const resolved = poiName || result.regeocode.formattedAddress || t('locationPicker.customLocation');
               locationName = resolved;
               resolve(resolved);
               return;
             }
-            locationName = '自定义位置';
-            resolve('自定义位置');
+            locationName = t('locationPicker.customLocation');
+            resolve(locationName);
           }
         );
       });
     } catch {
-      locationName = '自定义位置';
-      return '自定义位置';
+      locationName = t('locationPicker.customLocation');
+      return locationName;
     }
   }
   function cancelReverseGeocodeTimer() {
@@ -1379,7 +1380,7 @@
     const nextLat = lnglat.getLat();
     const nextLng = lnglat.getLng();
     await moveToCoordinate(nextLat, nextLng, {
-      hintMessage: isAnchorMode ? '已定位，请点击下方按钮确认' : '已定位到该位置'
+      hintMessage: isAnchorMode ? t('locationPicker.placementHintLocatedConfirm') : t('locationPicker.placementHintDefault')
     });
   }
 
@@ -1389,7 +1390,7 @@
     const nextLat = lnglat.getLat();
     const nextLng = lnglat.getLng();
     await moveToCoordinate(nextLat, nextLng, {
-      hintMessage: isAnchorMode ? '已定位，请点击下方按钮确认' : '已定位到该位置'
+      hintMessage: isAnchorMode ? t('locationPicker.placementHintLocatedConfirm') : t('locationPicker.placementHintDefault')
     });
   }
 
@@ -1473,7 +1474,7 @@
         location_name: resolvedName
       });
     } else {
-      toast.error('无法获取当前位置');
+      toast.error(t('locationPicker.locationUnavailable'));
     }
     isLocating = false;
   }
@@ -1497,11 +1498,11 @@
       await reverseGeocode(anchorLat, anchorLng);
     }
     hideGestureHint();
-    showPlacementHint('已回到浏览锚点位置');
+    showPlacementHint(t('locationPicker.placementHintAnchor'));
   }
 
   function handleConfirm() {
-    const normalizedName = locationName.trim() || '自定义位置';
+    const normalizedName = locationName.trim() || t('locationPicker.customLocation');
     if (isAnchorMode) {
       mapAnchorStore.setAnchor(latitude, longitude, normalizedName, searchRadius);
       addToAnchorHistory(latitude, longitude, normalizedName);
@@ -1762,7 +1763,7 @@
             <p class="mt-1 truncate text-base font-semibold">
               {modalTitle}
             </p>
-            <p class="mt-1 text-xs">拖动地图后确认中心点</p>
+            <p class="mt-1 text-xs">{t('locationPicker.dragHint')}</p>
           </div>
           <Button
             variant="ghost"
@@ -1770,7 +1771,7 @@
             class="h-9 w-9 shrink-0 rounded-full p-0"
             onclick={handleClose}
           >
-            <span class="sr-only">关闭</span>
+            <span class="sr-only">{t('locationPicker.close')}</span>
             <X class="h-4 w-4" />
           </Button>
         </div>
@@ -1782,7 +1783,7 @@
             onclick={toggleSearch}
           >
             <Search class="h-4 w-4" />
-            搜索地点
+            {t('locationPicker.searchPlace')}
           </Button>
           <Button
             data-location-filter-trigger="true"
@@ -1792,7 +1793,7 @@
             onclick={toggleFilterPanel}
           >
             <ListFilter class="h-4 w-4" />
-            筛选 {activeFilterCount}
+            {t('locationPicker.filterWithCount', { count: activeFilterCount })}
           </Button>
         </div>
       </div>
@@ -1810,7 +1811,7 @@
               class="h-11 w-11 rounded-[var(--radius-sm)] backdrop-blur"
               style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
               onclick={toggleFilterPanel}
-              aria-label="筛选地图内容"
+              aria-label={t('locationPicker.filterMapContentAria')}
             >
               <ListFilter class="h-4 w-4" />
             </Button>
@@ -1828,7 +1829,7 @@
               style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
               onclick={handleUseCurrentLocation}
               disabled={isLocating}
-              aria-label="定位到当前位置"
+              aria-label={t('locationPicker.locateCurrent')}
             >
               {#if isLocating}
                 <Loader2 class="h-4 w-4 animate-spin" />
@@ -1843,9 +1844,9 @@
                 class="h-11 w-11 rounded-[var(--radius-sm)] transition"
                 style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
                 onclick={handleBackToBrowseAnchor}
-                aria-label="回到浏览锚点位置"
+                aria-label={t('locationPicker.backToAnchorAria')}
               >
-                <img src="/map/marker_center_pin.svg" alt="浏览锚点" class="h-7 w-7" />
+                <img src="/map/marker_center_pin.svg" alt={t('locationPicker.anchorImageAlt')} class="h-7 w-7" />
               </Button>
             {/if}
             <Button
@@ -1858,7 +1859,7 @@
                 const currentZoom = map.getZoom?.() ?? 14;
                 map.setZoom(Math.min(20, currentZoom + 1));
               }}
-              aria-label="放大"
+              aria-label={t('locationPicker.zoomInAria')}
             >
               <Plus class="h-5 w-5" />
             </Button>
@@ -1872,7 +1873,7 @@
                 const currentZoom = map.getZoom?.() ?? 14;
                 map.setZoom(Math.max(1, currentZoom - 1));
               }}
-              aria-label="缩小"
+              aria-label={t('locationPicker.zoomOutAria')}
             >
               <Minus class="h-5 w-5" />
             </Button>
@@ -1895,8 +1896,8 @@
               onclick={() => toggleRenderFilter('user')}
             >
               <span class="flex items-center gap-2">
-                <img src="/map/marker_user.svg" alt="用户标记" class="h-8 w-auto" />
-                <span>用户</span>
+                <img src="/map/marker_user.svg" alt={t('locationPicker.filterUserAlt')} class="h-8 w-auto" />
+                <span>{t('locationPicker.filterUser')}</span>
               </span>
               <span
                 class="h-2.5 w-2.5 rounded-full"
@@ -1907,12 +1908,12 @@
               class={`mt-1 flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-2.5 text-left text-sm font-medium transition`}
               style={showGroups
                 ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
-                : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary); box-shadow: var(--shadow-sm);'}
+                : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
               onclick={() => toggleRenderFilter('group')}
             >
               <span class="flex items-center gap-2">
-                <img src="/map/marker_group.svg" alt="群组标记" class="h-8 w-auto" />
-                <span>群组</span>
+                <img src="/map/marker_group.svg" alt={t('locationPicker.filterGroupAlt')} class="h-8 w-auto" />
+                <span>{t('locationPicker.filterGroup')}</span>
               </span>
               <span
                 class="h-2.5 w-2.5 rounded-full"
@@ -1925,12 +1926,12 @@
               class={`mt-1 flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-2.5 text-left text-sm font-medium transition`}
               style={showMoments
                 ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
-                : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary); box-shadow: var(--shadow-sm);'}
+                : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
               onclick={() => toggleRenderFilter('moment')}
             >
               <span class="flex items-center gap-2">
-                <img src="/map/marker_moment.svg" alt="动态标记" class="h-8 w-auto" />
-                <span>动态</span>
+                <img src="/map/marker_moment.svg" alt={t('locationPicker.filterMomentAlt')} class="h-8 w-auto" />
+                <span>{t('locationPicker.filterMoment')}</span>
               </span>
               <span
                 class="h-2.5 w-2.5 rounded-full"
@@ -1940,7 +1941,7 @@
               ></span>
             </button>
             <div class="px-3 pb-1 pt-2 text-[11px]">
-              已启用 {activeFilterCount} 项筛选
+              {t('locationPicker.filtersEnabled', { count: activeFilterCount })}
             </div>
           </div>
         {/if}
@@ -1969,7 +1970,7 @@
                   onclick={dismissGestureHintPermanently}
                 >
                   <XIcon class="h-3 w-3" />
-                  <span>不再提示</span>
+                  <span>{t('locationPicker.noMoreHints')}</span>
                 </button>
               </div>
             {/if}
@@ -1979,9 +1980,9 @@
         {#if !isMapAvailable}
           <div class="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-sm">
             <div class="text-center space-y-3">
-              <p class="font-medium">地图未配置</p>
-              <p class="text-sm">请设置 VITE_AMAP_KEY</p>
-              <Button size="sm" variant="outline" onclick={handleRetryMapLoad}>重试加载</Button>
+              <p class="font-medium">{t('locationPicker.mapNotConfigured')}</p>
+              <p class="text-sm">{t('locationPicker.mapKeyHint')}</p>
+              <Button size="sm" variant="outline" onclick={handleRetryMapLoad}>{t('locationPicker.retryLoad')}</Button>
             </div>
           </div>
         {/if}
@@ -2001,7 +2002,7 @@
             style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-md);"
             onclick={handleUseCurrentLocation}
             disabled={isLocating}
-            aria-label="使用当前位置"
+            aria-label={t('locationPicker.useCurrentLocationAria')}
           >
             {#if isLocating}
               <Loader2 class="h-5 w-5 animate-spin" />
@@ -2016,9 +2017,9 @@
               class="h-12 w-12 rounded-full backdrop-blur-sm transition active:scale-95"
               style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-md);"
               onclick={handleBackToBrowseAnchor}
-              aria-label="回到浏览锚点位置"
+              aria-label={t('locationPicker.backToAnchorAria')}
             >
-              <img src="/map/marker_center_pin.svg" alt="浏览锚点" class="h-7 w-7" />
+              <img src="/map/marker_center_pin.svg" alt={t('locationPicker.anchorImageAlt')} class="h-7 w-7" />
             </Button>
           {/if}
         </div>
@@ -2038,7 +2039,7 @@
                     class="text-[11px] font-semibold uppercase tracking-[0.16em]"
                     style="color: var(--text-secondary);"
                   >
-                    {clusterPreview.kind === 'overlap_group' ? '同点内容预览' : '聚合内容预览'}
+                    {clusterPreview.kind === 'overlap_group' ? t('locationPicker.overlapPreviewTitle') : t('locationPicker.clusterPreviewTitle')}
                   </p>
                   <p class="truncate text-base font-bold">
                     {clusterPreview.title}
@@ -2055,7 +2056,7 @@
                   onclick={closeClusterPreview}
                 >
                   <X class="h-4 w-4" />
-                  <span class="sr-only">关闭预览</span>
+                  <span class="sr-only">{t('locationPicker.closePreview')}</span>
                 </Button>
               </div>
 
@@ -2073,9 +2074,9 @@
                         {getItemTypeLabel(previewItem)}
                       </div>
                       <div class="min-w-0 flex-1">
-                        <p class="truncate text-sm font-semibold">聚合区域</p>
+                        <p class="truncate text-sm font-semibold">{t('locationPicker.clusterRegion')}</p>
                         <p class="mt-1 line-clamp-2 text-xs">
-                          {previewItem.total_count} 个内容
+                          {t('locationPicker.contentCount', { count: previewItem.total_count })}
                         </p>
                       </div>
                     </button>
@@ -2083,7 +2084,7 @@
                 </div>
               {:else}
                 <div class="px-4 py-4 text-sm">
-                  当前层级只有聚合摘要，继续放大后才能看到具体对象列表。
+                  {t('locationPicker.clusterSummaryOnly')}
                 </div>
               {/if}
 
@@ -2093,13 +2094,13 @@
                   class="h-10 flex-1 rounded-[var(--radius-md)]"
                   onclick={closeClusterPreview}
                 >
-                  稍后再看
+                  {t('locationPicker.reviewLater')}
                 </Button>
                 <Button
                   class="h-10 flex-1 rounded-[var(--radius-md)]"
                   onclick={zoomToClusterPreview}
                 >
-                  {clusterPreview.kind === 'overlap_group' ? '放大展开' : '继续放大'}
+                  {clusterPreview.kind === 'overlap_group' ? t('locationPicker.zoomToExpandOverlap') : t('locationPicker.zoomToExpandCluster')}
                 </Button>
               </div>
             </div>
@@ -2123,12 +2124,12 @@
                     class="text-[11px] font-semibold uppercase tracking-[0.16em]"
                     style="color: var(--text-secondary);"
                   >
-                    地图对象详情
+                    {t('locationPicker.mapObjectDetails')}
                   </p>
                   <p class="truncate text-base font-bold">
                     {hotspotPreviewItems.length === 1
                       ? (hotspotPreviewItems[0]?.title ?? '')
-                      : `${hotspotPreviewItems.length} 个内容`}
+                      : t('locationPicker.contentCount', { count: hotspotPreviewItems.length })}
                   </p>
                 </div>
                 <Button
@@ -2142,7 +2143,7 @@
                   }}
                 >
                   <X class="h-4 w-4" />
-                  <span class="sr-only">关闭详情</span>
+                  <span class="sr-only">{t('locationPicker.closeDetails')}</span>
                 </Button>
               </div>
 
@@ -2167,10 +2168,10 @@
                       style="background: var(--surface-bg); color: var(--brand); border: 1px solid var(--border-theme);"
                     >
                       {item.object_type === 'user'
-                        ? '用户'
+                        ? t('locationPicker.itemLabelUser')
                         : item.object_type === 'group'
-                          ? '群组'
-                          : '动态'}
+                          ? t('locationPicker.itemLabelGroup')
+                          : t('locationPicker.itemLabelMoment')}
                     </div>
                     <div class="min-w-0 flex-1">
                       <p class="truncate text-sm font-semibold">
@@ -2204,13 +2205,13 @@
               class="flex w-full flex-col items-center gap-1 px-4 py-3"
               onclick={() => (isBottomSheetExpanded = !isBottomSheetExpanded)}
               aria-expanded={isBottomSheetExpanded}
-              aria-label={isBottomSheetExpanded ? '收起位置面板' : '展开位置面板'}
+              aria-label={isBottomSheetExpanded ? t('locationPicker.collapsePanelAria') : t('locationPicker.expandPanelAria')}
             >
               <div class="h-1 w-12 rounded-full" style="background: var(--border-theme);"></div>
               <div
                 class="flex items-center gap-2 text-[11px] font-semibold tracking-[0.08em] /90 uppercase"
               >
-                <span>{isBottomSheetExpanded ? '收起面板' : '展开面板'}</span>
+                <span>{isBottomSheetExpanded ? t('locationPicker.collapsePanel') : t('locationPicker.expandPanel')}</span>
                 {#if isBottomSheetExpanded}
                   <ChevronDown class="h-4 w-4" />
                 {:else}
@@ -2223,10 +2224,10 @@
             <div class="max-h-[70dvh] overflow-y-auto px-4 pb-safe">
               <div class="space-y-3 pb-4">
                 <AnchorSummaryCard
-                  label="当前选中"
+                  label={t('locationPicker.currentSelection')}
                   description={selectionDescription}
                   subtle
-                  overrideName={locationName || '拖动地图选择位置'}
+                  overrideName={locationName || t('locationPicker.dragToSelect')}
                 />
 
                 {#if showSearch}
@@ -2241,10 +2242,10 @@
                             class="text-[11px] font-semibold uppercase tracking-[0.16em]"
                             style="color: var(--text-secondary);"
                           >
-                            地点搜索
+                            {t('locationPicker.placeSearchTitle')}
                           </p>
                           <p class="mt-2 text-sm font-semibold">
-                            搜索地标、商圈或街道名，结果会直接落到地图中心。
+                            {t('locationPicker.placeSearchDesc')}
                           </p>
                         </div>
                         <Button
@@ -2254,7 +2255,7 @@
                           onclick={toggleSearch}
                         >
                           <X class="h-4 w-4" />
-                          <span class="sr-only">关闭搜索</span>
+                          <span class="sr-only">{t('locationPicker.closeSearch')}</span>
                         </Button>
                       </div>
                     </div>
@@ -2273,7 +2274,7 @@
                           type="text"
                           bind:this={searchInput}
                           bind:value={searchText}
-                          placeholder="搜索地点名称、街道或商圈"
+                          placeholder={t('locationPicker.searchPlaceholderMobile')}
                           class="flex-1 select-text bg-transparent text-sm outline-none"
                           oninput={() => {
                             if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
@@ -2333,7 +2334,7 @@
                                   {result.name}
                                 </div>
                                 <div class="mt-1 text-xs">
-                                  {result.address || '未提供详细地址'}
+                                  {result.address || t('locationPicker.noAddress')}
                                 </div>
                               </div>
                             </button>
@@ -2344,14 +2345,14 @@
                           <div class="flex items-center justify-between px-1">
                             <div class="flex items-center gap-1.5 text-xs font-medium">
                               <Clock class="h-3.5 w-3.5" />
-                              <span>最近使用</span>
+                              <span>{t('locationPicker.recentlyUsed')}</span>
                             </div>
                             <button
                               class="flex items-center gap-1 text-xs"
                               onclick={handleClearHistory}
                             >
                               <Trash2 class="h-3 w-3" />
-                              <span>清空</span>
+                              <span>{t('locationPicker.clearAll')}</span>
                             </button>
                           </div>
                           <div class="max-h-[32dvh] space-y-2 overflow-y-auto">
@@ -2372,7 +2373,7 @@
                                   <div class="truncate text-sm font-medium">
                                     {item.locationName}
                                   </div>
-                                  <div class="mt-1 text-[11px]">一键回到这个位置继续浏览</div>
+                                  <div class="mt-1 text-[11px]">{t('locationPicker.historyItemHint')}</div>
                                 </div>
                               </button>
                             {/each}
@@ -2382,8 +2383,8 @@
                         <div
                           class="rounded-[var(--radius-md)] border border-dashed px-4 py-6 text-center"
                         >
-                          <p class="text-sm font-semibold">没有找到匹配地点</p>
-                          <p class="mt-1 text-xs">换个关键词试试，或者直接拖动地图到目标区域。</p>
+                          <p class="text-sm font-semibold">{t('locationPicker.noMatchTitle')}</p>
+                          <p class="mt-1 text-xs">{t('locationPicker.noMatchDesc')}</p>
                         </div>
                       {/if}
                     </div>
@@ -2401,10 +2402,10 @@
                           class="text-[11px] font-semibold uppercase tracking-[0.16em]"
                           style="color: var(--text-secondary);"
                         >
-                          地图内容筛选
+                          {t('locationPicker.mapFilterTitle')}
                         </p>
                         <p class="mt-1 text-xs">
-                          已启用 {activeFilterCount} 项筛选
+                          {t('locationPicker.filtersEnabled', { count: activeFilterCount })}
                         </p>
                       </div>
                       <Button
@@ -2414,7 +2415,7 @@
                         onclick={toggleFilterPanel}
                       >
                         <X class="h-4 w-4" />
-                        <span class="sr-only">关闭筛选</span>
+                        <span class="sr-only">{t('locationPicker.closeFilter')}</span>
                       </Button>
                     </div>
                     <div class="space-y-2">
@@ -2426,8 +2427,8 @@
                         onclick={() => toggleRenderFilter('user')}
                       >
                         <span class="flex items-center gap-2">
-                          <img src="/map/marker_user.svg" alt="用户标记" class="h-8 w-auto" />
-                          <span>用户</span>
+                          <img src="/map/marker_user.svg" alt={t('locationPicker.filterUserAlt')} class="h-8 w-auto" />
+                          <span>{t('locationPicker.filterUser')}</span>
                         </span>
                         <span
                           class="h-2.5 w-2.5 rounded-full"
@@ -2444,8 +2445,8 @@
                         onclick={() => toggleRenderFilter('group')}
                       >
                         <span class="flex items-center gap-2">
-                          <img src="/map/marker_group.svg" alt="群组标记" class="h-8 w-auto" />
-                          <span>群组</span>
+                          <img src="/map/marker_group.svg" alt={t('locationPicker.filterGroupAlt')} class="h-8 w-auto" />
+                          <span>{t('locationPicker.filterGroup')}</span>
                         </span>
                         <span
                           class="h-2.5 w-2.5 rounded-full"
@@ -2462,8 +2463,8 @@
                         onclick={() => toggleRenderFilter('moment')}
                       >
                         <span class="flex items-center gap-2">
-                          <img src="/map/marker_moment.svg" alt="动态标记" class="h-8 w-auto" />
-                          <span>动态</span>
+                          <img src="/map/marker_moment.svg" alt={t('locationPicker.filterMomentAlt')} class="h-8 w-auto" />
+                          <span>{t('locationPicker.filterMoment')}</span>
                         </span>
                         <span
                           class="h-2.5 w-2.5 rounded-full"
@@ -2491,8 +2492,8 @@
                           style="color: var(--text-secondary);"
                         >
                           {clusterPreview.kind === 'overlap_group'
-                            ? '同点内容预览'
-                            : '聚合内容预览'}
+                            ? t('locationPicker.overlapPreviewTitle')
+                            : t('locationPicker.clusterPreviewTitle')}
                         </p>
                         <p class="truncate text-base font-bold">
                           {clusterPreview.title}
@@ -2508,7 +2509,7 @@
                         onclick={closeClusterPreview}
                       >
                         <X class="h-4 w-4" />
-                        <span class="sr-only">关闭预览</span>
+                        <span class="sr-only">{t('locationPicker.closePreview')}</span>
                       </Button>
                     </div>
                     {#if clusterPreview.items.length > 0}
@@ -2524,9 +2525,9 @@
                               {getItemTypeLabel(previewItem)}
                             </div>
                             <div class="min-w-0 flex-1">
-                              <p class="truncate text-sm font-semibold">聚合区域</p>
+                              <p class="truncate text-sm font-semibold">{t('locationPicker.clusterRegion')}</p>
                               <p class="mt-1 line-clamp-2 text-xs">
-                                {previewItem.total_count} 个内容
+                                {t('locationPicker.contentCount', { count: previewItem.total_count })}
                               </p>
                             </div>
                           </button>
@@ -2534,7 +2535,7 @@
                       </div>
                     {:else}
                       <div class="px-4 py-4 text-sm">
-                        当前层级只有聚合摘要，继续放大后才能看到具体对象列表。
+                        {t('locationPicker.clusterSummaryOnly')}
                       </div>
                     {/if}
                     <div
@@ -2546,13 +2547,13 @@
                         class="h-10 flex-1 rounded-[var(--radius-md)]"
                         onclick={closeClusterPreview}
                       >
-                        稍后再看
+                        {t('locationPicker.reviewLater')}
                       </Button>
                       <Button
                         class="h-10 flex-1 rounded-[var(--radius-md)]"
                         onclick={zoomToClusterPreview}
                       >
-                        {clusterPreview.kind === 'overlap_group' ? '放大展开' : '继续放大'}
+                        {clusterPreview.kind === 'overlap_group' ? t('locationPicker.zoomToExpandOverlap') : t('locationPicker.zoomToExpandCluster')}
                       </Button>
                     </div>
                   </div>
@@ -2572,12 +2573,12 @@
                           class="text-[11px] font-semibold uppercase tracking-[0.16em]"
                           style="color: var(--text-secondary);"
                         >
-                          地图对象详情
+                          {t('locationPicker.mapObjectDetails')}
                         </p>
                         <p class="truncate text-base font-bold">
                           {hotspotPreviewItems.length === 1
                             ? (hotspotPreviewItems[0]?.title ?? '')
-                            : `${hotspotPreviewItems.length} 个内容`}
+                            : t('locationPicker.contentCount', { count: hotspotPreviewItems.length })}
                         </p>
                       </div>
                       <Button
@@ -2590,7 +2591,7 @@
                         }}
                       >
                         <X class="h-4 w-4" />
-                        <span class="sr-only">关闭详情</span>
+                        <span class="sr-only">{t('locationPicker.closeDetails')}</span>
                       </Button>
                     </div>
                     <div class="max-h-[32dvh] space-y-2 overflow-y-auto px-3 py-3">
@@ -2613,10 +2614,10 @@
                             style="background: var(--surface-bg); color: var(--brand); border: 1px solid var(--border-theme);"
                           >
                             {item.object_type === 'user'
-                              ? '用户'
+                              ? t('locationPicker.itemLabelUser')
                               : item.object_type === 'group'
-                                ? '群组'
-                                : '动态'}
+                                ? t('locationPicker.itemLabelGroup')
+                                : t('locationPicker.itemLabelMoment')}
                           </div>
                           <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-semibold">
@@ -2655,7 +2656,7 @@
                     disabled={!locationName}
                   >
                     <Share2 class="h-5 w-5" />
-                    分享此位置
+                    {t('locationPicker.shareLocation')}
                   </Button>
                 {/if}
               </div>
@@ -2687,7 +2688,7 @@
               class="h-9 w-9 rounded-[var(--radius-md)] p-0"
               onclick={() => (isFullscreen = !isFullscreen)}
               aria-pressed={isFullscreen}
-              aria-label={isFullscreen ? '退出全屏' : '进入全屏'}
+              aria-label={isFullscreen ? t('locationPicker.exitFullscreenAria') : t('locationPicker.enterFullscreenAria')}
             >
               {#if isFullscreen}
                 <Minimize2 class="h-4 w-4" />
@@ -2712,7 +2713,7 @@
               type="text"
               bind:this={searchInput}
               bind:value={searchText}
-              placeholder="搜索地点、地标或坐标"
+              placeholder={t('locationPicker.searchPlaceholderDesktop')}
               class="flex-1 select-text bg-transparent text-sm outline-none"
               oninput={() => {
                 if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
@@ -2770,7 +2771,7 @@
                       {result.name}
                     </p>
                     <p class="mt-0.5 text-[11px]">
-                      {result.address || '未提供详细地址'}
+                      {result.address || t('locationPicker.noAddress')}
                     </p>
                   </div>
                 </button>
@@ -2779,11 +2780,11 @@
               <div class="flex items-center justify-between px-1 pb-1">
                 <div class="flex items-center gap-1.5 text-[11px] font-medium">
                   <Clock class="h-3.5 w-3.5" />
-                  <span>最近使用</span>
+                  <span>{t('locationPicker.recentlyUsed')}</span>
                 </div>
                 <button class="flex items-center gap-1 text-[11px]" onclick={handleClearHistory}>
                   <Trash2 class="h-3 w-3" />
-                  <span>清空</span>
+                  <span>{t('locationPicker.clearAll')}</span>
                 </button>
               </div>
               {#each anchorHistory as item (item.timestamp)}
@@ -2800,13 +2801,13 @@
                     <p class="truncate text-sm font-medium">
                       {item.locationName}
                     </p>
-                    <p class="mt-0.5 text-[11px]">一键回到该位置继续浏览</p>
+                    <p class="mt-0.5 text-[11px]">{t('locationPicker.historyItemHintShort')}</p>
                   </div>
                 </button>
               {/each}
             {:else if searchText.trim().length > 0 && !isSearching}
               <div class="rounded-[var(--radius-md)] border border-dashed px-3 py-4 text-[11px]">
-                没有找到匹配地点，换个关键词试试，或者直接拖动地图到目标区域。
+                {t('locationPicker.noMatchDescShort')}
               </div>
             {/if}
           </div>
@@ -2816,7 +2817,7 @@
         <div class="mt-auto space-y-3 border-t pt-3" style="border-color: var(--border-theme);">
           <div>
             <p class="text-body-lg truncate font-semibold" style="color: var(--text-primary)">
-              {locationName || '拖动地图选择位置'}
+              {locationName || t('locationPicker.dragToSelect')}
             </p>
           </div>
 
@@ -2838,7 +2839,7 @@
                 disabled={!locationName}
               >
                 <Share2 class="h-4 w-4" />
-                分享此位置
+                {t('locationPicker.shareLocation')}
               </Button>
             {/if}
           </div>

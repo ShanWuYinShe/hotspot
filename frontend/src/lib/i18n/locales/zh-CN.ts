@@ -1056,7 +1056,8 @@ export default {
     leaveDialogDesc: '确认要退出该群组吗？退出后将无法查看群组内容。',
     leaveDialogMemberCount: '{count} 位成员',
     leaveDialogFallback: '群组',
-    confirmLeave: '确认退出'
+    confirmLeave: '确认退出',
+    loadFailed: '加载失败'
   },
   momentDetail: {
     pageTitle: '瞬间详情',

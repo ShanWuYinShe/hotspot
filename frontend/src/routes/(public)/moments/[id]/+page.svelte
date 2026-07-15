@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { untrack } from 'svelte';
+  import { t } from '$lib/i18n';
   import { withMinimumLoadingTime } from '$lib/utils/loading';
   import { momentsService, commentsService, shareService } from '$lib/api/services';
   import { formatDateTime } from '$lib/utils/format';
@@ -61,11 +62,11 @@
         likesCount = moment.likes_count;
         commentsCount = moment.comments_count;
       } else {
-        toast.error(response.message || '加载失败');
+        toast.error(response.message || t('momentDetail.loadFailed'));
       }
     } catch {
       if (version !== loadVersion) return;
-      toast.error('加载失败');
+      toast.error(t('momentDetail.loadFailed'));
     } finally {
       if (version === loadVersion) isLoading = false;
     }
@@ -164,12 +165,12 @@
         comments = [response.data, ...comments];
         commentsCount++;
         commentText = '';
-        toast.success('评论成功');
+        toast.success(t('momentDetail.commentSuccess'));
       } else {
-        toast.error(response.message || '评论失败');
+        toast.error(response.message || t('momentDetail.commentFailed'));
       }
     } catch {
-      toast.error('评论失败');
+      toast.error(t('momentDetail.commentFailed'));
     } finally {
       isSubmitting = false;
     }
@@ -189,12 +190,12 @@
       if (isSuccess(response) && response.data) {
         const url = `${window.location.origin}/share/${response.data.share_code}`;
         await navigator.clipboard.writeText(url);
-        toast.success('分享链接已复制到剪贴板');
+        toast.success(t('momentDetail.shareCopied'));
       } else {
-        toast.error(response.message || '创建分享失败');
+        toast.error(response.message || t('momentDetail.shareFailed'));
       }
     } catch {
-      toast.error('创建分享失败');
+      toast.error(t('momentDetail.shareFailed'));
     }
   }
 
@@ -207,10 +208,10 @@
           c.comment_id === commentId ? { ...c, top_replies: replies, replies_count: replies.length } : c
         );
       } else {
-        toast.error(response.message || '加载回复失败');
+        toast.error(response.message || t('momentDetail.repliesLoadFailed'));
       }
     } catch {
-      toast.error('加载回复失败');
+      toast.error(t('momentDetail.repliesLoadFailed'));
     }
   }
 
@@ -247,7 +248,7 @@
 </script>
 
 <svelte:head>
-  <title>{moment?.description?.slice(0, 30) ?? '瞬间详情'} - HotSpot</title>
+  <title>{moment?.description?.slice(0, 30) ?? t('momentDetail.pageTitle')} - HotSpot</title>
 </svelte:head>
 
 <!-- Header — full-bleed sticky, content aligned to the same narrow shell as the body -->
@@ -257,14 +258,14 @@
 >
   <div class="page-shell page-shell--narrow flex items-center gap-4">
     <BackButton onclick={handleBackClick} size={36} />
-    <h1 class="text-h1" style="font-weight: 600; color: var(--text-primary)">瞬间详情</h1>
+    <h1 class="text-h1" style="font-weight: 600; color: var(--text-primary)">{t('momentDetail.pageTitle')}</h1>
     {#if isOwner}
       <div class="ml-auto">
         <button
           class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
           style="width: 36px; height: 36px;"
           onclick={() => (showEditModal = true)}
-          aria-label="编辑"
+          aria-label={t('momentDetail.editAria')}
         >
           <Pencil size={15} strokeWidth={1.5} color="var(--text-secondary)" />
         </button>
@@ -346,7 +347,7 @@
                 <div class="relative">
                   <SmartImage
                     src={image.url}
-                    alt="图片 {i + 1}"
+                    alt={t('momentDetail.imageAlt', { index: i + 1 })}
                     thumbnail={image.thumbnail_url}
                     width={image.width}
                     height={image.height}
@@ -445,7 +446,7 @@
               <input
                 type="text"
                 {@attach useKeyboardFocus()}
-                placeholder="写下你的评论..."
+                placeholder={t('momentDetail.commentPlaceholder')}
                 bind:value={commentText}
                 disabled={isSubmitting}
                 class="bg-transparent flex-1 outline-none text-sm"
@@ -480,7 +481,7 @@
           >
             <LogIn size={16} />
           </span>
-          <span class="text-sm" style="color: var(--text-secondary);">登录后评论</span>
+          <span class="text-sm" style="color: var(--text-secondary);">{t('momentDetail.loginToComment')}</span>
         </button>
       {/if}
 
@@ -493,7 +494,7 @@
           class="text-xs uppercase"
           style="letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 16px"
         >
-          评论 · {commentsCount}
+          {t('momentDetail.commentsTitle', { count: commentsCount })}
         </p>
 
         {#if isLoadingComments}
@@ -519,7 +520,7 @@
           </div>
         {:else if commentsError}
           <div class="flex flex-col items-center gap-3 py-8 text-center">
-            <p class="text-body-lg" style="color: var(--text-secondary)">加载评论失败</p>
+            <p class="text-body-lg" style="color: var(--text-secondary)">{t('momentDetail.commentsLoadFailed')}</p>
             <button
               class="rounded-full px-4 py-2 font-medium outline-none"
               style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
@@ -530,11 +531,11 @@
                 loadComments(momentId, v);
               }}
             >
-              重试
+              {t('common.retry')}
             </button>
           </div>
         {:else if comments.length === 0}
-          <p class="py-8 text-center" style="color: var(--text-secondary);">暂无评论</p>
+          <p class="py-8 text-center" style="color: var(--text-secondary);">{t('momentDetail.noComments')}</p>
         {:else}
           <div class="space-y-4">
             {#each comments as comment (comment.comment_id)}
@@ -597,7 +598,7 @@
                           style="color: var(--brand)"
                           onclick={() => loadAllReplies(comment.comment_id)}
                         >
-                          查看全部 {comment.replies_count} 条回复
+                          {t('momentDetail.viewAllReplies', { count: comment.replies_count })}
                         </button>
                       {/if}
                     </div>
@@ -613,13 +614,13 @@
         class="rounded-[var(--radius-lg)] py-12 text-center"
         style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
       >
-        <p style="color: var(--text-secondary);">瞬间不存在或已被删除</p>
+        <p style="color: var(--text-secondary);">{t('momentDetail.notExist')}</p>
         <button
           class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none"
           style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
           onclick={() => goto('/')}
         >
-          返回首页
+          {t('common.backHome')}
         </button>
       </div>
     {/if}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount, untrack } from 'svelte';
+  import { t } from '$lib/i18n';
   import { groupsService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import { authStore } from '$lib/stores/auth.svelte';
@@ -150,28 +151,28 @@
   function getJoinMethodLabel(method?: GroupJoinMethod) {
     switch (method) {
       case 'open':
-        return '开放加入';
+        return t('groupDetail.joinMethodOpen');
       case 'approval':
-        return '需要审核';
+        return t('groupDetail.joinMethodApproval');
       case 'invite_only':
-        return '仅限邀请';
+        return t('groupDetail.joinMethodInviteOnly');
       default:
-        return '未公开';
+        return t('groupDetail.joinMethodUnknown');
     }
   }
 
   function getRoleLabel(role: GroupMemberItem['role']) {
-    if (role === 'owner') return '群主';
-    if (role === 'admin') return '管理员';
-    return '成员';
+    if (role === 'owner') return t('groupDetail.roleOwner');
+    if (role === 'admin') return t('groupDetail.roleAdmin');
+    return t('groupDetail.roleMember');
   }
 
-  const mutePresets = [
-    { label: '30 分钟', value: 30 },
-    { label: '2 小时', value: 120 },
-    { label: '1 天', value: 1440 },
-    { label: '7 天', value: 10080 }
-  ];
+  const mutePresets = $derived([
+    { label: t('groupDetail.mutePreset30'), value: 30 },
+    { label: t('groupDetail.mutePreset120'), value: 120 },
+    { label: t('groupDetail.mutePreset1440'), value: 1440 },
+    { label: t('groupDetail.mutePreset10080'), value: 10080 }
+  ]);
 
   function resetAnnouncementForm() {
     announcementTitle = '';
@@ -234,15 +235,15 @@
     const title = announcementTitle.trim();
     const content = announcementContent.trim();
     if (!title || !content) {
-      toast.error('请填写公告标题和内容');
+      toast.error(t('groupDetail.fillAnnouncementError'));
       return;
     }
     if (title.length > ANNOUNCEMENT_TITLE_MAX) {
-      toast.error(`公告标题最多 ${ANNOUNCEMENT_TITLE_MAX} 字符`);
+      toast.error(t('groupDetail.announcementTitleMaxError', { count: ANNOUNCEMENT_TITLE_MAX }));
       return;
     }
     if (content.length > ANNOUNCEMENT_CONTENT_MAX) {
-      toast.error(`公告内容最多 ${ANNOUNCEMENT_CONTENT_MAX} 字符`);
+      toast.error(t('groupDetail.announcementContentMaxError', { count: ANNOUNCEMENT_CONTENT_MAX }));
       return;
     }
 
@@ -267,7 +268,7 @@
           announcementsPagination.updateItem((item) =>
             item.announcement_id === updatedItem.announcement_id ? updatedItem : null
           );
-          toast.success('公告已更新');
+          toast.success(t('groupDetail.announcementUpdated'));
           showAnnouncementDialog = false;
           resetAnnouncementForm();
           announcementsLoaded = true;
@@ -281,16 +282,16 @@
         });
         if (isSuccess(response) && response.data) {
           announcementsPagination.addItem(response.data);
-          toast.success('公告已发布');
+          toast.success(t('groupDetail.announcementPublished'));
           showAnnouncementDialog = false;
           resetAnnouncementForm();
           announcementsLoaded = true;
         } else {
-          toast.error(response.message || '操作失败');
+          toast.error(response.message || t('errors.operationFailed'));
         }
       }
     } catch {
-      toast.error('操作失败');
+      toast.error(t('errors.operationFailed'));
     } finally {
       announcementSubmitting = false;
     }
@@ -314,12 +315,12 @@
       if (isSuccess(response)) {
         // 从列表中删除公告
         announcementsPagination.removeItem((item) => item.announcement_id === targetId);
-        toast.success('公告已删除');
+        toast.success(t('groupDetail.announcementDeleted'));
       } else {
-        toast.error(response.message || '删除失败');
+        toast.error(response.message || t('groupDetail.deleteFailed'));
       }
     } catch {
-      toast.error('删除失败');
+      toast.error(t('groupDetail.deleteFailed'));
     }
   }
 
@@ -356,7 +357,7 @@
       duration < MUTE_DURATION_MIN ||
       duration > MUTE_DURATION_MAX
     ) {
-      toast.error(`禁言时长需在 ${MUTE_DURATION_MIN}-${MUTE_DURATION_MAX} 分钟之间`);
+      toast.error(t('groupDetail.muteDurationError', { min: MUTE_DURATION_MIN, max: MUTE_DURATION_MAX }));
       return;
     }
 
@@ -374,14 +375,14 @@
         membersPagination.updateItem((item) =>
           item.user.user_id === targetUserId ? { ...item, muted_until: mutedUntil } : null
         );
-        toast.success('已设置禁言');
+        toast.success(t('groupDetail.muteSet'));
         showMuteDialog = false;
         muteTarget = null;
       } else {
-        toast.error(response.message || '操作失败');
+        toast.error(response.message || t('errors.operationFailed'));
       }
     } catch {
-      toast.error('操作失败');
+      toast.error(t('errors.operationFailed'));
     } finally {
       muteSubmitting = false;
     }
@@ -404,12 +405,12 @@
         membersPagination.updateItem((item) =>
           item.user.user_id === member.user.user_id ? { ...item, muted_until: undefined } : null
         );
-        toast.success('已解除禁言');
+        toast.success(t('groupDetail.unmuted'));
       } else {
-        toast.error(response.message || '操作失败');
+        toast.error(response.message || t('errors.operationFailed'));
       }
     } catch {
-      toast.error('操作失败');
+      toast.error(t('errors.operationFailed'));
     }
   }
 
@@ -440,14 +441,14 @@
         membersPagination.updateItem((item) =>
           item.user.user_id === targetUserId ? { ...item, role } : null
         );
-        toast.success('成员角色已更新');
+        toast.success(t('groupDetail.roleUpdated'));
         showRoleDialog = false;
         roleTarget = null;
       } else {
-        toast.error(response.message || '操作失败');
+        toast.error(response.message || t('errors.operationFailed'));
       }
     } catch {
-      toast.error('操作失败');
+      toast.error(t('errors.operationFailed'));
     } finally {
       roleSubmitting = false;
     }
@@ -485,14 +486,14 @@
             }
           };
         }
-        toast.success('已移除成员');
+        toast.success(t('groupDetail.memberRemoved'));
         showRemoveDialog = false;
         removeTarget = null;
       } else {
-        toast.error(response.message || '操作失败');
+        toast.error(response.message || t('errors.operationFailed'));
       }
     } catch {
-      toast.error('操作失败');
+      toast.error(t('errors.operationFailed'));
     } finally {
       removeSubmitting = false;
     }
@@ -512,10 +513,10 @@
           membersLoaded = false;
         }
       } else {
-        toast.error(response.message || '群组不存在');
+        toast.error(response.message || t('groupDetail.groupNotExist'));
       }
     } catch {
-      toast.error('加载失败');
+      toast.error(t('groupDetail.loadFailed'));
     }
   }
 
@@ -619,12 +620,12 @@
             }
           };
         }
-        toast.success(action === 'approve' ? '已批准入群申请' : '已拒绝入群申请');
+        toast.success(action === 'approve' ? t('groupDetail.applicationApproved') : t('groupDetail.applicationRejected'));
       } else {
-        toast.error(response.message || '操作失败');
+        toast.error(response.message || t('errors.operationFailed'));
       }
     } catch {
-      toast.error('操作失败');
+      toast.error(t('errors.operationFailed'));
     } finally {
       setApplicationHandling(application.application_id, false);
     }
@@ -649,13 +650,13 @@
 
     const joinMethod = settings?.join_method ?? 'open';
     if (joinMethod === 'invite_only') {
-      toast.error('该群组仅支持邀请加入');
+      toast.error(t('groupDetail.inviteOnlyJoinError'));
       return;
     }
     const trimmedPassword = joinPassword.trim();
     const trimmedJoinMessage = joinMessage.trim();
     if (joinMethod === 'open' && group?.has_password && !trimmedPassword) {
-      toast.error('请输入群组密码');
+      toast.error(t('groupDetail.passwordRequired'));
       return;
     }
     if (
@@ -664,11 +665,11 @@
       trimmedPassword &&
       (trimmedPassword.length < GROUP_PASSWORD_MIN || trimmedPassword.length > GROUP_PASSWORD_MAX)
     ) {
-      toast.error(`群组密码长度需在 ${GROUP_PASSWORD_MIN}-${GROUP_PASSWORD_MAX} 字符之间`);
+      toast.error(t('groupDetail.passwordLengthError', { min: GROUP_PASSWORD_MIN, max: GROUP_PASSWORD_MAX }));
       return;
     }
     if (joinMethod === 'approval' && trimmedJoinMessage.length > GROUP_JOIN_MESSAGE_MAX) {
-      toast.error(`申请理由最多 ${GROUP_JOIN_MESSAGE_MAX} 字符`);
+      toast.error(t('groupDetail.joinMessageMaxError', { count: GROUP_JOIN_MESSAGE_MAX }));
       return;
     }
 
@@ -681,16 +682,16 @@
       });
 
       if (isSuccess(response)) {
-        toast.success(joinMethod === 'approval' ? '已提交申请' : '已加入群组');
+        toast.success(joinMethod === 'approval' ? t('groupDetail.applicationSubmitted') : t('groupDetail.joinedGroup'));
         showJoinDialog = false;
         settingsLoaded = false;
         await loadGroup();
         await loadSettings();
       } else {
-        toast.error(response.message || '操作失败');
+        toast.error(response.message || t('errors.operationFailed'));
       }
     } catch {
-      toast.error('操作失败');
+      toast.error(t('errors.operationFailed'));
     } finally {
       isJoining = false;
     }
@@ -711,15 +712,15 @@
     try {
       const response = await groupsService.leave({ group_id: groupId });
       if (isSuccess(response)) {
-        toast.success('已退出群组');
+        toast.success(t('groupDetail.leftGroup'));
         settingsLoaded = false;
         await loadGroup();
         await loadSettings();
       } else {
-        toast.error(response.message || '操作失败');
+        toast.error(response.message || t('errors.operationFailed'));
       }
     } catch {
-      toast.error('操作失败');
+      toast.error(t('errors.operationFailed'));
     } finally {
       isLeaving = false;
     }
@@ -764,7 +765,7 @@
       ids: [id],
       onSubscribeFailed: () => {
         if (cancelled) return;
-        toast.warning('群组实时订阅失败，正在重试...');
+        toast.warning(t('groupDetail.wsSubscribeFailed'));
       }
     });
 
@@ -855,7 +856,7 @@
 </script>
 
 <svelte:head>
-  <title>{group?.group.name ?? '群组详情'} - HotSpot</title>
+  <title>{group?.group.name ?? t('groupDetail.pageTitle')} - HotSpot</title>
 </svelte:head>
 
 <!-- Sticky header — full-bleed, content aligned to the same narrow shell as the body -->
@@ -866,9 +867,9 @@
   <div class="page-shell page-shell--narrow flex items-center gap-4">
     <BackButton onclick={() => history.back()} size={36} />
     <div>
-      <h1 class="text-h1" style="font-weight: 600; color: var(--text-primary)">群组详情</h1>
+      <h1 class="text-h1" style="font-weight: 600; color: var(--text-primary)">{t('groupDetail.pageTitle')}</h1>
       <p class="text-meta" style="color: var(--text-secondary); margin-top: 2px">
-        查看群信息、成员与公告管理
+        {t('groupDetail.pageSubtitle')}
       </p>
     </div>
   </div>
@@ -884,9 +885,9 @@
         <Loader2 size={14} class="animate-spin" style="color: var(--theme-warning);" />
         <span class="text-body-lg" style="color: var(--theme-warning)">
           {#if wsGroupSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
-            群组实时事件连接中…
+            {t('groupDetail.wsConnecting')}
           {:else}
-            群组实时事件订阅重试中…
+            {t('groupDetail.wsRetrying')}
           {/if}
         </span>
       </div>
@@ -899,7 +900,7 @@
       >
         <div class="flex flex-col items-center gap-4">
           <p style="color: var(--text-secondary);">
-            {data.error || '群组不存在'}
+            {data.error || t('groupDetail.groupNotExist')}
           </p>
         </div>
       </div>
@@ -956,14 +957,14 @@
                   style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
                   onclick={() => goto(`/chat/groups/${groupId}`)}
                 >
-                  进入群聊
+                  {t('groupDetail.enterChat')}
                 </button>
                 <button
                   class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] cursor-default"
                   style="border: 1px solid var(--border-theme); color: var(--brand); background: var(--surface-bg);"
                   disabled
                 >
-                  已加入
+                  {t('groupDetail.joined')}
                 </button>
                 <button
                   class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -974,7 +975,7 @@
                   {#if isLeaving}
                     <Loader2 size={14} class="animate-spin" />
                   {/if}
-                  退出群组
+                  {t('groupDetail.leaveGroup')}
                 </button>
               {:else}
                 <button
@@ -983,7 +984,7 @@
                   onclick={openJoinDialog}
                   disabled={settings?.join_method === 'invite_only'}
                 >
-                  {settings?.join_method === 'invite_only' ? '仅限邀请' : '加入群组'}
+                  {settings?.join_method === 'invite_only' ? t('groupDetail.inviteOnly') : t('groupDetail.joinGroup')}
                 </button>
               {/if}
             </div>
@@ -1000,7 +1001,7 @@
                 style="color: var(--text-secondary)"
               >
                 <Users size={16} />
-                成员数量
+                {t('groupDetail.membersCount')}
               </div>
               <div
                 style="margin-top: 8px; font-size: var(--text-display); font-weight: 700; color: var(--text-primary);"
@@ -1017,7 +1018,7 @@
                 style="color: var(--text-secondary)"
               >
                 <Shield size={16} />
-                加入方式
+                {t('groupDetail.joinMethod')}
               </div>
               <div
                 class="text-body-lg"
@@ -1035,7 +1036,7 @@
                 style="color: var(--text-secondary)"
               >
                 <MapPin size={16} />
-                群组位置
+                {t('groupDetail.groupLocation')}
               </div>
               <div
                 class="text-body-lg"
@@ -1050,7 +1051,7 @@
 
       <!-- Tab bar -->
       <div class="flex flex-wrap gap-2">
-        {#each [{ value: 'overview', label: '概览' }, { value: 'announcements', label: '公告' }, { value: 'members', label: '成员' }, ...(canManageGroup ? [{ value: 'applications', label: '申请' }] : [])] as tab (tab.value)}
+        {#each [{ value: 'overview', label: t('groupDetail.tabOverview') }, { value: 'announcements', label: t('groupDetail.tabAnnouncements') }, { value: 'members', label: t('groupDetail.tabMembers') }, ...(canManageGroup ? [{ value: 'applications', label: t('groupDetail.tabApplications') }] : [])] as tab (tab.value)}
           <button
             class="filter-chip"
             class:filter-chip--active={currentTab === tab.value}
@@ -1073,10 +1074,10 @@
               class="text-xs uppercase"
               style="letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 12px"
             >
-              群组说明
+              {t('groupDetail.groupDescription')}
             </h3>
             <p class="text-body-lg" style="color: var(--text-secondary)">
-              {group.description || '暂无群组简介，欢迎加入后一起完善。'}
+              {group.description || t('groupDetail.descriptionEmpty')}
             </p>
             {#if group.tags && group.tags.length > 0}
               <div class="mt-3 flex flex-wrap gap-2">
@@ -1099,25 +1100,25 @@
               class="text-xs uppercase"
               style="letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 12px"
             >
-              加入须知
+              {t('groupDetail.joinNotice')}
             </h3>
             <div class="text-body-lg space-y-2" style="color: var(--text-secondary)">
               <div class="flex items-center justify-between">
-                <span>加入方式</span>
+                <span>{t('groupDetail.joinMethod')}</span>
                 <span style="font-weight: 500; color: var(--text-primary);"
                   >{getJoinMethodLabel(settings?.join_method)}</span
                 >
               </div>
               <div style="height: 1px; background: var(--border-theme);"></div>
               <div class="flex items-center justify-between">
-                <span>是否需要密码</span>
+                <span>{t('groupDetail.needPassword')}</span>
                 <span style="font-weight: 500; color: var(--text-primary);"
-                  >{group.has_password ? '需要' : '不需要'}</span
+                  >{group.has_password ? t('groupDetail.needPasswordYes') : t('groupDetail.needPasswordNo')}</span
                 >
               </div>
               <div style="height: 1px; background: var(--border-theme);"></div>
               <div class="flex items-center justify-between">
-                <span>当前位置</span>
+                <span>{t('groupDetail.currentLocation')}</span>
                 <span style="font-weight: 500; color: var(--text-primary);"
                   >{group.location.location_name}</span
                 >
@@ -1130,14 +1131,14 @@
                   style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                   onclick={() => uiStore.openLoginModal()}
                 >
-                  登录后加入
+                  {t('groupDetail.loginToJoin')}
                 </button>
               {:else if group.my_state?.is_joined}
                 <div
                   class="text-meta rounded-[var(--radius-md)] px-3 py-2 text-center"
                   style="border: 1px solid var(--border-theme); color: var(--text-secondary)"
                 >
-                  你已加入该群组
+                  {t('groupDetail.alreadyJoined')}
                 </div>
               {:else}
                 <button
@@ -1145,7 +1146,7 @@
                   style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
                   onclick={openJoinDialog}
                 >
-                  申请加入
+                  {t('groupDetail.applyJoin')}
                 </button>
               {/if}
             </div>
@@ -1161,9 +1162,9 @@
           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
         >
           <div>
-            <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">群公告</p>
+            <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">{t('groupDetail.announcementsTitle')}</p>
             <p class="text-meta" style="margin-top: 4px; color: var(--text-secondary)">
-              重要通知与管理提示将展示在这里
+              {t('groupDetail.announcementsDesc')}
             </p>
           </div>
           <div class="flex flex-wrap gap-2">
@@ -1174,7 +1175,7 @@
               disabled={announcementsPagination.loading}
             >
               <RefreshCw size={14} />
-              刷新
+              {t('common.refresh')}
             </button>
             {#if canManageGroup}
               <button
@@ -1183,7 +1184,7 @@
                 onclick={() => openAnnouncementDialog()}
               >
                 <Plus size={14} />
-                发布公告
+                {t('groupDetail.publishAnnouncement')}
               </button>
             {/if}
           </div>
@@ -1215,7 +1216,7 @@
             class="rounded-[var(--radius-lg)] py-10 text-center"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
-            <p class="text-body-lg" style="color: var(--text-secondary)">暂无公告</p>
+            <p class="text-body-lg" style="color: var(--text-secondary)">{t('groupDetail.noAnnouncements')}</p>
           </div>
         {:else}
           <div class="space-y-3">
@@ -1234,7 +1235,7 @@
                         <span
                           class="text-xs rounded-full px-2 py-0.5"
                           style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
-                          >置顶</span
+                          >{t('groupDetail.pinned')}</span
                         >
                       {/if}
                     </div>
@@ -1253,20 +1254,20 @@
                       <DropdownMenuTrigger
                         class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
                         style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
-                        aria-label="公告操作"
+                        aria-label={t('groupDetail.announcementActionsAria')}
                       >
                         <MoreHorizontal size={16} />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" class="w-40">
                         <DropdownMenuItem onclick={() => openAnnouncementDialog(announcement)}>
-                          <Pencil size={16} style="margin-right: 8px;" />编辑公告
+                          <Pencil size={16} style="margin-right: 8px;" />{t('groupDetail.editAnnouncement')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onclick={() => openDeleteAnnouncement(announcement)}>
                           <Trash2
                             size={16}
                             style="margin-right: 8px; color: var(--theme-error);"
-                          />删除公告
+                          />{t('groupDetail.deleteAnnouncement')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1287,7 +1288,7 @@
                     size={14}
                     class="animate-spin"
                   />{/if}
-                加载更多
+                {t('common.loadMore')}
               </button>
             </div>
           {/if}
@@ -1302,10 +1303,10 @@
         >
           <div>
             <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">
-              成员列表
+              {t('groupDetail.membersTitle')}
             </p>
             <p class="text-meta" style="margin-top: 4px; color: var(--text-secondary)">
-              支持群主/管理员进行禁言与角色管理
+              {t('groupDetail.membersDesc')}
             </p>
           </div>
           <div class="flex flex-wrap gap-2">
@@ -1315,13 +1316,13 @@
               onclick={() => loadMembers(true)}
               disabled={membersPagination.loading}
             >
-              <RefreshCw size={14} />刷新
+              <RefreshCw size={14} />{t('common.refresh')}
             </button>
             {#if canManageGroup}
               <span
                 class="text-caption rounded-full px-3 py-1"
                 style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
-                >可管理成员</span
+                >{t('groupDetail.canManageMembers')}</span
               >
             {/if}
           </div>
@@ -1357,7 +1358,7 @@
             class="rounded-[var(--radius-lg)] py-10 text-center"
             style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
           >
-            <p class="text-body-lg" style="color: var(--text-secondary)">暂无成员</p>
+            <p class="text-body-lg" style="color: var(--text-secondary)">{t('groupDetail.noMembers')}</p>
           </div>
         {:else}
           <div class="density-grid density-grid--compact">
@@ -1392,11 +1393,11 @@
                         >
                       </div>
                       <p class="text-meta" style="color: var(--text-secondary)">
-                        加入于 {formatDateTime(member.joined_at)}
+                        {t('groupDetail.joinedAt', { time: formatDateTime(member.joined_at) })}
                       </p>
                       {#if member.muted_until}
                         <p class="text-meta" style="color: var(--theme-error); opacity: 0.8">
-                          禁言至 {formatDateTime(member.muted_until)}
+                          {t('groupDetail.mutedUntil', { time: formatDateTime(member.muted_until) })}
                         </p>
                       {/if}
                     </div>
@@ -1406,7 +1407,7 @@
                       <span
                         class="text-xs rounded-full px-2 py-0.5"
                         style="color: var(--text-secondary); background: var(--surface-bg); border: 1px solid var(--border-theme)"
-                        >已禁言</span
+                        >{t('groupDetail.muted')}</span
                       >
                     {/if}
                     {#if canManageMember(member)}
@@ -1414,7 +1415,7 @@
                         <DropdownMenuTrigger
                           class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
                           style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
-                          aria-label="成员操作"
+                          aria-label={t('groupDetail.memberActionsAria')}
                         >
                           <MoreHorizontal size={16} />
                         </DropdownMenuTrigger>
@@ -1424,14 +1425,14 @@
                               ><Mic
                                 size={16}
                                 style="margin-right: 8px;"
-                              />解除禁言</DropdownMenuItem
+                              />{t('groupDetail.unmuteMember')}</DropdownMenuItem
                             >
                           {:else}
                             <DropdownMenuItem onclick={() => openMuteDialog(member)}
                               ><MicOff
                                 size={16}
                                 style="margin-right: 8px;"
-                              />禁言成员</DropdownMenuItem
+                              />{t('groupDetail.muteMember')}</DropdownMenuItem
                             >
                           {/if}
                           {#if canChangeRole(member)}
@@ -1440,7 +1441,7 @@
                               ><UserCog
                                 size={16}
                                 style="margin-right: 8px;"
-                              />角色管理</DropdownMenuItem
+                              />{t('groupDetail.roleManagement')}</DropdownMenuItem
                             >
                           {/if}
                           <DropdownMenuSeparator />
@@ -1448,7 +1449,7 @@
                             ><UserMinus
                               size={16}
                               style="margin-right: 8px; color: var(--theme-error);"
-                            />移除成员</DropdownMenuItem
+                            />{t('groupDetail.removeMember')}</DropdownMenuItem
                           >
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1467,7 +1468,7 @@
                 disabled={membersPagination.loadingMore}
               >
                 {#if membersPagination.loadingMore}<Loader2 size={14} class="animate-spin" />{/if}
-                加载更多
+                {t('common.loadMore')}
               </button>
             </div>
           {/if}
@@ -1483,10 +1484,10 @@
           >
             <div>
               <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">
-                待处理申请
+                {t('groupDetail.applicationsTitle')}
               </p>
               <p class="text-meta" style="margin-top: 4px; color: var(--text-secondary)">
-                仅展示 pending 申请，处理后会自动移出列表
+                {t('groupDetail.applicationsDesc')}
               </p>
             </div>
             <button
@@ -1495,7 +1496,7 @@
               onclick={() => loadApplications(true)}
               disabled={applicationsPagination.loading}
             >
-              <RefreshCw size={14} />刷新
+              <RefreshCw size={14} />{t('common.refresh')}
             </button>
           </div>
           {#if applicationsPagination.loading && applicationsPagination.items.length === 0}
@@ -1525,7 +1526,7 @@
               class="rounded-[var(--radius-lg)] py-10 text-center"
               style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
             >
-              <p class="text-body-lg" style="color: var(--text-secondary)">暂无待处理申请</p>
+              <p class="text-body-lg" style="color: var(--text-secondary)">{t('groupDetail.noApplications')}</p>
             </div>
           {:else}
             <div class="space-y-3">
@@ -1556,7 +1557,7 @@
                         </p>
                       {/if}
                       <p class="text-meta" style="color: var(--text-secondary)">
-                        申请时间：{formatDateTime(application.created_at)}
+                        {t('groupDetail.applicationTime', { time: formatDateTime(application.created_at) })}
                       </p>
                     </div>
                     <div class="flex flex-wrap gap-2">
@@ -1566,7 +1567,7 @@
                         disabled={isApplicationHandling(application.application_id)}
                         onclick={() => handleApplicationDecision(application, 'approve')}
                       >
-                        {isApplicationHandling(application.application_id) ? '处理中...' : '批准'}
+                        {isApplicationHandling(application.application_id) ? t('groupDetail.processing') : t('common.approve')}
                       </button>
                       <button
                         class="text-body rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -1574,7 +1575,7 @@
                         disabled={isApplicationHandling(application.application_id)}
                         onclick={() => handleApplicationDecision(application, 'reject')}
                       >
-                        拒绝
+                        {t('common.reject')}
                       </button>
                     </div>
                   </div>
@@ -1593,7 +1594,7 @@
                       size={14}
                       class="animate-spin"
                     />{/if}
-                  加载更多
+                  {t('common.loadMore')}
                 </button>
               </div>
             {/if}
@@ -1611,12 +1612,11 @@
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
-      <Dialog.Title>加入群组</Dialog.Title>
+      <Dialog.Title>{t('groupDetail.joinDialogTitle')}</Dialog.Title>
       <Dialog.Description>
-        当前加入方式：{getJoinMethodLabel(settings?.join_method)}。
         {settings?.join_method === 'approval'
-          ? '请填写申请理由，等待管理员审核。'
-          : '填写信息后即可加入群组。'}
+          ? t('groupDetail.joinDialogDescApproval', { method: getJoinMethodLabel(settings?.join_method) })
+          : t('groupDetail.joinDialogDescOpen', { method: getJoinMethodLabel(settings?.join_method) })}
       </Dialog.Description>
     </Dialog.Header>
     <div class="space-y-4 py-4">
@@ -1628,12 +1628,12 @@
           <label
             for="group-password"
             class="text-body"
-            style="font-weight: 500; color: var(--text-primary)">群组密码</label
+            style="font-weight: 500; color: var(--text-primary)">{t('groupDetail.joinDialogPasswordLabel')}</label
           >
           <input
             id="group-password"
             type="password"
-            placeholder="请输入群组密码"
+            placeholder={t('groupDetail.joinDialogPasswordPlaceholder')}
             bind:value={joinPassword}
             maxlength={GROUP_PASSWORD_MAX}
             class="w-full rounded-full py-2.5 px-4 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -1649,11 +1649,11 @@
           <label
             for="join-message"
             class="text-body"
-            style="font-weight: 500; color: var(--text-primary)">申请理由</label
+            style="font-weight: 500; color: var(--text-primary)">{t('groupDetail.joinDialogMessageLabel')}</label
           >
           <textarea
             id="join-message"
-            placeholder="简单介绍一下你自己"
+            placeholder={t('groupDetail.joinDialogMessagePlaceholder')}
             rows={3}
             bind:value={joinMessage}
             maxlength={GROUP_JOIN_MESSAGE_MAX}
@@ -1667,7 +1667,7 @@
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
         style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-        onclick={() => (showJoinDialog = false)}>取消</button
+        onclick={() => (showJoinDialog = false)}>{t('common.cancel')}</button
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -1676,7 +1676,7 @@
         disabled={isJoining}
       >
         {#if isJoining}<Loader2 size={14} class="animate-spin" />{/if}
-        确认加入
+        {t('groupDetail.confirmJoin')}
       </button>
     </Dialog.Footer>
   </Dialog.Content>
@@ -1688,8 +1688,8 @@
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
-      <Dialog.Title>{editingAnnouncement ? '编辑公告' : '发布公告'}</Dialog.Title>
-      <Dialog.Description>发布给所有成员的重要通知与群规提醒。</Dialog.Description>
+      <Dialog.Title>{editingAnnouncement ? t('groupDetail.announcementDialogTitleEdit') : t('groupDetail.announcementDialogTitleCreate')}</Dialog.Title>
+      <Dialog.Description>{t('groupDetail.announcementDialogDesc')}</Dialog.Description>
     </Dialog.Header>
     <div class="space-y-4 py-4">
       <div
@@ -1699,11 +1699,11 @@
         <label
           for="announcement-title"
           class="text-body"
-          style="font-weight: 500; color: var(--text-primary)">公告标题</label
+          style="font-weight: 500; color: var(--text-primary)">{t('groupDetail.announcementTitleLabel')}</label
         >
         <input
           id="announcement-title"
-          placeholder="输入公告标题"
+          placeholder={t('groupDetail.announcementTitlePlaceholder')}
           bind:value={announcementTitle}
           maxlength={ANNOUNCEMENT_TITLE_MAX}
           class="w-full rounded-full py-2.5 px-4 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -1717,12 +1717,12 @@
         <label
           for="announcement-content"
           class="text-body"
-          style="font-weight: 500; color: var(--text-primary)">公告内容</label
+          style="font-weight: 500; color: var(--text-primary)">{t('groupDetail.announcementContentLabel')}</label
         >
         <textarea
           id="announcement-content"
           rows={5}
-          placeholder="输入公告内容"
+          placeholder={t('groupDetail.announcementContentPlaceholder')}
           bind:value={announcementContent}
           maxlength={ANNOUNCEMENT_CONTENT_MAX}
           class="w-full resize-none rounded-[var(--radius-md)] p-3 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -1734,8 +1734,8 @@
         style="border: 1px solid var(--border-theme);"
       >
         <div>
-          <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">置顶公告</p>
-          <p class="text-meta" style="color: var(--text-secondary)">置顶后将优先展示给成员</p>
+          <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">{t('groupDetail.pinAnnouncement')}</p>
+          <p class="text-meta" style="color: var(--text-secondary)">{t('groupDetail.pinDesc')}</p>
         </div>
         <button
           class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -1744,7 +1744,7 @@
             : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           onclick={() => (announcementPinned = !announcementPinned)}
         >
-          {announcementPinned ? '已置顶' : '未置顶'}
+          {announcementPinned ? t('groupDetail.pinnedStatus') : t('groupDetail.unpinnedStatus')}
         </button>
       </div>
     </div>
@@ -1752,7 +1752,7 @@
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
         style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-        onclick={() => (showAnnouncementDialog = false)}>取消</button
+        onclick={() => (showAnnouncementDialog = false)}>{t('common.cancel')}</button
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -1761,7 +1761,7 @@
         disabled={announcementSubmitting}
       >
         {#if announcementSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
-        {editingAnnouncement ? '保存修改' : '发布公告'}
+        {editingAnnouncement ? t('groupDetail.saveChanges') : t('groupDetail.publishAnnouncement')}
       </button>
     </Dialog.Footer>
   </Dialog.Content>
@@ -1773,25 +1773,25 @@
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
-      <Dialog.Title>删除公告</Dialog.Title>
-      <Dialog.Description>删除后成员将无法再看到该公告。</Dialog.Description>
+      <Dialog.Title>{t('groupDetail.deleteDialogTitle')}</Dialog.Title>
+      <Dialog.Description>{t('groupDetail.deleteDialogDesc')}</Dialog.Description>
     </Dialog.Header>
     <div
       class="text-body-lg rounded-[var(--radius-md)] px-4 py-3"
       style="border: 1px solid var(--border-theme); color: var(--text-secondary)"
     >
-      {announcementToDelete?.title ?? '该公告'}
+      {announcementToDelete?.title ?? t('groupDetail.deleteDialogFallback')}
     </div>
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
         style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-        onclick={() => (showAnnouncementDeleteDialog = false)}>取消</button
+        onclick={() => (showAnnouncementDeleteDialog = false)}>{t('common.cancel')}</button
       >
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
         style="background: var(--theme-error); color: var(--text-on-accent); box-shadow: 0 4px 14px var(--theme-error-border);"
-        onclick={handleDeleteAnnouncement}>确认删除</button
+        onclick={handleDeleteAnnouncement}>{t('groupDetail.confirmDelete')}</button
       >
     </Dialog.Footer>
   </Dialog.Content>
@@ -1803,12 +1803,12 @@
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
-      <Dialog.Title>禁言成员</Dialog.Title>
-      <Dialog.Description>被禁言成员仍可浏览，但无法发言。</Dialog.Description>
+      <Dialog.Title>{t('groupDetail.muteDialogTitle')}</Dialog.Title>
+      <Dialog.Description>{t('groupDetail.muteDialogDesc')}</Dialog.Description>
     </Dialog.Header>
     <div class="space-y-4 py-2">
       <div class="text-body-lg" style="color: var(--text-secondary)">
-        成员：{muteTarget?.user.nickname ?? '-'}
+        {t('groupDetail.muteDialogMember', { nickname: muteTarget?.user.nickname ?? '-' })}
       </div>
       <div class="grid grid-cols-2 gap-2">
         {#each mutePresets as preset (preset.value)}
@@ -1825,7 +1825,7 @@
         <label
           for="mute-duration"
           class="text-body"
-          style="font-weight: 500; color: var(--text-primary)">自定义时长（分钟）</label
+          style="font-weight: 500; color: var(--text-primary)">{t('groupDetail.muteDurationLabel')}</label
         >
         <input
           id="mute-duration"
@@ -1842,7 +1842,7 @@
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
         style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-        onclick={() => (showMuteDialog = false)}>取消</button
+        onclick={() => (showMuteDialog = false)}>{t('common.cancel')}</button
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -1851,7 +1851,7 @@
         disabled={muteSubmitting}
       >
         {#if muteSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
-        确认禁言
+        {t('groupDetail.confirmMute')}
       </button>
     </Dialog.Footer>
   </Dialog.Content>
@@ -1863,14 +1863,12 @@
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
-      <Dialog.Title>角色管理</Dialog.Title>
-      <Dialog.Description
-        >群主与管理员可调整成员角色；管理员不可操作管理员或群主。</Dialog.Description
-      >
+      <Dialog.Title>{t('groupDetail.roleDialogTitle')}</Dialog.Title>
+      <Dialog.Description>{t('groupDetail.roleDialogDesc')}</Dialog.Description>
     </Dialog.Header>
     <div class="space-y-4 py-2">
       <div class="text-body-lg" style="color: var(--text-secondary)">
-        成员：{roleTarget?.user.nickname ?? '-'}
+        {t('groupDetail.roleDialogMember', { nickname: roleTarget?.user.nickname ?? '-' })}
       </div>
       <div class="grid gap-2 sm:grid-cols-2">
         <button
@@ -1879,7 +1877,7 @@
             ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
             : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           disabled={roleTarget?.role === 'admin' || roleSubmitting}
-          onclick={() => handleSetRole('admin')}>设为管理员</button
+          onclick={() => handleSetRole('admin')}>{t('groupDetail.setAdmin')}</button
         >
         <button
           class="rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -1887,7 +1885,7 @@
             ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
             : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           disabled={roleTarget?.role === 'member' || roleSubmitting}
-          onclick={() => handleSetRole('member')}>设为成员</button
+          onclick={() => handleSetRole('member')}>{t('groupDetail.setMember')}</button
         >
       </div>
     </div>
@@ -1895,7 +1893,7 @@
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
         style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-        onclick={() => (showRoleDialog = false)}>取消</button
+        onclick={() => (showRoleDialog = false)}>{t('common.cancel')}</button
       >
     </Dialog.Footer>
   </Dialog.Content>
@@ -1907,8 +1905,8 @@
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
-      <Dialog.Title>移除成员</Dialog.Title>
-      <Dialog.Description>确认将该成员移出群组吗？</Dialog.Description>
+      <Dialog.Title>{t('groupDetail.removeDialogTitle')}</Dialog.Title>
+      <Dialog.Description>{t('groupDetail.removeDialogDesc')}</Dialog.Description>
     </Dialog.Header>
     <div
       class="text-body-lg rounded-[var(--radius-md)] px-4 py-3"
@@ -1920,7 +1918,7 @@
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
         style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-        onclick={() => (showRemoveDialog = false)}>取消</button
+        onclick={() => (showRemoveDialog = false)}>{t('common.cancel')}</button
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -1929,7 +1927,7 @@
         disabled={removeSubmitting}
       >
         {#if removeSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
-        确认移除
+        {t('groupDetail.confirmRemove')}
       </button>
     </Dialog.Footer>
   </Dialog.Content>
@@ -1941,25 +1939,25 @@
     style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
-      <Dialog.Title>退出群组</Dialog.Title>
-      <Dialog.Description>确认要退出该群组吗？退出后将无法查看群组内容。</Dialog.Description>
+      <Dialog.Title>{t('groupDetail.leaveDialogTitle')}</Dialog.Title>
+      <Dialog.Description>{t('groupDetail.leaveDialogDesc')}</Dialog.Description>
     </Dialog.Header>
     <div
       class="rounded-[var(--radius-md)] px-4 py-3"
       style="border: 1px solid var(--border-theme);"
     >
       <div class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
-        {group?.group.name ?? '群组'}
+        {group?.group.name ?? t('groupDetail.leaveDialogFallback')}
       </div>
       <div class="text-meta" style="margin-top: 4px; color: var(--text-secondary)">
-        {group?.group.members_count ?? 0} 位成员
+        {t('groupDetail.leaveDialogMemberCount', { count: group?.group.members_count ?? 0 })}
       </div>
     </div>
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
         style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-        onclick={() => (showLeaveDialog = false)}>取消</button
+        onclick={() => (showLeaveDialog = false)}>{t('common.cancel')}</button
       >
       <button
         class="flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -1968,7 +1966,7 @@
         disabled={isLeaving}
       >
         {#if isLeaving}<Loader2 size={14} class="animate-spin" />{/if}
-        确认退出
+        {t('groupDetail.confirmLeave')}
       </button>
     </Dialog.Footer>
   </Dialog.Content>

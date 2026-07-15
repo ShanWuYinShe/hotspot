@@ -10,6 +10,7 @@
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { toast } from '$lib/stores/toast.svelte';
+  import { t } from '$lib/i18n';
   import LocationPickerModal from './location-picker-modal.svelte';
   import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
@@ -40,10 +41,17 @@
   let { open = $bindable(), onOpenChange, onCreated, editMoment, onEdited }: Props = $props();
 
   const isEditMode = $derived(editMoment !== undefined);
-  const dialogTitle = $derived(isEditMode ? '编辑动态' : '发布动态');
-  const dialogSubtitle = $derived(isEditMode ? '修改你的生活瞬间' : '分享你此刻的生活瞬间');
+  const dialogTitle = $derived(isEditMode ? t('createMoment.titleEdit') : t('createMoment.titleCreate'));
+  const dialogSubtitle = $derived(isEditMode ? t('createMoment.subtitleEdit') : t('createMoment.subtitleCreate'));
 
-  const VIBE_TAGS = ['日常', '探店', '美食', '旅行', '户外', '城市'];
+  const VIBE_TAGS = $derived([
+    t('createMoment.vibeDaily'),
+    t('createMoment.vibeStore'),
+    t('createMoment.vibeFood'),
+    t('createMoment.vibeTravel'),
+    t('createMoment.vibeOutdoor'),
+    t('createMoment.vibeCity')
+  ]);
 
   let description = $state('');
   let tagsInput = $state('');
@@ -73,8 +81,8 @@
   const canPost = $derived(description.trim().length > 0);
 
   const descriptionRules = $derived<FieldRule[]>([
-    { required: true, requiredMessage: '请输入动态内容' },
-    { maxLength: DESCRIPTION_MAX, maxLengthMessage: `动态内容最多 ${DESCRIPTION_MAX} 字符` }
+    { required: true, requiredMessage: t('createMoment.descriptionRequired') },
+    { maxLength: DESCRIPTION_MAX, maxLengthMessage: t('createMoment.descriptionMaxError', { count: DESCRIPTION_MAX }) }
   ]);
   let descriptionError = $derived(
     touched['description'] ? validateField(description, descriptionRules) : undefined
@@ -87,7 +95,7 @@
     } else {
       // 标签总数（解析标签 + 氛围标签）不超过服务端配置上限
       if (tags.length + next.size >= MAX_TAGS) {
-        toast.error(`最多添加 ${MAX_TAGS} 个标签`);
+        toast.error(t('createMoment.tagsMaxError', { count: MAX_TAGS }));
         return;
       }
       next.add(tag);
@@ -134,7 +142,7 @@
     const remaining = MAX_IMAGES - selectedImages.length;
     const nextFiles = files.slice(0, remaining);
     if (nextFiles.length < files.length) {
-      toast.error(`最多上传 ${MAX_IMAGES} 张图片`);
+      toast.error(t('createMoment.imagesMaxError', { count: MAX_IMAGES }));
     }
 
     const nextImages = nextFiles.map((file) => ({
@@ -199,7 +207,7 @@
       return uploadedIds;
     } catch {
       isUploadingImages = false;
-      throw new Error('图片上传失败');
+      throw new Error(t('createMoment.imageUploadFailed'));
     }
   }
 
@@ -219,7 +227,7 @@
       const imageIds = await uploadImages();
       const locationName = selectedLocation.locationName.trim();
       if (!locationName) {
-        toast.error('请选择发布位置');
+        toast.error(t('createMoment.locationRequired'));
         return;
       }
 
@@ -241,12 +249,12 @@
           privacy_level: privacy
         });
         if (isSuccess(response)) {
-          toast.success('动态已更新');
+          toast.success(t('createMoment.momentUpdated'));
           open = false;
           onOpenChange?.(false);
           onEdited?.();
         } else {
-          toast.error(response.message || '更新失败');
+          toast.error(response.message || t('createMoment.updateFailed'));
         }
       } else {
         const response = await momentsService.create({
@@ -264,20 +272,20 @@
         });
 
         if (isSuccess(response)) {
-          toast.success('动态已发布');
+          toast.success(t('createMoment.momentPublished'));
           resetForm();
           open = false;
           onOpenChange?.(false);
           onCreated?.();
         } else {
-          toast.error(response.message || '发布失败');
+          toast.error(response.message || t('createMoment.publishFailed'));
         }
       }
     } catch (error) {
-      if (error instanceof Error && error.message === '图片上传失败') {
-        toast.error('图片上传失败，请重试');
+      if (error instanceof Error && error.message === t('createMoment.imageUploadFailed')) {
+        toast.error(t('createMoment.imageUploadRetry'));
       } else {
-        toast.error(isEditMode ? '更新失败' : '发布失败');
+        toast.error(isEditMode ? t('createMoment.updateFailed') : t('createMoment.publishFailed'));
       }
     } finally {
       isSubmitting = false;
@@ -322,7 +330,7 @@
         <h1 class="compose__title">{dialogTitle}</h1>
         <p class="compose__subtitle">{dialogSubtitle}</p>
       </div>
-      <button class="compose__close" onclick={() => { open = false; onOpenChange?.(false); }} aria-label="关闭">
+      <button class="compose__close" onclick={() => { open = false; onOpenChange?.(false); }} aria-label={t('createMoment.closeAria')}>
         <X size={18} color="var(--text-secondary)" strokeWidth={1.75} />
       </button>
     </div>
@@ -338,10 +346,10 @@
           size={36}
         />
         <div class="compose__author-info">
-          <span class="compose__author-name">{authStore.currentAccount?.nickname || '我'}</span>
+          <span class="compose__author-name">{authStore.currentAccount?.nickname || t('createMoment.authorFallback')}</span>
           <span class="compose__author-loc">
             <MapPin size={11} color="var(--brand)" strokeWidth={1.5} />
-            {selectedLocation.locationName || '定位中...'}
+            {selectedLocation.locationName || t('createMoment.locating')}
           </span>
         </div>
       </div>
@@ -350,7 +358,7 @@
       <div class="compose__textarea-wrap input-surface" class:compose__textarea-wrap--error={descriptionError}>
         <textarea
           id="moment-description"
-          placeholder="写点什么吧..."
+          placeholder={t('createMoment.placeholder')}
           class="compose__textarea"
           bind:value={description}
           onblur={() => markTouched('description')}
@@ -377,20 +385,20 @@
       <!-- Image upload grid -->
       <div class="compose__media">
         <div class="compose__section-label">
-          <span>照片</span>
+          <span>{t('createMoment.photos')}</span>
           <span class="compose__section-count">{selectedImages.length}/{MAX_IMAGES}</span>
         </div>
         {#if selectedImages.length > 0}
           <div class="compose__image-grid">
             {#each selectedImages as image, index (image.previewUrl)}
               <div class="compose__image-tile surface-flat">
-                <img src={image.previewUrl} alt="预览图" class="compose__image-img" />
+                <img src={image.previewUrl} alt={t('createMoment.previewAlt')} class="compose__image-img" />
                 {#if image.isUploading}
                   <div class="compose__image-overlay">
-                    上传中 {Math.round(image.progress)}%
+                    {t('createMoment.uploading', { percent: Math.round(image.progress) })}
                   </div>
                 {/if}
-                <button type="button" class="compose__image-remove" onclick={() => removeImage(index)} aria-label="删除">
+                <button type="button" class="compose__image-remove" onclick={() => removeImage(index)} aria-label={t('createMoment.removeImageAria')}>
                   <X size={14} color="var(--text-on-overlay)" strokeWidth={2} />
                 </button>
               </div>
@@ -405,7 +413,7 @@
         {:else}
           <label class="compose__image-empty surface-flat">
             <ImagePlus size={22} color="var(--text-secondary)" strokeWidth={1.25} />
-            <span>添加照片</span>
+            <span>{t('createMoment.addPhotos')}</span>
             <input type="file" accept="image/*" multiple class="hidden" onchange={handleImageChange} disabled={selectedImages.length >= MAX_IMAGES} />
           </label>
         {/if}
@@ -413,7 +421,7 @@
           <div class="compose__image-grid compose__image-grid--existing">
             {#each editMoment.images as image (image.thumbnail_url ?? image.url)}
               <div class="compose__image-tile compose__image-tile--existing surface-flat">
-                <SmartImage src={image.url} thumbnail={image.thumbnail_url} alt="已有图片" width={image.width} height={image.height} class="compose__image-img" />
+                <SmartImage src={image.url} thumbnail={image.thumbnail_url} alt={t('createMoment.existingImageAlt')} width={image.width} height={image.height} class="compose__image-img" />
               </div>
             {/each}
           </div>
@@ -422,7 +430,7 @@
 
       <!-- Vibe tags -->
       <div class="compose__vibes">
-        <span class="compose__section-label"><span>氛围</span></span>
+        <span class="compose__section-label"><span>{t('createMoment.vibe')}</span></span>
         <div class="compose__vibe-list">
           {#each VIBE_TAGS as tag (tag)}
             <button class="filter-chip" class:filter-chip--active={selectedVibes.has(tag)} onclick={() => toggleVibe(tag)}>
@@ -434,9 +442,9 @@
 
       <!-- Tags input -->
       <div class="compose__tags">
-        <span class="compose__section-label"><span>标签</span></span>
+        <span class="compose__section-label"><span>{t('createMoment.tags')}</span></span>
         <input
-          placeholder="标签（空格分隔）"
+          placeholder={t('createMoment.tagsPlaceholder')}
           class="compose__tags-input input-surface"
           bind:value={tagsInput}
         />
@@ -444,8 +452,8 @@
 
       <!-- Location -->
       <AnchorSummaryCard
-        label="发布位置"
-        description="发布将使用该位置，可单独选点且不修改浏览锚点"
+        label={t('createMoment.publishLocation')}
+        description={t('createMoment.publishLocationDesc')}
         overrideName={selectedLocation.locationName}
         onAdjust={() => (showLocationPicker = true)}
       />
@@ -454,8 +462,8 @@
     <!-- Footer: privacy + submit (fixed, not scrolling) -->
     <div class="compose__footer">
       <select class="compose__privacy" bind:value={privacy}>
-        <option value="public">公开</option>
-        <option value="private">仅自己</option>
+        <option value="public">{t('createMoment.privacyPublic')}</option>
+        <option value="private">{t('createMoment.privacyPrivate')}</option>
       </select>
       <button
         class="compose__submit"
@@ -468,7 +476,7 @@
         {:else}
           <Send size={16} strokeWidth={1.75} />
         {/if}
-        <span>{isEditMode ? '保存' : '发布'}</span>
+        <span>{isEditMode ? t('createMoment.submitEdit') : t('createMoment.submitCreate')}</span>
       </button>
     </div>
   </Dialog.Content>
