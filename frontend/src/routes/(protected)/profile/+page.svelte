@@ -30,6 +30,7 @@
   import { t } from '$lib/i18n';
   import { goto } from '$app/navigation';
   import Avatar from '$lib/components/common/avatar.svelte';
+  import SmartImage from '$lib/components/common/smart-image.svelte';
   import { mediaService } from '$lib/api/services';
 
   const TAG_OPTIONS = [
@@ -408,11 +409,13 @@
               style="aspect-ratio: 1/1;"
             >
               {#if img}
-                <img
-                  src={img.thumbnail_url || img.url}
+                <SmartImage
+                  src={img.url}
+                  thumbnail={img.thumbnail_url}
                   alt={moment.description}
-                  loading="lazy"
-                  decoding="async"
+                  width={img.width}
+                  height={img.height}
+                  sizes="150px"
                   class="h-full w-full object-cover"
                 />
                 <div

@@ -20,6 +20,7 @@
   import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
   import Grid3X3 from 'lucide-svelte/icons/grid-3x3';
   import Avatar from '$lib/components/common/avatar.svelte';
+  import SmartImage from '$lib/components/common/smart-image.svelte';
   import { t } from '$lib/i18n';
   import type { PageData } from './$types';
 
@@ -428,9 +429,13 @@
                   class="relative cursor-pointer overflow-hidden"
                   style="aspect-ratio: 1;"
                 >
-                  <img
-                    src={moment.images![0]!.thumbnail_url || moment.images![0]!.url}
+                  <SmartImage
+                    src={moment.images![0]!.url}
+                    thumbnail={moment.images![0]!.thumbnail_url}
                     alt={moment.description}
+                    width={moment.images![0]!.width}
+                    height={moment.images![0]!.height}
+                    sizes="150px"
                     class="h-full w-full object-cover transition-transform duration-150 hover:scale-[1.03]"
                   />
                 </a>
