@@ -82,7 +82,6 @@ func (s *Service) ListSentInvites(ctx context.Context, req GroupSentInvitesReque
 }
 
 func (s *Service) RevokeInvite(ctx context.Context, req RevokeSentInviteRequest) error {
-	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if !ok {
 		if err != nil {
@@ -93,7 +92,6 @@ func (s *Service) RevokeInvite(ctx context.Context, req RevokeSentInviteRequest)
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
 		return ErrAccessRestricted
 	}
-	_ = principal
 	return s.repo.RevokeInvite(ctx, req.GroupID, req.InviteID)
 }
 

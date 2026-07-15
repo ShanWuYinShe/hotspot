@@ -1,6 +1,7 @@
 package moments
 
 import (
+	"errors"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/geo"
@@ -46,6 +47,14 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	idempotency.ReplayOrStore(w, r, "moments/create", func() httpx.ApiResponse[MomentItem] {
 		item, err := h.service.Create(r.Context(), req)
 		if err != nil {
+			switch {
+			case errors.Is(err, ErrTooManyImages):
+				logBusinessError(r, "Create", 10000, "图片数量超过上限")
+				return httpx.ApiResponse[MomentItem]{Code: 10000, Message: "图片数量超过上限"}
+			case errors.Is(err, ErrImagesNotOwned):
+				logBusinessError(r, "Create", 10000, "图片校验失败")
+				return httpx.ApiResponse[MomentItem]{Code: 10000, Message: "图片校验失败"}
+			}
 			logServerError(r, "Create", err)
 			return httpx.ApiResponse[MomentItem]{Code: 10600, Message: "服务暂时不可用"}
 		}
@@ -129,14 +138,24 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	item, err := h.service.Update(r.Context(), req)
 	if err != nil {
-		if err == ErrMomentNotFound {
+		if errors.Is(err, ErrMomentNotFound) {
 			logBusinessError(r, "Update", 10300, "瞬间不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
+		if errors.Is(err, ErrPermissionDenied) {
 			logBusinessError(r, "Update", 10200, "权限不足")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
+			return
+		}
+		if errors.Is(err, ErrTooManyImages) {
+			logBusinessError(r, "Update", 10000, "图片数量超过上限")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "图片数量超过上限"))
+			return
+		}
+		if errors.Is(err, ErrImagesNotOwned) {
+			logBusinessError(r, "Update", 10000, "图片校验失败")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "图片校验失败"))
 			return
 		}
 		logServerError(r, "Update", err)

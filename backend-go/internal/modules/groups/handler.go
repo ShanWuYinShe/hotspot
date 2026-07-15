@@ -405,6 +405,10 @@ func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
+		if err == ErrApplicationNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "申请不存在"))
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}
