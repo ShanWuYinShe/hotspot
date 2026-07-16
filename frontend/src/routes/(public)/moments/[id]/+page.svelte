@@ -426,73 +426,63 @@
         </div>
       </div>
 
-      <!-- Comment input -->
-      {#if authStore.isAuthenticated}
-        <div
-          class="rounded-[var(--radius-lg)] p-4"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-        >
-          <div class="flex items-center gap-3">
+      <!-- Comments section（输入框 + 列表合并为单个卡片） -->
+      <div
+        class="rounded-[var(--radius-lg)] p-6"
+        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      >
+        <!-- Comment input -->
+        {#if authStore.isAuthenticated}
+          <div class="flex items-center gap-3 pb-4" style="border-bottom: 1px solid var(--border-theme);">
             <Avatar
               src={authStore.currentAccount?.avatar_url}
               name={authStore.currentAccount?.nickname}
               alt=""
               size={32}
             />
-            <div
-              class="input-surface flex flex-1 items-center gap-2"
-              style="height: 42px; border-radius: var(--radius-md); padding: 0 4px 0 14px;"
+            <input
+              type="text"
+              {@attach useKeyboardFocus()}
+              placeholder={t('momentDetail.commentPlaceholder')}
+              bind:value={commentText}
+              disabled={isSubmitting}
+              class="bg-transparent flex-1 outline-none text-sm"
+              style="color: var(--text-primary);"
+            />
+            <button
+              class="flex flex-shrink-0 items-center justify-center rounded-full outline-none transition-transform active:scale-90"
+              style="width: 30px; height: 30px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
+              onclick={submitComment}
+              disabled={!commentText.trim() || isSubmitting}
             >
-              <input
-                type="text"
-                {@attach useKeyboardFocus()}
-                placeholder={t('momentDetail.commentPlaceholder')}
-                bind:value={commentText}
-                disabled={isSubmitting}
-                class="bg-transparent flex-1 outline-none text-sm"
-                style="color: var(--text-primary);"
-              />
-              <button
-                class="flex flex-shrink-0 items-center justify-center rounded-full outline-none transition-transform active:scale-90"
-                style="width: 30px; height: 30px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
-                onclick={submitComment}
-                disabled={!commentText.trim() || isSubmitting}
-              >
-                {#if isSubmitting}
-                  <Loader2 size={14} color="var(--text-on-accent)" class="animate-spin" />
-                {:else}
-                  <Send size={14} color="var(--text-on-accent)" />
-                {/if}
-              </button>
-            </div>
+              {#if isSubmitting}
+                <Loader2 size={14} color="var(--text-on-accent)" class="animate-spin" />
+              {:else}
+                <Send size={14} color="var(--text-on-accent)" />
+              {/if}
+            </button>
           </div>
-        </div>
-      {:else}
-        <!-- 未登录：不显示评论输入框，改为引导条，传递 submitComment 作为登录后补做动作 -->
-        <button
-          type="button"
-          class="flex w-full items-center gap-3 rounded-[var(--radius-lg)] p-4 text-left transition-colors"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-          onclick={() => uiStore.openLoginModal(submitComment)}
-        >
-          <span
-            class="flex flex-shrink-0 items-center justify-center rounded-full"
-            style="width: 32px; height: 32px; background: var(--brand); color: var(--text-on-accent);"
+        {:else}
+          <!-- 未登录：引导登录后评论 -->
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 pb-4 text-left transition-colors"
+            style="border-bottom: 1px solid var(--border-theme);"
+            onclick={() => uiStore.openLoginModal(submitComment)}
           >
-            <LogIn size={16} />
-          </span>
-          <span class="text-sm" style="color: var(--text-secondary);">{t('momentDetail.loginToComment')}</span>
-        </button>
-      {/if}
+            <span
+              class="flex flex-shrink-0 items-center justify-center rounded-full"
+              style="width: 32px; height: 32px; background: var(--brand); color: var(--text-on-accent);"
+            >
+              <LogIn size={16} />
+            </span>
+            <span class="text-sm" style="color: var(--text-secondary);">{t('momentDetail.loginToComment')}</span>
+          </button>
+        {/if}
 
-      <!-- Comments -->
-      <div
-        class="rounded-[var(--radius-lg)] p-6"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-      >
         <p
           class="text-xs uppercase"
-          style="letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 16px"
+          style="letter-spacing: 0.14em; color: var(--text-secondary); margin-top: 16px; margin-bottom: 16px"
         >
           {t('momentDetail.commentsTitle', { count: commentsCount })}
         </p>
