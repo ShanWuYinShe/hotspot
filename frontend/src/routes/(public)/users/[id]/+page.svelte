@@ -185,7 +185,7 @@
   <title>{user?.user.nickname ?? t('userProfile.titleDefault')} - HotSpot</title>
 </svelte:head>
 
-<div class="page-pad">
+<div class="page-pad flex h-full flex-col overflow-y-auto no-scrollbar">
   <div class="page-shell page-shell--narrow min-h-full">
     {#if !user}
       <div class="flex flex-col items-center justify-center px-4 py-20">
@@ -407,7 +407,7 @@
           >
             {#each Array(9) as _, i (i)}
               <div
-                style="aspect-ratio: 1; background: var(--border-theme); border-radius: 4px;"
+                style="aspect-ratio: 1; background: var(--border-theme); border-radius: var(--radius-xs);"
                 class="animate-pulse"
               ></div>
             {/each}
@@ -468,7 +468,7 @@
           >
             {#each Array(9) as _, i (i)}
               <div
-                style="aspect-ratio: 1; background: var(--border-theme); border-radius: 4px;"
+                style="aspect-ratio: 1; background: var(--border-theme); border-radius: var(--radius-xs);"
                 class="animate-pulse"
               ></div>
             {/each}
@@ -530,7 +530,7 @@
           >
             {#each Array(9) as _, i (i)}
               <div
-                style="aspect-ratio: 1; background: var(--border-theme); border-radius: 4px;"
+                style="aspect-ratio: 1; background: var(--border-theme); border-radius: var(--radius-xs);"
                 class="animate-pulse"
               ></div>
             {/each}

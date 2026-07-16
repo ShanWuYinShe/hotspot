@@ -2,6 +2,28 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ───────────────────────────────────────────────────────────────
+   z-index 层级体系 —— 所有 UI 组件通过 —-z-* CSS 变量统一管理层级，
+   禁止在各组件中硬编码 z-index 值。
+   层级梯队（低→高）：
+     10 — sticky header / sticky 元素
+     20 — 浮动按钮 / 底部导航
+     30 — 下拉菜单 / 弹出面板
+     40 — 遮罩层（backdrop）
+     50 — 模态对话框 / Sheet
+     60 — 提示条（Toaster）
+     100 — 加载指示器（最高层）
+   ─────────────────────────────────────────────────────────────── */
+:root {
+  --z-sticky: 10;
+  --z-floating: 20;
+  --z-dropdown: 30;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+  --z-loading: 100;
+}
+
 /* 触屏保护：重定义内置 hover variant，使全站所有 `hover:` 仅在「支持悬停的设备」+
    `:hover` 时生效，从根上消除触屏点击后的 :hover 粘滞。一次性覆盖全站 98 处 `hover:`，
    无需逐个迁移到新 variant（Tailwind 官方推荐的 sticky-hover 解法）。
@@ -784,6 +806,12 @@
     scrollbar-width: none;
   }
 
+  /* 横向滚动容器（卡片横滚条等）：限制横向 overscroll 不向外连锁，
+     同时不拦截纵向滚轮，避免鼠标在卡片列表上无法向下滚动。 */
+  .h-scroll {
+    overscroll-behavior-x: contain;
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -1038,10 +1066,15 @@
       -4px -4px 8px var(--shadow-light);
   }
 
-  /* Hover shadow utilities */
+  /* Card hover: unified lift + shadow for all card-type elements.
+     Transition both transform and box-shadow so components can use
+     card-hover + hover:scale-* + active:scale-* without conflicting. */
   .card-hover,
   .neu-card-hover {
-    transition: box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+    transition:
+      transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+      outline 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .card-hover:hover,
   .neu-card-hover:hover {
@@ -1761,7 +1794,7 @@
     gap: 12px;
     width: 100%;
     padding: 9px 12px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     border: none;
     outline: none;
     text-align: left;
@@ -1813,7 +1846,8 @@
   .desktop-sidebar__nav-item:not(.active):hover svg {
     color: var(--theme-accent-primary);
   }
-  .desktop-sidebar__nav-item:not(.active):hover::before {
+  .desktop-sidebar__nav-item:not(.active):hover::before,
+  .desktop-sidebar__nav-item:not(.active):focus-visible::before {
     height: 16px;
     margin-top: -8px;
     opacity: 0.9;

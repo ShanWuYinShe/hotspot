@@ -20,7 +20,7 @@
   {/if}
   <input
     class={cn(
-      'w-full input-base rounded-2xl py-3 px-4 text-neu outline-none transition-all duration-200',
+      'w-full input-base rounded-[var(--radius-lg)] py-3 px-4 text-neu outline-none transition-all duration-200',
       'placeholder:text-secondary',
       icon && 'pl-12',
       className

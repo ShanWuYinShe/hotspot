@@ -11,7 +11,7 @@
 
 <DialogPrimitive.Overlay
   class={cn(
-    'fixed inset-0 z-50',
+    'fixed inset-0 z-[var(--z-overlay)]',
     'bg-black/50 backdrop-blur-[2px]',
     'data-[state=open]:animate-in data-[state=open]:fade-in-0',
     'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',

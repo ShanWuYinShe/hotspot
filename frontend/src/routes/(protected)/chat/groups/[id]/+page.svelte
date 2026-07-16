@@ -627,7 +627,7 @@
         style="width: 40px; height: 40px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
       ></div>
       <div
-        style="width: 128px; height: 20px; border-radius: 8px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+        style="width: 128px; height: 20px; border-radius: var(--radius-xs); background: var(--surface-bg); box-shadow: var(--shadow-inset);"
       ></div>
     {:else if group}
       <a
@@ -678,7 +678,7 @@
             ></div>
             <div class="flex-1 space-y-2">
               <div
-                style="width: 96px; height: 12px; border-radius: 6px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+                style="width: 96px; height: 12px; border-radius: var(--radius-xs); background: var(--surface-bg); box-shadow: var(--shadow-inset);"
               ></div>
               <div
                 class="max-w-xs rounded-[var(--radius-md)]"
@@ -835,8 +835,8 @@
     <!-- Scroll to Bottom Button -->
     {#if showScrollButton}
       <button
-        class="fixed bottom-24 right-6 z-10 flex items-center justify-center rounded-full outline-none"
-        style="width: 36px; height: 36px; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
+        class="fixed right-6 z-10 flex items-center justify-center rounded-full outline-none"
+        style="bottom: max(96px, calc(24px + env(safe-area-inset-bottom, 0px))); width: 36px; height: 36px; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
         onclick={() => scrollToBottom(true)}
         aria-label={t('chat.scrollToBottomAria')}
       >

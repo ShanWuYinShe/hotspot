@@ -37,7 +37,7 @@
   .auth-prompt-overlay {
     position: fixed;
     inset: 0;
-    z-index: 90;
+    z-index: var(--z-overlay);
     background: transparent;
     border: none;
     cursor: default;
@@ -45,10 +45,10 @@
 
   .auth-prompt-card {
     position: fixed;
-    bottom: 24px;
+    bottom: max(24px, env(safe-area-inset-bottom, 24px));
     left: 50%;
     transform: translateX(-50%);
-    z-index: 91;
+    z-index: var(--z-modal);
     width: calc(100vw - 48px);
     max-width: 420px;
     display: flex;

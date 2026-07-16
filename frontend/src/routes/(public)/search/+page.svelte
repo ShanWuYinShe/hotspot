@@ -477,7 +477,7 @@
       <!-- Has query: results -->
       <div class="page-shell page-shell--form">
         <!-- Result tabs -->
-        <div class="flex overflow-x-auto no-scrollbar pt-3 pb-0 gap-2">
+        <div class="flex overflow-x-auto no-scrollbar pt-3 pb-0 gap-2 h-scroll">
           {#each [{ value: 'all', label: '全部' }, { value: 'users', label: `用户${users.length ? ` (${users.length})` : ''}` }, { value: 'moments', label: `动态${moments.length ? ` (${moments.length})` : ''}` }, { value: 'groups', label: `群组${groups.length ? ` (${groups.length})` : ''}` }] as tab (tab.value)}
             <button
               class="filter-chip"

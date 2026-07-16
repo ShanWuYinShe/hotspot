@@ -13,6 +13,18 @@
   let { class: className, inset, disabled, children, child, ...restProps }: Props = $props();
 
   let hovered = $state(false);
+  let touched = $state(false);
+
+  function handlePointerEnter() {
+    hovered = true;
+  }
+  function handlePointerLeave() {
+    hovered = false;
+    touched = false;
+  }
+  function handleTouchStart() {
+    touched = true;
+  }
 </script>
 
 <DropdownMenuPrimitive.Item
@@ -27,11 +39,12 @@
     inset && 'pl-8',
     className
   )}
-  style="border-radius: var(--radius-sm); color: {hovered
+  style="border-radius: var(--radius-sm); color: {hovered || touched
     ? 'var(--text-on-accent)'
-    : 'var(--text-primary)'}; background: {hovered ? 'var(--brand)' : 'transparent'};"
-  onmouseenter={() => (hovered = true)}
-  onmouseleave={() => (hovered = false)}
+    : 'var(--text-primary)'}; background: {hovered || touched ? 'var(--brand)' : 'transparent'};"
+  onpointerenter={handlePointerEnter}
+  onpointerleave={handlePointerLeave}
+  ontouchstart={handleTouchStart}
   {disabled}
   {...restProps}
 >

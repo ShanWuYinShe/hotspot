@@ -13,7 +13,7 @@
 
 <!-- Admin section tabs — horizontal scrollable strip for tablet / mobile -->
 <div
-  class="sticky top-0 z-10 no-scrollbar overflow-x-auto"
+  class="sticky top-0 z-10 no-scrollbar overflow-x-auto h-scroll"
   style="background: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
 >
   <div class="flex w-max items-center gap-1.5 px-4 py-2.5">

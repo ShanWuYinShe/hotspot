@@ -146,7 +146,7 @@
     <p class="text-xs uppercase mb-2" style="letter-spacing: 0.12em; color: var(--text-secondary)">
       {t('common.online')}
     </p>
-    <div class="flex gap-3 overflow-x-auto no-scrollbar">
+    <div class="flex gap-3 overflow-x-auto no-scrollbar h-scroll">
       {#each onlineChats as chat (chat.other_user.user_id)}
         {@const selected = isPrivateChatSelected(chat.other_user.user_id)}
         <a

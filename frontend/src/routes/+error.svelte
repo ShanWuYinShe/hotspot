@@ -14,7 +14,7 @@
 </script>
 
 <div
-  class="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center error-enter"
+  class="flex min-h-[60dvh] flex-col items-center justify-center gap-6 px-4 text-center error-enter"
 >
   <div
     class="flex h-20 w-20 items-center justify-center rounded-[var(--radius-button)]"

@@ -146,7 +146,7 @@
   </div>
   <!-- Tab bar -->
   <div
-    class="flex overflow-x-auto no-scrollbar"
+    class="flex overflow-x-auto no-scrollbar h-scroll"
     style="border-bottom: 1px solid var(--border-theme);"
   >
     {#each TABS as tab (tab.id)}
@@ -252,9 +252,7 @@
       {#each trendingTags as topic (topic.name)}
         <button
           type="button"
-          class="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-3 py-2.5 outline-none transition-colors"
-          onmouseenter={(e) => (e.currentTarget.style.background = 'var(--border-theme)')}
-          onmouseleave={(e) => (e.currentTarget.style.background = 'transparent')}
+          class="tag-row flex w-full items-center justify-between rounded-[var(--radius-sm)] px-3 py-2.5 outline-none transition-colors"
           onclick={() => handleTrendingClick(`#${topic.name}`)}
         >
           <span class="text-body" style="color: var(--text-primary)">#{topic.name}</span>
@@ -337,7 +335,7 @@
           </div>
           <div
             class="flex-shrink-0"
-            style="width: 220px; border-left: 1px solid var(--border-theme); padding: 20px 16px; position: sticky; top: 0; align-self: flex-start;"
+            style="width: 240px; border-left: 1px solid var(--border-theme); padding: 20px 16px; position: sticky; top: 0; align-self: flex-start;"
           >
             {@render rightSidebar()}
           </div>
@@ -365,3 +363,18 @@
     </div>
   </div>
 {/if}
+
+<style>
+  .tag-row {
+    transition: background-color 0.15s ease;
+  }
+  @media (hover: hover) {
+    .tag-row:hover {
+      background: var(--border-theme);
+    }
+  }
+  .tag-row:focus-visible {
+    outline: 2px solid var(--glow);
+    outline-offset: 2px;
+  }
+</style>

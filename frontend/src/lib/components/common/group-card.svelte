@@ -187,7 +187,7 @@
 </script>
 
 <div
-  class="surface-hero card-hover cursor-pointer overflow-hidden rounded-[var(--radius-lg)] outline-none transition-[box-shadow,outline,transform] duration-200 hover:scale-[1.008] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
+  class="surface-hero card-hover cursor-pointer overflow-hidden rounded-[var(--radius-lg)] outline-none hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
   tabindex={0}
   role="link"
   onclick={handleCardClick}

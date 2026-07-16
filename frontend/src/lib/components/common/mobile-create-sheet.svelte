@@ -26,7 +26,7 @@
 {#if show}
   <!-- Backdrop -->
   <button
-    class="fixed inset-0 z-40 cursor-default"
+    class="fixed inset-0 z-[var(--z-overlay)] cursor-default"
     style="background: var(--overlay); backdrop-filter: blur(3px);"
     onclick={() => uiStore.closeCreateSheet()}
     aria-label="关闭"
@@ -35,7 +35,7 @@
 
   <!-- Sheet -->
   <div
-    class="fixed z-50 bottom-0 left-0 right-0 overflow-hidden rounded-t-[28px] px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-5"
+    class="fixed z-[var(--z-modal)] bottom-0 left-0 right-0 overflow-hidden rounded-t-[28px] px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-5"
     style="background: var(--surface-bg); border-top: 1px solid var(--border-theme); box-shadow: 0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--border-theme);"
     in:fly={{ y: 320, duration: 440, easing: backOut }}
     out:fly={{ y: 320, duration: 240, easing: cubicIn }}

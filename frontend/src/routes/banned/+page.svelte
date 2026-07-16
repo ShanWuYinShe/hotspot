@@ -24,7 +24,7 @@
 </svelte:head>
 
 <div
-  class="flex min-h-[80vh] flex-col items-center justify-center gap-6 px-4 text-center banned-enter"
+  class="flex min-h-[80dvh] flex-col items-center justify-center gap-6 px-4 text-center banned-enter"
 >
   <div
     class="flex h-20 w-20 items-center justify-center rounded-[var(--radius-button)]"
@@ -44,7 +44,7 @@
     </p>
     {#if reason}
       <p
-        class="mx-auto max-w-md rounded-2xl px-4 py-3 text-body"
+        class="mx-auto max-w-md rounded-[var(--radius-lg)] px-4 py-3 text-body"
         style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);"
       >
         {reason}

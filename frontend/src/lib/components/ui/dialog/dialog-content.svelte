@@ -61,7 +61,7 @@
     bind:ref
     onCloseAutoFocus={handleCloseAutoFocus}
     class={cn(
-      'fixed z-50 grid w-full gap-4 p-6 select-none duration-200',
+      'fixed z-[var(--z-modal)] grid w-full gap-4 p-6 select-none duration-200',
       'data-[state=open]:animate-in data-[state=open]:fade-in-0',
       'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
       'dialog-responsive-position',
@@ -75,7 +75,7 @@
     {/if}
     {#if !hideClose}
       <DialogPrimitive.Close
-        class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-sm outline-none opacity-70 transition-opacity hover:opacity-100 cursor-pointer"
+        class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-[var(--radius-xs)] outline-none opacity-70 transition-opacity hover:opacity-100 cursor-pointer"
         style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
       >
         <X size={16} color="var(--text-secondary)" />

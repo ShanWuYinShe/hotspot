@@ -402,7 +402,7 @@
         style="width: 40px; height: 40px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
       ></div>
       <div
-        style="width: 96px; height: 20px; border-radius: 8px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+        style="width: 96px; height: 20px; border-radius: var(--radius-xs); background: var(--surface-bg); box-shadow: var(--shadow-inset);"
       ></div>
     {:else if otherUser}
       <div class="flex items-center gap-3">

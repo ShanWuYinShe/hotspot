@@ -305,7 +305,7 @@
 
 <Dialog.Root bind:open onOpenChange={setOpenState}>
   <Dialog.Content
-    class="flex max-h-[85vh] flex-col sm:max-w-3xl"
+    class="flex max-h-[85dvh] flex-col sm:max-w-3xl"
     style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-lg);"
   >
     <!-- Header -->

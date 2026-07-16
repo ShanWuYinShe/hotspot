@@ -409,7 +409,7 @@
               <div class="space-y-1">
                 {#each perms as perm (perm.key)}
                   <label
-                    class="flex cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1"
+                    role="presentation" class="flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1"
                   >
                     <input
                       type="checkbox"

@@ -112,7 +112,7 @@
                     {moment.description}
                   </p>
                   {#if moment.images && moment.images.length > 0}
-                    <div class="mt-3 flex gap-2 overflow-x-auto">
+                    <div class="mt-3 flex gap-2 overflow-x-auto h-scroll">
                       {#each moment.images.slice(0, 4) as image, i (image.url)}
                         <SmartImage
                           src={image.url}

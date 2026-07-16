@@ -91,7 +91,7 @@
   <title>{t('usersNearby.title')} - HotSpot</title>
 </svelte:head>
 
-<div>
+<div class="flex h-full flex-col overflow-y-auto no-scrollbar">
   <!-- Sticky header -->
   <div
     class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
@@ -126,7 +126,7 @@
       </div>
 
       <!-- Sort tabs -->
-      <div class="no-scrollbar mb-3 flex items-center gap-2 overflow-x-auto">
+      <div class="no-scrollbar mb-3 flex items-center gap-2 overflow-x-auto h-scroll">
         {#each SORT_OPTIONS as s (s)}
           <button
             class="filter-chip"

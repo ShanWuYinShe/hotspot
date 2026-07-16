@@ -17,7 +17,7 @@
     {side}
     {align}
     class={cn(
-      'z-50 min-w-32 overflow-hidden',
+      'z-[var(--z-dropdown)] min-w-32 overflow-hidden',
       'p-2',
       'data-[state=open]:animate-bounce-in',
       'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',

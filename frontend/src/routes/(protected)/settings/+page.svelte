@@ -302,7 +302,7 @@
                   onclick={() => setThemeFamily(option.family)}
                 >
                   <div
-                    style="width: 60px; height: 80px; border-radius: 12px; background: var(--surface-bg); border: 1px solid {accent}22; box-shadow: var(--shadow-md); position: relative; overflow: hidden;"
+                    style="width: 60px; height: 80px; border-radius: var(--radius-sm); background: var(--surface-bg); border: 1px solid {accent}22; box-shadow: var(--shadow-md); position: relative; overflow: hidden;"
                   >
                     <div
                       style="position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; height: 20px; background: var(--surface-bg); border-top: 1px solid {accent}30;"
@@ -322,7 +322,7 @@
                     >
                       {#each [80, 60, 70] as w, i (i)}
                         <div
-                          style="width: {w}%; height: 5px; border-radius: 3px; background: {i === 0
+                          style="width: {w}%; height: 5px; border-radius: var(--radius-xs); background: {i === 0
                             ? `${accent}90`
                             : `${accent}35`};"
                         ></div>
@@ -519,7 +519,7 @@
             >
               <!-- Mini phone frame preview -->
               <div
-                style="width: 60px; height: 80px; border-radius: 12px; background: var(--surface-bg); border: 1px solid {accent}22; box-shadow: var(--shadow-md); position: relative; overflow: hidden;"
+                style="width: 60px; height: 80px; border-radius: var(--radius-sm); background: var(--surface-bg); border: 1px solid {accent}22; box-shadow: var(--shadow-md); position: relative; overflow: hidden;"
               >
                 <div
                   style="position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; height: 20px; background: var(--surface-bg); border-top: 1px solid {accent}30;"
@@ -539,7 +539,7 @@
                 >
                   {#each [80, 60, 70] as w, i (i)}
                     <div
-                      style="width: {w}%; height: 5px; border-radius: 3px; background: {i === 0
+                      style="width: {w}%; height: 5px; border-radius: var(--radius-xs); background: {i === 0
                         ? `${accent}90`
                         : `${accent}35`};"
                     ></div>

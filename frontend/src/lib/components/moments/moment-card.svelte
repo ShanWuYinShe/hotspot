@@ -129,7 +129,7 @@
 </script>
 
 <div
-  class="moment-card {className}"
+  class="moment-card card-hover hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--page-bg)] {className}"
   onclick={handleCardClick}
   role="link"
   tabindex={0}
@@ -315,25 +315,11 @@
       var(--surface-bg);
     box-shadow: none;
     outline: none;
-    transition:
-      transform 0.22s ease,
-      border-color 0.22s ease,
-      box-shadow 0.22s ease;
+    transition: border-color 0.22s ease;
   }
 
   .moment-card:hover {
     border-color: color-mix(in srgb, var(--brand) 30%, var(--border-theme));
-    box-shadow: var(--hover-shadow-card);
-  }
-
-  .moment-card:active {
-    transform: scale(0.99);
-  }
-
-  .moment-card:focus-visible {
-    box-shadow:
-      0 0 0 2px var(--glow),
-      var(--hover-shadow-card);
   }
 
   .moment-card__header {

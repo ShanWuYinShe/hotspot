@@ -35,7 +35,7 @@
     </div>
   {/if}
 
-  <div class="flex gap-3 overflow-x-auto no-scrollbar" style="padding-bottom: 4px;">
+  <div class="flex gap-3 overflow-x-auto no-scrollbar h-scroll" style="padding-bottom: 4px;">
     {#if loading}
       {#each Array(5) as _}
         <div class="flex flex-col items-center gap-1.5 flex-shrink-0">
@@ -91,13 +91,13 @@
     gap: 4px;
     flex-shrink: 0;
     width: 56px;
-    transition: transform 0.18s ease;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .radar-user:hover {
-    transform: scale(1.05);
+    transform: scale(1.02);
   }
   .radar-user:active {
-    transform: scale(0.95);
+    transform: scale(0.98);
   }
 
   .radar-more {
@@ -118,7 +118,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     outline: none;
   }
   .radar-more button:hover {
@@ -126,7 +126,7 @@
     border-color: var(--brand);
   }
   .radar-more button:active {
-    transform: scale(0.93);
+    transform: scale(0.98);
   }
   .radar-more button:focus-visible {
     outline: 2px solid var(--glow);

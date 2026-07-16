@@ -177,13 +177,13 @@
               style="background: var(--surface-bg); border: 1px solid var(--border-active);"
             >
               <div
-                style="width: 48px; height: 16px; background: var(--border-theme); border-radius: 4px; margin-bottom: 8px;"
+                style="width: 48px; height: 16px; background: var(--border-theme); border-radius: var(--radius-xs); margin-bottom: 8px;"
               ></div>
               <div
-                style="width: 100%; height: 12px; background: var(--border-theme); border-radius: 4px; margin-bottom: 6px;"
+                style="width: 100%; height: 12px; background: var(--border-theme); border-radius: var(--radius-xs); margin-bottom: 6px;"
               ></div>
               <div
-                style="width: 75%; height: 12px; background: var(--border-theme); border-radius: 4px;"
+                style="width: 75%; height: 12px; background: var(--border-theme); border-radius: var(--radius-xs);"
               ></div>
             </div>
           {/each}

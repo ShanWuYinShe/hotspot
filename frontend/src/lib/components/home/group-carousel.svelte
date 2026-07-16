@@ -33,18 +33,18 @@
     </button>
   </div>
 
-  <div class="flex gap-3 overflow-x-auto no-scrollbar" style="padding-bottom: 4px;">
+  <div class="flex gap-3 overflow-x-auto no-scrollbar h-scroll" style="padding-bottom: 4px;">
     {#if loading}
       {#each Array(3) as _}
         <div class="flex-shrink-0" style="width: 140px;">
           <div
-            style="height: 72px; border-radius: 14px 14px 0 0; background: var(--border-theme);"
+            style="height: 72px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--border-theme);"
           ></div>
           <div
-            style="padding: 8px 10px; border-radius: 0 0 14px 14px; background: var(--surface-bg); border: 1px solid var(--border-theme); border-top: none;"
+            style="padding: 8px 10px; border-radius: 0 0 var(--radius-lg) var(--radius-lg); background: var(--surface-bg); border: 1px solid var(--border-theme); border-top: none;"
           >
             <div
-              style="height: 12px; width: 80%; border-radius: 3px; background: var(--border-theme);"
+              style="height: 12px; width: 80%; border-radius: var(--radius-xs); background: var(--border-theme);"
             ></div>
           </div>
         </div>
@@ -52,12 +52,12 @@
     {:else if groups.length > 0}
       {#each groups as group (group.id)}
         <button
-          class="group-card flex-shrink-0 text-left"
+          class="group-card card-hover flex-shrink-0 text-left"
           onclick={() => void goto(`/groups/${group.id}`)}
         >
           <!-- Banner -->
           <div
-            style="position: relative; height: 72px; border-radius: 14px 14px 0 0; overflow: hidden; background: linear-gradient(135deg, var(--theme-accent-soft), var(--border-theme));"
+            style="position: relative; height: 72px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; overflow: hidden; background: linear-gradient(135deg, var(--theme-accent-soft), var(--border-theme));"
           >
             {#if group.banner_url}
               <img
@@ -75,13 +75,13 @@
             <div style="position: absolute; top: 6px; right: 6px;">
               {#if group.is_private}
                 <div
-                  style="width: 20px; height: 20px; border-radius: 6px; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;"
+                  style="width: 20px; height: 20px; border-radius: var(--radius-xs); background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;"
                 >
                   <Lock size={10} strokeWidth={2} color="var(--text-on-overlay)" />
                 </div>
               {:else}
                 <div
-                  style="width: 20px; height: 20px; border-radius: 6px; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;"
+                  style="width: 20px; height: 20px; border-radius: var(--radius-xs); background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;"
                 >
                   <Globe size={10} strokeWidth={2} color="var(--text-on-overlay)" />
                 </div>
@@ -91,7 +91,7 @@
             {#if group.distance}
               <div
                 class="text-xs"
-                style="position: absolute; bottom: 6px; left: 6px; color: var(--text-on-overlay); background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); padding: 2px 6px; border-radius: 6px"
+                style="position: absolute; bottom: 6px; left: 6px; color: var(--text-on-overlay); background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); padding: 2px 6px; border-radius: var(--radius-xs)"
               >
                 {group.distance}
               </div>
@@ -99,7 +99,7 @@
           </div>
           <!-- Info -->
           <div
-            style="padding: 8px 10px; border-radius: 0 0 14px 14px; background: var(--surface-bg); border: 1px solid var(--border-theme); border-top: none;"
+            style="padding: 8px 10px; border-radius: 0 0 var(--radius-lg) var(--radius-lg); background: var(--surface-bg); border: 1px solid var(--border-theme); border-top: none;"
           >
             <p
               class="text-meta"
@@ -133,17 +133,5 @@
     border: none;
     padding: 0;
     cursor: pointer;
-    transition: transform 0.2s ease;
-  }
-  .group-card:hover {
-    transform: scale(1.03);
-  }
-  .group-card:active {
-    transform: scale(0.97);
-  }
-  .group-card:focus-visible {
-    outline: 2px solid var(--glow);
-    outline-offset: 2px;
-    border-radius: var(--radius-sm);
   }
 </style>

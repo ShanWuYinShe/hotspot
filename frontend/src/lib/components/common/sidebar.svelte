@@ -71,6 +71,7 @@
         <button
           class="desktop-sidebar__nav-item {isActive(item) ? 'active' : ''}"
           onclick={() => handleNavClick(item)}
+          aria-current={isActive(item) ? 'page' : undefined}
         >
           <item.icon size={17} strokeWidth={isActive(item) ? 2 : 1.6} />
           <span class="text-sm" class:font-medium={isActive(item)}>
@@ -98,6 +99,7 @@
           <button
             class="desktop-sidebar__nav-item {isActive(item) ? 'active' : ''}"
             onclick={() => handleNavClick(item)}
+            aria-current={isActive(item) ? 'page' : undefined}
           >
             <item.icon size={17} strokeWidth={isActive(item) ? 2 : 1.6} />
             <span class="text-sm" class:font-medium={isActive(item)}>
@@ -133,6 +135,7 @@
         <button
           class="desktop-sidebar__nav-item {adminActive ? 'active' : ''}"
           onclick={() => void goto('/admin')}
+          aria-current={adminActive ? 'page' : undefined}
         >
           <Shield size={17} strokeWidth={adminActive ? 2 : 1.6} />
           <span class="text-sm" class:font-medium={adminActive}>

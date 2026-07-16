@@ -434,7 +434,7 @@
     <!-- Filter pills -->
     <div class="page-pad-x py-3" style="scrollbar-width: none;">
       <div class="page-shell">
-        <div class="flex gap-2 overflow-x-auto">
+        <div class="flex gap-2 overflow-x-auto h-scroll">
           {#each Object.entries(filterLabels) as [key, label]}
             <button
               class="filter-chip"
@@ -576,7 +576,7 @@
                         alt=""
                         loading="lazy"
                         decoding="async"
-                        style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-theme);"
+                        style="width: 38px; height: 38px; border-radius: var(--radius-md); object-fit: cover; border: 1px solid var(--border-theme);"
                       />
                     {/if}
                     <div
@@ -692,7 +692,7 @@
                     <img
                       src={thumbnailUrl}
                       alt=""
-                      style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-theme);"
+                      style="width: 38px; height: 38px; border-radius: var(--radius-md); object-fit: cover; border: 1px solid var(--border-theme);"
                     />
                   {/if}
                 </div>

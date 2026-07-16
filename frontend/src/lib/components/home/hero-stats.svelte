@@ -39,7 +39,7 @@
 <div class="ambient-glow">
   <button
     type="button"
-    class="surface-hero w-full overflow-hidden rounded-[var(--radius-xl)] text-left transition-transform duration-150 active:scale-[0.99]"
+    class="surface-hero card-hover w-full overflow-hidden rounded-[var(--radius-xl)] text-left hover:scale-[1.02] active:scale-[0.98]"
     style="padding: 18px 20px;"
     {onclick}
   >

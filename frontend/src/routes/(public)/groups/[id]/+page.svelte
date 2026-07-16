@@ -875,7 +875,7 @@
   </div>
 </div>
 
-<div class="page-pad">
+<div class="page-pad flex h-full flex-col overflow-y-auto no-scrollbar">
   <div class="page-shell space-y-5">
     {#if group && !wsGroupSubscription.state.isSubscribed}
       <div
@@ -1608,8 +1608,8 @@
 <!-- Dialogs: kept with neumorphic inner styling -->
 <Dialog.Root bind:open={showJoinDialog}>
   <Dialog.Content
-    class="sm:max-w-lg border var(--surface-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--border-theme);"
+    class="sm:max-w-lg border var(--surface-bg) backdrop-blur-md"
+    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{t('groupDetail.joinDialogTitle')}</Dialog.Title>
@@ -1684,8 +1684,8 @@
 
 <Dialog.Root bind:open={showAnnouncementDialog}>
   <Dialog.Content
-    class="sm:max-w-xl border var(--surface-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--border-theme);"
+    class="sm:max-w-xl border var(--surface-bg) backdrop-blur-md"
+    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{editingAnnouncement ? t('groupDetail.announcementDialogTitleEdit') : t('groupDetail.announcementDialogTitleCreate')}</Dialog.Title>
@@ -1769,8 +1769,8 @@
 
 <Dialog.Root bind:open={showAnnouncementDeleteDialog}>
   <Dialog.Content
-    class="sm:max-w-md border var(--surface-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--border-theme);"
+    class="sm:max-w-md border var(--surface-bg) backdrop-blur-md"
+    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{t('groupDetail.deleteDialogTitle')}</Dialog.Title>
@@ -1799,8 +1799,8 @@
 
 <Dialog.Root bind:open={showMuteDialog}>
   <Dialog.Content
-    class="sm:max-w-md border var(--surface-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--border-theme);"
+    class="sm:max-w-md border var(--surface-bg) backdrop-blur-md"
+    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{t('groupDetail.muteDialogTitle')}</Dialog.Title>
@@ -1859,8 +1859,8 @@
 
 <Dialog.Root bind:open={showRoleDialog}>
   <Dialog.Content
-    class="sm:max-w-md border var(--surface-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--border-theme);"
+    class="sm:max-w-md border var(--surface-bg) backdrop-blur-md"
+    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{t('groupDetail.roleDialogTitle')}</Dialog.Title>
@@ -1901,8 +1901,8 @@
 
 <Dialog.Root bind:open={showRemoveDialog}>
   <Dialog.Content
-    class="sm:max-w-md border var(--surface-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--border-theme);"
+    class="sm:max-w-md border var(--surface-bg) backdrop-blur-md"
+    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{t('groupDetail.removeDialogTitle')}</Dialog.Title>
@@ -1935,8 +1935,8 @@
 
 <Dialog.Root bind:open={showLeaveDialog}>
   <Dialog.Content
-    class="sm:max-w-md border var(--surface-bg) shadow-xl backdrop-blur-md"
-    style="border-color: var(--border-theme);"
+    class="sm:max-w-md border var(--surface-bg) backdrop-blur-md"
+    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{t('groupDetail.leaveDialogTitle')}</Dialog.Title>

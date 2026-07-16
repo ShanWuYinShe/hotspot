@@ -21,7 +21,7 @@
 
 <div
   class="flex flex-col overflow-hidden"
-  style="gap: 1px; background: var(--border-theme); border-radius: 16px; border: 1px solid var(--border-theme);"
+  style="gap: 1px; background: var(--border-theme); border-radius: var(--radius-md); border: 1px solid var(--border-theme);"
 >
   {#if loading}
     {#each Array(4) as _}
@@ -32,10 +32,10 @@
         ></div>
         <div class="flex-1">
           <div
-            style="height: 13px; width: 50%; border-radius: 3px; background: var(--border-theme);"
+            style="height: 13px; width: 50%; border-radius: var(--radius-xs); background: var(--border-theme);"
           ></div>
           <div
-            style="height: 10px; width: 30%; border-radius: 3px; background: var(--border-theme); margin-top: 4px;"
+            style="height: 10px; width: 30%; border-radius: var(--radius-xs); background: var(--border-theme); margin-top: 4px;"
           ></div>
         </div>
       </div>
@@ -85,7 +85,9 @@
   .hover-row {
     background-color: var(--surface-bg);
   }
-  .hover-row:hover {
-    background-color: var(--border-theme);
+  @media (hover: hover) {
+    .hover-row:hover {
+      background-color: var(--border-theme);
+    }
   }
 </style>

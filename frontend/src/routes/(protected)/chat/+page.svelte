@@ -182,7 +182,7 @@
             >
               {t('common.online')}
             </p>
-            <div class="flex gap-4 overflow-x-auto no-scrollbar pb-1">
+            <div class="flex gap-4 overflow-x-auto no-scrollbar pb-1 h-scroll">
               {#each onlineChats as chat (chat.other_user.user_id)}
                 <a
                   href="/chat/users/{chat.other_user.user_id}"

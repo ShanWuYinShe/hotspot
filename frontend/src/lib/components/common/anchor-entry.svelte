@@ -63,7 +63,7 @@
 {:else}
   <button
     type="button"
-    class="surface-flat flex max-w-[55vw] items-center gap-1.5 rounded-full px-3.5 py-1.5 outline-none transition-transform duration-150 active:scale-[0.94]"
+    class="surface-flat flex max-w-[280px] items-center gap-1.5 rounded-full px-3.5 py-1.5 outline-none transition-transform duration-150 active:scale-[0.94]"
     onclick={handleClick}
     aria-label={resolvedLabel}
   >

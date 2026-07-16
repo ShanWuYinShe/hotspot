@@ -98,7 +98,7 @@
   <title>{t('groupsNearby.title')} - HotSpot</title>
 </svelte:head>
 
-<div>
+<div class="flex h-full flex-col overflow-y-auto no-scrollbar">
   <!-- Sticky header -->
   <div
     class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
@@ -142,7 +142,7 @@
       </div>
 
       <!-- Category chips (sourced from actual group tags) -->
-      <div class="no-scrollbar mb-3 flex gap-2 overflow-x-auto">
+      <div class="no-scrollbar mb-3 flex gap-2 overflow-x-auto h-scroll">
         {#each availableCategories as c (c)}
           <button
             class="filter-chip"

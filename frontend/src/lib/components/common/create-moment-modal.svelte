@@ -322,7 +322,7 @@
 >
   <Dialog.Content
     hideClose
-    class="compose compose-dialog flex max-h-[85vh] flex-col"
+    class="compose compose-dialog flex max-h-[85dvh] flex-col"
   >
     <!-- Header: title + close (fixed, no drag handle) -->
     <div class="compose__header">

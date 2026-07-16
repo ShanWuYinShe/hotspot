@@ -96,7 +96,7 @@
   >
     <span
       aria-hidden="true"
-      style="position: absolute; left: {pill.x}px; top: {pill.y}px; width: {pill.w}px; height: {pill.h}px; border-radius: 20px; background: var(--brand); opacity: {pillVisible
+      style="position: absolute; left: {pill.x}px; top: {pill.y}px; width: {pill.w}px; height: {pill.h}px; border-radius: var(--radius-md); background: var(--brand); opacity: {pillVisible
         ? 0.14
         : 0}; pointer-events: none; z-index: 0; will-change: left, width; transition: left 0.42s cubic-bezier(0.34, 1.32, 0.46, 1), width 0.42s cubic-bezier(0.34, 1.32, 0.46, 1), top 0.42s cubic-bezier(0.34, 1.32, 0.46, 1), height 0.42s cubic-bezier(0.34, 1.32, 0.46, 1), opacity 0.22s ease;"
     ></span>

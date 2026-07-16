@@ -2754,7 +2754,7 @@
             {/if}
           </div>
 
-          <div class="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+          <div class="max-h-[60dvh] space-y-2 overflow-y-auto pr-1">
             {#if searchResults.length > 0}
               {#each searchResults as result (`desktop_${result.latitude}_${result.longitude}`)}
                 <button
@@ -2917,7 +2917,7 @@
     min-width: 30px;
     height: 30px;
     padding: 0 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     font-size: 14px;
     font-weight: 700;
     line-height: 1;
