@@ -256,7 +256,7 @@
   class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
   style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
 >
-  <div class="page-shell page-shell--narrow flex items-center gap-4">
+  <div class="page-shell flex items-center gap-4">
     <BackButton onclick={handleBackClick} size={36} />
     <h1 class="text-h1" style="font-weight: 600; color: var(--text-primary)">{t('momentDetail.pageTitle')}</h1>
     {#if isOwner}
@@ -275,7 +275,7 @@
 </div>
 
 <div class="page-pad">
-  <div class="page-shell page-shell--narrow space-y-6">
+  <div class="page-shell space-y-6">
     {#if isLoading}
       <div
         class="rounded-[var(--radius-lg)] p-6 space-y-4"
@@ -440,8 +440,8 @@
               size={32}
             />
             <div
-              class="input-surface flex flex-1 items-center"
-              style="height: 38px; border-radius: var(--radius-pill);"
+              class="input-surface flex flex-1 items-center gap-2"
+              style="height: 42px; border-radius: var(--radius-md); padding: 0 4px 0 14px;"
             >
               <input
                 type="text"
@@ -453,8 +453,8 @@
                 style="color: var(--text-primary);"
               />
               <button
-                class="ml-2 mr-1 flex items-center justify-center rounded-full outline-none"
-                style="width: 36px; height: 36px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
+                class="flex flex-shrink-0 items-center justify-center rounded-full outline-none transition-transform active:scale-90"
+                style="width: 30px; height: 30px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
                 onclick={submitComment}
                 disabled={!commentText.trim() || isSubmitting}
               >
