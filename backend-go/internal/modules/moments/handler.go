@@ -3,12 +3,16 @@ package moments
 import (
 	"errors"
 	"net/http"
+	"unicode/utf8"
 
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/observability"
 )
+
+// momentDescriptionMaxRunes 限制动态正文长度（与 ClientConfig.moment_description_max_length 一致）。
+const momentDescriptionMaxRunes = 2000
 
 type Handler struct {
 	service *Service
@@ -36,6 +40,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Description == "" || (req.Location.Point.Latitude == 0 && req.Location.Point.Longitude == 0 && req.Location.LocationName == "") {
 		logBusinessError(r, "Create", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if utf8.RuneCountInString(req.Description) > momentDescriptionMaxRunes {
+		logBusinessError(r, "Create", 10000, "内容超过长度限制")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "内容超过长度限制"))
 		return
 	}
 	// Reject out-of-range coordinates before they corrupt the S2 index.

@@ -72,7 +72,7 @@
     </DropdownMenu.Root>
     <button
       class="mx-1.5 flex items-center justify-center rounded-full outline-none transition-shadow duration-200"
-      style="width: 32px; height: 32px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
+      style="width: 36px; height: 36px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
       onclick={() => uiStore.openCreateSheet()}
       aria-label={t('nav.publish')}
     >
@@ -89,7 +89,7 @@
       <button
         type="button"
         class="ml-1.5 cursor-pointer"
-        style="width: 32px; height: 32px; padding: 0; border: none; background: none;"
+        style="width: 36px; height: 36px; padding: 0; border: none; background: none;"
         aria-label={t('nav.profile')}
         onclick={() => void goto('/profile')}
       >
@@ -97,14 +97,14 @@
           src={authStore.currentAccount?.avatar_url || ''}
           name={authStore.currentAccount?.nickname || 'Profile'}
           alt={authStore.currentAccount?.nickname || 'Profile'}
-          size={32}
+          size={36}
         />
       </button>
     {:else}
       <button
         type="button"
         class="text-body ml-1.5 rounded-full px-4 font-medium transition-transform duration-150 active:scale-95"
-        style="height: 32px; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
+        style="height: 36px; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
         onclick={() => uiStore.openLoginModalWithRedirect({})}
       >
         {t('nav.loginRegister')}

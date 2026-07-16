@@ -969,16 +969,21 @@
     border-color: var(--brand);
   }
 
-  /* Inset form field — for hand-laid inputs/textareas that keep their own
-     padding/font but need the shared focus feedback (brand border + glow ring).
-     Resting look matches the legacy inline `box-shadow: var(--shadow-inset)`.
-     Focus-only model, consistent with `.input-surface`. */
+  /* Inset form field — 凹陷式表单字段。
+     与 .input-base 共享尺寸基准（padding/font/placeholder），仅外观不同（凹陷 vs 凸起），
+     确保同一表单内两种风格混用时输入框高度、字体、placeholder 完全一致。 */
   .field-inset {
     box-shadow: var(--shadow-inset);
     border: 1px solid var(--border-theme);
+    padding: 6px 12px;
+    font-size: 14px;
     transition:
       box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
       border-color 0.2s ease;
+  }
+  .field-inset::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
   }
   .field-inset:focus,
   .field-inset:focus-visible {

@@ -287,7 +287,7 @@
               bind:value={password}
               disabled={isLoading}
               onblur={() => markTouched('password')}
-              class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none w-full pr-10"
+              class="text-body input-base rounded-[var(--radius-md)] outline-none w-full pr-10"
               class:field-error={passwordError}
               style="background: var(--surface-bg); color: var(--text-primary)"
             />
