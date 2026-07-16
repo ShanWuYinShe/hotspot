@@ -256,6 +256,7 @@
         >
         <input
           id="group-name"
+          name="group-name"
           class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
           class:field-error={nameError}
           style="background: var(--surface-bg); color: var(--text-primary)"
@@ -284,6 +285,7 @@
         >
         <textarea
           id="group-desc"
+          name="group-description"
           placeholder="简单描述群组用途与氛围"
           class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full resize-none"
           class:field-error={groupDescriptionError}
@@ -312,6 +314,7 @@
         >
         <input
           id="group-tags"
+          name="group-tags"
           class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
           style="background: var(--surface-bg); color: var(--text-primary)"
           placeholder="兴趣、城市、活动"
@@ -355,6 +358,7 @@
           >
           <input
             id="group-password"
+            name="group-password"
             class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
             class:field-error={groupPasswordError}
             style="background: var(--surface-bg); color: var(--text-primary)"
@@ -380,6 +384,7 @@
           >
           <input
             id="max-members"
+            name="group-max-members"
             class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full"
             class:field-error={maxMembersError}
             style="background: var(--surface-bg); color: var(--text-primary)"

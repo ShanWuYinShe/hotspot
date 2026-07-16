@@ -337,6 +337,7 @@
         <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
         <input
           type="text"
+          name="global-modal-search"
           placeholder={t('searchModal.placeholder')}
           bind:value={keyword}
           autocomplete="off"

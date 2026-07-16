@@ -358,6 +358,7 @@
       <div class="compose__textarea-wrap input-surface" class:compose__textarea-wrap--error={descriptionError}>
         <textarea
           id="moment-description"
+          name="moment-description"
           placeholder={t('createMoment.placeholder')}
           class="compose__textarea"
           bind:value={description}
@@ -444,6 +445,7 @@
       <div class="compose__tags">
         <span class="compose__section-label"><span>{t('createMoment.tags')}</span></span>
         <input
+          name="moment-tags"
           placeholder={t('createMoment.tagsPlaceholder')}
           class="compose__tags-input input-surface"
           bind:value={tagsInput}

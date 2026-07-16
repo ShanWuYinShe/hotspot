@@ -47,7 +47,13 @@ func NewServiceWithDeps(repo Repository, userService userReader) *Service {
 }
 
 func NewRuntime(factory *persistence.Factory) *Runtime {
-	return NewRuntimeWithRepo(NewPostgresRepository(factory))
+	repo := NewPostgresRepository(factory)
+	userService := users.NewServiceWithRepo(users.NewPersistenceRepository(factory))
+	service := NewServiceWithDeps(repo, userService)
+	return &Runtime{
+		handler:     NewHandler(service),
+		readService: service,
+	}
 }
 
 func NewRuntimeWithRepo(repo Repository) *Runtime {

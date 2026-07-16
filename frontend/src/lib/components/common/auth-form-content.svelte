@@ -257,6 +257,7 @@
           >
           <input
             id="auth-login-id"
+            name="login-id"
             type="text"
             placeholder={t('auth.phoneOrEmail')}
             autocomplete="username"
@@ -279,6 +280,7 @@
           <div class="relative">
             <input
               id="auth-login-password"
+              name="password"
               type={showPassword ? 'text' : 'password'}
               placeholder={t('auth.enterPassword')}
               autocomplete="current-password"
@@ -342,6 +344,7 @@
           >
           <input
             id="auth-register-nickname"
+            name="register-nickname"
             type="text"
             placeholder={t('auth.giveYourselfAName')}
             autocomplete="nickname"
@@ -363,6 +366,7 @@
           >
           <input
             id="auth-register-id"
+            name="register-login-id"
             type="text"
             placeholder={t('auth.phoneOrEmail')}
             autocomplete="username"
@@ -384,6 +388,7 @@
           >
           <input
             id="auth-register-password"
+            name="register-password"
             type="password"
             placeholder={t('auth.atLeast8Chars')}
             autocomplete="new-password"
@@ -405,6 +410,7 @@
           >
           <input
             id="auth-register-confirm"
+            name="register-confirm-password"
             type="password"
             placeholder={t('auth.enterPasswordAgain')}
             autocomplete="new-password"
@@ -452,6 +458,7 @@
           >
           <input
             id="auth-guest-nickname"
+            name="guest-nickname"
             type="text"
             placeholder={t('auth.giveYourselfAName')}
             autocomplete="nickname"
