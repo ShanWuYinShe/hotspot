@@ -36,10 +36,15 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if err := queryable.Exec(ctx, queryInsertComment, commentID, req.MomentID, userID, parentID, req.Content, createdAt, 0, 0); err != nil {
 		return CommentItem{}, err
 	}
+	var nickname string
+	_ = queryable.QueryRow(ctx, queryGetNickname, userID).Scan(&nickname)
+	if nickname == "" {
+		nickname = userID
+	}
 	return CommentItem{
 		CommentID:    commentID,
 		MomentID:     req.MomentID,
-		User:         UserInfo{UserID: userID, Nickname: userID},
+		User:         UserInfo{UserID: userID, Nickname: nickname},
 		Content:      req.Content,
 		CreatedAt:    createdAt,
 		LikesCount:   0,
@@ -74,12 +79,12 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 	items := make([]CommentItem, 0, limit+1)
 	for rows.Next() {
 		var item CommentItem
-		var userID, parentID string
+		var userID, nickname, parentID string
 		var createdAt time.Time
-		if err := rows.Scan(&item.CommentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
+		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
 			return PaginatedComments{}, err
 		}
-		item.User = UserInfo{UserID: userID, Nickname: userID}
+		item.User = UserInfo{UserID: userID, Nickname: nickname}
 		item.ParentID = parentID
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		item.MyState = &MyCommentState{IsLiked: false}
@@ -101,15 +106,15 @@ func (r *PostgresRepository) Get(ctx context.Context, commentID string) (Comment
 	}
 	row := queryable.QueryRow(ctx, queryGetComment, commentID)
 	var item CommentItem
-	var userID, parentID string
+	var userID, nickname, parentID string
 	var createdAt time.Time
-	if err := row.Scan(&item.CommentID, &item.MomentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
+	if err := row.Scan(&item.CommentID, &item.MomentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return CommentItem{}, false, nil
 		}
 		return CommentItem{}, false, err
 	}
-	item.User = UserInfo{UserID: userID, Nickname: userID}
+	item.User = UserInfo{UserID: userID, Nickname: nickname}
 	item.ParentID = parentID
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	item.MyState = &MyCommentState{IsLiked: false}
@@ -134,12 +139,12 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 	items := make([]CommentItem, 0, limit+1)
 	for rows.Next() {
 		var item CommentItem
-		var userID, parentID string
+		var userID, nickname, parentID string
 		var createdAt time.Time
-		if err := rows.Scan(&item.CommentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
+		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
 			return PaginatedComments{}, err
 		}
-		item.User = UserInfo{UserID: userID, Nickname: userID}
+		item.User = UserInfo{UserID: userID, Nickname: nickname}
 		item.ParentID = parentID
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		item.MyState = &MyCommentState{IsLiked: false}
@@ -173,12 +178,12 @@ func (r *PostgresRepository) ListTopRepliesByParentIDs(ctx context.Context, pare
 	defer rows.Close()
 	for rows.Next() {
 		var item CommentItem
-		var userID, parentID string
+		var userID, nickname, parentID string
 		var createdAt time.Time
-		if err := rows.Scan(&item.CommentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
+		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
 			return nil, err
 		}
-		item.User = UserInfo{UserID: userID, Nickname: userID}
+		item.User = UserInfo{UserID: userID, Nickname: nickname}
 		item.ParentID = parentID
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		item.MyState = &MyCommentState{IsLiked: false}

@@ -4,7 +4,7 @@
   import { t } from '$lib/i18n';
   import { withMinimumLoadingTime } from '$lib/utils/loading';
   import { momentsService, commentsService, shareService } from '$lib/api/services';
-  import { formatDateTime } from '$lib/utils/format';
+  import { formatRelativeTime } from '$lib/utils/format';
   import { isSuccess } from '$lib/api/client';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
@@ -216,7 +216,7 @@
   }
 
   function formatTime(dateStr: string): string {
-    return formatDateTime(dateStr);
+    return formatRelativeTime(dateStr, undefined, { fallback: 'date' });
   }
 
   function handleBackClick() {
