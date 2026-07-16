@@ -52,8 +52,7 @@
     {:else if groups.length > 0}
       {#each groups as group (group.id)}
         <button
-          class="flex-shrink-0 text-left"
-          style="width: 140px; background: none; border: none; padding: 0; cursor: pointer;"
+          class="group-card flex-shrink-0 text-left"
           onclick={() => void goto(`/groups/${group.id}`)}
         >
           <!-- Banner -->
@@ -126,3 +125,25 @@
     {/if}
   </div>
 </div>
+
+<style>
+  .group-card {
+    width: 140px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  .group-card:hover {
+    transform: scale(1.03);
+  }
+  .group-card:active {
+    transform: scale(0.97);
+  }
+  .group-card:focus-visible {
+    outline: 2px solid var(--glow);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+</style>

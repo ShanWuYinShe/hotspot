@@ -88,8 +88,8 @@
     {#if authStore.isAuthenticated}
       <button
         type="button"
-        class="ml-1.5 cursor-pointer"
-        style="width: 36px; height: 36px; padding: 0; border: none; background: none;"
+        class="ml-1.5 desktop-header__btn"
+        style="width: 36px; height: 36px; padding: 0;"
         aria-label={t('nav.profile')}
         onclick={() => void goto('/profile')}
       >
@@ -103,7 +103,7 @@
     {:else}
       <button
         type="button"
-        class="text-body ml-1.5 rounded-full px-4 font-medium transition-transform duration-150 active:scale-95"
+        class="text-body ml-1.5 rounded-full px-4 font-medium transition-all duration-150 hover:brightness-110 active:scale-95"
         style="height: 36px; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
         onclick={() => uiStore.openLoginModalWithRedirect({})}
       >

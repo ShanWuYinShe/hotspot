@@ -47,8 +47,8 @@
     {:else}
       {#each users as user (user.id)}
         <div
-          class="flex flex-col items-center gap-1 flex-shrink-0"
-          style="cursor: pointer; width: 56px;"
+          class="radar-user"
+          aria-hidden="true"
         >
           <div style="position: relative; width: 56px; height: 56px;">
             <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={48} />
@@ -72,10 +72,8 @@
       {/each}
 
       <!-- More card -->
-      <div class="flex flex-col items-center gap-1 flex-shrink-0" style="width: 56px;">
+      <div class="radar-more">
         <button
-          class="flex items-center justify-center"
-          style="width: 56px; height: 56px; border-radius: var(--radius-pill); border: 1.5px dashed var(--border-active); background: transparent; cursor: pointer;"
           onclick={onViewAll}
         >
           <ChevronRight size={18} strokeWidth={1.5} color="var(--text-secondary)" />
@@ -84,3 +82,54 @@
     {/if}
   </div>
 </div>
+
+<style>
+  .radar-user {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    width: 56px;
+    transition: transform 0.18s ease;
+  }
+  .radar-user:hover {
+    transform: scale(1.05);
+  }
+  .radar-user:active {
+    transform: scale(0.95);
+  }
+
+  .radar-more {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    width: 56px;
+  }
+  .radar-more button {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-pill);
+    border: 1.5px dashed var(--border-active);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+    outline: none;
+  }
+  .radar-more button:hover {
+    background: var(--theme-accent-soft);
+    border-color: var(--brand);
+  }
+  .radar-more button:active {
+    transform: scale(0.93);
+  }
+  .radar-more button:focus-visible {
+    outline: 2px solid var(--glow);
+    outline-offset: 2px;
+  }
+</style>
