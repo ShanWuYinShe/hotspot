@@ -1166,7 +1166,8 @@
   }
 
   /* @deprecated 别名 — 已统一到 .list-row 行为。
-     1 处引用(chat/+page.svelte:361 group chat 行),Task 7 迁移后废弃。 */
+     3 处引用(nearby-users-flat-list:44 / activity-list:57 / user-card:212),
+     Task 7 迁移后废弃。 */
   .surface-row {
     background-color: var(--surface-bg);
     transition: background-color 0.15s ease;
