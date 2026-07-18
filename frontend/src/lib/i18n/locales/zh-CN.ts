@@ -82,7 +82,13 @@ export default {
     loginNow: '立即登录',
     backHome: '返回首页',
     viewAll: '查看全部',
-    online: '在线'
+    online: '在线',
+    like: '赞',
+    unlike: '取消赞',
+    reply: '回复',
+    delete: '删除',
+    send: '发送',
+    operationFailed: '操作失败'
   },
   relativeTime: {
     justNow: '刚刚',
@@ -979,7 +985,12 @@ export default {
     shareFailed: '创建分享失败',
     repliesLoadFailed: '加载回复失败',
     save: '收藏',
-    unsave: '取消收藏'
+    unsave: '取消收藏',
+    replyPlaceholder: '写下你的回复...',
+    replySuccess: '回复成功',
+    replyFailed: '回复失败',
+    commentDeleted: '评论已删除',
+    deleteFailed: '删除失败'
   },
   createMoment: {
     titleCreate: '发布动态',

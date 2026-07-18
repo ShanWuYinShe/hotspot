@@ -16,7 +16,6 @@
   import Avatar from '$lib/components/common/avatar.svelte';
   import SmartImage from '$lib/components/common/smart-image.svelte';
   import ImagePreview from '$lib/components/common/image-preview.svelte';
-  import type { GridImage } from '$lib/components/common/image-grid.svelte';
 
   interface Props {
     moment: MomentItem;
@@ -44,12 +43,9 @@
   const visibleTags = $derived((moment.tags ?? []).slice(0, 3));
 
   // 图片预览:列表卡只显示首图,但点击可预览全部图。
-  const previewImages = $derived<GridImage[]>(
+  const previewImages = $derived(
     (moment.images ?? []).map((img) => ({
-      url: img.url,
-      thumbnail_url: img.thumbnail_url,
-      width: img.width,
-      height: img.height,
+      src: img.url,
       alt: moment.description || '动态图片'
     }))
   );
