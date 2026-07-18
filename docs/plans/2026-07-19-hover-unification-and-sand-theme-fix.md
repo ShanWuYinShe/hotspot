@@ -1501,6 +1501,8 @@ git commit -m "文档(AGENTS): 记录 hover 按类型统一矩阵 + sand 主题�
 - `:global(.map-cluster-bubble:hover)` 的地图交互改造
 - location-picker-modal 的 24 处内联 box-shadow + 26 处 raw surface-bg(单独批次)
 - **CTA `hover:opacity-*` → `hover:brightness-110`**(spec 批次 C 第 5 项):18+ 处散落 in settings/* + admin/*,低风险高扰动,放后续单独批次
+- **剩余 ~240 处内联 `box-shadow: var(--shadow-sm/md/lg/xl)` → `.surface-*` class 迁移**:spec §4 B 显式列出的 `create-group-modal:237` 和 `search-modal:316, 451` 也在内。**重要**:Task 1 的 token 修复已经通过 cascade 自动修复了这些元素的用户可见"方块色块"问题(它们读的是同一组 token),所以这不是用户可见 bug,只是代码一致性 / 未来防回归的清理工作。单独批次处理。
+- **Task 11 的 dead CSS**:`.radar-user:focus-visible` / `.compose__image-add:focus-visible` / `.compose__image-empty:focus-visible` 加在了非聚焦宿主元素(`<div aria-hidden>` / `<label>`)上,规则不触发。修法:把 `:focus-visible` 改为 `:focus-visible-within`,或重构 markup 让宿主可聚焦。
 
 ## 自审笔记(不修改计划,仅记录决策)
 
