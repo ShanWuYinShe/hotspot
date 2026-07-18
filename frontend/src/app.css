@@ -1253,6 +1253,14 @@
   .dark .neu-ambient-glow::before {
     opacity: 0.85;
   }
+  /* sand terracotta glow 在奶白/暖棕底上过亮,降到 0.4。
+     必须放在 .dark .ambient-glow::before 之后才能覆盖 sand dark 的 0.85。 */
+  [data-theme-family='sand'] .ambient-glow::before,
+  [data-theme-family='sand'] .neu-ambient-glow::before,
+  [data-theme-family='sand'].dark .ambient-glow::before,
+  [data-theme-family='sand'].dark .neu-ambient-glow::before {
+    opacity: 0.4;
+  }
   .ambient-glow > *,
   .neu-ambient-glow > * {
     position: relative;
