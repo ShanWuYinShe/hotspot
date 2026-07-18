@@ -169,9 +169,12 @@
   --theme-glass-border: rgba(61, 122, 85, 0.15);
   --theme-glass-shadow: 0 -2px 16px rgba(61, 122, 85, 0.08), 0 8px 24px rgba(61, 122, 85, 0.1);
   /* Hover = clean soft lift (flat at rest), matching the elevation language of the
-     other theme families — replaces the legacy hard ring/border outline. */
-  --hover-shadow-card: 0 8px 22px rgba(61, 122, 85, 0.1), 0 2px 6px rgba(27, 31, 27, 0.05);
-  --hover-shadow-row: 0 4px 14px rgba(61, 122, 85, 0.08), 0 1px 4px rgba(27, 31, 27, 0.04);
+     other theme families. forest 主题保留 1.5px border-active 边框模拟层
+     (surface-hero 在 forest 下靠它界定边界),避免 hover 时边框消失露出底色。 */
+  --hover-shadow-card: 0 0 0 1.5px var(--border-active), 0 8px 22px rgba(61, 122, 85, 0.1),
+    0 2px 6px rgba(27, 31, 27, 0.05);
+  --hover-shadow-row: 0 0 0 1.5px var(--border-active), 0 4px 14px rgba(61, 122, 85, 0.08),
+    0 1px 4px rgba(27, 31, 27, 0.04);
   --hover-shadow-btn: 0 4px 12px rgba(61, 122, 85, 0.14), 0 1px 4px rgba(61, 122, 85, 0.08);
   --hover-shadow-pill: 0 3px 9px rgba(61, 122, 85, 0.1);
 
@@ -257,10 +260,12 @@
   --theme-glass-bg: rgba(24, 28, 24, 0.9);
   --theme-glass-border: rgba(82, 184, 120, 0.16);
   --theme-glass-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.28);
-  /* Hover = clean soft lift on near-black canvas: depth shadow + faint green glow,
-     replacing the legacy hard ring/border outline. */
-  --hover-shadow-card: 0 10px 26px rgba(0, 0, 0, 0.44), 0 2px 8px rgba(82, 184, 120, 0.12);
-  --hover-shadow-row: 0 5px 16px rgba(0, 0, 0, 0.36), 0 1px 4px rgba(82, 184, 120, 0.1);
+  /* Hover = clean soft lift on near-black canvas: depth shadow + faint green glow.
+     保留 1.5px border-active 边框模拟层,避免 hover 时边框消失。 */
+  --hover-shadow-card: 0 0 0 1.5px var(--border-active), 0 10px 26px rgba(0, 0, 0, 0.44),
+    0 2px 8px rgba(82, 184, 120, 0.12);
+  --hover-shadow-row: 0 0 0 1.5px var(--border-active), 0 5px 16px rgba(0, 0, 0, 0.36),
+    0 1px 4px rgba(82, 184, 120, 0.1);
   --hover-shadow-btn: 0 4px 12px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(82, 184, 120, 0.18);
   --hover-shadow-pill: 0 3px 9px rgba(0, 0, 0, 0.34);
 
@@ -865,7 +870,9 @@
   [data-theme-family='forest'].dark .surface-hero,
   [data-theme-family='forest'].dark .neu-surface-hero {
     box-shadow: 0 0 0 1.5px var(--border-active);
-    border-color: var(--border-active);
+    /* forest 用 shadow ring 替代 border 做边界强调,清掉 1px border 避免叠加
+       导致圆角处颜色/厚度视觉瑕疵。 */
+    border-color: transparent;
   }
 
   .surface-flat,
