@@ -871,9 +871,9 @@
   [data-theme-family='forest'].dark .surface-hero,
   [data-theme-family='forest'].dark .neu-surface-hero {
     box-shadow: 0 0 0 1.5px var(--border-active);
-    /* forest 用 shadow ring 替代 border 做边界强调,清掉 1px border 避免叠加
-       导致圆角处颜色/厚度视觉瑕疵。 */
-    border-color: transparent;
+    /* forest 用 shadow ring 单一层做边界,去掉 base 的 1px border
+       避免透明 border 占位 + ring 叠加成 2.5px 多层边框视觉。 */
+    border: none;
   }
 
   .surface-flat,
