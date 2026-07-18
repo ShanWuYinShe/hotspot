@@ -742,7 +742,10 @@
 
                   <!-- 内联回复输入框 -->
                   {#if replyingTo === comment.comment_id}
-                    <div class="mt-2 flex items-center gap-2">
+                    <div
+                      class="mt-2 flex items-center gap-2 rounded-[var(--radius-md)] border-l-2 px-3 py-2"
+                      style="border-color: var(--brand); background: color-mix(in srgb, var(--brand) 6%, transparent);"
+                    >
                       <Textarea
                         size="sm"
                         variant="inset"
@@ -776,7 +779,10 @@
 
                   <!-- top_replies 预览 -->
                   {#if comment.top_replies && comment.top_replies.length > 0}
-                    <div class="mt-2 space-y-2">
+                    <div
+                      class="mt-2 space-y-2 rounded-[var(--radius-md)] border-l-2 px-3 py-2"
+                      style="border-color: var(--border-theme); background: color-mix(in srgb, var(--surface-secondary) 50%, transparent);"
+                    >
                       {#each comment.top_replies as reply (reply.comment_id)}
                         <div class="flex items-start gap-2">
                           <a href="/users/{reply.user.user_id}" class="shrink-0">

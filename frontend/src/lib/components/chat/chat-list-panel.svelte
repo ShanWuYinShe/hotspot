@@ -286,7 +286,7 @@
       {/each}
     {/if}
   {:else if isLoadingGroup}
-    {#each Array(3) as _}
+    {#each Array(5) as _}
       <div class="flex items-center gap-3 px-3 py-2.5">
         <div
           class="rounded-full"

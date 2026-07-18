@@ -92,6 +92,9 @@
   );
 
   onMount(() => {
+    // wide 模式由 ChatListPanel(layout 渲染)负责数据加载,这里跳过避免重复 onMount
+    // 导致 messageStore.syncFromChatList 被调用两次、未读计数瞬时错乱。
+    if (platformStore.useMasterDetail) return;
     loadPrivateChats();
   });
 </script>
