@@ -1115,29 +1115,58 @@
     outline-offset: 2px;
   }
 
-  /* ── Row hover overlay (macOS-style inset tint) ──
-     Uses inset box-shadow to overlay var(--border-theme) on top of ANY background,
-     including inline styles. Same visual result as .surface-row but composable. */
-  .row-hover,
-  .neu-row-hover {
-    transition: box-shadow 0.15s ease;
+  /* ── Unified list-row hover ─────────────────────────────────────
+     全主题统一:密集列表行用 background-tint,无阴影、无 transform。
+     避免 neumorphic 浮起在 sand 下方块化,避免 inset overlay 在 neumorphic
+     主题下与既有阴影冲突。
+     - hover: --border-theme tint(轻度,9-18% 描边色作 tint)
+     - active: --border-active(按下加重)
+     - focus-visible: --glow outline 环(键盘可达性)
+     @media (hover: hover) 包装避免触控设备误触发。 */
+  .list-row {
+    background-color: var(--surface-bg);
+    transition: background-color 0.15s ease;
   }
-  .row-hover:hover,
-  .neu-row-hover:hover {
-    box-shadow: inset 0 0 0 9999px var(--border-theme);
+  @media (hover: hover) {
+    .list-row:hover {
+      background-color: var(--border-theme);
+    }
   }
-  .row-hover:focus-visible,
-  .neu-row-hover:focus-visible {
-    box-shadow: inset 0 0 0 9999px var(--border-theme);
+  .list-row:active {
+    background-color: var(--border-active);
+  }
+  .list-row:focus-visible {
     outline: 2px solid var(--glow);
     outline-offset: 2px;
   }
 
-  /* ── Unified list-row surface (macOS-style) ──
-     Clean background, no borders, no shadow.
-     Hover = subtle background tint (like macOS Ventura/Sonoma sidebar).
-     Active = slightly stronger tint.
-     No scale/transform — pure color transition only. */
+  /* @deprecated 别名 — 已统一到 .list-row 行为。
+     审计确认所有 6 处 .row-hover 元素都没有内联 background,
+     可以安全从 box-shadow inset overlay 改为 background-color。
+     短期保留以兼容既有引用,等组件迁移完成后(Task 7)考虑废弃。 */
+  .row-hover,
+  .neu-row-hover {
+    background-color: var(--surface-bg);
+    transition: background-color 0.15s ease;
+  }
+  @media (hover: hover) {
+    .row-hover:hover,
+    .neu-row-hover:hover {
+      background-color: var(--border-theme);
+    }
+  }
+  .row-hover:active,
+  .neu-row-hover:active {
+    background-color: var(--border-active);
+  }
+  .row-hover:focus-visible,
+  .neu-row-hover:focus-visible {
+    outline: 2px solid var(--glow);
+    outline-offset: 2px;
+  }
+
+  /* @deprecated 别名 — 已统一到 .list-row 行为。
+     1 处引用(chat/+page.svelte:361 group chat 行),Task 7 迁移后废弃。 */
   .surface-row {
     background-color: var(--surface-bg);
     transition: background-color 0.15s ease;
@@ -1155,16 +1184,20 @@
     outline-offset: 2px;
   }
 
-  /* List rows grouped inside a single card: fill the row on hover instead of
-     drawing a ring, so adjacent rows read as one continuous list. */
+  /* @deprecated 别名 — 已统一到 .list-row 行为。 */
   .list-row-hover {
-    transition: background-color 0.18s ease;
+    background-color: var(--surface-bg);
+    transition: background-color 0.15s ease;
   }
-  .list-row-hover:hover {
-    background-color: var(--theme-accent-soft);
+  @media (hover: hover) {
+    .list-row-hover:hover {
+      background-color: var(--border-theme);
+    }
+  }
+  .list-row-hover:active {
+    background-color: var(--border-active);
   }
   .list-row-hover:focus-visible {
-    background-color: var(--theme-accent-soft);
     outline: 2px solid var(--glow);
     outline-offset: 2px;
   }
