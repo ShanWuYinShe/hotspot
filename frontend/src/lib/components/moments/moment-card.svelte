@@ -15,6 +15,8 @@
   import X from 'lucide-svelte/icons/x';
   import Avatar from '$lib/components/common/avatar.svelte';
   import SmartImage from '$lib/components/common/smart-image.svelte';
+  import ImagePreview from '$lib/components/common/image-preview.svelte';
+  import type { GridImage } from '$lib/components/common/image-grid.svelte';
 
   interface Props {
     moment: MomentItem;
@@ -40,6 +42,26 @@
   const primaryImage = $derived(moment.images?.[0]);
   const imageCount = $derived(moment.images?.length ?? 0);
   const visibleTags = $derived((moment.tags ?? []).slice(0, 3));
+
+  // 图片预览:列表卡只显示首图,但点击可预览全部图。
+  const previewImages = $derived<GridImage[]>(
+    (moment.images ?? []).map((img) => ({
+      url: img.url,
+      thumbnail_url: img.thumbnail_url,
+      width: img.width,
+      height: img.height,
+      alt: moment.description || '动态图片'
+    }))
+  );
+  let previewOpen = $state(false);
+  let previewIndex = $state(0);
+
+  function openPreview(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    previewIndex = 0;
+    previewOpen = true;
+  }
   const timeText = $derived(
     formatRelativeTime(moment.created_at, undefined, { fallback: 'date' })
   );
@@ -193,7 +215,13 @@
   </header>
 
   {#if primaryImage}
-    <div class="moment-card__media">
+    <button
+      type="button"
+      class="moment-card__media"
+      onclick={openPreview}
+      aria-label="预览图片"
+      data-card-action
+    >
       <SmartImage
         src={primaryImage.url}
         alt={moment.description || moment.tags?.[0] || '动态图片'}
@@ -206,7 +234,7 @@
       {#if imageCount > 1}
         <span class="moment-card__image-count">+{imageCount - 1}</span>
       {/if}
-    </div>
+    </button>
   {/if}
 
   <div class="moment-card__body">
@@ -292,6 +320,12 @@
     </div>
   </footer>
 </div>
+
+<ImagePreview
+  images={previewImages}
+  bind:open={previewOpen}
+  bind:index={previewIndex}
+/>
 
 <style>
   .moment-card {
@@ -432,6 +466,11 @@
   }
 
   .moment-card__media {
+    display: block;
+    width: 100%;
+    border: none;
+    padding: 0;
+    cursor: pointer;
     position: relative;
     margin: 0 var(--card-pad-x);
     overflow: clip;

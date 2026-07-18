@@ -20,6 +20,8 @@
   import BackButton from '$lib/components/common/back-button.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
   import SmartImage from '$lib/components/common/smart-image.svelte';
+  import ImageGrid from '$lib/components/common/image-grid.svelte';
+  import ImagePreview from '$lib/components/common/image-preview.svelte';
   import Send from 'lucide-svelte/icons/send';
   import Spinner from '$lib/components/common/spinner.svelte';
   import LogIn from 'lucide-svelte/icons/log-in';
@@ -37,6 +39,8 @@
   let isSubmitting = $state(false);
   let loadVersion = 0;
   let showEditModal = $state(false);
+  let imagePreviewOpen = $state(false);
+  let imagePreviewIndex = $state(0);
   const isOwner = $derived(
     authStore.isAuthenticated &&
       moment !== null &&
@@ -344,7 +348,15 @@
           {#if moment.images && moment.images.length > 0}
             <div class="grid gap-2 {moment.images.length === 1 ? '' : 'grid-cols-2'}">
               {#each moment.images as image, i (image.url)}
-                <div class="relative">
+                <button
+                  type="button"
+                  class="relative block w-full border-none bg-transparent p-0"
+                  onclick={() => {
+                    imagePreviewIndex = i;
+                    imagePreviewOpen = true;
+                  }}
+                  aria-label={t('momentDetail.imageAlt', { index: i + 1 })}
+                >
                   <SmartImage
                     src={image.url}
                     alt={t('momentDetail.imageAlt', { index: i + 1 })}
@@ -366,7 +378,7 @@
                       >
                     </div>
                   {/if}
-                </div>
+                </button>
               {/each}
             </div>
           {/if}
@@ -622,3 +634,14 @@
     {/if}
   </div>
 </div>
+
+{#if moment?.images && moment.images.length > 0}
+  <ImagePreview
+    images={moment.images.map((img, i) => ({
+      src: img.url,
+      alt: t('momentDetail.imageAlt', { index: i + 1 })
+    }))}
+    bind:open={imagePreviewOpen}
+    bind:index={imagePreviewIndex}
+  />
+{/if}

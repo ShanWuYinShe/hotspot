@@ -31,7 +31,7 @@
   import MessageCircle from 'lucide-svelte/icons/message-circle';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import ChevronDown from 'lucide-svelte/icons/chevron-down';
-  import X from 'lucide-svelte/icons/x';
+  import ImagePreview from '$lib/components/common/image-preview.svelte';
   import ChatBubble from '$lib/components/chat/chat-bubble.svelte';
 
   const groupId = $derived(page.params.id!);
@@ -939,30 +939,8 @@
 </div>
 
 <!-- Image Preview Modal -->
-{#if selectedImage}
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4"
-    style="background: var(--theme-overlay-strong);"
-    onclick={closeImagePreview}
-    role="button"
-    tabindex="0"
-    onkeydown={(e) => e.key === 'Escape' && closeImagePreview()}
-  >
-    <button
-      type="button"
-      class="absolute right-4 top-4 flex items-center justify-center rounded-full outline-none"
-      style="width: 40px; height: 40px; background: var(--theme-surface-glass); color: var(--text-on-overlay);"
-      onclick={closeImagePreview}
-      aria-label={t('chat.closeImagePreviewAria')}
-    >
-      <X size={24} />
-    </button>
-    <img
-      src={selectedImage}
-      alt={t('chat.preview')}
-      class="max-h-full max-w-full rounded-[var(--radius-sm)] object-contain"
-      onclick={(e) => e.stopPropagation()}
-      role="presentation"
-    />
-  </div>
-{/if}
+<ImagePreview
+  open={selectedImage !== null}
+  images={selectedImage ? [{ src: selectedImage, alt: t('chat.preview') }] : []}
+  onClose={closeImagePreview}
+/>
