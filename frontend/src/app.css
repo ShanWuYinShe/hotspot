@@ -496,8 +496,10 @@
 :root[data-theme-family='sand'] {
   --theme-bg: #efe7da;
   --page-bg: #e2d6c5;
-  --theme-shadow-light: rgba(255, 252, 245, 0.96);
-  --theme-shadow-dark: rgba(167, 145, 116, 0.38);
+  /* 陶瓷暖光阴影:从 0.96 实心奶白(画方块)降到 0.5 暖桃白,回归阴影语义。
+     暖桃白 #fbe8d8 与画布 #efe7da 形成色温对比,呈现"暖光打在陶瓷上"的质感。 */
+  --theme-shadow-light: rgba(251, 232, 216, 0.5);
+  --theme-shadow-dark: rgba(167, 145, 116, 0.22);
   --theme-text: #3f342a;
   --theme-text-muted: #65594a;
   --theme-accent: #8b806f;
@@ -517,7 +519,8 @@
   --theme-fallback-text: #b86f4b;
   --theme-active-text: #fff8f4;
   --theme-glass-bg: rgba(239, 231, 218, 0.88);
-  --theme-glass-border: rgba(255, 252, 245, 0.65);
+  /* glass-border 与 shadow-light 同色系,保持陶瓷温度一致 */
+  --theme-glass-border: rgba(251, 232, 216, 0.65);
   --theme-glass-shadow: 0 -2px 16px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(184, 111, 75, 0.1);
   --semantic-online: #66835d;
   --semantic-hot: #b86f4b;
