@@ -567,9 +567,17 @@
     outline: none;
     transition: background 0.16s ease, border-color 0.16s ease;
   }
-  .compose .compose__close:hover {
+  @media (hover: hover) {
+    .compose .compose__close:hover {
+      background: var(--border-theme);
+      border-color: var(--border-theme);
+    }
+  }
+  .compose .compose__close:focus-visible {
     background: var(--border-theme);
     border-color: var(--border-theme);
+    outline: 2px solid var(--glow);
+    outline-offset: 2px;
   }
 
   /* ── Body (scrollable) ──────────────────────────────────── */
@@ -729,7 +737,14 @@
     cursor: pointer;
     transition: border-color 0.16s ease;
   }
-  .compose .compose__image-add:hover { border-color: var(--brand) !important; }
+  @media (hover: hover) {
+    .compose .compose__image-add:hover { border-color: var(--brand) !important; }
+  }
+  .compose .compose__image-add:focus-visible {
+    border-color: var(--brand) !important;
+    outline: 2px solid var(--glow);
+    outline-offset: 2px;
+  }
   .compose .compose__image-empty {
     display: flex;
     flex-direction: column;
@@ -744,7 +759,14 @@
     font-size: 12px;
     transition: border-color 0.16s ease;
   }
-  .compose .compose__image-empty:hover { border-color: var(--brand) !important; }
+  @media (hover: hover) {
+    .compose .compose__image-empty:hover { border-color: var(--brand) !important; }
+  }
+  .compose .compose__image-empty:focus-visible {
+    border-color: var(--brand) !important;
+    outline: 2px solid var(--glow);
+    outline-offset: 2px;
+  }
 
   /* Vibe tags */
   .compose .compose__vibes { display: flex; flex-direction: column; }

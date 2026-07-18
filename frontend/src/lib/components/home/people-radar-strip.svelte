@@ -92,8 +92,15 @@
     width: 56px;
     transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .radar-user:hover {
+  @media (hover: hover) {
+    .radar-user:hover {
+      transform: scale(1.02);
+    }
+  }
+  .radar-user:focus-visible {
     transform: scale(1.02);
+    outline: 2px solid var(--glow);
+    outline-offset: 2px;
   }
   .radar-user:active {
     transform: scale(0.98);

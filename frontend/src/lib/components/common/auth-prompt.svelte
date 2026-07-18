@@ -125,8 +125,15 @@
     transition: all 0.15s;
   }
 
-  .auth-prompt-dismiss:hover {
+  @media (hover: hover) {
+    .auth-prompt-dismiss:hover {
+      color: var(--text-primary);
+    }
+  }
+  .auth-prompt-dismiss:focus-visible {
     color: var(--text-primary);
+    outline: 2px solid var(--glow);
+    outline-offset: 2px;
   }
 
   .auth-prompt-login {
@@ -143,8 +150,15 @@
     transition: all 0.15s;
   }
 
-  .auth-prompt-login:hover {
+  @media (hover: hover) {
+    .auth-prompt-login:hover {
+      opacity: 0.9;
+    }
+  }
+  .auth-prompt-login:focus-visible {
     opacity: 0.9;
+    outline: 2px solid var(--glow);
+    outline-offset: 2px;
   }
 
   .auth-prompt-login:active {
