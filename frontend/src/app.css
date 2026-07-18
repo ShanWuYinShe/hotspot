@@ -446,7 +446,8 @@
   --theme-glass-bg: rgba(20, 16, 40, 0.9);
   --theme-glass-border: rgba(129, 140, 248, 0.18);
   --theme-glass-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.28);
-  --hover-shadow-card: 0 14px 36px rgba(129, 140, 248, 0.18), 0 4px 14px rgba(129, 140, 248, 0.1);
+  --hover-shadow-card: 0 14px 36px rgba(129, 140, 248, 0.18), 0 4px 14px rgba(129, 140, 248, 0.1),
+    0 0 0 1px rgba(129, 140, 248, 0.12);
   --hover-shadow-row: 0 8px 20px rgba(129, 140, 248, 0.14), 0 2px 8px rgba(129, 140, 248, 0.08);
   --hover-shadow-btn: 0 6px 18px rgba(129, 140, 248, 0.24), 0 2px 6px rgba(129, 140, 248, 0.13);
   --hover-shadow-pill: 0 4px 12px rgba(129, 140, 248, 0.18), 0 1px 4px rgba(129, 140, 248, 0.11);
