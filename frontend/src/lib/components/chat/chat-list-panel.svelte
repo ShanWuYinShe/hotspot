@@ -201,16 +201,16 @@
         <div class="flex items-center gap-3 px-3 py-2.5">
           <div
             class="rounded-full"
-            style="width: 40px; height: 40px; background: var(--border-theme);"
+            style="width: 40px; height: 40px; background: var(--skeleton-bg);"
           ></div>
           <div class="flex-1">
             <div
               class="mb-1 rounded"
-              style="width: 60px; height: 11px; background: var(--border-theme);"
+              style="width: 60px; height: 11px; background: var(--skeleton-bg);"
             ></div>
             <div
               class="rounded"
-              style="width: 100px; height: 9px; background: var(--border-theme);"
+              style="width: 100px; height: 9px; background: var(--skeleton-bg);"
             ></div>
           </div>
         </div>
@@ -290,16 +290,16 @@
       <div class="flex items-center gap-3 px-3 py-2.5">
         <div
           class="rounded-full"
-          style="width: 40px; height: 40px; background: var(--border-theme);"
+          style="width: 40px; height: 40px; background: var(--skeleton-bg);"
         ></div>
         <div class="flex-1">
           <div
             class="mb-1 rounded"
-            style="width: 70px; height: 11px; background: var(--border-theme);"
+            style="width: 70px; height: 11px; background: var(--skeleton-bg);"
           ></div>
           <div
             class="rounded"
-            style="width: 90px; height: 9px; background: var(--border-theme);"
+            style="width: 90px; height: 9px; background: var(--skeleton-bg);"
           ></div>
         </div>
       </div>

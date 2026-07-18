@@ -378,7 +378,7 @@
               {#each Array(3) as _, i (i)}
                 <div
                   class="rounded-[var(--radius-md)]"
-                  style="height: 32px; background: var(--border-theme);"
+                  style="height: 32px; background: var(--skeleton-bg);"
                 ></div>
               {/each}
             </div>
@@ -561,7 +561,7 @@
                 {#each Array(4) as _, i (i)}
                   <div
                     class="rounded-[var(--radius-md)]"
-                    style="height: 28px; background: var(--border-theme);"
+                    style="height: 28px; background: var(--skeleton-bg);"
                   ></div>
                 {/each}
               </div>

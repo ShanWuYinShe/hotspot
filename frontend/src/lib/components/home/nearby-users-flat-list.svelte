@@ -25,14 +25,14 @@
       <div class="flex items-center gap-3 px-4 py-3 border-b border-[var(--border-theme)] last:border-b-0" style="background: var(--surface-bg);">
         <div
           class="flex-shrink-0 rounded-full"
-          style="width: 38px; height: 38px; background: var(--border-theme);"
+          style="width: 38px; height: 38px; background: var(--skeleton-bg);"
         ></div>
         <div class="flex-1">
           <div
-            style="height: 13px; width: 50%; border-radius: var(--radius-xs); background: var(--border-theme);"
+            style="height: 13px; width: 50%; border-radius: var(--radius-xs); background: var(--skeleton-bg);"
           ></div>
           <div
-            style="height: 10px; width: 30%; border-radius: var(--radius-xs); background: var(--border-theme); margin-top: 4px;"
+            style="height: 10px; width: 30%; border-radius: var(--radius-xs); background: var(--skeleton-bg); margin-top: 4px;"
           ></div>
         </div>
       </div>

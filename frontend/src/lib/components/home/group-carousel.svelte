@@ -38,13 +38,13 @@
       {#each Array(3) as _}
         <div class="flex-shrink-0" style="width: 140px;">
           <div
-            style="height: 72px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--border-theme);"
+            style="height: 72px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--skeleton-bg);"
           ></div>
           <div
             style="padding: 8px 10px; border-radius: 0 0 var(--radius-lg) var(--radius-lg); background: var(--surface-bg); border: 1px solid var(--border-theme); border-top: none;"
           >
             <div
-              style="height: 12px; width: 80%; border-radius: var(--radius-xs); background: var(--border-theme);"
+              style="height: 12px; width: 80%; border-radius: var(--radius-xs); background: var(--skeleton-bg);"
             ></div>
           </div>
         </div>

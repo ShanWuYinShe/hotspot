@@ -30,7 +30,7 @@
     >
       {#if loading}
         <div
-          style="width: 28px; height: 19px; border-radius: var(--radius-xs); background: var(--border-theme);"
+          style="width: 28px; height: 19px; border-radius: var(--radius-xs); background: var(--skeleton-bg);"
         ></div>
       {:else}
         <span

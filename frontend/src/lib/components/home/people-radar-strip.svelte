@@ -41,7 +41,7 @@
       {#each Array(5) as _}
         <div class="flex flex-col items-center gap-1.5 flex-shrink-0">
           <div
-            style="width: 56px; height: 56px; border-radius: var(--radius-pill); background: var(--border-theme);"
+            style="width: 56px; height: 56px; border-radius: var(--radius-pill); background: var(--skeleton-bg);"
           ></div>
         </div>
       {/each}
