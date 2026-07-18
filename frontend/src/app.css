@@ -213,6 +213,9 @@
   --sidebar-accent-foreground: #111827;
   --sidebar-border: #e5e7eb;
   --sidebar-ring: #3d7a55;
+  /* Skeleton 占位填充:比 surface 略深的同色调,
+     作占位时是"凹陷感"而非 pigmented 色块。 */
+  --skeleton-bg: color-mix(in srgb, var(--surface-bg) 65%, var(--page-bg));
   --topbar-height-mobile: 3.5rem;
   --topbar-height-desktop: 4rem;
 }
@@ -302,6 +305,9 @@
   --sidebar-accent-foreground: var(--theme-text);
   --sidebar-border: #243228;
   --sidebar-ring: #52b878;
+  /* Skeleton 占位填充:比 surface 略深的同色调,
+     作占位时是"凹陷感"而非 pigmented 色块。 */
+  --skeleton-bg: color-mix(in srgb, var(--surface-bg) 65%, var(--page-bg));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -395,6 +401,9 @@
   --sidebar-accent-foreground: #312e81;
   --sidebar-border: var(--theme-border);
   --sidebar-ring: #6366f1;
+  /* Skeleton 占位填充:比 surface 略深的同色调,
+     作占位时是"凹陷感"而非 pigmented 色块。 */
+  --skeleton-bg: color-mix(in srgb, var(--surface-bg) 65%, var(--page-bg));
   --topbar-height-mobile: 3.5rem;
   --topbar-height-desktop: 4rem;
 }
@@ -485,6 +494,9 @@
   --sidebar-accent-foreground: var(--theme-text);
   --sidebar-border: var(--theme-border);
   --sidebar-ring: #818cf8;
+  /* Skeleton 占位填充:比 surface 略深的同色调,
+     作占位时是"凹陷感"而非 pigmented 色块。 */
+  --skeleton-bg: color-mix(in srgb, var(--surface-bg) 65%, var(--page-bg));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -584,6 +596,9 @@
   --sidebar-accent-foreground: var(--theme-text);
   --sidebar-border: var(--theme-border-pressed);
   --sidebar-ring: var(--theme-accent-primary);
+  /* Skeleton 占位填充:比 surface 略深的同色调,
+     作占位时是"凹陷感"而非 pigmented 色块。 */
+  --skeleton-bg: color-mix(in srgb, var(--surface-bg) 65%, var(--page-bg));
   --topbar-height-mobile: 3.5rem;
   --topbar-height-desktop: 4rem;
 }
@@ -680,6 +695,9 @@
   --sidebar-accent-foreground: var(--theme-text);
   --sidebar-border: var(--theme-border-pressed);
   --sidebar-ring: var(--theme-accent-primary);
+  /* Skeleton 占位填充:比 surface 略深的同色调,
+     作占位时是"凹陷感"而非 pigmented 色块。 */
+  --skeleton-bg: color-mix(in srgb, var(--surface-bg) 65%, var(--page-bg));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════

@@ -15,9 +15,9 @@
   :global(.shimmer) {
     background: linear-gradient(
       90deg,
-      var(--border-theme) 25%,
+      var(--skeleton-bg) 25%,
       color-mix(in srgb, var(--text-primary) 8%, transparent) 50%,
-      var(--border-theme) 75%
+      var(--skeleton-bg) 75%
     );
     background-size: 200% 100%;
     animation: shimmer 1.5s ease-in-out infinite;
