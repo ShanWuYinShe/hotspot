@@ -25,7 +25,7 @@
   import BackButton from '$lib/components/common/back-button.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
   import Send from 'lucide-svelte/icons/send';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import MoreVertical from 'lucide-svelte/icons/more-vertical';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
   import MapPin from 'lucide-svelte/icons/map-pin';
@@ -703,7 +703,7 @@
 
       {#if isLoadingMore}
         <div class="flex justify-center py-3">
-          <Loader2 class="h-5 w-5 animate-spin" color="var(--text-secondary)" />
+          <Spinner size="lg" color="var(--text-secondary)" />
         </div>
       {/if}
 
@@ -867,7 +867,7 @@
           class="text-body flex items-center justify-center gap-2"
           style="color: var(--text-secondary)"
         >
-          <Loader2 class="h-4 w-4 animate-spin" />
+          <Spinner size="md" />
           {#if wsSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
             {t('chat.realtimeConnectingFull')}
           {:else}
@@ -929,7 +929,7 @@
           aria-label={t('chat.sendAria')}
         >
           {#if isSending}
-            <Loader2 class="h-5 w-5 animate-spin" />
+            <Spinner size="lg" />
           {:else}
             <Send size={20} />
           {/if}

@@ -5,7 +5,7 @@
   import { t } from '$lib/i18n';
   import { authStore } from '$lib/stores/auth.svelte';
   import { toast } from '$lib/stores/toast.svelte';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import Eye from 'lucide-svelte/icons/eye';
   import EyeOff from 'lucide-svelte/icons/eye-off';
   import { validateField } from '$lib/utils/form-validation';
@@ -316,7 +316,7 @@
           disabled={isLoading}
         >
           {#if isLoading}
-            <Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
+            <Spinner size="md" class="mr-2" />
           {/if}
           {t('auth.login')}
         </button>
@@ -433,7 +433,7 @@
           disabled={isLoading}
         >
           {#if isLoading}
-            <Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
+            <Spinner size="md" class="mr-2" />
           {/if}
           {t('auth.register')}
         </button>
@@ -481,7 +481,7 @@
           disabled={isLoading}
         >
           {#if isLoading}
-            <Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
+            <Spinner size="md" class="mr-2" />
           {/if}
           {t('auth.guestLogin')}
         </button>

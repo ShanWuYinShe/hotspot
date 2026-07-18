@@ -19,8 +19,7 @@
   import MoreVertical from 'lucide-svelte/icons/more-vertical';
   import User from 'lucide-svelte/icons/user';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
-  import UserPlus from 'lucide-svelte/icons/user-plus';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import FollowButton from '$lib/components/common/follow-button.svelte';
   import Share2 from 'lucide-svelte/icons/share-2';
   import Flag from 'lucide-svelte/icons/flag';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
@@ -201,20 +200,15 @@
   {#if variant === 'nearby-row'}
     <!-- Nearby row: horizontal row for nearby all page -->
     <div class="flex items-center gap-3.5 px-4 py-3.5">
-      <div class="relative flex-shrink-0">
-        <Avatar
-          src={userInfo.avatar_url}
-          name={userInfo.nickname}
-          alt={userInfo.nickname}
-          size={48}
-        />
-        {#if isOnline}
-          <span
-            class="absolute bottom-0 right-0 rounded-full"
-            style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-          ></span>
-        {/if}
-      </div>
+      <Avatar
+        class="flex-shrink-0"
+        src={userInfo.avatar_url}
+        name={userInfo.nickname}
+        alt={userInfo.nickname}
+        size={48}
+        online={isOnline}
+        onlineSize="md"
+      />
       <div class="min-w-0 flex-1">
         <p class="text-body-lg truncate min-w-0" style="color: var(--text-primary)">
           {userInfo.nickname}
@@ -242,21 +236,12 @@
           </div>
         {/if}
         {#if !isMe}
-          <button
-            data-card-action
-            class="rounded-full px-3.5 py-1 outline-none transition-all"
-            style={isFollowing
-              ? 'box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-active); color: var(--brand); background: var(--surface-bg); font-size: var(--text-caption);'
-              : 'box-shadow: 3px 3px 7px var(--shadow-dark), -3px -3px 7px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg); font-size: var(--text-caption);'}
+          <FollowButton
+            variant="pill"
+            following={isFollowing}
+            loading={isFollowPending}
             onclick={handleFollow}
-            disabled={isFollowPending}
-          >
-            {#if isFollowPending}
-              ...
-            {:else}
-              {isFollowing ? '已关注' : '关注'}
-            {/if}
-          </button>
+          />
         {/if}
       </div>
     </div>
@@ -269,20 +254,15 @@
       >
         <div class="flex items-start justify-between gap-3">
           <div class="flex min-w-0 items-center gap-2.5">
-            <div class="relative flex-shrink-0">
-              <Avatar
-                src={userInfo.avatar_url}
-                name={userInfo.nickname}
-                alt={userInfo.nickname}
-                size={48}
-              />
-              {#if isOnline}
-                <span
-                  class="absolute bottom-0 right-0 rounded-full"
-                  style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-                ></span>
-              {/if}
-            </div>
+            <Avatar
+              src={userInfo.avatar_url}
+              name={userInfo.nickname}
+              alt={userInfo.nickname}
+              size={48}
+              online={isOnline}
+              onlineSize="md"
+              class="flex-shrink-0"
+            />
             <div class="min-w-0 flex-1">
               <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
                 {userInfo.nickname}
@@ -325,20 +305,15 @@
   {:else if variant === 'compact'}
     <!-- Compact: horizontal list row -->
     <div class="flex items-center gap-3 p-3.5">
-      <div class="relative flex-shrink-0">
-        <Avatar
-          src={userInfo.avatar_url}
-          name={userInfo.nickname}
-          alt={userInfo.nickname}
-          size={40}
-        />
-        {#if isOnline}
-          <span
-            class="absolute bottom-0 right-0 rounded-full"
-            style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-          ></span>
-        {/if}
-      </div>
+      <Avatar
+        class="flex-shrink-0"
+        src={userInfo.avatar_url}
+        name={userInfo.nickname}
+        alt={userInfo.nickname}
+        size={40}
+        online={isOnline}
+        onlineSize="sm"
+      />
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between">
           <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
@@ -363,20 +338,15 @@
     <!-- Detailed: vertical with more info -->
     <div class="p-4">
       <div class="flex items-center gap-4">
-        <div class="relative flex-shrink-0">
-          <Avatar
-            src={userInfo.avatar_url}
-            name={userInfo.nickname}
-            alt={userInfo.nickname}
-            size={48}
-          />
-          {#if isOnline}
-            <span
-              class="absolute bottom-0 right-0 rounded-full"
-              style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-            ></span>
-          {/if}
-        </div>
+        <Avatar
+          class="flex-shrink-0"
+          src={userInfo.avatar_url}
+          name={userInfo.nickname}
+          alt={userInfo.nickname}
+          size={48}
+          online={isOnline}
+          onlineSize="md"
+        />
         <div class="min-w-0 flex-1">
           <p class="text-title" style="font-weight: 600; color: var(--text-primary)">
             {userInfo.nickname}
@@ -406,20 +376,15 @@
     <!-- Default: balanced horizontal -->
     <div class="p-4">
       <div class="flex items-center gap-3.5">
-        <div class="relative flex-shrink-0">
-          <Avatar
-            src={userInfo.avatar_url}
-            name={userInfo.nickname}
-            alt={userInfo.nickname}
-            size={40}
-          />
-          {#if isOnline}
-            <span
-              class="absolute bottom-0 right-0 rounded-full"
-              style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-            ></span>
-          {/if}
-        </div>
+        <Avatar
+          class="flex-shrink-0"
+          src={userInfo.avatar_url}
+          name={userInfo.nickname}
+          alt={userInfo.nickname}
+          size={40}
+          online={isOnline}
+          onlineSize="sm"
+        />
         <div class="min-w-0 flex-1">
           <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
             {userInfo.nickname}
@@ -465,20 +430,12 @@
           <span class="text-meta">消息</span>
         </button>
         <div class="flex items-center gap-2">
-          <button
-            data-card-action
-            class="flex items-center gap-1.5 py-1 outline-none transition-transform duration-150 active:scale-[0.93]"
-            style="color: {isFollowing ? 'var(--brand)' : 'var(--text-secondary)'};"
+          <FollowButton
+            variant="ghost"
+            following={isFollowing}
+            loading={isFollowPending}
             onclick={handleFollow}
-            disabled={isFollowPending}
-          >
-            {#if isFollowPending}
-              <Loader2 size={15} strokeWidth={1.5} class="animate-spin" />
-            {:else}
-              <UserPlus size={15} strokeWidth={1.5} />
-            {/if}
-            <span class="text-caption">{isFollowing ? '已关注' : '关注'}</span>
-          </button>
+          />
           {#if showMenu}
             <DropdownMenu>
               <DropdownMenuTrigger>

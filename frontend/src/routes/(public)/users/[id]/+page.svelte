@@ -15,11 +15,13 @@
   import MessageCircle from 'lucide-svelte/icons/message-circle';
   import UserPlus from 'lucide-svelte/icons/user-plus';
   import UserCheck from 'lucide-svelte/icons/user-check';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
+  import FollowButton from '$lib/components/common/follow-button.svelte';
   import Share2 from 'lucide-svelte/icons/share-2';
   import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
   import Grid3X3 from 'lucide-svelte/icons/grid-3x3';
   import Avatar from '$lib/components/common/avatar.svelte';
+  import OnlineDot from '$lib/components/common/online-dot.svelte';
   import SmartImage from '$lib/components/common/smart-image.svelte';
   import { t } from '$lib/i18n';
   import type { PageData } from './$types';
@@ -271,10 +273,7 @@
               />
             </div>
             <!-- Online status dot -->
-            <span
-              class="absolute bottom-1 right-1 rounded-full"
-              style="width: 12px; height: 12px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-            ></span>
+            <OnlineDot size="lg" />
           </div>
 
           <!-- Action buttons -->
@@ -288,26 +287,11 @@
                 <MessageCircle size={14} strokeWidth={1.5} />
                 {t('userProfile.message')}
               </button>
-              <button
-                class={isFollowing
-                  ? 'surface-flat flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]'
-                  : 'flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]'}
-                style={isFollowing
-                  ? 'border: 1.5px solid var(--brand); color: var(--brand); font-size: var(--text-meta);'
-                  : 'background: var(--brand); color: var(--text-on-accent); font-size: var(--text-meta); box-shadow: var(--shadow-brand-btn); border: 1px solid transparent;'}
+              <FollowButton
+                following={isFollowing}
+                loading={isActionLoading}
                 onclick={handleFollow}
-                disabled={isActionLoading}
-              >
-                {#if isActionLoading}
-                  <Loader2 size={14} class="animate-spin" />
-                {:else if isFollowing}
-                  <UserCheck size={14} strokeWidth={1.5} />
-                  {t('userProfile.following')}
-                {:else}
-                  <UserPlus size={14} strokeWidth={1.5} />
-                  {t('userProfile.follow')}
-                {/if}
-              </button>
+              />
             </div>
           {/if}
         </div>
@@ -451,7 +435,7 @@
                 disabled={momentsPagination.loadingMore}
               >
                 {#if momentsPagination.loadingMore}
-                  <Loader2 size={16} class="animate-spin" />
+                  <Spinner size="md" />
                 {/if}
                 {t('userProfile.loadMore')}
               </button>
@@ -513,7 +497,7 @@
                 disabled={followersPagination.loadingMore}
               >
                 {#if followersPagination.loadingMore}
-                  <Loader2 size={16} class="animate-spin" />
+                  <Spinner size="md" />
                 {/if}
                 {t('userProfile.loadMore')}
               </button>
@@ -575,7 +559,7 @@
                 disabled={followingPagination.loadingMore}
               >
                 {#if followingPagination.loadingMore}
-                  <Loader2 size={16} class="animate-spin" />
+                  <Spinner size="md" />
                 {/if}
                 {t('userProfile.loadMore')}
               </button>

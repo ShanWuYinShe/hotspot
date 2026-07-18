@@ -988,7 +988,9 @@ export default {
     commentFailed: 'Failed to comment',
     shareCopied: 'Share link copied to clipboard',
     shareFailed: 'Failed to create share',
-    repliesLoadFailed: 'Failed to load replies'
+    repliesLoadFailed: 'Failed to load replies',
+    save: 'Save',
+    unsave: 'Unsave'
   },
   createMoment: {
     titleCreate: 'Post a moment',

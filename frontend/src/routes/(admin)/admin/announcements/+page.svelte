@@ -16,7 +16,7 @@
   import Plus from 'lucide-svelte/icons/plus';
   import Megaphone from 'lucide-svelte/icons/megaphone';
   import Trash2 from 'lucide-svelte/icons/trash-2';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
 
   let deleteConfirmOpen = $state(false);
   let pendingDeleteId = $state<string | null>(null);
@@ -287,7 +287,7 @@
       <Button variant="flat" onclick={closeOverlayDialogs}>取消</Button>
       <Button variant="flat" onclick={handleSubmit} disabled={isSubmitting}>
         {#if isSubmitting}
-          <Loader2 size={14} strokeWidth={1.75} class="mr-2 animate-spin" />
+          <Spinner size="sm" strokeWidth={1.75} class="mr-2" />
         {/if}
         发布
       </Button>

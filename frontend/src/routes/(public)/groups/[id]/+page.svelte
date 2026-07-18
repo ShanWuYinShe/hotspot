@@ -34,7 +34,7 @@
   import MapPin from 'lucide-svelte/icons/map-pin';
   import Lock from 'lucide-svelte/icons/lock';
   import Shield from 'lucide-svelte/icons/shield';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import Plus from 'lucide-svelte/icons/plus';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
@@ -882,7 +882,7 @@
         class="flex items-center gap-2 rounded-[var(--radius-md)] px-4 py-2"
         style="background: var(--surface-bg); border: 1px solid var(--theme-warning-border);"
       >
-        <Loader2 size={14} class="animate-spin" style="color: var(--theme-warning);" />
+        <Spinner size="sm" color="var(--theme-warning)" />
         <span class="text-body-lg" style="color: var(--theme-warning)">
           {#if wsGroupSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
             {t('groupDetail.wsConnecting')}
@@ -973,7 +973,7 @@
                   disabled={isLeaving}
                 >
                   {#if isLeaving}
-                    <Loader2 size={14} class="animate-spin" />
+                    <Spinner size="sm" />
                   {/if}
                   {t('groupDetail.leaveGroup')}
                 </button>
@@ -1284,10 +1284,7 @@
                 onclick={() => loadAnnouncements(false)}
                 disabled={announcementsPagination.loadingMore}
               >
-                {#if announcementsPagination.loadingMore}<Loader2
-                    size={14}
-                    class="animate-spin"
-                  />{/if}
+                {#if announcementsPagination.loadingMore}<Spinner size="sm" />{/if}
                 {t('common.loadMore')}
               </button>
             </div>
@@ -1467,7 +1464,7 @@
                 onclick={() => loadMembers(false)}
                 disabled={membersPagination.loadingMore}
               >
-                {#if membersPagination.loadingMore}<Loader2 size={14} class="animate-spin" />{/if}
+                {#if membersPagination.loadingMore}<Spinner size="sm" />{/if}
                 {t('common.loadMore')}
               </button>
             </div>
@@ -1590,10 +1587,7 @@
                   onclick={() => loadApplications(false)}
                   disabled={applicationsPagination.loadingMore}
                 >
-                  {#if applicationsPagination.loadingMore}<Loader2
-                      size={14}
-                      class="animate-spin"
-                    />{/if}
+                  {#if applicationsPagination.loadingMore}<Spinner size="sm" />{/if}
                   {t('common.loadMore')}
                 </button>
               </div>
@@ -1675,7 +1669,7 @@
         onclick={handleJoin}
         disabled={isJoining}
       >
-        {#if isJoining}<Loader2 size={14} class="animate-spin" />{/if}
+        {#if isJoining}<Spinner size="sm" />{/if}
         {t('groupDetail.confirmJoin')}
       </button>
     </Dialog.Footer>
@@ -1760,7 +1754,7 @@
         onclick={submitAnnouncement}
         disabled={announcementSubmitting}
       >
-        {#if announcementSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
+        {#if announcementSubmitting}<Spinner size="sm" />{/if}
         {editingAnnouncement ? t('groupDetail.saveChanges') : t('groupDetail.publishAnnouncement')}
       </button>
     </Dialog.Footer>
@@ -1850,7 +1844,7 @@
         onclick={handleMuteMember}
         disabled={muteSubmitting}
       >
-        {#if muteSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
+        {#if muteSubmitting}<Spinner size="sm" />{/if}
         {t('groupDetail.confirmMute')}
       </button>
     </Dialog.Footer>
@@ -1926,7 +1920,7 @@
         onclick={handleRemoveMember}
         disabled={removeSubmitting}
       >
-        {#if removeSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
+        {#if removeSubmitting}<Spinner size="sm" />{/if}
         {t('groupDetail.confirmRemove')}
       </button>
     </Dialog.Footer>
@@ -1965,7 +1959,7 @@
         onclick={handleLeave}
         disabled={isLeaving}
       >
-        {#if isLeaving}<Loader2 size={14} class="animate-spin" />{/if}
+        {#if isLeaving}<Spinner size="sm" />{/if}
         {t('groupDetail.confirmLeave')}
       </button>
     </Dialog.Footer>

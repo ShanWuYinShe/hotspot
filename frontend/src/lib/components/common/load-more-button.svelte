@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import ArrowDown from 'lucide-svelte/icons/arrow-down';
   import { t } from '$lib/i18n';
 
@@ -39,7 +39,7 @@
   <div bind:this={viewport} class="flex justify-center py-8 {className}">
     {#if loading}
       <div class="flex items-center gap-2" role="status" aria-live="polite">
-        <Loader2 size={18} strokeWidth={1.5} class="animate-spin" color="var(--text-secondary)" />
+        <Spinner size="lg" strokeWidth={1.5} color="var(--text-secondary)" />
         <span class="text-body" style="color: var(--text-secondary)">{t('common.loading')}</span>
       </div>
     {:else}

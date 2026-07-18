@@ -20,7 +20,7 @@
   import MoreVertical from 'lucide-svelte/icons/more-vertical';
   import Info from 'lucide-svelte/icons/info';
   import UserPlus from 'lucide-svelte/icons/user-plus';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import Share2 from 'lucide-svelte/icons/share-2';
   import Flag from 'lucide-svelte/icons/flag';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
@@ -386,7 +386,7 @@
         disabled={isJoining}
       >
         {#if isJoining}
-          <Loader2 size={15} strokeWidth={1.5} class="animate-spin" />
+          <Spinner size="sm" strokeWidth={1.5} />
         {:else}
           <UserPlus size={15} strokeWidth={1.5} />
         {/if}

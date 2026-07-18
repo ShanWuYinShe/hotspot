@@ -7,7 +7,7 @@
   import { t } from '$lib/i18n';
   import PageHeader from '$lib/components/layout/page-header.svelte';
   import { Switch } from '$lib/components/ui/switch';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import type { PrivacyLevel, PrivateChatPermission, UserSettings } from '$lib/types/api';
 
   let settings = $state<UserSettings | null>(null);
@@ -287,7 +287,7 @@
         disabled={isSaving}
       >
         {#if isSaving}
-          <Loader2 size={16} class="mr-2 animate-spin" />
+          <Spinner size="md" class="mr-2" />
         {/if}
         {t('settings.saveSettings')}
       </button>

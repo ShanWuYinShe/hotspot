@@ -33,7 +33,7 @@
   import Avatar from '$lib/components/common/avatar.svelte';
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import Send from 'lucide-svelte/icons/send';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
   import Phone from 'lucide-svelte/icons/phone';
   import Video from 'lucide-svelte/icons/video';
@@ -457,7 +457,7 @@
         <DropdownMenuContent align="end" class="w-44">
           <DropdownMenuItem onclick={deleteChat} disabled={isDeletingChat} class="text-destructive">
             {#if isDeletingChat}
-              <Loader2 class="h-4 w-4 animate-spin" />
+              <Spinner size="md" />
               <span>{t('chat.deleting')}</span>
             {:else}
               <Trash2 class="h-4 w-4" />
@@ -538,7 +538,7 @@
         class="text-meta flex items-center justify-center gap-1.5 mb-2"
         style="color: var(--text-secondary)"
       >
-        <Loader2 class="h-3 w-3 animate-spin" />
+        <Spinner size="xs" />
         <span>{t('chat.realtimeConnecting')}</span>
       </div>
     {/if}
@@ -547,7 +547,7 @@
         class="text-meta flex items-center justify-center gap-1.5 mb-2"
         style="color: var(--text-secondary)"
       >
-        <Loader2 class="h-3 w-3 animate-spin" />
+        <Spinner size="xs" />
         <span>
           {#if wsSubscription.state.isAttemptingSubscribe}
             {t('chat.typingSubscribing')}
@@ -602,7 +602,7 @@
         aria-label={t('chat.sendAria')}
       >
         {#if isSending}
-          <Loader2 class="h-5 w-5 animate-spin" />
+          <Spinner size="lg" />
         {:else}
           <Send size={20} />
         {/if}

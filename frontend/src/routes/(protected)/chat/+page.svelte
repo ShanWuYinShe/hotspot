@@ -19,6 +19,7 @@
   import Bell from 'lucide-svelte/icons/bell';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
   import Avatar from '$lib/components/common/avatar.svelte';
+  import OnlineDot from '$lib/components/common/online-dot.svelte';
 
   let currentTab = $state<'private' | 'group'>('private');
   let privateChats = $state.raw<PrivateChatItem[]>([]);
@@ -201,10 +202,7 @@
                         border={false}
                       />
                     </div>
-                    <span
-                      class="absolute bottom-0.5 right-0.5 rounded-full"
-                      style="width: 12px; height: 12px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-                    ></span>
+                    <OnlineDot size="lg" />
                   </div>
                   <span class="text-caption" style="color: var(--text-secondary)"
                     >{chat.other_user.nickname}</span
@@ -288,10 +286,7 @@
                         />
                       </div>
                       {#if isOnline}
-                        <span
-                          class="absolute bottom-0 right-0 rounded-full"
-                          style="width: 10px; height: 10px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-                        ></span>
+                        <OnlineDot size="sm" />
                       {/if}
                     </div>
                     <div class="min-w-0 flex-1">

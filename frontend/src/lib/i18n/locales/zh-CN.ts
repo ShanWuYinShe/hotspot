@@ -977,7 +977,9 @@ export default {
     commentFailed: '评论失败',
     shareCopied: '分享链接已复制到剪贴板',
     shareFailed: '创建分享失败',
-    repliesLoadFailed: '加载回复失败'
+    repliesLoadFailed: '加载回复失败',
+    save: '收藏',
+    unsave: '取消收藏'
   },
   createMoment: {
     titleCreate: '发布动态',

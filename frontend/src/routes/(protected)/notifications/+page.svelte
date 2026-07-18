@@ -20,7 +20,7 @@
   import Calendar from 'lucide-svelte/icons/calendar';
   import CheckCheck from 'lucide-svelte/icons/check-check';
   import Heart from 'lucide-svelte/icons/heart';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
   import UserPlus from 'lucide-svelte/icons/user-plus';
   import Users from 'lucide-svelte/icons/users';
@@ -452,7 +452,7 @@
       <div class="page-shell">
         {#if pagination.loading}
           <div class="flex justify-center py-12">
-            <Loader2 class="h-8 w-8 animate-spin" color="var(--text-secondary)" />
+            <Spinner size="xl" color="var(--text-secondary)" />
           </div>
         {:else if pagination.error}
           <EmptyState icon={Bell} title={t('notificationsPage.loadFailed')} />
@@ -707,9 +707,7 @@
                 disabled={pagination.loadingMore}
                 onclick={() => loadNotifications(false)}
               >
-                {#if pagination.loadingMore}<Loader2
-                    class="mr-2 inline h-4 w-4 animate-spin"
-                  />{/if}
+                {#if pagination.loadingMore}<Spinner size="md" class="mr-2 inline" />{/if}
                 {t('common.loadMore')}
               </button>
             </div>

@@ -12,7 +12,7 @@
   import { toast } from '$lib/stores/toast.svelte';
   import LocationPickerModal from './location-picker-modal.svelte';
   import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import UsersRound from 'lucide-svelte/icons/users-round';
 
   type JoinMethod = 'open' | 'approval' | 'invite_only';
@@ -434,7 +434,7 @@
         disabled={isSubmitting}
       >
         {#if isSubmitting}
-          <Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
+          <Spinner size="md" class="mr-2" />
         {/if}
         创建群组
       </button>

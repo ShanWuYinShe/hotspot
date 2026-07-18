@@ -21,7 +21,7 @@
   import Avatar from '$lib/components/common/avatar.svelte';
   import SmartImage from '$lib/components/common/smart-image.svelte';
   import Send from 'lucide-svelte/icons/send';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import LogIn from 'lucide-svelte/icons/log-in';
   import Pencil from 'lucide-svelte/icons/pencil';
   import CreateMomentModal from '$lib/components/common/create-moment-modal.svelte';
@@ -410,10 +410,12 @@
           <div class="flex gap-2">
             <button
               class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-              style="color: {isFavorited ? 'var(--theme-warning)' : 'var(--text-secondary)'};"
+              style="color: {isFavorited ? 'var(--brand)' : 'var(--text-secondary)'};"
               onclick={handleFavorite}
+              aria-pressed={isFavorited}
+              aria-label={isFavorited ? t('momentDetail.unsave') : t('momentDetail.save')}
             >
-              <Bookmark size={19} class={isFavorited ? 'fill-current' : ''} />
+              <Bookmark size={19} fill={isFavorited ? 'currentColor' : 'none'} />
             </button>
             <button
               class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
@@ -456,7 +458,7 @@
               disabled={!commentText.trim() || isSubmitting}
             >
               {#if isSubmitting}
-                <Loader2 size={14} color="var(--text-on-accent)" class="animate-spin" />
+                <Spinner size="sm" color="var(--text-on-accent)" />
               {:else}
                 <Send size={14} color="var(--text-on-accent)" />
               {/if}
@@ -568,7 +570,7 @@
                               src={reply.user.avatar_url}
                               name={reply.user.nickname}
                               alt={reply.user.nickname}
-                              size={24}
+                              size={32}
                             />
                           </a>
                           <p class="text-body" style="color: var(--text-secondary)">

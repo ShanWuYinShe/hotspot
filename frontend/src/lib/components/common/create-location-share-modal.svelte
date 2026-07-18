@@ -6,7 +6,7 @@
   import Share2 from 'lucide-svelte/icons/share-2';
   import Copy from 'lucide-svelte/icons/copy';
   import Check from 'lucide-svelte/icons/check';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import UsersRound from 'lucide-svelte/icons/users-round';
   import {
     Dialog,
@@ -157,7 +157,7 @@
           disabled={isSubmitting}
         >
           {#if isSubmitting}
-            <Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
+            <Spinner size="md" class="mr-2" />
             生成中...
           {:else}
             <Share2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
