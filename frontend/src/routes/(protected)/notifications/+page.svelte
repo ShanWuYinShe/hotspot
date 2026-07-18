@@ -192,10 +192,8 @@
   });
 
   async function markAllRead() {
-    const ok = await notificationStore.markAllAsRead();
-    if (ok) {
-      pagination.updateItem((i) => (i.is_read ? i : { ...i, is_read: true }));
-    }
+    await notificationStore.markAllAsRead();
+    // $effect at line 133-147 handles syncing is_read to pagination items automatically
   }
 
   function isProcessing(notificationId: string): boolean {
@@ -234,12 +232,8 @@
 
   async function markNotificationRead(item: NotificationItem) {
     if (item.is_read) return;
-    const ok = await notificationStore.markAsRead([item.notification_id]);
-    if (ok) {
-      pagination.updateItem((i) =>
-        i.notification_id === item.notification_id ? { ...i, is_read: true } : null
-      );
-    }
+    await notificationStore.markAsRead([item.notification_id]);
+    // $effect at line 133-147 handles syncing is_read to pagination items automatically
   }
 
   async function handleInviteAction(item: NotificationItem, action: 'accept' | 'reject') {
@@ -319,12 +313,8 @@
 
   async function handleNotificationClick(item: NotificationItem) {
     if (!item.is_read) {
-      const ok = await notificationStore.markAsRead([item.notification_id]);
-      if (ok) {
-        pagination.updateItem((i) =>
-          i.notification_id === item.notification_id ? { ...i, is_read: true } : null
-        );
-      }
+      await notificationStore.markAsRead([item.notification_id]);
+      // $effect at line 133-147 handles syncing is_read to pagination items automatically
     }
     const target = getNotificationLink(item);
     if (target) {

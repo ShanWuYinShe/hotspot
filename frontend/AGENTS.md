@@ -1,6 +1,6 @@
 # HotSpot Frontend (SvelteKit)
 
-> **注意**：本项目为 **主前端**（SvelteKit），当前所有前端开发在此进行，**同时是 UI/UX 与设计系统的唯一事实源**。改前端样式前先阅读本文档底部的「UI/UX 设计规范」三节。
+> **注意**：本项目为 **主前端**（SvelteKit），当前所有前端开发在此进行，**同时是 UI/UX 与设计系统的唯一事实源**。改前端样式前先阅读下文的「UI/UX 设计规范」。
 
 ## 功能边界
 
@@ -75,7 +75,7 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
 
 ## UI/UX 设计规范
 
-以下三节为内联设计规范（原 `.claude/rules/` 已并入本文件），改 UI 前必读。
+以下三节为 UI/UX 规范，改 UI 前必读。
 
 **响应式适配原则**：组件层用容器查询原语（`.density-grid` 等，组件按自身容器宽度自适应），视口层判断用语义化派生量（`useMasterDetail`/`useSidebarChrome`/`hideRedundantEntry`）。业务页禁止裸用 `isMobile/isTablet/isDesktop/isWide` 切换纯布局密度。
 

@@ -41,7 +41,7 @@
       {#each Array(5) as _}
         <div class="flex flex-col items-center gap-1.5 flex-shrink-0">
           <div
-            style="width: 56px; height: 56px; border-radius: var(--radius-pill); border: 1.5px solid var(--border-theme); background: var(--border-theme);"
+            style="width: 56px; height: 56px; border-radius: var(--radius-pill); background: var(--border-theme);"
           ></div>
         </div>
       {/each}
@@ -111,18 +111,17 @@
     width: 56px;
     height: 56px;
     border-radius: var(--radius-pill);
-    border: 1.5px dashed var(--border-active);
-    background: transparent;
+    background: var(--border-theme);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     outline: none;
+    border: none;
   }
   .radar-more button:hover {
-    background: var(--theme-accent-soft);
-    border-color: var(--brand);
+    background: var(--brand);
   }
   .radar-more button:active {
     transform: scale(0.98);

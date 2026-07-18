@@ -1090,17 +1090,42 @@
     outline-offset: 2px;
   }
 
+  /* ── Row hover overlay (macOS-style inset tint) ──
+     Uses inset box-shadow to overlay var(--border-theme) on top of ANY background,
+     including inline styles. Same visual result as .surface-row but composable. */
   .row-hover,
   .neu-row-hover {
-    transition: box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: box-shadow 0.15s ease;
   }
   .row-hover:hover,
   .neu-row-hover:hover {
-    box-shadow: var(--hover-shadow-row) !important;
+    box-shadow: inset 0 0 0 9999px var(--border-theme);
   }
   .row-hover:focus-visible,
   .neu-row-hover:focus-visible {
-    box-shadow: var(--hover-shadow-row) !important;
+    box-shadow: inset 0 0 0 9999px var(--border-theme);
+    outline: 2px solid var(--glow);
+    outline-offset: 2px;
+  }
+
+  /* ── Unified list-row surface (macOS-style) ──
+     Clean background, no borders, no shadow.
+     Hover = subtle background tint (like macOS Ventura/Sonoma sidebar).
+     Active = slightly stronger tint.
+     No scale/transform — pure color transition only. */
+  .surface-row {
+    background-color: var(--surface-bg);
+    transition: background-color 0.15s ease;
+  }
+  @media (hover: hover) {
+    .surface-row:hover {
+      background-color: var(--border-theme);
+    }
+  }
+  .surface-row:active {
+    background-color: var(--border-active);
+  }
+  .surface-row:focus-visible {
     outline: 2px solid var(--glow);
     outline-offset: 2px;
   }

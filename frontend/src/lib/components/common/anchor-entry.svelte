@@ -29,8 +29,7 @@
 {#if variant === 'card'}
   <button
     type="button"
-    class="flex w-full items-center gap-3 rounded-[var(--radius-md)] text-left outline-none transition-transform duration-150 active:scale-[0.98]"
-    style="padding: 10px 12px; background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: 5px 5px 12px var(--shadow-dark), -5px -5px 12px var(--shadow-light);"
+    class="surface-hero card-hover flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left outline-none transition-transform duration-150 active:scale-[0.98]"
     onclick={handleClick}
   >
     <div

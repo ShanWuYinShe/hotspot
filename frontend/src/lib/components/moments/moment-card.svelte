@@ -345,12 +345,8 @@
       var(--surface-bg);
     box-shadow: none;
     outline: none;
-    transition: border-color 0.22s ease;
-  }
-
-  .moment-card:hover {
-    border-color: color-mix(in srgb, var(--brand) 30%, var(--border-theme));
-  }
+      transition: border-color 0.22s ease;
+    }
 
   .moment-card__header {
     display: flex;

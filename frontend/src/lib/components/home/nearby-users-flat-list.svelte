@@ -19,13 +19,10 @@
   let { users = [], loading = false }: Props = $props();
 </script>
 
-<div
-  class="flex flex-col overflow-hidden"
-  style="gap: 1px; background: var(--border-theme); border-radius: var(--radius-md); border: 1px solid var(--border-theme);"
->
+<div class="flex flex-col overflow-hidden rounded-[var(--radius-md)]">
   {#if loading}
     {#each Array(4) as _}
-      <div class="flex items-center gap-3 px-4 py-3" style="background: var(--surface-bg);">
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-[var(--border-theme)] last:border-b-0" style="background: var(--surface-bg);">
         <div
           class="flex-shrink-0 rounded-full"
           style="width: 38px; height: 38px; background: var(--border-theme);"
@@ -44,7 +41,7 @@
     {#each users as user (user.id)}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
-        class="hover-row flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer"
+        class="surface-row flex items-center gap-3 px-4 py-3 text-left cursor-pointer border-b border-[var(--border-theme)] last:border-b-0"
         role="button"
         tabindex="0"
         onclick={() => void goto(`/users/${user.id}`)}
@@ -80,14 +77,3 @@
     {/each}
   {/if}
 </div>
-
-<style>
-  .hover-row {
-    background-color: var(--surface-bg);
-  }
-  @media (hover: hover) {
-    .hover-row:hover {
-      background-color: var(--border-theme);
-    }
-  }
-</style>

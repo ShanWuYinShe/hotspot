@@ -204,7 +204,12 @@
 </script>
 
 <div
-  class="surface-hero card-hover cursor-pointer overflow-hidden rounded-[var(--radius-lg)] outline-none hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
+  class="cursor-pointer overflow-hidden rounded-[var(--radius-lg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
+  class:surface-hero={variant !== 'nearby-row' && variant !== 'member-row'}
+  class:card-hover={variant !== 'nearby-row' && variant !== 'member-row'}
+  class:hover:scale-[1.02]={variant !== 'nearby-row' && variant !== 'member-row'}
+  class:active:scale-[0.98]={variant !== 'nearby-row' && variant !== 'member-row'}
+  class:surface-row={variant === 'nearby-row' || variant === 'member-row'}
   tabindex={0}
   role="link"
   onclick={handleCardClick}
@@ -296,8 +301,7 @@
     <!-- Square: info-dense card -->
     <div class="p-4">
       <div
-        class="rounded-[var(--radius-md)] p-3"
-        style="background: var(--surface-bg); box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-theme);"
+        class="surface-pressed rounded-[var(--radius-md)] p-3"
       >
         <div class="flex items-start justify-between gap-3">
           <div class="flex min-w-0 items-center gap-2.5">

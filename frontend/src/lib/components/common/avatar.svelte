@@ -26,7 +26,7 @@
     type = 'user',
     shape = 'circle',
     class: className = '',
-    border = true,
+    border = false,
     online = false,
     onlineSize
   }: Props = $props();
