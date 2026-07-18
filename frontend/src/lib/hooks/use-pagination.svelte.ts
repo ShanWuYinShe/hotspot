@@ -27,7 +27,6 @@
 	import { isSuccess } from '$lib/api/client';
 	import type { ApiResponse, PaginatedData } from '$lib/types/api';
 	import { withMinimumLoadingTime } from '$lib/utils/loading';
-	import type { RequestOptions } from '$lib/api/client';
 	import { t } from '$lib/i18n';
 
 interface UsePaginationOptions<T> {

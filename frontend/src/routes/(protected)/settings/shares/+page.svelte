@@ -17,7 +17,7 @@
   import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
   import Ban from 'lucide-svelte/icons/ban';
   import ExternalLink from 'lucide-svelte/icons/external-link';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
 
   const shareTypeOptions = $derived<Array<{ value: ShareType | 'all'; label: string }>>([
     { value: 'all', label: t('settings.filterAll') },
@@ -203,7 +203,7 @@
                   disabled={item.is_revoked || revokingShareId === item.share_id}
                 >
                   {#if revokingShareId === item.share_id}
-                    <Loader2 size={14} class="mr-2 animate-spin" />
+                    <Spinner size="sm" class="mr-2" />
                   {:else}
                     <Ban size={14} class="mr-2" />
                   {/if}

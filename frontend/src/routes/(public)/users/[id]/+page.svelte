@@ -15,11 +15,15 @@
   import MessageCircle from 'lucide-svelte/icons/message-circle';
   import UserPlus from 'lucide-svelte/icons/user-plus';
   import UserCheck from 'lucide-svelte/icons/user-check';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
+  import FollowButton from '$lib/components/common/follow-button.svelte';
   import Share2 from 'lucide-svelte/icons/share-2';
   import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
   import Grid3X3 from 'lucide-svelte/icons/grid-3x3';
   import Avatar from '$lib/components/common/avatar.svelte';
+  import OnlineDot from '$lib/components/common/online-dot.svelte';
+  import UserCard from '$lib/components/common/user-card.svelte';
+  import Skeleton from '$lib/components/ui/skeleton/skeleton.svelte';
   import SmartImage from '$lib/components/common/smart-image.svelte';
   import { t } from '$lib/i18n';
   import type { PageData } from './$types';
@@ -271,10 +275,7 @@
               />
             </div>
             <!-- Online status dot -->
-            <span
-              class="absolute bottom-1 right-1 rounded-full"
-              style="width: 12px; height: 12px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-            ></span>
+            <OnlineDot size="lg" />
           </div>
 
           <!-- Action buttons -->
@@ -288,26 +289,11 @@
                 <MessageCircle size={14} strokeWidth={1.5} />
                 {t('userProfile.message')}
               </button>
-              <button
-                class={isFollowing
-                  ? 'surface-flat flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]'
-                  : 'flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]'}
-                style={isFollowing
-                  ? 'border: 1.5px solid var(--brand); color: var(--brand); font-size: var(--text-meta);'
-                  : 'background: var(--brand); color: var(--text-on-accent); font-size: var(--text-meta); box-shadow: var(--shadow-brand-btn); border: 1px solid transparent;'}
+              <FollowButton
+                following={isFollowing}
+                loading={isActionLoading}
                 onclick={handleFollow}
-                disabled={isActionLoading}
-              >
-                {#if isActionLoading}
-                  <Loader2 size={14} class="animate-spin" />
-                {:else if isFollowing}
-                  <UserCheck size={14} strokeWidth={1.5} />
-                  {t('userProfile.following')}
-                {:else}
-                  <UserPlus size={14} strokeWidth={1.5} />
-                  {t('userProfile.follow')}
-                {/if}
-              </button>
+              />
             </div>
           {/if}
         </div>
@@ -406,10 +392,9 @@
             style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px;"
           >
             {#each Array(9) as _, i (i)}
-              <div
-                style="aspect-ratio: 1; background: var(--border-theme); border-radius: var(--radius-xs);"
-                class="animate-pulse"
-              ></div>
+              <Skeleton
+                style="aspect-ratio: 1; border-radius: var(--radius-xs);"
+              />
             {/each}
           </div>
         {:else if momentsPagination.items.length === 0}
@@ -451,7 +436,7 @@
                 disabled={momentsPagination.loadingMore}
               >
                 {#if momentsPagination.loadingMore}
-                  <Loader2 size={16} class="animate-spin" />
+                  <Spinner size="md" />
                 {/if}
                 {t('userProfile.loadMore')}
               </button>
@@ -467,10 +452,9 @@
             style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px;"
           >
             {#each Array(9) as _, i (i)}
-              <div
-                style="aspect-ratio: 1; background: var(--border-theme); border-radius: var(--radius-xs);"
-                class="animate-pulse"
-              ></div>
+              <Skeleton
+                style="aspect-ratio: 1; border-radius: var(--radius-xs);"
+              />
             {/each}
           </div>
         {:else if followersPagination.items.length === 0}
@@ -481,27 +465,11 @@
         {:else}
           <div class="grid gap-3 p-4 sm:grid-cols-2">
             {#each followersPagination.items as follower (follower.user.user_id)}
-              <a href="/users/{follower.user.user_id}">
-                <div
-                  class="surface-flat flex cursor-pointer items-center gap-3 rounded-[var(--radius-lg)] p-4 transition-all active:scale-[0.98]"
-                >
-                  <Avatar
-                    src={follower.user.avatar_url}
-                    name={follower.user.nickname}
-                    alt={follower.user.nickname}
-                    size={48}
-                  />
-                  <div class="min-w-0">
-                    <p
-                      class="text-body-lg truncate"
-                      style="font-weight: 500; color: var(--text-primary)"
-                    >
-                      {follower.user.nickname}
-                    </p>
-                    <p class="text-meta" style="color: var(--text-secondary)">{t('userProfile.viewProfile')}</p>
-                  </div>
-                </div>
-              </a>
+              <UserCard
+                variant="member-row"
+                user={follower.user}
+                subtitle={t('userProfile.viewProfile')}
+              />
             {/each}
           </div>
           {#if followersPagination.hasMore}
@@ -513,7 +481,7 @@
                 disabled={followersPagination.loadingMore}
               >
                 {#if followersPagination.loadingMore}
-                  <Loader2 size={16} class="animate-spin" />
+                  <Spinner size="md" />
                 {/if}
                 {t('userProfile.loadMore')}
               </button>
@@ -529,10 +497,9 @@
             style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px;"
           >
             {#each Array(9) as _, i (i)}
-              <div
-                style="aspect-ratio: 1; background: var(--border-theme); border-radius: var(--radius-xs);"
-                class="animate-pulse"
-              ></div>
+              <Skeleton
+                style="aspect-ratio: 1; border-radius: var(--radius-xs);"
+              />
             {/each}
           </div>
         {:else if followingPagination.items.length === 0}
@@ -543,27 +510,11 @@
         {:else}
           <div class="grid gap-3 p-4 sm:grid-cols-2">
             {#each followingPagination.items as follow (follow.user.user_id)}
-              <a href="/users/{follow.user.user_id}">
-                <div
-                  class="surface-flat flex cursor-pointer items-center gap-3 rounded-[var(--radius-lg)] p-4 transition-all active:scale-[0.98]"
-                >
-                  <Avatar
-                    src={follow.user.avatar_url}
-                    name={follow.user.nickname}
-                    alt={follow.user.nickname}
-                    size={48}
-                  />
-                  <div class="min-w-0">
-                    <p
-                      class="text-body-lg truncate"
-                      style="font-weight: 500; color: var(--text-primary)"
-                    >
-                      {follow.user.nickname}
-                    </p>
-                    <p class="text-meta" style="color: var(--text-secondary)">{t('userProfile.viewProfile')}</p>
-                  </div>
-                </div>
-              </a>
+              <UserCard
+                variant="member-row"
+                user={follow.user}
+                subtitle={t('userProfile.viewProfile')}
+              />
             {/each}
           </div>
           {#if followingPagination.hasMore}
@@ -575,7 +526,7 @@
                 disabled={followingPagination.loadingMore}
               >
                 {#if followingPagination.loadingMore}
-                  <Loader2 size={16} class="animate-spin" />
+                  <Spinner size="md" />
                 {/if}
                 {t('userProfile.loadMore')}
               </button>

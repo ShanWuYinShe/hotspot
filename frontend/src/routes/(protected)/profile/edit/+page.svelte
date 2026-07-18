@@ -14,7 +14,8 @@
   import User from 'lucide-svelte/icons/user';
   import FileText from 'lucide-svelte/icons/file-text';
   import Check from 'lucide-svelte/icons/check';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
+  import { Textarea } from '$lib/components/ui/textarea';
 
   let profile = $state<MyProfile | null>(null);
   let isLoading = $state(true);
@@ -140,7 +141,7 @@
 {#if isLoading}
   <div class="page-pad">
     <div class="page-shell page-shell--form flex flex-col items-center justify-center py-24">
-      <Loader2 class="h-8 w-8 animate-spin" style="color: var(--brand);" />
+      <Spinner size="xl" color="var(--brand)" />
     </div>
   </div>
 {:else if profile}
@@ -262,15 +263,15 @@
           <span class="eyebrow">{t('profileEdit.bioLabel')}</span>
         </div>
         <div class="input-surface rounded-[var(--radius-md)] px-4 py-3">
-          <textarea
+          <Textarea
             id="bio"
+            variant="transparent"
+            size="md"
+            class="text-body-lg"
             bind:value={bio}
             placeholder={t('profileEdit.bioPlaceholder')}
-            rows="3"
             maxlength={150}
-            class="text-body-lg w-full bg-transparent outline-none resize-none"
-            style="color: var(--text-primary); line-height: 1.65"
-          ></textarea>
+          />
           <div class="flex justify-end mt-1">
             <span
               class="text-caption"
@@ -296,7 +297,7 @@
           <Check size={16} color="var(--text-on-accent)" strokeWidth={2.5} />
           {t('profileEdit.saved')}
         {:else if isSaving}
-          <Loader2 class="h-4 w-4 animate-spin" />
+          <Spinner size="md" />
           {t('profileEdit.saving')}
         {:else}
           {t('profileEdit.save')}

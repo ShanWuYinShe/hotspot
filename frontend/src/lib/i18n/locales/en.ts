@@ -82,7 +82,13 @@ export default {
     loginNow: 'Sign in now',
     backHome: 'Back to home',
     viewAll: 'View All',
-    online: 'Online'
+    online: 'Online',
+    like: 'Like',
+    unlike: 'Unlike',
+    reply: 'Reply',
+    delete: 'Delete',
+    send: 'Send',
+    operationFailed: 'Operation failed'
   },
   relativeTime: {
     justNow: 'just now',
@@ -988,7 +994,14 @@ export default {
     commentFailed: 'Failed to comment',
     shareCopied: 'Share link copied to clipboard',
     shareFailed: 'Failed to create share',
-    repliesLoadFailed: 'Failed to load replies'
+    repliesLoadFailed: 'Failed to load replies',
+    save: 'Save',
+    unsave: 'Unsave',
+    replyPlaceholder: 'Write a reply...',
+    replySuccess: 'Reply posted',
+    replyFailed: 'Failed to reply',
+    commentDeleted: 'Comment deleted',
+    deleteFailed: 'Failed to delete'
   },
   createMoment: {
     titleCreate: 'Post a moment',

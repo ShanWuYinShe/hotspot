@@ -5,7 +5,8 @@
   import { t } from '$lib/i18n';
   import { authStore } from '$lib/stores/auth.svelte';
   import { toast } from '$lib/stores/toast.svelte';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
+  import { Button } from '$lib/components/ui/button';
   import Eye from 'lucide-svelte/icons/eye';
   import EyeOff from 'lucide-svelte/icons/eye-off';
   import { validateField } from '$lib/utils/form-validation';
@@ -309,17 +310,18 @@
             <p class="text-meta" style="color: var(--error)">{passwordError}</p>
           {/if}
         </div>
-        <button
+        <Button
           type="submit"
-          class="text-body-lg rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
-          style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
+          variant="default"
+          size="lg"
+          class="w-full"
           disabled={isLoading}
         >
           {#if isLoading}
-            <Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
+            <Spinner size="md" class="mr-2" />
           {/if}
           {t('auth.login')}
-        </button>
+        </Button>
         <div class="text-center pt-1">
           <a
             href="/auth/reset-password"
@@ -426,17 +428,18 @@
             <p class="text-meta" style="color: var(--error)">{confirmPasswordError}</p>
           {/if}
         </div>
-        <button
-          type="submit"
-          class="text-body-lg rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
-          style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
-          disabled={isLoading}
-        >
-          {#if isLoading}
-            <Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
-          {/if}
-          {t('auth.register')}
-        </button>
+          <Button
+            type="submit"
+            variant="default"
+            size="lg"
+            class="w-full"
+            disabled={isLoading}
+          >
+            {#if isLoading}
+              <Spinner size="md" class="mr-2" />
+            {/if}
+            {t('auth.register')}
+          </Button>
       </form>
     {:else if currentTab === 'guest'}
       <form
@@ -474,17 +477,18 @@
             <p class="text-meta" style="color: var(--error)">{guestNicknameError}</p>
           {/if}
         </div>
-        <button
-          type="submit"
-          class="text-body-lg rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
-          style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
-          disabled={isLoading}
-        >
-          {#if isLoading}
-            <Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
-          {/if}
-          {t('auth.guestLogin')}
-        </button>
+          <Button
+            type="submit"
+            variant="default"
+            size="lg"
+            class="w-full"
+            disabled={isLoading}
+          >
+            {#if isLoading}
+              <Spinner size="md" class="mr-2" />
+            {/if}
+            {t('auth.guestLogin')}
+          </Button>
       </form>
     {/if}
   </div>

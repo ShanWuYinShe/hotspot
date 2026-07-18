@@ -14,7 +14,8 @@
   import Key from 'lucide-svelte/icons/key';
   import Edit from 'lucide-svelte/icons/edit';
   import Trash2 from 'lucide-svelte/icons/trash-2';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
+  import { Textarea } from '$lib/components/ui/textarea';
 
   let roles = $state.raw<AdminRoleItem[]>([]);
   let permissions = $state.raw<AdminPermissionItem[]>([]);
@@ -383,14 +384,13 @@
       </div>
       <div>
         <label for="role-desc" class="text-meta" style="color: var(--text-primary)">角色描述</label>
-        <textarea
+        <Textarea
           id="role-desc"
+          size="md"
+          class="mt-1.5"
           placeholder="描述该角色的职责"
           bind:value={roleDescription}
-          class="text-body field-inset mt-1.5 w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none resize-none"
-          rows="3"
-          style="background: var(--surface-bg); color: var(--text-primary)"
-        ></textarea>
+        />
       </div>
       <div>
         <span class="text-meta" style="color: var(--text-primary)">分配权限</span>
@@ -441,12 +441,7 @@
         onclick={handleSubmitRole}
         disabled={isSubmitting}
       >
-        {#if isSubmitting}<Loader2
-            size={14}
-            strokeWidth={1.5}
-            class="animate-spin"
-            style="display: inline; vertical-align: middle;"
-          />{/if}
+        {#if isSubmitting}<Spinner size="sm" strokeWidth={1.5} class="align-middle" />{/if}
         {editingRoleId ? '保存' : '创建'}
       </button>
     </Dialog.Footer>

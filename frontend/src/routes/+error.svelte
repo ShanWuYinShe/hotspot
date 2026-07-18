@@ -9,6 +9,7 @@
   import Home from 'lucide-svelte/icons/home';
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
+  import { Button } from '$lib/components/ui/button';
 
   const is404 = $derived(page.status === 404);
 </script>
@@ -39,23 +40,23 @@
   </div>
 
   <div class="flex gap-3">
-    <button
-      class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
-      style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+    <Button
+      variant="outline"
+      size="lg"
       onclick={() => history.back()}
       aria-label={t('errorPage.backAria')}
     >
       <ChevronLeft size={16} />
       {t('errorPage.back')}
-    </button>
-    <button
-      class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
-      style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
+    </Button>
+    <Button
+      variant="default"
+      size="lg"
       onclick={() => goto('/')}
       aria-label={t('errorPage.homeAria')}
     >
       <Home size={16} />
       {t('errorPage.home')}
-    </button>
+    </Button>
   </div>
 </div>

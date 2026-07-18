@@ -55,24 +55,24 @@
           }
         }}
       >
-        <div class="relative flex-shrink-0">
-          <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={40} />
-          {#if user.online}
-            <span
-              class="absolute bottom-0 right-0 rounded-full"
-              style="width: 9px; height: 9px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-            ></span>
-          {/if}
-        </div>
+        <Avatar
+          class="flex-shrink-0"
+          src={user.avatar_url}
+          name={user.nickname}
+          alt={user.nickname}
+          size={40}
+          online={user.online}
+          onlineSize="sm"
+        />
         <div class="min-w-0 flex-1">
-          <p class="text-body" style="color: var(--text-primary)">{user.nickname}</p>
+          <p class="text-body-lg truncate" style="color: var(--text-primary)">{user.nickname}</p>
           <div class="flex items-center gap-1.5" style="margin-top: 2px;">
             {#if user.tag}
               <span class="text-xs" style="color: var(--brand)">#{user.tag}</span>
               <span class="text-xs" style="color: var(--text-secondary); opacity: 0.5">·</span>
             {/if}
             {#if user.distance}
-              <span class="text-xs" style="color: var(--text-secondary)">{user.distance}</span>
+              <span class="text-xs" style="color: var(--brand)">{user.distance}</span>
             {/if}
           </div>
         </div>

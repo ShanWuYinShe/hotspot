@@ -9,6 +9,7 @@
   import { isSuccess } from '$lib/api/client';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import { toast } from '$lib/stores/toast.svelte';
+  import Skeleton from '$lib/components/ui/skeleton/skeleton.svelte';
   import UserCard from '$lib/components/common/user-card.svelte';
   import GroupCard from '$lib/components/common/group-card.svelte';
   import MomentCard from '$lib/components/moments/moment-card.svelte';
@@ -518,10 +519,7 @@
               <div class="feed-density-list">
                 {#if isLoading && users.length === 0}
                   {#each Array(3) as _, i (i)}
-                    <div
-                      class="h-16 animate-pulse rounded-[var(--radius-lg)]"
-                      style="background: var(--border-theme);"
-                    ></div>
+                    <Skeleton class="h-16 rounded-[var(--radius-lg)]" />
                   {/each}
                 {:else}
                   {#each users as user (user.user.user_id)}
@@ -546,10 +544,7 @@
               <div class="flex flex-col gap-2.5">
                 {#if isLoading && moments.length === 0}
                   {#each Array(3) as _, i (i)}
-                    <div
-                      class="h-20 animate-pulse rounded-[var(--radius-lg)]"
-                      style="background: var(--border-theme);"
-                    ></div>
+                    <Skeleton class="h-20 rounded-[var(--radius-lg)]" />
                   {/each}
                 {:else}
                   {#each moments as moment (moment.moment_id)}
@@ -574,10 +569,7 @@
               <div class="flex flex-col gap-2.5">
                 {#if isLoading && groups.length === 0}
                   {#each Array(3) as _, i (i)}
-                    <div
-                      class="h-16 animate-pulse rounded-[var(--radius-lg)]"
-                      style="background: var(--border-theme);"
-                    ></div>
+                    <Skeleton class="h-16 rounded-[var(--radius-lg)]" />
                   {/each}
                 {:else}
                   {#each groups as group (group.group.group_id)}

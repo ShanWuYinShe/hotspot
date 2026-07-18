@@ -19,18 +19,19 @@
     resolveLatestVisibleMessageId
   } from '$lib/hooks/use-chat-realtime-sync';
   import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
-  import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
+  import { KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
   import { platformStore } from '$lib/stores/platform.svelte';
   import type { GroupItem, GroupMessageItem } from '$lib/types/api';
   import BackButton from '$lib/components/common/back-button.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
   import Send from 'lucide-svelte/icons/send';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
+  import { Textarea } from '$lib/components/ui/textarea';
   import MoreVertical from 'lucide-svelte/icons/more-vertical';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import ChevronDown from 'lucide-svelte/icons/chevron-down';
-  import X from 'lucide-svelte/icons/x';
+  import ImagePreview from '$lib/components/common/image-preview.svelte';
   import ChatBubble from '$lib/components/chat/chat-bubble.svelte';
 
   const groupId = $derived(page.params.id!);
@@ -703,7 +704,7 @@
 
       {#if isLoadingMore}
         <div class="flex justify-center py-3">
-          <Loader2 class="h-5 w-5 animate-spin" color="var(--text-secondary)" />
+          <Spinner size="lg" color="var(--text-secondary)" />
         </div>
       {/if}
 
@@ -867,7 +868,7 @@
           class="text-body flex items-center justify-center gap-2"
           style="color: var(--text-secondary)"
         >
-          <Loader2 class="h-4 w-4 animate-spin" />
+          <Spinner size="md" />
           {#if wsSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
             {t('chat.realtimeConnectingFull')}
           {:else}
@@ -898,15 +899,13 @@
       </div>
     {:else}
       <div class="flex items-end gap-2">
-        <textarea
-          {@attach autofocus(shouldFocusInput)}
-          {@attach useKeyboardFocus()}
+        <Textarea
+          size="sm"
+          class="max-h-32 text-[15px]"
+          autofocusTrigger={shouldFocusInput}
           placeholder={t('chat.sendPlaceholder')}
           bind:value={messageText}
-          rows={1}
           maxlength={MESSAGE_CONTENT_MAX}
-          class="field-inset max-h-32 min-h-[42px] flex w-full resize-none rounded-[var(--radius-md)] px-4 py-2.5 text-[15px] outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-          style="background: var(--surface-bg); color: var(--text-primary);"
           disabled={isSending}
           oninput={() => {
             eventHandlers.sendGroupTyping(groupId, messageText.trim().length > 0);
@@ -917,7 +916,7 @@
               sendMessage();
             }
           }}
-        ></textarea>
+        />
         <button
           class="flex shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
           style="width: 36px; height: 36px; {messageText.trim()
@@ -929,7 +928,7 @@
           aria-label={t('chat.sendAria')}
         >
           {#if isSending}
-            <Loader2 class="h-5 w-5 animate-spin" />
+            <Spinner size="lg" />
           {:else}
             <Send size={20} />
           {/if}
@@ -940,30 +939,8 @@
 </div>
 
 <!-- Image Preview Modal -->
-{#if selectedImage}
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4"
-    style="background: var(--theme-overlay-strong);"
-    onclick={closeImagePreview}
-    role="button"
-    tabindex="0"
-    onkeydown={(e) => e.key === 'Escape' && closeImagePreview()}
-  >
-    <button
-      type="button"
-      class="absolute right-4 top-4 flex items-center justify-center rounded-full outline-none"
-      style="width: 40px; height: 40px; background: var(--theme-surface-glass); color: var(--text-on-overlay);"
-      onclick={closeImagePreview}
-      aria-label={t('chat.closeImagePreviewAria')}
-    >
-      <X size={24} />
-    </button>
-    <img
-      src={selectedImage}
-      alt={t('chat.preview')}
-      class="max-h-full max-w-full rounded-[var(--radius-sm)] object-contain"
-      onclick={(e) => e.stopPropagation()}
-      role="presentation"
-    />
-  </div>
-{/if}
+<ImagePreview
+  open={selectedImage !== null}
+  images={selectedImage ? [{ src: selectedImage, alt: t('chat.preview') }] : []}
+  onClose={closeImagePreview}
+/>

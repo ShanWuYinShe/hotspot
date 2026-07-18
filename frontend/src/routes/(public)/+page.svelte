@@ -19,6 +19,7 @@
   import LocationPickerModal from '$lib/components/common/location-picker-modal.svelte';
   import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
   import EmptyState from '$lib/components/common/empty-state.svelte';
+  import OnlineDot from '$lib/components/common/online-dot.svelte';
   import MapCard from '$lib/components/common/map-card.svelte';
 
   import { platformStore } from '$lib/stores/platform.svelte';
@@ -308,9 +309,7 @@
             class="surface-flat flex items-center gap-1.5 rounded-full py-1.5 px-3.5 outline-none"
             onclick={refreshAll}
           >
-            <span
-              style="width: 7px; height: 7px; border-radius: var(--radius-pill); background: var(--semantic-online); box-shadow: 0 0 0 3px color-mix(in srgb, var(--semantic-online) 22%, transparent);"
-            ></span>
+            <OnlineDot variant="glow" size="sm" />
             <span class="text-caption" style="color: var(--text-secondary)"
               >{onlineCount} {t('common.online')}</span
             >

@@ -10,6 +10,7 @@
   import { presenceStore } from '$lib/stores/presence.svelte';
   import UserCard from '$lib/components/common/user-card.svelte';
   import EmptyState from '$lib/components/common/empty-state.svelte';
+  import Skeleton from '$lib/components/ui/skeleton/skeleton.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
   import LocationPickerModal from '$lib/components/common/location-picker-modal.svelte';
   import AnchorEntry from '$lib/components/common/anchor-entry.svelte';
@@ -186,10 +187,7 @@
       {#if pagination.loading}
         <div class="density-grid">
           {#each Array(6) as _, i (i)}
-            <div
-              class="animate-pulse rounded-[var(--radius-lg)]"
-              style="height: 72px; background: var(--border-theme);"
-            ></div>
+            <Skeleton class="rounded-[var(--radius-lg)]" style="height: 72px;" />
           {/each}
         </div>
       {:else if pagination.error}

@@ -10,7 +10,7 @@
   import { withMinimumLoadingTime, MIN_LOADING_ACTION } from '$lib/utils/loading';
   import type { FieldRule } from '$lib/utils/form-validation';
   import Shield from 'lucide-svelte/icons/shield';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import ArrowLeft from 'lucide-svelte/icons/arrow-left';
   import Check from 'lucide-svelte/icons/check';
 
@@ -189,7 +189,7 @@
           disabled={isLoading}
         >
           {#if isLoading}
-            <Loader2 class="mr-2 inline-block animate-spin" style="width: 16px; height: 16px;" />
+            <Spinner size="md" class="mr-2" />
           {/if}
           发送验证码
         </button>
@@ -257,7 +257,7 @@
           disabled={isLoading}
         >
           {#if isLoading}
-            <Loader2 class="mr-2 inline-block animate-spin" style="width: 16px; height: 16px;" />
+            <Spinner size="md" class="mr-2" />
           {/if}
           重置密码
         </button>

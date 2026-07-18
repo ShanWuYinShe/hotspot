@@ -20,7 +20,7 @@
     resolveLatestVisibleMessageId
   } from '$lib/hooks/use-chat-realtime-sync';
   import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
-  import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
+  import { KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
   import { platformStore } from '$lib/stores/platform.svelte';
   import {
     DropdownMenu,
@@ -33,7 +33,8 @@
   import Avatar from '$lib/components/common/avatar.svelte';
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import Send from 'lucide-svelte/icons/send';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
+  import { Textarea } from '$lib/components/ui/textarea';
   import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
   import Phone from 'lucide-svelte/icons/phone';
   import Video from 'lucide-svelte/icons/video';
@@ -457,7 +458,7 @@
         <DropdownMenuContent align="end" class="w-44">
           <DropdownMenuItem onclick={deleteChat} disabled={isDeletingChat} class="text-destructive">
             {#if isDeletingChat}
-              <Loader2 class="h-4 w-4 animate-spin" />
+              <Spinner size="md" />
               <span>{t('chat.deleting')}</span>
             {:else}
               <Trash2 class="h-4 w-4" />
@@ -538,7 +539,7 @@
         class="text-meta flex items-center justify-center gap-1.5 mb-2"
         style="color: var(--text-secondary)"
       >
-        <Loader2 class="h-3 w-3 animate-spin" />
+        <Spinner size="xs" />
         <span>{t('chat.realtimeConnecting')}</span>
       </div>
     {/if}
@@ -547,7 +548,7 @@
         class="text-meta flex items-center justify-center gap-1.5 mb-2"
         style="color: var(--text-secondary)"
       >
-        <Loader2 class="h-3 w-3 animate-spin" />
+        <Spinner size="xs" />
         <span>
           {#if wsSubscription.state.isAttemptingSubscribe}
             {t('chat.typingSubscribing')}
@@ -572,15 +573,12 @@
       >
         <Smile size={15} color="var(--text-secondary)" strokeWidth={1.5} />
       </button>
-      <textarea
-        {@attach autofocus(shouldFocusInput)}
-        {@attach useKeyboardFocus()}
+      <Textarea
+        size="sm"
+        autofocusTrigger={shouldFocusInput}
         placeholder={t('chat.inputPlaceholder')}
         bind:value={messageText}
-        rows={1}
         maxlength={MESSAGE_CONTENT_MAX}
-        class="text-body field-inset min-h-[38px] flex w-full resize-none rounded-[var(--radius-md)] px-3 py-2 outline-none disabled:cursor-not-allowed disabled:opacity-50"
-        style="background: var(--surface-bg); color: var(--text-primary)"
         disabled={isSending}
         oninput={handleInput}
         onkeydown={(e) => {
@@ -589,7 +587,7 @@
             sendMessage();
           }
         }}
-      ></textarea>
+      />
       <button
         class="flex shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
         class:surface-pressed={!messageText.trim()}
@@ -602,7 +600,7 @@
         aria-label={t('chat.sendAria')}
       >
         {#if isSending}
-          <Loader2 class="h-5 w-5 animate-spin" />
+          <Spinner size="lg" />
         {:else}
           <Send size={20} />
         {/if}

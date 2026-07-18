@@ -1,6 +1,7 @@
 <script lang="ts">
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Avatar from '$lib/components/common/avatar.svelte';
+  import OnlineDot from '$lib/components/common/online-dot.svelte';
 
   interface NearbyUser {
     id: string;
@@ -53,9 +54,7 @@
           <div style="position: relative; width: 56px; height: 56px;">
             <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={48} />
             {#if user.online}
-              <div
-                style="position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; border-radius: var(--radius-pill); background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-              ></div>
+              <OnlineDot size="md" />
             {/if}
           </div>
           <span

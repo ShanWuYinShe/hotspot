@@ -11,7 +11,7 @@
   import Bell from 'lucide-svelte/icons/bell';
   import CheckCheck from 'lucide-svelte/icons/check-check';
   import ExternalLink from 'lucide-svelte/icons/external-link';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
 
   type NotificationPreferenceGroup = 'social' | 'interaction' | 'group' | 'system';
   type NotificationPreferenceMap = Record<NotificationType, boolean>;
@@ -207,7 +207,7 @@
           disabled={isMarkingAllRead || notificationStore.unreadCount === 0}
         >
           {#if isMarkingAllRead}
-            <Loader2 size={16} class="mr-2 animate-spin" />
+            <Spinner size="md" class="mr-2" />
           {:else}
             <CheckCheck size={16} class="mr-2" />
           {/if}
@@ -279,7 +279,7 @@
         disabled={isSaving}
       >
         {#if isSaving}
-          <Loader2 size={16} class="mr-2 animate-spin" />
+          <Spinner size="md" class="mr-2" />
         {/if}
         {t('settings.savePreferences')}
       </button>

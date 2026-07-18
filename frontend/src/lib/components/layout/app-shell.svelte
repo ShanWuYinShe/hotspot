@@ -7,6 +7,7 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { platformStore } from '$lib/stores/platform.svelte';
+  import { Button } from '$lib/components/ui/button';
   import DesktopHeader from '$lib/components/layout/desktop-header.svelte';
   import Sidebar from '$lib/components/common/sidebar.svelte';
   import MobileBottomNav from '$lib/components/common/mobile-bottom-nav.svelte';
@@ -59,13 +60,13 @@
       {t('auth.loginRequired')}
     </h2>
     <p class="mb-6" style="color: var(--text-secondary);">{t('auth.loginRequiredDescription')}</p>
-    <button
-      class="rounded-[var(--radius-lg)] px-8 py-3.5 font-medium transition-all"
-      style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
+    <Button
+      variant="default"
+      size="lg"
       onclick={() => uiStore.openLoginModalWithRedirect({})}
     >
       {t('common.loginNow')}
-    </button>
+    </Button>
   </div>
 {/snippet}
 

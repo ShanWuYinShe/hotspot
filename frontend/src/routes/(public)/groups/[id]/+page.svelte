@@ -30,11 +30,13 @@
   import { formatDateTime } from '$lib/utils/format';
   import BackButton from '$lib/components/common/back-button.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
+  import UserCard from '$lib/components/common/user-card.svelte';
+  import { Textarea } from '$lib/components/ui/textarea';
   import Users from 'lucide-svelte/icons/users';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import Lock from 'lucide-svelte/icons/lock';
   import Shield from 'lucide-svelte/icons/shield';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import Plus from 'lucide-svelte/icons/plus';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
@@ -882,7 +884,7 @@
         class="flex items-center gap-2 rounded-[var(--radius-md)] px-4 py-2"
         style="background: var(--surface-bg); border: 1px solid var(--theme-warning-border);"
       >
-        <Loader2 size={14} class="animate-spin" style="color: var(--theme-warning);" />
+        <Spinner size="sm" color="var(--theme-warning)" />
         <span class="text-body-lg" style="color: var(--theme-warning)">
           {#if wsGroupSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
             {t('groupDetail.wsConnecting')}
@@ -973,7 +975,7 @@
                   disabled={isLeaving}
                 >
                   {#if isLeaving}
-                    <Loader2 size={14} class="animate-spin" />
+                    <Spinner size="sm" />
                   {/if}
                   {t('groupDetail.leaveGroup')}
                 </button>
@@ -1284,10 +1286,7 @@
                 onclick={() => loadAnnouncements(false)}
                 disabled={announcementsPagination.loadingMore}
               >
-                {#if announcementsPagination.loadingMore}<Loader2
-                    size={14}
-                    class="animate-spin"
-                  />{/if}
+                {#if announcementsPagination.loadingMore}<Spinner size="sm" />{/if}
                 {t('common.loadMore')}
               </button>
             </div>
@@ -1363,100 +1362,66 @@
         {:else}
           <div class="density-grid density-grid--compact">
             {#each membersPagination.items as member (member.user.user_id)}
-              <div>
-                <div
-                  class="flex items-center gap-3 rounded-[var(--radius-lg)] p-4 transition-all"
-                  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
-                >
-                  <a
-                    href="/users/{member.user.user_id}"
-                    class="flex min-w-0 flex-1 items-center gap-3"
-                  >
-                    <Avatar
-                      src={member.user.avatar_url}
-                      name={member.user.nickname}
-                      alt={member.user.nickname}
-                      size={40}
-                    />
-                    <div class="min-w-0 flex-1">
-                      <div class="flex items-center gap-2">
-                        <p
-                          class="text-body-lg truncate"
-                          style="font-weight: 500; color: var(--text-primary)"
-                        >
-                          {member.user.nickname}
-                        </p>
-                        <span
-                          class="text-xs rounded-full px-2 py-0.5"
-                          style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
-                          >{getRoleLabel(member.role)}</span
-                        >
-                      </div>
-                      <p class="text-meta" style="color: var(--text-secondary)">
-                        {t('groupDetail.joinedAt', { time: formatDateTime(member.joined_at) })}
-                      </p>
-                      {#if member.muted_until}
-                        <p class="text-meta" style="color: var(--theme-error); opacity: 0.8">
-                          {t('groupDetail.mutedUntil', { time: formatDateTime(member.muted_until) })}
-                        </p>
-                      {/if}
-                    </div>
-                  </a>
-                  <div class="flex items-center gap-2">
-                    {#if member.muted_until}
-                      <span
-                        class="text-xs rounded-full px-2 py-0.5"
-                        style="color: var(--text-secondary); background: var(--surface-bg); border: 1px solid var(--border-theme)"
-                        >{t('groupDetail.muted')}</span
+              <UserCard
+                variant="member-row"
+                user={member.user}
+                roleLabel={getRoleLabel(member.role)}
+                subtitle={t('groupDetail.joinedAt', { time: formatDateTime(member.joined_at) })}
+                mutedLabel={member.muted_until
+                  ? t('groupDetail.mutedUntil', { time: formatDateTime(member.muted_until) })
+                  : undefined}
+              >
+                {#snippet actions()}
+                  {#if member.muted_until}
+                    <span class="tag-chip tag-chip--sm" style="color: var(--text-secondary);"
+                      >{t('groupDetail.muted')}</span
+                    >
+                  {/if}
+                  {#if canManageMember(member)}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        class="surface-flat inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                        aria-label={t('groupDetail.memberActionsAria')}
                       >
-                    {/if}
-                    {#if canManageMember(member)}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
-                          aria-label={t('groupDetail.memberActionsAria')}
-                        >
-                          <MoreHorizontal size={16} />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" class="w-40">
-                          {#if member.muted_until}
-                            <DropdownMenuItem onclick={() => handleUnmuteMember(member)}
-                              ><Mic
-                                size={16}
-                                style="margin-right: 8px;"
-                              />{t('groupDetail.unmuteMember')}</DropdownMenuItem
-                            >
-                          {:else}
-                            <DropdownMenuItem onclick={() => openMuteDialog(member)}
-                              ><MicOff
-                                size={16}
-                                style="margin-right: 8px;"
-                              />{t('groupDetail.muteMember')}</DropdownMenuItem
-                            >
-                          {/if}
-                          {#if canChangeRole(member)}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onclick={() => openRoleDialog(member)}
-                              ><UserCog
-                                size={16}
-                                style="margin-right: 8px;"
-                              />{t('groupDetail.roleManagement')}</DropdownMenuItem
-                            >
-                          {/if}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onclick={() => openRemoveDialog(member)}
-                            ><UserMinus
+                        <MoreHorizontal size={16} />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" class="w-40">
+                        {#if member.muted_until}
+                          <DropdownMenuItem onclick={() => handleUnmuteMember(member)}
+                            ><Mic
                               size={16}
-                              style="margin-right: 8px; color: var(--theme-error);"
-                            />{t('groupDetail.removeMember')}</DropdownMenuItem
+                              style="margin-right: 8px;"
+                            />{t('groupDetail.unmuteMember')}</DropdownMenuItem
                           >
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    {/if}
-                  </div>
-                </div>
-              </div>
+                        {:else}
+                          <DropdownMenuItem onclick={() => openMuteDialog(member)}
+                            ><MicOff
+                              size={16}
+                              style="margin-right: 8px;"
+                            />{t('groupDetail.muteMember')}</DropdownMenuItem
+                          >
+                        {/if}
+                        {#if canChangeRole(member)}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onclick={() => openRoleDialog(member)}
+                            ><UserCog
+                              size={16}
+                              style="margin-right: 8px;"
+                            />{t('groupDetail.roleManagement')}</DropdownMenuItem
+                          >
+                        {/if}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onclick={() => openRemoveDialog(member)}
+                          ><UserMinus
+                            size={16}
+                            style="margin-right: 8px; color: var(--theme-error);"
+                          />{t('groupDetail.removeMember')}</DropdownMenuItem
+                        >
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  {/if}
+                {/snippet}
+              </UserCard>
             {/each}
           </div>
           {#if membersPagination.hasMore}
@@ -1467,7 +1432,7 @@
                 onclick={() => loadMembers(false)}
                 disabled={membersPagination.loadingMore}
               >
-                {#if membersPagination.loadingMore}<Loader2 size={14} class="animate-spin" />{/if}
+                {#if membersPagination.loadingMore}<Spinner size="sm" />{/if}
                 {t('common.loadMore')}
               </button>
             </div>
@@ -1590,10 +1555,7 @@
                   onclick={() => loadApplications(false)}
                   disabled={applicationsPagination.loadingMore}
                 >
-                  {#if applicationsPagination.loadingMore}<Loader2
-                      size={14}
-                      class="animate-spin"
-                    />{/if}
+                  {#if applicationsPagination.loadingMore}<Spinner size="sm" />{/if}
                   {t('common.loadMore')}
                 </button>
               </div>
@@ -1651,15 +1613,13 @@
             class="text-body"
             style="font-weight: 500; color: var(--text-primary)">{t('groupDetail.joinDialogMessageLabel')}</label
           >
-          <textarea
+          <Textarea
             id="join-message"
+            size="md"
             placeholder={t('groupDetail.joinDialogMessagePlaceholder')}
-            rows={3}
             bind:value={joinMessage}
             maxlength={GROUP_JOIN_MESSAGE_MAX}
-            class="w-full resize-none rounded-[var(--radius-md)] p-3 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
-          ></textarea>
+          />
         </div>
       {/if}
     </div>
@@ -1675,7 +1635,7 @@
         onclick={handleJoin}
         disabled={isJoining}
       >
-        {#if isJoining}<Loader2 size={14} class="animate-spin" />{/if}
+        {#if isJoining}<Spinner size="sm" />{/if}
         {t('groupDetail.confirmJoin')}
       </button>
     </Dialog.Footer>
@@ -1719,15 +1679,13 @@
           class="text-body"
           style="font-weight: 500; color: var(--text-primary)">{t('groupDetail.announcementContentLabel')}</label
         >
-        <textarea
+        <Textarea
           id="announcement-content"
-          rows={5}
+          size="lg"
           placeholder={t('groupDetail.announcementContentPlaceholder')}
           bind:value={announcementContent}
           maxlength={ANNOUNCEMENT_CONTENT_MAX}
-          class="w-full resize-none rounded-[var(--radius-md)] p-3 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
-        ></textarea>
+        />
       </div>
       <div
         class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3"
@@ -1760,7 +1718,7 @@
         onclick={submitAnnouncement}
         disabled={announcementSubmitting}
       >
-        {#if announcementSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
+        {#if announcementSubmitting}<Spinner size="sm" />{/if}
         {editingAnnouncement ? t('groupDetail.saveChanges') : t('groupDetail.publishAnnouncement')}
       </button>
     </Dialog.Footer>
@@ -1850,7 +1808,7 @@
         onclick={handleMuteMember}
         disabled={muteSubmitting}
       >
-        {#if muteSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
+        {#if muteSubmitting}<Spinner size="sm" />{/if}
         {t('groupDetail.confirmMute')}
       </button>
     </Dialog.Footer>
@@ -1926,7 +1884,7 @@
         onclick={handleRemoveMember}
         disabled={removeSubmitting}
       >
-        {#if removeSubmitting}<Loader2 size={14} class="animate-spin" />{/if}
+        {#if removeSubmitting}<Spinner size="sm" />{/if}
         {t('groupDetail.confirmRemove')}
       </button>
     </Dialog.Footer>
@@ -1965,7 +1923,7 @@
         onclick={handleLeave}
         disabled={isLeaving}
       >
-        {#if isLeaving}<Loader2 size={14} class="animate-spin" />{/if}
+        {#if isLeaving}<Spinner size="sm" />{/if}
         {t('groupDetail.confirmLeave')}
       </button>
     </Dialog.Footer>

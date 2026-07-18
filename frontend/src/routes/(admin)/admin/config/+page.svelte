@@ -9,7 +9,7 @@
   import { Switch } from '$lib/components/ui/switch';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import Save from 'lucide-svelte/icons/save';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import Lock from 'lucide-svelte/icons/lock';
   import FileText from 'lucide-svelte/icons/file-text';
   import Bell from 'lucide-svelte/icons/bell';
@@ -193,7 +193,7 @@
               onclick={handleSave}
               disabled={isSaving}
             >
-              {#if isSaving}<Loader2 size={14} strokeWidth={1.5} class="animate-spin" />{:else}<Save
+              {#if isSaving}<Spinner size="sm" strokeWidth={1.5} />{:else}<Save
                   size={14}
                   strokeWidth={1.5}
                 />{/if}
@@ -243,7 +243,7 @@
               onclick={handleSave}
               disabled={isSaving}
             >
-              {#if isSaving}<Loader2 size={14} strokeWidth={1.5} class="animate-spin" />{:else}<Save
+              {#if isSaving}<Spinner size="sm" strokeWidth={1.5} />{:else}<Save
                   size={14}
                   strokeWidth={1.5}
                 />{/if}
@@ -289,7 +289,7 @@
               onclick={handleSave}
               disabled={isSaving}
             >
-              {#if isSaving}<Loader2 size={14} strokeWidth={1.5} class="animate-spin" />{:else}<Save
+              {#if isSaving}<Spinner size="sm" strokeWidth={1.5} />{:else}<Save
                   size={14}
                   strokeWidth={1.5}
                 />{/if}

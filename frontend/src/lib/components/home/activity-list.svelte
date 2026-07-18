@@ -6,6 +6,7 @@
   import Users from 'lucide-svelte/icons/users';
   import Star from 'lucide-svelte/icons/star';
   import Flame from 'lucide-svelte/icons/flame';
+  import Skeleton from '$lib/components/ui/skeleton/skeleton.svelte';
 
   interface Activity {
     id: string;
@@ -45,17 +46,10 @@
   {#if loading}
     {#each Array(3) as _}
       <div class="flex items-center gap-3 px-4 py-3" style="background: var(--surface-bg);">
-        <div
-          class="flex flex-shrink-0 items-center justify-center rounded-[var(--radius-xs)]"
-          style="width: 34px; height: 34px; background: var(--border-theme);"
-        ></div>
-        <div class="flex-1">
-          <div
-            style="height: 13px; width: 60%; border-radius: var(--radius-xs); background: var(--border-theme);"
-          ></div>
-          <div
-            style="height: 11px; width: 40%; border-radius: var(--radius-xs); background: var(--border-theme); margin-top: 4px;"
-          ></div>
+        <Skeleton class="flex-shrink-0 rounded-[var(--radius-xs)]" style="width: 34px; height: 34px;" />
+        <div class="flex-1 space-y-1">
+          <Skeleton class="rounded-[var(--radius-xs)]" style="height: 13px; width: 60%;" />
+          <Skeleton class="rounded-[var(--radius-xs)]" style="height: 11px; width: 40%;" />
         </div>
       </div>
     {/each}

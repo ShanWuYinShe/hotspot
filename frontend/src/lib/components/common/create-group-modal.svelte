@@ -1,5 +1,6 @@
 <script lang="ts">
   import * as Dialog from '$lib/components/ui/dialog';
+  import { Textarea } from '$lib/components/ui/textarea';
   import { groupsService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
   import { showApiError } from '$lib/utils/api-error';
@@ -12,7 +13,7 @@
   import { toast } from '$lib/stores/toast.svelte';
   import LocationPickerModal from './location-picker-modal.svelte';
   import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import UsersRound from 'lucide-svelte/icons/users-round';
 
   type JoinMethod = 'open' | 'approval' | 'invite_only';
@@ -283,16 +284,15 @@
       >
         <label for="group-desc" class="text-meta" style="color: var(--text-primary)">群组介绍</label
         >
-        <textarea
+        <Textarea
           id="group-desc"
           name="group-description"
+          size="md"
           placeholder="简单描述群组用途与氛围"
-          class="text-body field-inset rounded-[var(--radius-md)] px-4 py-2.5 outline-none transition-all duration-150 w-full resize-none"
-          class:field-error={groupDescriptionError}
-          style="background: var(--surface-bg); color: var(--text-primary); min-height: 100px"
+          class={groupDescriptionError ? 'field-error' : ''}
           bind:value={description}
           onblur={() => markTouched('description')}
-        ></textarea>
+        />
         <div class="flex items-center justify-between">
           {#if groupDescriptionError}
             <p class="text-meta" style="color: var(--error)">{groupDescriptionError}</p>
@@ -434,7 +434,7 @@
         disabled={isSubmitting}
       >
         {#if isSubmitting}
-          <Loader2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
+          <Spinner size="md" class="mr-2" />
         {/if}
         创建群组
       </button>

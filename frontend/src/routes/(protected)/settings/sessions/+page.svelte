@@ -10,7 +10,7 @@
   import type { SessionItem } from '$lib/types/api';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import EmptyState from '$lib/components/common/empty-state.svelte';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import Smartphone from 'lucide-svelte/icons/smartphone';
 
   let sessions = $state.raw<SessionItem[]>([]);
@@ -107,7 +107,7 @@
             disabled={isLoading || isRevokingOthers}
           >
             {#if isRevokingOthers}
-              <Loader2 size={14} class="mr-2 animate-spin" />
+              <Spinner size="sm" class="mr-2" />
             {/if}
             {t('settings.revokeOthers')}
           </button>
@@ -187,7 +187,7 @@
                 onclick={() => revoke(session.session_id)}
               >
                 {#if isRevoking === session.session_id}
-                  <Loader2 size={14} class="mr-2 animate-spin" />
+                  <Spinner size="sm" class="mr-2" />
                 {/if}
                 {t('settings.revoke')}
               </button>

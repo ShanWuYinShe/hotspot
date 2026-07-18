@@ -4,7 +4,7 @@
   import { toast } from '$lib/stores/toast.svelte';
   import { t } from '$lib/i18n';
   import PageHeader from '$lib/components/layout/page-header.svelte';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import { validateField } from '$lib/utils/form-validation';
   import type { FieldRule } from '$lib/utils/form-validation';
 
@@ -179,7 +179,7 @@
           disabled={isSaving}
         >
           {#if isSaving}
-            <Loader2 size={16} class="mr-2 animate-spin" />
+            <Spinner size="md" class="mr-2" />
           {/if}
           {t('settings.saveChanges')}
         </button>

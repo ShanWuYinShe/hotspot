@@ -10,12 +10,18 @@
     children?: Snippet;
     class?: string;
     hideClose?: boolean;
+    /**
+     * `center`(默认):居中模态(桌面居中/移动端底部 slide-up)。
+     * `sheet`:始终底部抽屉(贴底、顶部圆角、全宽),用于动作选择面板。
+     */
+    variant?: 'center' | 'sheet';
   }
 
   let {
     class: className,
     children,
     hideClose = false,
+    variant = 'center',
     ref = $bindable(null),
     onCloseAutoFocus,
     ...restProps
@@ -64,7 +70,7 @@
       'fixed z-[var(--z-modal)] grid w-full gap-4 p-6 select-none duration-200',
       'data-[state=open]:animate-in data-[state=open]:fade-in-0',
       'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
-      'dialog-responsive-position',
+      variant === 'sheet' ? 'dialog-sheet-position' : 'dialog-responsive-position',
       className
     )}
     style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme); color: var(--text-primary);"
@@ -93,6 +99,26 @@
     transform: translate(-50%, -50%);
     max-width: 32rem;
     border-radius: var(--theme-radius-xl, 24px);
+  }
+
+  /* Sheet variant: 始终底部抽屉,全宽,顶部大圆角 */
+  :global(.dialog-sheet-position) {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    transform: none;
+    max-width: 100%;
+    border-radius: var(--radius-pill) var(--radius-pill) 0 0;
+    border-bottom: none;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.18);
+  }
+  :global(.dialog-sheet-position[data-state='open']) {
+    animation: dialogSlideUp 0.42s cubic-bezier(0.34, 1.32, 0.46, 1);
+  }
+  :global(.dialog-sheet-position[data-state='closed']) {
+    animation: dialogSlideDown 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   @media (max-width: 639px) {

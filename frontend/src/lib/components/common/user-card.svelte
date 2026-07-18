@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { dev } from '$app/environment';
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
@@ -19,8 +20,7 @@
   import MoreVertical from 'lucide-svelte/icons/more-vertical';
   import User from 'lucide-svelte/icons/user';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
-  import UserPlus from 'lucide-svelte/icons/user-plus';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import FollowButton from '$lib/components/common/follow-button.svelte';
   import Share2 from 'lucide-svelte/icons/share-2';
   import Flag from 'lucide-svelte/icons/flag';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
@@ -36,7 +36,15 @@
     showMenu?: boolean;
     href?: string;
     class?: string;
-    variant?: 'default' | 'compact' | 'detailed' | 'square' | 'nearby-row';
+    variant?: 'default' | 'compact' | 'detailed' | 'square' | 'nearby-row' | 'member-row';
+    /** member-row 专用:角色 badge 文案(如「群主」「管理员」)。 */
+    roleLabel?: string;
+    /** member-row 专用:副信息行(如「加入时间」)。 */
+    subtitle?: string;
+    /** member-row 专用:禁言标记文案(红色提示)。 */
+    mutedLabel?: string;
+    /** member-row 专用:右侧自定义操作区(如 DropdownMenu)。 */
+    actions?: Snippet;
   }
 
   let {
@@ -48,7 +56,11 @@
     showMenu = true,
     href,
     class: className = '',
-    variant = 'default'
+    variant = 'default',
+    roleLabel,
+    subtitle,
+    mutedLabel,
+    actions
   }: Props = $props();
 
   const userInfo = $derived('user' in user ? user.user : user);
@@ -201,20 +213,15 @@
   {#if variant === 'nearby-row'}
     <!-- Nearby row: horizontal row for nearby all page -->
     <div class="flex items-center gap-3.5 px-4 py-3.5">
-      <div class="relative flex-shrink-0">
-        <Avatar
-          src={userInfo.avatar_url}
-          name={userInfo.nickname}
-          alt={userInfo.nickname}
-          size={48}
-        />
-        {#if isOnline}
-          <span
-            class="absolute bottom-0 right-0 rounded-full"
-            style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-          ></span>
-        {/if}
-      </div>
+      <Avatar
+        class="flex-shrink-0"
+        src={userInfo.avatar_url}
+        name={userInfo.nickname}
+        alt={userInfo.nickname}
+        size={48}
+        online={isOnline}
+        onlineSize="md"
+      />
       <div class="min-w-0 flex-1">
         <p class="text-body-lg truncate min-w-0" style="color: var(--text-primary)">
           {userInfo.nickname}
@@ -242,23 +249,48 @@
           </div>
         {/if}
         {#if !isMe}
-          <button
-            data-card-action
-            class="rounded-full px-3.5 py-1 outline-none transition-all"
-            style={isFollowing
-              ? 'box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light); border: 1px solid var(--border-active); color: var(--brand); background: var(--surface-bg); font-size: var(--text-caption);'
-              : 'box-shadow: 3px 3px 7px var(--shadow-dark), -3px -3px 7px var(--shadow-light); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg); font-size: var(--text-caption);'}
+          <FollowButton
+            variant="pill"
+            following={isFollowing}
+            loading={isFollowPending}
             onclick={handleFollow}
-            disabled={isFollowPending}
-          >
-            {#if isFollowPending}
-              ...
-            {:else}
-              {isFollowing ? '已关注' : '关注'}
-            {/if}
-          </button>
+          />
         {/if}
       </div>
+    </div>
+  {:else if variant === 'member-row'}
+    <!-- Member row: 用户列表行(粉丝/关注/群成员统一) -->
+    <div class="flex items-center gap-3 px-4 py-3.5">
+      <Avatar
+        class="flex-shrink-0"
+        src={userInfo.avatar_url}
+        name={userInfo.nickname}
+        alt={userInfo.nickname}
+        size={48}
+        online={showOnlineStatus && isOnline}
+        onlineSize="md"
+      />
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2">
+          <p class="text-body-lg truncate" style="font-weight: 500; color: var(--text-primary)">
+            {userInfo.nickname}
+          </p>
+          {#if roleLabel}
+            <span class="tag-chip tag-chip--sm" style="color: var(--brand);">{roleLabel}</span>
+          {/if}
+          {#if mutedLabel}
+            <span class="text-xs" style="color: var(--theme-error); opacity: 0.8;">{mutedLabel}</span>
+          {/if}
+        </div>
+        {#if subtitle}
+          <p class="text-meta" style="color: var(--text-secondary)">{subtitle}</p>
+        {/if}
+      </div>
+      {#if actions}
+        <div class="flex flex-shrink-0 items-center gap-2" data-card-action>
+          {@render actions()}
+        </div>
+      {/if}
     </div>
   {:else if variant === 'square'}
     <!-- Square: info-dense card -->
@@ -269,20 +301,15 @@
       >
         <div class="flex items-start justify-between gap-3">
           <div class="flex min-w-0 items-center gap-2.5">
-            <div class="relative flex-shrink-0">
-              <Avatar
-                src={userInfo.avatar_url}
-                name={userInfo.nickname}
-                alt={userInfo.nickname}
-                size={48}
-              />
-              {#if isOnline}
-                <span
-                  class="absolute bottom-0 right-0 rounded-full"
-                  style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-                ></span>
-              {/if}
-            </div>
+            <Avatar
+              src={userInfo.avatar_url}
+              name={userInfo.nickname}
+              alt={userInfo.nickname}
+              size={48}
+              online={isOnline}
+              onlineSize="md"
+              class="flex-shrink-0"
+            />
             <div class="min-w-0 flex-1">
               <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
                 {userInfo.nickname}
@@ -325,20 +352,15 @@
   {:else if variant === 'compact'}
     <!-- Compact: horizontal list row -->
     <div class="flex items-center gap-3 p-3.5">
-      <div class="relative flex-shrink-0">
-        <Avatar
-          src={userInfo.avatar_url}
-          name={userInfo.nickname}
-          alt={userInfo.nickname}
-          size={40}
-        />
-        {#if isOnline}
-          <span
-            class="absolute bottom-0 right-0 rounded-full"
-            style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-          ></span>
-        {/if}
-      </div>
+      <Avatar
+        class="flex-shrink-0"
+        src={userInfo.avatar_url}
+        name={userInfo.nickname}
+        alt={userInfo.nickname}
+        size={40}
+        online={isOnline}
+        onlineSize="sm"
+      />
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between">
           <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
@@ -363,20 +385,15 @@
     <!-- Detailed: vertical with more info -->
     <div class="p-4">
       <div class="flex items-center gap-4">
-        <div class="relative flex-shrink-0">
-          <Avatar
-            src={userInfo.avatar_url}
-            name={userInfo.nickname}
-            alt={userInfo.nickname}
-            size={48}
-          />
-          {#if isOnline}
-            <span
-              class="absolute bottom-0 right-0 rounded-full"
-              style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-            ></span>
-          {/if}
-        </div>
+        <Avatar
+          class="flex-shrink-0"
+          src={userInfo.avatar_url}
+          name={userInfo.nickname}
+          alt={userInfo.nickname}
+          size={48}
+          online={isOnline}
+          onlineSize="md"
+        />
         <div class="min-w-0 flex-1">
           <p class="text-title" style="font-weight: 600; color: var(--text-primary)">
             {userInfo.nickname}
@@ -406,20 +423,15 @@
     <!-- Default: balanced horizontal -->
     <div class="p-4">
       <div class="flex items-center gap-3.5">
-        <div class="relative flex-shrink-0">
-          <Avatar
-            src={userInfo.avatar_url}
-            name={userInfo.nickname}
-            alt={userInfo.nickname}
-            size={40}
-          />
-          {#if isOnline}
-            <span
-              class="absolute bottom-0 right-0 rounded-full"
-              style="width: 11px; height: 11px; background: var(--semantic-online); border: 2px solid var(--surface-bg);"
-            ></span>
-          {/if}
-        </div>
+        <Avatar
+          class="flex-shrink-0"
+          src={userInfo.avatar_url}
+          name={userInfo.nickname}
+          alt={userInfo.nickname}
+          size={40}
+          online={isOnline}
+          onlineSize="sm"
+        />
         <div class="min-w-0 flex-1">
           <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
             {userInfo.nickname}
@@ -452,7 +464,7 @@
   {/if}
 
   <!-- Action buttons -->
-  {#if !isMe && variant !== 'nearby-row'}
+  {#if !isMe && variant !== 'nearby-row' && variant !== 'member-row'}
     <div style="border-top: 1px solid var(--border-theme);" class="px-4 py-2.5">
       <div class="flex items-center justify-between">
         <button
@@ -465,20 +477,12 @@
           <span class="text-meta">消息</span>
         </button>
         <div class="flex items-center gap-2">
-          <button
-            data-card-action
-            class="flex items-center gap-1.5 py-1 outline-none transition-transform duration-150 active:scale-[0.93]"
-            style="color: {isFollowing ? 'var(--brand)' : 'var(--text-secondary)'};"
+          <FollowButton
+            variant="ghost"
+            following={isFollowing}
+            loading={isFollowPending}
             onclick={handleFollow}
-            disabled={isFollowPending}
-          >
-            {#if isFollowPending}
-              <Loader2 size={15} strokeWidth={1.5} class="animate-spin" />
-            {:else}
-              <UserPlus size={15} strokeWidth={1.5} />
-            {/if}
-            <span class="text-caption">{isFollowing ? '已关注' : '关注'}</span>
-          </button>
+          />
           {#if showMenu}
             <DropdownMenu>
               <DropdownMenuTrigger>

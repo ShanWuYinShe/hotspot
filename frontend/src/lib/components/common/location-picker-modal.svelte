@@ -34,7 +34,7 @@
   import Plus from 'lucide-svelte/icons/plus';
   import Minus from 'lucide-svelte/icons/minus';
   import LocateFixed from 'lucide-svelte/icons/locate-fixed';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
   import ChevronUp from 'lucide-svelte/icons/chevron-up';
   import ChevronDown from 'lucide-svelte/icons/chevron-down';
   import Maximize2 from 'lucide-svelte/icons/maximize-2';
@@ -1832,7 +1832,7 @@
               aria-label={t('locationPicker.locateCurrent')}
             >
               {#if isLocating}
-                <Loader2 class="h-4 w-4 animate-spin" />
+                <Spinner size="md" />
               {:else}
                 <LocateFixed class="h-6 w-6" style="color: var(--brand);" />
               {/if}
@@ -1989,7 +1989,7 @@
 
         {#if isLoadingMap}
           <div class="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-sm">
-            <Loader2 class="h-8 w-8 animate-spin" />
+            <Spinner size="xl" />
           </div>
         {/if}
 
@@ -2005,7 +2005,7 @@
             aria-label={t('locationPicker.useCurrentLocationAria')}
           >
             {#if isLocating}
-              <Loader2 class="h-5 w-5 animate-spin" />
+              <Spinner size="lg" />
             {:else}
               <LocateFixed class="h-7 w-7" style="color: var(--brand);" />
             {/if}
@@ -2298,7 +2298,7 @@
                           }}
                         />
                         {#if isSearching}
-                          <Loader2 class="h-4 w-4 shrink-0 animate-spin" />
+                          <Spinner size="md" class="shrink-0" />
                         {:else if searchText.length > 0}
                           <button
                             class="shrink-0"
@@ -2735,7 +2735,7 @@
               }}
             />
             {#if isSearching}
-              <Loader2 class="h-4 w-4 shrink-0 animate-spin" />
+              <Spinner size="md" class="shrink-0" />
             {:else if searchText.length > 0}
               <button
                 class="shrink-0"

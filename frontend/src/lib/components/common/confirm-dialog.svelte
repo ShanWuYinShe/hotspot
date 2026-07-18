@@ -7,7 +7,7 @@
     DialogHeader,
     DialogTitle
   } from '$lib/components/ui/dialog';
-  import Loader2 from 'lucide-svelte/icons/loader-2';
+  import Spinner from '$lib/components/common/spinner.svelte';
 
   interface Props {
     open?: boolean;
@@ -71,11 +71,10 @@
         disabled={loading}
       >
         {#if loading}
-          <Loader2
-            size={14}
+          <Spinner
+            size="sm"
             strokeWidth={1.5}
-            class="animate-spin"
-            style="display: inline; vertical-align: middle; margin-right: 6px;"
+            class="mr-1.5 align-middle"
           />
         {/if}
         {confirmText}
