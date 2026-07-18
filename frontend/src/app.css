@@ -169,12 +169,10 @@
   --theme-glass-border: rgba(61, 122, 85, 0.15);
   --theme-glass-shadow: 0 -2px 16px rgba(61, 122, 85, 0.08), 0 8px 24px rgba(61, 122, 85, 0.1);
   /* Hover = clean soft lift (flat at rest), matching the elevation language of the
-     other theme families. forest 主题保留 1.5px border-active 边框模拟层
-     (surface-hero 在 forest 下靠它界定边界),避免 hover 时边框消失露出底色。 */
-  --hover-shadow-card: 0 0 0 1.5px var(--border-active), 0 8px 22px rgba(61, 122, 85, 0.1),
-    0 2px 6px rgba(27, 31, 27, 0.05);
-  --hover-shadow-row: 0 0 0 1.5px var(--border-active), 0 4px 14px rgba(61, 122, 85, 0.08),
-    0 1px 4px rgba(27, 31, 27, 0.04);
+     other theme families. border 由 surface-hero 的 1px border-theme 处理,
+     hover 时保留。 */
+  --hover-shadow-card: 0 8px 22px rgba(61, 122, 85, 0.1), 0 2px 6px rgba(27, 31, 27, 0.05);
+  --hover-shadow-row: 0 4px 14px rgba(61, 122, 85, 0.08), 0 1px 4px rgba(27, 31, 27, 0.04);
   --hover-shadow-btn: 0 4px 12px rgba(61, 122, 85, 0.14), 0 1px 4px rgba(61, 122, 85, 0.08);
   --hover-shadow-pill: 0 3px 9px rgba(61, 122, 85, 0.1);
 
@@ -261,11 +259,9 @@
   --theme-glass-border: rgba(82, 184, 120, 0.16);
   --theme-glass-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.28);
   /* Hover = clean soft lift on near-black canvas: depth shadow + faint green glow.
-     保留 1.5px border-active 边框模拟层,避免 hover 时边框消失。 */
-  --hover-shadow-card: 0 0 0 1.5px var(--border-active), 0 10px 26px rgba(0, 0, 0, 0.44),
-    0 2px 8px rgba(82, 184, 120, 0.12);
-  --hover-shadow-row: 0 0 0 1.5px var(--border-active), 0 5px 16px rgba(0, 0, 0, 0.36),
-    0 1px 4px rgba(82, 184, 120, 0.1);
+     border 由 surface-hero 的 1px border-theme 处理,hover 时保留。 */
+  --hover-shadow-card: 0 10px 26px rgba(0, 0, 0, 0.44), 0 2px 8px rgba(82, 184, 120, 0.12);
+  --hover-shadow-row: 0 5px 16px rgba(0, 0, 0, 0.36), 0 1px 4px rgba(82, 184, 120, 0.1);
   --hover-shadow-btn: 0 4px 12px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(82, 184, 120, 0.18);
   --hover-shadow-pill: 0 3px 9px rgba(0, 0, 0, 0.34);
 
@@ -870,12 +866,11 @@
   [data-theme-family='forest'] .neu-surface-hero,
   [data-theme-family='forest'].dark .surface-hero,
   [data-theme-family='forest'].dark .neu-surface-hero {
-    box-shadow: 0 0 0 1.5px var(--border-active);
-    /* forest 用 shadow ring 单一层做边界,去掉 base 的 1px border
-       避免透明 border 占位 + ring 叠加成 2.5px 多层边框视觉。 */
-    border: none;
+    /* forest 扁平无 neumorphic 阴影,border 是唯一边界,用 border-active
+       (24% 对比度)而非默认的 border-theme(13%)确保清晰可见。
+       保持 border 属性(非 box-shadow),避免圆角处渲染断裂。 */
+    border-color: var(--border-active);
   }
-
   .surface-flat,
   .neu-surface-flat {
     background-color: var(--surface-bg);
