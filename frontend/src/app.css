@@ -1211,12 +1211,13 @@
   .circle-hover,  /* @deprecated alias */
   .neu-circle-hover {
     transition: box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-                transform 0.15s ease;
+                transform 0.15s ease,
+                outline 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .icon-btn-hover:hover,
   .circle-hover:hover,
   .neu-circle-hover:hover {
-    box-shadow: var(--hover-shadow-btn);
+    box-shadow: var(--hover-shadow-btn) !important;
   }
   .icon-btn-hover:active,
   .circle-hover:active,
@@ -1226,7 +1227,7 @@
   .icon-btn-hover:focus-visible,
   .circle-hover:focus-visible,
   .neu-circle-hover:focus-visible {
-    box-shadow: var(--hover-shadow-btn);
+    box-shadow: var(--hover-shadow-btn) !important;
     outline: 2px solid var(--glow);
     outline-offset: 2px;
   }
