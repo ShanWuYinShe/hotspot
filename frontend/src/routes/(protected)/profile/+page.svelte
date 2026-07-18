@@ -10,6 +10,7 @@
   import Camera from 'lucide-svelte/icons/camera';
   import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
   import Spinner from '$lib/components/common/spinner.svelte';
+  import { Textarea } from '$lib/components/ui/textarea';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import Heart from 'lucide-svelte/icons/heart';
   import Share2 from 'lucide-svelte/icons/share-2';
@@ -583,14 +584,14 @@
           <span class="eyebrow">{t('profile.bioFieldLabel')}</span>
         </div>
         <div class="input-surface rounded-[var(--radius-md)] px-4 py-3">
-          <textarea
+          <Textarea
             id="bio"
+            variant="transparent"
+            size="md"
+            class="text-body-lg"
             bind:value={bio}
             placeholder={t('profile.bioFieldPlaceholder')}
-            rows="3"
-            class="text-body-lg w-full bg-transparent outline-none resize-none"
-            style="color: var(--text-primary); line-height: 1.65"
-          ></textarea>
+          />
           <div class="flex justify-end mt-1">
             <span
               class="text-caption"

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { dev } from '$app/environment';
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
@@ -35,7 +36,15 @@
     showMenu?: boolean;
     href?: string;
     class?: string;
-    variant?: 'default' | 'compact' | 'detailed' | 'square' | 'nearby-row';
+    variant?: 'default' | 'compact' | 'detailed' | 'square' | 'nearby-row' | 'member-row';
+    /** member-row 专用:角色 badge 文案(如「群主」「管理员」)。 */
+    roleLabel?: string;
+    /** member-row 专用:副信息行(如「加入时间」)。 */
+    subtitle?: string;
+    /** member-row 专用:禁言标记文案(红色提示)。 */
+    mutedLabel?: string;
+    /** member-row 专用:右侧自定义操作区(如 DropdownMenu)。 */
+    actions?: Snippet;
   }
 
   let {
@@ -47,7 +56,11 @@
     showMenu = true,
     href,
     class: className = '',
-    variant = 'default'
+    variant = 'default',
+    roleLabel,
+    subtitle,
+    mutedLabel,
+    actions
   }: Props = $props();
 
   const userInfo = $derived('user' in user ? user.user : user);
@@ -245,6 +258,40 @@
         {/if}
       </div>
     </div>
+  {:else if variant === 'member-row'}
+    <!-- Member row: 用户列表行(粉丝/关注/群成员统一) -->
+    <div class="flex items-center gap-3 px-4 py-3.5">
+      <Avatar
+        class="flex-shrink-0"
+        src={userInfo.avatar_url}
+        name={userInfo.nickname}
+        alt={userInfo.nickname}
+        size={48}
+        online={showOnlineStatus && isOnline}
+        onlineSize="md"
+      />
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2">
+          <p class="text-body-lg truncate" style="font-weight: 500; color: var(--text-primary)">
+            {userInfo.nickname}
+          </p>
+          {#if roleLabel}
+            <span class="tag-chip tag-chip--sm" style="color: var(--brand);">{roleLabel}</span>
+          {/if}
+          {#if mutedLabel}
+            <span class="text-xs" style="color: var(--theme-error); opacity: 0.8;">{mutedLabel}</span>
+          {/if}
+        </div>
+        {#if subtitle}
+          <p class="text-meta" style="color: var(--text-secondary)">{subtitle}</p>
+        {/if}
+      </div>
+      {#if actions}
+        <div class="flex flex-shrink-0 items-center gap-2" data-card-action>
+          {@render actions()}
+        </div>
+      {/if}
+    </div>
   {:else if variant === 'square'}
     <!-- Square: info-dense card -->
     <div class="p-4">
@@ -417,7 +464,7 @@
   {/if}
 
   <!-- Action buttons -->
-  {#if !isMe && variant !== 'nearby-row'}
+  {#if !isMe && variant !== 'nearby-row' && variant !== 'member-row'}
     <div style="border-top: 1px solid var(--border-theme);" class="px-4 py-2.5">
       <div class="flex items-center justify-between">
         <button

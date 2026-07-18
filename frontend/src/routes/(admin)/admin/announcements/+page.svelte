@@ -17,6 +17,7 @@
   import Megaphone from 'lucide-svelte/icons/megaphone';
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import Spinner from '$lib/components/common/spinner.svelte';
+  import { Textarea } from '$lib/components/ui/textarea';
 
   let deleteConfirmOpen = $state(false);
   let pendingDeleteId = $state<string | null>(null);
@@ -258,14 +259,12 @@
       </div>
       <div class="space-y-2">
         <label for="content" class="text-meta" style="color: var(--text-primary)">内容</label>
-        <textarea
+        <Textarea
           id="content"
+          size="lg"
           placeholder="公告内容"
-          rows="5"
           bind:value={content}
-          class="text-body field-inset w-full rounded-[var(--radius-md)] px-4 py-2.5 outline-none resize-none"
-          style="background: var(--surface-bg); color: var(--text-primary)"
-        ></textarea>
+        />
       </div>
       <div class="space-y-2">
         <span class="text-meta" style="color: var(--text-primary)">级别</span>

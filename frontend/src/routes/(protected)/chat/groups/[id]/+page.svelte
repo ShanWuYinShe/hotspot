@@ -19,13 +19,14 @@
     resolveLatestVisibleMessageId
   } from '$lib/hooks/use-chat-realtime-sync';
   import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
-  import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
+  import { KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
   import { platformStore } from '$lib/stores/platform.svelte';
   import type { GroupItem, GroupMessageItem } from '$lib/types/api';
   import BackButton from '$lib/components/common/back-button.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
   import Send from 'lucide-svelte/icons/send';
   import Spinner from '$lib/components/common/spinner.svelte';
+  import { Textarea } from '$lib/components/ui/textarea';
   import MoreVertical from 'lucide-svelte/icons/more-vertical';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
   import MapPin from 'lucide-svelte/icons/map-pin';
@@ -898,15 +899,13 @@
       </div>
     {:else}
       <div class="flex items-end gap-2">
-        <textarea
-          {@attach autofocus(shouldFocusInput)}
-          {@attach useKeyboardFocus()}
+        <Textarea
+          size="sm"
+          class="max-h-32 text-[15px]"
+          autofocusTrigger={shouldFocusInput}
           placeholder={t('chat.sendPlaceholder')}
           bind:value={messageText}
-          rows={1}
           maxlength={MESSAGE_CONTENT_MAX}
-          class="field-inset max-h-32 min-h-[42px] flex w-full resize-none rounded-[var(--radius-md)] px-4 py-2.5 text-[15px] outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-          style="background: var(--surface-bg); color: var(--text-primary);"
           disabled={isSending}
           oninput={() => {
             eventHandlers.sendGroupTyping(groupId, messageText.trim().length > 0);
@@ -917,7 +916,7 @@
               sendMessage();
             }
           }}
-        ></textarea>
+        />
         <button
           class="flex shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.9]"
           style="width: 36px; height: 36px; {messageText.trim()

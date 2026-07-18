@@ -19,6 +19,7 @@
   import { untrack } from 'svelte';
   import ImagePlus from 'lucide-svelte/icons/image-plus';
   import Spinner from '$lib/components/common/spinner.svelte';
+  import { Textarea } from '$lib/components/ui/textarea';
   import Send from 'lucide-svelte/icons/send';
   import X from 'lucide-svelte/icons/x';
   import MapPin from 'lucide-svelte/icons/map-pin';
@@ -356,14 +357,15 @@
 
       <!-- Textarea -->
       <div class="compose__textarea-wrap input-surface" class:compose__textarea-wrap--error={descriptionError}>
-        <textarea
+        <Textarea
           id="moment-description"
           name="moment-description"
+          variant="transparent"
+          size="lg"
           placeholder={t('createMoment.placeholder')}
-          class="compose__textarea"
           bind:value={description}
           onblur={() => markTouched('description')}
-        ></textarea>
+        />
         <div class="compose__textarea-footer">
           {#if descriptionError}
             <span class="compose__error">{descriptionError}</span>
@@ -618,20 +620,6 @@
   .compose .compose__textarea-wrap--error {
     border-color: var(--error);
   }
-  .compose .compose__textarea {
-    flex: 1;
-    width: 100%;
-    min-height: 80px;
-    resize: none;
-    border: none;
-    outline: none;
-    background: transparent;
-    color: var(--text-primary);
-    font-size: 13px;
-    line-height: 1.6;
-    font-family: inherit;
-  }
-  .compose .compose__textarea::placeholder { color: var(--text-secondary); }
   .compose .compose__textarea-footer {
     display: flex;
     justify-content: flex-end;
