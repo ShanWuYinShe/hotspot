@@ -638,27 +638,11 @@
             {/if}
             <div class="flex items-center justify-between px-4 py-3.5">
               <span class="text-body-lg" style="color: var(--text-primary)">{item.label}</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={notifications[item.key]}
+              <Switch
+                checked={notifications[item.key]}
+                onchange={(val) => (notifications[item.key] = val)}
                 aria-label={item.label}
-                class="relative flex-shrink-0"
-                style="width: 50px; height: 28px; border-radius: 14px; border: none; cursor: pointer; transition: background 0.25s ease; background: {notifications[
-                  item.key
-                ]
-                  ? 'var(--brand)'
-                  : 'rgba(120,120,128,0.22)'};"
-                onclick={() => (notifications[item.key] = !notifications[item.key])}
-              >
-                <span
-                  style="position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 11px; background: var(--surface-bg); box-shadow: var(--theme-switch-shadow); transition: transform 0.25s ease; left: {notifications[
-                    item.key
-                  ]
-                    ? '25px'
-                    : '3px'};"
-                ></span>
-              </button>
+              />
             </div>
           {/each}
         </div>

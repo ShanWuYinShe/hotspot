@@ -7,6 +7,7 @@
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
   import { authStore } from '$lib/stores/auth.svelte';
   import * as Dialog from '$lib/components/ui/dialog';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import type { SearchSuggestItem, TagItem } from '$lib/types/api';
   import Search from 'lucide-svelte/icons/search';
   import Hash from 'lucide-svelte/icons/hash';
@@ -452,29 +453,12 @@
                           <Hash size={14} strokeWidth={1.5} color="var(--brand)" />
                         </div>
                       {:else}
-                        <div
-                          class="flex-shrink-0 overflow-hidden rounded-full"
-                          style="width: 34px; height: 34px; border: 1.5px solid var(--border-theme);"
-                        >
-                          {#if p.avatarUrl}
-                            <img
-                              src={p.avatarUrl}
-                              alt={p.avatarFallback ?? ''}
-                              class="h-full w-full object-cover"
-                            />
-                          {:else}
-                            <div
-                              class="flex h-full w-full items-center justify-center"
-                              style="background: var(--surface-secondary);"
-                            >
-                              <span
-                                class="text-meta"
-                                style="font-weight: 600; color: var(--text-tertiary)"
-                                >{p.avatarFallback ?? '?'}</span
-                              >
-                            </div>
-                          {/if}
-                        </div>
+                        <Avatar
+                          class="flex-shrink-0"
+                          src={p.avatarUrl}
+                          name={p.avatarFallback ?? ''}
+                          size={32}
+                        />
                       {/if}
                       <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2">

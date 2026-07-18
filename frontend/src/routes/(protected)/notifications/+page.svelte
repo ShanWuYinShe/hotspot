@@ -18,6 +18,7 @@
   import BackButton from '$lib/components/common/back-button.svelte';
   import Bell from 'lucide-svelte/icons/bell';
   import Calendar from 'lucide-svelte/icons/calendar';
+  import Avatar from '$lib/components/common/avatar.svelte';
   import CheckCheck from 'lucide-svelte/icons/check-check';
   import Heart from 'lucide-svelte/icons/heart';
   import Spinner from '$lib/components/common/spinner.svelte';
@@ -489,23 +490,8 @@
                 border: 1px solid {typeBorder};"
                 >
                   <!-- Avatar with type badge -->
-                  <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
-                    {#if avatarUrl}
-                      <img
-                        src={avatarUrl}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                        style="width: 44px; height: 44px; border-radius: var(--radius-pill); object-fit: cover; border: 1px solid var(--border-theme);"
-                      />
-                    {:else}
-                      <div
-                        class="input-surface flex items-center justify-center"
-                        style="width: 44px; height: 44px; border-radius: var(--radius-pill);"
-                      >
-                        <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
-                      </div>
-                    {/if}
+                  <div class="relative flex-shrink-0">
+                    <Avatar src={avatarUrl} name={getNotificationTitle(item, locale)} alt="" size={40} />
                     <div
                       class="absolute flex items-center justify-center"
                       style="width: 18px; height: 18px; border-radius: var(--radius-pill); background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"
@@ -607,23 +593,8 @@
                 class="row-hover flex items-start gap-3.5 rounded-[var(--radius-md)] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
                 style="background: {typeSoft}; border: 1px solid {typeBorder};"
               >
-                <div class="relative flex-shrink-0" style="width: 44px; height: 44px;">
-                  {#if avatarUrl}
-                    <img
-                      src={avatarUrl}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      style="width: 44px; height: 44px; border-radius: var(--radius-pill); object-fit: cover; border: 1px solid var(--border-theme);"
-                    />
-                  {:else}
-                    <div
-                      class="flex items-center justify-center"
-                      style="width: 44px; height: 44px; border-radius: var(--radius-pill); background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
-                    >
-                      <Bell size={16} strokeWidth={1.5} color="var(--text-secondary)" />
-                    </div>
-                  {/if}
+                <div class="relative flex-shrink-0">
+                  <Avatar src={avatarUrl} name={getNotificationTitle(item, locale)} alt="" size={40} />
                   <div
                     class="absolute flex items-center justify-center"
                     style="width: 18px; height: 18px; border-radius: var(--radius-pill); background: {typeColor}; border: 2px solid var(--surface-bg); bottom: -2px; right: -2px;"

@@ -65,14 +65,14 @@
           onlineSize="sm"
         />
         <div class="min-w-0 flex-1">
-          <p class="text-body" style="color: var(--text-primary)">{user.nickname}</p>
+          <p class="text-body-lg truncate" style="color: var(--text-primary)">{user.nickname}</p>
           <div class="flex items-center gap-1.5" style="margin-top: 2px;">
             {#if user.tag}
               <span class="text-xs" style="color: var(--brand)">#{user.tag}</span>
               <span class="text-xs" style="color: var(--text-secondary); opacity: 0.5">·</span>
             {/if}
             {#if user.distance}
-              <span class="text-xs" style="color: var(--text-secondary)">{user.distance}</span>
+              <span class="text-xs" style="color: var(--brand)">{user.distance}</span>
             {/if}
           </div>
         </div>
