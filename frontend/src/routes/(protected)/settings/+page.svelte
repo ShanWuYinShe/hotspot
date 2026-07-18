@@ -28,7 +28,7 @@
   const PREVIEW_ACCENT: Record<ThemeFamily, string> = {
     indigo: '#6366f1',
     forest: '#3D7A55',
-    sand: '#D4845A'
+    sand: '#b86f4b'
   };
 
   const THEME_NAMES = $derived<Record<ThemeFamily, string>>({
@@ -295,7 +295,7 @@
                   style="background: var(--surface-bg); {isSelected
                     ? 'box-shadow: 0 0 0 2.5px ' +
                       accent +
-                      ', 5px 5px 12px rgba(0,0,0,0.10); border: 1.5px solid ' +
+                      ', 5px 5px 12px rgba(0,0,0,0.06); border: 1.5px solid ' +
                       accent +
                       ';'
                     : ''}"
@@ -511,7 +511,7 @@
               style="background: var(--surface-bg); {isSelected
                 ? 'box-shadow: 0 0 0 2.5px ' +
                   accent +
-                  ', 5px 5px 12px rgba(0,0,0,0.10); border: 1.5px solid ' +
+                  ', 5px 5px 12px rgba(0,0,0,0.06); border: 1.5px solid ' +
                   accent +
                   ';'
                 : ''}"
