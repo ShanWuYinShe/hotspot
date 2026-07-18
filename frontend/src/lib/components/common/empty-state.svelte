@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ComponentType, Snippet } from 'svelte';
+  import { Button } from '$lib/components/ui/button';
 
   interface Props {
     icon: ComponentType;
@@ -63,13 +64,9 @@
       </p>
     {/if}
     {#if actionText && onAction}
-      <button
-        class="text-body mt-6 rounded-full px-6 py-2.5 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="font-weight: 500; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
-        onclick={onAction}
-      >
+      <Button variant="default" size="lg" class="mt-6" onclick={onAction}>
         {actionText}
-      </button>
+      </Button>
     {/if}
     {@render children?.()}
   </div>
