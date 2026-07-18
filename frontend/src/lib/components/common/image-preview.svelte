@@ -97,7 +97,7 @@
     <!-- 关闭按钮 -->
     <button
       type="button"
-      class="absolute right-4 top-4 flex items-center justify-center rounded-full outline-none transition-transform duration-150 hover:scale-110 active:scale-95"
+      class="absolute right-4 top-4 flex items-center justify-center rounded-full outline-none icon-btn-hover"
       style="width: 40px; height: 40px; background: var(--theme-surface-glass); color: var(--text-on-overlay); backdrop-filter: blur(8px);"
       onclick={(e) => {
         e.stopPropagation();
@@ -112,7 +112,7 @@
     {#if showNav}
       <button
         type="button"
-        class="absolute left-4 flex items-center justify-center rounded-full outline-none transition-transform duration-150 hover:scale-110 active:scale-95"
+        class="absolute left-4 flex items-center justify-center rounded-full outline-none icon-btn-hover"
         style="width: 40px; height: 40px; background: var(--theme-surface-glass); color: var(--text-on-overlay); backdrop-filter: blur(8px);"
         onclick={prev}
         aria-label="上一张"
@@ -121,7 +121,7 @@
       </button>
       <button
         type="button"
-        class="absolute right-4 flex items-center justify-center rounded-full outline-none transition-transform duration-150 hover:scale-110 active:scale-95"
+        class="absolute right-4 flex items-center justify-center rounded-full outline-none icon-btn-hover"
         style="width: 40px; height: 40px; background: var(--theme-surface-glass); color: var(--text-on-overlay); backdrop-filter: blur(8px);"
         onclick={next}
         aria-label="下一张"
