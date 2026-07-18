@@ -357,7 +357,7 @@
       {#each quickLinks as link (link.href)}
         <a
           href={link.href}
-          class="flex items-center gap-3 px-4 py-3 row-hover"
+          class="list-row flex items-center gap-3 px-4 py-3"
           style="border-bottom: 1px solid var(--border-theme);"
         >
           <link.icon size={16} strokeWidth={1.5} color="var(--text-secondary)" />

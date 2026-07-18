@@ -41,7 +41,7 @@
     {#each users as user (user.id)}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
-        class="surface-row flex items-center gap-3 px-4 py-3 text-left cursor-pointer border-b border-[var(--border-theme)] last:border-b-0"
+        class="list-row flex items-center gap-3 px-4 py-3 text-left cursor-pointer border-b border-[var(--border-theme)] last:border-b-0"
         role="button"
         tabindex="0"
         onclick={() => void goto(`/users/${user.id}`)}

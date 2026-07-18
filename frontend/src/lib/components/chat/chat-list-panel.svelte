@@ -222,7 +222,7 @@
         {@const selected = isPrivateChatSelected(chat.other_user.user_id)}
         <a
           href="/chat/users/{chat.other_user.user_id}"
-          class="flex items-center gap-3.5 cursor-pointer transition-all row-hover"
+          class="list-row flex items-center gap-3.5 cursor-pointer"
           style="padding: 10px 16px; border-radius: var(--radius-md); background: {selected
             ? 'var(--brand)'
             : 'transparent'}; box-shadow: {selected
@@ -309,7 +309,7 @@
       {@const selected = isGroupSelected(group.group.group_id)}
       <a
         href="/chat/groups/{group.group.group_id}"
-        class="flex items-center gap-3.5 cursor-pointer transition-all row-hover"
+        class="list-row flex items-center gap-3.5 cursor-pointer"
         style="padding: 10px 16px; border-radius: var(--radius-md); background: {selected
           ? 'var(--brand)'
           : 'transparent'}; box-shadow: {selected

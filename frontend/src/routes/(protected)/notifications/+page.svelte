@@ -475,7 +475,7 @@
                 {@const avatarUrl = getActorAvatar(item)}
                 {@const thumbnailUrl = getPostThumbnail(item)}
                 <div
-                  class="row-hover flex items-start gap-3.5 rounded-[var(--radius-md)] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
+                  class="list-row flex items-start gap-3.5 rounded-[var(--radius-md)] px-3 py-3.5"
                   style="background: {typeSoft};
                 border: 1px solid {typeBorder};"
                 >
@@ -580,7 +580,7 @@
               {@const avatarUrl = getActorAvatar(item)}
               {@const thumbnailUrl = getPostThumbnail(item)}
               <div
-                class="row-hover flex items-start gap-3.5 rounded-[var(--radius-md)] px-3 py-3.5 transition-transform duration-150 active:scale-[0.98]"
+                class="list-row flex items-start gap-3.5 rounded-[var(--radius-md)] px-3 py-3.5"
                 style="background: {typeSoft}; border: 1px solid {typeBorder};"
               >
                 <div class="relative flex-shrink-0">

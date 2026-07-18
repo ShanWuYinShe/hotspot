@@ -54,7 +54,7 @@
     {#each activities as a (a.id)}
       {@const Icon = ICON_MAP[a.icon] ?? Coffee}
       <button
-        class="surface-row flex items-center gap-3 px-4 py-3 text-left w-full border-b border-[var(--border-theme)] last:border-b-0"
+        class="list-row flex items-center gap-3 px-4 py-3 text-left w-full border-b border-[var(--border-theme)] last:border-b-0"
         onclick={() => handleSelect(a.id)}
       >
         <div

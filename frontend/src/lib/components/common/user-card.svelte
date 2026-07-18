@@ -209,7 +209,7 @@
   class:card-hover={variant !== 'nearby-row' && variant !== 'member-row'}
   class:hover:scale-[1.02]={variant !== 'nearby-row' && variant !== 'member-row'}
   class:active:scale-[0.98]={variant !== 'nearby-row' && variant !== 'member-row'}
-  class:surface-row={variant === 'nearby-row' || variant === 'member-row'}
+  class:list-row={variant === 'nearby-row' || variant === 'member-row'}
   tabindex={0}
   role="link"
   onclick={handleCardClick}
