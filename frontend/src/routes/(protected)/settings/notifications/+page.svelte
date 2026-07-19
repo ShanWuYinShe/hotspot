@@ -154,12 +154,12 @@
     <!-- Notification Status Card -->
     <div
       class="rounded-[var(--radius-lg)] p-5"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
     >
       <div class="mb-4 flex items-center gap-2">
         <div
           class="flex items-center justify-center rounded-full"
-          style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+          style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
         >
           <Bell size={15} strokeWidth={1.5} color="var(--brand)" />
         </div>
@@ -202,7 +202,7 @@
         </button>
         <button
           class="flex h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-primary);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary);"
           onclick={markAllRead}
           disabled={isMarkingAllRead || notificationStore.unreadCount === 0}
         >
@@ -219,7 +219,7 @@
     <!-- Preference Explanation Card -->
     <div
       class="rounded-[var(--radius-lg)] p-5"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
     >
       <div class="mb-3">
         <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">{t('settings.preferenceExplanation')}</p>
@@ -240,7 +240,7 @@
     <!-- Notification Preferences Card -->
     <div
       class="rounded-[var(--radius-lg)] p-5"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
     >
       <div class="mb-4">
         <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">

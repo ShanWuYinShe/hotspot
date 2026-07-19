@@ -91,7 +91,7 @@
     {#if isLoading}
       <div
         class="rounded-[var(--radius-lg)] p-5"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <div class="space-y-4">
           {#each Array(5) as _, i (i)}
@@ -106,7 +106,7 @@
       <!-- Basic Visibility Card -->
       <div
         class="rounded-[var(--radius-lg)] p-5"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <p
           class="text-xs"
@@ -186,7 +186,7 @@
       <!-- Social & Chat Card -->
       <div
         class="rounded-[var(--radius-lg)] p-5"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <p
           class="text-xs"
@@ -239,7 +239,7 @@
       <!-- Search & Discovery Card -->
       <div
         class="rounded-[var(--radius-lg)] p-5"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <p
           class="text-xs"

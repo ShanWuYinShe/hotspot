@@ -97,7 +97,7 @@
       {#snippet actions()}
         <button
           class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-primary);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary);"
           onclick={() => loadShares(true)}
           disabled={pagination.loading}
         >
@@ -148,7 +148,7 @@
         {#each pagination.items as item (item.share_id)}
           <div
             class="rounded-[var(--radius-lg)] p-4 sm:p-5"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div class="min-w-0 flex-1 space-y-2">
@@ -190,7 +190,7 @@
                 <a href={getShareHref(item)} target="_blank" rel="noreferrer">
                   <button
                     class="flex items-center rounded-[var(--radius-md)] px-4 py-2 text-sm transition-opacity hover:opacity-80"
-                    style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
+                    style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary);"
                   >
                     <ExternalLink size={14} class="mr-2" />
                     {t('settings.viewShare')}
@@ -198,7 +198,7 @@
                 </a>
                 <button
                   class="flex items-center rounded-[var(--radius-md)] px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-                  style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--theme-error-border); color: var(--theme-error);"
+                  style="background: var(--surface-bg); border: 1px solid var(--theme-error-border); color: var(--theme-error);"
                   onclick={() => revokeShare(item)}
                   disabled={item.is_revoked || revokingShareId === item.share_id}
                 >

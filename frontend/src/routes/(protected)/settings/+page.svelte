@@ -173,7 +173,7 @@
       {#if authStore.currentAccount}
         <div
           class="flex items-center gap-3 rounded-[var(--radius-md)] px-3.5 py-3"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); margin-bottom: 16px;"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme); margin-bottom: 16px;"
         >
           <div
             class="flex-shrink-0 overflow-hidden rounded-full"
@@ -299,7 +299,7 @@
                   onclick={() => setThemeFamily(option.family)}
                 >
                   <div
-                    style="width: 60px; height: 80px; border-radius: var(--radius-sm); background: var(--surface-bg); border: 1px solid {accent}22; box-shadow: var(--shadow-md); position: relative; overflow: hidden;"
+                    style="width: 60px; height: 80px; border-radius: var(--radius-sm); background: var(--surface-bg); border: 1px solid {accent}22; position: relative; overflow: hidden;"
                   >
                     <div
                       style="position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; height: 20px; background: var(--surface-bg); border-top: 1px solid {accent}30;"
@@ -361,12 +361,12 @@
             </p>
             <div
               class="flex items-center justify-between rounded-[var(--radius-md)] px-4 py-3.5"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div class="flex items-center gap-3">
                 <div
                   class="flex flex-shrink-0 items-center justify-center rounded-full"
-                  style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+                  style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
                 >
                   <Moon size={15} strokeWidth={1.5} color="var(--brand)" />
                 </div>
@@ -393,7 +393,7 @@
           </div>
           <div
             class="overflow-hidden rounded-[var(--radius-md)]"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             {#each notificationItems as item, i (item.key)}
               {#if i > 0}
@@ -422,7 +422,7 @@
             </div>
             <div
               class="overflow-hidden rounded-[var(--radius-md)]"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               {#each section.items as item, i (item.href)}
                 {#if i > 0}
@@ -431,7 +431,7 @@
                 <a href={item.href} class="flex items-center gap-3 px-4 py-3.5 transition-colors">
                   <div
                     class="flex flex-shrink-0 items-center justify-center rounded-full"
-                    style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+                    style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
                   >
                     <item.icon size={15} strokeWidth={1.5} color="var(--text-secondary)" />
                   </div>
@@ -469,7 +469,7 @@
           <div class="surface-flat flex items-center gap-3 rounded-[var(--radius-lg)] px-4 py-3.5">
             <div
               class="flex-shrink-0 overflow-hidden rounded-full"
-              style="width: 50px; height: 50px; padding: 2px; border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+              style="width: 50px; height: 50px; padding: 2px; border: 1px solid var(--border-theme);"
             >
               <Avatar
                 src={authStore.currentAccount.avatar_url}
@@ -516,7 +516,7 @@
             >
               <!-- Mini phone frame preview -->
               <div
-                style="width: 60px; height: 80px; border-radius: var(--radius-sm); background: var(--surface-bg); border: 1px solid {accent}22; box-shadow: var(--shadow-md); position: relative; overflow: hidden;"
+                style="width: 60px; height: 80px; border-radius: var(--radius-sm); background: var(--surface-bg); border: 1px solid {accent}22; position: relative; overflow: hidden;"
               >
                 <div
                   style="position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; height: 20px; background: var(--surface-bg); border-top: 1px solid {accent}30;"
@@ -575,7 +575,7 @@
             <div class="flex items-center gap-3">
               <div
                 class="flex flex-shrink-0 items-center justify-center rounded-full"
-                style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+                style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
               >
                 <Palette size={15} strokeWidth={1.5} color="var(--brand)" />
               </div>
@@ -605,7 +605,7 @@
               <a href={item.href} class="flex items-center gap-3 px-4 py-3.5 transition-colors">
                 <div
                   class="flex flex-shrink-0 items-center justify-center rounded-full"
-                  style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+                  style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
                 >
                   <item.icon size={15} strokeWidth={1.5} color="var(--text-secondary)" />
                 </div>
@@ -652,7 +652,7 @@
           >
             <div
               class="flex flex-shrink-0 items-center justify-center rounded-full"
-              style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+              style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
             >
               <LogOut size={15} strokeWidth={1.5} color="var(--brand)" />
             </div>

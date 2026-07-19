@@ -75,7 +75,7 @@
       {#snippet actions()}
         <button
           class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-primary);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary);"
           onclick={() => loadReports(true)}
           disabled={pagination.loading}
         >
@@ -88,7 +88,7 @@
     <!-- Filter Card -->
     <div
       class="rounded-[var(--radius-lg)] p-4"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
     >
       <div class="mb-3">
         <p class="text-body" style="font-weight: 500; color: var(--text-primary)">{t('settings.filterConditions')}</p>
@@ -153,7 +153,7 @@
         {#each pagination.items as item (item.report_id)}
           <div
             class="rounded-[var(--radius-lg)] p-4 sm:p-5"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div class="min-w-0 flex-1 space-y-2">

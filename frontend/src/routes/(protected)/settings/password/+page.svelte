@@ -102,7 +102,7 @@
 
     <div
       class="rounded-[var(--radius-lg)] p-5"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
     >
       <p
         class="text-body-lg"

@@ -93,7 +93,7 @@
         <div class="flex flex-wrap items-center gap-2">
           <button
             class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-primary);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary);"
             onclick={loadSessions}
             disabled={isLoading}
           >
@@ -102,7 +102,7 @@
           </button>
           <button
             class="flex items-center rounded-full px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--theme-error-border); color: var(--theme-error);"
+            style="background: var(--surface-bg); border: 1px solid var(--theme-error-border); color: var(--theme-error);"
             onclick={revokeOthers}
             disabled={isLoading || isRevokingOthers}
           >
@@ -120,7 +120,7 @@
         {#each Array(4) as _, i (i)}
           <div
             class="flex items-center gap-4 rounded-[var(--radius-lg)] p-4"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div
               class="h-12 w-12 rounded-[var(--radius-sm)]"
@@ -146,12 +146,12 @@
         {#each sessions as session (session.session_id)}
           <div
             class="flex flex-col gap-3 rounded-[var(--radius-lg)] p-4 sm:flex-row sm:items-center sm:justify-between"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div class="flex items-center gap-3 min-w-0">
               <div
                 class="flex flex-shrink-0 items-center justify-center rounded-full"
-                style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+                style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
               >
                 <Smartphone size={15} strokeWidth={1.5} color="var(--brand)" />
               </div>
@@ -178,7 +178,7 @@
             <div>
               <button
                 class="flex items-center rounded-[var(--radius-md)] px-4 py-2 text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid {session.is_current
+                style="background: var(--surface-bg); border: 1px solid {session.is_current
                   ? 'var(--border-theme)'
                   : 'var(--theme-error-border)'}; color: {session.is_current
                   ? 'var(--text-secondary)'
