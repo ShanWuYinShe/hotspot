@@ -525,7 +525,6 @@
     background: var(--surface-bg);
     border: 1px solid var(--border-theme);
     border-radius: var(--radius-lg);
-   
     color: var(--text-primary);
     gap: 0;
     padding: 0;
