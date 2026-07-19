@@ -16,6 +16,7 @@
   import UserPlus from 'lucide-svelte/icons/user-plus';
   import UserCheck from 'lucide-svelte/icons/user-check';
   import Spinner from '$lib/components/common/spinner.svelte';
+  import EmptyState from '$lib/components/common/empty-state.svelte';
   import FollowButton from '$lib/components/common/follow-button.svelte';
   import Share2 from 'lucide-svelte/icons/share-2';
   import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
@@ -398,10 +399,11 @@
             {/each}
           </div>
         {:else if momentsPagination.items.length === 0}
-          <div class="flex flex-col items-center justify-center py-12">
-            <Image size={40} color="var(--text-secondary)" />
-            <p style="margin-top: 16px; color: var(--text-secondary);">{t('userProfile.noMoments')}</p>
-          </div>
+          <EmptyState
+            icon={Image}
+            title={t('userProfile.noMoments')}
+            variant="inline"
+          />
         {:else}
           <!-- 3-column gallery grid from moments' images -->
           <div
@@ -458,10 +460,11 @@
             {/each}
           </div>
         {:else if followersPagination.items.length === 0}
-          <div class="flex flex-col items-center justify-center py-12">
-            <UserCheck size={40} color="var(--text-secondary)" />
-            <p style="margin-top: 16px; color: var(--text-secondary);">{t('userProfile.noFollowers')}</p>
-          </div>
+          <EmptyState
+            icon={UserCheck}
+            title={t('userProfile.noFollowers')}
+            variant="inline"
+          />
         {:else}
           <div class="grid gap-3 p-4 sm:grid-cols-2">
             {#each followersPagination.items as follower (follower.user.user_id)}
@@ -503,10 +506,11 @@
             {/each}
           </div>
         {:else if followingPagination.items.length === 0}
-          <div class="flex flex-col items-center justify-center py-12">
-            <UserPlus size={40} color="var(--text-secondary)" />
-            <p style="margin-top: 16px; color: var(--text-secondary);">{t('userProfile.noFollowing')}</p>
-          </div>
+          <EmptyState
+            icon={UserPlus}
+            title={t('userProfile.noFollowing')}
+            variant="inline"
+          />
         {:else}
           <div class="grid gap-3 p-4 sm:grid-cols-2">
             {#each followingPagination.items as follow (follow.user.user_id)}

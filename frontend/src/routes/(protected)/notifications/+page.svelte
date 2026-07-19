@@ -681,7 +681,7 @@
   {#if platformStore.useMasterDetail}
     <aside
       class="flex-shrink-0 overflow-y-auto no-scrollbar"
-      style="width: 300px; border-left: 1px solid var(--border-theme); padding: 20px 16px;"
+      style="width: 220px; border-left: 1px solid var(--border-theme); padding: 20px 16px;"
     >
       {@render overviewSidebar()}
     </aside>
