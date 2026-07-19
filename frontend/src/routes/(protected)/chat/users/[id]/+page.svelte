@@ -400,10 +400,10 @@
     {#if isLoading}
       <div
         class="rounded-full"
-        style="width: 40px; height: 40px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+        style="width: 40px; height: 40px; background: var(--surface-bg);"
       ></div>
       <div
-        style="width: 96px; height: 20px; border-radius: var(--radius-xs); background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+        style="width: 96px; height: 20px; border-radius: var(--radius-xs); background: var(--surface-bg);"
       ></div>
     {:else if otherUser}
       <div class="flex items-center gap-3">
@@ -480,12 +480,12 @@
               {#if i % 2 === 0}
                 <div
                   class="shrink-0 rounded-full"
-                  style="width: 32px; height: 32px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+                  style="width: 32px; height: 32px; background: var(--surface-bg);"
                 ></div>
               {/if}
               <div
                 class="rounded-[var(--radius-md)]"
-                style="width: 192px; height: 64px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+                style="width: 192px; height: 64px; background: var(--surface-bg);"
               ></div>
             </div>
           </div>

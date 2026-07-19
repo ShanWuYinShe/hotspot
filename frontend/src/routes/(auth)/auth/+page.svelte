@@ -33,12 +33,12 @@
 <div class="flex min-h-screen items-center justify-center page-pad">
   <div
     class="page-shell page-shell--form w-full rounded-[var(--radius-lg)] p-6"
-    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+    style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
   >
     <div class="mb-6 text-center">
       <div
         class="mx-auto mb-4 flex items-center justify-center rounded-full"
-        style="width: 48px; height: 48px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+        style="width: 48px; height: 48px; border: 1px solid var(--border-theme);"
       >
         <Shield size={19} color="var(--brand)" />
       </div>

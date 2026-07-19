@@ -201,7 +201,7 @@
         <div class="relative flex-shrink-0">
           <div
             class="overflow-hidden rounded-[var(--radius-lg)]"
-            style="width: 72px; height: 72px; border: 3px solid var(--surface-bg); box-shadow: var(--shadow-lg);"
+            style="width: 72px; height: 72px; border: 3px solid var(--surface-bg);"
           >
             {#if avatarUrl}
               <img src={avatarUrl} alt="avatar" class="w-full h-full object-cover" />

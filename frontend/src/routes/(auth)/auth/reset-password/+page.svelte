@@ -128,12 +128,12 @@
 <div class="flex min-h-screen items-center justify-center page-pad">
   <div
     class="page-shell page-shell--form w-full rounded-[var(--radius-lg)] p-6"
-    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+    style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
   >
     <div class="mb-6 text-center">
       <div
         class="mx-auto mb-4 flex items-center justify-center rounded-full"
-        style="width: 48px; height: 48px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+        style="width: 48px; height: 48px; border: 1px solid var(--border-theme);"
       >
         {#if step === 'done'}
           <Check size={19} color="var(--brand)" />
@@ -273,7 +273,7 @@
         </button>
         <button
           class="text-body-lg rounded-full px-5 py-2.5 outline-none w-full transition-[transform,box-shadow] duration-150 active:scale-[0.98] focus-visible:ring-[2px] focus-visible:ring-[var(--glow)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-bg)]"
-          style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+          style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid var(--border-theme);"
           onclick={() => goto('/auth')}
         >
           返回登录

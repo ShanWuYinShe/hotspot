@@ -387,7 +387,7 @@
         <div class="flex flex-col items-center justify-center py-12">
           <div
             class="flex items-center justify-center rounded-full"
-            style="width: 56px; height: 56px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+            style="width: 56px; height: 56px; border: 1px solid var(--border-theme);"
           >
             <Grid3X3
               size={22}
@@ -520,7 +520,7 @@
         <div class="relative flex-shrink-0">
           <div
             class="overflow-hidden rounded-[var(--radius-lg)]"
-            style="width: 72px; height: 72px; border: 3px solid var(--surface-bg); box-shadow: var(--shadow-lg);"
+            style="width: 72px; height: 72px; border: 3px solid var(--surface-bg);"
           >
             <Avatar
               src={p.avatar_url}

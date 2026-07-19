@@ -625,10 +625,10 @@
     {#if isLoading}
       <div
         class="rounded-full"
-        style="width: 40px; height: 40px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+        style="width: 40px; height: 40px; background: var(--surface-bg);"
       ></div>
       <div
-        style="width: 128px; height: 20px; border-radius: var(--radius-xs); background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+        style="width: 128px; height: 20px; border-radius: var(--radius-xs); background: var(--surface-bg);"
       ></div>
     {:else if group}
       <a
@@ -675,15 +675,15 @@
           <div class="flex gap-3">
             <div
               class="shrink-0 rounded-full"
-              style="width: 40px; height: 40px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+              style="width: 40px; height: 40px; background: var(--surface-bg);"
             ></div>
             <div class="flex-1 space-y-2">
               <div
-                style="width: 96px; height: 12px; border-radius: var(--radius-xs); background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+                style="width: 96px; height: 12px; border-radius: var(--radius-xs); background: var(--surface-bg);"
               ></div>
               <div
                 class="max-w-xs rounded-[var(--radius-md)]"
-                style="width: 100%; height: 64px; background: var(--surface-bg); box-shadow: var(--shadow-inset);"
+                style="width: 100%; height: 64px; background: var(--surface-bg);"
               ></div>
             </div>
           </div>
@@ -694,7 +694,7 @@
         <div class="flex justify-center py-3">
           <button
             class="rounded-full px-4 py-1.5 text-xs outline-none"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);"
             onclick={() => loadMessages(true)}
           >
             {t('chat.loadMoreMessages')}
@@ -713,7 +713,7 @@
           <div class="text-center">
             <div
               class="mb-4 inline-flex items-center justify-center rounded-full"
-              style="width: 64px; height: 64px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+              style="width: 64px; height: 64px; border: 1px solid var(--border-theme);"
             >
               <MessageCircle size={28} color="var(--text-secondary)" strokeWidth={1.5} />
             </div>

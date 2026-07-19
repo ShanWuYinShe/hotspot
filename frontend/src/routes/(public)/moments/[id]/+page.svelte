@@ -385,7 +385,7 @@
     {#if isLoading}
       <div
         class="rounded-[var(--radius-lg)] p-6 space-y-4"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <div class="flex items-center gap-3">
           <div
@@ -415,7 +415,7 @@
     {:else if moment}
       <div
         class="rounded-[var(--radius-lg)] p-6"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <!-- Author -->
         <a href="/users/{moment.user.user_id}" class="flex items-center gap-3">
@@ -490,7 +490,7 @@
               {#each moment.tags.slice(1) as tag (tag)}
                 <span
                   class="text-caption rounded-full px-2.5 py-1"
-                  style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
+                  style="color: var(--brand); background: var(--surface-bg); border: 1px solid var(--border-theme)"
                 >
                   #{tag}
                 </span>
@@ -545,7 +545,7 @@
       <!-- Comments section（输入框 + 列表合并为单个卡片） -->
       <div
         class="rounded-[var(--radius-lg)] p-6"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <!-- Comment input -->
         {#if authStore.isAuthenticated}
@@ -646,7 +646,7 @@
             <p class="text-body-lg" style="color: var(--text-secondary)">{t('momentDetail.commentsLoadFailed')}</p>
             <button
               class="rounded-full px-4 py-2 font-medium outline-none"
-              style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+              style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
               onclick={() => {
                 const v = ++loadVersion;
                 isLoadingComments = true;
@@ -824,12 +824,12 @@
     {:else}
       <div
         class="rounded-[var(--radius-lg)] py-12 text-center"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <p style="color: var(--text-secondary);">{t('momentDetail.notExist')}</p>
         <button
           class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none"
-          style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+          style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
           onclick={() => goto('/')}
         >
           {t('common.backHome')}

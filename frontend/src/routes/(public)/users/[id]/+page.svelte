@@ -263,7 +263,7 @@
           <div class="relative">
             <div
               class="overflow-hidden rounded-[var(--radius-lg)]"
-              style="width: 76px; height: 76px; border: 3px solid var(--surface-bg); box-shadow: var(--shadow-lg);"
+              style="width: 76px; height: 76px; border: 3px solid var(--surface-bg);"
             >
               <Avatar
                 src={user.user.avatar_url}

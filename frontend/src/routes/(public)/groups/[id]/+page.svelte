@@ -1699,7 +1699,7 @@
           class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           style={announcementPinned
             ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
-            : ' border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
+            : 'border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           onclick={() => (announcementPinned = !announcementPinned)}
         >
           {announcementPinned ? t('groupDetail.pinnedStatus') : t('groupDetail.unpinnedStatus')}
@@ -1774,7 +1774,7 @@
             class="rounded-full py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
             style={Number(muteDurationMinutes) === preset.value
               ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
-              : ' border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
+              : 'border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
             onclick={() => (muteDurationMinutes = String(preset.value))}>{preset.label}</button
           >
         {/each}
@@ -1833,7 +1833,7 @@
           class="rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           style={roleTarget?.role === 'admin'
             ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
-            : ' border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
+            : 'border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           disabled={roleTarget?.role === 'admin' || roleSubmitting}
           onclick={() => handleSetRole('admin')}>{t('groupDetail.setAdmin')}</button
         >
@@ -1841,7 +1841,7 @@
           class="rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           style={roleTarget?.role === 'member'
             ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
-            : ' border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
+            : 'border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           disabled={roleTarget?.role === 'member' || roleSubmitting}
           onclick={() => handleSetRole('member')}>{t('groupDetail.setMember')}</button
         >

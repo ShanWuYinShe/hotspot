@@ -16,7 +16,7 @@
   <div class="page-pad box-border h-full min-h-0">
     <div
       class="page-shell page-shell--wide flex h-full min-h-0 overflow-hidden rounded-[var(--radius-button)]"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
     >
       <!-- Left pane: chat list -->
       <div

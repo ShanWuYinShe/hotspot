@@ -1809,7 +1809,7 @@
               size="icon"
               variant="ghost"
               class="h-11 w-11 rounded-[var(--radius-sm)] backdrop-blur"
-              style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               onclick={toggleFilterPanel}
               aria-label={t('locationPicker.filterMapContentAria')}
             >
@@ -1826,7 +1826,7 @@
               size="icon"
               variant="ghost"
               class="h-11 w-11 rounded-[var(--radius-sm)] transition"
-              style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               onclick={handleUseCurrentLocation}
               disabled={isLocating}
               aria-label={t('locationPicker.locateCurrent')}
@@ -1842,7 +1842,7 @@
                 size="icon"
                 variant="ghost"
                 class="h-11 w-11 rounded-[var(--radius-sm)] transition"
-                style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+                style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                 onclick={handleBackToBrowseAnchor}
                 aria-label={t('locationPicker.backToAnchorAria')}
               >
@@ -1853,7 +1853,7 @@
               size="icon"
               variant="ghost"
               class="h-11 w-11 rounded-[var(--radius-sm)] transition"
-              style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               onclick={() => {
                 if (!map) return;
                 const currentZoom = map.getZoom?.() ?? 14;
@@ -1867,7 +1867,7 @@
               size="icon"
               variant="ghost"
               class="h-11 w-11 rounded-[var(--radius-sm)] transition"
-              style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               onclick={() => {
                 if (!map) return;
                 const currentZoom = map.getZoom?.() ?? 14;
@@ -1886,13 +1886,13 @@
           <div
             bind:this={filterPanelElement}
             class="absolute right-4 top-16 z-30 hidden w-40 select-none overflow-hidden rounded-[var(--radius-lg)] p-2 backdrop-blur-md sm:block"
-            style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <button
               class={`flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-2.5 text-left text-sm font-medium transition`}
               style={showUsers
-                ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
-                : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary); box-shadow: var(--shadow-sm);'}
+                ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary);'
+                : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
               onclick={() => toggleRenderFilter('user')}
             >
               <span class="flex items-center gap-2">
@@ -1907,7 +1907,7 @@
             <button
               class={`mt-1 flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-2.5 text-left text-sm font-medium transition`}
               style={showGroups
-                ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
+                ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary);'
                 : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
               onclick={() => toggleRenderFilter('group')}
             >
@@ -1925,7 +1925,7 @@
             <button
               class={`mt-1 flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-2.5 text-left text-sm font-medium transition`}
               style={showMoments
-                ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
+                ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary);'
                 : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
               onclick={() => toggleRenderFilter('moment')}
             >
@@ -1953,7 +1953,7 @@
             {#if placementHintVisible}
               <div
                 class="rounded-[var(--radius-md)] px-4 py-1.5 text-sm font-medium backdrop-blur-sm"
-                style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm); color: var(--text-primary);"
+                style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary);"
               >
                 {placementHintMessage}
               </div>
@@ -1999,7 +1999,7 @@
             size="icon"
             variant="ghost"
             class="h-12 w-12 rounded-full backdrop-blur-sm transition active:scale-95"
-            style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-md);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             onclick={handleUseCurrentLocation}
             disabled={isLocating}
             aria-label={t('locationPicker.useCurrentLocationAria')}
@@ -2015,7 +2015,7 @@
               size="icon"
               variant="ghost"
               class="h-12 w-12 rounded-full backdrop-blur-sm transition active:scale-95"
-              style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-md);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               onclick={handleBackToBrowseAnchor}
               aria-label={t('locationPicker.backToAnchorAria')}
             >
@@ -2028,7 +2028,7 @@
           <div class="absolute bottom-6 left-4 right-auto z-30 hidden w-100 select-none sm:block">
             <div
               class="overflow-hidden rounded-[var(--radius-button)] backdrop-blur-md"
-              style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div
                 class="flex items-start justify-between gap-3 border-b px-4 py-3"
@@ -2113,7 +2113,7 @@
           >
             <div
               class="overflow-hidden rounded-[var(--radius-button)] backdrop-blur-md"
-              style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <div
                 class="flex items-start justify-between gap-3 border-b px-4 py-3"
@@ -2233,7 +2233,7 @@
                 {#if showSearch}
                   <div
                     class="overflow-hidden rounded-[var(--radius-button)] backdrop-blur-md"
-                    style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+                    style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                   >
                     <div class="border-b px-4 py-3" style="border-color: var(--border-theme);">
                       <div class="flex items-start justify-between gap-3">
@@ -2394,7 +2394,7 @@
                 {#if showFilterPanel}
                   <div
                     class="overflow-hidden rounded-[var(--radius-button)] p-3 backdrop-blur-md"
-                    style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+                    style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                   >
                     <div class="mb-2 flex items-center justify-between px-1">
                       <div>
@@ -2422,7 +2422,7 @@
                       <button
                         class={`flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-3 text-left text-sm font-medium transition`}
                         style={showUsers
-                          ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
+                          ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary);'
                           : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
                         onclick={() => toggleRenderFilter('user')}
                       >
@@ -2440,7 +2440,7 @@
                       <button
                         class={`flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-3 text-left text-sm font-medium transition`}
                         style={showGroups
-                          ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
+                          ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary);'
                           : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
                         onclick={() => toggleRenderFilter('group')}
                       >
@@ -2458,7 +2458,7 @@
                       <button
                         class={`flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-3 text-left text-sm font-medium transition`}
                         style={showMoments
-                          ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary); box-shadow: var(--shadow-sm);'
+                          ? 'background: var(--surface-bg); border: 1px solid var(--brand); color: var(--text-primary);'
                           : 'background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary);'}
                         onclick={() => toggleRenderFilter('moment')}
                       >
@@ -2480,7 +2480,7 @@
                 {#if clusterPreview}
                   <div
                     class="overflow-hidden rounded-[var(--radius-button)] backdrop-blur-md"
-                    style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+                    style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                   >
                     <div
                       class="flex items-start justify-between gap-3 border-b px-4 py-3"
@@ -2562,7 +2562,7 @@
                 {#if hotspotPreviewItems.length > 0}
                   <div
                     class="overflow-hidden rounded-[var(--radius-button)] backdrop-blur-md"
-                    style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-sm);"
+                    style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                   >
                     <div
                       class="flex items-start justify-between gap-3 border-b px-4 py-3"

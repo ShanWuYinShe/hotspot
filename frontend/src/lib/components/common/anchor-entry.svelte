@@ -34,7 +34,7 @@
   >
     <div
       class="flex flex-shrink-0 items-center justify-center rounded-full"
-      style="width: 34px; height: 34px; background: var(--brand); box-shadow: var(--shadow-md);"
+      style="width: 34px; height: 34px; background: var(--brand);"
     >
       <Navigation2 size={14} strokeWidth={2} color="var(--text-on-accent)" />
     </div>

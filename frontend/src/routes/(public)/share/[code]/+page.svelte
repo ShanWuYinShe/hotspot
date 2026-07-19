@@ -82,7 +82,7 @@
     {#if !share}
       <div
         class="rounded-[var(--radius-lg)] p-6"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <h2 class="text-h2" style="font-weight: 600; color: var(--theme-error)">{t('share.loadFailed')}</h2>
         <p class="text-body-lg" style="color: var(--text-secondary); margin-top: 8px">
@@ -90,7 +90,7 @@
         </p>
         <button
           class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none"
-          style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+          style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
           onclick={() => goto('/')}
         >
           {t('share.backHome')}
@@ -100,7 +100,7 @@
       {@const payload = share.payload as LocationSharePayload}
       <div
         class="overflow-hidden rounded-[var(--radius-lg)]"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <!-- Header with creator info -->
         <div
@@ -188,7 +188,7 @@
           <div class="flex items-center gap-2">
             <button
               class="flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 font-medium outline-none"
-              style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+              style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
               onclick={copyShareLink}
             >
               <Share2 size={16} />
@@ -196,7 +196,7 @@
             </button>
             <button
               class="rounded-full px-5 py-2.5 font-medium outline-none"
-              style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+              style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
               onclick={() => goto('/')}
             >
               返回首页
@@ -208,7 +208,7 @@
       <!-- Other share types (user/group/moment) -->
       <div
         class="rounded-[var(--radius-lg)] p-6"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <h2 class="text-h2" style="font-weight: 600; color: var(--text-primary)">分享内容</h2>
         <p class="text-body-lg" style="color: var(--text-secondary); margin-top: 8px">
@@ -228,7 +228,7 @@
           </button>
           <button
             class="w-full rounded-full py-3 font-medium outline-none"
-            style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+            style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
             onclick={() => goto('/')}
           >
             返回首页

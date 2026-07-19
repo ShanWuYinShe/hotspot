@@ -119,7 +119,7 @@
         </div>
         <button
           class="text-meta flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary)"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary)"
           onclick={() => loadTab(activeTab, true)}
           disabled={activePg.loading}
         >

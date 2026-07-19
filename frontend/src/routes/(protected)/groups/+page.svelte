@@ -181,7 +181,7 @@
         <div class="flex gap-2">
           <button
             class="text-meta flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary)"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-secondary)"
             onclick={refreshAll}
             disabled={anyLoading}
           >
@@ -211,7 +211,7 @@
             <a
               href="/groups/nearby"
               class="rounded-full px-4 py-2 text-sm"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary); text-decoration: none;"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary); text-decoration: none;"
               >{t('groupsMine.discoverNearby')}</a
             >
             <button
@@ -227,7 +227,7 @@
             <a href="/groups/{group.group.group_id}" style="text-decoration: none;">
               <div
                 class="flex items-center gap-4 rounded-[var(--radius-md)] p-4"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+                style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               >
                 <Avatar
                   src={group.group.avatar_url}
@@ -270,13 +270,13 @@
         <!-- Invites -->
         <div
           class="rounded-[var(--radius-lg)] p-4"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
         >
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
               <div
                 class="flex items-center justify-center rounded-full"
-                style="width: 28px; height: 28px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+                style="width: 28px; height: 28px; border: 1px solid var(--border-theme);"
               >
                 <Inbox size={12} color="var(--text-secondary)" strokeWidth={1.5} />
               </div>
@@ -318,7 +318,7 @@
                     </button>
                     <button
                       class="rounded-full px-3 py-1 text-xs outline-none"
-                      style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                      style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                       disabled={isInviteProcessing(invite.invite_id)}
                       onclick={() => handleInvite(invite, 'reject')}
                     >
@@ -334,13 +334,13 @@
         <!-- Applications -->
         <div
           class="rounded-[var(--radius-lg)] p-4"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
         >
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
               <div
                 class="flex items-center justify-center rounded-full"
-                style="width: 28px; height: 28px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+                style="width: 28px; height: 28px; border: 1px solid var(--border-theme);"
               >
                 <CheckCircle2 size={12} color="var(--text-secondary)" strokeWidth={1.5} />
               </div>
@@ -374,7 +374,7 @@
                   <div class="mt-2 flex gap-2">
                     <button
                       class="rounded-full px-3 py-1 text-xs outline-none"
-                      style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                      style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                       disabled={isApplicationProcessing(application.application_id)}
                       onclick={() => handleCancelApplication(application)}
                     >

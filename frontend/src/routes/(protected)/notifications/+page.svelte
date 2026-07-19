@@ -622,7 +622,7 @@
                       >
                       <button
                         class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                        style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                         disabled={isProcessing(item.notification_id)}
                         onclick={() => handleInviteAction(item, 'reject')}
                         >{t('common.reject')}</button
@@ -639,7 +639,7 @@
                       >
                       <button
                         class="rounded-full px-3 py-1 text-xs outline-none transition-transform duration-150 active:scale-[0.93]"
-                        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                        style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                         disabled={isProcessing(item.notification_id)}
                         onclick={() => handleApplicationAction(item, 'reject')}
                         >{t('common.reject')}</button

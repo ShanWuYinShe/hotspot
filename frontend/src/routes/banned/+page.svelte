@@ -28,7 +28,7 @@
 >
   <div
     class="flex h-20 w-20 items-center justify-center rounded-[var(--radius-button)]"
-    style="background: var(--surface-bg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+    style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
   >
     <ShieldBan size={36} color="var(--theme-error)" />
   </div>
@@ -65,7 +65,7 @@
     {/if}
     <button
       class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none"
-      style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+      style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
       onclick={() => goto('/')}
       aria-label="返回首页"
     >
