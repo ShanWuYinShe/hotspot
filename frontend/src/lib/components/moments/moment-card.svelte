@@ -365,7 +365,6 @@
     border: 2px solid color-mix(in srgb, var(--brand) 18%, var(--border-theme));
     border-radius: var(--radius-pill);
     background: var(--surface-bg);
-    box-shadow: var(--shadow-sm);
   }
 
   /* :global 穿透到子组件(Avatar / SmartImage)内的 <img>，否则 scoped CSS 不生效 */

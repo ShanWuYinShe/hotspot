@@ -2878,7 +2878,6 @@
       max-height: 90vh;
       overflow: hidden;
       border: 1px solid var(--border-theme);
-      box-shadow: var(--shadow-lg);
     }
     :global(.dialog-responsive-position.location-dialog.is-fullscreen) {
       width: 100vw;

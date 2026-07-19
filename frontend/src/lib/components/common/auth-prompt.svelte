@@ -58,7 +58,6 @@
     border-radius: var(--radius-lg);
     background: var(--surface-bg);
     border: 1px solid var(--border-theme);
-    box-shadow: var(--shadow-lg);
     animation: slideUp 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
@@ -83,9 +82,6 @@
     border-radius: var(--radius-sm);
     background: var(--surface-bg);
     border: 1px solid var(--border-theme);
-    box-shadow:
-      4px 4px 9px var(--shadow-dark),
-      -4px -4px 9px var(--shadow-light);
     color: var(--brand);
   }
 
