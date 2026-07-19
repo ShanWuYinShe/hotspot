@@ -30,7 +30,11 @@ export const buttonVariants = tv({
         lift,
         pressFeedback
       ),
-      destructive: cn('border-transparent bg-[var(--theme-error)] text-on-accent', lift, pressFeedback),
+      destructive: cn(
+        'border-transparent bg-[var(--theme-error)] text-on-accent',
+        lift,
+        pressFeedback
+      ),
       outline: cn(pressFeedback),
       secondary: cn('surface-flat', pressFeedback),
       ghost: cn('shadow-none'),

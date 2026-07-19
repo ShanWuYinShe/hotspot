@@ -2198,7 +2198,7 @@
         >
           <div
             class="rounded-t-[28px] backdrop-blur-md"
-            style="background: var(--surface-bg); border-top: 1px solid var(--border-theme); box-shadow: 0 -4px 10px var(--shadow-dark);"
+            style="background: var(--surface-bg); border-top: 1px solid var(--border-theme); box-shadow: 0 -4px 10px var(--shadow-elevation);"
           >
             <!-- 展开/收起手柄 -->
             <button
