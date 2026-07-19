@@ -13,7 +13,7 @@
 
 <TabsPrimitive.List
   class={cn('inline-flex min-h-10 items-center justify-center gap-1 p-1', className)}
-  style="border-radius: var(--radius-md); background: var(--surface-bg); box-shadow: var(--shadow-inset); border: 1px solid var(--border-theme);"
+  style="border-radius: var(--radius-md); background: var(--surface-bg); border: 1px solid var(--border-theme);"
   {...restProps}
 >
   {#if children}

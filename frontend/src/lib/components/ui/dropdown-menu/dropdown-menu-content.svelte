@@ -23,7 +23,7 @@
       'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
       className
     )}
-    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme); border-radius: var(--radius-md); color: var(--text-primary);"
+    style="background: var(--surface-bg); border: 1px solid var(--border-theme); border-radius: var(--radius-md); color: var(--text-primary);"
     {...restProps}
   >
     {#if children}

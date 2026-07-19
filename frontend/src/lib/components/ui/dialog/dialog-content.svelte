@@ -73,7 +73,7 @@
       variant === 'sheet' ? 'dialog-sheet-position' : 'dialog-responsive-position',
       className
     )}
-    style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme); color: var(--text-primary);"
+    style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary);"
     {...restProps}
   >
     {#if children}
@@ -82,7 +82,7 @@
     {#if !hideClose}
       <DialogPrimitive.Close
         class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-[var(--radius-xs)] outline-none opacity-70 transition-opacity hover:opacity-100 cursor-pointer"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <X size={16} color="var(--text-secondary)" />
         <span class="sr-only">Close</span>
