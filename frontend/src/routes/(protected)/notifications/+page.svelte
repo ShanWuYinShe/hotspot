@@ -344,9 +344,10 @@
             {tile.label}
           </p>
           <p
-            style="font-size: {tile.big
-              ? '22px'
-              : '14px'}; color: {tile.color}; margin-top: 6px; font-weight: 600; line-height: 1.1;"
+            class:text-display={tile.big}
+            class:text-body-lg={!tile.big}
+            class:font-semibold={true}
+            style="color: {tile.color}; margin-top: 6px; line-height: 1.1;"
           >
             {tile.value}
           </p>

@@ -25,9 +25,10 @@
   <div class="flex items-center justify-between mb-3">
     <span class="eyebrow">附近群组</span>
     <button
-      class="text-meta"
+      class="text-meta outline-none transition-all duration-150 hover:opacity-70 active:scale-[0.93]"
       style="color: var(--brand); background: none; border: none; cursor: pointer"
       onclick={() => void goto('/groups/nearby')}
+      aria-label="查看全部群组"
     >
       更多 →
     </button>

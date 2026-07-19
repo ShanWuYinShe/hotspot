@@ -35,6 +35,15 @@
   const label = $derived(name?.trim() ?? '');
   const initials = $derived(Array.from(label).slice(0, 2).join('').toUpperCase());
   const radius = $derived(shape === 'circle' ? '9999px' : 'var(--radius-md)');
+  const textClass = $derived(
+    size <= 32 ? 'text-caption'
+    : size <= 40 ? 'text-meta'
+    : size <= 48 ? 'text-body'
+    : size <= 64 ? 'text-body-lg'
+    : size <= 80 ? 'text-title'
+    : size <= 96 ? 'text-h2'
+    : 'text-h1'
+  );
   const rootStyle = $derived(
     `width: ${size}px; height: ${size}px; border-radius: ${radius}; border: ${border ? '1.5px solid var(--border-theme)' : 'none'};`
   );
@@ -64,7 +73,7 @@
     {:else}
       <span class="flex h-full w-full items-center justify-center" style={fallbackStyle}>
         {#if initials}
-          <span style="font-size: {Math.max(10, Math.round(size * 0.34))}px; font-weight: 650;">
+          <span class={textClass} style="font-weight: 650;">
             {initials}
           </span>
         {:else if type === 'group'}

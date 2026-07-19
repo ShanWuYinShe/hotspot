@@ -545,7 +545,7 @@
           />
           <button
             class="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"
-            style="width: 26px; height: 26px; background: var(--brand); border: 2 solid var(--surface-bg); box-shadow: var(--shadow-brand-btn);"
+            style="width: 26px; height: 26px; background: var(--brand); border: 2px solid var(--surface-bg); box-shadow: var(--shadow-brand-btn);"
             title={t('profile.changeAvatar')}
             onclick={() => avatarInputElement?.click()}
           >
@@ -697,6 +697,7 @@
             <button
               class="flex items-center justify-center rounded-full outline-none surface-flat"
               style="width: 36px; height: 36px;"
+              aria-label="分享个人主页"
             >
               <Share2 size={15} strokeWidth={1.5} color="var(--text-secondary)" />
             </button>
@@ -704,6 +705,7 @@
               class="flex items-center justify-center rounded-full outline-none surface-flat"
               style="width: 36px; height: 36px;"
               onclick={() => void goto('/settings')}
+              aria-label="设置"
             >
               <Settings size={14} strokeWidth={1.5} color="var(--text-secondary)" />
             </button>
@@ -803,6 +805,7 @@
             <button
               class="flex items-center justify-center rounded-full outline-none surface-flat"
               style="width: 38px; height: 38px;"
+              aria-label="分享个人主页"
             >
               <Share2 size={15} strokeWidth={1.5} color="var(--text-secondary)" />
             </button>
@@ -810,6 +813,7 @@
               class="flex items-center justify-center rounded-full outline-none surface-flat"
               style="width: 38px; height: 38px;"
               onclick={() => void goto('/settings')}
+              aria-label="设置"
             >
               <Settings size={15} strokeWidth={1.5} color="var(--text-secondary)" />
             </button>

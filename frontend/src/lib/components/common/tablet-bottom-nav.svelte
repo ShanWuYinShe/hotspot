@@ -114,7 +114,7 @@
           style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;"
         >
           <item.icon
-            size={24}
+            size={22}
             strokeWidth={isActive(item) ? 2.1 : 1.5}
             color={isActive(item) ? 'var(--brand)' : 'var(--text-secondary)'}
             style="transition: color 0.22s ease;"
@@ -152,7 +152,7 @@
           </span>
         {:else}
           <span style="display: flex; animation: fabIconIn 0.18s ease-out both;">
-            <Plus size={19} strokeWidth={2.2} color="var(--text-on-accent)" />
+            <Plus size={20} strokeWidth={2.2} color="var(--text-on-accent)" />
           </span>
         {/if}
       </button>
@@ -172,7 +172,7 @@
           style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;"
         >
           <item.icon
-            size={24}
+            size={22}
             strokeWidth={isActive(item) ? 2.1 : 1.5}
             color={isActive(item) ? 'var(--brand)' : 'var(--text-secondary)'}
             style="transition: color 0.22s ease;"

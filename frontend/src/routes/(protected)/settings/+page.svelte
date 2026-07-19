@@ -143,6 +143,12 @@
     toast.success(t('settings.logoutSuccess'));
   }
 
+  function navStyle(active: boolean): string {
+    return active
+      ? 'background: var(--brand); color: var(--text-on-accent);'
+      : 'color: var(--text-primary);';
+  }
+
   function setThemeFamily(themeFamily: ThemeFamily) {
     themeStore.setThemeFamily(themeFamily);
   }
@@ -202,12 +208,8 @@
       <div class="flex flex-col gap-1">
         <button
           type="button"
-          class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-all"
-          style="background: {activeSection === 'appearance'
-            ? 'var(--brand)'
-            : 'transparent'}; color: {activeSection === 'appearance'
-            ? 'var(--text-on-accent)'
-            : 'var(--text-primary)'};"
+          class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-all hover:bg-[var(--theme-accent-soft)]"
+          style={navStyle(activeSection === 'appearance')}
           onclick={() => (activeSection = 'appearance')}
         >
           <Palette size={16} strokeWidth={1.5} />
@@ -217,12 +219,8 @@
         {#each settingsSections as section (section.id)}
           <button
             type="button"
-            class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-all"
-            style="background: {activeSection === section.id
-              ? 'var(--brand)'
-              : 'transparent'}; color: {activeSection === section.id
-              ? 'var(--text-on-accent)'
-              : 'var(--text-primary)'};"
+            class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-all hover:bg-[var(--theme-accent-soft)]"
+            style={navStyle(activeSection === section.id)}
             onclick={() => (activeSection = section.id)}
           >
             <section.icon size={16} strokeWidth={1.5} />
@@ -232,12 +230,8 @@
 
         <button
           type="button"
-          class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-all"
-          style="background: {activeSection === 'notifications'
-            ? 'var(--brand)'
-            : 'transparent'}; color: {activeSection === 'notifications'
-            ? 'var(--text-on-accent)'
-            : 'var(--text-primary)'};"
+          class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-all hover:bg-[var(--theme-accent-soft)]"
+          style={navStyle(activeSection === 'notifications')}
           onclick={() => (activeSection = 'notifications')}
         >
           <SlidersHorizontal size={16} strokeWidth={1.5} />
@@ -248,7 +242,7 @@
         <div style="margin-top: 12px; height: 1px; background: var(--border-theme);"></div>
         <button
           type="button"
-          class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-all"
+          class="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-all hover:bg-[var(--theme-accent-soft)]"
           style="color: var(--brand);"
           onclick={handleLogout}
         >

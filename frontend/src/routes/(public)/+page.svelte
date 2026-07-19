@@ -259,9 +259,14 @@
             <NearbyUsersFlatList users={flatUsers.slice(0, 5)} loading={loadingNearby} />
           </div>
         {:else}
-          <p class="text-meta" style="color: var(--text-secondary)">
-            附近暂无其他用户，可稍后再来或调整浏览位置。
-          </p>
+          <div class="py-6">
+            <EmptyState
+              icon={Users}
+              title="附近暂无其他用户"
+              description="换个浏览位置或稍后再来看看。"
+              variant="inline"
+            />
+          </div>
         {/if}
       </div>
 
