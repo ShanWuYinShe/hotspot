@@ -898,7 +898,7 @@
     {#if !group}
       <div
         class="rounded-[var(--radius-lg)] p-6"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <div class="flex flex-col items-center gap-4">
           <p style="color: var(--text-secondary);">
@@ -910,7 +910,7 @@
       <!-- Group profile card -->
       <div
         class="rounded-[var(--radius-lg)] p-6"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <div class="space-y-6">
           <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -970,7 +970,7 @@
                 </button>
                 <button
                   class="flex items-center justify-center rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                  style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                  style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                   onclick={confirmLeave}
                   disabled={isLeaving}
                 >
@@ -1070,7 +1070,7 @@
         <div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <div
             class="rounded-[var(--radius-lg)] p-5"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <h3
               class="text-xs uppercase"
@@ -1086,7 +1086,7 @@
                 {#each group.tags as tag (tag)}
                   <span
                     class="text-caption rounded-full px-2.5 py-1"
-                    style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
+                    style="color: var(--brand); background: var(--surface-bg); border: 1px solid var(--border-theme)"
                   >
                     #{tag}
                   </span>
@@ -1096,7 +1096,7 @@
           </div>
           <div
             class="rounded-[var(--radius-lg)] p-5"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <h3
               class="text-xs uppercase"
@@ -1130,7 +1130,7 @@
               {#if !authStore.isAuthenticated}
                 <button
                   class="w-full rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                  style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                  style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                   onclick={() => uiStore.openLoginModal()}
                 >
                   {t('groupDetail.loginToJoin')}
@@ -1161,7 +1161,7 @@
         <!-- Announcements toolbar -->
         <div
           class="flex flex-col gap-3 rounded-[var(--radius-lg)] p-4 sm:flex-row sm:items-center sm:justify-between"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
         >
           <div>
             <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">{t('groupDetail.announcementsTitle')}</p>
@@ -1172,7 +1172,7 @@
           <div class="flex flex-wrap gap-2">
             <button
               class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-              style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+              style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
               onclick={() => loadAnnouncements(true)}
               disabled={announcementsPagination.loading}
             >
@@ -1196,7 +1196,7 @@
             {#each Array(3) as _, i (i)}
               <div
                 class="rounded-[var(--radius-lg)] p-4 space-y-2"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+                style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               >
                 <div
                   class="rounded"
@@ -1216,7 +1216,7 @@
         {:else if announcementsPagination.items.length === 0}
           <div
             class="rounded-[var(--radius-lg)] py-10 text-center"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <p class="text-body-lg" style="color: var(--text-secondary)">{t('groupDetail.noAnnouncements')}</p>
           </div>
@@ -1225,7 +1225,7 @@
             {#each announcementsPagination.items as announcement (announcement.announcement_id)}
               <div
                 class="rounded-[var(--radius-lg)] p-4"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+                style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               >
                 <div class="flex items-start justify-between gap-3">
                   <div class="space-y-2">
@@ -1236,7 +1236,7 @@
                       {#if announcement.is_pinned}
                         <span
                           class="text-xs rounded-full px-2 py-0.5"
-                          style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
+                          style="color: var(--brand); background: var(--surface-bg); border: 1px solid var(--border-theme)"
                           >{t('groupDetail.pinned')}</span
                         >
                       {/if}
@@ -1255,7 +1255,7 @@
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
+                        style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary);"
                         aria-label={t('groupDetail.announcementActionsAria')}
                       >
                         <MoreHorizontal size={16} />
@@ -1282,7 +1282,7 @@
             <div class="flex justify-center pt-2">
               <button
                 class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                 onclick={() => loadAnnouncements(false)}
                 disabled={announcementsPagination.loadingMore}
               >
@@ -1298,7 +1298,7 @@
       {#if currentTab === 'members'}
         <div
           class="flex flex-col gap-3 rounded-[var(--radius-lg)] p-4 sm:flex-row sm:items-center sm:justify-between"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
         >
           <div>
             <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">
@@ -1311,7 +1311,7 @@
           <div class="flex flex-wrap gap-2">
             <button
               class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-              style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+              style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
               onclick={() => loadMembers(true)}
               disabled={membersPagination.loading}
             >
@@ -1320,7 +1320,7 @@
             {#if canManageGroup}
               <span
                 class="text-caption rounded-full px-3 py-1"
-                style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
+                style="color: var(--brand); background: var(--surface-bg); border: 1px solid var(--border-theme)"
                 >{t('groupDetail.canManageMembers')}</span
               >
             {/if}
@@ -1332,7 +1332,7 @@
               <div>
                 <div
                   class="flex items-center gap-3 rounded-[var(--radius-lg)] p-4"
-                  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+                  style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                 >
                   <div
                     class="rounded-full"
@@ -1355,7 +1355,7 @@
         {:else if membersPagination.items.length === 0}
           <div
             class="rounded-[var(--radius-lg)] py-10 text-center"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <p class="text-body-lg" style="color: var(--text-secondary)">{t('groupDetail.noMembers')}</p>
           </div>
@@ -1428,7 +1428,7 @@
             <div class="flex justify-center pt-2">
               <button
                 class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                 onclick={() => loadMembers(false)}
                 disabled={membersPagination.loadingMore}
               >
@@ -1445,7 +1445,7 @@
         <div class="space-y-4">
           <div
             class="flex flex-col gap-3 rounded-[var(--radius-lg)] p-4 sm:flex-row sm:items-center sm:justify-between"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div>
               <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary)">
@@ -1457,7 +1457,7 @@
             </div>
             <button
               class="flex items-center gap-1.5 rounded-full px-4 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-              style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+              style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
               onclick={() => loadApplications(true)}
               disabled={applicationsPagination.loading}
             >
@@ -1469,7 +1469,7 @@
               {#each Array(3) as _, i (i)}
                 <div
                   class="rounded-[var(--radius-lg)] p-4 space-y-2"
-                  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+                  style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                 >
                   <div
                     class="rounded"
@@ -1489,7 +1489,7 @@
           {:else if applicationsPagination.items.length === 0}
             <div
               class="rounded-[var(--radius-lg)] py-10 text-center"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
             >
               <p class="text-body-lg" style="color: var(--text-secondary)">{t('groupDetail.noApplications')}</p>
             </div>
@@ -1498,7 +1498,7 @@
               {#each applicationsPagination.items as application (application.application_id)}
                 <div
                   class="rounded-[var(--radius-lg)] p-4"
-                  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+                  style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                 >
                   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div class="min-w-0 space-y-1">
@@ -1536,7 +1536,7 @@
                       </button>
                       <button
                         class="text-body rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg)"
+                        style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg)"
                         disabled={isApplicationHandling(application.application_id)}
                         onclick={() => handleApplicationDecision(application, 'reject')}
                       >
@@ -1551,7 +1551,7 @@
               <div class="flex justify-center pt-2">
                 <button
                   class="flex items-center gap-2 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                  style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+                  style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
                   onclick={() => loadApplications(false)}
                   disabled={applicationsPagination.loadingMore}
                 >
@@ -1571,7 +1571,7 @@
 <Dialog.Root bind:open={showJoinDialog}>
   <Dialog.Content
     class="sm:max-w-lg border var(--surface-bg) backdrop-blur-md"
-    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{t('groupDetail.joinDialogTitle')}</Dialog.Title>
@@ -1599,7 +1599,7 @@
             bind:value={joinPassword}
             maxlength={GROUP_PASSWORD_MAX}
             class="w-full rounded-full py-2.5 px-4 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary);"
           />
         </div>
       {/if}
@@ -1626,7 +1626,7 @@
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+        style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showJoinDialog = false)}>{t('common.cancel')}</button
       >
       <button
@@ -1645,7 +1645,7 @@
 <Dialog.Root bind:open={showAnnouncementDialog}>
   <Dialog.Content
     class="sm:max-w-xl border var(--surface-bg) backdrop-blur-md"
-    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{editingAnnouncement ? t('groupDetail.announcementDialogTitleEdit') : t('groupDetail.announcementDialogTitleCreate')}</Dialog.Title>
@@ -1667,7 +1667,7 @@
           bind:value={announcementTitle}
           maxlength={ANNOUNCEMENT_TITLE_MAX}
           class="w-full rounded-full py-2.5 px-4 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary);"
         />
       </div>
       <div
@@ -1699,7 +1699,7 @@
           class="rounded-full px-4 py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           style={announcementPinned
             ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
-            : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
+            : ' border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           onclick={() => (announcementPinned = !announcementPinned)}
         >
           {announcementPinned ? t('groupDetail.pinnedStatus') : t('groupDetail.unpinnedStatus')}
@@ -1709,7 +1709,7 @@
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+        style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showAnnouncementDialog = false)}>{t('common.cancel')}</button
       >
       <button
@@ -1728,7 +1728,7 @@
 <Dialog.Root bind:open={showAnnouncementDeleteDialog}>
   <Dialog.Content
     class="sm:max-w-md border var(--surface-bg) backdrop-blur-md"
-    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{t('groupDetail.deleteDialogTitle')}</Dialog.Title>
@@ -1743,7 +1743,7 @@
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+        style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showAnnouncementDeleteDialog = false)}>{t('common.cancel')}</button
       >
       <button
@@ -1758,7 +1758,7 @@
 <Dialog.Root bind:open={showMuteDialog}>
   <Dialog.Content
     class="sm:max-w-md border var(--surface-bg) backdrop-blur-md"
-    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{t('groupDetail.muteDialogTitle')}</Dialog.Title>
@@ -1774,7 +1774,7 @@
             class="rounded-full py-2 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
             style={Number(muteDurationMinutes) === preset.value
               ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
-              : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
+              : ' border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
             onclick={() => (muteDurationMinutes = String(preset.value))}>{preset.label}</button
           >
         {/each}
@@ -1792,14 +1792,14 @@
           max={MUTE_DURATION_MAX}
           bind:value={muteDurationMinutes}
           class="w-full rounded-full py-2.5 px-4 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary);"
         />
       </div>
     </div>
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+        style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showMuteDialog = false)}>{t('common.cancel')}</button
       >
       <button
@@ -1818,7 +1818,7 @@
 <Dialog.Root bind:open={showRoleDialog}>
   <Dialog.Content
     class="sm:max-w-md border var(--surface-bg) backdrop-blur-md"
-    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{t('groupDetail.roleDialogTitle')}</Dialog.Title>
@@ -1833,7 +1833,7 @@
           class="rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           style={roleTarget?.role === 'admin'
             ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
-            : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
+            : ' border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           disabled={roleTarget?.role === 'admin' || roleSubmitting}
           onclick={() => handleSetRole('admin')}>{t('groupDetail.setAdmin')}</button
         >
@@ -1841,7 +1841,7 @@
           class="rounded-full py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           style={roleTarget?.role === 'member'
             ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
-            : 'box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
+            : ' border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);'}
           disabled={roleTarget?.role === 'member' || roleSubmitting}
           onclick={() => handleSetRole('member')}>{t('groupDetail.setMember')}</button
         >
@@ -1850,7 +1850,7 @@
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+        style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showRoleDialog = false)}>{t('common.cancel')}</button
       >
     </Dialog.Footer>
@@ -1860,7 +1860,7 @@
 <Dialog.Root bind:open={showRemoveDialog}>
   <Dialog.Content
     class="sm:max-w-md border var(--surface-bg) backdrop-blur-md"
-    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{t('groupDetail.removeDialogTitle')}</Dialog.Title>
@@ -1875,7 +1875,7 @@
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+        style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showRemoveDialog = false)}>{t('common.cancel')}</button
       >
       <button
@@ -1894,7 +1894,7 @@
 <Dialog.Root bind:open={showLeaveDialog}>
   <Dialog.Content
     class="sm:max-w-md border var(--surface-bg) backdrop-blur-md"
-    style="box-shadow: var(--shadow-lg); border-color: var(--border-theme);"
+    style="border-color: var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{t('groupDetail.leaveDialogTitle')}</Dialog.Title>
@@ -1914,7 +1914,7 @@
     <Dialog.Footer>
       <button
         class="rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
+        style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
         onclick={() => (showLeaveDialog = false)}>{t('common.cancel')}</button
       >
       <button
