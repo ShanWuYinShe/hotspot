@@ -130,6 +130,7 @@
 :root[data-theme-family='grove'] {
   --theme-bg: #f9f9f5;
   --page-bg: #edecea;
+  --shadow-elevation: rgba(27, 31, 27, 0.06);
   --theme-shadow-light: rgba(255, 255, 255, 0);
   --theme-shadow-dark: rgba(0, 0, 0, 0);
   --theme-text: #1b1f1b;
@@ -223,6 +224,7 @@
 :root[data-theme-family='grove'].dark {
   --theme-bg: #161a16;
   --page-bg: #0e110e;
+  --shadow-elevation: rgba(0, 0, 0, 0.36);
   --theme-shadow-light: rgba(255, 255, 255, 0);
   --theme-shadow-dark: rgba(0, 0, 0, 0);
   --theme-text: #dce8de;
@@ -319,8 +321,9 @@
 :root[data-theme-family='mist'] {
   --theme-bg: #fafafe;
   --page-bg: #eef2ff;
-  --theme-shadow-light: rgba(255, 255, 255, 1);
-  --theme-shadow-dark: rgba(99, 91, 200, 0.12);
+  --shadow-elevation: rgba(99, 102, 241, 0.08);
+  --theme-shadow-light: rgba(0, 0, 0, 0);
+  --theme-shadow-dark: rgba(0, 0, 0, 0);
   --theme-text: #1e1b4b;
   --theme-text-muted: #5b5792;
   --theme-accent: #6366f1;
@@ -357,12 +360,10 @@
   --theme-glass-bg: rgba(238, 242, 255, 0.88);
   --theme-glass-border: rgba(99, 102, 241, 0.13);
   --theme-glass-shadow: 0 -2px 16px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(99, 102, 241, 0.1);
-  --hover-shadow-card:
-    0 14px 36px rgba(99, 102, 241, 0.14), 0 4px 14px rgba(99, 102, 241, 0.08),
-    0 0 0 1px rgba(99, 102, 241, 0.07);
-  --hover-shadow-row: 0 8px 20px rgba(99, 102, 241, 0.11), 0 2px 8px rgba(99, 102, 241, 0.07);
-  --hover-shadow-btn: 0 6px 18px rgba(99, 102, 241, 0.2), 0 2px 6px rgba(99, 102, 241, 0.12);
-  --hover-shadow-pill: 0 4px 12px rgba(99, 102, 241, 0.16), 0 1px 4px rgba(99, 102, 241, 0.1);
+  --hover-shadow-card: 0 4px 12px var(--shadow-elevation), 0 0 0 1px rgba(99, 102, 241, 0.07);
+  --hover-shadow-row: 0 2px 6px var(--shadow-elevation);
+  --hover-shadow-btn: 0 2px 6px rgba(99, 102, 241, 0.18), 0 1px 2px rgba(99, 102, 241, 0.12);
+  --hover-shadow-pill: 0 2px 6px rgba(99, 102, 241, 0.16), 0 1px 2px rgba(99, 102, 241, 0.1);
 
   --background: var(--page-bg);
   --foreground: var(--theme-text);
@@ -413,8 +414,9 @@
 :root[data-theme-family='mist'].dark {
   --theme-bg: #130f26;
   --page-bg: #07040f;
-  --theme-shadow-light: rgba(129, 140, 248, 0.07);
-  --theme-shadow-dark: rgba(0, 0, 0, 0.72);
+  --shadow-elevation: rgba(0, 0, 0, 0.32);
+  --theme-shadow-light: rgba(0, 0, 0, 0);
+  --theme-shadow-dark: rgba(0, 0, 0, 0);
   --theme-text: #eae6ff;
   --theme-text-muted: #857fbd;
   --theme-accent: #818cf8;
@@ -451,11 +453,10 @@
   --theme-glass-bg: rgba(20, 16, 40, 0.9);
   --theme-glass-border: rgba(129, 140, 248, 0.18);
   --theme-glass-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.28);
-  --hover-shadow-card: 0 14px 36px rgba(129, 140, 248, 0.18), 0 4px 14px rgba(129, 140, 248, 0.1),
-    0 0 0 1px rgba(129, 140, 248, 0.12);
-  --hover-shadow-row: 0 8px 20px rgba(129, 140, 248, 0.14), 0 2px 8px rgba(129, 140, 248, 0.08);
-  --hover-shadow-btn: 0 6px 18px rgba(129, 140, 248, 0.24), 0 2px 6px rgba(129, 140, 248, 0.13);
-  --hover-shadow-pill: 0 4px 12px rgba(129, 140, 248, 0.18), 0 1px 4px rgba(129, 140, 248, 0.11);
+  --hover-shadow-card: 0 6px 16px var(--shadow-elevation), 0 0 0 1px rgba(129, 140, 248, 0.1);
+  --hover-shadow-row: 0 2px 8px var(--shadow-elevation);
+  --hover-shadow-btn: 0 2px 8px rgba(129, 140, 248, 0.22), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --hover-shadow-pill: 0 2px 6px rgba(129, 140, 248, 0.2), 0 1px 2px rgba(0, 0, 0, 0.18);
 
   --background: var(--page-bg);
   --foreground: var(--theme-text);
@@ -527,12 +528,14 @@
   --fab-glow: var(--theme-fab-glow);
   --glass-shadow: var(--theme-glass-shadow);
 
-  /* Shadow presets (adapt via --shadow-dark / --shadow-light) */
-  --shadow-inset: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light);
-  --shadow-sm: 4px 4px 10px var(--shadow-dark), -4px -4px 10px var(--shadow-light);
-  --shadow-md: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
-  --shadow-lg: 8px 8px 20px var(--shadow-dark), -8px -8px 20px var(--shadow-light);
-  --shadow-xl: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
+  /* 单方向 elevation shadow(向下,柔和)。
+     用于卡片悬浮、模态、下拉菜单等需要"浮起"反馈的元素。
+     取代之前的 neumorphic 双向 split shadow。 */
+  --shadow-inset: inset 0 1px 2px var(--shadow-elevation);
+  --shadow-sm: 0 1px 2px var(--shadow-elevation);
+  --shadow-md: 0 2px 6px var(--shadow-elevation);
+  --shadow-lg: 0 4px 12px var(--shadow-elevation);
+  --shadow-xl: 0 8px 24px var(--shadow-elevation);
 
   /* Brand CTA button shadow (unified glow for primary actions) */
   --shadow-brand-btn: 0 4px 14px var(--glow);
