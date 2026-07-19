@@ -85,7 +85,7 @@
         style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <h2 class="text-h2" style="font-weight: 600; color: var(--theme-error)">{t('share.loadFailed')}</h2>
-        <p class="text-body-lg" style="color: var(--text-secondary); margin-top: 8px">
+        <p class="text-body-lg mt-2" style="color: var(--text-secondary)">
           {data.error || t('share.notExist')}
         </p>
         <button
@@ -130,7 +130,7 @@
         <div class="space-y-6 p-6">
           <!-- Primary action button -->
           <button
-            class="flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-semibold outline-none"
+            class="flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-semibold outline-none transition-all duration-150 hover:-translate-y-0.5 active:scale-[0.97]"
             style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
             onclick={handleApply}
           >
@@ -169,8 +169,8 @@
           <!-- Location note -->
           <div>
             <p
-              class="text-xs uppercase"
-              style="letter-spacing: 0.14em; color: var(--text-secondary); margin-bottom: 8px"
+              class="text-xs uppercase mb-2"
+              style="letter-spacing: 0.14em; color: var(--text-secondary);"
             >
               {t('share.locationNote')}
             </p>
@@ -211,7 +211,7 @@
         style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <h2 class="text-h2" style="font-weight: 600; color: var(--text-primary)">分享内容</h2>
-        <p class="text-body-lg" style="color: var(--text-secondary); margin-top: 8px">
+        <p class="text-body-lg mt-2" style="color: var(--text-secondary)">
           分享类型：{share.share.share_type === 'user'
             ? '用户'
             : share.share.share_type === 'group'

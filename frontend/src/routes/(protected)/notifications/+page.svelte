@@ -331,7 +331,7 @@
   <!-- Overview stats -->
   <div class="surface-flat rounded-[var(--radius-lg)] p-4">
     <span class="eyebrow">通知概览</span>
-    <div class="grid grid-cols-2 gap-3" style="margin-top: 12px;">
+    <div class="grid grid-cols-2 gap-3 mt-3">
       {#each overviewTiles as tile (tile.label)}
         <div
           class="rounded-[var(--radius-md)]"
@@ -347,7 +347,8 @@
             class:text-display={tile.big}
             class:text-body-lg={!tile.big}
             class:font-semibold={true}
-            style="color: {tile.color}; margin-top: 6px; line-height: 1.1;"
+            class="mt-1.5"
+            style="color: {tile.color}; line-height: 1.1;"
           >
             {tile.value}
           </p>
@@ -357,9 +358,9 @@
   </div>
 
   <!-- Type distribution -->
-  <div class="surface-flat rounded-[var(--radius-lg)] p-4" style="margin-top: 16px;">
+  <div class="surface-flat rounded-[var(--radius-lg)] p-4 mt-4">
     <span class="eyebrow">类型分布</span>
-    <div class="flex flex-col" style="gap: 10px; margin-top: 12px;">
+    <div class="flex flex-col mt-3 gap-2.5">
       {#each distributionRows as row (row.label)}
         <div
           class="flex items-center justify-between rounded-[var(--radius-md)]"
@@ -403,7 +404,7 @@
                 {t('notificationsPage.title')}
               </h1>
               {#if notificationStore.unreadCount > 0}
-                <p class="text-meta" style="color: var(--text-secondary); margin-top: 1px">
+                <p class="text-meta mt-px" style="color: var(--text-secondary);">
                   {notificationStore.unreadCount} 条未读
                 </p>
               {/if}
@@ -505,7 +506,7 @@
                           >{getNotificationContent(item, locale)}</span
                         >
                       </div>
-                      <p class="text-caption" style="color: var(--text-secondary); margin-top: 2px">
+                      <p class="text-caption mt-0.5" style="color: var(--text-secondary);">
                         {formatNotificationTimestamp(item.created_at, locale)}
                       </p>
                     </button>

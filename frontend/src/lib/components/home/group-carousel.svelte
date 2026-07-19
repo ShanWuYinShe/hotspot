@@ -37,7 +37,7 @@
   <div class="flex gap-3 overflow-x-auto no-scrollbar h-scroll" style="padding-bottom: 4px;">
     {#if loading}
       {#each Array(3) as _}
-        <div class="flex-shrink-0" style="width: 140px;">
+        <div class="flex-shrink-0 w-[140px]">
           <div
             style="height: 72px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--skeleton-bg);"
           ></div>

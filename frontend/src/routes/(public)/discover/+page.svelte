@@ -5,6 +5,7 @@
   import { platformStore } from '$lib/stores/platform.svelte';
   import MomentCard from '$lib/components/moments/moment-card.svelte';
   import EmptyState from '$lib/components/common/empty-state.svelte';
+  import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
   import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
   import Search from 'lucide-svelte/icons/search';
@@ -124,8 +125,7 @@
   </div>
   <!-- Search bar -->
   <div
-    class="input-surface flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-2.5"
-    style="margin-bottom: 10px;"
+    class="input-surface flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-2.5 mb-2.5"
   >
     <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
     <input
@@ -152,8 +152,8 @@
     {#each TABS as tab (tab.id)}
       <button
         type="button"
-        class="text-body relative flex-shrink-0 pb-3 pt-1 outline-none transition-colors"
-        style="padding-left: 18px; padding-right: 18px; color: {activeTab === tab.id
+        class="text-body relative flex-shrink-0 pb-3 pt-1 px-[18px] outline-none transition-colors"
+        style="color: {activeTab === tab.id
           ? 'var(--brand)'
           : 'var(--text-secondary)'}; font-weight: {activeTab === tab.id ? 500 : 400}"
         onclick={() => (activeTab = tab.id)}
@@ -191,21 +191,7 @@
 {#snippet feedGrid()}
   {#if feed.loading}
     <div class="density-grid">
-      {#each Array(4) as _}
-        <div class="surface-flat rounded-[var(--radius-md)] overflow-hidden">
-          <div style="aspect-ratio: 16/9; background: var(--border-theme);"></div>
-          <div style="padding: 12px 16px;">
-            <div
-              class="rounded mb-2"
-              style="width: 80%; height: 12px; background: var(--border-theme);"
-            ></div>
-            <div
-              class="rounded"
-              style="width: 60%; height: 10px; background: var(--border-theme);"
-            ></div>
-          </div>
-        </div>
-      {/each}
+      <ListSkeleton type="moment" count={4} layout="grid" />
     </div>
   {:else if getFilteredItems().length === 0}
     <EmptyState
@@ -282,7 +268,7 @@
   <!-- Active users -->
   <div>
     <span class="eyebrow">活跃用户</span>
-    <div class="flex flex-col mt-3" style="gap: 10px;">
+    <div class="flex flex-col mt-3 gap-2.5">
       {#each topUsers as user (user.id)}
         <div class="flex items-center gap-2.5">
           <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={32} />

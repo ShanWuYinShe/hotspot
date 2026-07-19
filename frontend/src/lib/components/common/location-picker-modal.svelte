@@ -1757,7 +1757,7 @@
       >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <p class="text-[11px] font-medium uppercase tracking-[0.16em]">
+            <p class="text-caption font-medium uppercase tracking-[0.16em]">
               {mapModeLabel}
             </p>
             <p class="mt-1 truncate text-base font-semibold">
@@ -1940,7 +1940,7 @@
                   : 'background: var(--border-theme);'}
               ></span>
             </button>
-            <div class="px-3 pb-1 pt-2 text-[11px]">
+            <div class="px-3 pb-1 pt-2 text-caption">
               {t('locationPicker.filtersEnabled', { count: activeFilterCount })}
             </div>
           </div>
@@ -1965,7 +1965,7 @@
                 <span>{gestureHintMessage}</span>
                 <button
                   type="button"
-                  class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                  class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-medium"
                   style="color: var(--text-secondary);"
                   onclick={dismissGestureHintPermanently}
                 >
@@ -2036,7 +2036,7 @@
               >
                 <div class="min-w-0">
                   <p
-                    class="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                    class="text-caption font-semibold uppercase tracking-[0.16em]"
                     style="color: var(--text-secondary);"
                   >
                     {clusterPreview.kind === 'overlap_group' ? t('locationPicker.overlapPreviewTitle') : t('locationPicker.clusterPreviewTitle')}
@@ -2069,7 +2069,7 @@
                       onclick={() => focusPreviewEntity(previewItem)}
                     >
                       <div
-                        class={`rounded-full px-2 py-1 text-[11px] font-semibold ${getItemBadgeClass(previewItem)}`}
+                        class={`rounded-full px-2 py-1 text-caption font-semibold ${getItemBadgeClass(previewItem)}`}
                       >
                         {getItemTypeLabel(previewItem)}
                       </div>
@@ -2121,7 +2121,7 @@
               >
                 <div class="min-w-0">
                   <p
-                    class="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                    class="text-caption font-semibold uppercase tracking-[0.16em]"
                     style="color: var(--text-secondary);"
                   >
                     {t('locationPicker.mapObjectDetails')}
@@ -2164,7 +2164,7 @@
                     }}
                   >
                     <div
-                      class="rounded-full px-2 py-1 text-[11px] font-semibold"
+                      class="rounded-full px-2 py-1 text-caption font-semibold"
                       style="background: var(--surface-bg); color: var(--brand); border: 1px solid var(--border-theme);"
                     >
                       {item.object_type === 'user'
@@ -2209,7 +2209,7 @@
             >
               <div class="h-1 w-12 rounded-full" style="background: var(--border-theme);"></div>
               <div
-                class="flex items-center gap-2 text-[11px] font-semibold tracking-[0.08em] /90 uppercase"
+                class="flex items-center gap-2 text-caption font-semibold tracking-[0.08em] /90 uppercase"
               >
                 <span>{isBottomSheetExpanded ? t('locationPicker.collapsePanel') : t('locationPicker.expandPanel')}</span>
                 {#if isBottomSheetExpanded}
@@ -2239,7 +2239,7 @@
                       <div class="flex items-start justify-between gap-3">
                         <div>
                           <p
-                            class="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                            class="text-caption font-semibold uppercase tracking-[0.16em]"
                             style="color: var(--text-secondary);"
                           >
                             {t('locationPicker.placeSearchTitle')}
@@ -2373,7 +2373,7 @@
                                   <div class="truncate text-sm font-medium">
                                     {item.locationName}
                                   </div>
-                                  <div class="mt-1 text-[11px]">{t('locationPicker.historyItemHint')}</div>
+                                  <div class="mt-1 text-caption">{t('locationPicker.historyItemHint')}</div>
                                 </div>
                               </button>
                             {/each}
@@ -2399,7 +2399,7 @@
                     <div class="mb-2 flex items-center justify-between px-1">
                       <div>
                         <p
-                          class="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                          class="text-caption font-semibold uppercase tracking-[0.16em]"
                           style="color: var(--text-secondary);"
                         >
                           {t('locationPicker.mapFilterTitle')}
@@ -2488,7 +2488,7 @@
                     >
                       <div class="min-w-0">
                         <p
-                          class="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                          class="text-caption font-semibold uppercase tracking-[0.16em]"
                           style="color: var(--text-secondary);"
                         >
                           {clusterPreview.kind === 'overlap_group'
@@ -2520,7 +2520,7 @@
                             onclick={() => focusPreviewEntity(previewItem)}
                           >
                             <div
-                              class={`rounded-full px-2 py-1 text-[11px] font-semibold ${getItemBadgeClass(previewItem)}`}
+                              class={`rounded-full px-2 py-1 text-caption font-semibold ${getItemBadgeClass(previewItem)}`}
                             >
                               {getItemTypeLabel(previewItem)}
                             </div>
@@ -2570,7 +2570,7 @@
                     >
                       <div class="min-w-0">
                         <p
-                          class="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                          class="text-caption font-semibold uppercase tracking-[0.16em]"
                           style="color: var(--text-secondary);"
                         >
                           {t('locationPicker.mapObjectDetails')}
@@ -2610,7 +2610,7 @@
                           }}
                         >
                           <div
-                            class="rounded-full px-2 py-1 text-[11px] font-semibold"
+                            class="rounded-full px-2 py-1 text-caption font-semibold"
                             style="background: var(--surface-bg); color: var(--brand); border: 1px solid var(--border-theme);"
                           >
                             {item.object_type === 'user'
@@ -2674,7 +2674,7 @@
       >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <p class="text-[11px]" style="color: var(--text-secondary);">
+            <p class="text-caption" style="color: var(--text-secondary);">
               {mapModeLabel} <span style="margin: 0 4px;">›</span>
             </p>
             <p class="text-h2 mt-0.5 truncate text-base font-bold">
@@ -2770,7 +2770,7 @@
                     <p class="truncate text-sm font-medium">
                       {result.name}
                     </p>
-                    <p class="mt-0.5 text-[11px]">
+                    <p class="mt-0.5 text-caption">
                       {result.address || t('locationPicker.noAddress')}
                     </p>
                   </div>
@@ -2778,11 +2778,11 @@
               {/each}
             {:else if searchText.trim().length === 0 && anchorHistory.length > 0}
               <div class="flex items-center justify-between px-1 pb-1">
-                <div class="flex items-center gap-1.5 text-[11px] font-medium">
+                <div class="flex items-center gap-1.5 text-caption font-medium">
                   <Clock class="h-3.5 w-3.5" />
                   <span>{t('locationPicker.recentlyUsed')}</span>
                 </div>
-                <button class="flex items-center gap-1 text-[11px]" onclick={handleClearHistory}>
+                <button class="flex items-center gap-1 text-caption" onclick={handleClearHistory}>
                   <Trash2 class="h-3 w-3" />
                   <span>{t('locationPicker.clearAll')}</span>
                 </button>
@@ -2801,12 +2801,12 @@
                     <p class="truncate text-sm font-medium">
                       {item.locationName}
                     </p>
-                    <p class="mt-0.5 text-[11px]">{t('locationPicker.historyItemHintShort')}</p>
+                    <p class="mt-0.5 text-caption">{t('locationPicker.historyItemHintShort')}</p>
                   </div>
                 </button>
               {/each}
             {:else if searchText.trim().length > 0 && !isSearching}
-              <div class="rounded-[var(--radius-md)] border border-dashed px-3 py-4 text-[11px]">
+              <div class="rounded-[var(--radius-md)] border border-dashed px-3 py-4 text-caption">
                 {t('locationPicker.noMatchDescShort')}
               </div>
             {/if}
