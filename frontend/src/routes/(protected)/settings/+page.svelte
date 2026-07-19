@@ -428,7 +428,7 @@
                 {#if i > 0}
                   <div class="mx-4" style="height: 1px; background: var(--border-theme);"></div>
                 {/if}
-                <a href={item.href} class="flex items-center gap-3 px-4 py-3.5 transition-colors">
+                <a href={item.href} class="list-row flex items-center gap-3 px-4 py-3.5">
                   <div
                     class="flex flex-shrink-0 items-center justify-center rounded-full"
                     style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
