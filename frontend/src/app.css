@@ -122,12 +122,12 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Theme: forest — flat green, clean baseline
+   Theme: grove — flat green, clean baseline
    Light:  pure white canvas, #3D7A55 green accent
    Dark:   near-black #1A1C1A canvas, #52B878 green accent
    Shadows zeroed → components render as clean flat shapes.
    ═══════════════════════════════════════════════════════════════════════ */
-:root[data-theme-family='forest'] {
+:root[data-theme-family='grove'] {
   --theme-bg: #f9f9f5;
   --page-bg: #edecea;
   --theme-shadow-light: rgba(255, 255, 255, 0);
@@ -220,7 +220,7 @@
   --topbar-height-desktop: 4rem;
 }
 
-:root[data-theme-family='forest'].dark {
+:root[data-theme-family='grove'].dark {
   --theme-bg: #161a16;
   --page-bg: #0e110e;
   --theme-shadow-light: rgba(255, 255, 255, 0);
@@ -311,12 +311,12 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Theme: indigo — indigo/violet, energetic modern
+   Theme: mist — indigo/violet, energetic modern
    Light:  white cards on soft lavender canvas, electric indigo accent
    Dark:   deep indigo-black canvas, luminous lavender accent
    ═══════════════════════════════════════════════════════════════════════ */
 :root,
-:root[data-theme-family='indigo'] {
+:root[data-theme-family='mist'] {
   --theme-bg: #fafafe;
   --page-bg: #eef2ff;
   --theme-shadow-light: rgba(255, 255, 255, 1);
@@ -410,7 +410,7 @@
 
 :root,
 :root.dark,
-:root[data-theme-family='indigo'].dark {
+:root[data-theme-family='mist'].dark {
   --theme-bg: #130f26;
   --page-bg: #07040f;
   --theme-shadow-light: rgba(129, 140, 248, 0.07);
@@ -494,207 +494,6 @@
   --sidebar-accent-foreground: var(--theme-text);
   --sidebar-border: var(--theme-border);
   --sidebar-ring: #818cf8;
-  /* Skeleton 占位填充:比 surface 略深的同色调,
-     作占位时是"凹陷感"而非 pigmented 色块。 */
-  --skeleton-bg: color-mix(in srgb, var(--surface-bg) 65%, var(--page-bg));
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   Theme: sand — 暖砂 warm-sand ceramic (default theme)
-   Character: sun-warmed stone, ceramic tactility, low-contrast embossing.
-   Light:  warm sand #EFE7DA canvas, terracotta #B86F4B accent
-   Dark:   warm brown #211B17 canvas, ember #D18A5D accent
-   ═══════════════════════════════════════════════════════════════════════ */
-:root[data-theme-family='sand'] {
-  --theme-bg: #efe7da;
-  --page-bg: #e2d6c5;
-  /* 陶瓷暖光阴影:从 0.96 实心奶白(画方块)降到 0.5 暖桃白,回归阴影语义。
-     暖桃白 #fbe8d8 与画布 #efe7da 形成色温对比,呈现"暖光打在陶瓷上"的质感。 */
-  --theme-shadow-light: rgba(251, 232, 216, 0.5);
-  --theme-shadow-dark: rgba(167, 145, 116, 0.22);
-  --theme-text: #3f342a;
-  --theme-text-muted: #65594a;
-  --theme-accent: #8b806f;
-  --theme-accent-primary: #b86f4b;
-  --theme-glow: rgba(184, 111, 75, 0.24);
-  --theme-fab-glow: 0 6px 18px rgba(184, 111, 75, 0.34), 0 2px 4px rgba(0, 0, 0, 0.1);
-  --theme-border: rgba(93, 72, 52, 0.09);
-  --theme-border-pressed: rgba(93, 72, 52, 0.18);
-  --theme-accent-soft: rgba(184, 111, 75, 0.1);
-  --theme-accent-soft-border: rgba(184, 111, 75, 0.24);
-  --theme-error: #c0392b;
-  --theme-error-border: rgba(192, 57, 43, 0.3);
-  --theme-success: #66835d;
-  --theme-warning: #b8843f;
-  --theme-warning-border: rgba(184, 132, 63, 0.3);
-  --theme-fallback-bg: rgba(184, 111, 75, 0.12);
-  --theme-fallback-text: #b86f4b;
-  --theme-active-text: #fff8f4;
-  --theme-glass-bg: rgba(239, 231, 218, 0.88);
-  /* glass-border 与 shadow-light 同色系,保持陶瓷温度一致 */
-  --theme-glass-border: rgba(251, 232, 216, 0.65);
-  --theme-glass-shadow: 0 -2px 16px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(184, 111, 75, 0.1);
-  --semantic-online: #66835d;
-  --semantic-hot: #b86f4b;
-  --semantic-warning: #b8843f;
-  --map-user: #a97855;
-  --map-group: #7b8a69;
-  --map-post: #c97a55;
-  --map-mixed: #5a4632;
-  --overlay-soft: rgba(63, 52, 42, 0.1);
-  --overlay-strong: rgba(43, 33, 25, 0.46);
-  --surface-image-scrim: linear-gradient(
-    to bottom,
-    rgba(35, 27, 20, 0.04) 0%,
-    rgba(35, 27, 20, 0.48) 100%
-  );
-  --hover-shadow-card:
-    9px 9px 22px var(--theme-shadow-dark), -9px -9px 22px var(--theme-shadow-light);
-  --hover-shadow-row:
-    6px 6px 16px var(--theme-shadow-dark), -6px -6px 16px var(--theme-shadow-light);
-  --hover-shadow-btn:
-    5px 5px 13px var(--theme-shadow-dark), -5px -5px 13px var(--theme-shadow-light);
-  --hover-shadow-pill:
-    3px 3px 9px var(--theme-shadow-dark), -3px -3px 9px var(--theme-shadow-light);
-
-  --background: var(--page-bg);
-  --foreground: var(--theme-text);
-  --card: var(--theme-bg);
-  --card-foreground: var(--theme-text);
-  --popover: var(--theme-bg);
-  --popover-foreground: var(--theme-text);
-  --primary: var(--theme-accent-primary);
-  --primary-foreground: #fff8f4;
-  --secondary: color-mix(in srgb, var(--theme-bg) 78%, var(--page-bg));
-  --secondary-foreground: var(--theme-text);
-  --accent: color-mix(in srgb, var(--theme-bg) 90%, var(--page-bg));
-  --accent-foreground: var(--theme-text);
-  --muted: color-mix(in srgb, var(--theme-bg) 72%, var(--page-bg));
-  --muted-foreground: var(--theme-text-muted);
-  --destructive: var(--theme-error);
-  --destructive-foreground: #ffffff;
-  --border: var(--theme-border);
-  --input: var(--theme-border-pressed);
-  --input-background: color-mix(in srgb, var(--theme-bg) 86%, var(--page-bg));
-  --switch-background: var(--theme-border-pressed);
-  --ring: var(--theme-accent-primary);
-  --glow-primary: rgba(184, 111, 75, 0.24);
-  --glow-accent: rgba(184, 111, 75, 0.22);
-  --glow-success: rgba(102, 131, 93, 0.18);
-  --shadow-light: var(--theme-shadow-light);
-  --shadow-dark: var(--theme-shadow-dark);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: var(--theme-bg);
-  --sidebar-foreground: var(--theme-text);
-  --sidebar-primary: var(--theme-accent-primary);
-  --sidebar-primary-foreground: #fff8f4;
-  --sidebar-accent: color-mix(in srgb, var(--theme-bg) 90%, var(--page-bg));
-  --sidebar-accent-foreground: var(--theme-text);
-  --sidebar-border: var(--theme-border-pressed);
-  --sidebar-ring: var(--theme-accent-primary);
-  /* Skeleton 占位填充:比 surface 略深的同色调,
-     作占位时是"凹陷感"而非 pigmented 色块。 */
-  --skeleton-bg: color-mix(in srgb, var(--surface-bg) 65%, var(--page-bg));
-  --topbar-height-mobile: 3.5rem;
-  --topbar-height-desktop: 4rem;
-}
-
-:root[data-theme-family='sand'].dark {
-  /* 陶瓷深棕:bg/page 亮度差从 7% 提到 15%,卡片才凸出画布。
-     shadow-light 从 0.055(几乎不可见)提到 0.18(陶瓷凸起感回归),
-     light:dark 比例 1:10.5 → 1:3,立体而不被压平。
-     text/muted 略提亮,避免与 forest dark 灰绿混淆。 */
-  --theme-bg: #2a221c;
-  --page-bg: #18120e;
-  --theme-shadow-light: rgba(255, 200, 150, 0.18);
-  --theme-shadow-dark: rgba(0, 0, 0, 0.55);
-  --theme-text: #f5ead8;
-  --theme-text-muted: #b8a48c;
-  --theme-accent: #b7a28a;
-  --theme-accent-primary: #d18a5d;
-  --theme-glow: rgba(209, 138, 93, 0.22);
-  --theme-fab-glow: 0 6px 22px rgba(209, 138, 93, 0.36), 0 2px 6px rgba(0, 0, 0, 0.22);
-  --theme-border: rgba(255, 220, 183, 0.08);
-  --theme-border-pressed: rgba(255, 220, 183, 0.16);
-  --theme-accent-soft: rgba(209, 138, 93, 0.12);
-  --theme-accent-soft-border: rgba(209, 138, 93, 0.28);
-  --theme-error: #e06f6f;
-  --theme-error-border: rgba(224, 111, 111, 0.3);
-  --theme-success: #8ca877;
-  --theme-warning: #d1a35d;
-  --theme-warning-border: rgba(209, 163, 93, 0.3);
-  --theme-fallback-bg: rgba(209, 138, 93, 0.15);
-  --theme-fallback-text: #d18a5d;
-  --theme-active-text: #1a120c;
-  --theme-glass-bg: rgba(42, 34, 28, 0.9);
-  --theme-glass-border: rgba(255, 220, 183, 0.08);
-  --theme-glass-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.28);
-  --semantic-online: #8ca877;
-  --semantic-hot: #d18a5d;
-  --semantic-warning: #d1a35d;
-  --map-user: #d18a5d;
-  --map-group: #9aaf84;
-  --map-post: #c87857;
-  --map-mixed: #6b4f38;
-  --overlay-soft: rgba(245, 234, 216, 0.08);
-  --overlay-strong: rgba(0, 0, 0, 0.56);
-  --surface-image-scrim: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.02) 0%,
-    rgba(0, 0, 0, 0.58) 100%
-  );
-  --hover-shadow-card:
-    9px 9px 22px var(--theme-shadow-dark), -9px -9px 22px var(--theme-shadow-light);
-  --hover-shadow-row:
-    6px 6px 16px var(--theme-shadow-dark), -6px -6px 16px var(--theme-shadow-light);
-  --hover-shadow-btn:
-    5px 5px 13px var(--theme-shadow-dark), -5px -5px 13px var(--theme-shadow-light);
-  --hover-shadow-pill:
-    3px 3px 9px var(--theme-shadow-dark), -3px -3px 9px var(--theme-shadow-light);
-
-  --background: var(--page-bg);
-  --foreground: var(--theme-text);
-  --card: var(--theme-bg);
-  --card-foreground: var(--theme-text);
-  --popover: color-mix(in srgb, var(--theme-bg) 92%, var(--page-bg));
-  --popover-foreground: var(--theme-text);
-  --primary: var(--theme-accent-primary);
-  --primary-foreground: #1a120c;
-  --secondary: color-mix(in srgb, var(--theme-bg) 82%, var(--page-bg));
-  --secondary-foreground: var(--theme-text);
-  --accent: color-mix(in srgb, var(--theme-bg) 88%, var(--page-bg));
-  --accent-foreground: var(--theme-text);
-  --muted: color-mix(in srgb, var(--theme-bg) 78%, var(--page-bg));
-  --muted-foreground: var(--theme-text-muted);
-  --destructive: var(--theme-error);
-  --destructive-foreground: #fff8f4;
-  --border: var(--theme-border);
-  --input: var(--theme-border-pressed);
-  --input-background: color-mix(in srgb, var(--theme-bg) 84%, var(--page-bg));
-  --switch-background: var(--theme-border-pressed);
-  --ring: var(--theme-accent-primary);
-  --glow-primary: rgba(209, 138, 93, 0.18);
-  --glow-accent: rgba(209, 138, 93, 0.14);
-  --glow-success: rgba(140, 168, 119, 0.14);
-  --shadow-light: var(--theme-shadow-light);
-  --shadow-dark: var(--theme-shadow-dark);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.985 0 0);
-  --chart-4: oklch(0.806 0.204 91.732);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: var(--theme-bg);
-  --sidebar-foreground: var(--theme-text);
-  --sidebar-primary: var(--theme-accent-primary);
-  --sidebar-primary-foreground: #1a120c;
-  --sidebar-accent: color-mix(in srgb, var(--theme-bg) 88%, var(--page-bg));
-  --sidebar-accent-foreground: var(--theme-text);
-  --sidebar-border: var(--theme-border-pressed);
-  --sidebar-ring: var(--theme-accent-primary);
   /* Skeleton 占位填充:比 surface 略深的同色调,
      作占位时是"凹陷感"而非 pigmented 色块。 */
   --skeleton-bg: color-mix(in srgb, var(--surface-bg) 65%, var(--page-bg));
@@ -887,11 +686,11 @@
       8px 8px 18px var(--shadow-dark),
       -8px -8px 18px var(--shadow-light);
   }
-  [data-theme-family='forest'] .surface-hero,
-  [data-theme-family='forest'] .neu-surface-hero,
-  [data-theme-family='forest'].dark .surface-hero,
-  [data-theme-family='forest'].dark .neu-surface-hero {
-    /* forest 扁平无 neumorphic 阴影,border 是唯一边界,用 border-active
+  [data-theme-family='grove'] .surface-hero,
+  [data-theme-family='grove'] .neu-surface-hero,
+  [data-theme-family='grove'].dark .surface-hero,
+  [data-theme-family='grove'].dark .neu-surface-hero {
+    /* grove 扁平无 neumorphic 阴影,border 是唯一边界,用 border-active
        (24% 对比度)而非默认的 border-theme(13%)确保清晰可见。
        保持 border 属性(非 box-shadow),避免圆角处渲染断裂。 */
     border-color: var(--border-active);
@@ -1283,31 +1082,23 @@
     pointer-events: none;
     z-index: 0;
   }
-  [data-theme-family='forest'] .ambient-glow::before,
-  [data-theme-family='forest'] .neu-ambient-glow::before,
-  [data-theme-family='forest'].dark .ambient-glow::before,
-  [data-theme-family='forest'].dark .neu-ambient-glow::before {
+  [data-theme-family='grove'] .ambient-glow::before,
+  [data-theme-family='grove'] .neu-ambient-glow::before,
+  [data-theme-family='grove'].dark .ambient-glow::before,
+  [data-theme-family='grove'].dark .neu-ambient-glow::before {
     opacity: 0.95;
   }
-  [data-theme-family='indigo'] .ambient-glow::before,
-  [data-theme-family='indigo'] .neu-ambient-glow::before {
+  [data-theme-family='mist'] .ambient-glow::before,
+  [data-theme-family='mist'] .neu-ambient-glow::before {
     opacity: 0.7;
   }
-  [data-theme-family='indigo'].dark .ambient-glow::before,
-  [data-theme-family='indigo'].dark .neu-ambient-glow::before {
+  [data-theme-family='mist'].dark .ambient-glow::before,
+  [data-theme-family='mist'].dark .neu-ambient-glow::before {
     opacity: 0.8;
   }
   .dark .ambient-glow::before,
   .dark .neu-ambient-glow::before {
     opacity: 0.85;
-  }
-  /* sand terracotta glow 在奶白/暖棕底上过亮,降到 0.4。
-     必须放在 .dark .ambient-glow::before 之后才能覆盖 sand dark 的 0.85。 */
-  [data-theme-family='sand'] .ambient-glow::before,
-  [data-theme-family='sand'] .neu-ambient-glow::before,
-  [data-theme-family='sand'].dark .ambient-glow::before,
-  [data-theme-family='sand'].dark .neu-ambient-glow::before {
-    opacity: 0.4;
   }
   .ambient-glow > *,
   .neu-ambient-glow > * {
@@ -2031,14 +1822,11 @@
 /* Tablet glass-bg override (mobile=0.88, tablet=0.92) */
 @media (min-width: 600px) and (max-width: 1279px) {
   :root,
-  :root[data-theme-family='indigo']:not(.dark) {
+  :root[data-theme-family='mist']:not(.dark) {
     --theme-glass-bg: rgba(238, 242, 255, 0.92);
   }
-  [data-theme-family='forest']:not(.dark) {
+  [data-theme-family='grove']:not(.dark) {
     --theme-glass-bg: rgba(248, 252, 249, 0.92);
-  }
-  [data-theme-family='sand']:not(.dark) {
-    --theme-glass-bg: rgba(234, 229, 222, 0.92);
   }
 }
 
