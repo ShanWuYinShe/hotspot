@@ -498,7 +498,7 @@
                     e.preventDefault();
                     e.stopPropagation();
                   }}
-                  aria-label="更多操作"
+                  aria-label={t('userProfile.moreAria')}
                 >
                   <MoreVertical size={14} strokeWidth={1.5} color="var(--text-secondary)" />
                 </button>
@@ -506,11 +506,11 @@
               <DropdownMenuContent align="end" class="w-48">
                 <DropdownMenuItem onclick={handleViewProfile}>
                   <User class="mr-2 h-4 w-4" />
-                  <span>查看主页</span>
+                  <span>{t('profile.viewProfile')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onclick={handleShare}>
                   <Share2 class="mr-2 h-4 w-4" />
-                  <span>分享</span>
+                  <span>{t('userProfile.shareAria')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onclick={handleReport} class="text-destructive">

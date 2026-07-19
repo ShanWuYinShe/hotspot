@@ -541,14 +541,14 @@
   }
   .compose .compose__titles { min-width: 0; }
   .compose .compose__title {
-    font-size: 18px;
+    font-size: var(--text-h2);
     font-weight: 600;
     letter-spacing: -0.01em;
     color: var(--text-primary);
     margin: 0;
   }
   .compose .compose__subtitle {
-    font-size: 12px;
+    font-size: var(--text-meta);
     color: var(--text-secondary);
     margin: 2px 0 0;
   }
@@ -603,7 +603,7 @@
     min-width: 0;
   }
   .compose .compose__author-name {
-    font-size: 13px;
+    font-size: var(--text-body);
     font-weight: 500;
     color: var(--text-primary);
   }
@@ -611,7 +611,7 @@
     display: flex;
     align-items: center;
     gap: 3px;
-    font-size: 11px;
+    font-size: var(--text-caption);
     color: var(--text-secondary);
   }
 
@@ -634,12 +634,12 @@
     gap: 8px;
   }
   .compose .compose__error {
-    font-size: 11px;
+    font-size: var(--text-caption);
     color: var(--error);
     margin-right: auto;
   }
   .compose .compose__counter {
-    font-size: 11px;
+    font-size: var(--text-caption);
     color: var(--text-secondary);
     font-variant-numeric: tabular-nums;
   }
@@ -655,7 +655,7 @@
   .compose .compose__tag-chip {
     display: inline-flex;
     padding: 2px 10px;
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 500;
     border-radius: var(--radius-pill);
     background: var(--brand);
@@ -667,7 +667,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 11px;
+    font-size: var(--text-caption);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--text-secondary);
@@ -707,7 +707,7 @@
     justify-content: center;
     background: var(--overlay);
     color: var(--text-on-overlay);
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-variant-numeric: tabular-nums;
   }
   .compose .compose__image-remove {
@@ -755,7 +755,7 @@
     border: 1.5px dashed var(--border-active) !important;
     cursor: pointer;
     color: var(--text-secondary);
-    font-size: 12px;
+    font-size: var(--text-meta);
     transition: border-color 0.16s ease;
   }
   @media (hover: hover) {
@@ -780,7 +780,7 @@
   .compose .compose__tags-input {
     border-radius: var(--radius-md);
     padding: 8px 12px;
-    font-size: 12px;
+    font-size: var(--text-meta);
     color: var(--text-primary);
     outline: none;
     width: 100%;
@@ -803,7 +803,7 @@
     border: 1px solid var(--border-theme);
     background: var(--surface-bg);
     color: var(--text-primary);
-    font-size: 12px;
+    font-size: var(--text-meta);
     font-family: inherit;
     outline: none;
     cursor: pointer;
@@ -819,7 +819,7 @@
     border: 1px solid transparent;
     background: var(--brand);
     color: var(--text-on-accent);
-    font-size: 14px;
+    font-size: var(--text-body-lg);
     font-weight: 500;
     font-family: inherit;
     cursor: pointer;

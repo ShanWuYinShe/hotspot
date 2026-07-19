@@ -239,9 +239,9 @@
           <UsersRound style="width: 20px; height: 20px; color: var(--brand);" />
         </div>
         <div>
-          <div style="color: var(--text-primary); font-weight: 600;">创建群组</div>
+          <div style="color: var(--text-primary); font-weight: 600;">{t('group.createGroup')}</div>
           <div class="text-body" style="font-weight: 400; color: var(--text-secondary)">
-            邀请伙伴一起交流
+            {t('group.createGroupHint')}
           </div>
         </div>
       </Dialog.Title>
@@ -425,7 +425,7 @@
           onOpenChange?.(false);
         }}
       >
-        取消
+         {t('common.cancel')}
       </button>
       <button
         class="text-body rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
@@ -436,7 +436,7 @@
         {#if isSubmitting}
           <Spinner size="md" class="mr-2" />
         {/if}
-        创建群组
+         {t('group.createGroup')}
       </button>
     </Dialog.Footer>
   </Dialog.Content>
