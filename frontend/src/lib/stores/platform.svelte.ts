@@ -17,7 +17,7 @@ class PlatformStore {
   /**
    * 是否为"宽屏"：视口宽度 ≥ 960px（桌面恒为真，横屏 / 大尺寸平板亦为真）。
    * 用于决定 **内容布局** 是否采用双栏 / master-detail；导航 chrome（侧边栏 vs 底栏）
-   * 仍由 isDesktop / isTablet 决定。详见 frontend/CLAUDE.md「三档设备一致性」。
+   * 仍由 isDesktop / isTablet 决定。详见 frontend/AGENTS.md「三档设备一致性」。
    *
    * ⚠️ 业务页优先用下方语义化派生量（useMasterDetail 等）或容器查询原语（.density-grid /
    * .sidebar-layout / .switcher，见 app.css），而非直接读 isWide。直接读 isWide 仅用于

@@ -1,6 +1,6 @@
 <script lang="ts" module>
   /**
-   * SmartImage — 响应式图片原语（frontend/CLAUDE.md「图片响应式」）
+   * SmartImage — 响应式图片原语（frontend/AGENTS.md「图片响应式」）
    *
    * 统一三件事：
    *  1. `loading="lazy"` + `decoding="async"` —— 懒加载、不阻塞主线程解码；

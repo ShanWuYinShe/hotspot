@@ -106,7 +106,7 @@
 
   /* ───────────────────────────────────────────────────────────────
      字号 token —— --text-* 命名空间自动生成 text-* 工具类
-     消除散落各页的内联 `font-size:Npx`，对齐 .claude/rules/design-tokens.md。
+     消除散落各页的内联 `font-size:Npx`，对齐 frontend/AGENTS.md「设计规范」。
      频率实测：前 5 名(xs/caption/meta/body/body-lg) 覆盖 91% 用量。
      ─────────────────────────────────────────────────────────────── */
   --text-xs: 10px; /* eyebrow / micro —— 配合 .eyebrow 类的 letter-spacing+uppercase */
@@ -1048,7 +1048,7 @@
      原则：颜色随主题族解析（color-mix(--brand)），禁止硬编码色值。
      - .tag-chip      ：兴趣/话题 hashtag 软底胶囊（基准取自 moment-card）
      - .filter-chip   ：分段筛选/排序 pill（静默态 + --active 选中态）
-     详见 frontend/CLAUDE.md「设计风格」。
+     详见 frontend/AGENTS.md「设计风格」。
      ─────────────────────────────────────────────────────────────── */
   .tag-chip {
     display: inline-flex;
@@ -1372,10 +1372,10 @@
      配合 .page-pad 的响应式留白保证内容不紧贴容器边缘。
      档位：默认(feed/列表 1180) / --wide(表格 1320) /
           --narrow(详情阅读 720) / --form(表单 560)。
-     详见 frontend/CLAUDE.md「页面布局规范」。
+     详见 frontend/AGENTS.md「页面布局规范」。
      ─────────────────────────────────────────────────────────────── */
   /* 流式页面标题：字号随视口平滑缩放，替代散落各页的内联 `font-size: 20px/24px`。
-     对齐 CLAUDE.md「字号 / 字重」：列表 / 钻取页 18–20px，门面页(home)22–24px。
+     对齐 AGENTS.md「字号 / 字重」：列表 / 钻取页 18–20px，门面页(home)22–24px。
      用 `<h1 class="page-title">` / `<h1 class="page-title page-title--hero">`。 */
   .page-title {
     font-size: clamp(1.125rem, 0.95rem + 0.5vw, 1.375rem);
@@ -1465,7 +1465,7 @@
   /* ───────────────────────────────────────────────────────────────
      容器查询布局原语（component-driven responsiveness）
      组件按自身容器宽度自适应，零视口判断、零 platformStore 引用。
-     选用决策树见 .claude/rules/ui-layout.md「容器查询原语」。
+     选用决策树见 frontend/AGENTS.md「容器查询原语」。
 
      设计参照：GitHub Primer「两层抽象」+ Josh Comeau 混合模式——
      视口层只管导航 chrome（见 app-shell.svelte），组件层全部走本原语。

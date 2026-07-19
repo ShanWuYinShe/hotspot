@@ -4,7 +4,7 @@ import { BreakpointType } from '../core/responsive/Breakpoint';
 /**
  * 页面内容栏容器（对齐前端 .page-shell + .page-pad）
  *
- * 核心原则（承前端 CLAUDE.md「页面布局规范」）：
+ * 核心原则（承前端 AGENTS.md「页面布局规范」）：
  * 内容居中收束在一条合理的测量栏内，宽屏不铺满全宽、不留大片空白；
  * 同时始终保留舒适的响应式横向留白，内容不紧贴容器边缘。
  *

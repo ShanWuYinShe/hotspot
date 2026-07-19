@@ -14,7 +14,7 @@
  * 状态传递：通过 @Link 接收 Index.ets 维护的 6 个 @State
  * 业务回调（initApp / WS / 通知同步等）仍由 Index.ets 的 aboutToAppear 触发
  *
- * 图标：使用系统 SymbolSpan（按 harmonyapp/CLAUDE.md "系统图标" 约束）
+ * 图标：使用系统 SymbolSpan（按 harmonyapp/AGENTS.md "系统图标" 约束）
  */
 
 import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
