@@ -789,29 +789,31 @@
     <div class="flex flex-col">
       <!-- Sticky header -->
       <div
-        class="sticky top-0 z-20 flex items-center justify-between px-5 py-3"
+        class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
         style="background: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
       >
-        <div>
-          <p class="text-h2" style="color: var(--text-primary)">{profile.nickname}</p>
-          <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
-            @{formatHandle(profile)}
-          </p>
-        </div>
-        <div class="flex gap-2.5">
-          <button
-            class="flex items-center justify-center rounded-full outline-none surface-flat"
-            style="width: 38px; height: 38px;"
-          >
-            <Share2 size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-          </button>
-          <button
-            class="flex items-center justify-center rounded-full outline-none surface-flat"
-            style="width: 38px; height: 38px;"
-            onclick={() => void goto('/settings')}
-          >
-            <Settings size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-          </button>
+        <div class="page-shell page-shell--form flex items-center justify-between">
+          <div>
+            <p class="text-h2" style="color: var(--text-primary)">{profile.nickname}</p>
+            <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
+              @{formatHandle(profile)}
+            </p>
+          </div>
+          <div class="flex gap-2.5">
+            <button
+              class="flex items-center justify-center rounded-full outline-none surface-flat"
+              style="width: 38px; height: 38px;"
+            >
+              <Share2 size={15} strokeWidth={1.5} color="var(--text-secondary)" />
+            </button>
+            <button
+              class="flex items-center justify-center rounded-full outline-none surface-flat"
+              style="width: 38px; height: 38px;"
+              onclick={() => void goto('/settings')}
+            >
+              <Settings size={15} strokeWidth={1.5} color="var(--text-secondary)" />
+            </button>
+          </div>
         </div>
       </div>
 

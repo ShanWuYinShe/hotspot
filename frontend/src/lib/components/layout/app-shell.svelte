@@ -104,7 +104,7 @@
   >
     <main
       class="page-enter no-scrollbar flex-1 scroll-smooth overflow-x-hidden overflow-y-auto"
-      style="background-color: var(--surface-bg);"
+      style="background-color: var(--surface-bg); padding-bottom: max(80px, env(safe-area-inset-bottom, 24px));"
     >
       {#if subnav}{@render subnav()}{/if}
       {@render gated()}

@@ -147,13 +147,14 @@
 {:else if profile}
   <!-- Header -->
   <div
-    class="sticky top-0 z-20 flex items-center justify-between px-5 py-3"
+    class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
     style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
   >
-    <div class="flex items-center gap-3">
-      <BackButton onclick={() => history.back()} size={36} />
-      <h1 class="page-title" style="color: var(--text-primary);">{t('profileEdit.title')}</h1>
-    </div>
+    <div class="page-shell page-shell--form flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <BackButton onclick={() => history.back()} size={36} />
+        <h1 class="page-title" style="color: var(--text-primary);">{t('profileEdit.title')}</h1>
+      </div>
     <button
       class="flex items-center gap-1.5 rounded-full px-4 py-2 outline-none transition-all"
       style={saved
@@ -170,6 +171,7 @@
         {t('profileEdit.save')}
       {/if}
     </button>
+    </div>
   </div>
 
   <div class="page-pad">

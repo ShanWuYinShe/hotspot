@@ -90,7 +90,7 @@
       return;
     }
     likeAction.toggle();
-    if (!likeAction.isOn) {
+    if (likeAction.isOn) {
       heartBurst = true;
       setTimeout(() => {
         heartBurst = false;

@@ -44,9 +44,9 @@
     </button>
     <button class="desktop-header__btn" aria-label={t('sidebar.toggleTheme')} onclick={toggleMode}>
       {#if currentMode === 'dark'}
-        <Sun size={17} color="var(--text-secondary)" />
-      {:else}
         <Moon size={17} color="var(--text-secondary)" />
+      {:else}
+        <Sun size={17} color="var(--text-secondary)" />
       {/if}
     </button>
     <DropdownMenu.Root>

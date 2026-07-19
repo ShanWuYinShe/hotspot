@@ -335,7 +335,7 @@
   <title>搜索 - HotSpot</title>
 </svelte:head>
 
-<div class="flex flex-col" style="height: 100%; background-color: var(--surface-bg);">
+<div class="flex flex-col h-full" style="background-color: var(--surface-bg);">
   <!-- Search header — back button + search input -->
   <div
     class="flex-shrink-0 page-pad-x py-3"
@@ -479,13 +479,14 @@
       <div class="page-shell page-shell--form">
         <!-- Result tabs -->
         <div class="flex overflow-x-auto no-scrollbar pt-3 pb-0 gap-2 h-scroll">
-          {#each [{ value: 'all', label: '全部' }, { value: 'users', label: `用户${users.length ? ` (${users.length})` : ''}` }, { value: 'moments', label: `动态${moments.length ? ` (${moments.length})` : ''}` }, { value: 'groups', label: `群组${groups.length ? ` (${groups.length})` : ''}` }] as tab (tab.value)}
+          {#each [{ value: 'all', label: '全部' }, { value: 'users', label: '用户' }, { value: 'moments', label: '动态' }, { value: 'groups', label: '群组' }] as tab (tab.value)}
+            {@const count = tab.value === 'users' ? users.length : tab.value === 'moments' ? moments.length : tab.value === 'groups' ? groups.length : 0}
             <button
               class="filter-chip"
               class:filter-chip--active={currentTab === tab.value}
               onclick={() => handleTabChange(tab.value)}
             >
-              {tab.label}
+              {tab.label}{#if count > 0} ({count}){/if}
             </button>
           {/each}
         </div>

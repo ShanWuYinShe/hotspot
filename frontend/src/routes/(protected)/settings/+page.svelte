@@ -456,11 +456,13 @@
     <div class="page-shell page-shell--form">
       <!-- Header with back button -->
       <div
-        class="sticky top-0 z-10 flex items-center gap-3 px-5 py-3"
+        class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
         style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
       >
-        <BackButton onclick={() => history.back()} size={40} />
-        <h1 class="page-title" style="color: var(--text-primary);">{t('settings.title')}</h1>
+        <div class="page-shell page-shell--form flex items-center gap-3">
+          <BackButton onclick={() => history.back()} size={40} />
+          <h1 class="page-title" style="color: var(--text-primary);">{t('settings.title')}</h1>
+        </div>
       </div>
 
       <div class="space-y-3">
@@ -597,7 +599,7 @@
           >
             {section.title}
           </p>
-          <div class="overflow-hidden rounded-[var(--radius-lg)]" style="">
+          <div class="surface-flat overflow-hidden rounded-[var(--radius-lg)]">
             {#each section.items as item, i (item.href)}
               {#if i > 0}
                 <div class="mx-4" style="height: 1px; background: var(--border-theme);"></div>

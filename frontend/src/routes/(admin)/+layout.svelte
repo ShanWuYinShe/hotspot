@@ -91,5 +91,7 @@
   </AppShell>
 {:else}
   <!-- 未登录：复用 AppShell 的统一整页登录占位（Lock 图标），与 (protected) 路由完全一致 -->
-  <AppShell requireAuth>{''}</AppShell>
+  <AppShell requireAuth>
+    {@render children()}
+  </AppShell>
 {/if}

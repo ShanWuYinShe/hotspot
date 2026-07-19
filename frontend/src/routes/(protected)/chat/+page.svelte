@@ -160,7 +160,7 @@
 
         <!-- Search bar -->
         <div class="input-surface flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-2.5">
-          <Search size={15} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
+          <Search size={16} strokeWidth={1.5} color="var(--text-secondary)" class="flex-shrink-0" />
           <input
             type="text"
             name="chat-search"
