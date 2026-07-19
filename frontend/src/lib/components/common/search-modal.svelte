@@ -307,13 +307,13 @@
 <Dialog.Root bind:open onOpenChange={setOpenState}>
   <Dialog.Content
     class="flex max-h-[85dvh] flex-col sm:max-w-3xl"
-    style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-lg);"
+    style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
   >
     <!-- Header -->
     <div class="flex items-center gap-3 px-5 pt-5 pb-0">
       <div
         class="flex items-center justify-center rounded-full"
-        style="width: 40px; height: 40px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+        style="width: 40px; height: 40px; border: 1px solid var(--border-theme);"
       >
         <Search size={18} strokeWidth={1.5} color="var(--brand)" />
       </div>
@@ -371,7 +371,7 @@
         <!-- Search suggestions -->
         <div
           class="rounded-[var(--radius-md)] p-4"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
         >
           {#if isSuggesting}
             <div class="space-y-2">
@@ -410,14 +410,14 @@
                       <div class="flex items-center gap-1">
                         <button
                           class="text-meta rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
-                          style="color: var(--text-primary); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
+                          style="color: var(--text-primary); background: var(--surface-bg); border: 1px solid var(--border-theme)"
                           onclick={() => handleSearchNavigate(term)}
                         >
                           {term}
                         </button>
                         <button
                           class="flex items-center justify-center rounded-full outline-none"
-                          style="width: 22px; height: 22px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                          style="width: 22px; height: 22px; background: var(--surface-bg); border: 1px solid var(--border-theme);"
                           onclick={() => removeRecent(term)}
                           aria-label={getRemoveRecentLabel(term)}
                         >
@@ -442,13 +442,13 @@
                     <button
                       type="button"
                       class="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left outline-none hover:bg-[var(--surface-secondary)] transition-colors duration-150"
-                      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                      style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                       onclick={() => handleSuggestionClick(item)}
                     >
                       {#if item.type === 'tag'}
                         <div
                           class="flex flex-shrink-0 items-center justify-center rounded-full"
-                          style="width: 34px; height: 34px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+                          style="width: 34px; height: 34px; border: 1px solid var(--border-theme);"
                         >
                           <Hash size={14} strokeWidth={1.5} color="var(--brand)" />
                         </div>
@@ -497,7 +497,7 @@
           <!-- Recent searches -->
           <div
             class="rounded-[var(--radius-md)] p-4"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-1.5">
@@ -526,14 +526,14 @@
                   <div class="flex items-center gap-1">
                     <button
                       class="text-meta rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
-                      style="color: var(--text-primary); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
+                      style="color: var(--text-primary); background: var(--surface-bg); border: 1px solid var(--border-theme)"
                       onclick={() => handleRecentClick(term)}
                     >
                       {term}
                     </button>
                     <button
                       class="flex items-center justify-center rounded-full outline-none"
-                      style="width: 22px; height: 22px; background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                      style="width: 22px; height: 22px; background: var(--surface-bg); border: 1px solid var(--border-theme);"
                       onclick={() => removeRecent(term)}
                       aria-label={getRemoveRecentLabel(term)}
                     >
@@ -548,7 +548,7 @@
           <!-- Trending tags -->
           <div
             class="rounded-[var(--radius-md)] p-4"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div class="flex items-center gap-1.5 mb-3">
               <TrendingUp size={14} strokeWidth={1.5} color="var(--text-secondary)" />
@@ -574,7 +574,7 @@
                 {#each trendingTags as tag (tag.name)}
                   <button
                     class="text-meta flex items-center gap-1 rounded-full px-3 py-1 outline-none hover:opacity-80 active:scale-95 transition-all duration-150"
-                    style="color: var(--brand); background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
+                    style="color: var(--brand); background: var(--surface-bg); border: 1px solid var(--border-theme)"
                     onclick={() => handleTagClick(tag.name)}
                     aria-label={t('searchModal.searchHotTag', { name: tag.name })}
                   >

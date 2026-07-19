@@ -98,7 +98,7 @@
   <div class="absolute bottom-3 right-3 flex flex-col gap-2">
     <button
       class="flex items-center justify-center rounded-[var(--radius-md)] outline-none"
-      style="width: 34px; height: 34px; background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid var(--glass-border); box-shadow: var(--shadow-md);"
+      style="width: 34px; height: 34px; background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid var(--glass-border);"
       onclick={zoomToCurrentLocation}
       aria-label="定位到当前位置"
     >

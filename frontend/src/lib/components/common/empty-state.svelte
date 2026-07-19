@@ -34,7 +34,7 @@
       ? 'rounded-[var(--radius-lg)] py-16'
       : 'py-14'} {className}"
     style={variant === 'card'
-      ? 'background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);'
+      ? 'background: var(--surface-bg); border: 1px solid var(--border-theme);'
       : ''}
   >
     <!-- 图标徽标：带柔和品牌渐变光晕，避免「裸图标」的工程师感 -->

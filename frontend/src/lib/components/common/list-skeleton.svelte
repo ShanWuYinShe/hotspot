@@ -19,7 +19,7 @@
   {#each Array(count) as _, i (i)}
     <div
       class="rounded-[var(--radius-lg)] p-5"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
     >
       {#if type === 'user'}
         <div class="flex items-center gap-3.5">

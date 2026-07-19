@@ -40,12 +40,12 @@
       <div class="grid gap-3">
         <button
           class="flex h-16 items-center gap-3 rounded-[var(--radius-md)] px-4 text-left outline-none active:scale-95 transition-transform duration-100"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           onclick={handleCreateMoment}
         >
           <div
             class="flex items-center justify-center rounded-full"
-            style="width: 38px; height: 38px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+            style="width: 38px; height: 38px; border: 1px solid var(--border-theme);"
           >
             <Image size={16} strokeWidth={1.5} color="var(--brand)" />
           </div>
@@ -61,12 +61,12 @@
 
         <button
           class="flex h-16 items-center gap-3 rounded-[var(--radius-md)] px-4 text-left outline-none active:scale-95 transition-transform duration-100"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           onclick={handleCreateGroup}
         >
           <div
             class="flex items-center justify-center rounded-full"
-            style="width: 38px; height: 38px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+            style="width: 38px; height: 38px; border: 1px solid var(--border-theme);"
           >
             <UsersRound size={16} strokeWidth={1.5} color="var(--brand)" />
           </div>

@@ -26,7 +26,7 @@
 
 <div
   class="rounded-[var(--radius-lg)] p-4"
-  style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+  style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
 >
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div class="min-w-0">
@@ -53,7 +53,7 @@
     {:else if onAdjust}
       <button
         class="text-body flex items-center gap-2 rounded-full px-4 py-2 outline-none"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary)"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary)"
         onclick={onAdjust}
       >
         <MapPin size={15} strokeWidth={1.5} color="var(--brand)" />

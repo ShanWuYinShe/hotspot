@@ -228,13 +228,13 @@
 >
   <Dialog.Content
     class="flex max-h-[85dvh] flex-col sm:max-w-2xl"
-    style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-lg);"
+    style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title class="flex items-center gap-3">
         <div
           class="flex items-center justify-center rounded-full"
-          style="width: 40px; height: 40px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+          style="width: 40px; height: 40px; border: 1px solid var(--border-theme);"
         >
           <UsersRound style="width: 20px; height: 20px; color: var(--brand);" />
         </div>
@@ -251,7 +251,7 @@
       <!-- 群组名称 -->
       <div
         class="rounded-[var(--radius-lg)] p-4 space-y-2"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <label for="group-name" class="text-meta" style="color: var(--text-primary)">群组名称</label
         >
@@ -280,7 +280,7 @@
       <!-- 群组介绍 -->
       <div
         class="rounded-[var(--radius-lg)] p-4 space-y-2"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <label for="group-desc" class="text-meta" style="color: var(--text-primary)">群组介绍</label
         >
@@ -308,7 +308,7 @@
       <!-- 群组标签 -->
       <div
         class="rounded-[var(--radius-lg)] p-4 space-y-2"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <label for="group-tags" class="text-meta" style="color: var(--text-primary)">群组标签</label
         >
@@ -335,7 +335,7 @@
       <!-- 加入方式 & 口令 -->
       <div
         class="grid gap-4 rounded-[var(--radius-lg)] p-4 sm:grid-cols-2"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <div class="space-y-2">
           <label for="join-method" class="text-meta" style="color: var(--text-primary)"
@@ -376,7 +376,7 @@
       <!-- 最大成员数 & 搜索 -->
       <div
         class="grid gap-4 rounded-[var(--radius-lg)] p-4 sm:grid-cols-2"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <div class="space-y-2">
           <label for="max-members" class="text-meta" style="color: var(--text-primary)"
@@ -419,7 +419,7 @@
     <Dialog.Footer class="pt-2 flex gap-3 justify-end">
       <button
         class="text-body rounded-full px-5 py-2 outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-        style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
+        style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid var(--border-theme)"
         onclick={() => {
           open = false;
           onOpenChange?.(false);
