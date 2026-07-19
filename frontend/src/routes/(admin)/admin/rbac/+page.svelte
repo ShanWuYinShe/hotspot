@@ -169,7 +169,7 @@
   {#snippet actions()}
     <button
       class="text-body flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary)"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary)"
       onclick={loadData}
       disabled={isLoading}
     >
@@ -193,7 +193,7 @@
       <!-- Roles -->
       <div
         class="rounded-[var(--radius-lg)] overflow-hidden"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <div
           class="flex items-center gap-2 px-4 py-3"
@@ -210,7 +210,7 @@
               {#each Array(4) as _, i (i)}
                 <div
                   class="rounded-[var(--radius-md)] p-3"
-                  style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                  style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                 >
                   <div class="flex items-center gap-3">
                     <div
@@ -238,11 +238,11 @@
               {#each roles as role (role.role_id)}
                 <div
                   class="flex items-center gap-3 rounded-[var(--radius-md)] p-3"
-                  style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                  style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                 >
                   <div
                     class="flex flex-shrink-0 items-center justify-center rounded-full"
-                    style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+                    style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
                   >
                     <Shield size={15} strokeWidth={1.5} color="var(--brand)" />
                   </div>
@@ -290,7 +290,7 @@
       <!-- Permissions -->
       <div
         class="rounded-[var(--radius-lg)] overflow-hidden"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <div
           class="flex items-center gap-2 px-4 py-3"
@@ -335,7 +335,7 @@
                     {#each perms as perm (perm.key)}
                       <div
                         class="flex items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5"
-                        style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
                       >
                         <Key size={13} strokeWidth={1.5} color="var(--text-secondary)" />
                         <div class="flex-1">
@@ -365,7 +365,7 @@
 <Dialog.Root bind:open={showRoleDialog}>
   <Dialog.Content
     class="sm:max-w-lg"
-    style="background: var(--surface-bg); border: 1px solid var(--border-theme); box-shadow: var(--shadow-lg);"
+    style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
   >
     <Dialog.Header>
       <Dialog.Title>{editingRoleId ? '编辑角色' : '创建角色'}</Dialog.Title>
@@ -432,7 +432,7 @@
     <Dialog.Footer>
       <button
         class="text-body rounded-full px-5 py-2 outline-none"
-        style="background: var(--surface-bg); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme)"
+        style="background: var(--surface-bg); color: var(--text-primary); border: 1px solid var(--border-theme)"
         onclick={closeOverlayDialogs}>取消</button
       >
       <button

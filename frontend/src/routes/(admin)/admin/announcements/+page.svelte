@@ -161,7 +161,7 @@
     <!-- Announcements list -->
     <div
       class="rounded-[var(--radius-lg)] p-5"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
     >
       <!-- Section header -->
       <div class="mb-4 flex items-center gap-2">
@@ -225,7 +225,7 @@
                 <button
                   type="button"
                   class="flex items-center justify-center rounded-full outline-none transition-opacity hover:opacity-70"
-                  style="width: 36px; height: 36px; box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                  style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
                   onclick={() => requestDelete(announcement.announcement_id)}
                   aria-label="删除公告"
                 >

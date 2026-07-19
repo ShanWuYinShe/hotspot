@@ -93,7 +93,7 @@
   {#snippet actions()}
     <button
       class="text-body flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary)"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary)"
       onclick={() => loadUsers()}
       disabled={pagination.loading}
     >
@@ -130,7 +130,7 @@
     <!-- Users table -->
     <div
       class="rounded-[var(--radius-lg)] overflow-hidden"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
     >
       <div
         class="flex items-center gap-2 px-4 py-3"
@@ -172,7 +172,7 @@
             {#each pagination.items as user (user.user.user_id)}
               <div
                 class="flex items-center gap-3 rounded-[var(--radius-md)] p-3"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               >
                 <Avatar
                   src={user.user.avatar_url}
@@ -273,7 +273,7 @@
           {#if pagination.hasMore}
             <button
               class="text-body mt-4 w-full rounded-full py-2.5 outline-none"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary)"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary)"
               onclick={() => loadUsers(false)}>加载更多</button
             >
           {/if}

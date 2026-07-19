@@ -111,7 +111,7 @@
   {#snippet actions()}
     <button
       class="text-body flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary)"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary)"
       onclick={loadConfig}
       disabled={isLoading}
     >
@@ -128,7 +128,7 @@
         {#each Array(3) as _, i (i)}
           <div
             class="rounded-[var(--radius-lg)] p-4"
-            style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+            style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
           >
             <div class="space-y-3">
               <div
@@ -156,7 +156,7 @@
         <!-- Upload settings -->
         <div
           class="rounded-[var(--radius-lg)] overflow-hidden"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
         >
           <div
             class="flex items-center gap-2 px-4 py-3"
@@ -205,7 +205,7 @@
         <!-- Feature toggles -->
         <div
           class="rounded-[var(--radius-lg)] overflow-hidden"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
         >
           <div
             class="flex items-center gap-2 px-4 py-3"
@@ -255,7 +255,7 @@
         <!-- Limits -->
         <div
           class="rounded-[var(--radius-lg)] overflow-hidden"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
         >
           <div
             class="flex items-center gap-2 px-4 py-3"

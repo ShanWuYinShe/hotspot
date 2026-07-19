@@ -112,11 +112,11 @@
       {#each statCards as stat (stat.label)}
         <div
           class="flex flex-col items-center justify-center rounded-[var(--radius-lg)] py-5"
-          style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+          style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
         >
           <div
             class="mb-2 flex items-center justify-center rounded-full"
-            style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+            style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
           >
             <stat.icon size={16} strokeWidth={1.75} style="color: var(--brand);" />
           </div>
@@ -138,7 +138,7 @@
       <!-- 快捷操作 -->
       <div
         class="rounded-[var(--radius-lg)] p-5"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <div class="text-title mb-1" style="font-weight: 600; color: var(--text-primary)">
           {t('admin.quickActions')}
@@ -154,7 +154,7 @@
             >
               <div
                 class="flex items-center justify-center rounded-full"
-                style="width: 36px; height: 36px; box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
               >
                 <action.icon size={16} strokeWidth={1.75} style="color: var(--brand);" />
               </div>
@@ -172,7 +172,7 @@
       <!-- 系统状态 -->
       <div
         class="rounded-[var(--radius-lg)] p-5"
-        style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
         <div class="text-title mb-1" style="font-weight: 600; color: var(--text-primary)">
           {t('admin.systemStatus')}

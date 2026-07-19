@@ -77,7 +77,7 @@
   {#snippet actions()}
     <button
       class="text-body flex items-center gap-1.5 rounded-full px-4 py-2 outline-none"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary)"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary)"
       onclick={() => loadReports()}
       disabled={pagination.loading}
     >
@@ -103,7 +103,7 @@
     <!-- Reports list -->
     <div
       class="rounded-[var(--radius-lg)] overflow-hidden"
-      style="background: var(--surface-bg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-theme);"
+      style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
     >
       <div
         class="flex items-center gap-2 px-4 py-3"
@@ -120,7 +120,7 @@
             {#each Array(5) as _, i (i)}
               <div
                 class="rounded-[var(--radius-md)] p-3"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               >
                 <div class="flex items-center gap-3">
                   <div
@@ -150,13 +150,13 @@
             {#each pagination.items as report (report.report_id)}
               <div
                 class="rounded-[var(--radius-md)] p-3"
-                style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme);"
+                style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
               >
                 <div class="flex items-start justify-between gap-3">
                   <div class="flex items-start gap-3">
                     <div
                       class="flex flex-shrink-0 items-center justify-center rounded-full"
-                      style="width: 36px; height: 36px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-theme);"
+                      style="width: 36px; height: 36px; border: 1px solid var(--border-theme);"
                     >
                       <span class="text-meta" style="color: var(--text-secondary)">?</span>
                     </div>
@@ -256,7 +256,7 @@
           {#if pagination.hasMore}
             <button
               class="text-body mt-4 w-full rounded-full py-2.5 outline-none"
-              style="background: var(--surface-bg); box-shadow: var(--shadow-md); border: 1px solid var(--border-theme); color: var(--text-primary)"
+              style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary)"
               onclick={() => loadReports(false)}>加载更多</button
             >
           {/if}
