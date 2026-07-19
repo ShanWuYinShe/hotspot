@@ -53,7 +53,7 @@
 
 {#snippet loginRequired()}
   <div class="flex flex-col items-center justify-center py-20 text-center">
-    <div class="mb-4 rounded-[var(--radius-lg)] neu-flat p-6">
+    <div class="mb-4 rounded-[var(--radius-lg)] surface-flat p-6">
       <Lock size={48} color="var(--text-secondary)" strokeWidth={2} />
     </div>
     <h2 class="mb-2 text-xl font-semibold" style="color: var(--text-primary);">

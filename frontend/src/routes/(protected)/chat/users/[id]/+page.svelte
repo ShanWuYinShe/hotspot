@@ -409,7 +409,7 @@
       <div class="flex items-center gap-3">
         <div class="relative shrink-0">
           <div
-            class="neu-flat overflow-hidden rounded-full"
+            class="surface-flat overflow-hidden rounded-full"
             style="width: 38px; height: 38px; border: 1.5px solid var(--border-theme);"
           >
             <Avatar

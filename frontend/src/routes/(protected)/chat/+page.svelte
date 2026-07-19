@@ -194,7 +194,7 @@
                 >
                   <div class="relative">
                     <div
-                      class="neu-flat overflow-hidden rounded-full"
+                      class="surface-flat overflow-hidden rounded-full"
                       style="width: 52px; height: 52px; padding: 2.5px; background: var(--surface-bg); border: 1.5px solid var(--brand);"
                     >
                       <Avatar
