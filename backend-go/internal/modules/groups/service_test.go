@@ -3,6 +3,7 @@ package groups
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -1048,7 +1049,7 @@ func TestServiceUpdatePropagatesRepoError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if err.Error() != "db error" {
+	if !strings.Contains(err.Error(), "db error") {
 		t.Fatalf("expected db error, got %v", err)
 	}
 }
@@ -1060,7 +1061,7 @@ func TestServiceDismissPropagatesRepoError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if err.Error() != "db error" {
+	if !strings.Contains(err.Error(), "db error") {
 		t.Fatalf("expected db error, got %v", err)
 	}
 }

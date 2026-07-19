@@ -12,6 +12,8 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "format": "prettier --write .",
     "lint": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "logo:build": "node scripts/generate-logo-assets.ts"
   },
   "devDependencies": {
@@ -19,6 +21,8 @@
     "@sveltejs/kit": "^2.64.0",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/vite": "^4.3.0",
+    "@testing-library/svelte": "^5.4.2",
+    "jsdom": "^29.1.1",
     "png-to-ico": "^3.0.1",
     "prettier": "^3.8.3",
     "prettier-plugin-svelte": "^3.5.2",
@@ -27,7 +31,8 @@
     "svelte-check": "^4.6.0",
     "tailwindcss": "^4.3.0",
     "typescript": "^5.9.3",
-    "vite": "^7.3.5"
+    "vite": "^7.3.5",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "bits-ui": "^2.18.1",

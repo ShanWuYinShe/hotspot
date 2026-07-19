@@ -1,5 +1,6 @@
 import type { ClientApiResponse } from '$lib/api/client';
 import { ApiError, isSuccess } from '$lib/api/client';
+import { t } from '$lib/i18n';
 
 /**
  * 将 ApiResponse 统一转换为错误对象（如果失败），便于上层按错误类型处理。
@@ -16,7 +17,7 @@ export function toApiError<T>(response: ClientApiResponse<T>): ApiError | null {
 export function showApiError(
   toast: { error: (msg: string) => void },
   response: ClientApiResponse<unknown>,
-  fallbackMessage = '操作失败'
+  fallbackMessage = t('common.operationFailed')
 ): void {
   const error = toApiError(response);
   if (!error) return;

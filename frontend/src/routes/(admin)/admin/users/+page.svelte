@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import { adminUsersService } from '$lib/api/services';
-  import { isSuccess } from '$lib/api/client';
-  import { toast } from '$lib/stores/toast.svelte';
+	  import { onMount, onDestroy } from 'svelte';
+	  import { adminUsersService } from '$lib/api/services';
+	  import { isSuccess } from '$lib/api/client';
+	  import { toast } from '$lib/stores/toast.svelte';
+	  import { t } from '$lib/i18n';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import Avatar from '$lib/components/common/avatar.svelte';
@@ -53,28 +54,28 @@
         pagination.updateItem((u) =>
           u.user.user_id === userId ? { ...u, status: 'banned' as const } : null
         );
-        toast.success('已封禁');
-      } else {
-        toast.error(response.message || '操作失败');
-      }
-    } catch {
-      toast.error('操作失败');
-    }
-  }
+	        toast.success(t('admin.banned'));
+	      } else {
+	        toast.error(response.message || t('admin.operationFailed'));
+	      }
+	    } catch {
+	      toast.error(t('admin.operationFailed'));
+	    }
+	  }
 
-  async function handleUnban(userId: string) {
-    try {
-      const response = await adminUsersService.unban({ user_id: userId });
-      if (isSuccess(response)) {
-        pagination.updateItem((u) =>
-          u.user.user_id === userId ? { ...u, status: 'normal' as const } : null
-        );
-        toast.success('已解封');
-      } else {
-        toast.error(response.message || '操作失败');
-      }
-    } catch {
-      toast.error('操作失败');
+	  async function handleUnban(userId: string) {
+	    try {
+	      const response = await adminUsersService.unban({ user_id: userId });
+	      if (isSuccess(response)) {
+	        pagination.updateItem((u) =>
+	          u.user.user_id === userId ? { ...u, status: 'normal' as const } : null
+	        );
+	        toast.success(t('admin.unbanned'));
+	      } else {
+	        toast.error(response.message || t('admin.operationFailed'));
+	      }
+	    } catch {
+	      toast.error(t('admin.operationFailed'));
     }
   }
 

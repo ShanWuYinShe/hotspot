@@ -2,21 +2,16 @@ package users
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
 
@@ -124,15 +119,33 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	plan := geo.NewSearchPlan(refPt, radius, sortBy)
 	keyword := strings.ToLower(strings.TrimSpace(req.Keyword))
 	tag := strings.ToLower(strings.TrimSpace(req.Tag))
+	// Scan every candidate row first, then load profile tags for the whole
+	// page in a single query (avoids an N+1 of loadUserProfileTags calls
+	// inside the loop).
+	scanned := make([]MyProfile, 0)
 	for rows.Next() {
 		profile, err := scanUserProfileRow(rows)
 		if err != nil {
 			return PaginatedProfiles{}, err
 		}
-		profile.Tags, err = loadUserProfileTags(ctx, queryable, profile.UserID)
-		if err != nil {
-			return PaginatedProfiles{}, err
-		}
+		scanned = append(scanned, profile)
+	}
+	if err := rows.Err(); err != nil {
+		return PaginatedProfiles{}, err
+	}
+	if len(scanned) == 0 {
+		return PaginatedProfiles{}, nil
+	}
+	userIDs := make([]string, 0, len(scanned))
+	for _, profile := range scanned {
+		userIDs = append(userIDs, profile.UserID)
+	}
+	tagsByUserID, err := loadUserProfileTagsBatch(ctx, queryable, userIDs)
+	if err != nil {
+		return PaginatedProfiles{}, err
+	}
+	for _, profile := range scanned {
+		profile.Tags = tagsByUserID[profile.UserID]
 		if tag != "" && !containsFold(profile.Tags, tag) {
 			continue
 		}
@@ -141,9 +154,6 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 			continue
 		}
 		candidates = append(candidates, searchProfileCandidate{Profile: profile, Distance: distance, BearingDegrees: bearing, SortBy: sortBy, RelevanceScore: searchRelevanceScore(profile, keyword, tag)})
-	}
-	if err := rows.Err(); err != nil {
-		return PaginatedProfiles{}, err
 	}
 	sortSearchCandidates(candidates, normalizeSearchSort(req.SortBy))
 	return paginateSearchCandidates(candidates, req.Pagination), nil
@@ -178,6 +188,72 @@ func (r *PostgresRepository) Relationship(ctx context.Context, userID, targetUse
 		return Relationship{}, err
 	}
 	return Relationship{IsFollowing: following, IsFollowedBy: followedBy, IsBlocked: blocked}, nil
+}
+
+// RelationshipBatch resolves the relationship between fromUserID and every
+// entry in toUserIDs in two queries (one for the forward edge, one for the
+// reverse edge), rather than one query per target. It replaces the N+1 that
+// Search previously triggered by calling Relationship once per profile.
+func (r *PostgresRepository) RelationshipBatch(ctx context.Context, fromUserID string, toUserIDs []string) (map[string]Relationship, error) {
+	result := make(map[string]Relationship, len(toUserIDs))
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return result, persistence.ErrNotImplemented
+	}
+	if len(toUserIDs) == 0 {
+		return result, nil
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return result, persistence.ErrNotImplemented
+	}
+	// Initialise defaults so missing rows still produce a zero-value Relationship.
+	for _, target := range toUserIDs {
+		result[target] = Relationship{}
+	}
+	// Forward edge: am I following / did I block each target?
+	forwardRows, err := queryable.Query(ctx, queryListUserRelationsForward, fromUserID, toUserIDs)
+	if err != nil {
+		return nil, err
+	}
+	for forwardRows.Next() {
+		var targetUserID string
+		var following, blocked bool
+		if err := forwardRows.Scan(&targetUserID, &following, &blocked); err != nil {
+			forwardRows.Close()
+			return nil, err
+		}
+		rel := result[targetUserID]
+		rel.IsFollowing = following
+		rel.IsBlocked = blocked
+		result[targetUserID] = rel
+	}
+	if err := forwardRows.Err(); err != nil {
+		forwardRows.Close()
+		return nil, err
+	}
+	forwardRows.Close()
+	// Reverse edge: is each target following me?
+	reverseRows, err := queryable.Query(ctx, queryListUserRelationsReverse, fromUserID, toUserIDs)
+	if err != nil {
+		return nil, err
+	}
+	for reverseRows.Next() {
+		var sourceUserID string
+		var following bool
+		if err := reverseRows.Scan(&sourceUserID, &following); err != nil {
+			reverseRows.Close()
+			return nil, err
+		}
+		rel := result[sourceUserID]
+		rel.IsFollowedBy = following
+		result[sourceUserID] = rel
+	}
+	if err := reverseRows.Err(); err != nil {
+		reverseRows.Close()
+		return nil, err
+	}
+	reverseRows.Close()
+	return result, nil
 }
 
 func (r *PostgresRepository) getRelationFields(ctx context.Context, userID, targetUserID string) (bool, bool, string, any, any, string, error) {
@@ -638,53 +714,36 @@ func normalizeUserMomentLimit(limit int) int {
 	}
 }
 
+// usersCursorCodec caches the AES-GCM cipher used for user moment and
+// search cursors. Previously encode/decode rebuilt the cipher on every call
+// (aes.NewCipher + cipher.NewGCM). The key derivation matches the legacy
+// sha256(secret) format (no namespace salt) so existing cursors remain valid.
+var usersCursorCodec = cursor.NewCodecWithKey(func() ([]byte, error) {
+	secret := config.Load().AuthTokenSecret
+	if secret == "" {
+		secret = "dev-secret-change-me"
+	}
+	key := sha256.Sum256([]byte(secret))
+	return key[:], nil
+})
+
 func encodeUserMomentCursor(at, id string) string {
-	blob, err := json.Marshal(userMomentCursor{At: at, ID: id})
+	token, err := usersCursorCodec.Encode(userMomentCursor{At: at, ID: id})
 	if err != nil {
 		return ""
 	}
-	block, err := newUsersCursorBlock()
-	if err != nil {
-		return ""
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return ""
-	}
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return ""
-	}
-	sealed := gcm.Seal(nonce, nonce, blob, nil)
-	return base64.RawURLEncoding.EncodeToString(sealed)
+	return token
 }
 
-func decodeUserMomentCursor(cursor string) (any, string, error) {
-	if cursor == "" {
+func decodeUserMomentCursor(raw string) (any, string, error) {
+	if raw == "" {
 		return nil, "", nil
 	}
-	blob, err := base64.RawURLEncoding.DecodeString(cursor)
-	if err != nil {
-		return nil, "", ErrInvalidCursor
-	}
-	block, err := newUsersCursorBlock()
-	if err != nil {
-		return nil, "", ErrInvalidCursor
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, "", ErrInvalidCursor
-	}
-	if len(blob) < gcm.NonceSize() {
-		return nil, "", ErrInvalidCursor
-	}
-	nonce, ciphertext := blob[:gcm.NonceSize()], blob[gcm.NonceSize():]
-	payload, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return nil, "", ErrInvalidCursor
-	}
 	var decoded userMomentCursor
-	if err := json.Unmarshal(payload, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
+	if err := usersCursorCodec.Decode(raw, &decoded); err != nil {
+		return nil, "", ErrInvalidCursor
+	}
+	if decoded.At == "" || decoded.ID == "" {
 		return nil, "", ErrInvalidCursor
 	}
 	parsed, err := time.Parse(time.RFC3339, decoded.At)
@@ -700,15 +759,6 @@ func encodeUserCursor(at time.Time, id string) string {
 
 func decodeUserCursor(cursor string) (any, string, error) {
 	return decodeUserMomentCursor(cursor)
-}
-
-func newUsersCursorBlock() (cipher.Block, error) {
-	secret := config.Load().AuthTokenSecret
-	if secret == "" {
-		secret = "dev-secret-change-me"
-	}
-	key := sha256.Sum256([]byte(secret))
-	return aes.NewCipher(key[:])
 }
 
 func loadUserMomentTags(ctx context.Context, queryable persistence.QueryableDB, momentIDs []string) (map[string][]string, error) {
@@ -759,4 +809,30 @@ func loadUserProfileTags(ctx context.Context, queryable persistence.QueryableDB,
 		return nil, err
 	}
 	return tags, nil
+}
+
+// loadUserProfileTagsBatch fetches profile tags for many user IDs in one
+// query. It returns a userID -> []tags map; user IDs with no tags are absent
+// from the map (callers should treat absence as an empty slice).
+func loadUserProfileTagsBatch(ctx context.Context, queryable persistence.QueryableDB, userIDs []string) (map[string][]string, error) {
+	result := make(map[string][]string, len(userIDs))
+	if len(userIDs) == 0 {
+		return result, nil
+	}
+	rows, err := queryable.Query(ctx, queryListUserProfileTagsBatch, userIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var userID, tag string
+		if err := rows.Scan(&userID, &tag); err != nil {
+			return nil, err
+		}
+		result[userID] = append(result[userID], tag)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
 }

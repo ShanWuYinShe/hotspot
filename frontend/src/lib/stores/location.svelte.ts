@@ -157,10 +157,12 @@ class LocationStore {
           longitude: position.coords.longitude
         };
 
-        // 注意：这里只返回坐标，location_name 使用默认占位
+        // 注意：这里只返回坐标，location_name 使用 ClientConfig 默认位置名占位
+        // spec/api_spec_types.md: Location.location_name 必填，无名称时使用
+        // ClientConfig.defaults.default_location.location_name
         this.#current = {
           point: geoPoint,
-          location_name: ''
+          location_name: configStore.defaultLocation?.location_name ?? ''
         };
         this.#lastUpdated = new Date().toISOString();
         this.#permissionDenied = false;

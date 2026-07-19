@@ -14,8 +14,10 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
 - `bun check` — 类型检查（svelte-check）
 - `bun lint` — 格式检查（prettier --check）
 - `bun run format` — 格式化（prettier --write）
+- `bun test` — 单元测试（vitest run）
+- `bun test:watch` — 监听模式
 
-> **测试**：package.json 无 `test` 脚本，暂无自动化测试。
+> **测试**：vitest (v4), tests 目录下含 API client、组件及 store 测试,`setup.ts` 提供 jsdom polyfill。
 
 ## 技术栈
 

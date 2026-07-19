@@ -1176,6 +1176,7 @@ func TestHandlerUpdateReturnsSuccess(t *testing.T) {
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"group_id":"g1","name":"Updated Name"}`))
+	req.Header.Set("Idempotency-Key", "update_success_groups_aaaaaaaaaaaa")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
@@ -1194,6 +1195,7 @@ func TestHandlerUpdateReturnsSuccess(t *testing.T) {
 func TestHandlerUpdateRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
 	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{invalid`))
+	req.Header.Set("Idempotency-Key", "update_invalid_json_groups_bbbbbbbb")
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
 	assertGroupCode(t, rr, 10000)
@@ -1202,6 +1204,7 @@ func TestHandlerUpdateRejectsInvalidJSON(t *testing.T) {
 func TestHandlerUpdateReturns10300WhenNotFound(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
 	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"group_id":"missing"}`))
+	req.Header.Set("Idempotency-Key", "update_not_found_groups_cccccccccc")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
@@ -1215,6 +1218,7 @@ func TestHandlerUpdateReturns10200WhenAccessRestricted(t *testing.T) {
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"group_id":"g1"}`))
+	req.Header.Set("Idempotency-Key", "update_restricted_groups_dddddddddd")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
@@ -1317,6 +1321,7 @@ func TestHandlerLeaveGroupReturnsSuccess(t *testing.T) {
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/me/leave", strings.NewReader(`{"group_id":"g1"}`))
+	req.Header.Set("Idempotency-Key", "leave_success_groups_eeeeeeeeeeeee")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.LeaveGroup(rr, req)
@@ -1335,6 +1340,7 @@ func TestHandlerLeaveGroupReturnsSuccess(t *testing.T) {
 func TestHandlerLeaveGroupRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
 	req := httptest.NewRequest(http.MethodPost, "/me/leave", strings.NewReader(`{broken`))
+	req.Header.Set("Idempotency-Key", "leave_invalid_json_groups_ffffffff")
 	rr := httptest.NewRecorder()
 	handler.LeaveGroup(rr, req)
 	assertGroupCode(t, rr, 10000)
@@ -1343,6 +1349,7 @@ func TestHandlerLeaveGroupRejectsInvalidJSON(t *testing.T) {
 func TestHandlerLeaveGroupReturns10300WhenNotFound(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
 	req := httptest.NewRequest(http.MethodPost, "/me/leave", strings.NewReader(`{"group_id":"missing"}`))
+	req.Header.Set("Idempotency-Key", "leave_not_found_groups_ggggggggggg")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.LeaveGroup(rr, req)

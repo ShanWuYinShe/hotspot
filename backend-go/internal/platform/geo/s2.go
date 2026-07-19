@@ -3,6 +3,7 @@ package geo
 import (
 	"fmt"
 	"math"
+	"sync"
 
 	"github.com/golang/geo/s1"
 	"github.com/golang/geo/s2"
@@ -112,7 +113,71 @@ func CoveringArrays(bounds Bounds) (mins []int64, maxs []int64) {
 // Each pair maps to a BETWEEN clause on the leaf cell ID column,
 // turning a 2D spatial search into efficient 1D range scans.
 // The covering is intentionally coarse (pre-filter) — distance filter handles precision.
+//
+// Results are memoised by quantized bounds (rounded to 5 decimal places, ~1m)
+// because identical client viewports repeatedly produce identical coverings.
+// The s2.RegionCoverer construction itself is the expensive part (~μs of
+// allocation per call), and map/feed endpoints call this multiple times per
+// request, so caching yields a high hit rate at effectively zero cost. The
+// cache is bounded via simple LRU eviction to avoid unbounded growth when
+// viewports drift.
 func SearchCovering(bounds Bounds) [][2]int64 {
+	key := quantizeBounds(bounds)
+	coverCacheMu.RLock()
+	if cached, ok := coverCache[key]; ok {
+		coverCacheMu.RUnlock()
+		return cached
+	}
+	coverCacheMu.RUnlock()
+
+	ranges := computeSearchCovering(bounds)
+
+	coverCacheMu.Lock()
+	if coverCache == nil {
+		coverCache = make(map[uint64][][2]int64, coverCacheMaxEntries)
+	}
+	// Bounded eviction: drop a random-ish entry once we hit the cap. Using
+	// the map iteration order is fine here because correctness does not
+	// depend on which entry is dropped — only the cache hit rate.
+	if len(coverCache) >= coverCacheMaxEntries {
+		for k := range coverCache {
+			delete(coverCache, k)
+			break
+		}
+	}
+	coverCache[key] = ranges
+	coverCacheMu.Unlock()
+	return ranges
+}
+
+// coverCacheMaxEntries bounds the memoisation table. Each entry is a few
+// hundred bytes; 4096 entries caps memory at single-digit MB.
+const coverCacheMaxEntries = 4096
+
+var (
+	coverCacheMu sync.RWMutex
+	coverCache   = make(map[uint64][][2]int64, coverCacheMaxEntries)
+)
+
+// quantizeBounds rounds bounds to ~5 decimal places (~1m at the equator)
+// and packs them into a single uint64 cache key. Identical client viewports
+// (which the map endpoint sees repeatedly while panning) collapse to the
+// same key, giving a high cache hit rate.
+func quantizeBounds(b Bounds) uint64 {
+	// Multiply by 1e5 and round to integer; 5 decimals ≈ 1.1m at equator.
+	south := uint32(math.Round(b.South * 1e5))
+	north := uint32(math.Round(b.North * 1e5))
+	west := uint32(math.Round(b.West*1e5)+1e5*360) & 0xFFFFFFFF
+	east := uint32(math.Round(b.East*1e5)+1e5*360) & 0xFFFFFFFF
+	// Mix the four quantized components into a single 64-bit key. Use simple
+	// xor-mul folding; this is a hash, not cryptographic.
+	return uint64(south)*2654435761 ^
+		uint64(north)*40503 ^
+		uint64(west)*65599 ^
+		uint64(east)
+}
+
+func computeSearchCovering(bounds Bounds) [][2]int64 {
 	span := ApproxViewportSpanMeters(bounds)
 	level := SuggestedLevel(span)
 	maxLevel := level

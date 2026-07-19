@@ -45,12 +45,11 @@ func NewServiceWithRepoAndUsers(repo Repository, users userReader) *Service {
 	return &Service{repo: repo, users: users}
 }
 func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (MessageSent, error) {
-	userID := req.SenderUserID
-	if userID == "" {
-		if principal, ok := platformauth.PrincipalFromContext(ctx); ok {
-			userID = principal.UserID
-		}
+	principal, ok := platformauth.PrincipalFromContext(ctx)
+	if !ok || principal.UserID == "" {
+		return MessageSent{}, ErrNotGroupMember
 	}
+	userID := principal.UserID
 	if err := s.ensureMember(ctx, req.GroupID, userID); err != nil {
 		return MessageSent{}, err
 	}
@@ -68,7 +67,7 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 	payload := map[string]any{
 		"message_id": msg.MessageID,
 		"group_id":   req.GroupID,
-		"sender":     s.resolveUserInfo(ctx, req.SenderUserID),
+		"sender":     s.resolveUserInfo(ctx, userID),
 		"type":       req.Type,
 		"sent_at":    msg.SentAt,
 	}

@@ -61,6 +61,11 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
 			return
 		}
+		if errors.Is(err, ErrInvalidCursor) {
+			logBusinessError(r, "List", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			return
+		}
 		logServerError(r, "List", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
@@ -69,30 +74,34 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	var req DeleteCommentRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.CommentID == "" {
-		logBusinessError(r, "Delete", 10000, "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-		return
-	}
-	err := h.service.Delete(r.Context(), req)
-	if err != nil {
-		if errors.Is(err, ErrCommentNotFound) {
-			logBusinessError(r, "Delete", 10300, "评论不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "评论不存在"))
+		if err := idempotency.RequireKey(r); err != nil {
+			logBusinessError(r, "Delete", err.Code, err.Message)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 			return
 		}
-		if errors.Is(err, ErrPermissionDenied) {
-			logBusinessError(r, "Delete", 10200, "权限不足")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
+		var req DeleteCommentRequest
+		if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.CommentID == "" {
+			logBusinessError(r, "Delete", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 			return
 		}
-		logServerError(r, "Delete", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
+		idempotency.ReplayOrStore(w, r, "comments/delete", func() httpx.ApiResponse[struct{}] {
+			err := h.service.Delete(r.Context(), req)
+			if err != nil {
+				if errors.Is(err, ErrCommentNotFound) {
+					logBusinessError(r, "Delete", 10300, "评论不存在")
+					return httpx.ApiResponse[struct{}]{Code: 10300, Message: "评论不存在"}
+				}
+				if errors.Is(err, ErrPermissionDenied) {
+					logBusinessError(r, "Delete", 10200, "权限不足")
+					return httpx.ApiResponse[struct{}]{Code: 10200, Message: "权限不足"}
+				}
+				logServerError(r, "Delete", err)
+				return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
+			}
+			return httpx.Success(struct{}{})
+		})
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
-}
 
 func (h *Handler) ListReplies(w http.ResponseWriter, r *http.Request) {
 	var req CommentRepliesRequest
@@ -106,6 +115,11 @@ func (h *Handler) ListReplies(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, ErrCommentNotFound) {
 			logBusinessError(r, "ListReplies", 10300, "评论不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "评论不存在"))
+			return
+		}
+		if errors.Is(err, ErrInvalidCursor) {
+			logBusinessError(r, "ListReplies", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 			return
 		}
 		logServerError(r, "ListReplies", err)
@@ -169,6 +183,11 @@ func (h *Handler) ListLikes(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, ErrCommentNotFound) {
 			logBusinessError(r, "ListLikes", 10300, "评论不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "评论不存在"))
+			return
+		}
+		if errors.Is(err, ErrInvalidCursor) {
+			logBusinessError(r, "ListLikes", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 			return
 		}
 		logServerError(r, "ListLikes", err)

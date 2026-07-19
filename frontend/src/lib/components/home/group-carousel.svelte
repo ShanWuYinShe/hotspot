@@ -51,7 +51,7 @@
         </div>
       {/each}
     {:else if groups.length > 0}
-      {#each groups as group (group.id)}
+	      {#each groups as group, i (group.id)}
         <button
           class="group-card card-hover flex-shrink-0 text-left"
           onclick={() => void goto(`/groups/${group.id}`)}
@@ -61,12 +61,13 @@
             style="position: relative; height: 72px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; overflow: hidden; background: linear-gradient(135deg, var(--theme-accent-soft), var(--border-theme));"
           >
             {#if group.banner_url}
-              <img
-                src={group.banner_url}
-                alt={group.name}
-                loading="lazy"
-                decoding="async"
-                style="width: 100%; height: 100%; object-fit: cover;"
+	              <img
+	                src={group.banner_url}
+	                alt={group.name}
+	                loading={i === 0 ? 'eager' : 'lazy'}
+	                decoding="async"
+	                fetchpriority={i === 0 ? 'high' : 'auto'}
+	                style="width: 100%; height: 100%; object-fit: cover;"
               />
             {/if}
             <div

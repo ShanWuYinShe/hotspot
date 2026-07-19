@@ -22,32 +22,32 @@ func NewPostgresRefreshStore(factory *persistence.Factory, fallback RefreshToken
 	return &PostgresRefreshStore{factory: factory, fallback: fallback}
 }
 
-func (s *PostgresRefreshStore) Save(session RefreshSession) error {
+func (s *PostgresRefreshStore) Save(ctx context.Context, session RefreshSession) error {
 	queryable, ok := s.queryable()
 	if !ok {
-		return s.fallback.Save(session)
+		return s.fallback.Save(ctx, session)
 	}
-	return queryable.Exec(context.Background(), queryUpsertRefreshToken, session.RefreshToken, session.UserID, session.SessionID, emptyToNull(session.RotatedTo), zeroTimeToPtr(session.GraceUntil), session.ExpiresAt)
+	return queryable.Exec(ctx, queryUpsertRefreshToken, session.RefreshToken, session.UserID, session.SessionID, emptyToNull(session.RotatedTo), zeroTimeToPtr(session.GraceUntil), session.ExpiresAt)
 }
 
-func (s *PostgresRefreshStore) Rotate(oldToken string, current RefreshSession, next RefreshSession) error {
+func (s *PostgresRefreshStore) Rotate(ctx context.Context, oldToken string, current RefreshSession, next RefreshSession) error {
 	queryable, ok := s.queryable()
 	if !ok {
-		return s.fallback.Rotate(oldToken, current, next)
+		return s.fallback.Rotate(ctx, oldToken, current, next)
 	}
 	graceUntil := time.Now().UTC().Add(30 * time.Second)
-	return queryable.Exec(context.Background(), queryRotateRefreshToken, oldToken, next.RefreshToken, graceUntil, next.UserID, next.SessionID, next.ExpiresAt)
+	return queryable.Exec(ctx, queryRotateRefreshToken, oldToken, next.RefreshToken, graceUntil, next.UserID, next.SessionID, next.ExpiresAt)
 }
 
-func (s *PostgresRefreshStore) Get(token string) (RefreshSession, bool, error) {
+func (s *PostgresRefreshStore) Get(ctx context.Context, token string) (RefreshSession, bool, error) {
 	queryable, ok := s.queryable()
 	if !ok {
-		return s.fallback.Get(token)
+		return s.fallback.Get(ctx, token)
 	}
 	var session RefreshSession
 	var rotatedTo *string
 	var graceUntil *time.Time
-	if err := queryable.QueryRow(context.Background(), queryGetRefreshToken, token).Scan(&session.UserID, &session.SessionID, &session.RefreshToken, &rotatedTo, &graceUntil, &session.ExpiresAt); err != nil {
+	if err := queryable.QueryRow(ctx, queryGetRefreshToken, token).Scan(&session.UserID, &session.SessionID, &session.RefreshToken, &rotatedTo, &graceUntil, &session.ExpiresAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return RefreshSession{}, false, nil
 		}

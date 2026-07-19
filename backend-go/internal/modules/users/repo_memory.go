@@ -2,11 +2,6 @@ package users
 
 import (
 	"context"
-	"crypto/cipher"
-	"crypto/rand"
-	"encoding/base64"
-	"encoding/json"
-	"io"
 	"sort"
 	"strings"
 	"sync"
@@ -227,6 +222,18 @@ func (r *InMemoryRepository) Relationship(_ context.Context, userID, targetUserI
 	forward := r.relations[userID][targetUserID]
 	reverse := r.relations[targetUserID][userID]
 	return Relationship{IsFollowing: forward.Following, IsFollowedBy: reverse.Following, IsBlocked: forward.Blocked}, nil
+}
+
+func (r *InMemoryRepository) RelationshipBatch(_ context.Context, userID string, targetUserIDs []string) (map[string]Relationship, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	result := make(map[string]Relationship, len(targetUserIDs))
+	for _, target := range targetUserIDs {
+		forward := r.relations[userID][target]
+		reverse := r.relations[target][userID]
+		result[target] = Relationship{IsFollowing: forward.Following, IsFollowedBy: reverse.Following, IsBlocked: forward.Blocked}
+	}
+	return result, nil
 }
 
 func (r *InMemoryRepository) ListFriends(_ context.Context, userID string, limit int, cursor string) (PaginatedFriends, error) {
@@ -669,49 +676,19 @@ func searchCursorForItem(item searchProfileCandidate) searchCursor {
 }
 
 func encodeSearchCursor(item searchProfileCandidate) string {
-	payload, err := json.Marshal(searchCursorForItem(item))
+	token, err := usersCursorCodec.Encode(searchCursorForItem(item))
 	if err != nil {
 		return ""
 	}
-	block, err := newUsersCursorBlock()
-	if err != nil {
-		return ""
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return ""
-	}
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return ""
-	}
-	sealed := gcm.Seal(nonce, nonce, payload, nil)
-	return base64.RawURLEncoding.EncodeToString(sealed)
+	return token
 }
 
 func decodeSearchCursor(raw string) (searchCursor, error) {
-	blob, err := base64.RawURLEncoding.DecodeString(raw)
-	if err != nil {
-		return searchCursor{}, ErrInvalidCursor
-	}
-	block, err := newUsersCursorBlock()
-	if err != nil {
-		return searchCursor{}, ErrInvalidCursor
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return searchCursor{}, ErrInvalidCursor
-	}
-	if len(blob) < gcm.NonceSize() {
-		return searchCursor{}, ErrInvalidCursor
-	}
-	nonce, ciphertext := blob[:gcm.NonceSize()], blob[gcm.NonceSize():]
-	payload, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return searchCursor{}, ErrInvalidCursor
-	}
 	var decoded searchCursor
-	if err := json.Unmarshal(payload, &decoded); err != nil || decoded.SortBy == "" || decoded.UserID == "" {
+	if err := usersCursorCodec.Decode(raw, &decoded); err != nil {
+		return searchCursor{}, ErrInvalidCursor
+	}
+	if decoded.SortBy == "" || decoded.UserID == "" {
 		return searchCursor{}, ErrInvalidCursor
 	}
 	return decoded, nil

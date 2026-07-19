@@ -122,7 +122,7 @@
           : items;
       }
     } catch {
-      toast.error('加载失败，请稍后重试');
+      toast.error(t('home.loadFailed'));
     } finally {
       loadingNearby = false;
     }
@@ -135,7 +135,7 @@
         trendingTags = result.data?.trending_tags ?? [];
       }
     } catch {
-      toast.error('加载失败，请稍后重试');
+      toast.error(t('home.loadFailed'));
     }
   }
 
@@ -151,7 +151,7 @@
         nearbyGroups = response.data.items ?? [];
       }
     } catch {
-      toast.error('加载失败，请稍后重试');
+      toast.error(t('home.loadFailed'));
     }
   }
 
@@ -262,8 +262,8 @@
           <div class="py-6">
             <EmptyState
               icon={Users}
-              title="附近暂无其他用户"
-              description="换个浏览位置或稍后再来看看。"
+              title={t("home.emptyTitle")}
+              description={t("home.emptyDesc")}
               variant="inline"
             />
           </div>
@@ -378,8 +378,8 @@
           <div class="flex flex-1 items-center justify-center">
             <EmptyState
               icon={Users}
-              title="附近暂无其他用户"
-              description="换个浏览位置或稍后再来看看。"
+              title={t("home.emptyTitle")}
+              description={t("home.emptyDesc")}
               actionText={t('common.viewAll')}
               onAction={() => void goto('/users/nearby')}
               class="w-full"

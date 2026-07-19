@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -29,7 +30,7 @@ func TestRequiredAuthRejectsMissingToken(t *testing.T) {
 func TestOptionalAuthInjectsPrincipalForValidBearer(t *testing.T) {
 	service := NewService(config.Config{AuthTokenSecret: "test-secret"})
 	SetDefaultService(service)
-	result, err := service.IssueSession("user_alice")
+	result, err := service.IssueSession(context.Background(), "user_alice")
 	if err != nil {
 		t.Fatalf("issue session: %v", err)
 	}

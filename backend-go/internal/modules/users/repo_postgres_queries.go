@@ -20,6 +20,15 @@ FROM user_profile_tags
 WHERE user_id = $1
 ORDER BY tag_name ASC`
 
+	// queryListUserProfileTagsBatch fetches profile tags for many user_ids in
+	// one query so SearchProfiles can avoid an N+1 of loadUserProfileTags
+	// calls inside the rows scan loop.
+	queryListUserProfileTagsBatch = `
+SELECT user_id, tag_name
+FROM user_profile_tags
+WHERE user_id = ANY($1)
+ORDER BY user_id, tag_name ASC`
+
 	queryReplaceUserProfileTags = `
 DELETE FROM user_profile_tags WHERE user_id = $1`
 
@@ -91,6 +100,22 @@ block_reason = EXCLUDED.block_reason`
 SELECT is_following, is_blocked, COALESCE(remark, ''), followed_at, blocked_at, COALESCE(block_reason, '')
 FROM user_relations
 WHERE user_id = $1 AND target_user_id = $2`
+
+	// queryListUserRelationsForward fetches the forward-edge rows
+	// (user_id = $1 → target_user_id = ANY($2)) for a batched
+	// relationship lookup. Used by RelationshipBatch to avoid an N+1.
+	queryListUserRelationsForward = `
+SELECT target_user_id, is_following, is_blocked
+FROM user_relations
+WHERE user_id = $1 AND target_user_id = ANY($2)`
+
+	// queryListUserRelationsReverse fetches the reverse-edge rows
+	// (target_user_id = $1 → user_id = ANY($2)) for a batched
+	// relationship lookup so RelationshipBatch can resolve IsFollowedBy.
+	queryListUserRelationsReverse = `
+SELECT user_id, is_following
+FROM user_relations
+WHERE target_user_id = $1 AND user_id = ANY($2)`
 
 	queryCountUserStats = `
 SELECT

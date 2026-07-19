@@ -469,6 +469,8 @@
                     sizes={moment.images.length === 1
                       ? '(min-width: 720px) 720px, 100vw'
                       : '(min-width: 768px) 360px, 50vw'}
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    fetchpriority={i === 0 ? 'high' : 'auto'}
                     class="w-full rounded-[var(--radius-md)] h-[clamp(220px,38vw,380px)] object-cover"
                   />
                   {#if i === 0 && moment.tags && moment.tags.length > 0}

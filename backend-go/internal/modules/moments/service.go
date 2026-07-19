@@ -2,6 +2,7 @@ package moments
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -57,11 +58,11 @@ func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (MomentIt
 	if err := s.validateImageOwnership(ctx, principal.UserID, req.ImageFileIDs); err != nil {
 		return MomentItem{}, err
 	}
-	item, err := s.repo.Create(ctx, principal.UserID, req)
-	if err != nil {
-		observability.L().Error("moments.create failed", "error", err)
-		return MomentItem{}, err
-	}
+		item, err := s.repo.Create(ctx, principal.UserID, req)
+		if err != nil {
+			observability.L().Error("moments.create failed", "error", err)
+			return MomentItem{}, fmt.Errorf("moments.Service.Create: repo: %w", err)
+		}
 	resourceguard.RecordMoment(ctx, item.MomentID)
 	s.notifyMomentMentions(ctx, principal.UserID, item)
 	s.hydrateImages(ctx, &item)
@@ -178,17 +179,17 @@ func (s *Service) Update(ctx context.Context, req EditMomentRequest) (MomentItem
 	updateFn := func(ctx context.Context) error {
 		return s.repo.Update(ctx, principal.UserID, req)
 	}
-	if s.runInTx != nil {
-		if err := s.runInTx(ctx, updateFn); err != nil {
-			observability.L().Error("moments.update failed", "error", err, "moment_id", req.MomentID)
-			return MomentItem{}, err
+		if s.runInTx != nil {
+			if err := s.runInTx(ctx, updateFn); err != nil {
+				observability.L().Error("moments.update failed", "error", err, "moment_id", req.MomentID)
+				return MomentItem{}, fmt.Errorf("moments.Service.Update: tx: %w", err)
+			}
+		} else {
+			if err := updateFn(ctx); err != nil {
+				observability.L().Error("moments.update failed", "error", err, "moment_id", req.MomentID)
+				return MomentItem{}, fmt.Errorf("moments.Service.Update: repo: %w", err)
+			}
 		}
-	} else {
-		if err := updateFn(ctx); err != nil {
-			observability.L().Error("moments.update failed", "error", err, "moment_id", req.MomentID)
-			return MomentItem{}, err
-		}
-	}
 	updated, _, err := s.repo.Get(ctx, req.MomentID)
 	if err != nil {
 		observability.L().Error("moments.update reload failed", "error", err, "moment_id", req.MomentID)
@@ -211,7 +212,10 @@ func (s *Service) Delete(ctx context.Context, momentID string) error {
 	if item.User.UserID != principal.UserID {
 		return ErrPermissionDenied
 	}
-	return s.repo.Delete(ctx, momentID)
+		if err := s.repo.Delete(ctx, momentID); err != nil {
+			return fmt.Errorf("moments.Service.Delete: repo: %w", err)
+		}
+		return nil
 }
 
 func (s *Service) Like(ctx context.Context, momentID string) error {

@@ -16,6 +16,14 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+func logServerError(r *http.Request, method string, err error) {
+	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
+}
+
+func logBusinessError(r *http.Request, method string, code int, message string) {
+	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
+}
+
 func (h *Handler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
@@ -69,12 +77,12 @@ func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, r *http.Request, method string, err error) {
-	observability.L().Error("handler error",
-		"method", method,
-		"error", err,
-		"request_id", observability.RequestIDFromContext(r.Context()),
-	)
 	apiErr := apiErrorFromService(err)
+	if apiErr.Code == 10600 {
+		logServerError(r, method, err)
+	} else {
+		logBusinessError(r, method, apiErr.Code, apiErr.Message)
+	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
 }
 
@@ -91,6 +99,14 @@ func apiErrorFromService(err error) *httpx.APIError {
 	case errors.Is(err, ErrInvalidCursor):
 		return &httpx.APIError{Code: 10000, Message: "分页游标无效"}
 	case errors.Is(err, ErrContactChangeUnavailable):
+		// spec/api_spec_user.md marks the 4 contact-change endpoints (email/phone
+		// request_change + confirm_change) as "⏳ 延期实现" (deferred — pending
+		// email/SMS verification-code delivery). Spec lists error codes
+		// `10000`/`10200`/`10400` for these endpoints. We return `10400`
+		// ("业务冲突") with a clear "暂不支持此功能" message: this is the closest
+		// match among the spec-listed codes (the errors-spec 10400 boundary is
+		// about idempotent no-op misuse, but no dedicated "feature unavailable"
+		// code exists, and these endpoints explicitly enumerate 10400).
 		return &httpx.APIError{Code: 10400, Message: "暂不支持此功能"}
 	default:
 		return &httpx.APIError{Code: 10600, Message: "服务暂时不可用"}

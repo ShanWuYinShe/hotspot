@@ -1,6 +1,7 @@
 package mapmodule
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -15,6 +16,14 @@ type Handler struct {
 
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
+}
+
+func logServerError(r *http.Request, method string, err error) {
+	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
+}
+
+func logBusinessError(r *http.Request, method string, code int, message string) {
+	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
 }
 
 func isValidMapDataType(dataType string) bool {
@@ -64,19 +73,15 @@ func (h *Handler) Canvas(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	resp, err := h.service.Canvas(r.Context(), req)
-	if err != nil {
-		if err == ErrInvalidCursor {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		resp, err := h.service.Canvas(r.Context(), req)
+		if err != nil {
+			if errors.Is(err, ErrInvalidCursor) {
+				httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+				return
+			}
+			logServerError(r, "Canvas", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 			return
 		}
-		observability.L().Error("handler error",
-			"method", "Canvas",
-			"error", err,
-			"request_id", observability.RequestIDFromContext(r.Context()),
-		)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
-	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
 }

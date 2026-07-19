@@ -13,15 +13,21 @@
   import Compass from 'lucide-svelte/icons/compass';
   import TrendingUp from 'lucide-svelte/icons/trending-up';
   import UsersRound from 'lucide-svelte/icons/users-round';
-  import type { MomentItem, TrendingTagItem } from '$lib/types/api';
+  import type { MomentItem, TrendingTagItem, FeedSource } from '$lib/types/api';
   import { PAGE_SIZE } from '$lib/config/pagination';
+  import { t } from '$lib/i18n';
+  import type { TranslationKey } from '$lib/i18n';
 
+  // 标签 → source 映射必须与后端 FeedSource 一致(见 spec/api_spec_feed.md:
+  // list_moments 仅支持 'following' | 'nearby' | 'all')。
+  // - 移除了旧版「活动」tab:后端无对应 source,旧实现 fallback 到 'all',
+  //   与「热门」发出完全相同的请求,属误导性 UI。
+  // - 「附近」改为正确发送 source='nearby'(旧实现也 fallback 到 'all',与「热门」重复)。
   const TABS = [
-    { id: 'all', label: '热门' },
-    { id: 'nearby', label: '附近' },
-    { id: 'activity', label: '活动' },
-    { id: 'following', label: '关注' }
-  ];
+    { id: 'all', labelKey: 'discover.hot' as TranslationKey },
+    { id: 'nearby', labelKey: 'discover.nearby' as TranslationKey },
+    { id: 'following', labelKey: 'discover.following' as TranslationKey }
+  ] as const;
 
   let trendingTags: TrendingTagItem[] = $state([]);
 
@@ -37,7 +43,7 @@
   }
 
   let searchVal = $state('');
-  let activeTab = $state('all');
+  let activeTab = $state<FeedSource>('all');
   let activeTag = $state<string | null>(null);
   let dismissedIds = $state<Set<string>>(new Set());
 
@@ -53,7 +59,8 @@
           latitude: mapAnchorStore.latitude,
           longitude: mapAnchorStore.longitude
         },
-        source: activeTab === 'following' ? 'following' : 'all',
+        // activeTab 即 source(TABS.id 与 FeedSource 一一对应)
+        source: activeTab,
         radius: mapAnchorStore.radius * 1000,
         pagination: { limit: PAGE_SIZE.default, cursor }
       });
@@ -73,6 +80,11 @@
       return true;
     });
   }
+
+  // 缓存 getFilteredItems 结果：旧实现在模板里调用 3 次(count / empty 判定 / 渲染)，
+  // 每次都全量遍历 feed.items + 大小写归一。改用 $derived 后只在依赖变化时算一次。
+  // 依赖：feed.items / dismissedIds / activeTag / searchVal —— 均为 $state/$derived，自动追踪。
+  const filteredItems = $derived(getFilteredItems());
 
   function handleDismiss(momentId: string) {
     dismissedIds = new Set([...dismissedIds, momentId]);
@@ -112,15 +124,15 @@
 </script>
 
 <svelte:head>
-  <title>发现 - HotSpot</title>
+  <title>{t('discover.pageTitle')}</title>
 </svelte:head>
 
 <!-- Shared header content (used by all platforms) -->
 {#snippet headerContent()}
   <div class="flex items-center justify-between mb-2">
-    <h1 class="page-title page-title--hero" style="color: var(--text-primary);">发现</h1>
+    <h1 class="page-title page-title--hero" style="color: var(--text-primary);">{t('discover.title')}</h1>
     <span class="text-meta" style="color: var(--text-secondary)"
-      >{getFilteredItems().length} 条内容</span
+      >{t('discover.contentCount', { count: filteredItems.length })}</span
     >
   </div>
   <!-- Search bar -->
@@ -131,9 +143,9 @@
     <input
       type="text"
       name="discover-search"
-      aria-label="搜索发现内容"
+      aria-label={t('discover.searchAria')}
       bind:value={searchVal}
-      placeholder="地点、人物、关键词…"
+      placeholder={t('discover.searchPlaceholder')}
       class="text-body flex-1 bg-transparent outline-none"
       style="color: var(--text-primary)"
       onkeydown={(e) => e.key === 'Enter' && handleSearch()}
@@ -158,7 +170,7 @@
           : 'var(--text-secondary)'}; font-weight: {activeTab === tab.id ? 500 : 400}"
         onclick={() => (activeTab = tab.id)}
       >
-        {tab.label}
+        {t(tab.labelKey)}
         {#if activeTab === tab.id}
           <div
             style="position: absolute; bottom: -1px; left: 14%; right: 14%; height: 2px; border-radius: 1px; background: var(--brand);"
@@ -193,31 +205,31 @@
     <div class="density-grid">
       <ListSkeleton type="moment" count={4} layout="grid" />
     </div>
-  {:else if getFilteredItems().length === 0}
+  {:else if filteredItems.length === 0}
     <EmptyState
       icon={Compass}
-      title="暂无内容"
+      title={t('discover.emptyTitle')}
       description={activeTag
-        ? `「#${activeTag}」标签下还没有内容，换个标签或关键词试试吧。`
-        : '附近还没有动态，换个标签或关键词试试吧。'}
+        ? t('discover.emptyDescTag', { tag: activeTag })
+        : t('discover.emptyDesc')}
       variant="inline"
     />
   {:else}
-    {@const items = getFilteredItems()}
-    <!-- Hero first card -->
-    {#if items[0]}
-      {@const firstItem = items[0]}
-      <div class="ambient-glow mb-4">
-        <MomentCard moment={firstItem} onDismiss={() => handleDismiss(firstItem.moment_id)} />
-      </div>
-    {/if}
-    <!-- Remaining items — 统一 density-grid，卡片按容器列宽自适应（手机单列大卡、
-         平板两列、桌面多列），不再区分 list/grid2 mode 与 dense 变体。 -->
-    <div class="density-grid">
-      {#each items.slice(1) as moment (moment.moment_id)}
-        <MomentCard {moment} onDismiss={() => handleDismiss(moment.moment_id)} />
-      {/each}
-    </div>
+    {@const items = filteredItems}
+	    <!-- Hero first card -->
+	    {#if items[0]}
+	      {@const firstItem = items[0]}
+	      <div class="ambient-glow mb-4">
+	        <MomentCard moment={firstItem} onDismiss={() => handleDismiss(firstItem.moment_id)} imageFetchpriority="high" />
+	      </div>
+	    {/if}
+	    <!-- Remaining items — 统一 density-grid，卡片按容器列宽自适应（手机单列大卡、
+	         平板两列、桌面多列），不再区分 list/grid2 mode 与 dense 变体。 -->
+	    <div class="density-grid">
+	      {#each items.slice(1) as moment, i (moment.moment_id)}
+	        <MomentCard {moment} onDismiss={() => handleDismiss(moment.moment_id)} imageFetchpriority={i === 0 ? 'high' : 'auto'} />
+	      {/each}
+	    </div>
     <LoadMoreButton
       loading={feed.loadingMore}
       hasMore={feed.hasMore}
@@ -233,7 +245,7 @@
     {#if trendingTags.length > 0}
       <div class="flex items-center gap-1.5 mb-3">
         <TrendingUp size={13} strokeWidth={2} color="var(--brand)" />
-        <span class="eyebrow">热门话题</span>
+        <span class="eyebrow">{t('discover.trendingTopics')}</span>
       </div>
       {#each trendingTags as topic (topic.name)}
         <button
@@ -243,7 +255,7 @@
         >
           <span class="text-body" style="color: var(--text-primary)">#{topic.name}</span>
           <span class="text-caption" style="color: var(--text-secondary)"
-            >{topic.usage_count}帖</span
+            >{topic.usage_count}{t('discover.trendingPostsSuffix')}</span
           >
         </button>
       {/each}
@@ -258,7 +270,7 @@
         >
           <TrendingUp size={15} strokeWidth={1.75} color="var(--brand)" />
         </div>
-        <span class="text-meta" style="color: var(--text-secondary)">暂无热门话题</span>
+        <span class="text-meta" style="color: var(--text-secondary)">{t('discover.noTrendingTopics')}</span>
       </div>
     {/if}
   </div>
@@ -267,22 +279,20 @@
 
   <!-- Active users -->
   <div>
-    <span class="eyebrow">活跃用户</span>
+    <span class="eyebrow">{t('discover.activeUsers')}</span>
     <div class="flex flex-col mt-3 gap-2.5">
       {#each topUsers as user (user.id)}
-        <div class="flex items-center gap-2.5">
+        <!-- 整行链接到用户主页。原先右侧的"关注"按钮是死按钮(无 onclick、无关注 API 接入),
+             误导用户,已移除;点击昵称/头像区域跳转主页,主页内有可用的关注操作。 -->
+        <a
+          href={`/users/${user.id}`}
+          class="flex items-center gap-2.5 rounded-[var(--radius-sm)] px-1 py-1 outline-none transition-colors hover:bg-[var(--border-theme)]"
+        >
           <Avatar src={user.avatar_url} name={user.nickname} alt={user.nickname} size={32} />
-          <p class="text-meta min-w-0 flex-1 truncate" style="color: var(--text-primary)">
+          <span class="text-meta min-w-0 flex-1 truncate" style="color: var(--text-primary)">
             {user.nickname}
-          </p>
-          <button
-            type="button"
-            class="text-xs flex-shrink-0 rounded-full px-2.5 py-1 outline-none"
-            style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
-          >
-            关注
-          </button>
-        </div>
+          </span>
+        </a>
       {/each}
       {#if topUsers.length === 0}
         <div
@@ -295,7 +305,7 @@
           >
             <UsersRound size={15} strokeWidth={1.75} color="var(--brand)" />
           </div>
-          <span class="text-meta" style="color: var(--text-secondary)">附近暂无活跃用户</span>
+          <span class="text-meta" style="color: var(--text-secondary)">{t('discover.noActiveUsers')}</span>
         </div>
       {/if}
     </div>
@@ -313,19 +323,18 @@
     </div>
 
     <div class="flex flex-1 min-h-0 overflow-hidden">
-      <div class="flex-1 overflow-y-auto no-scrollbar feed-density-pad">
-        <div class="flex gap-0">
-          <div class="feed-density-shell flex-1 min-w-0">
-            {@render tagChips()}
-            {@render feedGrid()}
-          </div>
-          <div
-            class="flex-shrink-0"
-            style="width: 240px; border-left: 1px solid var(--border-theme); padding: 20px 16px; position: sticky; top: 0; align-self: flex-start;"
-          >
-            {@render rightSidebar()}
-          </div>
-        </div>
+      <div class="flex-1 overflow-y-auto no-scrollbar feed-density-pad min-w-0">
+        {@render tagChips()}
+        {@render feedGrid()}
+      </div>
+      <!-- 右侧 sidebar 独立于 feed 的 scroll container 之外,避免 position:sticky 在
+           flex 子元素中因浏览器差异导致与 feed 内容重叠。sidebar 自身 overflow-y-auto
+           在内容超出一屏时独立滚动。 -->
+      <div
+        class="flex-shrink-0 overflow-y-auto no-scrollbar"
+        style="width: 240px; border-left: 1px solid var(--border-theme); padding: 20px 16px;"
+      >
+        {@render rightSidebar()}
       </div>
     </div>
   </div>

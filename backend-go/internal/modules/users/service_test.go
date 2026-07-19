@@ -113,6 +113,13 @@ func (r *stubUserRepo) ListLikedMoments(_ context.Context, _ string, _ int, _ st
 func (r *stubUserRepo) Relationship(_ context.Context, _, _ string) (Relationship, error) {
 	return r.relation, r.relationErr
 }
+func (r *stubUserRepo) RelationshipBatch(_ context.Context, _ string, targetUserIDs []string) (map[string]Relationship, error) {
+	result := make(map[string]Relationship, len(targetUserIDs))
+	for _, id := range targetUserIDs {
+		result[id] = r.relation
+	}
+	return result, r.relationErr
+}
 func (r *stubUserRepo) ListFriends(_ context.Context, _ string, _ int, _ string) (PaginatedFriends, error) {
 	return r.friends, r.friendsErr
 }

@@ -3,10 +3,11 @@
  * 严格遵循 spec/api_spec_websocket.md
  */
 
-import { browser, dev } from '$app/environment';
-import { authStore } from '$lib/stores/auth.svelte';
-import { toast } from '$lib/stores/toast.svelte';
-import { ensureRefreshToken } from '$lib/api/client';
+	import { browser, dev } from '$app/environment';
+	import { authStore } from '$lib/stores/auth.svelte';
+	import { toast } from '$lib/stores/toast.svelte';
+	import { t } from '$lib/i18n';
+	import { ensureRefreshToken } from '$lib/api/client';
 import { untrack } from 'svelte';
 import type {
   ServerWebSocketEvent,
@@ -573,7 +574,7 @@ class WebSocketStore {
         this.cleanup();
         this.connectionState = 'failed';
         // 清除会话并提示用户
-        toast.error(payload.message || '会话已失效，请重新登录');
+	        toast.error(payload.message || t('websocket.sessionExpired'));
         authStore.logout();
         break;
 
@@ -745,7 +746,7 @@ class WebSocketStore {
       this.connectionState = 'failed';
       this.connectingLock = false;
       // spec: 达到最大重连次数后通知用户"连接失败，请检查网络"
-      toast.error('连接失败，请检查网络后重试');
+	      toast.error(t('websocket.connectionFailed'));
       return;
     }
 
@@ -758,7 +759,7 @@ class WebSocketStore {
     // spec: 连续失败 10 次后提示用户"连接不稳定，正在重试"
     if (this.reconnectAttempts >= CONSECUTIVE_FAILURE_THRESHOLD && !this.userNotifiedUnstable) {
       this.userNotifiedUnstable = true;
-      toast.warning('连接不稳定，正在重试…');
+	      toast.warning(t('websocket.reconnecting'));
     }
 
     log(

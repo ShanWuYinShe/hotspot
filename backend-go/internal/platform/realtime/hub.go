@@ -3,6 +3,8 @@ package realtime
 import (
 	"context"
 	"sync"
+
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 type FanoutSink interface {
@@ -175,20 +177,33 @@ func (h *Hub) BroadcastToAll(event Event) {
 }
 
 // deliverAllLocal collects a snapshot of every connected sink under RLock and
-// then delivers to each outside the lock. The pre-allocation is capped at
-// maxConnectionsPerBroadcast to avoid unbounded allocation spikes. This is
-// O(n) for all active connections.
+// then delivers to each outside the lock. The number of sinks actually
+// delivered is capped at maxConnectionsPerBroadcast (drop-tail): beyond the
+// cap, additional sessions are silently skipped and a single warning is
+// logged per call so operators can detect fan-out storms. This is O(n) for
+// all active connections.
 func (h *Hub) deliverAllLocal(event Event) {
 	h.mu.RLock()
-	n := len(h.bySession)
-	if n > maxConnectionsPerBroadcast {
-		n = maxConnectionsPerBroadcast
+	total := 0
+	for _, sessionSinks := range h.bySession {
+		total += len(sessionSinks)
 	}
-	sinks := make([]FanoutSink, 0, n)
+	sinks := make([]FanoutSink, 0, min(total, maxConnectionsPerBroadcast))
 	for _, sessionSinks := range h.bySession {
 		sinks = append(sinks, sessionSinks...)
+		if len(sinks) >= maxConnectionsPerBroadcast {
+			break
+		}
 	}
 	h.mu.RUnlock()
+	if total > maxConnectionsPerBroadcast {
+		observability.L().Warn(
+			"broadcast fanout exceeded cap; tail sessions dropped",
+			"total", total,
+			"cap", maxConnectionsPerBroadcast,
+			"delivered", len(sinks),
+		)
+	}
 	for _, sink := range sinks {
 		_ = sink.Send(event)
 	}

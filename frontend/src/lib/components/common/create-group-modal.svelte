@@ -151,19 +151,19 @@
       return;
     }
     if (tags.length > GROUP_TAG_MAX) {
-      toast.error(`标签最多 ${GROUP_TAG_MAX} 个`);
+	      toast.error(t('createGroup.tagLimit', { max: GROUP_TAG_MAX }));
       return;
     }
     if (tags.some((tag) => tag.length < 1 || tag.length > TAG_MAX_LENGTH)) {
-      toast.error(`标签长度需在 1-${TAG_MAX_LENGTH} 字符之间`);
+	      toast.error(t('createGroup.tagLengthLimit', { max: TAG_MAX_LENGTH }));
       return;
     }
     if (!locationName) {
-      toast.error('请选择群组位置');
+	      toast.error(t('createGroup.locationRequired'));
       return;
     }
     if (locationName.length > LOCATION_NAME_MAX) {
-      toast.error(`位置名称最多 ${LOCATION_NAME_MAX} 字符`);
+	      toast.error(t('createGroup.locationNameMax', { max: LOCATION_NAME_MAX }));
       return;
     }
 
@@ -198,16 +198,16 @@
 
       const response = await groupsService.create(payload);
       if (isSuccess(response)) {
-        toast.success('群组已创建');
+	        toast.success(t('createGroup.created'));
         resetForm();
         open = false;
         onOpenChange?.(false);
         onCreated?.();
       } else {
-        showApiError(toast, response, '创建失败');
-      }
-    } catch {
-      toast.error('创建失败');
+	        showApiError(toast, response, t('createGroup.createFailed'));
+	      }
+	    } catch {
+	      toast.error(t('createGroup.createFailed'));
     } finally {
       isSubmitting = false;
     }

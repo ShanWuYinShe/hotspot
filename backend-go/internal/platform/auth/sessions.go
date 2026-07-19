@@ -1,9 +1,13 @@
 package auth
 
-import "hotspot/backend-go/internal/platform/httpx"
+import (
+	"context"
 
-func (s *Service) ListSessions(userID, currentSessionID string) []SessionRecord {
-	sessions, err := s.sessions.ListActiveByUser(userID)
+	"hotspot/backend-go/internal/platform/httpx"
+)
+
+func (s *Service) ListSessions(ctx context.Context, userID, currentSessionID string) []SessionRecord {
+	sessions, err := s.sessions.ListActiveByUser(ctx, userID)
 	if err != nil {
 		return []SessionRecord{}
 	}
@@ -12,27 +16,27 @@ func (s *Service) ListSessions(userID, currentSessionID string) []SessionRecord 
 	}
 	for i := range sessions {
 		if sessions[i].SessionID == currentSessionID {
-			_ = s.sessions.Touch(currentSessionID)
+			_ = s.sessions.Touch(ctx, currentSessionID)
 			break
 		}
 	}
-	updated, err := s.sessions.ListActiveByUser(userID)
+	updated, err := s.sessions.ListActiveByUser(ctx, userID)
 	if err != nil {
 		return sessions
 	}
 	return updated
 }
 
-func (s *Service) RevokeOtherSessions(userID, currentSessionID string) int {
-	count, err := s.sessions.RevokeOthers(userID, currentSessionID)
+func (s *Service) RevokeOtherSessions(ctx context.Context, userID, currentSessionID string) int {
+	count, err := s.sessions.RevokeOthers(ctx, userID, currentSessionID)
 	if err != nil {
 		return 0
 	}
 	return count
 }
 
-func (s *Service) RevokeSession(userID, _ string, targetSessionID string) error {
-	target, ok, err := s.sessions.Get(targetSessionID)
+func (s *Service) RevokeSession(ctx context.Context, userID, _ string, targetSessionID string) error {
+	target, ok, err := s.sessions.Get(ctx, targetSessionID)
 	if err != nil {
 		return err
 	}
@@ -42,7 +46,7 @@ func (s *Service) RevokeSession(userID, _ string, targetSessionID string) error 
 	if target.UserID != userID {
 		return &httpx.APIError{Code: 10200, Message: "无权撤销该会话"}
 	}
-	if _, err := s.sessions.Revoke(targetSessionID); err != nil {
+	if _, err := s.sessions.Revoke(ctx, targetSessionID); err != nil {
 		return err
 	}
 	return nil

@@ -139,65 +139,71 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	var req EditMomentRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
-		logBusinessError(r, "Update", 10000, "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-		return
+		if err := idempotency.RequireKey(r); err != nil {
+			logBusinessError(r, "Update", err.Code, err.Message)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+			return
+		}
+		var req EditMomentRequest
+		if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
+			logBusinessError(r, "Update", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			return
+		}
+		idempotency.ReplayOrStore(w, r, "moments/update", func() httpx.ApiResponse[MomentItem] {
+			item, err := h.service.Update(r.Context(), req)
+			if err != nil {
+				if errors.Is(err, ErrMomentNotFound) {
+					logBusinessError(r, "Update", 10300, "瞬间不存在")
+					return httpx.ApiResponse[MomentItem]{Code: 10300, Message: "瞬间不存在"}
+				}
+				if errors.Is(err, ErrPermissionDenied) {
+					logBusinessError(r, "Update", 10200, "权限不足")
+					return httpx.ApiResponse[MomentItem]{Code: 10200, Message: "权限不足"}
+				}
+				if errors.Is(err, ErrTooManyImages) {
+					logBusinessError(r, "Update", 10000, "图片数量超过上限")
+					return httpx.ApiResponse[MomentItem]{Code: 10000, Message: "图片数量超过上限"}
+				}
+				if errors.Is(err, ErrImagesNotOwned) {
+					logBusinessError(r, "Update", 10000, "图片校验失败")
+					return httpx.ApiResponse[MomentItem]{Code: 10000, Message: "图片校验失败"}
+				}
+				logServerError(r, "Update", err)
+				return httpx.ApiResponse[MomentItem]{Code: 10600, Message: "服务暂时不可用"}
+			}
+			return httpx.Success(item)
+		})
 	}
-	item, err := h.service.Update(r.Context(), req)
-	if err != nil {
-		if errors.Is(err, ErrMomentNotFound) {
-			logBusinessError(r, "Update", 10300, "瞬间不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
-			return
-		}
-		if errors.Is(err, ErrPermissionDenied) {
-			logBusinessError(r, "Update", 10200, "权限不足")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
-			return
-		}
-		if errors.Is(err, ErrTooManyImages) {
-			logBusinessError(r, "Update", 10000, "图片数量超过上限")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "图片数量超过上限"))
-			return
-		}
-		if errors.Is(err, ErrImagesNotOwned) {
-			logBusinessError(r, "Update", 10000, "图片校验失败")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "图片校验失败"))
-			return
-		}
-		logServerError(r, "Update", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(item))
-}
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	var req DeleteMomentRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
-		logBusinessError(r, "Delete", 10000, "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-		return
-	}
-	if err := h.service.Delete(r.Context(), req.MomentID); err != nil {
-		if err == ErrMomentNotFound {
-			logBusinessError(r, "Delete", 10300, "瞬间不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
+		if err := idempotency.RequireKey(r); err != nil {
+			logBusinessError(r, "Delete", err.Code, err.Message)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 			return
 		}
-		if err == ErrPermissionDenied {
-			logBusinessError(r, "Delete", 10200, "权限不足")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
+		var req DeleteMomentRequest
+		if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
+			logBusinessError(r, "Delete", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 			return
 		}
-		logServerError(r, "Delete", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
+		idempotency.ReplayOrStore(w, r, "moments/delete", func() httpx.ApiResponse[struct{}] {
+			if err := h.service.Delete(r.Context(), req.MomentID); err != nil {
+				if errors.Is(err, ErrMomentNotFound) {
+					logBusinessError(r, "Delete", 10300, "瞬间不存在")
+					return httpx.ApiResponse[struct{}]{Code: 10300, Message: "瞬间不存在"}
+				}
+				if errors.Is(err, ErrPermissionDenied) {
+					logBusinessError(r, "Delete", 10200, "权限不足")
+					return httpx.ApiResponse[struct{}]{Code: 10200, Message: "权限不足"}
+				}
+				logServerError(r, "Delete", err)
+				return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
+			}
+			return httpx.Success(struct{}{})
+		})
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
-}
 
 func (h *Handler) Like(w http.ResponseWriter, r *http.Request) {
 	var req LikeMomentRequest
@@ -207,7 +213,7 @@ func (h *Handler) Like(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.Like(r.Context(), req.MomentID); err != nil {
-		if err == ErrMomentNotFound {
+		if errors.Is(err, ErrMomentNotFound) {
 			logBusinessError(r, "Like", 10300, "瞬间不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
 			return
@@ -227,7 +233,7 @@ func (h *Handler) Unlike(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.Unlike(r.Context(), req.MomentID); err != nil {
-		if err == ErrMomentNotFound {
+		if errors.Is(err, ErrMomentNotFound) {
 			logBusinessError(r, "Unlike", 10300, "瞬间不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
 			return
@@ -247,7 +253,7 @@ func (h *Handler) Favorite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.Favorite(r.Context(), req.MomentID); err != nil {
-		if err == ErrMomentNotFound {
+		if errors.Is(err, ErrMomentNotFound) {
 			logBusinessError(r, "Favorite", 10300, "瞬间不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
 			return
@@ -267,7 +273,7 @@ func (h *Handler) Unfavorite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.Unfavorite(r.Context(), req.MomentID); err != nil {
-		if err == ErrMomentNotFound {
+		if errors.Is(err, ErrMomentNotFound) {
 			logBusinessError(r, "Unfavorite", 10300, "瞬间不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
 			return
@@ -288,7 +294,7 @@ func (h *Handler) ListLikes(w http.ResponseWriter, r *http.Request) {
 	}
 	items, nextCursor, err := h.service.ListLikes(r.Context(), req)
 	if err != nil {
-		if err == ErrMomentNotFound {
+		if errors.Is(err, ErrMomentNotFound) {
 			logBusinessError(r, "ListLikes", 10300, "瞬间不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
 			return

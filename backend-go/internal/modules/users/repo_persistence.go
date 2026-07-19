@@ -59,6 +59,9 @@ func (r *PersistenceRepository) ListLikedMoments(ctx context.Context, userID str
 func (r *PersistenceRepository) Relationship(ctx context.Context, userID, targetUserID string) (Relationship, error) {
 	return r.impl.Relationship(ctx, userID, targetUserID)
 }
+func (r *PersistenceRepository) RelationshipBatch(ctx context.Context, userID string, targetUserIDs []string) (map[string]Relationship, error) {
+	return r.impl.RelationshipBatch(ctx, userID, targetUserIDs)
+}
 func (r *PersistenceRepository) ListFriends(ctx context.Context, userID string, limit int, cursor string) (PaginatedFriends, error) {
 	return r.impl.ListFriends(ctx, userID, limit, cursor)
 }

@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
@@ -21,8 +22,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 }
 
 func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams) (Account, error) {
-	queryable, ok := r.queryable()
-	if !ok {
+	if _, ok := r.queryable(); !ok {
 		return Account{}, persistence.ErrNotImplemented
 	}
 	userID, err := generateUserID()
@@ -35,23 +35,60 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 	}
 	now := params.Defaults.CreatedAt.UTC()
 	s2CellID := geo.LeafCellID(geo.Point{Latitude: params.Defaults.Latitude, Longitude: params.Defaults.Longitude})
-	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "normal", params.LoginID, params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
-		return Account{}, err
-	}
-	if err := queryable.Exec(ctx, queryInsertAuthAccount, params.LoginID, userID, hashed, now, now); err != nil {
-		if isUniqueViolation(err) {
-			_ = queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID)
-			return Account{}, ErrLoginIDConflict
+	// Wrap all three inserts (user profile, auth account, settings) in a single
+	// transaction. Previously these were separate Execs with manual compensating
+	// deletes on failure, which is racy under concurrent registration and leaks
+	// partial rows if the process dies mid-write. Tx rollback atomically undoes
+	// all three. RunInTransaction is a no-op for in-memory factories (tests).
+	var conflict bool
+	var execErr error
+	txErr := persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		queryable, ok := queryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
 		}
-		_ = queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID)
-		return Account{}, err
-	}
-	if err := queryable.Exec(ctx, queryUpsertUserSettings, userID); err != nil {
-		_ = queryable.Exec(ctx, queryDeleteAuthAccountByLoginID, params.LoginID)
-		_ = queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID)
-		return Account{}, err
-	}
+		if err := queryable.Exec(txCtx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "normal", params.LoginID, params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
+			execErr = err
+			return err
+		}
+		if err := queryable.Exec(txCtx, queryInsertAuthAccount, params.LoginID, userID, hashed, now, now); err != nil {
+			if isUniqueViolation(err) {
+				conflict = true
+			}
+			execErr = err
+			return err
+		}
+		if err := queryable.Exec(txCtx, queryUpsertUserSettings, userID); err != nil {
+			execErr = err
+			return err
+		}
+		return nil
+	})
+	if txErr != nil {
+			if conflict || isUniqueViolation(txErr) {
+				return Account{}, ErrLoginIDConflict
+			}
+			if execErr != nil {
+				return Account{}, fmt.Errorf("auth.Register: %w", execErr)
+			}
+			return Account{}, fmt.Errorf("auth.Register: %w", txErr)
+		}
 	return Account{UserID: userID, LoginID: params.LoginID, Nickname: params.Nickname, UserType: "normal"}, nil
+}
+
+// queryableForTx returns the queryable bound to ctx (an in-flight transaction)
+// when one is present, otherwise falls back to the shared pool. This lets the
+// same repo method run against either a tx (when RunInTransaction is active) or
+// the pool, without the caller caring which.
+func queryableForTx(ctx context.Context, factory *persistence.Factory) (persistence.Queryable, bool) {
+	if q, ok := persistence.QueryableFromContext(ctx); ok {
+		return q, true
+	}
+	if factory == nil || factory.DB == nil {
+		return nil, false
+	}
+	qdb, ok := factory.DB.(persistence.Queryable)
+	return qdb, ok
 }
 
 func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams) (Account, error) {
@@ -65,13 +102,13 @@ func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams
 	}
 	now := params.Defaults.CreatedAt.UTC()
 	s2CellID := geo.LeafCellID(geo.Point{Latitude: params.Defaults.Latitude, Longitude: params.Defaults.Longitude})
-	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "temp", "", params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
-		return Account{}, err
-	}
-	if err := queryable.Exec(ctx, queryUpsertUserSettings, userID); err != nil {
-		_ = queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID)
-		return Account{}, err
-	}
+		if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "temp", "", params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
+			return Account{}, fmt.Errorf("auth.CreateGuest: profile insert: %w", err)
+		}
+		if err := queryable.Exec(ctx, queryUpsertUserSettings, userID); err != nil {
+			_ = queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID)
+			return Account{}, fmt.Errorf("auth.CreateGuest: settings upsert: %w", err)
+		}
 	return Account{UserID: userID, Nickname: params.Nickname, UserType: "temp"}, nil
 }
 
@@ -80,14 +117,14 @@ func (r *PostgresRepository) Authenticate(ctx context.Context, loginID, password
 	if !ok {
 		return Account{}, persistence.ErrNotImplemented
 	}
-	record, found, err := r.accountByLoginID(ctx, queryable, loginID)
-	if err != nil {
-		return Account{}, err
-	}
-	if !found || !verifyPassword(record.PasswordHash, password) {
-		return Account{}, ErrInvalidCredentials
-	}
-	return record.Account, nil
+		record, found, err := r.accountByLoginID(ctx, queryable, loginID)
+		if err != nil {
+			return Account{}, fmt.Errorf("auth.Authenticate: %w", err)
+		}
+		if !found || !verifyPassword(record.PasswordHash, password) {
+			return Account{}, ErrInvalidCredentials
+		}
+		return record.Account, nil
 }
 
 func (r *PostgresRepository) UpdateLoginMeta(ctx context.Context, userID, ip, location string) error {
@@ -95,7 +132,10 @@ func (r *PostgresRepository) UpdateLoginMeta(ctx context.Context, userID, ip, lo
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryUpdateLoginMeta, userID, ip, location)
+		if err := queryable.Exec(ctx, queryUpdateLoginMeta, userID, ip, location); err != nil {
+			return fmt.Errorf("auth.UpdateLoginMeta: %w", err)
+		}
+		return nil
 }
 
 func (r *PostgresRepository) CreatePasswordReset(ctx context.Context, loginID string, expiresAt time.Time) (string, error) {
@@ -103,9 +143,9 @@ func (r *PostgresRepository) CreatePasswordReset(ctx context.Context, loginID st
 	if !ok {
 		return "", persistence.ErrNotImplemented
 	}
-	if _, found, err := r.accountByLoginID(ctx, queryable, loginID); err != nil {
-		return "", err
-	} else if !found {
+		if _, found, err := r.accountByLoginID(ctx, queryable, loginID); err != nil {
+			return "", fmt.Errorf("auth.CreatePasswordReset: account lookup: %w", err)
+		} else if !found {
 		return "", nil
 	}
 	requestID, err := generateUserID()
@@ -117,14 +157,14 @@ func (r *PostgresRepository) CreatePasswordReset(ctx context.Context, loginID st
 		return "", err
 	}
 	now := time.Now().UTC()
-	if latest, found, err := r.latestPasswordResetByLoginID(ctx, queryable, loginID); err != nil {
-		return "", err
-	} else if found && now.Sub(latest.CreatedAt) < passwordResetThrottleWindow {
-		return "", ErrPasswordResetThrottled
-	}
-	if err := queryable.Exec(ctx, queryInsertPasswordReset, requestID, loginID, code, expiresAt.UTC(), now); err != nil {
-		return "", err
-	}
+		if latest, found, err := r.latestPasswordResetByLoginID(ctx, queryable, loginID); err != nil {
+			return "", fmt.Errorf("auth.CreatePasswordReset: throttle check: %w", err)
+		} else if found && now.Sub(latest.CreatedAt) < passwordResetThrottleWindow {
+			return "", ErrPasswordResetThrottled
+		}
+		if err := queryable.Exec(ctx, queryInsertPasswordReset, requestID, loginID, code, expiresAt.UTC(), now); err != nil {
+			return "", fmt.Errorf("auth.CreatePasswordReset: insert: %w", err)
+		}
 	return code, nil
 }
 
@@ -133,31 +173,31 @@ func (r *PostgresRepository) ResetPassword(ctx context.Context, loginID, verific
 	if !ok {
 		return Account{}, persistence.ErrNotImplemented
 	}
-	account, found, err := r.accountByLoginID(ctx, queryable, loginID)
-	if err != nil {
-		return Account{}, err
-	}
-	if !found {
-		return Account{}, ErrPasswordResetNotFound
-	}
-	request, ok, err := r.passwordResetByCode(ctx, queryable, loginID, verificationCode)
-	if err != nil {
-		return Account{}, err
-	}
-	now := time.Now().UTC()
-	if !ok || request.UsedAt != nil || now.After(request.ExpiresAt) {
-		return Account{}, ErrPasswordResetNotFound
-	}
-	hashed, err := hashPassword(newPassword)
-	if err != nil {
-		return Account{}, err
-	}
-	if err := queryable.Exec(ctx, queryUpdateAccountPassword, account.UserID, hashed, now); err != nil {
-		return Account{}, err
-	}
-	if err := queryable.Exec(ctx, queryUsePasswordReset, request.RequestID, now); err != nil {
-		return Account{}, err
-	}
+		account, found, err := r.accountByLoginID(ctx, queryable, loginID)
+		if err != nil {
+			return Account{}, fmt.Errorf("auth.ResetPassword: account lookup: %w", err)
+		}
+		if !found {
+			return Account{}, ErrPasswordResetNotFound
+		}
+		request, ok, err := r.passwordResetByCode(ctx, queryable, loginID, verificationCode)
+		if err != nil {
+			return Account{}, fmt.Errorf("auth.ResetPassword: reset code lookup: %w", err)
+		}
+		now := time.Now().UTC()
+		if !ok || request.UsedAt != nil || now.After(request.ExpiresAt) {
+			return Account{}, ErrPasswordResetNotFound
+		}
+		hashed, err := hashPassword(newPassword)
+		if err != nil {
+			return Account{}, err
+		}
+		if err := queryable.Exec(ctx, queryUpdateAccountPassword, account.UserID, hashed, now); err != nil {
+			return Account{}, fmt.Errorf("auth.ResetPassword: password update: %w", err)
+		}
+		if err := queryable.Exec(ctx, queryUsePasswordReset, request.RequestID, now); err != nil {
+			return Account{}, fmt.Errorf("auth.ResetPassword: mark reset used: %w", err)
+		}
 	return account.Account, nil
 }
 
@@ -166,18 +206,21 @@ func (r *PostgresRepository) ChangePassword(ctx context.Context, userID, oldPass
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	account, found, err := r.accountByUserID(ctx, queryable, userID)
-	if err != nil {
-		return err
-	}
-	if !found || !verifyPassword(account.PasswordHash, oldPassword) {
-		return ErrInvalidOldPassword
-	}
-	hashed, err := hashPassword(newPassword)
-	if err != nil {
-		return err
-	}
-	return queryable.Exec(ctx, queryUpdateAccountPassword, userID, hashed, time.Now().UTC())
+		account, found, err := r.accountByUserID(ctx, queryable, userID)
+		if err != nil {
+			return fmt.Errorf("auth.ChangePassword: account lookup: %w", err)
+		}
+		if !found || !verifyPassword(account.PasswordHash, oldPassword) {
+			return ErrInvalidOldPassword
+		}
+		hashed, err := hashPassword(newPassword)
+		if err != nil {
+			return err
+		}
+		if err := queryable.Exec(ctx, queryUpdateAccountPassword, userID, hashed, time.Now().UTC()); err != nil {
+			return fmt.Errorf("auth.ChangePassword: password update: %w", err)
+		}
+		return nil
 }
 
 func (r *PostgresRepository) accountByLoginID(ctx context.Context, queryable persistence.QueryableDB, loginID string) (accountRecord, bool, error) {

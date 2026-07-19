@@ -24,7 +24,6 @@ import type {
   AdminReportItem,
   AdminAnnouncementItem,
   AdminTagItem,
-  AdminTagSortBy,
   AuditLogItem,
   AuditAction,
   AuditTargetType,
@@ -316,10 +315,10 @@ export const adminReportsService = {
 export const adminTagsService = {
   /**
    * 搜索标签
-   * spec: Request = { pagination?, keyword?, sort_by? }
+   * spec: Request = { keyword?, pagination? }（排序由服务端控制，默认 usage_count DESC）
    * spec: Response = PaginatedData<AdminTagItem>
    */
-  search(params?: { keyword?: string; sort_by?: AdminTagSortBy; pagination?: PaginationParams }) {
+  search(params?: { keyword?: string; pagination?: PaginationParams }) {
     return paginate<AdminTagItem>(ADMIN_TAGS.SEARCH, params);
   },
 

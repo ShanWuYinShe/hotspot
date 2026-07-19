@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { adminReportsService } from '$lib/api/services';
-  import { isSuccess } from '$lib/api/client';
-  import { toast } from '$lib/stores/toast.svelte';
+	  import { adminReportsService } from '$lib/api/services';
+	  import { isSuccess } from '$lib/api/client';
+	  import { toast } from '$lib/stores/toast.svelte';
+	  import { t } from '$lib/i18n';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import type { ReportItem, ReportStatus } from '$lib/types/api';
@@ -52,12 +53,12 @@
         pagination.updateItem((r) =>
           r.report_id === reportId ? { ...r, status: newStatus } : null
         );
-        toast.success(action === 'resolve' ? '已处理' : '已驳回');
-      } else {
-        toast.error(response.message || '操作失败');
-      }
-    } catch {
-      toast.error('操作失败');
+	        toast.success(action === 'resolve' ? t('admin.handled') : t('admin.rejected'));
+	      } else {
+	        toast.error(response.message || t('admin.operationFailed'));
+	      }
+	    } catch {
+	      toast.error(t('admin.operationFailed'));
     }
   }
 

@@ -284,7 +284,7 @@ func TestRefreshTokenAppReturnsNewTokenPair(t *testing.T) {
 func TestListSessionsReturnsCurrentSession(t *testing.T) {
 	handler := newTestHandler()
 	register := registerAppUser(t, handler, "alice", "Alice", "secret")
-	sessionID := handler.service.auth.UnsafeFirstSessionIDForUser(register.UserID)
+	sessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), register.UserID)
 	if sessionID == "" {
 		t.Fatal("expected session id")
 	}
@@ -408,7 +408,7 @@ func TestRequestPasswordResetDoesNotExposeUnknownLoginID(t *testing.T) {
 func TestResetPasswordRevokesExistingSessionsAndAllowsLoginWithNewPassword(t *testing.T) {
 	handler := newTestHandler()
 	register := registerAppUser(t, handler, "alice", "Alice", "secret")
-	firstSessionID := handler.service.auth.UnsafeFirstSessionIDForUser(register.UserID)
+	firstSessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), register.UserID)
 	if firstSessionID == "" {
 		t.Fatal("expected first session id")
 	}
@@ -499,7 +499,7 @@ func TestChangePasswordRequiresIdempotencyKey(t *testing.T) {
 func TestRevokeSessionRejectsCurrentSession(t *testing.T) {
 	handler := newTestHandler()
 	register := registerAppUser(t, handler, "alice", "Alice", "secret")
-	currentSessionID := handler.service.auth.UnsafeFirstSessionIDForUser(register.UserID)
+	currentSessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), register.UserID)
 	req := httptest.NewRequest(http.MethodPost, "/me/sessions/revoke", strings.NewReader(`{"session_id":"`+currentSessionID+`"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: register.UserID, SessionID: currentSessionID}))
 	rr := httptest.NewRecorder()
@@ -516,7 +516,7 @@ func TestRevokeSessionRejectsCurrentSession(t *testing.T) {
 func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T) {
 	handler := newTestHandler()
 	register := registerAppUser(t, handler, "alice", "Alice", "secret")
-	currentSessionID := handler.service.auth.UnsafeFirstSessionIDForUser(register.UserID)
+	currentSessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), register.UserID)
 	if currentSessionID == "" {
 		t.Fatal("expected current session id")
 	}
@@ -524,7 +524,7 @@ func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T)
 	loginRR := httptest.NewRecorder()
 	handler.Login(loginRR, loginReq)
 	otherSessionID := ""
-	for _, session := range handler.service.auth.ListSessions(register.UserID, currentSessionID) {
+	for _, session := range handler.service.auth.ListSessions(context.Background(), register.UserID, currentSessionID) {
 		if session.SessionID != currentSessionID {
 			otherSessionID = session.SessionID
 			break
@@ -759,7 +759,7 @@ func TestLoginReturns10100OnNonexistentUser(t *testing.T) {
 func TestLogoutClearsCookiesWithMaxAgeZero(t *testing.T) {
 	handler := newTestHandler()
 	reg := registerAppUser(t, handler, "logout_test", "Pass123", "pass123")
-	sessionID := handler.service.auth.UnsafeFirstSessionIDForUser(reg.UserID)
+	sessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), reg.UserID)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: reg.UserID, SessionID: sessionID})
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/logout", strings.NewReader(`{}`)).WithContext(ctx)
@@ -844,7 +844,7 @@ func TestHandlerRevokeAllSessionsIgnoresUnknownFields(t *testing.T) {
 func TestHandlerRevokeAllSessionsReturnsSuccess(t *testing.T) {
 	handler := newTestHandler()
 	reg := registerAppUser(t, handler, "revoke_all_user", "RevokeAll", "pass123")
-	sessionID := handler.service.auth.UnsafeFirstSessionIDForUser(reg.UserID)
+	sessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), reg.UserID)
 	if sessionID == "" {
 		t.Fatal("expected session id")
 	}

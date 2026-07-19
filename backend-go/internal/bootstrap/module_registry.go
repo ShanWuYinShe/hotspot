@@ -1,6 +1,8 @@
 package bootstrap
 
 import (
+	"context"
+
 	"hotspot/backend-go/internal/modules/admin"
 	"hotspot/backend-go/internal/modules/auth"
 	"hotspot/backend-go/internal/modules/feed"
@@ -24,6 +26,14 @@ import (
 )
 
 func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.Module {
+	return BuildModulesWithRedisPinger(cfg, factory, nil)
+}
+
+// BuildModulesWithRedisPinger is like BuildModules but additionally wires a
+// redis liveness probe into the system module's health check. Pass nil when
+// redis is not configured (single-instance mode) — the health endpoint then
+// skips the redis probe instead of reporting degraded.
+func BuildModulesWithRedisPinger(cfg config.Config, factory *persistence.Factory, redisPinger func(ctx context.Context) error) []modulekit.Module {
 	sharedAppConfig := appconfig.NewPersistenceSource(cfg, factory)
 	ratelimit.SetSource(sharedAppConfig)
 	usersModule := users.NewModule(factory, sharedAppConfig)
@@ -35,6 +45,8 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 	userSearcher := users.NewSearchAdapter(usersModule.Service)
 	groupSearcher := groups.NewSearchAdapter(groupsModule.Service)
 	momentSearcher := moments.NewSearchAdapter(momentsModule.Service)
+	systemModule := system.NewModule(factory, sharedAppConfig)
+	systemModule.SetHealthRedisPinger(redisPinger)
 	return []modulekit.Module{
 		admin.NewModule(factory, sharedAppConfig),
 		auth.NewModule(cfg, factory, sharedAppConfig),
@@ -49,7 +61,7 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 		reports.NewModule(factory),
 		search.NewModuleWithSearchers(factory, sharedAppConfig, userSearcher, groupSearcher, momentSearcher),
 		share.NewModule(factory),
-		system.NewModule(factory, sharedAppConfig),
+		systemModule,
 		usersModule,
 	}
 }

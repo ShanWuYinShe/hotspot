@@ -3,7 +3,8 @@
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
-  import { t } from '$lib/i18n';
+	  import { t } from '$lib/i18n';
+	  import { copyShareUrl } from '$lib/utils/share';
   import { toast } from '$lib/stores/toast.svelte';
   import { isSuccess } from '$lib/api/client';
   import { groupsService, reportsService } from '$lib/api/services';
@@ -122,18 +123,18 @@
     try {
       const response = await groupsService.join({ group_id: groupInfo.group_id });
       if (!isSuccess(response)) {
-        toast.error(response.message || '加入群组失败');
+        toast.error(response.message || t('group.joinFailed'));
         return;
       }
       if (response.data?.status === 'pending_approval') {
-        toast.info('已提交入群申请，等待管理员审核');
+        toast.info(t('group.joinPending'));
         return;
       }
       joinedOverride = true;
-      toast.success('加入群组成功');
+      toast.success(t('group.joinSuccess'));
       await goto(`/chat/groups/${groupInfo.group_id}`);
     } catch {
-      toast.error('加入群组失败');
+      toast.error(t('group.joinFailed'));
     } finally {
       isJoining = false;
     }
@@ -143,20 +144,19 @@
     e.preventDefault();
     e.stopPropagation();
     const shareData = {
-      title: `${groupInfo.name} - HotSpot`,
-      text: `加入 ${groupInfo.name} 群组`,
+      title: t('group.shareTitle', { name: groupInfo.name }),
+      text: t('group.shareText', { name: groupInfo.name }),
       url: `${window.location.origin}/groups/${groupInfo.group_id}`
     };
     if (navigator.share) {
       try {
         await navigator.share(shareData);
       } catch (err) {
-        if ((err as Error).name !== 'AbortError' && dev) console.error('分享失败:', err);
+        if ((err as Error).name !== 'AbortError' && dev) console.error('Share failed:', err);
       }
-    } else {
-      await navigator.clipboard.writeText(shareData.url);
-      toast.success('链接已复制到剪贴板');
-    }
+	    } else {
+	      await copyShareUrl(shareData.url);
+	    }
   }
 
   async function handleReport(e: MouseEvent) {
@@ -233,7 +233,7 @@
                 <div class="mt-0.5 flex items-center gap-0.5">
                   <Users size={11} strokeWidth={1.5} color="var(--text-secondary)" />
                   <span class="text-caption" style="color: var(--text-secondary)"
-                    >{groupInfo.members_count}人</span
+                    >{t('chat.membersCount', { count: groupInfo.members_count })}</span
                   >
                 </div>
               {/if}
@@ -259,7 +259,7 @@
             </p>
           {:else}
             <p class="text-caption" style="color: var(--text-secondary); margin-top: 10px">
-              群主很懒，还没有添加群组描述
+              {t('group.descEmpty')}
             </p>
           {/if}
         {/if}
@@ -309,7 +309,7 @@
           <div class="mt-0.5 flex items-center gap-0.5">
             <Users size={11} strokeWidth={1.5} color="var(--text-secondary)" />
             <span class="text-caption" style="color: var(--text-secondary)"
-              >{groupInfo.members_count}人</span
+              >{t('chat.membersCount', { count: groupInfo.members_count })}</span
             >
           </div>
         {/if}
@@ -352,7 +352,7 @@
               <div class="flex items-center gap-0.5">
                 <Users size={11} strokeWidth={1.5} color="var(--text-secondary)" />
                 <span class="text-caption" style="color: var(--text-secondary)"
-                  >{groupInfo.members_count}人</span
+                  >{t('chat.membersCount', { count: groupInfo.members_count })}</span
                 >
               </div>
             {/if}
@@ -392,7 +392,7 @@
           <UserPlus size={15} strokeWidth={1.5} />
         {/if}
         <span class="text-meta">
-          {#if isJoining}加入中{:else if isJoined}进入群聊{:else}加入群组{/if}
+          {#if isJoining}{t('group.joining')}{:else if isJoined}{t('group.enterChat')}{:else}{t('group.joinAction')}{/if}
         </span>
       </button>
       {#if showMenu}

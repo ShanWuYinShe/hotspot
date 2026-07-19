@@ -112,7 +112,7 @@ func newRealtimeHandlerForTest(authService *platformauth.Service) *Handler {
 func TestRealtimeWebsocketLifecycle(t *testing.T) {
 	SetDefaultHub(NewHub())
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
-	result, err := authService.IssueSession("user_alice")
+	result, err := authService.IssueSession(context.Background(), "user_alice")
 	if err != nil {
 		t.Fatalf("issue session: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestRealtimeWebsocketLifecycle(t *testing.T) {
 		t.Fatalf("unexpected snapshot: %#v", snapshot)
 	}
 
-	otherResult, _ := authService.IssueSession("user_bob")
+	otherResult, _ := authService.IssueSession(context.Background(), "user_bob")
 	otherConn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
 	if err != nil {
 		t.Fatalf("dial other websocket: %v", err)
@@ -242,7 +242,7 @@ func TestRealtimeSubscriptionLimit(t *testing.T) {
 	SetDefaultHub(NewHub())
 	ratelimit.SetSource(appconfig.NewStaticSource(config.Config{}))
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
-	result, _ := authService.IssueSession("user_alice")
+	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := newRealtimeHandlerForTest(authService)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -281,7 +281,7 @@ func TestRealtimeSubscriptionRateLimit(t *testing.T) {
 	})
 	ratelimit.SetSource(source)
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
-	result, _ := authService.IssueSession("user_alice")
+	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := newRealtimeHandlerForTest(authService)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -319,7 +319,7 @@ func TestRealtimeSubscriptionRateLimit(t *testing.T) {
 func TestRealtimeRejectsUserSubscriptionWhenPresenceHidden(t *testing.T) {
 	SetDefaultHub(NewHub())
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
-	result, _ := authService.IssueSession("user_alice")
+	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := NewHandler(
 		authService,
 		stubUserPresenceService{items: map[string]string{"user_hidden": ""}},
@@ -360,7 +360,7 @@ func TestRealtimeRejectsUserSubscriptionWhenPresenceHidden(t *testing.T) {
 func TestRealtimeRejectsGroupSubscriptionForNonMember(t *testing.T) {
 	SetDefaultHub(NewHub())
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
-	result, _ := authService.IssueSession("user_alice")
+	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := NewHandler(
 		authService,
 		stubUserPresenceService{items: map[string]string{}},
@@ -401,7 +401,7 @@ func TestRealtimeRejectsGroupSubscriptionForNonMember(t *testing.T) {
 func TestRealtimeAllowsUnsubscribeEvenWhenTargetNowDenied(t *testing.T) {
 	SetDefaultHub(NewHub())
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
-	result, _ := authService.IssueSession("user_alice")
+	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := NewHandler(
 		authService,
 		stubUserPresenceService{items: map[string]string{"user_hidden": ""}},
@@ -442,7 +442,7 @@ func TestRealtimeAllowsUnsubscribeEvenWhenTargetNowDenied(t *testing.T) {
 func TestRealtimeRejectsPrivateTypingWhenPrivateChatDenied(t *testing.T) {
 	SetDefaultHub(NewHub())
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
-	result, _ := authService.IssueSession("user_alice")
+	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := NewHandler(
 		authService,
 		stubUserPresenceService{items: map[string]string{}},
@@ -486,7 +486,7 @@ func TestRealtimeRejectsPrivateTypingWhenPrivateChatDenied(t *testing.T) {
 func TestRealtimeRejectsGroupTypingForNonMember(t *testing.T) {
 	SetDefaultHub(NewHub())
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
-	result, _ := authService.IssueSession("user_alice")
+	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := NewHandler(
 		authService,
 		stubUserPresenceService{items: map[string]string{}},
@@ -527,7 +527,7 @@ func TestRealtimeRejectsGroupTypingForNonMember(t *testing.T) {
 func TestRealtimeAllowsGroupSubscriptionAndTypingBeyondFirstHundredMembers(t *testing.T) {
 	SetDefaultHub(NewHub())
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
-	result, _ := authService.IssueSession("user_alice")
+	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	members := make([]string, 0, 121)
 	for i := 0; i < 120; i++ {
 		members = append(members, fmt.Sprintf("user_member_%03d", i))

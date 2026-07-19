@@ -4,6 +4,10 @@
 # 开发模式:   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 #
 # 密钥通过 .env 文件注入（复制 .env.example → .env 后填入真实值）。
+#
+# 镜像版本：生产镜像默认 :latest，但可通过 IMAGE_TAG 环境变量固定版本，
+#   例如：IMAGE_TAG=v1.2.3 docker compose up -d
+#   这样部署时可显式 pin 一个已知良好的镜像 tag，避免 :latest 漂移。
 
 services:
   # ── Database ────────────────────────────────────────────────────
@@ -21,6 +25,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "2"
 
   # ── Cache & Pub/Sub (Redis) ───────────────────────────────────────
   redis:
@@ -34,18 +43,32 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1"
 
   # ── Object Storage (S3-compatible) ──────────────────────────────
   seaweedfs:
     image: chrislusf/seaweedfs:${SEAWEEDFS_VERSION:-4.21}
     restart: always
     command: server -s3 -dir=/data
+    volumes:
+      # 持久化上传的媒体文件。此前 /data 没有 volume，
+      # docker compose down 会丢失所有已上传的图片/视频。
+      - seaweedfs_data:/data
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9333/dir/status || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1"
 
   # ── Backend (Go API) ────────────────────────────────────────────
   backend:
@@ -55,7 +78,7 @@ services:
       args:
         GO_VERSION: ${GO_VERSION:-1.26}
         ALPINE_VERSION: ${ALPINE_VERSION:-3.22}
-    image: hotspot-backend:latest
+    image: hotspot-backend:${IMAGE_TAG:-latest}
     restart: always
     depends_on:
       postgres:
@@ -81,19 +104,27 @@ services:
       S3_BUCKET: hotspot
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me}
+      # pprof 仅监听 localhost（容器内回环），不暴露到宿主机/外部网络。
+      # 留空可在生产关闭：PPROF_ADDR=
+      PPROF_ADDR: ${PPROF_ADDR:-127.0.0.1:6060}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8081/api/v1/system/health || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "2"
 
   # ── Frontend (SvelteKit 静态产物) ──────────────────────────────
-  # 生产模式: hotspot-frontend:latest 仅持有 build 产物，通过共享 volume 挂给网关 nginx。
+  # 生产模式: hotspot-frontend:${IMAGE_TAG:-latest} 仅持有 build 产物，通过共享 volume 挂给网关 nginx。
   # 开发模式: image 由 dev override 替换为 oven/bun + Vite HMR。
   # 生产构建: docker compose --profile prod build frontend-build
   frontend:
-    image: hotspot-frontend:latest
+    image: hotspot-frontend:${IMAGE_TAG:-latest}
     restart: always
     depends_on:
       backend:
@@ -106,6 +137,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "1"
 
   # ── Frontend Builder (仅生产构建) ─────────────────────────────
   frontend-build:
@@ -119,7 +155,7 @@ services:
         VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
         VITE_AMAP_SECURITY_CODE: ${VITE_AMAP_SECURITY_CODE:-}
         VITE_AMAP_SERVICE_HOST: ${VITE_AMAP_SERVICE_HOST:-}
-    image: hotspot-frontend:latest
+    image: hotspot-frontend:${IMAGE_TAG:-latest}
 
   # ── Gateway (Nginx) ─────────────────────────────────────────────
   nginx:
@@ -143,8 +179,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "1"
 
 volumes:
   postgres_data:
   redis_data:
+  seaweedfs_data:
   frontend_build:

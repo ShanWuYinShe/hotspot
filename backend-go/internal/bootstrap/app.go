@@ -12,10 +12,12 @@ import (
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/idempotency"
 	platformmigrate "hotspot/backend-go/internal/platform/migrate"
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/ratelimit"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/requestmeta"
 	"hotspot/backend-go/internal/platform/resourceguard"
@@ -29,6 +31,9 @@ type App struct {
 	modules     []modulekit.Module
 	persistence *persistence.Factory
 	bridge      *realtime.RedisBridge
+	realtime    *realtime.Handler
+	rootCtx     context.Context
+	rootCancel  context.CancelFunc
 }
 
 func NewApp(cfg config.Config) (*App, error) {
@@ -45,15 +50,30 @@ func NewApp(cfg config.Config) (*App, error) {
 		return nil, err
 	}
 	resourceguard.SetDefaultChecker(newResourceGuardChecker(persistenceFactory))
-	modules := BuildModules(cfg, persistenceFactory)
-	bridge := initRedisBridge(cfg, logger)
+	// Create the redis client (if configured) before building modules so the
+	// system health endpoint can probe it. The same client is handed to the
+	// realtime bridge below.
+	redisClient := newRedisClient(cfg, logger)
+	modules := BuildModulesWithRedisPinger(cfg, persistenceFactory, redisPinger(redisClient))
+	bridge := initRedisBridgeFromClient(cfg, logger, redisClient)
 	router := NewHTTPRouterWithLogger(modules, logger)
 	rootMux := http.NewServeMux()
 	rootMux.Handle("/", router)
 	userRepo := users.NewPersistenceRepository(persistenceFactory)
 	groupRepo := groups.NewPersistenceRepository(persistenceFactory)
 	userService := users.NewServiceWithRepo(userRepo)
-	rootMux.Handle("/ws/v1", realtime.NewHandler(platformauth.DefaultService(), realtimeUserService{svc: userService}, realtimeUserRepo{repo: userRepo}, realtimeGroupRepo{repo: groupRepo}))
+	// Root context governs long-lived goroutines started by platform packages
+	// (the realtime typing-throttle sweeper, the ratelimit store sweeper, the
+	// in-memory auth session/refresh store sweeper, the idempotency store
+	// sweeper). It is cancelled in Shutdown so they exit cleanly.
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	ratelimit.StartSweeper(rootCtx)
+	platformauth.StartSweeper(rootCtx)
+	// Prune expired idempotency records from the in-memory store. Get/Reserve
+	// already apply lazy expiry so this is purely about bounding map growth.
+	idempotency.StartSweeper(rootCtx)
+	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformauth.DefaultService(), realtimeUserService{svc: userService}, realtimeUserRepo{repo: userRepo}, realtimeGroupRepo{repo: groupRepo})
+	rootMux.Handle("/ws/v1", realtimeHandler)
 
 	return &App{
 		cfg:         cfg,
@@ -62,6 +82,9 @@ func NewApp(cfg config.Config) (*App, error) {
 		modules:     modules,
 		persistence: persistenceFactory,
 		bridge:      bridge,
+		realtime:    realtimeHandler,
+		rootCtx:     rootCtx,
+		rootCancel:  rootCancel,
 	}, nil
 }
 
@@ -80,6 +103,16 @@ func (a *App) LogField(key string, value any) (string, any) {
 func (a *App) Shutdown() {
 	if a.bridge != nil {
 		a.bridge.Close()
+	}
+	// Stop the realtime typing-throttle sweeper and wait for it to exit so it
+	// doesn't outlive the process (and so tests don't leak goroutines).
+	if a.realtime != nil {
+		a.realtime.Close()
+	}
+	// Cancel the root context to stop any other platform-level background
+	// goroutines (e.g. the ratelimit store sweeper).
+	if a.rootCancel != nil {
+		a.rootCancel()
 	}
 	// Close the Postgres pool too — otherwise a graceful shutdown leaks the
 	// pool and its connections until process exit.
@@ -115,7 +148,11 @@ func newResourceGuardChecker(factory *persistence.Factory) resourceguard.Checker
 	return resourceguard.NewDBChecker(queryable)
 }
 
-func initRedisBridge(cfg config.Config, logger *observability.Logger) *realtime.RedisBridge {
+// newRedisClient creates and ping-verifies a redis client from cfg.RedisURL.
+// Returns nil when redis is not configured or unreachable, in which case the
+// realtime hub runs in single-instance mode and the health endpoint skips the
+// redis probe.
+func newRedisClient(cfg config.Config, logger *observability.Logger) *redis.Client {
 	if cfg.RedisURL == "" {
 		logger.Info("redis not configured, realtime hub running in single-instance mode")
 		return nil
@@ -131,6 +168,26 @@ func initRedisBridge(cfg config.Config, logger *observability.Logger) *realtime.
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		logger.Error("redis connection failed, falling back to single-instance mode", "err", err)
 		rdb.Close()
+		return nil
+	}
+	return rdb
+}
+
+// redisPinger adapts a redis client into the health-probe function signature
+// expected by the system module. Nil client => nil pinger (probe is skipped).
+func redisPinger(rdb *redis.Client) func(context.Context) error {
+	if rdb == nil {
+		return nil
+	}
+	return func(ctx context.Context) error { return rdb.Ping(ctx).Err() }
+}
+
+// initRedisBridgeFromClient starts the realtime pub/sub bridge using rdb.
+// Takes ownership of rdb: when no bridge is created (nil client or init
+// failure) the caller is responsible for closing rdb; when a bridge is created
+// its Close() closes the underlying client.
+func initRedisBridgeFromClient(cfg config.Config, logger *observability.Logger, rdb *redis.Client) *realtime.RedisBridge {
+	if rdb == nil {
 		return nil
 	}
 	instanceID := fmt.Sprintf("hs-%d", time.Now().UnixNano())

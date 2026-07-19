@@ -31,35 +31,91 @@ var (
 // accumulate for the process lifetime (unbounded memory growth).
 const sweepCadence = 5 * time.Minute
 
-func init() {
-	go sweepStores()
+// sweeperCancel is the CancelFunc for the in-flight sweeper, if any. Guarded
+// by sweeperMu so StartSweeper is idempotent and safe to call from bootstrap.
+var (
+	sweeperMu       sync.Mutex
+	sweeperCancel   context.CancelFunc
+	sweeperStarted  bool
+)
+
+// StartSweeper launches the background store sweeper bound to ctx. It drops
+// expired entries from the windows/tokens maps every sweepCadence. The sweeper
+// exits when ctx is cancelled, at which point StartSweeper can be called again.
+//
+// This must be called once at bootstrap (see internal/bootstrap/app.go) — the
+// old package init() started an un-cancellable goroutine which leaked on
+// shutdown and made the package impossible to use cleanly in tests. If
+// StartSweeper is never called the limiter still works, but the maps will grow
+// unboundedly with one-off IP/user keys, so production wiring must call it.
+// Calling it while a sweeper is already running is a no-op.
+func StartSweeper(ctx context.Context) {
+	sweeperMu.Lock()
+	defer sweeperMu.Unlock()
+	if sweeperStarted {
+		// Already running; replacing it would race with in-flight sweep work
+		// for no benefit. Keep the existing one — it is bound to its own ctx.
+		return
+	}
+	sweepCtx, cancel := context.WithCancel(ctx)
+	sweeperCancel = cancel
+	sweeperStarted = true
+	go sweepStores(sweepCtx)
 }
 
-func sweepStores() {
+// StopSweeper cancels the background sweeper if one is running and blocks
+// briefly until it has exited (by re-locking after cancel). Intended for tests
+// that want a clean teardown; production relies on cancelling the app root
+// context passed to StartSweeper.
+func StopSweeper() {
+	sweeperMu.Lock()
+	if sweeperCancel == nil {
+		sweeperMu.Unlock()
+		return
+	}
+	sweeperCancel()
+	sweeperCancel = nil
+	sweeperStarted = false
+	sweeperMu.Unlock()
+}
+
+func sweepStores(ctx context.Context) {
+	defer func() {
+		// Allow StartSweeper to launch a fresh sweeper after this one exits.
+		sweeperMu.Lock()
+		sweeperCancel = nil
+		sweeperStarted = false
+		sweeperMu.Unlock()
+	}()
 	ticker := time.NewTicker(sweepCadence)
 	defer ticker.Stop()
-	for range ticker.C {
-		cutoff := time.Now().UTC().Add(-time.Hour) // keep up to 1h (longest window)
-		storeMu.Lock()
-		for key, events := range windows {
-			kept := events[:0]
-			for _, ts := range events {
-				if ts.After(cutoff) {
-					kept = append(kept, ts)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			cutoff := time.Now().UTC().Add(-time.Hour) // keep up to 1h (longest window)
+			storeMu.Lock()
+			for key, events := range windows {
+				kept := events[:0]
+				for _, ts := range events {
+					if ts.After(cutoff) {
+						kept = append(kept, ts)
+					}
+				}
+				if len(kept) == 0 {
+					delete(windows, key)
+				} else {
+					windows[key] = kept
 				}
 			}
-			if len(kept) == 0 {
-				delete(windows, key)
-			} else {
-				windows[key] = kept
+			for key, bucket := range tokens {
+				if bucket.LastRefill.Before(cutoff) {
+					delete(tokens, key)
+				}
 			}
+			storeMu.Unlock()
 		}
-		for key, bucket := range tokens {
-			if bucket.LastRefill.Before(cutoff) {
-				delete(tokens, key)
-			}
-		}
-		storeMu.Unlock()
 	}
 }
 

@@ -7,7 +7,7 @@
     src?: string | null;
     name?: string | null;
     alt?: string;
-    size?: 32 | 40 | 48 | 64 | 80 | 96 | 128;
+    size?: 32 | 36 | 40 | 48 | 64 | 80 | 96 | 128;
     type?: 'user' | 'group';
     shape?: 'circle' | 'rounded';
     class?: string;

@@ -2,6 +2,7 @@ package resourceguard
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -57,7 +58,7 @@ func (c *DBChecker) MayExist(ctx context.Context, kind ResourceKind, id string) 
 	if err == nil {
 		return true, nil
 	}
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		c.markMissing(kind, id)
 		return false, nil
 	}

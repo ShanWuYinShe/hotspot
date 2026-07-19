@@ -7,17 +7,37 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
 var errAnnouncementNotFound = errors.New("announcement not found")
 
+// healthPinger is the minimal subset of a dependency client needed to probe
+// liveness from Health(). Both *pgxpool.Pool (via persistence.DB) and
+// *redis.Client satisfy a compatible shape; we model them as functions so the
+// system package doesn't import redis/pgx directly.
+type healthPinger func(ctx context.Context) error
+
+// healthProbeTimeout caps how long a single dependency ping may take, so a
+// hung DB or redis doesn't stall the health endpoint (and whatever load
+// balancer is polling it).
+const healthProbeTimeout = 2 * time.Second
+
 type PostgresRepository struct {
-	factory *persistence.Factory
+	factory     *persistence.Factory
+	redisPinger healthPinger
 }
 
 func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 	return &PostgresRepository{factory: factory}
+}
+
+// SetRedisPinger wires an optional redis liveness probe. Bootstrap calls this
+// when a redis client is available; when nil (single-instance mode, or tests)
+// the health endpoint skips the redis check rather than reporting degraded.
+func (r *PostgresRepository) SetRedisPinger(p func(ctx context.Context) error) {
+	r.redisPinger = p
 }
 
 func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
@@ -35,8 +55,36 @@ func (r *PostgresRepository) GetMeta(ctx context.Context) ApiVersionMeta {
 	return ApiVersionMeta{Version: "v1", Status: ApiVersionStatusActive}
 }
 
+// Health probes the dependencies the service actually depends on (Postgres and,
+// when configured, Redis) and reports degraded status if any fails its liveness
+// check. Each probe runs under a 2s timeout so a hung dependency can't stall
+// the endpoint. The HTTP-layer response stays 200 so callers can read the body
+// to distinguish healthy/degraded/unhealthy.
 func (r *PostgresRepository) Health(ctx context.Context) (int, string, *HealthStatus) {
-	return 0, "", &HealthStatus{Status: SystemHealthHealthy, Timestamp: time.Now().UTC().Format(time.RFC3339)}
+	status := SystemHealthHealthy
+	dbOK, redisOK := true, true
+
+	if r.factory != nil && r.factory.DB != nil {
+		probeCtx, cancel := context.WithTimeout(ctx, healthProbeTimeout)
+		if err := r.factory.DB.Ping(probeCtx); err != nil {
+			status = SystemHealthDegraded
+			dbOK = false
+			observability.L().Warn("health check: postgres ping failed", "error", err)
+		}
+		cancel()
+	}
+	if r.redisPinger != nil {
+		probeCtx, cancel := context.WithTimeout(ctx, healthProbeTimeout)
+		if err := r.redisPinger(probeCtx); err != nil {
+			status = SystemHealthDegraded
+			redisOK = false
+			observability.L().Warn("health check: redis ping failed", "error", err)
+		}
+		cancel()
+	}
+	_ = dbOK
+	_ = redisOK
+	return 0, "", &HealthStatus{Status: status, Timestamp: time.Now().UTC().Format(time.RFC3339)}
 }
 
 func (r *PostgresRepository) GetAnnouncement(ctx context.Context, announcementID string) (AnnouncementRecord, bool, error) {

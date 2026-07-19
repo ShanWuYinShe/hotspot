@@ -1,6 +1,7 @@
 package groups
 
 import (
+	"errors"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -37,7 +38,7 @@ func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	}
 	idempotency.ReplayOrStore(w, r, "groups/me/invites/accept", func() httpx.ApiResponse[struct{}] {
 		if err := h.service.AcceptInvite(r.Context(), req); err != nil {
-			if err == ErrGroupNotFound {
+			if errors.Is(err, ErrGroupNotFound) {
 				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "群组不存在"}
 			}
 			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
@@ -58,10 +59,10 @@ func (h *Handler) RejectInvite(w http.ResponseWriter, r *http.Request) {
 	}
 	idempotency.ReplayOrStore(w, r, "groups/me/invites/reject", func() httpx.ApiResponse[struct{}] {
 		if err := h.service.RejectInvite(r.Context(), req); err != nil {
-			if err == ErrGroupNotFound {
+			if errors.Is(err, ErrGroupNotFound) {
 				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "群组不存在"}
 			}
-			if err == ErrInviteExpired {
+			if errors.Is(err, ErrInviteExpired) {
 				return httpx.ApiResponse[struct{}]{Code: 10400, Message: "邀请已失效"}
 			}
 			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
@@ -83,13 +84,13 @@ func (h *Handler) InviteMember(w http.ResponseWriter, r *http.Request) {
 	idempotency.ReplayOrStore(w, r, "groups/members/invite", func() httpx.ApiResponse[Invitation] {
 		item, err := h.service.InviteMember(r.Context(), req)
 		if err != nil {
-			if err == ErrGroupNotFound {
+			if errors.Is(err, ErrGroupNotFound) {
 				return httpx.ApiResponse[Invitation]{Code: 10300, Message: "群组不存在"}
 			}
-			if err == ErrAccessRestricted {
+			if errors.Is(err, ErrAccessRestricted) {
 				return httpx.ApiResponse[Invitation]{Code: 10200, Message: "权限不足"}
 			}
-			if err == ErrAlreadyMember {
+			if errors.Is(err, ErrAlreadyMember) {
 				return httpx.ApiResponse[Invitation]{Code: 10400, Message: "已是群成员"}
 			}
 			return httpx.ApiResponse[Invitation]{Code: 10600, Message: "服务暂时不可用"}
@@ -106,11 +107,11 @@ func (h *Handler) ListSentInvites(w http.ResponseWriter, r *http.Request) {
 	}
 	items, nextCursor, err := h.service.ListSentInvites(r.Context(), req)
 	if err != nil {
-		if err == ErrGroupNotFound {
+		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrAccessRestricted {
+		if errors.Is(err, ErrAccessRestricted) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
@@ -131,11 +132,11 @@ func (h *Handler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.RevokeInvite(r.Context(), req); err != nil {
-		if err == ErrGroupNotFound {
+		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrAccessRestricted {
+		if errors.Is(err, ErrAccessRestricted) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}

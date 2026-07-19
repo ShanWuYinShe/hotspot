@@ -1,12 +1,13 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"time"
 )
 
-func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
-	session, ok, err := s.refreshes.Get(refreshToken)
+func (s *Service) RefreshSession(ctx context.Context, refreshToken string) (AuthResult, error) {
+	session, ok, err := s.refreshes.Get(ctx, refreshToken)
 	if err != nil {
 		return AuthResult{}, err
 	}
@@ -17,14 +18,14 @@ func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
 	if now.After(session.ExpiresAt) {
 		return AuthResult{}, errors.New("expired refresh token")
 	}
-	if storedSession, ok, err := s.sessions.Get(session.SessionID); err != nil {
+	if storedSession, ok, err := s.sessions.Get(ctx, session.SessionID); err != nil {
 		return AuthResult{}, err
 	} else if !ok || storedSession.RevokedAt != nil {
 		return AuthResult{}, errors.New("revoked session")
 	}
 	if session.RotatedTo != "" {
 		if !now.After(session.GraceUntil) {
-			rotated, ok, err := s.refreshes.Get(session.RotatedTo)
+			rotated, ok, err := s.refreshes.Get(ctx, session.RotatedTo)
 			if err != nil {
 				return AuthResult{}, err
 			}
@@ -60,7 +61,7 @@ func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
 		RefreshToken: newRefreshToken,
 		ExpiresAt:    now.Add(s.refreshTTL),
 	}
-	if err := s.refreshes.Rotate(refreshToken, session, next); err != nil {
+	if err := s.refreshes.Rotate(ctx, refreshToken, session, next); err != nil {
 		return AuthResult{}, err
 	}
 	principal := newPrincipal(session.UserID, session.SessionID, "")

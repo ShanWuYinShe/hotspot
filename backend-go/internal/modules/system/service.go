@@ -33,6 +33,17 @@ func (s *Service) Health(ctx context.Context) (int, string, *HealthStatus) {
 	return s.repo.Health(ctx)
 }
 
+// SetHealthRedisPinger wires an optional redis liveness probe onto the
+// underlying repository, when it supports one. No-op for in-memory repos.
+func (s *Service) SetHealthRedisPinger(p func(ctx context.Context) error) {
+	type redisPingerSetter interface {
+		SetRedisPinger(func(ctx context.Context) error)
+	}
+	if setter, ok := s.repo.(redisPingerSetter); ok {
+		setter.SetRedisPinger(p)
+	}
+}
+
 func (s *Service) ListAnnouncements(ctx context.Context) (SystemAnnouncementList, error) {
 	items, err := s.repo.ListAnnouncements(ctx, s.provider.GetSystemAnnouncementsCount(ctx))
 	if err != nil {

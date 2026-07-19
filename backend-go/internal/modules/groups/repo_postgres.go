@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
+	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
@@ -29,7 +30,10 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		return GroupItem{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
-	groupID := fmt.Sprintf("group_%d", now.UnixNano())
+	groupID, err := idgen.WithPrefix("group_")
+	if err != nil {
+		return GroupItem{}, err
+	}
 	isSearchable := true
 	if req.IsSearchable != nil {
 		isSearchable = *req.IsSearchable
@@ -50,12 +54,12 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, IsSearchable: isSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
 	s2CellToken := geo.CellTokenAtLevel(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}, 14)
 	s2CellID := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
-	if err := queryable.Exec(ctx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, isSearchable, maxMembers, userID, now, now, tags, s2CellToken, s2CellID); err != nil {
-		return GroupItem{}, err
-	}
-	if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleOwner), now); err != nil {
-		return GroupItem{}, err
-	}
+		if err := queryable.Exec(ctx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, isSearchable, maxMembers, userID, now, now, tags, s2CellToken, s2CellID); err != nil {
+			return GroupItem{}, fmt.Errorf("groups.CreateGroup: insert group: %w", err)
+		}
+		if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleOwner), now); err != nil {
+			return GroupItem{}, fmt.Errorf("groups.CreateGroup: insert owner member: %w", err)
+		}
 	return item, nil
 }
 
@@ -90,8 +94,11 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 		s2CellID = &id
 	}
 	_ = userID
-	err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), nilOrBool(req.IsSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude, nilOrStrings(req.Tags), s2CellToken, s2CellID)
-	return err
+		err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), nilOrBool(req.IsSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude, nilOrStrings(req.Tags), s2CellToken, s2CellID)
+		if err != nil {
+			return fmt.Errorf("groups.Update: %w", err)
+		}
+		return nil
 }
 
 func (r *PostgresRepository) Dismiss(ctx context.Context, groupID string) error {
@@ -102,8 +109,11 @@ func (r *PostgresRepository) Dismiss(ctx context.Context, groupID string) error 
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	err := queryable.Exec(ctx, queryDeleteGroup, groupID)
-	return err
+		err := queryable.Exec(ctx, queryDeleteGroup, groupID)
+		if err != nil {
+			return fmt.Errorf("groups.Dismiss: %w", err)
+		}
+		return nil
 }
 
 func (r *PostgresRepository) ListMembers(ctx context.Context, groupID string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
@@ -309,7 +319,10 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 			}{ApplicationID: existingID}}, nil
 		}
 		now := time.Now().UTC()
-		applicationID := fmt.Sprintf("app_%d", now.UnixNano())
+		applicationID, err := idgen.WithPrefix("app_")
+		if err != nil {
+			return JoinGroupResult{}, err
+		}
 		if err := queryable.Exec(ctx, queryInsertGroupApplication, applicationID, groupID, userID, nullableStringPtr(message), string(ApplicationStatusPending), now); err != nil {
 			return JoinGroupResult{}, err
 		}
@@ -320,10 +333,10 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 	if group.HasPassword && (password == nil || *password == "") {
 		return JoinGroupResult{}, ErrInvalidPassword
 	}
-	now := time.Now().UTC()
-	if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleMember), now); err != nil {
-		return JoinGroupResult{}, err
-	}
+		now := time.Now().UTC()
+		if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleMember), now); err != nil {
+			return JoinGroupResult{}, fmt.Errorf("groups.JoinGroup: insert member: %w", err)
+		}
 	return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
 }
 
@@ -336,7 +349,10 @@ func (r *PostgresRepository) CreateAnnouncement(ctx context.Context, creatorID s
 		return GroupAnnouncementItem{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
-	announcementID := fmt.Sprintf("announce_%d", now.UnixNano())
+	announcementID, err := idgen.WithPrefix("announce_")
+	if err != nil {
+		return GroupAnnouncementItem{}, err
+	}
 	isPinned := false
 	if req.IsPinned != nil {
 		isPinned = *req.IsPinned
@@ -463,19 +479,24 @@ func (r *PostgresRepository) ApproveApplication(ctx context.Context, approverID 
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented
 	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
 	record, err := r.loadApplication(ctx, applicationID)
 	if err != nil {
 		return err
 	}
 	now := time.Now().UTC()
-	if err := queryable.Exec(ctx, queryUpdateGroupApplication, applicationID, string(ApplicationStatusAccepted), now, approverID); err != nil {
-		return err
-	}
-	return queryable.Exec(ctx, queryInsertGroupMember, record.GroupID, record.Applicant.UserID, string(GroupRoleMember), now)
+	// Wrap the application-status update and the member insert in a single tx.
+	// Previously these were two separate Execs: if the second failed the
+	// application was already marked accepted with no matching member row.
+	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		queryable, ok := queryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := queryable.Exec(txCtx, queryUpdateGroupApplication, applicationID, string(ApplicationStatusAccepted), now, approverID); err != nil {
+			return err
+		}
+		return queryable.Exec(txCtx, queryInsertGroupMember, record.GroupID, record.Applicant.UserID, string(GroupRoleMember), now)
+	})
 }
 
 func (r *PostgresRepository) RejectApplication(ctx context.Context, applicationID string, reason *string) error {
@@ -620,19 +641,23 @@ func (r *PostgresRepository) AcceptInvite(ctx context.Context, userID string, in
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented
 	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
 	invite, err := r.loadInvite(ctx, inviteID)
 	if err != nil {
 		return err
 	}
 	now := time.Now().UTC()
-	if err := queryable.Exec(ctx, queryUpdateGroupInvite, inviteID, string(ApplicationStatusAccepted), now); err != nil {
-		return err
-	}
-	return queryable.Exec(ctx, queryInsertGroupMember, invite.Group.GroupID, userID, string(GroupRoleMember), now)
+	// Wrap the invite-status update and the member insert in a single tx so a
+	// failure of the second statement rolls back the invite acceptance.
+	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		queryable, ok := queryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := queryable.Exec(txCtx, queryUpdateGroupInvite, inviteID, string(ApplicationStatusAccepted), now); err != nil {
+			return err
+		}
+		return queryable.Exec(txCtx, queryInsertGroupMember, invite.Group.GroupID, userID, string(GroupRoleMember), now)
+	})
 }
 
 func (r *PostgresRepository) RejectInvite(ctx context.Context, inviteID string) error {
@@ -661,7 +686,10 @@ func (r *PostgresRepository) InviteMember(ctx context.Context, userID string, re
 	}
 	now := time.Now().UTC()
 	expiresAt := now.Add(24 * time.Hour)
-	inviteID := fmt.Sprintf("invite_%d", now.UnixNano())
+	inviteID, err := idgen.WithPrefix("invite_")
+	if err != nil {
+		return Invitation{}, err
+	}
 	if err := queryable.Exec(ctx, queryInsertGroupInvite, inviteID, req.GroupID, userID, req.UserID, nullableStringPtr(req.Message), string(ApplicationStatusPending), now, expiresAt); err != nil {
 		return Invitation{}, err
 	}
@@ -857,6 +885,21 @@ func nilOrString(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// queryableForTx returns the queryable bound to ctx (an in-flight transaction)
+// when one is present, otherwise falls back to the shared pool. Used by methods
+// that opt into RunInTransaction so the same code path serves both the pooled
+// and the transactional case.
+func queryableForTx(ctx context.Context, factory *persistence.Factory) (persistence.Queryable, bool) {
+	if q, ok := persistence.QueryableFromContext(ctx); ok {
+		return q, true
+	}
+	if factory == nil || factory.DB == nil {
+		return nil, false
+	}
+	qdb, ok := factory.DB.(persistence.Queryable)
+	return qdb, ok
 }
 
 func nilOrStringJoinMethod(g *GroupJoinMethod) *string {

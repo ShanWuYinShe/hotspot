@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -10,12 +11,12 @@ import (
 
 type failingSessionStore struct{ err error }
 
-func (s failingSessionStore) Save(SessionRecord) error                         { return s.err }
-func (s failingSessionStore) Touch(string) error                               { return s.err }
-func (s failingSessionStore) ListActiveByUser(string) ([]SessionRecord, error) { return nil, s.err }
-func (s failingSessionStore) Revoke(string) (bool, error)                      { return false, s.err }
-func (s failingSessionStore) RevokeOthers(string, string) (int, error)         { return 0, s.err }
-func (s failingSessionStore) Get(string) (SessionRecord, bool, error) {
+func (s failingSessionStore) Save(context.Context, SessionRecord) error                         { return s.err }
+func (s failingSessionStore) Touch(context.Context, string) error                               { return s.err }
+func (s failingSessionStore) ListActiveByUser(context.Context, string) ([]SessionRecord, error) { return nil, s.err }
+func (s failingSessionStore) Revoke(context.Context, string) (bool, error)                      { return false, s.err }
+func (s failingSessionStore) RevokeOthers(context.Context, string, string) (int, error)         { return 0, s.err }
+func (s failingSessionStore) Get(context.Context, string) (SessionRecord, bool, error) {
 	return SessionRecord{}, false, s.err
 }
 
@@ -24,32 +25,32 @@ type rotateFailRefreshStore struct {
 	err     error
 }
 
-func (s *rotateFailRefreshStore) Save(session RefreshSession) error {
+func (s *rotateFailRefreshStore) Save(_ context.Context, session RefreshSession) error {
 	s.current = session
 	return nil
 }
-func (s *rotateFailRefreshStore) Get(token string) (RefreshSession, bool, error) {
+func (s *rotateFailRefreshStore) Get(_ context.Context, token string) (RefreshSession, bool, error) {
 	if s.current.RefreshToken == token {
 		return s.current, true, nil
 	}
 	return RefreshSession{}, false, nil
 }
-func (s *rotateFailRefreshStore) Rotate(string, RefreshSession, RefreshSession) error { return s.err }
+func (s *rotateFailRefreshStore) Rotate(context.Context, string, RefreshSession, RefreshSession) error { return s.err }
 
 func TestIssueSessionReturnsStoreWriteError(t *testing.T) {
 	service := NewServiceWithStores(config.Config{AuthTokenSecret: "test-secret"}, failingSessionStore{err: errors.New("session save failed")}, NewInMemoryRefreshStore())
-	if _, err := service.IssueSession("user_alice"); err == nil {
+	if _, err := service.IssueSession(context.Background(), "user_alice"); err == nil {
 		t.Fatal("expected issue session error")
 	}
 }
 
 func TestIssueSessionWithMetaPersistsSessionMetadata(t *testing.T) {
 	service := NewService(config.Config{AuthTokenSecret: "test-secret"})
-	issued, err := service.IssueSessionWithMeta("user_alice", SessionMeta{DeviceType: "app", DeviceName: "HotSpot App", IPAddress: "203.0.113.7", IPLocation: "US"})
+	issued, err := service.IssueSessionWithMeta(context.Background(), "user_alice", SessionMeta{DeviceType: "app", DeviceName: "HotSpot App", IPAddress: "203.0.113.7", IPLocation: "US"})
 	if err != nil {
 		t.Fatalf("issue session with meta: %v", err)
 	}
-	stored, ok, err := service.sessions.Get(issued.Principal.SessionID)
+	stored, ok, err := service.sessions.Get(context.Background(), issued.Principal.SessionID)
 	if err != nil || !ok {
 		t.Fatalf("get session: ok=%v err=%v", ok, err)
 	}
@@ -62,26 +63,26 @@ func TestRefreshSessionReturnsRotateError(t *testing.T) {
 	refreshes := &rotateFailRefreshStore{current: RefreshSession{UserID: "user_alice", SessionID: "sess_1", RefreshToken: "refresh_1", ExpiresAt: time.Now().UTC().Add(time.Hour)}, err: errors.New("refresh rotate failed")}
 	service := NewServiceWithStores(config.Config{AuthTokenSecret: "test-secret"}, NewInMemorySessionStore(), refreshes)
 	now := time.Now().UTC()
-	if err := service.sessions.Save(SessionRecord{SessionID: "sess_1", UserID: "user_alice", CreatedAt: now, LastActiveAt: now}); err != nil {
+	if err := service.sessions.Save(context.Background(), SessionRecord{SessionID: "sess_1", UserID: "user_alice", CreatedAt: now, LastActiveAt: now}); err != nil {
 		t.Fatalf("save session: %v", err)
 	}
-	if _, err := service.RefreshSession("refresh_1"); err == nil {
+	if _, err := service.RefreshSession(context.Background(), "refresh_1"); err == nil {
 		t.Fatal("expected refresh error")
 	}
 }
 
 func TestRefreshSessionAllowsReplayedTokenWithinGraceWindow(t *testing.T) {
 	service := NewService(config.Config{AuthTokenSecret: "test-secret"})
-	issued, err := service.IssueSession("user_alice")
+	issued, err := service.IssueSession(context.Background(), "user_alice")
 	if err != nil {
 		t.Fatalf("issue session: %v", err)
 	}
 
-	first, err := service.RefreshSession(issued.RefreshToken)
+	first, err := service.RefreshSession(context.Background(), issued.RefreshToken)
 	if err != nil {
 		t.Fatalf("first refresh: %v", err)
 	}
-	second, err := service.RefreshSession(issued.RefreshToken)
+	second, err := service.RefreshSession(context.Background(), issued.RefreshToken)
 	if err != nil {
 		t.Fatalf("second refresh in grace window: %v", err)
 	}
@@ -95,14 +96,14 @@ func TestRefreshSessionAllowsReplayedTokenWithinGraceWindow(t *testing.T) {
 
 func TestRefreshSessionRejectsReplayedTokenAfterGraceWindow(t *testing.T) {
 	service := NewService(config.Config{AuthTokenSecret: "test-secret"})
-	issued, err := service.IssueSession("user_alice")
+	issued, err := service.IssueSession(context.Background(), "user_alice")
 	if err != nil {
 		t.Fatalf("issue session: %v", err)
 	}
-	if _, err := service.RefreshSession(issued.RefreshToken); err != nil {
+	if _, err := service.RefreshSession(context.Background(), issued.RefreshToken); err != nil {
 		t.Fatalf("refresh session: %v", err)
 	}
-	stored, ok, err := service.refreshes.Get(issued.RefreshToken)
+	stored, ok, err := service.refreshes.Get(context.Background(), issued.RefreshToken)
 	if err != nil || !ok {
 		t.Fatalf("get old refresh session: ok=%v err=%v", ok, err)
 	}
@@ -112,7 +113,7 @@ func TestRefreshSessionRejectsReplayedTokenAfterGraceWindow(t *testing.T) {
 	memoryStore.items[issued.RefreshToken] = stored
 	memoryStore.mu.Unlock()
 
-	_, err = service.RefreshSession(issued.RefreshToken)
+	_, err = service.RefreshSession(context.Background(), issued.RefreshToken)
 	if err == nil || err.Error() != "expired refresh rotation window" {
 		t.Fatalf("expected expired rotation window, got %v", err)
 	}
@@ -120,7 +121,7 @@ func TestRefreshSessionRejectsReplayedTokenAfterGraceWindow(t *testing.T) {
 
 func TestRefreshSessionRejectsRevokedSession(t *testing.T) {
 	service := NewService(config.Config{AuthTokenSecret: "test-secret"})
-	issued, err := service.IssueSession("user_alice")
+	issued, err := service.IssueSession(context.Background(), "user_alice")
 	if err != nil {
 		t.Fatalf("issue session: %v", err)
 	}
@@ -128,11 +129,11 @@ func TestRefreshSessionRejectsRevokedSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse access token: %v", err)
 	}
-	if _, err := service.sessions.Revoke(claims.SessionID); err != nil {
+	if _, err := service.sessions.Revoke(context.Background(), claims.SessionID); err != nil {
 		t.Fatalf("revoke session: %v", err)
 	}
 
-	_, err = service.RefreshSession(issued.RefreshToken)
+	_, err = service.RefreshSession(context.Background(), issued.RefreshToken)
 	if err == nil || err.Error() != "revoked session" {
 		t.Fatalf("expected revoked session error, got %v", err)
 	}
@@ -141,22 +142,22 @@ func TestRefreshSessionRejectsRevokedSession(t *testing.T) {
 func TestListSessionsTouchesCurrentSessionWhenPresent(t *testing.T) {
 	service := NewService(config.Config{AuthTokenSecret: "test-secret"})
 	now := time.Now().UTC().Add(-time.Minute)
-	if err := service.sessions.Save(SessionRecord{SessionID: "sess_old", UserID: "user_alice", CreatedAt: now, LastActiveAt: now}); err != nil {
+	if err := service.sessions.Save(context.Background(), SessionRecord{SessionID: "sess_old", UserID: "user_alice", CreatedAt: now, LastActiveAt: now}); err != nil {
 		t.Fatalf("save old session: %v", err)
 	}
-	if err := service.sessions.Save(SessionRecord{SessionID: "sess_current", UserID: "user_alice", CreatedAt: now, LastActiveAt: now}); err != nil {
+	if err := service.sessions.Save(context.Background(), SessionRecord{SessionID: "sess_current", UserID: "user_alice", CreatedAt: now, LastActiveAt: now}); err != nil {
 		t.Fatalf("save current session: %v", err)
 	}
 
-	before, ok, err := service.sessions.Get("sess_current")
+	before, ok, err := service.sessions.Get(context.Background(), "sess_current")
 	if err != nil || !ok {
 		t.Fatalf("get current session: ok=%v err=%v", ok, err)
 	}
-	listed := service.ListSessions("user_alice", "sess_current")
+	listed := service.ListSessions(context.Background(), "user_alice", "sess_current")
 	if len(listed) != 2 {
 		t.Fatalf("expected 2 sessions, got %#v", listed)
 	}
-	after, ok, err := service.sessions.Get("sess_current")
+	after, ok, err := service.sessions.Get(context.Background(), "sess_current")
 	if err != nil || !ok {
 		t.Fatalf("get current session after list: ok=%v err=%v", ok, err)
 	}

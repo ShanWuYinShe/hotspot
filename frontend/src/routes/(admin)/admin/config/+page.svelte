@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { withMinimumLoadingTime } from '$lib/utils/loading';
-  import { adminAppConfigService } from '$lib/api/services';
-  import { isSuccess } from '$lib/api/client';
-  import { toast } from '$lib/stores/toast.svelte';
+	  import { onMount } from 'svelte';
+	  import { withMinimumLoadingTime } from '$lib/utils/loading';
+	  import { adminAppConfigService } from '$lib/api/services';
+	  import { isSuccess } from '$lib/api/client';
+	  import { toast } from '$lib/stores/toast.svelte';
+	  import { t } from '$lib/i18n';
   import type { AppConfig } from '$lib/types/api';
   import AdminPageHeader from '$lib/components/common/admin-page-header.svelte';
   import { Switch } from '$lib/components/ui/switch';
@@ -55,7 +56,7 @@
         searchRadiusMax = String(appConfig.limits?.search_radius_max || 50000);
       }
     } catch {
-      toast.error('加载配置失败');
+	      toast.error(t('admin.configLoadFailed'));
     } finally {
       isLoading = false;
     }
@@ -87,12 +88,12 @@
         }
       });
       if (isSuccess(response)) {
-        toast.success('配置已保存');
-      } else {
-        toast.error(response.message || '保存失败');
-      }
-    } catch {
-      toast.error('保存失败');
+	        toast.success(t('admin.configSaved'));
+	      } else {
+	        toast.error(response.message || t('admin.saveFailed'));
+	      }
+	    } catch {
+	      toast.error(t('admin.saveFailed'));
     } finally {
       isSaving = false;
     }

@@ -316,6 +316,7 @@ func TestHandlerDeleteHappyPath(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1"}`))
 	req = withAuth(req, "u1")
+	req.Header.Set("Idempotency-Key", "delete_happy_path_cmnt_aaaaaaaaaa")
 
 	handler.Delete(rr, req)
 	assertCode(t, rr, 0)
@@ -326,6 +327,7 @@ func TestHandlerDeleteRejectsInvalidJSON(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{bad`))
 	req = withAuth(req, "u1")
+	req.Header.Set("Idempotency-Key", "delete_invalid_json_cmnt_bbbbbbbbb")
 
 	handler.Delete(rr, req)
 	assertCode(t, rr, 10000)
@@ -336,6 +338,7 @@ func TestHandlerDeleteRejectsMissingCommentID(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{}`))
 	req = withAuth(req, "u1")
+	req.Header.Set("Idempotency-Key", "delete_no_comment_id_cmnt_ccccccc")
 
 	handler.Delete(rr, req)
 	assertCode(t, rr, 10000)
@@ -347,6 +350,7 @@ func TestHandlerDeleteRejectsNotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1"}`))
 	req = withAuth(req, "u1")
+	req.Header.Set("Idempotency-Key", "delete_not_found_cmnt_ddddddddddd")
 
 	handler.Delete(rr, req)
 	assertCode(t, rr, 10300)
@@ -358,6 +362,7 @@ func TestHandlerDeleteRejectsNotOwner(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1"}`))
 	req = withAuth(req, "u1")
+	req.Header.Set("Idempotency-Key", "delete_not_owner_cmnt_eeeeeeeeeeee")
 
 	handler.Delete(rr, req)
 	assertCode(t, rr, 10200)
@@ -369,6 +374,7 @@ func TestHandlerDeletePropagatesError(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1"}`))
 	req = withAuth(req, "u1")
+	req.Header.Set("Idempotency-Key", "delete_propagate_cmnt_fffffffffffff")
 
 	handler.Delete(rr, req)
 	assertCode(t, rr, 10600)
@@ -520,4 +526,93 @@ func TestHandlerListLikesRejectsInvalidJSON(t *testing.T) {
 
 	handler.ListLikes(rr, req)
 	assertCode(t, rr, 10000)
+}
+
+// TestHandlerListLikesMapsInvalidCursorToParamError verifies that a
+// malformed pagination cursor (returned by the repo as ErrInvalidCursor)
+// is mapped to code 10000 (parameter error) rather than the catch-all
+// 10600 (service unavailable). The cursor is opaque client state, so a
+// decode failure is a client-side problem, not a server fault.
+func TestHandlerListLikesMapsInvalidCursorToParamError(t *testing.T) {
+	repo := &stubCommentRepo{getResult: CommentItem{CommentID: "c1"}, getFound: true, likesErr: ErrInvalidCursor}
+	handler := newTestHandler(repo, defaultMoments())
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1","cursor":"@@malformed@@"}`))
+	req = withAuth(req, "u1")
+
+	handler.ListLikes(rr, req)
+	assertCode(t, rr, 10000)
+}
+
+// TestHandlerListMapsInvalidCursorToParamError mirrors the above for the
+// List endpoint, which shares the cursor decoder.
+func TestHandlerListMapsInvalidCursorToParamError(t *testing.T) {
+	repo := &stubCommentRepo{listErr: ErrInvalidCursor}
+	handler := newTestHandler(repo, defaultMoments())
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"moment_id":"m1","cursor":"@@malformed@@"}`))
+	req = withAuth(req, "u1")
+
+	handler.List(rr, req)
+	assertCode(t, rr, 10000)
+}
+
+// TestHandlerListRepliesMapsInvalidCursorToParamError mirrors the above for
+// the ListReplies endpoint, which also shares the cursor decoder.
+func TestHandlerListRepliesMapsInvalidCursorToParamError(t *testing.T) {
+	repo := &stubCommentRepo{repliesErr: ErrInvalidCursor}
+	handler := newTestHandler(repo, defaultMoments())
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1","cursor":"@@malformed@@"}`))
+	req = withAuth(req, "u1")
+
+	handler.ListReplies(rr, req)
+	assertCode(t, rr, 10000)
+}
+
+// TestDecodeCommentCursorRejectsMalformed verifies the repo-level cursor
+// decoder returns ErrInvalidCursor (not the catch-all persistence
+// ErrNotImplemented) for every malformed-input path. This is what the
+// handlers above rely on for the 10000 mapping.
+func TestDecodeCommentCursorRejectsMalformed(t *testing.T) {
+	cases := map[string]string{
+		"not base64":        "@@not-base64@@",
+		"empty json fields": encodeCommentCursor("", ""),
+		"missing id":        encodeCommentCursor("2025-01-01T00:00:00Z", ""),
+		"missing at":        encodeCommentCursor("", "u1"),
+		"unparseable time":  encodeCommentCursor("not-a-time", "u1"),
+	}
+	for name, cursor := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, _, err := decodeCommentCursor(cursor)
+			if !errors.Is(err, ErrInvalidCursor) {
+				t.Fatalf("expected ErrInvalidCursor for %q, got %v", cursor, err)
+			}
+		})
+	}
+}
+
+// TestDecodeCommentCursorAcceptsEmpty verifies an empty cursor is treated
+// as "no cursor" (nil error) so the first page request still works.
+func TestDecodeCommentCursorAcceptsEmpty(t *testing.T) {
+	_, _, err := decodeCommentCursor("")
+	if err != nil {
+		t.Fatalf("expected nil error for empty cursor, got %v", err)
+	}
+}
+
+// TestDecodeCommentCursorAcceptsValid verifies a well-formed cursor round-trips.
+func TestDecodeCommentCursorAcceptsValid(t *testing.T) {
+	const at = "2025-01-01T00:00:00Z"
+	const id = "user_abc"
+	v, vid, err := decodeCommentCursor(encodeCommentCursor(at, id))
+	if err != nil {
+		t.Fatalf("expected nil error for valid cursor, got %v", err)
+	}
+	if vid != id {
+		t.Fatalf("expected id %q, got %q", id, vid)
+	}
+	if v == nil {
+		t.Fatal("expected non-nil parsed timestamp")
+	}
 }

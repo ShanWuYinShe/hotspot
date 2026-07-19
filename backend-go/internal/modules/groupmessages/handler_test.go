@@ -174,6 +174,7 @@ func TestHandlerUpdateRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
 	req := gmCtx("u1")
 	req.Body = io.NopCloser(strings.NewReader(`{bad`))
+	req.Header.Set("Idempotency-Key", "upd_invalid_json_aaaaaaaaaaaaaaaa")
 
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
@@ -184,6 +185,7 @@ func TestHandlerUpdateRejectsMissingMessageID(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
 	req := gmCtx("u1")
 	req.Body = io.NopCloser(strings.NewReader(`{"content":"edited"}`))
+	req.Header.Set("Idempotency-Key", "upd_no_msg_id_bbbbbbbbbbbbbbbbbbbb")
 
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
@@ -194,6 +196,7 @@ func TestHandlerUpdateRejectsEmptyContent(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
 	req := gmCtx("u1")
 	req.Body = io.NopCloser(strings.NewReader(`{"message_id":"m1","content":""}`))
+	req.Header.Set("Idempotency-Key", "upd_empty_content_cccccccccccccc")
 
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
@@ -218,6 +221,7 @@ func TestHandlerUpdateMapsErrors(t *testing.T) {
 			handler := NewHandler(NewServiceWithRepo(repo))
 			req := gmCtx("u1")
 			req.Body = io.NopCloser(strings.NewReader(`{"message_id":"m1","content":"edited"}`))
+			req.Header.Set("Idempotency-Key", "test_update_maps_"+strings.ReplaceAll(tc.name, " ", "_")+"_000000000000")
 
 			rr := httptest.NewRecorder()
 			handler.Update(rr, req)
@@ -231,6 +235,7 @@ func TestHandlerUpdateHappyPath(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := gmCtx("u1")
 	req.Body = io.NopCloser(strings.NewReader(`{"message_id":"m1","content":"edited"}`))
+	req.Header.Set("Idempotency-Key", "upd_happy_path_ddddddddddddddddd")
 
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
@@ -243,6 +248,7 @@ func TestHandlerRecallRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
 	req := gmCtx("u1")
 	req.Body = io.NopCloser(strings.NewReader(`{bad`))
+	req.Header.Set("Idempotency-Key", "rec_invalid_json_eeeeeeeeeeeeeeee")
 
 	rr := httptest.NewRecorder()
 	handler.Recall(rr, req)
@@ -253,6 +259,7 @@ func TestHandlerRecallRejectsMissingMessageID(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
 	req := gmCtx("u1")
 	req.Body = io.NopCloser(strings.NewReader(`{}`))
+	req.Header.Set("Idempotency-Key", "rec_no_msg_id_ffffffffffffffffff")
 
 	rr := httptest.NewRecorder()
 	handler.Recall(rr, req)
@@ -277,6 +284,7 @@ func TestHandlerRecallMapsErrors(t *testing.T) {
 			handler := NewHandler(NewServiceWithRepo(repo))
 			req := gmCtx("u1")
 			req.Body = io.NopCloser(strings.NewReader(`{"message_id":"m1"}`))
+			req.Header.Set("Idempotency-Key", "test_recall_maps_"+strings.ReplaceAll(tc.name, " ", "_")+"_000000000000")
 
 			rr := httptest.NewRecorder()
 			handler.Recall(rr, req)
@@ -290,6 +298,7 @@ func TestHandlerRecallHappyPath(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := gmCtx("u1")
 	req.Body = io.NopCloser(strings.NewReader(`{"message_id":"m1"}`))
+	req.Header.Set("Idempotency-Key", "rec_happy_path_ggggggggggggggggg")
 
 	rr := httptest.NewRecorder()
 	handler.Recall(rr, req)

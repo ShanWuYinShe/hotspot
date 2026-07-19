@@ -7,6 +7,8 @@
   import { useOptimisticToggle } from '$lib/hooks/use-optimistic.svelte';
   import { formatRelativeTime, formatDistance } from '$lib/utils/format';
   import { interactive } from '$lib/actions/interactive';
+	  import { t } from '$lib/i18n';
+	  import { copyShareUrl } from '$lib/utils/share';
   import type { MomentItem } from '$lib/types/api';
   import Heart from 'lucide-svelte/icons/heart';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
@@ -18,13 +20,14 @@
   import SmartImage from '$lib/components/common/smart-image.svelte';
   import ImagePreview from '$lib/components/common/image-preview.svelte';
 
-  interface Props {
-    moment: MomentItem;
-    class?: string;
-    onDismiss?: () => void;
-  }
+	  interface Props {
+	    moment: MomentItem;
+	    class?: string;
+	    onDismiss?: () => void;
+	    imageFetchpriority?: 'high' | 'low' | 'auto';
+	  }
 
-  let { moment, class: className = '', onDismiss }: Props = $props();
+	  let { moment, class: className = '', onDismiss, imageFetchpriority = 'auto' }: Props = $props();
 
   const likeAction = useOptimisticToggle({
     initialValue: () => moment.my_state?.is_liked ?? false,
@@ -47,7 +50,7 @@
   const previewImages = $derived(
     (moment.images ?? []).map((img) => ({
       src: img.url,
-      alt: moment.description || '动态图片'
+      alt: moment.description || t('moment.imageAlt')
     }))
   );
   let previewOpen = $state(false);
@@ -82,6 +85,13 @@
   }
 
   let heartBurst = $state(false);
+  let heartBurstTimer: ReturnType<typeof setTimeout> | null = null;
+
+  $effect(() => {
+    return () => {
+      if (heartBurstTimer) clearTimeout(heartBurstTimer);
+    };
+  });
 
   function handleLike(event: MouseEvent) {
     event.preventDefault();
@@ -93,8 +103,10 @@
     likeAction.toggle();
     if (likeAction.isOn) {
       heartBurst = true;
-      setTimeout(() => {
+      if (heartBurstTimer) clearTimeout(heartBurstTimer);
+      heartBurstTimer = setTimeout(() => {
         heartBurst = false;
+        heartBurstTimer = null;
       }, 300);
     }
   }
@@ -113,19 +125,18 @@
     event.preventDefault();
     event.stopPropagation();
     const shareData = {
-      title: `${moment.user.nickname} 的瞬间`,
+      title: t('moment.shareTitle', { nickname: moment.user.nickname }),
       text: moment.description.slice(0, 100),
       url: `${window.location.origin}/moments/${moment.moment_id}`
     };
     if (navigator.share) {
       navigator.share(shareData).catch((error) => {
         if (error instanceof DOMException && error.name === 'AbortError') return;
-        toast.error('分享失败');
+        toast.error(t('moment.shareFailed'));
       });
-    } else {
-      navigator.clipboard.writeText(shareData.url);
-      toast.success('链接已复制');
-    }
+	    } else {
+	      copyShareUrl(shareData.url);
+	    }
   }
 
   function handleAuthorClick(event: MouseEvent) {
@@ -139,10 +150,10 @@
     event.stopPropagation();
     try {
       await feedService.dismiss({ target_type: 'moment', target_id: moment.moment_id });
-      toast.success('已标记为不感兴趣');
+      toast.success(t('moment.dismissed'));
       onDismiss?.();
     } catch {
-      toast.error('操作失败');
+      toast.error(t('common.operationFailed'));
     }
   }
 </script>
@@ -152,7 +163,7 @@
   onclick={handleCardClick}
   role="link"
   tabindex={0}
-  aria-label={`查看 ${moment.user.nickname} 的动态`}
+  aria-label={t('moment.viewMomentAria', { nickname: moment.user.nickname })}
   onkeydown={(e) => {
     if ((e.key === 'Enter' || e.key === ' ') && !isInteractiveTarget(e.target)) {
       e.preventDefault();
@@ -166,7 +177,7 @@
       data-card-action
       onclick={handleAuthorClick}
       class="moment-card__avatar"
-      aria-label={`查看 ${moment.user.nickname} 的主页`}
+      aria-label={t('moment.viewProfileAria', { nickname: moment.user.nickname })}
     >
       <Avatar
         src={moment.user.avatar_url}
@@ -204,8 +215,8 @@
         class="moment-card__dismiss"
         onclick={handleDismiss}
         use:interactive={{ type: 'action' }}
-        aria-label="不感兴趣"
-        title="不感兴趣"
+        aria-label={t('moment.dismissAria')}
+        title={t('moment.dismissAria')}
       >
         <X size={14} strokeWidth={1.7} />
       </button>
@@ -217,18 +228,20 @@
       type="button"
       class="moment-card__media"
       onclick={openPreview}
-      aria-label="预览图片"
+      aria-label={t('moment.previewImageAria')}
       data-card-action
       use:interactive={{ type: 'card' }}
     >
-      <SmartImage
-        src={primaryImage.url}
-        alt={moment.description || moment.tags?.[0] || '动态图片'}
-        thumbnail={primaryImage.thumbnail_url}
-        width={primaryImage.width}
-        height={primaryImage.height}
-        sizes="(min-width: 1536px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-      />
+	      <SmartImage
+	        src={primaryImage.url}
+	        alt={moment.description || moment.tags?.[0] || t('moment.imageAlt')}
+	        thumbnail={primaryImage.thumbnail_url}
+	        width={primaryImage.width}
+	        height={primaryImage.height}
+	        sizes="(min-width: 1536px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+	        loading={imageFetchpriority === 'high' ? 'eager' : 'lazy'}
+	        fetchpriority={imageFetchpriority}
+	      />
       <div class="moment-card__media-shade"></div>
       {#if imageCount > 1}
         <span class="moment-card__image-count">+{imageCount - 1}</span>
@@ -244,7 +257,7 @@
     {/if}
 
     {#if visibleTags.length > 0}
-      <div class="moment-card__tags" aria-label="动态标签">
+      <div class="moment-card__tags" aria-label={t('moment.tagsAria')}>
         {#each visibleTags as tag (tag)}
           <span>#{tag}</span>
         {/each}
@@ -262,7 +275,7 @@
         onclick={handleLike}
         disabled={likeAction.isLoading}
         use:interactive={{ type: 'action' }}
-        aria-label={likeAction.isOn ? '取消点赞' : '点赞'}
+        aria-label={likeAction.isOn ? t('common.unlike') : t('common.like')}
         aria-pressed={likeAction.isOn}
       >
         <Heart
@@ -284,7 +297,7 @@
           openMoment();
         }}
         use:interactive={{ type: 'action' }}
-        aria-label="查看评论"
+        aria-label={t('moment.viewCommentsAria')}
       >
         <MessageCircle size={16} strokeWidth={1.7} />
         <span>{moment.comments_count}</span>
@@ -300,7 +313,7 @@
         onclick={handleFavorite}
         disabled={favoriteAction.isLoading}
         use:interactive={{ type: 'action' }}
-        aria-label={favoriteAction.isOn ? '取消收藏' : '收藏'}
+        aria-label={favoriteAction.isOn ? t('moment.unsaveAria') : t('moment.saveAria')}
         aria-pressed={favoriteAction.isOn}
       >
         <Bookmark
@@ -316,7 +329,7 @@
         class="moment-card__icon-action"
         onclick={handleShare}
         use:interactive={{ type: 'action' }}
-        aria-label="分享"
+        aria-label={t('common.share')}
       >
         <Share2 size={16} strokeWidth={1.7} />
       </button>

@@ -33,6 +33,10 @@ func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/admin", func(adminRouter chi.Router) {
 		adminRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)
+			// AdminAccess is a middleware backstop on top of the service-layer RBAC:
+			// it rejects any request whose principal is not an admin before it reaches
+			// the handler. Belt and suspenders — the service layer also enforces this.
+			group.Use(platformauth.AdminAccess)
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)

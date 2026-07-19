@@ -2,20 +2,15 @@ package feed
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
-	"io"
 	"sort"
 	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/geo"
+	platformcursor "hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
@@ -624,50 +619,36 @@ func findMomentCursorStart(items []momentCandidate, cursor *itemCursor, source s
 	return len(items)
 }
 
+// feedCursorCodec caches the AES-GCM cipher for feed cursors at the package
+// level so encode/decode no longer rebuild it per call. Key derivation is
+// sha256 of the raw AuthTokenSecret (no namespace salt) to preserve
+// compatibility with cursors issued by previous deployments.
+var feedCursorCodec = platformcursor.NewCodecWithKey(func() ([]byte, error) {
+	secret := config.Load().AuthTokenSecret
+	if secret == "" {
+		secret = "dev-secret-change-me"
+	}
+	key := sha256.Sum256([]byte(secret))
+	return key[:], nil
+})
+
 func encodeFeedCursor(cursor itemCursor) string {
-	block, err := newFeedCursorBlock()
+	token, err := feedCursorCodec.Encode(cursor)
 	if err != nil {
 		return ""
 	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return ""
-	}
-	payload, err := json.Marshal(cursor)
-	if err != nil {
-		return ""
-	}
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return ""
-	}
-	sealed := gcm.Seal(nonce, nonce, payload, nil)
-	return base64.RawURLEncoding.EncodeToString(sealed)
+	return token
 }
 
 func decodeFeedCursor(cursor string) (*itemCursor, error) {
 	if cursor == "" {
 		return nil, nil
 	}
-	block, err := newFeedCursorBlock()
-	if err != nil {
-		return nil, ErrInvalidCursor
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, ErrInvalidCursor
-	}
-	blob, err := base64.RawURLEncoding.DecodeString(cursor)
-	if err != nil || len(blob) < gcm.NonceSize() {
-		return nil, ErrInvalidCursor
-	}
-	nonce, ciphertext := blob[:gcm.NonceSize()], blob[gcm.NonceSize():]
-	payload, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return nil, ErrInvalidCursor
-	}
 	var decoded itemCursor
-	if err := json.Unmarshal(payload, &decoded); err != nil || decoded.ID == "" {
+	if err := feedCursorCodec.Decode(cursor, &decoded); err != nil {
+		return nil, ErrInvalidCursor
+	}
+	if decoded.ID == "" {
 		return nil, ErrInvalidCursor
 	}
 	if decoded.CreatedAt != "" {
@@ -676,15 +657,6 @@ func decodeFeedCursor(cursor string) (*itemCursor, error) {
 		}
 	}
 	return &decoded, nil
-}
-
-func newFeedCursorBlock() (cipher.Block, error) {
-	secret := config.Load().AuthTokenSecret
-	if secret == "" {
-		secret = "dev-secret-change-me"
-	}
-	key := sha256.Sum256([]byte(secret))
-	return aes.NewCipher(key[:])
 }
 
 var _ Repository = (*PostgresRepository)(nil)

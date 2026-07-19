@@ -35,29 +35,60 @@ type Handler struct {
 	userRepo       userRelationAuthorizer
 	groupRepo      groupMembershipAuthorizer
 	typingThrottle sync.Map
+	stop           context.CancelFunc
+	wg             sync.WaitGroup
 }
 
+// NewHandler creates a realtime WS handler. The typing-throttle sweeper is
+// bound to ctx: when ctx is cancelled (or Close is called) the sweeper exits.
+// Callers that embed the handler for the process lifetime — e.g. bootstrap in
+// production — should pass the app's root context so shutdown stops the
+// goroutine. Tests that build a handler per test can pass context.Background()
+// and rely on Close (invoked via server.Close cleanup) to stop the sweeper.
 func NewHandler(auth *platformauth.Service, userService userPresenceAuthorizer, userRepo userRelationAuthorizer, groupRepo groupMembershipAuthorizer) *Handler {
-	h := &Handler{auth: auth, users: userService, userRepo: userRepo, groupRepo: groupRepo}
-	go h.sweepTypingThrottle()
+	return NewHandlerWithContext(context.Background(), auth, userService, userRepo, groupRepo)
+}
+
+// NewHandlerWithContext is the context-aware constructor. Prefer this from
+// bootstrap so the sweeper is tied to the application lifetime.
+func NewHandlerWithContext(ctx context.Context, auth *platformauth.Service, userService userPresenceAuthorizer, userRepo userRelationAuthorizer, groupRepo groupMembershipAuthorizer) *Handler {
+	sweepCtx, cancel := context.WithCancel(ctx)
+	h := &Handler{auth: auth, users: userService, userRepo: userRepo, groupRepo: groupRepo, stop: cancel}
+	h.wg.Add(1)
+	go h.sweepTypingThrottle(sweepCtx)
 	return h
+}
+
+// Close stops the background typing-throttle sweeper and waits for it to exit.
+// Safe to call multiple times.
+func (h *Handler) Close() {
+	if h.stop != nil {
+		h.stop()
+	}
+	h.wg.Wait()
 }
 
 // sweepTypingThrottle periodically drops stale typing-throttle entries so the
 // sync.Map doesn't grow unboundedly with each unique (user,target) pair over
 // the process lifetime. The throttle window is 3s; entries older than a minute
-// are dead.
-func (h *Handler) sweepTypingThrottle() {
+// are dead. It exits when ctx is cancelled.
+func (h *Handler) sweepTypingThrottle(ctx context.Context) {
+	defer h.wg.Done()
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
-	for range ticker.C {
-		cutoff := time.Now().Add(-time.Minute)
-		h.typingThrottle.Range(func(key, value any) bool {
-			if value.(time.Time).Before(cutoff) {
-				h.typingThrottle.Delete(key)
-			}
-			return true
-		})
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			cutoff := time.Now().Add(-time.Minute)
+			h.typingThrottle.Range(func(key, value any) bool {
+				if value.(time.Time).Before(cutoff) {
+					h.typingThrottle.Delete(key)
+				}
+				return true
+			})
+		}
 	}
 }
 
@@ -85,12 +116,16 @@ func sameOrigin(r *http.Request) bool {
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		return
-	}
-	defer conn.Close()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
 
-	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+		// Prevent memory-exhaustion DoS: the largest legitimate message is a
+		// SetSubscriptions with up to 500 user/group IDs (~64 KB).
+		conn.SetReadLimit(65536)
+
+		_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	var authEvent Event
 	if err := conn.ReadJSON(&authEvent); err != nil || authEvent.Type != "Auth" {
 		observability.L().Warn("ws: auth failed, invalid auth message", "error", err)

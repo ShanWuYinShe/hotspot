@@ -432,12 +432,14 @@
   }
 
   function getViewportSignature(viewport: MapViewport) {
+    // viewport 仅含 bounds（spec: 不需要客户端提供 zoom）；缓存键仍需 zoom 维度
+    // 以避免 zoom 变化时重复请求，故从地图实例直接读取。
     return [
       viewport.bounds.north.toFixed(6),
       viewport.bounds.south.toFixed(6),
       viewport.bounds.east.toFixed(6),
       viewport.bounds.west.toFixed(6),
-      viewport.zoom.toFixed(2)
+      (map?.getZoom() ?? lastMapZoom).toFixed(2)
     ].join('|');
   }
 
@@ -468,8 +470,7 @@
         south,
         east,
         west
-      },
-      zoom: Math.max(1, Math.min(20, visibleRegion.zoom))
+      }
     };
     return viewport;
   }

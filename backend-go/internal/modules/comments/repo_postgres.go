@@ -5,9 +5,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
+	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
@@ -28,7 +28,10 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	}
 	now := time.Now().UTC()
 	createdAt := now.Format(time.RFC3339)
-	commentID := fmt.Sprintf("comment_%d", now.UnixNano())
+	commentID, err := idgen.WithPrefix("comment_")
+	if err != nil {
+		return CommentItem{}, err
+	}
 	var parentID any
 	if req.ParentID != "" {
 		parentID = req.ParentID
@@ -305,15 +308,15 @@ func decodeCommentCursor(cursor string) (any, string, error) {
 	}
 	blob, err := base64.RawURLEncoding.DecodeString(cursor)
 	if err != nil {
-		return nil, "", persistence.ErrNotImplemented
+		return nil, "", ErrInvalidCursor
 	}
 	var decoded commentCursor
 	if err := json.Unmarshal(blob, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
-		return nil, "", persistence.ErrNotImplemented
+		return nil, "", ErrInvalidCursor
 	}
 	at, err := time.Parse(time.RFC3339, decoded.At)
 	if err != nil {
-		return nil, "", persistence.ErrNotImplemented
+		return nil, "", ErrInvalidCursor
 	}
 	return at.UTC(), decoded.ID, nil
 }

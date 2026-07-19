@@ -26,7 +26,8 @@
   import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
 
   const SORT_OPTIONS = ['distance', 'online', 'mutual'] as const;
-  const SORT_LABELS: Record<string, TranslationKey> = {
+  type SortOption = (typeof SORT_OPTIONS)[number];
+  const SORT_LABELS: Record<SortOption, TranslationKey> = {
     distance: 'usersNearby.sortDistance',
     online: 'usersNearby.sortOnline',
     mutual: 'usersNearby.sortMutual'

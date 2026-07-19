@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { withMinimumLoadingTime } from '$lib/utils/loading';
-  import { adminRbacService } from '$lib/api/services';
-  import { isSuccess } from '$lib/api/client';
-  import { toast } from '$lib/stores/toast.svelte';
+	  import { onMount } from 'svelte';
+	  import { withMinimumLoadingTime } from '$lib/utils/loading';
+	  import { adminRbacService } from '$lib/api/services';
+	  import { isSuccess } from '$lib/api/client';
+	  import { toast } from '$lib/stores/toast.svelte';
+	  import { t } from '$lib/i18n';
   import * as Dialog from '$lib/components/ui/dialog';
   import ConfirmDialog from '$lib/components/common/confirm-dialog.svelte';
   import type { AdminRoleItem, AdminPermissionItem } from '$lib/types/api';
@@ -44,7 +45,7 @@
       if (isSuccess(rolesRes) && rolesRes.data) roles = rolesRes.data.items;
       if (isSuccess(permissionsRes) && permissionsRes.data) permissions = permissionsRes.data.items;
     } catch {
-      toast.error('加载失败');
+	      toast.error(t('admin.loadFailed'));
     } finally {
       isLoading = false;
     }
@@ -69,7 +70,7 @@
 
   async function handleSubmitRole() {
     if (!roleName.trim()) {
-      toast.error('请填写角色名称');
+	      toast.error(t('admin.roleNameRequired'));
       return;
     }
     isSubmitting = true;
@@ -86,10 +87,10 @@
             permission_keys: rolePermissions
           });
           loadData();
-          toast.success('更新成功');
+          toast.success(t('admin.updateSuccess'));
           showRoleDialog = false;
         } else {
-          toast.error(response.message || '更新失败');
+          toast.error(response.message || t('admin.updateFailed'));
         }
       } else {
         const response = await adminRbacService.createRole({
@@ -102,42 +103,42 @@
             permission_keys: rolePermissions
           });
           loadData();
-          toast.success('创建成功');
+          toast.success(t('admin.createSuccess'));
           showRoleDialog = false;
         } else {
-          toast.error(response.message || '创建失败');
+          toast.error(response.message || t('admin.createFailed'));
         }
       }
-    } catch {
-      toast.error('操作失败');
-    } finally {
-      isSubmitting = false;
-    }
-  }
+	    } catch {
+	      toast.error(t('admin.operationFailed'));
+	    } finally {
+	      isSubmitting = false;
+	    }
+	  }
 
-  function requestDeleteRole(roleId: string) {
-    closeOverlayDialogs();
-    pendingDeleteRoleId = roleId;
-    deleteRoleConfirmOpen = true;
-  }
-  async function handleDeleteRole() {
-    if (!pendingDeleteRoleId) return;
-    try {
-      const response = await adminRbacService.deleteRole({ role_id: pendingDeleteRoleId });
-      if (isSuccess(response)) {
-        roles = roles.filter((r) => r.role_id !== pendingDeleteRoleId);
-        toast.success('已删除');
-      } else {
-        toast.error(response.message || '删除失败');
-      }
-    } catch {
-      toast.error('删除失败');
-    } finally {
-      pendingDeleteRoleId = null;
-    }
-  }
+	  function requestDeleteRole(roleId: string) {
+	    closeOverlayDialogs();
+	    pendingDeleteRoleId = roleId;
+	    deleteRoleConfirmOpen = true;
+	  }
+	  async function handleDeleteRole() {
+	    if (!pendingDeleteRoleId) return;
+	    try {
+	      const response = await adminRbacService.deleteRole({ role_id: pendingDeleteRoleId });
+	      if (isSuccess(response)) {
+	        roles = roles.filter((r) => r.role_id !== pendingDeleteRoleId);
+	        toast.success(t('admin.deleted'));
+	      } else {
+	        toast.error(response.message || t('admin.deleteFailed'));
+	      }
+	    } catch {
+	      toast.error(t('admin.deleteFailed'));
+	    } finally {
+	      pendingDeleteRoleId = null;
+	    }
+	  }
 
-  function togglePermission(permissionId: string) {
+	  function togglePermission(permissionId: string) {
     if (rolePermissions.includes(permissionId)) {
       rolePermissions = rolePermissions.filter((p) => p !== permissionId);
     } else {

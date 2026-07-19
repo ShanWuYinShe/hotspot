@@ -159,6 +159,22 @@ func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (Paginated
 	if err != nil {
 		return PaginatedUsers{}, err
 	}
+	// Batch-load relationships once for the whole page to avoid an N+1 of
+	// Relationship calls. Only meaningful when the caller is authenticated.
+	var relationsByUserID map[string]Relationship
+	if hasPrincipal && principal.UserID != "" {
+		targets := make([]string, 0, len(profiles.Items))
+		for _, profile := range profiles.Items {
+			if profile.UserID == principal.UserID {
+				continue
+			}
+			targets = append(targets, profile.UserID)
+		}
+		relationsByUserID, err = s.repo.RelationshipBatch(ctx, principal.UserID, targets)
+		if err != nil {
+			return PaginatedUsers{}, err
+		}
+	}
 	for _, profile := range profiles.Items {
 		settings, ok := settingsByUserID[profile.UserID]
 		if !ok {
@@ -173,12 +189,10 @@ func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (Paginated
 				item.Location.Distance = &d64
 				item.Location.BearingDegrees = &b64
 			}
-		if hasPrincipal && principal.UserID != "" && !isSelf {
-			relation, err := s.repo.Relationship(ctx, principal.UserID, profile.UserID)
-			if err != nil {
-				return PaginatedUsers{}, err
+		if relationsByUserID != nil && !isSelf {
+			if relation, ok := relationsByUserID[profile.UserID]; ok {
+				item.Relation = &relation
 			}
-			item.Relation = &relation
 		}
 		items = append(items, item)
 	}

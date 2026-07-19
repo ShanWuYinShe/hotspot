@@ -122,6 +122,10 @@ func (r *userFallbackRepo) Relationship(context.Context, string, string) (Relati
 	r.markUsed()
 	return Relationship{}, nil
 }
+func (r *userFallbackRepo) RelationshipBatch(context.Context, string, []string) (map[string]Relationship, error) {
+	r.markUsed()
+	return map[string]Relationship{}, nil
+}
 func (r *userFallbackRepo) ListFriends(context.Context, string, int, string) (PaginatedFriends, error) {
 	r.markUsed()
 	return PaginatedFriends{}, nil

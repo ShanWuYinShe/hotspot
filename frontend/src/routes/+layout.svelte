@@ -16,6 +16,7 @@
   import { themeStore } from '$lib/stores/theme.svelte';
   import { normalizeRedirectPath, uiStore } from '$lib/stores/ui.svelte';
   import { locationStore } from '$lib/stores/location.svelte';
+  import { configStore } from '$lib/stores/config.svelte';
   import { mapAnchorStore, DEFAULT_ANCHOR_NAME } from '$lib/stores/map-anchor.svelte';
   import { loadAMap, loadAMapPlugin } from '$lib/utils/amap';
   import { toGcjLngLat } from '$lib/utils/geo';
@@ -170,7 +171,8 @@
         latitude: current.point.latitude,
         longitude: current.point.longitude
       },
-      location_name: current.location_name || ''
+      // 防御层：兜底使用 ClientConfig 默认位置名，确保上链载荷 location_name 非空
+      location_name: current.location_name || configStore.defaultLocation?.location_name || ''
     };
     void syncLocationToServer(userId, location);
   });

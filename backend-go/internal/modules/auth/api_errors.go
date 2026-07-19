@@ -13,6 +13,7 @@ var (
 	ErrPasswordResetNotFound   = errors.New("auth: password reset not found")
 	ErrPasswordResetThrottled  = errors.New("auth: password reset throttled")
 	ErrEmailServiceUnavailable = errors.New("auth: email service not available")
+	ErrAccountLocked           = errors.New("auth: account locked due to too many failed attempts")
 )
 
 func apiErrorFrom(err error) *httpx.APIError {
@@ -28,6 +29,8 @@ func apiErrorFrom(err error) *httpx.APIError {
 		return &httpx.APIError{Code: 10400, Message: "账号已存在"}
 	case errors.Is(err, ErrInvalidCredentials):
 		return &httpx.APIError{Code: 10100, Message: "账号或密码错误"}
+	case errors.Is(err, ErrAccountLocked):
+		return &httpx.APIError{Code: 10500, Message: "登录失败次数过多，请15分钟后重试"}
 	case errors.Is(err, ErrInvalidOldPassword):
 		return &httpx.APIError{Code: 10100, Message: "旧密码错误"}
 	case errors.Is(err, ErrPasswordResetNotFound):

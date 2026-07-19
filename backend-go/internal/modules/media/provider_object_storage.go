@@ -27,9 +27,11 @@ type ObjectStorageProvider struct {
 
 func NewObjectStorageProvider(cfg config.Config) *ObjectStorageProvider {
 	return &ObjectStorageProvider{
-		cfg:    cfg,
-		client: http.DefaultClient,
-		now:    time.Now,
+		cfg: cfg,
+		client: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+		now: time.Now,
 	}
 }
 

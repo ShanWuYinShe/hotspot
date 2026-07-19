@@ -2,19 +2,14 @@ package mapmodule
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
-	"io"
 	"sort"
 	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
 )
@@ -67,23 +62,35 @@ func (r *PostgresRepository) loadCandidates(ctx context.Context, query canvasQue
 	if err != nil {
 		return nil, err
 	}
+	// Compute the S2 covering arrays once for the request bounds; the three
+	// queryMap* helpers used to each recompute geo.CoveringArrays themselves.
+	mins, maxs := geo.CoveringArrays(query.Bounds)
+	if len(mins) == 0 {
+		return nil, nil
+	}
 	items := make([]mapCandidate, 0)
+	// The three candidate queries are intentionally kept sequential. Running
+	// them concurrently with errgroup would hold up to three pgxpool
+	// connections per request, which risks pool exhaustion under load and the
+	// extra latency from connection waits can eclipse the saved query time.
+	// The single-covering optimisation above already removes the redundant
+	// geo work that was the dominant per-request overhead.
 	if query.DataType == "all" || query.DataType == "user" {
-		users, err := queryMapUsers(ctx, queryable, query)
+		users, err := queryMapUsers(ctx, queryable, query, mins, maxs)
 		if err != nil {
 			return nil, err
 		}
 		items = append(items, users...)
 	}
 	if query.DataType == "all" || query.DataType == "group" {
-		groups, err := queryMapGroups(ctx, queryable, query)
+		groups, err := queryMapGroups(ctx, queryable, query, mins, maxs)
 		if err != nil {
 			return nil, err
 		}
 		items = append(items, groups...)
 	}
 	if query.DataType == "all" || query.DataType == "moment" {
-		moments, err := queryMapMoments(ctx, queryable, query)
+		moments, err := queryMapMoments(ctx, queryable, query, mins, maxs)
 		if err != nil {
 			return nil, err
 		}
@@ -104,11 +111,7 @@ func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
 	return queryable, nil
 }
 
-func queryMapUsers(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery) ([]mapCandidate, error) {
-	mins, maxs := geo.CoveringArrays(query.Bounds)
-	if len(mins) == 0 {
-		return nil, nil
-	}
+func queryMapUsers(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery, mins, maxs []int64) ([]mapCandidate, error) {
 	rows, err := queryable.Query(ctx, queryMapCanvasUsers, mins, maxs, maxMapScanRows)
 	if err != nil {
 		return nil, err
@@ -130,11 +133,7 @@ func queryMapUsers(ctx context.Context, queryable persistence.QueryableDB, query
 	return items, nil
 }
 
-func queryMapGroups(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery) ([]mapCandidate, error) {
-	mins, maxs := geo.CoveringArrays(query.Bounds)
-	if len(mins) == 0 {
-		return nil, nil
-	}
+func queryMapGroups(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery, mins, maxs []int64) ([]mapCandidate, error) {
 	rows, err := queryable.Query(ctx, queryMapCanvasGroups, mins, maxs, maxMapScanRows)
 	if err != nil {
 		return nil, err
@@ -155,11 +154,7 @@ func queryMapGroups(ctx context.Context, queryable persistence.QueryableDB, quer
 	return items, nil
 }
 
-func queryMapMoments(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery) ([]mapCandidate, error) {
-	mins, maxs := geo.CoveringArrays(query.Bounds)
-	if len(mins) == 0 {
-		return nil, nil
-	}
+func queryMapMoments(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery, mins, maxs []int64) ([]mapCandidate, error) {
 	rows, err := queryable.Query(ctx, queryMapCanvasMoments, mins, maxs, maxMapScanRows)
 	if err != nil {
 		return nil, err
@@ -325,50 +320,35 @@ func truncateMapTitle(title string) string {
 	return string(runes[:60])
 }
 
+// mapCursorCodec is a process-wide cached AES-GCM codec for map cursors.
+// Previously encode/decode rebuilt the cipher (aes.NewCipher + GCM) on
+// every call; now the cipher is built once and reused. The key derivation
+// intentionally matches the legacy format (sha256 of the raw secret, with
+// no namespace salt) so existing cursors keep validating across deploys.
+var mapCursorCodec = cursor.NewCodecWithKey(func() ([]byte, error) {
+	secret := config.Load().AuthTokenSecret
+	if secret == "" {
+		secret = "dev-secret-change-me"
+	}
+	key := sha256.Sum256([]byte(secret))
+	return key[:], nil
+})
+
 func encodeMapCursor(item mapCandidate) string {
-	block, err := newMapCursorBlock()
+	payload := mapCursor{Distance: item.Distance, Type: item.ObjectType, ID: item.ObjectID, CreatedAt: item.CreatedAt}
+	token, err := mapCursorCodec.Encode(payload)
 	if err != nil {
 		return ""
 	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return ""
-	}
-	payload, err := json.Marshal(mapCursor{Distance: item.Distance, Type: item.ObjectType, ID: item.ObjectID, CreatedAt: item.CreatedAt})
-	if err != nil {
-		return ""
-	}
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return ""
-	}
-	sealed := gcm.Seal(nonce, nonce, payload, nil)
-	return base64.RawURLEncoding.EncodeToString(sealed)
+	return token
 }
 
-func decodeMapCursor(cursor string) (*mapCursor, error) {
-	if cursor == "" {
+func decodeMapCursor(raw string) (*mapCursor, error) {
+	if raw == "" {
 		return nil, nil
 	}
-	block, err := newMapCursorBlock()
-	if err != nil {
-		return nil, ErrInvalidCursor
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, ErrInvalidCursor
-	}
-	blob, err := base64.RawURLEncoding.DecodeString(cursor)
-	if err != nil || len(blob) < gcm.NonceSize() {
-		return nil, ErrInvalidCursor
-	}
-	nonce, ciphertext := blob[:gcm.NonceSize()], blob[gcm.NonceSize():]
-	payload, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return nil, ErrInvalidCursor
-	}
 	var decoded mapCursor
-	if err := json.Unmarshal(payload, &decoded); err != nil {
+	if err := mapCursorCodec.Decode(raw, &decoded); err != nil {
 		return nil, ErrInvalidCursor
 	}
 	if decoded.Type == "" || decoded.ID == "" {
@@ -388,15 +368,6 @@ func findMapCursorStart(items []mapCandidate, decoded mapCursor) int {
 		}
 	}
 	return len(items)
-}
-
-func newMapCursorBlock() (cipher.Block, error) {
-	secret := config.Load().AuthTokenSecret
-	if secret == "" {
-		secret = "dev-secret-change-me"
-	}
-	key := sha256.Sum256([]byte(secret))
-	return aes.NewCipher(key[:])
 }
 
 var _ Repository = (*PostgresRepository)(nil)

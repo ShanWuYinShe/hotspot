@@ -22,6 +22,13 @@
   let isSaving = $state(false);
   let saved = $state(false);
 
+  let savedResetTimer: ReturnType<typeof setTimeout> | null = null;
+  $effect(() => {
+    return () => {
+      if (savedResetTimer) clearTimeout(savedResetTimer);
+    };
+  });
+
   let nickname = $state('');
   let bio = $state('');
   let avatarUrl = $state('');
@@ -117,8 +124,10 @@
           authStore.setProfile(profile);
         }
         saved = true;
-        setTimeout(() => {
+        if (savedResetTimer) clearTimeout(savedResetTimer);
+        savedResetTimer = setTimeout(() => {
           saved = false;
+          savedResetTimer = null;
           void goto('/profile');
         }, 800);
       } else {

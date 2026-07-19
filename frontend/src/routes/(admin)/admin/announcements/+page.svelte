@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { adminAnnouncementsService } from '$lib/api/services';
-  import { isSuccess } from '$lib/api/client';
-  import { toast } from '$lib/stores/toast.svelte';
+	  import { onMount } from 'svelte';
+	  import { adminAnnouncementsService } from '$lib/api/services';
+	  import { isSuccess } from '$lib/api/client';
+	  import { toast } from '$lib/stores/toast.svelte';
+	  import { t } from '$lib/i18n';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
@@ -60,7 +61,7 @@
 
   async function handleSubmit() {
     if (!title.trim() || !content.trim()) {
-      toast.error('请填写完整信息');
+	      toast.error(t('admin.fillAllFields'));
       return;
     }
 
@@ -73,14 +74,14 @@
       });
 
       if (isSuccess(response)) {
-        toast.success('创建成功');
-        showDialog = false;
-        loadAnnouncements();
-      } else {
-        toast.error(response.message || '创建失败');
-      }
-    } catch {
-      toast.error('操作失败');
+	        toast.success(t('admin.createSuccess'));
+	        showDialog = false;
+	        loadAnnouncements();
+	      } else {
+	        toast.error(response.message || t('admin.createFailed'));
+	      }
+	    } catch {
+	      toast.error(t('admin.operationFailed'));
     } finally {
       isSubmitting = false;
     }
@@ -100,13 +101,13 @@
       });
       if (isSuccess(response)) {
         const deletedId = pendingDeleteId;
-        pagination.removeItem((a) => a.announcement_id === deletedId);
-        toast.success('已删除');
-      } else {
-        toast.error(response.message || '删除失败');
-      }
-    } catch {
-      toast.error('删除失败');
+	        pagination.removeItem((a) => a.announcement_id === deletedId);
+	        toast.success(t('admin.deleted'));
+	      } else {
+	        toast.error(response.message || t('admin.deleteFailed'));
+	      }
+	    } catch {
+	      toast.error(t('admin.deleteFailed'));
     } finally {
       pendingDeleteId = null;
     }

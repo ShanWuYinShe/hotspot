@@ -209,6 +209,8 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
+// Follow is naturally idempotent — calling it twice for the same user is harmless
+// (follows an already-followed user). No idempotency key required.
 func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 	var req FollowRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
@@ -221,9 +223,13 @@ func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
+// Unfollow is naturally idempotent — calling it twice for the same user is harmless
+// (unfollows a user who is already unfollowed). No idempotency key required.
 func (h *Handler) Unfollow(w http.ResponseWriter, r *http.Request) {
 	h.toggleUser(r, w, "Unfollow", func(userID string) error { return h.service.Unfollow(r.Context(), userID) })
 }
+// Block is naturally idempotent — calling it twice for the same user is harmless
+// (blocks an already-blocked user). No idempotency key required.
 func (h *Handler) Block(w http.ResponseWriter, r *http.Request) {
 	var req BlockRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
@@ -236,6 +242,8 @@ func (h *Handler) Block(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
+// Unblock is naturally idempotent — calling it twice for the same user is harmless
+// (unblocks an already-unblocked user). No idempotency key required.
 func (h *Handler) Unblock(w http.ResponseWriter, r *http.Request) {
 	h.toggleUser(r, w, "Unblock", func(userID string) error { return h.service.Unblock(r.Context(), userID) })
 }

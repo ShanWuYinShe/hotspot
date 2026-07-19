@@ -35,15 +35,29 @@ Attachments 是 Svelte 5.29+ 引入的新特性，用于替代传统的 Actions 
 <button onclick={sendMessage} onmousedown={(e) => e.preventDefault()}> 发送 </button>
 ```
 
-### 防止按钮抢夺焦点
+### 防止按钮抢夺焦点（条件化版本，推荐）
 
-在按钮上添加 `onmousedown` 事件并调用 `preventDefault()`：
+无脑 `onmousedown={(e) => e.preventDefault()}` 会同时屏蔽键盘 Tab 的焦点环 ——
+键盘用户聚焦到按钮后看不到焦点。仅在 textarea 当前正被聚焦时才阻止默认行为：
 
 ```svelte
-<button onclick={handleClick} onmousedown={(e) => e.preventDefault()}> 点击我 </button>
+<button
+  onclick={handleClick}
+  onmousedown={(e) => {
+    if (document.activeElement instanceof HTMLTextAreaElement) e.preventDefault();
+  }}
+>
+  点击我
+</button>
 ```
 
-**原理**：`onmousedown` 在 `onclick` 之前触发。通过 `preventDefault()` 阻止默认行为，按钮就不会获得焦点。
+**原理**：
+- `onmousedown` 在 `onclick` 之前触发；`preventDefault()` 阻止按钮获得焦点。
+- 鼠标在 textarea 中输入时点击按钮 → 不抢焦点（保留输入连续性）。
+- 键盘 Tab 聚焦按钮 → 不触发 preventDefault → 焦点环正常显示（满足 a11y）。
+
+> 旧版 `onmousedown={(e) => e.preventDefault()}`（无条件 preventDefault）已被淘汰，
+> 不要在新代码中 reintroduce。
 
 ## 与 Actions 的区别
 
@@ -79,10 +93,8 @@ Attachments 是 Svelte 5.29+ 引入的新特性，用于替代传统的 Actions 
    });
    ```
 
-3. **防止按钮抢夺焦点**：使用 `onmousedown` + `preventDefault()`
-   ```svelte
-   <button onmousedown={(e) => e.preventDefault()}>
-   ```
+3. **防止按钮抢夺焦点**：使用条件化的 `onmousedown` + `preventDefault()`
+   （见上文「条件化版本」）—— 不要无条件 `preventDefault()`，会破坏键盘焦点环。
 
 ## 参考资料
 

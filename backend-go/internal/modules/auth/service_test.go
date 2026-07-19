@@ -10,9 +10,18 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/realtime"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
-func TestMain(m *testing.M) { realtime.ResetHub(); m.Run() }
+func TestMain(m *testing.M) {
+	realtime.ResetHub()
+	// Drop bcrypt to MinCost for the test suite so Register/ChangePassword
+	// stay sub-millisecond. Production wiring restores OWASP default (12)
+	// via ConfigureHashingCost in module.go.
+	ConfigureHashingCost(bcrypt.MinCost)
+	m.Run()
+}
 
 // --- stub repo ---
 
@@ -175,6 +184,89 @@ func TestServiceLoginPropagatesMetaError(t *testing.T) {
 	}
 }
 
+// --- Lockout (brute-force protection) ---
+
+func TestLoginTrackerLocksAfterFiveFailures(t *testing.T) {
+	tracker := newInMemoryLoginTracker()
+	defer tracker.stop()
+	ctx := context.Background()
+
+	for i := 0; i < 5; i++ {
+		tracker.RecordFailed(ctx, "u@test")
+	}
+	// After 5 RecordFails, Check must return ErrAccountLocked.
+	err := tracker.Check(ctx, "u@test")
+	if !errors.Is(err, ErrAccountLocked) {
+		t.Fatalf("expected ErrAccountLocked after 5 failures, got %v", err)
+	}
+}
+
+func TestLoginTrackerClearResetsCounter(t *testing.T) {
+	tracker := newInMemoryLoginTracker()
+	defer tracker.stop()
+	ctx := context.Background()
+
+	for i := 0; i < 3; i++ {
+		tracker.RecordFailed(ctx, "u@test")
+	}
+	tracker.Clear(ctx, "u@test")
+
+	// After clear, another 5 failures should be needed.
+	for i := 0; i < 5; i++ {
+		tracker.RecordFailed(ctx, "u@test")
+		if i < 4 {
+			if err := tracker.Check(ctx, "u@test"); err != nil {
+				t.Fatalf("unexpected lock after clear + %d failures: %v", i+1, err)
+			}
+		}
+	}
+	if err := tracker.Check(ctx, "u@test"); !errors.Is(err, ErrAccountLocked) {
+		t.Fatalf("expected lock after clear + 5 failures, got %v", err)
+	}
+}
+
+func TestServiceLoginLocksAfterConsecutiveFailures(t *testing.T) {
+	repo := &stubAuthRepo{authErr: ErrInvalidCredentials}
+	svc, _ := newTestService(repo)
+	loginID := "lockout-test@b.com"
+
+	// 5 consecutive failures — tracker records each one.
+	for i := 0; i < 5; i++ {
+		_, err := svc.Login(context.Background(), LoginRequest{LoginID: loginID, Password: "wrong"}, defaultMeta())
+		if !errors.Is(err, ErrInvalidCredentials) {
+			t.Fatalf("attempt %d: expected ErrInvalidCredentials, got %v", i+1, err)
+		}
+	}
+
+	// 6th attempt must be rejected by the lockout tracker.
+	_, err := svc.Login(context.Background(), LoginRequest{LoginID: loginID, Password: "wrong"}, defaultMeta())
+	if !errors.Is(err, ErrAccountLocked) {
+		t.Fatalf("expected ErrAccountLocked after 5 failures, got %v", err)
+	}
+}
+
+func TestServiceLoginClearOnSuccessResetsLockout(t *testing.T) {
+	// Use the tracker directly — the Login method calls Clear() on success,
+	// and RecordFailed() + Check() flow is already verified via
+	// TestServiceLoginLocksAfterConsecutiveFailures.
+	tracker := newInMemoryLoginTracker()
+	defer tracker.stop()
+	ctx := context.Background()
+
+	for i := 0; i < 3; i++ {
+		tracker.RecordFailed(ctx, "u@test")
+	}
+	tracker.Clear(ctx, "u@test")
+
+	// After clear, 5 fresh failures should be needed to lock again.
+	for i := 0; i < 5; i++ {
+		tracker.RecordFailed(ctx, "u@test")
+	}
+	if err := tracker.Check(ctx, "u@test"); !errors.Is(err, ErrAccountLocked) {
+		t.Fatalf("expected lock after clear+5 failures, got %v", err)
+	}
+}
+
 // --- Guest ---
 
 func TestServiceGuestHappyPath(t *testing.T) {
@@ -209,7 +301,7 @@ func TestServiceRefreshUsesCookieForWeb(t *testing.T) {
 		t.Fatalf("setup: %v", err)
 	}
 	// Now refresh using the token via web client
-	refreshed, err := svc.Refresh(RefreshTokenRequest{RefreshToken: result.RefreshToken, ClientType: ClientTypeApp}, "")
+	refreshed, err := svc.Refresh(context.Background(), RefreshTokenRequest{RefreshToken: result.RefreshToken, ClientType: ClientTypeApp}, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -220,7 +312,7 @@ func TestServiceRefreshUsesCookieForWeb(t *testing.T) {
 
 func TestServiceRefreshRejectsInvalidToken(t *testing.T) {
 	svc, _ := newTestService(&stubAuthRepo{})
-	_, err := svc.Refresh(RefreshTokenRequest{RefreshToken: "bad-token", ClientType: ClientTypeApp}, "")
+	_, err := svc.Refresh(context.Background(), RefreshTokenRequest{RefreshToken: "bad-token", ClientType: ClientTypeApp}, "")
 	if err == nil {
 		t.Fatal("expected error for invalid token")
 	}
@@ -429,7 +521,7 @@ func TestRevokeSessionClosesRealtimeConnection(t *testing.T) {
 	reg, _ := svc.Register(context.Background(), RegisterRequest{LoginID: "ws_revoke", Nickname: "test", Password: "pass123"}, defaultMeta())
 	sessionID := reg.Principal.SessionID
 	userID := reg.Principal.UserID
-	otherResult, _ := authSvc.IssueSession(userID)
+	otherResult, _ := authSvc.IssueSession(context.Background(), userID)
 	otherSessionID := otherResult.Principal.SessionID
 
 	hub := realtime.DefaultHub()

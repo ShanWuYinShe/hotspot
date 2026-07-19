@@ -95,7 +95,7 @@ func newMountedAdminRouter(t *testing.T) (http.Handler, func(string) string) {
 	router := chi.NewRouter()
 	module.Mount(router)
 	issueToken := func(userID string) string {
-		result, err := authService.IssueSession(userID)
+		result, err := authService.IssueSession(context.Background(), userID)
 		if err != nil {
 			t.Fatalf("issue session: %v", err)
 		}

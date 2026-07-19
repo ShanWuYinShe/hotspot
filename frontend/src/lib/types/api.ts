@@ -102,7 +102,6 @@ export interface Bounds {
 
 export interface MapViewport {
   bounds: Bounds;
-  zoom: number;
 }
 
 // ============================================================================
@@ -700,7 +699,11 @@ export interface MapHeatBreakdown {
 
 // 与 spec/api_spec_map.md 中的 MapHeatBucket 对齐
 export interface MapHeatBucket {
-  /** 聚合单元的代表坐标（例如行政区多边形的质心） */
+  /** S2 单元格的字符串 token（客户端视为不透明标识） */
+  cell_token: string;
+  /** 该单元格所在的 S2 level */
+  level: number;
+  /** 聚合单元的代表坐标（S2 单元格的中心点） */
   location: GeoPoint;
   /** 当前过滤条件下，该区域内参与统计实体的总数 */
   total_count: number;
@@ -1077,8 +1080,6 @@ export interface AdminTagItem {
   trend?: TagTrend;
   created_at: string;
 }
-
-export type AdminTagSortBy = 'usage_count_desc' | 'usage_count_asc' | 'created_at_desc';
 
 export interface SystemAnnouncementItem {
   announcement_id: string;

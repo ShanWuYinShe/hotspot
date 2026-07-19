@@ -7,26 +7,27 @@
     DialogHeader,
     DialogTitle
   } from '$lib/components/ui/dialog';
-  import Spinner from '$lib/components/common/spinner.svelte';
+	import Spinner from '$lib/components/common/spinner.svelte';
+	import { t } from '$lib/i18n';
 
-  interface Props {
-    open?: boolean;
-    title?: string;
-    description?: string;
-    confirmText?: string;
-    cancelText?: string;
-    variant?: 'default' | 'destructive';
-    loading?: boolean;
-    onconfirm?: () => void | Promise<void>;
-    oncancel?: () => void;
-  }
+	interface Props {
+	  open?: boolean;
+	  title?: string;
+	  description?: string;
+	  confirmText?: string;
+	  cancelText?: string;
+	  variant?: 'default' | 'destructive';
+	  loading?: boolean;
+	  onconfirm?: () => void | Promise<void>;
+	  oncancel?: () => void;
+	}
 
-  let {
-    open = $bindable(false),
-    title = '确认操作',
-    description = '确定要执行此操作吗？',
-    confirmText = '确认',
-    cancelText = '取消',
+	let {
+	  open = $bindable(false),
+	  title = t('confirm.title'),
+	  description = t('confirm.description'),
+	  confirmText = t('confirm.confirmText'),
+	  cancelText = t('confirm.cancelText'),
     variant = 'default',
     loading = false,
     onconfirm,

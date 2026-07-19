@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import { goto } from '$app/navigation';
-  import { authService } from '$lib/api/services';
-  import { isSuccess } from '$lib/api/client';
-  import { toast } from '$lib/stores/toast.svelte';
+	  import { page } from '$app/state';
+	  import { goto } from '$app/navigation';
+	  import { authService } from '$lib/api/services';
+	  import { isSuccess } from '$lib/api/client';
+	  import { toast } from '$lib/stores/toast.svelte';
+	  import { t } from '$lib/i18n';
   import { authStore } from '$lib/stores/auth.svelte';
   import { usersService } from '$lib/api/services';
   import { validateField } from '$lib/utils/form-validation';
@@ -67,12 +68,12 @@
       );
       if (response.code === 0) {
         step = 'reset';
-        toast.success('验证码已发送，请查收');
+        toast.success(t('resetPassword.codeSent'));
       } else {
-        toast.error(response.message || '发送验证码失败');
+        toast.error(response.message || t('resetPassword.sendCodeFailed'));
       }
     } catch {
-      toast.error('网络错误，请重试');
+      toast.error(t('resetPassword.networkError'));
     } finally {
       isLoading = false;
     }
@@ -111,10 +112,10 @@
         }
         step = 'done';
       } else {
-        toast.error(response.message || '重置密码失败');
+        toast.error(response.message || t('resetPassword.resetFailed'));
       }
     } catch {
-      toast.error('网络错误，请重试');
+      toast.error(t('resetPassword.networkError'));
     } finally {
       isLoading = false;
     }

@@ -9,54 +9,134 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"sync"
 
 	"hotspot/backend-go/internal/platform/config"
 )
 
 var ErrInvalidCursor = errors.New("cursor: invalid cursor")
 
-func Encode(namespace string, payload any) (string, error) {
+// Codec wraps an AES-GCM cipher derived from a single AuthTokenSecret and a
+// namespace, amortising the (relatively expensive) aes.NewCipher + GCM setup
+// across every cursor encode/decode call instead of rebuilding it per
+// request. The codec assumes AuthTokenSecret is load-once at process start
+// (which it is — env vars are not re-read after boot); if the secret ever
+// changes at runtime, callers must construct a fresh Codec.
+type Codec struct {
+	gcm        cipher.AEAD
+	nonceSize  int
+	renderOnce sync.Once
+	renderErr  error
+	// deriveKey returns the 32-byte AES key. Callers can swap this to keep
+	// a legacy key derivation (e.g. one that omitted a namespace salt).
+	deriveKey func() ([]byte, error)
+}
+
+// NewCodec returns a Codec bound to a specific namespace. The cipher is
+// built lazily on first use so that test code that never touches a cursor
+// does not pay the setup cost (and so any config-load error surfaces at the
+// first real call rather than at constructor time).
+func NewCodec(namespace string) *Codec {
+	return &Codec{deriveKey: func() ([]byte, error) {
+		secret := config.Load().AuthTokenSecret
+		if secret == "" {
+			secret = "dev-secret-change-me"
+		}
+		key := sha256.Sum256([]byte(namespace + ":" + secret))
+		return key[:], nil
+	}}
+}
+
+// NewCodecWithKey returns a Codec that derives its AES key from the supplied
+// function, allowing modules with an existing key derivation (e.g. one that
+// predates the namespace convention) to reuse the cached cipher without
+// changing the on-the-wire cursor format.
+func NewCodecWithKey(deriveKey func() ([]byte, error)) *Codec {
+	return &Codec{deriveKey: deriveKey}
+}
+
+// NewCodecWithSecret returns a Codec pinned to an explicit secret, useful
+// for tests that want deterministic cursors without depending on env state.
+func NewCodecWithSecret(namespace, secret string) *Codec {
+	return &Codec{deriveKey: func() ([]byte, error) {
+		key := sha256.Sum256([]byte(namespace + ":" + secret))
+		return key[:], nil
+	}}
+}
+
+func (c *Codec) ensure() error {
+	c.renderOnce.Do(func() {
+		key, err := c.deriveKey()
+		if err != nil {
+			c.renderErr = err
+			return
+		}
+		block, err := aes.NewCipher(key)
+		if err != nil {
+			c.renderErr = err
+			return
+		}
+		gcm, err := cipher.NewGCM(block)
+		if err != nil {
+			c.renderErr = err
+			return
+		}
+		c.gcm = gcm
+		c.nonceSize = gcm.NonceSize()
+	})
+	return c.renderErr
+}
+
+// Encode JSON-marshals payload, encrypts it with AES-GCM and returns the
+// base64-rawurl-encoded token. Errors are returned rather than swallowed.
+func (c *Codec) Encode(payload any) (string, error) {
+	if err := c.ensure(); err != nil {
+		return "", err
+	}
 	blob, err := json.Marshal(payload)
 	if err != nil {
 		return "", err
 	}
-	block, err := newBlock(namespace)
-	if err != nil {
-		return "", err
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return "", err
-	}
-	nonce := make([]byte, gcm.NonceSize())
+	nonce := make([]byte, c.nonceSize)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return "", err
 	}
-	sealed := gcm.Seal(nonce, nonce, blob, nil)
+	sealed := c.gcm.Seal(nonce, nonce, blob, nil)
 	return base64.RawURLEncoding.EncodeToString(sealed), nil
 }
 
-func Decode(namespace string, value string, out any) error {
+// EncodeString is a convenience wrapper for the common case of cursors that
+// carry a single opaque string. It does not JSON-wrap the input.
+func (c *Codec) EncodeString(value string) (string, error) {
+	if err := c.ensure(); err != nil {
+		return "", err
+	}
+	nonce := make([]byte, c.nonceSize)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+	sealed := c.gcm.Seal(nonce, nonce, []byte(value), nil)
+	return base64.RawURLEncoding.EncodeToString(sealed), nil
+}
+
+// Decode reverses Encode, writing the decrypted JSON into out. An empty
+// input returns nil (no cursor) without touching out.
+func (c *Codec) Decode(value string, out any) error {
 	if value == "" {
 		return nil
+	}
+	if err := c.ensure(); err != nil {
+		return ErrInvalidCursor
 	}
 	blob, err := base64.RawURLEncoding.DecodeString(value)
 	if err != nil {
 		return ErrInvalidCursor
 	}
-	block, err := newBlock(namespace)
-	if err != nil {
+	if len(blob) < c.nonceSize {
 		return ErrInvalidCursor
 	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return ErrInvalidCursor
-	}
-	if len(blob) < gcm.NonceSize() {
-		return ErrInvalidCursor
-	}
-	nonce, ciphertext := blob[:gcm.NonceSize()], blob[gcm.NonceSize():]
-	payload, err := gcm.Open(nil, nonce, ciphertext, nil)
+	nonce, ciphertext := blob[:c.nonceSize], blob[c.nonceSize:]
+	payload, err := c.gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		return ErrInvalidCursor
 	}
@@ -66,11 +146,54 @@ func Decode(namespace string, value string, out any) error {
 	return nil
 }
 
-func newBlock(namespace string) (cipher.Block, error) {
-	secret := config.Load().AuthTokenSecret
-	if secret == "" {
-		secret = "dev-secret-change-me"
+// DecodeString reverses EncodeString.
+func (c *Codec) DecodeString(value string) (string, error) {
+	if value == "" {
+		return "", nil
 	}
-	key := sha256.Sum256([]byte(namespace + ":" + secret))
-	return aes.NewCipher(key[:])
+	if err := c.ensure(); err != nil {
+		return "", ErrInvalidCursor
+	}
+	blob, err := base64.RawURLEncoding.DecodeString(value)
+	if err != nil {
+		return "", ErrInvalidCursor
+	}
+	if len(blob) < c.nonceSize {
+		return "", ErrInvalidCursor
+	}
+	nonce, ciphertext := blob[:c.nonceSize], blob[c.nonceSize:]
+	payload, err := c.gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return "", ErrInvalidCursor
+	}
+	return string(payload), nil
 }
+
+// codecCache memoises Codec instances by namespace so that the package-level
+// Encode/Decode helpers do not pay aes.NewCipher + cipher.NewGCM on every
+// call. Codecs build their cipher lazily on first use, so the cache itself
+// is cheap; the cost amortisation happens inside each Codec's sync.Once.
+var (
+	codecCacheMu sync.Mutex
+	codecCache   = map[string]*Codec{}
+)
+
+func codecFor(namespace string) *Codec {
+	codecCacheMu.Lock()
+	defer codecCacheMu.Unlock()
+	if c, ok := codecCache[namespace]; ok {
+		return c
+	}
+	c := NewCodec(namespace)
+	codecCache[namespace] = c
+	return c
+}
+
+func Encode(namespace string, payload any) (string, error) {
+	return codecFor(namespace).Encode(payload)
+}
+
+func Decode(namespace string, value string, out any) error {
+	return codecFor(namespace).Decode(value, out)
+}
+

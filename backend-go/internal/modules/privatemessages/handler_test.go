@@ -386,47 +386,51 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		assertPrivateMessageCode(t, markAllRR, 10600)
 	})
 
-	t.Run("update maps domain errors", func(t *testing.T) {
-		cases := []struct {
-			name string
-			err  error
-			code int
-		}{
-			{name: "not found", err: ErrMessageNotFound, code: 10300},
-			{name: "permission", err: ErrMessagePermissionDenied, code: 10200},
-			{name: "not editable", err: ErrMessageNotEditable, code: 10400},
-		}
-		for _, tc := range cases {
-			t.Run(tc.name, func(t *testing.T) {
-				handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{updateErr: tc.err}, &privateMessageUserStub{}))
-				req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"message_id":"pm_1","content":"updated"}`)))
-				rr := httptest.NewRecorder()
-				handler.Update(rr, req)
-				assertPrivateMessageCode(t, rr, tc.code)
+			t.Run("update maps domain errors", func(t *testing.T) {
+				idempotency.SetStore(idempotency.NewInMemoryStore())
+				cases := []struct {
+					name string
+					err  error
+					code int
+				}{
+					{name: "not found", err: ErrMessageNotFound, code: 10300},
+					{name: "permission", err: ErrMessagePermissionDenied, code: 10200},
+					{name: "not editable", err: ErrMessageNotEditable, code: 10400},
+				}
+				for _, tc := range cases {
+					t.Run(tc.name, func(t *testing.T) {
+						handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{updateErr: tc.err}, &privateMessageUserStub{}))
+						req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"message_id":"pm_1","content":"updated"}`)))
+						req.Header.Set("Idempotency-Key", "test_update_maps_"+strings.ReplaceAll(tc.name, " ", "_")+"_000000000")
+						rr := httptest.NewRecorder()
+						handler.Update(rr, req)
+						assertPrivateMessageCode(t, rr, tc.code)
+					})
+				}
 			})
-		}
-	})
 
-	t.Run("recall maps domain errors", func(t *testing.T) {
-		cases := []struct {
-			name string
-			err  error
-			code int
-		}{
-			{name: "not found", err: ErrMessageNotFound, code: 10300},
-			{name: "permission", err: ErrMessagePermissionDenied, code: 10200},
-			{name: "not recallable", err: ErrMessageNotRecallable, code: 10400},
-		}
-		for _, tc := range cases {
-			t.Run(tc.name, func(t *testing.T) {
-				handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{recallErr: tc.err}, &privateMessageUserStub{}))
-				req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/recall", strings.NewReader(`{"message_id":"pm_1"}`)))
-				rr := httptest.NewRecorder()
-				handler.Recall(rr, req)
-				assertPrivateMessageCode(t, rr, tc.code)
+			t.Run("recall maps domain errors", func(t *testing.T) {
+				idempotency.SetStore(idempotency.NewInMemoryStore())
+				cases := []struct {
+					name string
+					err  error
+					code int
+				}{
+					{name: "not found", err: ErrMessageNotFound, code: 10300},
+					{name: "permission", err: ErrMessagePermissionDenied, code: 10200},
+					{name: "not recallable", err: ErrMessageNotRecallable, code: 10400},
+				}
+				for _, tc := range cases {
+					t.Run(tc.name, func(t *testing.T) {
+						handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{recallErr: tc.err}, &privateMessageUserStub{}))
+						req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/recall", strings.NewReader(`{"message_id":"pm_1"}`)))
+						req.Header.Set("Idempotency-Key", "test_recall_maps_"+strings.ReplaceAll(tc.name, " ", "_")+"_000000000")
+						rr := httptest.NewRecorder()
+						handler.Recall(rr, req)
+						assertPrivateMessageCode(t, rr, tc.code)
+					})
+				}
 			})
-		}
-	})
 
 	t.Run("mark as read maps not found", func(t *testing.T) {
 		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{markErr: ErrMessageNotFound}, &privateMessageUserStub{}))

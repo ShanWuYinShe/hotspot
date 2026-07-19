@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { untrack } from 'svelte';
   import { dev } from '$app/environment';
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
-  import { t } from '$lib/i18n';
+	  import { t } from '$lib/i18n';
+	  import { copyShareUrl } from '$lib/utils/share';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { presenceStore } from '$lib/stores/presence.svelte';
@@ -82,14 +84,24 @@
   );
 
   const isMe = $derived(authStore.currentUserId === userInfo.user_id);
-  let isFollowing = $state(false);
+  // 外部关注状态(派生)+ pending 乐观覆盖(null=回落到外部值)。
+  // 旧实现用 $effect 写 isFollowing,父组件在 API 成功后重传同一 user 对象时,
+  // effect 会再次覆盖乐观值 → 按钮闪烁回退。改用派生层叠加避免该问题。
+  const externalIsFollowing = $derived(
+    ('relation' in user ? (user as UserItem).relation : undefined)?.is_following ?? false
+  );
+  let pendingFollowing = $state<boolean | null>(null);
+  // user_id 变化时清除 pending(切换到不同用户卡片)
+  $effect(() => {
+    const _id = userInfo.user_id;
+    untrack(() => {
+      pendingFollowing = null;
+    });
+    void _id;
+  });
+  const isFollowing = $derived(pendingFollowing !== null ? pendingFollowing : externalIsFollowing);
   let isFollowPending = $state(false);
   let isReporting = $state(false);
-
-  $effect(() => {
-    const relation = 'relation' in user ? (user as UserItem).relation : undefined;
-    isFollowing = relation?.is_following ?? false;
-  });
 
   function isInteractiveTarget(target: EventTarget | null): boolean {
     return target instanceof HTMLElement
@@ -138,19 +150,24 @@
       return;
     }
     if (isFollowPending) return;
+    const nextFollowing = !isFollowing;
+    pendingFollowing = nextFollowing; // 乐观覆盖
     isFollowPending = true;
     try {
-      const response = isFollowing
-        ? await usersService.unfollow({ user_id: userInfo.user_id })
-        : await usersService.follow({ user_id: userInfo.user_id, source: 'profile' });
+      const response = nextFollowing
+        ? await usersService.follow({ user_id: userInfo.user_id, source: 'profile' })
+        : await usersService.unfollow({ user_id: userInfo.user_id });
       if (!isSuccess(response)) {
-        toast.error(response.message || '操作失败');
+        toast.error(response.message || t('common.operationFailed'));
+        pendingFollowing = null; // 回退到外部值
         return;
       }
-      isFollowing = !isFollowing;
-      toast.success(isFollowing ? '关注成功' : '已取消关注');
+      // 成功:保留 pending 直到外部数据刷新接管(派生会自动反映新外部值;
+      // 若父组件未刷新,下次 user_id 切换或 relation 引用变化时也会清掉)
+      toast.success(nextFollowing ? t('userProfile.followSuccess') : t('userProfile.unfollowed'));
     } catch {
-      toast.error(isFollowing ? '取消关注失败' : '关注失败');
+      pendingFollowing = null; // 回退
+      toast.error(nextFollowing ? t('user.followFailed') : t('user.unfollowFailed'));
     } finally {
       isFollowPending = false;
     }
@@ -160,20 +177,19 @@
     e.preventDefault();
     e.stopPropagation();
     const shareData = {
-      title: `${userInfo.nickname} - HotSpot`,
-      text: `查看 ${userInfo.nickname} 的个人主页`,
+      title: t('user.shareTitle', { nickname: userInfo.nickname }),
+      text: t('user.shareText', { nickname: userInfo.nickname }),
       url: `${window.location.origin}/users/${userInfo.user_id}`
     };
     if (navigator.share) {
       try {
         await navigator.share(shareData);
       } catch (err) {
-        if ((err as Error).name !== 'AbortError' && dev) console.error('分享失败:', err);
+        if ((err as Error).name !== 'AbortError' && dev) console.error('Share failed:', err);
       }
-    } else {
-      await navigator.clipboard.writeText(shareData.url);
-      toast.success('链接已复制到剪贴板');
-    }
+	    } else {
+	      await copyShareUrl(shareData.url);
+	    }
   }
 
   async function handleReport(e: MouseEvent) {
@@ -237,7 +253,7 @@
             class="text-caption"
             style="color: {isOnline ? 'var(--semantic-online)' : 'var(--text-secondary)'}"
           >
-            {isOnline ? '在线' : '离线'}
+            {isOnline ? t('common.online') : t('user.offline')}
           </span>
           {#if displayTags.length > 0}
             <span class="text-xs" style="color: var(--text-secondary); opacity: 0.5">·</span>
@@ -320,7 +336,7 @@
                 {userInfo.nickname}
               </p>
               <p class="text-caption" style="color: var(--text-secondary); margin-top: 1px">
-                {isOnline ? '在线' : '离线'}
+                {isOnline ? t('common.online') : t('user.offline')}
               </p>
             </div>
           </div>
@@ -341,7 +357,7 @@
           </p>
         {:else if showBio}
           <p class="text-caption" style="color: var(--text-secondary); margin-top: 10px">
-            这个人很神秘，暂时还没有留下简介
+            {t('user.bioEmpty')}
           </p>
         {/if}
       </div>
@@ -479,7 +495,7 @@
           onclick={handleSendMessage}
         >
           <MessageCircle size={15} strokeWidth={1.5} />
-          <span class="text-meta">消息</span>
+          <span class="text-meta">{t('user.messageAction')}</span>
         </button>
         <div class="flex items-center gap-2">
           <FollowButton

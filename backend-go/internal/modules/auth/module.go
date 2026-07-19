@@ -19,6 +19,9 @@ type Module struct {
 func NewModule(cfg config.Config, factory *persistence.Factory, source appconfig.Source) *Module {
 	authService := platformauth.NewServiceWithPersistence(cfg, factory)
 	platformauth.SetDefaultService(authService)
+	// Wire the configured bcrypt cost once at startup. config.Validate() has
+	// already enforced the OWASP minimum by this point.
+	ConfigureHashingCost(cfg.BcryptCost)
 	repo := NewPersistenceRepository(factory)
 	service := NewServiceWithSource(authService, repo, cfg, source)
 	return &Module{handler: NewHandler(service)}

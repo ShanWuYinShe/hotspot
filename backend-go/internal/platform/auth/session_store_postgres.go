@@ -22,24 +22,24 @@ func NewPostgresSessionStore(factory *persistence.Factory, fallback SessionStore
 	return &PostgresSessionStore{factory: factory, fallback: fallback}
 }
 
-func (s *PostgresSessionStore) Save(session SessionRecord) error {
+func (s *PostgresSessionStore) Save(ctx context.Context, session SessionRecord) error {
 	queryable, ok := s.queryable()
 	if !ok {
-		return s.fallback.Save(session)
+		return s.fallback.Save(ctx, session)
 	}
-	return queryable.Exec(context.Background(), queryUpsertSession, session.SessionID, session.UserID, session.CreatedAt, session.LastActiveAt, session.RevokedAt, session.DeviceType, session.DeviceName, session.IPAddress, session.IPLocation)
+	return queryable.Exec(ctx, queryUpsertSession, session.SessionID, session.UserID, session.CreatedAt, session.LastActiveAt, session.RevokedAt, session.DeviceType, session.DeviceName, session.IPAddress, session.IPLocation)
 }
 
-func (s *PostgresSessionStore) Touch(sessionID string) error {
+func (s *PostgresSessionStore) Touch(ctx context.Context, sessionID string) error {
 	queryable, ok := s.queryable()
 	if !ok {
-		return s.fallback.Touch(sessionID)
+		return s.fallback.Touch(ctx, sessionID)
 	}
-	return queryable.Exec(context.Background(), queryTouchSession, sessionID)
+	return queryable.Exec(ctx, queryTouchSession, sessionID)
 }
 
-func (s *PostgresSessionStore) Revoke(sessionID string) (bool, error) {
-	record, ok, err := s.Get(sessionID)
+func (s *PostgresSessionStore) Revoke(ctx context.Context, sessionID string) (bool, error) {
+	record, ok, err := s.Get(ctx, sessionID)
 	if err != nil {
 		return false, err
 	}
@@ -48,16 +48,16 @@ func (s *PostgresSessionStore) Revoke(sessionID string) (bool, error) {
 	}
 	queryable, pg := s.queryable()
 	if !pg {
-		return s.fallback.Revoke(sessionID)
+		return s.fallback.Revoke(ctx, sessionID)
 	}
-	if err := queryable.Exec(context.Background(), queryRevokeSession, sessionID); err != nil {
+	if err := queryable.Exec(ctx, queryRevokeSession, sessionID); err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (s *PostgresSessionStore) RevokeOthers(userID, currentSessionID string) (int, error) {
-	items, err := s.ListActiveByUser(userID)
+func (s *PostgresSessionStore) RevokeOthers(ctx context.Context, userID, currentSessionID string) (int, error) {
+	items, err := s.ListActiveByUser(ctx, userID)
 	if err != nil {
 		return 0, err
 	}
@@ -73,22 +73,22 @@ func (s *PostgresSessionStore) RevokeOthers(userID, currentSessionID string) (in
 	}
 	queryable, ok := s.queryable()
 	if !ok {
-		return s.fallback.RevokeOthers(userID, currentSessionID)
+		return s.fallback.RevokeOthers(ctx, userID, currentSessionID)
 	}
-	if err := queryable.Exec(context.Background(), queryRevokeOtherSessions, userID, currentSessionID); err != nil {
+	if err := queryable.Exec(ctx, queryRevokeOtherSessions, userID, currentSessionID); err != nil {
 		return 0, err
 	}
 	return count, nil
 }
 
-func (s *PostgresSessionStore) Get(sessionID string) (SessionRecord, bool, error) {
+func (s *PostgresSessionStore) Get(ctx context.Context, sessionID string) (SessionRecord, bool, error) {
 	queryable, ok := s.queryable()
 	if !ok {
-		return s.fallback.Get(sessionID)
+		return s.fallback.Get(ctx, sessionID)
 	}
 	var record SessionRecord
 	var revokedAt *time.Time
-	if err := queryable.QueryRow(context.Background(), queryGetSession, sessionID).Scan(&record.SessionID, &record.UserID, &record.CreatedAt, &record.LastActiveAt, &revokedAt, &record.DeviceType, &record.DeviceName, &record.IPAddress, &record.IPLocation); err != nil {
+	if err := queryable.QueryRow(ctx, queryGetSession, sessionID).Scan(&record.SessionID, &record.UserID, &record.CreatedAt, &record.LastActiveAt, &revokedAt, &record.DeviceType, &record.DeviceName, &record.IPAddress, &record.IPLocation); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return SessionRecord{}, false, nil
 		}
@@ -98,12 +98,12 @@ func (s *PostgresSessionStore) Get(sessionID string) (SessionRecord, bool, error
 	return record, true, nil
 }
 
-func (s *PostgresSessionStore) ListActiveByUser(userID string) ([]SessionRecord, error) {
+func (s *PostgresSessionStore) ListActiveByUser(ctx context.Context, userID string) ([]SessionRecord, error) {
 	queryable, ok := s.queryable()
 	if !ok {
-		return s.fallback.ListActiveByUser(userID)
+		return s.fallback.ListActiveByUser(ctx, userID)
 	}
-	rows, err := queryable.Query(context.Background(), queryListActiveSessionsByUser, userID)
+	rows, err := queryable.Query(ctx, queryListActiveSessionsByUser, userID)
 	if err != nil {
 		return nil, err
 	}

@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { shareService } from '$lib/api/services';
-  import { isSuccess } from '$lib/api/client';
-  import { toast } from '$lib/stores/toast.svelte';
+	  import { shareService } from '$lib/api/services';
+	  import { isSuccess } from '$lib/api/client';
+	  import { toast } from '$lib/stores/toast.svelte';
+	  import { t } from '$lib/i18n';
+	  import { copyShareUrl } from '$lib/utils/share';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import Share2 from 'lucide-svelte/icons/share-2';
   import Copy from 'lucide-svelte/icons/copy';
@@ -31,21 +33,25 @@
   let shareCode = $state<string | null>(null);
   let shareUrl = $state<string | null>(null);
   let isCopied = $state(false);
+  let copiedResetTimer: ReturnType<typeof setTimeout> | null = null;
+
+  $effect(() => {
+    return () => {
+      if (copiedResetTimer) clearTimeout(copiedResetTimer);
+    };
+  });
 
   // 复制分享链接
-  async function copyToClipboard() {
-    if (!shareUrl) return;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      isCopied = true;
-      toast.success('分享链接已复制到剪贴板');
-      setTimeout(() => {
-        isCopied = false;
-      }, 2000);
-    } catch (err) {
-      toast.error('复制失败，请手动复制');
-    }
-  }
+	  async function copyToClipboard() {
+	    if (!shareUrl) return;
+	    isCopied = true;
+	    await copyShareUrl(shareUrl);
+	    if (copiedResetTimer) clearTimeout(copiedResetTimer);
+	    copiedResetTimer = setTimeout(() => {
+	      isCopied = false;
+	      copiedResetTimer = null;
+	    }, 2000);
+	  }
 
   // 提交创建分享
   async function handleSubmit() {
@@ -68,12 +74,12 @@
         const shareCreated = response.data;
         shareCode = shareCreated.share_code;
         shareUrl = `${window.location.origin}/share/${shareCreated.share_code}`;
-        toast.success('位置分享创建成功！');
-      } else {
-        toast.error('创建失败', response.message);
-      }
-    } catch (error) {
-      toast.error('网络错误', '请检查网络连接');
+	        toast.success(t('createShare.createSuccess'));
+	      } else {
+	        toast.error(t('createShare.createFailed'), response.message);
+	      }
+	    } catch (error) {
+	      toast.error(t('createShare.networkError'), '请检查网络连接');
     } finally {
       isSubmitting = false;
     }
@@ -86,6 +92,10 @@
       shareCode = null;
       shareUrl = null;
       isCopied = false;
+      if (copiedResetTimer) {
+        clearTimeout(copiedResetTimer);
+        copiedResetTimer = null;
+      }
 
       open = false;
       onClose?.();
@@ -108,10 +118,10 @@
           >
             <Share2 style="width: 20px; height: 20px; color: var(--brand);" />
           </div>
-          <div style="color: var(--text-primary);">分享此位置</div>
+          <div style="color: var(--text-primary);">{t('createShare.title')}</div>
         </DialogTitle>
         <DialogDescription style="color: var(--text-secondary);"
-          >生成分享链接，让朋友快速定位到这个区域</DialogDescription
+          >{t('createShare.description')}</DialogDescription
         >
       </DialogHeader>
 
@@ -129,7 +139,7 @@
             {locationName}
           </div>
           <div class="text-meta" style="color: var(--text-secondary)">
-            接收者将看到以此位置为中心的内容推荐。
+            {t('createShare.receiverSees')}
           </div>
         </div>
 
@@ -140,12 +150,12 @@
         >
           <p class="flex items-center gap-2" style="font-weight: 500; color: var(--brand);">
             <UsersRound style="width: 16px; height: 16px;" />
-            接收者可以
+            {t('createShare.receiverBenefits')}
           </p>
           <ul class="space-y-1.5" style="color: var(--text-secondary);">
-            <li>• 一键设置浏览锚点到这个位置</li>
-            <li>• 查看附近的人、群组和动态</li>
-            <li>• 开始探索这个区域的社交圈</li>
+            <li>• {t('createShare.benefit1')}</li>
+            <li>• {t('createShare.benefit2')}</li>
+            <li>• {t('createShare.benefit3')}</li>
           </ul>
         </div>
 
@@ -158,10 +168,10 @@
         >
           {#if isSubmitting}
             <Spinner size="md" class="mr-2" />
-            生成中...
+            {t('createShare.generating')}
           {:else}
             <Share2 class="mr-2 inline-block" style="width: 16px; height: 16px;" />
-            生成分享链接
+            {t('createShare.generateShare')}
           {/if}
         </button>
       </div>
@@ -175,10 +185,10 @@
           >
             <Check style="width: 20px; height: 20px; color: var(--success);" />
           </div>
-          <div>分享链接已生成！</div>
+          <div>{t('createShare.generatedTitle')}</div>
         </DialogTitle>
         <DialogDescription style="color: var(--text-secondary);"
-          >复制链接发送给朋友</DialogDescription
+          >{t('createShare.generatedDesc')}</DialogDescription
         >
       </DialogHeader>
 
@@ -189,7 +199,7 @@
           style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
         >
           <label for="share-link-url" class="text-meta" style="color: var(--text-secondary)"
-            >分享链接</label
+            >{t('createShare.shareLinkLabel')}</label
           >
           <div class="flex gap-2">
             <input
@@ -218,7 +228,7 @@
           style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn)"
           onclick={handleClose}
         >
-          完成
+          {t('createShare.done')}
         </button>
       </div>
     {/if}

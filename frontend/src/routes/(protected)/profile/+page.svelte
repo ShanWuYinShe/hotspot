@@ -14,6 +14,7 @@
   import MapPin from 'lucide-svelte/icons/map-pin';
   import Heart from 'lucide-svelte/icons/heart';
   import Share2 from 'lucide-svelte/icons/share-2';
+  import Plus from 'lucide-svelte/icons/plus';
   import Settings from 'lucide-svelte/icons/settings';
   import Pencil from 'lucide-svelte/icons/pencil';
   import Grid3X3 from 'lucide-svelte/icons/grid-3x3';
@@ -28,8 +29,9 @@
   import FileText from 'lucide-svelte/icons/file-text';
   import { platformStore } from '$lib/stores/platform.svelte';
   import { adminPermissionsStore } from '$lib/stores/admin-permissions.svelte';
-  import { t } from '$lib/i18n';
-  import { goto } from '$app/navigation';
+	  import { t } from '$lib/i18n';
+	  import { copyShareUrl } from '$lib/utils/share';
+	  import { goto } from '$app/navigation';
   import Avatar from '$lib/components/common/avatar.svelte';
   import SmartImage from '$lib/components/common/smart-image.svelte';
   import { mediaService } from '$lib/api/services';
@@ -60,6 +62,13 @@
   let isEditing = $state(false);
   let activeTab = $state<'posts' | 'liked' | 'saved'>('posts');
 
+  let savedResetTimer: ReturnType<typeof setTimeout> | null = null;
+  $effect(() => {
+    return () => {
+      if (savedResetTimer) clearTimeout(savedResetTimer);
+    };
+  });
+
   let nickname = $state('');
   let bio = $state('');
   let selectedInterestTags = $state<Set<string>>(new Set());
@@ -71,6 +80,8 @@
   let bannerUploading = $state(false);
   let bannerInputElement: HTMLInputElement | undefined = $state();
   let avatarInputElement: HTMLInputElement | undefined = $state();
+  // Free-form custom tag input — spec allows arbitrary string[] tags beyond the suggested list.
+  let customTagValue = $state('');
 
   function toggleInterestTag(t: string) {
     const next = new Set(selectedInterestTags);
@@ -80,6 +91,15 @@
       next.add(t);
     }
     selectedInterestTags = next;
+  }
+
+  function addCustomTag() {
+    const tag = customTagValue.trim();
+    if (!tag || selectedInterestTags.size >= MAX_INTEREST_TAGS || selectedInterestTags.has(tag)) return;
+    const next = new Set(selectedInterestTags);
+    next.add(tag);
+    selectedInterestTags = next;
+    customTagValue = '';
   }
 
   $effect(() => {
@@ -188,9 +208,11 @@
           authStore.setProfile(profile);
         }
         saved = true;
-        setTimeout(() => {
+        if (savedResetTimer) clearTimeout(savedResetTimer);
+        savedResetTimer = setTimeout(() => {
           saved = false;
           isEditing = false;
+          savedResetTimer = null;
         }, 800);
       } else {
         toast.error(response.message || t('profile.saveFailed'));
@@ -208,6 +230,26 @@
       bio = profile.bio ?? '';
     }
     isEditing = false;
+  }
+
+  // 分享个人主页:优先调用 Web Share API,不可用时退回复制链接到剪贴板。
+  // 非安全上下文或权限被拒时 writeText 会 reject,需捕获。
+  async function handleShareProfile() {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${profile?.nickname ?? 'HotSpot'} - HotSpot`,
+          url
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          toast.error(t('share.shareFailed'));
+        }
+      }
+      return;
+    }
+    await copyShareUrl(url);
   }
 
   async function handleBannerUpload(file: File) {
@@ -642,6 +684,29 @@
             </button>
           {/each}
         </div>
+        <!-- Free-form custom tag input (spec: tags is free-form string[], not just preset enum) -->
+        {#if selectedInterestTags.size < MAX_INTEREST_TAGS}
+          <div class="flex items-center gap-2">
+            <input
+              type="text"
+              bind:value={customTagValue}
+              placeholder={t('profile.customTagPlaceholder')}
+              maxlength={20}
+              class="flex-1 rounded-[var(--radius-md)] border px-3 py-1.5 text-body-sm"
+              style="border-color: var(--border-secondary); background: var(--bg-secondary); color: var(--text-primary);"
+              onkeydown={(e: KeyboardEvent) => e.key === 'Enter' && addCustomTag()}
+            />
+            <button
+              onclick={addCustomTag}
+              disabled={!customTagValue.trim() || selectedInterestTags.size >= MAX_INTEREST_TAGS}
+              class="flex items-center gap-1 rounded-[var(--radius-md)] px-3 py-1.5 text-body-sm transition-opacity disabled:opacity-40"
+              style="background: var(--brand); color: var(--text-on-accent);"
+            >
+              <Plus size={14} />
+              {t('profile.addTag')}
+            </button>
+          </div>
+        {/if}
       </div>
 
       <!-- Action buttons -->
@@ -697,6 +762,7 @@
             <button
               class="flex items-center justify-center rounded-full outline-none surface-flat"
               style="width: 36px; height: 36px;"
+              onclick={handleShareProfile}
               aria-label="分享个人主页"
             >
               <Share2 size={15} strokeWidth={1.5} color="var(--text-secondary)" />
@@ -805,6 +871,7 @@
             <button
               class="flex items-center justify-center rounded-full outline-none surface-flat"
               style="width: 38px; height: 38px;"
+              onclick={handleShareProfile}
               aria-label="分享个人主页"
             >
               <Share2 size={15} strokeWidth={1.5} color="var(--text-secondary)" />

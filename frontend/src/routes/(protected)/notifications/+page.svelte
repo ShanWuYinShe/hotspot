@@ -28,20 +28,29 @@
 
   type FilterKey = 'all' | 'like' | 'follow' | 'comment' | 'nearby';
 
-  const filterLabels: Record<FilterKey, string> = {
-    all: '全部',
-    like: '点赞',
-    follow: '关注',
-    comment: '评论',
-    nearby: '附近'
-  };
+  const filterLabels = $derived<Record<FilterKey, string>>({
+    all: t('notificationsPage.filterAll'),
+    like: t('notificationsPage.filterLike'),
+    follow: t('notificationsPage.filterFollow'),
+    comment: t('notificationsPage.filterComment'),
+    nearby: t('notificationsPage.filterNearby')
+  });
 
-  const filterToTypes: Record<FilterKey, NotificationType[] | null> = {
+  // Hoist constant type sets to module scope — they never change, so building fresh
+  // Set<NotificationType> instances on every derived re-evaluation is wasted work.
+  const LIKE_TYPES = new Set<NotificationType>(['moment_liked', 'comment_liked']);
+  const FOLLOW_TYPES = new Set<NotificationType>(['new_follower', 'mutual_follow']);
+  const COMMENT_TYPES = new Set<NotificationType>([
+    'moment_commented',
+    'comment_reply',
+    'mentioned'
+  ]);
+  const filterTypeSets: Record<FilterKey, Set<NotificationType> | null> = {
     all: null,
-    like: ['moment_liked', 'comment_liked'],
-    follow: ['new_follower', 'mutual_follow'],
-    comment: ['moment_commented', 'comment_reply', 'mentioned'],
-    nearby: []
+    like: LIKE_TYPES,
+    follow: FOLLOW_TYPES,
+    comment: COMMENT_TYPES,
+    nearby: new Set()
   };
 
   let activeFilter = $state<FilterKey>('all');
@@ -146,50 +155,65 @@
     }
   });
 
-  let filteredItems = $derived.by(() => {
-    if (activeFilter === 'all') return pagination.items;
-    const types = filterToTypes[activeFilter];
-    if (!types) return pagination.items;
-    const typeSet = new Set(types);
-    return pagination.items.filter((i) => typeSet.has(i.type));
-  });
-
-  let unreadGroup = $derived(filteredItems.filter((i) => !i.is_read));
-  let readGroup = $derived(filteredItems.filter((i) => i.is_read));
-
-  const overviewTiles = $derived.by(() => {
+  // 单次遍历产出所有派生视图：filtered / unread / read / overview / distribution。
+  // 旧实现 5 个 $derived 各遍历一次 pagination.items(~5N/重算)，且 distributionRows 每次
+  // rebuild 新 Set。合并后为 1N，常量 Set 已 hoist 到模块作用域。
+  // 保留 overview/distribution 内联用 t() —— 派生仍是响应式的，locale 切换会重算。
+  let notificationViews = $derived.by(() => {
     const items = pagination.items;
+    const filterSet = filterTypeSets[activeFilter];
+
+    const filtered: NotificationItem[] = [];
+    const unread: NotificationItem[] = [];
+    const read: NotificationItem[] = [];
+    let totalUnread = 0;
+    let distLike = 0;
+    let distFollow = 0;
+    let distComment = 0;
+
+    for (const item of items) {
+      if (filterSet && !filterSet.has(item.type)) continue;
+      filtered.push(item);
+      if (item.is_read) {
+        read.push(item);
+      } else {
+        unread.push(item);
+        totalUnread++;
+      }
+      if (LIKE_TYPES.has(item.type)) distLike++;
+      else if (FOLLOW_TYPES.has(item.type)) distFollow++;
+      else if (COMMENT_TYPES.has(item.type)) distComment++;
+    }
+
     const total = items.length;
-    const unread = items.filter((i) => !i.is_read).length;
-    return [
-      { label: '全部', value: String(total), color: 'var(--text-primary)', big: true },
-      { label: '未读', value: String(unread), color: 'var(--brand)', big: true },
+    const overview = [
+      { label: t('notificationsPage.tileTotal'), value: String(total), color: 'var(--text-primary)', big: true },
+      { label: t('notificationsPage.tileUnread'), value: String(totalUnread), color: 'var(--brand)', big: true },
       {
-        label: '当前筛选',
+        label: t('notificationsPage.tileCurrentFilter'),
         value: filterLabels[activeFilter],
         color: 'var(--text-primary)',
         big: false
       },
-      { label: '已读', value: String(total - unread), color: 'var(--text-secondary)', big: true }
+      { label: t('notificationsPage.tileRead'), value: String(total - totalUnread), color: 'var(--text-secondary)', big: true }
     ];
+
+    const system = total - distLike - distFollow - distComment;
+    const distribution = [
+      { label: t('notificationsPage.distributionLike'), value: distLike, color: 'var(--theme-error)' },
+      { label: t('notificationsPage.distributionFollow'), value: distFollow, color: 'var(--brand)' },
+      { label: t('notificationsPage.distributionComment'), value: distComment, color: 'var(--map-user)' },
+      { label: t('notificationsPage.distributionSystem'), value: system, color: 'var(--theme-warning)' }
+    ];
+
+    return { filtered, unread, read, overview, distribution };
   });
 
-  const distributionRows = $derived.by(() => {
-    const items = pagination.items;
-    const countOf = (s: Set<NotificationType>) => items.filter((i) => s.has(i.type)).length;
-    const like = countOf(new Set<NotificationType>(['moment_liked', 'comment_liked']));
-    const follow = countOf(new Set<NotificationType>(['new_follower', 'mutual_follow']));
-    const comment = countOf(
-      new Set<NotificationType>(['moment_commented', 'comment_reply', 'mentioned'])
-    );
-    const system = items.length - like - follow - comment;
-    return [
-      { label: '点赞', value: like, color: 'var(--theme-error)' },
-      { label: '关注', value: follow, color: 'var(--brand)' },
-      { label: '评论', value: comment, color: 'var(--map-user)' },
-      { label: '系统', value: system, color: 'var(--theme-warning)' }
-    ];
-  });
+  let filteredItems = $derived(notificationViews.filtered);
+  let unreadGroup = $derived(notificationViews.unread);
+  let readGroup = $derived(notificationViews.read);
+  const overviewTiles = $derived(notificationViews.overview);
+  const distributionRows = $derived(notificationViews.distribution);
 
   async function markAllRead() {
     await notificationStore.markAllAsRead();
@@ -330,7 +354,7 @@
 {#snippet overviewSidebar()}
   <!-- Overview stats -->
   <div class="surface-flat rounded-[var(--radius-lg)] p-4">
-    <span class="eyebrow">通知概览</span>
+    <span class="eyebrow">{t('notificationsPage.overviewTitle')}</span>
     <div class="grid grid-cols-2 gap-3 mt-3">
       {#each overviewTiles as tile (tile.label)}
         <div
@@ -359,7 +383,7 @@
 
   <!-- Type distribution -->
   <div class="surface-flat rounded-[var(--radius-lg)] p-4 mt-4">
-    <span class="eyebrow">类型分布</span>
+    <span class="eyebrow">{t('notificationsPage.distributionTitle')}</span>
     <div class="flex flex-col mt-3 gap-2.5">
       {#each distributionRows as row (row.label)}
         <div
@@ -405,7 +429,7 @@
               </h1>
               {#if notificationStore.unreadCount > 0}
                 <p class="text-meta mt-px" style="color: var(--text-secondary);">
-                  {notificationStore.unreadCount} 条未读
+                  {t('notificationsPage.unreadCount', { count: notificationStore.unreadCount })}
                 </p>
               {/if}
             </div>
@@ -466,7 +490,7 @@
                 class="text-xs uppercase mb-2 tracking-wider"
                 style="color: var(--text-secondary)"
               >
-                新消息
+                {t('notificationsPage.groupNew')}
               </p>
               {#each unreadGroup as item (item.notification_id)}
                 {@const locale = getLocale()}
@@ -495,6 +519,9 @@
                   <div class="min-w-0 flex-1">
                     <button
                       class="w-full text-left outline-none"
+                      aria-label={t('notificationsPage.notificationCardAria', {
+                        title: getNotificationTitle(item, locale)
+                      })}
                       onclick={() => handleNotificationClick(item)}
                     >
                       <div
@@ -568,7 +595,7 @@
                   class="text-xs uppercase mt-4 mb-2 tracking-wider"
                   style="color: var(--text-secondary)"
                 >
-                  较早
+                  {t('notificationsPage.groupEarlier')}
                 </p>
               {/if}
             {/if}
@@ -598,6 +625,9 @@
                 <div class="min-w-0 flex-1">
                   <button
                     class="w-full text-left outline-none"
+                    aria-label={t('notificationsPage.notificationCardReadAria', {
+                      title: getNotificationTitle(item, locale)
+                    })}
                     onclick={() => handleNotificationClick(item)}
                   >
                     <div

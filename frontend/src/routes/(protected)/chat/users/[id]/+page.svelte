@@ -10,7 +10,7 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import { messageStore } from '$lib/stores/message.svelte';
   import { toast } from '$lib/stores/toast.svelte';
-  import { t } from '$lib/i18n';
+  import { t, getLocale } from '$lib/i18n';
   import { websocketStore, eventHandlers } from '$lib/websocket';
   import type { PrivateMessageNewPayload } from '$lib/websocket/types';
   import { useBatchMarkRead } from '$lib/hooks/use-batch-mark-read.svelte';
@@ -193,7 +193,10 @@
 
   function formatTime(dateStr: string): string {
     const date = new Date(dateStr);
-    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString(getLocale() === 'en' ? 'en-US' : 'zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   function isSelf(message: PrivateMessageItem): boolean {
@@ -601,7 +604,11 @@
           ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
           : 'color: var(--text-secondary);'}"
         onclick={sendMessage}
-        onmousedown={(e) => e.preventDefault()}
+        onmousedown={(e) => {
+          // 仅在 textarea 正在输入时阻止默认行为(避免鼠标点击 send 抢走输入框焦点);
+          // 键盘 Tab 聚焦到按钮时不再被阻止,焦点环正常显示。
+          if (document.activeElement instanceof HTMLTextAreaElement) e.preventDefault();
+        }}
         disabled={!messageText.trim() || isSending}
         aria-label={t('chat.sendAria')}
       >

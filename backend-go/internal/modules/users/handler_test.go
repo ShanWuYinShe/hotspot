@@ -78,6 +78,9 @@ func (invalidCursorRepo) ListLikedMoments(context.Context, string, int, string, 
 func (invalidCursorRepo) Relationship(context.Context, string, string) (Relationship, error) {
 	return Relationship{}, nil
 }
+func (invalidCursorRepo) RelationshipBatch(context.Context, string, []string) (map[string]Relationship, error) {
+	return map[string]Relationship{}, nil
+}
 func (invalidCursorRepo) ListFriends(context.Context, string, int, string) (PaginatedFriends, error) {
 	return PaginatedFriends{}, nil
 }
@@ -132,6 +135,9 @@ func (r *userErrorRepo) ListLikedMoments(context.Context, string, int, string, s
 }
 func (r *userErrorRepo) Relationship(context.Context, string, string) (Relationship, error) {
 	return Relationship{}, r.relErr
+}
+func (r *userErrorRepo) RelationshipBatch(context.Context, string, []string) (map[string]Relationship, error) {
+	return nil, r.relErr
 }
 func (r *userErrorRepo) ListFriends(context.Context, string, int, string) (PaginatedFriends, error) {
 	return PaginatedFriends{}, r.listBlockedErr

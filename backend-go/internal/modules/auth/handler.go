@@ -21,6 +21,14 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+func logServerError(r *http.Request, method string, err error) {
+	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
+}
+
+func logBusinessError(r *http.Request, method string, code int, message string) {
+	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
+}
+
 func (h *Handler) CheckStatus(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
@@ -73,26 +81,17 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	result, err := h.service.Login(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
-	if err != nil {
-		apiErr := apiErrorFrom(err)
-		if apiErr.Code == 10600 {
-			observability.L().Error("handler error",
-				"method", "Login",
-				"error", err,
-				"request_id", observability.RequestIDFromContext(r.Context()),
-			)
-		} else {
-			observability.L().Warn("handler business error",
-				"method", "Login",
-				"code", apiErr.Code,
-				"message", apiErr.Message,
-				"request_id", observability.RequestIDFromContext(r.Context()),
-			)
+		result, err := h.service.Login(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
+		if err != nil {
+			apiErr := apiErrorFrom(err)
+			if apiErr.Code == 10600 {
+				logServerError(r, "Login", err)
+			} else {
+				logBusinessError(r, "Login", apiErr.Code, apiErr.Message)
+			}
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
+			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
-		return
-	}
 	h.writeAuthSuccess(w, req.ClientType, result)
 }
 
@@ -152,16 +151,12 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	if cookie, err := r.Cookie(platformauth.RefreshTokenCookieName); err == nil {
 		refreshCookie = cookie.Value
 	}
-	result, err := h.service.Refresh(req, refreshCookie)
-	if err != nil {
-		observability.L().Warn("handler business error",
-			"method", "RefreshToken",
-			"error", err,
-			"request_id", observability.RequestIDFromContext(r.Context()),
-		)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10100, "Refresh Token 无效或过期"))
-		return
-	}
+		result, err := h.service.Refresh(r.Context(), req, refreshCookie)
+		if err != nil {
+			logBusinessError(r, "RefreshToken", 10100, "Refresh Token 无效或过期")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10100, "Refresh Token 无效或过期"))
+			return
+		}
 	if req.ClientType == ClientTypeWeb {
 		platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour)
 		payload := AuthTokenPairWeb{}
@@ -300,7 +295,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	principal, ok := platformauth.PrincipalFromContext(r.Context())
 	if ok {
-		_ = h.service.auth.RevokeSession(principal.UserID, principal.SessionID, principal.SessionID)
+		_ = h.service.auth.RevokeSession(r.Context(), principal.UserID, principal.SessionID, principal.SessionID)
 		realtime.DefaultHub().CloseSession(principal.SessionID, sessionRevokedEvent())
 	}
 	platformauth.ClearAuthCookies(w)
@@ -329,9 +324,6 @@ func authSuccessApp(result platformauth.AuthResult) httpx.ApiResponse[AuthTokenP
 func errorResponse[T any](apiErr *httpx.APIError) httpx.ApiResponse[T] {
 	if apiErr == nil {
 		apiErr = &httpx.APIError{Code: 10600, Message: "服务暂时不可用"}
-	}
-	if apiErr.Code == 10600 {
-		observability.L().Error("handler error", "code", apiErr.Code, "message", apiErr.Message)
 	}
 	return httpx.ApiResponse[T]{Code: apiErr.Code, Message: apiErr.Message}
 }

@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { adminGroupsService } from '$lib/api/services';
-  import { isSuccess } from '$lib/api/client';
-  import { toast } from '$lib/stores/toast.svelte';
+	  import { onMount } from 'svelte';
+	  import { adminGroupsService } from '$lib/api/services';
+	  import { isSuccess } from '$lib/api/client';
+	  import { toast } from '$lib/stores/toast.svelte';
+	  import { t } from '$lib/i18n';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import ConfirmDialog from '$lib/components/common/confirm-dialog.svelte';
@@ -53,13 +54,13 @@
       });
       if (isSuccess(response)) {
         const dissolvedId = pendingDissolveId;
-        pagination.removeItem((g) => g.group.group_id === dissolvedId);
-        toast.success('已解散群组');
-      } else {
-        toast.error(response.message || '操作失败');
-      }
-    } catch {
-      toast.error('操作失败');
+	        pagination.removeItem((g) => g.group.group_id === dissolvedId);
+	        toast.success(t('admin.groupDismissed'));
+	      } else {
+	        toast.error(response.message || t('admin.operationFailed'));
+	      }
+	    } catch {
+	      toast.error(t('admin.operationFailed'));
     } finally {
       pendingDissolveId = null;
     }

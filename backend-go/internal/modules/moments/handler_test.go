@@ -439,6 +439,7 @@ func TestDeleteMomentReturns10200WhenPermissionDenied(t *testing.T) {
 	}
 
 	deleteReq := httptest.NewRequest(http.MethodPost, "/delete", strings.NewReader(`{"moment_id":"`+created.MomentID+`"}`))
+	deleteReq.Header.Set("Idempotency-Key", "delete_perm_denied_moments_ggggggg")
 	deleteReq = deleteReq.WithContext(ctxOther)
 	deleteRR := httptest.NewRecorder()
 	handler.Delete(deleteRR, deleteReq)
@@ -771,6 +772,7 @@ func TestCreateMomentRejectsZeroLocation(t *testing.T) {
 func TestMomentHandlerUpdateRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
 	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{invalid`))
+	req.Header.Set("Idempotency-Key", "update_invalid_json_moments_aaaaaa")
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
 	assertMomentCode(t, rr, 10000)
@@ -779,6 +781,7 @@ func TestMomentHandlerUpdateRejectsInvalidJSON(t *testing.T) {
 func TestMomentHandlerUpdateRejectsMissingMomentID(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
 	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"description":"new"}`))
+	req.Header.Set("Idempotency-Key", "update_no_moment_id_moments_bbbbbb")
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
 	assertMomentCode(t, rr, 10000)
@@ -799,6 +802,7 @@ func TestMomentHandlerUpdateReturnsSuccess(t *testing.T) {
 
 	newDesc := "updated"
 	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"moment_id":"`+created.MomentID+`","description":"`+newDesc+`"}`))
+	req.Header.Set("Idempotency-Key", "update_success_moments_ccccccccccc")
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
@@ -823,6 +827,7 @@ func TestMomentHandlerUpdateReturns10600OnError(t *testing.T) {
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
 	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"moment_id":"any_moment","description":"x"}`))
+	req.Header.Set("Idempotency-Key", "update_error_moments_ddddddddddddd")
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
@@ -833,6 +838,7 @@ func TestMomentHandlerUpdateReturns10600OnError(t *testing.T) {
 func TestMomentHandlerDeleteRejectsMissingMomentID(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
 	req := httptest.NewRequest(http.MethodPost, "/delete", strings.NewReader(`{}`))
+	req.Header.Set("Idempotency-Key", "delete_no_moment_id_moments_eeeeee")
 	rr := httptest.NewRecorder()
 	handler.Delete(rr, req)
 	assertMomentCode(t, rr, 10000)
@@ -849,6 +855,7 @@ func TestMomentHandlerDeleteReturnsSuccess(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "/delete", strings.NewReader(`{"moment_id":"`+created.MomentID+`"}`))
+	req.Header.Set("Idempotency-Key", "delete_success_moments_fffffffffff")
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Delete(rr, req)

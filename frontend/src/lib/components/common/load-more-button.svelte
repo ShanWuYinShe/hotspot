@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import Spinner from '$lib/components/common/spinner.svelte';
   import ArrowDown from 'lucide-svelte/icons/arrow-down';
   import { t } from '$lib/i18n';
@@ -14,21 +15,25 @@
   let { loading, hasMore, onLoadMore, class: className = '', infinite = true }: Props = $props();
 
   let viewport: HTMLDivElement | undefined = $state();
-  let wasIntersecting = $state(false);
 
+  // 仅依赖 hasMore / infinite / viewport:这些真正决定是否需要观察。
+  // loading 通过 untrack 在回调内读取,避免每次加载翻转时重建 IntersectionObserver
+  // (旧实现还额外维护 wasIntersecting 状态,导致"只触发一次"的 bug——
+  // IntersectionObserver 默认只在进入/离开时回调,不需要状态去重)。
   $effect(() => {
     if (!infinite || !hasMore || !viewport) return;
+    const node = viewport;
     const observer = new IntersectionObserver(
       (entries) => {
         const isIntersecting = entries[0]?.isIntersecting ?? false;
-        if (isIntersecting && !wasIntersecting && !loading) {
-          onLoadMore();
-        }
-        wasIntersecting = isIntersecting;
+        if (!isIntersecting) return;
+        untrack(() => {
+          if (!loading) onLoadMore();
+        });
       },
       { rootMargin: '400px' }
     );
-    observer.observe(viewport);
+    observer.observe(node);
     return () => {
       observer.disconnect();
     };

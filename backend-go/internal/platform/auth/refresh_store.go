@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -23,21 +24,21 @@ func NewRefreshStore() *RefreshStore {
 	return &RefreshStore{items: make(map[string]RefreshSession)}
 }
 
-func (s *RefreshStore) Save(session RefreshSession) error {
+func (s *RefreshStore) Save(_ context.Context, session RefreshSession) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.items[session.RefreshToken] = session
 	return nil
 }
 
-func (s *RefreshStore) Get(token string) (RefreshSession, bool, error) {
+func (s *RefreshStore) Get(_ context.Context, token string) (RefreshSession, bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	session, ok := s.items[token]
 	return session, ok, nil
 }
 
-func (s *RefreshStore) Rotate(oldToken string, current RefreshSession, next RefreshSession) error {
+func (s *RefreshStore) Rotate(_ context.Context, oldToken string, current RefreshSession, next RefreshSession) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	current.RotatedTo = next.RefreshToken

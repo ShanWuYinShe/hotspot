@@ -147,6 +147,7 @@ func TestAppRouterServesWSV1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	t.Cleanup(app.Shutdown)
 	// Use HTTP request to /ws/v1 - WebSocket upgrade requires specific headers,
 	// so we just verify the route exists and does not return 404.
 	req := httptest.NewRequest(http.MethodGet, "/ws/v1", nil)

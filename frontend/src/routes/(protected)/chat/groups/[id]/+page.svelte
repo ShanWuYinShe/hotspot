@@ -9,7 +9,7 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import { messageStore } from '$lib/stores/message.svelte';
   import { toast } from '$lib/stores/toast.svelte';
-  import { t } from '$lib/i18n';
+  import { t, getLocale } from '$lib/i18n';
   import { websocketStore, eventHandlers } from '$lib/websocket';
   import type { GroupMessageNewPayload } from '$lib/websocket/types';
   import { useBatchMarkRead } from '$lib/hooks/use-batch-mark-read.svelte';
@@ -115,7 +115,7 @@
       .slice(0, GROUP_TYPING_NAME_PREVIEW_LIMIT)
       .map((id) => resolveGroupTypingDisplayName(id));
     if (count === 1) {
-      return t('chat.typing', { name: previewNames[0] });
+      return t('chat.typing', { name: previewNames[0] ?? '' });
     }
     if (count <= GROUP_TYPING_NAME_PREVIEW_LIMIT) {
       return t('chat.typingMany', { names: previewNames.join('、') });
@@ -295,7 +295,11 @@
       return t('chat.yesterday');
     }
 
-    return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+    return date.toLocaleDateString(getLocale() === 'en' ? 'en-US' : 'zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   }
 
   function isSelf(message: GroupMessageItem): boolean {
@@ -435,7 +439,10 @@
           const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
           const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
           if (isNearBottom) {
-            setTimeout(() => scrollToBottom(true), 100);
+            // 100ms 后平滑滚到底;组件若已卸载则跳过(isMounted 在 $effect cleanup 中置 false)
+            setTimeout(() => {
+              if (isMounted) scrollToBottom(true);
+            }, 100);
           }
         }
       }
@@ -811,7 +818,7 @@
 
                   {#if showAvatar}
                     <span class="text-xs px-3" style="color: var(--text-secondary); opacity: 0.6">
-                      {new Date(message.sent_at).toLocaleTimeString('zh-CN', {
+                      {new Date(message.sent_at).toLocaleTimeString(getLocale() === 'en' ? 'en-US' : 'zh-CN', {
                         hour: '2-digit',
                         minute: '2-digit'
                       })}
@@ -915,7 +922,11 @@
             ? 'background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);'
             : 'background: var(--surface-bg); color: var(--text-secondary); border: 1px solid var(--border-theme);'}"
           onclick={sendMessage}
-          onmousedown={(e) => e.preventDefault()}
+          onmousedown={(e) => {
+            // 仅在 textarea 正在输入时阻止默认行为(避免鼠标点击 send 抢走输入框焦点);
+            // 键盘 Tab 聚焦到按钮时不再被阻止,焦点环正常显示。
+            if (document.activeElement instanceof HTMLTextAreaElement) e.preventDefault();
+          }}
           disabled={!messageText.trim() || isSending}
           aria-label={t('chat.sendAria')}
         >

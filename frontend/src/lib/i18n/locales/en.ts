@@ -100,14 +100,17 @@ export default {
     hoursAgo: '{count}h ago',
     daysAgo: '{count}d ago'
   },
-  home: {
-    title: "HotSpot - Discover What's Nearby",
-    discoverNearbyPeopleAndThings: 'Discover interesting people and things nearby',
-    posts: ' posts',
-    nearbyActivity: 'Nearby Activity',
-    realtimeNearby: 'Live Nearby',
-    rangeWithin: 'range · live updates'
-  },
+	  home: {
+	    title: "HotSpot - Discover What's Nearby",
+	    discoverNearbyPeopleAndThings: 'Discover interesting people and things nearby',
+	    posts: ' posts',
+	    nearbyActivity: 'Nearby Activity',
+	    realtimeNearby: 'Live Nearby',
+	    rangeWithin: 'range · live updates',
+	    loadFailed: 'Failed to load, please try again later',
+	    emptyTitle: 'No other users nearby',
+	    emptyDesc: 'Try a different location or check back later.'
+	  },
   errorPage: {
     notFound: 'The page you are looking for could not be found',
     defaultMessage: 'Something went wrong on this page',
@@ -192,7 +195,30 @@ export default {
     applicationApproveFailed: 'Failed to approve request',
     applicationRejectFailed: 'Failed to reject request',
     applicationApproved: 'Group join request approved',
-    applicationRejected: 'Group join request rejected'
+    applicationRejected: 'Group join request rejected',
+    filterAll: 'All',
+    filterLike: 'Likes',
+    filterFollow: 'Follows',
+    filterComment: 'Comments',
+    filterNearby: 'Nearby',
+    overviewTitle: 'Notification overview',
+    distributionTitle: 'Type breakdown',
+    tileTotal: 'Total',
+    tileUnread: 'Unread',
+    tileCurrentFilter: 'Current filter',
+    tileRead: 'Read',
+    distributionLike: 'Likes',
+    distributionFollow: 'Follows',
+    distributionComment: 'Comments',
+    distributionSystem: 'System',
+    unreadCount: '{count} unread',
+    groupNew: 'New',
+    groupEarlier: 'Earlier',
+    // a11y: the card button needs an accessible name (title text is wrapped in inline
+    // spans, so SRs read the button container rather than a semantic name). The
+    // aria-label composes "title + read/unread state" into an audible phrase.
+    notificationCardAria: '{title}, unread',
+    notificationCardReadAria: '{title}, read'
   },
   settings: {
     title: 'Settings',
@@ -411,9 +437,27 @@ export default {
     serviceApi: 'API service',
     serviceDb: 'Database',
     serviceCache: 'Cache service',
-    statusNormal: 'Healthy',
-    statusAbnormal: 'Unhealthy',
-    statusChecking: 'Checking...'
+	    statusNormal: 'Healthy',
+	    statusAbnormal: 'Unhealthy',
+	    statusChecking: 'Checking...',
+	    loadFailed: 'Failed to load',
+	    roleNameRequired: 'Please fill in the role name',
+	    updateSuccess: 'Updated successfully',
+	    updateFailed: 'Failed to update',
+	    createSuccess: 'Created successfully',
+	    createFailed: 'Failed to create',
+	    deleted: 'Deleted',
+	    deleteFailed: 'Failed to delete',
+	    configLoadFailed: 'Failed to load configuration',
+	    configSaved: 'Configuration saved',
+	    saveFailed: 'Failed to save',
+	    fillAllFields: 'Please fill in all fields',
+	    groupDismissed: 'Group dismissed',
+	    banned: 'Banned',
+	    unbanned: 'Unbanned',
+	    handled: 'Handled',
+	    rejected: 'Rejected',
+	    operationFailed: 'Operation failed'
   },
   websocket: {
     groupInviteAccepted: '{nickname} accepted the group invitation',
@@ -442,14 +486,29 @@ export default {
     fieldMaxMembers: 'member limit',
     fieldPassword: 'password settings',
     fieldLocation: 'location',
-    permanent: 'permanent',
-    dayUnit: '{count} days'
-  },
+	    permanent: 'permanent',
+	    dayUnit: '{count} days',
+	    sessionExpired: 'Session expired. Please sign in again.',
+	    connectionFailed: 'Connection failed. Please check your network and try again.',
+	    reconnecting: 'Connection unstable. Retrying...'
+	  },
   discover: {
     hot: 'Hot',
     nearby: 'Nearby',
     following: 'Following',
     title: 'Discover',
+    pageTitle: 'Discover - HotSpot',
+    contentCount: '{count} posts',
+    searchAria: 'Search discover',
+    searchPlaceholder: 'Places, people, keywords…',
+    emptyTitle: 'Nothing here yet',
+    emptyDescTag: 'No posts under #{tag} yet. Try another tag or keyword.',
+    emptyDesc: 'No moments nearby yet. Try another tag or keyword.',
+    trendingTopics: 'Trending topics',
+    trendingPostsSuffix: 'posts',
+    noTrendingTopics: 'No trending topics',
+    activeUsers: 'Active users',
+    noActiveUsers: 'No active users nearby yet',
     loadFailed: 'Failed to load',
     noMoments: 'No moments',
     noMomentsDesc: 'No moments nearby yet. Be the first to post!',
@@ -549,6 +608,8 @@ export default {
     bioFieldPlaceholder: 'Tell us about yourself...',
     locationFieldLabel: 'Location',
     interestTagsLabel: 'Interest tags',
+    customTagPlaceholder: 'Type a custom tag...',
+    addTag: 'Add',
     tabPosts: 'Posts',
     tabLiked: 'Liked',
     tabSaved: 'Saved',
@@ -1005,7 +1066,35 @@ export default {
     commentDeleted: 'Comment deleted',
     deleteFailed: 'Failed to delete'
   },
-  createMoment: {
+	  createGroup: {
+	    tagLimit: 'Up to {max} tags',
+	    tagLengthLimit: 'Tag length must be 1-{max} characters',
+	    locationRequired: 'Please select a group location',
+	    locationNameMax: 'Location name must be at most {max} characters',
+	    created: 'Group created',
+	    createFailed: 'Failed to create'
+	  },
+	  createShare: {
+	    linkCopied: 'Share link copied to clipboard',
+	    copyFailed: 'Copy failed, please copy manually',
+	    createSuccess: 'Location share created!',
+	    createFailed: 'Failed to create',
+	    networkError: 'Network error, please check your connection',
+	    title: 'Share this location',
+	    description: 'Generate a share link for friends to quickly locate this area',
+	    receiverSees: 'Recipients will see content centered on this location.',
+	    receiverBenefits: 'Recipients can',
+	    benefit1: 'Set browse anchor to this location in one tap',
+	    benefit2: 'View nearby people, groups, and moments',
+	    benefit3: 'Start exploring the social circle in this area',
+	    generating: 'Generating...',
+	    generateShare: 'Generate share link',
+	    generatedTitle: 'Share link generated!',
+	    generatedDesc: 'Copy the link and send it to friends',
+	    shareLinkLabel: 'Share link',
+	    done: 'Done'
+	  },
+	  createMoment: {
     titleCreate: 'Post a moment',
     titleEdit: 'Edit moment',
     subtitleCreate: 'Share a moment from your life',
@@ -1048,28 +1137,84 @@ export default {
     momentUpdated: 'Moment updated',
     momentPublished: 'Moment posted'
   },
-  share: {
-    titleExplore: 'Explore a new area',
-    loadFailed: 'Unable to load share',
-    notExist: 'This share does not exist or has been deleted',
-    backHome: 'Back to home',
-    sharedLocation: 'shared this location',
-    setAsAnchor: 'Set as browse anchor',
-    willSeeTitle: 'After setting it you will see',
-    willSeePeople: 'People near this area',
-    willSeeGroups: 'Nearby groups and active communities in this area',
-    willSeeMoments: 'Latest moments and highlights in this area',
-    locationNote: 'Location note',
-    locationNoteDesc: 'Browse and discover content centered on "{name}".',
-    shareToFriend: 'Share with friends',
-    otherShareTitle: 'Shared content',
-    shareTypeLabel: 'Share type: {type}',
-    typeUser: 'User',
-    typeGroup: 'Group',
-    typeMoment: 'Moment',
-    viewNow: 'View now',
-    linkCopied: 'Share link copied to clipboard',
-    copyFailed: 'Copy failed. Please copy manually.',
-    anchorUpdated: 'Browse anchor updated!'
-  }
-} as const;
+  searchPage: {
+    searchFailed: 'Search failed. Please try again later.',
+    clear: 'Clear'
+  },
+  moment: {
+    shareTitle: "{nickname}'s moment",
+    imageAlt: 'Moment image',
+    viewMomentAria: "View {nickname}'s moment",
+    viewProfileAria: "View {nickname}'s profile",
+    dismissAria: 'Not interested',
+    previewImageAria: 'Preview image',
+    tagsAria: 'Moment tags',
+    viewCommentsAria: 'View comments',
+    saveAria: 'Save',
+    unsaveAria: 'Unsave',
+    shareFailed: 'Failed to share',
+    dismissed: 'Marked as not interested'
+  },
+  imagePreview: {
+    closeAria: 'Close preview',
+    prevAria: 'Previous image',
+    nextAria: 'Next image'
+  },
+  user: {
+    shareTitle: '{nickname} - HotSpot',
+    shareText: "Check out {nickname}'s profile",
+    followFailed: 'Failed to follow',
+    unfollowFailed: 'Failed to unfollow',
+    offline: 'Offline',
+    bioEmpty: "This person hasn't added a bio yet",
+    messageAction: 'Message'
+  },
+  group: {
+    shareTitle: '{name} - HotSpot',
+    shareText: 'Join the {name} group',
+    joinFailed: 'Failed to join group',
+    joinPending: 'Join request submitted. Waiting for admin approval.',
+    joinSuccess: 'Joined group',
+    descEmpty: 'No description has been added yet',
+    joining: 'Joining',
+    enterChat: 'Open chat',
+    joinAction: 'Join group'
+  },
+	  share: {
+	    titleExplore: 'Explore a new area',
+	    loadFailed: 'Unable to load share',
+	    notExist: 'This share does not exist or has been deleted',
+	    backHome: 'Back to home',
+	    sharedLocation: 'shared this location',
+	    setAsAnchor: 'Set as browse anchor',
+	    willSeeTitle: 'After setting it you will see',
+	    willSeePeople: 'People near this area',
+	    willSeeGroups: 'Nearby groups and active communities in this area',
+	    willSeeMoments: 'Latest moments and highlights in this area',
+	    locationNote: 'Location note',
+	    locationNoteDesc: 'Browse and discover content centered on "{name}".',
+	    shareToFriend: 'Share with friends',
+	    otherShareTitle: 'Shared content',
+	    shareTypeLabel: 'Share type: {type}',
+	    typeUser: 'User',
+	    typeGroup: 'Group',
+	    typeMoment: 'Moment',
+	    viewNow: 'View now',
+	    linkCopied: 'Share link copied to clipboard',
+	    copyFailed: 'Copy failed. Please copy manually.',
+	    anchorUpdated: 'Browse anchor updated!',
+	    shareFailed: 'Failed to share'
+	  },
+	  confirm: {
+	    title: 'Confirm',
+	    description: 'Are you sure you want to do this?',
+	    confirmText: 'Confirm',
+	    cancelText: 'Cancel'
+	  },
+	  resetPassword: {
+	    codeSent: 'Verification code sent. Please check your messages.',
+	    sendCodeFailed: 'Failed to send verification code',
+	    networkError: 'Network error. Please try again.',
+	    resetFailed: 'Failed to reset password'
+	  }
+	} as const;

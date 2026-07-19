@@ -174,14 +174,21 @@ func TestShareGetExpiredReturns10300(t *testing.T) {
 		t.Fatalf("create failed: %#v", createResp)
 	}
 
-	// Wait for the share to expire (1 second + buffer)
-	time.Sleep(2 * time.Second)
-
-	// Get the expired share — should return 10300
-	getReq := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"`+createResp.Data.ShareCode+`"}`))
-	getRR := httptest.NewRecorder()
-	handler.Get(getRR, getReq)
-	assertCode(t, getRR, 10300)
+	// Poll until the share expires (expires_in_seconds=1) instead of a fixed sleep.
+	// This avoids flaky timing in CI and is still bounded by a hard timeout.
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		getReq := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"`+createResp.Data.ShareCode+`"}`))
+		getRR := httptest.NewRecorder()
+		handler.Get(getRR, getReq)
+		var checkResp struct{ Code int }
+		_ = json.NewDecoder(getRR.Body).Decode(&checkResp)
+		if checkResp.Code == 10300 {
+			return // expired as expected
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatal("share did not expire within timeout")
 }
 
 func TestShareGetReturnsFullShareDetailShape(t *testing.T) {

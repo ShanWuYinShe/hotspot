@@ -70,18 +70,18 @@ func (s *Service) AuthenticateRequest(rctx context.Context, authHeader string, a
 	if err != nil {
 		return Principal{}, time.Time{}, false
 	}
-	session, ok, err := s.sessions.Get(claims.SessionID)
+	session, ok, err := s.sessions.Get(rctx, claims.SessionID)
 	if err != nil || !ok || session.UserID != claims.UserID || session.RevokedAt != nil {
 		return Principal{}, time.Time{}, false
 	}
 	return newPrincipal(claims.UserID, claims.SessionID, platformFromContext(rctx)), claims.ExpiresAt, true
 }
 
-func (s *Service) IssueSession(userID string) (AuthResult, error) {
-	return s.IssueSessionWithMeta(userID, SessionMeta{})
+func (s *Service) IssueSession(ctx context.Context, userID string) (AuthResult, error) {
+	return s.IssueSessionWithMeta(ctx, userID, SessionMeta{})
 }
 
-func (s *Service) IssueSessionWithMeta(userID string, meta SessionMeta) (AuthResult, error) {
+func (s *Service) IssueSessionWithMeta(ctx context.Context, userID string, meta SessionMeta) (AuthResult, error) {
 	sessionID, err := NewSessionID()
 	if err != nil {
 		return AuthResult{}, err
@@ -96,7 +96,7 @@ func (s *Service) IssueSessionWithMeta(userID string, meta SessionMeta) (AuthRes
 		return AuthResult{}, err
 	}
 	refreshExpires := time.Now().UTC().Add(s.refreshTTL)
-	if err := s.sessions.Save(SessionRecord{
+	if err := s.sessions.Save(ctx, SessionRecord{
 		SessionID:    sessionID,
 		UserID:       userID,
 		CreatedAt:    createdAt,
@@ -108,7 +108,7 @@ func (s *Service) IssueSessionWithMeta(userID string, meta SessionMeta) (AuthRes
 	}); err != nil {
 		return AuthResult{}, err
 	}
-	if err := s.refreshes.Save(RefreshSession{UserID: userID, SessionID: sessionID, RefreshToken: refreshToken, ExpiresAt: refreshExpires}); err != nil {
+	if err := s.refreshes.Save(ctx, RefreshSession{UserID: userID, SessionID: sessionID, RefreshToken: refreshToken, ExpiresAt: refreshExpires}); err != nil {
 		return AuthResult{}, err
 	}
 	return AuthResult{Principal: newPrincipal(userID, sessionID, ""), AccessToken: accessToken, RefreshToken: refreshToken, AccessExpires: accessExp, RefreshExpires: refreshExpires}, nil

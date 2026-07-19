@@ -216,27 +216,27 @@ func TestPostgresSessionStoreWritesAndReadsQueryableDB(t *testing.T) {
 	store := NewPostgresSessionStore(newAuthFactory(backend), nil)
 	now := time.Now().UTC().Round(time.Second)
 	record := SessionRecord{SessionID: "sess_1", UserID: "user_alice", CreatedAt: now, LastActiveAt: now, DeviceType: "app", DeviceName: "HotSpot App", IPAddress: "203.0.113.1", IPLocation: "US"}
-	if err := store.Save(record); err != nil {
+	if err := store.Save(context.Background(), record); err != nil {
 		t.Fatalf("save session: %v", err)
 	}
-	stored, ok, err := store.Get("sess_1")
+	stored, ok, err := store.Get(context.Background(), "sess_1")
 	if err != nil || !ok || stored.UserID != "user_alice" {
 		t.Fatalf("unexpected session: %#v ok=%v err=%v", stored, ok, err)
 	}
 	if stored.DeviceType != "app" || stored.DeviceName != "HotSpot App" || stored.IPAddress != "203.0.113.1" || stored.IPLocation != "US" {
 		t.Fatalf("unexpected stored metadata: %#v", stored)
 	}
-	items, err := store.ListActiveByUser("user_alice")
+	items, err := store.ListActiveByUser(context.Background(), "user_alice")
 	if err != nil || len(items) != 1 || items[0].SessionID != "sess_1" {
 		t.Fatalf("unexpected items: %#v err=%v", items, err)
 	}
-	if err := store.Touch("sess_1"); err != nil {
+	if err := store.Touch(context.Background(), "sess_1"); err != nil {
 		t.Fatalf("touch session: %v", err)
 	}
-	if revoked, err := store.Revoke("sess_1"); err != nil || !revoked {
+	if revoked, err := store.Revoke(context.Background(), "sess_1"); err != nil || !revoked {
 		t.Fatalf("unexpected revoke result: revoked=%v err=%v", revoked, err)
 	}
-	stored, ok, err = store.Get("sess_1")
+	stored, ok, err = store.Get(context.Background(), "sess_1")
 	if err != nil || !ok || stored.RevokedAt == nil {
 		t.Fatalf("expected revoked session, got %#v ok=%v err=%v", stored, ok, err)
 	}
@@ -247,21 +247,21 @@ func TestPostgresSessionStoreRevokeOthers(t *testing.T) {
 	store := NewPostgresSessionStore(newAuthFactory(backend), nil)
 	now := time.Now().UTC()
 	for _, sessionID := range []string{"sess_1", "sess_2", "sess_3"} {
-		if err := store.Save(SessionRecord{SessionID: sessionID, UserID: "user_alice", CreatedAt: now, LastActiveAt: now}); err != nil {
+		if err := store.Save(context.Background(), SessionRecord{SessionID: sessionID, UserID: "user_alice", CreatedAt: now, LastActiveAt: now}); err != nil {
 			t.Fatalf("save session %s: %v", sessionID, err)
 		}
 	}
-	count, err := store.RevokeOthers("user_alice", "sess_2")
+	count, err := store.RevokeOthers(context.Background(), "user_alice", "sess_2")
 	if err != nil || count != 2 {
 		t.Fatalf("unexpected revoke others result: count=%d err=%v", count, err)
 	}
 	for _, sessionID := range []string{"sess_1", "sess_3"} {
-		record, ok, err := store.Get(sessionID)
+		record, ok, err := store.Get(context.Background(), sessionID)
 		if err != nil || !ok || record.RevokedAt == nil {
 			t.Fatalf("expected revoked session %s, got %#v ok=%v err=%v", sessionID, record, ok, err)
 		}
 	}
-	record, ok, err := store.Get("sess_2")
+	record, ok, err := store.Get(context.Background(), "sess_2")
 	if err != nil || !ok || record.RevokedAt != nil {
 		t.Fatalf("expected current session to stay active, got %#v ok=%v err=%v", record, ok, err)
 	}
@@ -272,22 +272,22 @@ func TestPostgresRefreshStoreWritesReadsAndRotatesQueryableDB(t *testing.T) {
 	store := NewPostgresRefreshStore(newAuthFactory(backend), nil)
 	now := time.Now().UTC().Round(time.Second)
 	session := RefreshSession{UserID: "user_alice", SessionID: "sess_1", RefreshToken: "refresh_1", ExpiresAt: now.Add(time.Hour)}
-	if err := store.Save(session); err != nil {
+	if err := store.Save(context.Background(), session); err != nil {
 		t.Fatalf("save refresh: %v", err)
 	}
-	stored, ok, err := store.Get("refresh_1")
+	stored, ok, err := store.Get(context.Background(), "refresh_1")
 	if err != nil || !ok || stored.UserID != "user_alice" {
 		t.Fatalf("unexpected refresh session: %#v ok=%v err=%v", stored, ok, err)
 	}
 	next := RefreshSession{UserID: "user_alice", SessionID: "sess_1", RefreshToken: "refresh_2", ExpiresAt: now.Add(2 * time.Hour)}
-	if err := store.Rotate("refresh_1", stored, next); err != nil {
+	if err := store.Rotate(context.Background(), "refresh_1", stored, next); err != nil {
 		t.Fatalf("rotate refresh: %v", err)
 	}
-	rotated, ok, err := store.Get("refresh_1")
+	rotated, ok, err := store.Get(context.Background(), "refresh_1")
 	if err != nil || !ok || rotated.RotatedTo != "refresh_2" || rotated.GraceUntil.IsZero() {
 		t.Fatalf("unexpected rotated current session: %#v ok=%v err=%v", rotated, ok, err)
 	}
-	nextStored, ok, err := store.Get("refresh_2")
+	nextStored, ok, err := store.Get(context.Background(), "refresh_2")
 	if err != nil || !ok || nextStored.ExpiresAt.IsZero() {
 		t.Fatalf("unexpected rotated next session: %#v ok=%v err=%v", nextStored, ok, err)
 	}
@@ -300,10 +300,10 @@ func TestPostgresStoresReturnWriteErrors(t *testing.T) {
 	factory := newAuthFactory(backend)
 	sessionStore := NewPostgresSessionStore(factory, nil)
 	refreshStore := NewPostgresRefreshStore(factory, nil)
-	if err := sessionStore.Save(SessionRecord{SessionID: "sess_1", UserID: "user_alice", CreatedAt: time.Now().UTC(), LastActiveAt: time.Now().UTC()}); err == nil {
+	if err := sessionStore.Save(context.Background(), SessionRecord{SessionID: "sess_1", UserID: "user_alice", CreatedAt: time.Now().UTC(), LastActiveAt: time.Now().UTC()}); err == nil {
 		t.Fatal("expected session save error")
 	}
-	if err := refreshStore.Save(RefreshSession{UserID: "user_alice", SessionID: "sess_1", RefreshToken: "refresh_1", ExpiresAt: time.Now().UTC().Add(time.Hour)}); err == nil {
+	if err := refreshStore.Save(context.Background(), RefreshSession{UserID: "user_alice", SessionID: "sess_1", RefreshToken: "refresh_1", ExpiresAt: time.Now().UTC().Add(time.Hour)}); err == nil {
 		t.Fatal("expected refresh save error")
 	}
 }

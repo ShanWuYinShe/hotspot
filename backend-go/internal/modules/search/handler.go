@@ -15,6 +15,14 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+func logServerError(r *http.Request, method string, err error) {
+	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
+}
+
+func logBusinessError(r *http.Request, method string, code int, message string) {
+	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
+}
+
 func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Prefix         string `json:"prefix"`
@@ -46,21 +54,17 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	result, err := h.service.Suggest(r.Context(), SearchSuggestRequest{
-		Prefix:         body.Prefix,
-		ReferencePoint: point,
-		Types:          body.Types,
-		Radius:         body.Radius,
-	})
-	if err != nil {
-		observability.L().Error("handler error",
-			"method", "Suggest",
-			"error", err,
-			"request_id", observability.RequestIDFromContext(r.Context()),
-		)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
-	}
+		result, err := h.service.Suggest(r.Context(), SearchSuggestRequest{
+			Prefix:         body.Prefix,
+			ReferencePoint: point,
+			Types:          body.Types,
+			Radius:         body.Radius,
+		})
+		if err != nil {
+			logServerError(r, "Suggest", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+			return
+		}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
 }
 
@@ -89,22 +93,18 @@ func (h *Handler) SearchAll(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	result, err := h.service.SearchAll(r.Context(), SearchAllRequest{
-		Keyword:        body.Keyword,
-		Tag:            body.Tag,
-		Radius:         body.Radius,
-		SortBy:         body.SortBy,
-		ReferencePoint: *body.ReferencePoint,
-		Pagination:     body.Pagination,
-	})
-	if err != nil {
-		observability.L().Error("handler error",
-			"method", "SearchAll",
-			"error", err,
-			"request_id", observability.RequestIDFromContext(r.Context()),
-		)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
-	}
+		result, err := h.service.SearchAll(r.Context(), SearchAllRequest{
+			Keyword:        body.Keyword,
+			Tag:            body.Tag,
+			Radius:         body.Radius,
+			SortBy:         body.SortBy,
+			ReferencePoint: *body.ReferencePoint,
+			Pagination:     body.Pagination,
+		})
+		if err != nil {
+			logServerError(r, "SearchAll", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+			return
+		}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
 }
