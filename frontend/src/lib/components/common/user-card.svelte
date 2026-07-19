@@ -221,8 +221,7 @@
 </script>
 
 <div
-  class="cursor-pointer overflow-hidden rounded-[var(--radius-lg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
-  class:surface-hero={variant !== 'nearby-row' && variant !== 'member-row'}
+  class="user-card cursor-pointer overflow-hidden rounded-[var(--radius-lg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
   class:card-hover={variant !== 'nearby-row' && variant !== 'member-row'}
   class:hover:scale-[1.02]={variant !== 'nearby-row' && variant !== 'member-row'}
   class:active:scale-[0.98]={variant !== 'nearby-row' && variant !== 'member-row'}
@@ -235,8 +234,8 @@
   {#if variant === 'nearby-row'}
     <!-- Nearby row: horizontal row for nearby all page -->
     <div class="flex items-center gap-3.5 px-4 py-3.5">
+      <div class="user-card__avatar">
       <Avatar
-        class="flex-shrink-0"
         src={userInfo.avatar_url}
         name={userInfo.nickname}
         alt={userInfo.nickname}
@@ -244,6 +243,7 @@
         online={isOnline}
         onlineSize="md"
       />
+      </div>
       <div class="min-w-0 flex-1">
         <p class="text-body-lg truncate min-w-0" style="color: var(--text-primary)">
           {userInfo.nickname}
@@ -265,9 +265,9 @@
       </div>
       <div class="flex flex-shrink-0 flex-col items-end gap-2">
         {#if distance}
-          <div class="flex items-center gap-0.5">
-            <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
-            <span class="text-meta" style="color: var(--brand)">{formatDistance(distance)}</span>
+          <div class="user-card__distance">
+            <MapPin size={10} strokeWidth={1.5} />
+            <span>{formatDistance(distance)}</span>
           </div>
         {/if}
         {#if !isMe}
@@ -283,8 +283,8 @@
   {:else if variant === 'member-row'}
     <!-- Member row: 用户列表行(粉丝/关注/群成员统一) -->
     <div class="flex items-center gap-3 px-4 py-3.5">
+      <div class="user-card__avatar">
       <Avatar
-        class="flex-shrink-0"
         src={userInfo.avatar_url}
         name={userInfo.nickname}
         alt={userInfo.nickname}
@@ -292,6 +292,7 @@
         online={showOnlineStatus && isOnline}
         onlineSize="md"
       />
+      </div>
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2">
           <p class="text-body-lg truncate" style="font-weight: 500; color: var(--text-primary)">
@@ -322,6 +323,7 @@
       >
         <div class="flex items-start justify-between gap-3">
           <div class="flex min-w-0 items-center gap-2.5">
+            <div class="user-card__avatar">
             <Avatar
               src={userInfo.avatar_url}
               name={userInfo.nickname}
@@ -329,8 +331,8 @@
               size={48}
               online={isOnline}
               onlineSize="md"
-              class="flex-shrink-0"
             />
+            </div>
             <div class="min-w-0 flex-1">
               <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
                 {userInfo.nickname}
@@ -341,9 +343,9 @@
             </div>
           </div>
           {#if distance}
-            <div class="flex flex-shrink-0 items-center gap-0.5">
-              <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
-              <span class="text-xs" style="color: var(--brand)">{formatDistance(distance)}</span>
+            <div class="user-card__distance flex-shrink-0">
+              <MapPin size={10} strokeWidth={1.5} />
+              <span>{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
@@ -373,8 +375,8 @@
   {:else if variant === 'compact'}
     <!-- Compact: horizontal list row -->
     <div class="flex items-center gap-3 p-3.5">
+      <div class="user-card__avatar">
       <Avatar
-        class="flex-shrink-0"
         src={userInfo.avatar_url}
         name={userInfo.nickname}
         alt={userInfo.nickname}
@@ -382,15 +384,16 @@
         online={isOnline}
         onlineSize="sm"
       />
+      </div>
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between">
           <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
             {userInfo.nickname}
           </p>
           {#if distance}
-            <div class="flex items-center gap-0.5">
-              <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
-              <span class="text-xs" style="color: var(--brand)">{formatDistance(distance)}</span>
+            <div class="user-card__distance">
+              <MapPin size={10} strokeWidth={1.5} />
+              <span>{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
@@ -406,8 +409,8 @@
     <!-- Detailed: vertical with more info -->
     <div class="p-4">
       <div class="flex items-center gap-4">
+        <div class="user-card__avatar">
         <Avatar
-          class="flex-shrink-0"
           src={userInfo.avatar_url}
           name={userInfo.nickname}
           alt={userInfo.nickname}
@@ -415,14 +418,15 @@
           online={isOnline}
           onlineSize="md"
         />
+        </div>
         <div class="min-w-0 flex-1">
           <p class="text-title" style="font-weight: 600; color: var(--text-primary)">
             {userInfo.nickname}
           </p>
           {#if distance}
-            <div class="mt-1 flex items-center gap-0.5">
-              <MapPin size={12} strokeWidth={1.5} color="var(--brand)" />
-              <span class="text-meta" style="color: var(--brand)">{formatDistance(distance)}</span>
+            <div class="user-card__distance mt-1">
+              <MapPin size={12} strokeWidth={1.5} />
+              <span>{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
@@ -444,8 +448,8 @@
     <!-- Default: balanced horizontal -->
     <div class="p-4">
       <div class="flex items-center gap-3.5">
+        <div class="user-card__avatar">
         <Avatar
-          class="flex-shrink-0"
           src={userInfo.avatar_url}
           name={userInfo.nickname}
           alt={userInfo.nickname}
@@ -453,14 +457,15 @@
           online={isOnline}
           onlineSize="sm"
         />
+      </div>
         <div class="min-w-0 flex-1">
           <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
             {userInfo.nickname}
           </p>
           {#if distance}
-            <div class="mt-0.5 flex items-center gap-0.5">
-              <MapPin size={10} strokeWidth={1.5} color="var(--brand)" />
-              <span class="text-xs" style="color: var(--brand)">{formatDistance(distance)}</span>
+            <div class="user-card__distance mt-0.5">
+              <MapPin size={10} strokeWidth={1.5} />
+              <span>{formatDistance(distance)}</span>
             </div>
           {/if}
         </div>
@@ -490,12 +495,11 @@
       <div class="flex items-center justify-between">
         <button
           data-card-action
-          class="flex items-center gap-1.5 py-1 outline-none transition-transform duration-150 active:scale-[0.93]"
-          style="color: var(--text-secondary);"
+          class="user-card__action"
           onclick={handleSendMessage}
         >
           <MessageCircle size={15} strokeWidth={1.5} />
-          <span class="text-meta">{t('user.messageAction')}</span>
+          <span>{t('user.messageAction')}</span>
         </button>
         <div class="flex items-center gap-2">
           <FollowButton
@@ -503,20 +507,21 @@
             following={isFollowing}
             loading={isFollowPending}
             onclick={handleFollow}
+            class="user-card__action"
           />
           {#if showMenu}
             <DropdownMenu>
               <DropdownMenuTrigger>
                 <button
                   data-card-action
-                  class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88] w-[30px] h-[30px]"
+                  class="user-card__icon-action"
                   onclick={(e: MouseEvent) => {
                     e.preventDefault();
                     e.stopPropagation();
                   }}
                   aria-label={t('userProfile.moreAria')}
                 >
-                  <MoreVertical size={14} strokeWidth={1.5} color="var(--text-secondary)" />
+                  <MoreVertical size={14} strokeWidth={1.5} />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" class="w-48">
@@ -541,3 +546,111 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .user-card {
+    position: relative;
+    overflow: clip;
+    border-radius: var(--radius-lg);
+  }
+
+  .user-card:not(.list-row) {
+    border: 1px solid color-mix(in srgb, var(--border-theme) 82%, transparent);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--surface-bg) 96%, white 4%),
+        var(--surface-bg)
+      ),
+      var(--surface-bg);
+    box-shadow: none;
+    transition:
+      border-color 0.22s ease,
+      box-shadow 0.22s ease;
+  }
+
+  .user-card:not(.list-row):hover,
+  .user-card:not(.list-row):focus-visible {
+    border-color: color-mix(in srgb, var(--brand) 38%, var(--border-theme));
+    box-shadow: 0 2px 14px color-mix(in srgb, var(--brand) 10%, transparent);
+  }
+
+  .user-card__avatar {
+    display: block;
+    width: fit-content;
+    height: fit-content;
+    flex: 0 0 auto;
+    overflow: clip;
+    border: 2px solid color-mix(in srgb, var(--brand) 18%, var(--border-theme));
+    border-radius: var(--radius-pill);
+    background: var(--surface-bg);
+  }
+
+  .user-card__avatar :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .user-card__distance {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--border-theme));
+    border-radius: var(--radius-pill);
+    padding: 4px 8px;
+    color: var(--brand);
+    font-size: var(--text-caption);
+    font-weight: 600;
+    line-height: 1;
+    background: color-mix(in srgb, var(--brand) 9%, var(--surface-bg));
+  }
+
+  .user-card__action,
+  .user-card__icon-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    color: var(--text-secondary);
+    background: transparent;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    cursor: pointer;
+    transition:
+      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+      color 0.18s ease,
+      background 0.18s ease,
+      border-color 0.18s ease;
+  }
+
+  .user-card__action {
+    gap: 5px;
+    min-height: 32px;
+    padding: 6px 9px;
+    font-size: var(--text-meta);
+    font-weight: 650;
+  }
+
+  .user-card__icon-action {
+    width: 32px;
+    height: 32px;
+  }
+
+  .user-card__action:hover,
+  .user-card__icon-action:hover,
+  .user-card__action:focus-visible,
+  .user-card__icon-action:focus-visible {
+    color: var(--brand);
+    border-color: color-mix(in srgb, var(--brand) 20%, var(--border-theme));
+    background: color-mix(in srgb, var(--brand) 8%, transparent);
+  }
+
+  .user-card__action:active,
+  .user-card__icon-action:active {
+    transform: scale(0.9);
+    background: color-mix(in srgb, var(--brand) 14%, transparent);
+  }
+</style>
