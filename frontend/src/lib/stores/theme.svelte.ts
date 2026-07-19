@@ -6,7 +6,7 @@
 import { browser } from '$app/environment';
 import type { TranslationKey } from '$lib/i18n';
 
-export const THEME_FAMILIES = ['indigo', 'forest', 'sand'] as const;
+export const THEME_FAMILIES = ['mist', 'grove'] as const;
 
 export type ThemeFamily = (typeof THEME_FAMILIES)[number];
 
@@ -16,36 +16,26 @@ export const THEME_FAMILY_OPTIONS: {
   descriptionKey: TranslationKey;
 }[] = [
   {
-    family: 'indigo',
-    labelKey: 'sidebar.indigo',
-    descriptionKey: 'sidebar.indigoDesc'
+    family: 'mist',
+    labelKey: 'sidebar.mist',
+    descriptionKey: 'sidebar.mistDesc'
   },
   {
-    family: 'forest',
-    labelKey: 'sidebar.forest',
-    descriptionKey: 'sidebar.forestDesc'
-  },
-  {
-    family: 'sand',
-    labelKey: 'sidebar.sand',
-    descriptionKey: 'sidebar.sandDesc'
+    family: 'grove',
+    labelKey: 'sidebar.grove',
+    descriptionKey: 'sidebar.groveDesc'
   }
 ];
 
 const THEME_FAMILY_STORAGE_KEY = 'hotspot_theme_family';
-const DEFAULT_THEME_FAMILY: ThemeFamily = 'indigo';
+const DEFAULT_THEME_FAMILY: ThemeFamily = 'mist';
 
 /** `<html>` 上用于选择当前主题族的属性名 */
 export const THEME_FAMILY_ATTRIBUTE = 'data-theme-family';
 
-/** Map old theme names to current names */
-const THEME_MIGRATION: Record<string, ThemeFamily> = {
-  social_blue: 'indigo',
-  default_clean: 'forest',
-  figma_neu: 'sand',
-  vibrant: 'indigo',
-  neu: 'sand'
-};
+// 主题重命名(indigo→mist, forest→grove)+ 删除 sand 后,老 localStorage 值
+// 一律落回默认(mist),不做语义迁移 —— 见 docs/specs/2026-07-19-theme-rename-and-flatten-design.md §1.A
+const THEME_MIGRATION: Record<string, ThemeFamily> = {};
 
 function isThemeFamily(value: string | null | undefined): value is ThemeFamily {
   return THEME_FAMILIES.some((themeFamily) => themeFamily === value);

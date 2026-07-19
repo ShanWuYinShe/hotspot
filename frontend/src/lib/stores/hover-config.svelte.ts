@@ -19,21 +19,14 @@ export interface HoverConfig {
 const EASE_OUT = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
 const configs: Record<ThemeFamily, HoverConfig> = {
-  sand: {
-    card: { y: -7, scale: 1.018, duration: 260, easing: EASE_OUT },
-    row: { y: -5, scale: 1.01, duration: 240, easing: EASE_OUT },
-    btn: { scale: 1.12, duration: 220, easing: EASE_OUT },
-    action: { scale: 1.22, duration: 200, easing: EASE_OUT },
-    tap: { scale: 0.94, duration: 180, easing: EASE_OUT }
-  },
-  indigo: {
+  mist: {
     card: { y: -5, scale: 1.014, duration: 220, easing: EASE_OUT },
     row: { y: -3, scale: 1.009, duration: 180, easing: EASE_OUT },
     btn: { scale: 1.1, duration: 170, easing: EASE_OUT },
     action: { scale: 1.2, duration: 140, easing: EASE_OUT },
     tap: { scale: 0.94, duration: 100, easing: EASE_OUT }
   },
-  forest: {
+  grove: {
     card: { scale: 1.016, duration: 200, easing: EASE_OUT },
     row: { scale: 1.01, duration: 160, easing: EASE_OUT },
     btn: { scale: 1.08, duration: 160, easing: EASE_OUT },
@@ -42,7 +35,7 @@ const configs: Record<ThemeFamily, HoverConfig> = {
   }
 };
 
-const defaultConfig = configs.indigo;
+const defaultConfig = configs.mist;
 
 class HoverConfigStore {
   config = $derived(configs[themeStore.themeFamily] ?? defaultConfig);

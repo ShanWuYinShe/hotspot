@@ -21,7 +21,7 @@
 
   function toggleThemeFamily() {
     const currentIndex = themeFamilyCycle.indexOf(currentFamily);
-    const nextFamily = themeFamilyCycle[(currentIndex + 1) % themeFamilyCycle.length] ?? 'forest';
+    const nextFamily = themeFamilyCycle[(currentIndex + 1) % themeFamilyCycle.length] ?? 'mist';
     themeStore.setThemeFamily(nextFamily);
   }
 </script>

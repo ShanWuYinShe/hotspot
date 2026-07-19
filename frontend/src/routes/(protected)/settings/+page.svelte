@@ -26,21 +26,18 @@
   import Moon from 'lucide-svelte/icons/moon';
 
   const PREVIEW_ACCENT: Record<ThemeFamily, string> = {
-    indigo: '#6366f1',
-    forest: '#3D7A55',
-    sand: '#b86f4b'
+    mist: '#6366f1',
+    grove: '#3D7A55'
   };
 
   const THEME_NAMES = $derived<Record<ThemeFamily, string>>({
-    indigo: t('settings.themeNameIndigo'),
-    forest: t('settings.themeNameForest'),
-    sand: t('settings.themeNameSand')
+    mist: t('settings.themeNameMist'),
+    grove: t('settings.themeNameGrove')
   });
 
   const THEME_DESC = $derived<Record<ThemeFamily, string>>({
-    indigo: t('settings.themeDescIndigo'),
-    forest: t('settings.themeDescForest'),
-    sand: t('settings.themeDescSand')
+    mist: t('settings.themeDescMist'),
+    grove: t('settings.themeDescGrove')
   });
 
   const settingsSections = $derived([
