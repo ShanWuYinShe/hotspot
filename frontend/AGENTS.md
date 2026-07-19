@@ -209,7 +209,7 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
 2. **背景色和文字色来自同一明暗体系**：翻转体系（`--surface-bg`/`--page-bg` + `--text-primary`/`--text-secondary`）；不翻转体系（`--map-*`/`--brand`/`--semantic-*`/`--overlay-*` + `--text-on-overlay`/`--text-on-accent`）。**禁止跨体系混用**。
 3. **新增彩色 token 时同时定义各主题族的 dark 值**，dark 下取更亮/更饱和同色；「白字彩底」对比度 ≥ WCAG AA（正文 4.5:1，大号/粗体 ≥14px/700 时 3:1）。
 
-**表面与质感**：当前主题族 **forest（扁平）**：阴影归零，组件扁平；其他主题族可有 neumorphic 阴影（`--shadow-light`/`--shadow-dark`/`--shadow-md`/`--shadow-lg`）。复用类：`.surface-flat`（扁平交互面）、`.surface-hero`/`.ambient-glow`（概览卡）、`.input-surface`（输入容器）。圆形图标按钮统一 `36px`（移动可 `38px`）。
+**表面与质感**：当前主题族 **mist（岚）/ grove（林）**，统一采用**全扁平 border-only 设计语言**——所有表面零阴影、仅靠 `--border-theme` 描边区分层级；hover 时通过单方向 elevation（`--hover-shadow-card` / `--hover-shadow-row`，基于 `--shadow-elevation`）柔和浮起 + `active:scale` 微缩反馈，不使用 neumorphic / ceramic 触感。复用类：`.surface-flat`（扁平交互面）、`.surface-hero`/`.ambient-glow`（概览卡）、`.input-surface`（输入容器）；`.card-hover:hover` 走 `var(--hover-shadow-card)` 单方向 elevation。圆形图标按钮统一 `36px`（移动可 `38px`）。
 
 **圆角**：基础 `--radius: 0.625rem`；卡片 `22px`、概览/主张卡 `24px`、输入/搜索 `18px`、小面 `16px`、chip/pill/头像 `999px`。**token 阶梯**（`--radius-*`，禁用魔法数）：`xs 8` / `sm 12` / `md 18` / `lg 22` / `xl 24` / `xxl 22`(对齐鸿蒙 `RADIUS.XXL`) / `pill 40` / `button 28`。原语内联 `border-radius:Npx` 必须改用 `var(--radius-*)` 或 `rounded-[var(--radius-*)]`。
 
