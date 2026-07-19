@@ -3,6 +3,7 @@
   import { Textarea } from '$lib/components/ui/textarea';
   import { groupsService } from '$lib/api/services';
   import { isSuccess } from '$lib/api/client';
+  import { t } from '$lib/i18n';
   import { showApiError } from '$lib/utils/api-error';
   import { parseTags } from '$lib/utils/format';
   import { validateField } from '$lib/utils/form-validation';
@@ -239,9 +240,9 @@
           <UsersRound style="width: 20px; height: 20px; color: var(--brand);" />
         </div>
         <div>
-          <div style="color: var(--text-primary); font-weight: 600;">{t('group.createGroup')}</div>
+          <div style="color: var(--text-primary); font-weight: 600;">{t('nav.createGroup')}</div>
           <div class="text-body" style="font-weight: 400; color: var(--text-secondary)">
-            {t('group.createGroupHint')}
+            {t('nav.createGroupHint')}
           </div>
         </div>
       </Dialog.Title>
@@ -436,7 +437,7 @@
         {#if isSubmitting}
           <Spinner size="md" class="mr-2" />
         {/if}
-         {t('group.createGroup')}
+         {t('nav.createGroup')}
       </button>
     </Dialog.Footer>
   </Dialog.Content>

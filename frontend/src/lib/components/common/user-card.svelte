@@ -3,6 +3,7 @@
   import { dev } from '$app/environment';
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
+  import { t } from '$lib/i18n';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { presenceStore } from '$lib/stores/presence.svelte';
@@ -506,7 +507,7 @@
               <DropdownMenuContent align="end" class="w-48">
                 <DropdownMenuItem onclick={handleViewProfile}>
                   <User class="mr-2 h-4 w-4" />
-                  <span>{t('profile.viewProfile')}</span>
+                  <span>{t('userProfile.viewProfile')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onclick={handleShare}>
                   <Share2 class="mr-2 h-4 w-4" />

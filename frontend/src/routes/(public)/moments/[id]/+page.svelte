@@ -24,6 +24,7 @@
   import ImagePreview from '$lib/components/common/image-preview.svelte';
   import Send from 'lucide-svelte/icons/send';
   import Spinner from '$lib/components/common/spinner.svelte';
+  import EmptyState from '$lib/components/common/empty-state.svelte';
   import LogIn from 'lucide-svelte/icons/log-in';
   import Pencil from 'lucide-svelte/icons/pencil';
   import Trash2 from 'lucide-svelte/icons/trash-2';
@@ -501,8 +502,8 @@
 
         <!-- Actions -->
         <div
-          class="mt-4 flex items-center justify-between"
-          style="border-top: 1px solid var(--border-theme); padding-top: 16px;"
+          class="mt-4 flex items-center justify-between pt-4"
+          style="border-top: 1px solid var(--border-theme);"
         >
           <div class="flex gap-2">
             <button
@@ -614,8 +615,8 @@
         {/if}
 
         <p
-          class="text-xs uppercase"
-          style="letter-spacing: 0.14em; color: var(--text-secondary); margin-top: 16px; margin-bottom: 16px"
+          class="text-xs uppercase my-4"
+          style="letter-spacing: 0.14em; color: var(--text-secondary);"
         >
           {t('momentDetail.commentsTitle', { count: commentsCount })}
         </p>
@@ -642,23 +643,24 @@
             {/each}
           </div>
         {:else if commentsError}
-          <div class="flex flex-col items-center gap-3 py-8 text-center">
-            <p class="text-body-lg" style="color: var(--text-secondary)">{t('momentDetail.commentsLoadFailed')}</p>
-            <button
-              class="rounded-full px-4 py-2 font-medium outline-none"
-              style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-              onclick={() => {
-                const v = ++loadVersion;
-                isLoadingComments = true;
-                commentsError = false;
-                loadComments(momentId, v);
-              }}
-            >
-              {t('common.retry')}
-            </button>
-          </div>
+          <EmptyState
+            icon={MessageCircle}
+            title={t('momentDetail.commentsLoadFailed')}
+            actionText={t('common.retry')}
+            onAction={() => {
+              const v = ++loadVersion;
+              isLoadingComments = true;
+              commentsError = false;
+              loadComments(momentId, v);
+            }}
+            variant="inline"
+          />
         {:else if comments.length === 0}
-          <p class="py-8 text-center" style="color: var(--text-secondary);">{t('momentDetail.noComments')}</p>
+          <EmptyState
+            icon={MessageCircle}
+            title={t('momentDetail.noComments')}
+            variant="inline"
+          />
         {:else}
           <div class="space-y-4">
             {#each comments as comment (comment.comment_id)}
@@ -822,19 +824,13 @@
         {/if}
       </div>
     {:else}
-      <div
-        class="rounded-[var(--radius-lg)] py-12 text-center"
-        style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
-      >
-        <p style="color: var(--text-secondary);">{t('momentDetail.notExist')}</p>
-        <button
-          class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none"
-          style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
-          onclick={() => goto('/')}
-        >
-          {t('common.backHome')}
-        </button>
-      </div>
+      <EmptyState
+        icon={MessageCircle}
+        title={t('momentDetail.notExist')}
+        actionText={t('share.backHome')}
+        onAction={() => goto('/')}
+        variant="card"
+      />
     {/if}
 
     {#if isOwner && moment}

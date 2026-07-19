@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
+  import { t } from '$lib/i18n';
   import { toast } from '$lib/stores/toast.svelte';
   import { isSuccess } from '$lib/api/client';
   import { groupsService, reportsService } from '$lib/api/services';

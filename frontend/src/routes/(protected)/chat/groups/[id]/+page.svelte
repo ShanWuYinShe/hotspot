@@ -26,6 +26,7 @@
   import Avatar from '$lib/components/common/avatar.svelte';
   import Send from 'lucide-svelte/icons/send';
   import Spinner from '$lib/components/common/spinner.svelte';
+  import EmptyState from '$lib/components/common/empty-state.svelte';
   import { Textarea } from '$lib/components/ui/textarea';
   import MoreVertical from 'lucide-svelte/icons/more-vertical';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
@@ -710,21 +711,12 @@
 
       {#if messages.length === 0}
         <div class="flex h-full items-center justify-center p-8">
-          <div class="text-center">
-            <div
-              class="mb-4 inline-flex items-center justify-center rounded-full"
-              style="width: 64px; height: 64px; border: 1px solid var(--border-theme);"
-            >
-              <MessageCircle size={28} color="var(--text-secondary)" strokeWidth={1.5} />
-            </div>
-            <p
-              class="text-body-lg"
-              style="font-weight: 500; color: var(--text-primary); margin-bottom: 4px"
-            >
-              {t('chat.noMessagesYet')}
-            </p>
-            <p class="text-body" style="color: var(--text-secondary)">{t('chat.sendFirstMessage')}</p>
-          </div>
+          <EmptyState
+            icon={MessageCircle}
+            title={t('chat.noMessagesYet')}
+            description={t('chat.sendFirstMessage')}
+            variant="inline"
+          />
         </div>
       {:else}
         <div class="space-y-1 px-4 py-2">

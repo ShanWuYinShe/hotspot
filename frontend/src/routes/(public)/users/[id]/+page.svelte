@@ -304,13 +304,13 @@
           <h2 class="text-h1" style="color: var(--text-primary)">
             {user.user.nickname}
           </h2>
-          <p class="text-body" style="color: var(--text-secondary); margin-top: 1px">
+          <p class="text-body mt-px" style="color: var(--text-secondary);">
             @{formatHandle(user.user)}
           </p>
           {#if user.bio}
             <p
-              class="text-body"
-              style="color: var(--text-secondary); line-height: 1.65; margin-top: 8px"
+              class="text-body mt-2"
+              style="color: var(--text-secondary); line-height: 1.65;"
             >
               {user.bio}
             </p>
@@ -332,7 +332,7 @@
           {/if}
 
           {#if user.social_context?.mutual_friends_count}
-            <p class="text-body" style="color: var(--text-secondary); margin-top: 8px">
+            <p class="text-body mt-2" style="color: var(--text-secondary);">
               {t('userProfile.mutualFriends', { count: user.social_context.mutual_friends_count })}
             </p>
           {/if}

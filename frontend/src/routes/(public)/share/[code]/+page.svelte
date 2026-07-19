@@ -89,7 +89,7 @@
           {data.error || t('share.notExist')}
         </p>
         <button
-          class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none"
+          class="mt-4 rounded-full px-5 py-2.5 font-medium outline-none transition-all duration-150 hover:-translate-y-0.5 active:scale-[0.97]"
           style="border: 1px solid var(--border-theme); color: var(--text-secondary); background: var(--surface-bg);"
           onclick={() => goto('/')}
         >
@@ -224,7 +224,7 @@
             style="background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
             onclick={handleApply}
           >
-            前去查看
+            {t('share.viewNow')}
           </button>
           <button
             class="w-full rounded-full py-3 font-medium outline-none"

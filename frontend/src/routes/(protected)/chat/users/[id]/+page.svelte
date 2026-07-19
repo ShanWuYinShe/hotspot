@@ -34,11 +34,13 @@
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import Send from 'lucide-svelte/icons/send';
   import Spinner from '$lib/components/common/spinner.svelte';
+  import EmptyState from '$lib/components/common/empty-state.svelte';
   import { Textarea } from '$lib/components/ui/textarea';
   import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
   import Phone from 'lucide-svelte/icons/phone';
   import Video from 'lucide-svelte/icons/video';
   import Smile from 'lucide-svelte/icons/smile';
+  import MessageCircle from 'lucide-svelte/icons/message-circle';
   import ChatBubble from '$lib/components/chat/chat-bubble.svelte';
 
   const userId = $derived(page.params.id!);
@@ -493,7 +495,11 @@
       </div>
     {:else if messages.length === 0}
       <div class="flex h-full items-center justify-center">
-        <p class="text-body-lg" style="color: var(--text-secondary)">{t('chat.startChat')}</p>
+        <EmptyState
+          icon={MessageCircle}
+          title={t('chat.startChat')}
+          variant="inline"
+        />
       </div>
     {:else}
       <div class="space-y-3 px-4">
