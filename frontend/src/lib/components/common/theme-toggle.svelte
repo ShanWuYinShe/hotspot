@@ -16,7 +16,7 @@
 
   function getThemeFamilyLabel(themeFamily: ThemeFamily) {
     const option = THEME_FAMILY_OPTIONS.find((item) => item.family === themeFamily);
-    return option ? t(option.labelKey) : t('sidebar.forest');
+    return option ? t(option.labelKey) : t('sidebar.mist');
   }
 
   function toggleThemeFamily() {
