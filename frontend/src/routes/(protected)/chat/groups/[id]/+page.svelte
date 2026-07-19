@@ -828,7 +828,7 @@
     <!-- Scroll to Bottom Button -->
     {#if showScrollButton}
       <button
-        class="fixed right-6 z-10 flex items-center justify-center rounded-full outline-none"
+        class="fixed right-6 z-20 flex items-center justify-center rounded-full outline-none"
         style="bottom: max(96px, calc(24px + env(safe-area-inset-bottom, 0px))); width: 36px; height: 36px; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
         onclick={() => scrollToBottom(true)}
         aria-label={t('chat.scrollToBottomAria')}

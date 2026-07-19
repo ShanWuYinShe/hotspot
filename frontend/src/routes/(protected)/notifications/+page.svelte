@@ -463,8 +463,8 @@
             <!-- Unread group -->
             {#if unreadGroup.length > 0}
               <p
-                class="text-xs uppercase mb-2"
-                style="letter-spacing: 0.14em; color: var(--text-secondary)"
+                class="text-xs uppercase mb-2 tracking-wider"
+                style="color: var(--text-secondary)"
               >
                 新消息
               </p>
@@ -565,8 +565,8 @@
               {/each}
               {#if readGroup.length > 0}
                 <p
-                  class="text-xs uppercase mt-4 mb-2"
-                  style="letter-spacing: 0.14em; color: var(--text-secondary)"
+                  class="text-xs uppercase mt-4 mb-2 tracking-wider"
+                  style="color: var(--text-secondary)"
                 >
                   较早
                 </p>

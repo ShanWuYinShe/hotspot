@@ -210,13 +210,13 @@
         class="rounded-[var(--radius-lg)] p-6"
         style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
       >
-        <h2 class="text-h2" style="font-weight: 600; color: var(--text-primary)">分享内容</h2>
+        <h2 class="text-h2" style="font-weight: 600; color: var(--text-primary)">{t('share.otherShareTitle')}</h2>
         <p class="text-body-lg mt-2" style="color: var(--text-secondary)">
-          分享类型：{share.share.share_type === 'user'
-            ? '用户'
+          {t('share.shareTypeLabel', { type: share.share.share_type === 'user'
+            ? t('share.typeUser')
             : share.share.share_type === 'group'
-              ? '群组'
-              : '瞬间'}
+              ? t('share.typeGroup')
+              : t('share.typeMoment') })}
         </p>
         <div class="mt-4 space-y-3">
           <button

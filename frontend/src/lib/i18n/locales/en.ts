@@ -86,6 +86,10 @@ export default {
     reply: 'Reply',
     delete: 'Delete',
     send: 'Send',
+    share: 'Share',
+    report: 'Report',
+    viewDetail: 'View details',
+    moreActionsAria: 'More actions',
     operationFailed: 'Operation failed'
   },
   relativeTime: {

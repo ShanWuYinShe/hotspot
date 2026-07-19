@@ -86,6 +86,10 @@ export default {
     reply: '回复',
     delete: '删除',
     send: '发送',
+    share: '分享',
+    report: '举报',
+    viewDetail: '查看详情',
+    moreActionsAria: '更多操作',
     operationFailed: '操作失败'
   },
   relativeTime: {

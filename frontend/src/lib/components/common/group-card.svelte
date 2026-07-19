@@ -400,8 +400,7 @@
           <DropdownMenuTrigger>
             <button
               data-card-action
-              class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-              style="width: 30px; height: 30px;"
+              class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88] w-[30px] h-[30px]"
               onclick={(e: MouseEvent) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -414,7 +413,7 @@
           <DropdownMenuContent align="end" class="w-48">
             <DropdownMenuItem onclick={handleViewDetail}>
               <Info class="mr-2 h-4 w-4" />
-              <span>查看详情</span>
+              <span>{t('common.viewDetail')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem onclick={handleShare}>
               <Share2 class="mr-2 h-4 w-4" />
@@ -423,7 +422,7 @@
             <DropdownMenuSeparator />
             <DropdownMenuItem onclick={handleReport} class="text-destructive">
               <Flag class="mr-2 h-4 w-4" />
-              <span>举报</span>
+              <span>{t('common.report')}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

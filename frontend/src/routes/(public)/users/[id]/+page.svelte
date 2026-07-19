@@ -389,9 +389,7 @@
       <!-- Tab content: Moments / Gallery -->
       {#if currentTab === 'moments'}
         {#if momentsPagination.loading}
-          <div
-            style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px;"
-          >
+          <div class="grid grid-cols-3 gap-[3px] p-[3px]">
             {#each Array(9) as _, i (i)}
               <Skeleton
                 style="aspect-ratio: 1; border-radius: var(--radius-xs);"
@@ -406,9 +404,7 @@
           />
         {:else}
           <!-- 3-column gallery grid from moments' images -->
-          <div
-            style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px;"
-          >
+          <div class="grid grid-cols-3 gap-[3px] p-[3px]">
             {#each momentsPagination.items as moment (moment.moment_id)}
               {#if moment.images && moment.images.length > 0}
                 <a
@@ -450,9 +446,7 @@
       <!-- Tab content: Followers (粉丝) -->
       {#if currentTab === 'followers'}
         {#if followersPagination.loading}
-          <div
-            style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px;"
-          >
+          <div class="grid grid-cols-3 gap-[3px] p-[3px]">
             {#each Array(9) as _, i (i)}
               <Skeleton
                 style="aspect-ratio: 1; border-radius: var(--radius-xs);"
@@ -496,9 +490,7 @@
       <!-- Tab content: Following (关注) -->
       {#if currentTab === 'following'}
         {#if followingPagination.loading}
-          <div
-            style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px;"
-          >
+          <div class="grid grid-cols-3 gap-[3px] p-[3px]">
             {#each Array(9) as _, i (i)}
               <Skeleton
                 style="aspect-ratio: 1; border-radius: var(--radius-xs);"
