@@ -24,14 +24,14 @@ const configs: Record<ThemeFamily, HoverConfig> = {
     row: { y: -3, scale: 1.009, duration: 180, easing: EASE_OUT },
     btn: { scale: 1.1, duration: 170, easing: EASE_OUT },
     action: { scale: 1.2, duration: 140, easing: EASE_OUT },
-    tap: { scale: 0.94, duration: 100, easing: EASE_OUT }
+    tap: { scale: 0.9, duration: 120, easing: EASE_OUT }
   },
   grove: {
     card: { scale: 1.016, duration: 200, easing: EASE_OUT },
     row: { scale: 1.01, duration: 160, easing: EASE_OUT },
     btn: { scale: 1.08, duration: 160, easing: EASE_OUT },
     action: { scale: 1.18, duration: 140, easing: EASE_OUT },
-    tap: { scale: 0.97, duration: 100, easing: EASE_OUT }
+    tap: { scale: 0.92, duration: 120, easing: EASE_OUT }
   }
 };
 

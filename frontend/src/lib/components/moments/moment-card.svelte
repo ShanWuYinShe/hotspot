@@ -6,6 +6,7 @@
   import { toast } from '$lib/stores/toast.svelte';
   import { useOptimisticToggle } from '$lib/hooks/use-optimistic.svelte';
   import { formatRelativeTime, formatDistance } from '$lib/utils/format';
+  import { interactive } from '$lib/actions/interactive';
   import type { MomentItem } from '$lib/types/api';
   import Heart from 'lucide-svelte/icons/heart';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
@@ -146,14 +147,14 @@
   }
 </script>
 
-<div
-  class="moment-card card-hover hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--page-bg)] {className}"
+  <div
+  class="moment-card card-hover hover:scale-[1.01] active:scale-[0.985] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--page-bg)] {className}"
   onclick={handleCardClick}
   role="link"
   tabindex={0}
   aria-label={`查看 ${moment.user.nickname} 的动态`}
   onkeydown={(e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if ((e.key === 'Enter' || e.key === ' ') && !isInteractiveTarget(e.target)) {
       e.preventDefault();
       openMoment();
     }
@@ -202,6 +203,7 @@
         data-card-action
         class="moment-card__dismiss"
         onclick={handleDismiss}
+        use:interactive={{ type: 'action' }}
         aria-label="不感兴趣"
         title="不感兴趣"
       >
@@ -217,6 +219,7 @@
       onclick={openPreview}
       aria-label="预览图片"
       data-card-action
+      use:interactive={{ type: 'card' }}
     >
       <SmartImage
         src={primaryImage.url}
@@ -258,6 +261,7 @@
         class:is-active={likeAction.isOn}
         onclick={handleLike}
         disabled={likeAction.isLoading}
+        use:interactive={{ type: 'action' }}
         aria-label={likeAction.isOn ? '取消点赞' : '点赞'}
         aria-pressed={likeAction.isOn}
       >
@@ -279,6 +283,7 @@
           e.stopPropagation();
           openMoment();
         }}
+        use:interactive={{ type: 'action' }}
         aria-label="查看评论"
       >
         <MessageCircle size={16} strokeWidth={1.7} />
@@ -294,6 +299,7 @@
         class:is-active={favoriteAction.isOn}
         onclick={handleFavorite}
         disabled={favoriteAction.isLoading}
+        use:interactive={{ type: 'action' }}
         aria-label={favoriteAction.isOn ? '取消收藏' : '收藏'}
         aria-pressed={favoriteAction.isOn}
       >
@@ -309,6 +315,7 @@
         data-card-action
         class="moment-card__icon-action"
         onclick={handleShare}
+        use:interactive={{ type: 'action' }}
         aria-label="分享"
       >
         <Share2 size={16} strokeWidth={1.7} />
@@ -345,8 +352,16 @@
       var(--surface-bg);
     box-shadow: none;
     outline: none;
-      transition: border-color 0.22s ease;
-    }
+    transition:
+      border-color 0.22s ease,
+      box-shadow 0.22s ease;
+  }
+
+  .moment-card:hover,
+  .moment-card:focus-visible {
+    border-color: color-mix(in srgb, var(--brand) 38%, var(--border-theme));
+    box-shadow: 0 2px 14px color-mix(in srgb, var(--brand) 10%, transparent);
+  }
 
   .moment-card__header {
     display: flex;
@@ -561,8 +576,10 @@
     color: var(--text-secondary);
     background: transparent;
     outline: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
     transition:
-      transform 0.15s ease,
+      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
       color 0.18s ease,
       background 0.18s ease,
       border-color 0.18s ease;
@@ -592,13 +609,15 @@
 
   .moment-card__action:active,
   .moment-card__icon-action:active {
-    transform: scale(0.94);
+    transform: scale(0.9);
+    background: color-mix(in srgb, var(--brand) 14%, transparent);
   }
 
   .moment-card__action.is-active,
   .moment-card__icon-action.is-active {
     color: var(--brand);
-    background: color-mix(in srgb, var(--brand) 10%, transparent);
+    background: color-mix(in srgb, var(--brand) 12%, transparent);
+    border-color: color-mix(in srgb, var(--brand) 22%, var(--border-theme));
   }
 
   .moment-card__action:disabled,
