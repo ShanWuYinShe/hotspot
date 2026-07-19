@@ -2917,7 +2917,7 @@
     height: 30px;
     padding: 0 8px;
     border-radius: var(--radius-pill);
-    font-size: 14px;
+    font-size: var(--text-body-lg);
     font-weight: 700;
     line-height: 1;
     cursor: pointer;
