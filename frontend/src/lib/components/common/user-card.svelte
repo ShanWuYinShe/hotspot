@@ -192,12 +192,12 @@
         reason: 'other'
       });
       if (!isSuccess(response)) {
-        toast.error(response.message || '举报提交失败');
+        toast.error(response.message || t('common.reportFailed'));
         return;
       }
-      toast.success('举报已提交，我们会尽快处理');
+      toast.success(t('common.reportSuccess'));
     } catch {
-      toast.error('举报提交失败');
+      toast.error(t('common.reportFailed'));
     } finally {
       isReporting = false;
     }

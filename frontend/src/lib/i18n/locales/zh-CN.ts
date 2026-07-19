@@ -90,6 +90,8 @@ export default {
     report: '举报',
     viewDetail: '查看详情',
     moreActionsAria: '更多操作',
+    reportSuccess: '举报已提交，我们会尽快处理',
+    reportFailed: '举报提交失败',
     operationFailed: '操作失败'
   },
   relativeTime: {

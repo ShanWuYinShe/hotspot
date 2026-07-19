@@ -90,6 +90,8 @@ export default {
     report: 'Report',
     viewDetail: 'View details',
     moreActionsAria: 'More actions',
+    reportSuccess: 'Report submitted, we will process it shortly',
+    reportFailed: 'Report submission failed',
     operationFailed: 'Operation failed'
   },
   relativeTime: {
