@@ -14,11 +14,11 @@
   import MessageCircle from 'lucide-svelte/icons/message-circle';
   import Bookmark from 'lucide-svelte/icons/bookmark';
   import Share2 from 'lucide-svelte/icons/share-2';
-  import MapPin from 'lucide-svelte/icons/map-pin';
   import X from 'lucide-svelte/icons/x';
   import Avatar from '$lib/components/common/avatar.svelte';
   import SmartImage from '$lib/components/common/smart-image.svelte';
   import ImagePreview from '$lib/components/common/image-preview.svelte';
+  import { CardDistanceChip } from '$lib/components/common/card-primitives';
 
 	  interface Props {
 	    moment: MomentItem;
@@ -159,7 +159,7 @@
 </script>
 
   <div
-  class="moment-card card-hover hover:scale-[1.01] active:scale-[0.985] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--page-bg)] {className}"
+  class="moment-card card-surface card-hover hover:scale-[1.015] active:scale-[0.985] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--page-bg)] {className}"
   onclick={handleCardClick}
   role="link"
   tabindex={0}
@@ -202,10 +202,12 @@
     </div>
 
     {#if moment.location?.location_name}
-      <span class="moment-card__location">
-        <MapPin size={12} strokeWidth={1.7} />
-        <span>{moment.location.location_name}</span>
-      </span>
+      <CardDistanceChip
+        class="moment-card__location"
+        iconSize={12}
+        maxWidth="min(42%, 150px)"
+        text={moment.location.location_name}
+      />
     {/if}
 
     {#if onDismiss}
@@ -230,7 +232,6 @@
       onclick={openPreview}
       aria-label={t('moment.previewImageAria')}
       data-card-action
-      use:interactive={{ type: 'card' }}
     >
 	      <SmartImage
 	        src={primaryImage.url}
@@ -259,7 +260,7 @@
     {#if visibleTags.length > 0}
       <div class="moment-card__tags" aria-label={t('moment.tagsAria')}>
         {#each visibleTags as tag (tag)}
-          <span>#{tag}</span>
+          <span class="tag-chip tag-chip--sm">#{tag}</span>
         {/each}
       </div>
     {/if}
@@ -270,7 +271,7 @@
       <button
         type="button"
         data-card-action
-        class="moment-card__action"
+        class="card-action"
         class:is-active={likeAction.isOn}
         onclick={handleLike}
         disabled={likeAction.isLoading}
@@ -290,7 +291,7 @@
       <button
         type="button"
         data-card-action
-        class="moment-card__action"
+        class="card-action"
         onclick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -308,7 +309,7 @@
       <button
         type="button"
         data-card-action
-        class="moment-card__icon-action"
+        class="card-icon-action"
         class:is-active={favoriteAction.isOn}
         onclick={handleFavorite}
         disabled={favoriteAction.isLoading}
@@ -326,7 +327,7 @@
       <button
         type="button"
         data-card-action
-        class="moment-card__icon-action"
+        class="card-icon-action"
         onclick={handleShare}
         use:interactive={{ type: 'action' }}
         aria-label={t('common.share')}
@@ -353,27 +354,6 @@
     min-width: 0;
     cursor: pointer;
     flex-direction: column;
-    overflow: clip;
-    border: 1px solid color-mix(in srgb, var(--border-theme) 82%, transparent);
-    border-radius: var(--radius-lg);
-    background:
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--surface-bg) 96%, white 4%),
-        var(--surface-bg)
-      ),
-      var(--surface-bg);
-    box-shadow: none;
-    outline: none;
-    transition:
-      border-color 0.22s ease,
-      box-shadow 0.22s ease;
-  }
-
-  .moment-card:hover,
-  .moment-card:focus-visible {
-    border-color: color-mix(in srgb, var(--brand) 38%, var(--border-theme));
-    box-shadow: 0 2px 14px color-mix(in srgb, var(--brand) 10%, transparent);
   }
 
   .moment-card__header {
@@ -396,11 +376,28 @@
   }
 
   /* :global 穿透到子组件(Avatar / SmartImage)内的 <img>，否则 scoped CSS 不生效 */
-  .moment-card__avatar :global(img),
-  .moment-card__media :global(img) {
+  .moment-card__avatar :global(img) {
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  /* media 图片:容器固定 aspect-ratio + overflow:hidden,内层 img 绝对定位
+     填充容器不参与布局尺寸计算,避免高图/宽图撑破 aspect-ratio 造成卡片重叠。
+     object-fit: cover 处理过宽/过高/过大的图片;hover 放大由 transform scale 实现。 */
+  .moment-card__media :global(img) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (hover: hover) {
+    .moment-card__media:hover :global(img) {
+      transform: scale(1.05);
+    }
   }
 
   .moment-card__author {
@@ -429,28 +426,12 @@
     line-height: 1.2;
   }
 
+  /* moment-card 的 location chip 在 CardDistanceChip 基础上略加高 padding
+     (5px vs 默认 4px),与原设计一致;max-width 已通过 CardDistanceChip 的
+     maxWidth prop 传入。 */
   .moment-card__location {
-    display: flex;
-    max-width: min(42%, 150px);
     flex: 0 1 auto;
-    align-items: center;
-    gap: 4px;
-    overflow: clip;
-    border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--border-theme));
-    border-radius: var(--radius-pill);
     padding: 5px 8px;
-    color: var(--brand);
-    font-size: var(--text-caption);
-    font-weight: 600;
-    line-height: 1;
-    background: color-mix(in srgb, var(--brand) 9%, var(--surface-bg));
-  }
-
-  .moment-card__location span {
-    min-width: 0;
-    overflow: clip;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .moment-card__dismiss {
@@ -486,13 +467,13 @@
 
   .moment-card__media {
     display: block;
-    width: 100%;
     border: none;
     padding: 0;
     cursor: pointer;
     position: relative;
     margin: 0 var(--card-pad-x);
-    overflow: clip;
+    min-height: 0;
+    overflow: hidden;
     border-radius: var(--radius-md);
     aspect-ratio: var(--media-ratio);
     background: var(--border-theme);
@@ -535,7 +516,7 @@
     display: -webkit-box;
     overflow: clip;
     color: var(--text-primary);
-    font-size: clamp(13px, 1.2vw, 14px);
+    font-size: var(--text-body);
     line-height: 1.65;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
@@ -547,17 +528,7 @@
     flex-wrap: wrap;
     gap: 6px;
   }
-
-  .moment-card__tags span {
-    border: 1px solid color-mix(in srgb, var(--brand) 20%, var(--border-theme));
-    border-radius: var(--radius-pill);
-    padding: 4px 8px;
-    color: var(--brand);
-    font-size: var(--text-caption);
-    font-weight: 600;
-    line-height: 1;
-    background: color-mix(in srgb, var(--brand) 7%, transparent);
-  }
+  /* tag chip 样式复用全局 .tag-chip.tag-chip--sm(app.css),不再本地重写。 */
 
   .moment-card__footer {
     display: flex;
@@ -579,62 +550,15 @@
     flex: 0 0 auto;
   }
 
-  .moment-card__action,
-  .moment-card__icon-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid transparent;
-    border-radius: var(--radius-pill);
-    color: var(--text-secondary);
-    background: transparent;
-    outline: none;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
-    transition:
-      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
-      color 0.18s ease,
-      background 0.18s ease,
-      border-color 0.18s ease;
-  }
-
-  .moment-card__action {
-    gap: 5px;
-    min-height: 32px;
-    padding: 6px 9px;
-    font-size: var(--text-meta);
-    font-weight: 650;
-  }
-
-  .moment-card__icon-action {
-    width: 32px;
-    height: 32px;
-  }
-
-  .moment-card__action:hover,
-  .moment-card__icon-action:hover,
-  .moment-card__action:focus-visible,
-  .moment-card__icon-action:focus-visible {
-    color: var(--brand);
-    border-color: color-mix(in srgb, var(--brand) 20%, var(--border-theme));
-    background: color-mix(in srgb, var(--brand) 8%, transparent);
-  }
-
-  .moment-card__action:active,
-  .moment-card__icon-action:active {
-    transform: scale(0.9);
-    background: color-mix(in srgb, var(--brand) 14%, transparent);
-  }
-
-  .moment-card__action.is-active,
-  .moment-card__icon-action.is-active {
+  .card-action.is-active,
+  .card-icon-action.is-active {
     color: var(--brand);
     background: color-mix(in srgb, var(--brand) 12%, transparent);
     border-color: color-mix(in srgb, var(--brand) 22%, var(--border-theme));
   }
 
-  .moment-card__action:disabled,
-  .moment-card__icon-action:disabled {
+  .card-action:disabled,
+  .card-icon-action:disabled {
     cursor: wait;
     opacity: 0.62;
   }

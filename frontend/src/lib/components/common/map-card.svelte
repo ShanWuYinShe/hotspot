@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { loadAMap } from '$lib/utils/amap';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
+  import { t } from '$lib/i18n';
   import Navigation2 from 'lucide-svelte/icons/navigation-2';
   import Compass from 'lucide-svelte/icons/compass';
 
@@ -89,7 +90,7 @@
       style="background: linear-gradient(135deg, var(--surface-secondary), var(--surface-bg));"
     >
       <Compass size={24} strokeWidth={1.5} color="var(--text-secondary)" style="opacity: 0.5;" />
-      <span class="text-meta" style="color: var(--text-secondary)">地图加载失败</span>
+      <span class="text-meta" style="color: var(--text-secondary)">{t('mapCard.loadFailed')}</span>
     </div>
   {/if}
 
@@ -97,12 +98,11 @@
 
   <div class="absolute bottom-3 right-3 flex flex-col gap-2">
     <button
-      class="flex items-center justify-center rounded-[var(--radius-md)] outline-none"
-      style="width: 34px; height: 34px; background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid var(--glass-border);"
+      class="map-card__zoom-btn"
       onclick={zoomToCurrentLocation}
-      aria-label="定位到当前位置"
+      aria-label={t('mapCard.locateAria')}
     >
-      <Navigation2 size={14} strokeWidth={1.5} color="var(--text-primary)" />
+      <Navigation2 size={14} strokeWidth={1.5} />
     </button>
   </div>
 
@@ -110,7 +110,42 @@
     class="absolute bottom-3 left-3 flex items-center gap-1 rounded-full px-2.5 py-1"
     style="background: var(--surface-bg); opacity: 0.88; backdrop-filter: blur(8px); border: 1px solid var(--glass-border);"
   >
-    <span class="text-caption" style="color: var(--brand); font-weight: 600">已定位</span>
-    <span class="text-xs" style="color: var(--text-secondary)">拖拽浏览周边</span>
+    <span class="text-caption" style="color: var(--brand); font-weight: 600">{t('mapCard.located')}</span>
+    <span class="text-xs" style="color: var(--text-secondary)">{t('mapCard.dragHint')}</span>
   </div>
 </div>
+
+<style>
+  .map-card__zoom-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-md);
+    background: var(--surface-bg);
+    opacity: 0.88;
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    cursor: pointer;
+    outline: none;
+    color: var(--text-primary);
+    transition:
+      color 0.18s ease,
+      background 0.18s ease,
+      border-color 0.18s ease,
+      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .map-card__zoom-btn:hover,
+  .map-card__zoom-btn:focus-visible {
+    color: var(--brand);
+    border-color: color-mix(in srgb, var(--brand) 30%, var(--border-theme));
+    background: color-mix(in srgb, var(--brand) 12%, transparent);
+  }
+
+  .map-card__zoom-btn:active {
+    transform: scale(0.9);
+    background: color-mix(in srgb, var(--brand) 18%, transparent);
+  }
+</style>

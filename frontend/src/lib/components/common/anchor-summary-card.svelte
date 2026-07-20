@@ -1,6 +1,7 @@
 <script lang="ts">
   import MapPin from 'lucide-svelte/icons/map-pin';
   import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
+  import { t } from '$lib/i18n';
   import type { Snippet } from 'svelte';
 
   interface AnchorSummaryCardProps {
@@ -13,7 +14,7 @@
   }
 
   let {
-    label = '当前锚点',
+    label,
     description = null,
     subtle: _subtle = false,
     onAdjust,
@@ -21,20 +22,20 @@
     actions
   }: AnchorSummaryCardProps = $props();
 
+  const resolvedLabel = $derived(label ?? t('anchorSummary.label'));
   const displayName = $derived(overrideName ?? mapAnchorStore.displayName);
 </script>
 
 <div
-  class="rounded-[var(--radius-lg)] p-4"
-  style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
+  class="anchor-card card-surface rounded-[var(--radius-lg)] p-4"
 >
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div class="min-w-0">
       <p class="text-xs uppercase" style="letter-spacing: 0.14em; color: var(--text-secondary)">
-        {label}
+        {resolvedLabel}
       </p>
       <p class="text-body-lg" style="font-weight: 600; color: var(--text-primary); margin-top: 4px">
-        {displayName || '未设置锚点'}
+        {displayName || t('anchorSummary.notSet')}
       </p>
       {#if description}
         <p
@@ -52,13 +53,16 @@
       </div>
     {:else if onAdjust}
       <button
-        class="text-body flex items-center gap-2 rounded-full px-4 py-2 outline-none"
-        style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary)"
+        class="card-action"
+        style="min-height:34px;padding:8px 16px;font-size:13px;font-weight:500;gap:6px;"
         onclick={onAdjust}
       >
         <MapPin size={15} strokeWidth={1.5} color="var(--brand)" />
-        调整位置
+        {t('anchorSummary.adjust')}
       </button>
     {/if}
   </div>
 </div>
+
+<style>
+</style>

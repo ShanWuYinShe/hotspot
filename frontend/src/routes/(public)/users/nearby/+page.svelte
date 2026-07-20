@@ -212,17 +212,14 @@
       {:else}
         <div class="density-grid">
           {#each pagination.items as user (user.user.user_id)}
-            <div style="content-visibility: auto; contain-intrinsic-size: 100px;">
-              <UserCard
-                {user}
-                showDistance
-                showBio
-                showTags
-                showOnlineStatus
-                variant="nearby-row"
-                class="overflow-hidden"
-              />
-            </div>
+            <UserCard
+              {user}
+              showDistance
+              showBio
+              showTags
+              showOnlineStatus
+              variant="nearby-row"
+            />
           {/each}
         </div>
 

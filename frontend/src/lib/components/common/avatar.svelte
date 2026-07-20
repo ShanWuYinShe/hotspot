@@ -11,7 +11,11 @@
     type?: 'user' | 'group';
     shape?: 'circle' | 'rounded';
     class?: string;
-    border?: boolean;
+    /**
+     * 头像描边。false=无边;true=1.5px 中性边;'brand'=卡片场景用的品牌色描边
+     * (2px brand color-mix + surface-bg 底),与 moment/user/group-card 的品牌环一致。
+     */
+    border?: boolean | 'brand';
     /** 是否显示在线指示点(绝对定位在右下角)。 */
     online?: boolean;
     /** 在线点尺寸档位,默认按 size 自动:≤40 用 sm,48-64 用 md,≥80 用 lg。 */
@@ -44,8 +48,16 @@
     : size <= 96 ? 'text-h2'
     : 'text-h1'
   );
+  const borderDecl = $derived(
+    border === 'brand'
+      ? '2px solid color-mix(in srgb, var(--brand) 18%, var(--border-theme))'
+      : border
+        ? '1.5px solid var(--border-theme)'
+        : 'none'
+  );
+  const bgDecl = $derived(border === 'brand' ? 'var(--surface-bg)' : 'transparent');
   const rootStyle = $derived(
-    `width: ${size}px; height: ${size}px; border-radius: ${radius}; border: ${border ? '1.5px solid var(--border-theme)' : 'none'};`
+    `width: ${size}px; height: ${size}px; border-radius: ${radius}; border: ${borderDecl}; background: ${bgDecl};`
   );
   const fallbackStyle = $derived(
     `background: var(--surface-secondary); color: var(--text-secondary); border-radius: ${radius};`

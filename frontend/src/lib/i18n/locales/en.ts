@@ -1216,5 +1216,16 @@ export default {
 	    sendCodeFailed: 'Failed to send verification code',
 	    networkError: 'Network error. Please try again.',
 	    resetFailed: 'Failed to reset password'
+	  },
+	  anchorSummary: {
+	    label: 'Current Anchor',
+	    notSet: 'No anchor set',
+	    adjust: 'Adjust Location'
+	  },
+	  mapCard: {
+	    loadFailed: 'Failed to load map',
+	    located: 'Located',
+	    dragHint: 'Drag to explore nearby',
+	    locateAria: 'Locate to current position'
 	  }
 	} as const;

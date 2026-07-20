@@ -317,7 +317,7 @@
   <div class="flex h-full flex-col">
     <div
       class="flex-shrink-0 px-6 pt-5 pb-0"
-      style="background: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
+      style="position: relative; z-index: var(--z-sticky); background: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
     >
       {@render headerContent()}
     </div>

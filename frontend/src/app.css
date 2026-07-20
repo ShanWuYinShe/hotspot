@@ -819,21 +819,95 @@
   }
   .card-hover:hover,
   .neu-card-hover:hover {
-    box-shadow: var(--shadow-md) !important;
+    box-shadow:
+      0 4px 20px color-mix(in srgb, var(--brand) 16%, transparent),
+      0 1px 4px var(--shadow-elevation) !important;
   }
   .card-hover:focus-visible,
   .neu-card-hover:focus-visible {
-    box-shadow: var(--shadow-md) !important;
+    box-shadow:
+      0 4px 20px color-mix(in srgb, var(--brand) 16%, transparent),
+      0 1px 4px var(--shadow-elevation) !important;
     outline: 2px solid var(--glow);
     outline-offset: 2px;
   }
 
+  /* ── Card surface: 卡片基础层(所有卡片共享,确保视觉一致) ──────
+     使用 card-hover 获得过渡 + hover 阴影。
+     各组件模板: class="xxx-card card-surface card-hover" */
+  .card-surface {
+    border-radius: var(--radius-lg);
+    border: 1px solid color-mix(in srgb, var(--border-theme) 82%, transparent);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--surface-bg) 96%, white 4%),
+        var(--surface-bg)
+      ),
+      var(--surface-bg);
+    overflow: hidden;
+    box-shadow: none;
+    transition:
+      border-color 0.22s ease,
+      box-shadow 0.22s ease;
+  }
+  .card-surface:hover,
+  .card-surface:focus-visible {
+    border-color: color-mix(in srgb, var(--brand) 48%, var(--border-theme));
+  }
+
+  /* ── Card action button: 卡片操作按钮统一样式(所有卡片共享) ── */
+  .card-action,
+  .card-icon-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    color: var(--text-secondary);
+    background: transparent;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    cursor: pointer;
+    transition:
+      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+      color 0.18s ease,
+      background 0.18s ease,
+      border-color 0.18s ease;
+  }
+  .card-action:hover,
+  .card-icon-action:hover,
+  .card-action:focus-visible,
+  .card-icon-action:focus-visible {
+    color: var(--brand);
+    border-color: color-mix(in srgb, var(--brand) 30%, var(--border-theme));
+    background: color-mix(in srgb, var(--brand) 12%, transparent);
+  }
+  .card-action:active,
+  .card-icon-action:active {
+    transform: scale(0.9);
+    background: color-mix(in srgb, var(--brand) 18%, transparent);
+  }
+
+  .card-action {
+    gap: 5px;
+    min-height: 32px;
+    padding: 6px 9px;
+    font-size: var(--text-meta);
+    font-weight: 650;
+  }
+
+  .card-icon-action {
+    width: 32px;
+    height: 32px;
+  }
+
   /* ── Unified list-row hover ─────────────────────────────────────
-     全主题统一:密集列表行用 background-tint,无阴影、无 transform。
-     避免 neumorphic 浮起在密集列表下方块化,避免 inset overlay 在 neumorphic
-     主题下与既有阴影冲突。
-     - hover: --border-theme tint(轻度,9-18% 描边色作 tint)
-     - active: --border-active(按下加重)
+     全主题统一:密集列表行用 enhanced brand-tinted background,
+     无阴影、无 transform。
+     - hover: brand 8% tint(比 --border-theme 更明显)
+     - active: brand 14% tint(按下加重)
      - focus-visible: --glow outline 环(键盘可达性)
      @media (hover: hover) 包装避免触控设备误触发。 */
   .list-row {
@@ -842,11 +916,11 @@
   }
   @media (hover: hover) {
     .list-row:hover {
-      background-color: var(--border-theme);
+      background-color: color-mix(in srgb, var(--brand) 8%, var(--surface-bg));
     }
   }
   .list-row:active {
-    background-color: var(--border-active);
+    background-color: color-mix(in srgb, var(--brand) 14%, var(--surface-bg));
   }
   .list-row:focus-visible {
     outline: 2px solid var(--glow);

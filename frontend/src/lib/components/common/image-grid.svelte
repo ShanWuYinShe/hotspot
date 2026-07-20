@@ -59,7 +59,7 @@
     {#each visible as image, i (image.url)}
       <button
         type="button"
-        class="relative overflow-hidden rounded-[var(--radius-md)] bg-[var(--surface-secondary)] {isSingle
+        class="image-grid__cell relative overflow-hidden rounded-[var(--radius-md)] bg-[var(--surface-secondary)] {isSingle
           ? 'col-span-full'
           : ''}"
         style={isSingle ? 'aspect-ratio: 16 / 10;' : 'aspect-ratio: 1 / 1;'}
@@ -74,7 +74,7 @@
           width={image.width}
           height={image.height}
           {sizes}
-          class="h-full w-full object-cover"
+          class="image-grid__img h-full w-full object-cover"
         />
         {#if overflow > 0 && i === MAX - 1}
           <div
@@ -88,3 +88,19 @@
     {/each}
   </div>
 {/if}
+
+<style>
+  /* 图片 hover 缩放:容器 overflow-hidden 裁剪,内层 img transform scale,
+     实现"放大但不撑大容器"。与 moment-card__media 的 hover 效果保持一致。
+     @media (hover: hover) 避免触屏粘滞。
+     :global 因为 __img 类通过 SmartImage 的 class 透传到子组件 <img>,
+     Svelte 静态 scoped 检测无法识别,需显式穿透。 */
+  .image-grid__cell :global(.image-grid__img) {
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (hover: hover) {
+    .image-grid__cell:hover :global(.image-grid__img) {
+      transform: scale(1.05);
+    }
+  }
+</style>

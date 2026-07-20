@@ -94,9 +94,7 @@
       {:else}
         <div class="density-grid">
           {#each pagination.items as moment (moment.moment_id)}
-            <div style="content-visibility: auto; contain-intrinsic-size: 300px;">
-              <MomentCard {moment} />
-            </div>
+            <MomentCard {moment} />
           {/each}
         </div>
 

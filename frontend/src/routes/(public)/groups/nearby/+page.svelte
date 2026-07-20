@@ -237,9 +237,7 @@
       {:else}
         <div class="density-grid">
           {#each filteredGroups as group (group.group.group_id)}
-            <div style="content-visibility: auto; contain-intrinsic-size: 120px;">
-              <GroupCard {group} showDistance showMembers variant="default" class="overflow-hidden" />
-            </div>
+            <GroupCard {group} showDistance showMembers variant="default" />
           {/each}
         </div>
 

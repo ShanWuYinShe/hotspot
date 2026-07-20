@@ -1203,5 +1203,16 @@ export default {
 	    sendCodeFailed: '发送验证码失败',
 	    networkError: '网络错误，请重试',
 	    resetFailed: '重置密码失败'
+	  },
+	  anchorSummary: {
+	    label: '当前锚点',
+	    notSet: '未设置锚点',
+	    adjust: '调整位置'
+	  },
+	  mapCard: {
+	    loadFailed: '地图加载失败',
+	    located: '已定位',
+	    dragHint: '拖拽浏览周边',
+	    locateAria: '定位到当前位置'
 	  }
 	} as const;

@@ -9,17 +9,8 @@
   import { isSuccess } from '$lib/api/client';
   import { groupsService, reportsService } from '$lib/api/services';
   import { formatDistance } from '$lib/utils/format';
-  import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger
-  } from '$lib/components/ui/dropdown-menu';
   import Users from 'lucide-svelte/icons/users';
-  import MapPin from 'lucide-svelte/icons/map-pin';
   import Lock from 'lucide-svelte/icons/lock';
-  import MoreVertical from 'lucide-svelte/icons/more-vertical';
   import Info from 'lucide-svelte/icons/info';
   import UserPlus from 'lucide-svelte/icons/user-plus';
   import Spinner from '$lib/components/common/spinner.svelte';
@@ -27,6 +18,7 @@
   import Flag from 'lucide-svelte/icons/flag';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Avatar from '$lib/components/common/avatar.svelte';
+  import { CardDistanceChip, CardMoreMenu, CardActionBar } from '$lib/components/common/card-primitives';
   import type { GroupItem, GroupInfo } from '$lib/types/api';
 
   interface Props {
@@ -188,7 +180,9 @@
 </script>
 
 <div
-  class="group-card card-hover cursor-pointer overflow-hidden rounded-[var(--radius-lg)] outline-none hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
+  class="group-card card-surface card-hover cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--glow)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-bg)] {className}"
+  class:hover:scale-[1.015]={variant === 'square' || variant === 'compact'}
+  class:active:scale-[0.985]={variant === 'square' || variant === 'compact'}
   tabindex={0}
   role="link"
   onclick={handleCardClick}
@@ -204,15 +198,14 @@
         <div class="flex items-start justify-between gap-3">
           <div class="flex min-w-0 items-center gap-2.5">
             <div class="relative flex-shrink-0">
-              <div class="group-card__avatar">
               <Avatar
                 src={groupInfo.avatar_url}
                 name={groupInfo.name}
                 alt={groupInfo.name}
                 size={40}
                 type="group"
+                border="brand"
               />
-              </div>
               {#if unreadCount > 0}
                 <div
                   class="text-xs absolute -top-1 -right-1 flex items-center justify-center rounded-full"
@@ -224,7 +217,7 @@
             </div>
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-1">
-                <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
+                <p class="text-body-lg" style="font-weight: 650; color: var(--text-primary)">
                   {groupInfo.name}
                 </p>
                 {#if isPrivate}
@@ -242,10 +235,7 @@
             </div>
           </div>
           {#if distance}
-            <div class="group-card__distance flex-shrink-0">
-              <MapPin size={10} strokeWidth={1.5} />
-              <span>{formatDistance(distance)}</span>
-            </div>
+            <CardDistanceChip class="flex-shrink-0" text={formatDistance(distance)} />
           {/if}
         </div>
 
@@ -255,7 +245,7 @@
             {@const desc = groupWithDesc.description}
             <p
               class="text-meta mt-3 line-clamp-3"
-              style="color: var(--text-secondary); line-height: 1.5"
+              style="color: var(--text-secondary); line-height: 1.65"
             >
               {desc}
             </p>
@@ -281,19 +271,18 @@
   {:else if variant === 'compact'}
     <!-- Compact: horizontal list row -->
     <div class="flex items-center gap-3 p-3.5">
-      <div class="group-card__avatar">
-        <Avatar
-          src={groupInfo.avatar_url}
-          name={groupInfo.name}
-          alt={groupInfo.name}
-          size={40}
-          type="group"
-        />
-      </div>
+      <Avatar
+        src={groupInfo.avatar_url}
+        name={groupInfo.name}
+        alt={groupInfo.name}
+        size={40}
+        type="group"
+        border="brand"
+      />
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-1">
-            <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
+            <p class="text-body-lg" style="font-weight: 650; color: var(--text-primary)">
               {groupInfo.name}
             </p>
             {#if isPrivate}
@@ -301,10 +290,7 @@
             {/if}
           </div>
           {#if distance}
-            <div class="group-card__distance">
-              <MapPin size={10} strokeWidth={1.5} />
-              <span>{formatDistance(distance)}</span>
-            </div>
+            <CardDistanceChip text={formatDistance(distance)} />
           {/if}
         </div>
         {#if showMembers}
@@ -329,20 +315,19 @@
     </div>
   {:else}
     <!-- Default: horizontal with actions -->
-    <div class="p-4">
+    <div style="padding: var(--card-pad-y) var(--card-pad-x)">
       <div class="flex items-center gap-3.5">
-        <div class="group-card__avatar">
-          <Avatar
-            src={groupInfo.avatar_url}
-            name={groupInfo.name}
-            alt={groupInfo.name}
-            size={48}
-            type="group"
-          />
-        </div>
+        <Avatar
+          src={groupInfo.avatar_url}
+          name={groupInfo.name}
+          alt={groupInfo.name}
+          size={48}
+          type="group"
+          border="brand"
+        />
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-1">
-            <p class="text-body-lg" style="font-weight: 500; color: var(--text-primary)">
+            <p class="text-body-lg" style="font-weight: 650; color: var(--text-primary)">
               {groupInfo.name}
             </p>
             {#if isPrivate}
@@ -359,10 +344,7 @@
               </div>
             {/if}
             {#if distance}
-              <div class="group-card__distance">
-                <MapPin size={10} strokeWidth={1.5} />
-                <span>{formatDistance(distance)}</span>
-              </div>
+              <CardDistanceChip text={formatDistance(distance)} />
             {/if}
           </div>
         </div>
@@ -379,11 +361,11 @@
   {/if}
 
   <!-- Action buttons -->
-  <div style="border-top: 1px solid var(--border-theme);" class="px-4 py-2.5">
-    <div class="flex items-center justify-between">
+  <CardActionBar>
+    {#snippet primary()}
       <button
         data-card-action
-        class="group-card__action"
+        class="card-action"
         style="color: {isJoined ? 'var(--brand)' : 'var(--text-secondary)'};"
         onclick={handleJoinGroup}
         disabled={isJoining}
@@ -397,143 +379,31 @@
           {#if isJoining}{t('group.joining')}{:else if isJoined}{t('group.enterChat')}{:else}{t('group.joinAction')}{/if}
         </span>
       </button>
-      {#if showMenu}
-        <DropdownMenu>
-          <DropdownMenuTrigger>
-              <button
-                data-card-action
-                class="group-card__icon-action"
-                onclick={(e: MouseEvent) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                aria-label={t('userProfile.moreAria')}
-              >
-                <MoreVertical size={14} strokeWidth={1.5} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" class="w-48">
-            <DropdownMenuItem onclick={handleViewDetail}>
-              <Info class="mr-2 h-4 w-4" />
-              <span>{t('common.viewDetail')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onclick={handleShare}>
-              <Share2 class="mr-2 h-4 w-4" />
-              <span>{t('userProfile.shareAria')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onclick={handleReport} class="text-destructive">
-              <Flag class="mr-2 h-4 w-4" />
-              <span>{t('common.report')}</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      {/if}
-    </div>
-  </div>
+    {/snippet}
+    {#snippet secondary()}
+        <button data-card-action class="card-icon-action" onclick={handleShare} aria-label={t('common.share')}>
+          <Share2 size={16} strokeWidth={1.7} />
+        </button>
+        {#if showMenu}
+          <CardMoreMenu
+            ariaLabel={t('userProfile.moreAria')}
+            items={[
+              { icon: Info, label: t('common.viewDetail'), onclick: handleViewDetail },
+              { icon: Flag, label: t('common.report'), onclick: handleReport, destructive: true }
+            ]}
+          />
+        {/if}
+      {/snippet}
+  </CardActionBar>
 </div>
 
 <style>
   .group-card {
+    --card-pad-x: clamp(14px, 2vw, 18px);
+    --card-pad-y: clamp(13px, 1.8vw, 16px);
     position: relative;
-    overflow: clip;
-    border: 1px solid color-mix(in srgb, var(--border-theme) 82%, transparent);
-    border-radius: var(--radius-lg);
-    background:
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--surface-bg) 96%, white 4%),
-        var(--surface-bg)
-      ),
-      var(--surface-bg);
-    box-shadow: none;
-    transition:
-      border-color 0.22s ease,
-      box-shadow 0.22s ease;
-  }
-
-  .group-card:hover,
-  .group-card:focus-visible {
-    border-color: color-mix(in srgb, var(--brand) 38%, var(--border-theme));
-    box-shadow: 0 2px 14px color-mix(in srgb, var(--brand) 10%, transparent);
-  }
-
-  .group-card__avatar {
-    display: block;
-    width: fit-content;
-    height: fit-content;
-    flex: 0 0 auto;
-    overflow: clip;
-    border: 2px solid color-mix(in srgb, var(--brand) 18%, var(--border-theme));
-    border-radius: var(--radius-pill);
-    background: var(--surface-bg);
-  }
-
-  .group-card__avatar :global(img) {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .group-card__distance {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--border-theme));
-    border-radius: var(--radius-pill);
-    padding: 4px 8px;
-    color: var(--brand);
-    font-size: var(--text-caption);
-    font-weight: 600;
-    line-height: 1;
-    background: color-mix(in srgb, var(--brand) 9%, var(--surface-bg));
-  }
-
-  .group-card__action,
-  .group-card__icon-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid transparent;
-    border-radius: var(--radius-pill);
-    color: var(--text-secondary);
-    background: transparent;
-    outline: none;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
-    cursor: pointer;
-    transition:
-      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
-      color 0.18s ease,
-      background 0.18s ease,
-      border-color 0.18s ease;
-  }
-
-  .group-card__action {
-    gap: 5px;
-    min-height: 32px;
-    padding: 6px 9px;
-    font-size: var(--text-meta);
-    font-weight: 650;
-  }
-
-  .group-card__icon-action {
-    width: 32px;
-    height: 32px;
-  }
-
-  .group-card__action:hover,
-  .group-card__icon-action:hover,
-  .group-card__action:focus-visible,
-  .group-card__icon-action:focus-visible {
-    color: var(--brand);
-    border-color: color-mix(in srgb, var(--brand) 20%, var(--border-theme));
-    background: color-mix(in srgb, var(--brand) 8%, transparent);
-  }
-
-  .group-card__action:active,
-  .group-card__icon-action:active {
-    transform: scale(0.9);
-    background: color-mix(in srgb, var(--brand) 14%, transparent);
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
   }
 </style>
