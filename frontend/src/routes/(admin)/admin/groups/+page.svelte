@@ -5,7 +5,13 @@
 	  import { toast } from '$lib/stores/toast.svelte';
 	  import { t } from '$lib/i18n';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+  } from '$lib/components/ui/dropdown-menu';
   import ConfirmDialog from '$lib/components/common/confirm-dialog.svelte';
   import Avatar from '$lib/components/common/avatar.svelte';
   import type { AdminGroupItem } from '$lib/types/api';
@@ -13,7 +19,7 @@
   import AdminPageHeader from '$lib/components/common/admin-page-header.svelte';
   import Search from 'lucide-svelte/icons/search';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
-  import MoreVertical from 'lucide-svelte/icons/more-vertical';
+  import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
   import Eye from 'lucide-svelte/icons/eye';
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import UsersRound from 'lucide-svelte/icons/users-round';
@@ -195,49 +201,29 @@
                   class="text-xs rounded-full px-2 py-0.5"
                   style="background: var(--brand); color: var(--text-on-accent)">正常</span
                 >
-                <DropdownMenu.Root>
-                  <DropdownMenu.Trigger>
-                    {#snippet child({ props })}
-                      <button
-                        class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-                        style="width: 30px; height: 30px;"
-                        aria-label="更多操作"
-                        {...props}
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    class="surface-flat inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                    aria-label="更多操作"
+                  >
+                    <MoreHorizontal size={16} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" class="w-36">
+                    <DropdownMenuItem>
+                      <a
+                        href="/groups/{group.group.group_id}"
+                        class="flex items-center text-body"
+                        style="color: var(--text-primary)"
                       >
-                        <MoreVertical size={14} strokeWidth={1.5} color="var(--text-secondary)" />
-                      </button>
-                    {/snippet}
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Content align="end">
-                    <DropdownMenu.Item>
-                      {#snippet child({ props })}
-                        <a
-                          href="/groups/{group.group.group_id}"
-                          class="text-body"
-                          style="display: flex; align-items: center; gap: 6px; color: var(--text-primary)"
-                          {...props}
-                        >
-                          <Eye size={14} strokeWidth={1.5} />
-                          查看详情
-                        </a>
-                      {/snippet}
-                    </DropdownMenu.Item>
-                    <DropdownMenu.Separator />
-                    <DropdownMenu.Item class="text-destructive">
-                      {#snippet child({ props })}
-                        <button
-                          class="text-body"
-                          style="display: flex; align-items: center; gap: 6px"
-                          {...props}
-                          onclick={() => requestDissolve(group.group.group_id)}
-                        >
-                          <Trash2 size={14} strokeWidth={1.5} />
-                          解散群组
-                        </button>
-                      {/snippet}
-                    </DropdownMenu.Item>
-                  </DropdownMenu.Content>
-                </DropdownMenu.Root>
+                        <Eye class="mr-2 h-4 w-4" />查看详情
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onclick={() => requestDissolve(group.group.group_id)} class="text-destructive">
+                      <Trash2 class="mr-2 h-4 w-4" />解散群组
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             {/each}
           </div>

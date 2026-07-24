@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { withMinimumLoadingTime } from '$lib/utils/loading';
   import { formatRelativeTime } from '$lib/utils/format';
   import { privateChatsService, groupsService } from '$lib/api/services';
@@ -88,12 +88,12 @@
   );
 
   function isPrivateChatSelected(userId: string): boolean {
-    const path = $page.url.pathname;
+    const path = page.url.pathname;
     return path === `/chat/users/${userId}`;
   }
 
   function isGroupSelected(groupId: string): boolean {
-    const path = $page.url.pathname;
+    const path = page.url.pathname;
     return path === `/chat/groups/${groupId}`;
   }
 

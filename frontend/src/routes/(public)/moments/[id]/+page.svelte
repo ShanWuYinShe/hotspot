@@ -268,8 +268,22 @@
     try {
       const response = await commentsService.delete({ comment_id: comment.comment_id });
       if (isSuccess(response)) {
-        comments = comments.filter((c) => c.comment_id !== comment.comment_id);
-        commentsCount = Math.max(0, commentsCount - 1);
+        if (comment.parent_id) {
+          // 删除的是子评论：从父评论的 top_replies 移除，递减父评论的 replies_count
+          comments = comments.map((c) =>
+            c.comment_id === comment.parent_id
+              ? {
+                  ...c,
+                  top_replies: c.top_replies?.filter((r) => r.comment_id !== comment.comment_id),
+                  replies_count: Math.max(0, c.replies_count - 1)
+                }
+              : c
+          );
+        } else {
+          // 删除的是顶层评论
+          comments = comments.filter((c) => c.comment_id !== comment.comment_id);
+          commentsCount = Math.max(0, commentsCount - 1);
+        }
         toast.success(t('momentDetail.commentDeleted'));
       } else {
         toast.error(response.message || t('momentDetail.deleteFailed'));
@@ -312,7 +326,7 @@
       if (isSuccess(response) && response.data) {
         const replies = response.data.items;
         comments = comments.map((c) =>
-          c.comment_id === commentId ? { ...c, top_replies: replies, replies_count: replies.length } : c
+          c.comment_id === commentId ? { ...c, top_replies: replies } : c
         );
       } else {
         toast.error(response.message || t('momentDetail.repliesLoadFailed'));
@@ -552,7 +566,9 @@
       >
         <!-- Comment input -->
         {#if authStore.isAuthenticated}
-          <div class="flex items-center gap-3 pb-4" style="border-bottom: 1px solid var(--border-theme);">
+          <div
+            class="input-surface mb-4 flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-1.5"
+          >
             <Avatar
               src={authStore.currentAccount?.avatar_url}
               name={authStore.currentAccount?.nickname}
@@ -562,7 +578,7 @@
             <Textarea
               size="sm"
               variant="transparent"
-              class="flex-1 text-sm"
+              class="flex-1"
               placeholder={t('momentDetail.commentPlaceholder')}
               maxlength={commentMaxLength}
               bind:value={commentText}
@@ -575,8 +591,8 @@
               }}
             />
             <button
-              class="flex flex-shrink-0 items-center justify-center rounded-full outline-none transition-transform active:scale-90"
-              style="width: 30px; height: 30px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"
+              class="flex shrink-0 items-center justify-center rounded-full outline-none transition-transform active:scale-90"
+              style="width: 30px; height: 30px; background: var(--brand); color: var(--text-on-accent);"
               onclick={submitComment}
               disabled={!commentText.trim() || isSubmitting}
               aria-label={t('common.send')}
@@ -589,14 +605,16 @@
             </button>
           </div>
           {#if commentText.length > commentMaxLength * 0.85}
-            <span
-              class="text-caption self-end"
-              style="color: {commentText.length > commentMaxLength
-                ? 'var(--theme-error)'
-                : 'var(--brand)'};"
-            >
-              {commentText.length}/{commentMaxLength}
-            </span>
+            <div class="flex justify-end">
+              <span
+                class="text-caption"
+                style="color: {commentText.length > commentMaxLength
+                  ? 'var(--theme-error)'
+                  : 'var(--brand)'};"
+              >
+                {commentText.length}/{commentMaxLength}
+              </span>
+            </div>
           {/if}
         {:else}
           <!-- 未登录：引导登录后评论 -->
@@ -696,10 +714,10 @@
                   </p>
 
                   <!-- 操作行:点赞 / 回复 / 删除(作者本人) -->
-                  <div class="mt-1.5 flex items-center gap-3">
+                  <div class="mt-2 flex items-center gap-2">
                     <button
                       type="button"
-                      class="flex items-center gap-1 text-caption outline-none transition-transform active:scale-95"
+                      class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none transition-transform duration-150 active:scale-[0.93]"
                       style="color: {comment.is_liked
                         ? 'var(--brand)'
                         : 'var(--text-secondary)'};"
@@ -708,28 +726,28 @@
                       aria-label={comment.is_liked ? t('common.unlike') : t('common.like')}
                     >
                       <Heart
-                        size={13}
+                        size={14}
                         fill={comment.is_liked ? 'currentColor' : 'none'}
                         strokeWidth={1.8}
                       />
                       {#if comment.likes_count > 0}
-                        <span>{comment.likes_count}</span>
+                        <span class="text-meta">{comment.likes_count}</span>
                       {/if}
                     </button>
                     <button
                       type="button"
-                      class="flex items-center gap-1 text-caption outline-none transition-transform active:scale-95"
+                      class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none transition-transform duration-150 active:scale-[0.93]"
                       style="color: var(--text-secondary);"
                       onclick={() => startReply(comment)}
                       aria-expanded={replyingTo === comment.comment_id}
                     >
-                      <CornerDownRight size={13} strokeWidth={1.8} />
-                      <span>{t('common.reply')}</span>
+                      <CornerDownRight size={14} strokeWidth={1.8} />
+                      <span class="text-meta">{t('common.reply')}</span>
                     </button>
                     {#if authStore.isAuthenticated && authStore.currentUserId === comment.user.user_id}
                       <button
                         type="button"
-                        class="flex items-center gap-1 text-caption outline-none transition-transform active:scale-95"
+                        class="surface-flat flex items-center gap-1.5 rounded-full px-3 py-1.5 outline-none transition-transform duration-150 active:scale-[0.93]"
                         style="color: var(--text-secondary);"
                         onclick={() => deleteComment(comment)}
                         disabled={deletingComments.has(comment.comment_id)}
@@ -738,7 +756,7 @@
                         {#if deletingComments.has(comment.comment_id)}
                           <Spinner size="xs" />
                         {:else}
-                          <Trash2 size={13} strokeWidth={1.8} />
+                          <Trash2 size={14} strokeWidth={1.8} />
                         {/if}
                       </button>
                     {/if}
@@ -747,12 +765,11 @@
                   <!-- 内联回复输入框 -->
                   {#if replyingTo === comment.comment_id}
                     <div
-                      class="mt-2 flex items-center gap-2 rounded-[var(--radius-md)] border-l-2 px-3 py-2"
-                      style="border-color: var(--brand); background: color-mix(in srgb, var(--brand) 6%, transparent);"
+                      class="input-surface mt-2 flex items-center gap-2 rounded-[var(--radius-md)] px-3 py-1.5"
                     >
                       <Textarea
                         size="sm"
-                        variant="inset"
+                        variant="transparent"
                         class="flex-1"
                         maxlength={commentMaxLength}
                         placeholder={t('momentDetail.replyPlaceholder')}
@@ -767,7 +784,7 @@
                       <button
                         type="button"
                         class="flex shrink-0 items-center justify-center rounded-full outline-none transition-transform active:scale-90"
-                        style="width: 30px; height: 30px; background: var(--brand); color: var(--text-on-accent); box-shadow: var(--shadow-brand-btn);"
+                        style="width: 30px; height: 30px; background: var(--brand); color: var(--text-on-accent);"
                         onclick={() => submitReply(comment)}
                         disabled={!replyText.trim() || isSubmittingReply}
                         aria-label={t('common.send')}

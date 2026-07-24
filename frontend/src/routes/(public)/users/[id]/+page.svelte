@@ -181,7 +181,7 @@
   // 数据错误提示（独立 effect，避免 user 变化导致重复触发）
   $effect(() => {
     if (data.error) {
-      toast.error(data.error);
+      untrack(() => toast.error(data.error));
     }
   });
 </script>

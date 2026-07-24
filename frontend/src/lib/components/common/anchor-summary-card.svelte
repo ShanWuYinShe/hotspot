@@ -53,8 +53,7 @@
       </div>
     {:else if onAdjust}
       <button
-        class="card-action"
-        style="min-height:34px;padding:8px 16px;font-size:13px;font-weight:500;gap:6px;"
+        class="card-action text-body font-medium min-h-[34px] px-4 py-2 gap-1.5"
         onclick={onAdjust}
       >
         <MapPin size={15} strokeWidth={1.5} color="var(--brand)" />

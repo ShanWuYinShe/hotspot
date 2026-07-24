@@ -125,6 +125,16 @@ func (r *InMemoryRepository) SoftDelete(_ context.Context, commentID string) err
 			}
 		}
 	}
+	// Decrement parent comment's RepliesCount if this is a reply
+	if item.ParentID != "" {
+		if parent, ok := r.byID[item.ParentID]; ok {
+			parent.RepliesCount--
+			if parent.RepliesCount < 0 {
+				parent.RepliesCount = 0
+			}
+			r.byID[item.ParentID] = parent
+		}
+	}
 	return nil
 }
 

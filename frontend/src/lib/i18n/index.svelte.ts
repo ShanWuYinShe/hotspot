@@ -86,7 +86,7 @@ export function setLocale(locale: Locale): void {
   try {
     localStorage.setItem('locale', locale);
   } catch {
-    // ignore
+    /* quota exceeded */
   }
 }
 

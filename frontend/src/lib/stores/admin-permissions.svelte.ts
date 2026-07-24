@@ -25,7 +25,9 @@ class AdminPermissionsStore {
           return;
         }
 
-        if (this.#loadedUserId === currentUserId || this.#status === 'loading') {
+        const isAlreadyLoaded = this.#loadedUserId === currentUserId;
+        const isLoading = this.#status === 'loading';
+        if (isAlreadyLoaded || isLoading) {
           return;
         }
 

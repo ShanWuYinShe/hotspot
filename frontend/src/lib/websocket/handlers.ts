@@ -897,27 +897,6 @@ class WebSocketEventHandlers {
     return () => this.groupMessageHandlers.delete(handler);
   }
 
-  /**
-   * 添加通知处理器
-   */
-  onNotification(handler: EventHandler) {
-    this.notificationHandlers.add(handler);
-    return () => this.notificationHandlers.delete(handler);
-  }
-
-  /**
-   * 添加用户在线状态处理器
-   */
-  onUserOnline(handler: EventHandler) {
-    this.userOnlineHandlers.add(handler);
-    return () => this.userOnlineHandlers.delete(handler);
-  }
-
-  onUserOffline(handler: EventHandler) {
-    this.userOfflineHandlers.add(handler);
-    return () => this.userOfflineHandlers.delete(handler);
-  }
-
   // ============ 客户端事件发送 ============
 
   // Typing 节流状态（spec: 最多每 3 秒一次，停止 3 秒后自动发 false）

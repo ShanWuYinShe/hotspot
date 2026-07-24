@@ -96,7 +96,7 @@
   let isReporting = $state(false);
 
   function isInteractiveTarget(target: EventTarget | null): boolean {
-    return target instanceof HTMLElement
+    return target instanceof Element
       ? Boolean(
           target.closest(
             'button, a, input, select, textarea, summary, [role="button"], [role="menuitem"], [data-card-action]'
@@ -223,7 +223,7 @@
   onkeydown={handleCardKeydown}
 >
   {#if variant === 'nearby-row'}
-    <!-- Nearby row: horizontal row for nearby all page -->
+    <!-- Nearby row: 附近的人行 -->
     <div class="flex items-center gap-3.5" style="padding: var(--card-pad-y) var(--card-pad-x)">
       <Avatar
         src={userInfo.avatar_url}
@@ -253,19 +253,9 @@
           {/if}
         </div>
       </div>
-      <div class="flex flex-shrink-0 flex-col items-end gap-2">
-        {#if distance}
-          <CardDistanceChip text={formatDistance(distance)} />
-        {/if}
-        {#if !isMe}
-          <FollowButton
-            variant="pill"
-            following={isFollowing}
-            loading={isFollowPending}
-            onclick={handleFollow}
-          />
-        {/if}
-      </div>
+      {#if distance}
+        <CardDistanceChip text={formatDistance(distance)} />
+      {/if}
     </div>
   {:else if variant === 'member-row'}
     <!-- Member row: 用户列表行(粉丝/关注/群成员统一) -->
@@ -295,11 +285,6 @@
           <p class="text-meta" style="color: var(--text-secondary)">{subtitle}</p>
         {/if}
       </div>
-      {#if actions}
-        <div class="flex flex-shrink-0 items-center gap-2" data-card-action>
-          {@render actions()}
-        </div>
-      {/if}
     </div>
   {:else if variant === 'square'}
     <!-- Square: info-dense card -->
@@ -460,36 +445,47 @@
   {/if}
 
   <!-- Action buttons -->
-  {#if !isMe && variant !== 'nearby-row' && variant !== 'member-row'}
-    <CardActionBar>
-      {#snippet primary()}
-        <button data-card-action class="card-action" onclick={handleSendMessage}>
-          <MessageCircle size={15} strokeWidth={1.5} />
-          <span>{t('user.messageAction')}</span>
-        </button>
-      {/snippet}
-      {#snippet secondary()}
-        <FollowButton
-          variant="ghost"
-          following={isFollowing}
-          loading={isFollowPending}
-          onclick={handleFollow}
-          class="card-action"
-        />
-        <button data-card-action class="card-icon-action" onclick={handleShare} aria-label={t('common.share')}>
-          <Share2 size={16} strokeWidth={1.7} />
-        </button>
-        {#if showMenu}
-          <CardMoreMenu
-            ariaLabel={t('userProfile.moreAria')}
-            items={[
-              { icon: User, label: t('userProfile.viewProfile'), onclick: handleViewProfile },
-              { icon: Flag, label: t('common.report'), onclick: handleReport, destructive: true }
-            ]}
+  {#if !isMe}
+    {#if variant === 'member-row' && actions}
+      <div class="flex items-center justify-end gap-2 px-3 py-2.5" style="border-top: 1px solid var(--border-theme);">
+        {@render actions()}
+      </div>
+    {:else}
+      <CardActionBar>
+        {#snippet primary()}
+          <button data-card-action class="card-action" onclick={handleSendMessage}>
+            <MessageCircle size={15} strokeWidth={1.5} />
+            <span>{t('user.messageAction')}</span>
+          </button>
+        {/snippet}
+        {#snippet secondary()}
+          <FollowButton
+            variant="ghost"
+            following={isFollowing}
+            loading={isFollowPending}
+            onclick={handleFollow}
+            class="card-action"
           />
-        {/if}
-      {/snippet}
-    </CardActionBar>
+          <button
+            data-card-action
+            class="surface-flat inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+            onclick={handleShare}
+            aria-label={t('common.share')}
+          >
+            <Share2 size={16} strokeWidth={1.7} />
+          </button>
+          {#if showMenu}
+            <CardMoreMenu
+              ariaLabel={t('userProfile.moreAria')}
+              items={[
+                { icon: User, label: t('userProfile.viewProfile'), onclick: handleViewProfile },
+                { icon: Flag, label: t('common.report'), onclick: handleReport, destructive: true }
+              ]}
+            />
+          {/if}
+        {/snippet}
+      </CardActionBar>
+    {/if}
   {/if}
 </div>
 

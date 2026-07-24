@@ -12,6 +12,14 @@ const (
 	UPDATE comments SET is_deleted = TRUE, content = ''
 	WHERE comment_id = $1`
 
+	querySoftDeleteReplyAndDecrementParent = `
+	WITH deleted AS (
+		UPDATE comments SET is_deleted = TRUE, content = '' WHERE comment_id = $1
+		RETURNING parent_id
+	)
+	UPDATE comments SET replies_count = GREATEST(replies_count - 1, 0)
+	WHERE comment_id IN (SELECT parent_id FROM deleted WHERE parent_id IS NOT NULL AND parent_id != '')`
+
 	queryListComments = `
 		SELECT c.comment_id, c.user_id, COALESCE(u.nickname, c.user_id), COALESCE(c.parent_id, ''), c.content, c.created_at, c.likes_count, c.replies_count, c.is_deleted
 		FROM comments c
@@ -33,8 +41,8 @@ const (
 		FROM comments c
 		LEFT JOIN users u ON u.user_id = c.user_id
 		WHERE c.parent_id = $1
-		  AND ($2::timestamptz IS NULL OR (c.created_at, c.comment_id) < ($2::timestamptz, $3))
-		ORDER BY c.created_at DESC, c.comment_id DESC
+		  AND ($2::timestamptz IS NULL OR (c.created_at, c.comment_id) > ($2::timestamptz, $3))
+		ORDER BY c.created_at ASC, c.comment_id ASC
 		LIMIT $4`
 
 	// queryListTopRepliesByParentIDs fetches up to $2 newest replies per parent
@@ -49,6 +57,12 @@ const (
 		  WHERE c.parent_id = ANY($1::text[])
 		) ranked
 		WHERE rn <= $2`
+
+	queryIncrementCommentRepliesCount = `
+	UPDATE comments SET replies_count = replies_count + 1 WHERE comment_id = $1`
+
+	queryDecrementCommentRepliesCount = `
+	UPDATE comments SET replies_count = GREATEST(replies_count - 1, 0) WHERE comment_id = $1`
 
 	queryInsertCommentLike = `
 	INSERT INTO comment_likes (comment_id, user_id, liked_at)

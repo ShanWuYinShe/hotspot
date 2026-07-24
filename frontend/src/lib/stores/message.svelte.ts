@@ -24,16 +24,13 @@ export interface UnreadConversation {
 // ============ 消息未读计数 Store ============
 
 class MessageStore {
-  // 未读对话列表（使用 $state.raw 避免 Map 自赋值反模式）
-  unreadConversations = $state.raw<Map<string, UnreadConversation>>(new Map());
+  #unreadConversations = $state.raw<Map<string, UnreadConversation>>(new Map());
 
-  // 总未读消息数
   totalUnreadCount = $derived(
-    Array.from(this.unreadConversations.values()).reduce((sum, conv) => sum + conv.count, 0)
+    Array.from(this.#unreadConversations.values()).reduce((sum, conv) => sum + conv.count, 0)
   );
 
-  // 未读对话数
-  unreadConversationCount = $derived(this.unreadConversations.size);
+  unreadConversationCount = $derived(this.#unreadConversations.size);
 
   // 清理函数数组（用于取消 WebSocket 监听）
   private cleanupFunctions: (() => void)[] = [];
@@ -49,7 +46,7 @@ class MessageStore {
     this.destroyEffectRoot = $effect.root(() => {
       $effect(() => {
         if (!authStore.isAuthenticated) {
-          this.unreadConversations = new Map();
+          this.#unreadConversations = new Map();
         }
       });
     });
@@ -59,9 +56,9 @@ class MessageStore {
 
   /** 不可变更新 Map：clone → mutate → reassign */
   private updateMap(mutator: (map: Map<string, UnreadConversation>) => void) {
-    const next = new Map(this.unreadConversations);
+    const next = new Map(this.#unreadConversations);
     mutator(next);
-    this.unreadConversations = next;
+    this.#unreadConversations = next;
   }
 
   /** 统一的消息未读递增逻辑（私聊/群聊共用） */
@@ -143,7 +140,7 @@ class MessageStore {
   }
 
   markAllAsRead() {
-    this.unreadConversations = new Map();
+    this.#unreadConversations = new Map();
   }
 
   destroy() {

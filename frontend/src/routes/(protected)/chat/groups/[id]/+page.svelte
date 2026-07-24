@@ -28,7 +28,14 @@
   import Spinner from '$lib/components/common/spinner.svelte';
   import EmptyState from '$lib/components/common/empty-state.svelte';
   import { Textarea } from '$lib/components/ui/textarea';
-  import MoreVertical from 'lucide-svelte/icons/more-vertical';
+  import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
+  import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger
+  } from '$lib/components/ui/dropdown-menu';
+  import Info from 'lucide-svelte/icons/info';
   import MessageCircle from 'lucide-svelte/icons/message-circle';
   import MapPin from 'lucide-svelte/icons/map-pin';
   import ChevronDown from 'lucide-svelte/icons/chevron-down';
@@ -468,7 +475,6 @@
 
     const unsubscribeMemberJoined = websocketStore.on('GroupMemberJoined', (payload) => {
       if (payload.group_id === groupId) {
-        toast.success(t('chat.memberJoined', { nickname: payload.user.nickname }));
         if (group) {
           group = { ...group, group: { ...group.group, members_count: payload.member_count } };
         }
@@ -485,6 +491,37 @@
       markGroupUserTypingStopped(payload.user_id);
     });
 
+    const unsubscribeMemberLeft = websocketStore.on('GroupMemberLeft', (payload) => {
+      if (payload.group_id !== groupId) return;
+      if (group) {
+        group = { ...group, group: { ...group.group, members_count: payload.member_count } };
+      }
+    });
+
+    const unsubscribeMemberRemoved = websocketStore.on('GroupMemberRemoved', (payload) => {
+      if (payload.group_id !== groupId) return;
+      if (group) {
+        group = { ...group, group: { ...group.group, members_count: payload.member_count } };
+      }
+      if (payload.user.user_id === authStore.currentUserId) {
+        loadGroup();
+      }
+    });
+
+    const unsubscribeGroupUpdated = websocketStore.on('GroupUpdated', (payload) => {
+      if (payload.group_id !== groupId || !group) return;
+      group = {
+        ...group,
+        group: {
+          ...group.group,
+          ...(payload.updated_fields.name && { name: payload.updated_fields.name }),
+          ...(payload.updated_fields.avatar_url && {
+            avatar_url: payload.updated_fields.avatar_url
+          })
+        }
+      };
+    });
+
     return () => {
       isMounted = false;
       eventHandlers.cancelAllTyping();
@@ -494,6 +531,9 @@
       unsubscribeEdited();
       unsubscribeMemberJoined();
       unsubscribeGroupTyping();
+      unsubscribeMemberLeft();
+      unsubscribeMemberRemoved();
+      unsubscribeGroupUpdated();
       if (keyboardDismissHandler && typeof window !== 'undefined') {
         window.removeEventListener(KEYBOARD_DISMISS_EVENT, keyboardDismissHandler);
       }
@@ -522,48 +562,7 @@
     });
   });
 
-  // WebSocket 事件处理（Svelte 5 $effect，自动清理）
-  $effect(() => {
-    return websocketStore.on('GroupMemberLeft', (payload) => {
-      if (payload.group_id !== groupId) return;
-      if (group) {
-        group = { ...group, group: { ...group.group, members_count: payload.member_count } };
-      }
-    });
-  });
-
-  $effect(() => {
-    return websocketStore.on('GroupMemberRemoved', (payload) => {
-      if (payload.group_id !== groupId) return;
-      if (group) {
-        group = { ...group, group: { ...group.group, members_count: payload.member_count } };
-      }
-      if (payload.user.user_id === authStore.currentUserId) {
-        loadGroup();
-      }
-    });
-  });
-
-  $effect(() => {
-    return websocketStore.on('GroupUpdated', (payload) => {
-      if (payload.group_id !== groupId || !group) return;
-      group = {
-        ...group,
-        group: {
-          ...group.group,
-          ...(payload.updated_fields.name && { name: payload.updated_fields.name }),
-          ...(payload.updated_fields.avatar_url && {
-            avatar_url: payload.updated_fields.avatar_url
-          })
-        }
-      };
-    });
-  });
-
-  /**
-   * 响应式订阅管理（等待 WebSocket 连接完成）
-   * 使用 $effect 监听连接状态，自动订阅/恢复订阅
-   */
+  // 响应式订阅管理（等待 WebSocket 连接完成，使用 $effect 监听连接状态，自动订阅/恢复订阅）
   $effect(() => {
     let cancelled = false;
 
@@ -576,14 +575,18 @@
 
     if (!connected) {
       // 连接断开，重置订阅状态
-      if (wsSubscription.state.isSubscribed) {
-        if (dev) console.log('[GroupChat] WebSocket 断开，重置订阅状态');
-      }
+      untrack(() => {
+        if (wsSubscription.state.isSubscribed) {
+          if (dev) console.log('[GroupChat] WebSocket 断开，重置订阅状态');
+        }
+      });
       resetGroupTypingUsers();
-      wsSubscription.sync({
-        connected,
-        type: 'group',
-        ids: [groupId]
+      untrack(() => {
+        wsSubscription.sync({
+          connected,
+          type: 'group',
+          ids: [groupId]
+        });
       });
       return () => {
         cancelled = true;
@@ -593,15 +596,17 @@
       void backfillRecentMessagesAfterReconnect();
     }
 
-    wsSubscription.sync({
-      connected,
-      type: 'group',
-      ids: [groupId],
-      onSubscribeFailed: () => {
-        if (cancelled) return;
-        if (dev) console.warn('[GroupChat] ❌ 订阅失败，将在重连后重试');
-        toast.warning(t('chat.subscribeFailedRetrying'));
-      }
+    untrack(() => {
+      wsSubscription.sync({
+        connected,
+        type: 'group',
+        ids: [groupId],
+        onSubscribeFailed: () => {
+          if (cancelled) return;
+          if (dev) console.warn('[GroupChat] ❌ 订阅失败，将在重连后重试');
+          toast.warning(t('chat.subscribeFailedRetrying'));
+        }
+      });
     });
 
     return () => {
@@ -661,13 +666,20 @@
       </a>
     {/if}
 
-    <button
-      class="surface-flat flex shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-      style="width: 36px; height: 36px;"
-      aria-label={t('chat.moreOptionsAria')}
-    >
-      <MoreVertical size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-    </button>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        class="surface-flat flex shrink-0 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+        style="width: 36px; height: 36px;"
+        aria-label={t('chat.moreOptionsAria')}
+      >
+        <MoreHorizontal size={16} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" class="w-44">
+        <DropdownMenuItem onclick={() => window.open(`/groups/${groupId}`, '_blank')}>
+          <Info class="mr-2 h-4 w-4" />{t('groupDetail.pageTitle')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   </header>
 
   <!-- Messages Container -->

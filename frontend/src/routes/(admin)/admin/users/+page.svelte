@@ -5,13 +5,19 @@
 	  import { toast } from '$lib/stores/toast.svelte';
 	  import { t } from '$lib/i18n';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+  } from '$lib/components/ui/dropdown-menu';
   import Avatar from '$lib/components/common/avatar.svelte';
   import type { UserItem } from '$lib/types/api';
   import AdminPageHeader from '$lib/components/common/admin-page-header.svelte';
   import Search from 'lucide-svelte/icons/search';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
-  import MoreVertical from 'lucide-svelte/icons/more-vertical';
+  import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
   import Ban from 'lucide-svelte/icons/ban';
   import UserX from 'lucide-svelte/icons/user-x';
   import Eye from 'lucide-svelte/icons/eye';
@@ -196,78 +202,48 @@
                     : 'background: var(--brand); color: var(--text-on-accent);'}"
                   >{STATUS_TEXT[user.status] ?? user.status}</span
                 >
-                <DropdownMenu.Root>
-                  <DropdownMenu.Trigger>
-                    {#snippet child({ props })}
-                      <button
-                        class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-                        style="width: 30px; height: 30px;"
-                        aria-label="更多操作"
-                        {...props}
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    class="surface-flat inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                    aria-label="更多操作"
+                  >
+                    <MoreHorizontal size={16} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" class="w-40">
+                    <DropdownMenuItem>
+                      <a
+                        href="/users/{user.user.user_id}"
+                        class="flex items-center text-body"
+                        style="color: var(--text-primary)"
                       >
-                        <MoreVertical size={14} strokeWidth={1.5} color="var(--text-secondary)" />
-                      </button>
-                    {/snippet}
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Content align="end">
-                    <DropdownMenu.Item>
-                      {#snippet child({ props })}
-                        <a
-                          href="/users/{user.user.user_id}"
-                          class="text-body"
-                          style="display: flex; align-items: center; gap: 6px; color: var(--text-primary)"
-                          {...props}
-                        >
-                          <Eye size={14} strokeWidth={1.5} />
-                          查看详情
-                        </a>
-                      {/snippet}
-                    </DropdownMenu.Item>
-                    <DropdownMenu.Item>
-                      {#snippet child({ props })}
-                        <a
-                          href="/admin/rbac"
-                          class="text-body"
-                          style="display: flex; align-items: center; gap: 6px; color: var(--text-primary)"
-                          {...props}
-                        >
-                          <Shield size={14} strokeWidth={1.5} />
-                          管理角色
-                        </a>
-                      {/snippet}
-                    </DropdownMenu.Item>
-                    <DropdownMenu.Separator />
+                        <Eye class="mr-2 h-4 w-4" />
+                        查看详情
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <a
+                        href="/admin/rbac"
+                        class="flex items-center text-body"
+                        style="color: var(--text-primary)"
+                      >
+                        <Shield class="mr-2 h-4 w-4" />
+                        管理角色
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     {#if user.status === 'banned'}
-                      <DropdownMenu.Item>
-                        {#snippet child({ props })}
-                          <button
-                            class="text-body"
-                            style="display: flex; align-items: center; gap: 6px; color: var(--text-primary)"
-                            {...props}
-                            onclick={() => handleUnban(user.user.user_id)}
-                          >
-                            <UserX size={14} strokeWidth={1.5} />
-                            解除封禁
-                          </button>
-                        {/snippet}
-                      </DropdownMenu.Item>
+                      <DropdownMenuItem onclick={() => handleUnban(user.user.user_id)}>
+                        <UserX class="mr-2 h-4 w-4" />
+                        解除封禁
+                      </DropdownMenuItem>
                     {:else}
-                      <DropdownMenu.Item class="text-destructive">
-                        {#snippet child({ props })}
-                          <button
-                            class="text-body"
-                            style="display: flex; align-items: center; gap: 6px"
-                            {...props}
-                            onclick={() => handleBan(user.user.user_id)}
-                          >
-                            <Ban size={14} strokeWidth={1.5} />
-                            封禁用户
-                          </button>
-                        {/snippet}
-                      </DropdownMenu.Item>
+                      <DropdownMenuItem onclick={() => handleBan(user.user.user_id)} class="text-destructive">
+                        <Ban class="mr-2 h-4 w-4" />
+                        封禁用户
+                      </DropdownMenuItem>
                     {/if}
-                  </DropdownMenu.Content>
-                </DropdownMenu.Root>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             {/each}
           </div>

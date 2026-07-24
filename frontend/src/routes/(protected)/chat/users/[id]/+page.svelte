@@ -349,14 +349,18 @@
 
     if (!connected) {
       // 连接断开，重置订阅状态
-      if (wsSubscription.state.isSubscribed) {
-        if (dev) console.log('[Chat] WebSocket 断开，重置订阅状态');
-      }
+      untrack(() => {
+        if (wsSubscription.state.isSubscribed) {
+          if (dev) console.log('[Chat] WebSocket 断开，重置订阅状态');
+        }
+      });
       resetOtherUserTyping();
-      wsSubscription.sync({
-        connected,
-        type: 'user',
-        ids: [userId]
+      untrack(() => {
+        wsSubscription.sync({
+          connected,
+          type: 'user',
+          ids: [userId]
+        });
       });
       return () => {
         cancelled = true;
@@ -366,15 +370,17 @@
       void backfillRecentMessagesAfterReconnect();
     }
 
-    wsSubscription.sync({
-      connected,
-      type: 'user',
-      ids: [userId],
-      onSubscribeFailed: () => {
-        if (cancelled) return;
-        if (dev) console.warn('[Chat] ❌ 订阅失败，将在重连后重试');
-        toast.warning(t('chat.subscribeFailedRetrying'));
-      }
+    untrack(() => {
+      wsSubscription.sync({
+        connected,
+        type: 'user',
+        ids: [userId],
+        onSubscribeFailed: () => {
+          if (cancelled) return;
+          if (dev) console.warn('[Chat] ❌ 订阅失败，将在重连后重试');
+          toast.warning(t('chat.subscribeFailedRetrying'));
+        }
+      });
     });
 
     return () => {
@@ -451,14 +457,12 @@
         <Video size={14} color="var(--text-secondary)" strokeWidth={1.5} />
       </button>
       <DropdownMenu>
-        <DropdownMenuTrigger>
-          <button
-            class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-            style="width: 36px; height: 36px;"
-            aria-label={t('chat.moreOptionsAria')}
-          >
-            <MoreHorizontal size={15} strokeWidth={1.5} color="var(--text-secondary)" />
-          </button>
+        <DropdownMenuTrigger
+          class="surface-flat flex items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+          style="width: 36px; height: 36px;"
+          aria-label={t('chat.moreOptionsAria')}
+        >
+          <MoreHorizontal size={16} />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" class="w-44">
           <DropdownMenuItem onclick={deleteChat} disabled={isDeletingChat} class="text-destructive">

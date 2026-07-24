@@ -3,7 +3,7 @@
    * CardMoreMenu — 卡片右上角"⋯"更多菜单。
    *
    * 收敛 user-card / group-card 各自抄写的 ~30 行 DropdownMenu 样板:
-   * MoreVertical trigger + DropdownMenuContent + 一组 item(查看 / 分享 / 举报)。
+   * surface-flat trigger + DropdownMenuContent + 一组 item(查看 / 分享 / 举报)。
    *
    * 用法:
    * ```svelte
@@ -22,7 +22,7 @@
     DropdownMenuSeparator,
     DropdownMenuTrigger
   } from '$lib/components/ui/dropdown-menu';
-  import MoreVertical from 'lucide-svelte/icons/more-vertical';
+  import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
 
   type IconComponent = typeof Icon;
 
@@ -54,14 +54,14 @@
     <button
       type="button"
       data-card-action
-      class="card-icon-action"
+      class="surface-flat inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
       onclick={(e: MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
       }}
       aria-label={ariaLabel}
     >
-      <MoreVertical size={14} strokeWidth={1.5} />
+      <MoreHorizontal size={16} />
     </button>
   </DropdownMenuTrigger>
   <DropdownMenuContent align="end" class="w-48">

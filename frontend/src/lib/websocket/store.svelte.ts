@@ -57,24 +57,28 @@ class WebSocketStore {
   private wsUrl = $state('');
 
   // 连接状态（公开，供外部响应式使用）
-  connectionState = $state<ConnectionState>('disconnected');
-  connectionId = $state<string | null>(null);
-  lastError = $state<string | null>(null);
+  #connectionState = $state<ConnectionState>('disconnected');
+  #connectionId = $state<string | null>(null);
+  #lastError = $state<string | null>(null);
+
+  connectionState = $derived(this.#connectionState);
+  connectionId = $derived(this.#connectionId);
+  lastError = $derived(this.#lastError);
 
   // ============ 派生状态（使用 $derived） ============
 
   /** 是否已连接 */
-  isConnected = $derived(this.connectionState === 'connected');
+  isConnected = $derived(this.#connectionState === 'connected');
 
   /** 是否正在连接中 */
   isConnecting = $derived(
-    this.connectionState === 'connecting' ||
-      this.connectionState === 'authenticating' ||
-      this.connectionState === 'reconnecting'
+    this.#connectionState === 'connecting' ||
+      this.#connectionState === 'authenticating' ||
+      this.#connectionState === 'reconnecting'
   );
 
   /** 是否可以发送消息 */
-  canSendMessage = $derived(this.connectionState === 'connected');
+  canSendMessage = $derived(this.#connectionState === 'connected');
 
   // ============ 内部状态（非响应式） ============
 
@@ -116,7 +120,9 @@ class WebSocketStore {
   // 断开时间戳（客户端本地），仅在 lastServerTime 不可用时回退使用
   private disconnectTime = 0;
   // 最近一次重连前的断开时长（毫秒），用于业务层判定是否需要 HTTP 回补
-  lastDisconnectDurationMs = $state<number | null>(null);
+  #lastDisconnectDurationMs = $state<number | null>(null);
+
+  lastDisconnectDurationMs = $derived(this.#lastDisconnectDurationMs);
 
   // 防止并发连接的锁
   private connectingLock = false;
@@ -145,7 +151,7 @@ class WebSocketStore {
         if (isAuthenticated) {
           // 用户已登录，检查是否需要连接
           untrack(() => {
-            const state = this.connectionState;
+            const state = this.#connectionState;
             if (state === 'disconnected' || state === 'failed') {
               log('[WebSocket] 用户已登录，自动连接');
               this.connect();
@@ -156,7 +162,7 @@ class WebSocketStore {
         } else {
           // 用户未登录，断开连接
           untrack(() => {
-            const state = this.connectionState;
+            const state = this.#connectionState;
             if (state !== 'disconnected' && state !== 'failed') {
               log('[WebSocket] 用户已登出，自动断开');
               this.disconnect();
@@ -168,7 +174,7 @@ class WebSocketStore {
         return () => {
           if (authStore.isAuthenticated) return;
           untrack(() => {
-            const state = this.connectionState;
+            const state = this.#connectionState;
             if (state !== 'disconnected' && state !== 'failed') {
               this.disconnect();
             }
@@ -186,7 +192,7 @@ class WebSocketStore {
         // 页面重新显示时，检查连接是否需要恢复
         untrack(() => {
           const isAuthenticated = authStore.isAuthenticated;
-          const state = this.connectionState;
+          const state = this.#connectionState;
 
           if (isAuthenticated && (state === 'failed' || state === 'disconnected')) {
             log('[WebSocket] 页面显示，尝试恢复连接');
@@ -206,7 +212,7 @@ class WebSocketStore {
       log('[WebSocket] 网络恢复');
       untrack(() => {
         const isAuthenticated = authStore.isAuthenticated;
-        const state = this.connectionState;
+        const state = this.#connectionState;
 
         if (isAuthenticated && (state === 'failed' || state === 'disconnected')) {
           log('[WebSocket] 网络恢复，尝试重连');
@@ -255,7 +261,7 @@ class WebSocketStore {
 
     // 防护 3: 状态检查（使用 derived 状态）
     if (this.isConnecting || this.isConnected) {
-      warn(`[WebSocket] 当前状态 ${this.connectionState}，无需重连`);
+      warn(`[WebSocket] 当前状态 ${this.#connectionState}，无需重连`);
       return;
     }
 
@@ -275,11 +281,11 @@ class WebSocketStore {
     this.lastConnectAttempt = now;
     this.connectingLock = true;
     this.shouldReconnect = true;
-    this.lastError = null;
-    this.lastDisconnectDurationMs = null;
+    this.#lastError = null;
+    this.#lastDisconnectDurationMs = null;
 
     // 手动触发连接（非重连循环）时重置重连计数器
-    if (this.connectionState === 'failed' || this.connectionState === 'disconnected') {
+    if (this.#connectionState === 'failed' || this.#connectionState === 'disconnected') {
       this.reconnectAttempts = 0;
     }
 
@@ -292,7 +298,7 @@ class WebSocketStore {
     }
 
     // 更新状态并建立连接
-    this.connectionState = 'connecting';
+    this.#connectionState = 'connecting';
     log(`[WebSocket] 连接到 ${this.wsUrl}`);
 
     try {
@@ -315,7 +321,7 @@ class WebSocketStore {
     this.connectingLock = false; // 释放连接锁
     this.pendingMessages = []; // 清空待发送队列，防止旧会话消息在重连后被错误发送
     this.cleanup();
-    this.connectionState = 'disconnected';
+    this.#connectionState = 'disconnected';
   }
 
   /**
@@ -326,7 +332,7 @@ class WebSocketStore {
     // 使用 derived 状态检查
     if (!this.canSendMessage) {
       this.pendingMessages.push(event);
-      warn(`[WebSocket] 未连接(${this.connectionState})，消息已入队: ${event.type}`);
+      warn(`[WebSocket] 未连接(${this.#connectionState})，消息已入队: ${event.type}`);
       return;
     }
 
@@ -398,7 +404,7 @@ class WebSocketStore {
 
     this.ws.onopen = () => {
       log('[WebSocket] 连接已建立，开始鉴权...');
-      this.connectionState = 'authenticating';
+      this.#connectionState = 'authenticating';
       this.reconnectAttempts = 0; // 重置重连次数
       this.userNotifiedUnstable = false; // 重置通知标记
       this.authenticate();
@@ -492,9 +498,9 @@ class WebSocketStore {
    * 处理连接建立（类型安全！）
    */
   private handleConnectionEstablished(payload: ConnectionEstablishedPayload) {
-    this.connectionState = 'connected';
-    this.connectionId = payload.connection_id ?? null;
-    this.lastError = null;
+    this.#connectionState = 'connected';
+    this.#connectionId = payload.connection_id ?? null;
+    this.#lastError = null;
     this.connectingLock = false; // 释放连接锁
 
     // 保存服务端配置
@@ -519,7 +525,7 @@ class WebSocketStore {
       disconnectDurationMs = disconnectDuration > 0 ? disconnectDuration : null;
       log(`[WebSocket] 断开时长: ${(disconnectDuration / 1000).toFixed(1)}秒（基于客户端时间）`);
     }
-    this.lastDisconnectDurationMs = disconnectDurationMs;
+    this.#lastDisconnectDurationMs = disconnectDurationMs;
     // 记录本次服务端时间，用于下次断线恢复
     this.lastServerTime = payload.server_time;
 
@@ -563,7 +569,7 @@ class WebSocketStore {
    */
   private handleServerError(payload: ErrorPayload) {
     logError('[WebSocket] 服务端错误:', payload);
-    this.lastError = payload.message ?? '未知错误';
+    this.#lastError = payload.message ?? '未知错误';
     this.emitEvent('Error', payload);
 
     switch (payload.severity) {
@@ -572,7 +578,7 @@ class WebSocketStore {
         warn('[WebSocket] 致命错误，断开连接不重连:', payload.message);
         this.shouldReconnect = false;
         this.cleanup();
-        this.connectionState = 'failed';
+        this.#connectionState = 'failed';
         // 清除会话并提示用户
 	        toast.error(payload.message || t('websocket.sessionExpired'));
         authStore.logout();
@@ -589,7 +595,7 @@ class WebSocketStore {
           log('[WebSocket] Token可能已过期，尝试刷新...');
           this.shouldReconnect = true; // 允许在刷新后重连
           this.cleanup();
-          this.connectionState = 'reconnecting';
+          this.#connectionState = 'reconnecting';
 
           // 触发 HTTP 层面的刷新 Token
           ensureRefreshToken()
@@ -601,7 +607,7 @@ class WebSocketStore {
               } else {
                 log('[WebSocket] Token刷新失败，断开连接并登出');
                 this.shouldReconnect = false;
-                this.connectionState = 'failed';
+                this.#connectionState = 'failed';
                 authStore.logout();
               }
             })
@@ -622,8 +628,8 @@ class WebSocketStore {
    * 处理连接错误
    */
   private handleConnectionError(error: string) {
-    this.lastError = error;
-    this.connectionState = 'failed';
+    this.#lastError = error;
+    this.#connectionState = 'failed';
     this.connectingLock = false; // 释放连接锁
     this.cleanup(false); // 不关闭 WebSocket（已经出错）
     this.scheduleReconnect();
@@ -642,7 +648,7 @@ class WebSocketStore {
     if (this.shouldReconnect) {
       this.scheduleReconnect();
     } else {
-      this.connectionState = 'disconnected';
+      this.#connectionState = 'disconnected';
     }
   }
 
@@ -691,7 +697,7 @@ class WebSocketStore {
    * 发送 Ping
    */
   private sendPing() {
-    if (this.connectionState !== 'connected') {
+    if (this.#connectionState !== 'connected') {
       return;
     }
 
@@ -734,7 +740,7 @@ class WebSocketStore {
 
     if (!this.shouldReconnect) {
       log('[WebSocket] 不应重连，停止重连');
-      this.connectionState = 'failed';
+      this.#connectionState = 'failed';
       this.connectingLock = false; // 释放锁
       return;
     }
@@ -743,14 +749,14 @@ class WebSocketStore {
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       logError(`[WebSocket] 已达最大重连次数 ${MAX_RECONNECT_ATTEMPTS}，停止自动重连`);
       this.shouldReconnect = false;
-      this.connectionState = 'failed';
+      this.#connectionState = 'failed';
       this.connectingLock = false;
       // spec: 达到最大重连次数后通知用户"连接失败，请检查网络"
 	      toast.error(t('websocket.connectionFailed'));
       return;
     }
 
-    this.connectionState = 'reconnecting';
+    this.#connectionState = 'reconnecting';
 
     // 计算延迟（带抖动）
     const delay = this.getReconnectDelay(this.reconnectAttempts);
@@ -799,7 +805,7 @@ class WebSocketStore {
     }
 
     this.ws = null;
-    this.connectionId = null;
+    this.#connectionId = null;
     // 释放连接锁，允许后续重连；无论 closeWebSocket 是否为 true 都需要释放
     this.connectingLock = false;
   }
@@ -880,8 +886,8 @@ class WebSocketStore {
 
     // 连接状态
     console.group('📡 连接状态');
-    log('状态:', this.connectionState);
-    log('连接 ID:', this.connectionId ?? '无');
+    log('状态:', this.#connectionState);
+    log('连接 ID:', this.#connectionId ?? '无');
     log('WebSocket URL:', this.wsUrl || '未设置');
     log(
       '原生状态:',
@@ -939,9 +945,9 @@ class WebSocketStore {
     console.groupEnd();
 
     // 错误信息
-    if (this.lastError) {
+    if (this.#lastError) {
       console.group('❌ 最后错误');
-      logError(this.lastError);
+      logError(this.#lastError);
       console.groupEnd();
     }
 

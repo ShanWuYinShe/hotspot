@@ -39,6 +39,11 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if err := queryable.Exec(ctx, queryInsertComment, commentID, req.MomentID, userID, parentID, req.Content, createdAt, 0, 0); err != nil {
 		return CommentItem{}, err
 	}
+	if req.ParentID != "" {
+		if err := queryable.Exec(ctx, queryIncrementCommentRepliesCount, req.ParentID); err != nil {
+			return CommentItem{}, err
+		}
+	}
 	var nickname string
 	_ = queryable.QueryRow(ctx, queryGetNickname, userID).Scan(&nickname)
 	if nickname == "" {
@@ -61,7 +66,7 @@ func (r *PostgresRepository) SoftDelete(ctx context.Context, commentID string) e
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, querySoftDeleteComment, commentID)
+	return queryable.Exec(ctx, querySoftDeleteReplyAndDecrementParent, commentID)
 }
 
 func (r *PostgresRepository) List(ctx context.Context, momentID string, limit int, cursor string) (PaginatedComments, error) {

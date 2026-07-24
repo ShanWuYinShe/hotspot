@@ -4,7 +4,12 @@
 	  import { toast } from '$lib/stores/toast.svelte';
 	  import { t } from '$lib/i18n';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger
+  } from '$lib/components/ui/dropdown-menu';
   import type { ReportItem, ReportStatus } from '$lib/types/api';
   import {
     REPORT_REASON_LABEL,
@@ -13,9 +18,9 @@
   } from '$lib/utils/content-labels';
   import { formatDateTime } from '$lib/utils/format';
   import AdminPageHeader from '$lib/components/common/admin-page-header.svelte';
+  import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import Flag from 'lucide-svelte/icons/flag';
-  import MoreVertical from 'lucide-svelte/icons/more-vertical';
   import Check from 'lucide-svelte/icons/check';
   import X from 'lucide-svelte/icons/x';
 
@@ -202,52 +207,22 @@
                       >{STATUS_TEXT[report.status] ?? report.status}</span
                     >
                     {#if report.status === 'pending'}
-                      <DropdownMenu.Root>
-                        <DropdownMenu.Trigger>
-                          {#snippet child({ props })}
-                            <button
-                              class="surface-flat flex items-center justify-center rounded-full outline-none transition-transform duration-150 active:scale-[0.88]"
-                              style="width: 30px; height: 30px;"
-                              aria-label="更多操作"
-                              {...props}
-                            >
-                              <MoreVertical
-                                size={14}
-                                strokeWidth={1.5}
-                                color="var(--text-secondary)"
-                              />
-                            </button>
-                          {/snippet}
-                        </DropdownMenu.Trigger>
-                        <DropdownMenu.Content align="end">
-                          <DropdownMenu.Item>
-                            {#snippet child({ props })}
-                              <button
-                                class="text-body"
-                                style="display: flex; align-items: center; gap: 6px"
-                                {...props}
-                                onclick={() => handleProcess(report.report_id, 'resolve')}
-                              >
-                                <Check size={14} strokeWidth={1.5} color="var(--theme-success)" />
-                                确认并处理
-                              </button>
-                            {/snippet}
-                          </DropdownMenu.Item>
-                          <DropdownMenu.Item>
-                            {#snippet child({ props })}
-                              <button
-                                class="text-body"
-                                style="display: flex; align-items: center; gap: 6px"
-                                {...props}
-                                onclick={() => handleProcess(report.report_id, 'dismiss')}
-                              >
-                                <X size={14} strokeWidth={1.5} color="var(--theme-error)" />
-                                驳回举报
-                              </button>
-                            {/snippet}
-                          </DropdownMenu.Item>
-                        </DropdownMenu.Content>
-                      </DropdownMenu.Root>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          class="surface-flat inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                          aria-label="更多操作"
+                        >
+                          <MoreHorizontal size={16} />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" class="w-36">
+                          <DropdownMenuItem onclick={() => handleProcess(report.report_id, 'resolve')}>
+                            <Check class="mr-2 h-4 w-4" style="color: var(--theme-success);" />确认并处理
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onclick={() => handleProcess(report.report_id, 'dismiss')}>
+                            <X class="mr-2 h-4 w-4" style="color: var(--theme-error);" />驳回举报
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     {/if}
                   </div>
                 </div>

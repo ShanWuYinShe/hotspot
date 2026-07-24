@@ -39,9 +39,8 @@
         </a>
       {/if}
       <h1
-        style="font-size: {size === 'hero'
-          ? '24px'
-          : '20px'}; font-weight: 600; color: var(--text-primary);"
+        class={size === 'hero' ? 'text-display' : 'text-h1'}
+        style="font-weight: 600; color: var(--text-primary);"
       >
         {title}
       </h1>

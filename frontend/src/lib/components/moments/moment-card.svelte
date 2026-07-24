@@ -70,7 +70,7 @@
   );
 
   function isInteractiveTarget(target: EventTarget | null): boolean {
-    return target instanceof HTMLElement
+    return target instanceof Element
       ? Boolean(target.closest('button, a, input, select, textarea, [data-card-action]'))
       : false;
   }
@@ -145,16 +145,18 @@
     void goto(`/users/${moment.user.user_id}`);
   }
 
-  async function handleDismiss(event: MouseEvent) {
+  function handleDismiss(event: MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
-    try {
-      await feedService.dismiss({ target_type: 'moment', target_id: moment.moment_id });
-      toast.success(t('moment.dismissed'));
-      onDismiss?.();
-    } catch {
-      toast.error(t('common.operationFailed'));
-    }
+    feedService
+      .dismiss({ target_type: 'moment', target_id: moment.moment_id })
+      .then(() => {
+        toast.success(t('moment.dismissed'));
+        onDismiss?.();
+      })
+      .catch(() => {
+        toast.error(t('common.operationFailed'));
+      });
   }
 </script>
 
@@ -216,7 +218,6 @@
         data-card-action
         class="moment-card__dismiss"
         onclick={handleDismiss}
-        use:interactive={{ type: 'action' }}
         aria-label={t('moment.dismissAria')}
         title={t('moment.dismissAria')}
       >

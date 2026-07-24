@@ -7,23 +7,21 @@ export type Orientation = 'portrait' | 'landscape';
 const WIDE_MIN_WIDTH = 960;
 
 class PlatformStore {
-  platform = $state<Platform>('mobile');
-  orientation = $state<Orientation>('portrait');
-  isMobile = $state(true);
-  isTablet = $state(false);
-  isDesktop = $state(false);
-  /** 当前视口宽度（px）。 */
-  width = $state(0);
-  /**
-   * 是否为"宽屏"：视口宽度 ≥ 960px（桌面恒为真，横屏 / 大尺寸平板亦为真）。
-   * 用于决定 **内容布局** 是否采用双栏 / master-detail；导航 chrome（侧边栏 vs 底栏）
-   * 仍由 isDesktop / isTablet 决定。详见 frontend/AGENTS.md「三档设备一致性」。
-   *
-   * ⚠️ 业务页优先用下方语义化派生量（useMasterDetail 等）或容器查询原语（.density-grid /
-   * .sidebar-layout / .switcher，见 app.css），而非直接读 isWide。直接读 isWide 仅用于
-   * 「信息架构级」差异（master-detail vs 长滚动这类容器查询无法消解的结构差异）。
-   */
-  isWide = $state(false);
+  #platform = $state<Platform>('mobile');
+  #orientation = $state<Orientation>('portrait');
+  #isMobile = $state(true);
+  #isTablet = $state(false);
+  #isDesktop = $state(false);
+  #width = $state(0);
+  #isWide = $state(false);
+
+  platform = $derived(this.#platform);
+  orientation = $derived(this.#orientation);
+  isMobile = $derived(this.#isMobile);
+  isTablet = $derived(this.#isTablet);
+  isDesktop = $derived(this.#isDesktop);
+  width = $derived(this.#width);
+  isWide = $derived(this.#isWide);
 
   #initialized = false;
   #raf = 0;
@@ -48,13 +46,13 @@ class PlatformStore {
     else if (minDim >= 600) p = 'tablet';
     else p = 'mobile';
 
-    this.platform = p;
-    this.orientation = w > h ? 'landscape' : 'portrait';
-    this.isMobile = p === 'mobile';
-    this.isTablet = p === 'tablet';
-    this.isDesktop = p === 'desktop';
-    this.width = w;
-    this.isWide = w >= WIDE_MIN_WIDTH;
+    this.#platform = p;
+    this.#orientation = w > h ? 'landscape' : 'portrait';
+    this.#isMobile = p === 'mobile';
+    this.#isTablet = p === 'tablet';
+    this.#isDesktop = p === 'desktop';
+    this.#width = w;
+    this.#isWide = w >= WIDE_MIN_WIDTH;
   }
 
   // ── 语义化派生量：表达「布局意图」而非「设备类型」。

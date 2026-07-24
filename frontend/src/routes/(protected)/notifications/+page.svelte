@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { goto } from '$app/navigation';
   import { notificationStore } from '$lib/stores/notification.svelte';
   import { groupsService } from '$lib/api/services';
@@ -143,7 +143,7 @@
     const syncVersion = notificationStore.readSyncVersion;
     if (syncVersion === 0) return;
     if (notificationStore.lastReadMutationType === 'mark_all_read') {
-      pagination.updateItem((i) => (i.is_read ? i : { ...i, is_read: true }));
+      untrack(() => pagination.updateItem((i) => (i.is_read ? i : { ...i, is_read: true })));
       return;
     }
     if (
@@ -151,7 +151,9 @@
       notificationStore.lastReadNotificationIds.length > 0
     ) {
       const ids = new Set(notificationStore.lastReadNotificationIds);
-      pagination.updateItem((i) => (ids.has(i.notification_id) ? { ...i, is_read: true } : null));
+      untrack(() =>
+        pagination.updateItem((i) => (ids.has(i.notification_id) ? { ...i, is_read: true } : null))
+      );
     }
   });
 

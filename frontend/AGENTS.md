@@ -21,9 +21,21 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
 
 ## 技术栈
 
-- SvelteKit（Svelte 5）
+- SvelteKit（Svelte 5，默认 runes 模式）
 - TypeScript（严格模式）
 - Vite
+
+## Svelte 5 约束
+
+- **全面使用 runes**：`$state` / `$derived` / `$effect` / `$props` / `$bindable`，禁止使用 Svelte 4 已弃用语法：
+  - 禁止 `export let` → 用 `$props()`
+  - 禁止 `$:` → 用 `$derived` / `$effect`
+  - 禁止 `on:click` 等事件修饰符 → 用 `onclick=` 属性
+  - 禁止 `<slot>` → 用 `{@render children()}`
+  - 禁止 `createEventDispatcher` → 用 callback props
+  - 禁止 `$$props` / `$$restProps` → 用 `$props()` 解构
+- **`$app/stores` 已全面迁移到 `$app/state`**：所有 `import { page } from '$app/stores'` 必须改为 `$app/state`
+- **Stores 用 `.svelte.ts` class 模式**（`writable`/`readable` 已在项目中淘汰）
 
 ## 目录与分层（必须）
 

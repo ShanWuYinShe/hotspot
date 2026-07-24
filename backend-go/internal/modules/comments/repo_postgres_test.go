@@ -118,7 +118,7 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 		for _, items := range b.comments {
 			for _, item := range items {
 				if item.CommentID == commentID {
-					return rowValues{values: []any{item.CommentID, item.MomentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted}}
+					return rowValues{values: []any{item.CommentID, item.MomentID, item.User.UserID, item.User.Nickname, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted}}
 				}
 			}
 		}
@@ -166,7 +166,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.CommentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted})
+			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted})
 		}
 		return &rowsValues{rows: rows}, nil
 	case queryListCommentReplies:
@@ -187,14 +187,14 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		sort.Slice(items, func(i, j int) bool {
 			if items[i].CreatedAt == items[j].CreatedAt {
-				return items[i].CommentID > items[j].CommentID
+				return items[i].CommentID < items[j].CommentID
 			}
-			return items[i].CreatedAt > items[j].CreatedAt
+			return items[i].CreatedAt < items[j].CreatedAt
 		})
 		if cursor.commentID != "" {
 			filtered := items[:0]
 			for _, item := range items {
-				if item.CreatedAt < cursor.likedAt || (item.CreatedAt == cursor.likedAt && item.CommentID < cursor.commentID) {
+				if item.CreatedAt > cursor.likedAt || (item.CreatedAt == cursor.likedAt && item.CommentID > cursor.commentID) {
 					filtered = append(filtered, item)
 				}
 			}
@@ -205,7 +205,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.CommentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted})
+			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted})
 		}
 		return &rowsValues{rows: rows}, nil
 	default:
@@ -291,7 +291,7 @@ func TestPostgresRepositoryListRepliesUsesCursor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first page: %v", err)
 	}
-	if len(first.Items) != 2 || first.Items[0].CommentID != "reply_3" || first.Items[1].CommentID != "reply_2" || first.NextCursor == "" {
+	if len(first.Items) != 2 || first.Items[0].CommentID != "reply_1" || first.Items[1].CommentID != "reply_2" || first.NextCursor == "" {
 		t.Fatalf("unexpected first page: %#v", first)
 	}
 
@@ -299,7 +299,7 @@ func TestPostgresRepositoryListRepliesUsesCursor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second page: %v", err)
 	}
-	if len(second.Items) != 1 || second.Items[0].CommentID != "reply_1" || second.NextCursor != "" {
+	if len(second.Items) != 1 || second.Items[0].CommentID != "reply_3" || second.NextCursor != "" {
 		t.Fatalf("unexpected second page: %#v", second)
 	}
 }

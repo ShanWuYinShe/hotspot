@@ -18,14 +18,16 @@ import { websocketStore } from '$lib/websocket';
 // ============ 通知 Store ============
 
 class NotificationStore {
-  // 未读数量（来自 HTTP API + WebSocket 增量）
-  unreadCount = $state(0);
-  readSyncVersion = $state(0);
-  lastReadMutationType = $state<'mark_read' | 'mark_all_read' | null>(null);
-  lastReadNotificationIds = $state.raw<string[]>([]);
-  // 已读通知 ID 集合：用于 markAsRead 时只对「真正新标记为已读」的项扣减未读计数，
-  // 避免重复标记导致计数漂移为负
-  readIds: Set<string> = new Set();
+  #unreadCount = $state(0);
+  #readSyncVersion = $state(0);
+  #lastReadMutationType = $state<'mark_read' | 'mark_all_read' | null>(null);
+  #lastReadNotificationIds = $state.raw<string[]>([]);
+  #readIds: Set<string> = new Set();
+
+  unreadCount = $derived(this.#unreadCount);
+  readSyncVersion = $derived(this.#readSyncVersion);
+  lastReadMutationType = $derived(this.#lastReadMutationType);
+  lastReadNotificationIds = $derived(this.#lastReadNotificationIds);
 
   private cleanupFunctions: (() => void)[] = [];
   // $effect.root() 清理函数
@@ -45,8 +47,8 @@ class NotificationStore {
           this.fetchUnreadCount();
         } else {
           // 登出时清空未读计数与已读集合，防止跨用户数据泄漏
-          this.unreadCount = 0;
-          this.readIds.clear();
+          this.#unreadCount = 0;
+          this.#readIds.clear();
           // 使之前的请求结果无效
           this.fetchVersion++;
         }
@@ -63,9 +65,8 @@ class NotificationStore {
     // 竞态保护：仅接受最新请求的结果（防止登出后过期响应写入）
     if (version !== this.fetchVersion) return;
     if (isSuccess(res) && res.data) {
-      this.unreadCount = res.data.total;
-      // 服务端权威计数刷新后重置本地已读集合，避免旧 readIds 干扰后续 markAsRead 扣减
-      this.readIds.clear();
+      this.#unreadCount = res.data.total;
+      this.#readIds.clear();
     }
   }
 
@@ -85,13 +86,12 @@ class NotificationStore {
     if (notificationIds.length === 0) return true;
     const res = await notificationsService.markAsRead({ notification_ids: notificationIds });
     if (isSuccess(res)) {
-      // 仅对本次「真正新标记为已读」的 ID 扣减，避免重复标记导致计数漂移
-      const newlyRead = notificationIds.filter((id) => !this.readIds.has(id));
-      newlyRead.forEach((id) => this.readIds.add(id));
-      this.unreadCount = Math.max(0, this.unreadCount - newlyRead.length);
-      this.lastReadMutationType = 'mark_read';
-      this.lastReadNotificationIds = [...notificationIds];
-      this.readSyncVersion += 1;
+      const newlyRead = notificationIds.filter((id) => !this.#readIds.has(id));
+      newlyRead.forEach((id) => this.#readIds.add(id));
+      this.#unreadCount = Math.max(0, this.#unreadCount - newlyRead.length);
+      this.#lastReadMutationType = 'mark_read';
+      this.#lastReadNotificationIds = [...notificationIds];
+      this.#readSyncVersion += 1;
       return true;
     }
     return false;
@@ -103,11 +103,11 @@ class NotificationStore {
   async markAllAsRead(): Promise<boolean> {
     const res = await notificationsService.markAllRead();
     if (isSuccess(res)) {
-      this.unreadCount = 0;
-      this.readIds.clear();
-      this.lastReadMutationType = 'mark_all_read';
-      this.lastReadNotificationIds = [];
-      this.readSyncVersion += 1;
+      this.#unreadCount = 0;
+      this.#readIds.clear();
+      this.#lastReadMutationType = 'mark_all_read';
+      this.#lastReadNotificationIds = [];
+      this.#readSyncVersion += 1;
       return true;
     }
     return false;
@@ -118,7 +118,7 @@ class NotificationStore {
    */
   private registerNotificationHandlers() {
     const increment = () => {
-      this.unreadCount += 1;
+      this.#unreadCount += 1;
     };
 
     this.cleanupFunctions.push(websocketStore.on('NewFollower', increment));

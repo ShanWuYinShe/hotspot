@@ -1,7 +1,7 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { browser } from '$app/environment';
   import { t } from '$lib/i18n';
   import { withMinimumLoadingTime } from '$lib/utils/loading';
   import { usersService, momentsService, groupsService, searchService } from '$lib/api/services';
@@ -50,7 +50,7 @@
   let searchError = $state<string | null>(null);
   let recentSearches = $state<string[]>(loadRecent());
 
-  $effect(() => {
+  onMount(() => {
     void loadTrending();
   });
 
@@ -74,7 +74,6 @@
   const hasAnyResults = $derived(users.length + moments.length + groups.length > 0);
 
   function loadRecent(): string[] {
-    if (!browser) return [];
     try {
       const raw = localStorage.getItem(STORAGE_KEY_RECENT);
       return raw ? JSON.parse(raw) : [];
@@ -84,11 +83,10 @@
   }
 
   function saveRecent(items: string[]) {
-    if (!browser) return;
     try {
       localStorage.setItem(STORAGE_KEY_RECENT, JSON.stringify(items));
     } catch {
-      /* ignore */
+      /* quota exceeded */
     }
   }
 

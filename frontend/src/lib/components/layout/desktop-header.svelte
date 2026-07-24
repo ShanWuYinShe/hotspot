@@ -5,7 +5,14 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { mode, toggleMode } from 'mode-watcher';
   import { THEME_FAMILY_OPTIONS, themeStore, type ThemeFamily } from '$lib/stores/theme.svelte';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+  } from '$lib/components/ui/dropdown-menu';
   import Avatar from '$lib/components/common/avatar.svelte';
   import Search from 'lucide-svelte/icons/search';
   import Sun from 'lucide-svelte/icons/sun';
@@ -49,27 +56,26 @@
         <Sun size={17} color="var(--text-secondary)" />
       {/if}
     </button>
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger>
-        {#snippet child({ props })}
-          <button {...props} class="desktop-header__btn" aria-label={t('sidebar.themeFamily')}>
-            <Palette size={17} color="var(--text-secondary)" />
-          </button>
-        {/snippet}
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Content class="w-44" align="end">
-        <DropdownMenu.Label>{t('sidebar.themeFamily')}</DropdownMenu.Label>
-        <DropdownMenu.Separator />
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        class="desktop-header__btn"
+        aria-label={t('sidebar.themeFamily')}
+      >
+        <Palette size={17} color="var(--text-secondary)" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent class="w-44" align="end">
+        <DropdownMenuLabel>{t('sidebar.themeFamily')}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
         {#each THEME_FAMILY_OPTIONS as option (option.family)}
-          <DropdownMenu.Item onclick={() => selectThemeFamily(option.family)}>
+          <DropdownMenuItem onclick={() => selectThemeFamily(option.family)}>
             <span class="flex-1">{t(option.labelKey)}</span>
             {#if currentThemeFamily === option.family}
               <Check size={15} />
             {/if}
-          </DropdownMenu.Item>
+          </DropdownMenuItem>
         {/each}
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+      </DropdownMenuContent>
+    </DropdownMenu>
     <button
       class="mx-1.5 flex items-center justify-center rounded-full outline-none transition-shadow duration-200"
       style="width: 36px; height: 36px; background: var(--brand); box-shadow: var(--shadow-brand-btn);"

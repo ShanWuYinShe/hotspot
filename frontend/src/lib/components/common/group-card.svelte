@@ -71,7 +71,7 @@
   });
 
   function isInteractiveTarget(target: EventTarget | null): boolean {
-    return target instanceof HTMLElement
+    return target instanceof Element
       ? Boolean(
           target.closest(
             'button, a, input, select, textarea, summary, [role="button"], [role="menuitem"], [data-card-action]'
@@ -381,7 +381,12 @@
       </button>
     {/snippet}
     {#snippet secondary()}
-        <button data-card-action class="card-icon-action" onclick={handleShare} aria-label={t('common.share')}>
+        <button
+          data-card-action
+          class="surface-flat inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+          onclick={handleShare}
+          aria-label={t('common.share')}
+        >
           <Share2 size={16} strokeWidth={1.7} />
         </button>
         {#if showMenu}

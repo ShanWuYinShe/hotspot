@@ -84,6 +84,12 @@ export function useChatWsSubscription() {
       return;
     }
 
+    // 如果 subscriptionManager 已标记此 ID 为 desired，说明 restore 已替我们完成了订阅
+    if (ids.every((id) => subscriptionManager.isSubscribed(options.type, id))) {
+      state.isSubscribed = true;
+      return;
+    }
+
     state.isAttemptingSubscribe = true;
     const attemptToken = ++syncToken;
 

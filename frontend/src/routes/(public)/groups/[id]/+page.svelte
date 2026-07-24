@@ -9,7 +9,6 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { usePagination } from '$lib/hooks/use-pagination.svelte';
-  import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
   import type { PageData } from './$types';
   import {
     DropdownMenu,
@@ -751,35 +750,8 @@
       toast.error(data.error);
     }
     loadSettings();
-  });
 
-  // WebSocket 群组订阅管理（进入页面时订阅，离开时取消）
-  const wsGroupSubscription = useChatWsSubscription();
-
-  $effect(() => {
-    let cancelled = false;
-    const connected = websocketStore.isConnected;
-    const id = groupId;
-
-    wsGroupSubscription.sync({
-      connected,
-      type: 'group',
-      ids: [id],
-      onSubscribeFailed: () => {
-        if (cancelled) return;
-        toast.warning(t('groupDetail.wsSubscribeFailed'));
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      wsGroupSubscription.cleanup('group', [id]);
-    };
-  });
-
-  // WebSocket 事件处理（Svelte 5 $effect，自动清理）
-  $effect(() => {
-    return websocketStore.on('GroupMemberLeft', (payload) => {
+    const unsubscribeMemberLeft = websocketStore.on('GroupMemberLeft', (payload) => {
       if (payload.group_id !== groupId) return;
       membersPagination.removeItem((item) => item.user.user_id === payload.user.user_id);
       if (groupData) {
@@ -789,10 +761,8 @@
         };
       }
     });
-  });
 
-  $effect(() => {
-    return websocketStore.on('GroupMemberRemoved', (payload) => {
+    const unsubscribeMemberRemoved = websocketStore.on('GroupMemberRemoved', (payload) => {
       if (payload.group_id !== groupId) return;
       membersPagination.removeItem((item) => item.user.user_id === payload.user.user_id);
       if (groupData) {
@@ -805,10 +775,8 @@
         loadGroup();
       }
     });
-  });
 
-  $effect(() => {
-    return websocketStore.on('GroupMemberMuted', (payload) => {
+    const unsubscribeMemberMuted = websocketStore.on('GroupMemberMuted', (payload) => {
       if (payload.group_id !== groupId) return;
       membersPagination.updateItem((item) => {
         if (item.user.user_id === payload.user.user_id) {
@@ -820,10 +788,8 @@
         loadGroup();
       }
     });
-  });
 
-  $effect(() => {
-    return websocketStore.on('GroupMemberUnmuted', (payload) => {
+    const unsubscribeMemberUnmuted = websocketStore.on('GroupMemberUnmuted', (payload) => {
       if (payload.group_id !== groupId) return;
       membersPagination.updateItem((item) => {
         if (item.user.user_id === payload.user.user_id) {
@@ -835,10 +801,8 @@
         loadGroup();
       }
     });
-  });
 
-  $effect(() => {
-    return websocketStore.on('GroupUpdated', (payload) => {
+    const unsubscribeGroupUpdated = websocketStore.on('GroupUpdated', (payload) => {
       if (payload.group_id !== groupId || !groupData) return;
       groupData = {
         ...groupData,
@@ -854,6 +818,14 @@
         })
       };
     });
+
+    return () => {
+      unsubscribeMemberLeft();
+      unsubscribeMemberRemoved();
+      unsubscribeMemberMuted();
+      unsubscribeMemberUnmuted();
+      unsubscribeGroupUpdated();
+    };
   });
 </script>
 
@@ -866,7 +838,7 @@
   class="sticky top-0 z-10 page-pad-x pt-3 pb-3"
   style="background-color: var(--surface-bg); border-bottom: 1px solid var(--border-theme);"
 >
-  <div class="page-shell page-shell--narrow flex items-center gap-4">
+  <div class="page-shell flex items-center gap-4">
     <BackButton onclick={() => history.back()} size={36} />
     <div>
       <h1 class="text-h1" style="font-weight: 600; color: var(--text-primary)">{t('groupDetail.pageTitle')}</h1>
@@ -879,23 +851,7 @@
 
 <div class="page-pad flex h-full flex-col overflow-y-auto no-scrollbar">
   <div class="page-shell space-y-5">
-    {#if group && !wsGroupSubscription.state.isSubscribed}
-      <div
-        class="flex items-center gap-2 rounded-[var(--radius-md)] px-4 py-2"
-        style="background: var(--surface-bg); border: 1px solid var(--theme-warning-border);"
-      >
-        <Spinner size="sm" color="var(--theme-warning)" />
-        <span class="text-body-lg" style="color: var(--theme-warning)">
-          {#if wsGroupSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
-            {t('groupDetail.wsConnecting')}
-          {:else}
-            {t('groupDetail.wsRetrying')}
-          {/if}
-        </span>
-      </div>
-    {/if}
-
-    {#if !group}
+  {#if !group}
       <div
         class="rounded-[var(--radius-lg)] p-6"
         style="background: var(--surface-bg); border: 1px solid var(--border-theme);"
@@ -1254,22 +1210,18 @@
                   {#if canManageGroup}
                     <DropdownMenu>
                       <DropdownMenuTrigger
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                        style="background: var(--surface-bg); border: 1px solid var(--border-theme); color: var(--text-primary);"
+                        class="surface-flat inline-flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
                         aria-label={t('groupDetail.announcementActionsAria')}
                       >
                         <MoreHorizontal size={16} />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" class="w-40">
                         <DropdownMenuItem onclick={() => openAnnouncementDialog(announcement)}>
-                          <Pencil size={16} style="margin-right: 8px;" />{t('groupDetail.editAnnouncement')}
+                          <Pencil class="mr-2 h-4 w-4" />{t('groupDetail.editAnnouncement')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onclick={() => openDeleteAnnouncement(announcement)}>
-                          <Trash2
-                            size={16}
-                            style="margin-right: 8px; color: var(--theme-error);"
-                          />{t('groupDetail.deleteAnnouncement')}
+                          <Trash2 class="mr-2 h-4 w-4 text-destructive" />{t('groupDetail.deleteAnnouncement')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1372,11 +1324,6 @@
                   : undefined}
               >
                 {#snippet actions()}
-                  {#if member.muted_until}
-                    <span class="tag-chip tag-chip--sm" style="color: var(--text-secondary);"
-                      >{t('groupDetail.muted')}</span
-                    >
-                  {/if}
                   {#if canManageMember(member)}
                     <DropdownMenu>
                       <DropdownMenuTrigger
@@ -1387,36 +1334,24 @@
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" class="w-40">
                         {#if member.muted_until}
-                          <DropdownMenuItem onclick={() => handleUnmuteMember(member)}
-                            ><Mic
-                              size={16}
-                              style="margin-right: 8px;"
-                            />{t('groupDetail.unmuteMember')}</DropdownMenuItem
-                          >
+                          <DropdownMenuItem onclick={() => handleUnmuteMember(member)}>
+                            <Mic class="mr-2 h-4 w-4" />{t('groupDetail.unmuteMember')}
+                          </DropdownMenuItem>
                         {:else}
-                          <DropdownMenuItem onclick={() => openMuteDialog(member)}
-                            ><MicOff
-                              size={16}
-                              style="margin-right: 8px;"
-                            />{t('groupDetail.muteMember')}</DropdownMenuItem
-                          >
+                          <DropdownMenuItem onclick={() => openMuteDialog(member)}>
+                            <MicOff class="mr-2 h-4 w-4" />{t('groupDetail.muteMember')}
+                          </DropdownMenuItem>
                         {/if}
                         {#if canChangeRole(member)}
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onclick={() => openRoleDialog(member)}
-                            ><UserCog
-                              size={16}
-                              style="margin-right: 8px;"
-                            />{t('groupDetail.roleManagement')}</DropdownMenuItem
-                          >
+                          <DropdownMenuItem onclick={() => openRoleDialog(member)}>
+                            <UserCog class="mr-2 h-4 w-4" />{t('groupDetail.roleManagement')}
+                          </DropdownMenuItem>
                         {/if}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onclick={() => openRemoveDialog(member)}
-                          ><UserMinus
-                            size={16}
-                            style="margin-right: 8px; color: var(--theme-error);"
-                          />{t('groupDetail.removeMember')}</DropdownMenuItem
-                        >
+                        <DropdownMenuItem onclick={() => openRemoveDialog(member)}>
+                          <UserMinus class="mr-2 h-4 w-4 text-destructive" />{t('groupDetail.removeMember')}
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   {/if}
