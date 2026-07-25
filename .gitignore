@@ -53,6 +53,7 @@ __pycache__/
 # ============================================
 # AI Tools (local config)
 # ============================================
+.workwork/
 .opencode/
 .sisyphus
 .worktrees
