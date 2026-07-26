@@ -1,0 +1,1016 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+  --background: #ffffff;
+  --foreground: oklch(0.145 0 0);
+  --card: #ffffff;
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: #030213;
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.0058 264.53);
+  --secondary-foreground: #030213;
+  --muted: #ececf0;
+  --muted-foreground: #717182;
+  --accent: #e9ebef;
+  --accent-foreground: #030213;
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: transparent;
+  --input-background: #f3f3f5;
+  --switch-background: #cbced4;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: #030213;
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Inter", "Noto Sans SC", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  /**
+  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
+  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+  */
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}
+
+/* 默认主题变量（星际）：首帧与无脚本环境保持与可选主题一致。 */
+:root {
+  --neu-bg: #FAFAFE; --page-bg: #EEF2FF; --neu-shadow-light: rgba(255,255,255,1); --neu-shadow-dark: rgba(99,91,200,.12);
+  --neu-text: #1E1B4B; --neu-text-muted: #514D86; --neu-accent: #4F46E5; --neu-accent-primary: #4F46E5; --neu-glow: rgba(79,70,229,.30);
+  --neu-border: rgba(99,102,241,.15); --neu-border-pressed: rgba(99,102,241,.26); --neu-accent-soft: rgba(79,70,229,.10); --neu-accent-soft-border: rgba(79,70,229,.32); --neu-on-accent: #FFFFFF; --neu-hover: rgba(79,70,229,.12); --neu-active-hover: rgba(79,70,229,.16);
+  --background: var(--neu-bg); --foreground: var(--neu-text); --card: var(--neu-bg); --card-foreground: var(--neu-text); --popover: var(--neu-bg); --popover-foreground: var(--neu-text);
+  --secondary: #F1F3FF; --secondary-foreground: var(--neu-text); --muted: #F0F1FE; --muted-foreground: var(--neu-text-muted); --accent: var(--neu-accent-soft); --accent-foreground: var(--neu-text); --border: var(--neu-border); --ring: var(--neu-accent-primary); --input-background: #F3F4FF; --switch-background: var(--neu-border-pressed);
+  --semantic-online: #0F766E; --semantic-hot: #BE123C; --semantic-warning: #A16207; --map-user: #4F46E5; --map-group: #047857; --map-post: #C2410C; --overlay-soft: rgba(30,27,75,.08); --overlay-strong: rgba(14,10,35,.50); --surface-image-scrim: linear-gradient(to bottom, rgba(20,16,56,.04), rgba(20,16,56,.52));
+  --hover-shadow-card: 0 14px 36px rgba(99,102,241,.14), 0 4px 14px rgba(99,102,241,.08); --hover-shadow-row: 0 8px 20px rgba(99,102,241,.11); --hover-shadow-btn: 0 6px 18px rgba(99,102,241,.20); --hover-shadow-pill: 0 4px 12px rgba(99,102,241,.16);
+}
+
+/* ── Forest / 清野 Theme ─────────────────────────────────────────────
+   Character: organic warmth, paper-canvas feel. COMPLETELY FLAT.
+   "清野" = clear wilderness — fresh, natural, minimal.
+   Light: warm off-white #F9F9F5 — like recycled paper / matcha tea
+   Dark:  deep forest green-black #161A16 — quiet and grounded
+   Shadows: ZERO — fully flat. Borders: green-tinted hairlines.
+────────────────────────────────────────────────────────────────────── */
+.forest {
+  /* Canvas — warm off-white instead of pure white */
+  --neu-bg: #F9F9F5;
+  --page-bg: #EDECEA;
+  --background: var(--neu-bg);
+  --foreground: var(--neu-text);
+  --card: var(--neu-bg);
+  --card-foreground: var(--neu-text);
+  --popover: var(--neu-bg);
+  --popover-foreground: var(--neu-text);
+  --secondary: #F3F4EE;
+  --secondary-foreground: var(--neu-text);
+  --muted: #F0F1EC;
+  --muted-foreground: var(--neu-text-muted);
+  --accent: var(--neu-accent-soft);
+  --accent-foreground: var(--neu-text);
+  --border: var(--neu-border);
+  --ring: var(--neu-accent-primary);
+  --input-background: #F4F5F0;
+  --switch-background: var(--neu-border-pressed);
+  --semantic-online: #3D7A55;
+  --semantic-hot: #78602E;
+  --semantic-warning: #806426;
+  --map-user: #3D7A55;
+  --map-group: #638B46;
+  --map-post: #A57C38;
+  --overlay-soft: rgba(27, 31, 27, 0.08);
+  --overlay-strong: rgba(20, 28, 20, 0.42);
+  --surface-image-scrim: linear-gradient(to bottom, rgba(20, 28, 20, 0.02) 0%, rgba(20, 28, 20, 0.44) 100%);
+
+  /* Shadows (flat — zero) */
+  --neu-shadow-light: rgba(255, 255, 255, 0.0);
+  --neu-shadow-dark:  rgba(0, 0, 0, 0.0);
+
+  /* Typography — slightly warm, earthy */
+  --neu-text:       #1B1F1B;
+  --neu-text-muted: #58685E;
+
+  /* Accent — forest green */
+  --neu-accent:         #3D7A55;
+  --neu-accent-primary: #3D7A55;
+  --neu-glow:           rgba(61, 122, 85, 0.18);
+
+  /* Borders — green-tinted hairlines (the key differentiator from Vibrant) */
+  --neu-border:         rgba(61, 122, 85, 0.13);
+  --neu-border-pressed: rgba(61, 122, 85, 0.24);
+  --neu-accent-soft:        rgba(61, 122, 85, 0.10);
+  --neu-accent-soft-border: rgba(61, 122, 85, 0.32);
+  --neu-hover:              rgba(61, 122, 85, 0.11);
+  --neu-active-hover:       rgba(61, 122, 85, 0.16);
+  --neu-on-accent:          #FFFFFF;
+
+  /* Hover */
+  --hover-shadow-card: 0 0 0 1.5px rgba(61, 122, 85, 0.22);
+  --hover-shadow-row:  0 0 0 1px  rgba(61, 122, 85, 0.18);
+  --hover-shadow-btn:  0 0 0 1.5px rgba(61, 122, 85, 0.28);
+  --hover-shadow-pill: 0 0 0 1px  rgba(61, 122, 85, 0.20);
+}
+
+.forest.dark {
+  /* Canvas — deep forest, slight green undertone */
+  --neu-bg: #161A16;
+  --page-bg: #0E110E;
+  --background: var(--neu-bg);
+  --foreground: var(--neu-text);
+  --card: var(--neu-bg);
+  --card-foreground: var(--neu-text);
+  --popover: var(--neu-bg);
+  --popover-foreground: var(--neu-text);
+  --secondary: #1B211B;
+  --secondary-foreground: var(--neu-text);
+  --muted: #1A201A;
+  --muted-foreground: var(--neu-text-muted);
+  --accent: var(--neu-accent-soft);
+  --accent-foreground: var(--neu-text);
+  --border: var(--neu-border);
+  --ring: var(--neu-accent-primary);
+  --input-background: #1A201A;
+  --switch-background: var(--neu-border-pressed);
+  --semantic-online: #52B878;
+  --semantic-hot: #C4A75A;
+  --semantic-warning: #C4A75A;
+  --map-user: #52B878;
+  --map-group: #88B85A;
+  --map-post: #C4A75A;
+  --overlay-soft: rgba(220, 232, 222, 0.07);
+  --overlay-strong: rgba(0, 0, 0, 0.54);
+  --surface-image-scrim: linear-gradient(to bottom, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.56) 100%);
+
+  /* Shadows (flat) */
+  --neu-shadow-light: rgba(255, 255, 255, 0.0);
+  --neu-shadow-dark:  rgba(0, 0, 0, 0.0);
+
+  /* Typography — warm off-white with green tint */
+  --neu-text:       #DCE8DE;
+  --neu-text-muted: #9AAFA0;
+
+  /* Accent */
+  --neu-accent:         #52B878;
+  --neu-accent-primary: #52B878;
+  --neu-glow:           rgba(82, 184, 120, 0.20);
+
+  /* Borders */
+  --neu-border:         rgba(82, 184, 120, 0.12);
+  --neu-border-pressed: rgba(82, 184, 120, 0.22);
+  --neu-accent-soft:        rgba(82, 184, 120, 0.12);
+  --neu-accent-soft-border: rgba(82, 184, 120, 0.34);
+  --neu-hover:              rgba(82, 184, 120, 0.14);
+  --neu-active-hover:       rgba(82, 184, 120, 0.20);
+  --neu-on-accent:          #0B1A10;
+
+  /* Hover */
+  --hover-shadow-card: 0 0 0 1.5px rgba(82, 184, 120, 0.26);
+  --hover-shadow-row:  0 0 0 1px  rgba(82, 184, 120, 0.20);
+  --hover-shadow-btn:  0 0 0 1.5px rgba(82, 184, 120, 0.32);
+  --hover-shadow-pill: 0 0 0 1px  rgba(82, 184, 120, 0.24);
+}
+
+/* ── Vibrant / 星际 Theme ─────────────────────────────────────────────
+   Character: electric, modern, "floating glass" feel. WITH DEPTH.
+   "星际" = cosmic/stardust — cool, energetic, high-contrast.
+   Light: barely-cool off-white #FAFAFE on lavender page bg #EEF2FF
+   Dark:  deep void-purple #130F26 — near-black with purple soul
+   Shadows: indigo-tinted directional elevation (floating cards).
+────────────────────────────────────────────────────────────────────── */
+.vibrant {
+  /* Canvas — very subtle cool tint (clearly NOT warm like Forest) */
+  --neu-bg:             #FAFAFE;
+  --page-bg:            #EEF2FF;
+  --background: var(--neu-bg);
+  --foreground: var(--neu-text);
+  --card: var(--neu-bg);
+  --card-foreground: var(--neu-text);
+  --popover: var(--neu-bg);
+  --popover-foreground: var(--neu-text);
+  --secondary: #F1F3FF;
+  --secondary-foreground: var(--neu-text);
+  --muted: #F0F1FE;
+  --muted-foreground: var(--neu-text-muted);
+  --accent: var(--neu-accent-soft);
+  --accent-foreground: var(--neu-text);
+  --border: var(--neu-border);
+  --ring: var(--neu-accent-primary);
+  --input-background: #F3F4FF;
+  --switch-background: var(--neu-border-pressed);
+  --neu-shadow-light:   rgba(255, 255, 255, 1);
+  --neu-shadow-dark:    rgba(99, 91, 200, 0.12);
+  --neu-text:           #1e1b4b;
+  --neu-text-muted:     #514D86;
+  --neu-accent:         #4F46E5;
+  --neu-accent-primary: #4F46E5;
+  --neu-glow:           rgba(79, 70, 229, 0.30);
+  --neu-border:         rgba(99, 102, 241, 0.15);
+  --neu-border-pressed: rgba(99, 102, 241, 0.26);
+  --neu-accent-soft:        rgba(79, 70, 229, 0.10);
+  --neu-accent-soft-border: rgba(79, 70, 229, 0.32);
+  --neu-hover:              rgba(79, 70, 229, 0.12);
+  --neu-active-hover:       rgba(79, 70, 229, 0.16);
+  --neu-on-accent:          #FFFFFF;
+  --semantic-online: #0F766E;
+  --semantic-hot: #BE123C;
+  --semantic-warning: #A16207;
+  --map-user: #4F46E5;
+  --map-group: #047857;
+  --map-post: #C2410C;
+  --overlay-soft: rgba(30, 27, 75, 0.08);
+  --overlay-strong: rgba(14, 10, 35, 0.50);
+  --surface-image-scrim: linear-gradient(to bottom, rgba(20, 16, 56, 0.04) 0%, rgba(20, 16, 56, 0.52) 100%);
+
+  /* Hover — directional accent-glow elevation */
+  --hover-shadow-card: 0 14px 36px rgba(99, 102, 241, 0.14), 0 4px 14px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.07);
+  --hover-shadow-row:  0 8px  20px rgba(99, 102, 241, 0.11), 0 2px  8px  rgba(99, 102, 241, 0.07);
+  --hover-shadow-btn:  0 6px  18px rgba(99, 102, 241, 0.20), 0 2px  6px  rgba(99, 102, 241, 0.12);
+  --hover-shadow-pill: 0 4px  12px rgba(99, 102, 241, 0.16), 0 1px  4px  rgba(99, 102, 241, 0.10);
+}
+
+.vibrant.dark {
+  /* Canvas — deep void purple, very dark */
+  --neu-bg:             #130F26;
+  --page-bg:            #07040F;
+  --background: var(--neu-bg);
+  --foreground: var(--neu-text);
+  --card: var(--neu-bg);
+  --card-foreground: var(--neu-text);
+  --popover: var(--neu-bg);
+  --popover-foreground: var(--neu-text);
+  --secondary: #1A1530;
+  --secondary-foreground: var(--neu-text);
+  --muted: #1A1530;
+  --muted-foreground: var(--neu-text-muted);
+  --accent: var(--neu-accent-soft);
+  --accent-foreground: var(--neu-text);
+  --border: var(--neu-border);
+  --ring: var(--neu-accent-primary);
+  --input-background: #1B1632;
+  --switch-background: var(--neu-border-pressed);
+  --neu-shadow-light:   rgba(129, 140, 248, 0.07);
+  --neu-shadow-dark:    rgba(0, 0, 0, 0.72);
+  --neu-text:           #EAE6FF;
+  --neu-text-muted:     #AAA6D8;
+  --neu-accent:         #818cf8;
+  --neu-accent-primary: #818cf8;
+  --neu-glow:           rgba(129, 140, 248, 0.30);
+  --neu-border:         rgba(129, 140, 248, 0.14);
+  --neu-border-pressed: rgba(129, 140, 248, 0.26);
+  --neu-accent-soft:        rgba(129, 140, 248, 0.14);
+  --neu-accent-soft-border: rgba(129, 140, 248, 0.34);
+  --neu-hover:              rgba(129, 140, 248, 0.18);
+  --neu-active-hover:       rgba(129, 140, 248, 0.24);
+  --neu-on-accent:          #120F2A;
+  --semantic-online: #2DD4BF;
+  --semantic-hot: #FB7185;
+  --semantic-warning: #FBBF24;
+  --map-user: #818CF8;
+  --map-group: #34D399;
+  --map-post: #FB923C;
+  --overlay-soft: rgba(234, 230, 255, 0.08);
+  --overlay-strong: rgba(0, 0, 0, 0.60);
+  --surface-image-scrim: linear-gradient(to bottom, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.62) 100%);
+
+  /* Hover */
+  --hover-shadow-card: 0 14px 36px rgba(129, 140, 248, 0.20), 0 4px 14px rgba(129, 140, 248, 0.12);
+  --hover-shadow-row:  0 8px  20px rgba(129, 140, 248, 0.15), 0 2px  8px  rgba(129, 140, 248, 0.09);
+  --hover-shadow-btn:  0 6px  18px rgba(129, 140, 248, 0.26), 0 2px  6px  rgba(129, 140, 248, 0.14);
+  --hover-shadow-pill: 0 4px  12px rgba(129, 140, 248, 0.20), 0 1px  4px  rgba(129, 140, 248, 0.12);
+}
+
+@theme inline {
+  --color-neu-bg: var(--neu-bg);
+  --color-neu-shadow-light: var(--neu-shadow-light);
+  --color-neu-shadow-dark: var(--neu-shadow-dark);
+  --color-neu-text: var(--neu-text);
+  --color-neu-text-muted: var(--neu-text-muted);
+  --color-neu-accent: var(--neu-accent);
+  --color-neu-accent-primary: var(--neu-accent-primary);
+  --color-neu-glow: var(--neu-glow);
+  --color-neu-border: var(--neu-border);
+  --color-neu-border-pressed: var(--neu-border-pressed);
+  --color-neu-accent-soft: var(--neu-accent-soft);
+  --color-neu-accent-soft-border: var(--neu-accent-soft-border);
+  --color-page-bg: var(--page-bg);
+  --color-semantic-online: var(--semantic-online);
+  --color-semantic-hot: var(--semantic-hot);
+  --color-semantic-warning: var(--semantic-warning);
+  --color-map-user: var(--map-user);
+  --color-map-group: var(--map-group);
+  --color-map-post: var(--map-post);
+}
+
+@layer utilities {
+  /*
+   * neu-input-surface — for <div> wrappers that contain an <input>/<textarea>
+   * Default: convex (raised). Focus-within: concave (pressed in).
+   */
+  .neu-input-surface {
+    background-color: var(--neu-bg);
+    box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light);
+    border: 1px solid var(--neu-border);
+    transition: box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease;
+  }
+  .neu-input-surface:focus-within {
+    box-shadow: inset 5px 5px 10px var(--neu-shadow-dark), inset -5px -5px 10px var(--neu-shadow-light);
+    border-color: var(--neu-border-pressed);
+  }
+
+  /*
+   * neu-input-base — for bare <input> elements (no wrapper div)
+   * Default: convex. Focus: concave.
+   */
+  .neu-input-base {
+    background-color: var(--neu-bg);
+    box-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light);
+    border: 1px solid var(--neu-border);
+    color: var(--neu-text);
+    transition: box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease;
+  }
+  .neu-input-base:focus {
+    box-shadow: inset 8px 8px 16px var(--neu-shadow-dark), inset -8px -8px 16px var(--neu-shadow-light);
+    border-color: var(--neu-border-pressed);
+    outline: none;
+  }
+
+  /*
+   * neu-icon-badge — small circular icon containers (凸起按钮感)
+   */
+  .neu-icon-badge {
+    background-color: var(--neu-bg);
+    box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);
+    border: 1px solid var(--neu-border);
+  }
+
+  /* ── Theme-aware hover surfaces ─────────────────────────────────
+     CSS  →  box-shadow transition (smooth, uses CSS variable resolution)
+     Motion →  y / scale animation (spring or ease-out per theme)
+     Theme variables (--hover-shadow-*) are defined per theme above.
+  ────────────────────────────────────────────────────────────────── */
+
+  /* Large content card */
+  .neu-card-hover {
+    cursor: pointer;
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.18s ease;
+  }
+  .neu-card-hover:hover {
+    transform: translateY(-3px);
+    border-color: var(--neu-accent-soft-border) !important;
+    box-shadow: var(--hover-shadow-card) !important;
+  }
+  .neu-card-hover:active { transform: translateY(-1px) scale(0.985); }
+  .neu-card-hover:focus-visible { outline: 2px solid var(--neu-accent-primary); outline-offset: 2px; }
+
+  /* List-row item — shared feedback for every clickable row.
+     This combines a visible surface change with lift and press feedback so
+     interaction never relies on an imperceptible shadow alone. */
+  .neu-row-hover {
+    position: relative;
+    cursor: pointer;
+    transition:
+      transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .neu-row-hover:hover {
+    transform: translateY(-2px);
+    background-color: color-mix(in srgb, var(--neu-accent-soft) 72%, var(--neu-bg)) !important;
+    border-color: var(--neu-accent-soft-border) !important;
+    box-shadow: var(--hover-shadow-row) !important;
+  }
+  .neu-row-hover:active {
+    transform: translateY(0) scale(0.985);
+  }
+  .neu-row-hover[data-active="true"],
+  .neu-row-hover[aria-pressed="true"] {
+    background-color: var(--neu-accent-soft) !important;
+    border-color: var(--neu-accent-soft-border) !important;
+    box-shadow: inset 2px 0 0 var(--neu-accent-primary), 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-row) !important;
+  }
+  .neu-row-hover[data-active="true"]:hover,
+  .neu-row-hover[aria-pressed="true"]:hover {
+    background-color: var(--neu-active-hover) !important;
+    border-color: var(--neu-accent-primary) !important;
+    box-shadow: inset 2px 0 0 var(--neu-accent-primary), 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-row) !important;
+    transform: none;
+  }
+  .neu-row-hover:focus-visible {
+    outline: 2px solid var(--neu-accent-primary);
+    outline-offset: 2px;
+  }
+
+  /* ── Unified list system ────────────────────────────────────────
+     One structural grammar for actionable content lists:
+     compact = controls/history, standard = people/settings, rich = places/messages.
+     Grid cards remain reserved for visual discovery, not ordinary lists. */
+  .app-list {
+    overflow: hidden;
+    border: 1px solid var(--neu-border);
+    border-radius: 1rem;
+    background: var(--neu-bg);
+  }
+  .app-list-row {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: left;
+    background: var(--neu-bg);
+    border: 1px solid transparent;
+  }
+  .app-list-row + .app-list-row { border-top-color: var(--neu-border); }
+  .app-list-row--compact { min-height: 3.25rem; padding: 0.625rem 0.875rem; }
+  .app-list-row--standard { min-height: 4.125rem; padding: 0.75rem 0.875rem; }
+  .app-list-row--rich { min-height: 4.75rem; padding: 0.875rem; }
+  .app-list-row__main { min-width: 0; flex: 1; }
+  .app-list-row__title { color: var(--neu-text); font-size: 0.875rem; line-height: 1.25; }
+  .app-list-row__meta { margin-top: 0.1875rem; color: var(--neu-text-muted); font-size: 0.75rem; line-height: 1.3; }
+
+  /* Circular icon button */
+  .neu-circle-hover {
+    transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.20s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.16s ease;
+  }
+  .neu-circle-hover:hover {
+    transform: scale(1.07);
+    border-color: var(--neu-accent-soft-border) !important;
+    box-shadow: var(--hover-shadow-btn) !important;
+  }
+  .neu-circle-hover:active { transform: scale(0.92); }
+
+  /* Pill / tag button */
+  .neu-pill-hover {
+    transition: box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .neu-pill-hover:hover {
+    box-shadow: var(--hover-shadow-pill) !important;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Global placeholder styling — adapts to theme */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--neu-text-muted);
+    opacity: 0.6;
+  }
+  .neu-flat {
+    background-color: var(--neu-bg);
+    box-shadow: 10px 10px 20px var(--neu-shadow-dark), -10px -10px 20px var(--neu-shadow-light);
+    color: var(--neu-text);
+    border: 1px solid var(--neu-border);
+  }
+  .neu-pressed {
+    background-color: var(--neu-bg);
+    box-shadow: inset 8px 8px 16px var(--neu-shadow-dark), inset -8px -8px 16px var(--neu-shadow-light);
+    color: var(--neu-text);
+    border: 1px solid var(--neu-border-pressed);
+  }
+  .neu-convex {
+    background-color: var(--neu-bg);
+    box-shadow: 12px 12px 24px var(--neu-shadow-dark), -12px -12px 24px var(--neu-shadow-light);
+    border: 1px solid var(--neu-border);
+  }
+  .neu-button-glow {
+    box-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light);
+  }
+  .dark .neu-button-glow {
+    box-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light), 0 0 20px rgba(244, 200, 155, 0.15);
+  }
+  .text-neu {
+    color: var(--neu-text);
+  }
+  .text-neu-muted {
+    color: var(--neu-text-muted);
+  }
+  .text-neu-accent {
+    color: var(--neu-accent);
+  }
+  .text-neu-accent-primary {
+    color: var(--neu-accent-primary);
+  }
+
+  /* ── Surface hierarchy ──────────────────────────────────────────
+     A 3-tier system to avoid the "everything elevated" trap.
+     Use exactly one hero per visual zone; flat for lists; ghost for chips.
+  ──────────────────────────────────────────────────────────────── */
+
+  /* Tier 1 — focal point. One per section. Full neumorphic elevation. */
+  .neu-surface-hero {
+    background-color: var(--neu-bg);
+    border: 1px solid var(--neu-border);
+    box-shadow:
+      8px 8px 18px var(--neu-shadow-dark),
+      -8px -8px 18px var(--neu-shadow-light);
+  }
+  /* Forest is fully flat — replace invisible shadow with a 1.5px accent ring
+     so hero still reads as the focal point. */
+  .forest .neu-surface-hero,
+  .forest.dark .neu-surface-hero {
+    box-shadow: 0 0 0 1.5px var(--neu-border-pressed);
+    border-color: var(--neu-border-pressed);
+  }
+
+  /* Tier 2 — secondary content (rows, list items). Border + subtle tint, NO shadow. */
+  .neu-surface-flat {
+    background-color: var(--neu-bg);
+    border: 1px solid var(--neu-border);
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+  }
+  .neu-surface-flat:hover {
+    border-color: var(--neu-border-pressed);
+  }
+
+  /* Tier 3 — tertiary (chips, inline buttons). No border by default, hover-only fill. */
+  .neu-surface-ghost {
+    background-color: transparent;
+    border: 1px solid transparent;
+    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  }
+  .neu-surface-ghost:hover {
+    background-color: var(--neu-hover);
+    border-color: var(--neu-accent-soft-border);
+  }
+  .neu-surface-ghost[aria-pressed="true"] {
+    background-color: var(--neu-accent-soft);
+    border-color: var(--neu-accent-soft-border);
+    color: var(--neu-accent-primary);
+  }
+  .neu-surface-ghost[aria-pressed="true"]:hover {
+    background-color: var(--neu-active-hover);
+    border-color: var(--neu-accent-primary);
+  }
+
+  /* Ambient backdrop — radial glow behind hero zones so elevated cards
+     feel "anchored" rather than floating. Use as an absolutely-positioned
+     pseudo-layer behind hero content. */
+  .neu-ambient-glow {
+    position: relative;
+  }
+  .neu-ambient-glow::before {
+    content: "";
+    position: absolute;
+    inset: -20% -10% auto -10%;
+    height: 70%;
+    background: radial-gradient(
+      ellipse at top,
+      var(--neu-glow) 0%,
+      transparent 65%
+    );
+    opacity: 0.55;
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* Per-theme ambient glow intensity — compensates for different --neu-glow alpha */
+  .forest .neu-ambient-glow::before,
+  .forest.dark .neu-ambient-glow::before {
+    opacity: 0.95;
+  }
+  .vibrant .neu-ambient-glow::before {
+    opacity: 0.70;
+  }
+  .vibrant.dark .neu-ambient-glow::before {
+    opacity: 0.80;
+  }
+  .dark .neu-ambient-glow::before {
+    /* dark mode — keep ambient glow visible on either available theme */
+    opacity: 0.85;
+  }
+  .neu-ambient-glow > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Soft divider — barely-there visual seam */
+  .neu-divider-soft {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      var(--neu-border) 20%,
+      var(--neu-border) 80%,
+      transparent 100%
+    );
+  }
+
+  /* Section eyebrow label — micro-typography for uppercase section heads */
+  .neu-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--neu-text-muted);
+    opacity: 0.75;
+  }
+}
+@layer utilities {
+  /* Theme coherence pass — common primitives now obey each theme's material language. */
+  .neu-theme-panel {
+    background: var(--neu-bg);
+    border: 1px solid var(--neu-border);
+    color: var(--neu-text);
+  }
+
+  .neu-theme-chip {
+    background: var(--neu-accent-soft);
+    border: 1px solid var(--neu-accent-soft-border);
+    color: var(--neu-accent-primary);
+  }
+
+  /* Bright dark-theme accent fills need an ink foreground, not hard-coded white.
+     This catches both inline-styled and Tailwind primary buttons while leaving
+     image scrims and non-button status markers untouched. */
+  .dark button[style*="background: var(--neu-accent-primary)"],
+  .dark button[class*="bg-[var(--neu-accent-primary)]"] {
+    color: var(--neu-on-accent) !important;
+  }
+  .dark button[style*="background: var(--neu-accent-primary)"] :is(svg, span),
+  .dark button[class*="bg-[var(--neu-accent-primary)]"] :is(svg, span) {
+    color: var(--neu-on-accent) !important;
+  }
+
+  /* 星际: glass/electric surfaces, never warm ceramic. */
+  .vibrant .neu-surface-hero,
+  .vibrant .neu-convex,
+  .vibrant .neu-flat,
+  .vibrant .neu-input-surface,
+  .vibrant .neu-input-base,
+  .vibrant .neu-icon-badge,
+  .vibrant .neu-button-glow {
+    background: color-mix(in srgb, var(--neu-bg) 82%, white 18%);
+    border-color: var(--neu-border);
+  }
+  .vibrant.dark .neu-surface-hero,
+  .vibrant.dark .neu-convex,
+  .vibrant.dark .neu-flat,
+  .vibrant.dark .neu-input-surface,
+  .vibrant.dark .neu-input-base,
+  .vibrant.dark .neu-icon-badge,
+  .vibrant.dark .neu-button-glow {
+    background: color-mix(in srgb, var(--neu-bg) 86%, var(--neu-accent-primary) 6%);
+  }
+  .vibrant .neu-surface-flat {
+    background: color-mix(in srgb, var(--neu-bg) 92%, var(--neu-accent-primary) 3%);
+  }
+  .vibrant .neu-surface-ghost:hover {
+    background: color-mix(in srgb, var(--neu-accent-primary) 10%, transparent);
+    border-color: color-mix(in srgb, var(--neu-accent-primary) 18%, transparent);
+  }
+
+  /* 清野: strict paper-flat. Remove stray shadows from legacy inline-like utility classes. */
+  .forest .neu-input-surface,
+  .forest .neu-input-base,
+  .forest .neu-icon-badge,
+  .forest .neu-flat,
+  .forest .neu-pressed,
+  .forest .neu-convex,
+  .forest .neu-button-glow,
+  .forest .neu-card-hover,
+  .forest .neu-row-hover,
+  .forest .neu-circle-hover,
+  .forest .neu-pill-hover {
+    box-shadow: none !important;
+    background: var(--neu-bg);
+    border-color: var(--neu-border);
+  }
+  .forest .neu-input-surface:focus-within,
+  .forest .neu-input-base:focus,
+  .forest .neu-pressed {
+    box-shadow: inset 0 0 0 1px var(--neu-border-pressed) !important;
+  }
+  .forest .neu-card-hover:hover,
+  .forest .neu-row-hover:hover,
+  .forest .neu-circle-hover:hover,
+  .forest .neu-pill-hover:hover {
+    box-shadow: 0 0 0 1px var(--neu-border-pressed) !important;
+  }
+  .forest .neu-surface-ghost:hover {
+    background: var(--neu-hover);
+    border-color: var(--neu-accent-soft-border);
+  }
+  .forest .neu-row-hover[data-active="true"]:hover,
+  .forest .neu-row-hover[aria-pressed="true"]:hover {
+    background: var(--neu-active-hover) !important;
+    border-color: var(--neu-accent-primary) !important;
+    box-shadow: inset 2px 0 0 var(--neu-accent-primary), 0 0 0 1px var(--neu-accent-soft-border) !important;
+  }
+
+  @media (min-width: 1024px) {
+    .desktop-context-shell {
+      max-width: 1120px;
+      margin-left: auto;
+      margin-right: auto;
+      width: 100%;
+    }
+  }
+}
+
+
+@layer utilities {
+  /* Inputs/search are places to type, not raised buttons. Keep them calm and embedded. */
+  .neu-input-surface,
+  .neu-input-base {
+    background: color-mix(in srgb, var(--neu-bg) 82%, var(--page-bg) 18%) !important;
+    box-shadow: inset 0 0 0 1px var(--neu-border), inset 0 1px 2px color-mix(in srgb, var(--neu-shadow-dark) 26%, transparent) !important;
+    border-color: var(--neu-border) !important;
+  }
+  .neu-input-surface:focus-within,
+  .neu-input-base:focus {
+    box-shadow: inset 0 0 0 1.5px var(--neu-accent-primary), 0 0 0 3px var(--neu-accent-soft) !important;
+    border-color: color-mix(in srgb, var(--neu-accent-primary) 48%, var(--neu-border)) !important;
+  }
+  .vibrant .neu-input-surface,
+  .vibrant .neu-input-base {
+    background: color-mix(in srgb, var(--neu-bg) 70%, var(--neu-accent-primary) 5%) !important;
+    backdrop-filter: blur(18px) saturate(1.25);
+  }
+  .forest .neu-input-surface,
+  .forest .neu-input-base {
+    background: color-mix(in srgb, var(--neu-bg) 94%, var(--page-bg) 6%) !important;
+    box-shadow: inset 0 0 0 1px var(--neu-border) !important;
+  }
+}
+
+@layer utilities {
+  /* Context rail system — shared right-side geometry across desktop and wide-tablet pages. */
+  :root {
+    --context-rail-width: 20rem;
+    --context-rail-inset: 1rem;
+    --context-rail-gap: 1.5rem;
+  }
+
+  .context-rail {
+    width: var(--context-rail-width);
+    min-width: var(--context-rail-width);
+    flex-shrink: 0;
+    align-self: stretch;
+    border-left: 1px solid var(--neu-border);
+    background: var(--neu-bg);
+  }
+  .context-rail__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 100%;
+    padding: var(--context-rail-inset);
+  }
+  .context-rail--attached {
+    height: 100%;
+    overflow: hidden;
+  }
+  .context-rail__content--scroll {
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .context-rail__content--scroll::-webkit-scrollbar { display: none; }
+  .context-rail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--context-rail-width);
+    gap: var(--context-rail-gap);
+    align-items: start;
+  }
+}
+
+@layer utilities {
+  @media (min-width: 1024px) {
+    .context-rail-grid { grid-template-columns: minmax(0, 1fr) var(--context-rail-width); }
+  }
+}
+
+@layer utilities {
+  /* Shared content canvas — every routed view occupies the same right-hand
+     working field. Pages may choose their internal composition, but never a
+     different outer alignment or an arbitrary content ceiling. */
+  :root {
+    --workspace-gutter: clamp(0.875rem, 1.75vw, 1.5rem);
+    --workspace-gap: clamp(0.875rem, 1.5vw, 1.25rem);
+    --content-canvas-max: 96rem;
+    --content-reading-max: 48rem;
+    --context-rail-width: clamp(18rem, 20vw, 21rem);
+    --context-rail-gap: clamp(1rem, 1.75vw, 1.5rem);
+  }
+
+  .desktop-workspace {
+    gap: var(--workspace-gap);
+    /* The work field must paint all the way to the viewport edge. Content
+       components own their reading padding inside this field. */
+    padding: 0;
+  }
+
+  /* A full-height work field, not a giant rounded card. */
+  .desktop-main-panel {
+    position: relative;
+    isolation: isolate;
+    min-height: 0;
+    background:
+      radial-gradient(70rem 28rem at 14% -12%, color-mix(in srgb, var(--neu-accent-primary) 5%, transparent), transparent 68%),
+      linear-gradient(180deg, color-mix(in srgb, var(--neu-bg) 96%, var(--page-bg)) 0%, var(--neu-bg) 46%, color-mix(in srgb, var(--neu-bg) 98%, var(--page-bg)) 100%);
+  }
+
+  .desktop-main-scroll {
+    box-sizing: border-box;
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
+    /* Sticky page headers must anchor at the physical scrollport edge. */
+    padding-block: 0;
+  }
+
+  .desktop-page-canvas,
+  .tablet-page-canvas {
+    width: min(100%, var(--content-canvas-max));
+    min-height: 100%;
+    margin-inline: auto;
+  }
+
+  .content-mode-wide {
+    min-width: 0;
+  }
+
+  .content-mode-reading {
+    max-width: var(--content-reading-max);
+  }
+
+  /* On wide desktop, pages that opt into the shared rail grid inherit the
+     exact same left start, readable field, rail width, and column gap. */
+  .desktop-page-canvas .context-rail-grid {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) var(--context-rail-width);
+    column-gap: var(--context-rail-gap);
+  }
+
+  @media (min-width: 768px) and (max-width: 1279px) {
+    .tablet-page-canvas {
+      max-width: 74rem;
+    }
+  }
+}
+
+
+@layer base {
+  /* Baseline feedback for every native button. Component-level row/card
+     utilities add richer surface states where a button represents content. */
+  button:not(:disabled) {
+    transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1), filter 0.14s ease, opacity 0.14s ease;
+  }
+  @media (hover: hover) {
+    button:not(:disabled):hover { filter: brightness(1.035); }
+  }
+  button:not(:disabled):active { transform: scale(0.975); }
+  button:focus-visible {
+    outline: 2px solid var(--neu-accent-primary);
+    outline-offset: 2px;
+  }
+}

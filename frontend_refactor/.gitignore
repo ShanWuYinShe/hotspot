@@ -1,0 +1,25 @@
+node_modules
+dist
+
+# Vite timestamp files
+vite.config.ts.timestamp-*
+vite.config.js.timestamp-*
+
+# Environment files (keep .env.example)
+.env
+.env.*
+!.env.example
+
+# Local overrides
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# AI tools (shared rule)
+.workwork/

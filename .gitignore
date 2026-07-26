@@ -22,7 +22,7 @@ Thumbs.db:encryptable
 # Build Outputs
 # ============================================
 target/
-frontend/node_modules/
+node_modules/
 frontend/build/
 frontend/.svelte-kit/
 backend-go/server
