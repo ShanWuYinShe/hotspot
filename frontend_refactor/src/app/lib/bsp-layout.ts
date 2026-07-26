@@ -3,6 +3,10 @@
  *
  * Cards are placed on an integer unit grid and may only occupy one of four
  * discrete tile shapes — 1×1, 1×2 (portrait / 竖), 2×1 (landscape / 横), or 2×2.
+ * The field is overwhelmingly 1×1 cards (~85%+); 1×2 and 2×1 are used sparingly
+ * as visual rhythm breaks ("穿插"), and 2×2 is reserved as a single hero anchor
+ * for large enough collections.
+ *
  * Because every card snaps to the same unit, all cards of the same tier are
  * pixel-identical in size, portrait and landscape tiles appear symmetrically,
  * and a "prefer no two equal-tier cards touch" rule keeps the field varied.
@@ -244,11 +248,11 @@ function touchesSameTier(
 /**
  * Soft per-tier quotas for a target card count.
  *
- * The field reads as "mostly uniform squares with rectangular tiles as rhythm"
- * rather than a maximally varied mosaic: 1×1 is the steady majority (~55%),
- * 1×2 and 2×1 each take ~20% and stay balanced against each other, and 2×2 is
- * reserved as a single visual anchor (only when the collection is large enough
- * that one hero card does not dominate it).
+ * The field reads as "mostly 1×1 squares with occasional rectangular tiles as
+ * visual rhythm breaks" rather than a varied mosaic. 1×1 is the overwhelming
+ * majority (~85%+ depending on count); 1×2 and 2×1 are used sparingly as
+ * "穿插" (interspersed accents — just enough to break monotony); 2×2 is
+ * reserved as a single hero anchor for large enough collections.
  *
  * `random` adds a small ±1 jitter so consecutive layouts with the same count
  * do not land on identical quotas every time.
@@ -256,19 +260,21 @@ function touchesSameTier(
 function computeTierQuotas(targetCount: number, random: Random): Record<Tier, number> {
   const quotas: Record<Tier, number> = { "1x1": 0, "1x2": 0, "2x1": 0, "2x2": 0 };
 
-  // 2×2 anchor: at most one, and only once the collection can absorb it.
-  if (targetCount >= 6) quotas["2x2"] = 1;
+  // 2×2 hero: at most one, and only when the scene is large enough that a
+  // hero card does not dominate the entire field.
+  if (targetCount >= 8) quotas["2x2"] = 1;
 
   const remaining = targetCount - quotas["2x2"];
-  // Rectangular tiles each target ~20% of the non-hero cards, rounded with a
-  // random nudge so two layouts of the same size are not identical.
-  const rectTarget = Math.max(1, Math.round(remaining * 0.2 + (random() - 0.5)));
-  quotas["1x2"] = rectTarget;
-  quotas["2x1"] = rectTarget;
-  // 1×1 takes whatever is left; never negative.
+  // Rectangular tiers are "穿插" — occasional rhythm breaks in a mostly-1×1
+  // field. Each gets ~5% of non-hero cards (not 20%), capped at 2 so they
+  // never dominate the visual. A random nudge prevents repeat layouts.
+  const rectCount = Math.min(2, Math.max(0, Math.round(remaining * 0.05 + (random() - 0.5))));
+  quotas["1x2"] = rectCount;
+  quotas["2x1"] = rectCount;
+  // 1×1 takes everything else — the bread and butter of the field.
   quotas["1x1"] = Math.max(0, remaining - quotas["1x2"] - quotas["2x1"]);
 
-  // Clamp totals to targetCount (rect rounding can overshoot by 1 on small sets).
+  // Clamp totals to targetCount (rounding can overshoot by 1 on small sets).
   let total = quotas["1x1"] + quotas["1x2"] + quotas["2x1"] + quotas["2x2"];
   while (total > targetCount && quotas["1x1"] > 0) {
     quotas["1x1"]--;
@@ -302,8 +308,8 @@ function candidateAnchors(
  * without hunting through the scoring code.
  *
  * Higher = stronger pull toward that factor. The anti-adjacency penalty is the
- * largest because visual repetition ("two identical tiles touching") is the most
- * obvious defect; the rest break ties and add subtler rhythm.
+ * largest so that even the few rectangular tiles ("穿插") are spread out
+ * instead of clumped; the rest break ties and add subtler rhythm.
  */
 const SCORE_WEIGHTS = {
   antiAdjacency: 100,   // large penalty when the candidate touches a same-tier card
@@ -581,9 +587,9 @@ function placeCards(
 
 /**
  * Generates a discrete-tiered, gap-consistent set of card bounds.
- * Every same-tier card is pixel-identical; portrait and landscape tiles are
- * balanced; equal-tier adjacency is avoided when the grid allows it. Supply a
- * seed for reproducible layouts (for example, in tests).
+ * The field is mostly 1×1 with a 2×2 hero and sparse 1×2/2×1 accents
+ * ("穿插") to break the rhythm. Supply a seed for reproducible layouts
+ * (for example, in tests).
  */
 export function generateBspCardLayout({
   canvasWidth,

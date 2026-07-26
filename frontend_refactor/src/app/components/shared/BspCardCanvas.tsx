@@ -42,8 +42,8 @@ type BspCardCanvasProps<T> = {
 
 /**
  * Responsive BSP renderer shared by the three desktop discovery directories.
- * The bounded ratio family intentionally reads as loose 1×1 / 1×2 / 2×1 / 2×2
- * tiles rather than a fragmented masonry wall.
+ * Cards are mostly 1×1 for easy scanning, with sparse 1×2 / 2×1 accents
+ * ("穿插") and an occasional 2×2 hero to break the rhythm without clutter.
  */
 export function BspCardCanvas<T>({
   items,
@@ -98,10 +98,19 @@ export function BspCardCanvas<T>({
   // visibly reshuffle existing cards). Reset whenever the width changes,
   // because the unit grid shifts and old rects no longer snap cleanly.
   const prevSolveRef = useRef<{ width: number; count: number; height: number; layout: BspRect[] } | null>(null);
+  /**
+   * Pinned column count from the first successful layout solve. Once the grid
+   * geometry is established for a given viewport width, the column count (and
+   * thus the card base size) stays frozen — loading more data extends the
+   * canvas downward rather than shrinking every card to fit more columns.
+   * Reset when the viewport width changes (responsive recalculation).
+   */
+  const pinnedColsRef = useRef<number | null>(null);
 
   const { canvasHeight, layout } = useMemo(() => {
     if (!width || !items.length) {
       prevSolveRef.current = null;
+      pinnedColsRef.current = null;
       return { canvasHeight: minCanvasHeight, layout: [] as BspRect[] };
     }
 
@@ -110,12 +119,19 @@ export function BspCardCanvas<T>({
     const sourceMinWidth = resolvedMinWidth + gap;
     const sourceMinHeight = resolvedMinHeight + gap;
 
+    const prev = prevSolveRef.current;
+    // When the viewport width changes the grid geometry must be recalculated;
+    // clear the pinned cols so the next solve picks the appropriate column
+    // count for the new width.
+    if (pinnedColsRef.current !== null && prev?.width !== width) {
+      pinnedColsRef.current = null;
+    }
+
     // Append path: same width, items only grew. Freeze the existing cards and
     // place just the new ones into the remaining free cells, then extend the
     // canvas downward by enough rows to fit them. This keeps a 1000-card feed
     // cheap: each page load solves only the new page's worth of cards, never
     // the accumulated history.
-    const prev = prevSolveRef.current;
     if (prev && prev.width === width && items.length > prev.count) {
       // Estimate how tall the canvas must grow to host the new items: average
       // ~1.6 cells per card across the tier mix, so total cells ≈ count × 1.6,
@@ -125,6 +141,7 @@ export function BspCardCanvas<T>({
       const appendGeo = deriveBspGridGeometry({
         canvasWidth: width, canvasHeight: width * 3, targetCount: items.length,
         gap, minWidth: sourceMinWidth, minHeight: sourceMinHeight, minRatio, maxRatio,
+        cols: pinnedColsRef.current ?? undefined,
       });
       const estimatedRows = Math.max(2, Math.ceil((items.length * 1.6) / appendGeo.cols));
       const expandedHeight = Math.max(prev.height, Math.round(estimatedRows * appendGeo.unitH));
@@ -139,6 +156,7 @@ export function BspCardCanvas<T>({
         minHeight: sourceMinHeight,
         minRatio,
         maxRatio,
+        cols: pinnedColsRef.current ?? undefined,
         seed,
       });
       if (appended.length >= items.length) {
@@ -151,10 +169,10 @@ export function BspCardCanvas<T>({
       // a full recompute so the canvas always reaches the target count.
     }
 
-
-
     // Probe candidate grids by row count. Start from the theoretical minimum
     // (cols × rows ≥ count) and grow until a tier-rich layout is achievable.
+    // Pass pinned cols when available so the card base size stays stable
+    // across data loads for the same viewport width.
     const geometry = deriveBspGridGeometry({
       canvasWidth: width,
       // Pass a generous height so deriveGrid's row clamp does not pre-trim;
@@ -166,8 +184,15 @@ export function BspCardCanvas<T>({
       minHeight: sourceMinHeight,
       minRatio,
       maxRatio,
+      cols: pinnedColsRef.current ?? undefined,
     });
     const { cols, unitH } = geometry;
+
+    // Pin the column count from the first solve so card sizes never change
+    // when items are loaded incrementally at the same viewport width.
+    if (pinnedColsRef.current === null && cols > 0) {
+      pinnedColsRef.current = cols;
+    }
 
     // The probe budget is count-sensitive. Small collections benefit from
     // trying many seeds × a few row counts to find a varied, hole-free tile
@@ -216,6 +241,7 @@ export function BspCardCanvas<T>({
           minHeight: sourceMinHeight,
           minRatio,
           maxRatio,
+          cols: pinnedColsRef.current ?? undefined,
           seed: seed + seedOffset * 0x9e3779b9,
         });
         const covers = result.length >= items.length;
