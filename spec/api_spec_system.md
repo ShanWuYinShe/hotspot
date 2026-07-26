@@ -19,6 +19,7 @@
 | `POST /api/v1/system/health` | 健康检查 | 无 | 无 |
 | `POST /api/v1/system/list_announcements` | 系统公告列表 | 无 | 无 |
 | `POST /api/v1/system/get_client_config` | 客户端公开配置 | 无 | 无 |
+| `POST /api/v1/system/bootstrap` | 冷启动聚合（config + meta + profile + unread） | 可选 | 无 |
 
 ## 类型定义
 
@@ -148,10 +149,62 @@ interface ClientConfig {
 // 客户端可见的默认值
 // 由管理员在后台配置（见 api_spec_admin_core.md 中 ContentDefaults）
 interface ClientDefaults {
-  default_location: Location;    // 默认位置（必须满足 Location 约束），Location 定义于 api_spec_types.md
-  default_user_avatar: string;   // 默认用户头像 URL
-  default_group_avatar: string;  // 默认群组头像 URL
+  default_location: Location;        // 默认位置（必须满足 Location 约束），Location 定义于 api_spec_types.md
+  default_user_avatar_url: string;   // 默认用户头像 URL（原 default_user_avatar，加 _url 后缀统一）
+  default_group_avatar_url: string;  // 默认群组头像 URL（原 default_group_avatar）
 }
 ```
+
+**错误码**: `10000`
+
+---
+
+### POST /api/v1/system/bootstrap
+
+冷启动聚合端点。一次请求拉齐客户端冷启动所需的全部基础数据，替代分别调用 `get_meta` + `get_client_config` + `users/me/profile/get` + `notifications/unread_count` 的多次往返。
+
+- **认证**: 可选（未登录时 `profile`/`unread_summary` 省略，仅返回 `meta` + `client_config`）
+- **幂等**: 无
+
+**缓存契约（防惊群）**：响应携带 `bootstrap_version`（服务端在 config/version 变更时递增）。客户端可缓存响应并在后续冷启动时通过 `If-None-Match: <bootstrap_version>` 请求头询问；服务端无变化时返回精简的 `304`-语义响应（`code=0` + `data.bootstrap_version` 不变 + 其余字段省略，由客户端使用缓存）。`bootstrap_version` 的失效由服务端在 admin 修改 `AppConfig` 或发布新版本/公告时主动递增。
+
+> **惊群防护（生产必需）**：`bootstrap_version` 变更时，所有客户端下次冷启动会同时 miss 缓存并全量重拉 bootstrap（响应体大：含 client_config + profile + unread_summary）。若不加防护，单次 admin 配置变更会瞬间产生百万级全量请求击穿该端点。**强制要求**：
+> - **服务端**：响应必须可被 CDN/反向代理缓存（按 `bootstrap_version` 作 cache key），并支持 stale-while-revalidate（旧版本响应在短时间内仍可返回，后台异步刷新）
+> - **客户端**：检测到 `bootstrap_version` 变更后，**不得立即**发起全量请求；须加随机 jitter 延迟（建议 0-300 秒均匀分布）后再刷新，将集中请求打散到数分钟窗口
+> - **降级**：若 CDN 缓存可用，客户端 jitter 可缩短；若 CDN 不可用，jitter 是唯一的惊群防线，不可省略
+
+**Request**: `BootstrapRequest`
+```typescript
+interface BootstrapRequest {
+  client_type: ClientType;
+  device_id?: DeviceId;        // 可选：携带设备标识（App 端通常已有，便于服务端记录设备绑定）
+}
+```
+
+**Response**: `ApiResponse<BootstrapData>`
+```typescript
+interface BootstrapData {
+  bootstrap_version: string;        // 缓存版本号，客户端下次冷启动透传给 If-None-Match
+  meta: ApiVersionMeta;             // 同 get_meta 响应（ApiVersionMeta 定义于本文件 get_meta 段）
+  client_config: ClientConfig;      // 同 get_client_config 响应
+
+  // === @auth-only 以下字段仅登录态返回 ===
+  profile?: MyProfileState;         // 同 users/me/profile/get（MyProfileState 定义于 api_spec_user.md）
+  unread_summary?: UnreadSummary;   // 未读摘要（聚合私聊/群聊/通知，替代多次 unread_count 调用）
+}
+
+// 未读摘要（聚合各域未读，冷启动时一次性渲染角标）
+interface UnreadSummary {
+  notification_unread_count: number;   // 通知未读总数（同 notifications/unread_count.total）
+  private_chat_unread_count: number;   // 私聊会话未读消息总数
+  group_chat_unread_count: number;     // 群聊未读消息总数
+  total_badge: number;                 // 综合角标数（客户端展示用，服务端按业务规则聚合）
+}
+```
+
+**说明**：
+- 这是**聚合端点**，不引入新数据，仅合并现有端点的响应；各字段语义与原端点完全一致
+- 登录态下若 `profile` 所在的 token 已过期，按"认证可选"语义降级为匿名（返回 `meta` + `client_config`，省略 `profile`/`unread_summary`），不返回 `10100`
+- 客户端应优先调用此端点；各原子端点（`get_meta`/`get_client_config` 等）仍保留，供需要单项刷新的场景
 
 **错误码**: `10000`

@@ -40,7 +40,7 @@
 - 禁止在客户端生成或拼装 `cursor`
 - 禁止返回本规范（`api_spec_base` / `api_spec_types` / 各模块 `api_spec_*`）中未定义的字段
 - 禁止在任何文档中硬编码与本规范不一致的端点/字段名
-- 禁止以"不专业/不规范"为由修改规范中刻意为之的**无害**玩梗/彩蛋命名（如 `open_the_door` 等端点命名），存疑时应向维护者确认；但冒犯性或针对特定群体的内容不属于保护范围
+- 禁止以"不专业/不规范"为由修改规范中刻意为之的**无害**玩梗/彩蛋命名，存疑时应向维护者确认；但冒犯性或针对特定群体的内容不属于保护范围
 
 ---
 
@@ -76,6 +76,8 @@ interface ApiResponse<T = void> {
 各错误码的类型、客户端行为及 message 示例详见 `api_spec_errors.md`。
 
 因此，端点文档中的"**错误码**"字段仅需列出该端点**特有的业务错误码**（如 `10000`、`10200`、`10300`、`10400` 等）；隐含错误码（`10100`、`10201`、`10500`、`10600`）与幂等错误码（`22000`、`22001`、`22002`）无需重复列出。
+
+> **权威清单**：哪些错误码属于"隐含/中间件级"（所有端点自动适用、模块文档禁止重复列出）的权威定义在 `api_spec_errors.md` 的「隐含错误码（无需在端点重复列出）」小节。模块文档的"错误码"字段只列该端点**特有**的业务错误码；若某端点的错误码小节出现了隐含码，视为文档缺陷，应删除。
 
 ## 请求与响应头（契约级）
 
@@ -142,19 +144,29 @@ interface ApiResponse<T = void> {
 
 #### Web 端 Cookie 契约
 
-Web 端使用以下**固定名称**的 HttpOnly Cookie 携带认证信息（**禁止**使用 `Authorization` Header）：
+Web 端使用以下**固定名称**的 HttpOnly Cookie 携带认证信息（**禁止**使用 `Authorization` Header）。此外使用一个独立的设备标识 Cookie（非鉴权凭证）：
 
 | Cookie 名称 | 用途 | Path | 属性 | Max-Age |
 |---|---|---|---|---|
 | `access_token` | API 访问令牌 | `/` | `HttpOnly; Secure; SameSite=Strict` | 服务端动态设置（与 token 过期时间一致） |
 | `refresh_token` | Token 刷新令牌 | `/api/v1/auth/refresh_token` | `HttpOnly; Secure; SameSite=Strict` | 服务端动态设置（与 token 过期时间一致） |
+| `device_id` | 设备标识（非鉴权凭证，见下「Web 端 device_id Cookie」） | `/` | `Secure; SameSite=Lax` | 10 年（长期，独立于登录态） |
 
 **规则**：
 - `access_token` 和 `refresh_token` 是**固定的 Cookie 名称**，前端 / 后端必须一致使用，禁止使用其他名称（如 `token`、`jwt`、`session`）
 - `access_token` 使用 `Path=/` 以统一覆盖 HTTP API（`/api/v1/`）和 WebSocket（`/ws/v1`）端点
 - `refresh_token` 使用精确 Path 确保仅在刷新端点（`/api/v1/auth/refresh_token`）自动携带，普通 API 请求不会发送
-- Cookie 由服务端通过 `Set-Cookie` 响应头设置和清除，前端 JavaScript 不可读取也不应手动操作
-- 登出时服务端通过 `Max-Age=0` 清除两个 Cookie
+- 鉴权 Cookie 由服务端通过 `Set-Cookie` 响应头设置和清除，前端 JavaScript 不可读取也不应手动操作
+- 登出时服务端通过 `Max-Age=0` 清除两个鉴权 Cookie（`access_token`/`refresh_token`）
+
+##### Web 端 device_id Cookie
+
+`device_id` 是设备身份标识，**不是鉴权凭证**（`DeviceId` 类型语义见 `api_spec_types.md`），用于支撑「单设备单会话」模型（详见 `api_spec_auth.md`）。
+
+- **属性差异**：不带 `HttpOnly`（前端可读取以便在 App 内嵌 WebView 等场景与 App 共享），`SameSite=Lax`（非凭证，无需 `Strict` 的 CSRF 保护，且需容忍从外部链接进入时携带）
+- **生命周期**：长期有效（默认 10 年），**登出不清除**——保持设备身份连续，下次登录仍是同一设备
+- **生成时机**：客户端首次访问（无 `device_id` Cookie）时由服务端生成 UUID v4 并通过 `Set-Cookie` 下发；客户端不可预测或自造
+- **多浏览器档案**：不同浏览器档案（profile）/无痕窗口各自独立 Cookie 存储，天然对应不同 `device_id`，即「按浏览器档案 = 一台逻辑设备」
 
 #### CSRF 防护（Web 端）
 
@@ -423,6 +435,19 @@ App 端通过 Header 携带认证信息：
 #### 去重（契约级）
 
 - 客户端必须按资源主键去重（用户：`user_id`；群组：`group_id`；瞬间：`moment_id`；评论：`comment_id`；消息：`message_id`）
+
+#### 计数器一致性（契约级）
+
+所有 `*_count` 字段（如 `likes_count`、`comments_count`、`shares_count`、`members_count`、`followers_count`、`reaction.count`、`read_count` 等）均为**最终一致**，非强一致实时值：
+
+- **更新策略**：服务端采用异步累计（写入队列 + 定时刷新到主存储 + 缓存），容忍秒级到分钟级延迟
+- **客户端约束**：
+  - 不得将 `*_count` 用于精确对账或与列表实际条数强校验（列表分页 + 计数器异步可能导致短暂不一致，属正常现象）
+  - 不得在收到互动事件后立即期望本地 count +1 与服务端一致；应以服务端后续推送或下次拉取为准
+  - 不得轮询 count 字段（高频拉取计数器视为滥用，触发限流）
+- **精度**：服务端保证最终收敛（无互动时 count 稳定），但不保证任意时刻与底层数据完全一致
+
+> 设计依据：社交产品的计数器（粉丝数、点赞数）在百万级活跃用户下，若每次互动都同步写主库会击穿 DB。业界（Twitter/微博/Discord）一致采用异步累计 + 缓存近似值。客户端 UI 应容忍短暂偏差，不显示"精确到个位"的承诺。
 
 ### 隐私与可见性（契约级）
 

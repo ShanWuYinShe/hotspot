@@ -18,7 +18,7 @@
 | `POST /api/v1/media/presign_upload` | 申请上传预签名 | 必须 | 无 |
 | `POST /api/v1/media/batch_presign_upload` | 批量申请上传预签名 | 必须 | 无 |
 | `POST /api/v1/media/complete_upload` | 完成上传 | 必须 | MUST |
-| `POST /api/v1/media/complete_upload/batch` | 批量完成上传 | 必须 | 无 |
+| `POST /api/v1/media/batch_complete_upload` | 批量完成上传 | 必须 | 无 |
 
 ## 设计理念
 
@@ -51,8 +51,6 @@
 | `chat_video` | video/mp4, video/quicktime | 100MB | 聊天视频 |
 | `chat_audio` | audio/mpeg, audio/aac, audio/ogg | 20MB | 聊天语音 |
 | `chat_file` | 见下方黑名单约束 | 100MB | 聊天文件 |
-
-## 分类限制
 
 ### chat_file 安全约束（黑名单）
 
@@ -186,7 +184,7 @@ interface UploadedMedia {
 - `10300`：`upload_id` 不存在（如恶意请求发送了不存在的 upload_id）
 - `10400`：业务冲突——文件直传尚未完成（对象存储上传未到位），客户端应完成直传后重试
 
-### POST /api/v1/media/complete_upload/batch
+### POST /api/v1/media/batch_complete_upload
 
 批量完成上传。适用于瞬间发布（多图）、聊天批量发文件等场景——与 `batch_presign_upload` 配对，消除发图场景下逐个调用 `complete_upload` 的 N 次请求。
 

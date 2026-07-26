@@ -21,24 +21,21 @@
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
 | `POST /api/v1/moments/search` | 搜索瞬间（支持关键字/标签/位置组合） | 可选 | 无 |
-| `POST /api/v1/moments/open_the_door` | 瞬间详情 | 可选 | 无 |
+| `POST /api/v1/moments/get_detail` | 瞬间详情 | 可选 | 无 |
 | `POST /api/v1/moments/create` | 创建瞬间 | 必须 | MUST |
 | `POST /api/v1/moments/update` | 编辑瞬间 | 必须 | 幂等语义 |
 | `POST /api/v1/moments/delete` | 删除瞬间 | 必须 | 幂等语义 |
 | `POST /api/v1/moments/me/list` | 我发布的瞬间 | 必须 | 无 |
 | `POST /api/v1/moments/me/list_favorites` | 我的收藏 | 必须 | 无 |
-| `POST /api/v1/moments/me/like` | 点赞 | 必须 | 幂等语义 |
-| `POST /api/v1/moments/me/unlike` | 取消点赞 | 必须 | 幂等语义 |
-| `POST /api/v1/moments/me/favorite` | 收藏 | 必须 | 幂等语义 |
-| `POST /api/v1/moments/me/unfavorite` | 取消收藏 | 必须 | 幂等语义 |
-| `POST /api/v1/moments/list_likes` | 瞬间点赞列表 | 可选 | 无 |
+| `POST /api/v1/moments/me/set_favorite` | 设置收藏状态（两态统一） | 必须 | 幂等语义 |
+| `POST /api/v1/moments/list_reactions` | 瞬间反应列表（含 emoji） | 可选 | 无 |
 | `POST /api/v1/comments/create` | 创建评论/回复 | 必须 | MUST |
 | `POST /api/v1/comments/delete` | 删除评论 | 必须 | 幂等语义 |
 | `POST /api/v1/comments/list` | 顶层评论列表 | 可选 | 无 |
 | `POST /api/v1/comments/list_replies` | 子评论列表 | 可选 | 无 |
-| `POST /api/v1/comments/me/like` | 点赞评论 | 必须 | 幂等语义 |
-| `POST /api/v1/comments/me/unlike` | 取消点赞评论 | 必须 | 幂等语义 |
-| `POST /api/v1/comments/list_likes` | 评论点赞列表 | 可选 | 无 |
+| `POST /api/v1/comments/list_reactions` | 评论反应列表（含 emoji） | 可选 | 无 |
+
+> 表情反应（点赞/emoji）统一由 `POST /api/v1/me/set_reaction` 处理（覆盖 message/moment/comment，详见 `api_spec_user.md`），故本表不再列出 moments/comments 的 like/unlike 端点。
 
 ## 类型定义
 
@@ -89,7 +86,7 @@ interface SearchMomentsRequest {
 
 **错误码**: `10000`
 
-### POST /api/v1/moments/open_the_door
+### POST /api/v1/moments/get_detail
 
 获取瞬间详情。认证可选，字段可见性规则见 `api_spec_base.md`。
 
@@ -180,71 +177,21 @@ interface DeleteMomentRequest {
 
 ### 当前用户瞬间互动 API（/me/ 路径）
 
-### POST /api/v1/moments/me/like
+> 表情反应（reaction）统一由 `/api/v1/me/set_reaction` 处理（覆盖 message/moment/comment 三类资源，详见 `api_spec_user.md`）。本模块不再单独定义 like/unlike 端点。
+> 收藏是 moment 专属的"我保存"概念（独立于 reaction 维度），保留为下方 `set_favorite` 单端点。
 
-点赞生活瞬间（重复点赞返回成功）。
+### POST /api/v1/moments/me/set_favorite
 
-- **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
-
-**Request**: `LikeMomentRequest`
-```typescript
-interface LikeMomentRequest {
-  moment_id: string;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10300`
-
-### POST /api/v1/moments/me/unlike
-
-取消点赞生活瞬间。重复取消点赞返回成功（不报错），客户端无需担心重复操作。
+设置瞬间收藏状态（两态统一端点，替代原 favorite/unfavorite 成对动词）。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 幂等语义（`active` 与当前状态一致时视为 no-op，返回成功）
 
-**Request**: `UnlikeMomentRequest`
+**Request**: `SetFavoriteRequest`
 ```typescript
-interface UnlikeMomentRequest {
+interface SetFavoriteRequest {
   moment_id: string;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10300`
-
-### POST /api/v1/moments/me/favorite
-
-收藏瞬间。重复收藏返回成功（不报错），客户端无需担心重复操作。
-
-- **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
-
-**Request**: `FavoriteMomentRequest`
-```typescript
-interface FavoriteMomentRequest {
-  moment_id: string;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10300`
-
-### POST /api/v1/moments/me/unfavorite
-
-取消收藏瞬间。重复取消收藏返回成功（不报错），客户端无需担心重复操作。
-
-- **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
-
-**Request**: `UnfavoriteMomentRequest`
-```typescript
-interface UnfavoriteMomentRequest {
-  moment_id: string;
+  active: boolean;   // true=收藏，false=取消收藏
 }
 ```
 
@@ -290,23 +237,24 @@ interface MyFavoritesRequest {
 
 **错误码**: `10000`
 
-### POST /api/v1/moments/list_likes
+### POST /api/v1/moments/list_reactions
 
-获取生活瞬间点赞列表。
+获取生活瞬间表情反应列表（按反应时间倒序，含 emoji 维度，替代原 list_likes）。
 
 - **认证**: 可选
 - **幂等**: 无
-- **排序**: 默认按 `liked_at` **时间倒序**（最近点赞在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
+- **排序**: 默认按 `reacted_at` **时间倒序**（最近反应在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `MomentLikesRequest`
+**Request**: `MomentReactionsRequest`
 ```typescript
-interface MomentLikesRequest {
+interface MomentReactionsRequest {
   moment_id: string;
+  emoji?: string;   // 可选：按特定 emoji 过滤；不传则返回所有 emoji 的反应者
   pagination?: PaginationParams;
 }
 ```
 
-**Response**: `ApiResponse<PaginatedData<LikeItem>>`（`LikeItem` 定义于 `api_spec_types.md`）
+**Response**: `ApiResponse<PaginatedData<ReactionItem>>`（`ReactionItem` 定义于 `api_spec_types.md`）
 
 **错误码**: `10000` `10300`
 
@@ -350,12 +298,9 @@ interface CommentItem {
   parent_id?: string;       // 父评论 ID（回复时存在）
   mentions?: string[];      // @ 提及的用户 ID 列表
   created_at: string;
-  likes_count: number;
   replies_count: number;    // 子评论数量
+  reactions?: Reaction[];   // 表情反应聚合（含 reacted_by_me，替代原 likes_count + is_liked）
   is_deleted: boolean;      // 软删除标记；true 时 content 为空，客户端展示"该评论已删除"占位
-
-  // === @auth-only 以下字段仅登录态返回 ===
-  is_liked?: boolean;       // 当前用户是否已点赞该评论
 
   // 顶层评论列表场景（comments/list）返回前 N 条回复预览，消除展开回复的 N+1；
   // comments/list_replies 返回的回复项不返回此字段（避免递归嵌套）。
@@ -431,58 +376,25 @@ interface CommentRepliesRequest {
 
 **错误码**: `10000` `10300`
 
-### POST /api/v1/comments/me/like
+> 评论的表情反应统一由 `/api/v1/me/set_reaction { target_type: 'comment', target_id: comment_id, ... }` 处理，本模块不再单独定义 like/unlike 端点。
 
-点赞评论（重复点赞返回成功）。
+### POST /api/v1/comments/list_reactions
 
-- **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
-
-**Request**: `LikeCommentRequest`
-```typescript
-interface LikeCommentRequest {
-  comment_id: string;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10300`
-
-### POST /api/v1/comments/me/unlike
-
-取消点赞评论。重复取消点赞返回成功（不报错），客户端无需担心重复操作。
-
-- **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
-
-**Request**: `UnlikeCommentRequest`
-```typescript
-interface UnlikeCommentRequest {
-  comment_id: string;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10300`
-
-### POST /api/v1/comments/list_likes
-
-获取评论点赞列表。
+获取评论表情反应列表（按反应时间倒序，含 emoji 维度，替代原 list_likes）。
 
 - **认证**: 可选
 - **幂等**: 无
-- **排序**: 点赞列表默认按 `liked_at` **时间倒序**（最近点赞在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
+- **排序**: 默认按 `reacted_at` **时间倒序**（最近反应在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `CommentLikesRequest`
+**Request**: `CommentReactionsRequest`
 ```typescript
-interface CommentLikesRequest {
+interface CommentReactionsRequest {
   comment_id: string;
+  emoji?: string;   // 可选：按特定 emoji 过滤
   pagination?: PaginationParams;
 }
 ```
 
-**Response**: `ApiResponse<PaginatedData<LikeItem>>`（`LikeItem` 定义于 `api_spec_types.md`）
+**Response**: `ApiResponse<PaginatedData<ReactionItem>>`（`ReactionItem` 定义于 `api_spec_types.md`）
 
 **错误码**: `10000` `10300`

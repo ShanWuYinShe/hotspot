@@ -72,7 +72,7 @@
 **字段说明**：
 - `reason`：举报原因，从 `ReportReason` 枚举中选取
 - `description`：举报详细说明，0-1000 字符，`reason` 为 `'other'` 时建议填写
-- `target_id`：统一为 string 类型；举报用户时将 `user_id` 转为字符串格式
+- `target_id`：统一为 string 类型（与全规范 `xxx_id` 一致）；不同 `target_type` 下语义为对应的 `user_id`/`moment_id`/`comment_id`/`message_id`/`group_id`
 
 **业务规则**：
 - 禁止自举报：当 `target_type='user'` 且 `target_id` 为当前用户时，返回 `10400`
@@ -85,7 +85,7 @@
 ```typescript
 interface CreateReportRequest {
   target_type: ReportTargetType;
-  target_id: string;            // 统一为 string（user_id 需转为字符串格式）
+  target_id: string;            // 统一 string；语义随 target_type 为对应资源 ID
   reason: ReportReason;         // 举报原因（从枚举中选取）
   description?: string;         // 举报详细说明（0-1000 字符），reason 为 'other' 时建议填写
   message_snapshot?: MessageReportSnapshot;  // target_type='message' 时必填：消息内容快照（见 MessageReportSnapshot，定义于 api_spec_types.md）
@@ -121,5 +121,7 @@ interface MyReportsRequest {
 **Response**: `ApiResponse<PaginatedData<ReportItem>>`
 
 `ReportItem` 定义于 `api_spec_types.md`。
+
+**可见性说明（契约级）**：举报人在 `reports/me/list` 可见自己举报的完整状态机（`pending`/`reviewing`/`escalated`/终态）及 `ReportItem.resolution`（`@owner-only`，仅举报人自己可见处理结果摘要）。**不可见**处理管理员的身份（隐私保护，避免举报人针对性报复）——`resolution` 不含 `handled_by`，仅含 `action`/`resolved_at`/`note`(脱敏)。
 
 **错误码**: `10000`

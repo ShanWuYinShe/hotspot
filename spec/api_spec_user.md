@@ -17,14 +17,14 @@
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
 | `POST /api/v1/users/search` | 搜索用户（支持关键字/标签/位置组合） | 可选 | 无 |
-| `POST /api/v1/users/open_the_door` | 用户资料详情 | 可选 | 无 |
+| `POST /api/v1/users/get_detail` | 用户资料详情 | 可选 | 无 |
 | `POST /api/v1/users/profile_get` | 用户主页聚合（资料 + 近期瞬间，首屏骨架） | 可选 | 无 |
 | `POST /api/v1/users/list_friends` | 好友列表（user_id 可选，默认=当前用户） | 条件必须 | 无 |
 | `POST /api/v1/users/list_following` | 关注列表（user_id 可选，默认=当前用户） | 条件必须 | 无 |
 | `POST /api/v1/users/list_followers` | 粉丝列表（user_id 可选，默认=当前用户） | 条件必须 | 无 |
 | `POST /api/v1/users/list_groups` | 用户群组列表 | 可选 | 无 |
 | `POST /api/v1/users/list_moments` | 用户瞬间历史 | 可选 | 无 |
-| `POST /api/v1/users/list_liked_moments` | 用户点赞瞬间列表 | 可选 | 无 |
+| `POST /api/v1/users/list_reacted_moments` | 用户反应过的瞬间列表 | 可选 | 无 |
 | `POST /api/v1/users/me/profile/get` | 我的资料 | 必须 | 无 |
 | `POST /api/v1/users/me/profile/update` | 更新我的资料 | 必须 | 幂等语义 |
 | `POST /api/v1/users/me/location/update` | 更新我的位置 | 必须 | 幂等语义 |
@@ -32,12 +32,16 @@
 | `POST /api/v1/users/me/settings/get` | 我的设置 | 必须 | 无 |
 | `POST /api/v1/users/me/settings/update` | 更新我的设置 | 必须 | 幂等语义 |
 | `POST /api/v1/users/me/delete` | 删除账户 | 必须 | SHOULD |
-| `POST /api/v1/users/me/follow` | 关注用户 | 必须 | 幂等语义 |
-| `POST /api/v1/users/me/unfollow` | 取消关注 | 必须 | 幂等语义 |
-| `POST /api/v1/users/me/block` | 拉黑用户 | 必须 | 幂等语义 |
-| `POST /api/v1/users/me/unblock` | 解除拉黑 | 必须 | 幂等语义 |
+| `POST /api/v1/users/me/set_follow` | 设置关注状态（两态统一） | 必须 | 幂等语义 |
+| `POST /api/v1/users/me/set_block` | 设置拉黑状态（两态统一） | 必须 | 幂等语义 |
 | `POST /api/v1/users/me/list_blocked` | 我的拉黑列表 | 必须 | 无 |
 | `POST /api/v1/users/me/set_remark` | 设置备注 | 必须 | 幂等语义 |
+| `POST /api/v1/users/me/email/request_change` | 请求变更邮箱 (⏳ 延期) | 必须 | MUST |
+| `POST /api/v1/users/me/email/confirm_change` | 确认变更邮箱 (⏳ 延期) | 必须 | MUST |
+| `POST /api/v1/users/me/phone/request_change` | 请求变更手机 (⏳ 延期) | 必须 | MUST |
+| `POST /api/v1/users/me/phone/confirm_change` | 确认变更手机 (⏳ 延期) | 必须 | MUST |
+
+> 表情反应（点赞/emoji）是跨 message/moment/comment 三类资源的统一动作，由全局端点 `POST /api/v1/me/set_reaction` 处理（见下方「表情反应 API」）。它不属于 users 命名空间，但因其「目标可为用户发布的资源」而在此一并说明。
 | `POST /api/v1/users/me/email/request_change` | 请求变更邮箱 (⏳ 延期) | 必须 | MUST |
 | `POST /api/v1/users/me/email/confirm_change` | 确认变更邮箱 (⏳ 延期) | 必须 | MUST |
 | `POST /api/v1/users/me/phone/request_change` | 请求变更手机 (⏳ 延期) | 必须 | MUST |
@@ -98,7 +102,7 @@ interface SearchUsersRequest {
 
 ---
 
-### POST /api/v1/users/open_the_door
+### POST /api/v1/users/get_detail
 
 获取用户资料详情。认证可选，字段可见性规则见 `api_spec_base.md`。
 
@@ -124,7 +128,7 @@ interface UserOpenTheDoorRequest {
 
 获取用户主页首屏聚合数据（资料 + 近期瞬间）。一次请求拿到主页骨架，消除"资料 + 瞬间"的多次往返。
 
-- **认证**: 可选（与 `users/open_the_door` 对齐，字段可见性规则见 `api_spec_base.md`）
+- **认证**: 可选（与 `users/get_detail` 对齐，字段可见性规则见 `api_spec_base.md`）
 - **幂等**: 无
 - **排序**: `recent_moments` 内部按 `created_at DESC`（最新在前），与 `users/list_moments` 一致
 
@@ -175,14 +179,14 @@ interface ListFriendsRequest {
 interface FriendItem {
   user: UserInfo;
   presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
-  last_online?: string;
+  last_online_at?: string;
   remark?: string;             // @owner-only：仅查询自己时返回
   followed_at: string;         // 我关注对方的时间
   followed_back_at: string;    // 对方回关我的时间（成为好友的时间）
 }
 ```
 
-**可见性说明**：`remark` 为 `@owner-only`（仅查询自己时返回），`presence_status`/`last_online` 受对方 `presence_visible` 隐私设置控制。
+**可见性说明**：`remark` 为 `@owner-only`（仅查询自己时返回），`presence_status`/`last_online_at` 受对方 `presence_visible` 隐私设置控制。
 
 **错误码**: `10000` `10200` `10300`
 
@@ -213,11 +217,11 @@ interface FollowingItem {
   followed_at: string;
   is_mutual: boolean;
   presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
-  last_online?: string;
+  last_online_at?: string;
 }
 ```
 
-**可见性说明**：`presence_status`/`last_online` 受对方 `presence_visible` 隐私设置控制。
+**可见性说明**：`presence_status`/`last_online_at` 受对方 `presence_visible` 隐私设置控制。
 
 **错误码**: `10000` `10200` `10300`
 
@@ -248,11 +252,11 @@ interface FollowerItem {
   followed_at: string;
   is_following_back: boolean;
   presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
-  last_online?: string;
+  last_online_at?: string;
 }
 ```
 
-**可见性说明**：`presence_status`/`last_online` 受对方 `presence_visible` 隐私设置控制。
+**可见性说明**：`presence_status`/`last_online_at` 受对方 `presence_visible` 隐私设置控制。
 
 **错误码**: `10000` `10200` `10300`
 
@@ -306,19 +310,19 @@ interface UserMomentsRequest {
 
 ---
 
-### POST /api/v1/users/list_liked_moments
+### POST /api/v1/users/list_reacted_moments
 
-获取指定用户点赞的瞬间。
+获取指定用户反应过的瞬间（去重，一个瞬间无论被该用户用过几个 emoji 只出现一次）。
 
-**隐私控制**：受 `liked_moments_visible` 设置控制。
+**隐私控制**：受 `liked_moments_visible` 设置控制（语义不变：控制"他人能否看到我反应过的瞬间"）。
 
 - **认证**: 可选
 - **幂等**: 无
-- **排序**: 默认按 `liked_at` **时间倒序**（最近点赞在前），`moment_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
+- **排序**: 默认按 `last_reacted_at` **时间倒序**（最近反应在前），`moment_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `UserLikedMomentsRequest`
+**Request**: `UserReactedMomentsRequest`
 ```typescript
-interface UserLikedMomentsRequest {
+interface UserReactedMomentsRequest {
   user_id: string;
   pagination?: PaginationParams;
 }
@@ -341,11 +345,13 @@ interface UserLikedMomentsRequest {
 
 **Request**: `{}`
 
-**Response**: `ApiResponse<MyProfile>`
+**Response**: `ApiResponse<MyProfileState>`
 ```typescript
-// Gender 定义于 api_spec_types.md
+// Gender 为本模块类型（原定义于 api_spec_types.md，因仅 user 模块使用已下放至此）
+// 'other' 为包容性取值，覆盖非二元/不愿透露等场景
+type Gender = 'male' | 'female' | 'other';
 
-interface MyProfile {
+interface MyProfileState {
   user_id: string;
   nickname: string;
   avatar_url?: string;
@@ -355,9 +361,9 @@ interface MyProfile {
   gender?: Gender;
   email?: string;               // 通过 users/me/email/request_change + confirm_change 变更
   phone?: string;               // 通过 users/me/phone/request_change + confirm_change 变更
-  location: Location;  // 存储的原始位置，不含 distance/bearing_degrees（与 RelativeLocation 不同）
+  location: Location;           // 存储的原始位置，不含 distance/bearing_degrees（与 RelativeLocation 不同）
   presence_status: UserPresenceStatus;
-  last_online: string;
+  last_online_at: string;       // UTC ISO 8601，最后在线时间
   created_at: string;
   stats: UserStats;
 }
@@ -491,90 +497,88 @@ interface DeleteAccountRequest {
 
 ---
 
-### POST /api/v1/users/me/follow
+### POST /api/v1/users/me/set_follow
 
-关注用户。关注成功后，若对方已关注当前用户，自动成为好友，触发 WebSocket `MutualFollow` 事件。
+设置关注状态（两态统一端点，替代原 follow/unfollow 成对动词）。
 
-**规则说明**：
-- 不存在关注申请流程
-- 对方 `allow_follow=false` 时直接返回失败（`10200`）
+`active=true` 时：若对方已关注当前用户，自动成为好友，触发 WebSocket `MutualFollow` 事件。对方 `allow_follow=false` 时返回 `10200`。不存在关注申请流程。
+
+`active=false` 时：若原本是好友，则好友关系自动解除。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复关注同一用户返回成功）
+- **幂等**: 幂等语义（`active` 与当前状态一致时视为 no-op，返回成功）
 
-**Request**: `FollowRequest`
+**Request**: `SetFollowRequest`
 ```typescript
-interface FollowRequest {
+interface SetFollowRequest {
   user_id: string;
-  source?: FollowSource;        // 可选：关注来源（用于来源归因）
-  source_moment_id?: string;    // 可选：如果是通过瞬间关注，提供瞬间 ID
+  active: boolean;
+  source?: FollowSource;        // 可选：关注来源（用于来源归因，仅 active=true 有意义）
+  source_moment_id?: string;    // 可选：通过瞬间关注时提供瞬间 ID
 }
 ```
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`（不能关注自己）
+**错误码**: `10000` `10200` `10300` `10400`（不能关注/取关自己）
 
 ---
 
-### POST /api/v1/users/me/unfollow
+### POST /api/v1/users/me/set_block
 
-取消关注用户。取消关注后，如果原本是好友，则好友关系自动解除。
+设置拉黑状态（两态统一端点，替代原 block/unblock 成对动词）。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复取消关注同一用户返回成功）
+- **幂等**: 幂等语义（`active` 与当前状态一致时视为 no-op，返回成功）
 
-**Request**: `UnfollowRequest`
+**Request**: `SetBlockRequest`
 ```typescript
-interface UnfollowRequest {
+interface SetBlockRequest {
   user_id: string;
+  active: boolean;
+  reason?: string;   // 可选：拉黑原因（仅 active=true 有意义）
 }
 ```
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300` `10400`（不能取消关注自己）
+**错误码**: `10000` `10300` `10400`（不能拉黑/解除拉黑自己）
 
 ---
 
-### POST /api/v1/users/me/block
+## 表情反应 API（全局 `/me/` 端点）
 
-拉黑用户。
+> 此端点位于全局 `/api/v1/me/` 命名空间（非 `users/`），因统一处理 message/moment/comment 三类资源，故定义于此处便于跨模块引用。类型 `ReactionTargetType` / `Reaction` / `ReactionItem` 见 `api_spec_types.md`。
+
+### POST /api/v1/me/set_reaction
+
+设置表情反应（两态统一端点）。覆盖消息、瞬间、评论三类目标。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复拉黑同一用户返回成功）
+- **幂等**: 幂等语义（`active` 与当前状态一致时视为 no-op，返回成功；同一目标切换 emoji 视为更新而非新增）
 
-**Request**: `BlockRequest`
+**Request**: `SetReactionRequest`
 ```typescript
-interface BlockRequest {
-  user_id: string;
-  reason?: string;
+interface SetReactionRequest {
+  target_type: ReactionTargetType;  // 'message' | 'moment' | 'comment'
+  target_id: string;                // message_id / moment_id / comment_id
+  emoji: string;                    // Unicode 码点字符串，须在 AppConfig.limits.reaction_emojis 白名单内
+  active: boolean;                  // true=添加/切换反应，false=取消反应
 }
 ```
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300` `10400`（不能拉黑自己）
+**行为细节**：
+- `active=true` 且用户此前对该目标用过其他 emoji：视为切换（旧 emoji 计数 -1，新 emoji 计数 +1），不分多次调用
+- `active=true` 且 emoji 与当前一致：no-op 成功
+- `active=false`：移除当前用户对该目标的反应（若 emoji 与当前不一致仍视为成功，幂等）
+- 目标资源不存在返回 `10300`；emoji 不在白名单返回 `10000`
+- 私聊/群聊消息场景：若被对方拉黑或对方 `allow_private_chat='nobody'`，仍允许 reaction（reaction 是公开互动信号，不受私聊权限约束——与点赞一致）
 
----
+**WS 推送**：成功后触发 `ReactionAdded` / `ReactionRemoved` 事件（见 `api_spec_websocket.md`），并向被反应资源作者推送 `reaction_added` 通知（若作者非当前用户）。
 
-### POST /api/v1/users/me/unblock
-
-解除拉黑用户。
-
-- **认证**: 必须
-- **幂等**: 幂等语义（重复解除拉黑同一用户返回成功）
-
-**Request**: `UnblockRequest`
-```typescript
-interface UnblockRequest {
-  user_id: string;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10300` `10400`（不能解除拉黑自己）
+**错误码**: `10000` `10300`
 
 ---
 

@@ -75,6 +75,14 @@
 - 端侧离线同步算法
 - 消息全文搜索
 
+## 预留（Reserved / 未实现）
+
+以下能力**当前不实现**，但契约为其预留扩展点，待未来版本落地。客户端不应依赖这些端点/字段的存在：
+
+- **消息送达回执（delivered）**：当前只到"已读"（`is_read`/`read_count`）。WS 消息相关 payload 预留 `delivered_to?: string[]` 字段位（默认不返回），未来实现送达回执时启用。
+- **第三方登录（OAuth）**：当前仅支持账号密码 + 游客。`api_spec_auth.md` 预留 `auth/oauth/{provider}/callback` 端点签名（标记 `@planned`），provider 枚举 `'wechat' | 'qq' | 'apple'`，待集成第三方 IdP 时实现。
+- **多端实时同步（self-sync）**：单设备单会话模型下，跨设备状态同步通过冷启动 `system/bootstrap` + HTTP 补拉实现。未来如需实时多端同步，将作为独立 WS 协议版本重新设计（不在此版本预留具体事件形状）。
+
 ## 快速索引（按路径前缀）
 
 | 路径前缀 | 对应文档 |

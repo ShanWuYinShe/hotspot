@@ -26,7 +26,7 @@
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
 | `POST /api/v1/private_chats/me/list` | 私聊列表 | 必须 | 无 |
-| `POST /api/v1/private_chats/open_the_door` | 私聊详情 | 必须 | 幂等语义 |
+| `POST /api/v1/private_chats/get_detail` | 私聊详情 | 必须 | 幂等语义 |
 | `POST /api/v1/private_chats/me/update_settings` | 更新会话设置 | 必须 | 幂等语义 |
 | `POST /api/v1/private_chats/me/delete` | 删除私聊会话 | 必须 | 幂等语义 |
 
@@ -38,8 +38,7 @@
 | `POST /api/v1/private_messages/get_history` | 私聊消息历史 | 必须 | 无 |
 | `POST /api/v1/private_messages/update` | 编辑私聊消息 | 必须 | 幂等语义 |
 | `POST /api/v1/private_messages/recall` | 撤回私聊消息 | 必须 | 幂等语义 |
-| `POST /api/v1/private_messages/me/mark_as_read` | 标记指定私聊会话已读 | 必须 | 幂等语义 |
-| `POST /api/v1/private_messages/me/mark_all_read` | 标记所有私聊消息已读 | 必须 | 幂等语义 |
+| `POST /api/v1/private_messages/me/mark_read` | 标记私聊消息已读（scope 控制范围） | 必须 | 幂等语义 |
 
 ### 群聊消息（`group_messages`）
 
@@ -49,24 +48,45 @@
 | `POST /api/v1/group_messages/get_history` | 群聊消息历史 | 必须 | 无 |
 | `POST /api/v1/group_messages/update` | 编辑群聊消息 | 必须 | 幂等语义 |
 | `POST /api/v1/group_messages/recall` | 撤回群聊消息 | 必须 | 幂等语义 |
-| `POST /api/v1/group_messages/me/mark_as_read` | 标记指定群聊已读 | 必须 | 幂等语义 |
-| `POST /api/v1/group_messages/me/mark_all_read` | 标记所有群聊消息已读 | 必须 | 幂等语义 |
+| `POST /api/v1/group_messages/me/mark_read` | 标记群聊消息已读（scope 控制范围） | 必须 | 幂等语义 |
 
 ## 已读状态设计
 
 | 场景 | 字段 | 说明 |
 |------|------|------|
 | 私聊（1v1） | `is_read` | 发送方看到 `is_read=true` 表示对方已读；实时更新依赖 WebSocket `PrivateMessageRead` |
-| 群聊（多人） | `read_count` | 表示已读人数；不推送逐人已读事件，`read_count` 通过历史接口获取 |
+| 群聊（多人） | `read_count` | 表示已读人数；服务端**节流聚合**后通过 WebSocket `GroupMessageReadCountUpdated` 推送变更（3-5 秒窗口聚合，非逐人广播，避免大群广播风暴）。客户端无需轮询 `get_history` 获取 read_count——订阅群频道后会收到该事件。`read_count` 为最终一致值（见 `api_spec_base.md`「计数器一致性」）。 |
 
-`mark_as_read` 接口统一采用 up_to 语义：标记截至某条消息的所有消息为已读。
+`mark_read` 接口统一采用 up_to 语义：标记截至某条消息的所有消息为已读。
+
+**跨设备已读同步（已知取舍）**：当前协议不提供多端实时同步事件（self-sync 已从契约移除，见 `api_spec_index.md`「预留」）。单设备单会话模型下，同一设备的已读状态实时准确；但**跨设备**场景（用户在手机+Web 同时登录），在一端标记已读后，另一端的 `is_read`/`read_count` 不会实时更新——需等该端下次拉取 `get_history` 或冷启动 `system/bootstrap` 时刷新。这是有意的取舍（避免多端同步协议的复杂度）；未来若引入实时多端同步，将作为独立 WS 协议版本设计。客户端应在切前台/切会话时主动拉取一次历史以收敛已读状态。
 
 ## 类型定义
 
 以下类型定义于 `api_spec_types.md`：
 - `UserInfo`
 - `MessageType`
-- `SendMessageType`
+- `MessageMedia`、`MessageReplyTo`、`Reaction`、`ReactionItem`
+- `PaginatedData`、`PaginationParams`
+
+### 本模块类型
+
+```typescript
+// 可发送的消息类型（system 由服务端生成，客户端不可发送）
+type SendMessageType = Exclude<MessageType, 'system'>;
+
+// 不可发消息原因（被拉黑场景统一返回 'privacy'，不暴露拉黑状态以保护隐私）
+type MessageBlockedReason =
+  | 'privacy'                  // 对方隐私设置不允许（含被拉黑场景）
+  | 'stranger_quota_exceeded'  // 陌生人消息限额已用完
+  | 'account_suspended';       // 账号被限制
+
+// 消息发送成功响应（私聊/群聊通用）
+interface MessageSent {
+  message_id: string;
+  sent_at: string;
+}
+```
 - `MessageMedia`
 - `MessageReplyTo`
 - `MessageSent`
@@ -83,19 +103,20 @@
 interface PrivateMessageItem {
   message_id: string;
   type: MessageType;
-  
+
   content?: string;
   media?: MessageMedia;
   share_code?: string;
-  
+
   sender: UserInfo;
-  
+
   reply_to?: MessageReplyTo;
-  
+
   sent_at: string;
   edited_at?: string;
   recalled_at?: string;  // 存在即表示已撤回
   is_read: boolean;      // 消息是否已被对方读取（默认 false）
+  reactions?: Reaction[];  // 表情反应聚合（无反应时省略）
 }
 ```
 
@@ -107,22 +128,23 @@ interface PrivateMessageItem {
 interface GroupMessageItem {
   message_id: string;
   type: MessageType;
-  
+
   content?: string;
   media?: MessageMedia;
   share_code?: string;
-  
+
   sender: UserInfo;
-  
+
   reply_to?: MessageReplyTo;
   mentions?: string[];  // @UserIDs
   recalled_by?: UserInfo;  // 撤回操作者（群管理员/群主/发送者）
-  
+
   sent_at: string;
   edited_at?: string;
   recalled_at?: string;  // 存在即表示已撤回
-  
+
   read_count?: number;
+  reactions?: Reaction[];  // 表情反应聚合（无反应时省略）
 }
 ```
 
@@ -195,7 +217,7 @@ interface PrivateChatItem {
 
 ---
 
-### POST /api/v1/private_chats/open_the_door
+### POST /api/v1/private_chats/get_detail
 
 获取私聊详情（纯查询，无创建副作用）。
 
@@ -205,7 +227,7 @@ interface PrivateChatItem {
 - 会话的实际创建由 `private_messages/send` 即发即创承担（首次发消息时物化会话）
 
 **首次聊天流程**：
-1. 调用 `open_the_door` 查询会话状态
+1. 调用 `get_detail` 查询会话状态
 2. 会话存在 → 返回详情 + 最近消息；会话不存在 → 返回空态（`chat` 为空态对象，`recent_messages.items` 为空数组）
 3. 客户端展示"发起聊天"入口，用户发送首条消息时调用 `send`（send 即发即创）
 
@@ -375,40 +397,27 @@ interface RecallPrivateMessageRequest {
 
 **错误码**: `10000` `10200` `10300` `10400`
 
-### POST /api/v1/private_messages/me/mark_as_read
+### POST /api/v1/private_messages/me/mark_read
 
-标记指定私聊会话的消息为已读。
+标记私聊消息为已读（统一端点，通过 `scope` 控制范围，替代原 mark_as_read + mark_all_read）。
 
-**语义**：标记与指定用户的私聊消息为已读。当不传 `up_to_message_id` 时，标记该会话全部消息为已读。
-**up_to_message_id 校验**：当 `up_to_message_id` 不属于指定私聊会话时，返回 `10300`。
+**up_to 语义**：标记截至某条消息（含）及之前的所有消息为已读。`up_to_message_id` 不属于目标会话时返回 `10300`。
 
 - **认证**: 必须
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
-**Request**: `MarkPrivateMessagesReadRequest`
+**Request**: `MarkPrivateReadRequest`
 ```typescript
-interface MarkPrivateMessagesReadRequest {
-  target_user_id: string;        // 指定会话（必选）
-  up_to_message_id?: string;     // 标记截至此消息（含）及之前的所有消息；不传时标记该会话全部
+interface MarkPrivateReadRequest {
+  scope: 'session' | 'all';
+  target_user_id?: string;       // scope='session' 时必填：指定私聊会话
+  up_to_message_id?: string;     // scope='session' 时可选：标记截至此消息；不传则标记该会话全部
 }
 ```
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300`
-
-### POST /api/v1/private_messages/me/mark_all_read
-
-标记所有私聊消息为已读。
-
-- **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
-
-**Request**: `{}`
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000`
+**错误码**: `10000` `10300`（`scope='session'` 但 `target_user_id` 缺失，或 `up_to_message_id` 不属于该会话）
 
 ---
 
@@ -504,37 +513,24 @@ interface RecallGroupMessageRequest {
 
 **错误码**: `10000` `10200` `10300` `10400`
 
-### POST /api/v1/group_messages/me/mark_as_read
+### POST /api/v1/group_messages/me/mark_read
 
-标记指定群聊的消息为已读。
+标记群聊消息为已读（统一端点，通过 `scope` 控制范围，替代原 mark_as_read + mark_all_read）。
 
-**语义**：标记指定群组的群聊消息为已读。当不传 `up_to_message_id` 时，标记该群全部消息为已读。
-**up_to_message_id 校验**：当 `up_to_message_id` 不属于指定群组时，返回 `10300`。
+**up_to 语义**：标记截至某条消息（含）及之前的所有消息为已读。`up_to_message_id` 不属于目标群组时返回 `10300`。
 
 - **认证**: 必须
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
-**Request**: `MarkGroupMessagesReadRequest`
+**Request**: `MarkGroupReadRequest`
 ```typescript
-interface MarkGroupMessagesReadRequest {
-  group_id: string;              // 指定群组（必选）
-  up_to_message_id?: string;     // 标记截至此消息（含）及之前的所有消息；不传时标记该群全部
+interface MarkGroupReadRequest {
+  scope: 'group' | 'all';
+  group_id?: string;              // scope='group' 时必填：指定群组
+  up_to_message_id?: string;      // scope='group' 时可选：标记截至此消息；不传则标记该群全部
 }
 ```
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300` `10400`
-
-### POST /api/v1/group_messages/me/mark_all_read
-
-标记所有群聊消息为已读。
-
-- **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
-
-**Request**: `{}`
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000`
+**错误码**: `10000` `10300` `10400`（`scope='group'` 但 `group_id` 缺失返回 `10000`）

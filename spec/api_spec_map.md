@@ -43,7 +43,7 @@
 
 **Response**: `ApiResponse<MapCanvasResponse>`
 
-> 类型定义见下方「类型定义」；服务端可观测行为见「行为约束」。`heatmap` 与 `hotspots` 互斥，同一次响应最多出现一个；无数据时两者均省略。
+> 类型定义见下方「类型定义」；服务端可观测行为见「行为约束」。`MapCanvasResponse` 为 tagged union（按 `mode` 分支），互斥由结构保证。
 
 ## 类型定义
 
@@ -134,9 +134,10 @@ interface MapHotspotItem {
   title: string;                  // 昵称 / 群名 / 动态标题
   subtitle?: string;              // 简短描述 / 地点名等
   cover_url?: string;             // 头像 / 群头像 / 动态封面
-  location: GeoPoint;             // 对象实际坐标（WGS-84）
-  created_at?: string;            // 对于动态等有时间语义的对象可返回创建时间
-  distance_meters?: number;       // 相对视口中心或参考点的距离（可选）
+  // 位置统一使用 RelativeLocation（含 distance/bearing_degrees），与 feed/search 对齐
+  // distance/bearing 相对于视口几何中心计算（见 MapCanvasRequest 说明），由服务端计算
+  location: RelativeLocation;
+  created_at?: string;            // 对于动态等有时间语义的对象可返回创建时间（UTC ISO 8601）
 }
 
 interface MapHotspotsCanvas {
@@ -158,18 +159,21 @@ interface MapCanvasRequest {
   filter?: MapCanvasFilter;
   // pagination 仅在返回 hotspots 时使用；limit 覆盖全局默认为 default=50、max=200（base.md 允许模块显式覆盖）
   pagination?: PaginationParams;
-}
+  // 注：无 reference_point 字段。distance/bearing_degrees 的计算锚点 = viewport 几何中心
+  //     （由 bounds 四角求平均得到）。客户端无需传入锚点；服务端按视口中心计算所有 hotspot 的相对距离/方位。
 
-interface MapCanvasResponse {
-  heatmap?: MapHeatCanvas;       // 有统计数据时出现
-  hotspots?: MapHotspotsCanvas;  // 有明细数据时出现
-}
+// 响应为 tagged union：模式由服务端按视口尺度与数据密度决定（大尺度→heatmap，小尺度→hotspots）
+// 客户端按 mode 分支渲染；结构本身编码了互斥规则，无需散文约束
+type MapCanvasResponse =
+  | { mode: 'heatmap'; heatmap: MapHeatCanvas }
+  | { mode: 'hotspots'; hotspots: MapHotspotsCanvas }
+  | { mode: 'empty' };   // 视口内无足够数据时返回空态（既无 heatmap 也无 hotspots）
 ```
 
 约束：
 
-- 同一次响应中，`heatmap` 与 `hotspots` 最多出现一个字段：要么只返回统计，要么只返回明细，不会同时出现；
-- 当某类结果没有任何数据时，不返回对应字段：没有 bucket 就不返回 `heatmap`，没有热点对象就不返回 `hotspots`。
+- `MapCanvasResponse` 为 tagged union，`mode` 字段互斥地指明返回形态（`heatmap` / `hotspots` / `empty`），互斥规则由结构本身保证，无需客户端额外校验；
+- 视口内无足够数据时返回 `mode: 'empty'`（不再用"两者都省略"表达空态）。
 
 ### 行为约束（契约级）
 

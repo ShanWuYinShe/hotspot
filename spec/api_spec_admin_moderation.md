@@ -14,13 +14,13 @@
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
 | `POST /api/v1/admin/users/search` | 搜索用户 | 必须 + `admin.users.read` | 无 |
-| `POST /api/v1/admin/users/open_the_door` | 用户详情 | 必须 + `admin.users.read` | 无 |
+| `POST /api/v1/admin/users/get_detail` | 用户详情 | 必须 + `admin.users.read` | 无 |
 | `POST /api/v1/admin/users/ban` | 封禁用户 | 必须 + `admin.users.write` | MUST |
 | `POST /api/v1/admin/users/unban` | 解封用户 | 必须 + `admin.users.write` | 幂等语义 |
 | `POST /api/v1/admin/groups/search` | 搜索群组 | 必须 + `admin.groups.read` | 无 |
-| `POST /api/v1/admin/groups/open_the_door` | 群组详情 | 必须 + `admin.groups.read` | 无 |
+| `POST /api/v1/admin/groups/get_detail` | 群组详情 | 必须 + `admin.groups.read` | 无 |
 | `POST /api/v1/admin/groups/dismiss` | 解散群组 | 必须 + `admin.groups.write` | MUST |
-| `POST /api/v1/admin/reports/search` | 搜索举报 | 必须 + `admin.reports.read` | 无 |
+| `POST /api/v1/admin/reports/list` | 举报列表（按状态/类型过滤） | 必须 + `admin.reports.read` | 无 |
 | `POST /api/v1/admin/reports/handle` | 处理举报 | 必须 + `admin.reports.write` | MUST |
 | `POST /api/v1/admin/tags/search` | 搜索标签 | 必须 + `admin.tags.read` | 无 |
 | `POST /api/v1/admin/tags/delete` | 删除/屏蔽标签 | 必须 + `admin.tags.write` | 幂等语义 |
@@ -100,7 +100,7 @@ interface AdminUserItem extends UserItem {
 
 ---
 
-### POST /api/v1/admin/users/open_the_door
+### POST /api/v1/admin/users/get_detail
 
 获取用户详情（管理员）。
 
@@ -202,7 +202,7 @@ interface AdminGroupItem extends GroupItem {
 
 ---
 
-### POST /api/v1/admin/groups/open_the_door
+### POST /api/v1/admin/groups/get_detail
 
 获取群组详情（管理员）。
 
@@ -248,17 +248,17 @@ interface AdminDismissGroupRequest {
 
 ---
 
-### POST /api/v1/admin/reports/search
+### POST /api/v1/admin/reports/list
 
-搜索举报（管理员）。
+举报列表（管理员）。按状态/目标类型过滤（无关键字搜索语义，故命名为 list 而非 search）。
 
 - **认证**: 必须 + `admin.reports.read`
 - **幂等**: 无
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `report_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
-**Request**: `AdminReportSearchRequest`
+**Request**: `AdminReportListRequest`
 ```typescript
-interface AdminReportSearchRequest {
+interface AdminReportListRequest {
   status?: ReportStatus;
   target_type?: ReportTargetType;
   pagination?: PaginationParams;
@@ -336,10 +336,10 @@ interface AdminTagSearchRequest {
 
 **Response**: `ApiResponse<PaginatedData<AdminTagItem>>`
 ```typescript
-interface AdminTagItem {
-  name: string;
-  usage_count: number;
-  trend?: TagTrend;
+// 扩展 TagItem（定义于 api_spec_types.md）添加管理员视角字段
+// 补 tag_id：原仅用 name 作主键违反「所有 ID 用 xxx_id」约定，tags 改名后历史关联不断
+interface AdminTagItem extends TagItem {
+  tag_id: string;        // 标签唯一标识（替代原仅用 name 作主键）
   created_at: string;
 }
 ```

@@ -18,7 +18,7 @@
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
 | `POST /api/v1/groups/search` | 搜索群组（支持关键字/标签/位置组合） | 可选 | 无 |
-| `POST /api/v1/groups/open_the_door` | 群组详情 | 可选 | 无 |
+| `POST /api/v1/groups/get_detail` | 群组详情 | 可选 | 无 |
 | `POST /api/v1/groups/create` | 创建群组 | 必须 | MUST |
 | `POST /api/v1/groups/update` | 更新群组 | 必须 | 幂等语义 |
 | `POST /api/v1/groups/dismiss` | 解散群组 | 必须 | SHOULD |
@@ -28,8 +28,7 @@
 | `POST /api/v1/groups/members/invites/list` | 我发出的邀请列表 | 必须 | 无 |
 | `POST /api/v1/groups/members/invites/revoke` | 撤销已发邀请 | 必须 | 幂等语义 |
 | `POST /api/v1/groups/members/set_role` | 设置角色 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/members/mute` | 禁言成员 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/members/unmute` | 取消禁言 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/members/set_mute` | 设置禁言状态（两态统一） | 必须 | 幂等语义 |
 | `POST /api/v1/groups/members/ban` | 封禁成员 | 必须 | MUST |
 | `POST /api/v1/groups/members/unban` | 解除封禁 | 必须 | 幂等语义 |
 | `POST /api/v1/groups/members/list_banned` | 封禁列表 | 必须 | 无 |
@@ -74,6 +73,10 @@
 ```typescript
 // 可设置的角色（不含 owner，仅在本模块使用）
 type SettableGroupRole = 'admin' | 'member';
+
+// 申请/邀请状态（群申请与群邀请共用同一套状态枚举）
+// 'revoked': 邀请/申请发起者主动撤销，或过期自动撤销（群已不存在/被 ban/超时）
+type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
 ```
 
 ## 端点详情
@@ -113,7 +116,7 @@ interface SearchGroupsRequest {
 
 ---
 
-### POST /api/v1/groups/open_the_door
+### POST /api/v1/groups/get_detail
 
 获取群组详情。认证可选，字段可见性规则见 `api_spec_base.md`。
 
@@ -201,6 +204,8 @@ interface UpdateGroupRequest {
 
 **解散行为**：解散后向所有在线群成员推送 WebSocket `GroupDismissed` 事件（`reason='owner_dismissed'`）。不暴露解散者身份（隐私保护，操作记录仅保留在审计日志）。
 
+**级联处理（契约级）**：解散时，该群所有 `pending` 状态的申请与邀请由服务端自动置为 `revoked`（群已不存在，无需推送单独事件；客户端下次拉取列表时自然不可见）。
+
 - **认证**: 必须
 - **幂等**: SHOULD（建议客户端携带 `Idempotency-Key`）
 
@@ -244,7 +249,7 @@ interface GroupMemberItem {
   joined_at: string;
   muted_until?: string;           // @group-admin-only（或被禁言者自身可见）
   presence_status?: UserPresenceStatus;  // 隐私受控：成员隐私设置时不返回
-  last_online?: string;
+  last_online_at?: string;
 }
 ```
 
@@ -323,7 +328,7 @@ interface Invitation {
 ```typescript
 interface GroupSentInvitesRequest {
   group_id: string;
-  status?: ApplicationStatus | 'all';
+  status?: ApplicationStatus | 'all';  // 默认 'pending'；查历史需显式传 'all'
   pagination?: PaginationParams;
 }
 ```
@@ -333,15 +338,18 @@ interface GroupSentInvitesRequest {
 interface GroupSentInviteItem {
   invite_id: string;
   invitee: UserInfo;
+  inviter: UserInfo;           // 邀请发起者（多管理员场景可见是谁发的）
   status: ApplicationStatus;
   message?: string;
   created_at: string;
-  expires_at?: string;
-  responded_at?: string;
+  expires_at?: string;         // UTC ISO 8601，由 AppConfig.limits.group_invite_ttl_hours 控制
+  responded_at?: string;       // UTC ISO 8601，进入终态时间
 }
 ```
 
-`ApplicationStatus='revoked'` 表示邀请由发起者主动撤销，客户端需与 `rejected`（受邀者拒绝）区分展示。
+`ApplicationStatus='revoked'` 表示邀请由发起者主动撤销（含过期自动撤销），客户端需与 `rejected`（受邀者拒绝）区分展示。
+
+**过期语义（契约级）**：超过 `expires_at` 的 pending 邀请由服务端自动置为 `revoked`（与发起者主动撤销同状态，便于客户端统一展示为"已失效"），并向邀请人和受邀人推送 `GroupInviteClosed` 事件（见 `api_spec_websocket.md`）。`members/invites/list` 默认仅返回 `pending`，查历史需显式传 `status`。
 
 **错误码**: `10000` `10200` `10300` `10400`
 
@@ -377,6 +385,8 @@ interface RevokeSentInviteRequest {
 
 设置成员角色。幂等语义：设置为目标角色与当前一致时视为 no-op，返回成功。
 
+**降级与 pending 邀请**：邀请是群行为（非个人），inviter 降级为普通成员后，其历史发出的 pending 邀请由其他管理员/owner 继续可见与管理（不自动失效）。**owner 降级**（转交所有权）前若有 pending 邀请，需先 `members/invites/revoke` 或在 `transfer_ownership` 中一并转交管理权，否则返回 `10400`。
+
 - **认证**: 必须
 - **幂等**: 幂等语义（重复请求返回一致结果；目标角色与当前一致时返回成功）
 
@@ -395,19 +405,20 @@ interface SetMemberRoleRequest {
 
 ---
 
-### POST /api/v1/groups/members/mute
+### POST /api/v1/groups/members/set_mute
 
-禁言成员。
+设置成员禁言状态（两态统一端点，替代原 mute/unmute 成对动词）。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 幂等语义（`active=false` 对未禁言成员视为 no-op 成功；`active=true` 重复禁言刷新 duration）
 
-**Request**: `MuteMemberRequest`
+**Request**: `SetMuteRequest`
 ```typescript
-interface MuteMemberRequest {
+interface SetMuteRequest {
   group_id: string;
   user_id: string;
-  duration_minutes: number;
+  active: boolean;
+  duration_minutes?: number;  // active=true 时必填（1-43200，最多 30 天）；active=false 时忽略
 }
 ```
 
@@ -417,30 +428,11 @@ interface MuteMemberRequest {
 
 ---
 
-### POST /api/v1/groups/members/unmute
-
-取消禁言成员。幂等语义：对当前未被禁言的成员调用视为 no-op，返回成功。
-
-- **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果；未禁言成员视为已达目标状态，返回成功）
-
-**Request**: `UnmuteMemberRequest`
-```typescript
-interface UnmuteMemberRequest {
-  group_id: string;
-  user_id: string;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10200` `10300`
-
----
-
 ### POST /api/v1/groups/members/ban
 
 封禁成员。封禁后成员将被移出群组且无法再次加入。
+
+**级联处理（契约级）**：封禁时，被 ban 用户**发出的**该群 pending 申请置 `revoked`；**发给**被 ban 用户的该群 pending 邀请置 `revoked`（避免被封用户仍收到邀请再加入）。
 
 - **认证**: 必须
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
@@ -546,7 +538,7 @@ interface RemoveMemberRequest {
 ```typescript
 interface GroupApplicationsRequest {
   group_id: string;
-  status?: ApplicationStatus | 'all';
+  status?: ApplicationStatus | 'all';  // 默认 'pending'（仅待处理，管理员工作台语义）；查历史需显式传 'all'
   pagination?: PaginationParams;
 }
 ```
@@ -555,15 +547,17 @@ interface GroupApplicationsRequest {
 ```typescript
 // ApplicationStatus 定义于 api_spec_types.md
 
-// 群组申请列表项
+// 群组申请列表项（群管理员视角与申请人视角共用此类型）
 interface GroupApplicationItem {
   application_id: string;
+  group: GroupInfo;              // 目标群组（申请人视角的 me/applications/list 跨群，需群上下文）
   applicant: UserInfo;
   message?: string;
   status: ApplicationStatus;
   created_at: string;
-  handled_at?: string;
-  // === @group-admin-only ===
+  expires_at?: string;           // UTC ISO 8601，申请有效期截止（由 AppConfig.limits.group_application_ttl_hours 控制）；0 TTL 时省略
+  handled_at?: string;           // UTC ISO 8601，进入终态（accepted/rejected/revoked）的时间
+  // === @group-admin-only（群管理员视角返回，申请人视角的 handled_by 不返回）===
   handled_by?: UserInfo;
 }
 ```
@@ -584,6 +578,7 @@ interface GroupApplicationItem {
 **Request**: `ApproveGroupApplicationRequest`
 ```typescript
 interface ApproveGroupApplicationRequest {
+  group_id: string;        // 群级鉴权（与 revoke 对齐）；须与 application 所属群一致，否则 10000
   application_id: string;
 }
 ```
@@ -596,7 +591,7 @@ interface ApproveGroupApplicationRequest {
 
 ### POST /api/v1/groups/applications/reject
 
-拒绝群组申请。
+拒绝群组申请。拒绝后向申请人推送 `GroupApplicationRejected` 通知（含 `reason`，对应 `NotificationType='group_application_rejected'`）。
 
 - **认证**: 必须
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
@@ -604,8 +599,9 @@ interface ApproveGroupApplicationRequest {
 **Request**: `RejectGroupApplicationRequest`
 ```typescript
 interface RejectGroupApplicationRequest {
+  group_id: string;        // 群级鉴权
   application_id: string;
-  reason?: string;
+  reason?: string;         // 0-200 字符，拒绝原因，会随通知送达申请人
 }
 ```
 
@@ -828,7 +824,7 @@ interface MyGroupsRequest {
 **Request**: `MyApplicationsRequest`
 ```typescript
 interface MyApplicationsRequest {
-  status?: ApplicationStatus | 'all';  // 默认: 'all'
+  status?: ApplicationStatus | 'all';  // 默认 'pending'（我待处理的申请）；查历史需显式传 'all'
   pagination?: PaginationParams;
 }
 ```
@@ -841,7 +837,7 @@ interface MyApplicationsRequest {
 
 ### POST /api/v1/groups/me/applications/cancel
 
-取消群组申请。
+取消群组申请。取消后向群管理员推送 `GroupApplicationCancelled` 通知（对应 `NotificationType='group_application_cancelled'`）。
 
 
 - **认证**: 必须
@@ -850,7 +846,9 @@ interface MyApplicationsRequest {
 **Request**: `CancelApplicationRequest`
 ```typescript
 interface CancelApplicationRequest {
+  group_id: string;         // 群级鉴权
   application_id: string;
+  reason?: string;          // 0-200 字符，取消原因，对齐 admin 侧 reject 的 reason
 }
 ```
 
@@ -872,14 +870,14 @@ interface CancelApplicationRequest {
 **Request**: `MyInvitesRequest`
 ```typescript
 interface MyInvitesRequest {
-  status?: ApplicationStatus | 'all';
+  status?: ApplicationStatus | 'all';  // 默认 'pending'（待我处理的邀请）；查历史需显式传 'all'
   pagination?: PaginationParams;
 }
 ```
 
 **Response**: `ApiResponse<PaginatedData<GroupInviteItem>>`
 ```typescript
-// 群组邀请列表项
+// 群组邀请列表项（受邀人视角，来自 me/invites/list）
 interface GroupInviteItem {
   invite_id: string;
   group: GroupInfo;
@@ -887,7 +885,8 @@ interface GroupInviteItem {
   message?: string;
   status: ApplicationStatus;
   created_at: string;
-  expires_at?: string;
+  expires_at?: string;       // UTC ISO 8601，由 AppConfig.limits.group_invite_ttl_hours 控制
+  responded_at?: string;     // UTC ISO 8601，进入终态（accepted/rejected/revoked）时间
 }
 ```
 
@@ -910,7 +909,12 @@ interface AcceptInviteRequest {
 }
 ```
 
-**Response**: `ApiResponse`（完整数据通过 WebSocket `GroupMemberJoined` 推送）
+**Response**: `ApiResponse<InviteAcceptedResult>`（客户端可立即跳转群组；完整成员数据通过 WebSocket `GroupMemberJoined` 推送）
+```typescript
+interface InviteAcceptedResult {
+  group_id: string;   // 接受的群组 ID，便于客户端直接跳转/拉取群详情
+}
+```
 
 **错误码**: `10000` `10300` `10400`
 
@@ -928,6 +932,7 @@ interface AcceptInviteRequest {
 ```typescript
 interface RejectInviteRequest {
   invite_id: string;
+  reason?: string;          // 0-200 字符，拒绝原因（对齐其他负向转移端点）
 }
 ```
 
@@ -942,6 +947,8 @@ interface RejectInviteRequest {
 退出群组。
 
 **限制**：群主不能直接退出群组，必须先通过 `groups/me/transfer_ownership` 转让群主身份，否则返回 `10400`（message: "群主需先转让群主身份"）。
+
+**级联处理（契约级）**：退群用户作为**申请人**的该群 pending 申请自动置 `revoked`；作为 inviter 发出的 pending 邀请**保留**（邀请是群行为，由其他管理员管理），但如果退群的是该群最后一个管理员/owner，则已由 `transfer_ownership` 限制提前拦截（不会发生"无人管理 pending 邀请"的状态）。
 
 - **认证**: 必须
 - **幂等**: SHOULD（建议客户端携带 `Idempotency-Key`）

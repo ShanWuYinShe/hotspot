@@ -18,8 +18,7 @@
 |-----|------|------|------|
 | `POST /api/v1/notifications/list` | 通知列表 | 必须 | 无 |
 | `POST /api/v1/notifications/unread_count` | 未读通知数 | 必须 | 无 |
-| `POST /api/v1/notifications/mark_as_read` | 标记已读 | 必须 | 幂等语义 |
-| `POST /api/v1/notifications/mark_all_read` | 标记全部已读 | 必须 | 幂等语义 |
+| `POST /api/v1/notifications/mark_read` | 标记已读（scope 控制范围） | 必须 | 幂等语义 |
 
 ## 类型定义
 
@@ -143,44 +142,32 @@ interface UnreadCountResult {
 
 ---
 
-### POST /api/v1/notifications/mark_as_read
+### POST /api/v1/notifications/mark_read
 
-批量标记指定通知为已读。
+标记通知为已读（统一端点，通过字段组合控制范围，替代原 mark_as_read + mark_all_read）。
 
-**职责分工**（与 `mark_all_read` 区分）：
-- `mark_as_read`：精确标记少量已读（读详情后回标 / 滑动逐条标记），或按类型批量标记
-- `mark_all_read`：清空全部未读（"全部已读"按钮），走服务端全量更新
+**范围语义**：
+- 传 `notification_ids`：精确标记指定通知（0-50 个；空数组视为 no-op 成功）
+- 传 `type`：按类型批量标记（将该类型所有未读标记为已读）
+- 都不传（`scope: 'all'`）：清空全部未读（"全部已读"按钮）
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复标记同一通知不产生错误）
+- **幂等**: 幂等语义（重复标记已读通知不产生错误）
 
-**Request**: `MarkAsReadRequest`
+**Request**: `MarkReadRequest`
 ```typescript
-interface MarkAsReadRequest {
-  notification_ids?: string[];       // 精确标记：要标记为已读的通知 ID（0-50 个；空数组视为 no-op 成功，不报错；超过 50 个返回 10000）
-  type?: NotificationType;           // 按类型批量标记：将该类型的所有未读通知标记为已读
+interface MarkReadRequest {
+  scope?: 'selected' | 'all';        // 默认 'selected'；'all' 时清空全部未读（忽略 notification_ids/type）
+  notification_ids?: string[];       // scope='selected' 时：精确标记（0-50 个；空数组 no-op 成功；超 50 返回 10000）
+  type?: NotificationType;           // scope='selected' 时：按类型批量标记
 }
-// 二选一：必须且只能传 notification_ids 或 type 其中之一；同时传或都不传返回 10000
-// 空数组 notification_ids: [] 对齐"已达目标状态→成功"的幂等哲学，不惩罚空选择的合法调用
+// scope='selected' 时，notification_ids 与 type 二选一（同时传或都不传返回 10000，除非 scope='all'）
 ```
 
-**非法 ID 处理**：不存在或不属于当前用户的 `notification_ids` 将被服务端静默忽略，不返回错误。
+**非法 ID 处理**：不存在或不属于当前用户的 `notification_ids` 将被服务端静默忽略，不返回错误（不泄漏存在性）。
 
 **Response**: `ApiResponse`
 
 **错误码**: `10000`
-
----
-
-### POST /api/v1/notifications/mark_all_read
-
-标记当前用户的所有通知为已读。
-
-- **认证**: 必须
-- **幂等**: 幂等语义（重复调用不产生错误）
-
-**Request**: `{}`
-
-**Response**: `ApiResponse`
 
 **错误码**: `10000`

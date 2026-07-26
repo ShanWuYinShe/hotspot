@@ -32,7 +32,13 @@
 - `UserInfo`
 - `Location`
 - `PaginationParams`
-- `ShareType`
+
+### 本模块类型
+
+```typescript
+// 分享目标类型（原定义于 api_spec_types.md，因仅 share 模块使用已下放至此）
+type ShareType = 'user' | 'group' | 'moment' | 'location';
+```
 
 **说明**：`preview` 为展示用摘要。分享存在但目标资源不可访问时（如目标被删除/隐私变更），不返回 `preview`，仅返回 `share` 与 `payload`（让客户端知道分享类型与目标 ID，可提示"内容已不可访问"）；分享本身已撤销/过期时整体返回 `10300`（见「有效期规则」）。
 
@@ -67,7 +73,7 @@
 
 **Request**: `CreateShareRequest`
 ```typescript
-// ShareType 定义于 api_spec_types.md
+// ShareType 定义于本模块「类型定义」小节
 
 interface UserSharePayload {
   shared_user_id: string;

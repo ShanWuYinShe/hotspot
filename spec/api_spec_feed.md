@@ -128,7 +128,12 @@ interface GetFeedUsersRequest {
 
 ### POST /api/v1/feed/list_trending
 
-获取热门内容。认证可选，字段可见性规则见 `api_spec_base.md`。
+获取热门瞬间（发现页默认内容，无输入场景）。
+
+**与 search/suggest 的边界（契约级）**：
+- `feed/list_trending`：**无输入**的"发现页默认内容"——用户刚进入 App/发现页时，平台主动推荐的热门瞬间。全局热门，不依赖用户输入或位置。
+- `search/suggest`：**有输入前缀**的"搜索框联想"——用户在搜索框输入时，按前缀匹配的用户/群组/瞬间/标签建议。
+- 标签的热门榜（trending tags）归 `search/suggest` 的 tag 类别，**不在本端点返回**（原 `trending_tags` 已移除以消除与 suggest 的职责重叠）。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -136,28 +141,17 @@ interface GetFeedUsersRequest {
 **Request**: `GetFeedTrendingRequest`
 ```typescript
 interface GetFeedTrendingRequest {}
-// 返回条数由 AppConfig.response_defaults 控制（trending_tags_count、hot_moments_count）
+// 返回条数由 AppConfig.response_defaults.hot_moments_count 控制
 ```
 
 **Response**: `ApiResponse<TrendingBundle>`
 ```typescript
 interface TrendingBundle {
-  trending_tags: TrendingTagItem[];
-  hot_moments: MomentItem[];
-}
-
-// TrendingTagItem 复用 TagItem 并扩展热门瞬间预览
-// TagItem 定义于 api_spec_types.md（含 name、usage_count、trend?）
-// 此处使用 extends Omit 是为了将 trend 从可选覆盖为必填，避免重复定义 TagItem 的所有字段
-interface TrendingTagItem extends Omit<TagItem, 'trend'> {
-  trend: TagTrend;  // 必填（TagItem 中为可选，此处覆盖为必填）
-  hot_moment_preview?: MomentItem;
+  hot_moments: MomentItem[];   // 热门瞬间列表；@auth-only 字段（如 reactions[].reacted_by_me）按登录态返回
 }
 ```
 
 **错误码**: `10000`
-
-> **注**：标签相关类型（`TagItem`、`TagTrend`）定义于 `api_spec_types.md`。
 
 ---
 

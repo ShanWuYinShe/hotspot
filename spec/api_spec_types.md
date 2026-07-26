@@ -38,6 +38,24 @@ type GroupRole = 'owner' | 'admin' | 'member';
 // === 客户端 ===
 type ClientType = 'web' | 'app';
 
+// === 设备标识（单设备单会话模型的基础原语，详见 api_spec_auth.md「单设备单会话模型」）===
+// 客户端生成的稳定设备标识（UUID v4 字符串）。语义：一台逻辑设备 = 一个 device_id。
+// - App：首次启动生成并存入 Keychain（iOS）/ Keystore（Android），卸载重装后视为新设备
+// - Web：存入 localStorage 或独立于 auth cookie 的 HttpOnly cookie（见 base.md「Web 端 device_id cookie」），登出不清除以保持设备身份连续；不同浏览器档案 = 不同 device_id
+// 服务端用作会话主键的一部分：同一 user 在同一 device_id 上只允许一个活跃 session（新登录驱逐旧 session，详见 auth.md login）
+type DeviceId = string;
+
+// === Reaction（emoji 表情回应，统一用于 message/moment/comment 三类资源）===
+// emoji 为 Unicode 码点字符串（如 "👍"），服务端按 AppConfig.limits.reaction_emojis 白名单校验
+// 可用 emoji 集合对客户端透明，通过 system/get_client_config 下发
+type ReactionTargetType = 'message' | 'moment' | 'comment';
+
+interface Reaction {
+  emoji: string;          // 表情符号
+  count: number;          // 该表情的反应总数
+  reacted_by_me: boolean; // 当前用户是否已用此表情反应（@auth-only 语义：匿名时为 false）
+}
+
 // === 状态枚举 ===
 // 用户在线状态（当前仅支持 online/offline，后续可扩展更多状态）
 type UserPresenceStatus = 'online' | 'offline';
@@ -47,7 +65,7 @@ type ReportStatus = 'pending' | 'reviewing' | 'escalated' | 'resolved' | 'dismis
 type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
 type ReportHandleAction = 'resolve' | 'dismiss' | 'escalate';
 
-// 举报原因枚举（用户从中选取）
+// 举报原因枚举（用户从中选取；跨 report + admin_moderation 两模块——AdminReportItem extends ReportItem 继承此字段）
 type ReportReason =
   | 'spam'              // 垃圾信息/广告
   | 'harassment'        // 骚扰/欺凌
@@ -68,30 +86,20 @@ type AnnouncementSeverity = 'info' | 'warning' | 'error';
 type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
 
 // === 推荐理由类型（用于解释推荐来源）===
+// 注：原 RecommendationContext 为单字段 { type } 包装，过度设计，已折叠。
+// MomentItem.recommendation 现直接使用 RecommendationType。
 type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
-
-interface RecommendationContext {
-  type: RecommendationType;
-}
 
 // === 以下类型从各模块收归至此，作为跨模块共享的权威定义 ===
 
-// 性别枚举（原定义于 api_spec_user.md）
-// 'other' 为包容性取值，覆盖非二元/不愿透露等场景，不使用任何特定梗或戏谑命名
-type Gender = 'male' | 'female' | 'other';
-
-// 私聊权限（原定义于 api_spec_user.md）
+// 私聊权限（跨 user + chat + admin 三模块，故保留在通用类型）
 // 注：'friends' 表示"仅好友"，好友 = 双方互相关注的用户
 type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
 
-// 申请状态（原定义于 api_spec_group.md）
-// 'revoked': 邀请/申请发起者主动撤销（与被拒绝区分，便于客户端展示不同状态）
-type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
-
-// 分享类型（原定义于 api_spec_share.md）
-type ShareType = 'user' | 'group' | 'moment' | 'location';
-
-// 通知类型（原定义于 api_spec_notification.md）
+// 通知类型（跨 notification + websocket + admin 三模块，故保留在通用类型）
+// 注：原单模块类型 Gender/ApplicationStatus/ShareType/MessageBlockedReason/SendMessageType/MessageSent
+// 经核查仅单模块使用，已下放回各自模块文件（符合「单模块归属」规则）。
+// 通知类型与分类本身确实跨 notification + websocket + admin_moderation 三个模块（未读计数、推送事件、管理端），故保留于此。
 type NotificationType =
   | 'new_follower'
   | 'mutual_follow'
@@ -100,26 +108,23 @@ type NotificationType =
   | 'comment_liked'
   | 'comment_reply'
   | 'mentioned'
+  | 'reaction_added'              // 新增：表情反应通知（@auth-only，仅 message/moment/comment 三类目标的 reaction）
   | 'group_invite_received'
+  | 'group_invite_revoked'        // 新增：邀请被发起方撤销（@auth-only，原仅 accepted 推送，现补负向转移）
   | 'group_invite_accepted'
   | 'group_application_received'
+  | 'group_application_cancelled' // 新增：申请被发起方取消（@auth-only，通知群管理员）
   | 'group_application_accepted'
+  | 'group_application_rejected'  // 新增：申请被拒绝（@auth-only，通知申请人，对应 #18 返回处理结果）
   | 'system_announcement';
 
 // 通知分类（用于未读计数分组展示，见 api_spec_notification.md unread_count.by_type）
 // 映射为契约级，新增 NotificationType 时必须同步归类：
 // - social:        new_follower, mutual_follow
-// - interaction:   moment_liked, moment_commented, comment_liked, comment_reply, mentioned
-// - group:         group_invite_received, group_invite_accepted, group_application_received, group_application_accepted
+// - interaction:   moment_liked, moment_commented, comment_liked, comment_reply, mentioned, reaction_added
+// - group:         group_invite_received, group_invite_revoked, group_invite_accepted, group_application_received, group_application_cancelled, group_application_accepted, group_application_rejected
 // - system:        system_announcement
 type NotificationCategory = 'social' | 'interaction' | 'group' | 'system';
-
-// 不可发消息原因（原定义于 api_spec_chat.md）
-// 设计说明：被拉黑场景统一返回 'privacy'，不暴露拉黑状态（隐私保护）
-type MessageBlockedReason =
-  | 'privacy'                  // 对方隐私设置不允许（含被拉黑场景）
-  | 'stranger_quota_exceeded'  // 陌生人消息限额已用完
-  | 'account_suspended';       // 账号被限制
 ```
 
 ### 位置与地理信息
@@ -181,7 +186,7 @@ interface RelativeLocation {
 // 使用说明：
 // - Request：使用 Location（仅坐标+名称）
 // - Response：经过距离/角度计算时使用 RelativeLocation（搜索/列表/Feed 有 distance/bearing；详情/Admin/当前用户视角通常为 undefined）
-// - 未经距离/角度计算的响应字段仍使用 Location（如 GroupSettings.location、MyProfile.location）
+// - 未经距离/角度计算的响应字段仍使用 Location（如 GroupSettings.location、MyProfileState.location）
 ```
 
 ### 分页与元数据
@@ -265,20 +270,20 @@ interface UserItem {
   user: UserInfo;
   bio?: string;
   tags?: string[];
-  
+
   // 隐私受控字段（隐私限制时不返回，不暴露原因）
   presence_status?: UserPresenceStatus;  // 用户状态（online/offline）
-  last_online?: string;                  // 最后在线时间（offline 时有值），精度截断到分钟（隐私保护，防止行为模式分析）
-  
+  last_online_at?: string;               // 最后在线时间（offline 时有值），UTC ISO 8601，精度截断到分钟（隐私保护，防止行为模式分析）
+
   // 位置信息（可见性规则见 RelativeLocation 类型定义）
   location?: RelativeLocation;
-  
-  // 统计信息：详情页（open_the_door）始终返回；搜索/列表由服务端根据接口语义决定是否返回（客户端不应依赖其在列表中的存在性）
+
+  // 统计信息：详情页（get_detail）始终返回；搜索/列表由服务端根据接口语义决定是否返回（客户端不应依赖其在列表中的存在性）
   stats?: UserStats;
-  
+
   // === @auth-only 以下字段仅登录态返回 ===
   relation?: Relationship;
-  
+
   // @auth-only
   // 社交上下文（展示与当前用户的共同点）
   // 详情页/Feed 返回，搜索/列表不返回
@@ -333,7 +338,7 @@ interface GroupItem {
 
   // 位置信息：统一使用 RelativeLocation
   // - 列表/搜索/Feed 场景：distance / bearing_degrees 由服务端基于 reference_point 计算
-  // - 详情场景（open_the_door）：distance / bearing_degrees 为 undefined
+  // - 详情场景（get_detail）：distance / bearing_degrees 为 undefined
   location: RelativeLocation;
 
   // 列表/详情页返回
@@ -412,28 +417,28 @@ interface MomentItem {
   moment_id: string;
   description: string;
   images?: MediaAsset[];
-  tags: string[];
+  tags?: string[];                 // 标签；与 user/group 对齐改为可选
   mentions?: string[];
   created_at: string;
   likes_count: number;
   comments_count: number;
   shares_count: number;
+  reactions?: Reaction[];          // 表情反应聚合（无反应时省略）；reaction.reacted_by_me 为 @auth-only 语义
   user: UserInfo;
-  
+
   // 位置信息（可见性规则见 RelativeLocation 类型定义）
   location: RelativeLocation;
-  
+
   // === @owner-only 以下字段仅资源拥有者返回 ===
   privacy_level?: PrivacyLevel;   // 仅拥有者可见，服务端过滤控制可见性
-  
+
   // === @auth-only 以下字段仅登录态返回 ===
   my_state?: {
-    is_liked: boolean;
-    is_favorited: boolean;
+    is_favorited: boolean;         // 收藏状态（点赞/反应态改由 reactions[].reacted_by_me 表达）
   };
-  
+
   // Feed 场景返回（推荐理由，让用户了解为什么看到这条内容）
-  recommendation?: RecommendationContext;
+  recommendation?: RecommendationType;  // 原 RecommendationContext 已折叠为单 type
 }
 ```
 
@@ -448,15 +453,19 @@ interface MomentSummary {
 }
 ```
 
-### 点赞 (Like)
+### 反应 (Reaction)
 
-**LikeItem**: 点赞列表项（瞬间点赞 `moments/list_likes` 和评论点赞 `comments/list_likes` 共用）
+**ReactionItem**: 反应者列表项（用于 `me/list_reactions` 查询某个资源的反应详情，替代原 `moments/list_likes`/`comments/list_likes`）
 ```typescript
-interface LikeItem {
+interface ReactionItem {
   user: UserInfo;
-  liked_at: string;
+  emoji: string;        // 该用户使用的表情
+  reacted_at: string;   // UTC ISO 8601
 }
 ```
+
+> 设计说明：原 `LikeItem`（仅 liked_at）随点赞/取消点赞二元接口被统一 `set_reaction` 取代而废弃。
+> 反应列表统一返回带 emoji 的 `ReactionItem`，客户端可按 emoji 分组渲染，也可聚合为 `MomentItem.reactions` 的 count。
 
 ### 消息 (Message)
 
@@ -474,13 +483,7 @@ interface MessageReplyTo {
 
 > 设计说明：`sender` 采用嵌套 `UserInfo` 而非扁平 `user_id`/`nickname`，与 spec 中所有"对用户的引用"（`sender`/`actor`/`creator`/`applicant` 等）保持一致；`type` 字段是渲染回复引用的必需信息（区分文本/图片/分享等），扁平结构无法表达非文本消息的引用。
 
-**MessageSent**: 消息发送成功响应（私聊/群聊通用）
-```typescript
-interface MessageSent {
-  message_id: string;
-  sent_at: string;
-}
-```
+> 注：`MessageSent`（消息发送成功响应）经核查仅 chat 模块使用，已下放至 `api_spec_chat.md`，此处不再定义。
 
 私聊/群聊消息项类型定义在模块文档中：`api_spec_chat.md`。
 
@@ -512,10 +515,19 @@ interface ReportItem {
   created_at: string;
   handled_at?: string;
   message_snapshot?: MessageReportSnapshot;  // 仅 target_type='message'：举报时的消息内容快照，供管理员审核
+
+  // === @owner-only 仅举报人自己可见（reports/me/list 返回，他人不可见）===
+  // 处理结果摘要：让举报人了解处理进展与结论，但不暴露处理管理员身份（隐私）
+  resolution?: {
+    action: ReportHandleAction;   // 最终处理动作
+    resolved_at: string;          // UTC ISO 8601，处理完成时间
+    note?: string;                // 可选的处理说明（脱敏后，不含内部细节）
+  };
 }
 
 // 消息举报快照（隐私边界设计：管理员基于快照审核，不直接查询私聊消息库）
 // 举报人在 reports/create 时提交，服务端原样存储，审核方据此判断举报是否成立
+// 跨 report + admin_moderation 两模块（随 ReportItem 被 AdminReportItem 继承），故保留于通用类型
 interface MessageReportSnapshot {
   chat_type: 'private' | 'group';   // 会话类型
   target_chat_id: string;           // private: target_user_id；group: group_id
@@ -535,7 +547,7 @@ interface MessageReportSnapshot {
 interface UserSettings {
   privacy_level: PrivacyLevel;
   location_visible: boolean;          // false 时，普通用户视角的 UserItem.location 字段不返回
-  presence_visible: boolean;         // 在线状态和最后在线时间的可见性（统一控制），false 时 `presence_status`/`last_online` 均不返回
+  presence_visible: boolean;         // 在线状态和最后在线时间的可见性（统一控制），false 时 `presence_status`/`last_online_at` 均不返回
   social_lists_visible: boolean;     // 好友/关注/粉丝列表是否公开（统一控制）
   groups_visible: boolean;           // 群组列表是否公开（false 时 users/list_groups 直接过滤）
   liked_moments_visible: boolean;    // 点赞瞬间列表是否公开
@@ -572,6 +584,9 @@ interface AppLimits {
   search_radius_max: number;  // 搜索半径上限（米），用于搜索和 Feed 相关接口
   message_recall_window_seconds: number;  // 消息撤回时间窗（秒），发送者仅可撤回该窗口内的消息；0 表示不允许撤回
   stranger_message_daily_quota: number;   // 每日可向非互相关注（陌生人）用户发送的私聊消息上限；超过返回 MessageBlockedReason='stranger_quota_exceeded'，0 表示禁止任何陌生人消息
+  reaction_emojis: string[];              // 允许的表情反应 emoji 白名单（Unicode 码点字符串数组），客户端据此渲染反应面板
+  group_invite_ttl_hours: number;         // 群邀请有效期（小时），过期后状态置 'revoked'；0 表示永不过期
+  group_application_ttl_hours: number;    // 群申请有效期（小时），过期后状态置 'revoked'；0 表示永不过期
 }
 
 // 联系/合规信息（客户端可见）
@@ -579,6 +594,6 @@ interface ContactInfo {
   support_email: string;
   privacy_policy_url: string;
   terms_of_service_url: string;
-  official_website: string;
+  official_website_url: string;  // 原 official_website，加 _url 后缀与同接口其他 URL 字段统一
 }
 ```

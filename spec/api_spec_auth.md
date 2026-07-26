@@ -16,22 +16,44 @@
 | 端点 | 说明 | 认证 | 幂等 |
 |------|------|------|------|
 | `POST /api/v1/auth/register` | 用户注册 | 无 | MUST |
-| `POST /api/v1/auth/login` | 用户登录 | 无 | 无 |
-| `POST /api/v1/auth/logout` | 用户登出 | 必须 | 无 |
+| `POST /api/v1/auth/login` | 用户登录 | 无 | 幂等语义 |
+| `POST /api/v1/auth/logout` | 用户登出 | 必须 | 幂等语义 |
 | `POST /api/v1/auth/guest` | 创建访客用户 | 无 | MUST |
-| `POST /api/v1/auth/refresh_token` | 刷新 Token | 可选 | 无 |
+| `POST /api/v1/auth/refresh_token` | 刷新 Token | 可选 | 幂等语义 |
 | `POST /api/v1/auth/check_status` | 检查认证状态 | 可选 | 无 |
 | `POST /api/v1/auth/request_password_reset` | 请求密码重置 | 无 | MUST |
 | `POST /api/v1/auth/reset_password` | 重置密码 | 无 | MUST |
 | `POST /api/v1/auth/me/change_password` | 修改密码 | 必须 | MUST |
 | `POST /api/v1/auth/me/sessions/list` | 获取会话列表 | 必须 | 无 |
-| `POST /api/v1/auth/me/sessions/revoke` | 撤销会话 | 必须 | 无 |
-| `POST /api/v1/auth/me/sessions/revoke_all` | 撤销所有其他会话 | 必须 | 无 |
+| `POST /api/v1/auth/me/sessions/revoke` | 撤销会话 | 必须 | 幂等语义 |
+| `POST /api/v1/auth/me/sessions/revoke_all` | 撤销所有其他会话 | 必须 | 幂等语义 |
 
 ## 类型定义
 
 以下类型定义于 `api_spec_types.md`：
 - `ClientType`
+- `DeviceId`（设备标识，见下方「单设备单会话模型」）
+
+### 单设备单会话模型（契约级）
+
+HotSpot 采用「**同一用户在同一设备上只有一个活跃 session**」的会话模型。`device_id`（`DeviceId` 类型）是设备身份的主键，与 `user_id` 一起构成 session 的唯一性约束 `(user_id, device_id)`。
+
+**设备标识的稳定性**：
+- **App**：客户端首次启动生成 UUID v4 并持久化到 Keychain（iOS）/ Keystore（Android）；卸载重装视为新设备（新 device_id）
+- **Web**：由服务端通过独立 `device_id` Cookie 下发（见 `api_spec_base.md`「Web 端 device_id Cookie」），登出不清除；不同浏览器档案/无痕窗口天然对应不同 device_id
+- 客户端**不得**自造或预测 device_id（App 端虽本地生成，但一经生成即稳定，禁止为绕过驱逐而轮换）
+
+**驱逐规则**：
+- `login` / `register` / `guest` 成功时，若 `(user_id, device_id)` 已有活跃 session，服务端立即将旧 session 的 access_token + refresh_token 写入黑名单，并向旧 session 的在线 WebSocket 连接推送 `SessionRevoked` 事件（见 `api_spec_websocket.md`），新 session 取而代之
+- 驱逐写入黑名单**立即生效**，refresh 的 30 秒宽限期**不覆盖显式驱逐**（见 `refresh_token` 的「驱逐优先于宽限」）
+
+**跨设备共存**：用户可在多个设备（手机、平板、Web）同时登录，各自 `device_id` 不同、互不驱逐。`sessions/list` 返回所有活跃设备的 session 列表。
+
+**与既有失效机制的协同**：
+- `change_password`：撤销除当前外所有 session（跨设备，含其他设备）——强度高于单设备驱逐，用于密码泄露场景
+- `reset_password`：撤销所有 session（含当前）——最强，用于忘密码重置
+- `logout`：仅撤销当前 session
+- `sessions/revoke` / `revoke_all`：用户主动管理多设备
 
 ### 客户端类型与 Token 投递策略
 
@@ -101,6 +123,7 @@ interface RegisterRequest {
   nickname: string;
   password: string;
   client_type: ClientType;
+  device_id: DeviceId;   // 设备标识（详见「单设备单会话模型」）
 }
 ```
 
@@ -113,7 +136,7 @@ interface RegisterRequest {
 用户登录（密码方式）。
 
 - **认证**: 无
-- **幂等**: 无
+- **幂等**: 幂等语义（同一 `device_id` 重复登录：驱逐旧 session 后重建，结果一致）
 
 **Request**: `LoginRequest`
 ```typescript
@@ -121,10 +144,13 @@ interface LoginRequest {
   login_id: string;            // 手机号/邮箱/用户名
   password: string;            // 密码
   client_type: ClientType;
+  device_id: DeviceId;         // 设备标识（详见「单设备单会话模型」）
 }
 ```
 
 **Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
+
+**单设备单会话驱逐**：登录成功时，服务端查找 `(user_id, device_id)` 已有的活跃 session，若存在则立即将其 access_token + refresh_token 写入黑名单（沿用 `change_password` 机制），并向被驱逐设备的在线 WebSocket 连接推送 `SessionRevoked` 事件（见 `api_spec_websocket.md`）。新 session 取代旧 session，保证「同一用户在同一设备上只有一个活跃 session」。
 
 **安全说明**：用户不存在和密码错误统一返回 `10100`（认证失败），不区分具体原因，防止账号枚举攻击。
 
@@ -137,7 +163,7 @@ interface LoginRequest {
 用户登出。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 幂等语义（重复登出当前会话：旧 token 已在黑名单，二次请求视为无操作成功）
 
 **失效规则**：登出会将当前 access_token 与 refresh_token 写入黑名单，直至过期。
 
@@ -177,6 +203,7 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 interface GuestRequest {
   nickname: string;
   client_type: ClientType;
+  device_id: DeviceId;   // 设备标识（详见「单设备单会话模型」）
 }
 ```
 
@@ -204,6 +231,8 @@ interface GuestRequest {
 - 设计目的：解决多标签页/多并发请求同时触发刷新的竞态问题
 - 客户端侧建议：使用刷新锁（mutex），同一时刻仅允许一个刷新请求执行
 
+**驱逐优先于宽限（契约级）**：宽限期仅容忍"并发刷新竞态"。若旧 session 是被「单设备单会话驱逐」显式写入黑名单的（如同设备重新登录），则黑名单立即生效，**30 秒宽限不覆盖显式驱逐**——旧 session 的任何请求（含宽限期内 refresh）立即失败为 `10100`。
+
 **client_type 约束**：
 - `client_type='web'`：请求体不得包含 `refresh_token` 字段（若包含则返回 `10000`）
 - `client_type='app'`：请求体必须包含非空 `refresh_token`（缺少或为空则返回 `10000`）
@@ -212,6 +241,7 @@ interface GuestRequest {
 ```typescript
 interface RefreshTokenRequest {
   client_type: ClientType;
+  device_id: DeviceId;     // 设备标识（用于校验 refresh_token 归属当前设备，防止跨设备 token 挪用）
   refresh_token?: string;  // App 端必填，Web 端留空（使用 Cookie）
 }
 ```
@@ -346,19 +376,21 @@ interface SessionsRequest {} // 直接返回全部活跃会话，无需分页
 ```typescript
 interface SessionItem {
   session_id: string;           // 会话标识，用于展示和撤销操作
-  device_type?: string;
-  device_name?: string;
+  device_id: DeviceId;          // 设备标识（会话主键的一部分，支撑单设备单会话模型）
+  device_type?: string;         // 设备类型展示（如 "iOS" / "Android" / "Web"），来自 client_type 与 UA 解析
+  device_name?: string;         // 设备名称展示（如 "iPhone 15 Pro" / "Chrome on macOS"），来自 UA 解析
   ip_address?: string;          // 脱敏显示（如 "192.168.xxx.xxx"），防止被用于跟踪
   ip_location?: string;         // IP 地理位置（如 "北京市"）
   created_at: string;
   last_active_at: string;
-  is_current: boolean;
+  is_current: boolean;          // 判定：session.device_id === 当前请求所属会话的 device_id
 }
 ```
 
 **说明**：
-- 活跃会话数天然有限（受并发设备数约束，过期会话自动清理），无需分页
+- 单设备单会话模型下，同一 `device_id` 最多一个活跃 session；活跃会话数 = 用户活跃设备数，无需分页
 - 按 `last_active_at` 倒序排列，当前会话在前
+- 跨设备场景：用户可在手机、平板、Web 各自登录（不同 `device_id`），互不驱逐；同设备重复登录则驱逐旧 session
 
 **错误码**: `10000`
 
@@ -366,14 +398,15 @@ interface SessionItem {
 
 ### POST /api/v1/auth/me/sessions/revoke
 
-撤销会话。
+撤销会话（设备下线）。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 幂等语义（目标 session 已不活跃/已撤销：视为无操作成功）
 
 **安全说明**：
 - 撤销操作会将对应会话的 token 写入黑名单，直至过期
-- 不允许撤销当前会话（使用 logout 代替）
+- 不允许撤销当前会话（使用 logout 代替），返回 `10400`
+- 被撤销会话关联的在线 WebSocket 连接会收到 `SessionRevoked` 事件后断开
 
 **Request**: `RevokeSessionRequest`
 ```typescript
@@ -384,7 +417,7 @@ interface RevokeSessionRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10000` `10300` `10400`
 
 ---
 
@@ -393,12 +426,12 @@ interface RevokeSessionRequest {
 撤销当前会话之外的所有其他活跃会话。适用于账号被盗、密码泄露等紧急安全场景。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 幂等语义（无其他活跃会话时：revoked_count=0 成功返回）
 
 **安全说明**：
 - 当前会话（发起请求的会话）不会被撤销
 - 所有被撤销会话的 token 都会写入黑名单
-- 操作不可逆，被撤销的设备需要重新登录
+- 操作不可逆，被撤销的设备需要重新登录；每个被撤销会话的在线连接收到 `SessionRevoked` 后断开
 
 **Request**: `{}`
 

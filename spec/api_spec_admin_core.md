@@ -69,7 +69,7 @@
 | `POST /api/v1/admin/rbac/admins/grant` | 授权/更新管理员 | 必须 + `admin.rbac.manage` | MUST |
 | `POST /api/v1/admin/rbac/admins/revoke` | 撤销管理员 | 必须 + `admin.rbac.manage` | 幂等语义 |
 | `POST /api/v1/admin/audit/list` | 审计日志列表 | 必须 + `admin.audit.read` | 无 |
-| `POST /api/v1/admin/audit/open_the_door` | 审计日志详情 | 必须 + `admin.audit.read` | 无 |
+| `POST /api/v1/admin/audit/get_detail` | 审计日志详情 | 必须 + `admin.audit.read` | 无 |
 | `POST /api/v1/admin/app_config/get` | 获取完整应用配置 | 必须 + `admin.app_config.read` | 无 |
 | `POST /api/v1/admin/app_config/update` | 更新应用配置（按 section 部分更新） | 必须 + `admin.app_config.write` | 幂等语义 |
 
@@ -445,7 +445,7 @@ interface AuditLogItem {
 
 ---
 
-### POST /api/v1/admin/audit/open_the_door
+### POST /api/v1/admin/audit/get_detail
 
 获取审计日志详情。
 
@@ -599,7 +599,7 @@ interface ResponseDefaults {
   search_suggest_count: number;       // 搜索建议返回条数，默认 5
   trending_tags_count: number;        // 热门标签返回条数（feed/list_trending），默认 10
   hot_moments_count: number;          // feed/list_trending 热门瞬间返回条数，默认 20
-  chat_recent_messages_count: number; // open_the_door 返回的最近消息条数，默认 20
+  chat_recent_messages_count: number; // get_detail 返回的最近消息条数，默认 20
   group_announcements_count: number;  // 群公告列表返回条数，默认 10
   system_announcements_count: number; // 系统公告列表返回条数（system/list_announcements），默认 10
   comment_top_replies_count: number;  // 顶层评论内嵌的前 N 条回复（comments/list 场景），默认 3；消除展开回复的 N+1
