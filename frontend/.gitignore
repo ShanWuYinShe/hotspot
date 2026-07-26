@@ -1,24 +1,25 @@
 node_modules
+dist
 
-# Output
-.output
-.vercel
-.netlify
-.wrangler
-/.svelte-kit
-/build
+# Vite timestamp files
+vite.config.ts.timestamp-*
+vite.config.js.timestamp-*
+
+# Environment files (keep .env.example)
+.env
+.env.*
+!.env.example
+
+# Local overrides
+*.local
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Env
-.env
-.env.*
-!.env.example
-!.env.test
+# IDE
+.idea/
+.vscode/
 
-# Vite
-vite.config.js.timestamp-*
-vite.config.ts.timestamp-*
-docs/superpowers/
+# AI tools (shared rule)
+.workwork/

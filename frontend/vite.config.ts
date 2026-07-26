@@ -1,29 +1,36 @@
-import { sveltekit } from '@sveltejs/kit/vite';
-import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vite'
+import path from 'path'
+import tailwindcss from '@tailwindcss/vite'
+import react from '@vitejs/plugin-react'
+
+
+function figmaAssetResolver() {
+  return {
+    name: 'figma-asset-resolver',
+    resolveId(id) {
+      if (id.startsWith('figma:asset/')) {
+        const filename = id.replace('figma:asset/', '')
+        return path.resolve(__dirname, 'src/assets', filename)
+      }
+    },
+  }
+}
 
 export default defineConfig({
-  plugins: [tailwindcss(), sveltekit()],
-  server: {
-    port: parseInt(process.env['PORT'] || '5173'),
-    allowedHosts: ['.yinghuoren.com', '.chaoset.com', '.orb.local']
+  plugins: [
+    figmaAssetResolver(),
+    // The React and Tailwind plugins are both required for Make, even if
+    // Tailwind is not being actively used – do not remove them
+    react(),
+    tailwindcss(),
+  ],
+  resolve: {
+    alias: {
+      // Alias @ to the src directory
+      '@': path.resolve(__dirname, './src'),
+    },
   },
-  preview: {
-    port: parseInt(process.env['PORT'] || '5173'),
-    allowedHosts: ['.yinghuoren.com', '.chaoset.com', '.orb.local']
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules/svelte/')) {
-            return 'svelte';
-          }
-          if (id.includes('node_modules/lucide-svelte/')) {
-            return 'lucide';
-          }
-        }
-      }
-    }
-  }
-});
+
+  // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
+  assetsInclude: ['**/*.svg', '**/*.csv'],
+})
