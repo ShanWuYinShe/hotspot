@@ -202,3 +202,16 @@ func orderedUsers(a, b string) (string, string) {
 	}
 	return b, a
 }
+
+func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string) (bool, string, error) {
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return false, "", persistence.ErrNotImplemented
+	}
+	var senderUserID string
+	err := queryable.QueryRow(ctx, queryPrivateMessageExists, messageID).Scan(&senderUserID)
+	if err != nil {
+		return false, "", nil
+	}
+	return true, senderUserID, nil
+}

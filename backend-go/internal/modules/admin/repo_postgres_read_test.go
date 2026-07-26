@@ -155,7 +155,7 @@ func (r *adminFallbackRepo) GetReportHandleRecord(context.Context, string) (repo
 	r.used = true
 	return reportHandleRecord{}, false, nil
 }
-func (r *adminFallbackRepo) HandleReport(context.Context, string, ReportHandleAction, string, *UserInfo) (AdminReportItem, bool, error) {
+func (r *adminFallbackRepo) HandleReport(context.Context, string, ReportAction, string, *UserInfo) (AdminReportItem, bool, error) {
 	r.used = true
 	return AdminReportItem{}, false, nil
 }

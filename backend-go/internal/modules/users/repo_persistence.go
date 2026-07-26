@@ -53,8 +53,8 @@ func (r *PersistenceRepository) SetRemark(ctx context.Context, userID, targetUse
 func (r *PersistenceRepository) ListBlocked(ctx context.Context, userID string, limit int, cursor string) (PaginatedBlockedUsers, error) {
 	return r.impl.ListBlocked(ctx, userID, limit, cursor)
 }
-func (r *PersistenceRepository) ListLikedMoments(ctx context.Context, userID string, limit int, cursor, viewerUserID string) (momenttypes.PaginatedMoments, error) {
-	return r.impl.ListLikedMoments(ctx, userID, limit, cursor, viewerUserID)
+func (r *PersistenceRepository) ListReactedMoments(ctx context.Context, userID string, limit int, cursor, viewerUserID string) (momenttypes.PaginatedMoments, error) {
+	return r.impl.ListReactedMoments(ctx, userID, limit, cursor, viewerUserID)
 }
 func (r *PersistenceRepository) Relationship(ctx context.Context, userID, targetUserID string) (Relationship, error) {
 	return r.impl.Relationship(ctx, userID, targetUserID)

@@ -57,6 +57,7 @@ func (r *privateMessageErrorRepo) MarkAllRead(context.Context, string) error {
 func (r *privateMessageErrorRepo) GetMessageForReply(context.Context, string, string) (map[string]any, bool, error) {
 	return nil, false, nil
 }
+func (r *privateMessageErrorRepo) MessageExists(_ context.Context, _ string) (bool, string, error) { return false, "", nil }
 func (r *privateMessageErrorRepo) GetMediaForMessage(context.Context, string, string) (map[string]any, bool, error) {
 	return nil, false, nil
 }
@@ -103,7 +104,7 @@ func TestSendBroadcastsPrivateMessageNewToTarget(t *testing.T) {
 	userStub := &privateMessageUserStub{
 		item:     users.UserItem{Relation: &users.Relationship{}},
 		ok:       true,
-		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone},
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
 	}
 	service := NewServiceWithDeps(NewInMemoryRepository(), userStub)
 
@@ -140,7 +141,7 @@ func TestUpdateBroadcastsPrivateMessageEditedToBothParties(t *testing.T) {
 	userStub := &privateMessageUserStub{
 		item:     users.UserItem{Relation: &users.Relationship{}},
 		ok:       true,
-		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone},
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
 	}
 	service := NewServiceWithDeps(repo, userStub)
 
@@ -185,7 +186,7 @@ func TestRecallBroadcastsPrivateMessageRecalledToBothParties(t *testing.T) {
 	userStub := &privateMessageUserStub{
 		item:     users.UserItem{Relation: &users.Relationship{}},
 		ok:       true,
-		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone},
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
 	}
 	service := NewServiceWithDeps(repo, userStub)
 
@@ -221,7 +222,7 @@ func TestMarkAsReadBroadcastsPrivateMessageReadToTarget(t *testing.T) {
 	userStub := &privateMessageUserStub{
 		item:     users.UserItem{Relation: &users.Relationship{}},
 		ok:       true,
-		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone},
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
 	}
 	service := NewServiceWithDeps(repo, userStub)
 
@@ -260,7 +261,7 @@ func TestMarkAllReadBroadcastsSelfReadSync(t *testing.T) {
 	userStub := &privateMessageUserStub{
 		item:     users.UserItem{Relation: &users.Relationship{}},
 		ok:       true,
-		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone},
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
 	}
 	service := NewServiceWithDeps(repo, userStub)
 
@@ -287,7 +288,7 @@ func TestSendIgnoresRealtimeErrors(t *testing.T) {
 	userStub := &privateMessageUserStub{
 		item:     users.UserItem{Relation: &users.Relationship{}},
 		ok:       true,
-		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone},
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
 	}
 	service := NewServiceWithDeps(NewInMemoryRepository(), userStub)
 
@@ -306,7 +307,7 @@ func TestSendAndHistoryPrivateMessages(t *testing.T) {
 		item: users.UserItem{Relation: &users.Relationship{}},
 		ok:   true,
 		settings: users.UserSettings{
-			AllowPrivateChat: users.PrivateChatEveryone,
+			AllowPrivateChat: users.ChatPermEveryone,
 		},
 	}
 	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), userStub))
@@ -380,9 +381,9 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		handler.GetHistory(historyRR, historyReq)
 		assertPrivateMessageCode(t, historyRR, 10600)
 
-		markAllReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_all_read", strings.NewReader(`{}`)))
+		markAllReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"all"}`)))
 		markAllRR := httptest.NewRecorder()
-		handler.MarkAllRead(markAllRR, markAllReq)
+		handler.MarkRead(markAllRR, markAllReq)
 		assertPrivateMessageCode(t, markAllRR, 10600)
 	})
 
@@ -434,34 +435,39 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 
 	t.Run("mark as read maps not found", func(t *testing.T) {
 		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{markErr: ErrMessageNotFound}, &privateMessageUserStub{}))
-		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_as_read", strings.NewReader(`{"target_user_id":"user_bob","up_to_message_id":"pm_1"}`)))
+		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"session","target_user_id":"user_bob","up_to_message_id":"pm_1"}`)))
 		rr := httptest.NewRecorder()
-		handler.MarkAsRead(rr, req)
+		handler.MarkRead(rr, req)
 		assertPrivateMessageCode(t, rr, 10300)
 	})
 
 	t.Run("mark as read rejects missing target user", func(t *testing.T) {
 		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{}, &privateMessageUserStub{}))
-		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_as_read", strings.NewReader(`{"up_to_message_id":"pm_1"}`)))
+		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"session","up_to_message_id":"pm_1"}`)))
 		rr := httptest.NewRecorder()
-		handler.MarkAsRead(rr, req)
+		handler.MarkRead(rr, req)
 		assertPrivateMessageCode(t, rr, 10000)
 	})
 
-	t.Run("mark all read ignores unknown fields", func(t *testing.T) {
-		// Per api_spec_base.md, empty-object endpoints silently ignore unknown
-		// fields; {"extra":true} is accepted, not rejected.
+	t.Run("mark all read happy path", func(t *testing.T) {
 		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{}, &privateMessageUserStub{}))
-		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_all_read", strings.NewReader(`{"extra":true}`)))
+		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"all"}`)))
 		rr := httptest.NewRecorder()
-		handler.MarkAllRead(rr, req)
+		handler.MarkRead(rr, req)
 		assertPrivateMessageCode(t, rr, 0)
 	})
 	t.Run("mark all read rejects non-object body", func(t *testing.T) {
 		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{}, &privateMessageUserStub{}))
-		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_all_read", strings.NewReader(`[1,2]`)))
+		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`[1,2]`)))
 		rr := httptest.NewRecorder()
-		handler.MarkAllRead(rr, req)
+		handler.MarkRead(rr, req)
+		assertPrivateMessageCode(t, rr, 10000)
+	})
+	t.Run("mark read rejects bad scope", func(t *testing.T) {
+		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{}, &privateMessageUserStub{}))
+		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"unknown"}`)))
+		rr := httptest.NewRecorder()
+		handler.MarkRead(rr, req)
 		assertPrivateMessageCode(t, rr, 10000)
 	})
 }

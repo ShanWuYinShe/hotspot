@@ -1,4 +1,4 @@
-package notifications
+package notify
 
 import (
 	"context"
@@ -7,15 +7,16 @@ import (
 )
 
 type Repository interface {
-	Append(context.Context, string, NotificationItem) error
-	AppendMany(context.Context, []string, NotificationItem) error
-	List(context.Context, string, NotificationListRequest) (PaginatedNotifications, error)
+	Append(context.Context, string, NotifyItem) error
+	AppendMany(context.Context, []string, NotifyItem) error
+	List(context.Context, string, NotificationListRequest) (PaginatedNotify, error)
 	UnreadCount(context.Context, string) (UnreadCountResult, error)
 	MarkAsRead(context.Context, string, []string) error
 	MarkAllRead(context.Context, string) error
+	MarkAllReadByType(context.Context, string, string) error
 }
 
-func normalizeNotificationItem(item NotificationItem) NotificationItem {
+func normalizeNotifyItem(item NotifyItem) NotifyItem {
 	now := time.Now().UTC()
 	if item.NotificationID == "" {
 		item.NotificationID = fmt.Sprintf("notif_%d", now.UnixNano())

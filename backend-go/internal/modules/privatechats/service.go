@@ -190,24 +190,24 @@ func (s *Service) buildChat(ctx context.Context, userID string, state ChatState)
 	}
 	if userItem.Relation != nil && userItem.Relation.IsBlocked {
 		item.CanMessage = false
-		item.MessageBlockedReason = "privacy"
+		item.BlockReason = "privacy"
 	}
 	settings, settingsErr := s.users.GetMySettings(platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: state.TargetID, SessionID: "private-chat-probe"}))
 	if settingsErr == nil {
 		switch settings.AllowPrivateChat {
-		case users.PrivateChatNobody:
+		case users.ChatPermNobody:
 			item.CanMessage = false
-			item.MessageBlockedReason = "privacy"
-		case users.PrivateChatFriends:
+			item.BlockReason = "privacy"
+		case users.ChatPermFriends:
 			if userItem.Relation == nil || !(userItem.Relation.IsFollowing && userItem.Relation.IsFollowedBy) {
 				item.CanMessage = false
-				item.MessageBlockedReason = "privacy"
+				item.BlockReason = "privacy"
 			}
 		}
 	}
 	if userID == state.TargetID {
 		item.CanMessage = true
-		item.MessageBlockedReason = ""
+		item.BlockReason = ""
 	}
 	if last != nil {
 		item.LastActivityAt = last.SentAt

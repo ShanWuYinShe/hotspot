@@ -191,6 +191,19 @@ func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID s
 	return result, true, nil
 }
 
+func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string) (bool, string, error) {
+	queryable, ok := r.getQueryable()
+	if !ok {
+		return false, "", persistence.ErrNotImplemented
+	}
+	var senderUserID string
+	err := queryable.QueryRow(ctx, queryGetGroupMessageForReply, messageID).Scan(&senderUserID, new(string), new(string), new(string))
+	if err != nil {
+		return false, "", nil
+	}
+	return true, senderUserID, nil
+}
+
 func (r *PostgresRepository) getQueryable() (persistence.QueryableDB, bool) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return nil, false

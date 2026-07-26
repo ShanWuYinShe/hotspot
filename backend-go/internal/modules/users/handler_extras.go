@@ -63,6 +63,26 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(bundle))
 }
 
+// BatchGet handles POST /api/v1/users/batch_get. Returns a user_id -> UserItem
+// map; non-existent ids are omitted. Capped at 100 ids per spec.
+func (h *Handler) BatchGet(w http.ResponseWriter, r *http.Request) {
+	var req BatchGetUsersRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || len(req.UserIDs) == 0 {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if len(req.UserIDs) > 100 {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	users, err := h.service.BatchGet(r.Context(), req.UserIDs)
+	if err != nil {
+		h.writeServiceError(w, r, "BatchGet", err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(map[string]any{"users": users}))
+}
+
 func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
 	var req UpdateLocationRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Location.LocationName == "" {
@@ -90,7 +110,7 @@ func (h *Handler) RequestEmailChange(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "users/me/email/request_change", func() httpx.ApiResponse[VerificationSent] {
+	idempotency.ReplayOrStore(w, r, "users/email/request_change", func() httpx.ApiResponse[VerificationSent] {
 		result, err := h.service.RequestEmailChange(r.Context(), req)
 		if err != nil {
 			return errorResponse[VerificationSent](err)
@@ -113,7 +133,7 @@ func (h *Handler) ConfirmEmailChange(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "users/me/email/confirm_change", func() httpx.ApiResponse[struct{}] {
+	idempotency.ReplayOrStore(w, r, "users/email/confirm_change", func() httpx.ApiResponse[struct{}] {
 		if err := h.service.ConfirmEmailChange(r.Context(), req); err != nil {
 			return errorResponse[struct{}](err)
 		}
@@ -135,7 +155,7 @@ func (h *Handler) RequestPhoneChange(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "users/me/phone/request_change", func() httpx.ApiResponse[VerificationSent] {
+	idempotency.ReplayOrStore(w, r, "users/phone/request_change", func() httpx.ApiResponse[VerificationSent] {
 		result, err := h.service.RequestPhoneChange(r.Context(), req)
 		if err != nil {
 			return errorResponse[VerificationSent](err)
@@ -158,7 +178,7 @@ func (h *Handler) ConfirmPhoneChange(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "users/me/phone/confirm_change", func() httpx.ApiResponse[struct{}] {
+	idempotency.ReplayOrStore(w, r, "users/phone/confirm_change", func() httpx.ApiResponse[struct{}] {
 		if err := h.service.ConfirmPhoneChange(r.Context(), req); err != nil {
 			return errorResponse[struct{}](err)
 		}
@@ -209,43 +229,49 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
-// Follow is naturally idempotent — calling it twice for the same user is harmless
-// (follows an already-followed user). No idempotency key required.
+// Follow is the unified two-state follow endpoint (api_spec_user.md). active=true
+// follows the target user; active=false unfollows them. Idempotent: a no-op when
+// active matches the current state.
 func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 	var req FollowRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if err := h.service.Follow(r.Context(), req.UserID, req.Source, req.SourceMomentID); err != nil {
-		h.writeServiceError(w, r, "Follow", err)
-		return
+	if req.Active {
+		if err := h.service.Follow(r.Context(), req.UserID, req.Source, req.SourceMomentID); err != nil {
+			h.writeServiceError(w, r, "Follow", err)
+			return
+		}
+	} else {
+		if err := h.service.Unfollow(r.Context(), req.UserID); err != nil {
+			h.writeServiceError(w, r, "Unfollow", err)
+			return
+		}
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
-// Unfollow is naturally idempotent — calling it twice for the same user is harmless
-// (unfollows a user who is already unfollowed). No idempotency key required.
-func (h *Handler) Unfollow(w http.ResponseWriter, r *http.Request) {
-	h.toggleUser(r, w, "Unfollow", func(userID string) error { return h.service.Unfollow(r.Context(), userID) })
-}
-// Block is naturally idempotent — calling it twice for the same user is harmless
-// (blocks an already-blocked user). No idempotency key required.
+
+// Block is the unified two-state block endpoint (api_spec_user.md). active=true
+// blocks the target user; active=false unblocks them. Idempotent.
 func (h *Handler) Block(w http.ResponseWriter, r *http.Request) {
 	var req BlockRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if err := h.service.Block(r.Context(), req.UserID, req.Reason); err != nil {
-		h.writeServiceError(w, r, "Block", err)
-		return
+	if req.Active {
+		if err := h.service.Block(r.Context(), req.UserID, req.Reason); err != nil {
+			h.writeServiceError(w, r, "Block", err)
+			return
+		}
+	} else {
+		if err := h.service.Unblock(r.Context(), req.UserID); err != nil {
+			h.writeServiceError(w, r, "Unblock", err)
+			return
+		}
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
-}
-// Unblock is naturally idempotent — calling it twice for the same user is harmless
-// (unblocks an already-unblocked user). No idempotency key required.
-func (h *Handler) Unblock(w http.ResponseWriter, r *http.Request) {
-	h.toggleUser(r, w, "Unblock", func(userID string) error { return h.service.Unblock(r.Context(), userID) })
 }
 func (h *Handler) ListBlocked(w http.ResponseWriter, r *http.Request) {
 	var req MyBlockedRequest
@@ -273,15 +299,15 @@ func (h *Handler) SetRemark(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
-func (h *Handler) ListLikedMoments(w http.ResponseWriter, r *http.Request) {
-	var req UserLikedMomentsRequest
+func (h *Handler) ListReactedMoments(w http.ResponseWriter, r *http.Request) {
+	var req UserReactedMomentsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	result, err := h.service.ListLikedMoments(r.Context(), req)
+	result, err := h.service.ListReactedMoments(r.Context(), req)
 	if err != nil {
-		h.writeServiceError(w, r, "ListLikedMoments", err)
+		h.writeServiceError(w, r, "ListReactedMoments", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
@@ -355,17 +381,4 @@ func (h *Handler) ListMoments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
-}
-
-func (h *Handler) toggleUser(r *http.Request, w http.ResponseWriter, method string, fn func(string) error) {
-	var req ToggleUserRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-		return
-	}
-	if err := fn(req.UserID); err != nil {
-		h.writeServiceError(w, r, method, err)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }

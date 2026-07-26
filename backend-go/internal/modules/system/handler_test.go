@@ -74,7 +74,7 @@ func TestGetClientConfigReturnsSpecShape(t *testing.T) {
 		Data struct {
 			Contact struct {
 				SupportEmail    string `json:"support_email"`
-				OfficialWebsite string `json:"official_website"`
+				OfficialWebsite string `json:"official_website_url"`
 			} `json:"contact"`
 			Defaults struct {
 				DefaultLocation struct {
@@ -195,7 +195,7 @@ func TestListAnnouncementsReturnsRepoData(t *testing.T) {
 		AnnouncementID: "ann_1",
 		Title:          "系统维护",
 		Content:        "今晚维护",
-		Severity:       AnnouncementSeverityWarning,
+		Severity:       AnnounceLevelWarning,
 		ActionURL:      "https://example.com/maintenance",
 		CreatedAt:      time.Date(2026, 3, 23, 12, 0, 0, 0, time.UTC),
 	}}}
@@ -336,7 +336,7 @@ func TestSystemHandlerGetClientConfigReturnsConfig(t *testing.T) {
 
 func TestSystemHandlerListAnnouncementsReturnsSuccess(t *testing.T) {
 	repo := &staticRepo{items: []AnnouncementRecord{
-		{AnnouncementID: "h1", Title: "公告", Content: "内容", Severity: AnnouncementSeverityInfo, CreatedAt: time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)},
+		{AnnouncementID: "h1", Title: "公告", Content: "内容", Severity: AnnounceLevelInfo, CreatedAt: time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)},
 	}}
 	handler := NewHandler(NewServiceWithDeps(repo, fixedProvider{count: 5}))
 	req := httptest.NewRequest(http.MethodPost, "/list_announcements", strings.NewReader(`{}`))

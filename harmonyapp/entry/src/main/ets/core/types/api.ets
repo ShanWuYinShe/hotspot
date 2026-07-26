@@ -581,21 +581,25 @@ export interface DeleteAccountRequest {
 
 export interface FollowRequest {
   user_id: string;
+  active?: boolean;
   source?: FollowSource;
   source_moment_id?: string;
 }
 
 export interface UnfollowRequest {
   user_id: string;
+  active?: boolean;
 }
 
 export interface BlockRequest {
   user_id: string;
+  active?: boolean;
   reason?: string;
 }
 
 export interface UnblockRequest {
   user_id: string;
+  active?: boolean;
 }
 
 export interface ListFriendsRequest {
@@ -701,10 +705,12 @@ export interface UnlikeMomentRequest {
 
 export interface FavoriteMomentRequest {
   moment_id: string;
+  active?: boolean;
 }
 
 export interface UnfavoriteMomentRequest {
   moment_id: string;
+  active?: boolean;
 }
 
 export interface MyMomentsRequest {
@@ -756,6 +762,22 @@ export interface CommentLikesRequest {
   pagination?: PaginationParams;
 }
 
+// ==================== Reactions API类型 ====================
+
+export interface SetReactionRequest {
+  target_type: string;
+  target_id: string;
+  emoji: string;
+  active: boolean;
+}
+
+export interface ListReactionsRequest {
+  target_type: string;
+  target_id: string;
+  emoji?: string;
+  pagination?: PaginationParams;
+}
+
 // ==================== 私聊管理API类型 ====================
 
 export interface MyPrivateChatsRequest {
@@ -802,7 +824,8 @@ export interface RecallPrivateMessageRequest {
 }
 
 export interface MarkPrivateMessagesReadRequest {
-  target_user_id: string;
+  scope: string;
+  target_user_id?: string;
   up_to_message_id?: string;
 }
 
@@ -916,12 +939,14 @@ export interface SetMemberRoleRequest {
 export interface MuteMemberRequest {
   group_id: string;
   user_id: string;
-  duration_minutes: number;
+  active?: boolean;
+  duration_minutes?: number;
 }
 
 export interface UnmuteMemberRequest {
   group_id: string;
   user_id: string;
+  active?: boolean;
 }
 
 export interface BanMemberRequest {
@@ -1097,7 +1122,8 @@ export interface RecallGroupMessageRequest {
 }
 
 export interface MarkGroupMessagesReadRequest {
-  group_id: string;
+  scope: string;
+  group_id?: string;
   up_to_message_id?: string;
 }
 
@@ -1921,8 +1947,11 @@ export interface GroupAnnouncementListData {
 export type NotificationType =
   'new_follower' | 'mutual_follow' | 'moment_liked' | 'moment_commented'
   | 'comment_liked' | 'comment_reply' | 'mentioned'
-  | 'group_invite_received' | 'group_invite_accepted'
-  | 'group_application_received' | 'group_application_accepted' | 'system_announcement';
+  | 'reaction_added'
+  | 'group_invite_received' | 'group_invite_accepted' | 'group_invite_revoked'
+  | 'group_application_received' | 'group_application_accepted' | 'group_application_cancelled' | 'group_application_rejected'
+  | 'report_resolved' | 'report_dismissed'
+  | 'system_announcement';
 
 // Spec 定义 NotificationPayload 为 discriminated union（按 type 区分），
 // 但 ArkTS 当前不支持基于字面量类型的类型窄化（type narrowing），
@@ -1966,6 +1995,7 @@ export interface UnreadCountByType {
   social: number;
   interaction: number;
   group: number;
+  report: number;
   system: number;
 }
 
@@ -1976,10 +2006,12 @@ export interface UnreadCountResult {
 
 export interface NotificationListRequest {
   type?: NotificationType;
+  is_read?: boolean;
   pagination?: PaginationParams;
 }
 
 export interface MarkAsReadRequest {
   notification_ids?: string[];
   type?: NotificationType;
+  scope?: string;
 }

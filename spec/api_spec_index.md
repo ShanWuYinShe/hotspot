@@ -19,8 +19,8 @@
 
 | 文件 | 说明 |
 |-----|------|
-| [api_spec_auth.md](api_spec_auth.md) | 认证 API（登录、注册、游客、Token 刷新、密码重置、当前用户安全会话） |
-| [api_spec_user.md](api_spec_user.md) | 用户与当前用户工作台 API（用户搜索/详情/公开列表、`/me` 资料/设置/社交关系） |
+| [api_spec_auth.md](api_spec_auth.md) | 认证 API（登录、注册、游客、Token 刷新、密码重置、会话管理） |
+| [api_spec_user.md](api_spec_user.md) | 用户 API（搜索/详情/主页聚合、账户资料/设置、关注/拉黑/备注） |
 | [api_spec_moment.md](api_spec_moment.md) | 生活瞬间与评论 API |
 | [api_spec_chat.md](api_spec_chat.md) | 聊天 API（私聊管理、私聊消息、群聊消息） |
 | [api_spec_group.md](api_spec_group.md) | 群组管理 API（群组 CRUD、成员管理、申请/邀请、群公告） |
@@ -30,18 +30,19 @@
 | 文件 | 说明 |
 |-----|------|
 | [api_spec_feed.md](api_spec_feed.md) | 发现域 Feed API（推荐、附近、热门、不感兴趣） |
-| [api_spec_search.md](api_spec_search.md) | 发现域搜索 API（综合建议） |
-| [api_spec_map.md](api_spec_map.md) | 发现域地图渲染 API |
+| [api_spec_search.md](api_spec_search.md) | 搜索与发现 API（综合建议、综合搜索） |
+| [api_spec_map.md](api_spec_map.md) | 地图渲染 API |
 | [api_spec_share.md](api_spec_share.md) | 通用分享系统 API（位置、动态、群组等） |
 
 ### 辅助功能 API
 
 | 文件 | 说明 |
 |-----|------|
+| [api_spec_reaction.md](api_spec_reaction.md) | 表情反应 API（message / moment / comment 统一操作与列表） |
 | [api_spec_media.md](api_spec_media.md) | 文件与媒体上传 API（Presigned 模式） |
-| [api_spec_report.md](api_spec_report.md) | 用户举报 API |
-| [api_spec_notification.md](api_spec_notification.md) | 当前用户通知中心 API（通知历史、未读计数、已读标记） |
-| [api_spec_system.md](api_spec_system.md) | 系统健康检查、版本信息、客户端配置、公告（客户端冷启动时调用以获取初始数据） |
+| [api_spec_report.md](api_spec_report.md) | 举报 API |
+| [api_spec_notify.md](api_spec_notify.md) | 通知中心 API（通知历史、未读计数、已读标记） |
+| [api_spec_system.md](api_spec_system.md) | 系统健康检查、版本信息、客户端配置、公告、冷启动聚合 |
 
 ### 管理员 API
 
@@ -54,7 +55,7 @@
 
 - 本规范是 HotSpot 前后端交互契约的唯一权威（端点、字段、类型、错误码、事件、响应 envelope）
 - 若本规范与工程实现或各子项目 `AGENTS.md` 中的实现规范冲突，以本规范为准
-- 引用本规范时仅使用小节标题或锚点标题，禁止使用数字章节号（如“第X章/第X节”）
+- 引用本规范时仅使用小节标题或锚点标题，禁止使用数字章节号（如"第X章/第X节"）
 
 **内部优先级**（本规范内部冲突时）：
 1. `api_spec_base.md`
@@ -87,19 +88,21 @@
 
 | 路径前缀 | 对应文档 |
 |---------|---------|
-| `/api/v1/auth/`, `/api/v1/me/security/` | `api_spec_auth.md` |
-| `/api/v1/me/profile/`, `/api/v1/me/settings/`, `/api/v1/me/account/`, `/api/v1/me/contact/`, `/api/v1/me/location/`, `/api/v1/me/blocked/` | `api_spec_user.md` |
-| `/api/v1/users/` | `api_spec_user.md`（含 follow/block 等对用户的动作 + users/moments/list 等） |
-| `/api/v1/moments/`, `/api/v1/comments/`, `/api/v1/me/moments/` | `api_spec_moment.md` |
-| `/api/v1/private_chats/`, `/api/v1/private_messages/`, `/api/v1/group_messages/` | `api_spec_chat.md` |
-| `/api/v1/groups/`, `/api/v1/me/groups/` | `api_spec_group.md` |
+| `/api/v1/auth/` | `api_spec_auth.md` |
+| `/api/v1/users/` | `api_spec_user.md` |
+| `/api/v1/moments/` | `api_spec_moment.md` |
+| `/api/v1/comments/` | `api_spec_moment.md` |
+| `/api/v1/reactions/` | `api_spec_reaction.md` |
+| `/api/v1/private_chats/` | `api_spec_chat.md` |
+| `/api/v1/private_messages/` | `api_spec_chat.md` |
+| `/api/v1/group_messages/` | `api_spec_chat.md` |
+| `/api/v1/groups/` | `api_spec_group.md` |
 | `/api/v1/feed/` | `api_spec_feed.md` |
 | `/api/v1/search/` | `api_spec_search.md` |
 | `/api/v1/map/` | `api_spec_map.md` |
 | `/api/v1/share/` | `api_spec_share.md` |
 | `/api/v1/media/` | `api_spec_media.md` |
 | `/api/v1/reports/` | `api_spec_report.md` |
-| `/api/v1/notifications/` | `api_spec_notification.md` |
+| `/api/v1/notify/` | `api_spec_notify.md` |
 | `/api/v1/system/` | `api_spec_system.md` |
-| `/api/v1/admin/app_config/`, `/api/v1/admin/rbac/`, `/api/v1/admin/audit/` | `api_spec_admin_core.md` |
-| `/api/v1/admin/users/`, `/api/v1/admin/groups/`, `/api/v1/admin/reports/`, `/api/v1/admin/tags/`, `/api/v1/admin/announcements/` | `api_spec_admin_moderation.md` |
+| `/api/v1/admin/` | `api_spec_admin_core.md` + `api_spec_admin_moderation.md` |

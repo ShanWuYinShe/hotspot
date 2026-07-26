@@ -12,7 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/modules/notify"
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -38,11 +38,11 @@ func newTestModuleWithStore() (*Module, *InMemoryRepository) {
 	return NewModuleWithDeps(store, provider, nil, nil), store
 }
 
-func newTestModuleWithPushStore() (*Module, *InMemoryRepository, *notifications.InMemoryRepository) {
+func newTestModuleWithPushStore() (*Module, *InMemoryRepository, *notify.InMemoryRepository) {
 	store := NewInMemoryRepository()
 	provider := NewAppConfigProvider(appconfig.NewStaticSource(config.Load()))
-	notificationRepo := notifications.NewInMemoryRepository()
-	pushService := notifications.NewServiceWithRepo(notificationRepo)
+	notificationRepo := notify.NewInMemoryRepository()
+	pushService := notify.NewServiceWithRepo(notificationRepo)
 	return NewModuleWithDeps(store, provider, nil, pushService), store, notificationRepo
 }
 
@@ -53,7 +53,7 @@ func newTestHandlerWithStore() (*Handler, *InMemoryRepository) {
 	return module.handler, store
 }
 
-func newTestHandlerWithPushStore() (*Handler, *InMemoryRepository, *notifications.InMemoryRepository) {
+func newTestHandlerWithPushStore() (*Handler, *InMemoryRepository, *notify.InMemoryRepository) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
 	module, store, notificationRepo := newTestModuleWithPushStore()
@@ -114,10 +114,10 @@ func TestAdminModerationRoutesAreMounted(t *testing.T) {
 		body string
 	}{
 		{name: "users search", path: "/api/v1/admin/users/search", body: `{"nickname":"bob","pagination":{"limit":10}}`},
-		{name: "users open", path: "/api/v1/admin/users/open_the_door", body: `{"user_id":"user_bob"}`},
+		{name: "users open", path: "/api/v1/admin/users/get_detail", body: `{"user_id":"user_bob"}`},
 		{name: "groups search", path: "/api/v1/admin/groups/search", body: `{"name":"hot","pagination":{"limit":10}}`},
-		{name: "groups open", path: "/api/v1/admin/groups/open_the_door", body: `{"group_id":"group_hotspot"}`},
-		{name: "reports search", path: "/api/v1/admin/reports/search", body: `{"status":"pending","pagination":{"limit":10}}`},
+		{name: "groups open", path: "/api/v1/admin/groups/get_detail", body: `{"group_id":"group_hotspot"}`},
+		{name: "reports search", path: "/api/v1/admin/reports/list", body: `{"status":"pending","pagination":{"limit":10}}`},
 		{name: "tags search", path: "/api/v1/admin/tags/search", body: `{"keyword":"hot","pagination":{"limit":10}}`},
 		{name: "announcements search", path: "/api/v1/admin/announcements/search", body: `{"pagination":{"limit":10}}`},
 	}
@@ -818,17 +818,17 @@ func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 	if !ok {
 		t.Fatalf("unexpected alice payload type: %#v", aliceSink.events[0].Payload)
 	}
-	if adminPayload.AnnouncementID != createResp.Data.AnnouncementID || adminPayload.Title != "维护通知" || adminPayload.Content != "今晚维护" || adminPayload.Severity != AnnouncementSeverityWarning || adminPayload.ActionURL != "https://example.com/maint" {
+	if adminPayload.AnnouncementID != createResp.Data.AnnouncementID || adminPayload.Title != "维护通知" || adminPayload.Content != "今晚维护" || adminPayload.Severity != AnnounceLevelWarning || adminPayload.ActionURL != "https://example.com/maint" {
 		t.Fatalf("unexpected admin payload: %#v", adminPayload)
 	}
 	if alicePayload != adminPayload {
 		t.Fatalf("expected broadcast payloads to match: %#v %#v", adminPayload, alicePayload)
 	}
-	adminNotifications, err := notificationRepo.List(context.Background(), "admin", notifications.NotificationListRequest{})
+	adminNotifications, err := notificationRepo.List(context.Background(), "admin", notify.NotificationListRequest{})
 	if err != nil || len(adminNotifications.Items) != 1 || adminNotifications.Items[0].Type != "system_announcement" {
 		t.Fatalf("unexpected admin notifications: %#v err=%v", adminNotifications, err)
 	}
-	aliceNotifications, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
+	aliceNotifications, err := notificationRepo.List(context.Background(), "user_alice", notify.NotificationListRequest{})
 	if err != nil || len(aliceNotifications.Items) != 1 || aliceNotifications.Items[0].Type != "system_announcement" {
 		t.Fatalf("unexpected alice notifications: %#v err=%v", aliceNotifications, err)
 	}
@@ -1298,7 +1298,7 @@ func TestOpenAuditLogReturnsLog(t *testing.T) {
 	}
 	logID := listResp.Data.Items[0].LogID
 
-	openReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/open_the_door", strings.NewReader(`{"log_id":"`+logID+`"}`)), "admin", true)
+	openReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/get_detail", strings.NewReader(`{"log_id":"`+logID+`"}`)), "admin", true)
 	openRR := httptest.NewRecorder()
 	handler.OpenAuditLog(openRR, openReq)
 	openResp := decodeResponse[AuditLogItem](t, openRR)
@@ -1309,7 +1309,7 @@ func TestOpenAuditLogReturnsLog(t *testing.T) {
 
 func TestOpenAuditLogReturnsNotFoundForMissingLog(t *testing.T) {
 	handler := newTestHandler()
-	openReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/open_the_door", strings.NewReader(`{"log_id":"missing_log_id"}`)), "admin", true)
+	openReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/get_detail", strings.NewReader(`{"log_id":"missing_log_id"}`)), "admin", true)
 	openRR := httptest.NewRecorder()
 	handler.OpenAuditLog(openRR, openReq)
 	openResp := decodeResponse[AuditLogItem](t, openRR)

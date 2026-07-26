@@ -19,7 +19,7 @@
 | `POST /api/v1/feed/list_groups` | 获取群组推荐 | 必须 | 无 |
 | `POST /api/v1/feed/list_users` | 获取用户推荐 | 必须 | 无 |
 | `POST /api/v1/feed/list_trending` | 获取热门内容 | 可选 | 无 |
-| `POST /api/v1/feed/me/dismiss` | 标记不感兴趣 (⏳ 延期实现，见详情) | 必须 | 幂等语义 |
+| `POST /api/v1/feed/dismiss` | 标记不感兴趣 (⏳ 延期实现，见详情) | 必须 | 幂等语义 |
 
 ## 类型定义
 
@@ -155,7 +155,7 @@ interface TrendingBundle {
 
 ---
 
-### POST /api/v1/feed/me/dismiss
+### POST /api/v1/feed/dismiss
 
 > ⏳ **延期实现**：推荐算法优化为后续迭代重点，当前阶段优先完成核心 Feed 流。
 

@@ -36,7 +36,7 @@ func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "groups/me/invites/accept", func() httpx.ApiResponse[struct{}] {
+	idempotency.ReplayOrStore(w, r, "groups/accept_invite", func() httpx.ApiResponse[struct{}] {
 		if err := h.service.AcceptInvite(r.Context(), req); err != nil {
 			if errors.Is(err, ErrGroupNotFound) {
 				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "群组不存在"}
@@ -57,7 +57,7 @@ func (h *Handler) RejectInvite(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "groups/me/invites/reject", func() httpx.ApiResponse[struct{}] {
+	idempotency.ReplayOrStore(w, r, "groups/reject_invite", func() httpx.ApiResponse[struct{}] {
 		if err := h.service.RejectInvite(r.Context(), req); err != nil {
 			if errors.Is(err, ErrGroupNotFound) {
 				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "群组不存在"}

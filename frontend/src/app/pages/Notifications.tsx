@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { ROUTES } from "../lib/routes";
 import { ArrowLeft, Heart, UserPlus, MessageCircle, Bell, MapPin, CheckCheck, Filter } from "lucide-react";
@@ -7,6 +7,7 @@ import { useHoverConfig } from "../hooks/useHoverConfig";
 import { usePlatform } from "../contexts/PlatformContext";
 import { DesktopDetailSplit, RailSection, RailUserRow } from "../components/layout/DetailRail";
 import { ActionIconButton } from "../components/shared/ActionIconButton";
+import { listNotifications, getUnreadCount } from "../../api";
 
 /* ── Types & data ───────────────────────────────────────────────── */
 type NotifType = "like" | "follow" | "comment" | "nearby" | "event";
@@ -16,19 +17,6 @@ interface Notif {
   user: { name: string; avatar: string };
   text: string; postImage?: string;
 }
-
-const NOTIFS: Notif[] = [
-  { id: 1,  type:"like",    read:false, time:"2分钟前",  user:{ name:"鹿鸣",    avatar:"https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80" }, text:"赞了你的动态「植物园晨光」", postImage:"https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?w=120" },
-  { id: 2,  type:"follow",  read:false, time:"8分钟前",  user:{ name:"阿禾",  avatar:"https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80" }, text:"开始关注了你" },
-  { id: 3,  type:"comment", read:false, time:"15分钟前", user:{ name:"野原",   avatar:"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80" }, text:"评论了你的动态：「太美了！我也想去」", postImage:"https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?w=120" },
-  { id: 4,  type:"nearby",  read:false, time:"32分钟前", user:{ name:"Mika",    avatar:"https://images.unsplash.com/photo-1758613172074-7275c3455034?w=80" }, text:"在你附近 520m · 在线中" },
-  { id: 5,  type:"event",   read:true,  time:"1小时前",  user:{ name:"活动助手", avatar:"" }, text:"「湖边晨咖小聚」明天早9点开始，别忘了！" },
-  { id: 6,  type:"like",    read:true,  time:"2小时前",  user:{ name:"林一",    avatar:"https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80" }, text:"赞了你的动态「城市夜光」", postImage:"https://images.unsplash.com/photo-1748737349771-e2b6605e5961?w=120" },
-  { id: 7,  type:"follow",  read:true,  time:"3小时前",  user:{ name:"小满",avatar:"https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80" }, text:"开始关注了你" },
-  { id: 8,  type:"comment", read:true,  time:"昨天",     user:{ name:"阿川",     avatar:"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80" }, text:"评论了你的动态：「请问地址方便分享吗？」", postImage:"https://images.unsplash.com/photo-1748737349771-e2b6605e5961?w=120" },
-  { id: 9,  type:"nearby",  read:true,  time:"昨天",     user:{ name:"南枝",   avatar:"https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80" }, text:"在你附近 820m · 上次活跃：1小时前" },
-  { id: 10, type:"event",   read:true,  time:"2天前",    user:{ name:"活动助手", avatar:"" }, text:"「户部山周末弹唱」收到了你的报名！" },
-];
 
 const TYPE_CONFIG: Record<NotifType, { icon: React.ElementType; color: string; label: string }> = {
   like:    { icon: Heart,          color: "var(--semantic-hot)", label: "点赞" },
@@ -49,11 +37,48 @@ const FILTER_TABS = [
 export function Notifications() {
   const navigate = useNavigate();
   const { platform } = usePlatform();
-  const [notifs, setNotifs] = useState<Notif[]>(NOTIFS);
+  const [notifs, setNotifs] = useState<Notif[]>([]);
   const [filter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
 
   const unread = notifs.filter(n => !n.read).length;
   const isDesktop = platform === "desktop";
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchNotifs() {
+      try {
+        setLoading(true);
+        const [notifRes, unreadRes] = await Promise.all([
+          listNotifications().catch(() => ({ code: -1, data: { items: [] } })),
+          getUnreadCount().catch(() => ({ code: -1, data: { count: 0 } })),
+        ]);
+        if (cancelled) return;
+
+        const notifData = (notifRes.code === 0 ? notifRes.data : null) as any;
+        const unreadData = (unreadRes.code === 0 ? unreadRes.data : null) as any;
+
+        if (notifData) {
+          const items: Notif[] = (notifData.items || []).map((n: any, i: number) => ({
+            id: n.id ?? i + 1,
+            type: (n.type as NotifType) ?? "like",
+            read: n.read ?? n.is_read ?? false,
+            time: n.time ?? n.created_at ?? "",
+            user: { name: n.user?.name ?? n.sender_name ?? "", avatar: n.user?.avatar ?? n.sender_avatar ?? "" },
+            text: n.text ?? n.content ?? n.body ?? "",
+            postImage: n.post_image ?? n.image ?? n.thumb ?? undefined,
+          }));
+          setNotifs(items);
+        }
+      } catch {
+        if (!cancelled) setNotifs([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchNotifs();
+    return () => { cancelled = true; };
+  }, []);
 
   const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, read: true })));
   const markRead = (id: number) => setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));

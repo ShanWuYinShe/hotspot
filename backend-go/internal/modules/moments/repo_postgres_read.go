@@ -137,17 +137,12 @@ func (r *PostgresRepository) LoadMyState(ctx context.Context, momentID, userID s
 	if !ok {
 		return nil
 	}
-	var liked int
-	isLiked := false
-	if err := queryable.QueryRow(ctx, queryGetMomentLike, momentID, userID).Scan(&liked); err == nil {
-		isLiked = true
-	}
 	var favorited int
 	isFavorited := false
 	if err := queryable.QueryRow(ctx, queryCheckMomentFavorite, userID, momentID).Scan(&favorited); err == nil {
 		isFavorited = true
 	}
-	return &MyMomentState{IsLiked: isLiked, IsFavorited: isFavorited}
+	return &MyMomentState{IsFavorited: isFavorited}
 }
 
 func (r *PostgresRepository) Exists(ctx context.Context, momentID string) (bool, error) {

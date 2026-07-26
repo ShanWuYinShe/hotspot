@@ -31,6 +31,10 @@ export default defineConfig({
     },
   },
 
+  server: {
+    allowedHosts: ['nginx.hotspot.orb.local', '.orb.local'],
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })

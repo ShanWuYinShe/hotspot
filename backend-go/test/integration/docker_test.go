@@ -449,10 +449,10 @@ func TestUsers_ListMoments(t *testing.T) {
 	})
 }
 
-func TestUsers_ListLikedMoments(t *testing.T) {
+func TestUsers_ListReactedMoments(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/list_liked_moments", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/list_reacted_moments", map[string]any{}, &resp)
 	})
 }
 
@@ -1041,28 +1041,31 @@ func TestGroupMessages_MarkAsRead(t *testing.T) {
 func TestNotifications_List(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/notifications/list", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/notify/list", map[string]any{}, &resp)
 	})
 }
 
 func TestNotifications_UnreadCount(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/notifications/unread_count", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/notify/get_unread_count", map[string]any{}, &resp)
 	})
 }
 
-func TestNotifications_MarkAsRead(t *testing.T) {
+func TestNotifications_MarkReadSelected(t *testing.T) {
 	withAuth(t, func(token string) {
-		apiRespOK(t, "/api/v1/notifications/mark_as_read", map[string]any{
+		apiRespOK(t, "/api/v1/notify/mark_read", map[string]any{
+			"scope":            "selected",
 			"notification_ids": []string{"fake_notif_id"},
 		}, nil)
 	})
 }
 
-func TestNotifications_MarkAllRead(t *testing.T) {
+func TestNotifications_MarkReadAll(t *testing.T) {
 	withAuth(t, func(token string) {
-		apiRespOK(t, "/api/v1/notifications/mark_all_read", map[string]any{}, nil)
+		apiRespOK(t, "/api/v1/notify/mark_read", map[string]any{
+			"scope": "all",
+		}, nil)
 	})
 }
 
@@ -1410,7 +1413,7 @@ func TestAdmin_GroupsSearch(t *testing.T) {
 func TestAdmin_ReportsSearch(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/admin/reports/search", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/admin/reports/list", map[string]any{}, &resp)
 	})
 }
 

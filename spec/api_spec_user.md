@@ -10,7 +10,6 @@
   - 基础规范：`api_spec_base.md`
   - 通用类型：`api_spec_types.md`
   - 错误码：`api_spec_errors.md`
-  - 搜索建议：`api_spec_search.md`（per-module suggest 已移除，使用全局 `search/suggest`）
 
 ## 端点总览
 
@@ -18,34 +17,31 @@
 |-----|------|------|------|
 | `POST /api/v1/users/search` | 搜索用户（支持关键字/标签/位置组合） | 可选 | 无 |
 | `POST /api/v1/users/get_detail` | 用户资料详情 | 可选 | 无 |
-| `POST /api/v1/users/profile_get` | 用户主页聚合（资料 + 近期瞬间，首屏骨架） | 可选 | 无 |
+| `POST /api/v1/users/get_profile` | 用户主页聚合（资料 + 近期瞬间，首屏骨架） | 可选 | 无 |
 | `POST /api/v1/users/list_friends` | 好友列表（user_id 可选，默认=当前用户） | 条件必须 | 无 |
 | `POST /api/v1/users/list_following` | 关注列表（user_id 可选，默认=当前用户） | 条件必须 | 无 |
 | `POST /api/v1/users/list_followers` | 粉丝列表（user_id 可选，默认=当前用户） | 条件必须 | 无 |
 | `POST /api/v1/users/list_groups` | 用户群组列表 | 可选 | 无 |
 | `POST /api/v1/users/list_moments` | 用户瞬间历史 | 可选 | 无 |
 | `POST /api/v1/users/list_reacted_moments` | 用户反应过的瞬间列表 | 可选 | 无 |
-| `POST /api/v1/users/me/profile/get` | 我的资料 | 必须 | 无 |
-| `POST /api/v1/users/me/profile/update` | 更新我的资料 | 必须 | 幂等语义 |
-| `POST /api/v1/users/me/location/update` | 更新我的位置 | 必须 | 幂等语义 |
-| `POST /api/v1/users/me/upgrade` | 访客升级 | 必须 | 无 |
-| `POST /api/v1/users/me/settings/get` | 我的设置 | 必须 | 无 |
-| `POST /api/v1/users/me/settings/update` | 更新我的设置 | 必须 | 幂等语义 |
-| `POST /api/v1/users/me/delete` | 删除账户 | 必须 | SHOULD |
-| `POST /api/v1/users/me/set_follow` | 设置关注状态（两态统一） | 必须 | 幂等语义 |
-| `POST /api/v1/users/me/set_block` | 设置拉黑状态（两态统一） | 必须 | 幂等语义 |
-| `POST /api/v1/users/me/list_blocked` | 我的拉黑列表 | 必须 | 无 |
-| `POST /api/v1/users/me/set_remark` | 设置备注 | 必须 | 幂等语义 |
-| `POST /api/v1/users/me/email/request_change` | 请求变更邮箱 (⏳ 延期) | 必须 | MUST |
-| `POST /api/v1/users/me/email/confirm_change` | 确认变更邮箱 (⏳ 延期) | 必须 | MUST |
-| `POST /api/v1/users/me/phone/request_change` | 请求变更手机 (⏳ 延期) | 必须 | MUST |
-| `POST /api/v1/users/me/phone/confirm_change` | 确认变更手机 (⏳ 延期) | 必须 | MUST |
+| `POST /api/v1/users/batch_get` | 批量获取用户信息 | 可选 | 无 |
+| `POST /api/v1/users/get_account` | 我的账户数据 | 必须 | 无 |
+| `POST /api/v1/users/update_account` | 更新我的账户 | 必须 | 幂等语义 |
+| `POST /api/v1/users/update_location` | 更新我的位置 | 必须 | 幂等语义 |
+| `POST /api/v1/users/upgrade` | 访客升级 | 必须 | 无 |
+| `POST /api/v1/users/get_settings` | 我的设置 | 必须 | 无 |
+| `POST /api/v1/users/update_settings` | 更新我的设置 | 必须 | 幂等语义 |
+| `POST /api/v1/users/delete_account` | 删除账户 | 必须 | SHOULD |
+| `POST /api/v1/users/follow` | 设置关注状态（两态统一） | 必须 | 幂等语义 |
+| `POST /api/v1/users/block` | 设置拉黑状态（两态统一） | 必须 | 幂等语义 |
+| `POST /api/v1/users/list_blocked` | 我的拉黑列表 | 必须 | 无 |
+| `POST /api/v1/users/set_remark` | 设置备注 | 必须 | 幂等语义 |
+| `POST /api/v1/users/email/request_change` | 请求变更邮箱 (⏳ 延期) | 必须 | MUST |
+| `POST /api/v1/users/email/confirm_change` | 确认变更邮箱 (⏳ 延期) | 必须 | MUST |
+| `POST /api/v1/users/phone/request_change` | 请求变更手机 (⏳ 延期) | 必须 | MUST |
+| `POST /api/v1/users/phone/confirm_change` | 确认变更手机 (⏳ 延期) | 必须 | MUST |
 
-> 表情反应（点赞/emoji）是跨 message/moment/comment 三类资源的统一动作，由全局端点 `POST /api/v1/me/set_reaction` 处理（见下方「表情反应 API」）。它不属于 users 命名空间，但因其「目标可为用户发布的资源」而在此一并说明。
-| `POST /api/v1/users/me/email/request_change` | 请求变更邮箱 (⏳ 延期) | 必须 | MUST |
-| `POST /api/v1/users/me/email/confirm_change` | 确认变更邮箱 (⏳ 延期) | 必须 | MUST |
-| `POST /api/v1/users/me/phone/request_change` | 请求变更手机 (⏳ 延期) | 必须 | MUST |
-| `POST /api/v1/users/me/phone/confirm_change` | 确认变更手机 (⏳ 延期) | 必须 | MUST |
+> 表情反应（reaction）是跨 message/moment/comment 三类资源的统一动作，独立命名空间 `reactions/`（见 `api_spec_reaction.md`）。
 
 ## 类型定义
 
@@ -63,7 +59,7 @@
 - `MomentItem`
 - `FollowSource`
 - `Gender`
-- `PrivateChatPermission`
+- `ChatPerm`
 - `UserSettings`
 
 ## 端点详情
@@ -124,7 +120,7 @@ interface UserOpenTheDoorRequest {
 
 ---
 
-### POST /api/v1/users/profile_get
+### POST /api/v1/users/get_profile
 
 获取用户主页首屏聚合数据（资料 + 近期瞬间）。一次请求拿到主页骨架，消除"资料 + 瞬间"的多次往返。
 
@@ -314,7 +310,7 @@ interface UserMomentsRequest {
 
 获取指定用户反应过的瞬间（去重，一个瞬间无论被该用户用过几个 emoji 只出现一次）。
 
-**隐私控制**：受 `liked_moments_visible` 设置控制（语义不变：控制"他人能否看到我反应过的瞬间"）。
+**隐私控制**：受 `reacted_moments_visible` 设置控制。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -334,24 +330,45 @@ interface UserReactedMomentsRequest {
 
 ---
 
-### POST /api/v1/users/me/profile/get
+### POST /api/v1/users/batch_get
 
-获取当前用户资料。
+批量获取用户信息。用于列表/Feed/通知等场景中高效解析 `UserInfo`，消除逐个调用 `get_detail` 的 N+1 问题。
 
-**说明**：`/me/*` 端点返回的是当前用户的资料字段，永远可见，不受隐私设置影响。
+- **认证**: 可选（已登录返回 `@auth-only` 字段）
+- **幂等**: 无
+
+**Request**: `BatchGetUsersRequest`
+```typescript
+interface BatchGetUsersRequest {
+  user_ids: string[];  // 最多 100 个
+}
+```
+
+**Response**: `ApiResponse<{ users: Record<string, UserItem> }>`
+```typescript
+// users 为 user_id → UserItem 的映射；不存在的 user_id 不出现在 map 中
+```
+
+**错误码**: `10000`
+
+---
+
+### POST /api/v1/users/get_account
+
+获取当前用户账户数据（含 `email`/`phone`/`user_type` 等仅自己可见的字段）。
 
 - **认证**: 必须
 - **幂等**: 无
 
 **Request**: `{}`
 
-**Response**: `ApiResponse<MyProfileState>`
+**Response**: `ApiResponse<AccountData>`
 ```typescript
-// Gender 为本模块类型（原定义于 api_spec_types.md，因仅 user 模块使用已下放至此）
+// Gender 为本模块类型
 // 'other' 为包容性取值，覆盖非二元/不愿透露等场景
 type Gender = 'male' | 'female' | 'other';
 
-interface MyProfileState {
+interface AccountData {
   user_id: string;
   nickname: string;
   avatar_url?: string;
@@ -359,8 +376,8 @@ interface MyProfileState {
   bio?: string;
   tags?: string[];
   gender?: Gender;
-  email?: string;               // 通过 users/me/email/request_change + confirm_change 变更
-  phone?: string;               // 通过 users/me/phone/request_change + confirm_change 变更
+  email?: string;               // 通过 users/email/request_change + confirm_change 变更
+  phone?: string;               // 通过 users/phone/request_change + confirm_change 变更
   location: Location;           // 存储的原始位置，不含 distance/bearing_degrees（与 RelativeLocation 不同）
   presence_status: UserPresenceStatus;
   last_online_at: string;       // UTC ISO 8601，最后在线时间
@@ -373,16 +390,16 @@ interface MyProfileState {
 
 ---
 
-### POST /api/v1/users/me/profile/update
+### POST /api/v1/users/update_account
 
-更新用户资料。
+更新用户账户资料。
 
 - **认证**: 必须
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
-**Request**: `UpdateProfileRequest`
+**Request**: `UpdateAccountRequest`
 ```typescript
-interface UpdateProfileRequest {
+interface UpdateAccountRequest {
   nickname?: string;
   avatar_file_id?: string;
   bio?: string;
@@ -399,7 +416,7 @@ interface UpdateProfileRequest {
 
 ---
 
-### POST /api/v1/users/me/location/update
+### POST /api/v1/users/update_location
 
 更新用户位置。
 
@@ -419,7 +436,7 @@ interface UpdateLocationRequest {
 
 ---
 
-### POST /api/v1/users/me/upgrade
+### POST /api/v1/users/upgrade
 
 账户升级（访客升级为正式用户）。
 
@@ -434,13 +451,15 @@ interface UpgradeAccountRequest {
 }
 ```
 
-**Response**: `ApiResponse`
+**Response**: `ApiResponse<AccountData>`
+
+升级成功后返回完整账户数据，客户端无需额外调 `get_account` 即可获取新的 `user_type`。
 
 **错误码**: `10000` `10400`
 
 ---
 
-### POST /api/v1/users/me/settings/get
+### POST /api/v1/users/get_settings
 
 获取用户设置。
 
@@ -457,7 +476,7 @@ interface UpgradeAccountRequest {
 
 ---
 
-### POST /api/v1/users/me/settings/update
+### POST /api/v1/users/update_settings
 
 更新用户设置。
 
@@ -477,7 +496,7 @@ interface UpdateSettingsRequest {
 
 ---
 
-### POST /api/v1/users/me/delete
+### POST /api/v1/users/delete_account
 
 删除账户。
 
@@ -497,9 +516,9 @@ interface DeleteAccountRequest {
 
 ---
 
-### POST /api/v1/users/me/set_follow
+### POST /api/v1/users/follow
 
-设置关注状态（两态统一端点，替代原 follow/unfollow 成对动词）。
+设置关注状态（两态统一端点）。
 
 `active=true` 时：若对方已关注当前用户，自动成为好友，触发 WebSocket `MutualFollow` 事件。对方 `allow_follow=false` 时返回 `10200`。不存在关注申请流程。
 
@@ -508,9 +527,9 @@ interface DeleteAccountRequest {
 - **认证**: 必须
 - **幂等**: 幂等语义（`active` 与当前状态一致时视为 no-op，返回成功）
 
-**Request**: `SetFollowRequest`
+**Request**: `FollowRequest`
 ```typescript
-interface SetFollowRequest {
+interface FollowRequest {
   user_id: string;
   active: boolean;
   source?: FollowSource;        // 可选：关注来源（用于来源归因，仅 active=true 有意义）
@@ -524,16 +543,16 @@ interface SetFollowRequest {
 
 ---
 
-### POST /api/v1/users/me/set_block
+### POST /api/v1/users/block
 
-设置拉黑状态（两态统一端点，替代原 block/unblock 成对动词）。
+设置拉黑状态（两态统一端点）。
 
 - **认证**: 必须
 - **幂等**: 幂等语义（`active` 与当前状态一致时视为 no-op，返回成功）
 
-**Request**: `SetBlockRequest`
+**Request**: `BlockRequest`
 ```typescript
-interface SetBlockRequest {
+interface BlockRequest {
   user_id: string;
   active: boolean;
   reason?: string;   // 可选：拉黑原因（仅 active=true 有意义）
@@ -546,43 +565,7 @@ interface SetBlockRequest {
 
 ---
 
-## 表情反应 API（全局 `/me/` 端点）
-
-> 此端点位于全局 `/api/v1/me/` 命名空间（非 `users/`），因统一处理 message/moment/comment 三类资源，故定义于此处便于跨模块引用。类型 `ReactionTargetType` / `Reaction` / `ReactionItem` 见 `api_spec_types.md`。
-
-### POST /api/v1/me/set_reaction
-
-设置表情反应（两态统一端点）。覆盖消息、瞬间、评论三类目标。
-
-- **认证**: 必须
-- **幂等**: 幂等语义（`active` 与当前状态一致时视为 no-op，返回成功；同一目标切换 emoji 视为更新而非新增）
-
-**Request**: `SetReactionRequest`
-```typescript
-interface SetReactionRequest {
-  target_type: ReactionTargetType;  // 'message' | 'moment' | 'comment'
-  target_id: string;                // message_id / moment_id / comment_id
-  emoji: string;                    // Unicode 码点字符串，须在 AppConfig.limits.reaction_emojis 白名单内
-  active: boolean;                  // true=添加/切换反应，false=取消反应
-}
-```
-
-**Response**: `ApiResponse`
-
-**行为细节**：
-- `active=true` 且用户此前对该目标用过其他 emoji：视为切换（旧 emoji 计数 -1，新 emoji 计数 +1），不分多次调用
-- `active=true` 且 emoji 与当前一致：no-op 成功
-- `active=false`：移除当前用户对该目标的反应（若 emoji 与当前不一致仍视为成功，幂等）
-- 目标资源不存在返回 `10300`；emoji 不在白名单返回 `10000`
-- 私聊/群聊消息场景：若被对方拉黑或对方 `allow_private_chat='nobody'`，仍允许 reaction（reaction 是公开互动信号，不受私聊权限约束——与点赞一致）
-
-**WS 推送**：成功后触发 `ReactionAdded` / `ReactionRemoved` 事件（见 `api_spec_websocket.md`），并向被反应资源作者推送 `reaction_added` 通知（若作者非当前用户）。
-
-**错误码**: `10000` `10300`
-
----
-
-### POST /api/v1/users/me/list_blocked
+### POST /api/v1/users/list_blocked
 
 获取拉黑列表。
 
@@ -610,7 +593,7 @@ interface BlockedUserItem {
 
 ---
 
-### POST /api/v1/users/me/set_remark
+### POST /api/v1/users/set_remark
 
 设置用户备注（允许给我关注的任何人设置备注，方便记忆和管理）。
 
@@ -633,7 +616,7 @@ interface SetRemarkRequest {
 
 ---
 
-### POST /api/v1/users/me/email/request_change
+### POST /api/v1/users/email/request_change
 
 > ⏳ **延期实现**：依赖邮件验证码发送服务，待服务接入后实现。
 
@@ -663,7 +646,7 @@ interface VerificationSent {
 
 ---
 
-### POST /api/v1/users/me/email/confirm_change
+### POST /api/v1/users/email/confirm_change
 
 > ⏳ **延期实现**：依赖邮件验证码发送服务，待服务接入后实现。
 
@@ -686,7 +669,7 @@ interface ConfirmEmailChangeRequest {
 
 ---
 
-### POST /api/v1/users/me/phone/request_change
+### POST /api/v1/users/phone/request_change
 
 > ⏳ **延期实现**：依赖短信验证码发送服务，待服务接入后实现。
 
@@ -711,7 +694,7 @@ interface RequestPhoneChangeRequest {
 
 ---
 
-### POST /api/v1/users/me/phone/confirm_change
+### POST /api/v1/users/phone/confirm_change
 
 > ⏳ **延期实现**：依赖短信验证码发送服务，待服务接入后实现。
 

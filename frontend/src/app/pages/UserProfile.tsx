@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { ROUTES } from "../lib/routes";
 import { ActionIconButton } from "../components/shared/ActionIconButton";
@@ -7,68 +7,33 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   DesktopDetailSplit, RailSection, RailUserRow, RailPostThumb, RailLocationMini,
 } from "../components/layout/DetailRail";
+import { getProfile } from "../../api";
 
-const MUTUAL_FRIENDS = [
-  { id: 3, name: "野原",   sub: "共同好友 · 旅行", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80" },
-  { id: 4, name: "Mika",   sub: "共同好友 · 美食", avatar: "https://images.unsplash.com/photo-1758613172074-7275c3455034?w=80" },
-];
+const MUTUAL_FRIENDS: { id: number; name: string; sub: string; avatar: string }[] = [];
 
-const SIMILAR_USERS = [
-  { id: 5, name: "青砚",   sub: "摄影 · 614m",  avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80" },
-  { id: 6, name: "南枝",   sub: "城市 · 1.2km", avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80" },
-  { id: 7, name: "林一",   sub: "光影 · 1.8km", avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80" },
-];
+const SIMILAR_USERS: { id: number; name: string; sub: string; avatar: string }[] = [];
 
-/* ── Mock data ────────────────────────────────────────────────────── */
-const USERS: Record<number, {
+interface UserData {
   name: string; handle: string; bio: string; location: string;
   avatar: string; banner: string; followers: number; following: number; posts: number;
   gallery: string[]; tags: string[];
-}> = {
-  1: {
-    name: "鹿鸣",          handle: "@liam.photos",
-    bio: "自由摄影师 · 用镜头记录城市的呼吸和光影。",
-    location: "徐州·云龙区",
-    avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=400",
-    banner: "https://images.unsplash.com/photo-1748737349771-e2b6605e5961?w=1080",
-    followers: 1240, following: 386, posts: 87,
-    gallery: [
-      "https://images.unsplash.com/photo-1748737349771-e2b6605e5961?w=400",
-      "https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?w=400",
-      "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=400",
-      "https://images.unsplash.com/photo-1759734282634-b4958ea9a6e0?w=400",
-      "https://images.unsplash.com/photo-1758613172074-7275c3455034?w=400",
-      "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=400",
-    ],
-    tags: ["摄影", "城市", "光影"],
-  },
-  2: {
-    name: "阿禾",        handle: "@sophia.wander",
-    bio: "世界旅行者 · 每座城市都是一首诗。",
-    location: "徐州·泉山区",
-    avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=400",
-    banner: "https://images.unsplash.com/photo-1759734282634-b4958ea9a6e0?w=1080",
-    followers: 3820, following: 210, posts: 156,
-    gallery: [
-      "https://images.unsplash.com/photo-1759734282634-b4958ea9a6e0?w=400",
-      "https://images.unsplash.com/photo-1748737349771-e2b6605e5961?w=400",
-      "https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?w=400",
-      "https://images.unsplash.com/photo-1758613172074-7275c3455034?w=400",
-      "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=400",
-      "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=400",
-    ],
-    tags: ["旅行", "探索", "文化"],
-  },
-};
+}
 
-const DEFAULT_USER = USERS[1];
+const DEFAULT_USER: UserData = {
+  name: "", handle: "", bio: "", location: "",
+  avatar: "", banner: "", followers: 0, following: 0, posts: 0,
+  gallery: [], tags: [],
+};
 
 type Tab = "posts" | "liked" | "saved";
 
 export function UserProfile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const user = USERS[Number(userId)] ?? DEFAULT_USER;
+  const [user, setUser] = useState<UserData>(DEFAULT_USER);
+  const [loading, setLoading] = useState(true);
+  const [mutualFriends, setMutualFriends] = useState<typeof MUTUAL_FRIENDS>([]);
+  const [similarUsers, setSimilarUsers] = useState<typeof SIMILAR_USERS>([]);
   const [followed, setFollowed] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("posts");
   const [moreOpen, setMoreOpen] = useState(false);
@@ -77,6 +42,54 @@ export function UserProfile() {
   const [remarkDraft, setRemarkDraft] = useState("");
   const [reportSent, setReportSent] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const uid = userId ?? "";
+    async function fetchProfile() {
+      try {
+        setLoading(true);
+        const res = await getProfile(uid).catch(() => ({ code: -1, data: null }));
+        if (cancelled) return;
+        const data = (res.code === 0 ? res.data : null) as any;
+        if (data) {
+          setUser({
+            name: data.name ?? data.nickname ?? DEFAULT_USER.name,
+            handle: data.handle ?? data.username ?? "",
+            bio: data.bio ?? data.description ?? "",
+            location: data.location ?? data.place ?? "",
+            avatar: data.avatar ?? "",
+            banner: data.banner ?? data.cover ?? "",
+            followers: data.followers ?? data.follower_count ?? 0,
+            following: data.following ?? data.following_count ?? 0,
+            posts: data.posts ?? data.post_count ?? 0,
+            gallery: data.gallery ?? data.images ?? data.photos ?? [],
+            tags: data.tags ?? [],
+          });
+          if (data.followed !== undefined) setFollowed(data.followed);
+          if (data.blocked !== undefined) setBlocked(data.blocked);
+          if (data.remark) setRemark(data.remark);
+
+          if (data.mutual_friends) {
+            setMutualFriends((data.mutual_friends || []).map((f: any) => ({
+              id: f.id ?? 0, name: f.name ?? "", sub: f.sub ?? "", avatar: f.avatar ?? "",
+            })));
+          }
+          if (data.similar_users) {
+            setSimilarUsers((data.similar_users || []).map((u: any) => ({
+              id: u.id ?? 0, name: u.name ?? "", sub: u.sub ?? "", avatar: u.avatar ?? "",
+            })));
+          }
+        }
+      } catch {
+        // empty data is normal
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchProfile();
+    return () => { cancelled = true; };
+  }, [userId]);
 
   const fmtNum = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 
@@ -248,10 +261,10 @@ export function UserProfile() {
         </div>
       </RailSection>
 
-      {MUTUAL_FRIENDS.length > 0 && (
+      {mutualFriends.length > 0 && (
         <RailSection title="共同好友">
           <div className="flex flex-col gap-3">
-            {MUTUAL_FRIENDS.map(f => (
+            {mutualFriends.map(f => (
               <RailUserRow
                 key={f.id}
                 avatar={f.avatar}
@@ -276,7 +289,7 @@ export function UserProfile() {
 
       <RailSection title="你可能也关注" action="更多" onAction={() => navigate(ROUTES.nearbyPeople)}>
         <div className="flex flex-col gap-3">
-          {SIMILAR_USERS.map(u => (
+            {similarUsers.map(u => (
             <RailUserRow
               key={u.id}
               avatar={u.avatar}

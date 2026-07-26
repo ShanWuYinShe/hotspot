@@ -178,44 +178,57 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-func (h *Handler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
-	var req MarkGroupMessagesReadRequest
+// MarkRead is the unified mark_read endpoint for group messages. It replaces
+// the legacy /me/mark_as_read and /me/mark_all_read endpoints. scope selects
+// the operation: "all" clears every unread group message for the caller;
+// "group" (the default) marks messages in group_id as read (up to the
+// optional up_to_message_id).
+func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
+	var req MarkGroupReadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		logBusinessError(r, "MarkAsRead", 10000, "请求体格式错误")
+		logBusinessError(r, "MarkRead", 10000, "请求体格式错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
-	if req.GroupID == "" {
-		logBusinessError(r, "MarkAsRead", 10000, "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-		return
+	scope := req.Scope
+	if scope == "" {
+		scope = "group"
 	}
-	if err := h.service.MarkAsRead(r.Context(), req); err != nil {
-		switch {
-		case errors.Is(err, ErrMessageNotFound):
-			logBusinessError(r, "MarkAsRead", 10300, "消息不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "消息不存在"))
-		default:
-			logServerError(r, "MarkAsRead", err)
+	switch scope {
+	case "all":
+		if err := h.service.MarkAllRead(r.Context()); err != nil {
+			logServerError(r, "MarkRead", err)
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+			return
 		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
-}
-
-func (h *Handler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
-	if err := httpx.RequireEmptyObject(r); err != nil {
-		logBusinessError(r, "MarkAllRead", err.Code, err.Message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+	case "group":
+		if req.GroupID == "" {
+			logBusinessError(r, "MarkRead", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			return
+		}
+		if err := h.service.MarkAsRead(r.Context(), MarkGroupMessagesReadRequest{
+			GroupID:       req.GroupID,
+			UpToMessageID: req.UpToMessageID,
+		}); err != nil {
+			switch {
+			case errors.Is(err, ErrMessageNotFound):
+				logBusinessError(r, "MarkRead", 10300, "消息不存在")
+				httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "消息不存在"))
+			default:
+				logServerError(r, "MarkRead", err)
+				httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+			}
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 		return
+	default:
+		logBusinessError(r, "MarkRead", 10000, "参数错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 	}
-	if err := h.service.MarkAllRead(r.Context()); err != nil {
-		logServerError(r, "MarkAllRead", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
 func isValidPagination(p *PaginationParams) bool {

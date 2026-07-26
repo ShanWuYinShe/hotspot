@@ -14,6 +14,14 @@ type Service struct {
 	repo      Repository
 	appConfig appconfig.Source
 	images    ImageResolver
+	reactions ReactionAggregator // optional; nil => reactions[] not filled
+}
+
+// ReactionAggregator computes per-emoji reaction aggregates for feed moments.
+// Implemented by the reactions module (dependency inversion). viewerID drives
+// the @auth-only reacted_by_me flag.
+type ReactionAggregator interface {
+	AggregateMoments(ctx context.Context, momentIDs []string, viewerID string) (map[string][]Reaction, error)
 }
 
 func NewService(source appconfig.Source) *Service {
@@ -51,7 +59,32 @@ func (s *Service) ListMoments(ctx context.Context, req ListFeedMomentsRequest) (
 		return PaginatedMoments{}, err
 	}
 	s.hydrateImages(ctx, items.Items)
+	s.fillReactions(ctx, items.Items, principal.UserID)
 	return items, nil
+}
+
+// SetReactionAggregator wires the reactions aggregator (called by bootstrap).
+func (s *Service) SetReactionAggregator(ra ReactionAggregator) { s.reactions = ra }
+
+// fillReactions populates MomentItem.reactions[] for a list via the aggregator.
+func (s *Service) fillReactions(ctx context.Context, items []MomentItem, viewerID string) {
+	if s.reactions == nil || len(items) == 0 {
+		return
+	}
+	ids := make([]string, 0, len(items))
+	for i := range items {
+		ids = append(ids, items[i].MomentID)
+	}
+	byID, err := s.reactions.AggregateMoments(ctx, ids, viewerID)
+	if err != nil {
+		observability.L().Warn("feed.fillReactions failed", "error", err)
+		return
+	}
+	for i := range items {
+		if recs := byID[items[i].MomentID]; len(recs) > 0 {
+			items[i].Reactions = recs
+		}
+	}
 }
 
 // hydrateImages fills the Images field on each moment in place via a single
@@ -123,6 +156,7 @@ func (s *Service) ListTrending(ctx context.Context) (TrendingBundle, error) {
 	bundle.TrendingTags = slicex.LimitCopy(bundle.TrendingTags, cfg.ResponseDefaults.TrendingTagsCount)
 	bundle.HotMoments = slicex.LimitCopy(bundle.HotMoments, cfg.ResponseDefaults.HotMomentsCount)
 	s.hydrateImages(ctx, bundle.HotMoments)
+	s.fillReactions(ctx, bundle.HotMoments, viewerUserID)
 	return bundle, nil
 }
 

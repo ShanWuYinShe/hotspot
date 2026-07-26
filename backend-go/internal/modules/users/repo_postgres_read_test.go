@@ -114,7 +114,7 @@ func (r *userFallbackRepo) ListBlocked(context.Context, string, int, string) (Pa
 	r.markUsed()
 	return PaginatedBlockedUsers{}, nil
 }
-func (r *userFallbackRepo) ListLikedMoments(context.Context, string, int, string, string) (momenttypes.PaginatedMoments, error) {
+func (r *userFallbackRepo) ListReactedMoments(context.Context, string, int, string, string) (momenttypes.PaginatedMoments, error) {
 	r.markUsed()
 	return momenttypes.PaginatedMoments{}, nil
 }
@@ -233,7 +233,7 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 		queryRowsByQuery: map[string][][]any{
 			"FROM users u":                            {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC)}},
 			queryListBlockedUsers:                     {{"user_bob", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), "buddy"}},
-			queryListLikedMoments:                     {{"moment_1", "user_alice", "Alice", "hello", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), 3, 2, 1, "南天门", 35.0, 112.0, "public", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC)}},
+			queryListReactedMoments:                   {{"moment_1", "user_alice", "Alice", "hello", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), 3, 2, 1, "南天门", 35.0, 112.0, "public", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC)}},
 			momenttypesQueryListMomentTagsByMomentID:  {{"travel"}, {"hotspot"}},
 			momenttypesQueryListMomentTagsByMomentIDs: {{"moment_1", "travel"}, {"moment_1", "hotspot"}},
 		},
@@ -249,7 +249,7 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 		t.Fatalf("unexpected profile: %#v ok=%v err=%v", profile, ok, err)
 	}
 	settings, ok, err := repo.GetSettings(context.Background(), "user_alice")
-	if err != nil || !ok || settings.AllowPrivateChat != PrivateChatEveryone {
+	if err != nil || !ok || settings.AllowPrivateChat != ChatPermEveryone {
 		t.Fatalf("unexpected settings: %#v ok=%v err=%v", settings, ok, err)
 	}
 	profiles, err := repo.SearchProfiles(context.Background(), SearchUsersRequest{Keyword: "Alice", ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
@@ -264,11 +264,11 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 	if err != nil || !rel.IsFollowing || rel.IsBlocked {
 		t.Fatalf("unexpected relationship: %v err=%v", rel, err)
 	}
-	liked, err := repo.ListLikedMoments(context.Background(), "user_alice", 20, "", "")
+	liked, err := repo.ListReactedMoments(context.Background(), "user_alice", 20, "", "")
 	if err != nil || len(liked.Items) != 1 || liked.Items[0].MomentID != "moment_1" {
-		t.Fatalf("unexpected liked moments: %#v err=%v", liked, err)
+		t.Fatalf("unexpected reacted moments: %#v err=%v", liked, err)
 	}
-	if liked.Items[0].MyState == nil || !liked.Items[0].MyState.IsLiked || len(liked.Items[0].Tags) != 2 {
+	if liked.Items[0].MyState == nil || len(liked.Items[0].Tags) != 2 {
 		t.Fatalf("unexpected liked moment state: %#v", liked.Items[0])
 	}
 }
@@ -285,9 +285,9 @@ func TestPostgresRepositorySearchAndListBlockedReturnErrorsWithoutFallback(t *te
 	if _, err := repo.ListBlocked(context.Background(), "user_alice", 20, ""); err == nil {
 		t.Fatal("expected list blocked error")
 	}
-	backend.queryErrs[queryListLikedMoments] = errors.New("boom")
-	if _, err := repo.ListLikedMoments(context.Background(), "user_alice", 20, "", ""); err == nil {
-		t.Fatal("expected liked moments error")
+	backend.queryErrs[queryListReactedMoments] = errors.New("boom")
+	if _, err := repo.ListReactedMoments(context.Background(), "user_alice", 20, "", ""); err == nil {
+		t.Fatal("expected reacted moments error")
 	}
 }
 

@@ -1,4 +1,4 @@
-package notifications
+package notify
 
 import (
 	"context"
@@ -14,11 +14,11 @@ type Service struct{ repo Repository }
 func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
 func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} }
 
-func (s *Service) List(ctx context.Context, req NotificationListRequest) (PaginatedNotifications, error) {
+func (s *Service) List(ctx context.Context, req NotificationListRequest) (PaginatedNotify, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	query, err := normalizeNotificationListQuery(req)
 	if err != nil {
-		return PaginatedNotifications{}, err
+		return PaginatedNotify{}, err
 	}
 	normalizedReq := NotificationListRequest{Type: query.Type, Pagination: &PaginationParams{Limit: query.Limit}}
 	if query.Cursor != nil {
@@ -27,7 +27,7 @@ func (s *Service) List(ctx context.Context, req NotificationListRequest) (Pagina
 	items, err := s.repo.List(ctx, principal.UserID, normalizedReq)
 	if err != nil {
 		observability.L().Error("notifications.list failed", "error", err)
-		return PaginatedNotifications{}, err
+		return PaginatedNotify{}, err
 	}
 	return items, nil
 }
@@ -60,6 +60,15 @@ func (s *Service) MarkAllRead(ctx context.Context) error {
 	return nil
 }
 
+func (s *Service) MarkAllReadByType(ctx context.Context, notificationType string) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if err := s.repo.MarkAllReadByType(ctx, principal.UserID, notificationType); err != nil {
+		observability.L().Error("notifications.mark_all_read_by_type failed", "error", err, "type", notificationType)
+		return err
+	}
+	return nil
+}
+
 func (s *Service) AppendNewFollower(ctx context.Context, targetUserID string, actor map[string]any, source string, sourceMomentID string) error {
 	payload := map[string]any{"type": "new_follower", "actor": actor}
 	if source != "" {
@@ -68,7 +77,7 @@ func (s *Service) AppendNewFollower(ctx context.Context, targetUserID string, ac
 	if sourceMomentID != "" {
 		payload["source_moment_id"] = sourceMomentID
 	}
-	return s.repo.Append(ctx, targetUserID, NotificationItem{
+	return s.repo.Append(ctx, targetUserID, NotifyItem{
 		Type:    "new_follower",
 		IsRead:  false,
 		Payload: payload,
@@ -76,7 +85,7 @@ func (s *Service) AppendNewFollower(ctx context.Context, targetUserID string, ac
 }
 
 func (s *Service) AppendMutualFollow(ctx context.Context, targetUserID string, actor map[string]any) error {
-	return s.repo.Append(ctx, targetUserID, NotificationItem{
+	return s.repo.Append(ctx, targetUserID, NotifyItem{
 		Type:    "mutual_follow",
 		IsRead:  false,
 		Payload: map[string]any{"type": "mutual_follow", "actor": actor},
@@ -84,7 +93,7 @@ func (s *Service) AppendMutualFollow(ctx context.Context, targetUserID string, a
 }
 
 func (s *Service) AppendSystemAnnouncement(ctx context.Context, userIDs []string, item systemmodule.SystemAnnouncementItem) error {
-	return s.repo.AppendMany(ctx, userIDs, NotificationItem{
+	return s.repo.AppendMany(ctx, userIDs, NotifyItem{
 		Type:   "system_announcement",
 		IsRead: false,
 		Payload: map[string]any{
@@ -106,23 +115,23 @@ func (s *Service) AppendGroupInviteReceived(ctx context.Context, targetUserID st
 	if message != nil && *message != "" {
 		payload["message"] = *message
 	}
-	return s.repo.Append(ctx, targetUserID, NotificationItem{Type: "group_invite_received", IsRead: false, Payload: payload})
+	return s.repo.Append(ctx, targetUserID, NotifyItem{Type: "group_invite_received", IsRead: false, Payload: payload})
 }
 
 func (s *Service) AppendGroupInviteAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, user map[string]any) error {
-	return s.repo.Append(ctx, targetUserID, NotificationItem{Type: "group_invite_accepted", IsRead: false, Payload: map[string]any{"type": "group_invite_accepted", "group_id": groupID, "group_name": groupName, "invite_id": inviteID, "user": user}})
+	return s.repo.Append(ctx, targetUserID, NotifyItem{Type: "group_invite_accepted", IsRead: false, Payload: map[string]any{"type": "group_invite_accepted", "group_id": groupID, "group_name": groupName, "invite_id": inviteID, "user": user}})
 }
 
 func (s *Service) AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant map[string]any, groupID string, groupName string, applicationID string) error {
-	return s.repo.Append(ctx, targetUserID, NotificationItem{Type: "group_application_received", IsRead: false, Payload: map[string]any{"type": "group_application_received", "applicant": applicant, "group_id": groupID, "group_name": groupName, "application_id": applicationID}})
+	return s.repo.Append(ctx, targetUserID, NotifyItem{Type: "group_application_received", IsRead: false, Payload: map[string]any{"type": "group_application_received", "applicant": applicant, "group_id": groupID, "group_name": groupName, "application_id": applicationID}})
 }
 
 func (s *Service) AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) error {
-	return s.repo.Append(ctx, targetUserID, NotificationItem{Type: "group_application_accepted", IsRead: false, Payload: map[string]any{"type": "group_application_accepted", "group_id": groupID, "group_name": groupName, "application_id": applicationID}})
+	return s.repo.Append(ctx, targetUserID, NotifyItem{Type: "group_application_accepted", IsRead: false, Payload: map[string]any{"type": "group_application_accepted", "group_id": groupID, "group_name": groupName, "application_id": applicationID}})
 }
 
 func (s *Service) AppendMomentLiked(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any) error {
-	return s.repo.Append(ctx, targetUserID, NotificationItem{
+	return s.repo.Append(ctx, targetUserID, NotifyItem{
 		Type:   "moment_liked",
 		IsRead: false,
 		Payload: map[string]any{
@@ -135,7 +144,7 @@ func (s *Service) AppendMomentLiked(ctx context.Context, targetUserID string, ac
 }
 
 func (s *Service) AppendMomentCommented(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error {
-	return s.repo.Append(ctx, targetUserID, NotificationItem{
+	return s.repo.Append(ctx, targetUserID, NotifyItem{
 		Type:   "moment_commented",
 		IsRead: false,
 		Payload: map[string]any{
@@ -150,7 +159,7 @@ func (s *Service) AppendMomentCommented(ctx context.Context, targetUserID string
 }
 
 func (s *Service) AppendCommentLiked(ctx context.Context, targetUserID string, actor map[string]any, commentID string, commentPreview string, momentID string, momentSummary map[string]any) error {
-	return s.repo.Append(ctx, targetUserID, NotificationItem{
+	return s.repo.Append(ctx, targetUserID, NotifyItem{
 		Type:   "comment_liked",
 		IsRead: false,
 		Payload: map[string]any{
@@ -164,8 +173,25 @@ func (s *Service) AppendCommentLiked(ctx context.Context, targetUserID string, a
 	})
 }
 
+// AppendReactionAdded records a generic reaction_added notification. Used for
+// message-target reactions (moment/comment reactions take the more specific
+// moment_liked / comment_liked paths). Spec api_spec_types.md NotifyType.
+func (s *Service) AppendReactionAdded(ctx context.Context, targetUserID string, actor map[string]any, targetType string, targetID string, emoji string) error {
+	return s.repo.Append(ctx, targetUserID, NotifyItem{
+		Type:   "reaction_added",
+		IsRead: false,
+		Payload: map[string]any{
+			"type":        "reaction_added",
+			"actor":       actor,
+			"target_type": targetType,
+			"target_id":   targetID,
+			"emoji":       emoji,
+		},
+	})
+}
+
 func (s *Service) AppendCommentReply(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, parentCommentID string, parentPreview string, replyID string, replyPreview string) error {
-	return s.repo.Append(ctx, targetUserID, NotificationItem{
+	return s.repo.Append(ctx, targetUserID, NotifyItem{
 		Type:   "comment_reply",
 		IsRead: false,
 		Payload: map[string]any{
@@ -195,7 +221,7 @@ func (s *Service) AppendMentioned(ctx context.Context, targetUserID string, acto
 	if commentPreview != "" {
 		payload["comment_preview"] = commentPreview
 	}
-	return s.repo.Append(ctx, targetUserID, NotificationItem{
+	return s.repo.Append(ctx, targetUserID, NotifyItem{
 		Type:    "mentioned",
 		IsRead:  false,
 		Payload: payload,

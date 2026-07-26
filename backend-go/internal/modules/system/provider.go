@@ -11,6 +11,11 @@ type Provider interface {
 	GetSystemAnnouncementsCount(context.Context) int
 }
 
+type BootstrapResolver interface {
+	ResolveProfile(ctx context.Context) (any, bool)
+	ResolveUnreadSummary(ctx context.Context) UnreadSummary
+}
+
 type AppConfigProvider struct {
 	source appconfig.Source
 }

@@ -964,10 +964,10 @@ export struct ChatPage {
         if (this.chatType === 'private_chat') {
           const targetUserId = this.targetId;
           if (!targetUserId) return;
-          const request: MarkPrivateMessagesReadRequest = { target_user_id: targetUserId, up_to_message_id: upToMessageId };
+          const request: MarkPrivateMessagesReadRequest = { scope: "session", target_user_id: targetUserId, up_to_message_id: upToMessageId };
           await ApiClient.markPrivateMessagesRead(request);
         } else {
-          const request: MarkGroupMessagesReadRequest = { group_id: this.chatId, up_to_message_id: upToMessageId };
+          const request: MarkGroupMessagesReadRequest = { scope: "group", group_id: this.chatId, up_to_message_id: upToMessageId };
           await ApiClient.markGroupMessagesRead(request);
         }
         GlobalStateManager.getInstance().notifyMessageSync();

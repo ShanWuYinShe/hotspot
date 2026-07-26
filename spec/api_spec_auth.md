@@ -23,10 +23,10 @@
 | `POST /api/v1/auth/check_status` | 检查认证状态 | 可选 | 无 |
 | `POST /api/v1/auth/request_password_reset` | 请求密码重置 | 无 | MUST |
 | `POST /api/v1/auth/reset_password` | 重置密码 | 无 | MUST |
-| `POST /api/v1/auth/me/change_password` | 修改密码 | 必须 | MUST |
-| `POST /api/v1/auth/me/sessions/list` | 获取会话列表 | 必须 | 无 |
-| `POST /api/v1/auth/me/sessions/revoke` | 撤销会话 | 必须 | 幂等语义 |
-| `POST /api/v1/auth/me/sessions/revoke_all` | 撤销所有其他会话 | 必须 | 幂等语义 |
+| `POST /api/v1/auth/change_password` | 修改密码 | 必须 | MUST |
+| `POST /api/v1/auth/list_sessions` | 获取会话列表 | 必须 | 无 |
+| `POST /api/v1/auth/revoke_session` | 撤销会话 | 必须 | 幂等语义 |
+| `POST /api/v1/auth/revoke_all_sessions` | 撤销所有其他会话 | 必须 | 幂等语义 |
 
 ## 类型定义
 
@@ -47,13 +47,13 @@ HotSpot 采用「**同一用户在同一设备上只有一个活跃 session**」
 - `login` / `register` / `guest` 成功时，若 `(user_id, device_id)` 已有活跃 session，服务端立即将旧 session 的 access_token + refresh_token 写入黑名单，并向旧 session 的在线 WebSocket 连接推送 `SessionRevoked` 事件（见 `api_spec_websocket.md`），新 session 取而代之
 - 驱逐写入黑名单**立即生效**，refresh 的 30 秒宽限期**不覆盖显式驱逐**（见 `refresh_token` 的「驱逐优先于宽限」）
 
-**跨设备共存**：用户可在多个设备（手机、平板、Web）同时登录，各自 `device_id` 不同、互不驱逐。`sessions/list` 返回所有活跃设备的 session 列表。
+**跨设备共存**：用户可在多个设备（手机、平板、Web）同时登录，各自 `device_id` 不同、互不驱逐。`list_sessions` 返回所有活跃设备的 session 列表。
 
 **与既有失效机制的协同**：
 - `change_password`：撤销除当前外所有 session（跨设备，含其他设备）——强度高于单设备驱逐，用于密码泄露场景
 - `reset_password`：撤销所有 session（含当前）——最强，用于忘密码重置
 - `logout`：仅撤销当前 session
-- `sessions/revoke` / `revoke_all`：用户主动管理多设备
+- `revoke_session` / `revoke_all_sessions`：用户主动管理多设备
 
 ### 客户端类型与 Token 投递策略
 
@@ -66,7 +66,7 @@ HotSpot 采用「**同一用户在同一设备上只有一个活跃 session**」
 // 
 // JWT 设计原则：
 // - JWT (access_token) 中只存储不可变信息：user_id
-// - 可变信息（nickname、头像等）应通过 /api/v1/users/me/profile/get 获取
+// - 可变信息（nickname、头像等）应通过 /api/v1/users/get_account 获取
 // - 避免 JWT 中的信息与实际数据不一致
 // - Token 失效通过黑名单机制实现（登出/撤销时写入黑名单，直至过期）
 type AuthTokenPairWeb = {}; // Web 端 data 为空对象（Token 仅通过 HttpOnly Cookie 传递，响应体不含任何 token 字段）
@@ -268,8 +268,6 @@ interface RefreshTokenRequest {
 interface AuthStatus {
   is_valid: boolean;
   expires_at?: string;  // 仅当 is_valid === true 时返回，对应 access_token 的过期时间
-  
-  // 注：如需完整用户信息（nickname、头像等），应调用 /api/v1/users/me/profile/get
 }
 ```
 
@@ -332,7 +330,7 @@ interface ResetPasswordRequest {
 
 ---
 
-### POST /api/v1/auth/me/change_password
+### POST /api/v1/auth/change_password
 
 修改密码（需要验证旧密码）。
 
@@ -358,7 +356,7 @@ interface ChangePasswordRequest {
 
 ---
 
-### POST /api/v1/auth/me/sessions/list
+### POST /api/v1/auth/list_sessions
 
 获取活跃会话列表。
 
@@ -396,7 +394,7 @@ interface SessionItem {
 
 ---
 
-### POST /api/v1/auth/me/sessions/revoke
+### POST /api/v1/auth/revoke_session
 
 撤销会话（设备下线）。
 
@@ -421,7 +419,7 @@ interface RevokeSessionRequest {
 
 ---
 
-### POST /api/v1/auth/me/sessions/revoke_all
+### POST /api/v1/auth/revoke_all_sessions
 
 撤销当前会话之外的所有其他活跃会话。适用于账号被盗、密码泄露等紧急安全场景。
 

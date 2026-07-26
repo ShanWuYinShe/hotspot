@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Bell,
@@ -15,9 +15,7 @@ import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { useHoverConfig } from "../hooks/useHoverConfig";
 import { ActionIconButton } from "../components/shared/ActionIconButton";
-
-const USER_AVATAR =
-  "https://images.unsplash.com/photo-1614339804578-8e82dd7f3214?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400";
+import { getAccount, getSettings, logout } from "../../api";
 
 /* ── Small helpers ─────────────────────────────────────────────── */
 
@@ -155,6 +153,53 @@ export function Settings() {
   const [sounds, setSounds] = useState(true);
   const [privateProfile, setPrivateProfile] = useState(false);
   const [locationSharing, setLocationSharing] = useState(true);
+  const [accountName, setAccountName] = useState("");
+  const [accountHandle, setAccountHandle] = useState("");
+  const [accountEmail, setAccountEmail] = useState("");
+  const [accountAvatar, setAccountAvatar] = useState("https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const [accountRes, settingsRes] = await Promise.all([
+          getAccount().catch(() => ({ code: -1, data: null })),
+          getSettings().catch(() => ({ code: -1, data: null })),
+        ]);
+        if (cancelled) return;
+
+        const accountData = (accountRes.code === 0 ? accountRes.data : null) as any;
+        const settingsData = (settingsRes.code === 0 ? settingsRes.data : null) as any;
+
+        if (accountData) {
+          setAccountName(accountData.name ?? accountData.nickname ?? "");
+          setAccountHandle(accountData.handle ?? accountData.username ?? "");
+          setAccountEmail(accountData.email ?? "");
+          setAccountAvatar(accountData.avatar ?? accountAvatar);
+        }
+
+        if (settingsData) {
+          if (settingsData.notifications !== undefined) setNotif(settingsData.notifications);
+          if (settingsData.sounds !== undefined) setSounds(settingsData.sounds);
+          if (settingsData.private_profile !== undefined) setPrivateProfile(settingsData.private_profile);
+          if (settingsData.location_sharing !== undefined) setLocationSharing(settingsData.location_sharing);
+        }
+      } catch {
+        // empty data is normal
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchData();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleLogout = async () => {
+    await logout().catch(() => {});
+    navigate("/login");
+  };
 
   return (
     <>
@@ -190,14 +235,14 @@ export function Settings() {
                 boxShadow: "0 4px 12px var(--neu-glow)",
               }}>
               <img
-                src="https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200"
+                src={accountAvatar}
                 alt="Avatar"
                 className="w-full h-full object-cover"
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[15px] tracking-tight" style={{ color: "var(--neu-text)" }}>鹿鸣</p>
-              <p className="text-[11px] mt-0.5" style={{ color: "var(--neu-text-muted)" }}>@lumos.xz · luming@example.com</p>
+              <p className="text-[15px] tracking-tight" style={{ color: "var(--neu-text)" }}>{accountName || "用户"}</p>
+              <p className="text-[11px] mt-0.5" style={{ color: "var(--neu-text-muted)" }}>{accountHandle}{accountEmail ? ` · ${accountEmail}` : ""}</p>
             </div>
             <ChevronRight style={{ width: 15, height: 15, color: "var(--neu-text-muted)", flexShrink: 0 }} strokeWidth={1.5} />
           </motion.button>
@@ -258,6 +303,7 @@ export function Settings() {
         <div className="mt-5">
           <motion.button
             whileTap={hover.tap as any}
+            onClick={handleLogout}
             className="flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] w-full outline-none neu-surface-flat"
             style={{ color: "var(--neu-accent-primary)" }}
           >

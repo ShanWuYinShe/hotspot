@@ -706,7 +706,7 @@ func (r *PostgresRepository) GetReportHandleRecord(ctx context.Context, reportID
 	return record, true, nil
 }
 
-func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, action ReportHandleAction, note string, handledBy *UserInfo) (AdminReportItem, bool, error) {
+func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, action ReportAction, note string, handledBy *UserInfo) (AdminReportItem, bool, error) {
 	queryable, ok := r.queryable()
 	if !ok {
 		return AdminReportItem{}, false, persistence.ErrNotImplemented
@@ -717,11 +717,11 @@ func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, 
 	}
 	status := ReportStatusReviewing
 	switch action {
-	case ReportHandleResolve:
+	case ReportActionResolve:
 		status = ReportStatusResolved
-	case ReportHandleDismiss:
+	case ReportActionDismiss:
 		status = ReportStatusDismissed
-	case ReportHandleEscalate:
+	case ReportActionEscalate:
 		status = ReportStatusEscalated
 	}
 	now := time.Now().UTC()

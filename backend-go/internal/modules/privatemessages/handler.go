@@ -139,38 +139,56 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-func (h *Handler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
-	var req MarkPrivateMessagesReadRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetUserID == "" {
-		logBusinessError(r, "MarkAsRead", 10000, "参数错误")
+// MarkRead is the unified mark_read endpoint for private messages. It replaces
+// the legacy /me/mark_as_read and /me/mark_all_read endpoints. scope selects
+// the operation: "all" clears every unread private message for the caller;
+// "session" (the default) marks messages from target_user_id as read (up to
+// the optional up_to_message_id).
+func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
+	var req MarkPrivateReadRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		logBusinessError(r, "MarkRead", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if err := h.service.MarkAsRead(r.Context(), req); err != nil {
-		if errors.Is(err, ErrMessageNotFound) {
-			logBusinessError(r, "MarkAsRead", 10300, "消息不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "消息不存在"))
+	scope := req.Scope
+	if scope == "" {
+		scope = "session"
+	}
+	switch scope {
+	case "all":
+		if err := h.service.MarkAllRead(r.Context()); err != nil {
+			logServerError(r, "MarkRead", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 			return
 		}
-		logServerError(r, "MarkAsRead", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
-}
-
-func (h *Handler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
-	if err := httpx.RequireEmptyObject(r); err != nil {
-		logBusinessError(r, "MarkAllRead", err.Code, err.Message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+	case "session":
+		if req.TargetUserID == "" {
+			logBusinessError(r, "MarkRead", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			return
+		}
+		if err := h.service.MarkAsRead(r.Context(), MarkPrivateMessagesReadRequest{
+			TargetUserID:  req.TargetUserID,
+			UpToMessageID: req.UpToMessageID,
+		}); err != nil {
+			if errors.Is(err, ErrMessageNotFound) {
+				logBusinessError(r, "MarkRead", 10300, "消息不存在")
+				httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "消息不存在"))
+				return
+			}
+			logServerError(r, "MarkRead", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 		return
+	default:
+		logBusinessError(r, "MarkRead", 10000, "参数错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 	}
-	if err := h.service.MarkAllRead(r.Context()); err != nil {
-		logServerError(r, "MarkAllRead", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
 func isValidSendRequest(req SendPrivateMessageRequest) bool {

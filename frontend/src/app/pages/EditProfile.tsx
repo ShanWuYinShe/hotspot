@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, Camera, MapPin, Link, User, FileText, Check } from "lucide-react";
 import { ActionIconButton } from "../components/shared/ActionIconButton";
 import { motion, AnimatePresence } from "motion/react";
+import { getAccount, updateAccount } from "../../api";
 
 const AVATAR = "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=400";
 const BANNER = "https://images.unsplash.com/photo-1759734282634-b4958ea9a6e0?w=1080";
@@ -56,17 +57,62 @@ function InputRow({
 
 export function EditProfile() {
   const navigate = useNavigate();
-  const [name,     setName]     = useState("鹿鸣");
-  const [handle,   setHandle]   = useState("elara.v");
-  const [bio,      setBio]      = useState("触感思考者 · 在流动中寻觅静止");
-  const [location, setLocation] = useState("江苏·徐州");
+  const [name,     setName]     = useState("");
+  const [handle,   setHandle]   = useState("");
+  const [bio,      setBio]      = useState("");
+  const [location, setLocation] = useState("");
   const [website,  setWebsite]  = useState("");
-  const [tags,     setTags]     = useState<Set<string>>(new Set(["摄影", "旅行"]));
+  const [tags,     setTags]     = useState<Set<string>>(new Set());
   const [saved,    setSaved]    = useState(false);
+  const [avatar,   setAvatar]   = useState(AVATAR);
+  const [banner,   setBanner]   = useState(BANNER);
+  const [loading,  setLoading]  = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchAccount() {
+      try {
+        setLoading(true);
+        const res = await getAccount().catch(() => ({ code: -1, data: null }));
+        if (cancelled) return;
+        const data = (res.code === 0 ? res.data : null) as any;
+        if (data) {
+          setName(data.name ?? data.nickname ?? "");
+          setHandle((data.handle ?? data.username ?? "").replace("@", ""));
+          setBio(data.bio ?? data.description ?? "");
+          setLocation(data.location ?? data.place ?? "");
+          setWebsite(data.website ?? data.url ?? "");
+          setAvatar(data.avatar ?? AVATAR);
+          setBanner(data.banner ?? data.cover ?? BANNER);
+          if (data.tags) {
+            setTags(new Set(data.tags));
+          }
+        }
+      } catch {
+        // empty data is normal
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchAccount();
+    return () => { cancelled = true; };
+  }, []);
 
   const toggleTag = (t: string) => setTags(prev => { const n = new Set(prev); n.has(t) ? n.delete(t) : n.add(t); return n; });
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    try {
+      await updateAccount({
+        name,
+        handle,
+        bio,
+        location,
+        website,
+        tags: Array.from(tags),
+      });
+    } catch {
+      // ignore save error
+    }
     setSaved(true);
     setTimeout(() => { setSaved(false); navigate(-1); }, 800);
   };
@@ -101,7 +147,7 @@ export function EditProfile() {
 
         {/* Avatar section */}
         <div className="relative rounded-[24px] overflow-hidden" style={{ height: "clamp(120px, 18vw, 160px)" }}>
-          <img src={BANNER} alt="banner" className="absolute inset-0 w-full h-full object-cover" />
+          <img src={banner} alt="banner" className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.5))" }} />
           <motion.button whileTap={{ scale: 0.9 }}
             className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
@@ -116,7 +162,7 @@ export function EditProfile() {
           <div className="relative flex-shrink-0">
             <div className="rounded-[22px] overflow-hidden"
               style={{ width: 72, height: 72, border: "3px solid var(--neu-bg)", boxShadow: "0 6px 20px rgba(0,0,0,0.22)" }}>
-              <img src={AVATAR} alt="avatar" className="w-full h-full object-cover" />
+              <img src={avatar} alt="avatar" className="w-full h-full object-cover" />
             </div>
             <motion.button whileTap={{ scale: 0.9 }}
               className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"

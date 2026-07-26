@@ -272,7 +272,7 @@ func (r *PostgresRepository) loadMomentCandidates(ctx context.Context, queryable
 			SharesCount:   sharesCount,
 			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
 				Location:      RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
-			MyState:       &MyMomentState{IsLiked: isLiked, IsFavorited: isFavorited},
+			MyState:       &MyMomentState{IsFavorited: isFavorited},
 		}
 		reasonType := "trending"
 		switch query.Source {
@@ -402,7 +402,7 @@ func loadTrendingMoments(ctx context.Context, queryable persistence.QueryableDB,
 			SharesCount:    sharesCount,
 			User:           UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
 			Location:       RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName},
-			MyState:        &MyMomentState{IsLiked: isLiked, IsFavorited: isFavorited},
+			MyState:        &MyMomentState{IsFavorited: isFavorited},
 			Recommendation: &RecommendationContext{Type: "trending"},
 		}
 		items = append(items, momentCandidate{Item: item, Score: likesCount + commentsCount + sharesCount, CreatedAt: createdAt.UTC()})

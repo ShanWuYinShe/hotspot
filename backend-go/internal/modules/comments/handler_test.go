@@ -15,22 +15,16 @@ import (
 // --- stub repo ---
 
 type stubCommentRepo struct {
-	created     CommentItem
-	createErr   error
-	deleteErr   error
-	listResult  PaginatedComments
-	listErr     error
-	getResult   CommentItem
-	getFound    bool
-	getErr      error
-	repliesRes  PaginatedComments
-	repliesErr  error
-	likeNew     bool
-	likeErr     error
-	unlikeErr   error
-	likesRes    []CommentLikeItem
-	likesCursor string
-	likesErr    error
+	created    CommentItem
+	createErr  error
+	deleteErr  error
+	listResult PaginatedComments
+	listErr    error
+	getResult  CommentItem
+	getFound   bool
+	getErr     error
+	repliesRes PaginatedComments
+	repliesErr error
 }
 
 func (r *stubCommentRepo) Create(_ context.Context, _ string, _ CreateCommentRequest) (CommentItem, error) {
@@ -48,15 +42,6 @@ func (r *stubCommentRepo) ListReplies(_ context.Context, _ string, _ int, _ stri
 }
 func (r *stubCommentRepo) ListTopRepliesByParentIDs(_ context.Context, _ []string, _ int) (map[string][]CommentItem, error) {
 	return map[string][]CommentItem{}, nil
-}
-func (r *stubCommentRepo) Like(_ context.Context, _ string, _ string) (bool, error) {
-	return r.likeNew, r.likeErr
-}
-func (r *stubCommentRepo) Unlike(_ context.Context, _ string, _ string) error {
-	return r.unlikeErr
-}
-func (r *stubCommentRepo) ListLikes(_ context.Context, _ string, _ int, _ string) ([]CommentLikeItem, string, error) {
-	return r.likesRes, r.likesCursor, r.likesErr
 }
 
 // --- stub moment provider ---
@@ -95,9 +80,6 @@ func (p *stubMomentProvider) NotificationContext(_ context.Context, _ string) (M
 type stubNotifWriter struct{}
 
 func (s *stubNotifWriter) AppendMomentCommented(_ context.Context, _ string, _ map[string]any, _ string, _ map[string]any, _, _ string) error {
-	return nil
-}
-func (s *stubNotifWriter) AppendCommentLiked(_ context.Context, _ string, _ map[string]any, _, _, _ string, _ map[string]any) error {
 	return nil
 }
 func (s *stubNotifWriter) AppendCommentReply(_ context.Context, _ string, _ map[string]any, _ string, _ map[string]any, _, _, _, _ string) error {
@@ -380,74 +362,6 @@ func TestHandlerDeletePropagatesError(t *testing.T) {
 	assertCode(t, rr, 10600)
 }
 
-// --- Like tests ---
-
-func TestHandlerLikeHappyPath(t *testing.T) {
-	repo := &stubCommentRepo{getResult: CommentItem{CommentID: "c1", MomentID: "m1", User: UserInfo{UserID: "u2"}}, getFound: true, likeNew: true}
-	handler := newTestHandler(repo, defaultMoments())
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1"}`))
-	req = withAuth(req, "u1")
-
-	handler.Like(rr, req)
-	assertCode(t, rr, 0)
-}
-
-func TestHandlerLikeRejectsNotFound(t *testing.T) {
-	repo := &stubCommentRepo{getFound: false}
-	handler := newTestHandler(repo, defaultMoments())
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1"}`))
-	req = withAuth(req, "u1")
-
-	handler.Like(rr, req)
-	assertCode(t, rr, 10300)
-}
-
-func TestHandlerLikeRejectsInvalidJSON(t *testing.T) {
-	handler := newTestHandler(&stubCommentRepo{}, defaultMoments())
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{bad`))
-	req = withAuth(req, "u1")
-
-	handler.Like(rr, req)
-	assertCode(t, rr, 10000)
-}
-
-// --- Unlike tests ---
-
-func TestHandlerUnlikeHappyPath(t *testing.T) {
-	repo := &stubCommentRepo{getResult: CommentItem{CommentID: "c1"}, getFound: true}
-	handler := newTestHandler(repo, defaultMoments())
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1"}`))
-	req = withAuth(req, "u1")
-
-	handler.Unlike(rr, req)
-	assertCode(t, rr, 0)
-}
-
-func TestHandlerUnlikeRejectsNotFound(t *testing.T) {
-	repo := &stubCommentRepo{getFound: false}
-	handler := newTestHandler(repo, defaultMoments())
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1"}`))
-	req = withAuth(req, "u1")
-
-	handler.Unlike(rr, req)
-	assertCode(t, rr, 10300)
-}
-
-func TestHandlerUnlikeRejectsInvalidJSON(t *testing.T) {
-	handler := newTestHandler(&stubCommentRepo{}, defaultMoments())
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{bad`))
-	req = withAuth(req, "u1")
-
-	handler.Unlike(rr, req)
-	assertCode(t, rr, 10000)
-}
-
 // --- ListReplies tests ---
 
 func TestHandlerListRepliesHappyPath(t *testing.T) {
@@ -485,62 +399,6 @@ func TestHandlerListRepliesRejectsInvalidJSON(t *testing.T) {
 	req = withAuth(req, "u1")
 
 	handler.ListReplies(rr, req)
-	assertCode(t, rr, 10000)
-}
-
-// --- ListLikes tests ---
-
-func TestHandlerListLikesHappyPath(t *testing.T) {
-	repo := &stubCommentRepo{getResult: CommentItem{CommentID: "c1"}, getFound: true, likesRes: []CommentLikeItem{{User: UserInfo{UserID: "u2"}, LikedAt: "2025-01-01T00:00:00Z"}}, likesCursor: "next"}
-	handler := newTestHandler(repo, defaultMoments())
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1"}`))
-	req = withAuth(req, "u1")
-
-	handler.ListLikes(rr, req)
-	resp := decodeResponse[PaginatedCommentLikes](t, rr)
-	if resp.Code != 0 {
-		t.Fatalf("expected success, got code %d", resp.Code)
-	}
-	if len(resp.Data.Items) != 1 {
-		t.Fatalf("expected 1 item, got %d", len(resp.Data.Items))
-	}
-}
-
-func TestHandlerListLikesRejectsNotFound(t *testing.T) {
-	repo := &stubCommentRepo{getFound: false}
-	handler := newTestHandler(repo, defaultMoments())
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1"}`))
-	req = withAuth(req, "u1")
-
-	handler.ListLikes(rr, req)
-	assertCode(t, rr, 10300)
-}
-
-func TestHandlerListLikesRejectsInvalidJSON(t *testing.T) {
-	handler := newTestHandler(&stubCommentRepo{}, defaultMoments())
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{bad`))
-	req = withAuth(req, "u1")
-
-	handler.ListLikes(rr, req)
-	assertCode(t, rr, 10000)
-}
-
-// TestHandlerListLikesMapsInvalidCursorToParamError verifies that a
-// malformed pagination cursor (returned by the repo as ErrInvalidCursor)
-// is mapped to code 10000 (parameter error) rather than the catch-all
-// 10600 (service unavailable). The cursor is opaque client state, so a
-// decode failure is a client-side problem, not a server fault.
-func TestHandlerListLikesMapsInvalidCursorToParamError(t *testing.T) {
-	repo := &stubCommentRepo{getResult: CommentItem{CommentID: "c1"}, getFound: true, likesErr: ErrInvalidCursor}
-	handler := newTestHandler(repo, defaultMoments())
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1","cursor":"@@malformed@@"}`))
-	req = withAuth(req, "u1")
-
-	handler.ListLikes(rr, req)
 	assertCode(t, rr, 10000)
 }
 
@@ -615,4 +473,42 @@ func TestDecodeCommentCursorAcceptsValid(t *testing.T) {
 	if v == nil {
 		t.Fatal("expected non-nil parsed timestamp")
 	}
+}
+
+func TestHandlerGetDetailHappyPath(t *testing.T) {
+	repo := &stubCommentRepo{
+		getResult: CommentItem{CommentID: "c1", Content: "hello"},
+		getFound:  true,
+	}
+	handler := newTestHandler(repo, defaultMoments())
+	rr := httptest.NewRecorder()
+	req := withAuth(httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"c1"}`)), "u1")
+
+	handler.GetDetail(rr, req)
+	resp := decodeResponse[CommentItem](t, rr)
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+	if resp.Data.CommentID != "c1" {
+		t.Fatalf("expected c1, got %s", resp.Data.CommentID)
+	}
+}
+
+func TestHandlerGetDetailMapsNotFoundTo10300(t *testing.T) {
+	repo := &stubCommentRepo{getFound: false}
+	handler := newTestHandler(repo, defaultMoments())
+	rr := httptest.NewRecorder()
+	req := withAuth(httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"missing"}`)), "u1")
+
+	handler.GetDetail(rr, req)
+	assertCode(t, rr, 10300)
+}
+
+func TestHandlerGetDetailRejectsMissingCommentID(t *testing.T) {
+	handler := newTestHandler(&stubCommentRepo{}, defaultMoments())
+	rr := httptest.NewRecorder()
+	req := withAuth(httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{}`)), "u1")
+
+	handler.GetDetail(rr, req)
+	assertCode(t, rr, 10000)
 }

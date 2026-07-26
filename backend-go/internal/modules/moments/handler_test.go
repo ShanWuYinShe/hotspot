@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"hotspot/backend-go/internal/modules/comments"
-	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/modules/notify"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -96,7 +96,7 @@ func TestCreateOpenAndListMoment(t *testing.T) {
 	openRR := httptest.NewRecorder()
 	handler.OpenTheDoor(openRR, openReq)
 
-	listReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{}`))
+	listReq := httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`))
 	listReq = listReq.WithContext(ctx)
 	listRR := httptest.NewRecorder()
 	handler.ListMine(listRR, listReq)
@@ -157,7 +157,7 @@ func TestCreateCommentDoesNotIncrementMomentCountWhenCounterFails(t *testing.T) 
 	momentService := NewServiceWithRepo(momentRepo)
 	counter := &failingMomentCounter{repo: momentRepo, failErr: errors.New("update failed")}
 	commentRepo := comments.NewInMemoryRepository()
-	commentService := comments.NewServiceWithDeps(commentRepo, counter, notifications.NewService(), nil, nil, persistence.NewMemoryTxRunner())
+	commentService := comments.NewServiceWithDeps(commentRepo, counter, notify.NewService(), nil, nil, persistence.NewMemoryTxRunner())
 	commentHandler := comments.NewHandler(commentService)
 	momentHandler := NewHandler(momentService)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
@@ -243,110 +243,11 @@ func TestCreateMomentRecordsResourceGuard(t *testing.T) {
 	}
 }
 
-func TestLikeMomentSendsRealtimeAndNotificationToAuthor(t *testing.T) {
-	hub := realtime.NewHub()
-	realtime.SetDefaultHub(hub)
-	notificationRepo := notifications.NewInMemoryRepository()
-	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo), nil)
-	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	ctxBob := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"})
-	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}})
-	if err != nil {
-		t.Fatalf("create moment: %v", err)
-	}
-	aliceSink := &sinkCapture{}
-	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
-
-	if err := service.Like(ctxBob, created.MomentID); err != nil {
-		t.Fatalf("like moment: %v", err)
-	}
-	if len(aliceSink.events) != 1 {
-		t.Fatalf("expected one event, got %#v", aliceSink.events)
-	}
-	if aliceSink.events[0].Type != "MomentLiked" {
-		t.Fatalf("unexpected event type: %#v", aliceSink.events)
-	}
-	payload, ok := aliceSink.events[0].Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("unexpected payload type: %#v", aliceSink.events[0].Payload)
-	}
-	if payload["moment_id"] != created.MomentID {
-		t.Fatalf("unexpected payload: %#v", payload)
-	}
-	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
-	if err != nil {
-		t.Fatalf("list notifications: %v", err)
-	}
-	if len(notificationsPage.Items) != 1 || notificationsPage.Items[0].Type != "moment_liked" {
-		t.Fatalf("unexpected notifications page: %#v", notificationsPage)
-	}
-}
-
-func TestLikeMomentSkipsSelfNotification(t *testing.T) {
-	hub := realtime.NewHub()
-	realtime.SetDefaultHub(hub)
-	notificationRepo := notifications.NewInMemoryRepository()
-	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo), nil)
-	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}})
-	if err != nil {
-		t.Fatalf("create moment: %v", err)
-	}
-	aliceSink := &sinkCapture{}
-	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
-
-	if err := service.Like(ctxAlice, created.MomentID); err != nil {
-		t.Fatalf("like own moment: %v", err)
-	}
-	if len(aliceSink.events) != 0 {
-		t.Fatalf("expected no self event, got %#v", aliceSink.events)
-	}
-	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
-	if err != nil {
-		t.Fatalf("list notifications: %v", err)
-	}
-	if len(notificationsPage.Items) != 0 {
-		t.Fatalf("expected no self notifications, got %#v", notificationsPage)
-	}
-}
-
-func TestLikeMomentDeduplicatesRepeatedLike(t *testing.T) {
-	hub := realtime.NewHub()
-	realtime.SetDefaultHub(hub)
-	notificationRepo := notifications.NewInMemoryRepository()
-	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo), nil)
-	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	ctxBob := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"})
-	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}})
-	if err != nil {
-		t.Fatalf("create moment: %v", err)
-	}
-	aliceSink := &sinkCapture{}
-	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
-
-	if err := service.Like(ctxBob, created.MomentID); err != nil {
-		t.Fatalf("first like: %v", err)
-	}
-	if err := service.Like(ctxBob, created.MomentID); err != nil {
-		t.Fatalf("second like: %v", err)
-	}
-	if len(aliceSink.events) != 1 {
-		t.Fatalf("expected one event, got %#v", aliceSink.events)
-	}
-	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
-	if err != nil {
-		t.Fatalf("list notifications: %v", err)
-	}
-	if len(notificationsPage.Items) != 1 || notificationsPage.Items[0].Type != "moment_liked" {
-		t.Fatalf("expected one moment_liked notification, got %#v", notificationsPage)
-	}
-}
-
 func TestCreateMomentSendsMentionNotificationsAndRealtime(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
-	notificationRepo := notifications.NewInMemoryRepository()
-	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo), nil)
+	notificationRepo := notify.NewInMemoryRepository()
+	service := NewServiceWithDeps(NewInMemoryRepository(), notify.NewServiceWithRepo(notificationRepo), nil)
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	bobSink := &sinkCapture{}
 	hub.RegisterUser("user_bob", "sess_bob", bobSink)
@@ -368,7 +269,7 @@ func TestCreateMomentSendsMentionNotificationsAndRealtime(t *testing.T) {
 	if payload["target_type"] != "moment" || payload["moment_id"] != created.MomentID {
 		t.Fatalf("unexpected realtime payload: %#v", payload)
 	}
-	notificationsPage, err := notificationRepo.List(context.Background(), "user_bob", notifications.NotificationListRequest{})
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_bob", notify.NotificationListRequest{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
 	}
@@ -380,8 +281,8 @@ func TestCreateMomentSendsMentionNotificationsAndRealtime(t *testing.T) {
 func TestUpdateMomentReplacesMentionNotificationsAndState(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
-	notificationRepo := notifications.NewInMemoryRepository()
-	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo), nil)
+	notificationRepo := notify.NewInMemoryRepository()
+	service := NewServiceWithDeps(NewInMemoryRepository(), notify.NewServiceWithRepo(notificationRepo), nil)
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	bobSink := &sinkCapture{}
 	carolSink := &sinkCapture{}
@@ -402,7 +303,7 @@ func TestUpdateMomentReplacesMentionNotificationsAndState(t *testing.T) {
 	if len(carolSink.events) != 1 || carolSink.events[0].Type != "MessageMentioned" {
 		t.Fatalf("unexpected carol events: %#v", carolSink.events)
 	}
-	carolNotifications, err := notificationRepo.List(context.Background(), "user_carol", notifications.NotificationListRequest{})
+	carolNotifications, err := notificationRepo.List(context.Background(), "user_carol", notify.NotificationListRequest{})
 	if err != nil {
 		t.Fatalf("list carol notifications: %v", err)
 	}
@@ -876,91 +777,7 @@ func TestMomentHandlerDeleteReturnsSuccess(t *testing.T) {
 	}
 }
 
-// --- Like/Unlike/Favorite/Unfavorite handler tests ---
-
-func TestMomentHandlerLikeRejectsMissingMomentID(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
-	req := httptest.NewRequest(http.MethodPost, "/like", strings.NewReader(`{}`))
-	rr := httptest.NewRecorder()
-	handler.Like(rr, req)
-	assertMomentCode(t, rr, 10000)
-}
-
-func TestMomentHandlerLikeReturnsSuccess(t *testing.T) {
-	repo := NewInMemoryRepository()
-	handler := NewHandler(NewServiceWithRepo(repo))
-	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"})
-
-	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Here"}})
-	if err != nil {
-		t.Fatalf("create moment: %v", err)
-	}
-
-	req := httptest.NewRequest(http.MethodPost, "/like", strings.NewReader(`{"moment_id":"`+created.MomentID+`"}`))
-	req = req.WithContext(ctx)
-	rr := httptest.NewRecorder()
-	handler.Like(rr, req)
-
-	var resp struct {
-		Code int `json:"code"`
-	}
-	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if resp.Code != 0 {
-		t.Fatalf("expected code 0, got %d", resp.Code)
-	}
-}
-
-func TestMomentHandlerUnlikeRejectsMissingMomentID(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
-	req := httptest.NewRequest(http.MethodPost, "/unlike", strings.NewReader(`{}`))
-	rr := httptest.NewRecorder()
-	handler.Unlike(rr, req)
-	assertMomentCode(t, rr, 10000)
-}
-
-func TestMomentHandlerUnlikeReturnsSuccess(t *testing.T) {
-	repo := NewInMemoryRepository()
-	handler := NewHandler(NewServiceWithRepo(repo))
-	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"})
-
-	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Here"}})
-	if err != nil {
-		t.Fatalf("create moment: %v", err)
-	}
-
-	// 先点赞
-	likeReq := httptest.NewRequest(http.MethodPost, "/like", strings.NewReader(`{"moment_id":"`+created.MomentID+`"}`))
-	likeReq = likeReq.WithContext(ctx)
-	likeRR := httptest.NewRecorder()
-	handler.Like(likeRR, likeReq)
-
-	// 再取消点赞
-	req := httptest.NewRequest(http.MethodPost, "/unlike", strings.NewReader(`{"moment_id":"`+created.MomentID+`"}`))
-	req = req.WithContext(ctx)
-	rr := httptest.NewRecorder()
-	handler.Unlike(rr, req)
-
-	var resp struct {
-		Code int `json:"code"`
-	}
-	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if resp.Code != 0 {
-		t.Fatalf("expected code 0, got %d", resp.Code)
-	}
-
-	// 验证 likes_count 回到 0
-	item, ok, _ := repo.Get(ctx, created.MomentID)
-	if !ok {
-		t.Fatal("moment should exist")
-	}
-	if item.LikesCount != 0 {
-		t.Fatalf("expected likes_count=0, got %d", item.LikesCount)
-	}
-}
+// --- Favorite/Unfavorite handler tests ---
 
 func TestMomentHandlerFavoriteRejectsMissingMomentID(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
@@ -980,7 +797,7 @@ func TestMomentHandlerFavoriteReturnsSuccess(t *testing.T) {
 		t.Fatalf("create moment: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`"}`))
+	req := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`","active":true}`))
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Favorite(rr, req)
@@ -998,9 +815,9 @@ func TestMomentHandlerFavoriteReturnsSuccess(t *testing.T) {
 
 func TestMomentHandlerUnfavoriteRejectsMissingMomentID(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
-	req := httptest.NewRequest(http.MethodPost, "/unfavorite", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"active":false}`))
 	rr := httptest.NewRecorder()
-	handler.Unfavorite(rr, req)
+	handler.Favorite(rr, req)
 	assertMomentCode(t, rr, 10000)
 }
 
@@ -1015,16 +832,16 @@ func TestMomentHandlerUnfavoriteReturnsSuccess(t *testing.T) {
 	}
 
 	// 先收藏
-	favReq := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`"}`))
+	favReq := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`","active":true}`))
 	favReq = favReq.WithContext(ctx)
 	favRR := httptest.NewRecorder()
 	handler.Favorite(favRR, favReq)
 
 	// 再取消收藏
-	req := httptest.NewRequest(http.MethodPost, "/unfavorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`"}`))
+	req := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`","active":false}`))
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
-	handler.Unfavorite(rr, req)
+	handler.Favorite(rr, req)
 
 	var resp struct {
 		Code int `json:"code"`
@@ -1037,55 +854,7 @@ func TestMomentHandlerUnfavoriteReturnsSuccess(t *testing.T) {
 	}
 }
 
-// --- ListLikes/ListFavorites handler tests ---
-
-func TestMomentHandlerListLikesRejectsMissingMomentID(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
-	req := httptest.NewRequest(http.MethodPost, "/list_likes", strings.NewReader(`{}`))
-	rr := httptest.NewRecorder()
-	handler.ListLikes(rr, req)
-	assertMomentCode(t, rr, 10000)
-}
-
-func TestMomentHandlerListLikesReturnsSuccess(t *testing.T) {
-	repo := NewInMemoryRepository()
-	handler := NewHandler(NewServiceWithRepo(repo))
-	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	ctxBob := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"})
-
-	created, err := repo.Create(ctxAlice, "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Here"}})
-	if err != nil {
-		t.Fatalf("create moment: %v", err)
-	}
-
-	// Bob 点赞
-	likeReq := httptest.NewRequest(http.MethodPost, "/like", strings.NewReader(`{"moment_id":"`+created.MomentID+`"}`))
-	likeReq = likeReq.WithContext(ctxBob)
-	likeRR := httptest.NewRecorder()
-	handler.Like(likeRR, likeReq)
-
-	// 列出点赞
-	req := httptest.NewRequest(http.MethodPost, "/list_likes", strings.NewReader(`{"moment_id":"`+created.MomentID+`"}`))
-	rr := httptest.NewRecorder()
-	handler.ListLikes(rr, req)
-
-	var resp struct {
-		Code int            `json:"code"`
-		Data PaginatedLikes `json:"data"`
-	}
-	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if resp.Code != 0 {
-		t.Fatalf("expected code 0, got %d", resp.Code)
-	}
-	if len(resp.Data.Items) != 1 {
-		t.Fatalf("expected 1 like item, got %d", len(resp.Data.Items))
-	}
-	if resp.Data.Items[0].User.UserID != "user_bob" {
-		t.Fatalf("expected user_bob, got %s", resp.Data.Items[0].User.UserID)
-	}
-}
+// --- ListFavorites handler tests ---
 
 func TestMomentHandlerListFavoritesReturnsSuccess(t *testing.T) {
 	repo := NewInMemoryRepository()
@@ -1098,7 +867,7 @@ func TestMomentHandlerListFavoritesReturnsSuccess(t *testing.T) {
 	}
 
 	// Alice 收藏自己的 moment
-	favReq := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`"}`))
+	favReq := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`","active":true}`))
 	favReq = favReq.WithContext(ctxAlice)
 	favRR := httptest.NewRecorder()
 	handler.Favorite(favRR, favReq)
@@ -1216,13 +985,8 @@ func (r *errorRepo) Exists(context.Context, string) (bool, error)        { retur
 func (r *errorRepo) IncrementCommentCount(context.Context, string) error { return nil }
 func (r *errorRepo) DecrementCommentCount(context.Context, string) error { return nil }
 func (r *errorRepo) IncrementSharesCount(context.Context, string) error  { return nil }
-func (r *errorRepo) Like(context.Context, string, string) (bool, error)  { return false, nil }
-func (r *errorRepo) Unlike(context.Context, string, string) error        { return nil }
 func (r *errorRepo) Favorite(context.Context, string, string) error      { return nil }
 func (r *errorRepo) Unfavorite(context.Context, string, string) error    { return nil }
-func (r *errorRepo) ListLikes(context.Context, string, int, string) ([]LikeItem, string, error) {
-	return nil, "", nil
-}
 func (r *errorRepo) ListFavorites(context.Context, string, int, string) (PaginatedMoments, error) {
 	return PaginatedMoments{}, nil
 }

@@ -39,6 +39,8 @@
 | | `GroupApplicationReceived` | 推送给群主/管理员，告知有新的入群申请 |
 | | `GroupApplicationResponse` | 推送给申请加入群的用户，告知申请被接受 |
 | **用户** | `UserProfileUpdated` | 推送给正在与其私聊的对端以及其当前所在群聊的订阅者 |
+| **举报** | `ReportResolved` | 推送给举报人，告知举报已被处理 |
+| | `ReportDismissed` | 推送给举报人，告知举报已被驳回 |
 | **系统** | `SystemAnnouncement` | 推送给所有在线连接的系统公告 |
 | | `AccountBanned` | 推送给被封禁账号的当前连接，客户端收到后应立即登出 |
 
@@ -154,7 +156,7 @@ WebSocket close code 受 RFC 6455 约束（范围 1000-4999），应用层错误
 HTTP API 返回的数据可能与 WebSocket 推送的事件重复（resume 续传或补拉都可能产生）。去重方式按资源主键执行（参见 `api_spec_base.md`）：
 
 - **持久化事件**：去重规则分两类：
-  - **通知类事件**（关注/瞬间互动/群邀请申请/系统公告/reaction）：payload 携带 `notification_id`，客户端按 `notification_id` 去重——它与 HTTP `notifications/list` 返回的 `NotificationItem.notification_id` 为同一主键（见 api_spec_notification.md）。
+  - **通知类事件**（关注/瞬间互动/群邀请申请/系统公告/reaction）：payload 携带 `notification_id`，客户端按 `notification_id` 去重——它与 HTTP `notify/list` 返回的 `NotifyItem.notification_id` 为同一主键（见 api_spec_notify.md）。
   - **其它持久化事件**（消息等）：按业务主键或稳定组合键去重（如 `message_id`、`comment_id`）。resume 续传的事件携带单调递增的 `server_seq`，客户端也可按 seq 去重。
 - **状态快照事件**：直接覆盖（保留最新状态），无需去重。
 
@@ -280,6 +282,8 @@ type ServerEventType =
   | "GroupApplicationReceived" | "GroupApplicationCancelled" | "GroupApplicationExpired" | "GroupApplicationRejected" | "GroupApplicationResponse"
   | "GroupAnnouncementCreated"
   | "GroupUpdated" | "GroupDismissed"
+  // 举报
+  | "ReportResolved" | "ReportDismissed"      // 管理员处理举报后推送给举报人
   // 用户
   | "UserProfileUpdated"
   // 系统
@@ -425,12 +429,12 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
 // FollowSource 定义于 api_spec_types.md
 
 // 命名约定：
-// - actor: 执行操作的人（如关注者、点赞者、评论者），与 NotificationPayload.actor 语义一致
+// - actor: 执行操作的人（如关注者、点赞者、评论者），与 NotifyPayload.actor 语义一致
 // - user: 事件主体（如加入群的人、被操作的人），不一定是操作发起者
 //
 // 持久化通知类事件统一携带 notification_id：
-// - 下列"关注/瞬间互动/群邀请申请/系统公告"事件均会落库为通知记录（见 api_spec_notification.md）
-// - payload 首字段 notification_id 与 HTTP notifications/list 返回的 NotificationItem.notification_id 为同一主键
+// - 下列"关注/瞬间互动/群邀请申请/系统公告"事件均会落库为通知记录（见 api_spec_notify.md）
+// - payload 首字段 notification_id 与 HTTP notify/list 返回的 NotifyItem.notification_id 为同一主键
 // - 客户端据此在 WS 实时路径与 HTTP 补拉路径间精确去重（按 notification_id），无需依赖业务组合键
 // - 与瞬时状态事件（UserOnline/Typing 等，无 notification_id）形成明确区分
 
@@ -458,10 +462,10 @@ type MutualFollowEvent = { type: "MutualFollow"; payload: MutualFollowPayload; }
 // MomentSummary 定义于 api_spec_types.md
 
 // 表情反应（统一 message/moment/comment 三类目标）
-// ReactionTargetType / Reaction 定义于 api_spec_types.md
+// ReactTarget / Reaction 定义于 api_spec_types.md
 interface ReactionAddedPayload {
   notification_id: string;          // 仅当 actor ≠ 资源作者时携带（自我反应不通知）；自反应时省略
-  target_type: ReactionTargetType;  // 'message' | 'moment' | 'comment'
+  target_type: ReactTarget;  // 'message' | 'moment' | 'comment'
   target_id: string;                // message_id / moment_id / comment_id
   emoji: string;
   actor: UserInfo;
@@ -471,7 +475,7 @@ type ReactionAddedEvent = { type: "ReactionAdded"; payload: ReactionAddedPayload
 
 interface ReactionRemovedPayload {
   // 反应移除不产生通知（非持久化通知），无 notification_id
-  target_type: ReactionTargetType;
+  target_type: ReactTarget;
   target_id: string;
   emoji: string;
   actor: UserInfo;
@@ -730,7 +734,7 @@ interface GroupApplicationExpiredPayload {
 }
 type GroupApplicationExpiredEvent = { type: "GroupApplicationExpired"; payload: GroupApplicationExpiredPayload; };
 
-// 申请被群管理员拒绝 → 推送给申请人（对应 NotificationType='group_application_rejected'，含 reason）
+// 申请被群管理员拒绝 → 推送给申请人（对应 NotifyType='group_application_rejected'，含 reason）
 interface GroupApplicationRejectedPayload {
   notification_id: string;
   application_id: string;
@@ -741,9 +745,31 @@ interface GroupApplicationRejectedPayload {
 }
 type GroupApplicationRejectedEvent = { type: "GroupApplicationRejected"; payload: GroupApplicationRejectedPayload; };
 
-// 群公告发布：本质是持久化通知，补 notification_id 以支持与 notifications/list 去重
+// 举报处理结果（推送给举报人）
+// ReportTargetType 定义于 api_spec_types.md
+interface ReportResolvedPayload {
+  notification_id: string;
+  report_id: string;
+  target_type: ReportTargetType;
+  target_id: string;
+  resolved_at: string;
+  note?: string;               // 管理员处理说明（脱敏后，与 ReportItem.resolution.note 一致）
+}
+type ReportResolvedEvent = { type: "ReportResolved"; payload: ReportResolvedPayload; };
+
+interface ReportDismissedPayload {
+  notification_id: string;
+  report_id: string;
+  target_type: ReportTargetType;
+  target_id: string;
+  dismissed_at: string;
+  note?: string;               // 管理员处理说明（脱敏后）
+}
+type ReportDismissedEvent = { type: "ReportDismissed"; payload: ReportDismissedPayload; };
+
+// 群公告发布：本质是持久化通知，补 notification_id 以支持与 notify/list 去重
 interface GroupAnnouncementCreatedPayload {
-  notification_id: string;      // 与 notifications/list 的 NotificationItem.notification_id 同主键
+  notification_id: string;      // 与 notify/list 的 NotifyItem.notification_id 同主键
   announcement: GroupAnnouncementItem;
 }
 type GroupAnnouncementCreatedEvent = { type: "GroupAnnouncementCreated"; payload: GroupAnnouncementCreatedPayload; };
@@ -856,7 +882,7 @@ interface SystemAnnouncementPayload {
   announcement_id: string;
   title: string;
   content: string;
-  severity: AnnouncementSeverity;
+  severity: AnnounceLevel;
   action_url?: string;
   created_at: string;
 }

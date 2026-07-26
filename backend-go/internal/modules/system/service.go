@@ -9,8 +9,9 @@ import (
 )
 
 type Service struct {
-	repo     Repository
-	provider Provider
+	repo       Repository
+	provider   Provider
+	bootstrap  BootstrapResolver
 }
 
 func NewService(appConfig appconfig.Source) *Service {
@@ -60,3 +61,23 @@ func (s *Service) ListAnnouncements(ctx context.Context) (SystemAnnouncementList
 func (s *Service) GetClientConfig(ctx context.Context) ClientConfig {
 	return s.provider.GetClientConfig(ctx)
 }
+
+func (s *Service) Bootstrap(ctx context.Context, bootstrapResolver BootstrapResolver) BootstrapData {
+	bootstrapVersion := s.repo.GetMeta(ctx).Version
+	bd := BootstrapData{
+		BootstrapVersion: bootstrapVersion,
+		Meta:             s.GetMeta(ctx),
+		ClientConfig:     s.GetClientConfig(ctx),
+	}
+	if bootstrapResolver != nil {
+		if profile, ok := bootstrapResolver.ResolveProfile(ctx); ok {
+			bd.Profile = profile
+		}
+		summary := bootstrapResolver.ResolveUnreadSummary(ctx)
+		bd.UnreadSummary = &summary
+	}
+	return bd
+}
+
+func (s *Service) GetBootstrapResolver() BootstrapResolver { return s.bootstrap }
+func (s *Service) SetBootstrapResolver(r BootstrapResolver) { s.bootstrap = r }

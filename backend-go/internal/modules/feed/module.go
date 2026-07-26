@@ -12,12 +12,14 @@ import (
 )
 
 type Module struct {
-	handler *Handler
-}
+		handler *Handler
+		Service *Service
+	}
 
 func NewModule(factory *persistence.Factory, source appconfig.Source, imageResolver ImageResolver) *Module {
 	repo := NewPersistenceRepository(factory)
-	return &Module{handler: NewHandler(NewServiceWithSourceAndImages(repo, source, imageResolver))}
+	svc := NewServiceWithSourceAndImages(repo, source, imageResolver)
+	return &Module{handler: NewHandler(svc), Service: svc}
 }
 
 func (m *Module) Mount(r chi.Router) {
@@ -30,7 +32,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/list_moments", m.handler.ListMoments)
 			group.Post("/list_groups", m.handler.ListGroups)
 			group.Post("/list_users", m.handler.ListUsers)
-			group.Post("/me/dismiss", m.handler.Dismiss)
+			group.Post("/dismiss", m.handler.Dismiss)
 		})
 		feedRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.OptionalAuth)

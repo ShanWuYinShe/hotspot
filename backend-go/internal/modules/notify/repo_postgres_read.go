@@ -1,4 +1,4 @@
-package notifications
+package notify
 
 import (
 	"context"
@@ -8,17 +8,17 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-func (r *PostgresRepository) List(ctx context.Context, userID string, req NotificationListRequest) (PaginatedNotifications, error) {
+func (r *PostgresRepository) List(ctx context.Context, userID string, req NotificationListRequest) (PaginatedNotify, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return PaginatedNotifications{}, persistence.ErrNotImplemented
+		return PaginatedNotify{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return PaginatedNotifications{}, persistence.ErrNotImplemented
+		return PaginatedNotify{}, persistence.ErrNotImplemented
 	}
 	query, err := normalizeNotificationListQuery(req)
 	if err != nil {
-		return PaginatedNotifications{}, err
+		return PaginatedNotify{}, err
 	}
 	var cursorCreatedAt any
 	cursorNotificationID := ""
@@ -28,27 +28,27 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notifi
 	}
 	rows, err := queryable.Query(ctx, queryListNotifications, userID, query.Type, cursorCreatedAt, cursorNotificationID, query.Limit+1)
 	if err != nil {
-		return PaginatedNotifications{}, err
+		return PaginatedNotify{}, err
 	}
 	defer rows.Close()
-	items := make([]NotificationItem, 0, query.Limit+1)
+	items := make([]NotifyItem, 0, query.Limit+1)
 	for rows.Next() {
-		var item NotificationItem
+		var item NotifyItem
 		var payloadJSON string
 		if err := rows.Scan(&item.NotificationID, &item.Type, &item.IsRead, &item.CreatedAt, &payloadJSON); err != nil {
-			return PaginatedNotifications{}, err
+			return PaginatedNotify{}, err
 		}
 		if payloadJSON != "" {
 			if err := json.Unmarshal([]byte(payloadJSON), &item.Payload); err != nil {
-				return PaginatedNotifications{}, err
+				return PaginatedNotify{}, err
 			}
 		}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
-		return PaginatedNotifications{}, err
+		return PaginatedNotify{}, err
 	}
-	page := PaginatedNotifications{}
+	page := PaginatedNotify{}
 	if len(items) > query.Limit {
 		last := items[query.Limit-1]
 		page.NextCursor = encodeNotificationCursor(notificationCursor{CreatedAt: last.CreatedAt, NotificationID: last.NotificationID})

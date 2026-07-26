@@ -87,7 +87,7 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 			LikesCount:   args[6].(int),
 			RepliesCount: args[7].(int),
 			User:         UserInfo{UserID: args[2].(string), Nickname: args[2].(string)},
-			MyState:      &MyCommentState{IsLiked: false},
+			MyState:      &MyCommentState{},
 		}
 		if parentID, ok := args[3].(string); ok {
 			item.ParentID = parentID
@@ -261,7 +261,7 @@ func TestPostgresRepositoryGetReturnsMomentID(t *testing.T) {
 		LikesCount:   1,
 		RepliesCount: 0,
 		User:         UserInfo{UserID: "user_alice", Nickname: "user_alice"},
-		MyState:      &MyCommentState{IsLiked: false},
+		MyState:      &MyCommentState{},
 	}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
@@ -279,9 +279,9 @@ func TestPostgresRepositoryGetReturnsMomentID(t *testing.T) {
 func TestPostgresRepositoryListRepliesUsesCursor(t *testing.T) {
 	backend := newBackendStub()
 	backend.comments["moment_1"] = []CommentItem{
-		{CommentID: "reply_3", MomentID: "moment_1", ParentID: "comment_0", Content: "c", CreatedAt: "2026-03-28T10:02:00Z", User: UserInfo{UserID: "u3", Nickname: "u3"}, MyState: &MyCommentState{IsLiked: false}},
-		{CommentID: "reply_2", MomentID: "moment_1", ParentID: "comment_0", Content: "b", CreatedAt: "2026-03-28T10:01:00Z", User: UserInfo{UserID: "u2", Nickname: "u2"}, MyState: &MyCommentState{IsLiked: false}},
-		{CommentID: "reply_1", MomentID: "moment_1", ParentID: "comment_0", Content: "a", CreatedAt: "2026-03-28T10:00:00Z", User: UserInfo{UserID: "u1", Nickname: "u1"}, MyState: &MyCommentState{IsLiked: false}},
+		{CommentID: "reply_3", MomentID: "moment_1", ParentID: "comment_0", Content: "c", CreatedAt: "2026-03-28T10:02:00Z", User: UserInfo{UserID: "u3", Nickname: "u3"}, MyState: &MyCommentState{}},
+		{CommentID: "reply_2", MomentID: "moment_1", ParentID: "comment_0", Content: "b", CreatedAt: "2026-03-28T10:01:00Z", User: UserInfo{UserID: "u2", Nickname: "u2"}, MyState: &MyCommentState{}},
+		{CommentID: "reply_1", MomentID: "moment_1", ParentID: "comment_0", Content: "a", CreatedAt: "2026-03-28T10:00:00Z", User: UserInfo{UserID: "u1", Nickname: "u1"}, MyState: &MyCommentState{}},
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend

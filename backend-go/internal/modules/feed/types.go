@@ -85,8 +85,15 @@ type PaginatedGroups struct {
 	NextCursor string      `json:"next_cursor,omitempty"`
 }
 
+// Reaction mirrors spec api_spec_types.md Reaction (filled by an aggregator
+// at read time, identical shape to moments.Reaction / reactions.Reaction).
+type Reaction struct {
+	Emoji       string `json:"emoji"`
+	Count       int    `json:"count"`
+	ReactedByMe bool   `json:"reacted_by_me"`
+}
+
 type MyMomentState struct {
-	IsLiked     bool `json:"is_liked"`
 	IsFavorited bool `json:"is_favorited"`
 }
 
@@ -114,6 +121,7 @@ type MomentItem struct {
 	SharesCount    int                    `json:"shares_count"`
 	User           UserInfo               `json:"user"`
 	Location       RelativeLocation       `json:"location"`
+	Reactions      []Reaction             `json:"reactions,omitempty"`
 	MyState        *MyMomentState         `json:"my_state,omitempty"`
 	Recommendation *RecommendationContext `json:"recommendation,omitempty"`
 }

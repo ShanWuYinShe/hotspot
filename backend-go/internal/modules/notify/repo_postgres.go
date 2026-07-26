@@ -1,4 +1,4 @@
-package notifications
+package notify
 
 import (
 	"context"
@@ -15,7 +15,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 	return &PostgresRepository{factory: factory}
 }
 
-func (r *PostgresRepository) Append(ctx context.Context, userID string, item NotificationItem) error {
+func (r *PostgresRepository) Append(ctx context.Context, userID string, item NotifyItem) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented
 	}
@@ -23,7 +23,7 @@ func (r *PostgresRepository) Append(ctx context.Context, userID string, item Not
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	item = normalizeNotificationItem(item)
+	item = normalizeNotifyItem(item)
 	payloadJSON, err := json.Marshal(item.Payload)
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func (r *PostgresRepository) Append(ctx context.Context, userID string, item Not
 	return queryable.Exec(ctx, queryInsertNotification, item.NotificationID, userID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON))
 }
 
-func (r *PostgresRepository) AppendMany(ctx context.Context, userIDs []string, item NotificationItem) error {
+func (r *PostgresRepository) AppendMany(ctx context.Context, userIDs []string, item NotifyItem) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return nil
 	}
@@ -39,7 +39,7 @@ func (r *PostgresRepository) AppendMany(ctx context.Context, userIDs []string, i
 	if !ok {
 		return nil
 	}
-	item = normalizeNotificationItem(item)
+	item = normalizeNotifyItem(item)
 	payloadJSON, err := json.Marshal(item.Payload)
 	if err != nil {
 		return err
@@ -75,4 +75,15 @@ func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) err
 		return persistence.ErrNotImplemented
 	}
 	return queryable.Exec(ctx, queryMarkAllNotificationsRead, userID)
+}
+
+func (r *PostgresRepository) MarkAllReadByType(ctx context.Context, userID string, notificationType string) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryMarkAllNotificationsByTypeRead, userID, notificationType)
 }

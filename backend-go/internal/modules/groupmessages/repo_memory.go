@@ -209,6 +209,10 @@ func (r *InMemoryRepository) GetMessageForReply(_ context.Context, _ string) (ma
 	return nil, false, nil
 }
 
+func (r *InMemoryRepository) MessageExists(_ context.Context, _ string) (bool, string, error) {
+	return false, "", nil
+}
+
 func (r *InMemoryRepository) GetMediaForMessage(_ context.Context, _ string) (map[string]any, bool, error) {
 	return nil, false, nil
 }

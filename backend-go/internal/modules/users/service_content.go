@@ -61,16 +61,16 @@ func (s *Service) UpdateMySettings(ctx context.Context, req UpdateSettingsReques
 	return nil
 }
 
-func (s *Service) ListLikedMoments(ctx context.Context, req UserLikedMomentsRequest) (momenttypes.PaginatedMoments, error) {
+func (s *Service) ListReactedMoments(ctx context.Context, req UserReactedMomentsRequest) (momenttypes.PaginatedMoments, error) {
 	startedAt := time.Now()
-	observability.L().Info("users.list_liked_moments started", "user_id", req.UserID)
+	observability.L().Info("users.list_reacted_moments started", "user_id", req.UserID)
 	if err := ensureUserExists(ctx, s.repo, req.UserID); err != nil {
 		return momenttypes.PaginatedMoments{}, err
 	}
 	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
 	settings, ok, err := s.repo.GetSettings(ctx, req.UserID)
 	if err != nil {
-		observability.L().Error("users.list_liked_moments failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		observability.L().Error("users.list_reacted_moments failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return momenttypes.PaginatedMoments{}, err
 	}
 	if !ok {
@@ -80,13 +80,13 @@ func (s *Service) ListLikedMoments(ctx context.Context, req UserLikedMomentsRequ
 	if hasPrincipal {
 		viewerUserID = principal.UserID
 	}
-	if !settings.LikedMomentsVisible && viewerUserID != req.UserID {
+	if !settings.ReactedMomentsVisible && viewerUserID != req.UserID {
 		return momenttypes.PaginatedMoments{}, ErrPermissionDenied
 	}
 	limit, cursor := normalizeMomentPagination(req.Pagination)
-	result, err := s.repo.ListLikedMoments(ctx, req.UserID, limit, cursor, viewerUserID)
+	result, err := s.repo.ListReactedMoments(ctx, req.UserID, limit, cursor, viewerUserID)
 	if err != nil {
-		observability.L().Error("users.list_liked_moments failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		observability.L().Error("users.list_reacted_moments failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return momenttypes.PaginatedMoments{}, err
 	}
 	for i := range result.Items {
@@ -94,7 +94,7 @@ func (s *Service) ListLikedMoments(ctx context.Context, req UserLikedMomentsRequ
 			result.Items[i].PrivacyLevel = ""
 		}
 	}
-	observability.L().Info("users.list_liked_moments completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
+	observability.L().Info("users.list_reacted_moments completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return result, nil
 }
 
@@ -305,8 +305,8 @@ func applySettingsPatch(settings *UserSettings, patch PartialUserSettings) {
 	if patch.GroupsVisible != nil {
 		settings.GroupsVisible = *patch.GroupsVisible
 	}
-	if patch.LikedMomentsVisible != nil {
-		settings.LikedMomentsVisible = *patch.LikedMomentsVisible
+	if patch.ReactedMomentsVisible != nil {
+		settings.ReactedMomentsVisible = *patch.ReactedMomentsVisible
 	}
 	if patch.StatsVisible != nil {
 		settings.StatsVisible = *patch.StatsVisible

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   MapPin, ChevronRight, Users,
   Coffee, Music, Star, Flame, Lock, Globe, Radar,
@@ -13,29 +13,7 @@ import {
   SuggestedFollowsCard, VibeCard,
 } from "../components/TabletRail";
 import { ContextRail } from "../components/layout/ContextRail";
-
-/* ── Mock data ──────────────────────────────────────────────────── */
-const NEARBY_USERS = [
-  { id: 1, name: "鹿鸣",   distance: "246m", avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=200", status: "在线",  tag: "摄影" },
-  { id: 2, name: "阿禾", distance: "252m", avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=200", status: "在线",  tag: "旅行" },
-  { id: 3, name: "野原",  distance: "388m", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200", status: "离线", tag: "音乐" },
-  { id: 4, name: "Mika",   distance: "520m", avatar: "https://images.unsplash.com/photo-1758613172074-7275c3455034?w=200", status: "在线",  tag: "美食" },
-  { id: 5, name: "青砚",   distance: "614m", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200", status: "在线",  tag: "健身" },
-];
-
-const ACTIVITIES = [
-  { id: 1, icon: Coffee, title: "湖边晨咖话题", sub: "12人 · 0.3km", color: "var(--semantic-warning)", bg: "color-mix(in srgb, var(--semantic-warning) 10%, transparent)" },
-  { id: 2, icon: Music,  title: "户部山弹唱片段", sub: "38人 · 0.7km", color: "var(--neu-accent-primary)", bg: "var(--neu-accent-soft)" },
-  { id: 3, icon: Users,  title: "回龙窝夜读讨论",   sub: "9人 · 1.1km",  color: "var(--map-group)", bg: "color-mix(in srgb, var(--map-group) 10%, transparent)"  },
-  { id: 4, icon: Star,   title: "老街胶片记录",   sub: "21人 · 1.5km", color: "var(--semantic-hot)", bg: "color-mix(in srgb, var(--semantic-hot) 10%, transparent)" },
-];
-
-const NEARBY_GROUPS = [
-  { id: 1, name: "回龙窝胶片会", members: 143, banner: "https://images.unsplash.com/photo-1637354098670-9fb8b3d765fc?w=400", distance: "0.4km", privacy: "public" as const },
-  { id: 2, name: "云龙湖晨跑团", members: 89,  banner: "https://images.unsplash.com/photo-1758599669009-5a9002c09487?w=400", distance: "0.8km", privacy: "public" as const },
-  { id: 3, name: "户部山弹唱角",     members: 62,  banner: "https://images.unsplash.com/photo-1776717494824-2036ea6cab02?w=400", distance: "1.1km", privacy: "public" as const },
-  { id: 4, name: "黄楼夜读角",   members: 34,  banner: "https://images.unsplash.com/photo-1774125384717-5c5a05ce8e9c?w=400", distance: "1.4km", privacy: "private" as const },
-];
+import { getFeedTrending, getFeedMoments, getClientConfig } from "../../api";
 
 /* ── Section heading ────────────────────────────────────────────── */
 function SectionHead({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
@@ -54,8 +32,13 @@ function SectionHead({ title, action, onAction }: { title: string; action?: stri
   );
 }
 
+/* ── Types ─────────────────────────────────────────────────────── */
+interface NearbyUser { id: number; name: string; distance: string; avatar: string; status: string; tag: string; }
+interface Activity { id: number; icon: React.ElementType; title: string; sub: string; color: string; bg: string; }
+interface NearbyGroup { id: number; name: string; members: number; banner: string; distance: string; privacy: "public" | "private"; }
+
 /* ── Hero stats banner — single focal point with ambient glow ───── */
-function HeroStats({ onExplore }: { onExplore: () => void }) {
+function HeroStats({ onExplore, stats }: { onExplore: () => void; stats: { nearby: string; active: string; online: string } }) {
   const { platform } = usePlatform();
   const rangeLabel = platform === "mobile" ? "徐州 · 5km 内 · 持续更新" : "5km 内 · 持续更新";
   return (
@@ -91,9 +74,9 @@ function HeroStats({ onExplore }: { onExplore: () => void }) {
         {/* Stats row */}
         <div className="grid grid-cols-3 mt-4" style={{ gap: 1, background: "var(--neu-border)", borderRadius: 14, overflow: "hidden" }}>
           {[
-            { label: "人附近", v: "23", color: "var(--neu-accent-primary)" },
-            { label: "活动中", v: "6",  color: "var(--semantic-warning)" },
-            { label: "在线",   v: "14", color: "var(--semantic-online)" },
+            { label: "人附近", v: stats.nearby, color: "var(--neu-accent-primary)" },
+            { label: "活动中", v: stats.active,  color: "var(--semantic-warning)" },
+            { label: "在线",   v: stats.online, color: "var(--semantic-online)" },
           ].map(s => (
             <div key={s.label} className="flex flex-col items-center justify-center py-2.5"
               style={{ background: "var(--neu-bg)" }}>
@@ -108,7 +91,7 @@ function HeroStats({ onExplore }: { onExplore: () => void }) {
 }
 
 /* ── People radar strip — flat avatars on ambient ───────────────── */
-function PeopleRadarStrip({ users, onSeeAll, onSelectUser }: { users: typeof NEARBY_USERS; onSeeAll: () => void; onSelectUser: (userId: number) => void }) {
+function PeopleRadarStrip({ users, onSeeAll, onSelectUser }: { users: NearbyUser[]; onSeeAll: () => void; onSelectUser: (userId: number) => void }) {
   return (
     <div>
       <SectionHead title="附近的人 · 实时" action="查看全部" onAction={onSeeAll} />
@@ -146,7 +129,7 @@ function PeopleRadarStrip({ users, onSeeAll, onSelectUser }: { users: typeof NEA
 }
 
 /* ── Activity rows (flat list) ──────────────────────────────────── */
-function ActivityRow({ item, onClick }: { item: typeof ACTIVITIES[0]; onClick: () => void }) {
+function ActivityRow({ item, onClick }: { item: Activity; onClick: () => void }) {
   const [hovered, setHovered] = useState(false);
   const hover = useHoverConfig();
   const Icon = item.icon;
@@ -172,7 +155,7 @@ function ActivityRow({ item, onClick }: { item: typeof ACTIVITIES[0]; onClick: (
   );
 }
 
-function ActivityList({ items, onClick }: { items: typeof ACTIVITIES; onClick: (id: number) => void }) {
+function ActivityList({ items, onClick }: { items: Activity[]; onClick: (id: number) => void }) {
   return (
     <div className="flex flex-col" style={{ gap: 1, background: "var(--neu-border)", borderRadius: 16, overflow: "hidden", border: "1px solid var(--neu-border)" }}>
       {items.map(a => <ActivityRow key={a.id} item={a} onClick={() => onClick(a.id)} />)}
@@ -181,7 +164,7 @@ function ActivityList({ items, onClick }: { items: typeof ACTIVITIES; onClick: (
 }
 
 /* ── Group cards horizontal (flat) ──────────────────────────────── */
-function GroupCarousel({ groups, onSeeAll }: { groups: typeof NEARBY_GROUPS; onSeeAll: () => void }) {
+function GroupCarousel({ groups, onSeeAll }: { groups: NearbyGroup[]; onSeeAll: () => void }) {
   return (
     <div>
       <SectionHead title="附近群组" action="更多" onAction={onSeeAll} />
@@ -219,7 +202,7 @@ function GroupCarousel({ groups, onSeeAll }: { groups: typeof NEARBY_GROUPS; onS
 }
 
 /* ── Compact nearby user rows (flat, joined list) ──────────────── */
-function NearbyUserRow({ user, followed, onToggle }: { user: typeof NEARBY_USERS[0]; followed: boolean; onToggle: () => void }) {
+function NearbyUserRow({ user, followed, onToggle }: { user: NearbyUser; followed: boolean; onToggle: () => void }) {
   const [hovered, setHovered] = useState(false);
   const hover = useHoverConfig();
   return (
@@ -261,7 +244,7 @@ function NearbyUserRow({ user, followed, onToggle }: { user: typeof NEARBY_USERS
 
 function NearbyUsersFlatList({
   users, followingIds, onToggle,
-}: { users: typeof NEARBY_USERS; followingIds: Set<number>; onToggle: (id: number) => void }) {
+}: { users: NearbyUser[]; followingIds: Set<number>; onToggle: (id: number) => void }) {
   return (
     <div className="flex flex-col" style={{ gap: 1, background: "var(--neu-border)", borderRadius: 16, overflow: "hidden", border: "1px solid var(--neu-border)" }}>
       {users.map(u => (
@@ -274,11 +257,12 @@ function NearbyUsersFlatList({
 /* ══════════════════════════════════════════════════════════════════
    Mobile/Tablet Home
 ══════════════════════════════════════════════════════════════════ */
-function HomeMobile() {
+function HomeMobile({ nearbyUsers, activities, nearbyGroups, heroStats, loading }: { nearbyUsers: NearbyUser[]; activities: Activity[]; nearbyGroups: NearbyGroup[]; heroStats: { nearby: string; active: string; online: string }; loading: boolean }) {
   const navigate = useNavigate();
   const { platform } = usePlatform();
   const [followingIds, setFollowingIds] = useState<Set<number>>(new Set());
   const toggle = (id: number) => setFollowingIds(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const onlineCount = nearbyUsers.filter(u => u.status === "在线").length;
 
   const isTablet = platform === "tablet";
   const shellStyle: React.CSSProperties = isTablet
@@ -298,12 +282,12 @@ function HomeMobile() {
               <h1 style={{ fontSize: 22, color: "var(--neu-text)" }}>附近</h1>
               <p style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 2 }}>发现周边有趣的人和事</p>
             </div>
-            <motion.div whileTap={{ scale: 0.94 }}
-              className="flex items-center gap-1.5 py-1.5 px-3 rounded-full cursor-pointer neu-surface-flat"
-              onClick={() => navigate(ROUTES.map)}>
-              <span className="rounded-full" style={{ width: 6, height: 6, background: "var(--semantic-online)", flexShrink: 0 }} />
-              <span style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>徐州</span>
-            </motion.div>
+             {onlineCount > 0 && <motion.div whileTap={{ scale: 0.94 }}
+                className="flex items-center gap-1.5 py-1.5 px-3 rounded-full cursor-pointer neu-surface-flat"
+                onClick={() => navigate(ROUTES.map)}>
+                <span className="rounded-full" style={{ width: 6, height: 6, background: "var(--semantic-online)", flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>{onlineCount} 在线</span>
+              </motion.div>}
           </div>
           {isTablet && <div className="hidden lg:block flex-shrink-0" style={{ width: "var(--context-rail-width)" }} />}
         </div>
@@ -316,16 +300,16 @@ function HomeMobile() {
 
         <div className={isTablet ? `${mainColClass} flex flex-col gap-7 px-5` : "flex flex-col gap-7 w-full"}
           style={mainColStyle}>
-          <HeroStats onExplore={() => navigate(ROUTES.nearbyPeople)} />
-          <PeopleRadarStrip users={NEARBY_USERS} onSeeAll={() => navigate(ROUTES.nearbyPeople)} onSelectUser={(userId) => navigate(ROUTES.user(userId))} />
+          <HeroStats onExplore={() => navigate(ROUTES.nearbyPeople)} stats={heroStats} />
+          <PeopleRadarStrip users={nearbyUsers} onSeeAll={() => navigate(ROUTES.nearbyPeople)} onSelectUser={(userId) => navigate(ROUTES.user(userId))} />
           <div>
-            <SectionHead title="附近话题" action="更多" onAction={() => {}} />
-            <ActivityList items={ACTIVITIES} onClick={() => navigate(ROUTES.discover)} />
+            <SectionHead title="附近话题" action="更多" onAction={() => navigate(ROUTES.discover)} />
+            <ActivityList items={activities} onClick={() => navigate(ROUTES.discover)} />
           </div>
-          <GroupCarousel groups={NEARBY_GROUPS} onSeeAll={() => navigate(ROUTES.nearbyGroups)} />
+          <GroupCarousel groups={nearbyGroups} onSeeAll={() => navigate(ROUTES.nearbyGroups)} />
           <div>
             <SectionHead title="人物推荐" action="查看全部" onAction={() => navigate(ROUTES.nearbyPeople)} />
-            <NearbyUsersFlatList users={NEARBY_USERS.slice(0, 4)} followingIds={followingIds} onToggle={toggle} />
+            <NearbyUsersFlatList users={nearbyUsers.slice(0, 4)} followingIds={followingIds} onToggle={toggle} />
           </div>
         </div>
 
@@ -348,10 +332,11 @@ function HomeMobile() {
 /* ══════════════════════════════════════════════════════════════════
    Desktop Home — 2-column with clear hierarchy
 ══════════════════════════════════════════════════════════════════ */
-function HomeDesktop() {
+function HomeDesktop({ nearbyUsers, activities, nearbyGroups, heroStats, loading }: { nearbyUsers: NearbyUser[]; activities: Activity[]; nearbyGroups: NearbyGroup[]; heroStats: { nearby: string; active: string; online: string }; loading: boolean }) {
   const navigate = useNavigate();
   const [followingIds, setFollowingIds] = useState<Set<number>>(new Set());
   const toggle = (id: number) => setFollowingIds(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const onlineCount = nearbyUsers.filter(u => u.status === "在线").length;
 
   return (
     <div className="content-mode-wide flex flex-col h-full">
@@ -364,7 +349,7 @@ function HomeDesktop() {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full neu-surface-flat">
             <span className="rounded-full" style={{ width: 6, height: 6, background: "var(--semantic-online)" }} />
-            <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>14 在线</span>
+            <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{onlineCount} 在线</span>
           </div>
         </div>
       </div>
@@ -375,14 +360,14 @@ function HomeDesktop() {
         <div className="flex flex-col overflow-y-auto no-scrollbar p-6 gap-6"
           style={{ width: 340, flexShrink: 0, borderRight: "1px solid var(--neu-border)" }}>
 
-          <HeroStats onExplore={() => navigate(ROUTES.nearbyPeople)} />
+          <HeroStats onExplore={() => navigate(ROUTES.nearbyPeople)} stats={heroStats} />
 
           <div>
-            <SectionHead title="附近话题" action="更多" onAction={() => {}} />
-            <ActivityList items={ACTIVITIES} onClick={() => navigate(ROUTES.discover)} />
+            <SectionHead title="附近话题" action="更多" onAction={() => navigate(ROUTES.discover)} />
+            <ActivityList items={activities} onClick={() => navigate(ROUTES.discover)} />
           </div>
 
-          <GroupCarousel groups={NEARBY_GROUPS} onSeeAll={() => navigate(ROUTES.nearbyGroups)} />
+          <GroupCarousel groups={nearbyGroups} onSeeAll={() => navigate(ROUTES.nearbyGroups)} />
         </div>
 
         {/* ── Right: people radar + full list ── */}
@@ -402,10 +387,10 @@ function HomeDesktop() {
             </motion.button>
           </div>
 
-          <PeopleRadarStrip users={NEARBY_USERS} onSeeAll={() => navigate(ROUTES.nearbyPeople)} onSelectUser={(userId) => navigate(ROUTES.user(userId))} />
+          <PeopleRadarStrip users={nearbyUsers} onSeeAll={() => navigate(ROUTES.nearbyPeople)} onSelectUser={(userId) => navigate(ROUTES.user(userId))} />
 
           <div className="mt-6">
-            <NearbyUsersFlatList users={NEARBY_USERS} followingIds={followingIds} onToggle={toggle} />
+            <NearbyUsersFlatList users={nearbyUsers} followingIds={followingIds} onToggle={toggle} />
           </div>
         </div>
       </div>
@@ -415,6 +400,83 @@ function HomeDesktop() {
 
 export function Home() {
   const { platform } = usePlatform();
-  if (platform === "desktop") return <HomeDesktop />;
-  return <HomeMobile />;
+  const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [nearbyGroups, setNearbyGroups] = useState<NearbyGroup[]>([]);
+  const [heroStats, setHeroStats] = useState({ nearby: "0", active: "0", online: "0" });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchData() {
+      try {
+        setLoading(true);
+        setError(null);
+        const [trendingRes, nearbyRes, configRes] = await Promise.all([
+          getFeedTrending().catch(() => ({ code: -1, data: null })),
+          getFeedMoments({ source: "nearby" }).catch(() => ({ code: -1, data: { items: [] } })),
+          getClientConfig().catch(() => ({ code: -1, data: null })),
+        ]);
+        if (cancelled) return;
+
+        const trendingData = (trendingRes.code === 0 ? trendingRes.data : null) as any;
+        const nearbyData = (nearbyRes.code === 0 ? nearbyRes.data : null) as any;
+        const configData = (configRes.code === 0 ? configRes.data : null) as any;
+
+        if (trendingData) {
+          const acts: Activity[] = (trendingData.activities || trendingData.items || []).map((a: any, i: number) => ({
+            id: a.id ?? i + 1,
+            icon: [Coffee, Music, Users, Star][i % 4],
+            title: a.title ?? a.name ?? "",
+            sub: a.sub ?? a.subtitle ?? "",
+            color: ["var(--semantic-warning)", "var(--neu-accent-primary)", "var(--map-group)", "var(--semantic-hot)"][i % 4],
+            bg: [`color-mix(in srgb, var(--semantic-warning) 10%, transparent)`, "var(--neu-accent-soft)", `color-mix(in srgb, var(--map-group) 10%, transparent)`, `color-mix(in srgb, var(--semantic-hot) 10%, transparent)`][i % 4],
+          }));
+          setActivities(acts);
+        }
+
+        if (trendingData) {
+          const groups: NearbyGroup[] = (trendingData.groups || []).map((g: any, i: number) => ({
+            id: g.id ?? i + 1,
+            name: g.name ?? "",
+            members: g.members ?? g.member_count ?? 0,
+            banner: g.banner ?? g.avatar ?? "",
+            distance: g.distance ?? "",
+            privacy: g.privacy ?? "public",
+          }));
+          setNearbyGroups(groups);
+        }
+
+        if (nearbyData) {
+          const users: NearbyUser[] = (nearbyData.items || []).map((u: any, i: number) => ({
+            id: u.id ?? u.user_id ?? i + 1,
+            name: u.name ?? u.nickname ?? "",
+            distance: u.distance ?? "",
+            avatar: u.avatar ?? "",
+            status: u.online ? "在线" : "离线",
+            tag: u.tag ?? u.tags?.[0] ?? "",
+          }));
+          setNearbyUsers(users);
+        }
+
+        if (configData) {
+          setHeroStats({
+            nearby: String(configData.nearby_count ?? configData.nearby ?? 0),
+            active: String(configData.active_count ?? configData.active ?? 0),
+            online: String(configData.online_count ?? configData.online ?? 0),
+          });
+        }
+      } catch (e: any) {
+        if (!cancelled) setError(e.message ?? "加载失败");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchData();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (platform === "desktop") return <HomeDesktop nearbyUsers={nearbyUsers} activities={activities} nearbyGroups={nearbyGroups} heroStats={heroStats} loading={loading} />;
+  return <HomeMobile nearbyUsers={nearbyUsers} activities={activities} nearbyGroups={nearbyGroups} heroStats={heroStats} loading={loading} />;
 }

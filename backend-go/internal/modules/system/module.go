@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"hotspot/backend-go/internal/platform/appconfig"
+	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/ratelimit"
@@ -14,12 +15,15 @@ import (
 
 type Module struct {
 	handler *Handler
+	service *Service
 }
 
 func NewModule(factory *persistence.Factory, source appconfig.Source) *Module {
 	service := NewServiceWithFactory(factory, source)
-	return &Module{handler: NewHandler(service)}
+	return &Module{handler: NewHandler(service), service: service}
 }
+
+func (m *Module) Service() *Service { return m.service }
 
 // SetHealthRedisPinger wires an optional redis liveness probe used by the
 // health endpoint. Bootstrap calls this when a redis client is configured.
@@ -37,6 +41,13 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			MountRoutes(group, m.handler)
+		})
+		systemRouter.Group(func(group chi.Router) {
+			group.Use(platformauth.OptionalAuth)
+			group.Use(ratelimit.Middleware)
+			group.Use(resourceguard.Middleware)
+			group.Use(idempotency.Middleware)
+			group.Post("/bootstrap", m.handler.Bootstrap)
 		})
 	})
 }

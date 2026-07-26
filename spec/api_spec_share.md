@@ -23,7 +23,7 @@
 |-----|------|------|------|
 | `POST /api/v1/share/create` | 创建分享 | 必须 | MUST |
 | `POST /api/v1/share/get` | 获取分享详情 | 可选 | 无 |
-| `POST /api/v1/share/me/list` | 我的分享列表 | 必须 | 无 |
+| `POST /api/v1/share/list_my` | 我的分享列表 | 必须 | 无 |
 | `POST /api/v1/share/revoke` | 撤销分享 | 必须 | 幂等语义 |
 
 ## 类型定义
@@ -166,7 +166,7 @@ interface ShareDetail {
 
 ---
 
-### POST /api/v1/share/me/list
+### POST /api/v1/share/list_my
 
 获取当前用户创建的分享列表。
 
@@ -209,7 +209,7 @@ interface ShareListItem {
 **Request**: `RevokeShareRequest`
 ```typescript
 interface RevokeShareRequest {
-  share_id?: string;    // 分享 ID（来自 share/create 或 share/me/list）
+  share_id?: string;    // 分享 ID（来自 share/create 或 share/list_my）
   share_code?: string;  // 或分享码（创建者可能仅保留了复制出的链接码）
 }
 // 二选一：必须且只能传 share_id 或 share_code 其中之一；同时传或都不传返回 10000

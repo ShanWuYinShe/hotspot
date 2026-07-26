@@ -11,20 +11,8 @@ import { useHoverConfig } from "../../hooks/useHoverConfig";
 
 type Tab = "add" | "chat";
 
-const SUGGESTED = [
-  { id: 1, name: "鹿鸣",    subtitle: "@liam.photo · 摄影师",  avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80",  added: false },
-  { id: 2, name: "阿禾",  subtitle: "@sophia_t · 旅行博主",   avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80",  added: false },
-  { id: 3, name: "野原",   subtitle: "@marco_m · 音乐人",      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80",  added: false },
-  { id: 4, name: "Mika",    subtitle: "@aiko_e · 美食达人",     avatar: "https://images.unsplash.com/photo-1758613172074-7275c3455034?w=80",  added: false },
-  { id: 5, name: "青砚",    subtitle: "@chen_fit · 健身教练",   avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80",  added: false },
-];
-
-const CONTACTS = [
-  { id: 101, name: "林一",       avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80",  online: true  },
-  { id: 102, name: "小满",   avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80",  online: true  },
-  { id: 103, name: "阿川",        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80",  online: false },
-  { id: 104, name: "设计小队",   avatar: "https://images.unsplash.com/photo-1763467669450-e69029c1484d?w=80",  online: false },
-];
+const SUGGESTED: { id: number; name: string; subtitle: string; avatar: string; added: boolean }[] = [];
+const CONTACTS: { id: number; name: string; avatar: string; online: boolean }[] = [];
 
 interface Props {
   defaultTab?: Tab;

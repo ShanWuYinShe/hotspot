@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { ROUTES } from "../lib/routes";
 import { useSocial } from "../contexts/SocialContext";
@@ -12,120 +12,108 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   DesktopDetailSplit, RailSection, RailUserRow, RailPostThumb, RailLocationMini,
 } from "../components/layout/DetailRail";
+import { getMomentDetail, listComments, listReactions } from "../../api";
 
-/* ── Mock related content for desktop rail ─────────────────────── */
-const RELATED_POSTS = [
-  { id: 41, image: "https://images.unsplash.com/photo-1748737349771-e2b6605e5961?w=200", title: "市中心隐藏茶馆", meta: "本地向导 · 0.8km" },
-  { id: 43, image: "https://images.unsplash.com/photo-1759734282634-b4958ea9a6e0?w=200", title: "云龙湖落日", meta: "小满 · 1.2km" },
-  { id: 44, image: "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=200", title: "老街胶片漫步", meta: "鹿鸣 · 1.5km" },
-];
+interface PostComment { id: number; user: string; avatar: string; text: string; time: string; likes: number; }
 
+interface PostData {
+  id: number; user: string; handle: string; avatar: string;
+  location: string; image: string; content: string;
+  time: string; likes: number; tag: string;
+  comments: PostComment[];
+}
+
+// Nearby users kept as simple mock since they come from different system
 const NEARBY_NOW = [
   { id: 2, name: "阿禾",   avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80", sub: "252m · 在线" },
   { id: 4, name: "Mika",   avatar: "https://images.unsplash.com/photo-1758613172074-7275c3455034?w=80", sub: "520m · 在线" },
   { id: 5, name: "青砚",   avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80", sub: "614m · 在线" },
 ];
 
-/* ── Mock data ─────────────────────────────────────────────────── */
-const POSTS: Record<number, {
-  id: number; user: string; handle: string; avatar: string;
-  location: string; image: string; content: string;
-  time: string; likes: number; tag: string;
-  comments: Array<{ id: number; user: string; avatar: string; text: string; time: string; likes: number }>;
-}> = {
-  40: {
-    id: 40, user: "Aria Sol", handle: "@aria.sol", avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80",
-    location: "植物园", image: "https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?w=1080",
-    content: "清晨在绿意中找到了一片宁静。黎明时分阳光穿过树叶，滤出完美的光影。推荐大家周末早起来这里散步，绝对值得！这种时刻让人感觉整个世界都属于自己。",
-    time: "2小时前", likes: 124, tag: "自然",
-    comments: [
-      { id: 1, user: "野原",   avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80",    text: "太美了！我也想去",              time: "1小时前",  likes: 8 },
-      { id: 2, user: "林一",    avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80",   text: "这光线真的绝了，什么时候去的？", time: "45分钟前", likes: 3 },
-      { id: 3, user: "小满",avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80",   text: "我们下次一起去吧 🌿",           time: "20分钟前", likes: 12 },
-    ],
-  },
-  41: {
-    id: 41, user: "本地向导", handle: "@local.guide", avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80",
-    location: "市中心核心区", image: "https://images.unsplash.com/photo-1748737349771-e2b6605e5961?w=1080",
-    content: "城市里那些安静的角落已经被我全部标注出来了。每一条小巷都有属于自己的故事，等待有心人去发现。\n\n这次找到了一条被遗忘的石板路，通向一家隐藏了30年的老茶馆。",
-    time: "5小时前", likes: 89, tag: "城市",
-    comments: [
-      { id: 1, user: "阿川",    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80", text: "请问地址方便分享吗？",  time: "3小时前",  likes: 5 },
-      { id: 2, user: "阿禾", avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80", text: "老茶馆！我一定要去！", time: "2小时前",  likes: 14 },
-    ],
-  },
-};
-
-const DEFAULT_POST = POSTS[40];
-const FEED_COMMENT_COUNTS: Record<number, number> = {
-  1: 12, 2: 5, 3: 8, 4: 34, 5: 27, 6: 19,
-};
-
-/* Discover uses IDs 1–6. Keep its cards and the detail route on the same data contract. */
-const DISCOVER_DETAIL_POSTS: Record<number, typeof DEFAULT_POST> = {
-  1: { ...POSTS[40], id: 1 },
-  2: { ...POSTS[41], id: 2 },
-  3: {
-    ...DEFAULT_POST, id: 3, user: "野原", handle: "@yuan.wander",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80",
-    location: "老街手冲馆", image: "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=1080",
-    tag: "生活", likes: 56, time: "昨天",
-    content: "周末午后最适合窝在这里看书，点杯手冲，看窗外的行人。安静的座位不多，适合慢慢待上一整个下午。",
-    comments: [],
-  },
-  4: {
-    ...DEFAULT_POST, id: 4, user: "小满", handle: "@xiaoman.xz",
-    location: "云龙湖畔", image: "https://images.unsplash.com/photo-1758613172074-7275c3455034?w=1080",
-    tag: "社群", likes: 201, time: "周一",
-    content: "湖畔的周末市集开始了！有好多有意思的手工艺品和本地小吃，傍晚还有一场小型现场演出。",
-    comments: [],
-  },
-  5: {
-    ...DEFAULT_POST, id: 5, user: "林一", handle: "@linyi.live",
-    location: "彭城广场", image: "https://images.unsplash.com/photo-1759734282634-b4958ea9a6e0?w=1080",
-    tag: "音乐", likes: 315, time: "3天前",
-    content: "户部山周末弹唱现场，氛围太好了。久违的烟火气又回来了，路过的人会不自觉地停下来听一会儿。",
-    comments: [],
-  },
-  6: {
-    ...DEFAULT_POST, id: 6, user: "Mika", handle: "@mika.city",
-    location: "汉文化景区", image: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=1080",
-    tag: "人文", likes: 142, time: "4天前",
-    content: "徐州的历史比很多人想象的还要厚重。沿着景区慢慢走，每一块砖和每一段城墙都有自己的故事。",
-    comments: [],
-  },
+const DEFAULT_POST: PostData = {
+  id: 0, user: "", handle: "", avatar: "",
+  location: "", image: "", content: "",
+  time: "", likes: 0, tag: "",
+  comments: [],
 };
 
 export function PostDetail() {
   const { postId } = useParams<{ postId: string }>();
   const navigate = useNavigate();
-  const { profilePosts, likedIds, savedIds, commentsByPost, toggleLike, toggleSave, addComment } = useSocial();
+  const { likedIds, savedIds, commentsByPost, toggleLike, toggleSave, addComment } = useSocial();
   const numericPostId = Number(postId);
-  const publishedPost = profilePosts.find((item) => item.id === numericPostId);
-  const post = publishedPost
-    ? {
-        ...DEFAULT_POST,
-        id: publishedPost.id,
-        user: publishedPost.user,
-        handle: "@elara.v",
-        avatar: publishedPost.avatar,
-        location: publishedPost.location,
-        image: publishedPost.image ?? "https://images.unsplash.com/photo-1762113396314-8e9e5417ed17?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
-        content: publishedPost.content,
-        time: publishedPost.time,
-        likes: publishedPost.likes,
-        tag: publishedPost.tag,
-        comments: [],
-      }
-    : DISCOVER_DETAIL_POSTS[numericPostId] ?? POSTS[numericPostId] ?? DEFAULT_POST;
-
+  const [post, setPost] = useState<PostData>(DEFAULT_POST);
+  const [apiComments, setApiComments] = useState<PostComment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [relatedPosts, setRelatedPosts] = useState<{ id: number; image: string; title: string; meta: string }[]>([]);
   const [input, setInput] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
   const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "failed">("idle");
   const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const momentId = String(numericPostId);
+    async function fetchPost() {
+      try {
+        setLoading(true);
+        const [detailRes, commentsRes, reactionsRes] = await Promise.all([
+          getMomentDetail(momentId).catch(() => ({ code: -1, data: null })),
+          listComments(momentId).catch(() => ({ code: -1, data: { items: [] } })),
+          listReactions({ target_type: "moment", target_id: momentId }).catch(() => ({ code: -1, data: { items: [] } })),
+        ]);
+        if (cancelled) return;
+
+        const detailData = (detailRes.code === 0 ? detailRes.data : null) as any;
+        const commentsData = (commentsRes.code === 0 ? commentsRes.data : null) as any;
+        const reactionsData = (reactionsRes.code === 0 ? reactionsRes.data : null) as any;
+
+        if (detailData) {
+          const pd: PostData = {
+            id: detailData.id ?? detailData.moment_id ?? numericPostId,
+            user: detailData.user ?? detailData.author_name ?? detailData.nickname ?? "",
+            handle: detailData.handle ?? detailData.username ?? "",
+            avatar: detailData.avatar ?? detailData.author_avatar ?? "",
+            location: detailData.location ?? detailData.place ?? "",
+            image: detailData.image ?? detailData.images?.[0] ?? "",
+            content: detailData.content ?? detailData.text ?? detailData.body ?? "",
+            time: detailData.time ?? detailData.created_at ?? "",
+            likes: detailData.likes ?? detailData.like_count ?? 0,
+            tag: detailData.tag ?? detailData.tags?.[0] ?? "",
+            comments: [],
+          };
+          setPost(pd);
+
+          if (detailData.related_posts) {
+            setRelatedPosts((detailData.related_posts || []).map((r: any) => ({
+              id: r.id ?? 0, image: r.image ?? "", title: r.title ?? r.name ?? "", meta: r.meta ?? r.subtitle ?? "",
+            })));
+          }
+        }
+
+        if (commentsData) {
+          const items: PostComment[] = (commentsData.items || []).map((c: any, i: number) => ({
+            id: c.id ?? i + 1,
+            user: c.user ?? c.author_name ?? c.nickname ?? "",
+            avatar: c.avatar ?? c.author_avatar ?? "",
+            text: c.text ?? c.content ?? c.body ?? "",
+            time: c.time ?? c.created_at ?? "",
+            likes: c.likes ?? c.like_count ?? 0,
+          }));
+          setApiComments(items);
+        }
+      } catch {
+        // empty data is normal
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchPost();
+    return () => { cancelled = true; };
+  }, [numericPostId]);
   const persistedComments = commentsByPost[numericPostId] ?? [];
-  const comments = [...post.comments, ...persistedComments];
-  const commentCount = (FEED_COMMENT_COUNTS[numericPostId] ?? post.comments.length) + persistedComments.length;
+  const comments = [...apiComments, ...post.comments, ...persistedComments];
+  const commentCount = comments.length;
   const liked = likedIds.has(numericPostId);
   const saved = savedIds.has(numericPostId);
 
@@ -360,7 +348,7 @@ export function PostDetail() {
 
       <RailSection title="更多动态" action="发现" onAction={() => navigate(ROUTES.discover)}>
         <div className="flex flex-col gap-3">
-          {RELATED_POSTS.map(p => (
+          {relatedPosts.map(p => (
             <RailPostThumb
               key={p.id}
               image={p.image}

@@ -92,4 +92,11 @@ type MarkGroupMessagesReadRequest struct {
 	UpToMessageID string `json:"up_to_message_id,omitempty"`
 }
 
-// MarkAllRead 使用空对象 {}
+// MarkGroupReadRequest is the unified mark_read request for group messages.
+// scope defaults to "group"; "group" requires group_id (optionally
+// up_to_message_id), "all" clears all unread group messages for the caller.
+type MarkGroupReadRequest struct {
+	Scope         string `json:"scope,omitempty"`
+	GroupID       string `json:"group_id,omitempty"`
+	UpToMessageID string `json:"up_to_message_id,omitempty"`
+}

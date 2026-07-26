@@ -51,12 +51,12 @@ type MyProfile struct {
 	Stats          UserStats          `json:"stats"`
 }
 
-type PrivateChatPermission string
+type ChatPerm string
 
 const (
-	PrivateChatEveryone PrivateChatPermission = "everyone"
-	PrivateChatFriends  PrivateChatPermission = "friends"
-	PrivateChatNobody   PrivateChatPermission = "nobody"
+	ChatPermEveryone ChatPerm = "everyone"
+	ChatPermFriends  ChatPerm = "friends"
+	ChatPermNobody   ChatPerm = "nobody"
 )
 
 type UserSettings struct {
@@ -65,17 +65,20 @@ type UserSettings struct {
 	PresenceVisible     bool                  `json:"presence_visible"`
 	SocialListsVisible  bool                  `json:"social_lists_visible"`
 	GroupsVisible       bool                  `json:"groups_visible"`
-	LikedMomentsVisible bool                  `json:"liked_moments_visible"`
-	StatsVisible        bool                  `json:"stats_visible"`
-	AllowFollow         bool                  `json:"allow_follow"`
-	AllowPrivateChat    PrivateChatPermission `json:"allow_private_chat"`
-	Searchable          bool                  `json:"searchable"`
-	PhoneSearchable     bool                  `json:"phone_searchable"`
-	NicknameSearchable  bool                  `json:"nickname_searchable"`
-	LocationSearchable  bool                  `json:"location_searchable"`
+	// ReactedMomentsVisible gates the list_reacted_moments endpoint. Renamed
+	// from liked_moments_visible as part of the reaction migration
+	// (see migrations/032_rename_liked_to_reacted_moments_visible.sql).
+	ReactedMomentsVisible bool `json:"reacted_moments_visible"`
+	StatsVisible          bool                  `json:"stats_visible"`
+	AllowFollow           bool                  `json:"allow_follow"`
+	AllowPrivateChat      ChatPerm `json:"allow_private_chat"`
+	Searchable            bool                  `json:"searchable"`
+	PhoneSearchable       bool                  `json:"phone_searchable"`
+	NicknameSearchable    bool                  `json:"nickname_searchable"`
+	LocationSearchable    bool                  `json:"location_searchable"`
 }
 
-type UpdateProfileRequest struct {
+type UpdateAccountRequest struct {
 	Nickname     *string   `json:"nickname,omitempty"`
 	AvatarFileID *string   `json:"avatar_file_id,omitempty"`
 	Bio          *string   `json:"bio,omitempty"`
@@ -84,19 +87,19 @@ type UpdateProfileRequest struct {
 }
 
 type PartialUserSettings struct {
-	PrivacyLevel        *string                `json:"privacy_level,omitempty"`
-	LocationVisible     *bool                  `json:"location_visible,omitempty"`
-	PresenceVisible     *bool                  `json:"presence_visible,omitempty"`
-	SocialListsVisible  *bool                  `json:"social_lists_visible,omitempty"`
-	GroupsVisible       *bool                  `json:"groups_visible,omitempty"`
-	LikedMomentsVisible *bool                  `json:"liked_moments_visible,omitempty"`
-	StatsVisible        *bool                  `json:"stats_visible,omitempty"`
-	AllowFollow         *bool                  `json:"allow_follow,omitempty"`
-	AllowPrivateChat    *PrivateChatPermission `json:"allow_private_chat,omitempty"`
-	Searchable          *bool                  `json:"searchable,omitempty"`
-	PhoneSearchable     *bool                  `json:"phone_searchable,omitempty"`
-	NicknameSearchable  *bool                  `json:"nickname_searchable,omitempty"`
-	LocationSearchable  *bool                  `json:"location_searchable,omitempty"`
+	PrivacyLevel         *string                `json:"privacy_level,omitempty"`
+	LocationVisible      *bool                  `json:"location_visible,omitempty"`
+	PresenceVisible      *bool                  `json:"presence_visible,omitempty"`
+	SocialListsVisible   *bool                  `json:"social_lists_visible,omitempty"`
+	GroupsVisible        *bool                  `json:"groups_visible,omitempty"`
+	ReactedMomentsVisible *bool                 `json:"reacted_moments_visible,omitempty"`
+	StatsVisible         *bool                  `json:"stats_visible,omitempty"`
+	AllowFollow          *bool                  `json:"allow_follow,omitempty"`
+	AllowPrivateChat     *ChatPerm `json:"allow_private_chat,omitempty"`
+	Searchable           *bool                  `json:"searchable,omitempty"`
+	PhoneSearchable      *bool                  `json:"phone_searchable,omitempty"`
+	NicknameSearchable   *bool                  `json:"nickname_searchable,omitempty"`
+	LocationSearchable   *bool                  `json:"location_searchable,omitempty"`
 }
 
 type UpdateSettingsRequest struct {
@@ -105,7 +108,7 @@ type UpdateSettingsRequest struct {
 
 type PaginationParams = types.PaginationParams
 
-type UserLikedMomentsRequest struct {
+type UserReactedMomentsRequest struct {
 	UserID     string                        `json:"user_id"`
 	Pagination *momenttypes.PaginationParams `json:"pagination,omitempty"`
 }

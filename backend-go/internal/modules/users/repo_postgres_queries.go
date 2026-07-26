@@ -58,17 +58,17 @@ s2_cell_id = EXCLUDED.s2_cell_id`
 	queryDeleteUserProfile = `DELETE FROM users WHERE user_id = $1`
 
 	queryGetUserSettings = `
-SELECT privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, liked_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable
+SELECT privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, reacted_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable
 FROM user_settings
 WHERE user_id = $1`
 
 	queryGetUserSettingsBatch = `
-SELECT user_id, privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, liked_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable
+SELECT user_id, privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, reacted_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable
 FROM user_settings
 WHERE user_id = ANY($1)`
 
 	queryUpsertUserSettings = `
-INSERT INTO user_settings (user_id, privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, liked_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable)
+INSERT INTO user_settings (user_id, privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, reacted_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 ON CONFLICT (user_id) DO UPDATE SET
 privacy_level = EXCLUDED.privacy_level,
@@ -76,7 +76,7 @@ location_visible = EXCLUDED.location_visible,
 presence_visible = EXCLUDED.presence_visible,
 social_lists_visible = EXCLUDED.social_lists_visible,
 groups_visible = EXCLUDED.groups_visible,
-liked_moments_visible = EXCLUDED.liked_moments_visible,
+reacted_moments_visible = EXCLUDED.reacted_moments_visible,
 stats_visible = EXCLUDED.stats_visible,
 allow_follow = EXCLUDED.allow_follow,
 allow_private_chat = EXCLUDED.allow_private_chat,
@@ -204,19 +204,19 @@ WHERE m.user_id = $1
 ORDER BY m.created_at DESC, m.moment_id DESC
 LIMIT $5`
 
-	queryListLikedMoments = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, ml.liked_at
-FROM moment_likes ml
-JOIN moments m ON m.moment_id = ml.moment_id
+	queryListReactedMoments = `
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, r.reacted_at
+FROM reactions r
+JOIN moments m ON m.moment_id = r.target_id
 LEFT JOIN users u ON u.user_id = m.user_id
-WHERE ml.user_id = $1
+WHERE r.target_type = 'moment' AND r.user_id = $1
   AND ($2 = '' OR m.user_id = $2 OR m.privacy_level <> 'private')
   AND (
     $3::timestamptz IS NULL
-    OR ml.liked_at < $3::timestamptz
-    OR (ml.liked_at = $3::timestamptz AND m.moment_id < $4)
+    OR r.reacted_at < $3::timestamptz
+    OR (r.reacted_at = $3::timestamptz AND m.moment_id < $4)
   )
-ORDER BY ml.liked_at DESC, m.moment_id DESC
+ORDER BY r.reacted_at DESC, m.moment_id DESC
 LIMIT $5`
 
 	queryCountCommonGroups = `

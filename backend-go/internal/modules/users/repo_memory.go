@@ -21,29 +21,29 @@ type memoryRelation struct {
 	BlockReason string
 }
 
-type likedMomentRecord struct {
-	LikedAt string
-	Moment  momenttypes.MomentItem
+type reactedMomentRecord struct {
+	ReactedAt string
+	Moment    momenttypes.MomentItem
 }
 
 type InMemoryRepository struct {
-	mu            sync.RWMutex
-	profiles      map[string]MyProfile
-	settings      map[string]UserSettings
-	relations     map[string]map[string]memoryRelation
-	likedMoments  map[string][]likedMomentRecord
-	groupsByUser  map[string][]grouptypes.GroupItem
-	momentsByUser map[string][]momenttypes.MomentItem
+	mu              sync.RWMutex
+	profiles        map[string]MyProfile
+	settings        map[string]UserSettings
+	relations       map[string]map[string]memoryRelation
+	reactedMoments  map[string][]reactedMomentRecord
+	groupsByUser    map[string][]grouptypes.GroupItem
+	momentsByUser   map[string][]momenttypes.MomentItem
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
-		profiles:      make(map[string]MyProfile),
-		settings:      make(map[string]UserSettings),
-		relations:     make(map[string]map[string]memoryRelation),
-		likedMoments:  make(map[string][]likedMomentRecord),
-		groupsByUser:  make(map[string][]grouptypes.GroupItem),
-		momentsByUser: make(map[string][]momenttypes.MomentItem),
+		profiles:        make(map[string]MyProfile),
+		settings:        make(map[string]UserSettings),
+		relations:       make(map[string]map[string]memoryRelation),
+		reactedMoments:  make(map[string][]reactedMomentRecord),
+		groupsByUser:    make(map[string][]grouptypes.GroupItem),
+		momentsByUser:   make(map[string][]momenttypes.MomentItem),
 	}
 }
 
@@ -65,7 +65,7 @@ func (r *InMemoryRepository) DeleteProfile(_ context.Context, userID string) err
 	delete(r.profiles, userID)
 	delete(r.settings, userID)
 	delete(r.relations, userID)
-	delete(r.likedMoments, userID)
+	delete(r.reactedMoments, userID)
 	delete(r.groupsByUser, userID)
 	delete(r.momentsByUser, userID)
 	for sourceUserID := range r.relations {
@@ -203,17 +203,17 @@ func (r *InMemoryRepository) ListBlocked(_ context.Context, userID string, limit
 	})
 	return paginateBlocked(items, limit, cursor), nil
 }
-func (r *InMemoryRepository) ListLikedMoments(_ context.Context, userID string, limit int, cursor, viewerUserID string) (momenttypes.PaginatedMoments, error) {
+func (r *InMemoryRepository) ListReactedMoments(_ context.Context, userID string, limit int, cursor, viewerUserID string) (momenttypes.PaginatedMoments, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	records := append([]likedMomentRecord(nil), r.likedMoments[userID]...)
-	visible := make([]likedMomentRecord, 0, len(records))
+	records := append([]reactedMomentRecord(nil), r.reactedMoments[userID]...)
+	visible := make([]reactedMomentRecord, 0, len(records))
 	for _, record := range records {
 		if viewerUserID == record.Moment.User.UserID || record.Moment.PrivacyLevel != "private" {
 			visible = append(visible, record)
 		}
 	}
-	return paginateLikedMoments(visible, limit, cursor), nil
+	return paginateReactedMoments(visible, limit, cursor), nil
 }
 
 func (r *InMemoryRepository) Relationship(_ context.Context, userID, targetUserID string) (Relationship, error) {
@@ -501,11 +501,11 @@ func paginateMoments(items []momenttypes.MomentItem, limit int, cursor string) m
 	return resp
 }
 
-func paginateLikedMoments(items []likedMomentRecord, limit int, cursor string) momenttypes.PaginatedMoments {
+func paginateReactedMoments(items []reactedMomentRecord, limit int, cursor string) momenttypes.PaginatedMoments {
 	if limit <= 0 {
 		limit = 20
 	}
-	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].LikedAt, items[i].Moment.MomentID }, len(items))
+	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].ReactedAt, items[i].Moment.MomentID }, len(items))
 	if !ok {
 		return momenttypes.PaginatedMoments{}
 	}
@@ -518,7 +518,7 @@ func paginateLikedMoments(items []likedMomentRecord, limit int, cursor string) m
 		resp.Items = append(resp.Items, item.Moment)
 	}
 	if end < len(items) && end > start {
-		resp.NextCursor = encodeUserMomentCursor(items[end-1].LikedAt, items[end-1].Moment.MomentID)
+		resp.NextCursor = encodeUserMomentCursor(items[end-1].ReactedAt, items[end-1].Moment.MomentID)
 	}
 	return resp
 }

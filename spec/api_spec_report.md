@@ -17,7 +17,7 @@
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
 | `POST /api/v1/reports/create` | 创建举报 | 必须 | MUST |
-| `POST /api/v1/reports/me/list` | 我的举报记录 | 必须 | 无 |
+| `POST /api/v1/reports/list_my` | 我的举报记录 | 必须 | 无 |
 
 ## 举报审核流程说明
 
@@ -88,7 +88,7 @@ interface CreateReportRequest {
   target_id: string;            // 统一 string；语义随 target_type 为对应资源 ID
   reason: ReportReason;         // 举报原因（从枚举中选取）
   description?: string;         // 举报详细说明（0-1000 字符），reason 为 'other' 时建议填写
-  message_snapshot?: MessageReportSnapshot;  // target_type='message' 时必填：消息内容快照（见 MessageReportSnapshot，定义于 api_spec_types.md）
+  message_snapshot?: ReportSnapshot;  // target_type='message' 时必填：消息内容快照（见 ReportSnapshot，定义于 api_spec_types.md）
 }
 ```
 
@@ -101,7 +101,7 @@ interface ReportCreated {
 
 **错误码**: `10000` `10300` `10400`（自举报、重复举报等）
 
-### POST /api/v1/reports/me/list
+### POST /api/v1/reports/list_my
 
 我的举报记录。
 
@@ -122,6 +122,6 @@ interface MyReportsRequest {
 
 `ReportItem` 定义于 `api_spec_types.md`。
 
-**可见性说明（契约级）**：举报人在 `reports/me/list` 可见自己举报的完整状态机（`pending`/`reviewing`/`escalated`/终态）及 `ReportItem.resolution`（`@owner-only`，仅举报人自己可见处理结果摘要）。**不可见**处理管理员的身份（隐私保护，避免举报人针对性报复）——`resolution` 不含 `handled_by`，仅含 `action`/`resolved_at`/`note`(脱敏)。
+**可见性说明（契约级）**：举报人在 `reports/list_my` 可见自己举报的完整状态机（`pending`/`reviewing`/`escalated`/终态）及 `ReportItem.resolution`（`@owner-only`，仅举报人自己可见处理结果摘要）。**不可见**处理管理员的身份（隐私保护，避免举报人针对性报复）——`resolution` 不含 `handled_by`，仅含 `action`/`resolved_at`/`note`(脱敏)。
 
 **错误码**: `10000`

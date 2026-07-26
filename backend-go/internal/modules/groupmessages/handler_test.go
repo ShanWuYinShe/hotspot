@@ -69,6 +69,7 @@ func (r *stubGroupMessageRepo) MarkAllRead(_ context.Context, _ string) error {
 func (r *stubGroupMessageRepo) MemberMuteStatus(_ context.Context, _ string, _ string) (bool, string, bool, error) {
 	return false, "", true, nil
 }
+func (r *stubGroupMessageRepo) MessageExists(_ context.Context, _ string) (bool, string, error) { return false, "", nil }
 
 // --- helpers ---
 
@@ -376,92 +377,70 @@ func TestHandlerHistoryHappyPath(t *testing.T) {
 	}
 }
 
-// --- MarkAsRead tests ---
+// --- MarkRead (group scope) tests ---
 
-func TestHandlerMarkAsReadRejectsInvalidJSON(t *testing.T) {
+func TestHandlerMarkReadRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
 	req := gmCtx("u1")
 	req.Body = io.NopCloser(strings.NewReader(`{bad`))
 
 	rr := httptest.NewRecorder()
-	handler.MarkAsRead(rr, req)
+	handler.MarkRead(rr, req)
 	gmAssertCode(t, rr, 10000)
 }
 
-func TestHandlerMarkAsReadRejectsMissingGroupID(t *testing.T) {
+func TestHandlerMarkReadRejectsMissingGroupID(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
 	req := gmCtx("u1")
-	req.Body = io.NopCloser(strings.NewReader(`{}`))
+	req.Body = io.NopCloser(strings.NewReader(`{"scope":"group"}`))
 
 	rr := httptest.NewRecorder()
-	handler.MarkAsRead(rr, req)
+	handler.MarkRead(rr, req)
 	gmAssertCode(t, rr, 10000)
 }
 
-func TestHandlerMarkAsReadRejectsUnknownFields(t *testing.T) {
+func TestHandlerMarkReadRejectsUnknownFields(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
 	req := gmCtx("u1")
-	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1","bogus":true}`))
+	req.Body = io.NopCloser(strings.NewReader(`{"scope":"group","group_id":"g1","bogus":true}`))
 
 	rr := httptest.NewRecorder()
-	handler.MarkAsRead(rr, req)
+	handler.MarkRead(rr, req)
 	gmAssertCode(t, rr, 10000)
 }
 
-func TestHandlerMarkAsReadHappyPath(t *testing.T) {
+func TestHandlerMarkReadHappyPath(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
 	req := gmCtx("u1")
-	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1"}`))
+	req.Body = io.NopCloser(strings.NewReader(`{"scope":"group","group_id":"g1"}`))
 
 	rr := httptest.NewRecorder()
-	handler.MarkAsRead(rr, req)
+	handler.MarkRead(rr, req)
 	gmAssertCode(t, rr, 0)
 }
 
-func TestHandlerMarkAsReadMapsNotFound(t *testing.T) {
+func TestHandlerMarkReadMapsNotFound(t *testing.T) {
 	repo := &stubGroupMessageRepo{markReadFn: func(_ context.Context, _ string, _ MarkGroupMessagesReadRequest) error {
 		return ErrMessageNotFound
 	}}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := gmCtx("u1")
-	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1"}`))
+	req.Body = io.NopCloser(strings.NewReader(`{"scope":"group","group_id":"g1"}`))
 
 	rr := httptest.NewRecorder()
-	handler.MarkAsRead(rr, req)
+	handler.MarkRead(rr, req)
 	gmAssertCode(t, rr, 10300)
 }
 
-// --- MarkAllRead tests ---
-
-func TestHandlerMarkAllReadIgnoresUnknownFields(t *testing.T) {
-	// Per api_spec_base.md, empty-object endpoints silently ignore unknown
-	// fields; {"unexpected":true} is accepted, not rejected.
-	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
-	req := gmCtx("u1")
-	req.Body = io.NopCloser(strings.NewReader(`{"unexpected":true}`))
-
-	rr := httptest.NewRecorder()
-	handler.MarkAllRead(rr, req)
-	gmAssertCode(t, rr, 0)
-}
-
-func TestHandlerMarkAllReadRejectsNonObjectBody(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
-	req := gmCtx("u1")
-	req.Body = io.NopCloser(strings.NewReader(`[1,2]`))
-
-	rr := httptest.NewRecorder()
-	handler.MarkAllRead(rr, req)
-	gmAssertCode(t, rr, 10000)
-}
+// --- MarkRead (all scope) tests ---
 
 func TestHandlerMarkAllReadHappyPath(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
 	req := gmCtx("u1")
-	req.Body = io.NopCloser(strings.NewReader(`{}`))
+	req.Body = io.NopCloser(strings.NewReader(`{"scope":"all"}`))
 
 	rr := httptest.NewRecorder()
-	handler.MarkAllRead(rr, req)
+	handler.MarkRead(rr, req)
 	gmAssertCode(t, rr, 0)
 }
 
@@ -469,9 +448,19 @@ func TestHandlerMarkAllReadReturns10600OnError(t *testing.T) {
 	repo := &stubGroupMessageRepo{markAllErr: errors.New("boom")}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := gmCtx("u1")
-	req.Body = io.NopCloser(strings.NewReader(`{}`))
+	req.Body = io.NopCloser(strings.NewReader(`{"scope":"all"}`))
 
 	rr := httptest.NewRecorder()
-	handler.MarkAllRead(rr, req)
+	handler.MarkRead(rr, req)
 	gmAssertCode(t, rr, 10600)
+}
+
+func TestHandlerMarkReadRejectsBadScope(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"scope":"unknown"}`))
+
+	rr := httptest.NewRecorder()
+	handler.MarkRead(rr, req)
+	gmAssertCode(t, rr, 10000)
 }

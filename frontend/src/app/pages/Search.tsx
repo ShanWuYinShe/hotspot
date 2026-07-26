@@ -1,28 +1,18 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { ROUTES } from "../lib/routes";
 import { ArrowLeft, Search as SearchIcon, TrendingUp, Hash, Users, FileText, MapPin, Clock, X } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { usePlatform } from "../contexts/PlatformContext";
 import { ActionIconButton } from "../components/shared/ActionIconButton";
-
-/* ── All searchable items ─────────────────────────────────────────── */
-const PEOPLE = [
-  { id: 1, name: "鹿鸣",     handle: "@liam.photos", avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80", tag: "摄影" },
-  { id: 2, name: "阿禾",   handle: "@sophia.wander", avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80", tag: "旅行" },
-  { id: 3, name: "野原",    handle: "@marco.music",  avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80", tag: "音乐" },
-];
-const POSTS = [
-  { id: 40, title: "植物园晨光",   user: "南枝", image: "https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?w=120", tag: "自然",  likes: 124 },
-  { id: 41, title: "城市夜光",     user: "本地向导", image: "https://images.unsplash.com/photo-1748737349771-e2b6605e5961?w=120", tag: "城市",  likes: 89 },
-  { id: 42, title: "老街手冲馆",   user: "野原",    image: "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=120", tag: "生活",  likes: 56 },
-  { id: 43, title: "云龙湖落日",   user: "小满", image: "https://images.unsplash.com/photo-1759734282634-b4958ea9a6e0?w=120", tag: "风景",  likes: 201 },
-];
-const TAGS = ["摄影", "城市探索", "周末去哪", "隐藏咖啡馆", "徐州美食", "本地生活", "户外运动", "街头摄影"];
-const HOT_SEARCHES = ["植物园", "云龙湖", "周末市集", "咖啡馆", "摄影"];
-const RECENT_SEARCHES = ["Aria Sol", "户部山周末弹唱", "徐州骑行"];
+import { searchAll } from "../../api";
 
 type TabType = "all" | "people" | "posts" | "tags";
+
+interface SearchResultUser { user_id: string; nickname: string; avatar_url?: string; tags?: string[] }
+interface SearchResultMoment { moment_id: string; description?: string; user?: SearchResultUser; tag?: string; like_count?: number }
+
+const HOT_SEARCHES = ["植物园", "云龙湖", "周末市集", "咖啡馆", "摄影"];
 
 export function Search() {
   const navigate = useNavigate();
@@ -30,26 +20,43 @@ export function Search() {
   const isDesktop = platform === "desktop";
   const shellStyle = { maxWidth: isDesktop ? 1040 : 640, marginLeft: "auto", marginRight: "auto", width: "100%" };
   const inputRef = useRef<HTMLInputElement>(null);
-  const [query,   setQuery]   = useState("");
-  const [tab,     setTab]     = useState<TabType>("all");
-  const [recent,  setRecent]  = useState(RECENT_SEARCHES);
+  const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<TabType>("all");
+  const [recent, setRecent] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("search_recent") ?? "[]"); } catch { return []; }
+  });
   const [focused, setFocused] = useState(true);
+  const [results, setResults] = useState<{ users: SearchResultUser[]; moments: SearchResultMoment[]; tags: string[] }>({ users: [], moments: [], tags: [] });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => { localStorage.setItem("search_recent", JSON.stringify(recent)); }, [recent]);
 
   const q = query.toLowerCase().trim();
 
-  const filteredPeople = q
-    ? PEOPLE.filter(p => p.name.toLowerCase().includes(q) || p.handle.includes(q) || p.tag.includes(q))
-    : [];
-  const filteredPosts = q
-    ? POSTS.filter(p => p.title.toLowerCase().includes(q) || p.user.toLowerCase().includes(q) || p.tag.includes(q))
-    : [];
-  const filteredTags = q
-    ? TAGS.filter(t => t.includes(q))
-    : [];
+  const doSearch = useCallback(async (term: string) => {
+    if (!term) { setResults({ users: [], moments: [], tags: [] }); return; }
+    setLoading(true);
+    try {
+      const res = await searchAll({ keyword: term });
+      if (res.code === 0 && res.data) {
+        const d = res.data as any;
+        const users = d.users?.items ?? d.users ?? [];
+        const moments = d.moments?.items ?? d.moments ?? [];
+        setResults({ users: Array.isArray(users) ? users : [], moments: Array.isArray(moments) ? moments : [], tags: [] });
+      } else if (res.message) {
+        setResults({ users: [], moments: [], tags: [] });
+      }
+    } catch (err) {
+      setResults({ users: [], moments: [], tags: [] });
+    }
+    finally { setLoading(false); }
+  }, []);
 
-  const hasResults = filteredPeople.length > 0 || filteredPosts.length > 0 || filteredTags.length > 0;
+  useEffect(() => {
+    const timer = setTimeout(() => doSearch(q), 300);
+    return () => clearTimeout(timer);
+  }, [q, doSearch]);
 
   const addRecent = (s: string) => {
     setRecent(prev => [s, ...prev.filter(r => r !== s)].slice(0, 6));
@@ -60,11 +67,13 @@ export function Search() {
     addRecent(s);
   };
 
+  const hasResults = results.users.length > 0 || results.moments.length > 0 || results.tags.length > 0;
+
   const RESULT_TABS: { id: TabType; label: string }[] = [
     { id: "all",    label: "全部" },
-    { id: "people", label: `用户 ${filteredPeople.length ? `(${filteredPeople.length})` : ""}` },
-    { id: "posts",  label: `动态 ${filteredPosts.length ? `(${filteredPosts.length})` : ""}` },
-    { id: "tags",   label: `标签 ${filteredTags.length ? `(${filteredTags.length})` : ""}` },
+    { id: "people", label: `用户 ${results.users.length ? `(${results.users.length})` : ""}` },
+    { id: "posts",  label: `动态 ${results.moments.length ? `(${results.moments.length})` : ""}` },
+    { id: "tags",   label: `标签 ${results.tags.length ? `(${results.tags.length})` : ""}` },
   ];
 
   return (
@@ -82,7 +91,7 @@ export function Search() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             onFocus={() => setFocused(true)}
-            onKeyDown={e => { if (e.key === "Enter" && query.trim()) addRecent(query.trim()); }}
+            onKeyDown={e => { if (e.key === "Enter" && query.trim()) handleSearch(query.trim()); }}
             placeholder="搜索用户、地点、话题…"
             className="flex-1 bg-transparent outline-none"
             style={{ fontSize: 13, color: "var(--neu-text)" }}
@@ -101,7 +110,6 @@ export function Search() {
         {/* No query: show discovery */}
         {!q && (
           <div className="px-5 pt-4 pb-6" style={shellStyle}>
-            {/* Recent searches */}
             {recent.length > 0 && (
               <div className="mb-5">
                 <div className="flex items-center justify-between mb-2.5">
@@ -125,7 +133,6 @@ export function Search() {
               </div>
             )}
 
-            {/* Hot searches */}
             <div className="mb-5">
               <div className="flex items-center gap-1.5 mb-2.5">
                 <TrendingUp style={{ width: 13, height: 13, color: "var(--neu-accent-primary)" }} strokeWidth={2} />
@@ -143,31 +150,12 @@ export function Search() {
                 </motion.button>
               ))}
             </div>
-
-            {/* Tag suggestions */}
-            <div>
-              <div className="flex items-center gap-1.5 mb-2.5">
-                <Hash style={{ width: 13, height: 13, color: "var(--neu-accent-primary)" }} strokeWidth={2} />
-                <p className="uppercase" style={{ fontSize: 10, letterSpacing: "0.12em", color: "var(--neu-text-muted)" }}>热门话题</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {TAGS.map(t => (
-                  <motion.button key={t} whileTap={{ scale: 0.93 }}
-                    onClick={() => handleSearch(t)}
-                    className="px-3.5 py-1.5 rounded-full outline-none neu-theme-chip"
-                    style={{ fontSize: 12 }}>
-                    #{t}
-                  </motion.button>
-                ))}
-              </div>
-            </div>
           </div>
         )}
 
         {/* Has query: show results */}
         {q && (
           <div style={shellStyle}>
-            {/* Result tabs */}
             <div className="flex overflow-x-auto no-scrollbar px-5 pt-3 pb-0 gap-2">
               {RESULT_TABS.map(t => (
                 <motion.button key={t.id} whileTap={{ scale: 0.92 }}
@@ -182,8 +170,13 @@ export function Search() {
             </div>
 
             <div className="px-5 pt-4 pb-6 flex flex-col gap-4">
-              {/* No results */}
-              {!hasResults && (
+              {loading && (
+                <div className="flex items-center justify-center py-12">
+                  <p style={{ fontSize: 13, color: "var(--neu-text-muted)" }}>搜索中...</p>
+                </div>
+              )}
+
+              {!loading && !hasResults && (
                 <div className="flex flex-col items-center justify-center py-16 gap-3">
                   <SearchIcon style={{ width: 36, height: 36, color: "var(--neu-text-muted)", opacity: 0.4 }} strokeWidth={1.25} />
                   <p style={{ fontSize: 15, color: "var(--neu-text)" }}>未找到相关内容</p>
@@ -191,24 +184,22 @@ export function Search() {
                 </div>
               )}
 
-              {/* People results */}
-              {(tab === "all" || tab === "people") && filteredPeople.length > 0 && (
+              {(tab === "all" || tab === "people") && results.users.length > 0 && (
                 <div>
                   {tab === "all" && <p className="uppercase mb-2.5" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--neu-text-muted)" }}>用户</p>}
                   <div className="flex flex-col gap-2.5">
-                    {filteredPeople.map(person => (
-                      <motion.div key={person.id} whileTap={{ scale: 0.98 }}
-                        onClick={() => navigate(ROUTES.user(person.id))}
+                    {results.users.map(user => (
+                      <motion.div key={user.user_id} whileTap={{ scale: 0.98 }}
+                        onClick={() => navigate(ROUTES.user(user.user_id))}
                         className="app-list-row app-list-row--rich neu-row-hover cursor-pointer rounded-[20px] px-4 neu-surface-flat">
                         <div className="rounded-full overflow-hidden flex-shrink-0" style={{ width: 42, height: 42 }}>
-                          <img src={person.avatar} alt={person.name} className="w-full h-full object-cover" />
+                          <img src={user.avatar_url ?? "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80"} alt={user.nickname} className="w-full h-full object-cover" />
                         </div>
                         <div className="flex-1">
-                          <p style={{ fontSize: 14, color: "var(--neu-text)" }}>{person.name}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{person.handle}</span>
-                            <span className="px-2 py-0.5 rounded-full" style={{ fontSize: 10, background: "var(--neu-accent-soft)", color: "var(--neu-accent-primary)" }}>#{person.tag}</span>
-                          </div>
+                          <p style={{ fontSize: 14, color: "var(--neu-text)" }}>{user.nickname}</p>
+                          {user.tags && user.tags.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full" style={{ fontSize: 10, background: "var(--neu-accent-soft)", color: "var(--neu-accent-primary)" }}>#{user.tags[0]}</span>
+                          )}
                         </div>
                         <Users style={{ width: 15, height: 15, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
                       </motion.div>
@@ -217,24 +208,25 @@ export function Search() {
                 </div>
               )}
 
-              {/* Post results */}
-              {(tab === "all" || tab === "posts") && filteredPosts.length > 0 && (
+              {(tab === "all" || tab === "posts") && results.moments.length > 0 && (
                 <div>
                   {tab === "all" && <p className="uppercase mb-2.5" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--neu-text-muted)" }}>动态</p>}
                   <div className="flex flex-col gap-2.5">
-                    {filteredPosts.map(post => (
-                      <motion.div key={post.id} whileTap={{ scale: 0.98 }}
-                        onClick={() => navigate(ROUTES.moment(post.id))}
+                    {results.moments.map(moment => (
+                      <motion.div key={moment.moment_id} whileTap={{ scale: 0.98 }}
+                        onClick={() => navigate(ROUTES.moment(moment.moment_id))}
                         className="app-list-row app-list-row--rich neu-row-hover cursor-pointer rounded-[20px] px-4 neu-surface-flat">
-                        <div className="rounded-[12px] overflow-hidden flex-shrink-0" style={{ width: 42, height: 42 }}>
-                          <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
-                        </div>
+                        <div className="rounded-[12px] overflow-hidden flex-shrink-0" style={{ width: 42, height: 42, background: "var(--neu-accent-soft)" }} />
                         <div className="flex-1 min-w-0">
-                          <p className="truncate" style={{ fontSize: 14, color: "var(--neu-text)" }}>{post.title}</p>
+                          <p className="truncate" style={{ fontSize: 14, color: "var(--neu-text)" }}>{moment.description ?? "无标题"}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{post.user}</span>
-                            <span style={{ fontSize: 10, color: "var(--neu-text-muted)", opacity: 0.5 }}>·</span>
-                            <span style={{ fontSize: 11, color: "var(--neu-accent-primary)" }}>❤️ {post.likes}</span>
+                            <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{moment.user?.nickname ?? ""}</span>
+                            {moment.like_count !== undefined && (
+                              <>
+                                <span style={{ fontSize: 10, color: "var(--neu-text-muted)", opacity: 0.5 }}>·</span>
+                                <span style={{ fontSize: 11, color: "var(--neu-accent-primary)" }}>❤️ {moment.like_count}</span>
+                              </>
+                            )}
                           </div>
                         </div>
                         <FileText style={{ width: 15, height: 15, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
@@ -244,12 +236,11 @@ export function Search() {
                 </div>
               )}
 
-              {/* Tag results */}
-              {(tab === "all" || tab === "tags") && filteredTags.length > 0 && (
+              {(tab === "all" || tab === "tags") && results.tags.length > 0 && (
                 <div>
                   {tab === "all" && <p className="uppercase mb-2.5" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--neu-text-muted)" }}>标签</p>}
                   <div className="flex flex-wrap gap-2">
-                    {filteredTags.map(t => (
+                    {results.tags.map(t => (
                       <motion.button key={t} whileTap={{ scale: 0.93 }}
                         className="px-4 py-2 rounded-full outline-none neu-theme-chip"
                         style={{ fontSize: 13 }}>

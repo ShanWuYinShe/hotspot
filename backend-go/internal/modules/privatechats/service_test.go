@@ -64,6 +64,7 @@ func (m *stubMsgReadService) Last(_ context.Context, _ string, _ *time.Time) (*p
 func (m *stubMsgReadService) UnreadCount(_ context.Context, _ string, _ *time.Time) (int, error) {
 	return m.unreadCount, m.unreadErr
 }
+func (m *stubMsgReadService) LookupMessage(_ context.Context, _ string) (bool, string, error) { return false, "", nil }
 
 type stubChatUserReader struct {
 	item        users.UserItem
@@ -89,7 +90,7 @@ func defaultUserItem() users.UserItem {
 }
 
 func defaultSettings() users.UserSettings {
-	return users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone}
+	return users.UserSettings{AllowPrivateChat: users.ChatPermEveryone}
 }
 
 func TestServiceOpenTheDoorCreatesChat(t *testing.T) {

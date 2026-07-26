@@ -12,8 +12,17 @@ type Location struct {
 	LocationName string `json:"location_name"`
 }
 
+// Reaction mirrors spec api_spec_types.md Reaction (per-emoji aggregate with
+// reacted_by_me). Defined here rather than imported from the reactions module
+// so moments does not depend on reactions at the type level; the values are
+// filled by a reactions.Service adapter at read time.
+type Reaction struct {
+	Emoji       string `json:"emoji"`
+	Count       int    `json:"count"`
+	ReactedByMe bool   `json:"reacted_by_me"`
+}
+
 type MyMomentState struct {
-	IsLiked     bool `json:"is_liked"`
 	IsFavorited bool `json:"is_favorited"`
 }
 
@@ -38,7 +47,11 @@ type MomentItem struct {
 	User          UserInfo       `json:"user"`
 	Location      Location       `json:"location"`
 	PrivacyLevel  string         `json:"privacy_level,omitempty"`
-	MyState       *MyMomentState `json:"my_state,omitempty"`
+	// Reactions is the per-emoji aggregate (@auth-only reacted_by_me). Omitted
+	// when the moment has no reactions. LikesCount above is the total across
+	// all emojis, kept for sort/heat computations and legacy clients.
+	Reactions  []Reaction      `json:"reactions,omitempty"`
+	MyState    *MyMomentState  `json:"my_state,omitempty"`
 }
 
 type CreateMomentRequest struct {
@@ -86,35 +99,13 @@ type DeleteMomentRequest struct {
 	MomentID string `json:"moment_id"`
 }
 
-type LikeMomentRequest struct {
-	MomentID string `json:"moment_id"`
-}
-
-type UnlikeMomentRequest struct {
-	MomentID string `json:"moment_id"`
-}
-
 type FavoriteMomentRequest struct {
 	MomentID string `json:"moment_id"`
+	Active   bool   `json:"active"`
 }
 
 type UnfavoriteMomentRequest struct {
 	MomentID string `json:"moment_id"`
-}
-
-type ListLikesRequest struct {
-	MomentID   string            `json:"moment_id"`
-	Pagination *PaginationParams `json:"pagination,omitempty"`
-}
-
-type LikeItem struct {
-	User     UserInfo `json:"user"`
-	LikedAt  string   `json:"liked_at"`
-}
-
-type PaginatedLikes struct {
-	Items      []LikeItem `json:"items"`
-	NextCursor string     `json:"next_cursor,omitempty"`
 }
 
 type MyMomentsRequest struct {

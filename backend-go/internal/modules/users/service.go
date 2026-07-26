@@ -57,7 +57,7 @@ func (s *Service) GetMyProfile(ctx context.Context) (MyProfile, error) {
 	return profile, nil
 }
 
-func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateProfileRequest) error {
+func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest) error {
 	startedAt := time.Now()
 	observability.L().Info("users.update_my_profile started")
 	principal, err := requirePrincipal(ctx)
@@ -245,6 +245,27 @@ func (s *Service) OpenTheDoor(ctx context.Context, userID string) (UserItem, boo
 	return item, true, nil
 }
 
+// BatchGet resolves multiple users at once (spec api_spec_user.md users/batch_get).
+// Returns a user_id -> UserItem map; ids that do not exist (or fail privacy
+// checks) are simply absent from the map. Each user is resolved through the
+// same OpenTheDoor privacy path so visibility rules stay consistent with the
+// single-user endpoint.
+func (s *Service) BatchGet(ctx context.Context, userIDs []string) (map[string]UserItem, error) {
+	result := make(map[string]UserItem, len(userIDs))
+	for _, userID := range userIDs {
+		item, ok, err := s.OpenTheDoor(ctx, userID)
+		if err != nil {
+			observability.L().Error("users.batch_get single lookup failed", "error", err, "user_id", userID)
+			continue
+		}
+		if !ok {
+			continue
+		}
+		result[userID] = item
+	}
+	return result, nil
+}
+
 func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest) error {
 	startedAt := time.Now()
 	observability.L().Info("users.update_location started")
@@ -401,7 +422,7 @@ func (s *Service) resolveReferencePoint(ctx context.Context, ref GeoPoint) GeoPo
 }
 
 func defaultSettings() UserSettings {
-	return UserSettings{PrivacyLevel: "public", LocationVisible: true, PresenceVisible: true, SocialListsVisible: true, GroupsVisible: true, LikedMomentsVisible: true, StatsVisible: true, AllowFollow: true, AllowPrivateChat: PrivateChatEveryone, Searchable: true, PhoneSearchable: false, NicknameSearchable: true, LocationSearchable: true}
+	return UserSettings{PrivacyLevel: "public", LocationVisible: true, PresenceVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, AllowPrivateChat: ChatPermEveryone, Searchable: true, PhoneSearchable: false, NicknameSearchable: true, LocationSearchable: true}
 }
 
 func userItemFromProfile(profile MyProfile, relation *Relationship, includePresence bool, includeLocation bool, includeStats bool) UserItem {

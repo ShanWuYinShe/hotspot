@@ -63,6 +63,7 @@ func (r *stubMsgRepo) GetMessageForReply(_ context.Context, _ string, _ string) 
 func (r *stubMsgRepo) GetMediaForMessage(_ context.Context, _ string, _ string) (map[string]any, bool, error) {
 	return nil, false, nil
 }
+func (r *stubMsgRepo) MessageExists(_ context.Context, _ string) (bool, string, error) { return false, "", nil }
 
 type stubUserReader struct {
 	item        users.UserItem
@@ -85,7 +86,7 @@ func msgCtx(userID string) context.Context {
 
 func TestServiceSendDelegatesToRepo(t *testing.T) {
 	repo := &stubMsgRepo{sendResult: MessageSent{MessageID: "pm1", SentAt: "2025-01-01T00:00:00Z"}}
-	svc := NewServiceWithDeps(repo, &stubUserReader{found: true, settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone}})
+	svc := NewServiceWithDeps(repo, &stubUserReader{found: true, settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone}})
 	result, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u2", Type: "text", Content: "hi"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -107,7 +108,7 @@ func TestServiceSendRejectsBlockedUser(t *testing.T) {
 	svc := NewServiceWithDeps(&stubMsgRepo{}, &stubUserReader{
 		found:    true,
 		item:     users.UserItem{Relation: &users.Relationship{IsBlocked: true}},
-		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone},
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
 	})
 	_, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u2", Type: "text"})
 	if err == nil {
@@ -118,7 +119,7 @@ func TestServiceSendRejectsBlockedUser(t *testing.T) {
 func TestServiceSendRejectsNobodySetting(t *testing.T) {
 	svc := NewServiceWithDeps(&stubMsgRepo{}, &stubUserReader{
 		found:    true,
-		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatNobody},
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermNobody},
 	})
 	_, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u2", Type: "text"})
 	if err == nil {
@@ -128,7 +129,7 @@ func TestServiceSendRejectsNobodySetting(t *testing.T) {
 
 func TestServiceSendAllowsSelfMessage(t *testing.T) {
 	repo := &stubMsgRepo{sendResult: MessageSent{MessageID: "pm1"}}
-	svc := NewServiceWithDeps(repo, &stubUserReader{found: true, settings: users.UserSettings{AllowPrivateChat: users.PrivateChatNobody}})
+	svc := NewServiceWithDeps(repo, &stubUserReader{found: true, settings: users.UserSettings{AllowPrivateChat: users.ChatPermNobody}})
 	_, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u1", Type: "text"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -136,7 +137,7 @@ func TestServiceSendAllowsSelfMessage(t *testing.T) {
 }
 
 func TestServiceSendPropagatesError(t *testing.T) {
-	svc := NewServiceWithDeps(&stubMsgRepo{sendErr: errors.New("boom")}, &stubUserReader{found: true, settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone}})
+	svc := NewServiceWithDeps(&stubMsgRepo{sendErr: errors.New("boom")}, &stubUserReader{found: true, settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone}})
 	_, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u2", Type: "text"})
 	if err == nil {
 		t.Fatal("expected error")

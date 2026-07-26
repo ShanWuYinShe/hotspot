@@ -32,24 +32,24 @@
 | `POST /api/v1/groups/members/ban` | 封禁成员 | 必须 | MUST |
 | `POST /api/v1/groups/members/unban` | 解除封禁 | 必须 | 幂等语义 |
 | `POST /api/v1/groups/members/list_banned` | 封禁列表 | 必须 | 无 |
-| `POST /api/v1/groups/members/remove_member` | 移除成员 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/members/remove` | 移除成员 | 必须 | 幂等语义 |
 | `POST /api/v1/groups/applications/list` | 申请列表 | 必须 | 无 |
 | `POST /api/v1/groups/applications/approve` | 同意申请 | 必须 | MUST |
 | `POST /api/v1/groups/applications/reject` | 拒绝申请 | 必须 | MUST |
-| `POST /api/v1/groups/me/update_settings` | 更新我的群组偏好 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/me/join` | 加入群组（根据 join_method 自动处理） | 必须 | MUST |
-| `POST /api/v1/groups/me/transfer_ownership` | 转让群主 | 必须 | SHOULD |
+| `POST /api/v1/groups/update_preferences` | 更新我的群组偏好 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/join` | 加入群组（根据 join_method 自动处理） | 必须 | MUST |
+| `POST /api/v1/groups/transfer_ownership` | 转让群主 | 必须 | SHOULD |
 | `POST /api/v1/groups/announcements/create` | 发布公告 | 必须 | MUST |
 | `POST /api/v1/groups/announcements/list` | 公告列表 | 可选 | 无 |
 | `POST /api/v1/groups/announcements/update` | 更新公告 | 必须 | 幂等语义 |
 | `POST /api/v1/groups/announcements/delete` | 删除公告 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/me/list` | 我的群组列表 | 必须 | 无 |
-| `POST /api/v1/groups/me/applications/list` | 我的申请列表 | 必须 | 无 |
-| `POST /api/v1/groups/me/applications/cancel` | 取消申请 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/me/invites/list` | 我的邀请列表 | 必须 | 无 |
-| `POST /api/v1/groups/me/invites/accept` | 接受邀请 | 必须 | MUST |
-| `POST /api/v1/groups/me/invites/reject` | 拒绝邀请 | 必须 | MUST |
-| `POST /api/v1/groups/me/leave` | 退出群组 | 必须 | SHOULD |
+| `POST /api/v1/groups/list_my` | 我的群组列表 | 必须 | 无 |
+| `POST /api/v1/groups/list_applications` | 我的申请列表 | 必须 | 无 |
+| `POST /api/v1/groups/cancel_application` | 取消申请 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/list_invites` | 我的邀请列表 | 必须 | 无 |
+| `POST /api/v1/groups/accept_invite` | 接受邀请 | 必须 | MUST |
+| `POST /api/v1/groups/reject_invite` | 拒绝邀请 | 必须 | MUST |
+| `POST /api/v1/groups/leave` | 退出群组 | 必须 | SHOULD |
 
 ## 类型定义
 
@@ -505,7 +505,7 @@ interface BannedMemberItem {
 
 ---
 
-### POST /api/v1/groups/members/remove_member
+### POST /api/v1/groups/members/remove
 
 移除成员。
 
@@ -591,7 +591,7 @@ interface ApproveGroupApplicationRequest {
 
 ### POST /api/v1/groups/applications/reject
 
-拒绝群组申请。拒绝后向申请人推送 `GroupApplicationRejected` 通知（含 `reason`，对应 `NotificationType='group_application_rejected'`）。
+拒绝群组申请。拒绝后向申请人推送 `GroupApplicationRejected` 通知（含 `reason`，对应 `NotifyType='group_application_rejected'`）。
 
 - **认证**: 必须
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
@@ -704,9 +704,9 @@ interface DeleteGroupAnnouncementRequest {
 
 ---
 
-### POST /api/v1/groups/me/update_settings
+### POST /api/v1/groups/update_preferences
 
-更新我的群组偏好。
+更新我的群组偏好（静音/置顶，区别于 `groups/update` 群信息更新）。
 
 
 - **认证**: 必须
@@ -727,7 +727,7 @@ interface UpdateGroupMySettingsRequest {
 
 ---
 
-### POST /api/v1/groups/me/join
+### POST /api/v1/groups/join
 
 加入群组（智能路由）。根据群组 `join_method` 自动处理：
 - `open`：直接加入，返回 `status: 'joined'`
@@ -766,7 +766,7 @@ interface JoinGroupResult {
 
 ---
 
-### POST /api/v1/groups/me/transfer_ownership
+### POST /api/v1/groups/transfer_ownership
 
 转让群主。
 
@@ -789,7 +789,7 @@ interface TransferOwnershipRequest {
 
 ---
 
-### POST /api/v1/groups/me/list
+### POST /api/v1/groups/list_my
 
 获取我的群组。
 
@@ -813,7 +813,7 @@ interface MyGroupsRequest {
 
 ---
 
-### POST /api/v1/groups/me/applications/list
+### POST /api/v1/groups/list_applications
 
 获取我的群组申请列表。查看当前用户提交的所有群组申请及其审核状态。
 
@@ -835,9 +835,9 @@ interface MyApplicationsRequest {
 
 ---
 
-### POST /api/v1/groups/me/applications/cancel
+### POST /api/v1/groups/cancel_application
 
-取消群组申请。取消后向群管理员推送 `GroupApplicationCancelled` 通知（对应 `NotificationType='group_application_cancelled'`）。
+取消群组申请。取消后向群管理员推送 `GroupApplicationCancelled` 通知（对应 `NotifyType='group_application_cancelled'`）。
 
 
 - **认证**: 必须
@@ -858,7 +858,7 @@ interface CancelApplicationRequest {
 
 ---
 
-### POST /api/v1/groups/me/invites/list
+### POST /api/v1/groups/list_invites
 
 获取我的群组邀请列表。
 
@@ -894,7 +894,7 @@ interface GroupInviteItem {
 
 ---
 
-### POST /api/v1/groups/me/invites/accept
+### POST /api/v1/groups/accept_invite
 
 接受群组邀请。
 
@@ -920,7 +920,7 @@ interface InviteAcceptedResult {
 
 ---
 
-### POST /api/v1/groups/me/invites/reject
+### POST /api/v1/groups/reject_invite
 
 拒绝群组邀请。
 
@@ -942,11 +942,11 @@ interface RejectInviteRequest {
 
 ---
 
-### POST /api/v1/groups/me/leave
+### POST /api/v1/groups/leave
 
 退出群组。
 
-**限制**：群主不能直接退出群组，必须先通过 `groups/me/transfer_ownership` 转让群主身份，否则返回 `10400`（message: "群主需先转让群主身份"）。
+**限制**：群主不能直接退出群组，必须先通过 `groups/transfer_ownership` 转让群主身份，否则返回 `10400`（message: "群主需先转让群主身份"）。
 
 **级联处理（契约级）**：退群用户作为**申请人**的该群 pending 申请自动置 `revoked`；作为 inviter 发出的 pending 邀请**保留**（邀请是群行为，由其他管理员管理），但如果退群的是该群最后一个管理员/owner，则已由 `transfer_ownership` 限制提前拦截（不会发生"无人管理 pending 邀请"的状态）。
 

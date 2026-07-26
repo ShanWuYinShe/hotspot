@@ -9,10 +9,14 @@ import (
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
-type Module struct{ handler *Handler }
+type Module struct {
+	handler *Handler
+	Service *Service
+}
 
 func NewModule(factory *persistence.Factory, users userReader) *Module {
-	return &Module{handler: NewHandler(NewServiceWithRepoAndUsers(NewPersistenceRepository(factory), users))}
+	svc := NewServiceWithRepoAndUsers(NewPersistenceRepository(factory), users)
+	return &Module{handler: NewHandler(svc), Service: svc}
 }
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/group_messages", func(gr chi.Router) {
@@ -25,8 +29,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/get_history", m.handler.History)
 			group.Post("/update", m.handler.Update)
 			group.Post("/recall", m.handler.Recall)
-			group.Post("/me/mark_as_read", m.handler.MarkAsRead)
-			group.Post("/me/mark_all_read", m.handler.MarkAllRead)
+			group.Post("/mark_read", m.handler.MarkRead)
 		})
 	})
 }

@@ -108,7 +108,7 @@ func (r *PersistenceRepository) GetReportHandleRecord(ctx context.Context, repor
 	return r.impl.GetReportHandleRecord(ctx, reportID)
 }
 
-func (r *PersistenceRepository) HandleReport(ctx context.Context, reportID string, action ReportHandleAction, note string, handledBy *UserInfo) (AdminReportItem, bool, error) {
+func (r *PersistenceRepository) HandleReport(ctx context.Context, reportID string, action ReportAction, note string, handledBy *UserInfo) (AdminReportItem, bool, error) {
 	return r.impl.HandleReport(ctx, reportID, action, note, handledBy)
 }
 

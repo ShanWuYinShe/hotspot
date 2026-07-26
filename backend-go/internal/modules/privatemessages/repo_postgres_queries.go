@@ -146,4 +146,9 @@ const (
 		       declared_mime_type
 		FROM media_upload_sessions
 		WHERE file_id = $1 AND status = 'completed' AND user_id = $2`
+
+	queryPrivateMessageExists = `
+		SELECT sender_user_id
+		FROM private_messages
+		WHERE message_id = $1`
 )

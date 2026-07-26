@@ -15,6 +15,7 @@ type ReadService interface {
 	Recent(context.Context, string, int, *time.Time) (PaginatedMessages, error)
 	Last(context.Context, string, *time.Time) (*PrivateMessageItem, error)
 	UnreadCount(context.Context, string, *time.Time) (int, error)
+	LookupMessage(ctx context.Context, messageID string) (found bool, senderID string, err error)
 }
 
 type Runtime struct {
@@ -228,9 +229,9 @@ func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string
 		return settingsErr
 	}
 	switch settings.AllowPrivateChat {
-	case users.PrivateChatNobody:
+	case users.ChatPermNobody:
 		return ErrMessagePermissionDenied
-	case users.PrivateChatFriends:
+	case users.ChatPermFriends:
 		if item.Relation == nil || !(item.Relation.IsFollowing && item.Relation.IsFollowedBy) {
 			return ErrMessagePermissionDenied
 		}
@@ -265,4 +266,8 @@ func (s *Service) buildMedia(ctx context.Context, fileID, ownerUserID string) ma
 		return nil
 	}
 	return info
+}
+
+func (s *Service) LookupMessage(ctx context.Context, messageID string) (found bool, senderID string, err error) {
+	return s.repo.MessageExists(ctx, messageID)
 }

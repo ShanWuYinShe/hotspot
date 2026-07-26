@@ -12,10 +12,10 @@ func TestUsersModuleMountsContactChangeRoutes(t *testing.T) {
 	NewModule(nil, nil).Mount(router)
 
 	routes := map[string]bool{
-		"/api/v1/users/me/email/request_change": false,
-		"/api/v1/users/me/email/confirm_change": false,
-		"/api/v1/users/me/phone/request_change": false,
-		"/api/v1/users/me/phone/confirm_change": false,
+		"/api/v1/users/email/request_change": false,
+		"/api/v1/users/email/confirm_change": false,
+		"/api/v1/users/phone/request_change": false,
+		"/api/v1/users/phone/confirm_change": false,
 	}
 	if err := chi.Walk(router, func(method string, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
 		if method != http.MethodPost {

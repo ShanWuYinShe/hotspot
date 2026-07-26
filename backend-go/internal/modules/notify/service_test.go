@@ -1,4 +1,4 @@
-package notifications
+package notify
 
 import (
 	"context"
@@ -16,28 +16,28 @@ type notificationListCaptureRepo struct {
 	userID     string
 	appendUser string
 	appendMany []string
-	appended   []NotificationItem
+	appended   []NotifyItem
 	req        NotificationListRequest
-	list       PaginatedNotifications
+	list       PaginatedNotify
 	listErr    error
 }
 
 func (s *sinkStub) Send(e realtime.Event) error { s.events = append(s.events, e); return nil }
 func (s *sinkStub) Close() error                { return nil }
 
-func (r *notificationListCaptureRepo) Append(_ context.Context, userID string, item NotificationItem) error {
+func (r *notificationListCaptureRepo) Append(_ context.Context, userID string, item NotifyItem) error {
 	r.appendUser = userID
 	r.appended = append(r.appended, item)
 	return nil
 }
 
-func (r *notificationListCaptureRepo) AppendMany(_ context.Context, userIDs []string, item NotificationItem) error {
+func (r *notificationListCaptureRepo) AppendMany(_ context.Context, userIDs []string, item NotifyItem) error {
 	r.appendMany = append([]string(nil), userIDs...)
 	r.appended = append(r.appended, item)
 	return nil
 }
 
-func (r *notificationListCaptureRepo) List(_ context.Context, userID string, req NotificationListRequest) (PaginatedNotifications, error) {
+func (r *notificationListCaptureRepo) List(_ context.Context, userID string, req NotificationListRequest) (PaginatedNotify, error) {
 	r.userID = userID
 	r.req = req
 	return r.list, r.listErr
@@ -49,6 +49,7 @@ func (r *notificationListCaptureRepo) UnreadCount(context.Context, string) (Unre
 
 func (r *notificationListCaptureRepo) MarkAsRead(context.Context, string, []string) error { return nil }
 func (r *notificationListCaptureRepo) MarkAllRead(context.Context, string) error          { return nil }
+func (r *notificationListCaptureRepo) MarkAllReadByType(context.Context, string, string) error { return nil }
 
 func TestAppendNewFollowerBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
@@ -200,7 +201,7 @@ func TestPushSystemAnnouncementFansOut(t *testing.T) {
 	hub.RegisterUser("user_alice", "sess_1", aliceSink)
 	hub.RegisterUser("user_bob", "sess_2", bobSink)
 	service := NewService()
-	payload := systemmodule.SystemAnnouncementItem{AnnouncementID: "ann_1", Title: "维护通知", Content: "今晚维护", Severity: systemmodule.AnnouncementSeverityInfo, CreatedAt: "2026-03-26T00:00:00Z"}
+	payload := systemmodule.SystemAnnouncementItem{AnnouncementID: "ann_1", Title: "维护通知", Content: "今晚维护", Severity: systemmodule.AnnounceLevelInfo, CreatedAt: "2026-03-26T00:00:00Z"}
 	service.PushSystemAnnouncement(payload)
 	if len(aliceSink.events) != 1 || len(bobSink.events) != 1 {
 		t.Fatalf("unexpected events: %#v %#v", aliceSink.events, bobSink.events)
@@ -217,7 +218,7 @@ func TestPushSystemAnnouncementFansOut(t *testing.T) {
 func TestAppendSystemAnnouncementBuildsNotificationsForUsers(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	payload := systemmodule.SystemAnnouncementItem{AnnouncementID: "ann_1", Title: "维护通知", Content: "今晚维护", Severity: systemmodule.AnnouncementSeverityInfo, CreatedAt: "2026-03-26T00:00:00Z"}
+	payload := systemmodule.SystemAnnouncementItem{AnnouncementID: "ann_1", Title: "维护通知", Content: "今晚维护", Severity: systemmodule.AnnounceLevelInfo, CreatedAt: "2026-03-26T00:00:00Z"}
 	if err := service.AppendSystemAnnouncement(context.Background(), []string{"user_alice", "user_bob"}, payload); err != nil {
 		t.Fatalf("append system announcement: %v", err)
 	}
@@ -231,7 +232,7 @@ func TestAppendSystemAnnouncementBuildsNotificationsForUsers(t *testing.T) {
 }
 
 func TestServiceListNormalizesPaginationAndCursor(t *testing.T) {
-	repo := &notificationListCaptureRepo{list: PaginatedNotifications{Items: []NotificationItem{{NotificationID: "notif_1"}}}}
+	repo := &notificationListCaptureRepo{list: PaginatedNotify{Items: []NotifyItem{{NotificationID: "notif_1"}}}}
 	service := NewServiceWithRepo(repo)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	cursor := encodeNotificationCursor(notificationCursor{CreatedAt: "2026-03-26T00:00:00Z", NotificationID: "notif_9"})

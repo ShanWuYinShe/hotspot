@@ -73,6 +73,29 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
 }
 
+// GetDetail handles POST /api/v1/comments/get_detail. Returns a single comment
+// by id (spec api_spec_moment.md). found=false maps to 10300.
+func (h *Handler) GetDetail(w http.ResponseWriter, r *http.Request) {
+	var req GetCommentRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.CommentID == "" {
+		logBusinessError(r, "GetDetail", 10000, "参数错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	item, found, err := h.service.GetForDetail(r.Context(), req.CommentID)
+	if err != nil {
+		logServerError(r, "GetDetail", err)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	if !found {
+		logBusinessError(r, "GetDetail", 10300, "评论不存在")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "评论不存在"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(item))
+}
+
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		if err := idempotency.RequireKey(r); err != nil {
 			logBusinessError(r, "Delete", err.Code, err.Message)
@@ -127,74 +150,6 @@ func (h *Handler) ListReplies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
-}
-
-func (h *Handler) Like(w http.ResponseWriter, r *http.Request) {
-	var req LikeCommentRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.CommentID == "" {
-		logBusinessError(r, "Like", 10000, "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-		return
-	}
-	err := h.service.Like(r.Context(), req)
-	if err != nil {
-		if errors.Is(err, ErrCommentNotFound) {
-			logBusinessError(r, "Like", 10300, "评论不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "评论不存在"))
-			return
-		}
-		logServerError(r, "Like", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
-}
-
-func (h *Handler) Unlike(w http.ResponseWriter, r *http.Request) {
-	var req UnlikeCommentRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.CommentID == "" {
-		logBusinessError(r, "Unlike", 10000, "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-		return
-	}
-	err := h.service.Unlike(r.Context(), req)
-	if err != nil {
-		if errors.Is(err, ErrCommentNotFound) {
-			logBusinessError(r, "Unlike", 10300, "评论不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "评论不存在"))
-			return
-		}
-		logServerError(r, "Unlike", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
-}
-
-func (h *Handler) ListLikes(w http.ResponseWriter, r *http.Request) {
-	var req CommentLikesRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.CommentID == "" {
-		logBusinessError(r, "ListLikes", 10000, "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-		return
-	}
-	result, err := h.service.ListLikes(r.Context(), req)
-	if err != nil {
-		if errors.Is(err, ErrCommentNotFound) {
-			logBusinessError(r, "ListLikes", 10300, "评论不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "评论不存在"))
-			return
-		}
-		if errors.Is(err, ErrInvalidCursor) {
-			logBusinessError(r, "ListLikes", 10000, "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-			return
-		}
-		logServerError(r, "ListLikes", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
 }
 
 func logServerError(r *http.Request, method string, err error) {

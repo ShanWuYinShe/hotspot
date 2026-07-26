@@ -73,7 +73,6 @@ func (r *rowsValues) Err() error   { return r.err }
 type backendStub struct {
 	moments      map[string]MomentItem
 	blockedTags  map[string]struct{}
-	likes        map[string]map[string]string
 	favorites    map[string]map[string]string
 	execErrs     map[string]error
 	queryErr     error
@@ -81,7 +80,7 @@ type backendStub struct {
 }
 
 func newBackendStub() *backendStub {
-	return &backendStub{moments: make(map[string]MomentItem), blockedTags: make(map[string]struct{}), likes: make(map[string]map[string]string), favorites: make(map[string]map[string]string), execErrs: make(map[string]error), queryRowErrs: make(map[string]error)}
+	return &backendStub{moments: make(map[string]MomentItem), blockedTags: make(map[string]struct{}), favorites: make(map[string]map[string]string), execErrs: make(map[string]error), queryRowErrs: make(map[string]error)}
 }
 
 func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
@@ -99,7 +98,7 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 			SharesCount:   args[6].(int),
 			User:          UserInfo{UserID: args[1].(string), Nickname: args[1].(string)},
 			PrivacyLevel:  args[10].(string),
-			MyState:       &MyMomentState{IsLiked: false, IsFavorited: false},
+			MyState:       &MyMomentState{IsFavorited: false},
 		}
 		item.Location.LocationName = args[7].(string)
 		item.Location.Point.Latitude = args[8].(float64)
@@ -173,52 +172,6 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 			return rowValues{err: pgx.ErrNoRows}
 		}
 		return rowValues{values: []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel}}
-	case queryGetMomentLike:
-		momentID := args[0].(string)
-		userID := args[1].(string)
-		if b.likes[momentID] != nil {
-			if _, ok := b.likes[momentID][userID]; ok {
-				return rowValues{values: []any{"1"}}
-			}
-		}
-		return rowValues{err: pgx.ErrNoRows}
-	case queryInsertMomentLikeAndCount:
-		// Mirror the real CTE: insert the like row (no-op on conflict) and bump
-		// the counter only when the row was actually inserted, returning whether
-		// it was new. This lets the idempotency test prove the counter cannot
-		// double-increment on a duplicate like.
-		momentID := args[0].(string)
-		userID := args[1].(string)
-		likedAt := args[2].(time.Time).UTC().Format(time.RFC3339)
-		if b.likes[momentID] == nil {
-			b.likes[momentID] = make(map[string]string)
-		}
-		if _, exists := b.likes[momentID][userID]; exists {
-			return rowValues{err: pgx.ErrNoRows}
-		}
-		b.likes[momentID][userID] = likedAt
-		item := b.moments[momentID]
-		item.LikesCount++
-		b.moments[momentID] = item
-		return rowValues{values: []any{true}}
-	case queryDeleteMomentLikeAndCount:
-		// Mirror the real CTE: delete the like row (no-op when absent) and
-		// decrement only when a row was actually removed.
-		momentID := args[0].(string)
-		userID := args[1].(string)
-		if b.likes[momentID] == nil {
-			return rowValues{err: pgx.ErrNoRows}
-		}
-		if _, exists := b.likes[momentID][userID]; !exists {
-			return rowValues{err: pgx.ErrNoRows}
-		}
-		delete(b.likes[momentID], userID)
-		item := b.moments[momentID]
-		if item.LikesCount > 0 {
-			item.LikesCount--
-		}
-		b.moments[momentID] = item
-		return rowValues{values: []any{true}}
 	default:
 		return rowValues{err: persistence.ErrNotImplemented}
 	}
@@ -350,41 +303,6 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 			return &rowsValues{rows: batchMentionRows(v)}, nil
 		}
 		return &rowsValues{rows: nil}, nil
-	case queryListMomentLikes:
-		momentID := args[0].(string)
-		cursorAt := ""
-		if args[1] != nil {
-			cursorAt = args[1].(time.Time).UTC().Format(time.RFC3339)
-		}
-		cursorUserID := args[2].(string)
-		limit := args[3].(int)
-		type likeRow struct {
-			userID  string
-			likedAt string
-		}
-		likedRows := make([]likeRow, 0)
-		for userID, likedAt := range b.likes[momentID] {
-			if cursorAt != "" {
-				if likedAt > cursorAt || (likedAt == cursorAt && userID <= cursorUserID) {
-					continue
-				}
-			}
-			likedRows = append(likedRows, likeRow{userID: userID, likedAt: likedAt})
-		}
-		sort.Slice(likedRows, func(i, j int) bool {
-			if likedRows[i].likedAt == likedRows[j].likedAt {
-				return likedRows[i].userID < likedRows[j].userID
-			}
-			return likedRows[i].likedAt > likedRows[j].likedAt
-		})
-		if len(likedRows) > limit {
-			likedRows = likedRows[:limit]
-		}
-		rows := make([][]any, 0, len(likedRows))
-		for _, row := range likedRows {
-			rows = append(rows, []any{row.userID, row.userID, row.likedAt})
-		}
-		return &rowsValues{rows: rows}, nil
 	case queryListFavoriteMoments:
 		userID := args[0].(string)
 		cursorAt := ""
@@ -565,70 +483,11 @@ func TestPostgresRepositoryCreateFiltersBlockedTags(t *testing.T) {
 	}
 }
 
-func TestPostgresRepositoryLikeAndUnlikeAreIdempotent(t *testing.T) {
-	backend := newBackendStub()
-	backend.moments["moment_1"] = MomentItem{MomentID: "moment_1", User: UserInfo{UserID: "user_alice"}, LikesCount: 0}
-	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
-	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory)
-
-	// First like is genuinely new: counter bumps and newlyLiked is true.
-	newlyLiked, err := repo.Like(context.Background(), "user_bob", "moment_1")
-	if err != nil {
-		t.Fatalf("first like: %v", err)
-	}
-	if !newlyLiked {
-		t.Fatalf("first like should report newlyLiked=true")
-	}
-	// A duplicate like must not double-increment the counter nor report a new
-	// like. The atomic INSERT...ON CONFLICT + conditional UPDATE guarantees this
-	// even under concurrency (the check-then-act window the old code had).
-	newlyLiked, err = repo.Like(context.Background(), "user_bob", "moment_1")
-	if err != nil {
-		t.Fatalf("second like: %v", err)
-	}
-	if newlyLiked {
-		t.Fatalf("duplicate like should report newlyLiked=false")
-	}
-	if got := backend.moments["moment_1"].LikesCount; got != 1 {
-		t.Fatalf("expected likes_count=1 after duplicate like, got %d", got)
-	}
-	// Distinct users each contribute one; counter tracks the real like count.
-	if _, err := repo.Like(context.Background(), "user_carla", "moment_1"); err != nil {
-		t.Fatalf("second user like: %v", err)
-	}
-	if got := backend.moments["moment_1"].LikesCount; got != 2 {
-		t.Fatalf("expected likes_count=2 after two distinct likers, got %d", got)
-	}
-
-	if err := repo.Unlike(context.Background(), "user_bob", "moment_1"); err != nil {
-		t.Fatalf("first unlike: %v", err)
-	}
-	if err := repo.Unlike(context.Background(), "user_bob", "moment_1"); err != nil {
-		t.Fatalf("second unlike: %v", err)
-	}
-	if got := backend.moments["moment_1"].LikesCount; got != 1 {
-		t.Fatalf("expected likes_count=1 after duplicate unlike, got %d", got)
-	}
-	// Removing the last like brings the counter to zero.
-	if err := repo.Unlike(context.Background(), "user_carla", "moment_1"); err != nil {
-		t.Fatalf("third unlike: %v", err)
-	}
-	if got := backend.moments["moment_1"].LikesCount; got != 0 {
-		t.Fatalf("expected likes_count=0 after all unliked, got %d", got)
-	}
-}
-
-func TestPostgresRepositoryListsLikesAndFavorites(t *testing.T) {
+func TestPostgresRepositoryListsFavorites(t *testing.T) {
 	backend := newBackendStub()
 	backend.moments["moment_1"] = MomentItem{MomentID: "moment_1", Description: "one", CreatedAt: "2026-03-20T00:00:00Z", User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public", Location: Location{LocationName: "南天门"}, Tags: []string{"a"}}
 	backend.moments["moment_2"] = MomentItem{MomentID: "moment_2", Description: "two", CreatedAt: "2026-03-19T00:00:00Z", User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public", Location: Location{LocationName: "南天门"}, Tags: []string{"b"}}
 	backend.moments["moment_3"] = MomentItem{MomentID: "moment_3", Description: "three", CreatedAt: "2026-03-18T00:00:00Z", User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public", Location: Location{LocationName: "南天门"}, Tags: []string{"c"}}
-	backend.likes["moment_1"] = map[string]string{
-		"user_bob":   "2026-03-22T00:00:00Z",
-		"user_carla": "2026-03-21T00:00:00Z",
-		"user_dan":   "2026-03-21T00:00:00Z",
-	}
 	backend.favorites["user_bob"] = map[string]string{
 		"moment_1": "2026-03-23T00:00:00Z",
 		"moment_2": "2026-03-22T00:00:00Z",
@@ -637,24 +496,6 @@ func TestPostgresRepositoryListsLikesAndFavorites(t *testing.T) {
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
-
-	likes, nextCursor, err := repo.ListLikes(context.Background(), "moment_1", 2, "")
-	if err != nil {
-		t.Fatalf("list likes: %v", err)
-	}
-	if len(likes) != 2 || likes[0].User.UserID != "user_bob" || likes[1].User.UserID != "user_carla" {
-		t.Fatalf("unexpected likes: %#v", likes)
-	}
-	if nextCursor == "" {
-		t.Fatal("expected likes next cursor")
-	}
-	likes, nextCursor, err = repo.ListLikes(context.Background(), "moment_1", 2, nextCursor)
-	if err != nil {
-		t.Fatalf("list likes second page: %v", err)
-	}
-	if len(likes) != 1 || likes[0].User.UserID != "user_dan" || nextCursor != "" {
-		t.Fatalf("unexpected second page likes: %#v next=%q", likes, nextCursor)
-	}
 
 	favorites, err := repo.ListFavorites(context.Background(), "user_bob", 2, "")
 	if err != nil {
@@ -684,9 +525,6 @@ func TestPostgresRepositoryInteractionReadsReturnErrorsWithoutFallback(t *testin
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
-	if _, _, err := repo.ListLikes(context.Background(), "moment_1", 20, ""); err == nil {
-		t.Fatal("expected list likes error")
-	}
 	if _, err := repo.ListFavorites(context.Background(), "user_bob", 20, ""); err == nil {
 		t.Fatal("expected list favorites error")
 	}

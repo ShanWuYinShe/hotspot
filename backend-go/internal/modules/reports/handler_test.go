@@ -48,7 +48,7 @@ func TestCreateAndListReports(t *testing.T) {
 	createReq2 = createReq2.WithContext(ctx)
 	handler.Create(createRR2, createReq2)
 
-	listReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"target_type":"moment"}`))
+	listReq := httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{"target_type":"moment"}`))
 	listReq = listReq.WithContext(ctx)
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
@@ -83,7 +83,7 @@ func TestReportsHandlerReturns10600OnServiceError(t *testing.T) {
 	handler.Create(createRR, createReq)
 	assertReportCode(t, createRR, 10600)
 
-	listReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{}`))
+	listReq := httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`))
 	listReq = listReq.WithContext(ctx)
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
@@ -156,7 +156,7 @@ func TestReportsMeListFiltersByStatus(t *testing.T) {
 	}
 	repo.mu.Unlock()
 
-	listReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"status":"pending"}`))
+	listReq := httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{"status":"pending"}`))
 	listReq = listReq.WithContext(ctx)
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)

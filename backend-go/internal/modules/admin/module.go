@@ -3,7 +3,7 @@ package admin
 import (
 	"github.com/go-chi/chi/v5"
 
-	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/modules/notify"
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -20,7 +20,7 @@ func NewModule(factory *persistence.Factory, source appconfig.MutableSource) *Mo
 	provider := NewAppConfigProvider(source)
 	systemRepo := systemmodule.NewPersistenceRepository(factory)
 	moderationStore := NewPersistenceModerationStore(factory, systemRepo)
-	pushService := notifications.NewServiceWithRepo(notifications.NewPersistenceRepository(factory))
+	pushService := notify.NewServiceWithRepo(notify.NewPersistenceRepository(factory))
 	return NewModuleWithDeps(repo, provider, moderationStore, pushService)
 }
 

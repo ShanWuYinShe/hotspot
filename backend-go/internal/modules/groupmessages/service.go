@@ -199,3 +199,7 @@ func (s *Service) buildMedia(ctx context.Context, fileID string) map[string]any 
 	}
 	return info
 }
+
+func (s *Service) LookupMessage(ctx context.Context, messageID string) (found bool, senderID string, err error) {
+	return s.repo.MessageExists(ctx, messageID)
+}

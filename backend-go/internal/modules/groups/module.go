@@ -3,7 +3,7 @@ package groups
 import (
 	"github.com/go-chi/chi/v5"
 
-	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/modules/notify"
 	"hotspot/backend-go/internal/platform/actor"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
@@ -19,7 +19,7 @@ type Module struct {
 
 func NewModule(factory *persistence.Factory, actorProvider actor.Provider) *Module {
 	repo := NewPersistenceRepository(factory)
-	notificationService := notifications.NewServiceWithRepo(notifications.NewPersistenceRepository(factory))
+	notificationService := notify.NewServiceWithRepo(notify.NewPersistenceRepository(factory))
 	svc := NewServiceWithDeps(repo, notificationService, actorProvider)
 	return &Module{handler: NewHandler(svc), Service: svc}
 }
@@ -32,7 +32,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			group.Post("/search", m.handler.Search)
-			group.Post("/open_the_door", m.handler.OpenTheDoor)
+			group.Post("/get_detail", m.handler.OpenTheDoor)
 			group.Post("/members/list", m.handler.ListMembers)
 			group.Post("/members/search", m.handler.SearchMembers)
 			group.Post("/announcements/list", m.handler.ListAnnouncements)
@@ -45,26 +45,25 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/create", m.handler.Create)
 			group.Post("/update", m.handler.Update)
 			group.Post("/dismiss", m.handler.Dismiss)
-			group.Post("/me/list", m.handler.ListMyGroups)
-			group.Post("/me/join", m.handler.JoinGroup)
-			group.Post("/me/transfer_ownership", m.handler.TransferOwnership)
-			group.Post("/me/update_settings", m.handler.UpdateMySettings)
-			group.Post("/me/leave", m.handler.LeaveGroup)
-			group.Post("/me/applications/list", m.handler.ListMyApplications)
-			group.Post("/me/applications/cancel", m.handler.CancelApplication)
-			group.Post("/me/invites/list", m.handler.ListMyInvites)
-			group.Post("/me/invites/accept", m.handler.AcceptInvite)
-			group.Post("/me/invites/reject", m.handler.RejectInvite)
+			group.Post("/list_my", m.handler.ListMyGroups)
+			group.Post("/join", m.handler.JoinGroup)
+			group.Post("/transfer_ownership", m.handler.TransferOwnership)
+			group.Post("/update_preferences", m.handler.UpdateMySettings)
+			group.Post("/leave", m.handler.LeaveGroup)
+			group.Post("/list_applications", m.handler.ListMyApplications)
+			group.Post("/cancel_application", m.handler.CancelApplication)
+			group.Post("/list_invites", m.handler.ListMyInvites)
+			group.Post("/accept_invite", m.handler.AcceptInvite)
+			group.Post("/reject_invite", m.handler.RejectInvite)
 			group.Post("/members/invite", m.handler.InviteMember)
 			group.Post("/members/invites/list", m.handler.ListSentInvites)
 			group.Post("/members/invites/revoke", m.handler.RevokeInvite)
 			group.Post("/members/set_role", m.handler.SetMemberRole)
-			group.Post("/members/mute", m.handler.MuteMember)
-			group.Post("/members/unmute", m.handler.UnmuteMember)
+			group.Post("/members/set_mute", m.handler.SetMute)
 			group.Post("/members/ban", m.handler.BanMember)
 			group.Post("/members/unban", m.handler.UnbanMember)
 			group.Post("/members/list_banned", m.handler.ListBannedMembers)
-			group.Post("/members/remove_member", m.handler.RemoveMember)
+			group.Post("/members/remove", m.handler.RemoveMember)
 			group.Post("/announcements/create", m.handler.CreateAnnouncement)
 			group.Post("/announcements/update", m.handler.UpdateAnnouncement)
 			group.Post("/announcements/delete", m.handler.DeleteAnnouncement)

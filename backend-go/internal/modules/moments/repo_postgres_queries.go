@@ -103,45 +103,6 @@ WHERE moment_id = $1`
 	queryDeleteMoment = `
 DELETE FROM moments WHERE moment_id = $1`
 
-	queryGetMomentLike = `
-SELECT 1
-FROM moment_likes
-WHERE moment_id = $1 AND user_id = $2`
-
-	// queryInsertMomentLikeAndCount atomically inserts a like row and bumps the
-	// moment's like counter only when the row was actually inserted (i.e. not
-	// absorbed by the uniqueness conflict). The CTE surfaces `inserted` (bool)
-	// so callers learn whether this is a genuinely new like without a separate
-	// existence check — eliminating the check-then-act window under which two
-	// concurrent likes could both pass the check and double-increment.
-	queryInsertMomentLikeAndCount = `
-WITH ins AS (
-  INSERT INTO moment_likes (moment_id, user_id, liked_at)
-  VALUES ($1, $2, $3)
-  ON CONFLICT (moment_id, user_id) DO NOTHING
-  RETURNING moment_id
-)
-UPDATE moments
-SET likes_count = likes_count + 1
-WHERE moment_id = $1
-  AND EXISTS (SELECT 1 FROM ins)
-RETURNING EXISTS (SELECT 1 FROM ins) AS inserted`
-
-	// queryDeleteMomentLikeAndCount atomically removes a like row and decrements
-	// the counter only when a row was actually deleted, so repeated unlikes
-	// cannot drive the counter below the real like count.
-	queryDeleteMomentLikeAndCount = `
-WITH del AS (
-  DELETE FROM moment_likes
-  WHERE moment_id = $1 AND user_id = $2
-  RETURNING moment_id
-)
-UPDATE moments
-SET likes_count = GREATEST(likes_count - 1, 0)
-WHERE moment_id = $1
-  AND EXISTS (SELECT 1 FROM del)
-RETURNING EXISTS (SELECT 1 FROM del) AS deleted`
-
 	queryCheckMomentFavorite = `
 SELECT 1
 FROM moment_favorites
@@ -155,19 +116,6 @@ ON CONFLICT (user_id, moment_id) DO NOTHING`
 	queryDeleteMomentFavorite = `
 DELETE FROM moment_favorites
 WHERE user_id = $1 AND moment_id = $2`
-
-	queryListMomentLikes = `
-SELECT ml.user_id, u.nickname, ml.liked_at
-FROM moment_likes ml
-LEFT JOIN users u ON u.user_id = ml.user_id
-WHERE ml.moment_id = $1
-  AND (
-    $2 IS NULL
-    OR ml.liked_at < $2
-    OR (ml.liked_at = $2 AND ml.user_id > $3)
-  )
-ORDER BY ml.liked_at DESC, ml.user_id ASC
-LIMIT $4`
 
 	queryListFavoriteMoments = `
 SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, mf.favorited_at

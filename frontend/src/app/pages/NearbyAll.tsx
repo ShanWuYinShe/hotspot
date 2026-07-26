@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Map, MapPin, Radar, Search, SlidersHorizontal, UserCheck, UserPlus, Users } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
@@ -9,47 +9,17 @@ import { MoodCheckinCard, NearbyPulseCard, SuggestedFollowsCard, TabletRail, Vib
 import { ContextRail } from "../components/layout/ContextRail";
 import { ActionIconButton } from "../components/shared/ActionIconButton";
 import { BspCardCanvas } from "../components/shared/BspCardCanvas";
+import { getFeedMoments } from "../../api";
 
-const ALL_USER_SEED = [
-  { name: "鹿鸣", avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=400", tag: "摄影", note: "刚在回龙窝拍完一卷胶片" },
-  { name: "阿禾", avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=400", tag: "旅行", note: "在找周末短途搭子" },
-  { name: "野原", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400", tag: "音乐", note: "晚点会去弹唱角" },
-  { name: "Mika", avatar: "https://images.unsplash.com/photo-1758613172074-7275c3455034?w=400", tag: "美食", note: "想试试黄河路的新店" },
-  { name: "南枝", avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=400", tag: "艺术", note: "在美术馆看展" },
-  { name: "阿川", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400", tag: "运动", note: "云龙湖夜跑，缺一位" },
-  { name: "宋悦", avatar: "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=400", tag: "阅读", note: "最近在读《山茶文具店》" },
-  { name: "林一", avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=400", tag: "游戏", note: "晚上开一局双人成行" },
-  { name: "小满", avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=400", tag: "电影", note: "想找人看周末首映" },
-  { name: "青砚", avatar: "https://images.unsplash.com/photo-1759734282634-b4958ea9a6e0?w=400", tag: "科技", note: "在做一台口袋电台" },
-  { name: "Yuki", avatar: "https://images.unsplash.com/photo-1758613172074-7275c3455034?w=400", tag: "时尚", note: "逛完展想喝杯咖啡" },
-  { name: "陈芊", avatar: "https://images.unsplash.com/photo-1748737349771-e2b6605e5961?w=400", tag: "户外", note: "计划周日去泉山" },
-];
-
-const DISTANCE_TICKS = ["246m", "252m", "388m", "520m", "820m", "910m", "1.1km", "1.3km", "1.6km", "2.1km", "2.4km", "3.0km", "3.4km", "3.8km", "4.2km"];
-
-// Mock pagination: real backends return dozens–hundreds of nearby users, so the
-// seed pool is cycled with id/name offsets to produce a list large enough to
-// exercise the BSP canvas's incremental-load + virtualization path. Replaced by
-// the API once pagination is wired through.
-const ALL_USERS = Array.from({ length: 96 }, (_, i) => {
-  const seed = ALL_USER_SEED[i % ALL_USER_SEED.length];
-  const cycle = Math.floor(i / ALL_USER_SEED.length);
-  return {
-    id: i + 1,
-    name: cycle === 0 ? seed.name : `${seed.name}${cycle + 1}`,
-    distance: DISTANCE_TICKS[i % DISTANCE_TICKS.length],
-    avatar: seed.avatar,
-    status: i % 3 === 2 ? "离线" : "在线",
-    tag: seed.tag,
-    mutual: (i * 7) % 9,
-    note: seed.note,
-  };
-});
+interface NearbyUser {
+  id: number; name: string; distance: string; avatar: string;
+  status: string; tag: string; mutual: number; note: string;
+}
 
 const SORT_OPTIONS = ["距离", "在线", "共同好友"];
 const FILTER_TAGS = ["全部", "摄影", "旅行", "音乐", "美食", "运动", "阅读", "艺术"];
 
-function OnlineStrip({ users, onNavigate }: { users: typeof ALL_USERS; onNavigate: (path: string) => void }) {
+function OnlineStrip({ users, onNavigate }: { users: NearbyUser[]; onNavigate: (path: string) => void }) {
   return (
     <section className="mb-5" aria-label="正在附近">
       <div className="flex items-center gap-2 mb-3">
@@ -72,7 +42,7 @@ function OnlineStrip({ users, onNavigate }: { users: typeof ALL_USERS; onNavigat
   );
 }
 
-function UserCard({ user, followed, onFollow, onNavigate, format = "standard" }: { user: typeof ALL_USERS[number]; followed: boolean; onFollow: () => void; onNavigate: () => void; format?: "focus" | "portrait" | "standard" }) {
+function UserCard({ user, followed, onFollow, onNavigate, format = "standard" }: { user: NearbyUser; followed: boolean; onFollow: () => void; onNavigate: () => void; format?: "focus" | "portrait" | "standard" }) {
   const hover = useHoverConfig();
   const [hovered, setHovered] = useState(false);
   return (
@@ -104,18 +74,51 @@ export function NearbyAll() {
   const [tagFilter, setTagFilter] = useState("全部");
   const [followedIds, setFollowedIds] = useState<Set<number>>(new Set());
   const [visibleCount, setVisibleCount] = useState(12);
+  const [allUsers, setAllUsers] = useState<NearbyUser[]>([]);
+  const [loading, setLoading] = useState(true);
   const isDesktop = platform === "desktop";
   const isTablet = platform === "tablet";
   const showRail = isTablet;
 
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchUsers() {
+      try {
+        setLoading(true);
+        const res = await getFeedMoments({ source: "nearby" }).catch(() => ({ code: -1, data: { items: [] } }));
+        if (cancelled) return;
+        const data = (res.code === 0 ? res.data : null) as any;
+        if (data) {
+          const items: NearbyUser[] = (data.items || []).map((u: any, i: number) => ({
+            id: u.id ?? u.user_id ?? i + 1,
+            name: u.name ?? u.nickname ?? "",
+            distance: u.distance ?? "",
+            avatar: u.avatar ?? "",
+            status: u.online ? "在线" : "离线",
+            tag: u.tag ?? u.tags?.[0] ?? "",
+            mutual: u.mutual ?? u.mutual_count ?? 0,
+            note: u.note ?? u.bio ?? u.status_text ?? "",
+          }));
+          setAllUsers(items);
+        }
+      } catch {
+        if (!cancelled) setAllUsers([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchUsers();
+    return () => { cancelled = true; };
+  }, []);
+
   const list = useMemo(() => {
-    const next = ALL_USERS.filter((user) => (tagFilter === "全部" || user.tag === tagFilter) && (!search || `${user.name}${user.tag}${user.note}`.toLowerCase().includes(search.toLowerCase())));
+    const next = allUsers.filter((user) => (tagFilter === "全部" || user.tag === tagFilter) && (!search || `${user.name}${user.tag}${user.note}`.toLowerCase().includes(search.toLowerCase())));
     if (sort === "在线") return [...next].sort((a, b) => Number(b.status === "在线") - Number(a.status === "在线"));
     if (sort === "共同好友") return [...next].sort((a, b) => b.mutual - a.mutual);
     return next;
-  }, [search, sort, tagFilter]);
+  }, [search, sort, tagFilter, allUsers]);
 
-  const onlineUsers = ALL_USERS.filter((user) => user.status === "在线");
+  const onlineUsers = allUsers.filter((user) => user.status === "在线");
   const onlineCount = list.filter((user) => user.status === "在线").length;
   const contentStyle = isDesktop ? { width: "100%" } : isTablet ? { maxWidth: 964, width: "100%" } : { maxWidth: 680, width: "100%" };
   const gridColumns = platform === "mobile" ? 2 : isDesktop ? 3 : 2;

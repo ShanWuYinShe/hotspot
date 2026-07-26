@@ -288,7 +288,7 @@ func TestListSessionsReturnsCurrentSession(t *testing.T) {
 	if sessionID == "" {
 		t.Fatal("expected session id")
 	}
-	req := httptest.NewRequest(http.MethodPost, "/me/sessions/list", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/list_sessions", strings.NewReader(`{}`))
 	ctx := platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: register.UserID, SessionID: sessionID})
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
@@ -333,7 +333,7 @@ func TestListSessionsIncludesSessionMetadata(t *testing.T) {
 		t.Fatal("expected authenticated principal")
 	}
 
-	listReq := httptest.NewRequest(http.MethodPost, "/me/sessions/list", strings.NewReader(`{}`))
+	listReq := httptest.NewRequest(http.MethodPost, "/list_sessions", strings.NewReader(`{}`))
 	listReq = listReq.WithContext(platformauth.WithPrincipal(listReq.Context(), principal))
 	listRR := httptest.NewRecorder()
 	handler.ListSessions(listRR, listReq)
@@ -480,7 +480,7 @@ func TestResetPasswordUnknownOrInvalidRequestReturnsNotFound(t *testing.T) {
 
 func TestChangePasswordRequiresIdempotencyKey(t *testing.T) {
 	handler := newTestHandler()
-	req := httptest.NewRequest(http.MethodPost, "/me/change_password", strings.NewReader(`{"old_password":"old","new_password":"new"}`))
+	req := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"old","new_password":"new"}`))
 	ctx := platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
@@ -500,7 +500,7 @@ func TestRevokeSessionRejectsCurrentSession(t *testing.T) {
 	handler := newTestHandler()
 	register := registerAppUser(t, handler, "alice", "Alice", "secret")
 	currentSessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), register.UserID)
-	req := httptest.NewRequest(http.MethodPost, "/me/sessions/revoke", strings.NewReader(`{"session_id":"`+currentSessionID+`"}`))
+	req := httptest.NewRequest(http.MethodPost, "/revoke_session", strings.NewReader(`{"session_id":"`+currentSessionID+`"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: register.UserID, SessionID: currentSessionID}))
 	rr := httptest.NewRecorder()
 	handler.RevokeSession(rr, req)
@@ -535,7 +535,7 @@ func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T)
 	}
 
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	badReq := httptest.NewRequest(http.MethodPost, "/me/change_password", strings.NewReader(`{"old_password":"wrong","new_password":"new-secret"}`))
+	badReq := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"wrong","new_password":"new-secret"}`))
 	badReq.Header.Set("Idempotency-Key", "11111234abcd1234abcd1234abcd1234")
 	badReq = badReq.WithContext(platformauth.WithPrincipal(badReq.Context(), platformauth.Principal{UserID: register.UserID, SessionID: currentSessionID}))
 	badRR := httptest.NewRecorder()
@@ -549,7 +549,7 @@ func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T)
 	}
 
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	goodReq := httptest.NewRequest(http.MethodPost, "/me/change_password", strings.NewReader(`{"old_password":"secret","new_password":"new-secret"}`))
+	goodReq := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"secret","new_password":"new-secret"}`))
 	goodReq.Header.Set("Idempotency-Key", "22221234abcd1234abcd1234abcd1234")
 	goodReq = goodReq.WithContext(platformauth.WithPrincipal(goodReq.Context(), platformauth.Principal{UserID: register.UserID, SessionID: currentSessionID}))
 	goodRR := httptest.NewRecorder()
@@ -825,7 +825,7 @@ func TestHandlerRevokeAllSessionsIgnoresUnknownFields(t *testing.T) {
 	// Per api_spec_base.md, empty-object endpoints silently ignore unknown
 	// fields. {"extra":1} is accepted (the field is dropped), returning success.
 	handler := newTestHandler()
-	req := httptest.NewRequest(http.MethodPost, "/me/sessions/revoke_all", strings.NewReader(`{"extra":1}`))
+	req := httptest.NewRequest(http.MethodPost, "/revoke_session_all", strings.NewReader(`{"extra":1}`))
 	ctx := platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
@@ -849,7 +849,7 @@ func TestHandlerRevokeAllSessionsReturnsSuccess(t *testing.T) {
 		t.Fatal("expected session id")
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/me/sessions/revoke_all", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/revoke_session_all", strings.NewReader(`{}`))
 	ctx := platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: reg.UserID, SessionID: sessionID})
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
@@ -876,7 +876,7 @@ func TestHandlerRevokeAllSessionsReturns10600OnError(t *testing.T) {
 	// RevokeAllSessions without a principal context returns an empty result (no 10600 path).
 	// The handler delegates to service.RevokeAll which returns RevokeAllResult{} when no principal.
 	// Verify that calling without principal returns success with zero revoked_count.
-	req := httptest.NewRequest(http.MethodPost, "/me/sessions/revoke_all", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/revoke_session_all", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.RevokeAllSessions(rr, req)
 

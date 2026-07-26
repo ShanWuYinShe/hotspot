@@ -161,17 +161,17 @@ interface ClientDefaults {
 
 ### POST /api/v1/system/bootstrap
 
-冷启动聚合端点。一次请求拉齐客户端冷启动所需的全部基础数据，替代分别调用 `get_meta` + `get_client_config` + `users/me/profile/get` + `notifications/unread_count` 的多次往返。
+冷启动聚合端点。一次请求拉齐客户端冷启动所需的全部基础数据，替代分别调用 `get_meta` + `get_client_config` + `users/get_account` + `notify/get_unread_count` 的多次往返。
 
 - **认证**: 可选（未登录时 `profile`/`unread_summary` 省略，仅返回 `meta` + `client_config`）
 - **幂等**: 无
 
-**缓存契约（防惊群）**：响应携带 `bootstrap_version`（服务端在 config/version 变更时递增）。客户端可缓存响应并在后续冷启动时通过 `If-None-Match: <bootstrap_version>` 请求头询问；服务端无变化时返回精简的 `304`-语义响应（`code=0` + `data.bootstrap_version` 不变 + 其余字段省略，由客户端使用缓存）。`bootstrap_version` 的失效由服务端在 admin 修改 `AppConfig` 或发布新版本/公告时主动递增。
+**缓存契约（防惊群）**：响应携带 `bootstrap_version`（服务端在 config/version 变更时递增）。客户端可缓存响应并在后续冷启动时通过 `If-None-Match: <bootstrap_version>` 请求头询问；服务端无变化时返回精简响应（`code=0` + `data.bootstrap_version` 不变 + 其余字段省略，由客户端使用缓存）。`bootstrap_version` 的失效由服务端在 admin 修改 `AppConfig` 或发布新版本/公告时主动递增。
 
-> **惊群防护（生产必需）**：`bootstrap_version` 变更时，所有客户端下次冷启动会同时 miss 缓存并全量重拉 bootstrap（响应体大：含 client_config + profile + unread_summary）。若不加防护，单次 admin 配置变更会瞬间产生百万级全量请求击穿该端点。**强制要求**：
-> - **服务端**：响应必须可被 CDN/反向代理缓存（按 `bootstrap_version` 作 cache key），并支持 stale-while-revalidate（旧版本响应在短时间内仍可返回，后台异步刷新）
+> **惊群防护（生产必需）**：`bootstrap_version` 变更时，所有客户端下次冷启动会同时 miss 缓存并全量重拉 bootstrap。若不加防护，单次 admin 配置变更会瞬间产生百万级全量请求击穿该端点。**强制要求**：
 > - **客户端**：检测到 `bootstrap_version` 变更后，**不得立即**发起全量请求；须加随机 jitter 延迟（建议 0-300 秒均匀分布）后再刷新，将集中请求打散到数分钟窗口
-> - **降级**：若 CDN 缓存可用，客户端 jitter 可缩短；若 CDN 不可用，jitter 是唯一的惊群防线，不可省略
+> - **服务端**：`bootstrap_version`、`meta`、`client_config` 三个字段为**公共数据**，可按 `bootstrap_version` 做 CDN/反向代理缓存 key 并启用 stale-while-revalidate
+> - **注意**：`profile` 和 `unread_summary` 为用户私有数据，**不可被 CDN 缓存**。已登录用户的 bootstrap 响应天然不可缓存——jitter 是唯一防线；CDN 缓存仅对匿名用户流量生效
 
 **Request**: `BootstrapRequest`
 ```typescript
@@ -189,13 +189,13 @@ interface BootstrapData {
   client_config: ClientConfig;      // 同 get_client_config 响应
 
   // === @auth-only 以下字段仅登录态返回 ===
-  profile?: MyProfileState;         // 同 users/me/profile/get（MyProfileState 定义于 api_spec_user.md）
+  profile?: AccountData;         // 同 users/get_account（AccountData 定义于 api_spec_user.md）
   unread_summary?: UnreadSummary;   // 未读摘要（聚合私聊/群聊/通知，替代多次 unread_count 调用）
 }
 
 // 未读摘要（聚合各域未读，冷启动时一次性渲染角标）
 interface UnreadSummary {
-  notification_unread_count: number;   // 通知未读总数（同 notifications/unread_count.total）
+  notification_unread_count: number;   // 通知未读总数（同 notify/get_unread_count.total）
   private_chat_unread_count: number;   // 私聊会话未读消息总数
   group_chat_unread_count: number;     // 群聊未读消息总数
   total_badge: number;                 // 综合角标数（客户端展示用，服务端按业务规则聚合）

@@ -21,4 +21,5 @@ type Repository interface {
 	GetMessageForReply(context.Context, string) (map[string]any, bool, error)
 	GetMediaForMessage(context.Context, string) (map[string]any, bool, error)
 	MemberMuteStatus(context.Context, string, string) (isMuted bool, mutedUntil string, found bool, err error)
+	MessageExists(ctx context.Context, messageID string) (found bool, senderID string, err error)
 }

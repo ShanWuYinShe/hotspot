@@ -67,7 +67,7 @@ func TestCreateGetAndListShare(t *testing.T) {
 		t.Fatalf("unexpected get response: %#v", getResp)
 	}
 
-	listReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"share_type":"user"}`)))
+	listReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{"share_type":"user"}`)))
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
 	var listResp struct {
@@ -94,7 +94,7 @@ func TestShareHandlerValidatesRequest(t *testing.T) {
 	handler.Get(badGetRR, badGet)
 	assertCode(t, badGetRR, 10000)
 
-	badList := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"share_type":"bad"}`)))
+	badList := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{"share_type":"bad"}`)))
 	badListRR := httptest.NewRecorder()
 	handler.List(badListRR, badList)
 	assertCode(t, badListRR, 10000)
@@ -134,7 +134,7 @@ func TestShareHandlerReturns10600OnServiceError(t *testing.T) {
 	handler.Get(getRR, getReq)
 	assertCode(t, getRR, 10600)
 
-	listReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{}`)))
+	listReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`)))
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
 	assertCode(t, listRR, 10600)
@@ -243,7 +243,7 @@ func TestShareGetReturnsFullShareDetailShape(t *testing.T) {
 func TestShareMeListRequiresAuth(t *testing.T) {
 	handler := NewHandler(NewService())
 	// Request without principal — List handler delegates to service which checks for auth
-	req := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.List(rr, req)
 	assertCode(t, rr, 10000)

@@ -18,16 +18,10 @@ type stubMomentRepo struct {
 	deleteErr   error
 	exists      bool
 	existsErr   error
-	likeNew     bool
-	likeErr     error
-	unlikeErr   error
 	favRepoErr  error
 	unfavErr    error
 	searchRes   PaginatedMoments
 	searchErr   error
-	likesRes    []LikeItem
-	likesCursor string
-	likesErr    error
 	favRes      PaginatedMoments
 	favListErr  error
 	incComment  error
@@ -66,18 +60,11 @@ func (r *stubMomentRepo) DecrementCommentCount(_ context.Context, _ string) erro
 func (r *stubMomentRepo) IncrementSharesCount(_ context.Context, _ string) error {
 	return r.incShares
 }
-func (r *stubMomentRepo) Like(_ context.Context, _ string, _ string) (bool, error) {
-	return r.likeNew, r.likeErr
-}
-func (r *stubMomentRepo) Unlike(_ context.Context, _ string, _ string) error { return r.unlikeErr }
 func (r *stubMomentRepo) Favorite(_ context.Context, _ string, _ string) error {
 	return r.favRepoErr
 }
 func (r *stubMomentRepo) Unfavorite(_ context.Context, _ string, _ string) error {
 	return r.unfavErr
-}
-func (r *stubMomentRepo) ListLikes(_ context.Context, _ string, _ int, _ string) ([]LikeItem, string, error) {
-	return r.likesRes, r.likesCursor, r.likesErr
 }
 func (r *stubMomentRepo) ListFavorites(_ context.Context, _ string, _ int, _ string) (PaginatedMoments, error) {
 	return r.favRes, r.favListErr
@@ -199,48 +186,6 @@ func TestServiceDeleteHappyPath(t *testing.T) {
 	}
 }
 
-func TestServiceLikeRejectsNotFound(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{})
-	err := svc.Like(momentCtx("u1"), "m1")
-	if !errors.Is(err, ErrMomentNotFound) {
-		t.Fatalf("expected not found, got %v", err)
-	}
-}
-
-func TestServiceLikeHappyPath(t *testing.T) {
-	repo := &stubMomentRepo{exists: true, likeNew: true, getResult: ownedMoment(), getFound: true}
-	svc := NewServiceWithRepo(repo)
-	err := svc.Like(momentCtx("u2"), "m1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestServiceLikeIdempotent(t *testing.T) {
-	repo := &stubMomentRepo{exists: true, likeNew: false}
-	svc := NewServiceWithRepo(repo)
-	err := svc.Like(momentCtx("u1"), "m1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestServiceUnlikeDelegates(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{exists: true})
-	err := svc.Unlike(momentCtx("u1"), "m1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestServiceUnlikePropagatesError(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{unlikeErr: errors.New("boom")})
-	err := svc.Unlike(momentCtx("u1"), "m1")
-	if err == nil {
-		t.Fatal("expected error")
-	}
-}
-
 func TestServiceFavoriteRejectsNotFound(t *testing.T) {
 	svc := NewServiceWithRepo(&stubMomentRepo{})
 	err := svc.Favorite(momentCtx("u1"), "m1")
@@ -261,42 +206,6 @@ func TestServiceFavoriteHappyPath(t *testing.T) {
 func TestServiceUnfavoriteDelegates(t *testing.T) {
 	svc := NewServiceWithRepo(&stubMomentRepo{exists: true})
 	err := svc.Unfavorite(momentCtx("u1"), "m1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestServiceListLikesNormalizesPagination(t *testing.T) {
-	repo := &stubMomentRepo{likesRes: []LikeItem{{User: UserInfo{UserID: "u2"}}}, likesCursor: "c1"}
-	svc := NewServiceWithRepo(repo)
-	items, cursor, err := svc.ListLikes(context.Background(), ListLikesRequest{
-		MomentID:   "m1",
-		Pagination: &PaginationParams{Limit: 50, Cursor: "abc"},
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(items) != 1 || cursor != "c1" {
-		t.Fatalf("unexpected result: items=%d cursor=%s", len(items), cursor)
-	}
-}
-
-func TestServiceListLikesDefaultsLimit(t *testing.T) {
-	repo := &stubMomentRepo{}
-	svc := NewServiceWithRepo(repo)
-	_, _, err := svc.ListLikes(context.Background(), ListLikesRequest{MomentID: "m1"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestServiceListLikesClampsMaxLimit(t *testing.T) {
-	repo := &stubMomentRepo{}
-	svc := NewServiceWithRepo(repo)
-	_, _, err := svc.ListLikes(context.Background(), ListLikesRequest{
-		MomentID:   "m1",
-		Pagination: &PaginationParams{Limit: 999},
-	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -383,30 +292,7 @@ func TestServiceCheckCommentableMomentNotFound(t *testing.T) {
 	}
 }
 
-// ---------- A) Like/Unlike 错误路径 ----------
-
-func TestServiceLikePropagatesRepoError(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{exists: true, likeErr: errors.New("boom")})
-	err := svc.Like(momentCtx("u1"), "m1")
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if err.Error() != "boom" {
-		t.Fatalf("expected boom, got %v", err)
-	}
-}
-
-func TestServiceUnlikeRejectsNotFound(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{})
-	err := svc.Unlike(momentCtx("u1"), "m1")
-	if !errors.Is(err, ErrMomentNotFound) {
-		t.Fatalf("expected ErrMomentNotFound, got %v", err)
-	}
-}
-
-// TestServiceUnlikePropagatesError 已在文件中存在（第 229 行），此处跳过。
-
-// ---------- B) Favorite/Unfavorite 错误路径 ----------
+// ---------- A) Favorite/Unfavorite 错误路径 ----------
 
 func TestServiceFavoritePropagatesRepoError(t *testing.T) {
 	svc := NewServiceWithRepo(&stubMomentRepo{exists: true, favRepoErr: errors.New("boom")})
@@ -520,7 +406,7 @@ func TestServiceListMineDefaultLimit(t *testing.T) {
 
 func TestServiceOpenTheDoorLoadsMyState(t *testing.T) {
 	expected := ownedMoment()
-	myState := &MyMomentState{IsLiked: true, IsFavorited: false}
+	myState := &MyMomentState{IsFavorited: true}
 	repo := &stubMomentRepo{getResult: expected, getFound: true, myState: myState}
 	svc := NewServiceWithRepo(repo)
 	item, ok, err := svc.OpenTheDoor(momentCtx("u1"), "m1")
@@ -533,10 +419,7 @@ func TestServiceOpenTheDoorLoadsMyState(t *testing.T) {
 	if item.MyState == nil {
 		t.Fatal("expected MyState to be loaded")
 	}
-	if !item.MyState.IsLiked {
-		t.Fatal("expected IsLiked=true")
-	}
-	if item.MyState.IsFavorited {
-		t.Fatal("expected IsFavorited=false")
+	if !item.MyState.IsFavorited {
+		t.Fatal("expected IsFavorited=true")
 	}
 }

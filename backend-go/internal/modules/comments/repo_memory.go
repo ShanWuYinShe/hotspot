@@ -10,18 +10,11 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-type likeEntry struct {
-	userID   string
-	nickname string
-	likedAt  string
-}
-
 type InMemoryRepository struct {
 	mu       sync.RWMutex
-	comments map[string][]CommentItem        // momentID -> comments
-	byID     map[string]CommentItem          // commentID -> item
-	byParent map[string][]string             // parentID -> child commentIDs
-	likes    map[string]map[string]likeEntry // commentID -> userID -> entry
+	comments map[string][]CommentItem // momentID -> comments
+	byID     map[string]CommentItem   // commentID -> item
+	byParent map[string][]string      // parentID -> child commentIDs
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -29,7 +22,6 @@ func NewInMemoryRepository() *InMemoryRepository {
 		comments: make(map[string][]CommentItem),
 		byID:     make(map[string]CommentItem),
 		byParent: make(map[string][]string),
-		likes:    make(map[string]map[string]likeEntry),
 	}
 }
 
@@ -47,7 +39,7 @@ func (r *InMemoryRepository) Create(ctx context.Context, userID string, req Crea
 		CreatedAt:    now.Format(time.RFC3339),
 		LikesCount:   0,
 		RepliesCount: 0,
-		MyState:      &MyCommentState{IsLiked: false},
+		MyState:      &MyCommentState{},
 	}
 	r.comments[req.MomentID] = append(r.comments[req.MomentID], item)
 	r.byID[item.CommentID] = item
@@ -252,95 +244,6 @@ func (r *InMemoryRepository) ListTopRepliesByParentIDs(_ context.Context, parent
 		result[parentID] = items
 	}
 	return result, nil
-}
-
-func (r *InMemoryRepository) Like(_ context.Context, commentID string, userID string) (bool, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if _, ok := r.byID[commentID]; !ok {
-		return false, ErrCommentNotFound
-	}
-	if r.likes[commentID] == nil {
-		r.likes[commentID] = make(map[string]likeEntry)
-	}
-	if _, exists := r.likes[commentID][userID]; exists {
-		return false, nil
-	}
-	now := time.Now().UTC().Format(time.RFC3339)
-	r.likes[commentID][userID] = likeEntry{userID: userID, nickname: userID, likedAt: now}
-	if item, ok := r.byID[commentID]; ok {
-		item.LikesCount++
-		r.byID[commentID] = item
-	}
-	return true, nil
-}
-
-func (r *InMemoryRepository) Unlike(_ context.Context, commentID string, userID string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if _, ok := r.byID[commentID]; !ok {
-		return ErrCommentNotFound
-	}
-	if r.likes[commentID] == nil {
-		return nil
-	}
-	if _, exists := r.likes[commentID][userID]; !exists {
-		return nil
-	}
-	delete(r.likes[commentID], userID)
-	if item, ok := r.byID[commentID]; ok {
-		item.LikesCount--
-		if item.LikesCount < 0 {
-			item.LikesCount = 0
-		}
-		r.byID[commentID] = item
-	}
-	return nil
-}
-
-func (r *InMemoryRepository) ListLikes(_ context.Context, commentID string, limit int, cursor string) ([]CommentLikeItem, string, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	likeMap := r.likes[commentID]
-	entries := make([]likeEntry, 0, len(likeMap))
-	for _, entry := range likeMap {
-		entries = append(entries, entry)
-	}
-	sort.Slice(entries, func(i, j int) bool {
-		if entries[i].likedAt == entries[j].likedAt {
-			return entries[i].userID < entries[j].userID
-		}
-		return entries[i].likedAt > entries[j].likedAt
-	})
-	start := 0
-	if cursor != "" {
-		for i, e := range entries {
-			if e.userID == cursor {
-				start = i + 1
-				break
-			}
-		}
-	}
-	if start >= len(entries) {
-		return []CommentLikeItem{}, "", nil
-	}
-	end := len(entries)
-	if limit > 0 && start+limit < end {
-		end = start + limit
-	}
-	page := entries[start:end]
-	items := make([]CommentLikeItem, 0, len(page))
-	for _, e := range page {
-		items = append(items, CommentLikeItem{
-			User:    UserInfo{UserID: e.userID, Nickname: e.nickname},
-			LikedAt: e.likedAt,
-		})
-	}
-	var nextCursor string
-	if end < len(entries) {
-		nextCursor = page[len(page)-1].userID
-	}
-	return items, nextCursor, nil
 }
 
 // ensure InMemoryRepository compiles as Repository

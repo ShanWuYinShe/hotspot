@@ -1,4 +1,4 @@
-package notifications
+package notify
 
 import (
 	"github.com/go-chi/chi/v5"
@@ -17,17 +17,20 @@ func NewModule(factory *persistence.Factory) *Module {
 	return &Module{handler: NewHandler(NewServiceWithRepo(repo))}
 }
 
+func NewModuleWithService(service *Service) *Module {
+	return &Module{handler: NewHandler(service)}
+}
+
 func (m *Module) Mount(r chi.Router) {
-	r.Route("/api/v1/notifications", func(notificationRouter chi.Router) {
+	r.Route("/api/v1/notify", func(notificationRouter chi.Router) {
 		notificationRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			group.Post("/list", m.handler.List)
-			group.Post("/unread_count", m.handler.UnreadCount)
-			group.Post("/mark_as_read", m.handler.MarkAsRead)
-			group.Post("/mark_all_read", m.handler.MarkAllRead)
+			group.Post("/get_unread_count", m.handler.UnreadCount)
+			group.Post("/mark_read", m.handler.MarkRead)
 		})
 	})
 }

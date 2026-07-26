@@ -57,7 +57,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		CreatedAt:    createdAt,
 		LikesCount:   0,
 		RepliesCount: 0,
-		MyState:      &MyCommentState{IsLiked: false},
+		MyState:      &MyCommentState{},
 	}, nil
 }
 
@@ -95,7 +95,7 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 		item.User = UserInfo{UserID: userID, Nickname: nickname}
 		item.ParentID = parentID
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-		item.MyState = &MyCommentState{IsLiked: false}
+		item.MyState = &MyCommentState{}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -125,7 +125,7 @@ func (r *PostgresRepository) Get(ctx context.Context, commentID string) (Comment
 	item.User = UserInfo{UserID: userID, Nickname: nickname}
 	item.ParentID = parentID
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-	item.MyState = &MyCommentState{IsLiked: false}
+	item.MyState = &MyCommentState{}
 	return item, true, nil
 }
 
@@ -155,7 +155,7 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 		item.User = UserInfo{UserID: userID, Nickname: nickname}
 		item.ParentID = parentID
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-		item.MyState = &MyCommentState{IsLiked: false}
+		item.MyState = &MyCommentState{}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -194,78 +194,13 @@ func (r *PostgresRepository) ListTopRepliesByParentIDs(ctx context.Context, pare
 		item.User = UserInfo{UserID: userID, Nickname: nickname}
 		item.ParentID = parentID
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-		item.MyState = &MyCommentState{IsLiked: false}
+		item.MyState = &MyCommentState{}
 		result[parentID] = append(result[parentID], item)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	return result, nil
-}
-
-func (r *PostgresRepository) Like(ctx context.Context, commentID string, userID string) (bool, error) {
-	queryable, ok := queryable(ctx, r.factory)
-	if !ok {
-		return false, persistence.ErrNotImplemented
-	}
-	now := time.Now().UTC()
-	var inserted bool
-	if err := queryable.QueryRow(ctx, queryInsertCommentLikeAndCount, commentID, userID, now).Scan(&inserted); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return false, nil
-		}
-		return false, err
-	}
-	return inserted, nil
-}
-
-func (r *PostgresRepository) Unlike(ctx context.Context, commentID string, userID string) error {
-	queryable, ok := queryable(ctx, r.factory)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	var deleted bool
-	if err := queryable.QueryRow(ctx, queryDeleteCommentLikeAndCount, commentID, userID).Scan(&deleted); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		return err
-	}
-	return nil
-}
-
-func (r *PostgresRepository) ListLikes(ctx context.Context, commentID string, limit int, cursor string) ([]CommentLikeItem, string, error) {
-	queryable, ok := queryable(ctx, r.factory)
-	if !ok {
-		return nil, "", persistence.ErrNotImplemented
-	}
-	limit = normalizeCommentLimit(limit)
-	cursorLikedAt, cursorUserID, err := decodeCommentCursor(cursor)
-	if err != nil {
-		return nil, "", err
-	}
-	rows, err := queryable.Query(ctx, queryListCommentLikes, commentID, cursorLikedAt, cursorUserID, limit+1)
-	if err != nil {
-		return nil, "", err
-	}
-	defer rows.Close()
-	items := make([]CommentLikeItem, 0, limit+1)
-	for rows.Next() {
-		var item CommentLikeItem
-		var likedAt time.Time
-		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &likedAt); err != nil {
-			return nil, "", err
-		}
-		item.LikedAt = likedAt.UTC().Format(time.RFC3339)
-		items = append(items, item)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, "", err
-	}
-	if len(items) > limit {
-		return items[:limit], encodeCommentCursor(items[limit-1].LikedAt, items[limit-1].User.UserID), nil
-	}
-	return items, "", nil
 }
 
 type commentCursor struct {

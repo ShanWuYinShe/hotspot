@@ -24,7 +24,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			group.Post("/create", m.handler.Create)
-			group.Post("/me/list", m.handler.List)
+			group.Post("/list_my", m.handler.List)
 		})
 	})
 }

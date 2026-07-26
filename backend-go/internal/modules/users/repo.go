@@ -21,7 +21,7 @@ type Repository interface {
 	Unblock(context.Context, string, string) error
 	SetRemark(context.Context, string, string, string) error
 	ListBlocked(context.Context, string, int, string) (PaginatedBlockedUsers, error)
-	ListLikedMoments(context.Context, string, int, string, string) (momenttypes.PaginatedMoments, error)
+	ListReactedMoments(context.Context, string, int, string, string) (momenttypes.PaginatedMoments, error)
 	Relationship(context.Context, string, string) (Relationship, error)
 	RelationshipBatch(context.Context, string, []string) (map[string]Relationship, error)
 	ListFriends(context.Context, string, int, string) (PaginatedFriends, error)

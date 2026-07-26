@@ -16,13 +16,18 @@ import (
 type Module struct {
 	chatHandler    *Handler
 	messageHandler *private_messages.Handler
+	messageRuntime *private_messages.Runtime
 }
 
 func NewModule(factory *persistence.Factory, source appconfig.Source) *Module {
 	messageRuntime := private_messages.NewRuntime(factory)
 	userService := users.NewServiceWithRepo(users.NewPersistenceRepository(factory))
 	chatService := NewServiceWithDeps(NewPostgresRepository(factory), messageRuntime.ReadService(), userService)
-	return &Module{chatHandler: NewHandler(chatService, source), messageHandler: messageRuntime.Handler()}
+	return &Module{chatHandler: NewHandler(chatService, source), messageHandler: messageRuntime.Handler(), messageRuntime: messageRuntime}
+}
+
+func (m *Module) MessageService() private_messages.ReadService {
+	return m.messageRuntime.ReadService()
 }
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/private_chats", func(chatRouter chi.Router) {
@@ -31,10 +36,10 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
-			group.Post("/me/list", m.chatHandler.List)
-			group.Post("/open_the_door", m.chatHandler.OpenTheDoor)
-			group.Post("/me/update_settings", m.chatHandler.UpdateSettings)
-			group.Post("/me/delete", m.chatHandler.Delete)
+			group.Post("/list", m.chatHandler.List)
+			group.Post("/get_detail", m.chatHandler.OpenTheDoor)
+			group.Post("/update_preferences", m.chatHandler.UpdateSettings)
+			group.Post("/delete", m.chatHandler.Delete)
 		})
 	})
 	r.Route("/api/v1/private_messages", func(messageRouter chi.Router) {
@@ -47,8 +52,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/get_history", m.messageHandler.GetHistory)
 			group.Post("/update", m.messageHandler.Update)
 			group.Post("/recall", m.messageHandler.Recall)
-			group.Post("/me/mark_as_read", m.messageHandler.MarkAsRead)
-			group.Post("/me/mark_all_read", m.messageHandler.MarkAllRead)
+			group.Post("/mark_read", m.messageHandler.MarkRead)
 		})
 	})
 }

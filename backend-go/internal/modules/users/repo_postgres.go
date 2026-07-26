@@ -57,7 +57,7 @@ func (r *PostgresRepository) PutSettings(ctx context.Context, userID string, set
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryUpsertUserSettings, userID, settings.PrivacyLevel, settings.LocationVisible, settings.PresenceVisible, settings.SocialListsVisible, settings.GroupsVisible, settings.LikedMomentsVisible, settings.StatsVisible, settings.AllowFollow, settings.AllowPrivateChat, settings.Searchable, settings.PhoneSearchable, settings.NicknameSearchable, settings.LocationSearchable)
+	return queryable.Exec(ctx, queryUpsertUserSettings, userID, settings.PrivacyLevel, settings.LocationVisible, settings.PresenceVisible, settings.SocialListsVisible, settings.GroupsVisible, settings.ReactedMomentsVisible, settings.StatsVisible, settings.AllowFollow, settings.AllowPrivateChat, settings.Searchable, settings.PhoneSearchable, settings.NicknameSearchable, settings.LocationSearchable)
 }
 func (r *PostgresRepository) Follow(ctx context.Context, userID, targetUserID string, source FollowSource, sourceMomentID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
@@ -123,11 +123,11 @@ func (r *PostgresRepository) ListBlocked(ctx context.Context, userID string, lim
 	return listBlockedUsersPostgres(ctx, r.factory, userID, limit, cursor)
 }
 
-func (r *PostgresRepository) ListLikedMoments(ctx context.Context, userID string, limit int, cursor, viewerUserID string) (momenttypes.PaginatedMoments, error) {
+func (r *PostgresRepository) ListReactedMoments(ctx context.Context, userID string, limit int, cursor, viewerUserID string) (momenttypes.PaginatedMoments, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return momenttypes.PaginatedMoments{}, persistence.ErrNotImplemented
 	}
-	return listLikedMomentsPostgres(ctx, r.factory, userID, limit, cursor, viewerUserID)
+	return listReactedMomentsPostgres(ctx, r.factory, userID, limit, cursor, viewerUserID)
 }
 
 func (r *PostgresRepository) ListFriends(ctx context.Context, userID string, limit int, cursor string) (PaginatedFriends, error) {

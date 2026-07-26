@@ -34,8 +34,8 @@ type stubUserRepo struct {
 	blockedResult PaginatedBlockedUsers
 	blockedErr    error
 
-	likedMoments momenttypes.PaginatedMoments
-	likedErr     error
+	reactedMoments momenttypes.PaginatedMoments
+	reactedErr     error
 
 	relation    Relationship
 	relationErr error
@@ -107,8 +107,8 @@ func (r *stubUserRepo) SetRemark(_ context.Context, _, _, _ string) error {
 func (r *stubUserRepo) ListBlocked(_ context.Context, _ string, _ int, _ string) (PaginatedBlockedUsers, error) {
 	return r.blockedResult, r.blockedErr
 }
-func (r *stubUserRepo) ListLikedMoments(_ context.Context, _ string, _ int, _ string, _ string) (momenttypes.PaginatedMoments, error) {
-	return r.likedMoments, r.likedErr
+func (r *stubUserRepo) ListReactedMoments(_ context.Context, _ string, _ int, _ string, _ string) (momenttypes.PaginatedMoments, error) {
+	return r.reactedMoments, r.reactedErr
 }
 func (r *stubUserRepo) Relationship(_ context.Context, _, _ string) (Relationship, error) {
 	return r.relation, r.relationErr
@@ -204,7 +204,7 @@ func TestServiceUpdateMyProfileAppliesPatch(t *testing.T) {
 	repo := &stubUserRepo{profile: testProfile("u1"), profileFound: true}
 	svc := NewServiceWithRepo(repo)
 	nick := "new_nick"
-	err := svc.UpdateMyProfile(userCtx("u1"), UpdateProfileRequest{Nickname: &nick})
+	err := svc.UpdateMyProfile(userCtx("u1"), UpdateAccountRequest{Nickname: &nick})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestServiceUpdateMyProfileAppliesPatch(t *testing.T) {
 
 func TestServiceUpdateMyProfileRequiresAuth(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
-	err := svc.UpdateMyProfile(context.Background(), UpdateProfileRequest{})
+	err := svc.UpdateMyProfile(context.Background(), UpdateAccountRequest{})
 	if !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected unauthorized, got %v", err)
 	}
@@ -487,12 +487,12 @@ func TestServiceListFriendsRejectsHidden(t *testing.T) {
 	}
 }
 
-// --- ListLikedMoments ---
+// --- ListReactedMoments ---
 
-func TestServiceListLikedMomentsRejectsHidden(t *testing.T) {
-	repo := &stubUserRepo{exists: true, settingsFound: true, settings: UserSettings{LikedMomentsVisible: false}}
+func TestServiceListReactedMomentsRejectsHidden(t *testing.T) {
+	repo := &stubUserRepo{exists: true, settingsFound: true, settings: UserSettings{ReactedMomentsVisible: false}}
 	svc := NewServiceWithRepo(repo)
-	_, err := svc.ListLikedMoments(userCtx("u1"), UserLikedMomentsRequest{UserID: "u2"})
+	_, err := svc.ListReactedMoments(userCtx("u1"), UserReactedMomentsRequest{UserID: "u2"})
 	if !errors.Is(err, ErrPermissionDenied) {
 		t.Fatalf("expected permission denied, got %v", err)
 	}

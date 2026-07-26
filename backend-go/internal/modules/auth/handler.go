@@ -243,7 +243,7 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "auth/me/change_password", func() httpx.ApiResponse[struct{}] {
+	idempotency.ReplayOrStore(w, r, "auth/change_password", func() httpx.ApiResponse[struct{}] {
 		if err := h.service.ChangePassword(r.Context(), req); err != nil {
 			return errorResponse[struct{}](apiErrorFrom(err))
 		}

@@ -37,7 +37,7 @@ type Contact struct {
 	SupportEmail      string `json:"support_email"`
 	PrivacyPolicyURL  string `json:"privacy_policy_url"`
 	TermsOfServiceURL string `json:"terms_of_service_url"`
-	OfficialWebsite   string `json:"official_website"`
+	OfficialWebsite   string `json:"official_website_url"`
 }
 
 type UploadConfig struct {
@@ -51,8 +51,8 @@ type UploadConfig struct {
 
 type Defaults struct {
 	DefaultLocation      Location      `json:"default_location"`
-	DefaultUserAvatar    string        `json:"default_user_avatar"`
-	DefaultGroupAvatar   string        `json:"default_group_avatar"`
+	DefaultUserAvatar    string        `json:"default_user_avatar_url"`
+	DefaultGroupAvatar   string        `json:"default_group_avatar_url"`
 	DefaultGroupSettings GroupSettings `json:"default_group_settings"`
 }
 

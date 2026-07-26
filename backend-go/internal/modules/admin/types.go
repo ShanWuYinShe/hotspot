@@ -21,12 +21,12 @@ type FeatureSwitches = systemmodule.FeatureSwitches
 type AppLimits = systemmodule.AppLimits
 
 type ContactInfo = systemmodule.ContactInfo
-type AnnouncementSeverity = systemmodule.AnnouncementSeverity
+type AnnounceLevel = systemmodule.AnnounceLevel
 
 const (
-	AnnouncementSeverityInfo    = systemmodule.AnnouncementSeverityInfo
-	AnnouncementSeverityWarning = systemmodule.AnnouncementSeverityWarning
-	AnnouncementSeverityError   = systemmodule.AnnouncementSeverityError
+	AnnounceLevelInfo    = systemmodule.AnnounceLevelInfo
+	AnnounceLevelWarning = systemmodule.AnnounceLevelWarning
+	AnnounceLevelError   = systemmodule.AnnounceLevelError
 )
 
 type PaginationParams = types.PaginationParams
@@ -113,7 +113,7 @@ type ReportStatus string
 
 type ReportTargetType string
 
-type ReportHandleAction string
+type ReportAction string
 
 const (
 	UserAccountStatusNormal UserAccountStatus = "normal"
@@ -131,9 +131,9 @@ const (
 	ReportTargetTypeMessage ReportTargetType = "message"
 	ReportTargetTypeGroup   ReportTargetType = "group"
 
-	ReportHandleResolve  ReportHandleAction = "resolve"
-	ReportHandleDismiss  ReportHandleAction = "dismiss"
-	ReportHandleEscalate ReportHandleAction = "escalate"
+	ReportActionResolve  ReportAction = "resolve"
+	ReportActionDismiss  ReportAction = "dismiss"
+	ReportActionEscalate ReportAction = "escalate"
 )
 
 type AdminUserItem struct {
@@ -248,10 +248,10 @@ type AdminReportSearchRequest struct {
 }
 
 type AdminReportHandleRequest struct {
-	ReportID        string             `json:"report_id"`
-	Action          ReportHandleAction `json:"action"`
-	Note            string             `json:"note,omitempty"`
-	BanDurationDays *int               `json:"ban_duration_days,omitempty"`
+	ReportID        string       `json:"report_id"`
+	Action          ReportAction `json:"action"`
+	Note            string       `json:"note,omitempty"`
+	BanDurationDays *int         `json:"ban_duration_days,omitempty"`
 }
 
 type AuditAction string
@@ -505,7 +505,7 @@ type AdminAnnouncementItem struct {
 	AnnouncementID string               `json:"announcement_id"`
 	Title          string               `json:"title"`
 	Content        string               `json:"content"`
-	Severity       AnnouncementSeverity `json:"severity"`
+	Severity       AnnounceLevel `json:"severity"`
 	ActionURL      string               `json:"action_url,omitempty"`
 	CreatedAt      string               `json:"created_at"`
 	CreatedBy      UserInfo             `json:"created_by"`
@@ -520,14 +520,14 @@ type PaginatedAdminAnnouncements struct {
 }
 
 type AdminAnnouncementSearchRequest struct {
-	Severity   AnnouncementSeverity `json:"severity,omitempty"`
+	Severity   AnnounceLevel `json:"severity,omitempty"`
 	Pagination *PaginationParams    `json:"pagination,omitempty"`
 }
 
 type CreateAnnouncementRequest struct {
 	Title     string               `json:"title"`
 	Content   string               `json:"content"`
-	Severity  AnnouncementSeverity `json:"severity"`
+	Severity  AnnounceLevel `json:"severity"`
 	ActionURL string               `json:"action_url,omitempty"`
 	SendPush  bool                 `json:"send_push,omitempty"`
 }
@@ -540,7 +540,7 @@ type UpdateAnnouncementRequest struct {
 	AnnouncementID string                `json:"announcement_id"`
 	Title          *string               `json:"title,omitempty"`
 	Content        *string               `json:"content,omitempty"`
-	Severity       *AnnouncementSeverity `json:"severity,omitempty"`
+	Severity       *AnnounceLevel `json:"severity,omitempty"`
 	ActionURL      *string               `json:"action_url,omitempty"`
 }
 

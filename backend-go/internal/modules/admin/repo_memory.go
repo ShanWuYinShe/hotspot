@@ -947,7 +947,7 @@ func (r *InMemoryRepository) GetReportHandleRecord(_ context.Context, reportID s
 	return cloneReportHandleRecord(record), true, nil
 }
 
-func (r *InMemoryRepository) HandleReport(_ context.Context, reportID string, action ReportHandleAction, note string, handledBy *UserInfo) (AdminReportItem, bool, error) {
+func (r *InMemoryRepository) HandleReport(_ context.Context, reportID string, action ReportAction, note string, handledBy *UserInfo) (AdminReportItem, bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	record, ok := r.reports[reportID]
@@ -956,11 +956,11 @@ func (r *InMemoryRepository) HandleReport(_ context.Context, reportID string, ac
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	switch action {
-	case ReportHandleResolve:
+	case ReportActionResolve:
 		record.Item.Status = ReportStatusResolved
-	case ReportHandleDismiss:
+	case ReportActionDismiss:
 		record.Item.Status = ReportStatusDismissed
-	case ReportHandleEscalate:
+	case ReportActionEscalate:
 		record.Item.Status = ReportStatusEscalated
 	}
 	record.Item.HandledAt = now

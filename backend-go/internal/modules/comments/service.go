@@ -5,9 +5,8 @@ import (
 	"errors"
 	"sort"
 	"strings"
-	"time"
 
-	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/modules/notify"
 	"hotspot/backend-go/internal/platform/actor"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -25,17 +24,24 @@ type Service struct {
 	users         actor.Provider
 	appConfig     appconfig.Source
 	runInTx       persistence.TxRunner // optional; nil => no transaction wrapping
+	reactions     ReactionAggregator  // optional; nil => reactions[] not filled
+}
+
+// ReactionAggregator computes per-emoji reaction aggregates for comments.
+// Implemented by the reactions module (dependency inversion). viewerID drives
+// the @auth-only reacted_by_me flag.
+type ReactionAggregator interface {
+	AggregateComments(ctx context.Context, commentIDs []string, viewerID string) (map[string][]Reaction, error)
 }
 
 type commentNotificationWriter interface {
 	AppendMomentCommented(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error
-	AppendCommentLiked(ctx context.Context, targetUserID string, actor map[string]any, commentID string, commentPreview string, momentID string, momentSummary map[string]any) error
 	AppendCommentReply(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, parentCommentID string, parentPreview string, replyID string, replyPreview string) error
 	AppendMentioned(ctx context.Context, targetUserID string, actor map[string]any, targetType string, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error
 }
 
 func NewService(repo Repository, moments MomentProvider) *Service {
-	return NewServiceWithDeps(repo, moments, notifications.NewService(), nil, nil, nil)
+	return NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
 }
 
 func NewServiceWithDeps(repo Repository, moments MomentProvider, notificationWriter commentNotificationWriter, actorProvider actor.Provider, appConfig appconfig.Source, runInTx persistence.TxRunner) *Service {
@@ -107,7 +113,6 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 		s.notifyMomentAuthor(ctx, momentContext, actor, item, mentionTargets)
 	}
 	s.notifyMentionedUsers(ctx, momentContext, actor, item, mentionTargets)
-	syncIsLiked([]CommentItem{item})
 	return item, nil
 }
 
@@ -131,22 +136,8 @@ func (s *Service) List(ctx context.Context, req ListCommentsRequest) (PaginatedC
 		return PaginatedComments{}, err
 	}
 	s.fillTopReplies(ctx, result.Items)
-	syncIsLiked(result.Items)
+	s.fillReactionsBatch(ctx, result.Items, viewerUserID(ctx))
 	return result, nil
-}
-
-// syncIsLiked copies each comment's MyState.IsLiked onto the top-level IsLiked
-// field so the wire shape matches the spec (CommentItem.is_liked is a
-// top-level @auth-only field, not nested under my_state). A nil IsLiked here
-// is fine — it omits from JSON for unauthenticated requests.
-func syncIsLiked(items []CommentItem) {
-	for i := range items {
-		if items[i].MyState != nil {
-			liked := items[i].MyState.IsLiked
-			items[i].IsLiked = &liked
-		}
-		syncIsLiked(items[i].TopReplies)
-	}
 }
 
 func (s *Service) fillTopReplies(ctx context.Context, items []CommentItem) {
@@ -177,6 +168,24 @@ func (s *Service) fillTopReplies(ctx context.Context, items []CommentItem) {
 			items[i].TopReplies = repliesByParent[items[i].CommentID]
 		}
 	}
+}
+
+// Get returns a single comment by id. found=false (no error) when the comment
+// does not exist. Exposed for cross-module lookups (e.g. reactions target
+// resolution). Does NOT fill reactions[].
+func (s *Service) Get(ctx context.Context, commentID string) (CommentItem, bool, error) {
+	return s.repo.Get(ctx, commentID)
+}
+
+// GetForDetail returns a single comment with reactions[] filled (backs
+// comments/get_detail). Use Get for internal lookups that don't need reactions.
+func (s *Service) GetForDetail(ctx context.Context, commentID string) (CommentItem, bool, error) {
+	item, found, err := s.repo.Get(ctx, commentID)
+	if err != nil || !found {
+		return CommentItem{}, found, err
+	}
+	s.fillReactionsBatch(ctx, []CommentItem{item}, viewerUserID(ctx))
+	return item, true, nil
 }
 
 func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
@@ -229,93 +238,65 @@ func (s *Service) ListReplies(ctx context.Context, req CommentRepliesRequest) (P
 	if err != nil {
 		return PaginatedComments{}, err
 	}
-	syncIsLiked(result.Items)
+	s.fillReactionsBatch(ctx, result.Items, viewerUserID(ctx))
 	return result, nil
 }
 
-func (s *Service) Like(ctx context.Context, req LikeCommentRequest) error {
-	comment, found, err := s.repo.Get(ctx, req.CommentID)
+// SetReactionAggregator wires the reactions aggregator (called by bootstrap).
+func (s *Service) SetReactionAggregator(ra ReactionAggregator) { s.reactions = ra }
+
+// fillReactionsBatch populates CommentItem.reactions[] for a list in one query,
+// including any nested TopReplies.
+func (s *Service) fillReactionsBatch(ctx context.Context, items []CommentItem, viewerID string) {
+	if s.reactions == nil || len(items) == 0 {
+		return
+	}
+	// Collect all comment ids across top-level items and their top replies so a
+	// single aggregate query covers the whole tree.
+	idSet := make(map[string]struct{}, len(items)*2)
+	collect := func(items []CommentItem) {
+		for i := range items {
+			idSet[items[i].CommentID] = struct{}{}
+			for _, r := range items[i].TopReplies {
+				idSet[r.CommentID] = struct{}{}
+			}
+		}
+	}
+	collect(items)
+	if len(idSet) == 0 {
+		return
+	}
+	ids := make([]string, 0, len(idSet))
+	for id := range idSet {
+		ids = append(ids, id)
+	}
+	byID, err := s.reactions.AggregateComments(ctx, ids, viewerID)
 	if err != nil {
-		return err
+		observability.L().Warn("comments.fillReactionsBatch failed", "error", err)
+		return
 	}
-	if !found {
-		return ErrCommentNotFound
+	apply := func(items []CommentItem) {
+		for i := range items {
+			if recs := byID[items[i].CommentID]; len(recs) > 0 {
+				items[i].Reactions = recs
+			}
+			for j := range items[i].TopReplies {
+				if recs := byID[items[i].TopReplies[j].CommentID]; len(recs) > 0 {
+					items[i].TopReplies[j].Reactions = recs
+				}
+			}
+		}
 	}
-	principal, _ := platformauth.PrincipalFromContext(ctx)
-	newlyLiked, err := s.repo.Like(ctx, req.CommentID, principal.UserID)
-	if err != nil {
-		return err
-	}
-	if !newlyLiked || strings.TrimSpace(comment.User.UserID) == "" || comment.User.UserID == principal.UserID {
-		return nil
-	}
-	momentContext, ok, err := s.moments.NotificationContext(ctx, comment.MomentID)
-	if err != nil {
-		observability.L().Error("comments.like load moment notification context failed", "error", err, "moment_id", comment.MomentID, "comment_id", comment.CommentID)
-		return nil
-	}
+	apply(items)
+}
+
+// viewerUserID returns the authenticated user id, or "" for anonymous callers.
+func viewerUserID(ctx context.Context) string {
+	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok {
-		return nil
+		return ""
 	}
-	actor, actorErr := s.buildActorForUser(ctx, principal.UserID)
-	if actorErr != nil {
-		observability.L().Error("comments.like build actor failed", "error", actorErr, "user_id", principal.UserID)
-		actor = buildCommentActor(CommentItem{User: UserInfo{UserID: principal.UserID, Nickname: principal.UserID}}, principal.UserID)
-	}
-	momentSummary := notificationMomentSummary(momentContext, comment.MomentID)
-	commentPreview := summarizeCommentText(comment.Content, "")
-	if s.notifications != nil {
-		if err := s.notifications.AppendCommentLiked(ctx, comment.User.UserID, actor, comment.CommentID, commentPreview, comment.MomentID, momentSummary); err != nil {
-			observability.L().Error("comments.like append comment_liked notification failed", "error", err, "moment_id", comment.MomentID, "comment_id", comment.CommentID, "target_user_id", comment.User.UserID)
-		}
-	}
-	realtime.DefaultHub().BroadcastToUser(comment.User.UserID, realtime.Event{Type: realtime.EventTypeCommentLiked, Payload: map[string]any{
-		"comment_id":      comment.CommentID,
-		"moment_id":       comment.MomentID,
-		"moment_summary":  cloneSummary(momentSummary),
-		"comment_preview": commentPreview,
-		"actor":           actor,
-		"liked_at":        currentTimestamp(),
-	}})
-	return nil
-}
-
-func (s *Service) Unlike(ctx context.Context, req UnlikeCommentRequest) error {
-	_, found, err := s.repo.Get(ctx, req.CommentID)
-	if err != nil {
-		return err
-	}
-	if !found {
-		return ErrCommentNotFound
-	}
-	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.Unlike(ctx, req.CommentID, principal.UserID)
-}
-
-func (s *Service) ListLikes(ctx context.Context, req CommentLikesRequest) (PaginatedCommentLikes, error) {
-	_, found, err := s.repo.Get(ctx, req.CommentID)
-	if err != nil {
-		return PaginatedCommentLikes{}, err
-	}
-	if !found {
-		return PaginatedCommentLikes{}, ErrCommentNotFound
-	}
-	limit := 20
-	cursor := ""
-	if req.Pagination != nil {
-		if req.Pagination.Limit > 0 {
-			limit = req.Pagination.Limit
-		}
-		if limit > 100 {
-			limit = 100
-		}
-		cursor = req.Pagination.Cursor
-	}
-	items, nextCursor, err := s.repo.ListLikes(ctx, req.CommentID, limit, cursor)
-	if err != nil {
-		return PaginatedCommentLikes{}, err
-	}
-	return PaginatedCommentLikes{Items: items, NextCursor: nextCursor}, nil
+	return principal.UserID
 }
 
 func (s *Service) resolveReplyTarget(ctx context.Context, parentID string) (CommentItem, bool, error) {
@@ -456,10 +437,6 @@ func sortedMentionTargets(targets map[string]struct{}) []string {
 	return userIDs
 }
 
-func currentTimestamp() string {
-	return time.Now().UTC().Format(time.RFC3339)
-}
-
 func summarizeCommentText(primary string, fallback string) string {
 	value := strings.TrimSpace(primary)
 	if value == "" {
@@ -496,15 +473,4 @@ func (s *Service) ensureMomentExists(ctx context.Context, momentID string) error
 		return ErrMomentNotFound
 	}
 	return nil
-}
-
-func (s *Service) buildActorForUser(ctx context.Context, userID string) (map[string]any, error) {
-	if s.users == nil {
-		return nil, nil
-	}
-	info, err := s.users.GetActorInfo(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{"user_id": info.UserID, "nickname": info.Nickname, "avatar_url": info.AvatarURL}, nil
 }

@@ -29,7 +29,7 @@ func (s *Store) Create(userID string, req CreateCommentRequest) CommentItem {
 		CreatedAt:    now.Format(time.RFC3339),
 		LikesCount:   0,
 		RepliesCount: 0,
-		MyState:      &MyCommentState{IsLiked: false},
+		MyState:      &MyCommentState{},
 	}
 	s.comments[req.MomentID] = append(s.comments[req.MomentID], item)
 	return item

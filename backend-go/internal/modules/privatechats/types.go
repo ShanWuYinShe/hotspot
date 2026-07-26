@@ -59,7 +59,7 @@ type PrivateChatItem struct {
 	PresenceStatus       string       `json:"presence_status,omitempty"`
 	CreatedAt            string       `json:"created_at,omitempty"`
 	CanMessage           bool         `json:"can_message"`
-	MessageBlockedReason string       `json:"message_blocked_reason,omitempty"`
+	BlockReason string       `json:"message_blocked_reason,omitempty"`
 }
 
 type PaginatedPrivateChats struct {

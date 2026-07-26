@@ -1,4 +1,4 @@
-package notifications
+package notify
 
 import (
 	"context"
@@ -8,21 +8,21 @@ import (
 
 type InMemoryRepository struct {
 	mu    sync.RWMutex
-	items map[string][]NotificationItem
+	items map[string][]NotifyItem
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
-	return &InMemoryRepository{items: make(map[string][]NotificationItem)}
+	return &InMemoryRepository{items: make(map[string][]NotifyItem)}
 }
 
-func (r *InMemoryRepository) Append(_ context.Context, userID string, item NotificationItem) error {
+func (r *InMemoryRepository) Append(_ context.Context, userID string, item NotifyItem) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.items[userID] = append(r.items[userID], normalizeNotificationItem(item))
+	r.items[userID] = append(r.items[userID], normalizeNotifyItem(item))
 	return nil
 }
 
-func (r *InMemoryRepository) AppendMany(ctx context.Context, userIDs []string, item NotificationItem) error {
+func (r *InMemoryRepository) AppendMany(ctx context.Context, userIDs []string, item NotifyItem) error {
 	for _, userID := range userIDs {
 		if userID == "" {
 			continue
@@ -34,14 +34,14 @@ func (r *InMemoryRepository) AppendMany(ctx context.Context, userIDs []string, i
 	return nil
 }
 
-func (r *InMemoryRepository) List(_ context.Context, userID string, req NotificationListRequest) (PaginatedNotifications, error) {
+func (r *InMemoryRepository) List(_ context.Context, userID string, req NotificationListRequest) (PaginatedNotify, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	query, err := normalizeNotificationListQuery(req)
 	if err != nil {
-		return PaginatedNotifications{}, err
+		return PaginatedNotify{}, err
 	}
-	items := make([]NotificationItem, 0)
+	items := make([]NotifyItem, 0)
 	for _, item := range r.items[userID] {
 		if query.Type == "" || item.Type == query.Type {
 			items = append(items, item)
@@ -62,7 +62,7 @@ func (r *InMemoryRepository) List(_ context.Context, userID string, req Notifica
 		}
 		items = filtered
 	}
-	page := PaginatedNotifications{}
+	page := PaginatedNotify{}
 	if len(items) > query.Limit {
 		last := items[query.Limit-1]
 		page.NextCursor = encodeNotificationCursor(notificationCursor{CreatedAt: last.CreatedAt, NotificationID: last.NotificationID})
@@ -117,11 +117,22 @@ func (r *InMemoryRepository) MarkAllRead(_ context.Context, userID string) error
 	return nil
 }
 
+func (r *InMemoryRepository) MarkAllReadByType(_ context.Context, userID string, notificationType string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for i := range r.items[userID] {
+		if r.items[userID][i].Type == notificationType {
+			r.items[userID][i].IsRead = true
+		}
+	}
+	return nil
+}
+
 func bucket(notificationType string) string {
 	switch notificationType {
 	case "new_follower", "mutual_follow":
 		return "social"
-	case "moment_liked", "moment_commented", "comment_liked", "comment_reply", "mentioned":
+	case "moment_liked", "moment_commented", "comment_liked", "comment_reply", "mentioned", "reaction_added":
 		return "interaction"
 	case "group_invite_received", "group_invite_accepted", "group_application_received", "group_application_accepted":
 		return "group"

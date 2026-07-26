@@ -109,34 +109,23 @@ func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
 }
 
-func (h *Handler) MuteMember(w http.ResponseWriter, r *http.Request) {
+// SetMute is the unified two-state mute endpoint (api_spec_group.md). active=true
+// mutes the member (for DurationMinutes); active=false unmutes them. Idempotent.
+// Retained as a single handler replacing the legacy MuteMember/UnmuteMember
+// pair; the service-layer MuteMember/UnmuteMember methods are unchanged.
+func (h *Handler) SetMute(w http.ResponseWriter, r *http.Request) {
 	var req MuteMemberRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if err := h.service.MuteMember(r.Context(), req); err != nil {
-		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
-			return
-		}
-		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
-			return
-		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
+	var err error
+	if req.Active {
+		err = h.service.MuteMember(r.Context(), req)
+	} else {
+		err = h.service.UnmuteMember(r.Context(), UnmuteMemberRequest{GroupID: req.GroupID, UserID: req.UserID})
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
-}
-
-func (h *Handler) UnmuteMember(w http.ResponseWriter, r *http.Request) {
-	var req UnmuteMemberRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-		return
-	}
-	if err := h.service.UnmuteMember(r.Context(), req); err != nil {
+	if err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return

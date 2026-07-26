@@ -71,7 +71,7 @@ func TestPostgresIT_PutAndGetSettings(t *testing.T) {
 			LocationVisible:  true,
 			PresenceVisible:  false,
 			AllowFollow:      true,
-			AllowPrivateChat: PrivateChatFriends,
+			AllowPrivateChat: ChatPermFriends,
 			Searchable:       true,
 		}
 		if err := repo.PutSettings(ctx, userID, settings); err != nil {
@@ -85,8 +85,8 @@ func TestPostgresIT_PutAndGetSettings(t *testing.T) {
 		if !found {
 			t.Fatal("expected found=true")
 		}
-		if got.AllowPrivateChat != PrivateChatFriends {
-			t.Fatalf("allow_private_chat: got %q, want %q", got.AllowPrivateChat, PrivateChatFriends)
+		if got.AllowPrivateChat != ChatPermFriends {
+			t.Fatalf("allow_private_chat: got %q, want %q", got.AllowPrivateChat, ChatPermFriends)
 		}
 		if got.PresenceVisible {
 			t.Fatal("expected presence_visible=false")

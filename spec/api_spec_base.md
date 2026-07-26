@@ -9,7 +9,7 @@
 
 ## 术语约定（契约级）
 
-- **当前用户**：指已鉴权的调用方用户，通常对应 `/me/` 路径与个人视角数据
+- **当前用户**：指已鉴权的调用方用户。个人视角操作由 Token 隐含标识，无独立 `/me/` 路径段
 - **自身**：指"对自己执行操作"的语义，用于错误码与规则描述
 - **群成员**：指已加入群组的用户
 - **会话参与者**：指私聊会话的双方用户
@@ -133,7 +133,7 @@ interface ApiResponse<T = void> {
 ├── map/               # 地图渲染
 ├── search/            # 搜索与发现（综合建议）
 ├── reports/           # 举报
-├── notifications/     # 通知中心
+├── notify/            # 通知中心
 ├── media/             # 媒体上传
 ├── share/             # 分享系统
 ├── system/            # 系统（健康/版本/配置/公告）
@@ -189,8 +189,7 @@ App 端通过 Header 携带认证信息：
 |-----|----------|---------|
 | 查询类（搜索/详情/列表） | **可选** | 若类型定义含 `@auth-only` 字段，登录态返回这些字段 |
 | 写操作（create/update/delete） | **必须** | 缺少 token 返回认证错误 |
-| 互动操作（like/follow/block 等） | **必须** | 缺少 token 返回认证错误 |
-| `*/me/*` 路径（如 `/api/v1/users/me/*`） | **必须** | 当前用户专属数据 |
+| 互动操作（follow/block 等） | **必须** | 缺少 token 返回认证错误 |
 | `/feed/*` 路径 | **必须**（`list_trending` 可选） | 个性化推荐依赖身份；`list_trending` 为全局热门数据，不依赖身份 |
 | `/admin/*` 路径 | **必须**+权限 | 管理员功能 |
 
@@ -547,8 +546,8 @@ App 端通过 Header 携带认证信息：
 
 #### 必须使用幂等键的接口（MUST）
 
-- 认证与账号：`auth/register`、`auth/guest`、`auth/request_password_reset`、`auth/reset_password`、`auth/me/change_password`
-- 联系方式变更：`users/me/email/request_change`、`users/me/email/confirm_change`、`users/me/phone/request_change`、`users/me/phone/confirm_change`
+- 认证与账号：`auth/register`、`auth/guest`、`auth/request_password_reset`、`auth/reset_password`、`auth/change_password`
+- 联系方式变更：`users/email/request_change`、`users/email/confirm_change`、`users/phone/request_change`、`users/phone/confirm_change`
 - 内容创建：`moments/create`、`comments/create`
 - 消息发送：`private_messages/send`、`group_messages/send`
 - 媒体上传：`media/complete_upload`
@@ -556,11 +555,11 @@ App 端通过 Header 携带认证信息：
 - 分享创建：`share/create`
 - 群组创建与公告：`groups/create`、`groups/announcements/create`
 - 群组封禁：`groups/members/ban`
-- 群组加入/审核：`groups/me/join`、`groups/applications/approve`、`groups/applications/reject`
+- 群组加入/审核：`groups/join`、`groups/applications/approve`、`groups/applications/reject`
 - 群组邀请：`groups/members/invite`
-- 群组邀请处理：`groups/me/invites/accept`、`groups/me/invites/reject`
+- 群组邀请处理：`groups/accept_invite`、`groups/reject_invite`
 - 管理员操作（所有具有"创建/处理/封禁/解散"语义的 admin 写操作）
 
 #### 建议使用幂等键的接口（SHOULD）
 
-- 重要且不可逆的变更操作（如 `users/me/delete`、`groups/dismiss`、`groups/me/transfer_ownership`）
+- 重要且不可逆的变更操作（如 `users/delete_account`、`groups/dismiss`、`groups/transfer_ownership`）

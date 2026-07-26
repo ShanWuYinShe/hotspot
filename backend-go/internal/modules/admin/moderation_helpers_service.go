@@ -25,7 +25,7 @@ func trimOptional(value *string) *string {
 }
 
 func validateAnnouncementCreate(req CreateAnnouncementRequest) *httpx.APIError {
-	if !validAnnouncementSeverity(req.Severity) {
+	if !validAnnounceLevel(req.Severity) {
 		return httpx.InvalidRequest("参数错误")
 	}
 	if !validAnnouncementTitle(req.Title) || !validAnnouncementContent(req.Content) {
@@ -50,7 +50,7 @@ func validateAnnouncementUpdate(req UpdateAnnouncementRequest) *httpx.APIError {
 	if req.Content != nil && !validAnnouncementContent(*req.Content) {
 		return httpx.InvalidRequest("参数错误")
 	}
-	if req.Severity != nil && !validAnnouncementSeverity(*req.Severity) {
+	if req.Severity != nil && !validAnnounceLevel(*req.Severity) {
 		return httpx.InvalidRequest("参数错误")
 	}
 	if req.ActionURL != nil && !validAnnouncementActionURL(*req.ActionURL) {
@@ -91,9 +91,9 @@ func toAdminAnnouncementItem(item systemmodule.AnnouncementRecord) AdminAnnounce
 	return resp
 }
 
-func validAnnouncementSeverity(severity AnnouncementSeverity) bool {
+func validAnnounceLevel(severity AnnounceLevel) bool {
 	switch severity {
-	case AnnouncementSeverityInfo, AnnouncementSeverityWarning, AnnouncementSeverityError:
+	case AnnounceLevelInfo, AnnounceLevelWarning, AnnounceLevelError:
 		return true
 	default:
 		return false

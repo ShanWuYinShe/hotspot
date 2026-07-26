@@ -19,8 +19,9 @@ import { ContextRail } from "../../components/layout/ContextRail";
 import { ActionIconButton } from "../../components/shared/ActionIconButton";
 import { ROUTES, type ProfileSection } from "../../lib/routes";
 
-/* ── Constants & mock data (extracted) ──────────────────────────── */
+/* ── Data hooks ──────────────────────────── */
 import {
+  useAccountData, useGalleryPosts, useReactedPosts, useFavoritePosts, useMyGroups,
   USER_AVATAR, GALLERY_POSTS, LIKED_POSTS, SAVED_POSTS, STATS,
   MOCK_GROUPS, MOCK_FRIENDS, MOCK_FOLLOWING, MOCK_FANS,
 } from "./profile.data";
@@ -199,7 +200,7 @@ function ProfileDesktop() {
           {/* Stats */}
           <div className="w-full rounded-[18px] overflow-hidden mb-4"
             style={{ background: "var(--neu-bg)", boxShadow: "6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
-            {STATS.map((stat, i) => (
+            {STATS.map((stat: any, i) => (
               <React.Fragment key={stat.label}>
                 {i > 0 && <div style={{ height: 1, background: "var(--neu-border)" }} />}
                 <motion.button whileTap={{ scale: 0.97 }}

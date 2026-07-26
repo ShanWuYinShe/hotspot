@@ -37,7 +37,7 @@ func TestMiddlewareRejectsKnownMissingUser(t *testing.T) {
 	handler := Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/open_the_door", strings.NewReader(`{"user_id":"user_missing"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/get_detail", strings.NewReader(`{"user_id":"user_missing"}`))
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
@@ -58,7 +58,7 @@ func TestMiddlewareBypassesWhenCheckerNotReady(t *testing.T) {
 		called = true
 		w.WriteHeader(http.StatusNoContent)
 	}))
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups/open_the_door", strings.NewReader(`{"group_id":"group_1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups/get_detail", strings.NewReader(`{"group_id":"group_1"}`))
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
@@ -76,7 +76,7 @@ func TestMiddlewareBypassesOnCheckerError(t *testing.T) {
 		called = true
 		w.WriteHeader(http.StatusNoContent)
 	}))
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/moments/open_the_door", strings.NewReader(`{"moment_id":"moment_1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/moments/get_detail", strings.NewReader(`{"moment_id":"moment_1"}`))
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
@@ -117,7 +117,7 @@ func TestMiddlewareRestoresRequestBody(t *testing.T) {
 		body = string(data)
 		w.WriteHeader(http.StatusNoContent)
 	}))
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/open_the_door", strings.NewReader(`{"user_id":"user_1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/get_detail", strings.NewReader(`{"user_id":"user_1"}`))
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)

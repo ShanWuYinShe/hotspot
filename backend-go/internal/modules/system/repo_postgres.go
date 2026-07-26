@@ -238,7 +238,7 @@ func scanAnnouncement(scanner interface{ Scan(...any) error }, includeDeleted bo
 			return AnnouncementRecord{}, err
 		}
 	}
-	item.Severity = AnnouncementSeverity(severity)
+	item.Severity = AnnounceLevel(severity)
 	if pushSentAt != nil {
 		utc := pushSentAt.UTC()
 		item.PushSentAt = &utc

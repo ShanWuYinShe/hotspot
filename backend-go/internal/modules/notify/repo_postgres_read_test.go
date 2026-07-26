@@ -1,4 +1,4 @@
-package notifications
+package notify
 
 import (
 	"context"
@@ -53,13 +53,13 @@ func (notificationNonQueryableDB) Ping(context.Context) error { return nil }
 func (notificationNonQueryableDB) Close() error               { return nil }
 
 type notificationBackendStub struct {
-	items     map[string][]NotificationItem
+	items     map[string][]NotifyItem
 	execErrs  map[string]error
 	queryErrs map[string]error
 }
 
 func newNotificationBackendStub() *notificationBackendStub {
-	return &notificationBackendStub{items: make(map[string][]NotificationItem), execErrs: make(map[string]error), queryErrs: make(map[string]error)}
+	return &notificationBackendStub{items: make(map[string][]NotifyItem), execErrs: make(map[string]error), queryErrs: make(map[string]error)}
 }
 
 func (b *notificationBackendStub) Exec(_ context.Context, query string, args ...any) error {
@@ -69,7 +69,7 @@ func (b *notificationBackendStub) Exec(_ context.Context, query string, args ...
 	userID := args[0].(string)
 	switch query {
 	case queryInsertNotification:
-		item := NotificationItem{
+		item := NotifyItem{
 			NotificationID: args[0].(string),
 			Type:           args[2].(string),
 			IsRead:         args[3].(bool),
@@ -117,7 +117,7 @@ func (b *notificationBackendStub) Query(_ context.Context, query string, args ..
 		}
 		cursorNotificationID := args[3].(string)
 		limit := args[4].(int)
-		items := append([]NotificationItem(nil), b.items[userID]...)
+		items := append([]NotifyItem(nil), b.items[userID]...)
 		sort.Slice(items, func(i, j int) bool {
 			if items[i].CreatedAt == items[j].CreatedAt {
 				return items[i].NotificationID > items[j].NotificationID
@@ -175,7 +175,7 @@ func TestPersistenceRepositoryWithPostgresDSNDoesNotFallbackSilently(t *testing.
 	}
 	repo := &PersistenceRepository{impl: NewPostgresRepository(factory)}
 
-	if err := repo.Append(context.Background(), "user_alice", NotificationItem{Type: "new_follower"}); !errors.Is(err, persistence.ErrNotImplemented) {
+	if err := repo.Append(context.Background(), "user_alice", NotifyItem{Type: "new_follower"}); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented for append, got %v", err)
 	}
 	if _, err := repo.List(context.Background(), "user_alice", NotificationListRequest{}); !errors.Is(err, persistence.ErrNotImplemented) {
@@ -194,7 +194,7 @@ func TestPersistenceRepositoryWithPostgresDSNDoesNotFallbackSilently(t *testing.
 
 func TestPostgresRepositoryListSupportsFilterPaginationAndUnreadCount(t *testing.T) {
 	backend := newNotificationBackendStub()
-	backend.items["user_alice"] = []NotificationItem{
+	backend.items["user_alice"] = []NotifyItem{
 		{NotificationID: "notif_3", Type: "system_announcement", IsRead: false, CreatedAt: "2026-03-20T00:00:00Z", Payload: map[string]any{"type": "system_announcement", "announcement_id": "ann_1"}},
 		{NotificationID: "notif_2", Type: "new_follower", IsRead: false, CreatedAt: "2026-03-20T00:00:00Z", Payload: map[string]any{"type": "new_follower"}},
 		{NotificationID: "notif_1", Type: "group_invite_received", IsRead: true, CreatedAt: "2026-03-19T00:00:00Z", Payload: map[string]any{"type": "group_invite_received"}},
@@ -248,7 +248,7 @@ func TestPostgresRepositoryAppendWritesAndAffectsUnreadCount(t *testing.T) {
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
-	if err := repo.Append(context.Background(), "user_alice", NotificationItem{Type: "new_follower", Payload: map[string]any{"actor": map[string]any{"user_id": "user_bob"}}}); err != nil {
+	if err := repo.Append(context.Background(), "user_alice", NotifyItem{Type: "new_follower", Payload: map[string]any{"actor": map[string]any{"user_id": "user_bob"}}}); err != nil {
 		t.Fatalf("append: %v", err)
 	}
 	list, err := repo.List(context.Background(), "user_alice", NotificationListRequest{})

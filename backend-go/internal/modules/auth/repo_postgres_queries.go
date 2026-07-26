@@ -13,7 +13,7 @@ VALUES ($1, $2, $3, $4, '', '', $5, '', $6, $7, $8, $9, 'online', $10, $11, $12,
 	queryDeleteUserProfileByUserID = `DELETE FROM users
 WHERE user_id = $1`
 
-	queryUpsertUserSettings = `INSERT INTO user_settings (user_id, privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, liked_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable)
+	queryUpsertUserSettings = `INSERT INTO user_settings (user_id, privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, reacted_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable)
 VALUES ($1, 'public', TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, 'everyone', TRUE, FALSE, TRUE, TRUE)
 ON CONFLICT (user_id) DO NOTHING`
 

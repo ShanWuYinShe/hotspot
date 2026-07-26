@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/modules/notify"
 	"hotspot/backend-go/internal/platform/actor"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
@@ -33,11 +33,11 @@ type groupNotificationWriter interface {
 }
 
 func NewService() *Service {
-	return NewServiceWithDeps(NewInMemoryRepository(), notifications.NewService(), nil)
+	return NewServiceWithDeps(NewInMemoryRepository(), notify.NewService(), nil)
 }
 
 func NewServiceWithRepo(repo Repository) *Service {
-	return NewServiceWithDeps(repo, notifications.NewService(), nil)
+	return NewServiceWithDeps(repo, notify.NewService(), nil)
 }
 
 func NewServiceWithDeps(repo Repository, notificationWriter groupNotificationWriter, actorProvider actor.Provider) *Service {

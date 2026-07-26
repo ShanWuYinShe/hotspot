@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowLeft, Search, MapPin, Heart, MessageCircle, Share2, Bookmark, X, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { usePlatform } from "../contexts/PlatformContext";
@@ -12,73 +12,12 @@ import { ContextRail } from "../components/layout/ContextRail";
 import { useSocial, type SocialPost } from "../contexts/SocialContext";
 import { BspCardCanvas } from "../components/shared/BspCardCanvas";
 import { ActionIconButton } from "../components/shared/ActionIconButton";
+import { getFeedMoments, searchSuggest } from "../../api";
 
 /* ── Feed data ──────────────────────────────────────────────────── */
 type FeedItem = Omit<SocialPost, "moods" | "audience">;
 
-const FEED_ITEM_SEED: FeedItem[] = [
-  {
-    id: 1, user: "阿禾", location: "植物园", tag: "自然",
-    avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
-    content: "清晨在绿意中找到了一片宁静。黎明时分阳光穿过树叶，滤出完美的光影。",
-    image: "https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
-    likes: 124, comments: 12, time: "2小时前",
-  },
-  {
-    id: 2, user: "本地向导", location: "市中心核心区", tag: "城市",
-    avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
-    content: "城市里那些安静的角落已经被我全部地图标注出来了。每一条小巷都有属于己的故事。",
-    image: "https://images.unsplash.com/photo-1748737349771-e2b6605e5961?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
-    likes: 89, comments: 5, time: "5小时前",
-  },
-  {
-    id: 3, user: "野原", location: "老街手冲馆", tag: "生活",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
-    content: "周末午后最适合窝在这里看书，点杯手冲，看窗外的行人。",
-    image: "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
-    likes: 56, comments: 8, time: "昨天",
-  },
-  {
-    id: 4, user: "小满", location: "云龙湖畔", tag: "活动",
-    avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
-    content: "湖畔的周末市集开始了！有好多有意思的手工艺品和本地小吃。",
-    image: "https://images.unsplash.com/photo-1758613172074-7275c3455034?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
-    likes: 201, comments: 34, time: "周一",
-  },
-  {
-    id: 5, user: "林一", location: "彭城广场", tag: "音乐",
-    avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
-    content: "户部山周末弹唱现场，氛围太好了，久违的烟火气又回来了。",
-    image: "https://images.unsplash.com/photo-1759734282634-b4958ea9a6e0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
-    likes: 315, comments: 27, time: "3天前",
-  },
-  {
-    id: 6, user: "Mika", location: "汉文化景区", tag: "人文",
-    avatar: "https://images.unsplash.com/photo-1758613172074-7275c3455034?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
-    content: "徐州的历史比很多人想象的还要厚重，这里每一块砖都有故事。",
-    image: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
-    likes: 142, comments: 19, time: "4天前",
-  },
-];
-
-// Mock pagination: real discovery feeds stream many more cards than fit on a
-// screen, so the seed items are cycled with id/likes offsets to give the BSP
-// canvas enough cards to exercise incremental loading + virtualization.
-// Replaced by the API once pagination is wired through.
-const FEED_ITEMS: FeedItem[] = Array.from({ length: 72 }, (_, i) => {
-  const seed = FEED_ITEM_SEED[i % FEED_ITEM_SEED.length];
-  const cycle = Math.floor(i / FEED_ITEM_SEED.length);
-  return {
-    ...seed,
-    id: i + 1,
-    user: cycle === 0 ? seed.user : `${seed.user}${cycle + 1}`,
-    likes: seed.likes + cycle * 17,
-    comments: seed.comments + cycle * 3,
-  };
-});
-
 const TABS  = ["热门", "附近", "活动", "关注"];
-const TAGS  = ["自然", "城市", "美食", "音乐", "活动", "摄影", "生活", "旅行"];
 
 
 /* ══════════════════════════════════════════════════════════════════
@@ -286,13 +225,13 @@ function DiscoverHeader({
 
 /* ── Tag chips strip ────────────────────────────────────────────── */
 function TagChips({
-  activeTag, setActiveTag, scrollable = false,
+  activeTag, setActiveTag, tags, scrollable = false,
 }: {
-  activeTag: string | null; setActiveTag: (t: string | null) => void; scrollable?: boolean;
+  activeTag: string | null; setActiveTag: (t: string | null) => void; tags: string[]; scrollable?: boolean;
 }) {
   return (
     <div className={scrollable ? "flex gap-2 overflow-x-auto no-scrollbar pb-1" : "flex gap-2 flex-wrap"}>
-      {TAGS.map(tag => {
+      {tags.map(tag => {
         const active = activeTag === tag;
         return (
           <motion.button
@@ -319,10 +258,10 @@ function TagChips({
 /* ══════════════════════════════════════════════════════════════════
    Mobile Discover — single-column feed, max-width 560px centred
 ══════════════════════════════════════════════════════════════════ */
-function DiscoverMobile() {
+function DiscoverMobile({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags: string[] }) {
   const navigate = useNavigate();
   const { discoverPosts, likedIds, savedIds, commentsByPost, toggleLike, toggleSave } = useSocial();
-  const feedItems: FeedItem[] = [...discoverPosts, ...FEED_ITEMS].map((item) => ({
+  const feedItems: FeedItem[] = [...discoverPosts, ...apiFeedItems].map((item) => ({
     ...item,
     comments: item.comments + (commentsByPost[item.id]?.length ?? 0),
   }));
@@ -359,8 +298,8 @@ function DiscoverMobile() {
       >
         {/* Tag chips */}
         <div className="mb-4">
-          <TagChips activeTag={activeTag} setActiveTag={setActiveTag} scrollable />
-        </div>
+            <TagChips activeTag={activeTag} setActiveTag={setActiveTag} tags={tags} scrollable />
+          </div>
 
         {/* Feed — first is hero with ambient, rest are flat */}
         <div className="flex flex-col gap-4">
@@ -391,10 +330,10 @@ function DiscoverMobile() {
    Tablet Discover — 2-column grid, max-width 800px centred
    Handles 600-1279px — both portrait and landscape tablets
 ══════════════════════════════════════════════════════════════════ */
-function DiscoverTablet() {
+function DiscoverTablet({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags: string[] }) {
   const navigate = useNavigate();
   const { discoverPosts, likedIds, savedIds, commentsByPost, toggleLike, toggleSave } = useSocial();
-  const feedItems: FeedItem[] = [...discoverPosts, ...FEED_ITEMS].map((item) => ({
+  const feedItems: FeedItem[] = [...discoverPosts, ...apiFeedItems].map((item) => ({
     ...item,
     comments: item.comments + (commentsByPost[item.id]?.length ?? 0),
   }));
@@ -439,7 +378,7 @@ function DiscoverTablet() {
       >
         <div className="mx-auto w-full lg:mx-0 px-5 min-w-0" style={{ width: "100%" }}>
           <div className="mb-5">
-            <TagChips activeTag={activeTag} setActiveTag={setActiveTag} scrollable />
+          <TagChips activeTag={activeTag} setActiveTag={setActiveTag} tags={tags} scrollable />
           </div>
 
           {filtered[0] && (
@@ -483,10 +422,10 @@ function DiscoverTablet() {
    2 cols (not 3) because content area is ~770px; 3 cols would make
    each card only ~245px wide — image becomes unreadably shallow.
 ══════════════════════════════════════════════════════════════════ */
-function DiscoverDesktop() {
+function DiscoverDesktop({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags: string[] }) {
   const navigate = useNavigate();
   const { discoverPosts, likedIds, savedIds, commentsByPost, toggleLike, toggleSave } = useSocial();
-  const feedItems: FeedItem[] = [...discoverPosts, ...FEED_ITEMS].map((item) => ({
+  const feedItems: FeedItem[] = [...discoverPosts, ...apiFeedItems].map((item) => ({
     ...item,
     comments: item.comments + (commentsByPost[item.id]?.length ?? 0),
   }));
@@ -526,7 +465,7 @@ function DiscoverDesktop() {
           <div style={{ padding: "20px 24px 28px" }}>
             {/* Tag chips */}
             <div className="mb-5">
-              <TagChips activeTag={activeTag} setActiveTag={setActiveTag} />
+              <TagChips activeTag={activeTag} setActiveTag={setActiveTag} tags={tags} />
             </div>
 
             {/* Responsive BSP field — remeasured whenever the desktop workspace changes width. */}
@@ -563,7 +502,57 @@ function DiscoverDesktop() {
 ══════════════════════════════════════════════════════════════════ */
 export function Discover() {
   const { platform } = usePlatform();
-  if (platform === "desktop") return <DiscoverDesktop />;
-  if (platform === "tablet")  return <DiscoverTablet />;
-  return <DiscoverMobile />;
+  const [apiFeedItems, setApiFeedItems] = useState<FeedItem[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const [feedRes, suggestRes] = await Promise.all([
+          getFeedMoments().catch(() => ({ code: -1, data: { items: [] } })),
+          searchSuggest({ type: "tag" }).catch(() => ({ code: -1, data: { items: [] } })),
+        ]);
+        if (cancelled) return;
+
+        const feedData = (feedRes.code === 0 ? feedRes.data : null) as any;
+        const suggestData = (suggestRes.code === 0 ? suggestRes.data : null) as any;
+
+        if (feedData) {
+          const items: FeedItem[] = (feedData.items || []).map((m: any, i: number) => ({
+            id: m.id ?? m.moment_id ?? i + 1,
+            user: m.user ?? m.author_name ?? m.nickname ?? "",
+            location: m.location ?? m.place ?? "",
+            tag: m.tag ?? m.tags?.[0] ?? "",
+            avatar: m.avatar ?? m.author_avatar ?? "",
+            content: m.content ?? m.text ?? m.body ?? "",
+            image: m.image ?? m.images?.[0] ?? "",
+            likes: m.likes ?? m.like_count ?? 0,
+            comments: m.comments ?? m.comment_count ?? 0,
+            time: m.time ?? m.created_at ?? "",
+          }));
+          setApiFeedItems(items);
+        }
+
+        if (suggestData) {
+          const tagsList: string[] = (suggestData.items || suggestData.tags || []).map((t: any) =>
+            typeof t === "string" ? t : t.name ?? t.tag ?? t.value ?? ""
+          ).filter(Boolean);
+          setTags(tagsList.length > 0 ? tagsList : []);
+        }
+      } catch {
+        // empty data is normal
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchData();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (platform === "desktop") return <DiscoverDesktop apiFeedItems={apiFeedItems} tags={tags} />;
+  if (platform === "tablet")  return <DiscoverTablet apiFeedItems={apiFeedItems} tags={tags} />;
+  return <DiscoverMobile apiFeedItems={apiFeedItems} tags={tags} />;
 }

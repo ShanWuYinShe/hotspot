@@ -1,4 +1,4 @@
-package notifications
+package notify
 
 import (
 	"context"
@@ -12,15 +12,15 @@ func NewPersistenceRepository(factory *persistence.Factory) *PersistenceReposito
 	return &PersistenceRepository{impl: NewPostgresRepository(factory)}
 }
 
-func (r *PersistenceRepository) Append(ctx context.Context, userID string, item NotificationItem) error {
+func (r *PersistenceRepository) Append(ctx context.Context, userID string, item NotifyItem) error {
 	return r.impl.Append(ctx, userID, item)
 }
 
-func (r *PersistenceRepository) AppendMany(ctx context.Context, userIDs []string, item NotificationItem) error {
+func (r *PersistenceRepository) AppendMany(ctx context.Context, userIDs []string, item NotifyItem) error {
 	return r.impl.AppendMany(ctx, userIDs, item)
 }
 
-func (r *PersistenceRepository) List(ctx context.Context, userID string, req NotificationListRequest) (PaginatedNotifications, error) {
+func (r *PersistenceRepository) List(ctx context.Context, userID string, req NotificationListRequest) (PaginatedNotify, error) {
 	return r.impl.List(ctx, userID, req)
 }
 
@@ -34,4 +34,8 @@ func (r *PersistenceRepository) MarkAsRead(ctx context.Context, userID string, i
 
 func (r *PersistenceRepository) MarkAllRead(ctx context.Context, userID string) error {
 	return r.impl.MarkAllRead(ctx, userID)
+}
+
+func (r *PersistenceRepository) MarkAllReadByType(ctx context.Context, userID string, notificationType string) error {
+	return r.impl.MarkAllReadByType(ctx, userID, notificationType)
 }

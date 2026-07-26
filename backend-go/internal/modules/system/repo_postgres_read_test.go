@@ -98,7 +98,7 @@ func (b *announcementBackendStub) Exec(_ context.Context, query string, args ...
 			AnnouncementID: args[0].(string),
 			Title:          args[1].(string),
 			Content:        args[2].(string),
-			Severity:       AnnouncementSeverity(args[3].(string)),
+			Severity:       AnnounceLevel(args[3].(string)),
 			SendPush:       args[5].(bool),
 			ViewCount:      args[7].(int),
 			CreatedBy:      AnnouncementActor{UserID: args[8].(string), Nickname: args[8].(string)},
@@ -120,7 +120,7 @@ func (b *announcementBackendStub) Exec(_ context.Context, query string, args ...
 		}
 		item.Title = args[1].(string)
 		item.Content = args[2].(string)
-		item.Severity = AnnouncementSeverity(args[3].(string))
+		item.Severity = AnnounceLevel(args[3].(string))
 		if args[4] == nil {
 			item.ActionURL = ""
 		} else {
@@ -237,8 +237,8 @@ func serializeAnnouncementRow(item AnnouncementRecord, includeDeleted bool) []an
 
 func TestPostgresRepositoryAnnouncementReadsQueryableDB(t *testing.T) {
 	backend := newAnnouncementBackendStub()
-	backend.announcements["ann_2"] = AnnouncementRecord{AnnouncementID: "ann_2", Title: "维护", Content: "今晚维护", Severity: AnnouncementSeverityWarning, ActionURL: "https://example.com/maint", CreatedAt: time.Date(2026, 3, 23, 11, 0, 0, 0, time.UTC), CreatedBy: AnnouncementActor{UserID: "admin", Nickname: "Admin"}, SendPush: true, PushSentAt: timePtr(time.Date(2026, 3, 23, 11, 0, 1, 0, time.UTC)), ViewCount: 3}
-	backend.announcements["ann_1"] = AnnouncementRecord{AnnouncementID: "ann_1", Title: "提示", Content: "普通提示", Severity: AnnouncementSeverityInfo, CreatedAt: time.Date(2026, 3, 23, 10, 0, 0, 0, time.UTC), CreatedBy: AnnouncementActor{UserID: "admin", Nickname: "Admin"}, DeletedAt: timePtr(time.Date(2026, 3, 23, 12, 0, 0, 0, time.UTC))}
+	backend.announcements["ann_2"] = AnnouncementRecord{AnnouncementID: "ann_2", Title: "维护", Content: "今晚维护", Severity: AnnounceLevelWarning, ActionURL: "https://example.com/maint", CreatedAt: time.Date(2026, 3, 23, 11, 0, 0, 0, time.UTC), CreatedBy: AnnouncementActor{UserID: "admin", Nickname: "Admin"}, SendPush: true, PushSentAt: timePtr(time.Date(2026, 3, 23, 11, 0, 1, 0, time.UTC)), ViewCount: 3}
+	backend.announcements["ann_1"] = AnnouncementRecord{AnnouncementID: "ann_1", Title: "提示", Content: "普通提示", Severity: AnnounceLevelInfo, CreatedAt: time.Date(2026, 3, 23, 10, 0, 0, 0, time.UTC), CreatedBy: AnnouncementActor{UserID: "admin", Nickname: "Admin"}, DeletedAt: timePtr(time.Date(2026, 3, 23, 12, 0, 0, 0, time.UTC))}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
@@ -259,13 +259,13 @@ func TestPostgresRepositoryAnnouncementWritesQueryableDB(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	created, err := repo.CreateAnnouncement(context.Background(), AnnouncementCreateInput{Actor: AnnouncementActor{UserID: "admin", Nickname: "Admin"}, Title: "维护", Content: "今晚维护", Severity: AnnouncementSeverityWarning, ActionURL: "https://example.com/maint", SendPush: true})
+	created, err := repo.CreateAnnouncement(context.Background(), AnnouncementCreateInput{Actor: AnnouncementActor{UserID: "admin", Nickname: "Admin"}, Title: "维护", Content: "今晚维护", Severity: AnnounceLevelWarning, ActionURL: "https://example.com/maint", SendPush: true})
 	if err != nil || created.AnnouncementID == "" || created.PushSentAt == nil {
 		t.Fatalf("unexpected created item: %#v err=%v", created, err)
 	}
 	updatedTitle := "已恢复"
 	updatedContent := "服务恢复"
-	updatedSeverity := AnnouncementSeverityInfo
+	updatedSeverity := AnnounceLevelInfo
 	clearedAction := ""
 	updated, err := repo.UpdateAnnouncement(context.Background(), AnnouncementUpdateInput{AnnouncementID: created.AnnouncementID, Title: &updatedTitle, Content: &updatedContent, Severity: &updatedSeverity, ActionURL: &clearedAction})
 	if err != nil || updated.Title != updatedTitle || updated.ActionURL != "" {

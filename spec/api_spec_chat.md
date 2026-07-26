@@ -25,10 +25,10 @@
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
-| `POST /api/v1/private_chats/me/list` | 私聊列表 | 必须 | 无 |
+| `POST /api/v1/private_chats/list` | 私聊列表 | 必须 | 无 |
 | `POST /api/v1/private_chats/get_detail` | 私聊详情 | 必须 | 幂等语义 |
-| `POST /api/v1/private_chats/me/update_settings` | 更新会话设置 | 必须 | 幂等语义 |
-| `POST /api/v1/private_chats/me/delete` | 删除私聊会话 | 必须 | 幂等语义 |
+| `POST /api/v1/private_chats/update_preferences` | 更新会话偏好 | 必须 | 幂等语义 |
+| `POST /api/v1/private_chats/delete` | 删除私聊会话 | 必须 | 幂等语义 |
 
 ### 私聊消息（`private_messages`）
 
@@ -38,7 +38,7 @@
 | `POST /api/v1/private_messages/get_history` | 私聊消息历史 | 必须 | 无 |
 | `POST /api/v1/private_messages/update` | 编辑私聊消息 | 必须 | 幂等语义 |
 | `POST /api/v1/private_messages/recall` | 撤回私聊消息 | 必须 | 幂等语义 |
-| `POST /api/v1/private_messages/me/mark_read` | 标记私聊消息已读（scope 控制范围） | 必须 | 幂等语义 |
+| `POST /api/v1/private_messages/mark_read` | 标记私聊消息已读（scope 控制范围） | 必须 | 幂等语义 |
 
 ### 群聊消息（`group_messages`）
 
@@ -48,7 +48,7 @@
 | `POST /api/v1/group_messages/get_history` | 群聊消息历史 | 必须 | 无 |
 | `POST /api/v1/group_messages/update` | 编辑群聊消息 | 必须 | 幂等语义 |
 | `POST /api/v1/group_messages/recall` | 撤回群聊消息 | 必须 | 幂等语义 |
-| `POST /api/v1/group_messages/me/mark_read` | 标记群聊消息已读（scope 控制范围） | 必须 | 幂等语义 |
+| `POST /api/v1/group_messages/mark_read` | 标记群聊消息已读（scope 控制范围） | 必须 | 幂等语义 |
 
 ## 已读状态设计
 
@@ -76,7 +76,7 @@
 type SendMessageType = Exclude<MessageType, 'system'>;
 
 // 不可发消息原因（被拉黑场景统一返回 'privacy'，不暴露拉黑状态以保护隐私）
-type MessageBlockedReason =
+type BlockReason =
   | 'privacy'                  // 对方隐私设置不允许（含被拉黑场景）
   | 'stranger_quota_exceeded'  // 陌生人消息限额已用完
   | 'account_suspended';       // 账号被限制
@@ -87,13 +87,6 @@ interface MessageSent {
   sent_at: string;
 }
 ```
-- `MessageMedia`
-- `MessageReplyTo`
-- `MessageSent`
-- `UserPresenceStatus`
-- `PaginationParams`
-- `PaginatedData`
-- `MessageBlockedReason`
 
 ### PrivateMessageItem
 
@@ -161,9 +154,9 @@ interface GroupMessageItem {
 
 ## 私聊管理 API
 
-私聊权限由用户设置 `allow_private_chat`（`PrivateChatPermission`，定义于 `api_spec_types.md`）控制；不可发消息原因见 `MessageBlockedReason`（同上）。
+私聊权限由用户设置 `allow_private_chat`（`ChatPerm`，定义于 `api_spec_types.md`）控制；不可发消息原因见 `BlockReason`（同上）。
 
-### POST /api/v1/private_chats/me/list
+### POST /api/v1/private_chats/list
 
 获取私聊列表。
 
@@ -205,10 +198,8 @@ interface PrivateChatItem {
   // 详情场景返回
   created_at?: string;
   can_message: boolean;
-  message_blocked_reason?: MessageBlockedReason; // 仅 can_message=false 时返回
+  message_blocked_reason?: BlockReason; // 仅 can_message=false 时返回
 }
-
-// MessageBlockedReason 定义于 api_spec_types.md
 ```
 
 **说明**：`can_message` 仅反映调用当下的隐私校验结果；若对方后续修改隐私设置或拉黑，`private_messages/send` 仍可能失败，客户端需处理权限错误。
@@ -254,16 +245,16 @@ interface PrivateChatOpenResult {
 
 **错误码**: `10000` `10200` `10300`
 
-### POST /api/v1/private_chats/me/update_settings
+### POST /api/v1/private_chats/update_preferences
 
-更新私聊设置。
+更新私聊偏好（静音/置顶）。
 
 - **认证**: 必须
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
-**Request**: `UpdatePrivateChatSettingsRequest`
+**Request**: `UpdatePrivateChatPreferencesRequest`
 ```typescript
-interface UpdatePrivateChatSettingsRequest {
+interface UpdatePrivateChatPreferencesRequest {
   target_user_id: string;
   is_muted?: boolean;
   is_pinned?: boolean;
@@ -274,7 +265,7 @@ interface UpdatePrivateChatSettingsRequest {
 
 **错误码**: `10000` `10300`
 
-### POST /api/v1/private_chats/me/delete
+### POST /api/v1/private_chats/delete
 
 删除私聊。
 
@@ -397,9 +388,9 @@ interface RecallPrivateMessageRequest {
 
 **错误码**: `10000` `10200` `10300` `10400`
 
-### POST /api/v1/private_messages/me/mark_read
+### POST /api/v1/private_messages/mark_read
 
-标记私聊消息为已读（统一端点，通过 `scope` 控制范围，替代原 mark_as_read + mark_all_read）。
+标记私聊消息为已读（统一端点，通过 `scope` 控制范围）。
 
 **up_to 语义**：标记截至某条消息（含）及之前的所有消息为已读。`up_to_message_id` 不属于目标会话时返回 `10300`。
 
@@ -513,9 +504,9 @@ interface RecallGroupMessageRequest {
 
 **错误码**: `10000` `10200` `10300` `10400`
 
-### POST /api/v1/group_messages/me/mark_read
+### POST /api/v1/group_messages/mark_read
 
-标记群聊消息为已读（统一端点，通过 `scope` 控制范围，替代原 mark_as_read + mark_all_read）。
+标记群聊消息为已读（统一端点，通过 `scope` 控制范围）。
 
 **up_to 语义**：标记截至某条消息（含）及之前的所有消息为已读。`up_to_message_id` 不属于目标群组时返回 `10300`。
 

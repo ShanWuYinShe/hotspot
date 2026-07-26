@@ -81,7 +81,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		User:          UserInfo{UserID: userID, Nickname: nickname},
 		Location:      req.Location,
 		PrivacyLevel:  privacy,
-		MyState:       &MyMomentState{IsLiked: false, IsFavorited: false},
+		MyState:       &MyMomentState{IsFavorited: false},
 	}, nil
 }
 
@@ -289,45 +289,6 @@ func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error 
 		return nil
 }
 
-func (r *PostgresRepository) Like(ctx context.Context, userID string, momentID string) (bool, error) {
-	queryable, ok := queryable(ctx, r.factory)
-	if !ok {
-		return false, persistence.ErrNotImplemented
-	}
-	// Single atomic statement: insert the like row and bump the counter only if
-	// the insert was real (not a conflict). The existence check used to live in
-	// a separate query, leaving a window where two concurrent likes could both
-	// pass it and double-increment the counter.
-	now := time.Now().UTC()
-	var inserted bool
-	if err := queryable.QueryRow(ctx, queryInsertMomentLikeAndCount, momentID, userID, now).Scan(&inserted); err != nil {
-		// On conflict the UPDATE matches no rows and returns no row; treat that
-		// (pgx.ErrNoRows) as "already liked" rather than an error.
-		if errors.Is(err, pgx.ErrNoRows) {
-			return false, nil
-		}
-		return false, err
-	}
-	return inserted, nil
-}
-
-func (r *PostgresRepository) Unlike(ctx context.Context, userID string, momentID string) error {
-	queryable, ok := queryable(ctx, r.factory)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	// Single atomic statement: delete the like row and decrement only if a row
-	// was actually removed, so repeated unlikes never undercount.
-	var deleted bool
-	if err := queryable.QueryRow(ctx, queryDeleteMomentLikeAndCount, momentID, userID).Scan(&deleted); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		return err
-	}
-	return nil
-}
-
 func (r *PostgresRepository) Favorite(ctx context.Context, userID string, momentID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented
@@ -348,45 +309,6 @@ func (r *PostgresRepository) Unfavorite(ctx context.Context, userID string, mome
 		return persistence.ErrNotImplemented
 	}
 	return queryable.Exec(ctx, queryDeleteMomentFavorite, userID, momentID)
-}
-
-func (r *PostgresRepository) ListLikes(ctx context.Context, momentID string, limit int, cursor string) ([]LikeItem, string, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, "", persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
-		return nil, "", persistence.ErrNotImplemented
-	}
-	limit = normalizeMomentInteractionLimit(limit)
-	cursorLikedAt, cursorUserID, err := decodeMomentLikeCursor(cursor)
-	if err != nil {
-		return nil, "", err
-	}
-	rows, err := queryable.Query(ctx, queryListMomentLikes, momentID, cursorLikedAt, cursorUserID, limit+1)
-	if err != nil {
-		return nil, "", err
-	}
-	defer rows.Close()
-	items := make([]LikeItem, 0, limit+1)
-	cursors := make([]string, 0, limit+1)
-	for rows.Next() {
-		var item LikeItem
-		var likedAt time.Time
-		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &likedAt); err != nil {
-			return nil, "", err
-		}
-		item.LikedAt = likedAt.UTC().Format(time.RFC3339)
-		items = append(items, item)
-		cursors = append(cursors, encodeMomentLikeCursor(item.LikedAt, item.User.UserID))
-		if len(items) == limit+1 {
-			return items[:limit], cursors[limit-1], nil
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, "", err
-	}
-	return items, "", nil
 }
 
 func (r *PostgresRepository) NotificationContext(ctx context.Context, momentID string) (MomentItem, bool, error) {
@@ -469,33 +391,6 @@ func normalizeMomentInteractionLimit(limit int) int {
 // (which is applied after sorting). 500 comfortably exceeds any single result
 // page while keeping memory predictable.
 const maxSearchScanRows = 500
-
-func encodeMomentLikeCursor(likedAt, userID string) string {
-	blob, err := json.Marshal(momentInteractionCursor{At: likedAt, ID: userID})
-	if err != nil {
-		return ""
-	}
-	return base64.RawURLEncoding.EncodeToString(blob)
-}
-
-func decodeMomentLikeCursor(cursor string) (any, string, error) {
-	if cursor == "" {
-		return nil, "", nil
-	}
-	blob, err := base64.RawURLEncoding.DecodeString(cursor)
-	if err != nil {
-		return nil, "", ErrInvalidCursor
-	}
-	var decoded momentInteractionCursor
-	if err := json.Unmarshal(blob, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
-		return nil, "", ErrInvalidCursor
-	}
-	likedAt, err := time.Parse(time.RFC3339, decoded.At)
-	if err != nil {
-		return nil, "", ErrInvalidCursor
-	}
-	return likedAt.UTC(), decoded.ID, nil
-}
 
 func encodeMomentFavoriteCursor(favoritedAt, momentID string) string {
 	blob, err := json.Marshal(momentInteractionCursor{At: favoritedAt, ID: momentID})

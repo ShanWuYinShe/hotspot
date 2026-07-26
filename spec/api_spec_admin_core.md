@@ -403,7 +403,7 @@ type AuditAction =
 type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'admin' | 'report' | 'tag' | 'config';
 
 // 注意：AuditDetails.type 必须与 AuditLogItem.action 一致（即每个 action 对应唯一的 details 变体）
-// ReportHandleAction 定义于 api_spec_types.md
+// ReportAction 定义于 api_spec_types.md
 type AuditDetails = 
   | { type: 'user.ban'; reason?: string; duration_days?: number }
   | { type: 'user.unban'; reason?: string }
@@ -420,7 +420,7 @@ type AuditDetails =
   | { type: 'role.set_permissions'; role_name: string; permissions: string[] }
   | { type: 'admin.grant'; target_user_id: string; role_ids: string[]; grant_all_permissions?: boolean }
   | { type: 'admin.revoke'; target_user_id: string }
-  | { type: 'report.handle'; report_id: string; action: ReportHandleAction; note?: string }
+  | { type: 'report.handle'; report_id: string; action: ReportAction; note?: string }
   | { type: 'tag.delete'; name: string }
   | { type: 'permission.grant'; permission: string }
   | { type: 'permission.revoke'; permission: string }

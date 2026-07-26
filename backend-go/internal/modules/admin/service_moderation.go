@@ -428,7 +428,7 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 	if apiErr != nil || err != nil {
 		return apiErr, err
 	}
-	if strings.TrimSpace(req.ReportID) == "" || !isValidReportHandleAction(req.Action) || len(req.Note) > 500 {
+	if strings.TrimSpace(req.ReportID) == "" || !isValidReportAction(req.Action) || len(req.Note) > 500 {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
 	if req.BanDurationDays != nil && *req.BanDurationDays < 0 {
@@ -444,7 +444,7 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 	if record.Item.Status != ReportStatusPending && record.Item.Status != ReportStatusReviewing && record.Item.Status != ReportStatusEscalated {
 		return &httpx.APIError{Code: 10400, Message: "举报已处理"}, nil
 	}
-	if req.Action == ReportHandleResolve {
+	if req.Action == ReportActionResolve {
 		switch record.Item.TargetType {
 		case ReportTargetTypeGroup:
 			if _, _, err := s.repo.DismissGroup(ctx, record.Item.TargetID); err != nil {
@@ -583,9 +583,9 @@ func validateAdminUserSearchRequest(req AdminUserSearchRequest) *httpx.APIError 
 	return nil
 }
 
-func isValidReportHandleAction(action ReportHandleAction) bool {
+func isValidReportAction(action ReportAction) bool {
 	switch action {
-	case ReportHandleResolve, ReportHandleDismiss, ReportHandleEscalate:
+	case ReportActionResolve, ReportActionDismiss, ReportActionEscalate:
 		return true
 	default:
 		return false

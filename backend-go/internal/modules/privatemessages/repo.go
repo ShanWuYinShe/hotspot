@@ -33,4 +33,5 @@ type Repository interface {
 	MarkAllRead(context.Context, string) error
 	GetMessageForReply(context.Context, string, string) (map[string]any, bool, error)
 	GetMediaForMessage(context.Context, string, string) (map[string]any, bool, error)
+	MessageExists(ctx context.Context, messageID string) (found bool, senderID string, err error)
 }

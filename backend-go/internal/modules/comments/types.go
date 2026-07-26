@@ -4,8 +4,20 @@ import "hotspot/backend-go/internal/platform/types"
 
 type UserInfo = types.UserInfo
 
-type MyCommentState struct {
-	IsLiked bool `json:"is_liked"`
+// MyCommentState holds the requesting user's per-comment interaction state.
+// The struct is intentionally kept (and may be empty) so callers that allocate
+// it do not need to change shape when fields are added back by the reactions
+// adapter; IsLiked has been removed in favour of the reactions aggregate.
+type MyCommentState struct{}
+
+// Reaction mirrors spec api_spec_types.md Reaction (per-emoji aggregate with
+// reacted_by_me). Defined here rather than imported from the reactions module
+// so comments does not depend on reactions at the type level; the values are
+// filled by a reactions.Service adapter at read time.
+type Reaction struct {
+	Emoji       string `json:"emoji"`
+	Count       int    `json:"count"`
+	ReactedByMe bool   `json:"reacted_by_me"`
 }
 
 type CommentItem struct {
@@ -19,12 +31,11 @@ type CommentItem struct {
 	LikesCount   int             `json:"likes_count"`
 	RepliesCount int             `json:"replies_count"`
 	IsDeleted    bool            `json:"is_deleted"`
-	// IsLiked is the spec-defined top-level @auth-only field (api_spec_moment.md
-	// CommentItem.is_liked). It mirrors MyState.IsLiked so clients reading
-	// comment.is_liked per the contract get the value. Kept as a pointer so it
-	// omits when nil (unauthenticated / no state), matching the `?` optional.
-	IsLiked     *bool            `json:"is_liked,omitempty"`
-	MyState     *MyCommentState  `json:"my_state,omitempty"`
+	// Reactions is the per-emoji aggregate (@auth-only reacted_by_me). Omitted
+	// when the comment has no reactions. LikesCount above is the total across
+	// all emojis, kept for legacy clients.
+	Reactions  []Reaction       `json:"reactions,omitempty"`
+	MyState    *MyCommentState  `json:"my_state,omitempty"`
 	// TopReplies 仅在 comments/list 返回的顶层评论中填充(前 N 条回复预览)。
 	TopReplies []CommentItem `json:"top_replies,omitempty"`
 }
@@ -50,32 +61,15 @@ type DeleteCommentRequest struct {
 	CommentID string `json:"comment_id"`
 }
 
+// GetCommentRequest backs POST /api/v1/comments/get_detail
+// (spec api_spec_moment.md CommentOpenTheDoorRequest).
+type GetCommentRequest struct {
+	CommentID string `json:"comment_id"`
+}
+
 type PaginationParams = types.PaginationParams
 
 type CommentRepliesRequest struct {
 	CommentID  string            `json:"comment_id"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
-}
-
-type LikeCommentRequest struct {
-	CommentID string `json:"comment_id"`
-}
-
-type UnlikeCommentRequest struct {
-	CommentID string `json:"comment_id"`
-}
-
-type CommentLikesRequest struct {
-	CommentID  string            `json:"comment_id"`
-	Pagination *PaginationParams `json:"pagination,omitempty"`
-}
-
-type CommentLikeItem struct {
-	User    UserInfo `json:"user"`
-	LikedAt string   `json:"liked_at"`
-}
-
-type PaginatedCommentLikes struct {
-	Items      []CommentLikeItem `json:"items"`
-	NextCursor string            `json:"next_cursor,omitempty"`
 }

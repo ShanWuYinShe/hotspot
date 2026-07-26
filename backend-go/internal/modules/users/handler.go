@@ -38,7 +38,7 @@ func (h *Handler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateMyProfile(w http.ResponseWriter, r *http.Request) {
-	var req UpdateProfileRequest
+	var req UpdateAccountRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return

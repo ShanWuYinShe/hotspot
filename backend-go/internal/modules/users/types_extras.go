@@ -45,6 +45,12 @@ type UserOpenTheDoorRequest struct {
 	UserID string `json:"user_id"`
 }
 
+// BatchGetUsersRequest backs POST /api/v1/users/batch_get
+// (spec api_spec_user.md). At most 100 user ids per call.
+type BatchGetUsersRequest struct {
+	UserIDs []string `json:"user_ids"`
+}
+
 type FollowSource string
 
 const (
@@ -114,16 +120,14 @@ type DeleteAccountRequest struct {
 
 type FollowRequest struct {
 	UserID         string       `json:"user_id"`
+	Active         bool         `json:"active"`
 	Source         FollowSource `json:"source,omitempty"`
 	SourceMomentID string       `json:"source_moment_id,omitempty"`
 }
 
-type ToggleUserRequest struct {
-	UserID string `json:"user_id"`
-}
-
 type BlockRequest struct {
 	UserID string `json:"user_id"`
+	Active bool   `json:"active"`
 	Reason string `json:"reason,omitempty"`
 }
 

@@ -1,4 +1,4 @@
-package notifications
+package notify
 
 const (
 	queryListNotifications = `
@@ -29,4 +29,9 @@ WHERE user_id = $1 AND notification_id = ANY($2)`
 UPDATE notifications
 SET is_read = TRUE
 WHERE user_id = $1 AND is_read = FALSE`
+
+	queryMarkAllNotificationsByTypeRead = `
+UPDATE notifications
+SET is_read = TRUE
+WHERE user_id = $1 AND is_read = FALSE AND type = $2`
 )

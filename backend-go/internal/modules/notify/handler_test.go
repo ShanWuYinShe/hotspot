@@ -1,4 +1,4 @@
-package notifications
+package notify
 
 import (
 	"context"
@@ -15,21 +15,22 @@ import (
 )
 
 type notificationErrorRepo struct {
-	listErr     error
-	unreadErr   error
-	markReadErr error
-	markAllErr  error
-	appendErr   error
+	listErr         error
+	unreadErr       error
+	markReadErr     error
+	markAllErr      error
+	markAllByTypeErr error
+	appendErr       error
 }
 
-func (r *notificationErrorRepo) Append(context.Context, string, NotificationItem) error {
+func (r *notificationErrorRepo) Append(context.Context, string, NotifyItem) error {
 	return r.appendErr
 }
-func (r *notificationErrorRepo) AppendMany(context.Context, []string, NotificationItem) error {
+func (r *notificationErrorRepo) AppendMany(context.Context, []string, NotifyItem) error {
 	return r.appendErr
 }
-func (r *notificationErrorRepo) List(context.Context, string, NotificationListRequest) (PaginatedNotifications, error) {
-	return PaginatedNotifications{}, r.listErr
+func (r *notificationErrorRepo) List(context.Context, string, NotificationListRequest) (PaginatedNotify, error) {
+	return PaginatedNotify{}, r.listErr
 }
 func (r *notificationErrorRepo) UnreadCount(context.Context, string) (UnreadCountResult, error) {
 	return UnreadCountResult{}, r.unreadErr
@@ -40,6 +41,9 @@ func (r *notificationErrorRepo) MarkAsRead(context.Context, string, []string) er
 func (r *notificationErrorRepo) MarkAllRead(context.Context, string) error {
 	return r.markAllErr
 }
+func (r *notificationErrorRepo) MarkAllReadByType(context.Context, string, string) error {
+	return r.markAllByTypeErr
+}
 
 func withPrincipal(req *http.Request) *http.Request {
 	ctx := platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
@@ -48,7 +52,7 @@ func withPrincipal(req *http.Request) *http.Request {
 
 func TestUnreadCountAndMarkRead(t *testing.T) {
 	handler := NewHandler(NewService())
-	unreadReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/unread_count", strings.NewReader(`{}`)))
+	unreadReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/get_unread_count", strings.NewReader(`{}`)))
 	unreadRR := httptest.NewRecorder()
 	handler.UnreadCount(unreadRR, unreadReq)
 
@@ -68,7 +72,7 @@ func TestUnreadCountAndMarkRead(t *testing.T) {
 	handler.List(listRR, listReq)
 	var listResp struct {
 		Code int                    `json:"code"`
-		Data PaginatedNotifications `json:"data"`
+		Data PaginatedNotify `json:"data"`
 	}
 	if err := json.NewDecoder(listRR.Body).Decode(&listResp); err != nil {
 		t.Fatalf("decode list response: %v", err)
@@ -77,38 +81,38 @@ func TestUnreadCountAndMarkRead(t *testing.T) {
 		t.Fatalf("unexpected list response: %#v", listResp)
 	}
 
-	markReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_as_read", strings.NewReader(`{"notification_ids":["notif_1"]}`)))
+	markReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"selected","notification_ids":["notif_1"]}`)))
 	markRR := httptest.NewRecorder()
-	handler.MarkAsRead(markRR, markReq)
+	handler.MarkRead(markRR, markReq)
 	assertNotificationCode(t, markRR, 0)
 
-	markAllReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_all_read", strings.NewReader(`{}`)))
+	markAllReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"all"}`)))
 	markAllRR := httptest.NewRecorder()
-	handler.MarkAllRead(markAllRR, markAllReq)
+	handler.MarkRead(markAllRR, markAllReq)
 	assertNotificationCode(t, markAllRR, 0)
 }
 
 func TestNotificationHandlerReturns10600OnServiceError(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&notificationErrorRepo{listErr: errors.New("boom"), unreadErr: errors.New("boom"), markReadErr: errors.New("boom"), markAllErr: errors.New("boom")}))
+	handler := NewHandler(NewServiceWithRepo(&notificationErrorRepo{listErr: errors.New("boom"), unreadErr: errors.New("boom"), markReadErr: errors.New("boom"), markAllErr: errors.New("boom"), markAllByTypeErr: errors.New("boom")}))
 
 	listReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{}`)))
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
 	assertNotificationCode(t, listRR, 10600)
 
-	unreadReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/unread_count", strings.NewReader(`{}`)))
+	unreadReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/get_unread_count", strings.NewReader(`{}`)))
 	unreadRR := httptest.NewRecorder()
 	handler.UnreadCount(unreadRR, unreadReq)
 	assertNotificationCode(t, unreadRR, 10600)
 
-	markReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_as_read", strings.NewReader(`{"notification_ids":["notif_1"]}`)))
+	markReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"selected","notification_ids":["notif_1"]}`)))
 	markRR := httptest.NewRecorder()
-	handler.MarkAsRead(markRR, markReq)
+	handler.MarkRead(markRR, markReq)
 	assertNotificationCode(t, markRR, 10600)
 
-	markAllReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_all_read", strings.NewReader(`{}`)))
+	markAllReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"all"}`)))
 	markAllRR := httptest.NewRecorder()
-	handler.MarkAllRead(markAllRR, markAllReq)
+	handler.MarkRead(markAllRR, markAllReq)
 	assertNotificationCode(t, markAllRR, 10600)
 }
 
@@ -135,9 +139,9 @@ func TestUnreadCountReturnsByTypeBreakdown(t *testing.T) {
 	_ = svc.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "charlie", "nickname": "Charlie"}, "", "")
 	_ = svc.AppendMomentLiked(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "m1", nil)
 	_ = svc.AppendGroupInviteReceived(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "grp1", "Group One", "inv1", nil)
-	_ = svc.AppendSystemAnnouncement(context.Background(), []string{"user_alice"}, systemmodule.SystemAnnouncementItem{AnnouncementID: "ann1", Title: "Test", Content: "Test content", Severity: systemmodule.AnnouncementSeverityInfo})
+	_ = svc.AppendSystemAnnouncement(context.Background(), []string{"user_alice"}, systemmodule.SystemAnnouncementItem{AnnouncementID: "ann1", Title: "Test", Content: "Test content", Severity: systemmodule.AnnounceLevelInfo})
 
-	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/unread_count", strings.NewReader(`{}`)))
+	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/get_unread_count", strings.NewReader(`{}`)))
 	rr := httptest.NewRecorder()
 	handler.UnreadCount(rr, req)
 
@@ -168,21 +172,22 @@ func TestUnreadCountReturnsByTypeBreakdown(t *testing.T) {
 	}
 }
 
-func TestMarkAsReadRejectsEmptyArray(t *testing.T) {
+func TestMarkReadRejectsEmptyArray(t *testing.T) {
 	handler := NewHandler(NewService())
 
-	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_as_read", strings.NewReader(`{"notification_ids":[]}`)))
+	// scope=selected with empty notification_ids and no type is invalid (neither provided)
+	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"selected","notification_ids":[]}`)))
 	rr := httptest.NewRecorder()
-	handler.MarkAsRead(rr, req)
+	handler.MarkRead(rr, req)
 	assertNotificationCode(t, rr, 10000)
 }
 
-func TestMarkAsReadRejectsTooManyIDs(t *testing.T) {
+func TestMarkReadRejectsTooManyIDs(t *testing.T) {
 	handler := NewHandler(NewService())
 
 	var b strings.Builder
-	b.WriteString(`{"notification_ids":[`)
-	for i := 0; i < 101; i++ {
+	b.WriteString(`{"scope":"selected","notification_ids":[`)
+	for i := 0; i < 51; i++ {
 		if i > 0 {
 			b.WriteString(",")
 		}
@@ -191,9 +196,25 @@ func TestMarkAsReadRejectsTooManyIDs(t *testing.T) {
 		b.WriteString(`"`)
 	}
 	b.WriteString(`]}`)
-	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_as_read", strings.NewReader(b.String())))
+	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(b.String())))
 	rr := httptest.NewRecorder()
-	handler.MarkAsRead(rr, req)
+	handler.MarkRead(rr, req)
+	assertNotificationCode(t, rr, 10000)
+}
+
+func TestMarkReadRejectsBothIDsAndType(t *testing.T) {
+	handler := NewHandler(NewService())
+	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"selected","notification_ids":["n1"],"type":"new_follower"}`)))
+	rr := httptest.NewRecorder()
+	handler.MarkRead(rr, req)
+	assertNotificationCode(t, rr, 10000)
+}
+
+func TestMarkReadRejectsBadScope(t *testing.T) {
+	handler := NewHandler(NewService())
+	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"unknown","notification_ids":["n1"]}`)))
+	rr := httptest.NewRecorder()
+	handler.MarkRead(rr, req)
 	assertNotificationCode(t, rr, 10000)
 }
 

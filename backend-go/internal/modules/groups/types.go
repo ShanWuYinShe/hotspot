@@ -218,6 +218,7 @@ type SetMemberRoleRequest struct {
 type MuteMemberRequest struct {
 	GroupID         string `json:"group_id"`
 	UserID          string `json:"user_id"`
+	Active          bool   `json:"active"`
 	DurationMinutes int    `json:"duration_minutes"`
 }
 

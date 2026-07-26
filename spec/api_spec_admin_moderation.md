@@ -41,9 +41,9 @@
 - `PrivacyLevel`
 - `ReportStatus`
 - `ReportTargetType`
-- `ReportHandleAction`
+- `ReportAction`
 - `TagTrend`
-- `AnnouncementSeverity`
+- `AnnounceLevel`
 - `UserInfo`
 - `ReportItem`
 
@@ -290,15 +290,15 @@ interface AdminReportItem extends ReportItem {
 - 处理操作会记录审计日志
 
 **动作语义**：
-- `resolve`：确认举报有效，执行处理（如封禁用户、删除内容），状态变更为 `resolved`
-- `dismiss`：驳回举报，不执行任何处理，状态变更为 `dismissed`
-- `escalate`：升级举报，转交更高权限管理员，状态变更为 `escalated`（等待更高级管理员认领；与 `reviewing` 区分：`reviewing` = 已认领正在审，`escalated` = 已升级待接手，见 `api_spec_report.md` 防卡死设计）
+- `resolve`：确认举报有效，执行处理（如封禁用户、删除内容），状态变更为 `resolved`。处理成功后向举报人推送 `ReportResolved` WebSocket 事件并落库通知（`NotifyType='report_resolved'`）
+- `dismiss`：驳回举报，不执行任何处理，状态变更为 `dismissed`。驳回后向举报人推送 `ReportDismissed` WebSocket 事件并落库通知（`NotifyType='report_dismissed'`）
+- `escalate`：升级举报，转交更高权限管理员，状态变更为 `escalated`（等待更高级管理员认领；与 `reviewing` 区分：`reviewing` = 已认领正在审，`escalated` = 已升级待接手，见 `api_spec_report.md` 防卡死设计）。升级不触发用户通知
 
 **Request**: `AdminReportHandleRequest`
 ```typescript
 interface AdminReportHandleRequest {
   report_id: string;
-  action: ReportHandleAction;   // resolve | dismiss | escalate
+  action: ReportAction;   // resolve | dismiss | escalate
   note?: string;                // 处理备注（0-500 字符）
   ban_duration_days?: number;   // action=resolve 时可选：封禁天数（0=永久），不提供则仅标记处理不执行封禁。
                                 // target_type='user': 直接封禁该用户
@@ -389,7 +389,7 @@ interface AdminDeleteTagRequest {
 **Request**: `AdminAnnouncementSearchRequest`
 ```typescript
 interface AdminAnnouncementSearchRequest {
-  severity?: AnnouncementSeverity;
+  severity?: AnnounceLevel;
   pagination?: PaginationParams;
 }
 ```
@@ -420,7 +420,7 @@ interface AdminAnnouncementItem extends SystemAnnouncementItem {
 interface CreateAnnouncementRequest {
   title: string;
   content: string;
-  severity: AnnouncementSeverity;
+  severity: AnnounceLevel;
   action_url?: string;
   send_push?: boolean;
 }
@@ -450,7 +450,7 @@ interface UpdateAnnouncementRequest {
   announcement_id: string;
   title?: string;
   content?: string;
-  severity?: AnnouncementSeverity;
+  severity?: AnnounceLevel;
   action_url?: string;
 }
 ```

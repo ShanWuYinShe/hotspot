@@ -51,3 +51,7 @@ func (r *PersistenceRepository) GetMessageForReply(ctx context.Context, messageI
 func (r *PersistenceRepository) GetMediaForMessage(ctx context.Context, fileID string) (map[string]any, bool, error) {
 	return r.impl.GetMediaForMessage(ctx, fileID)
 }
+
+func (r *PersistenceRepository) MessageExists(ctx context.Context, messageID string) (bool, string, error) {
+	return r.impl.MessageExists(ctx, messageID)
+}

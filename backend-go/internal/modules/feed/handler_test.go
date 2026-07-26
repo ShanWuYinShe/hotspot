@@ -209,7 +209,7 @@ func TestListTrendingReturns10600OnRepoError(t *testing.T) {
 func TestDismissIsIdempotent(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/me/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
 	handler.Dismiss(rr, req)
@@ -220,7 +220,7 @@ func TestDismissIsIdempotent(t *testing.T) {
 
 	// second dismiss should also return success
 	rr = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodPost, "/me/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
+	req = httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 	handler.Dismiss(rr, req)
 	assertFeedCode(t, rr, 0)
@@ -229,7 +229,7 @@ func TestDismissIsIdempotent(t *testing.T) {
 func TestDismissDoesNotRequireIdempotencyKey(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/me/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
 	handler.Dismiss(rr, req)
@@ -239,7 +239,7 @@ func TestDismissDoesNotRequireIdempotencyKey(t *testing.T) {
 func TestDismissRejectsInvalidRequest(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/me/dismiss", strings.NewReader(`{"target_type":"bad","target_id":"m1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"target_type":"bad","target_id":"m1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
 	handler.Dismiss(rr, req)
@@ -249,7 +249,7 @@ func TestDismissRejectsInvalidRequest(t *testing.T) {
 func TestDismissReturnsNotFound(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{err: ErrDismissTargetNotFound}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/me/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
 	handler.Dismiss(rr, req)
@@ -259,7 +259,7 @@ func TestDismissReturnsNotFound(t *testing.T) {
 func TestDismissReturnsSuccess(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/me/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
 	handler.Dismiss(rr, req)

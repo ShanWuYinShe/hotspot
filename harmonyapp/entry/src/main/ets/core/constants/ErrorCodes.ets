@@ -5,16 +5,16 @@
  * - 10000-10600: 通用业务错误
  * - 22000-22002: 幂等性错误
  */
-export const ErrorCode = {
-  PARAM_ERROR: 10000,
-  AUTH_FAILED: 10100,
-  PERMISSION_DENIED: 10200,
-  ACCOUNT_BANNED: 10201,
-  RESOURCE_NOT_FOUND: 10300,
-  BUSINESS_CONFLICT: 10400,
-  RATE_LIMITED: 10500,
-  SERVICE_UNAVAILABLE: 10600,
-  IDEMPOTENCY_KEY_CONFLICT: 22000,
-  IDEMPOTENCY_CACHE_EXPIRED: 22001,
-  IDEMPOTENCY_IN_FLIGHT: 22002,
-} as const;
+export class ErrorCode {
+  static readonly PARAM_ERROR: number = 10000;
+  static readonly AUTH_FAILED: number = 10100;
+  static readonly PERMISSION_DENIED: number = 10200;
+  static readonly ACCOUNT_BANNED: number = 10201;
+  static readonly RESOURCE_NOT_FOUND: number = 10300;
+  static readonly BUSINESS_CONFLICT: number = 10400;
+  static readonly RATE_LIMITED: number = 10500;
+  static readonly SERVICE_UNAVAILABLE: number = 10600;
+  static readonly IDEMPOTENCY_KEY_CONFLICT: number = 22000;
+  static readonly IDEMPOTENCY_CACHE_EXPIRED: number = 22001;
+  static readonly IDEMPOTENCY_IN_FLIGHT: number = 22002;
+}

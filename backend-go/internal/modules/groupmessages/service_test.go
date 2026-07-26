@@ -51,6 +51,7 @@ func (r *stubRepo) MarkAllRead(_ context.Context, _ string) error {
 func (r *stubRepo) GetMessageForReply(_ context.Context, _ string) (map[string]any, bool, error) {
 	return r.replyToResult, r.replyToOk, r.replyToErr
 }
+func (r *stubRepo) MessageExists(_ context.Context, _ string) (bool, string, error) { return false, "", nil }
 
 func (r *stubRepo) GetMediaForMessage(_ context.Context, _ string) (map[string]any, bool, error) {
 	return r.mediaResult, r.mediaOk, r.mediaErr

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { ROUTES } from "../lib/routes";
 import { Search, Plus, MessageSquareDashed, X } from "lucide-react";
@@ -9,14 +9,12 @@ import { useHoverConfig } from "../hooks/useHoverConfig";
 import { useDismissibleLayer } from "../hooks/useDismissibleLayer";
 import { NewConversationSheet } from "../features/messaging/NewConversationSheet";
 import { CreateGroupSheet } from "../features/groups/CreateGroupSheet";
+import { getPrivateChats } from "../../api";
 
-/* ── Data ────────────────────────────────────────────────────────── */
-const CHATS = [
-  { id: 1, name: "林一",      avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", lastMessage: "嘿，我们今晚的计划还在吗？", time: "13:27", unread: 2, online: true,  group: false },
-  { id: 2, name: "设计小队",  avatar: "https://images.unsplash.com/photo-1763467669450-e69029c1484d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", lastMessage: "新原型看起来太棒了！",         time: "09:41", unread: 0, online: false, group: true  },
-  { id: 3, name: "小满",  avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", lastMessage: "给你发了张照片 📷",            time: "昨天",  unread: 0, online: true,  group: false },
-  { id: 4, name: "阿川",       avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", lastMessage: "在老地方见！",                time: "周一",  unread: 0, online: false, group: false },
-];
+interface ChatItem {
+  id: number; name: string; avatar: string; lastMessage: string;
+  time: string; unread: number; online: boolean; group: boolean;
+}
 
 /* ── Shared ChatListItem ─────────────────────────────────────────── */
 function ChatListItem({
@@ -25,7 +23,7 @@ function ChatListItem({
   onClick,
   compact = false,
 }: {
-  chat: typeof CHATS[0];
+  chat: ChatItem;
   isSelected?: boolean;
   onClick: () => void;
   compact?: boolean;
@@ -95,12 +93,12 @@ function ChatListItem({
 /* ══════════════════════════════════════════════════════════════════
    Mobile Messages
 ══════════════════════════════════════════════════════════════════ */
-function MessagesMobile() {
+function MessagesMobile({ chats, loading }: { chats: ChatItem[]; loading: boolean }) {
   const navigate = useNavigate();
   const [searchVal, setSearchVal] = useState("");
-  const filtered = CHATS.filter(c => c.name.toLowerCase().includes(searchVal.toLowerCase()));
-  const onlineChats = CHATS.filter(c => c.online);
-  const totalUnread = CHATS.reduce((s, c) => s + c.unread, 0);
+  const filtered = chats.filter(c => c.name.toLowerCase().includes(searchVal.toLowerCase()));
+  const onlineChats = chats.filter(c => c.online);
+  const totalUnread = chats.reduce((s, c) => s + c.unread, 0);
   const hover = useHoverConfig();
   const [showNewChat, setShowNewChat] = useState(false);
   const [newChatTab, setNewChatTab] = useState<"add" | "chat">("chat");
@@ -234,12 +232,12 @@ function MessagesMobile() {
 /* ══════════════════════════════════════════════════════════════════
    Desktop Messages — split pane (list left + chat right)
 ══════════════════════════════════════════════════════════════════ */
-function MessagesDesktop() {
+function MessagesDesktop({ chats, loading }: { chats: ChatItem[]; loading: boolean }) {
   const [searchVal, setSearchVal] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const filtered = CHATS.filter(c => c.name.toLowerCase().includes(searchVal.toLowerCase()));
-  const totalUnread = CHATS.reduce((s, c) => s + c.unread, 0);
-  const onlineChats = CHATS.filter(c => c.online);
+  const filtered = chats.filter(c => c.name.toLowerCase().includes(searchVal.toLowerCase()));
+  const totalUnread = chats.reduce((s, c) => s + c.unread, 0);
+  const onlineChats = chats.filter(c => c.online);
   const hover = useHoverConfig();
   const [showNewChat, setShowNewChat] = useState(false);
   const [newChatTab, setNewChatTab] = useState<"add" | "chat">("chat");
@@ -413,6 +411,40 @@ function MessagesDesktop() {
 ══════════════════════════════════════════════════════════════════ */
 export function Messages() {
   const { platform } = usePlatform();
-  if (platform === "desktop") return <MessagesDesktop />;
-  return <MessagesMobile />;
+  const [chats, setChats] = useState<ChatItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchChats() {
+      try {
+        setLoading(true);
+        const res = await getPrivateChats().catch(() => ({ code: -1, data: { items: [] } }));
+        if (cancelled) return;
+        if (res.code === 0 && res.data) {
+          const data = res.data as any;
+          const items: ChatItem[] = (data.items || []).map((c: any, i: number) => ({
+            id: c.id ?? i + 1,
+            name: c.name ?? c.nickname ?? c.peer_name ?? "",
+            avatar: c.avatar ?? c.peer_avatar ?? "",
+            lastMessage: c.last_message ?? c.last_msg ?? "",
+            time: c.time ?? c.updated_at ?? "",
+            unread: c.unread ?? c.unread_count ?? 0,
+            online: c.online ?? false,
+            group: c.group ?? c.is_group ?? false,
+          }));
+          setChats(items);
+        }
+      } catch {
+        if (!cancelled) setChats([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchChats();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (platform === "desktop") return <MessagesDesktop chats={chats} loading={loading} />;
+  return <MessagesMobile chats={chats} loading={loading} />;
 }

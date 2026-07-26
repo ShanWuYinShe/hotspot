@@ -11,25 +11,17 @@ import (
 	"hotspot/backend-go/internal/platform/geo"
 )
 
-type likeEntry struct {
-	userID   string
-	nickname string
-	likedAt  string
-}
-
 type InMemoryRepository struct {
 	mu        sync.RWMutex
 	moments   map[string]MomentItem
 	byUser    map[string][]string
-	likes     map[string]map[string]likeEntry // momentID -> userID -> entry
-	favorites map[string]map[string]bool      // userID -> momentID -> favorited
+	favorites map[string]map[string]bool // userID -> momentID -> favorited
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
 		moments:   make(map[string]MomentItem),
 		byUser:    make(map[string][]string),
-		likes:     make(map[string]map[string]likeEntry),
 		favorites: make(map[string]map[string]bool),
 	}
 }
@@ -43,7 +35,7 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	if privacy == "" {
 		privacy = "public"
 	}
-	item := MomentItem{MomentID: momentID, Description: req.Description, Tags: normalizeMomentTags(req.Tags), Mentions: normalizeMomentMentions(req.Mentions), CreatedAt: now.Format(time.RFC3339), LikesCount: 0, CommentsCount: 0, SharesCount: 0, User: UserInfo{UserID: userID, Nickname: userID}, Location: req.Location, PrivacyLevel: privacy, MyState: &MyMomentState{IsLiked: false, IsFavorited: false}}
+	item := MomentItem{MomentID: momentID, Description: req.Description, Tags: normalizeMomentTags(req.Tags), Mentions: normalizeMomentMentions(req.Mentions), CreatedAt: now.Format(time.RFC3339), LikesCount: 0, CommentsCount: 0, SharesCount: 0, User: UserInfo{UserID: userID, Nickname: userID}, Location: req.Location, PrivacyLevel: privacy, MyState: &MyMomentState{IsFavorited: false}}
 	r.moments[momentID] = item
 	r.byUser[userID] = append(r.byUser[userID], momentID)
 	return item, nil
@@ -240,45 +232,6 @@ func containsTag(tags []string, tag string) bool {
 	return false
 }
 
-func (r *InMemoryRepository) Like(_ context.Context, userID string, momentID string) (bool, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if _, ok := r.moments[momentID]; !ok {
-		return false, ErrMomentNotFound
-	}
-	if r.likes[momentID] == nil {
-		r.likes[momentID] = make(map[string]likeEntry)
-	}
-	if _, exists := r.likes[momentID][userID]; exists {
-		return false, nil
-	}
-	r.likes[momentID][userID] = likeEntry{
-		userID:   userID,
-		nickname: userID,
-		likedAt:  time.Now().UTC().Format(time.RFC3339),
-	}
-	item := r.moments[momentID]
-	item.LikesCount++
-	r.moments[momentID] = item
-	return true, nil
-}
-
-func (r *InMemoryRepository) Unlike(_ context.Context, userID string, momentID string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.likes[momentID] != nil {
-		if _, exists := r.likes[momentID][userID]; exists {
-			delete(r.likes[momentID], userID)
-			item := r.moments[momentID]
-			if item.LikesCount > 0 {
-				item.LikesCount--
-			}
-			r.moments[momentID] = item
-		}
-	}
-	return nil
-}
-
 func (r *InMemoryRepository) Favorite(_ context.Context, userID string, momentID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -301,51 +254,17 @@ func (r *InMemoryRepository) Unfavorite(_ context.Context, userID string, moment
 	return nil
 }
 
-func (r *InMemoryRepository) ListLikes(_ context.Context, momentID string, limit int, cursor string) ([]LikeItem, string, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	if _, ok := r.moments[momentID]; !ok {
-		return nil, "", ErrMomentNotFound
-	}
-	if limit <= 0 {
-		limit = 20
-	}
-	if limit > 100 {
-		limit = 100
-	}
-	userMap := r.likes[momentID]
-	if userMap == nil {
-		return []LikeItem{}, "", nil
-	}
-	items := make([]LikeItem, 0, len(userMap))
-	for uid, entry := range userMap {
-		items = append(items, LikeItem{User: UserInfo{UserID: uid, Nickname: entry.nickname}, LikedAt: entry.likedAt})
-	}
-	_ = cursor
-	if len(items) == 0 {
-		return []LikeItem{}, "", nil
-	}
-	if len(items) > limit {
-		return items[:limit], items[limit].User.UserID, nil
-	}
-	return items, "", nil
-}
-
 func (r *InMemoryRepository) LoadMyState(_ context.Context, momentID, userID string) *MyMomentState {
 	if userID == "" {
 		return nil
 	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	isLiked := false
-	if userLikes, ok := r.likes[momentID]; ok {
-		_, isLiked = userLikes[userID]
-	}
 	isFavorited := false
 	if userFavs, ok := r.favorites[userID]; ok {
 		isFavorited = userFavs[momentID]
 	}
-	return &MyMomentState{IsLiked: isLiked, IsFavorited: isFavorited}
+	return &MyMomentState{IsFavorited: isFavorited}
 }
 
 func (r *InMemoryRepository) ListFavorites(_ context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {

@@ -51,13 +51,13 @@ func (r *PostgresRepository) GetSettings(ctx context.Context, userID string) (Us
 	}
 	var settings UserSettings
 	var allowPrivateChat string
-	if err := queryable.QueryRow(ctx, queryGetUserSettings, userID).Scan(&settings.PrivacyLevel, &settings.LocationVisible, &settings.PresenceVisible, &settings.SocialListsVisible, &settings.GroupsVisible, &settings.LikedMomentsVisible, &settings.StatsVisible, &settings.AllowFollow, &allowPrivateChat, &settings.Searchable, &settings.PhoneSearchable, &settings.NicknameSearchable, &settings.LocationSearchable); err != nil {
+	if err := queryable.QueryRow(ctx, queryGetUserSettings, userID).Scan(&settings.PrivacyLevel, &settings.LocationVisible, &settings.PresenceVisible, &settings.SocialListsVisible, &settings.GroupsVisible, &settings.ReactedMomentsVisible, &settings.StatsVisible, &settings.AllowFollow, &allowPrivateChat, &settings.Searchable, &settings.PhoneSearchable, &settings.NicknameSearchable, &settings.LocationSearchable); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return UserSettings{}, false, nil
 		}
 		return UserSettings{}, false, err
 	}
-	settings.AllowPrivateChat = PrivateChatPermission(allowPrivateChat)
+	settings.AllowPrivateChat = ChatPerm(allowPrivateChat)
 	return settings, true, nil
 }
 
@@ -82,10 +82,10 @@ func (r *PostgresRepository) GetSettingsBatch(ctx context.Context, userIDs []str
 		var userID string
 		var settings UserSettings
 		var allowPrivateChat string
-		if err := rows.Scan(&userID, &settings.PrivacyLevel, &settings.LocationVisible, &settings.PresenceVisible, &settings.SocialListsVisible, &settings.GroupsVisible, &settings.LikedMomentsVisible, &settings.StatsVisible, &settings.AllowFollow, &allowPrivateChat, &settings.Searchable, &settings.PhoneSearchable, &settings.NicknameSearchable, &settings.LocationSearchable); err != nil {
+		if err := rows.Scan(&userID, &settings.PrivacyLevel, &settings.LocationVisible, &settings.PresenceVisible, &settings.SocialListsVisible, &settings.GroupsVisible, &settings.ReactedMomentsVisible, &settings.StatsVisible, &settings.AllowFollow, &allowPrivateChat, &settings.Searchable, &settings.PhoneSearchable, &settings.NicknameSearchable, &settings.LocationSearchable); err != nil {
 			return nil, err
 		}
-		settings.AllowPrivateChat = PrivateChatPermission(allowPrivateChat)
+		settings.AllowPrivateChat = ChatPerm(allowPrivateChat)
 		result[userID] = settings
 	}
 	if err := rows.Err(); err != nil {
@@ -496,7 +496,7 @@ func listUserMomentsPostgres(ctx context.Context, factory *persistence.Factory, 
 	return momenttypes.PaginatedMoments{Items: items}, nil
 }
 
-func listLikedMomentsPostgres(ctx context.Context, factory *persistence.Factory, userID string, limit int, cursor string, viewerUserID string) (momenttypes.PaginatedMoments, error) {
+func listReactedMomentsPostgres(ctx context.Context, factory *persistence.Factory, userID string, limit int, cursor string, viewerUserID string) (momenttypes.PaginatedMoments, error) {
 	if factory == nil || factory.DB == nil || factory.Config.PostgresDSN == "" {
 		return momenttypes.PaginatedMoments{}, persistence.ErrNotImplemented
 	}
@@ -505,11 +505,11 @@ func listLikedMomentsPostgres(ctx context.Context, factory *persistence.Factory,
 		return momenttypes.PaginatedMoments{}, persistence.ErrNotImplemented
 	}
 	limit = normalizeUserMomentLimit(limit)
-	cursorLikedAt, cursorMomentID, err := decodeUserMomentCursor(cursor)
+	cursorReactedAt, cursorMomentID, err := decodeUserMomentCursor(cursor)
 	if err != nil {
 		return momenttypes.PaginatedMoments{}, ErrInvalidCursor
 	}
-	rows, err := queryable.Query(ctx, queryListLikedMoments, userID, viewerUserID, cursorLikedAt, cursorMomentID, limit+1)
+	rows, err := queryable.Query(ctx, queryListReactedMoments, userID, viewerUserID, cursorReactedAt, cursorMomentID, limit+1)
 	if err != nil {
 		return momenttypes.PaginatedMoments{}, err
 	}
@@ -518,14 +518,14 @@ func listLikedMomentsPostgres(ctx context.Context, factory *persistence.Factory,
 	momentIDs := make([]string, 0, limit+1)
 	cursors := make([]string, 0, limit+1)
 	for rows.Next() {
-		item, likedAt, err := scanUserLikedMomentRow(rows)
+		item, reactedAt, err := scanUserReactedMomentRow(rows)
 		if err != nil {
 			return momenttypes.PaginatedMoments{}, err
 		}
-		item.MyState = &momenttypes.MyMomentState{IsLiked: true}
+		item.MyState = &momenttypes.MyMomentState{}
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
-		cursors = append(cursors, encodeUserMomentCursor(likedAt, item.MomentID))
+		cursors = append(cursors, encodeUserMomentCursor(reactedAt, item.MomentID))
 		if len(items) == limit+1 {
 			tagsByMomentID, err := loadUserMomentTags(ctx, queryable, momentIDs[:limit])
 			if err != nil {
@@ -677,12 +677,12 @@ func scanMomentItem(scanner interface{ Scan(...any) error }) (momenttypes.Moment
 	return item, nil
 }
 
-func scanUserLikedMomentRow(scanner interface{ Scan(...any) error }) (momenttypes.MomentItem, string, error) {
+func scanUserReactedMomentRow(scanner interface{ Scan(...any) error }) (momenttypes.MomentItem, string, error) {
 	var item momenttypes.MomentItem
 	var userID, nickname, locationName, privacyLevel string
 	var latitude, longitude float64
-	var createdAt, likedAt time.Time
-	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &likedAt); err != nil {
+	var createdAt, reactedAt time.Time
+	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &reactedAt); err != nil {
 		return momenttypes.MomentItem{}, "", err
 	}
 	if nickname == "" {
@@ -695,7 +695,7 @@ func scanUserLikedMomentRow(scanner interface{ Scan(...any) error }) (momenttype
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
 	item.PrivacyLevel = privacyLevel
-	return item, likedAt.UTC().Format(time.RFC3339), nil
+	return item, reactedAt.UTC().Format(time.RFC3339), nil
 }
 
 type userMomentCursor struct {

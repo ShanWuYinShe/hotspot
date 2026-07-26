@@ -606,7 +606,7 @@ func TestServiceHandleReportHappyPath(t *testing.T) {
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
 	apiErr, err := svc.HandleReport(adminCtx("admin1"), AdminReportHandleRequest{
 		ReportID: "report_1",
-		Action:   ReportHandleDismiss,
+		Action:   ReportActionDismiss,
 		Note:     "false alarm",
 	})
 	if err != nil {

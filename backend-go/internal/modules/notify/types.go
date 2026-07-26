@@ -1,4 +1,4 @@
-package notifications
+package notify
 
 import (
 	"encoding/base64"
@@ -16,7 +16,7 @@ const (
 
 var ErrInvalidNotificationRequest = errors.New("notifications: invalid request")
 
-type NotificationItem struct {
+type NotifyItem struct {
 	NotificationID string         `json:"notification_id"`
 	Type           string         `json:"type"`
 	IsRead         bool           `json:"is_read"`
@@ -24,8 +24,8 @@ type NotificationItem struct {
 	Payload        map[string]any `json:"payload"`
 }
 
-type PaginatedNotifications struct {
-	Items      []NotificationItem `json:"items"`
+type PaginatedNotify struct {
+	Items      []NotifyItem `json:"items"`
 	NextCursor string             `json:"next_cursor,omitempty"`
 }
 
@@ -48,8 +48,21 @@ type NotificationListRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
+// MarkAsReadRequest is retained for service/repo layer compatibility (the
+// handler now uses MarkReadRequest with a scope field). It is unused at the
+// HTTP boundary after the mark_read endpoint merge.
 type MarkAsReadRequest struct {
 	NotificationIDs []string `json:"notification_ids"`
+}
+
+// MarkReadRequest is the unified mark_read request (api_spec_notify.md).
+// scope defaults to "selected" when empty. When scope="all", notification_ids
+// and type are ignored and all unread notifications are cleared. When
+// scope="selected", exactly one of notification_ids or type must be provided.
+type MarkReadRequest struct {
+	Scope           string   `json:"scope,omitempty"`
+	NotificationIDs []string `json:"notification_ids,omitempty"`
+	Type            string   `json:"type,omitempty"`
 }
 
 type notificationListQuery struct {
@@ -66,7 +79,7 @@ type notificationCursor struct {
 func normalizeNotificationType(value string) string {
 	value = strings.TrimSpace(value)
 	switch value {
-	case "", "new_follower", "mutual_follow", "moment_liked", "moment_commented", "comment_liked", "comment_reply", "mentioned", "group_invite_received", "group_invite_accepted", "group_application_received", "group_application_accepted", "system_announcement":
+	case "", "new_follower", "mutual_follow", "moment_liked", "moment_commented", "comment_liked", "comment_reply", "mentioned", "reaction_added", "group_invite_received", "group_invite_accepted", "group_application_received", "group_application_accepted", "system_announcement":
 		return value
 	default:
 		return ""

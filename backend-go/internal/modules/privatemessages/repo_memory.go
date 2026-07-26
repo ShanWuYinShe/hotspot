@@ -293,6 +293,10 @@ func (r *InMemoryRepository) GetMessageForReply(ctx context.Context, messageID, 
 	return nil, false, nil
 }
 
+func (r *InMemoryRepository) MessageExists(_ context.Context, _ string) (bool, string, error) {
+	return false, "", nil
+}
+
 func (r *InMemoryRepository) GetMediaForMessage(ctx context.Context, fileID, ownerUserID string) (map[string]any, bool, error) {
 	return nil, false, nil
 }

@@ -9,10 +9,13 @@ CREATE TABLE IF NOT EXISTS moments (
   location_name TEXT NOT NULL,
   latitude DOUBLE PRECISION NOT NULL,
   longitude DOUBLE PRECISION NOT NULL,
-  privacy_level TEXT NOT NULL DEFAULT 'public'
+  privacy_level TEXT NOT NULL DEFAULT 'public',
+  s2_cell_id BIGINT NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_moments_user_id_created_at ON moments(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_moments_s2_cell_id ON moments(s2_cell_id);
+CREATE INDEX IF NOT EXISTS idx_moments_non_private_s2_cell_id ON moments(s2_cell_id) WHERE privacy_level <> 'private';
 
 CREATE TABLE IF NOT EXISTS comments (
   comment_id TEXT PRIMARY KEY,
@@ -22,7 +25,8 @@ CREATE TABLE IF NOT EXISTS comments (
   content TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   likes_count INTEGER NOT NULL DEFAULT 0,
-  replies_count INTEGER NOT NULL DEFAULT 0
+  replies_count INTEGER NOT NULL DEFAULT 0,
+  is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE INDEX IF NOT EXISTS idx_comments_moment_id_created_at ON comments(moment_id, created_at DESC);

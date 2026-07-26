@@ -19,7 +19,12 @@ CREATE TABLE IF NOT EXISTS reports (
   reason TEXT NOT NULL,
   description TEXT,
   status TEXT NOT NULL DEFAULT 'pending',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  handled_at TIMESTAMPTZ,
+  handled_by_user_id TEXT REFERENCES users(user_id) ON DELETE SET NULL,
+  handle_note TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_reports_creator_created_at ON reports(creator_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reports_status_created_at ON reports(status, created_at DESC, report_id DESC);
+CREATE INDEX IF NOT EXISTS idx_reports_target_type_created_at ON reports(target_type, created_at DESC, report_id DESC);

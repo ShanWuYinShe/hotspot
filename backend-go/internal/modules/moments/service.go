@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"hotspot/backend-go/internal/modules/comments"
-	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/modules/notify"
 	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/actor"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -24,19 +23,27 @@ type Service struct {
 	images        ImageResolver
 	appConfig     appconfig.Source
 	runInTx       persistence.TxRunner
+	reactions     ReactionAggregator // optional; nil => reactions[] not filled
+}
+
+// ReactionAggregator computes per-emoji reaction aggregates for moments.
+// Implemented by the reactions module (dependency inversion: moments never
+// imports reactions). Backs MomentItem.reactions[]. The viewerID drives the
+// @auth-only reacted_by_me flag (empty for anonymous).
+type ReactionAggregator interface {
+	AggregateMoments(ctx context.Context, momentIDs []string, viewerID string) (map[string][]Reaction, error)
 }
 
 type momentNotificationWriter interface {
-	AppendMomentLiked(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any) error
 	AppendMentioned(ctx context.Context, targetUserID string, actor map[string]any, targetType string, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error
 }
 
 func NewService() *Service {
-	return NewServiceWithDepsAndImagesAndConfig(NewInMemoryRepository(), notifications.NewService(), nil, nil, nil, nil)
+	return NewServiceWithDepsAndImagesAndConfig(NewInMemoryRepository(), notify.NewService(), nil, nil, nil, nil)
 }
 
 func NewServiceWithRepo(repo Repository) *Service {
-	return NewServiceWithDepsAndImagesAndConfig(repo, notifications.NewService(), nil, nil, nil, nil)
+	return NewServiceWithDepsAndImagesAndConfig(repo, notify.NewService(), nil, nil, nil, nil)
 }
 
 func NewServiceWithDeps(repo Repository, notificationWriter momentNotificationWriter, actorProvider actor.Provider) *Service {
@@ -86,6 +93,7 @@ func (s *Service) OpenTheDoor(ctx context.Context, momentID string) (MomentItem,
 		item.MyState = s.repo.LoadMyState(ctx, momentID, principal.UserID)
 	}
 	s.hydrateImages(ctx, &item)
+	s.fillReactions(ctx, &item, principal.UserID)
 	return item, true, nil
 }
 
@@ -121,6 +129,7 @@ func (s *Service) ListMine(ctx context.Context, req MyMomentsRequest) (Paginated
 		return result, err
 	}
 	s.hydrateImagesBatch(ctx, result.Items)
+	s.fillReactionsBatch(ctx, result.Items, principal.UserID)
 	return result, nil
 }
 
@@ -158,6 +167,7 @@ func (s *Service) Search(ctx context.Context, req SearchMomentsRequest) (Paginat
 		return result, err
 	}
 	s.hydrateImagesBatch(ctx, result.Items)
+	s.fillReactionsBatch(ctx, result.Items, viewerUserID(ctx))
 	return result, nil
 }
 
@@ -218,65 +228,6 @@ func (s *Service) Delete(ctx context.Context, momentID string) error {
 		return nil
 }
 
-func (s *Service) Like(ctx context.Context, momentID string) error {
-	principal, _ := platformauth.PrincipalFromContext(ctx)
-	exists, err := s.repo.Exists(ctx, momentID)
-	if err != nil {
-		observability.L().Error("moments.like failed", "error", err, "moment_id", momentID)
-		return err
-	}
-	if !exists {
-		return ErrMomentNotFound
-	}
-	newlyLiked, err := s.repo.Like(ctx, principal.UserID, momentID)
-	if err != nil {
-		observability.L().Error("moments.like failed", "error", err, "moment_id", momentID, "user_id", principal.UserID)
-		return err
-	}
-	if !newlyLiked {
-		return nil
-	}
-	momentContext, ok, err := s.NotificationContext(ctx, momentID)
-	if err != nil {
-		observability.L().Error("moments.like load notification context failed", "error", err, "moment_id", momentID)
-		return nil
-	}
-	if !ok || strings.TrimSpace(momentContext.UserID) == "" || momentContext.UserID == principal.UserID {
-		return nil
-	}
-	actor, err := s.buildMomentActor(ctx, principal.UserID)
-	if err != nil {
-		observability.L().Error("moments.like build actor failed", "error", err, "user_id", principal.UserID)
-		actor = fallbackActor(principal.UserID)
-	}
-	momentSummary := cloneMomentSummary(momentContext.Summary, momentID)
-	if s.notifications != nil {
-		if err := s.notifications.AppendMomentLiked(ctx, momentContext.UserID, actor, momentID, momentSummary); err != nil {
-			observability.L().Error("moments.like append notification failed", "error", err, "moment_id", momentID, "target_user_id", momentContext.UserID)
-		}
-	}
-	realtime.DefaultHub().BroadcastToUser(momentContext.UserID, realtime.Event{Type: realtime.EventTypeMomentLiked, Payload: map[string]any{
-		"moment_id":      momentID,
-		"moment_summary": cloneMomentSummary(momentSummary, momentID),
-		"actor":          actor,
-		"liked_at":       time.Now().UTC().Format(time.RFC3339),
-	}})
-	return nil
-}
-
-func (s *Service) Unlike(ctx context.Context, momentID string) error {
-	principal, _ := platformauth.PrincipalFromContext(ctx)
-	exists, err := s.repo.Exists(ctx, momentID)
-	if err != nil {
-		observability.L().Error("moments.unlike failed", "error", err, "moment_id", momentID)
-		return err
-	}
-	if !exists {
-		return ErrMomentNotFound
-	}
-	return s.repo.Unlike(ctx, principal.UserID, momentID)
-}
-
 func (s *Service) Favorite(ctx context.Context, momentID string) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	exists, err := s.repo.Exists(ctx, momentID)
@@ -303,21 +254,6 @@ func (s *Service) Unfavorite(ctx context.Context, momentID string) error {
 	return s.repo.Unfavorite(ctx, principal.UserID, momentID)
 }
 
-func (s *Service) ListLikes(ctx context.Context, req ListLikesRequest) ([]LikeItem, string, error) {
-	limit := 20
-	if req.Pagination != nil && req.Pagination.Limit > 0 {
-		limit = req.Pagination.Limit
-	}
-	if limit > 100 {
-		limit = 100
-	}
-	cursor := ""
-	if req.Pagination != nil {
-		cursor = req.Pagination.Cursor
-	}
-	return s.repo.ListLikes(ctx, req.MomentID, limit, cursor)
-}
-
 func (s *Service) ListFavorites(ctx context.Context, req MyFavoritesRequest) (PaginatedMoments, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	limit := 20
@@ -336,6 +272,7 @@ func (s *Service) ListFavorites(ctx context.Context, req MyFavoritesRequest) (Pa
 		return result, err
 	}
 	s.hydrateImagesBatch(ctx, result.Items)
+	s.fillReactionsBatch(ctx, result.Items, principal.UserID)
 	return result, nil
 }
 
@@ -377,6 +314,56 @@ func (s *Service) hydrateImagesBatch(ctx context.Context, items []MomentItem) {
 		return
 	}
 	HydrateMomentImages(ctx, s.repo, s.images, items)
+}
+
+// SetReactionAggregator wires the reactions aggregator (called by bootstrap
+// after both modules are constructed, breaking the import cycle).
+func (s *Service) SetReactionAggregator(ra ReactionAggregator) { s.reactions = ra }
+
+// fillReactions populates MomentItem.reactions[] for a single item via the
+// aggregator. No-op when no aggregator is wired or the moment has no reactions.
+func (s *Service) fillReactions(ctx context.Context, item *MomentItem, viewerID string) {
+	if s.reactions == nil || item == nil {
+		return
+	}
+	byID, err := s.reactions.AggregateMoments(ctx, []string{item.MomentID}, viewerID)
+	if err != nil {
+		observability.L().Warn("moments.fillReactions failed", "error", err, "moment_id", item.MomentID)
+		return
+	}
+	if recs := byID[item.MomentID]; len(recs) > 0 {
+		item.Reactions = recs
+	}
+}
+
+// fillReactionsBatch populates MomentItem.reactions[] for a list in one query.
+func (s *Service) fillReactionsBatch(ctx context.Context, items []MomentItem, viewerID string) {
+	if s.reactions == nil || len(items) == 0 {
+		return
+	}
+	ids := make([]string, 0, len(items))
+	for i := range items {
+		ids = append(ids, items[i].MomentID)
+	}
+	byID, err := s.reactions.AggregateMoments(ctx, ids, viewerID)
+	if err != nil {
+		observability.L().Warn("moments.fillReactionsBatch failed", "error", err)
+		return
+	}
+	for i := range items {
+		if recs := byID[items[i].MomentID]; len(recs) > 0 {
+			items[i].Reactions = recs
+		}
+	}
+}
+
+// viewerUserID returns the authenticated user id, or "" for anonymous callers.
+func viewerUserID(ctx context.Context) string {
+	principal, ok := platformauth.PrincipalFromContext(ctx)
+	if !ok {
+		return ""
+	}
+	return principal.UserID
 }
 
 func (s *Service) buildMomentActor(ctx context.Context, userID string) (map[string]any, error) {

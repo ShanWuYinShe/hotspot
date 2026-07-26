@@ -36,12 +36,12 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-		code, message, data := h.service.Health(r.Context())
-		if code != 0 {
-			logBusinessError(r, "Health", code, message)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(code, message))
-			return
-		}
+	code, message, data := h.service.Health(r.Context())
+	if code != 0 {
+		logBusinessError(r, "Health", code, message)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(code, message))
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(*data))
 }
 
@@ -50,12 +50,12 @@ func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-		payload, err := h.service.ListAnnouncements(r.Context())
-		if err != nil {
-			logServerError(r, "ListAnnouncements", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-			return
-		}
+	payload, err := h.service.ListAnnouncements(r.Context())
+	if err != nil {
+		logServerError(r, "ListAnnouncements", err)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
 }
 
@@ -65,4 +65,15 @@ func (h *Handler) GetClientConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.GetClientConfig(r.Context())))
+}
+
+func (h *Handler) Bootstrap(w http.ResponseWriter, r *http.Request) {
+	var req BootstrapRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	bootstrapResolver := h.service.GetBootstrapResolver()
+	bd := h.service.Bootstrap(r.Context(), bootstrapResolver)
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(bd))
 }

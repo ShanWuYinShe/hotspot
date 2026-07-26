@@ -75,6 +75,7 @@ func (r *privateChatMessageReader) UnreadCount(context.Context, string, *time.Ti
 	}
 	return r.unreadCount, nil
 }
+func (r *privateChatMessageReader) LookupMessage(_ context.Context, _ string) (bool, string, error) { return false, "", nil }
 
 type privateChatUserReader struct {
 	item     users.UserItem
@@ -110,11 +111,11 @@ func newHandlersWithUserRepo(userRepo *users.InMemoryRepository) (*Handler, *pri
 func seedPrivateChatUsers(userRepo *users.InMemoryRepository) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	_ = userRepo.PutProfile(context.Background(), users.MyProfile{UserID: "user_bob", Nickname: "Bob", UserType: users.UserTypeNormal, Location: users.Location{LocationName: "Somewhere"}, PresenceStatus: users.UserPresenceOnline, LastOnline: now, CreatedAt: now})
-	_ = userRepo.PutSettings(context.Background(), "user_bob", users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, LikedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
+	_ = userRepo.PutSettings(context.Background(), "user_bob", users.UserSettings{AllowPrivateChat: users.ChatPermEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
 	_ = userRepo.PutProfile(context.Background(), users.MyProfile{UserID: "user_alice", Nickname: "Alice", UserType: users.UserTypeNormal, Location: users.Location{LocationName: "Somewhere"}, PresenceStatus: users.UserPresenceOnline, LastOnline: now, CreatedAt: now})
-	_ = userRepo.PutSettings(context.Background(), "user_alice", users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, LikedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
+	_ = userRepo.PutSettings(context.Background(), "user_alice", users.UserSettings{AllowPrivateChat: users.ChatPermEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
 	_ = userRepo.PutProfile(context.Background(), users.MyProfile{UserID: "user_charlie", Nickname: "Charlie", UserType: users.UserTypeNormal, Location: users.Location{LocationName: "Somewhere"}, PresenceStatus: users.UserPresenceOnline, LastOnline: now, CreatedAt: now})
-	_ = userRepo.PutSettings(context.Background(), "user_charlie", users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, LikedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
+	_ = userRepo.PutSettings(context.Background(), "user_charlie", users.UserSettings{AllowPrivateChat: users.ChatPermEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
 }
 
 func TestOpenTheDoorReturnsChatAndRecentMessages(t *testing.T) {
@@ -192,7 +193,7 @@ func TestPrivateChatsHandlerReturns10600OnServiceError(t *testing.T) {
 		appconfig.NewStaticSource(config.Load()),
 	)
 
-	listReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"pagination":{"limit":20}}`))
+	listReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"pagination":{"limit":20}}`))
 	listReq = listReq.WithContext(platformauth.WithPrincipal(listReq.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	listRR := httptest.NewRecorder()
 	chatHandler.List(listRR, listReq)
@@ -218,7 +219,7 @@ func TestOpenTheDoorUsesSharedResponseDefaults(t *testing.T) {
 	messageRepo := private_messages.NewInMemoryRepository()
 	userRepo := users.NewInMemoryRepository()
 	_ = userRepo.PutProfile(context.Background(), users.MyProfile{UserID: "user_bob", Nickname: "Bob", UserType: users.UserTypeNormal, Location: users.Location{LocationName: "Somewhere"}, PresenceStatus: users.UserPresenceOnline, LastOnline: time.Now().UTC().Format(time.RFC3339), CreatedAt: time.Now().UTC().Format(time.RFC3339)})
-	_ = userRepo.PutSettings(context.Background(), "user_bob", users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, LikedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
+	_ = userRepo.PutSettings(context.Background(), "user_bob", users.UserSettings{AllowPrivateChat: users.ChatPermEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
 	userService := users.NewServiceWithRepo(userRepo)
 	messageService := private_messages.NewServiceWithDeps(messageRepo, userService)
 	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), messageService, userService), source)
@@ -279,13 +280,13 @@ func TestUpdateSettingsAndDeleteHandlers(t *testing.T) {
 	messageHandler.Send(sendRR, sendReq)
 	assertPrivateChatCode(t, sendRR, 0)
 
-	updateReq := httptest.NewRequest(http.MethodPost, "/me/update_settings", strings.NewReader(`{"target_user_id":"user_bob","is_muted":true,"is_pinned":true}`))
+	updateReq := httptest.NewRequest(http.MethodPost, "/update_preferences", strings.NewReader(`{"target_user_id":"user_bob","is_muted":true,"is_pinned":true}`))
 	updateReq = updateReq.WithContext(ctx)
 	updateRR := httptest.NewRecorder()
 	chatHandler.UpdateSettings(updateRR, updateReq)
 	assertPrivateChatCode(t, updateRR, 0)
 
-	listReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"pagination":{"limit":20}}`))
+	listReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"pagination":{"limit":20}}`))
 	listReq = listReq.WithContext(ctx)
 	listRR := httptest.NewRecorder()
 	chatHandler.List(listRR, listReq)
@@ -303,13 +304,13 @@ func TestUpdateSettingsAndDeleteHandlers(t *testing.T) {
 		t.Fatalf("expected updated settings in list: %#v", listResp.Data.Items[0])
 	}
 
-	deleteReq := httptest.NewRequest(http.MethodPost, "/me/delete", strings.NewReader(`{"target_user_id":"user_bob"}`))
+	deleteReq := httptest.NewRequest(http.MethodPost, "/delete", strings.NewReader(`{"target_user_id":"user_bob"}`))
 	deleteReq = deleteReq.WithContext(ctx)
 	deleteRR := httptest.NewRecorder()
 	chatHandler.Delete(deleteRR, deleteReq)
 	assertPrivateChatCode(t, deleteRR, 0)
 
-	listAfterDeleteReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"pagination":{"limit":20}}`))
+	listAfterDeleteReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"pagination":{"limit":20}}`))
 	listAfterDeleteReq = listAfterDeleteReq.WithContext(ctx)
 	listAfterDeleteRR := httptest.NewRecorder()
 	chatHandler.List(listAfterDeleteRR, listAfterDeleteReq)
@@ -340,13 +341,13 @@ func TestDeleteOnlyAffectsCurrentUserView(t *testing.T) {
 	messageHandler.Send(sendRR, sendReq)
 	assertPrivateChatCode(t, sendRR, 0)
 
-	deleteReq := httptest.NewRequest(http.MethodPost, "/me/delete", strings.NewReader(`{"target_user_id":"user_bob"}`))
+	deleteReq := httptest.NewRequest(http.MethodPost, "/delete", strings.NewReader(`{"target_user_id":"user_bob"}`))
 	deleteReq = deleteReq.WithContext(aliceCtx)
 	deleteRR := httptest.NewRecorder()
 	chatHandler.Delete(deleteRR, deleteReq)
 	assertPrivateChatCode(t, deleteRR, 0)
 
-	aliceListReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"pagination":{"limit":20}}`))
+	aliceListReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"pagination":{"limit":20}}`))
 	aliceListReq = aliceListReq.WithContext(aliceCtx)
 	aliceListRR := httptest.NewRecorder()
 	chatHandler.List(aliceListRR, aliceListReq)
@@ -361,7 +362,7 @@ func TestDeleteOnlyAffectsCurrentUserView(t *testing.T) {
 		t.Fatalf("expected alice chat list empty after delete: %#v", aliceResp.Data.Items)
 	}
 
-	bobListReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"pagination":{"limit":20}}`))
+	bobListReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"pagination":{"limit":20}}`))
 	bobListReq = bobListReq.WithContext(bobCtx)
 	bobListRR := httptest.NewRecorder()
 	chatHandler.List(bobListRR, bobListReq)
@@ -392,7 +393,7 @@ func TestDeleteThenNewMessageReappearsAsBlankConversation(t *testing.T) {
 	messageHandler.Send(firstSendRR, firstSendReq)
 	assertPrivateChatCode(t, firstSendRR, 0)
 
-	deleteReq := httptest.NewRequest(http.MethodPost, "/me/delete", strings.NewReader(`{"target_user_id":"user_bob"}`))
+	deleteReq := httptest.NewRequest(http.MethodPost, "/delete", strings.NewReader(`{"target_user_id":"user_bob"}`))
 	deleteReq = deleteReq.WithContext(aliceCtx)
 	deleteRR := httptest.NewRecorder()
 	chatHandler.Delete(deleteRR, deleteReq)
@@ -430,7 +431,7 @@ func TestDeleteThenNewMessageReappearsAsBlankConversation(t *testing.T) {
 func TestOpenTheDoorRespectsTargetPrivacy(t *testing.T) {
 	userRepo := users.NewInMemoryRepository()
 	seedPrivateChatUsers(userRepo)
-	_ = userRepo.PutSettings(context.Background(), "user_bob", users.UserSettings{AllowPrivateChat: users.PrivateChatNobody, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, LikedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
+	_ = userRepo.PutSettings(context.Background(), "user_bob", users.UserSettings{AllowPrivateChat: users.ChatPermNobody, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
 	chatHandler, _ := newHandlersWithUserRepo(userRepo)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
@@ -452,7 +453,7 @@ func TestOpenTheDoorRespectsTargetPrivacy(t *testing.T) {
 	if openResp.Data.Chat.CanMessage {
 		t.Fatalf("expected can_message=false: %#v", openResp.Data.Chat)
 	}
-	if openResp.Data.Chat.MessageBlockedReason != "privacy" {
+	if openResp.Data.Chat.BlockReason != "privacy" {
 		t.Fatalf("expected privacy blocked reason: %#v", openResp.Data.Chat)
 	}
 }
@@ -468,7 +469,7 @@ func TestDeleteThenOpenTheDoorCreatesBlankConversation(t *testing.T) {
 	messageHandler.Send(sendRR, sendReq)
 	assertPrivateChatCode(t, sendRR, 0)
 
-	deleteReq := httptest.NewRequest(http.MethodPost, "/me/delete", strings.NewReader(`{"target_user_id":"user_bob"}`))
+	deleteReq := httptest.NewRequest(http.MethodPost, "/delete", strings.NewReader(`{"target_user_id":"user_bob"}`))
 	deleteReq = deleteReq.WithContext(ctx)
 	deleteRR := httptest.NewRecorder()
 	chatHandler.Delete(deleteRR, deleteReq)
@@ -498,7 +499,7 @@ func TestDeleteThenOpenTheDoorCreatesBlankConversation(t *testing.T) {
 	if openResp.Data.Chat.CreatedAt == "" {
 		t.Fatalf("expected created_at on reopened blank conversation: %#v", openResp.Data.Chat)
 	}
-	listReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"pagination":{"limit":20}}`))
+	listReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"pagination":{"limit":20}}`))
 	listReq = listReq.WithContext(ctx)
 	listRR := httptest.NewRecorder()
 	chatHandler.List(listRR, listReq)
@@ -529,7 +530,7 @@ func TestListSupportsPaginationCursor(t *testing.T) {
 		assertPrivateChatCode(t, openRR, 0)
 	}
 
-	firstReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"pagination":{"limit":1}}`))
+	firstReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"pagination":{"limit":1}}`))
 	firstReq = firstReq.WithContext(ctx)
 	firstRR := httptest.NewRecorder()
 	chatHandler.List(firstRR, firstReq)
@@ -547,7 +548,7 @@ func TestListSupportsPaginationCursor(t *testing.T) {
 		t.Fatalf("expected next_cursor on first page: %#v", firstResp)
 	}
 
-	secondReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"pagination":{"limit":1,"cursor":"`+firstResp.Data.NextCursor+`"}}`))
+	secondReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"pagination":{"limit":1,"cursor":"`+firstResp.Data.NextCursor+`"}}`))
 	secondReq = secondReq.WithContext(ctx)
 	secondRR := httptest.NewRecorder()
 	chatHandler.List(secondRR, secondReq)
@@ -597,7 +598,7 @@ func TestPrivateChatDeleteReturns10300OnNotFound(t *testing.T) {
 	)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
-	deleteReq := httptest.NewRequest(http.MethodPost, "/me/delete", strings.NewReader(`{"target_user_id":"nonexistent_user"}`))
+	deleteReq := httptest.NewRequest(http.MethodPost, "/delete", strings.NewReader(`{"target_user_id":"nonexistent_user"}`))
 	deleteReq = deleteReq.WithContext(ctx)
 	deleteRR := httptest.NewRecorder()
 	chatHandler.Delete(deleteRR, deleteReq)

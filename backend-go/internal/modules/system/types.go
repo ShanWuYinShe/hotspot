@@ -18,12 +18,12 @@ const (
 	SystemHealthUnhealthy SystemHealthStatus = "unhealthy"
 )
 
-type AnnouncementSeverity string
+type AnnounceLevel string
 
 const (
-	AnnouncementSeverityInfo    AnnouncementSeverity = "info"
-	AnnouncementSeverityWarning AnnouncementSeverity = "warning"
-	AnnouncementSeverityError   AnnouncementSeverity = "error"
+	AnnounceLevelInfo    AnnounceLevel = "info"
+	AnnounceLevelWarning AnnounceLevel = "warning"
+	AnnounceLevelError   AnnounceLevel = "error"
 )
 
 type GeoPoint = types.GeoPoint
@@ -48,12 +48,12 @@ type HealthStatus struct {
 }
 
 type SystemAnnouncementItem struct {
-	AnnouncementID string               `json:"announcement_id"`
-	Title          string               `json:"title"`
-	Content        string               `json:"content"`
-	Severity       AnnouncementSeverity `json:"severity"`
-	ActionURL      string               `json:"action_url,omitempty"`
-	CreatedAt      string               `json:"created_at"`
+	AnnouncementID string        `json:"announcement_id"`
+	Title          string        `json:"title"`
+	Content        string        `json:"content"`
+	Severity       AnnounceLevel `json:"severity"`
+	ActionURL      string        `json:"action_url,omitempty"`
+	CreatedAt      string        `json:"created_at"`
 }
 
 type SystemAnnouncementList struct {
@@ -80,13 +80,13 @@ type ContactInfo struct {
 	SupportEmail      string `json:"support_email"`
 	PrivacyPolicyURL  string `json:"privacy_policy_url"`
 	TermsOfServiceURL string `json:"terms_of_service_url"`
-	OfficialWebsite   string `json:"official_website"`
+	OfficialWebsite   string `json:"official_website_url"`
 }
 
 type ClientDefaults struct {
 	DefaultLocation    Location `json:"default_location"`
-	DefaultUserAvatar  string   `json:"default_user_avatar"`
-	DefaultGroupAvatar string   `json:"default_group_avatar"`
+	DefaultUserAvatar  string   `json:"default_user_avatar_url"`
+	DefaultGroupAvatar string   `json:"default_group_avatar_url"`
 }
 
 type ClientConfig struct {
@@ -94,4 +94,24 @@ type ClientConfig struct {
 	Limits   AppLimits       `json:"limits"`
 	Contact  ContactInfo     `json:"contact"`
 	Defaults ClientDefaults  `json:"defaults"`
+}
+
+type BootstrapRequest struct {
+	ClientType string  `json:"client_type"`
+	DeviceID   *string `json:"device_id,omitempty"`
+}
+
+type BootstrapData struct {
+	BootstrapVersion string         `json:"bootstrap_version"`
+	Meta             ApiVersionMeta `json:"meta"`
+	ClientConfig     ClientConfig   `json:"client_config"`
+	Profile          any            `json:"profile,omitempty"`
+	UnreadSummary    *UnreadSummary `json:"unread_summary,omitempty"`
+}
+
+type UnreadSummary struct {
+	NotificationUnreadCount int `json:"notification_unread_count"`
+	PrivateChatUnreadCount  int `json:"private_chat_unread_count"`
+	GroupChatUnreadCount    int `json:"group_chat_unread_count"`
+	TotalBadge              int `json:"total_badge"`
 }
