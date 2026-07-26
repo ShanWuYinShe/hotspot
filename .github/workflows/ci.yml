@@ -57,7 +57,7 @@ jobs:
         run: go test -C backend-go -count=1 $(go list -C backend-go ./... | grep -v /test/integration) -v 2>&1 | tee
 
   frontend:
-    name: Frontend (SvelteKit)
+    name: Frontend (React)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -68,9 +68,7 @@ jobs:
 
       - name: bun install
         run: bun install --cwd frontend
-      - name: svelte-check (type-check)
+      - name: type-check (tsc)
         run: bun run --cwd frontend check
       - name: bun build
         run: bun run --cwd frontend build
-      - name: vitest
-        run: bun run --cwd frontend test

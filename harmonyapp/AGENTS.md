@@ -113,7 +113,7 @@ PATH=$JAVA_HOME/bin:$PATH
 
 ### 设计系统（design-tokens）
 
-所有颜色、字号、间距、圆角、阴影**只用 DesignConstants / AppThemeManager token**，对齐前端 SvelteKit forest 设计系统（单一事实源）。**禁止**在页面/组件里硬编码十六进制色值或裸数字 `fontSize(N)` / `padding({left:N})`。
+所有颜色、字号、间距、圆角、阴影**只用 DesignConstants / AppThemeManager token**，对齐前端 forest 设计系统（单一事实源）。**禁止**在页面/组件里硬编码十六进制色值或裸数字 `fontSize(N)` / `padding({left:N})`。
 
 **颜色**：
 - 画布：`COLOR.PRIMARY_BG_*` / `SECONDARY_BG_*`

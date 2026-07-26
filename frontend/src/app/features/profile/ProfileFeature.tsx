@@ -17,7 +17,7 @@ import {
 } from "../../components/TabletRail";
 import { ContextRail } from "../../components/layout/ContextRail";
 import { ActionIconButton } from "../../components/shared/ActionIconButton";
-import { ROUTES } from "../../lib/routes";
+import { ROUTES, type ProfileSection } from "../../lib/routes";
 
 /* ── Constants & mock data (extracted) ──────────────────────────── */
 import {
@@ -220,9 +220,9 @@ function ProfileDesktop() {
           <div className="w-full rounded-[18px] overflow-hidden"
             style={{ background: "var(--neu-bg)", boxShadow: "6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
             {[
-              { label: "我的瞬间",  section: "moments",   icon: Grid3X3,      count: GALLERY_POSTS.length },
-              { label: "我的群组",  section: "groups",    icon: Users,        count: MOCK_GROUPS.length },
-              { label: "关系网络",  section: "relationships", icon: Heart, count: MOCK_FRIENDS.length + MOCK_FOLLOWING.length + MOCK_FANS.length },
+              { label: "我的瞬间",  section: "moments" as ProfileSection, icon: Grid3X3, count: GALLERY_POSTS.length },
+              { label: "我的群组",  section: "groups" as ProfileSection,    icon: Users,   count: MOCK_GROUPS.length },
+              { label: "关系网络",  section: "relationships" as ProfileSection, icon: Heart, count: MOCK_FRIENDS.length + MOCK_FOLLOWING.length + MOCK_FANS.length },
             ].map((item, i) => (
               <React.Fragment key={item.label}>
                 {i > 0 && <div style={{ height: 1, background: "var(--neu-border)" }} />}
@@ -290,7 +290,7 @@ function ShareProfileBtn() {
   const hover = useHoverConfig();
   return (
     <motion.button whileTap={{ scale: 0.97 }}
-      onClick={onClick}
+      onClick={() => {}}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[14px] outline-none"

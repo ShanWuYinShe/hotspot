@@ -119,7 +119,7 @@ services:
           memory: 1g
           cpus: "2"
 
-  # ── Frontend (SvelteKit 静态产物) ──────────────────────────────
+  # ── Frontend (React SPA 静态产物) ─────────────────────────────
   # 生产模式: hotspot-frontend:${IMAGE_TAG:-latest} 仅持有 build 产物，通过共享 volume 挂给网关 nginx。
   # 开发模式: image 由 dev override 替换为 oven/bun + Vite HMR。
   # 生产构建: docker compose --profile prod build frontend-build
