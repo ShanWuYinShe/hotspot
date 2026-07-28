@@ -21,6 +21,17 @@ export function setApiBaseUrl(url: string) {
   baseUrl = url.replace(/\/$/, '');
 }
 
+/**
+ * Notify the app of an auth-state change observed at the transport layer.
+ * AuthContext listens for these instead of the client importing React.
+ *   'auth-failed' → session invalid / refresh failed → drop to anonymous.
+ *   'auth-banned' → 10201 account banned → show ban screen.
+ */
+function emitAuthEvent(type: 'auth-failed' | 'auth-banned', message?: string) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(type, { detail: { type, message } }));
+}
+
 async function request<T>(endpoint: string, body?: unknown, retryCount = 0): Promise<ApiResponse<T>> {
   const url = `${baseUrl}${endpoint}`;
   const res = await fetch(url, {
@@ -33,11 +44,21 @@ async function request<T>(endpoint: string, body?: unknown, retryCount = 0): Pro
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try { const errBody = await res.json(); msg = (errBody as any).message ?? msg; } catch {}
+    // A non-200 transport failure is unexpected per spec (business errors come
+    // back as 200 + code). Surface it; AuthContext treats a thrown request as
+    // a soft failure the caller can handle.
     throw new Error(msg);
   }
 
   const json: ApiResponse<T> = await res.json();
 
+  // 10201: account banned — force-drop and show the ban screen with the message.
+  if (json.code === 10201) {
+    emitAuthEvent('auth-banned', json.message);
+    return json;
+  }
+
+  // 10100: access token invalid/expired. Try a single deduped refresh + retry.
   if (json.code === 10100 && retryCount < 1) {
     if (!refreshLock) {
       refreshLock = (async () => {
@@ -56,6 +77,8 @@ async function request<T>(endpoint: string, body?: unknown, retryCount = 0): Pro
     }
     const ok = await refreshLock;
     if (ok) return request<T>(endpoint, body, retryCount + 1);
+    // Refresh failed: notify AuthContext so it can drop to anonymous and prompt.
+    emitAuthEvent('auth-failed');
   }
 
   return json;
@@ -67,6 +90,8 @@ export async function login(params: object)              { return request<object
 export async function guest(params?: object)             { return request<object>(Endpoints.Auth.Guest, params ?? {}); }
 export async function checkAuthStatus()                   { return request<object>(Endpoints.Auth.CheckStatus); }
 export async function logout()                            { return request<void>(Endpoints.Auth.Logout); }
+export async function requestPasswordReset(params: object) { return request<void>(Endpoints.Auth.RequestPasswordReset, params); }
+export async function resetPassword(params: object)      { return request<object>(Endpoints.Auth.ResetPassword, params); }
 
 // Users
 export async function getAccount()                        { return request<object>(Endpoints.Users.GetAccount); }
@@ -79,6 +104,9 @@ export async function block(params: object)               { return request<void>
 export async function getProfile(userId: string)          { return request<object>(Endpoints.Users.GetProfile, { user_id: userId }); }
 export async function getUserDetail(userId: string)       { return request<object>(Endpoints.Users.GetDetail, { user_id: userId }); }
 export async function batchGet(userIds: string[])         { return request<Record<string, object>>(Endpoints.Users.BatchGet, { user_ids: userIds }); }
+export async function listFriends(params?: object)        { return request<PaginatedData<object>>(Endpoints.Users.ListFriends, params ?? {}); }
+export async function listFollowing(params?: object)      { return request<PaginatedData<object>>(Endpoints.Users.ListFollowing, params ?? {}); }
+export async function listFollowers(params?: object)      { return request<PaginatedData<object>>(Endpoints.Users.ListFollowers, params ?? {}); }
 
 // Feed
 export async function getFeedMoments(params?: object)     { return request<PaginatedData<object>>(Endpoints.Feed.ListMoments, params ?? {}); }
@@ -90,6 +118,7 @@ export async function searchMoments(params: object)       { return request<Pagin
 export async function getMomentDetail(momentId: string)   { return request<object>(Endpoints.Moments.GetDetail, { moment_id: momentId }); }
 export async function createMoment(params: object)        { return request<object>(Endpoints.Moments.Create, params); }
 export async function listMyMoments(params?: object)      { return request<PaginatedData<object>>(Endpoints.Moments.ListMy, params ?? {}); }
+export async function getFavoritePosts(params?: object)   { return request<PaginatedData<object>>(Endpoints.Moments.ListFavorites, params ?? {}); }
 
 // Groups
 export async function searchGroups(params: object)        { return request<PaginatedData<object>>(Endpoints.Groups.Search, params); }
@@ -131,6 +160,12 @@ export async function completeUpload(params: object)      { return request<objec
 // Reactions
 export async function setReaction(params: object)         { return request<void>(Endpoints.Reactions.Set, params); }
 export async function listReactions(params: object)       { return request<PaginatedData<object>>(Endpoints.Reactions.List, params); }
+
+// Comments
+export async function createComment(params: object)       { return request<object>(Endpoints.Comments.Create, params); }
+
+// Moments — favorite (two-state via active per spec)
+export async function favoriteMoment(params: object)      { return request<void>(Endpoints.Moments.Favorite, params); }
 
 // Groups extended
 export async function getGroupMembers(groupId: string, pagination?: object) {

@@ -14,6 +14,8 @@ import { TimerManager } from '../utils/TimerManager';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { EventBus } from '../events/EventBus';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
+import { DeviceIdUtil } from '../util/DeviceIdUtil';
+import { MockInterceptor } from '../mock/MockInterceptor';
 import { createLogger } from '../utils/LogManager';
 import { common } from '@kit.AbilityKit';
 
@@ -244,6 +246,12 @@ export class ServiceRegistry {
 
     try {
       await PreferencesUtil.init(context);
+
+      // 初始化持久化 device_id（auth 请求必填，驱动单设备单会话踢人语义）
+      await DeviceIdUtil.ensureInitialized();
+
+      // 初始化 Mock 拦截器（开发阶段调试用，默认关闭）
+      await MockInterceptor.init();
 
       // 初始化国际化服务
       if (this.config.enableI18n) {

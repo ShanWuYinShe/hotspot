@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import {
   Home, Users, Rss, MessageCircle, Bell, ImageIcon,
-  Heart, Search,
+  Heart, Search, Settings,
   Plus, Navigation2, ChevronRight, UserRound, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -16,11 +16,7 @@ import { useComposer } from "../../contexts/ComposerContext";
 import { CreateSheet } from "./CreateSheet";
 import { cn } from "../../../lib/utils";
 import imgHotSpot from "../../../assets/9254a1e0e11b516a6c1aecb80d92b66f2caa243e.png";
-
-/* ── Constants ──────────────────────────────────────────────────── */
-
-const USER_AVATAR =
-  "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface NavItem {
   id: DesktopNavId;
@@ -33,7 +29,7 @@ const TOP_NAV: NavItem[] = [
   { id: "home",            icon: Home,        label: "首页",     path: ROUTES.home },
   { id: "nearby-people",   icon: Users,       label: "附近的人", path: ROUTES.nearbyPeople },
   { id: "nearby-groups",   icon: UserRound,   label: "附近群组", path: ROUTES.nearbyGroups },
-  { id: "nearby-activity", icon: Rss,         label: "附近瞬间", path: ROUTES.discover },
+  { id: "nearby-activity", icon: Rss,   label: "附近瞬间", path: ROUTES.nearbyMoments },
 ];
 
 const PERSONAL_NAV: NavItem[] = [
@@ -235,6 +231,17 @@ export function DesktopLayout() {
   );
   const isSplitWorkspace = location.pathname === ROUTES.messages;
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Reactive current user from AuthContext — reflects login/logout immediately.
+  const { user, requireAuth, status } = useAuth();
+  const authUser = user
+    ? { avatar_url: user.avatar_url, nickname: user.nickname, user_id: user.user_id }
+    : null;
+
+  /** Navigate only when authenticated; otherwise prompt login (anonymous browsing strategy). */
+  const guardNav = (label: string, path: string) => {
+    if (status === "authenticated") { navigate(path); return; }
+    requireAuth({ action: label, run: () => navigate(path) });
+  };
 
   /* Only explicit rail routes replace the current rail context. */
   useEffect(() => {
@@ -246,6 +253,13 @@ export function DesktopLayout() {
   }, [location.pathname, location.search]);
 
   const handleNavClick = (item: NavItem) => {
+    // Personal/private destinations require auth; public discovery does not.
+    const requiresAuth = item.id === "messages" || item.id === "moments"
+      || item.id === "my-groups" || item.id === "relationships";
+    if (requiresAuth && status !== "authenticated") {
+      requireAuth({ action: item.label, run: () => { setActiveNavId(item.id); persistLastDesktopNav(item.id); navigate(item.path); } });
+      return;
+    }
     setActiveNavId(item.id);
     persistLastDesktopNav(item.id);
     navigate(item.path);
@@ -310,55 +324,62 @@ export function DesktopLayout() {
           <HeaderBtn
             icon={Plus}
             label="发布"
-            onClick={openComposer}
+            onClick={() => {
+              if (status === "authenticated") { openComposer(); return; }
+              requireAuth({ action: "发布动态", run: openComposer });
+            }}
           />
 
           <HeaderBtn
             icon={Bell}
             label="通知"
-            onClick={() => { setActiveNavId("notifications"); navigate(ROUTES.notifications); }}
+            onClick={() => guardNav("查看通知", ROUTES.notify)}
           />
 
           <AppearanceMenu />
 
-          {/* Avatar with notification badge */}
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.92 }}
-            onClick={() => {
-              setActiveNavId("moments");
-              navigate(ROUTES.me);
-            }}
-            aria-label="打开个人主页"
-            className="relative ml-1.5 flex-shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--page-bg)]"
-            style={{ width: 32, height: 32 }}
-          >
-            <img
-              src={USER_AVATAR}
-              alt="My Profile"
-              className="w-full h-full rounded-full object-cover"
+          <HeaderBtn
+            icon={Settings}
+            label="设置"
+            onClick={() => navigate(ROUTES.settings)}
+          />
+
+          {authUser && (
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.92 }}
+              onClick={() => guardNav("打开个人主页", ROUTES.me)}
+              aria-label="打开个人主页"
+              className="relative ml-1.5 flex-shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--page-bg)]"
+              style={{ width: 32, height: 32 }}
+            >
+              <img
+                src={authUser.avatar_url || ""}
+                alt={authUser.nickname || "用户"}
+                className="w-full h-full rounded-full object-cover"
+                style={{
+                  border: "1.5px solid var(--neu-border)",
+                }}
+              />
+            </motion.button>
+          )}
+          {!authUser && (
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.96 }}
+              onClick={() => navigate(ROUTES.login)}
+              aria-label="登录"
+              className="ml-1.5 flex-shrink-0 rounded-full px-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
               style={{
-                border: "1.5px solid var(--neu-border)",
-              }}
-            />
-            {/* Badge */}
-            <div
-              className="absolute flex items-center justify-center rounded-full text-white pointer-events-none"
-              style={{
-                width: 15,
-                height: 15,
-                fontSize: 8,
-                fontWeight: 700,
-                top: -3,
-                right: -3,
+                height: 32,
                 background: "var(--neu-accent-primary)",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.25)",
-                border: "1.5px solid var(--page-bg)",
+                color: "white",
+                fontSize: 12,
               }}
             >
-              12
-            </div>
-          </motion.button>
+              登录
+            </motion.button>
+          )}
         </div>
       </header>
 
@@ -371,10 +392,10 @@ export function DesktopLayout() {
         <aside
           className="flex flex-col flex-shrink-0 overflow-hidden box-border"
           style={{
-            width: isSidebarCollapsed ? 56 : "calc(192px + var(--workspace-gutter))",
+            width: isSidebarCollapsed ? 56 : "calc(192px + var(--workspace-gutter) * 2)",
             padding: isSidebarCollapsed
-              ? "var(--workspace-gutter) 8px"
-              : "var(--workspace-gutter) 0 var(--workspace-gutter) var(--workspace-gutter)",
+              ? "calc(var(--workspace-gutter) / 2) 8px"
+              : "var(--workspace-gutter)",
             background: "color-mix(in srgb, var(--neu-bg) 80%, transparent)",
             borderRight: "1px solid var(--neu-border)",
           }}

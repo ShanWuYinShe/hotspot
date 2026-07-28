@@ -16,7 +16,7 @@ import { ROUTES, isPrimaryRouteActive, isSubPagePath } from "../../lib/routes";
 
 const NAV_ITEMS = [
   { path: ROUTES.home,     icon: MapPin,         label: "附近" },
-  { path: ROUTES.discover, icon: Compass,        label: "发现" },
+  { path: ROUTES.nearbyMoments, icon: Compass,        label: "发现" },
   { path: ROUTES.messages, icon: MessageCircle,  label: "消息" },
   { path: ROUTES.me,  icon: CircleUser,     label: "我的" },
 ];

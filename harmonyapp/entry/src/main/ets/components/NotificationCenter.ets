@@ -335,15 +335,16 @@ export struct NotificationCenter {
       return;
     }
     const applicationId = notification.payload?.application_id ?? '';
-    if (!applicationId) {
+    const groupId = notification.payload?.group_id ?? '';
+    if (!applicationId || !groupId) {
       SystemToast.showWarning('申请信息缺失，无法处理', this.getUIContext());
       return;
     }
     this.setActionLoading(notification.notification_id, true);
     try {
       const response = action === 'approve'
-        ? await ApiClient.approveGroupApplication({ application_id: applicationId })
-        : await ApiClient.rejectGroupApplication({ application_id: applicationId });
+        ? await ApiClient.approveGroupApplication({ group_id: groupId, application_id: applicationId })
+        : await ApiClient.rejectGroupApplication({ group_id: groupId, application_id: applicationId });
       if (response.code !== 0) {
         SystemToast.showError(response.message || (action === 'approve' ? '批准申请失败' : '拒绝申请失败'), this.getUIContext());
         return;

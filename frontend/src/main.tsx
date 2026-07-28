@@ -7,10 +7,13 @@ const apiUrl = import.meta.env.VITE_API_URL ?? window.location.origin;
 setApiBaseUrl(apiUrl);
 
 async function startApp() {
-  // Enable MSW mock API in dev mode. Set VITE_API_MOCK=false to use real backend.
-  if (import.meta.env.DEV && import.meta.env.VITE_API_MOCK !== "false") {
+  // Always initialize MSW in dev mode. Reads persisted preference from localStorage,
+  // falls back to VITE_API_MOCK env. Toggling via AppearanceMenu saves to localStorage
+  // and reloads the page so all data is re-fetched from the correct source.
+  if (import.meta.env.DEV) {
     const { worker } = await import("./mocks/browser");
-    await worker.start({ onUnhandledRequest: "bypass" });
+    const { initMock } = await import("./mocks/toggle");
+    initMock(worker, import.meta.env.VITE_API_MOCK !== "false");
   }
 
   createRoot(document.getElementById("root")!).render(<App />);

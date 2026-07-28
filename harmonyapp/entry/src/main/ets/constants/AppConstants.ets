@@ -17,21 +17,6 @@ export const SERVER_BASE_URL: string = DEBUG ? DEV_SERVER : PROD_SERVER;
 export const API_BASE_URL: string = SERVER_BASE_URL;
 export const WS_BASE_URL: string = SERVER_BASE_URL.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws/v1';
 
-// 业务状态码
-export interface BusinessCodeType {
-  SUCCESS: number;
-  ERROR: number;
-  UNAUTHORIZED: number;
-  SERVER_ERROR: number;
-}
-
-export const BusinessCode: BusinessCodeType = {
-  SUCCESS: 0,
-  ERROR: 40000,
-  UNAUTHORIZED: 10100,
-  SERVER_ERROR: 50000
-};
-
 // 存储键名
 export interface StorageKeysType {
   USER_INFO: string;
@@ -41,6 +26,7 @@ export interface StorageKeysType {
   SERVER_BASE_URL: string;
   AUTH_ACCOUNTS: string;
   THEME_MODE: string;
+  DEVICE_ID: string;
 }
 
 export const StorageKeys: StorageKeysType = {
@@ -51,7 +37,9 @@ export const StorageKeys: StorageKeysType = {
   SERVER_BASE_URL: 'server_base_url',
   // 多账号：保存所有账户的 AppAuthData（含 refresh_token），并记录当前活跃账号
   AUTH_ACCOUNTS: 'auth_accounts',
-  THEME_MODE: 'theme_mode'
+  THEME_MODE: 'theme_mode',
+  // spec: 持久化 device_id（UUID v4），驱动单设备单会话踢人语义
+  DEVICE_ID: 'device_id'
 };
 
 // 页面名称

@@ -10,9 +10,9 @@ import { searchAll } from "../../api";
 type TabType = "all" | "people" | "posts" | "tags";
 
 interface SearchResultUser { user_id: string; nickname: string; avatar_url?: string; tags?: string[] }
-interface SearchResultMoment { moment_id: string; description?: string; user?: SearchResultUser; tag?: string; like_count?: number }
+interface SearchResultMoment { moment_id: string; description?: string; user?: SearchResultUser; tag?: string; likes_count?: number }
 
-const HOT_SEARCHES = ["植物园", "云龙湖", "周末市集", "咖啡馆", "摄影"];
+const HOT_SEARCHES: string[] = [];
 
 export function Search() {
   const navigate = useNavigate();
@@ -41,9 +41,18 @@ export function Search() {
       const res = await searchAll({ keyword: term });
       if (res.code === 0 && res.data) {
         const d = res.data as any;
-        const users = d.users?.items ?? d.users ?? [];
-        const moments = d.moments?.items ?? d.moments ?? [];
-        setResults({ users: Array.isArray(users) ? users : [], moments: Array.isArray(moments) ? moments : [], tags: [] });
+        const rawUsers = d.users?.items ?? d.users ?? [];
+        const rawMoments = d.moments?.items ?? d.moments ?? [];
+        // searchAll returns nested UserItem:{user:{user_id,nickname,avatar_url}} and MomentItem:{user:{...}}.
+        const users = rawUsers.map((u: any) => {
+          const inner = u.user ?? u;
+          return { user_id: inner.user_id ?? "", nickname: inner.nickname ?? "", avatar_url: inner.avatar_url };
+        });
+        const moments = rawMoments.map((m: any) => ({
+          ...m,
+          user: m.user ?? (m as any).user_info,
+        }));
+        setResults({ users, moments, tags: [] });
       } else if (res.message) {
         setResults({ users: [], moments: [], tags: [] });
       }
@@ -221,10 +230,10 @@ export function Search() {
                           <p className="truncate" style={{ fontSize: 14, color: "var(--neu-text)" }}>{moment.description ?? "无标题"}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{moment.user?.nickname ?? ""}</span>
-                            {moment.like_count !== undefined && (
+                            {moment.likes_count !== undefined && (
                               <>
                                 <span style={{ fontSize: 10, color: "var(--neu-text-muted)", opacity: 0.5 }}>·</span>
-                                <span style={{ fontSize: 11, color: "var(--neu-accent-primary)" }}>❤️ {moment.like_count}</span>
+                                <span style={{ fontSize: 11, color: "var(--neu-accent-primary)" }}>❤️ {moment.likes_count}</span>
                               </>
                             )}
                           </div>

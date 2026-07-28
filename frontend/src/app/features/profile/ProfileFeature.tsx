@@ -6,7 +6,7 @@ import {
   MoreHorizontal, TrendingUp, Shield, X, ArrowLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { Navigate, useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { usePlatform } from "../../contexts/PlatformContext";
 import { useHoverConfig } from "../../hooks/useHoverConfig";
 import { AppearanceMenu } from "../../components/layout/AppearanceMenu";
@@ -22,8 +22,7 @@ import { ROUTES, type ProfileSection } from "../../lib/routes";
 /* ── Data hooks ──────────────────────────── */
 import {
   useAccountData, useGalleryPosts, useReactedPosts, useFavoritePosts, useMyGroups,
-  USER_AVATAR, GALLERY_POSTS, LIKED_POSTS, SAVED_POSTS, STATS,
-  MOCK_GROUPS, MOCK_FRIENDS, MOCK_FOLLOWING, MOCK_FANS,
+  useRelationships,
 } from "./profile.data";
 
 import {
@@ -32,17 +31,18 @@ import {
 
 type RelationshipTab = "friends" | "following" | "followers";
 
-const RELATIONSHIP_TABS: Array<{ id: RelationshipTab; label: string; detail: string; count: number; Icon: React.ElementType }> = [
-  { id: "friends", label: "好友", detail: "可以直接对话的双向关系", count: MOCK_FRIENDS.length, Icon: MessageCircle },
-  { id: "following", label: "关注", detail: "你主动订阅的动态与创作者", count: MOCK_FOLLOWING.length, Icon: Heart },
-  { id: "followers", label: "粉丝", detail: "关注你的人与待回关关系", count: MOCK_FANS.length, Icon: UserPlus },
-];
-
 function RelationshipsWorkspace() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { friends, following, followers } = useRelationships();
   const tabParam = new URLSearchParams(location.search).get("tab");
   const activeTab: RelationshipTab = tabParam === "following" || tabParam === "followers" ? tabParam : "friends";
+
+  const RELATIONSHIP_TABS: Array<{ id: RelationshipTab; label: string; detail: string; count: number; Icon: React.ElementType }> = [
+    { id: "friends", label: "好友", detail: "可以直接对话的双向关系", count: friends.length, Icon: MessageCircle },
+    { id: "following", label: "关注", detail: "你主动订阅的动态与创作者", count: following.length, Icon: Heart },
+    { id: "followers", label: "粉丝", detail: "关注你的人与待回关关系", count: followers.length, Icon: UserPlus },
+  ];
   const activeMeta = RELATIONSHIP_TABS.find((tab) => tab.id === activeTab)!;
 
   const setTab = (tab: RelationshipTab) => {
@@ -57,7 +57,7 @@ function RelationshipsWorkspace() {
             <div className="flex items-center gap-2">
               <p style={{ fontSize: 16, color: "var(--neu-text)" }}>关系网络</p>
               <span className="rounded-full px-2 py-0.5" style={{ fontSize: 10, color: "var(--neu-accent-primary)", background: "var(--neu-accent-soft)", border: "1px solid var(--neu-accent-soft-border)" }}>
-                {MOCK_FRIENDS.length + MOCK_FOLLOWING.length + MOCK_FANS.length} 条关系
+                {friends.length + following.length + followers.length} 条关系
               </span>
             </div>
             <p className="mt-1" style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{activeMeta.detail}</p>
@@ -101,19 +101,14 @@ function RelationshipsWorkspace() {
 function ProfileDesktop() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { avatar, nickname, stats } = useAccountData();
+  const { posts: myGalleryPosts } = useGalleryPosts("my");
+  const { friends, following, followers } = useRelationships();
+  const { groups: myGroups } = useMyGroups();
   // /me is the overview; /me/:section resolves an independently addressable resource page.
   const section = location.pathname.startsWith(`${ROUTES.me}/`)
     ? location.pathname.slice(`${ROUTES.me}/`.length)
     : null;
-
-  const legacyRelationshipTabs: Record<string, RelationshipTab> = {
-    friends: "friends",
-    following: "following",
-    followers: "followers",
-  };
-  if (section && legacyRelationshipTabs[section]) {
-    return <Navigate replace to={`${ROUTES.meSection("relationships")}?tab=${legacyRelationshipTabs[section]}`} />;
-  }
 
   const SECTION_META: Record<string, { title: string; render: () => React.ReactNode }> = {
     moments:       { title: "我的瞬间", render: () => <SectionMoments /> },
@@ -170,7 +165,7 @@ function ProfileDesktop() {
               style={{ background: "var(--neu-glow)", filter: "blur(20px)", transform: "scale(1.2)", opacity: 0.5 }} />
             <div className="relative rounded-full"
               style={{ width: 96, height: 96, padding: 2, background: "var(--neu-bg)", boxShadow: "8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light)", border: "1.5px solid var(--neu-border)" }}>
-              <img src={USER_AVATAR} alt="鹿鸣" className="w-full h-full object-cover rounded-full" />
+              <img src={avatar} alt={nickname || "用户"} className="w-full h-full object-cover rounded-full" />
             </div>
             <motion.button whileTap={{ scale: 0.9 }}
               className="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none"
@@ -200,17 +195,21 @@ function ProfileDesktop() {
           {/* Stats */}
           <div className="w-full rounded-[18px] overflow-hidden mb-4"
             style={{ background: "var(--neu-bg)", boxShadow: "6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
-            {STATS.map((stat: any, i) => (
+            {[
+              { label: "瞬间", value: stats.moments_count ?? 0, section: "moments" as ProfileSection },
+              { label: "关注者", value: stats.followers_count ?? 0, section: "followers" as const },
+              { label: "关注", value: stats.following_count ?? 0, section: "following" as ProfileSection },
+            ].map((stat, i) => (
               <React.Fragment key={stat.label}>
                 {i > 0 && <div style={{ height: 1, background: "var(--neu-border)" }} />}
                 <motion.button whileTap={{ scale: 0.97 }}
-                  onClick={() => stat.section && navigate(stat.section === "followers" ? `${ROUTES.meSection("relationships")}?tab=followers` : ROUTES.meSection(stat.section))}
+                  onClick={() => navigate(stat.section === "followers" ? `${ROUTES.meSection("relationships")}?tab=followers` : ROUTES.meSection(stat.section as ProfileSection))}
                   className="w-full flex items-center justify-between px-4 py-3 outline-none"
-                  style={{ cursor: stat.section ? "pointer" : "default" }}>
+                  style={{ cursor: "pointer" }}>
                   <span style={{ fontSize: 13, color: "var(--neu-text-muted)" }}>{stat.label}</span>
                   <div className="flex items-center gap-1.5">
                     <span style={{ fontSize: 17, color: "var(--neu-text)" }}>{stat.value}</span>
-                    {stat.section && <ChevronRight style={{ width: 12, height: 12, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />}
+                    <ChevronRight style={{ width: 12, height: 12, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
                   </div>
                 </motion.button>
               </React.Fragment>
@@ -221,9 +220,9 @@ function ProfileDesktop() {
           <div className="w-full rounded-[18px] overflow-hidden"
             style={{ background: "var(--neu-bg)", boxShadow: "6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
             {[
-              { label: "我的瞬间",  section: "moments" as ProfileSection, icon: Grid3X3, count: GALLERY_POSTS.length },
-              { label: "我的群组",  section: "groups" as ProfileSection,    icon: Users,   count: MOCK_GROUPS.length },
-              { label: "关系网络",  section: "relationships" as ProfileSection, icon: Heart, count: MOCK_FRIENDS.length + MOCK_FOLLOWING.length + MOCK_FANS.length },
+              { label: "我的瞬间",  section: "moments" as ProfileSection, icon: Grid3X3, count: myGalleryPosts.length },
+              { label: "我的群组",  section: "groups" as ProfileSection,    icon: Users,   count: myGroups.length },
+              { label: "关系网络",  section: "relationships" as ProfileSection, icon: Heart, count: friends.length + following.length + followers.length },
             ].map((item, i) => (
               <React.Fragment key={item.label}>
                 {i > 0 && <div style={{ height: 1, background: "var(--neu-border)" }} />}
@@ -256,7 +255,7 @@ function ProfileDesktop() {
             </motion.button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, maxWidth: 3 * 240 + 2 * 10 }}>
-            {GALLERY_POSTS.slice(0, 9).map(post => (
+            {myGalleryPosts.slice(0, 9).map(post => (
               <motion.div key={post.id} whileTap={{ scale: 0.97 }}
                 className="relative rounded-[16px] overflow-hidden cursor-pointer"
                 style={{ aspectRatio: "1/1", boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
@@ -327,8 +326,12 @@ function ProfileStatBtn({ label, value, onClick }: { label: string; value: strin
 function ProfileMobile() {
   const navigate = useNavigate();
   const { platform } = usePlatform();
+  const { avatar, nickname, stats } = useAccountData();
+  const { posts: myPosts } = useGalleryPosts("my");
+  const { posts: reacted } = useReactedPosts();
+  const { posts: savedP } = useFavoritePosts();
   const [activeTab, setActiveTab] = useState<Tab>("posts");
-  const postsMap: Record<Tab, typeof GALLERY_POSTS> = { posts: GALLERY_POSTS, liked: LIKED_POSTS, saved: SAVED_POSTS };
+  const postsMap: Record<Tab, any> = { posts: myPosts, liked: reacted, saved: savedP };
 
   const isTablet = platform === "tablet";
   // On tablet:
@@ -395,7 +398,7 @@ function ProfileMobile() {
                     border: "3px solid var(--neu-bg)",
                     boxShadow: "0 6px 18px var(--neu-glow)",
                   }}>
-                  <img src={USER_AVATAR} alt="鹿鸣" className="w-full h-full object-cover" />
+                  {avatar ? <img src={avatar} alt={nickname || "用户"} className="w-full h-full object-cover" /> : <span style={{fontSize:32,color:"var(--neu-text-muted)"}}>{(nickname||"?")[0]}</span>}
                 </div>
                 <motion.button whileTap={{ scale: 0.9 }}
                   className="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none"

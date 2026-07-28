@@ -1,11 +1,17 @@
+  # HotSpot Frontend
 
-  # Hotspot Make WIP
-
-  This is a code bundle for Hotspot Make WIP. The original project is available at https://www.figma.com/design/rlkQFY3VGKzaQR18L2bHUL/Hotspot-Make-WIP.
+  This is the React web frontend for HotSpot. It is a pure UI layer that must be served alongside the backend API.
 
   ## Running the code
 
-  Run `npm i` to install the dependencies.
+  This project runs inside Docker Compose together with the Go backend, PostgreSQL, Redis, SeaweedFS, and an nginx gateway.
 
-  Run `npm run dev` to start the development server.
+  ```bash
+  # From the repository root:
+  docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+  # Then open: http://localhost:8888
+  ```
+
+  **Do not** run `bun run dev` directly on the host and attempt to access the Vite dev server via its port — API calls will fail because they must go through the nginx gateway. See `AGENTS.md` in this directory for details.
   

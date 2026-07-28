@@ -1974,7 +1974,7 @@ export struct ProfilePage {
           user_id: authData.user_id, nickname: '', avatar_url: '', user_type: 'temp',
           bio: '', tags: [], email: '', phone: '',
           location: { point: { latitude: 0, longitude: 0 }, location_name: '' },
-          presence_status: 'online', last_online: '', created_at: new Date().toISOString(),
+          presence_status: 'online', last_online_at: '', created_at: new Date().toISOString(),
           stats: { moments_count: 0, friends_count: 0, followers_count: 0, following_count: 0, groups_count: 0 }
         };
         this.stateManager.updateUser(basicUserInfo);

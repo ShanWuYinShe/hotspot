@@ -8,12 +8,7 @@ import { usePlatform } from "../contexts/PlatformContext";
 import { useNavigate } from "react-router";
 import { ROUTES } from "../lib/routes";
 import { useHoverConfig } from "../hooks/useHoverConfig";
-import {
-  TabletRail, NearbyPulseCard, StreakCard, DailyPickCard,
-  SuggestedFollowsCard, VibeCard,
-} from "../components/TabletRail";
-import { ContextRail } from "../components/layout/ContextRail";
-import { getFeedTrending, getFeedMoments, getClientConfig } from "../../api";
+import { getFeedTrending, searchMoments, getClientConfig } from "../../api";
 
 /* ── Section heading ────────────────────────────────────────────── */
 function SectionHead({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
@@ -303,8 +298,8 @@ function HomeMobile({ nearbyUsers, activities, nearbyGroups, heroStats, loading 
           <HeroStats onExplore={() => navigate(ROUTES.nearbyPeople)} stats={heroStats} />
           <PeopleRadarStrip users={nearbyUsers} onSeeAll={() => navigate(ROUTES.nearbyPeople)} onSelectUser={(userId) => navigate(ROUTES.user(userId))} />
           <div>
-            <SectionHead title="附近话题" action="更多" onAction={() => navigate(ROUTES.discover)} />
-            <ActivityList items={activities} onClick={() => navigate(ROUTES.discover)} />
+            <SectionHead title="附近话题" action="更多" onAction={() => navigate(ROUTES.nearbyMoments)} />
+            <ActivityList items={activities} onClick={() => navigate(ROUTES.nearbyMoments)} />
           </div>
           <GroupCarousel groups={nearbyGroups} onSeeAll={() => navigate(ROUTES.nearbyGroups)} />
           <div>
@@ -312,18 +307,6 @@ function HomeMobile({ nearbyUsers, activities, nearbyGroups, heroStats, loading 
             <NearbyUsersFlatList users={nearbyUsers.slice(0, 4)} followingIds={followingIds} onToggle={toggle} />
           </div>
         </div>
-
-        {isTablet && (
-          <ContextRail className="hidden lg:block">
-              <TabletRail>
-                <NearbyPulseCard />
-                <StreakCard />
-                <DailyPickCard />
-                <SuggestedFollowsCard />
-                <VibeCard />
-              </TabletRail>
-          </ContextRail>
-        )}
       </motion.div>
     </>
   );
@@ -363,8 +346,8 @@ function HomeDesktop({ nearbyUsers, activities, nearbyGroups, heroStats, loading
           <HeroStats onExplore={() => navigate(ROUTES.nearbyPeople)} stats={heroStats} />
 
           <div>
-            <SectionHead title="附近话题" action="更多" onAction={() => navigate(ROUTES.discover)} />
-            <ActivityList items={activities} onClick={() => navigate(ROUTES.discover)} />
+            <SectionHead title="附近话题" action="更多" onAction={() => navigate(ROUTES.nearbyMoments)} />
+            <ActivityList items={activities} onClick={() => navigate(ROUTES.nearbyMoments)} />
           </div>
 
           <GroupCarousel groups={nearbyGroups} onSeeAll={() => navigate(ROUTES.nearbyGroups)} />
@@ -415,7 +398,8 @@ export function Home() {
         setError(null);
         const [trendingRes, nearbyRes, configRes] = await Promise.all([
           getFeedTrending().catch(() => ({ code: -1, data: null })),
-          getFeedMoments({ source: "nearby" }).catch(() => ({ code: -1, data: { items: [] } })),
+          // moments/search is auth-optional, so anonymous users still see nearby public moments.
+          searchMoments({ sort: "nearby", pagination: { limit: 12 } }).catch(() => ({ code: -1, data: { items: [] } })),
           getClientConfig().catch(() => ({ code: -1, data: null })),
         ]);
         if (cancelled) return;
@@ -425,35 +409,33 @@ export function Home() {
         const configData = (configRes.code === 0 ? configRes.data : null) as any;
 
         if (trendingData) {
-          const acts: Activity[] = (trendingData.activities || trendingData.items || []).map((a: any, i: number) => ({
-            id: a.id ?? i + 1,
+          const moments = trendingData.hot_moments || trendingData.activities || trendingData.items || [];
+          const acts: Activity[] = moments.map((a: any, i: number) => ({
+            id: a.id ?? a.moment_id ?? i + 1,
             icon: [Coffee, Music, Users, Star][i % 4],
-            title: a.title ?? a.name ?? "",
-            sub: a.sub ?? a.subtitle ?? "",
+            title: a.title ?? a.description ?? a.name ?? "",
+            sub: a.sub ?? a.location?.location_name ?? a.subtitle ?? "",
             color: ["var(--semantic-warning)", "var(--neu-accent-primary)", "var(--map-group)", "var(--semantic-hot)"][i % 4],
             bg: [`color-mix(in srgb, var(--semantic-warning) 10%, transparent)`, "var(--neu-accent-soft)", `color-mix(in srgb, var(--map-group) 10%, transparent)`, `color-mix(in srgb, var(--semantic-hot) 10%, transparent)`][i % 4],
           }));
           setActivities(acts);
-        }
 
-        if (trendingData) {
-          const groups: NearbyGroup[] = (trendingData.groups || []).map((g: any, i: number) => ({
-            id: g.id ?? i + 1,
-            name: g.name ?? "",
-            members: g.members ?? g.member_count ?? 0,
-            banner: g.banner ?? g.avatar ?? "",
-            distance: g.distance ?? "",
-            privacy: g.privacy ?? "public",
-          }));
-          setNearbyGroups(groups);
+          // Groups from trending (legacy fallback: groups come from separate group search now)
+          if (trendingData.groups) {
+            const groups: NearbyGroup[] = trendingData.groups.map((g: any, i: number) => ({
+              id: g.id ?? i + 1, name: g.name ?? "", members: g.members ?? g.member_count ?? 0,
+              banner: g.banner ?? g.avatar ?? "", distance: g.distance ?? "", privacy: g.privacy ?? "public",
+            }));
+            setNearbyGroups(groups);
+          }
         }
 
         if (nearbyData) {
           const users: NearbyUser[] = (nearbyData.items || []).map((u: any, i: number) => ({
-            id: u.id ?? u.user_id ?? i + 1,
-            name: u.name ?? u.nickname ?? "",
-            distance: u.distance ?? "",
-            avatar: u.avatar ?? "",
+            id: u.id ?? u.user_id ?? u.moment_id ?? i + 1,
+            name: u.name ?? u.nickname ?? u.user?.nickname ?? "",
+            distance: u.distance ?? u.location?.distance ?? "",
+            avatar: u.avatar ?? u.user?.avatar_url ?? "",
             status: u.online ? "在线" : "离线",
             tag: u.tag ?? u.tags?.[0] ?? "",
           }));

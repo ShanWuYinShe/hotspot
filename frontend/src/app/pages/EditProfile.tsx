@@ -5,9 +5,6 @@ import { ActionIconButton } from "../components/shared/ActionIconButton";
 import { motion, AnimatePresence } from "motion/react";
 import { getAccount, updateAccount } from "../../api";
 
-const AVATAR = "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=400";
-const BANNER = "https://images.unsplash.com/photo-1759734282634-b4958ea9a6e0?w=1080";
-
 const TAG_OPTIONS = ["摄影", "旅行", "音乐", "美食", "运动", "阅读", "艺术", "科技", "游戏", "户外", "时尚", "电影"];
 
 function InputRow({
@@ -64,8 +61,8 @@ export function EditProfile() {
   const [website,  setWebsite]  = useState("");
   const [tags,     setTags]     = useState<Set<string>>(new Set());
   const [saved,    setSaved]    = useState(false);
-  const [avatar,   setAvatar]   = useState(AVATAR);
-  const [banner,   setBanner]   = useState(BANNER);
+  const [avatar,   setAvatar]   = useState("");
+  const [banner,   setBanner]   = useState("");
   const [loading,  setLoading]  = useState(true);
 
   useEffect(() => {
@@ -80,10 +77,10 @@ export function EditProfile() {
           setName(data.name ?? data.nickname ?? "");
           setHandle((data.handle ?? data.username ?? "").replace("@", ""));
           setBio(data.bio ?? data.description ?? "");
-          setLocation(data.location ?? data.place ?? "");
+          setLocation(data.location?.location_name ?? data.place ?? "");
           setWebsite(data.website ?? data.url ?? "");
-          setAvatar(data.avatar ?? AVATAR);
-          setBanner(data.banner ?? data.cover ?? BANNER);
+          setAvatar(data.avatar_url ?? data.avatar ?? "");
+          setBanner(data.cover_url ?? data.banner ?? "");
           if (data.tags) {
             setTags(new Set(data.tags));
           }

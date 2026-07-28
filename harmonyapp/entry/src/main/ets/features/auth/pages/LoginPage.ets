@@ -15,6 +15,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
 import { AuthData, MyProfile, LoginRequest, RegisterRequest, GuestRequest } from '../../../core/types/api';
+import { DeviceIdUtil } from '../../../core/util/DeviceIdUtil';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -736,7 +737,7 @@ export struct LoginPage {
         this.loadingStage = '正在创建访客身份...';
         this.loadingProgress = 40;
 
-        const request: GuestRequest = { nickname, client_type: 'app' };
+        const request: GuestRequest = { nickname, client_type: 'app', device_id: DeviceIdUtil.getDeviceId() };
         const response = await ApiClient.createTempUser(request);
         if (response.code === 0 && response.data) {
           this.loadingStage = '创建成功，正在初始化...';
@@ -782,7 +783,8 @@ export struct LoginPage {
         const loginRequest: LoginRequest = {
           login_id: trimmedLoginId,
           password: this.password,
-          client_type: 'app'
+          client_type: 'app',
+          device_id: DeviceIdUtil.getDeviceId()
         };
 
         const response = await ApiClient.login(loginRequest);
@@ -846,7 +848,8 @@ export struct LoginPage {
           nickname: trimmedNickname,
           login_id: trimmedLoginId,
           password: this.registerPassword,
-          client_type: 'app'
+          client_type: 'app',
+          device_id: DeviceIdUtil.getDeviceId()
         };
 
         const response = await ApiClient.register(registerRequest);
@@ -908,7 +911,7 @@ export struct LoginPage {
       phone: '',
       location: { point: { latitude: 0, longitude: 0 }, location_name: '' },
       presence_status: 'online',
-      last_online: '',
+      last_online_at: '',
       created_at: new Date().toISOString(),
       stats: {
         moments_count: 0,

@@ -1,12 +1,9 @@
-import React, { useRef, useState } from "react";
-import { Check, Moon, Palette, Settings, Sun } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Moon, Palette, Sun, Database } from "lucide-react";
 import { ActionIconButton } from "../shared/ActionIconButton";
 import { AnimatePresence, motion } from "motion/react";
 import { useTheme } from "../../contexts/ThemeContext";
-import { useNavigate } from "react-router";
-import { useHoverConfig } from "../../hooks/useHoverConfig";
 import { useDismissibleLayer } from "../../hooks/useDismissibleLayer";
-import { ROUTES } from "../../lib/routes";
 
 type AppearanceMenuProps = { className?: string };
 
@@ -15,11 +12,123 @@ const THEMES = [
   { id: "forest" as const, label: "清野", note: "自然纸面", swatch: "#3D7A55" },
 ];
 
+/* ── Dev API source toggle ─────────────────────────────────── */
+function DevApiSection() {
+  const [enabled, setEnabled] = useState(true);
+
+  useEffect(() => {
+    import("../../../mocks/toggle").then(({ isMockEnabled, subscribe, toggleMock: _ }) => {
+      setEnabled(isMockEnabled());
+      return subscribe(() => setEnabled(isMockEnabled()));
+    });
+  }, []);
+
+  const handleToggle = async () => {
+    const { toggleMock } = await import("../../../mocks/toggle");
+    await toggleMock();
+  };
+
+  return (
+    <motion.button
+      type="button"
+      whileTap={{ scale: 0.985 }}
+      onClick={handleToggle}
+      className="mt-2 flex w-full items-center justify-between rounded-[12px] border border-[var(--neu-border)] px-3 py-2.5 text-left outline-none transition-colors hover:bg-[var(--neu-accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
+      style={{ color: "var(--neu-text)" }}
+    >
+      <span className="flex items-center gap-2">
+        <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[var(--neu-accent-soft)]">
+          <Database size={13} color="var(--neu-accent-primary)" />
+        </span>
+        <span>
+          <span className="block text-[12px] font-medium">API 数据来源</span>
+          <span className="block text-[10px] text-[var(--neu-text-muted)]">{enabled ? "模拟数据" : "真实后端"}</span>
+        </span>
+      </span>
+      <span
+        className="relative h-5 w-[34px] overflow-hidden rounded-full"
+        style={{ background: enabled ? "var(--neu-accent-primary)" : "var(--neu-border-pressed)" }}
+      >
+        <motion.span
+          animate={{ left: enabled ? 17 : 3 }}
+          transition={{ type: "spring", stiffness: 420, damping: 30 }}
+          className="absolute top-[3px] h-[14px] w-[14px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.18)]"
+        />
+      </span>
+    </motion.button>
+  );
+}
+
+/* ── Dev auth scenario + login-state controls (mock only) ──── */
+const AUTH_SCENARIOS = [
+  { id: "ok", label: "正常登录" },
+  { id: "invalid-creds", label: "账号/密码错误 (10100)" },
+  { id: "banned", label: "账号封禁 (10201)" },
+  { id: "param-error", label: "参数错误 (10000)" },
+  { id: "rate-limit", label: "限流 (10500)" },
+] as const;
+
+function DevAuthSection() {
+  const [scenario, setScenario] = useState<string>("ok");
+
+  useEffect(() => {
+    import("../../../mocks/data").then(({ getMockAuthScenario }) => {
+      setScenario(getMockAuthScenario());
+    });
+  }, []);
+
+  const apply = async (next: string) => {
+    const { setMockAuthScenario } = await import("../../../mocks/data");
+    setMockAuthScenario(next as any);
+    setScenario(next);
+  };
+
+  const resetLoggedOut = async () => {
+    const { setMockLoggedIn } = await import("../../../mocks/data");
+    // Clear the mock session cookies + state, then reload so AuthContext
+    // re-checks status and renders the anonymous UI.
+    document.cookie = "access_token=; Path=/; Max-Age=0";
+    document.cookie = "refresh_token=; Path=/; Max-Age=0";
+    setMockLoggedIn(false);
+    window.location.reload();
+  };
+
+  return (
+    <div className="mt-2 rounded-[12px] border border-[var(--neu-border)] px-3 py-2.5" style={{ color: "var(--neu-text)" }}>
+      <span className="block text-[12px] font-medium">模拟登录态</span>
+      <span className="mb-2 block text-[10px] text-[var(--neu-text-muted)]">影响 login/register/guest/reset 的返回</span>
+      <div className="flex flex-col" style={{ gap: 4 }}>
+        {AUTH_SCENARIOS.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => apply(s.id)}
+            className="flex items-center justify-between rounded-[8px] px-2 py-1.5 text-left text-[11px] outline-none transition-colors"
+            style={{
+              background: scenario === s.id ? "var(--neu-accent-soft)" : "transparent",
+              color: scenario === s.id ? "var(--neu-accent-primary)" : "var(--neu-text)",
+            }}
+          >
+            <span>{s.label}</span>
+            {scenario === s.id && <Check size={12} />}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={resetLoggedOut}
+        className="mt-2 w-full rounded-[8px] border border-[var(--neu-border)] px-2 py-1.5 text-[11px] outline-none transition-colors hover:bg-[var(--neu-accent-soft)]"
+        style={{ color: "var(--neu-text-muted)" }}
+      >
+        重置为未登录（匿名浏览）
+      </button>
+    </div>
+  );
+}
+
 /** The only theme/mode control. Selection stays open; only explicit completion, outside press, or Escape dismisses it. */
 export function AppearanceMenu({ className = "" }: AppearanceMenuProps) {
   const { isDark, toggleDark, theme, setTheme } = useTheme();
-  const hover = useHoverConfig();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const currentTheme = THEMES.find((item) => item.id === theme)?.label ?? "星际";
@@ -119,24 +228,8 @@ export function AppearanceMenu({ className = "" }: AppearanceMenuProps) {
               </span>
             </motion.button>
 
-            <div className="mt-2 flex items-center gap-1.5 border-t border-[var(--neu-border)] pt-2">
-              <button
-                type="button"
-                onClick={() => { setOpen(false); navigate(ROUTES.settings); }}
-                className="flex min-w-0 flex-1 items-center gap-2 rounded-[10px] px-2.5 py-2 text-left text-[11px] text-[var(--neu-text-muted)] outline-none transition-colors hover:bg-[var(--neu-accent-soft)] hover:text-[var(--neu-text)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
-              >
-                <Settings size={14} strokeWidth={1.6} />
-                账号与应用设置
-              </button>
-              <motion.button
-                type="button"
-                whileTap={hover.tap as any}
-                onClick={() => setOpen(false)}
-                className="rounded-full bg-[var(--neu-accent-primary)] px-3 py-1.5 text-[11px] font-medium text-white outline-none shadow-[0_3px_10px_var(--neu-glow)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]"
-              >
-                完成
-              </motion.button>
-            </div>
+            {import.meta.env.DEV && <DevApiSection />}
+            {import.meta.env.DEV && <DevAuthSection />}
           </motion.div>
         )}
       </AnimatePresence>

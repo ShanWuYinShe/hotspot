@@ -1,96 +1,128 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ArrowLeft, Phone, Video, Send, Smile, CheckCheck, MoreHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-
-/* ── Data ───────────────────────────────────────────────────────────── */
-export const CONTACTS: Record<number, { name: string; avatar: string; online: boolean; lastSeen?: string }> = {
-  1: { name: "林一",        avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", online: true },
-  2: { name: "设计小队",    avatar: "https://images.unsplash.com/photo-1763467669450-e69029c1484d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", online: false, lastSeen: "2小时前" },
-  3: { name: "小满",    avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", online: true },
-  4: { name: "阿川",         avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400", online: false, lastSeen: "3小时前" },
-};
-
-export const CONVERSATIONS: Record<number, Array<{ id: number; text: string; sent: boolean; time: string }>> = {
-  1: [
-    { id: 1, text: "今天怎么样？", sent: false, time: "13:18" },
-    { id: 2, text: "还不错！刚在植物园附近发现一家超棒的咖啡馆 ☕", sent: true, time: "13:19" },
-    { id: 3, text: "哪家呀，听起来很赞", sent: false, time: "13:21" },
-    { id: 4, text: "就那家有拱形窗户、灯光很柔和的那个，你一定喜欢", sent: true, time: "13:22" },
-    { id: 5, text: "这周末一定要去！", sent: false, time: "13:24" },
-    { id: 6, text: "一起去吧 🌿", sent: true, time: "13:25" },
-    { id: 7, text: "嘿，我们今晚的计划还在吗？", sent: false, time: "13:27" },
-  ],
-  2: [
-    { id: 1, text: "刚把更新后的组件规范推到共享白板了", sent: true, time: "09:28" },
-    { id: 2, text: "新的原型看起来超棒！", sent: false, time: "09:38" },
-    { id: 3, text: "谢谢！新拟态卡片的阴影效果真的很满意", sent: true, time: "09:39" },
-    { id: 4, text: "阴影层次感拿捏得刚刚好 👌", sent: false, time: "09:41" },
-    { id: 5, text: "明早要开个评审会吗？", sent: true, time: "09:43" },
-  ],
-  3: [
-    { id: 1, text: "昨天的日落看到了吗？", sent: true, time: "17:30" },
-    { id: 2, text: "看到了！！美翻了 🌅", sent: false, time: "17:33" },
-    { id: 3, text: "我试着拍了但照片真的不够好看", sent: true, time: "17:34" },
-    { id: 4, text: "给你发张照片 📷", sent: false, time: "17:36" },
-    { id: 5, text: "哇这也太美了！", sent: true, time: "17:38" },
-  ],
-  4: [
-    { id: 1, text: "快出发了吗？", sent: false, time: "11:18" },
-    { id: 2, text: "快了，给我10分钟", sent: true, time: "11:20" },
-    { id: 3, text: "出门了！", sent: true, time: "11:22" },
-    { id: 4, text: "在老地方见！", sent: false, time: "11:23" },
-  ],
-};
-
-function formatTime(d: Date) {
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
+import { getPrivateMessages, sendPrivateMessage } from "../../../api";
+import { useAuth } from "../../contexts/AuthContext";
 
 /* ── ChatView ─────────────────────────────────────────────────────── */
+// spec: private chats are addressed by the peer's user_id (target_user_id).
+// History comes from private_messages/get_history; sends go to
+// private_messages/send. Message direction is derived from sender.user_id
+// vs the current user.
+
+interface ChatContact {
+  name: string;
+  avatar: string;
+  online: boolean;
+  lastSeen?: string;
+}
+
+interface ChatMessage {
+  id: string;
+  text: string;
+  sent: boolean;   // true = outgoing (from current user)
+  time: string;
+}
+
 interface ChatViewProps {
-  chatId: number;
+  /** The peer's user_id (spec: target_user_id). */
+  peerUserId: string;
+  /** Optional peer display info from the chat list; fetched if absent. */
+  contact?: ChatContact;
   showBackButton?: boolean;
   onBack?: () => void;
   compact?: boolean; // for desktop split-pane (smaller header)
 }
 
-export function ChatView({ chatId, showBackButton = false, onBack, compact = false }: ChatViewProps) {
-  const contact = CONTACTS[chatId];
-  const [messages, setMessages] = useState(() =>
-    CONVERSATIONS[chatId] ? [...CONVERSATIONS[chatId]] : []
-  );
+function formatTime(iso?: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+export function ChatView({ peerUserId, contact: contactProp, showBackButton = false, onBack, compact = false }: ChatViewProps) {
+  const { user } = useAuth();
+  const [contact, setContact] = useState<ChatContact | null>(contactProp ?? null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputVal, setInputVal] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      // Fetch history by target_user_id; derive direction from sender.
+      const res = await getPrivateMessages({ target_user_id: peerUserId, pagination: { limit: 50 } })
+        .catch(() => ({ code: -1, data: { items: [] } }));
+      if (cancelled) return;
+      const items = (res.code === 0 && res.data ? (res.data as any).items : []) as any[];
+      const mapped: ChatMessage[] = items.map((m: any) => ({
+        id: String(m.message_id ?? ""),
+        text: m.content ?? m.text ?? "",
+        sent: m.sender?.user_id ? m.sender.user_id === (user?.user_id ?? "__me__") : Boolean(m.sent),
+        time: formatTime(m.sent_at ?? m.created_at),
+      }));
+      setMessages(mapped);
+      setLoading(false);
+
+      // If no peer display info was passed, try to read it from the latest
+      // incoming message's sender (or any message sender that isn't me).
+      if (!contactProp) {
+        const peer = items
+          .map((m: any) => m.sender)
+          .find((s: any) => s && s.user_id !== (user?.user_id ?? "__me__"));
+        if (peer) {
+          setContact({
+            name: peer.nickname ?? peer.name ?? "",
+            avatar: peer.avatar_url ?? peer.avatar ?? "",
+            online: peer.presence_status === "online",
+          });
+        }
+      }
+    }
+    if (peerUserId) load();
+    else { setMessages([]); setLoading(false); }
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peerUserId, user?.user_id]);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, []);
+  }, [loading]);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  if (!contact) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-3">
-        <p style={{ color: "var(--neu-text-muted)", fontSize: 14 }}>会话不存在</p>
-      </div>
-    );
-  }
+  const peerName = contact?.name ?? "";
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const text = inputVal.trim();
-    if (!text) return;
-    setMessages((prev) => [
-      ...prev,
-      { id: prev.length + 1, text, sent: true, time: formatTime(new Date()) },
-    ]);
+    if (!text || sending || !peerUserId) return;
     setInputVal("");
+    setSending(true);
+    // Optimistic append so the user sees their message instantly.
+    const tempId = `temp-${Date.now()}`;
+    setMessages((prev) => [...prev, { id: tempId, text, sent: true, time: formatTime(new Date().toISOString()) }]);
+    try {
+      const res = await sendPrivateMessage({ target_user_id: peerUserId, type: "text", content: text });
+      if (res.code !== 0) {
+        // Roll back the optimistic message on failure.
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      }
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    } finally {
+      setSending(false);
+    }
   };
 
-  const lastSentId = Math.max(...messages.filter((m) => m.sent).map((m) => m.id), -Infinity);
+  const lastSentId = messages.filter((m) => m.sent).map((m) => m.id).pop();
 
   return (
     <div className="flex min-h-0 flex-col h-full" style={{ backgroundColor: "var(--neu-bg)" }}>
@@ -122,16 +154,21 @@ export function ChatView({ chatId, showBackButton = false, onBack, compact = fal
         {/* Avatar */}
         <div className="relative flex-shrink-0">
           <div
-            className="rounded-full overflow-hidden"
+            className="rounded-full overflow-hidden flex items-center justify-center"
             style={{
               width: compact ? 34 : 38, height: compact ? 34 : 38,
               border: "1.5px solid var(--neu-border)",
               boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)",
+              background: "var(--neu-bg)",
             }}
           >
-            <img src={contact.avatar} alt={contact.name} className="w-full h-full object-cover" />
+            {contact?.avatar ? (
+              <img src={contact.avatar} alt={peerName} className="w-full h-full object-cover" />
+            ) : (
+              <span style={{ fontSize: 13, color: "var(--neu-text-muted)" }}>{(peerName || "?").slice(0, 1)}</span>
+            )}
           </div>
-          {contact.online && (
+          {contact?.online && (
             <span
               className="absolute bottom-0 right-0 rounded-full"
               style={{ width: 9, height: 9, background: "var(--semantic-online)", border: "2px solid var(--neu-bg)" }}
@@ -142,10 +179,10 @@ export function ChatView({ chatId, showBackButton = false, onBack, compact = fal
         {/* Name + status */}
         <div className="flex-1 min-w-0">
           <p className="truncate" style={{ fontSize: compact ? 13 : 14, color: "var(--neu-text)" }}>
-            {contact.name}
+            {peerName || "会话"}
           </p>
-          <p style={{ fontSize: 11, color: contact.online ? "var(--semantic-online)" : "var(--neu-text-muted)" }}>
-            {contact.online ? "在线" : `活跃于${contact.lastSeen}`}
+          <p style={{ fontSize: 11, color: contact?.online ? "var(--semantic-online)" : "var(--neu-text-muted)" }}>
+            {contact ? (contact.online ? "在线" : (contact.lastSeen ? `活跃于${contact.lastSeen}` : "离线")) : ""}
           </p>
         </div>
 

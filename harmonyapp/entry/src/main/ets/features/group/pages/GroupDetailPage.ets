@@ -341,7 +341,10 @@ export struct GroupDetailPage {
     if (!applicationId || this.isApplicationHandling(applicationId)) return;
     this.setApplicationHandling(applicationId, true);
     try {
-      const response = await ApiClient.approveGroupApplication({ application_id: applicationId });
+      const response = await ApiClient.approveGroupApplication({
+        group_id: this.groupInfo?.group.group_id ?? '',
+        application_id: applicationId
+      });
       if (response.code === 0) {
         this.removeApplicationById(applicationId);
         if (this.groupInfo?.group) {
@@ -368,7 +371,10 @@ export struct GroupDetailPage {
     if (!applicationId || this.isApplicationHandling(applicationId)) return;
     this.setApplicationHandling(applicationId, true);
     try {
-      const response = await ApiClient.rejectGroupApplication({ application_id: applicationId });
+      const response = await ApiClient.rejectGroupApplication({
+        group_id: this.groupInfo?.group.group_id ?? '',
+        application_id: applicationId
+      });
       if (response.code === 0) {
         this.removeApplicationById(applicationId);
         SystemToast.showSuccess('已拒绝入群申请', this.getUIContext());
@@ -696,7 +702,7 @@ export struct GroupDetailPage {
       joined_at: member.joined_at,
       muted_until: member.muted_until,
       presence_status: member.presence_status,
-      last_online: member.last_online
+      last_online_at: member.last_online_at
     };
   }
 
@@ -707,7 +713,7 @@ export struct GroupDetailPage {
       joined_at: member.joined_at,
       muted_until: mutedUntil,
       presence_status: member.presence_status,
-      last_online: member.last_online
+      last_online_at: member.last_online_at
     };
   }
 

@@ -1,50 +1,98 @@
 // Realistic mock data matching API response shapes (spec/api_spec_*.md).
 // Used by MSW handlers during development/testing.
 // Turn off via: VITE_API_MOCK=false
+//
+// Shapes are spec-faithful: UserInfo is nested under `user:`/`other_user:` on
+// MomentItem / PrivateChatItem / suggest items, and reactions carry the
+// `Reaction`/`ReactionItem` shapes so pages parsing per-spec render correctly.
 
 export function apiOk<T>(data: T) {
   return { code: 0, data };
+}
+
+/** Business error envelope (HTTP stays 200; code != 0 per spec). */
+export function apiError(code: number, message: string) {
+  return { code, message };
 }
 
 export function paginated<T>(items: T[], nextCursor?: string) {
   return apiOk({ items, next_cursor: nextCursor ?? undefined });
 }
 
-// ── Auth ──────────────────────────────────────────
-export const mockAuthData = {
-  access_token: "mock-jwt",
-  refresh_token: "mock-refresh",
-  user_id: "user_lumos",
-  user_type: "normal",
-};
+// ── Auth scenario switch ──────────────────────────────────────
+// Drives the auth/* handlers so tests can exercise success / invalid-creds /
+// banned / param-error / rate-limit paths without a backend. Persisted in
+// localStorage so a scenario survives reloads.
+export type MockAuthScenario = "ok" | "invalid-creds" | "banned" | "param-error" | "rate-limit";
+const AUTH_SCENARIO_KEY = "hotspot:mock-auth-scenario";
 
-// ── Users ─────────────────────────────────────────
-export const mockUsers = [
-  { user_id: "user_lumos", nickname: "鹿鸣", avatar_url: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=200", tags: ["摄影", "旅行"], bio: "记录城市光影", gender: "female", location_name: "云龙湖" },
-  { user_id: "user_sophia", nickname: "阿禾", avatar_url: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=200", tags: ["旅行", "美食"], bio: "在路上的生活", gender: "female", location_name: "彭城广场" },
-  { user_id: "user_marco", nickname: "野原", avatar_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200", tags: ["音乐", "咖啡"], bio: "音乐是灵魂的出口", gender: "male", location_name: "老街" },
-  { user_id: "user_mika", nickname: "Mika", avatar_url: "https://images.unsplash.com/photo-1758613172074-7275c3455034?w=200", tags: ["美食", "探店"], bio: "吃遍徐州每一条街", gender: "female", location_name: "市中心" },
-  { user_id: "user_chen", nickname: "青砚", avatar_url: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200", tags: ["健身", "户外"], bio: "每天进步一点点", gender: "male", location_name: "植物园" },
-  { user_id: "user_lin", nickname: "林一", avatar_url: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=200", tags: ["音乐", "弹唱"], bio: "户部山的吉他手", gender: "male", location_name: "户部山" },
-  { user_id: "user_xiaoman", nickname: "小满", avatar_url: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=200", tags: ["手工", "市集"], bio: "周末市集组织者", gender: "female", location_name: "云龙湖" },
+export function getMockAuthScenario(): MockAuthScenario {
+  try {
+    const v = localStorage.getItem(AUTH_SCENARIO_KEY);
+    if (v === "ok" || v === "invalid-creds" || v === "banned" || v === "param-error" || v === "rate-limit") return v;
+  } catch {}
+  return "ok";
+}
+
+export function setMockAuthScenario(s: MockAuthScenario) {
+  try { localStorage.setItem(AUTH_SCENARIO_KEY, s); } catch {}
+}
+
+// Whether the mock session is currently "logged in". login/logout flip this;
+// check_status reads it so the boot flow reflects the mock state.
+const AUTH_LOGGED_IN_KEY = "hotspot:mock-auth-logged-in";
+export function isMockLoggedIn(): boolean {
+  try { return localStorage.getItem(AUTH_LOGGED_IN_KEY) === "true"; } catch { return false; }
+}
+export function setMockLoggedIn(v: boolean) {
+  try { localStorage.setItem(AUTH_LOGGED_IN_KEY, String(v)); } catch {}
+}
+
+// ── Users (spec UserInfo: { user_id, nickname, avatar_url? }) ────
+const avatarA = "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=200";
+const avatarB = "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=200";
+
+export interface MockUser {
+  user_id: string;
+  nickname: string;
+  avatar_url: string;
+}
+
+export const mockUsers: MockUser[] = [
+  { user_id: "user_lumos",   nickname: "鹿鸣", avatar_url: avatarA },
+  { user_id: "user_sophia",  nickname: "阿禾", avatar_url: avatarB },
+  { user_id: "user_marco",   nickname: "野原", avatar_url: avatarA },
+  { user_id: "user_mika",    nickname: "Mika", avatar_url: avatarB },
+  { user_id: "user_chen",    nickname: "青砚", avatar_url: avatarA },
+  { user_id: "user_lin",     nickname: "林一", avatar_url: avatarB },
+  { user_id: "user_xiaoman", nickname: "小满", avatar_url: avatarA },
 ];
 
+const mockLocation = (location_name: string, distance?: string) => ({
+  point: { latitude: 34.26, longitude: 117.18 },
+  location_name,
+  distance,
+});
+
+// ── Account (spec AccountData) ─────────────────────────────────
 export const mockAccount = {
   user_id: "user_lumos",
   nickname: "鹿鸣",
-  avatar_url: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=400",
+  avatar_url: avatarA.replace("w=200", "w=400"),
   user_type: "normal",
   bio: "记录城市光影",
   tags: ["摄影", "旅行", "咖啡"],
   gender: "female",
   email: "lumos@example.com",
+  phone: "",
   location: { point: { latitude: 34.2604, longitude: 117.1855 }, location_name: "云龙湖" },
   presence_status: "online",
-  last_online: "2026-07-26T15:00:00Z",
+  last_online_at: "2026-07-26T15:00:00Z",
   created_at: "2025-01-01T00:00:00Z",
   stats: { moments_count: 72, friends_count: 42, followers_count: 315, following_count: 128, groups_count: 14 },
 };
 
+// ── Settings (spec UserSettings) ───────────────────────────────
 export const mockSettings = {
   privacy_level: "public",
   location_visible: true, presence_visible: true,
@@ -55,58 +103,63 @@ export const mockSettings = {
   nickname_searchable: true, location_searchable: true,
 };
 
-// ── Moments ───────────────────────────────────────
-const momentImages = [
-  "https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?w=600",
-  "https://images.unsplash.com/photo-1748737349771-e2b6605e5961?w=600",
-  "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=600",
-  "https://images.unsplash.com/photo-1758613172074-7275c3455034?w=600",
-  "https://images.unsplash.com/photo-1759734282634-b4958ea9a6e0?w=600",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600",
-];
+// ── Moments (spec MomentItem) ──────────────────────────────────
+// user is a nested UserInfo; reactions carry the Reaction aggregate shape;
+// likes_count coexists with reactions per spec.
+const momentPic = "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=600";
 
-export const mockMoments = Array.from({ length: 24 }, (_, i) => ({
-  moment_id: `moment_${i + 1}`,
-  user: mockUsers[i % mockUsers.length],
-  description: ["清晨在绿意中找到了一片宁静", "城市里那些安静的角落", "周末午后最适合窝在这里看书", "湖畔的周末市集开始了", "户部山周末弹唱现场", "徐州的历史比想象的还要厚重"][i % 6],
-  image_url: momentImages[i % momentImages.length],
-  tag: ["自然", "城市", "生活", "活动", "音乐", "人文"][i % 6],
-  location: { point: { latitude: 34.26 + i * 0.002, longitude: 117.18 + i * 0.003 }, location_name: ["植物园", "市中心", "老街手冲馆", "云龙湖", "彭城广场", "汉文化景区"][i % 6] },
-  like_count: Math.floor(Math.random() * 300) + 20,
-  comment_count: Math.floor(Math.random() * 30) + 1,
-  created_at: new Date(Date.now() - i * 3600000).toISOString(),
+export const mockMoments = Array.from({ length: 24 }, (_, i) => {
+  const u = mockUsers[i % mockUsers.length];
+  return {
+    moment_id: `moment_${i + 1}`,
+    user: { user_id: u.user_id, nickname: u.nickname, avatar_url: u.avatar_url },
+    description: ["清晨在绿意中找到了一片宁静", "城市里那些安静的角落", "周末午后最适合窝在这里看书", "湖畔的周末市集开始了", "户部山周末弹唱现场", "徐州的历史比想象的还要厚重"][i % 6],
+    images: [{ url: momentPic }],
+    tags: [["自然", "城市", "生活", "活动", "音乐", "人文"][i % 6]],
+    created_at: new Date(Date.now() - i * 3600000).toISOString(),
+    likes_count: Math.floor(Math.random() * 300) + 20,
+    comments_count: Math.floor(Math.random() * 30) + 1,
+    shares_count: 0,
+    reactions: [{ emoji: "👍", count: Math.floor(Math.random() * 200) + 10, reacted_by_me: i % 3 === 0 }],
+    location: { point: { latitude: 34.26 + i * 0.002, longitude: 117.18 + i * 0.003 }, location_name: ["植物园", "市中心", "老街手冲馆", "云龙湖", "彭城广场", "汉文化景区"][i % 6], distance: `${(0.3 + i * 0.2).toFixed(1)}km` },
+    my_state: { is_favorited: i % 4 === 0 },
+  };
+});
+
+// ── Reaction items (spec ReactionItem: { user, emoji, reacted_at }) ──
+// Used by reactions/list (the reactions detail view for a moment/comment).
+export const mockReactionItems = mockUsers.slice(0, 5).map((u, i) => ({
+  user: { user_id: u.user_id, nickname: u.nickname, avatar_url: u.avatar_url },
+  emoji: ["👍", "❤️", "🔥"][i % 3],
+  reacted_at: new Date(Date.now() - i * 600000).toISOString(),
 }));
 
-// ── Groups ────────────────────────────────────────
+// ── Groups (spec GroupItem: nested { group: GroupInfo }) ───────
 export const mockGroups = [
-  { group_id: "group_1", name: "回龙窝胶片会", avatar_url: "https://images.unsplash.com/photo-1637354098670-9fb8b3d765fc?w=400", description: "胶片摄影爱好者交流", members_count: 143, location_name: "回龙窝", join_method: "open", is_searchable: true },
-  { group_id: "group_2", name: "云龙湖晨跑团", avatar_url: "https://images.unsplash.com/photo-1758599669009-5a9002c09487?w=400", description: "每天清晨6点环湖跑", members_count: 89, location_name: "云龙湖", join_method: "open", is_searchable: true },
-  { group_id: "group_3", name: "户部山弹唱角", avatar_url: "https://images.unsplash.com/photo-1776717494824-2036ea6cab02?w=400", description: "周末弹唱交流", members_count: 62, location_name: "户部山", join_method: "approval", is_searchable: true },
-  { group_id: "group_4", name: "黄楼夜读角", avatar_url: "https://images.unsplash.com/photo-1774125384717-5c5a05ce8e9c?w=400", description: "读书分享小组", members_count: 34, location_name: "黄楼", join_method: "open", is_searchable: false },
+  { group: { group_id: "group_1", name: "回龙窝胶片会", avatar_url: avatarA.replace("w=200", "w=400"), members_count: 143 }, description: "胶片摄影爱好者交流", location: { point: { latitude: 34.25, longitude: 117.19 }, location_name: "回龙窝", distance: "0.4km" }, tags: ["摄影"], my_state: { role: "member", is_joined: true, unread_count: 0, is_muted: false, is_pinned: false } },
+  { group: { group_id: "group_2", name: "云龙湖晨跑团", avatar_url: avatarB.replace("w=200", "w=400"), members_count: 89 }, description: "每天清晨6点环湖跑", location: { point: { latitude: 34.24, longitude: 117.20 }, location_name: "云龙湖", distance: "0.8km" }, tags: ["户外"], my_state: { role: "member", is_joined: false, unread_count: 0, is_muted: false, is_pinned: false } },
+  { group: { group_id: "group_3", name: "户部山弹唱角", avatar_url: avatarA.replace("w=200", "w=400"), members_count: 62 }, description: "周末弹唱交流", location: { point: { latitude: 34.26, longitude: 117.18 }, location_name: "户部山", distance: "1.1km" }, tags: ["音乐"], my_state: { role: "member", is_joined: false, unread_count: 0, is_muted: false, is_pinned: false } },
+  { group: { group_id: "group_4", name: "黄楼夜读角", avatar_url: avatarB.replace("w=200", "w=400"), members_count: 34 }, description: "读书分享小组", location: { point: { latitude: 34.27, longitude: 117.18 }, location_name: "黄楼", distance: "1.4km" }, tags: ["阅读"], my_state: { role: "member", is_joined: false, unread_count: 0, is_muted: false, is_pinned: false } },
 ];
 
-// ── Notifications ─────────────────────────────────
+// ── Notifications (spec NotifyItem) ────────────────────────────
 export const mockNotifications = [
-  { notification_id: "notif_1", type: "new_follower", is_read: false, created_at: "2026-07-26T14:00:00Z", payload: { user: mockUsers[1] } },
-  { notification_id: "notif_2", type: "moment_liked", is_read: false, created_at: "2026-07-26T13:30:00Z", payload: { user: mockUsers[2], moment: mockMoments[0] } },
-  { notification_id: "notif_3", type: "moment_commented", is_read: true, created_at: "2026-07-26T12:00:00Z", payload: { user: mockUsers[3], moment: mockMoments[1] } },
-  { notification_id: "notif_4", type: "group_invite_received", is_read: false, created_at: "2026-07-26T10:00:00Z", payload: { group: mockGroups[0], inviter: mockUsers[4] } },
-  { notification_id: "notif_5", type: "system_announcement", is_read: true, created_at: "2026-07-25T08:00:00Z", payload: { title: "系统升级通知", content: "HotSpot v2.0 即将发布" } },
-  { notification_id: "notif_6", type: "reaction_added", is_read: false, created_at: "2026-07-26T09:00:00Z", payload: { user: mockUsers[5], emoji: "🔥", moment_id: mockMoments[2].moment_id } },
+  { notification_id: "notif_1", type: "new_follower", is_read: false, created_at: "2026-07-26T14:00:00Z", payload: { type: "new_follower", actor: mockUsers[1] } },
+  { notification_id: "notif_2", type: "moment_liked", is_read: false, created_at: "2026-07-26T13:30:00Z", payload: { type: "moment_liked", actor: mockUsers[2], moment_id: mockMoments[0].moment_id, moment_summary: { moment_id: mockMoments[0].moment_id, description_preview: mockMoments[0].description.slice(0, 100), cover_url: mockMoments[0].images?.[0]?.url } } },
+  { notification_id: "notif_3", type: "moment_commented", is_read: true, created_at: "2026-07-26T12:00:00Z", payload: { type: "moment_commented", actor: mockUsers[3], moment_id: mockMoments[1].moment_id, moment_summary: { moment_id: mockMoments[1].moment_id, description_preview: mockMoments[1].description.slice(0, 100) }, comment_id: "c1", comment_preview: "好美！" } },
+  { notification_id: "notif_4", type: "group_invite_received", is_read: false, created_at: "2026-07-26T10:00:00Z", payload: { type: "group_invite_received", actor: mockUsers[4], group_id: mockGroups[0].group.group_id, group_name: mockGroups[0].group.name, group_avatar_url: mockGroups[0].group.avatar_url, invite_id: "inv_1" } },
+  { notification_id: "notif_5", type: "system_announcement", is_read: true, created_at: "2026-07-25T08:00:00Z", payload: { type: "system_announcement", announcement_id: "ann_1", severity: "info" } },
+  { notification_id: "notif_6", type: "reaction_added", is_read: false, created_at: "2026-07-26T09:00:00Z", payload: { type: "reaction_added", actor: mockUsers[5], target_type: "moment", target_id: mockMoments[2].moment_id, emoji: "🔥" } },
 ];
 
-// ── Chats ─────────────────────────────────────────
+// ── Chats (spec PrivateChatItem: nested other_user: UserInfo) ──
 export const mockChats = [
-  { target_user_id: "user_sophia", last_message: { content: "周末一起去植物园吗？", type: "text", sent_at: "2026-07-26T14:30:00Z" }, is_pinned: true, unread_count: 2 },
-  { target_user_id: "user_marco", last_message: { content: "今晚的弹唱你会来吗", type: "text", sent_at: "2026-07-26T13:00:00Z" }, unread_count: 0 },
-  { target_user_id: "user_mika", last_message: { content: "推荐了一家新开的咖啡馆", type: "text", sent_at: "2026-07-25T18:00:00Z" }, unread_count: 1 },
+  { other_user: mockUsers[1], presence_status: "online", unread_count: 2, is_muted: false, is_pinned: true, last_activity_at: "2026-07-26T14:30:00Z", can_message: true, last_message: { message_id: "m1", content: "周末一起去植物园吗？", type: "text", sender: mockUsers[1], sent_at: "2026-07-26T14:30:00Z" } },
+  { other_user: mockUsers[2], presence_status: "offline", unread_count: 0, is_muted: false, is_pinned: false, last_activity_at: "2026-07-26T13:00:00Z", can_message: true, last_message: { message_id: "m2", content: "今晚的弹唱你会来吗", type: "text", sender: mockUsers[2], sent_at: "2026-07-26T13:00:00Z" } },
+  { other_user: mockUsers[3], presence_status: "online", unread_count: 1, is_muted: false, is_pinned: false, last_activity_at: "2026-07-25T18:00:00Z", can_message: true, last_message: { message_id: "m3", content: "推荐了一家新开的咖啡馆", type: "text", sender: mockUsers[3], sent_at: "2026-07-25T18:00:00Z" } },
 ];
 
-// ── Trending ──────────────────────────────────────
+// ── Trending (spec TrendingBundle: { hot_moments }) ────────────
 export const mockTrending = {
-  hot_tags: ["植物园", "云龙湖", "周末市集", "咖啡馆", "摄影", "户外运动", "街头摄影", "徐州美食"],
-  hot_locations: [
-    { location_name: "云龙湖风景区", latitude: 34.2444, longitude: 117.1989, heat: 42 },
-    { location_name: "彭城广场", latitude: 34.2568, longitude: 117.1952, heat: 38 },
-  ],
+  hot_moments: mockMoments.slice(0, 6),
 };

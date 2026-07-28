@@ -17,6 +17,7 @@ import { API_BASE_URL, StorageKeys } from '../../constants/AppConstants';
 import { ApiEndpoints } from '../config/ApiEndpoints';
 import { ApiResponse, AuthData, HealthStatus, MediaCategory, UploadedMedia } from '../types/api';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
+import { DeviceIdUtil } from '../util/DeviceIdUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ErrorCode } from '../constants/ErrorCodes';
 import { extractApiErrorSnapshot,
@@ -29,6 +30,7 @@ import { AppRouter, LoginRouteParam } from '../router/AppRouter';
 import { MediaUrlUtil } from '../utils/MediaUrlUtil';
 import { AuthAccountManager } from '../state/AuthAccountManager';
 import { GlobalStateManager } from '../state/GlobalStateManager';
+import { MockInterceptor } from '../mock/MockInterceptor';
 
 /**
  * Spec MUST 幂等端点列表
@@ -99,9 +101,17 @@ const TOKEN_OPTIONAL_ENDPOINTS: string[] = [
 
 const DOMAIN_NUMBER: number = 0xFF08;
 const TAG: string = 'HttpUtil';
-const IDEMPOTENCY_CLIENT_ID: string = util.generateRandomUUID(false).split('-').join('').substring(0, 8);
 const MAX_IDEMPOTENCY_RETRY_COUNT = 1;
 const MEDIA_URL_FIELDS: string[] = ['url', 'avatar_url', 'thumbnail_url', 'cover_url'];
+
+/**
+ * 幂等键的 client_id 前缀。绑定到持久化 device_id 的前 8 位，使幂等上下文
+ * 在同设备跨重启稳定（spec：Idempotency-Key 绑定 user_id + endpoint + key，
+ * client_id 部分代表发起端身份）。device_id 尚未初始化时退化为进程内稳定值。
+ */
+function getIdempotencyClientId(): string {
+  return DeviceIdUtil.getDeviceId().split('-').join('').substring(0, 8);
+}
 
 /**
  * 生成 spec 要求格式的幂等键：
@@ -110,7 +120,7 @@ const MEDIA_URL_FIELDS: string[] = ['url', 'avatar_url', 'thumbnail_url', 'cover
 function generateIdempotencyKey(): string {
   const timestampMs = Date.now().toString();
   const randomPart = util.generateRandomUUID(false).split('-').join('').substring(0, 12);
-  return `${IDEMPOTENCY_CLIENT_ID}-${timestampMs}-${randomPart}`;
+  return `${getIdempotencyClientId()}-${timestampMs}-${randomPart}`;
 }
 
 interface DebugInfo {
@@ -275,7 +285,7 @@ export class HttpUtil {
         const requestOptions: http.HttpRequestOptions = {
           method: http.RequestMethod.POST,
           header: headers,
-          extraData: JSON.stringify({ refresh_token: refreshToken, client_type: 'app' }),
+          extraData: JSON.stringify({ refresh_token: refreshToken, client_type: 'app', device_id: DeviceIdUtil.getDeviceId() }),
           connectTimeout: 15000,
           readTimeout: 15000
         };
@@ -385,6 +395,15 @@ export class HttpUtil {
     omitAuthHeader: boolean = false,
     rateLimitRetryCount: number = 0
   ): Promise<TResponse> {
+    // DEV mock interceptor — returns canned ApiResponse when enabled.
+    if (MockInterceptor.isEnabled()) {
+      const canned = MockInterceptor.match(url);
+      if (canned) {
+        hilog.debug(DOMAIN_NUMBER, TAG, `Mock response for ${url}`);
+        return canned as TResponse;
+      }
+    }
+
     const baseUrl = await HttpUtil.getBaseUrl();
     const fullUrl = `${baseUrl}${url}`;
     const httpRequest = http.createHttp();

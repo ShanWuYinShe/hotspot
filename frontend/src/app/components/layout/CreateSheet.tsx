@@ -11,10 +11,8 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { ActionIconButton } from "../shared/ActionIconButton";
-import { useSocial } from "../../contexts/SocialContext";
-
-const USER_AVATAR =
-  "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400";
+import { useAuth } from "../../contexts/AuthContext";
+import { createMoment } from "../../../api";
 
 const MOOD_TAGS = ["松弛", "漫游", "咖啡", "展览", "自然", "夜色"];
 const LOCATIONS = ["徐州 · 云龙湖附近", "徐州 · 回龙窝", "徐州 · 彭城广场"];
@@ -33,13 +31,14 @@ interface Props {
 
 /** Shared composer used by the phone sheet, tablet sheet, and desktop dialog. */
 export function CreateSheet({ onClose }: Props) {
-  const { createPost } = useSocial();
+  const { user } = useAuth();
   const [text, setText] = useState("");
   const [selectedMoods, setSelectedMoods] = useState<Set<string>>(new Set());
   const [hasImage, setHasImage] = useState(false);
   const [locationIndex, setLocationIndex] = useState(0);
   const [audience, setAudience] = useState<AudienceId>("nearby");
   const [topicActive, setTopicActive] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const toggleMood = (tag: string) =>
     setSelectedMoods((previous) => {
@@ -64,24 +63,34 @@ export function CreateSheet({ onClose }: Props) {
     setTopicActive((active) => !active);
   };
 
-  const canPost = text.trim().length > 0;
+  const canPost = text.trim().length > 0 && !submitting;
   const activeAudience = AUDIENCES.find((item) => item.id === audience) ?? AUDIENCES[0];
+
+  const handleSubmit = async () => {
+    if (!canPost) return;
+    setSubmitting(true);
+    try {
+      const res = await createMoment({
+        description: text.trim(),
+        tags: Array.from(selectedMoods),
+        location: { location_name: LOCATIONS[locationIndex] },
+        // spec PrivacyLevel: nearby→public, friends→friends, private→private
+        privacy_level: audience === "nearby" ? "public" : audience,
+      });
+      if (res.code === 0) {
+        onClose();
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <form
       className="flex h-full w-full flex-col overflow-hidden bg-[var(--neu-bg)] text-[var(--neu-text)]"
       onSubmit={(event) => {
         event.preventDefault();
-        if (canPost) {
-          createPost({
-            content: text,
-            moods: Array.from(selectedMoods),
-            location: LOCATIONS[locationIndex],
-            audience,
-            hasImage,
-          });
-          onClose();
-        }
+        void handleSubmit();
       }}
     >
       <header className="flex-none border-b border-[var(--neu-border)] px-5 pb-3 pt-4">
@@ -103,13 +112,19 @@ export function CreateSheet({ onClose }: Props) {
         <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">
-              <img
-                src={USER_AVATAR}
-                alt="鹿鸣的头像"
-                className="h-9 w-9 rounded-full border border-[var(--neu-border)] object-cover"
-              />
+              {user?.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt={user.nickname}
+                  className="h-9 w-9 rounded-full border border-[var(--neu-border)] object-cover"
+                />
+              ) : (
+                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--neu-border)] text-[14px] text-[var(--neu-text-muted)]">
+                  {(user?.nickname || "?").slice(0, 1)}
+                </span>
+              )}
               <div className="min-w-0">
-                <p className="text-[13px] font-medium text-[var(--neu-text)]">鹿鸣</p>
+                <p className="text-[13px] font-medium text-[var(--neu-text)]">{user?.nickname || "用户"}</p>
                 <button
                   type="button"
                   onClick={() => setLocationIndex((index) => (index + 1) % LOCATIONS.length)}
@@ -158,7 +173,7 @@ export function CreateSheet({ onClose }: Props) {
               className="relative overflow-hidden rounded-[18px] border border-[var(--neu-border)] bg-[var(--page-bg)]"
             >
               <img
-                src="https://images.unsplash.com/photo-1762113396314-8e9e5417ed17?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1000"
+                src="https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=600"
                 alt="待发布的动态配图：云龙湖边的傍晚"
                 className="h-36 w-full object-cover"
               />

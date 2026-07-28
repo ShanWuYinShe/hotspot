@@ -384,7 +384,10 @@ export struct GroupPage {
     if (this.isApplicationHandling(application.application_id)) return;
     this.setApplicationHandling(application.application_id, true);
     try {
-      const response = await ApiClient.cancelGroupApplication({ application_id: application.application_id });
+      const response = await ApiClient.cancelGroupApplication({
+        group_id: application.group?.group_id ?? '',
+        application_id: application.application_id
+      });
       if (response.code === 0) {
         this.myApplications = this.myApplications.filter((item: GroupApplicationItem) => item.application_id !== application.application_id);
         this.applicationsDataSource.setData(this.myApplications);

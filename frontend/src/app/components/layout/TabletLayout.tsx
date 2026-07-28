@@ -12,9 +12,9 @@ import { useComposer } from "../../contexts/ComposerContext";
 
 const NAV_ITEMS = [
   { path: "/",         icon: MapPin,        label: "附近" },
-  { path: "/discover", icon: Compass,       label: "发现" },
+  { path: ROUTES.nearbyMoments, icon: Compass,       label: "发现" },
   { path: "/messages", icon: MessageCircle, label: "消息" },
-  { path: "/profile",  icon: CircleUser,    label: "我的" },
+  { path: ROUTES.me,   icon: CircleUser,    label: "我的" },
 ];
 
 function useIsSubPage() {

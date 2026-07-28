@@ -16,7 +16,7 @@ const PRIVACY_ITEMS: SettingToggleItem[] = [
   { key: 'presence_visible', title: '在线状态可见', subtitle: '向他人展示你的在线状态。' },
   { key: 'social_lists_visible', title: '社交列表可见', subtitle: '允许他人查看你的好友、关注与粉丝列表。' },
   { key: 'groups_visible', title: '群组公开可见', subtitle: '允许他人查看你加入的公开群组。' },
-  { key: 'liked_moments_visible', title: '点赞瞬间可见', subtitle: '允许他人查看你点赞过的瞬间。' },
+  { key: 'reacted_moments_visible', title: '点赞瞬间可见', subtitle: '允许他人查看你点赞过的瞬间。' },
   { key: 'stats_visible', title: '数据统计可见', subtitle: '允许他人查看你的个人统计数据。' },
   { key: 'allow_follow', title: '允许被关注', subtitle: '关闭后其他用户将无法关注你。' },
   { key: 'searchable', title: '允许被搜索', subtitle: '控制是否能在全局搜索中被找到。' },
@@ -72,7 +72,7 @@ export struct PrivacySettingsPage {
       presence_visible: key === 'presence_visible' ? value : current.presence_visible,
       social_lists_visible: key === 'social_lists_visible' ? value : current.social_lists_visible,
       groups_visible: key === 'groups_visible' ? value : current.groups_visible,
-      liked_moments_visible: key === 'liked_moments_visible' ? value : current.liked_moments_visible,
+      liked_moments_visible: key === 'reacted_moments_visible' ? value : current.reacted_moments_visible,
       stats_visible: key === 'stats_visible' ? value : current.stats_visible,
       allow_follow: key === 'allow_follow' ? value : current.allow_follow,
       allow_private_chat: current.allow_private_chat,
@@ -96,8 +96,8 @@ export struct PrivacySettingsPage {
         return this.settings.social_lists_visible;
       case 'groups_visible':
         return this.settings.groups_visible;
-      case 'liked_moments_visible':
-        return this.settings.liked_moments_visible;
+      case 'reacted_moments_visible':
+        return this.settings.reacted_moments_visible;
       case 'stats_visible':
         return this.settings.stats_visible;
       case 'allow_follow':

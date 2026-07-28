@@ -5,8 +5,6 @@ import { useNavigate } from "react-router";
 import { ROUTES } from "../lib/routes";
 import { usePlatform } from "../contexts/PlatformContext";
 import { useHoverConfig } from "../hooks/useHoverConfig";
-import { MoodCheckinCard, NearbyPulseCard, SuggestedFollowsCard, TabletRail, VibeCard } from "../components/TabletRail";
-import { ContextRail } from "../components/layout/ContextRail";
 import { ActionIconButton } from "../components/shared/ActionIconButton";
 import { BspCardCanvas } from "../components/shared/BspCardCanvas";
 import { getFeedMoments } from "../../api";
@@ -78,7 +76,6 @@ export function NearbyAll() {
   const [loading, setLoading] = useState(true);
   const isDesktop = platform === "desktop";
   const isTablet = platform === "tablet";
-  const showRail = isTablet;
 
   useEffect(() => {
     let cancelled = false;
@@ -90,14 +87,14 @@ export function NearbyAll() {
         const data = (res.code === 0 ? res.data : null) as any;
         if (data) {
           const items: NearbyUser[] = (data.items || []).map((u: any, i: number) => ({
-            id: u.id ?? u.user_id ?? i + 1,
-            name: u.name ?? u.nickname ?? "",
-            distance: u.distance ?? "",
-            avatar: u.avatar ?? "",
+            id: u.id ?? u.user_id ?? u.moment_id ?? i + 1,
+            name: u.name ?? u.nickname ?? u.user?.nickname ?? "",
+            distance: u.distance ?? u.location?.distance ?? "",
+            avatar: u.avatar ?? u.user?.avatar_url ?? "",
             status: u.online ? "在线" : "离线",
             tag: u.tag ?? u.tags?.[0] ?? "",
             mutual: u.mutual ?? u.mutual_count ?? 0,
-            note: u.note ?? u.bio ?? u.status_text ?? "",
+            note: u.note ?? u.bio ?? u.status_text ?? u.user?.bio ?? "",
           }));
           setAllUsers(items);
         }
@@ -138,7 +135,7 @@ export function NearbyAll() {
     </header>
 
     <div className={isDesktop ? "px-7 py-6" : "px-5 py-5 mx-auto"} style={contentStyle}>
-      <div className={showRail ? "grid gap-6 context-rail-grid" : ""}>
+      <div className={isTablet ? "grid gap-6" : ""}>
         <div className="min-w-0">
           <OnlineStrip users={onlineUsers} onNavigate={navigate} />
           <section className="neu-surface-hero rounded-[22px] p-4 mb-5 flex items-center gap-4">
@@ -173,7 +170,6 @@ export function NearbyAll() {
             )}
           </motion.div> : <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-3 py-20"><Users size={40} color="var(--neu-text-muted)" opacity={0.4} /><p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>没有找到匹配的附近用户</p></motion.div>}</AnimatePresence>
         </div>
-        {showRail && <ContextRail className="hidden lg:block"><TabletRail><NearbyPulseCard /><MoodCheckinCard /><SuggestedFollowsCard /><VibeCard /></TabletRail></ContextRail>}
       </div>
     </div>
   </>;

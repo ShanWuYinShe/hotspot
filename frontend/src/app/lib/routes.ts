@@ -3,18 +3,17 @@ export type ProfileSection = "moments" | "groups" | "relationships" | "friends" 
 
 export const ROUTES = {
   home: "/",
-  discover: "/discover",
+  login: "/login",
   messages: "/messages",
   me: "/me",
   meEdit: "/me/edit",
   settings: "/settings",
   map: "/map",
-  notifications: "/notifications",
-  nearby: "/nearby",
   nearbyPeople: "/nearby/people",
   nearbyGroups: "/nearby/groups",
   nearbyMoments: "/nearby/moments",
   search: "/search",
+  notify: "/notify",
   user: (userId: string | number) => `/users/${userId}`,
   moment: (momentId: string | number) => `/moments/${momentId}`,
   group: (groupId: string | number) => `/groups/${groupId}`,
@@ -25,10 +24,9 @@ export const ROUTES = {
 export const SUB_PAGE_PATHS = [
   ROUTES.settings,
   ROUTES.map,
-  ROUTES.notifications,
+  ROUTES.notify,
   ROUTES.meEdit,
   ROUTES.search,
-  ROUTES.nearby,
   ROUTES.nearbyPeople,
   ROUTES.nearbyGroups,
   ROUTES.nearbyMoments,
@@ -72,8 +70,8 @@ export function getDesktopNavId(pathname: string, search = ""): DesktopNavId | n
   if (pathname === ROUTES.home) return "home";
   if (pathname === ROUTES.messages || pathname.startsWith(`${ROUTES.messages}/`)) return "messages";
   if (pathname === ROUTES.nearbyGroups) return "nearby-groups";
-  if (pathname === ROUTES.nearbyPeople || pathname === ROUTES.nearby) return "nearby-people";
-  if (pathname === ROUTES.discover || pathname === ROUTES.nearbyMoments) return "nearby-activity";
+  if (pathname === ROUTES.nearbyPeople) return "nearby-people";
+  if (pathname === ROUTES.nearbyMoments) return "nearby-activity";
 
   if (pathname.startsWith(`${ROUTES.me}/`)) {
     const section = pathname.slice(`${ROUTES.me}/`.length);

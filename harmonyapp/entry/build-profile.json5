@@ -20,6 +20,12 @@
   "targets": [
     {
       "name": "default"
+    },
+    {
+      "name": "ohosTest",
+      "source": {
+        "root": "./src/ohosTest/ets"
+      }
     }
   ]
 }

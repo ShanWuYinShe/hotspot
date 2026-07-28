@@ -26,6 +26,17 @@ bun install --cwd frontend
 bun run --cwd frontend build
 ```
 
+## 调试入口
+
+**不要直接启动前端 dev server 直连浏览器**。前端是纯 UI，必须配合后端服务。
+
+| 项目 | 调试方式 | 入口 |
+|------|----------|------|
+| 前端 | docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d | http://localhost:8888（nginx 网关） |
+| Go 后端 | 同上（Docker 内 hot-reload 由 air 负责） | 同上，/api 经 nginx 反代 |
+
+详见各子项目 `AGENTS.md`：`frontend/AGENTS.md`、`backend-go/AGENTS.md`。
+
 ## 项目特有约束
 - **契约权威**：`spec/` 是 API 契约的唯一权威来源；修改接口、字段、错误码前先对齐 `spec/`。
 - **跨端边界**：距离与位置计算统一由后端完成，前端和客户端只展示结果。

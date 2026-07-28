@@ -13,12 +13,12 @@ import { listNotifications, getUnreadCount } from "../../api";
 type NotifType = "like" | "follow" | "comment" | "nearby" | "event";
 
 interface Notif {
-  id: number; type: NotifType; read: boolean; time: string;
+  id: string; type: string; read: boolean; time: string;
   user: { name: string; avatar: string };
   text: string; postImage?: string;
 }
 
-const TYPE_CONFIG: Record<NotifType, { icon: React.ElementType; color: string; label: string }> = {
+const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; label: string }> = {
   like:    { icon: Heart,          color: "var(--semantic-hot)", label: "点赞" },
   follow:  { icon: UserPlus,       color: "var(--neu-accent-primary)", label: "关注" },
   comment: { icon: MessageCircle,  color: "var(--map-user)", label: "评论" },
@@ -51,7 +51,7 @@ export function Notifications() {
         setLoading(true);
         const [notifRes, unreadRes] = await Promise.all([
           listNotifications().catch(() => ({ code: -1, data: { items: [] } })),
-          getUnreadCount().catch(() => ({ code: -1, data: { count: 0 } })),
+          getUnreadCount().catch(() => ({ code: -1, data: { total: 0 } })),
         ]);
         if (cancelled) return;
 
@@ -59,15 +59,26 @@ export function Notifications() {
         const unreadData = (unreadRes.code === 0 ? unreadRes.data : null) as any;
 
         if (notifData) {
-          const items: Notif[] = (notifData.items || []).map((n: any, i: number) => ({
-            id: n.id ?? i + 1,
-            type: (n.type as NotifType) ?? "like",
-            read: n.read ?? n.is_read ?? false,
-            time: n.time ?? n.created_at ?? "",
-            user: { name: n.user?.name ?? n.sender_name ?? "", avatar: n.user?.avatar ?? n.sender_avatar ?? "" },
-            text: n.text ?? n.content ?? n.body ?? "",
-            postImage: n.post_image ?? n.image ?? n.thumb ?? undefined,
-          }));
+          const items: Notif[] = (notifData.items || []).map((n: any, i: number) => {
+            const actor = n.payload?.actor ?? n.actor ?? {};
+            let text = "";
+            if (n.type === "moment_liked") text = `${actor.nickname ?? ""} 赞了你的动态`;
+            else if (n.type === "moment_commented") text = n.payload?.comment_preview ?? `${actor.nickname ?? ""} 评论了你的动态`;
+            else if (n.type === "new_follower") text = `${actor.nickname ?? ""} 关注了你`;
+            else if (n.type === "group_invite_received") text = `${actor.nickname ?? ""} 邀请你加入 ${n.payload?.group_name ?? "群组"}`;
+            else if (n.type === "reaction_added") text = `${actor.nickname ?? ""} 做出了反应 ${n.payload?.emoji ?? ""}`;
+            else if (n.type === "system_announcement") text = "系统公告";
+            else text = n.payload?.title ?? n.message ?? "";
+            return {
+              id: n.notification_id ?? String(i + 1),
+              type: n.type ?? "like",
+              read: n.is_read ?? false,
+              time: n.created_at ?? "",
+              user: { name: actor.nickname ?? "", avatar: actor.avatar_url ?? "" },
+              text,
+              postImage: n.payload?.moment_summary?.cover_url ?? n.payload?.cover_url ?? undefined,
+            };
+          });
           setNotifs(items);
         }
       } catch {
@@ -81,8 +92,8 @@ export function Notifications() {
   }, []);
 
   const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, read: true })));
-  const markRead = (id: number) => setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  const remove = (id: number) => setNotifs(prev => prev.filter(n => n.id !== id));
+  const markRead = (id: string) => setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  const remove = (id: string) => setNotifs(prev => prev.filter(n => n.id !== id));
 
   const filtered = notifs.filter(n => filter === "all" || n.type === filter);
   const unreadGroup = filtered.filter(n => !n.read);
@@ -241,8 +252,8 @@ export function Notifications() {
 
 function NotifRow({ notif, onRead, onRemove, navigate }: {
   notif: Notif;
-  onRead: (id: number) => void;
-  onRemove: (id: number) => void;
+  onRead: (id: string) => void;
+  onRemove: (id: string) => void;
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const cfg = TYPE_CONFIG[notif.type];

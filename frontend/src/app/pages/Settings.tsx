@@ -15,7 +15,8 @@ import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { useHoverConfig } from "../hooks/useHoverConfig";
 import { ActionIconButton } from "../components/shared/ActionIconButton";
-import { getAccount, getSettings, logout } from "../../api";
+import { getAccount, getSettings } from "../../api";
+import { useAuth } from "../contexts/AuthContext";
 
 /* ── Small helpers ─────────────────────────────────────────────── */
 
@@ -149,6 +150,7 @@ function NavRow({ Icon, label, value }: { Icon: React.ElementType; label: string
 export function Settings() {
   const navigate = useNavigate();
   const hover = useHoverConfig();
+  const { logout: authLogout } = useAuth();
   const [notif, setNotif] = useState(true);
   const [sounds, setSounds] = useState(true);
   const [privateProfile, setPrivateProfile] = useState(false);
@@ -156,7 +158,7 @@ export function Settings() {
   const [accountName, setAccountName] = useState("");
   const [accountHandle, setAccountHandle] = useState("");
   const [accountEmail, setAccountEmail] = useState("");
-  const [accountAvatar, setAccountAvatar] = useState("https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200");
+  const [accountAvatar, setAccountAvatar] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -177,7 +179,7 @@ export function Settings() {
           setAccountName(accountData.name ?? accountData.nickname ?? "");
           setAccountHandle(accountData.handle ?? accountData.username ?? "");
           setAccountEmail(accountData.email ?? "");
-          setAccountAvatar(accountData.avatar ?? accountAvatar);
+          setAccountAvatar(accountData.avatar_url ?? accountData.avatar ?? "");
         }
 
         if (settingsData) {
@@ -197,8 +199,10 @@ export function Settings() {
   }, []);
 
   const handleLogout = async () => {
-    await logout().catch(() => {});
-    navigate("/login");
+    // AuthContext.logout clears client auth state and keeps the user on the
+    // current route (anonymous browsing). No more redirect to a dead /login.
+    await authLogout();
+    navigate("/");
   };
 
   return (
@@ -234,11 +238,17 @@ export function Settings() {
                 border: "2px solid var(--neu-bg)",
                 boxShadow: "0 4px 12px var(--neu-glow)",
               }}>
-              <img
-                src={accountAvatar}
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
+              {accountAvatar ? (
+                <img
+                  src={accountAvatar}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="flex w-full h-full items-center justify-center" style={{ fontSize: 18, color: "var(--neu-text-muted)" }}>
+                  {(accountName || "?").slice(0, 1)}
+                </span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[15px] tracking-tight" style={{ color: "var(--neu-text)" }}>{accountName || "用户"}</p>

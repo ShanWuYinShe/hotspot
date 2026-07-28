@@ -82,8 +82,8 @@ function buildSupportLinks(config: ClientConfig | null): SupportLinkItem[] {
   if (contact.terms_of_service_url) {
     items.push({ title: '服务条款', value: contact.terms_of_service_url });
   }
-  if (contact.official_website) {
-    items.push({ title: '官方网站', value: contact.official_website });
+  if (contact.official_website_url) {
+    items.push({ title: '官方网站', value: contact.official_website_url });
   }
   return items;
 }

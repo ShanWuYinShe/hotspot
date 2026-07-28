@@ -12,7 +12,7 @@ import { CreateGroupSheet } from "../features/groups/CreateGroupSheet";
 import { getPrivateChats } from "../../api";
 
 interface ChatItem {
-  id: number; name: string; avatar: string; lastMessage: string;
+  id: number; peerUserId: string; name: string; avatar: string; lastMessage: string;
   time: string; unread: number; online: boolean; group: boolean;
 }
 
@@ -143,7 +143,7 @@ function MessagesMobile({ chats, loading }: { chats: ChatItem[]; loading: boolea
             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
               {onlineChats.map(chat => (
                 <motion.div key={chat.id} whileTap={{ scale: 0.93 }}
-                  onClick={() => navigate(ROUTES.message(chat.id))}
+                  onClick={() => navigate(ROUTES.message(chat.peerUserId || chat.id))}
                   className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer">
                   <div className="relative">
                     <div className="rounded-full overflow-hidden"
@@ -171,7 +171,7 @@ function MessagesMobile({ chats, loading }: { chats: ChatItem[]; loading: boolea
             : filtered.map((chat, i) => (
                 <React.Fragment key={chat.id}>
                   <div className="px-2 py-1">
-                    <ChatListItem chat={chat} onClick={() => navigate(ROUTES.message(chat.id))} />
+                    <ChatListItem chat={chat} onClick={() => navigate(ROUTES.message(chat.peerUserId || chat.id))} />
                   </div>
                   {i < filtered.length - 1 && (
                     <div className="mx-4" style={{ height: 1, background: "var(--neu-border)" }} />
@@ -324,7 +324,15 @@ function MessagesDesktop({ chats, loading }: { chats: ChatItem[]; loading: boole
               transition={{ duration: 0.18, ease: "easeOut" }}
               className="h-full"
             >
-              <ChatView chatId={selectedId} showBackButton={false} compact />
+              <ChatView
+                peerUserId={chats.find(c => c.id === selectedId)?.peerUserId ?? ""}
+                contact={(() => {
+                  const c = chats.find(c => c.id === selectedId);
+                  return c ? { name: c.name, avatar: c.avatar, online: c.online } : undefined;
+                })()}
+                showBackButton={false}
+                compact
+              />
             </motion.div>
           ) : (
             <motion.div
@@ -425,12 +433,15 @@ export function Messages() {
           const data = res.data as any;
           const items: ChatItem[] = (data.items || []).map((c: any, i: number) => ({
             id: c.id ?? i + 1,
-            name: c.name ?? c.nickname ?? c.peer_name ?? "",
-            avatar: c.avatar ?? c.peer_avatar ?? "",
-            lastMessage: c.last_message ?? c.last_msg ?? "",
-            time: c.time ?? c.updated_at ?? "",
-            unread: c.unread ?? c.unread_count ?? 0,
-            online: c.online ?? false,
+            // spec: PrivateChatItem.other_user — the peer; private messages are
+            // addressed by target_user_id (the peer's user_id), not a chat id.
+            peerUserId: c.other_user?.user_id ?? c.peer_user_id ?? c.target_user_id ?? "",
+            name: c.other_user?.nickname ?? c.name ?? c.nickname ?? c.peer_name ?? "",
+            avatar: c.other_user?.avatar_url ?? c.avatar ?? c.peer_avatar ?? "",
+            lastMessage: c.last_message?.content ?? c.last_message ?? c.last_msg ?? "",
+            time: c.last_message?.sent_at ?? c.last_activity_at ?? c.time ?? c.updated_at ?? "",
+            unread: c.unread_count ?? c.unread ?? 0,
+            online: (c.other_user?.presence_status === "online") || c.online || false,
             group: c.group ?? c.is_group ?? false,
           }));
           setChats(items);

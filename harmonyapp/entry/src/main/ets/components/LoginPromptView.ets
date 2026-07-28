@@ -244,7 +244,7 @@ export struct LoginPromptView {
       phone: '',
       location: { point: { latitude: 0, longitude: 0 }, location_name: '' },
       presence_status: 'online',
-      last_online: '',
+      last_online_at: '',
       created_at: new Date().toISOString(),
       stats: {
         moments_count: 0,

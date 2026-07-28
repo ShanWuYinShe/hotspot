@@ -5,19 +5,66 @@ import { usePlatform } from "../contexts/PlatformContext";
 import { useNavigate } from "react-router";
 import { ROUTES } from "../lib/routes";
 import { useHoverConfig } from "../hooks/useHoverConfig";
-import {
-  TabletRail, DailyPickCard, StreakCard, VibeCard, SuggestedFollowsCard,
-} from "../components/TabletRail";
-import { ContextRail } from "../components/layout/ContextRail";
-import { useSocial, type SocialPost } from "../contexts/SocialContext";
 import { BspCardCanvas } from "../components/shared/BspCardCanvas";
 import { ActionIconButton } from "../components/shared/ActionIconButton";
-import { getFeedMoments, searchSuggest } from "../../api";
+import { getFeedMoments, searchSuggest, setReaction, favoriteMoment } from "../../api";
 
 /* ── Feed data ──────────────────────────────────────────────────── */
-type FeedItem = Omit<SocialPost, "moods" | "audience">;
+// FeedItem is the card shape; liked/saved are per-item interaction state held
+// locally (derived from reactions/my_state on fetch, toggled via the API).
+interface FeedItem {
+  id: number | string;
+  user: string;
+  avatar: string;
+  location: string;
+  tag: string;
+  content: string;
+  image: string;
+  likes: number;
+  comments: number;
+  time: string;
+  liked: boolean;
+  saved: boolean;
+  likeEmoji: string;
+}
 
 const TABS  = ["热门", "附近", "活动", "关注"];
+
+/**
+ * Holds per-item liked/saved interaction state and toggles it via the API
+ * (setReaction / moments/favorite). Initial state is derived from the feed
+ * item's reactions/my_state at fetch time.
+ */
+function useFeedInteractions(initial: FeedItem[]) {
+  const [items, setItems] = useState<FeedItem[]>(initial);
+  useEffect(() => { setItems(initial); }, [initial]);
+
+  const toggleLike = async (id: FeedItem["id"]) => {
+    setItems((prev) => prev.map((it) => it.id === id ? { ...it, liked: !it.liked } : it));
+    const target = items.find((it) => it.id === id);
+    if (target) {
+      try {
+        await setReaction({ target_type: "moment", target_id: String(id), emoji: target.likeEmoji, active: !target.liked });
+      } catch {
+        setItems((prev) => prev.map((it) => it.id === id ? { ...it, liked: target.liked } : it));
+      }
+    }
+  };
+
+  const toggleSave = async (id: FeedItem["id"]) => {
+    setItems((prev) => prev.map((it) => it.id === id ? { ...it, saved: !it.saved } : it));
+    const target = items.find((it) => it.id === id);
+    if (target) {
+      try {
+        await favoriteMoment({ moment_id: String(id), active: !target.saved });
+      } catch {
+        setItems((prev) => prev.map((it) => it.id === id ? { ...it, saved: target.saved } : it));
+      }
+    }
+  };
+
+  return { items, toggleLike, toggleSave };
+}
 
 
 /* ══════════════════════════════════════════════════════════════════
@@ -260,11 +307,7 @@ function TagChips({
 ══════════════════════════════════════════════════════════════════ */
 function DiscoverMobile({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags: string[] }) {
   const navigate = useNavigate();
-  const { discoverPosts, likedIds, savedIds, commentsByPost, toggleLike, toggleSave } = useSocial();
-  const feedItems: FeedItem[] = [...discoverPosts, ...apiFeedItems].map((item) => ({
-    ...item,
-    comments: item.comments + (commentsByPost[item.id]?.length ?? 0),
-  }));
+  const { items: feedItems, toggleLike, toggleSave } = useFeedInteractions(apiFeedItems);
   const [searchVal, setSearchVal] = useState("");
   const [activeTab, setActiveTab] = useState("热门");
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -307,7 +350,7 @@ function DiscoverMobile({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
             <div key={item.id} className="neu-ambient-glow">
               <PostCard
                 item={item} hero
-                liked={likedIds.has(item.id)} saved={savedIds.has(item.id)}
+                liked={item.liked} saved={item.saved}
                 onLike={() => toggleLike(item.id)} onSave={() => toggleSave(item.id)}
                 onClick={() => navigate(ROUTES.moment(item.id))}
               />
@@ -315,7 +358,7 @@ function DiscoverMobile({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
           ) : (
             <PostCard
               key={item.id} item={item}
-              liked={likedIds.has(item.id)} saved={savedIds.has(item.id)}
+              liked={item.liked} saved={item.saved}
               onLike={() => toggleLike(item.id)} onSave={() => toggleSave(item.id)}
               onClick={() => navigate(ROUTES.moment(item.id))}
             />
@@ -332,11 +375,7 @@ function DiscoverMobile({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
 ══════════════════════════════════════════════════════════════════ */
 function DiscoverTablet({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags: string[] }) {
   const navigate = useNavigate();
-  const { discoverPosts, likedIds, savedIds, commentsByPost, toggleLike, toggleSave } = useSocial();
-  const feedItems: FeedItem[] = [...discoverPosts, ...apiFeedItems].map((item) => ({
-    ...item,
-    comments: item.comments + (commentsByPost[item.id]?.length ?? 0),
-  }));
+  const { items: feedItems, toggleLike, toggleSave } = useFeedInteractions(apiFeedItems);
   const [searchVal, setSearchVal] = useState("");
   const [activeTab, setActiveTab] = useState("热门");
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -385,7 +424,7 @@ function DiscoverTablet({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
             <div className="neu-ambient-glow mb-4">
               <PostCard
                 item={filtered[0]} hero
-                liked={likedIds.has(filtered[0].id)} saved={savedIds.has(filtered[0].id)}
+                liked={filtered[0].liked} saved={filtered[0].saved}
                 onLike={() => toggleLike(filtered[0].id)} onSave={() => toggleSave(filtered[0].id)}
                 onClick={() => navigate(ROUTES.moment(filtered[0].id))}
               />
@@ -396,22 +435,13 @@ function DiscoverTablet({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
             {filtered.slice(1).map(item => (
               <PostCard
                 key={item.id} item={item} dense
-                liked={likedIds.has(item.id)} saved={savedIds.has(item.id)}
+                liked={item.liked} saved={item.saved}
                 onLike={() => toggleLike(item.id)} onSave={() => toggleSave(item.id)}
                 onClick={() => navigate(ROUTES.moment(item.id))}
               />
             ))}
           </div>
         </div>
-
-        <ContextRail className="hidden lg:block">
-          <TabletRail>
-            <DailyPickCard />
-            <StreakCard />
-            <VibeCard />
-            <SuggestedFollowsCard />
-          </TabletRail>
-        </ContextRail>
       </motion.div>
     </>
   );
@@ -424,11 +454,7 @@ function DiscoverTablet({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
 ══════════════════════════════════════════════════════════════════ */
 function DiscoverDesktop({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags: string[] }) {
   const navigate = useNavigate();
-  const { discoverPosts, likedIds, savedIds, commentsByPost, toggleLike, toggleSave } = useSocial();
-  const feedItems: FeedItem[] = [...discoverPosts, ...apiFeedItems].map((item) => ({
-    ...item,
-    comments: item.comments + (commentsByPost[item.id]?.length ?? 0),
-  }));
+  const { items: feedItems, toggleLike, toggleSave } = useFeedInteractions(apiFeedItems);
   const [searchVal, setSearchVal] = useState("");
   const [activeTab, setActiveTab] = useState("热门");
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -483,7 +509,7 @@ function DiscoverDesktop({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tag
               renderItem={(item, index) => (
                 <PostCard
                   item={item} dense edition={String(index + 1).padStart(2, "0")}
-                  liked={likedIds.has(item.id)} saved={savedIds.has(item.id)}
+                  liked={item.liked} saved={item.saved}
                   onLike={() => toggleLike(item.id)} onSave={() => toggleSave(item.id)}
                   onClick={() => navigate(ROUTES.moment(item.id))}
                 />
@@ -521,18 +547,24 @@ export function Discover() {
         const suggestData = (suggestRes.code === 0 ? suggestRes.data : null) as any;
 
         if (feedData) {
-          const items: FeedItem[] = (feedData.items || []).map((m: any, i: number) => ({
-            id: m.id ?? m.moment_id ?? i + 1,
-            user: m.user ?? m.author_name ?? m.nickname ?? "",
-            location: m.location ?? m.place ?? "",
-            tag: m.tag ?? m.tags?.[0] ?? "",
-            avatar: m.avatar ?? m.author_avatar ?? "",
-            content: m.content ?? m.text ?? m.body ?? "",
-            image: m.image ?? m.images?.[0] ?? "",
-            likes: m.likes ?? m.like_count ?? 0,
-            comments: m.comments ?? m.comment_count ?? 0,
-            time: m.time ?? m.created_at ?? "",
-          }));
+          const items: FeedItem[] = (feedData.items || []).map((m: any, i: number) => {
+            const mine = (m.reactions || []).find((r: any) => r.reacted_by_me);
+            return {
+              id: m.moment_id ?? m.id ?? i + 1,
+              user: m.user?.nickname ?? "",
+              avatar: m.user?.avatar_url ?? "",
+              location: m.location?.location_name ?? "",
+              tag: m.tags?.[0] ?? "",
+              content: m.description ?? m.content ?? "",
+              image: m.images?.[0]?.url ?? "",
+              likes: m.likes_count ?? 0,
+              comments: m.comments_count ?? 0,
+              time: m.created_at ?? "",
+              liked: Boolean(mine),
+              saved: Boolean(m.my_state?.is_favorited),
+              likeEmoji: mine?.emoji ?? "👍",
+            };
+          });
           setApiFeedItems(items);
         }
 

@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import {
   getAccount, getProfile, listUserMoments, listUserReactedMoments,
-  listMyMoments, listMyGroups, type ApiResponse, type PaginatedData,
+  listMyMoments, getFavoritePosts, listMyGroups,
+  listFriends, listFollowing, listFollowers,
+  type ApiResponse, type PaginatedData,
 } from "../../../api";
 
 export interface GalleryPost {
@@ -42,7 +44,7 @@ export function useGalleryPosts(type: "my" | "user" = "my", userId?: string) {
     fetcher({ pagination: { limit: 20 } }).then(res => {
       if (res.code === 0 && res.data) {
         setPosts((res.data as any).items?.map((m: any) => ({
-          id: m.moment_id, img: m.image_url ?? "", likes: m.like_count ?? 0, comments: m.comment_count ?? 0,
+          id: m.moment_id, img: m.images?.[0]?.url ?? "", likes: m.likes_count ?? 0, comments: m.comments_count ?? 0,
         })) ?? []);
       }
     }).finally(() => setLoading(false));
@@ -59,7 +61,7 @@ export function useReactedPosts(userId?: string) {
     listUserReactedMoments(userId ?? "", { pagination: { limit: 20 } }).then(res => {
       if (res.code === 0 && res.data) {
         setPosts((res.data as any).items?.map((m: any) => ({
-          id: m.moment_id, img: m.image_url ?? "", likes: m.like_count ?? 0, comments: m.comment_count ?? 0,
+          id: m.moment_id, img: m.images?.[0]?.url ?? m.images?.[0] ?? "", likes: m.likes_count ?? 0, comments: m.comments_count ?? 0,
         })) ?? []);
       }
     }).finally(() => setLoading(false));
@@ -73,19 +75,13 @@ export function useFavoritePosts() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    import("../../../api").then(({ Endpoints }) => {
-      fetch(`${Endpoints.Moments.ListFavorites}`, {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pagination: { limit: 20 } }),
-      }).then(r => r.json()).then((res: ApiResponse<any>) => {
-        if (res.code === 0) {
-          setPosts((res.data as any).items?.map((m: any) => ({
-            id: m.moment_id, img: m.image_url ?? "", likes: m.like_count ?? 0, comments: m.comment_count ?? 0,
-          })) ?? []);
-        }
-      }).finally(() => setLoading(false));
-    });
+    getFavoritePosts({ pagination: { limit: 20 } }).then(res => {
+      if (res.code === 0 && res.data) {
+        setPosts((res.data as any).items?.map((m: any) => ({
+          id: m.moment_id, img: m.images?.[0]?.url ?? m.images?.[0] ?? "", likes: m.likes_count ?? 0, comments: m.comments_count ?? 0,
+        })) ?? []);
+      }
+    }).finally(() => setLoading(false));
   }, []);
 
   return { posts, loading };
@@ -104,18 +100,24 @@ export function useMyGroups() {
   return { groups, loading };
 }
 
-// Backward-compatible empty defaults (used by ProfileSections until fully migrated to hooks).
-// When DB is empty, these show zero state which is the correct behavior.
-export const USER_AVATAR = "";
-export const GALLERY_POSTS: GalleryPost[] = [];
-export const LIKED_POSTS: GalleryPost[] = [];
-export const SAVED_POSTS: GalleryPost[] = [];
-export const STATS: { label: string; value: number }[] = [
-  { label: "瞬间", value: 0 },
-  { label: "好友", value: 0 },
-  { label: "足迹", value: 0 },
-];
-export const MOCK_GROUPS: any[] = [];
-export const MOCK_FRIENDS: any[] = [];
-export const MOCK_FOLLOWING: any[] = [];
-export const MOCK_FANS: any[] = [];
+/** Relationship lists — friends / following / followers. */
+export function useRelationships() {
+  const [friends, setFriends] = useState<any[]>([]);
+  const [following, setFollowing] = useState<any[]>([]);
+  const [followers, setFollowers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      listFriends({ pagination: { limit: 50 } }).catch(() => ({ code: -1, data: { items: [] } })),
+      listFollowing({ pagination: { limit: 50 } }).catch(() => ({ code: -1, data: { items: [] } })),
+      listFollowers({ pagination: { limit: 50 } }).catch(() => ({ code: -1, data: { items: [] } })),
+    ]).then(([f, fo, fr]) => {
+      setFriends(f.code === 0 ? (f.data as any).items ?? [] : []);
+      setFollowing(fo.code === 0 ? (fo.data as any).items ?? [] : []);
+      setFollowers(fr.code === 0 ? (fr.data as any).items ?? [] : []);
+    }).finally(() => setLoading(false));
+  }, []);
+
+  return { friends, following, followers, loading };
+}

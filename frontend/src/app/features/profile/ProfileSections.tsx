@@ -6,12 +6,13 @@ import { ROUTES } from "../../lib/routes";
 import { useHoverConfig } from "../../hooks/useHoverConfig";
 import { useDismissibleLayer } from "../../hooks/useDismissibleLayer";
 import { useComposer } from "../../contexts/ComposerContext";
-import { useSocial } from "../../contexts/SocialContext";
 import { usePlatform } from "../../contexts/PlatformContext";
 import { CreateGroupSheet } from "../../features/groups/CreateGroupSheet";
 import { MetricStrip } from "../../components/shared/DataDisplay";
 import { BspCardCanvas } from "../../components/shared/BspCardCanvas";
-import { USER_AVATAR, GALLERY_POSTS, LIKED_POSTS, SAVED_POSTS, MOCK_GROUPS, MOCK_FRIENDS, MOCK_FOLLOWING, MOCK_FANS } from "./profile.data";
+import {
+  useGalleryPosts, useReactedPosts, useFavoritePosts, useMyGroups, useRelationships, type GalleryPost,
+} from "./profile.data";
 
 /* ── Shared: Tab bar ──────────────────────────────────────────────── */
 export type Tab = "posts" | "liked" | "saved";
@@ -44,7 +45,7 @@ export function ProfileTabs({ activeTab, setActiveTab }: { activeTab: Tab; setAc
 }
 
 /* ── Shared: Gallery grid (mobile/harmony) ────────────────────────── */
-export function GalleryGrid({ posts, activeTab }: { posts: typeof GALLERY_POSTS; activeTab: Tab }) {
+export function GalleryGrid({ posts, activeTab }: { posts: GalleryPost[]; activeTab: Tab }) {
   const { platform } = usePlatform();
   const navigate = useNavigate();
   const numCols = platform === "mobile" ? 2 : 3;
@@ -90,19 +91,14 @@ export function GalleryGrid({ posts, activeTab }: { posts: typeof GALLERY_POSTS;
 export function SectionMoments() {
   const navigate = useNavigate();
   const { openComposer } = useComposer();
-  const { profilePosts, commentsByPost } = useSocial();
   const { platform } = usePlatform();
   const isDesktop = platform === "desktop";
   const [activeTab, setActiveTab] = useState<Tab>("posts");
   const [visibleCount, setVisibleCount] = useState(12);
-  const publishedGalleryPosts = profilePosts.map((post) => ({
-    id: post.id,
-    img: post.image ?? "https://images.unsplash.com/photo-1762113396314-8e9e5417ed17?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800",
-    likes: post.likes,
-    comments: post.comments + (commentsByPost[post.id]?.length ?? 0),
-  }));
-  const ownPosts = [...publishedGalleryPosts, ...GALLERY_POSTS];
-  const postsMap = { posts: ownPosts, liked: LIKED_POSTS, saved: SAVED_POSTS };
+  const { posts: myPosts, loading: myLoading } = useGalleryPosts("my");
+  const { posts: reacted, loading: reactedLoading } = useReactedPosts();
+  const { posts: savedP, loading: savedLoading } = useFavoritePosts();
+  const postsMap = { posts: myPosts, liked: reacted, saved: savedP };
   const activePosts = postsMap[activeTab];
   const collectionMeta: Record<Tab, { eyebrow: string; title: string; detail: string }> = {
     posts: { eyebrow: "个人存档", title: "我的瞬间", detail: "你发布的每一次靠近与停留" },
@@ -250,7 +246,8 @@ export function SectionGroups() {
   const [visibleCount, setVisibleCount] = useState(12);
   useDismissibleLayer({ open: showCreate, onDismiss: () => setShowCreate(false) });
   const hover = useHoverConfig();
-  const filtered = MOCK_GROUPS.filter(g =>
+  const { groups } = useMyGroups();
+  const filtered = groups.filter(g =>
     searchQ === "" || g.name.toLowerCase().includes(searchQ.toLowerCase())
   );
 
@@ -261,7 +258,7 @@ export function SectionGroups() {
         <div className="flex items-center gap-2.5">
           <span style={{ fontSize: 15, color: "var(--neu-text)" }}>我的群组</span>
           <span className="px-2 py-0.5 rounded-full" style={{ fontSize: 11, background: "var(--neu-accent-primary)", color: "white" }}>
-            {MOCK_GROUPS.length} 个
+            {groups.length} 个
           </span>
         </div>
         <motion.button whileTap={hover.tap as any} whileHover={hover.btn as any}
@@ -345,7 +342,7 @@ export function SectionGroups() {
    desktop BSP mosaic and the tablet/mobile vertical list. `onEnter` is the
    inline "进入" action (stops propagation so it never re-triggers the card). */
 function MyGroupCard({ g, hover, onOpen, onEnter }: {
-  g: typeof MOCK_GROUPS[number];
+  g: any;
   hover: ReturnType<typeof useHoverConfig>;
   onOpen: () => void;
   onEnter: () => void;
@@ -415,11 +412,12 @@ export function SectionFriends({ embedded = false }: { embedded?: boolean }) {
   const [searchQ, setSearchQ] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "online" | "offline">("all");
 
-  const filtered = MOCK_FRIENDS
+  const { friends, loading } = useRelationships();
+  const filtered = friends
     .filter(f => activeFilter === "all" || (activeFilter === "online" ? f.online : !f.online))
     .filter(f => searchQ === "" || f.name.toLowerCase().includes(searchQ.toLowerCase()) || f.handle.includes(searchQ));
 
-  const onlineCount = MOCK_FRIENDS.filter(f => f.online).length;
+  const onlineCount = friends.filter(f => f.online).length;
 
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col">
@@ -437,7 +435,7 @@ export function SectionFriends({ embedded = false }: { embedded?: boolean }) {
           </div>
           <p className="mt-1" style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>双向关系，可直接开启对话</p>
         </div>
-        <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{MOCK_FRIENDS.length} 位好友</span>
+        <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{friends.length} 位好友</span>
       </div>
       </>}
 
@@ -514,7 +512,7 @@ export function SectionFriends({ embedded = false }: { embedded?: boolean }) {
 /* ══════════════════════════════════════════════════════════════════
    Section: 关注
 ══════════════════════════════════════════════════════════════════ */
-export function FollowingRow({ f, isUnfollowed, onToggle, wide = false }: { f: typeof MOCK_FOLLOWING[0]; isUnfollowed: boolean; onToggle: () => void; wide?: boolean }) {
+export function FollowingRow({ f, isUnfollowed, onToggle, wide = false }: { f: any; isUnfollowed: boolean; onToggle: () => void; wide?: boolean }) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
   const hover = useHoverConfig();
@@ -555,6 +553,7 @@ export function FollowingRow({ f, isUnfollowed, onToggle, wide = false }: { f: t
 export function SectionFollowing({ embedded = false }: { embedded?: boolean }) {
   const [sortBy, setSortBy] = useState<"recent" | "active">("recent");
   const [unfollowedIds, setUnfollowedIds] = useState<Set<number>>(new Set());
+  const { following } = useRelationships();
 
   const toggleUnfollow = (id: number) => {
     setUnfollowedIds(prev => {
@@ -564,7 +563,7 @@ export function SectionFollowing({ embedded = false }: { embedded?: boolean }) {
     });
   };
 
-  const sorted = [...MOCK_FOLLOWING].sort((a, b) =>
+  const sorted = [...following].sort((a, b) =>
     sortBy === "active" ? b.posts - a.posts : 0
   );
 
@@ -577,7 +576,7 @@ export function SectionFollowing({ embedded = false }: { embedded?: boolean }) {
           <div className="flex items-center gap-2.5">
             <span style={{ fontSize: 15, color: "var(--neu-text)" }}>关注</span>
             <span className="px-2 py-0.5 rounded-full" style={{ fontSize: 11, background: "var(--neu-accent-primary)", color: "white" }}>
-              {MOCK_FOLLOWING.length} 人
+              {following.length} 人
             </span>
           </div>
           <p className="mt-1" style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>你主动订阅的动态与创作者</p>
@@ -627,7 +626,7 @@ export function SectionFollowing({ embedded = false }: { embedded?: boolean }) {
 /* ══════════════════════════════════════════════════════════════════
    Section: 粉丝
 ══════════════════════════════════════════════════════════════════ */
-export function FanRow({ f, isMutual, onToggle, wide = false }: { f: typeof MOCK_FANS[0]; isMutual: boolean; onToggle: () => void; wide?: boolean }) {
+export function FanRow({ f, isMutual, onToggle, wide = false }: { f: any; isMutual: boolean; onToggle: () => void; wide?: boolean }) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
   const hover = useHoverConfig();
@@ -674,8 +673,9 @@ export function FanRow({ f, isMutual, onToggle, wide = false }: { f: typeof MOCK
 
 export function SectionFans({ embedded = false }: { embedded?: boolean }) {
   const [fanFilter, setFanFilter] = useState<"all" | "mutual" | "pending">("all");
+  const { followers } = useRelationships();
   const [followedBack, setFollowedBack] = useState<Set<number>>(
-    new Set(MOCK_FANS.filter(f => f.followBack).map(f => f.id))
+    new Set(followers.filter(f => f.followBack).map(f => f.id))
   );
 
   const toggleFollow = (id: number) => {
@@ -686,7 +686,7 @@ export function SectionFans({ embedded = false }: { embedded?: boolean }) {
     });
   };
 
-  const filtered = MOCK_FANS.filter(f => {
+  const filtered = followers.filter(f => {
     const isMutual = followedBack.has(f.id);
     if (fanFilter === "mutual") return isMutual;
     if (fanFilter === "pending") return !isMutual;
@@ -694,7 +694,7 @@ export function SectionFans({ embedded = false }: { embedded?: boolean }) {
   });
 
   const mutualCount = [...followedBack].length;
-  const pendingCount = MOCK_FANS.length - mutualCount;
+  const pendingCount = followers.length - mutualCount;
 
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col">
@@ -705,7 +705,7 @@ export function SectionFans({ embedded = false }: { embedded?: boolean }) {
           <div className="flex items-center gap-2.5">
             <span style={{ fontSize: 15, color: "var(--neu-text)" }}>粉丝</span>
             <span className="px-2 py-0.5 rounded-full" style={{ fontSize: 11, background: "var(--neu-accent-primary)", color: "white" }}>
-              {MOCK_FANS.length} 人
+              {followers.length} 人
             </span>
           </div>
           <p className="mt-1" style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>关注你的人，优先处理待回关关系</p>
@@ -723,7 +723,7 @@ export function SectionFans({ embedded = false }: { embedded?: boolean }) {
       {/* Stats row — flat joined cells, no isolated shadows */}
       <div className={`${embedded ? "px-6 lg:px-8" : "px-5"} py-4 flex-shrink-0`}>
         <MetricStrip items={[
-          { value: MOCK_FANS.length, label: "总粉丝" },
+          { value: followers.length, label: "总粉丝" },
           { value: mutualCount, label: "互相关注", tone: "positive" },
           { value: pendingCount, label: "待回关", tone: "warning" },
         ]} />

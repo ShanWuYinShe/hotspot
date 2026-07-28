@@ -5,6 +5,7 @@
 
 import { HttpUtil } from '../network/HttpUtil';
 import { ApiEndpoints } from '../config/ApiEndpoints';
+import { GlobalStateManager } from '../state/GlobalStateManager';
 import common from '@ohos.app.ability.common';
 import fs from '@ohos.file.fs';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -79,7 +80,7 @@ import {
   FavoriteMomentRequest,
   UnfavoriteMomentRequest,
   MomentLikesRequest,
-  LikeItem,
+  ReactionItem,
   MyMomentsRequest,
   MyFavoritesRequest,
 
@@ -149,6 +150,7 @@ import {
   MyInvitesRequest,
   GroupInviteItem,
   AcceptInviteRequest,
+  InviteAcceptedResult,
   RejectInviteRequest,
   LeaveGroupRequest,
   DismissFeedItemRequest,
@@ -583,17 +585,27 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<void>, SetReactionRequest>(ApiEndpoints.REACTIONS.SET, req);
   }
 
+  /**
+   * 「点赞」使用的默认 emoji。spec 要求 emoji 必须在 AppConfig.limits.reaction_emojis
+   * 白名单内，否则后端返回 10000。优先取白名单首项；配置未加载时退化为 '👍'（规范默认白名单含此项）。
+   */
+  private static getDefaultLikeEmoji(): string {
+    const emojis = GlobalStateManager.getInstance().getLimits()?.reaction_emojis;
+    return (emojis && emojis.length > 0) ? emojis[0] : '👍';
+  }
+
   static async likeMoment(params: LikeMomentRequest): Promise<ApiResponse<void>> {
-    return ApiClient.setMomentReaction(params.moment_id, '👍', true);
+    return ApiClient.setMomentReaction(params.moment_id, ApiClient.getDefaultLikeEmoji(), true);
   }
 
   static async unlikeMoment(params: UnlikeMomentRequest): Promise<ApiResponse<void>> {
-    return ApiClient.setMomentReaction(params.moment_id, '👍', false);
+    // 取消点赞必须用与点赞时相同的 emoji（reactions/set 按 emoji 维度去重）。
+    return ApiClient.setMomentReaction(params.moment_id, ApiClient.getDefaultLikeEmoji(), false);
   }
 
-  static async getMomentLikes(params: MomentLikesRequest): Promise<ApiResponse<PaginatedData<LikeItem>>> {
+  static async getMomentLikes(params: MomentLikesRequest): Promise<ApiResponse<PaginatedData<ReactionItem>>> {
     const req: ListReactionsRequest = { target_type: 'moment', target_id: params.moment_id, pagination: params.pagination };
-    return HttpUtil.post<ApiResponse<PaginatedData<LikeItem>>, ListReactionsRequest>(ApiEndpoints.REACTIONS.LIST, req);
+    return HttpUtil.post<ApiResponse<PaginatedData<ReactionItem>>, ListReactionsRequest>(ApiEndpoints.REACTIONS.LIST, req);
   }
 
   static async getMyMoments(params: MyMomentsRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
@@ -614,9 +626,9 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<PaginatedData<CommentItem>>, CommentRepliesRequest>(ApiEndpoints.COMMENT.LIST_REPLIES, params);
   }
 
-  static async getCommentLikes(params: CommentLikesRequest): Promise<ApiResponse<PaginatedData<LikeItem>>> {
+  static async getCommentLikes(params: CommentLikesRequest): Promise<ApiResponse<PaginatedData<ReactionItem>>> {
     const req: ListReactionsRequest = { target_type: 'comment', target_id: params.comment_id, pagination: params.pagination };
-    return HttpUtil.post<ApiResponse<PaginatedData<LikeItem>>, ListReactionsRequest>(ApiEndpoints.REACTIONS.LIST, req);
+    return HttpUtil.post<ApiResponse<PaginatedData<ReactionItem>>, ListReactionsRequest>(ApiEndpoints.REACTIONS.LIST, req);
   }
 
   static async createComment(params: CreateCommentRequest): Promise<ApiResponse<CommentItem>> {
@@ -812,8 +824,8 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<PaginatedData<GroupInviteItem>>, MyInvitesRequest>(ApiEndpoints.GROUP.LIST_INVITES, params);
   }
 
-  static async acceptGroupInvite(params: AcceptInviteRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, AcceptInviteRequest>(ApiEndpoints.GROUP.ACCEPT_INVITE, params);
+  static async acceptGroupInvite(params: AcceptInviteRequest): Promise<ApiResponse<InviteAcceptedResult>> {
+    return HttpUtil.post<ApiResponse<InviteAcceptedResult>, AcceptInviteRequest>(ApiEndpoints.GROUP.ACCEPT_INVITE, params);
   }
 
   static async rejectGroupInvite(params: RejectInviteRequest): Promise<ApiResponse<void>> {

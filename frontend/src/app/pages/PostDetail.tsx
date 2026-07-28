@@ -1,18 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { ROUTES } from "../lib/routes";
-import { useSocial } from "../contexts/SocialContext";
 import { ActionIconButton } from "../components/shared/ActionIconButton";
 import { useDismissibleLayer } from "../hooks/useDismissibleLayer";
+import { useAuth } from "../contexts/AuthContext";
 import {
   ArrowLeft, MapPin, Heart, MessageCircle, Share2, Bookmark,
   MoreHorizontal, Send, ChevronRight, Link2, Check,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  DesktopDetailSplit, RailSection, RailUserRow, RailPostThumb, RailLocationMini,
+  DesktopDetailSplit, RailSection, RailUserRow, RailLocationMini,
 } from "../components/layout/DetailRail";
-import { getMomentDetail, listComments, listReactions } from "../../api";
+import {
+  getMomentDetail, listComments, setReaction, createComment, favoriteMoment,
+} from "../../api";
 
 interface PostComment { id: number; user: string; avatar: string; text: string; time: string; likes: number; }
 
@@ -22,13 +24,6 @@ interface PostData {
   time: string; likes: number; tag: string;
   comments: PostComment[];
 }
-
-// Nearby users kept as simple mock since they come from different system
-const NEARBY_NOW = [
-  { id: 2, name: "阿禾",   avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80", sub: "252m · 在线" },
-  { id: 4, name: "Mika",   avatar: "https://images.unsplash.com/photo-1758613172074-7275c3455034?w=80", sub: "520m · 在线" },
-  { id: 5, name: "青砚",   avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80", sub: "614m · 在线" },
-];
 
 const DEFAULT_POST: PostData = {
   id: 0, user: "", handle: "", avatar: "",
@@ -40,16 +35,20 @@ const DEFAULT_POST: PostData = {
 export function PostDetail() {
   const { postId } = useParams<{ postId: string }>();
   const navigate = useNavigate();
-  const { likedIds, savedIds, commentsByPost, toggleLike, toggleSave, addComment } = useSocial();
+  const { user } = useAuth();
   const numericPostId = Number(postId);
   const [post, setPost] = useState<PostData>(DEFAULT_POST);
   const [apiComments, setApiComments] = useState<PostComment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [relatedPosts, setRelatedPosts] = useState<{ id: number; image: string; title: string; meta: string }[]>([]);
   const [input, setInput] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
   const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "failed">("idle");
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  // Reaction/favorite state derived from the moment detail (spec: liked state
+  // comes from reactions[].reacted_by_me; saved from my_state.is_favorited).
+  const [liked, setLiked] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [likeEmoji, setLikeEmoji] = useState("👍");
 
   useEffect(() => {
     let cancelled = false;
@@ -57,48 +56,44 @@ export function PostDetail() {
     async function fetchPost() {
       try {
         setLoading(true);
-        const [detailRes, commentsRes, reactionsRes] = await Promise.all([
+        const [detailRes, commentsRes] = await Promise.all([
           getMomentDetail(momentId).catch(() => ({ code: -1, data: null })),
           listComments(momentId).catch(() => ({ code: -1, data: { items: [] } })),
-          listReactions({ target_type: "moment", target_id: momentId }).catch(() => ({ code: -1, data: { items: [] } })),
         ]);
         if (cancelled) return;
 
         const detailData = (detailRes.code === 0 ? detailRes.data : null) as any;
         const commentsData = (commentsRes.code === 0 ? commentsRes.data : null) as any;
-        const reactionsData = (reactionsRes.code === 0 ? reactionsRes.data : null) as any;
 
         if (detailData) {
           const pd: PostData = {
             id: detailData.id ?? detailData.moment_id ?? numericPostId,
-            user: detailData.user ?? detailData.author_name ?? detailData.nickname ?? "",
+            user: detailData.user?.nickname ?? detailData.author_name ?? detailData.nickname ?? "",
             handle: detailData.handle ?? detailData.username ?? "",
-            avatar: detailData.avatar ?? detailData.author_avatar ?? "",
-            location: detailData.location ?? detailData.place ?? "",
-            image: detailData.image ?? detailData.images?.[0] ?? "",
+            avatar: detailData.avatar ?? detailData.user?.avatar_url ?? detailData.author_avatar ?? "",
+            location: detailData.location?.location_name ?? detailData.place ?? "",
+            image: detailData.image ?? detailData.images?.[0]?.url ?? detailData.images?.[0] ?? "",
             content: detailData.content ?? detailData.text ?? detailData.body ?? "",
             time: detailData.time ?? detailData.created_at ?? "",
-            likes: detailData.likes ?? detailData.like_count ?? 0,
+            likes: detailData.likes_count ?? 0,
             tag: detailData.tag ?? detailData.tags?.[0] ?? "",
             comments: [],
           };
           setPost(pd);
-
-          if (detailData.related_posts) {
-            setRelatedPosts((detailData.related_posts || []).map((r: any) => ({
-              id: r.id ?? 0, image: r.image ?? "", title: r.title ?? r.name ?? "", meta: r.meta ?? r.subtitle ?? "",
-            })));
-          }
+          // Derive liked from reactions[].reacted_by_me (spec); saved from my_state.
+          const mine = (detailData.reactions || []).find((r: any) => r.reacted_by_me);
+          if (mine) { setLiked(true); setLikeEmoji(mine.emoji ?? "👍"); } else { setLiked(false); }
+          setSaved(Boolean(detailData.my_state?.is_favorited));
         }
 
         if (commentsData) {
           const items: PostComment[] = (commentsData.items || []).map((c: any, i: number) => ({
             id: c.id ?? i + 1,
-            user: c.user ?? c.author_name ?? c.nickname ?? "",
-            avatar: c.avatar ?? c.author_avatar ?? "",
+            user: c.user?.nickname ?? c.author_name ?? c.nickname ?? "",
+            avatar: c.avatar ?? c.user?.avatar_url ?? c.author_avatar ?? "",
             text: c.text ?? c.content ?? c.body ?? "",
             time: c.time ?? c.created_at ?? "",
-            likes: c.likes ?? c.like_count ?? 0,
+            likes: (c.reactions || []).reduce((s: number, r: any) => s + (r.count ?? 0), 0),
           }));
           setApiComments(items);
         }
@@ -111,16 +106,48 @@ export function PostDetail() {
     fetchPost();
     return () => { cancelled = true; };
   }, [numericPostId]);
-  const persistedComments = commentsByPost[numericPostId] ?? [];
-  const comments = [...apiComments, ...post.comments, ...persistedComments];
-  const commentCount = comments.length;
-  const liked = likedIds.has(numericPostId);
-  const saved = savedIds.has(numericPostId);
 
-  const handleComment = () => {
-    if (!input.trim()) return;
-    addComment(numericPostId, input);
+  const commentCount = apiComments.length;
+
+  const handleComment = async () => {
+    const text = input.trim();
+    if (!text) return;
     setInput("");
+    // Optimistic append; createComment confirms server-side.
+    const optimistic: PostComment = {
+      id: Date.now(),
+      user: user?.nickname ?? "",
+      avatar: user?.avatar_url ?? "",
+      text,
+      time: "刚刚",
+      likes: 0,
+    };
+    setApiComments((prev) => [...prev, optimistic]);
+    try {
+      await createComment({ moment_id: String(numericPostId), content: text });
+    } catch {
+      setApiComments((prev) => prev.filter((c) => c.id !== optimistic.id));
+    }
+  };
+
+  const toggleLike = async () => {
+    const next = !liked;
+    setLiked(next);
+    try {
+      await setReaction({ target_type: "moment", target_id: String(numericPostId), emoji: likeEmoji, active: next });
+    } catch {
+      setLiked(!next);
+    }
+  };
+
+  const toggleSave = async () => {
+    const next = !saved;
+    setSaved(next);
+    try {
+      await favoriteMoment({ moment_id: String(numericPostId), active: next });
+    } catch {
+      setSaved(!next);
+    }
   };
 
   const copyPostLink = async () => {
@@ -233,7 +260,7 @@ export function PostDetail() {
             style={{ borderTop: "1px solid var(--neu-border)", borderBottom: "1px solid var(--neu-border)" }}>
             <div className="flex gap-4">
               <motion.button whileTap={{ scale: 0.85 }}
-                onClick={() => toggleLike(numericPostId)}
+                onClick={() => toggleLike()}
                 className="flex items-center gap-1.5 outline-none"
                 style={{ color: liked ? "var(--neu-accent-primary)" : "var(--neu-text-muted)" }}>
                 <Heart style={{ width: 19, height: 19 }} strokeWidth={1.5} fill={liked ? "currentColor" : "none"} />
@@ -245,7 +272,7 @@ export function PostDetail() {
               </div>
             </div>
             <div className="flex gap-3">
-              <motion.button whileTap={{ scale: 0.85 }} onClick={() => toggleSave(numericPostId)} className="outline-none"
+              <motion.button whileTap={{ scale: 0.85 }} onClick={() => toggleSave()} className="outline-none"
                 style={{ color: saved ? "var(--neu-accent-primary)" : "var(--neu-text-muted)" }}>
                 <Bookmark style={{ width: 19, height: 19 }} strokeWidth={1.5} fill={saved ? "currentColor" : "none"} />
               </motion.button>
@@ -260,7 +287,7 @@ export function PostDetail() {
             评论 · {commentCount}
           </p>
           <div className="flex flex-col gap-4">
-            {comments.map(c => (
+            {apiComments.map(c => (
               <div key={c.id} className="flex gap-3">
                 <div className="rounded-full overflow-hidden flex-shrink-0" style={{ width: 34, height: 34 }}>
                   <img src={c.avatar} alt={c.user} className="w-full h-full object-cover" />
@@ -289,8 +316,12 @@ export function PostDetail() {
       {/* Input bar */}
       <div className="flex-shrink-0 flex items-center gap-2.5 px-4 py-3"
         style={{ backgroundColor: "var(--neu-bg)", borderTop: "1px solid var(--neu-border)" }}>
-        <div className="rounded-full overflow-hidden flex-shrink-0" style={{ width: 30, height: 30 }}>
-          <img src="https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80" alt="me" className="w-full h-full object-cover" />
+        <div className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ width: 30, height: 30, background: "var(--neu-bg)", border: "1px solid var(--neu-border)" }}>
+          {user?.avatar_url ? (
+            <img src={user.avatar_url} alt="me" className="w-full h-full object-cover" />
+          ) : (
+            <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{(user?.nickname || "?").slice(0, 1)}</span>
+          )}
         </div>
         <div className="flex-1 flex items-center px-4 rounded-[18px] neu-input-surface"
           style={{ height: 38 }}>
@@ -329,35 +360,7 @@ export function PostDetail() {
       </RailSection>
 
       <RailSection title="相关位置">
-        <RailLocationMini name={post.location} desc="共 12 条动态 · 6 人在此" />
-      </RailSection>
-
-      <RailSection title="此刻附近" action="查看全部" onAction={() => navigate(ROUTES.nearbyPeople)}>
-        <div className="flex flex-col gap-3">
-          {NEARBY_NOW.map(u => (
-            <RailUserRow
-              key={u.id}
-              avatar={u.avatar}
-              name={u.name}
-              sub={u.sub}
-              onClick={() => navigate(ROUTES.user(u.id))}
-            />
-          ))}
-        </div>
-      </RailSection>
-
-      <RailSection title="更多动态" action="发现" onAction={() => navigate(ROUTES.discover)}>
-        <div className="flex flex-col gap-3">
-          {relatedPosts.map(p => (
-            <RailPostThumb
-              key={p.id}
-              image={p.image}
-              title={p.title}
-              meta={p.meta}
-              onClick={() => navigate(ROUTES.moment(p.id))}
-            />
-          ))}
-        </div>
+        <RailLocationMini name={post.location} />
       </RailSection>
     </>
   );

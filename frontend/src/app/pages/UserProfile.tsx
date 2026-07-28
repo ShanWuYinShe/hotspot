@@ -53,31 +53,30 @@ export function UserProfile() {
         if (cancelled) return;
         const data = (res.code === 0 ? res.data : null) as any;
         if (data) {
+          const u = data.user ?? data;
+          const s = data.stats ?? {};
+          const r = data.relation ?? {};
           setUser({
-            name: data.name ?? data.nickname ?? DEFAULT_USER.name,
-            handle: data.handle ?? data.username ?? "",
-            bio: data.bio ?? data.description ?? "",
-            location: data.location ?? data.place ?? "",
-            avatar: data.avatar ?? "",
-            banner: data.banner ?? data.cover ?? "",
-            followers: data.followers ?? data.follower_count ?? 0,
-            following: data.following ?? data.following_count ?? 0,
-            posts: data.posts ?? data.post_count ?? 0,
-            gallery: data.gallery ?? data.images ?? data.photos ?? [],
-            tags: data.tags ?? [],
+            name: u.nickname ?? data.nickname ?? "",
+            handle: u.user_id ? `@${(u.nickname ?? "").replace(/\s/g, "_")}` : "",
+            bio: u.bio ?? data.bio ?? "",
+            location: u.location?.location_name ?? data.location?.location_name ?? "",
+            avatar: u.avatar_url ?? data.avatar ?? "",
+            banner: u.cover_url ?? data.banner ?? "",
+            followers: s.followers_count ?? 0,
+            following: s.following_count ?? 0,
+            posts: s.moments_count ?? 0,
+            gallery: data.recent_moments?.items?.map((m: any) => m.images?.[0]?.url ?? "") ?? [],
+            tags: u.tags ?? data.tags ?? [],
           });
-          if (data.followed !== undefined) setFollowed(data.followed);
-          if (data.blocked !== undefined) setBlocked(data.blocked);
+          if (r.is_following !== undefined) setFollowed(r.is_following);
+          if (r.is_blocked !== undefined) setBlocked(r.is_blocked);
           if (data.remark) setRemark(data.remark);
 
-          if (data.mutual_friends) {
-            setMutualFriends((data.mutual_friends || []).map((f: any) => ({
-              id: f.id ?? 0, name: f.name ?? "", sub: f.sub ?? "", avatar: f.avatar ?? "",
-            })));
-          }
-          if (data.similar_users) {
-            setSimilarUsers((data.similar_users || []).map((u: any) => ({
-              id: u.id ?? 0, name: u.name ?? "", sub: u.sub ?? "", avatar: u.avatar ?? "",
+          const mutual = u.social_context?.mutual_friends_preview ?? data.mutual_friends;
+          if (mutual) {
+            setMutualFriends(mutual.map((f: any) => ({
+              id: f.user_id ?? f.id ?? 0, name: f.nickname ?? f.name ?? "", sub: "", avatar: f.avatar_url ?? f.avatar ?? "",
             })));
           }
         }

@@ -89,10 +89,10 @@ export function StreakCard() {
 
 const VISITORS = [
   { name: "鹿鸣",  avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80", min: 4 },
-  { name: "Mika",  avatar: "https://images.unsplash.com/photo-1758613172074-7275c3455034?w=80", min: 12 },
-  { name: "南枝",  avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80", min: 23 },
-  { name: "野原",  avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80", min: 41 },
-  { name: "阿川",  avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80", min: 68 },
+  { name: "Mika",  avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80", min: 12 },
+  { name: "南枝",  avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80", min: 23 },
+  { name: "野原",  avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80", min: 41 },
+  { name: "阿川",  avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80", min: 68 },
 ];
 
 export function VisitorsCard() {
@@ -234,7 +234,7 @@ export function AchievementCard() {
 const SUGGESTED = [
   { name: "林一",  handle: "@linyi.photos",  avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80", mutual: 8 },
   { name: "小满",  handle: "@xiaoman.life",  avatar: "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80", mutual: 5 },
-  { name: "阿川",  handle: "@achuan.dev",    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80", mutual: 3 },
+  { name: "阿川",  handle: "@achuan.dev",    avatar: "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80", mutual: 3 },
 ];
 
 export function SuggestedFollowsCard() {
@@ -344,7 +344,7 @@ export function DailyPickCard() {
         }}
       >
         <img
-          src="https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=400&q=80"
+          src="https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=400&q=80"
           alt="pick"
           className="w-full h-full object-cover"
           style={{ opacity: 0.92 }}

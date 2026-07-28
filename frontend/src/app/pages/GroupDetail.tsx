@@ -27,9 +27,9 @@ export function GroupDetail() {
   const [joined, setJoined] = useState(false);
   const [tab, setTab] = useState<GroupTab>("overview");
   const [group, setGroup] = useState<Group>({
-    name: "附近兴趣群组", category: "同城", members: 64, online: 8, distance: "附近",
-    description: "这里汇聚了正在探索城市的人。加入后可以查看群公告、成员与群聊。",
-    banner: "https://images.unsplash.com/photo-1543269865-cbf427effbad?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1200",
+    name: "", category: "", members: 0, online: 0, distance: "",
+    description: "",
+    banner: "",
   });
   const [members, setMembers] = useState<Member[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -53,25 +53,26 @@ export function GroupDetail() {
         const announcementsData = (announcementsRes.code === 0 ? announcementsRes.data : null) as any;
 
         if (detailData) {
+          const g = detailData.group ?? detailData;
           setGroup({
-            name: detailData.name ?? group.name,
-            category: detailData.category ?? detailData.tag ?? group.category,
-            members: detailData.members ?? detailData.member_count ?? group.members,
-            online: detailData.online ?? detailData.online_count ?? group.online,
-            distance: detailData.distance ?? group.distance,
-            description: detailData.description ?? detailData.bio ?? group.description,
-            banner: detailData.banner ?? detailData.image ?? group.banner,
+            name: g.name ?? group.name,
+            category: (detailData.tags?.[0] ?? g.category ?? group.category) || "同城",
+            members: g.members_count ?? group.members,
+            online: g.online_count ?? group.online,
+            distance: detailData.location?.distance ?? group.distance,
+            description: detailData.description ?? group.description,
+            banner: g.avatar_url ?? group.banner,
           });
-          if (detailData.joined) setJoined(true);
+          if (detailData.my_state?.is_joined) setJoined(true);
         }
 
         if (membersData) {
           const items: Member[] = (membersData.items || []).map((m: any, i: number) => ({
-            id: m.id ?? m.user_id ?? i + 1,
-            name: m.name ?? m.nickname ?? "",
+            id: m.user?.user_id ?? i + 1,
+            name: m.user?.nickname ?? m.name ?? "",
             role: m.role ?? "成员",
-            online: m.online ?? false,
-            avatar: m.avatar ?? "",
+            online: m.user?.presence_status === "online" || m.online || false,
+            avatar: m.user?.avatar_url ?? m.avatar ?? "",
           }));
           setMembers(items);
         }
