@@ -8,6 +8,7 @@ import { usePlatform } from "../../contexts/PlatformContext";
 import { useNavigate } from "react-router";
 import { ROUTES } from "../../lib/routes";
 import { useHoverConfig } from "../../hooks/useHoverConfig";
+import { useDefaultLocation } from "../../hooks/useDefaultLocation";
 import { getFeedTrending, searchMoments, getClientConfig } from "../../../api";
 
 /* ── Section heading ────────────────────────────────────────────── */
@@ -383,6 +384,7 @@ function HomeDesktop({ nearbyUsers, activities, nearbyGroups, heroStats, loading
 
 export function NearbyFeedPage() {
   const { platform } = usePlatform();
+  const { reference_point } = useDefaultLocation();
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [nearbyGroups, setNearbyGroups] = useState<NearbyGroup[]>([]);
@@ -391,6 +393,9 @@ export function NearbyFeedPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // spec: moments/search requires reference_point + ≥1 of keyword/tag/radius.
+    // reference_point comes from ClientConfig.default_location (location denied fallback).
+    if (!reference_point) return;
     let cancelled = false;
     async function fetchData() {
       try {
@@ -399,7 +404,7 @@ export function NearbyFeedPage() {
         const [trendingRes, nearbyRes, configRes] = await Promise.all([
           getFeedTrending().catch(() => ({ code: -1, data: null })),
           // moments/search is auth-optional, so anonymous users still see nearby public moments.
-          searchMoments({ sort: "nearby", pagination: { limit: 12 } }).catch(() => ({ code: -1, data: { items: [] } })),
+          searchMoments({ reference_point, radius: 5000, sort_by: "distance", pagination: { limit: 12 } }).catch(() => ({ code: -1, data: { items: [] } })),
           getClientConfig().catch(() => ({ code: -1, data: null })),
         ]);
         if (cancelled) return;
@@ -457,7 +462,7 @@ export function NearbyFeedPage() {
     }
     fetchData();
     return () => { cancelled = true; };
-  }, []);
+  }, [reference_point]);
 
   if (platform === "desktop") return <HomeDesktop nearbyUsers={nearbyUsers} activities={activities} nearbyGroups={nearbyGroups} heroStats={heroStats} loading={loading} />;
   return <HomeMobile nearbyUsers={nearbyUsers} activities={activities} nearbyGroups={nearbyGroups} heroStats={heroStats} loading={loading} />;

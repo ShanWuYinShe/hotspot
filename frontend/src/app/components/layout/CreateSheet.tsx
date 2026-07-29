@@ -13,6 +13,7 @@ import { motion } from "motion/react";
 import { ActionIconButton } from "../shared/ActionIconButton";
 import { Avatar } from "../shared/Avatar";
 import { useAuth } from "../../contexts/AuthContext";
+import { useDefaultLocation } from "../../hooks/useDefaultLocation";
 import { createMoment } from "../../../api";
 
 const MOOD_TAGS = ["松弛", "漫游", "咖啡", "展览", "自然", "夜色"];
@@ -33,6 +34,7 @@ interface Props {
 /** Shared composer used by the phone sheet, tablet sheet, and desktop dialog. */
 export function CreateSheet({ onClose }: Props) {
   const { user } = useAuth();
+  const { reference_point } = useDefaultLocation();
   const [text, setText] = useState("");
   const [selectedMoods, setSelectedMoods] = useState<Set<string>>(new Set());
   const [hasImage, setHasImage] = useState(false);
@@ -74,7 +76,10 @@ export function CreateSheet({ onClose }: Props) {
       const res = await createMoment({
         description: text.trim(),
         tags: Array.from(selectedMoods),
-        location: { location_name: LOCATIONS[locationIndex] },
+        // spec: location requires point + location_name. Point from ClientConfig default_location.
+        location: reference_point
+          ? { point: reference_point, location_name: LOCATIONS[locationIndex] }
+          : { point: { latitude: 0, longitude: 0 }, location_name: LOCATIONS[locationIndex] },
         // spec PrivacyLevel: nearby→public, friends→friends, private→private
         privacy_level: audience === "nearby" ? "public" : audience,
       });

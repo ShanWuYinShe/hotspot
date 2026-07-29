@@ -132,6 +132,8 @@ export async function searchSuggest(params: object)       { return request<objec
 // Notifications
 export async function getUnreadCount()                    { return request<object>(Endpoints.Notify.GetUnreadCount); }
 export async function listNotifications(params?: object)  { return request<PaginatedData<object>>(Endpoints.Notify.List, params ?? {}); }
+// spec: scope='selected' needs exactly one of notification_ids|type; scope='all' clears all.
+export async function markRead(params: object)            { return request<void>(Endpoints.Notify.MarkRead, params); }
 
 // System
 export async function getClientConfig()                   { return request<object>(Endpoints.System.GetClientConfig); }

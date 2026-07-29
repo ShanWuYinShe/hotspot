@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, Camera, MapPin, Link, User, FileText, Check } from "lucide-react";
+import { ArrowLeft, Camera, User, FileText, Check } from "lucide-react";
 import { ActionIconButton } from "../../components/shared/ActionIconButton";
 import { motion, AnimatePresence } from "motion/react";
 import { getAccount, updateAccount } from "../../../api";
@@ -22,7 +22,6 @@ function InputRow({
           {label}
         </label>
       </div>
-      {/* neu-input-surface: convex at rest, concave on focus-within */}
       <div className="px-4 py-3 rounded-[18px] neu-input-surface">
         {multiline ? (
           <div>
@@ -52,18 +51,22 @@ function InputRow({
   );
 }
 
+// spec: updateAccount accepts only these fields (all optional).
+interface ProfileFields {
+  nickname: string;
+  bio: string;
+  tags: Set<string>;
+  avatar: string;
+}
+
 export function EditProfilePage() {
   const navigate = useNavigate();
-  const [name,     setName]     = useState("");
-  const [handle,   setHandle]   = useState("");
-  const [bio,      setBio]      = useState("");
-  const [location, setLocation] = useState("");
-  const [website,  setWebsite]  = useState("");
-  const [tags,     setTags]     = useState<Set<string>>(new Set());
-  const [saved,    setSaved]    = useState(false);
-  const [avatar,   setAvatar]   = useState("");
-  const [banner,   setBanner]   = useState("");
-  const [loading,  setLoading]  = useState(true);
+  const [nickname, setNickname] = useState("");
+  const [bio, setBio] = useState("");
+  const [tags, setTags] = useState<Set<string>>(new Set());
+  const [saved, setSaved] = useState(false);
+  const [avatar, setAvatar] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,19 +77,12 @@ export function EditProfilePage() {
         if (cancelled) return;
         const data = (res.code === 0 ? res.data : null) as any;
         if (data) {
-          setName(data.name ?? data.nickname ?? "");
-          setHandle((data.handle ?? data.username ?? "").replace("@", ""));
-          setBio(data.bio ?? data.description ?? "");
-          setLocation(data.location?.location_name ?? data.place ?? "");
-          setWebsite(data.website ?? data.url ?? "");
+          // spec: AccountData.nickname, .bio, .tags, .avatar_url
+          setNickname(data.nickname ?? data.name ?? "");    // "name" is legacy, not in spec
+          setBio(data.bio ?? "");
           setAvatar(data.avatar_url ?? data.avatar ?? "");
-          setBanner(data.cover_url ?? data.banner ?? "");
-          if (data.tags) {
-            setTags(new Set(data.tags));
-          }
+          if (data.tags) setTags(new Set(data.tags));
         }
-      } catch {
-        // empty data is normal
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -99,13 +95,11 @@ export function EditProfilePage() {
 
   const handleSave = async () => {
     try {
+      // spec: updateAccount { nickname?, avatar_file_id?, bio?, tags?, gender? }
       await updateAccount({
-        name,
-        handle,
-        bio,
-        location,
-        website,
-        tags: Array.from(tags),
+        nickname: nickname || undefined,
+        bio: bio || undefined,
+        tags: tags.size > 0 ? Array.from(tags) : undefined,
       });
     } catch {
       // ignore save error
@@ -144,8 +138,7 @@ export function EditProfilePage() {
 
         {/* Avatar section */}
         <div className="relative rounded-[24px] overflow-hidden" style={{ height: "clamp(120px, 18vw, 160px)" }}>
-          <img src={banner} alt="banner" className="absolute inset-0 w-full h-full object-cover" />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.5))" }} />
+          <div className="absolute inset-0" style={{ background: "var(--neu-surface-flat)" }} />
           <motion.button whileTap={{ scale: 0.9 }}
             className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
             style={{ padding: "6px 12px", background: "var(--overlay-strong)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.25)", fontSize: 12, color: "white" }}>
@@ -168,17 +161,13 @@ export function EditProfilePage() {
             </motion.button>
           </div>
           <div>
-            <p style={{ fontSize: 16, color: "var(--neu-text)" }}>{name}</p>
-            <p style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>@{handle}</p>
+            <p style={{ fontSize: 16, color: "var(--neu-text)" }}>{nickname || "未设置昵称"}</p>
           </div>
         </div>
 
-        {/* Form fields */}
-        <InputRow label="姓名" icon={User} value={name} onChange={setName} placeholder="你的名字" maxLen={30} />
-        <InputRow label="用户名" icon={User} value={handle} onChange={v => setHandle(v.replace(/\s/g, "").toLowerCase())} placeholder="用户名 (不含@)" maxLen={20} />
+        {/* Form fields — spec: nickname, bio, tags are the only user-editable profile fields. */}
+        <InputRow label="昵称" icon={User} value={nickname} onChange={setNickname} placeholder="你的名字" maxLen={30} />
         <InputRow label="个人简介" icon={FileText} value={bio} onChange={setBio} placeholder="介绍一下自己…" multiline maxLen={150} />
-        <InputRow label="所在地" icon={MapPin} value={location} onChange={setLocation} placeholder="城市或地区" maxLen={40} />
-        <InputRow label="网站" icon={Link} value={website} onChange={setWebsite} placeholder="https://…" maxLen={100} />
 
         {/* Interest tags */}
         <div className="flex flex-col gap-2.5">

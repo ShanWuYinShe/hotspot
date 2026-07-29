@@ -7,7 +7,7 @@ import { useHoverConfig } from "../../hooks/useHoverConfig";
 import { usePlatform } from "../../contexts/PlatformContext";
 import { DesktopDetailSplit, RailSection, RailUserRow } from "../../components/layout/DetailRail";
 import { ActionIconButton } from "../../components/shared/ActionIconButton";
-import { listNotifications, getUnreadCount } from "../../../api";
+import { listNotifications, getUnreadCount, markRead } from "../../../api";
 
 /* ── Types & data ───────────────────────────────────────────────── */
 type NotifType = "like" | "follow" | "comment" | "nearby" | "event";
@@ -91,8 +91,16 @@ export function NotificationsPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, read: true })));
-  const markRead = (id: string) => setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  const markAllRead = () => {
+    // spec: scope='all' clears all unread. Update local state optimistically.
+    setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+    markRead({ scope: "all" }).catch(() => {});
+  };
+  const markSingleRead = (id: string) => {
+    setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    // spec: scope='selected' with notification_ids (one of notification_ids|type).
+    markRead({ scope: "selected", notification_ids: [id] }).catch(() => {});
+  };
   const remove = (id: string) => setNotifs(prev => prev.filter(n => n.id !== id));
 
   const filtered = notifs.filter(n => filter === "all" || n.type === filter);
@@ -150,14 +158,14 @@ export function NotificationsPage() {
         {unreadGroup.length > 0 && (
           <>
             <p className="uppercase mb-2" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--neu-text-muted)" }}>新消息</p>
-            {unreadGroup.map(n => <NotifRow key={n.id} notif={n} onRead={markRead} onRemove={remove} navigate={navigate} />)}
+            {unreadGroup.map(n => <NotifRow key={n.id} notif={n} onRead={markSingleRead} onRemove={remove} navigate={navigate} />)}
             {readGroup.length > 0 && <p className="uppercase mt-4 mb-2" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--neu-text-muted)" }}>较早</p>}
           </>
         )}
 
         {/* Read group */}
         <AnimatePresence>
-          {readGroup.map(n => <NotifRow key={n.id} notif={n} onRead={markRead} onRemove={remove} navigate={navigate} />)}
+          {readGroup.map(n => <NotifRow key={n.id} notif={n} onRead={markSingleRead} onRemove={remove} navigate={navigate} />)}
         </AnimatePresence>
 
         {filtered.length === 0 && (

@@ -5,10 +5,11 @@ import { usePlatform } from "../../contexts/PlatformContext";
 import { useNavigate } from "react-router";
 import { ROUTES } from "../../lib/routes";
 import { useHoverConfig } from "../../hooks/useHoverConfig";
+import { useDefaultLocation } from "../../hooks/useDefaultLocation";
 import { BspCardCanvas } from "../../components/shared/BspCardCanvas";
 import { ActionIconButton } from "../../components/shared/ActionIconButton";
 import { Avatar } from "../../components/shared/Avatar";
-import { getFeedMoments, searchSuggest, setReaction, favoriteMoment } from "../../../api";
+import { getFeedMoments, setReaction, favoriteMoment } from "../../../api";
 
 /* ── Feed data ──────────────────────────────────────────────────── */
 // FeedItem is the card shape; liked/saved are per-item interaction state held
@@ -525,23 +526,23 @@ function DiscoverDesktop({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tag
 ══════════════════════════════════════════════════════════════════ */
 export function MomentsFeedPage() {
   const { platform } = usePlatform();
+  const { reference_point } = useDefaultLocation();
   const [apiFeedItems, setApiFeedItems] = useState<FeedItem[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // spec: feed/list_moments requires source + reference_point.
+    // reference_point comes from ClientConfig.default_location (location denied fallback).
+    if (!reference_point) return;
     let cancelled = false;
     async function fetchData() {
       try {
         setLoading(true);
-        const [feedRes, suggestRes] = await Promise.all([
-          getFeedMoments().catch(() => ({ code: -1, data: { items: [] } })),
-          searchSuggest({ type: "tag" }).catch(() => ({ code: -1, data: { items: [] } })),
-        ]);
+        const feedRes = await getFeedMoments({ source: "nearby", reference_point }).catch(() => ({ code: -1, data: { items: [] } }));
         if (cancelled) return;
 
         const feedData = (feedRes.code === 0 ? feedRes.data : null) as any;
-        const suggestData = (suggestRes.code === 0 ? suggestRes.data : null) as any;
 
         if (feedData) {
           const items: FeedItem[] = (feedData.items || []).map((m: any, i: number) => {
@@ -563,13 +564,18 @@ export function MomentsFeedPage() {
             };
           });
           setApiFeedItems(items);
-        }
 
-        if (suggestData) {
-          const tagsList: string[] = (suggestData.items || suggestData.tags || []).map((t: any) =>
-            typeof t === "string" ? t : t.name ?? t.tag ?? t.value ?? ""
-          ).filter(Boolean);
-          setTags(tagsList.length > 0 ? tagsList : []);
+          // Hot tags are aggregated from the feed itself — search/suggest is a
+          // search-box autocomplete (needs a prefix) and must not be used to
+          // browse tags. Dedupe tags across the returned moments, keep order.
+          const seen = new Set<string>();
+          const tagsList: string[] = [];
+          for (const m of (feedData.items || [])) {
+            for (const t of (m.tags || [])) {
+              if (typeof t === "string" && t && !seen.has(t)) { seen.add(t); tagsList.push(t); }
+            }
+          }
+          setTags(tagsList);
         }
       } catch {
         // empty data is normal
@@ -579,7 +585,7 @@ export function MomentsFeedPage() {
     }
     fetchData();
     return () => { cancelled = true; };
-  }, []);
+  }, [reference_point]);
 
   if (platform === "desktop") return <DiscoverDesktop apiFeedItems={apiFeedItems} tags={tags} />;
   if (platform === "tablet")  return <DiscoverTablet apiFeedItems={apiFeedItems} tags={tags} />;

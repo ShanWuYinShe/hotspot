@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   DesktopDetailSplit, RailSection, RailUserRow, RailPostThumb, RailLocationMini,
 } from "../../components/layout/DetailRail";
-import { getProfile } from "../../../api";
+import { getProfile, follow, block } from "../../../api";
 
 const MUTUAL_FRIENDS: { id: number; name: string; sub: string; avatar: string }[] = [];
 
@@ -101,7 +101,17 @@ export function UserProfilePage() {
             <div className="flex items-center justify-between"><div><p className="neu-eyebrow">关系与安全</p><p className="mt-1 text-[16px] text-[var(--neu-text)]">{user.name}</p></div><ActionIconButton icon={X} label="关闭" onClick={() => setMoreOpen(false)} size={32} /></div>
             <label className="mt-5 block text-[12px] text-[var(--neu-text-muted)]">备注名称<input value={remarkDraft} onChange={(event) => setRemarkDraft(event.target.value.slice(0, 24))} placeholder="只对你可见" className="mt-2 w-full rounded-[14px] border border-[var(--neu-border)] bg-transparent px-3 py-2.5 text-[13px] text-[var(--neu-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]" /></label>
             <button type="button" onClick={() => { setRemark(remarkDraft.trim()); setMoreOpen(false); }} className="mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] border border-[var(--neu-border)] py-2.5 text-[13px] text-[var(--neu-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"><PencilLine size={14} />保存备注</button>
-            <button type="button" onClick={() => { setBlocked((value) => !value); setFollowed(false); setMoreOpen(false); }} className="mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--semantic-hot)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--semantic-hot)]"><UserX size={14} />{blocked ? "解除屏蔽" : "屏蔽用户"}</button>
+                <button type="button" onClick={() => {
+                  const next = !blocked;
+                  setBlocked(next);
+                  setFollowed(false);
+                  setMoreOpen(false);
+                  // spec: block/unblock uses user_id + active boolean.
+                  block({ user_id: userId ?? "", active: next }).catch(() => {
+                    setBlocked(!next);
+                    setFollowed(next);
+                  });
+                }} className="mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--semantic-hot)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--semantic-hot)]"><UserX size={14} />{blocked ? "解除屏蔽" : "屏蔽用户"}</button>
             <button type="button" onClick={() => setReportSent(true)} className="mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--neu-text-muted)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]">{reportSent ? <><Check size={14} />举报已记录</> : <><Flag size={14} />举报用户</>}</button>
           </motion.section>
         </>}
@@ -145,7 +155,13 @@ export function UserProfilePage() {
                 私信
               </motion.button>
               <motion.button whileTap={{ scale: 0.93 }}
-                onClick={() => !blocked && setFollowed(f => !f)}
+                onClick={() => {
+                  if (blocked) return;
+                  const next = !followed;
+                  setFollowed(next);
+                  // spec: follow/unfollow uses user_id + active boolean.
+                  follow({ user_id: userId ?? "", active: next }).catch(() => setFollowed(!next));
+                }}
                 disabled={blocked}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45"
                 style={followed

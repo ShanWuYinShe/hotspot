@@ -10,7 +10,7 @@ export {
   searchMoments, getMomentDetail, createMoment, listMyMoments, getFavoritePosts,
   searchGroups, getGroupDetail, listMyGroups,
   searchAll, searchSuggest,
-  getUnreadCount, listNotifications,
+  getUnreadCount, listNotifications, markRead,
   getClientConfig, bootstrap,
   createReport,
   getShare, createShare,

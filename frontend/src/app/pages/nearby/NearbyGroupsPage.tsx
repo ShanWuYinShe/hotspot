@@ -6,6 +6,7 @@ import { CreateGroupSheet } from "../groups/CreateGroupSheet";
 import { usePlatform } from "../../contexts/PlatformContext";
 import { useHoverConfig } from "../../hooks/useHoverConfig";
 import { useDismissibleLayer } from "../../hooks/useDismissibleLayer";
+import { useDefaultLocation } from "../../hooks/useDefaultLocation";
 import { ActionIconButton } from "../../components/shared/ActionIconButton";
 import { BspCardCanvas } from "../../components/shared/BspCardCanvas";
 import { ROUTES } from "../../lib/routes";
@@ -71,13 +72,17 @@ function GroupCard({ group, onToggle, onOpen }: { group: Group; onToggle: () => 
 
 export function NearbyGroupsPage() {
   const navigate = useNavigate(); const { platform } = usePlatform();
+  const { reference_point } = useDefaultLocation();
   const [activeCategory, setActiveCategory] = useState("全部"); const [searchQuery, setSearchQuery] = useState(""); const [showCreate, setShowCreate] = useState(false); const [groups, setGroups] = useState<Group[]>([]); const [visibleCount, setVisibleCount] = useState(12); const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // spec: groups/search requires reference_point + ≥1 of keyword/tag/radius.
+    // reference_point comes from ClientConfig.default_location (location denied fallback).
+    if (!reference_point) return;
     let cancelled = false;
     async function fetchGroups() {
       setLoading(true);
-      const res = await searchGroups({ sort: "nearby", pagination: { limit: 24 } }).catch(() => ({ code: -1, data: { items: [] } }));
+      const res = await searchGroups({ reference_point, radius: 5000, sort_by: "distance", pagination: { limit: 24 } }).catch(() => ({ code: -1, data: { items: [] } }));
       if (cancelled) return;
       const items = (res.code === 0 && res.data ? (res.data as any).items : []) as any[];
       setGroups(items.map(mapGroup));
@@ -85,7 +90,7 @@ export function NearbyGroupsPage() {
     }
     fetchGroups();
     return () => { cancelled = true; };
-  }, []);
+  }, [reference_point]);
   useDismissibleLayer({ open: showCreate, onDismiss: () => setShowCreate(false) });
   const isDesktop = platform === "desktop"; const isTablet = platform === "tablet"; const showRail = isTablet;
   const filtered = useMemo(() => groups.filter((group) => (activeCategory === "全部" || group.category === activeCategory) && (!searchQuery || `${group.name}${group.desc}${group.category}`.includes(searchQuery))), [activeCategory, groups, searchQuery]);

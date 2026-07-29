@@ -5,6 +5,7 @@ import { useNavigate } from "react-router";
 import { ROUTES } from "../../lib/routes";
 import { usePlatform } from "../../contexts/PlatformContext";
 import { useHoverConfig } from "../../hooks/useHoverConfig";
+import { useDefaultLocation } from "../../hooks/useDefaultLocation";
 import { ActionIconButton } from "../../components/shared/ActionIconButton";
 import { BspCardCanvas } from "../../components/shared/BspCardCanvas";
 import { getFeedMoments } from "../../../api";
@@ -67,6 +68,7 @@ function UserCard({ user, followed, onFollow, onNavigate, format = "standard" }:
 export function NearbyPeoplePage() {
   const navigate = useNavigate();
   const { platform } = usePlatform();
+  const { reference_point } = useDefaultLocation();
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("距离");
   const [tagFilter, setTagFilter] = useState("全部");
@@ -78,11 +80,13 @@ export function NearbyPeoplePage() {
   const isTablet = platform === "tablet";
 
   useEffect(() => {
+    // spec: feed/list_moments requires reference_point (ClientConfig default location fallback).
+    if (!reference_point) return;
     let cancelled = false;
     async function fetchUsers() {
       try {
         setLoading(true);
-        const res = await getFeedMoments({ source: "nearby" }).catch(() => ({ code: -1, data: { items: [] } }));
+        const res = await getFeedMoments({ source: "nearby", reference_point }).catch(() => ({ code: -1, data: { items: [] } }));
         if (cancelled) return;
         const data = (res.code === 0 ? res.data : null) as any;
         if (data) {
@@ -106,7 +110,7 @@ export function NearbyPeoplePage() {
     }
     fetchUsers();
     return () => { cancelled = true; };
-  }, []);
+  }, [reference_point]);
 
   const list = useMemo(() => {
     const next = allUsers.filter((user) => (tagFilter === "全部" || user.tag === tagFilter) && (!search || `${user.name}${user.tag}${user.note}`.toLowerCase().includes(search.toLowerCase())));
