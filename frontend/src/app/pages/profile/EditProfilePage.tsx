@@ -51,14 +51,6 @@ function InputRow({
   );
 }
 
-// spec: updateAccount accepts only these fields (all optional).
-interface ProfileFields {
-  nickname: string;
-  bio: string;
-  tags: Set<string>;
-  avatar: string;
-}
-
 export function EditProfilePage() {
   const navigate = useNavigate();
   const [nickname, setNickname] = useState("");
@@ -66,13 +58,11 @@ export function EditProfilePage() {
   const [tags, setTags] = useState<Set<string>>(new Set());
   const [saved, setSaved] = useState(false);
   const [avatar, setAvatar] = useState("");
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     async function fetchAccount() {
       try {
-        setLoading(true);
         const res = await getAccount().catch(() => ({ code: -1, data: null }));
         if (cancelled) return;
         const data = (res.code === 0 ? res.data : null) as any;
@@ -84,7 +74,7 @@ export function EditProfilePage() {
           if (data.tags) setTags(new Set(data.tags));
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        // ignore fetch error
       }
     }
     fetchAccount();
