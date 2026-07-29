@@ -68,6 +68,39 @@ export const mockUsers: MockUser[] = [
   { user_id: "user_xiaoman", nickname: "小满", avatar_url: avatarA },
 ];
 
+// ── Relationship lists (spec FriendItem / FollowingItem / FollowerItem) ──
+// Each item nests UserInfo under `user:` and carries the spec's relationship
+// fields. Previously the handlers returned the bare mockUsers array (flat
+// {user_id, nickname, avatar_url}), which did not match the spec item shape and
+// left pages reading user.avatar_url / presence_status with undefined values.
+const PRESENCES = ["online", "offline", "online", "online", "offline", "online"] as const;
+const isoDaysAgo = (days: number) => new Date(Date.now() - days * 86400000).toISOString();
+
+export const mockFriends = mockUsers.slice(0, 6).map((u, i) => ({
+  user: u,
+  presence_status: PRESENCES[i],
+  last_online_at: isoDaysAgo(i),
+  remark: i % 3 === 0 ? `${u.nickname}备注` : undefined,
+  followed_at: isoDaysAgo(30 + i),
+  followed_back_at: isoDaysAgo(20 + i),
+}));
+
+export const mockFollowing = mockUsers.slice(1, 6).map((u, i) => ({
+  user: u,
+  followed_at: isoDaysAgo(15 + i),
+  is_mutual: i % 2 === 0,
+  presence_status: PRESENCES[i + 1],
+  last_online_at: isoDaysAgo(i + 1),
+}));
+
+export const mockFollowers = mockUsers.slice(2, 7).map((u, i) => ({
+  user: u,
+  followed_at: isoDaysAgo(i + 2),
+  is_following_back: i % 2 === 1,
+  presence_status: PRESENCES[i + 2],
+  last_online_at: isoDaysAgo(i + 1),
+}));
+
 const mockLocation = (location_name: string, distance?: string) => ({
   point: { latitude: 34.26, longitude: 117.18 },
   location_name,

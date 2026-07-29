@@ -3,6 +3,7 @@ import {
   apiOk, apiError, paginated,
   mockUsers, mockAccount, mockSettings,
   mockMoments, mockGroups, mockNotifications, mockChats, mockTrending, mockReactionItems,
+  mockFriends, mockFollowing, mockFollowers,
   getMockAuthScenario, setMockLoggedIn, isMockLoggedIn,
 } from "./data";
 
@@ -122,9 +123,9 @@ export const handlers = [
   http.post(`${API}/users/search`, () => json(paginated(mockUsers))),
   http.post(`${API}/users/batch_get`, () => json(apiOk({ users: Object.fromEntries(mockUsers.map(u => [u.user_id, u])) }))),
   // list_* default to the current user → auth-required when no user_id given.
-  http.post(`${API}/users/list_friends`, () => requireMockAuth() ?? json(paginated(mockUsers.slice(0, 6)))),
-  http.post(`${API}/users/list_following`, () => requireMockAuth() ?? json(paginated(mockUsers.slice(1, 6)))),
-  http.post(`${API}/users/list_followers`, () => requireMockAuth() ?? json(paginated(mockUsers.slice(2, 7)))),
+  http.post(`${API}/users/list_friends`, () => requireMockAuth() ?? json(paginated(mockFriends))),
+  http.post(`${API}/users/list_following`, () => requireMockAuth() ?? json(paginated(mockFollowing))),
+  http.post(`${API}/users/list_followers`, () => requireMockAuth() ?? json(paginated(mockFollowers))),
   http.post(`${API}/users/list_groups`, () => requireMockAuth() ?? json(paginated(mockGroups))),
   http.post(`${API}/users/list_moments`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 12)))),
   http.post(`${API}/users/list_reacted_moments`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(6, 18)))),

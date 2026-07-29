@@ -1,5 +1,5 @@
 /** Canonical application URLs mirror backend domains and resource names. */
-export type ProfileSection = "moments" | "groups" | "relationships" | "friends" | "following" | "followers";
+export type ProfileSection = "moments" | "groups" | "relationships";
 
 export const ROUTES = {
   home: "/",
@@ -21,6 +21,13 @@ export const ROUTES = {
   meSection: (section: ProfileSection) => `/me/${section}`,
 } as const;
 
+/**
+ * Static path prefixes for detail pages. Using these avoids fragile runtime
+ * string surgery (`.replace(/\/$/, "")` on a helper result) when testing
+ * whether a pathname lives under a parametrised route.
+ */
+const DETAIL_PREFIXES = ["/users/", "/moments/", "/groups/"] as const;
+
 export const SUB_PAGE_PATHS = [
   ROUTES.settings,
   ROUTES.map,
@@ -34,14 +41,10 @@ export const SUB_PAGE_PATHS = [
 
 /** Paths that replace bottom navigation with a focused detail experience. */
 export function isSubPagePath(pathname: string) {
-  return (
-    SUB_PAGE_PATHS.some((path) => pathname === path) ||
-    pathname.startsWith(`${ROUTES.messages}/`) ||
-    pathname.startsWith(`${ROUTES.user("").replace(/\/$/, "")}/`) ||
-    pathname.startsWith(`${ROUTES.moment("").replace(/\/$/, "")}/`) ||
-    pathname.startsWith(`${ROUTES.group("").replace(/\/$/, "")}/`) ||
-    pathname.startsWith(`${ROUTES.me}/`)
-  );
+  if (SUB_PAGE_PATHS.some((path) => pathname === path)) return true;
+  if (pathname.startsWith(`${ROUTES.messages}/`)) return true;
+  if (pathname.startsWith(`${ROUTES.me}/`)) return true;
+  return DETAIL_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
 /** Consistent active state for the four primary mobile/tablet navigation targets. */
@@ -77,12 +80,13 @@ export function getDesktopNavId(pathname: string, search = ""): DesktopNavId | n
     const section = pathname.slice(`${ROUTES.me}/`.length);
     if (section === "moments") return "moments";
     if (section === "groups") return "my-groups";
-    if (section === "relationships" || section === "friends" || section === "following" || section === "followers") return "relationships";
+    // "relationships" is the only other section; treat it (and any /me/ tail) as relationships.
+    return "relationships";
   }
 
-  if (pathname.startsWith(`${ROUTES.moment("").replace(/\/$/, "")}/`) && source === "me") return "moments";
-  if (pathname.startsWith(`${ROUTES.group("").replace(/\/$/, "")}/`) && source === "me") return "my-groups";
-  if (pathname.startsWith(`${ROUTES.user("").replace(/\/$/, "")}/`) && source === "relationships") return "relationships";
+  if (pathname.startsWith("/moments/") && source === "me") return "moments";
+  if (pathname.startsWith("/groups/") && source === "me") return "my-groups";
+  if (pathname.startsWith("/users/") && source === "relationships") return "relationships";
 
   return null;
 }

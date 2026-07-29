@@ -22,9 +22,17 @@ export function initMock(w: any, envDefault: boolean) {
   worker = w;
   enabled = readPersisted(envDefault);
   if (enabled) {
-    // "warn" surfaces unhandled requests so missing handlers are visible during
-    // dev instead of silently falling through to the real network.
-    worker.start({ onUnhandledRequest: "warn" });
+    // Only warn about genuinely missing API handlers. SPA navigation requests
+    // (e.g. GET /me/groups, GET /me/relationships — the page routes, not API
+    // calls) and Vite HMR / font / static asset requests would otherwise each
+    // log a noisy "[MSW] intercepted a request without a matching request
+    // handler" warning on every navigation, drowning out real gaps.
+    worker.start({
+      onUnhandledRequest(req: { url: string }) {
+        if (req.url.includes("/api/v1/")) return "warn";
+        return "bypass";
+      },
+    });
   }
   notify();
 }

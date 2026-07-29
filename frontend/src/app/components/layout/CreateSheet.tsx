@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { ActionIconButton } from "../shared/ActionIconButton";
+import { Avatar } from "../shared/Avatar";
 import { useAuth } from "../../contexts/AuthContext";
 import { createMoment } from "../../../api";
 
@@ -112,17 +113,8 @@ export function CreateSheet({ onClose }: Props) {
         <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">
-              {user?.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user.nickname}
-                  className="h-9 w-9 rounded-full border border-[var(--neu-border)] object-cover"
-                />
-              ) : (
-                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--neu-border)] text-[14px] text-[var(--neu-text-muted)]">
-                  {(user?.nickname || "?").slice(0, 1)}
-                </span>
-              )}
+              <Avatar src={user?.avatar_url} name={user?.nickname} size={36}
+                className="border border-[var(--neu-border)]" />
               <div className="min-w-0">
                 <p className="text-[13px] font-medium text-[var(--neu-text)]">{user?.nickname || "用户"}</p>
                 <button
