@@ -6,7 +6,7 @@ export {
   getAccount, updateAccount, getSettings, updateSettings, updateLocation,
   follow, block, getProfile, getUserDetail, batchGet,
   listFriends, listFollowing, listFollowers,
-  getFeedMoments, getFeedTrending, dismissFeedItem,
+  getFeedMoments, getFeedTrending, getFeedUsers, getFeedGroups, dismissFeedItem,
   searchMoments, getMomentDetail, createMoment, listMyMoments, getFavoritePosts,
   searchGroups, getGroupDetail, listMyGroups,
   searchAll, searchSuggest,

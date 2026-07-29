@@ -8,7 +8,7 @@ import { useHoverConfig } from "../../hooks/useHoverConfig";
 import { useDefaultLocation } from "../../hooks/useDefaultLocation";
 import { ActionIconButton } from "../../components/shared/ActionIconButton";
 import { BspCardCanvas } from "../../components/shared/BspCardCanvas";
-import { getFeedMoments } from "../../../api";
+import { getFeedUsers } from "../../../api";
 
 interface NearbyUser {
   id: number; name: string; distance: string; avatar: string;
@@ -80,25 +80,26 @@ export function NearbyPeoplePage() {
   const isTablet = platform === "tablet";
 
   useEffect(() => {
-    // spec: feed/list_moments requires reference_point (ClientConfig default location fallback).
+    // spec: feed/list_users returns nearby UserItem[]. reference_point from ClientConfig default_location.
     if (!reference_point) return;
     let cancelled = false;
     async function fetchUsers() {
       try {
         setLoading(true);
-        const res = await getFeedMoments({ source: "nearby", reference_point }).catch(() => ({ code: -1, data: { items: [] } }));
+        const res = await getFeedUsers({ reference_point }).catch(() => ({ code: -1, data: { items: [] } }));
         if (cancelled) return;
         const data = (res.code === 0 ? res.data : null) as any;
         if (data) {
           const items: NearbyUser[] = (data.items || []).map((u: any, i: number) => ({
-            id: u.id ?? u.user_id ?? u.moment_id ?? i + 1,
-            name: u.name ?? u.nickname ?? u.user?.nickname ?? "",
-            distance: u.distance ?? u.location?.distance ?? "",
-            avatar: u.avatar ?? u.user?.avatar_url ?? "",
-            status: u.online ? "在线" : "离线",
-            tag: u.tag ?? u.tags?.[0] ?? "",
-            mutual: u.mutual ?? u.mutual_count ?? 0,
-            note: u.note ?? u.bio ?? u.status_text ?? u.user?.bio ?? "",
+            // spec UserItem: user_id, nickname, avatar_url, presence_status, distance, tags, bio, social_context
+            id: u.user_id ?? i + 1,
+            name: u.nickname ?? "",
+            distance: u.distance ?? "",
+            avatar: u.avatar_url ?? "",
+            status: u.presence_status === "online" ? "在线" : "离线",
+            tag: u.tags?.[0] ?? "",
+            mutual: u.social_context?.mutual_friends_count ?? 0,
+            note: u.bio ?? "",
           }));
           setAllUsers(items);
         }

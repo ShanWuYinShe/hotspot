@@ -111,6 +111,8 @@ export async function listFollowers(params?: object)      { return request<Pagin
 // Feed
 export async function getFeedMoments(params?: object)     { return request<PaginatedData<object>>(Endpoints.Feed.ListMoments, params ?? {}); }
 export async function getFeedTrending(params?: object)    { return request<object>(Endpoints.Feed.ListTrending, params ?? {}); }
+export async function getFeedUsers(params?: object)       { return request<PaginatedData<object>>(Endpoints.Feed.ListUsers, params ?? {}); }
+export async function getFeedGroups(params?: object)      { return request<PaginatedData<object>>(Endpoints.Feed.ListGroups, params ?? {}); }
 export async function dismissFeedItem(params: object)     { return request<void>(Endpoints.Feed.Dismiss, params); }
 
 // Moments

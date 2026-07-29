@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   DesktopDetailSplit, RailSection, RailUserRow, RailPostThumb, RailLocationMini,
 } from "../../components/layout/DetailRail";
-import { getProfile, follow, block } from "../../../api";
+import { getProfile, follow, block, createReport } from "../../../api";
 
 const MUTUAL_FRIENDS: { id: number; name: string; sub: string; avatar: string }[] = [];
 
@@ -112,7 +112,10 @@ export function UserProfilePage() {
                     setFollowed(next);
                   });
                 }} className="mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--semantic-hot)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--semantic-hot)]"><UserX size={14} />{blocked ? "解除屏蔽" : "屏蔽用户"}</button>
-            <button type="button" onClick={() => setReportSent(true)} className="mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--neu-text-muted)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]">{reportSent ? <><Check size={14} />举报已记录</> : <><Flag size={14} />举报用户</>}</button>
+                <button type="button" onClick={() => {
+                  createReport({ target_type: "user", target_id: userId ?? "", reason: "other" }).then(() => setReportSent(true)).catch(() => {});
+                  setMoreOpen(false);
+                }} className="mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--neu-text-muted)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]">{reportSent ? <><Check size={14} />举报已记录</> : <><Flag size={14} />举报用户</>}</button>
           </motion.section>
         </>}
       </AnimatePresence>
