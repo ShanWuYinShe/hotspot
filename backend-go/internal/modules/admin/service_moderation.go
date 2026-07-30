@@ -36,7 +36,7 @@ func (s *Service) SearchTags(ctx context.Context, req AdminTagSearchRequest) (Pa
 	}
 	resp := PaginatedAdminTags{Items: make([]AdminTagItem, 0, len(page.Items))}
 	for _, item := range page.Items {
-		resp.Items = append(resp.Items, AdminTagItem{Name: item.Name, UsageCount: item.UsageCount, Trend: defaultTagTrend, CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339)})
+		resp.Items = append(resp.Items, AdminTagItem{TagID: "tag_" + item.Name, Name: item.Name, UsageCount: item.UsageCount, Trend: defaultTagTrend, CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339)})
 	}
 	if page.Next != nil {
 		resp.NextCursor = encodeTagCursor(*page.Next)
@@ -63,20 +63,20 @@ func (s *Service) DeleteTag(ctx context.Context, name string, hardDelete bool) (
 		}
 		return nil, err
 	}
-		if !wasBlocked {
-			deleteType := "soft_block"
-			if hardDelete {
-				deleteType = "hard_delete"
-			}
-			details := AuditDetails{"type": string(AuditActionTagDelete), "name": tagName, "method": deleteType}
-			if hardDelete && hadRefs {
-				details["warning"] = "该操作会从所有历史引用中移除标签，不可恢复"
-			}
-			if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionTagDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeTag, TargetID: tagName, TargetName: tagName, Details: details}); err != nil {
-				return nil, err
-			}
+	if !wasBlocked {
+		deleteType := "soft_block"
+		if hardDelete {
+			deleteType = "hard_delete"
 		}
-		return nil, nil
+		details := AuditDetails{"type": string(AuditActionTagDelete), "name": tagName, "method": deleteType}
+		if hardDelete && hadRefs {
+			details["warning"] = "该操作会从所有历史引用中移除标签，不可恢复"
+		}
+		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionTagDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeTag, TargetID: tagName, TargetName: tagName, Details: details}); err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
 }
 
 func (s *Service) SearchAnnouncements(ctx context.Context, req AdminAnnouncementSearchRequest) (PaginatedAdminAnnouncements, *httpx.APIError, error) {
@@ -400,7 +400,7 @@ func (s *Service) DismissGroup(ctx context.Context, req AdminDismissGroupRequest
 	return nil, nil
 }
 
-func (s *Service) SearchReports(ctx context.Context, req AdminReportSearchRequest) (PaginatedAdminReports, *httpx.APIError, error) {
+func (s *Service) SearchReports(ctx context.Context, req AdminReportListRequest) (PaginatedAdminReports, *httpx.APIError, error) {
 	if _, apiErr, err := s.requirePermission(ctx, permissionReportsRead); apiErr != nil || err != nil {
 		return PaginatedAdminReports{}, apiErr, err
 	}

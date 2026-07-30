@@ -14,9 +14,9 @@ import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import {
-  UserItem, GroupItem, TrendingTagItem, MomentItem, TrendingBundle,
+  UserItem, GroupItem, MomentItem,
   SearchUsersRequest, SearchGroupsRequest, CreateReportRequest, Relationship,
-  GetFeedMomentsRequest, FeedSource
+  GetFeedFollowingRequest, GetFeedNearbyRequest
 } from '../../../core/types/api';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -60,7 +60,6 @@ export struct DiscoverPage {
 
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
-  @State trendingTags: TrendingTagItem[] = [];
   @State recommendedUsers: UserItem[] = [];
   private recommendedUsersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
   @State recommendedGroups: GroupItem[] = [];
@@ -111,33 +110,50 @@ export struct DiscoverPage {
   }
 
   private hasAnyData(): boolean {
-    return this.trendingTags.length > 0 || this.recommendedUsers.length > 0 ||
+    return this.recommendedUsers.length > 0 ||
       this.recommendedGroups.length > 0 || this.hotMoments.length > 0;
   }
 
-  private async loadFeedMoments(source: FeedSource): Promise<void> {
+  private async loadFeedMoments(source: string): Promise<void> {
     const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
-    const request: GetFeedMomentsRequest = {
-      source: source,
-      reference_point: { latitude: refLoc?.latitude ?? 0, longitude: refLoc?.longitude ?? 0 },
-      pagination: { limit: 20 }
-    };
-    if (source === 'nearby') {
-      request.radius = DefaultConfig.NEARBY_RADIUS;
-    }
-    const response = await LoadingUtil.withMinimumTime(() => ApiClient.getFeedMoments(request));
-    if (this.isDestroyed) return;
-    if (response.code === 0) {
-      this.hotMoments = response.data?.items ?? [];
-      this.hotMomentsDataSource.setData(this.hotMoments);
-      this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
-      // 关注/附近为 feed 流，不展示聚合发现区块
-      this.trendingTags = [];
-      this.recommendedUsers = [];
-      this.recommendedGroups = [];
-      this.recommendedUsersDataSource.setData([]);
-    } else if (!this.hasAnyData()) {
-      this.errorMessage = response.message ?? '加载失败';
+    const refPoint = { latitude: refLoc?.latitude ?? 0, longitude: refLoc?.longitude ?? 0 };
+    const pagination = { limit: 20 };
+
+    if (source === 'following') {
+      const request: GetFeedFollowingRequest = {
+        reference_point: refPoint,
+        pagination: pagination
+      };
+      const response = await LoadingUtil.withMinimumTime(() => ApiClient.getFeedFollowing(request));
+      if (this.isDestroyed) return;
+      if (response.code === 0) {
+        this.hotMoments = response.data?.items ?? [];
+        this.hotMomentsDataSource.setData(this.hotMoments);
+        this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
+        this.recommendedUsers = [];
+        this.recommendedGroups = [];
+        this.recommendedUsersDataSource.setData([]);
+      } else if (!this.hasAnyData()) {
+        this.errorMessage = response.message ?? '加载失败';
+      }
+    } else {
+      const request: GetFeedNearbyRequest = {
+        reference_point: refPoint,
+        radius: DefaultConfig.NEARBY_RADIUS,
+        pagination: pagination
+      };
+      const response = await LoadingUtil.withMinimumTime(() => ApiClient.getFeedNearby(request));
+      if (this.isDestroyed) return;
+      if (response.code === 0) {
+        this.hotMoments = response.data?.items ?? [];
+        this.hotMomentsDataSource.setData(this.hotMoments);
+        this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
+        this.recommendedUsers = [];
+        this.recommendedGroups = [];
+        this.recommendedUsersDataSource.setData([]);
+      } else if (!this.hasAnyData()) {
+        this.errorMessage = response.message ?? '加载失败';
+      }
     }
   }
 
@@ -197,7 +213,6 @@ export struct DiscoverPage {
         const trendingResponse = results[0];
         if (trendingResponse.code === 0) {
           const bundle = trendingResponse.data;
-          this.trendingTags = bundle?.trending_tags ?? [];
           this.hotMoments = bundle?.hot_moments ?? [];
           this.hotMomentsDataSource.setData(this.hotMoments);
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
@@ -210,7 +225,6 @@ export struct DiscoverPage {
         if (this.isDestroyed) return;
         if (trendingResponse.code === 0) {
           const bundle = trendingResponse.data;
-          this.trendingTags = bundle?.trending_tags ?? [];
           this.hotMoments = bundle?.hot_moments ?? [];
           this.hotMomentsDataSource.setData(this.hotMoments);
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
@@ -429,58 +443,6 @@ export struct DiscoverPage {
   @Builder
   buildRightSidebar() {
     Column() {
-      // 热门话题（对齐前端 trending topics：eyebrow 标题 + 列表项）
-      if (this.trendingTags.length > 0) {
-        Column() {
-          Row() {
-            Text() {
-              SymbolSpan($r(AppIcon.CHART))
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor([this.getCurrentThemePalette().accentBackground])
-            }
-            Text('热门话题')
-              .fontSize(DesignConstants.FONT.SIZE.XS2) // 10 eyebrow
-              .fontWeight(FontWeight.Medium)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-              .textCase(TextCase.UpperCase)
-              .letterSpacing(1.2)
-              .margin({ left: DesignConstants.SPACING.XS })
-          }
-          .alignItems(VerticalAlign.Center)
-          .margin({ top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.SM })
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-
-          ForEach(this.trendingTags, (topic: TrendingTagItem) => {
-            Row() {
-              Text(`#${topic.name}`)
-                .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13 对齐前端 text-body
-                .fontColor(this.getCurrentThemePalette().textPrimary)
-                .layoutWeight(1)
-
-              Text(`${topic.usage_count}帖`)
-                .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-caption
-                .fontColor(this.getCurrentThemePalette().textSecondary)
-            }
-            .width('100%')
-            .padding({
-              left: DesignConstants.SPACING.LG,
-              right: DesignConstants.SPACING.LG,
-              top: DesignConstants.SPACING.SM,
-              bottom: DesignConstants.SPACING.SM
-            })
-            .borderRadius(DesignConstants.RADIUS.SM)
-            .onClick(() => { this.activeTag = topic.name; })
-          }, (topic: TrendingTagItem) => topic.name)
-        }
-        .width('100%')
-
-        // 分隔线（对齐前端 divider-soft）
-        Divider()
-          .width('85%')
-          .color(this.getSurfaceBorder())
-          .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-      }
-
       // 活跃用户（对齐前端 active users：eyebrow + 列表项）
       if (this.recommendedUsers.length > 0) {
         Column() {
@@ -493,6 +455,7 @@ export struct DiscoverPage {
             .padding({
               left: DesignConstants.SPACING.LG,
               right: DesignConstants.SPACING.LG,
+              top: DesignConstants.SPACING.XL,
               bottom: DesignConstants.SPACING.SM
             })
 

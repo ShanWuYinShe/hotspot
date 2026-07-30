@@ -194,11 +194,13 @@ interface BootstrapData {
 }
 
 // 未读摘要（聚合各域未读，冷启动时一次性渲染角标）
+// 通知部分的字段与 notify/get_unread_count 的 UnreadCountResult 对齐
 interface UnreadSummary {
-  notification_unread_count: number;   // 通知未读总数（同 notify/get_unread_count.total）
-  private_chat_unread_count: number;   // 私聊会话未读消息总数
-  group_chat_unread_count: number;     // 群聊未读消息总数
-  total_badge: number;                 // 综合角标数（客户端展示用，服务端按业务规则聚合）
+  notification_total: number;               // 通知未读总数（同 notify/get_unread_count.total）
+  notification_by_type: Record<NotifyCategory, number>;  // 按分类的未读数（同 notify/get_unread_count.by_type）
+  private_chat_unread_count: number;        // 私聊会话未读消息总数
+  group_chat_unread_count: number;          // 群聊未读消息总数
+  total_badge: number;                      // 综合角标数（客户端展示用，服务端按业务规则聚合）
 }
 ```
 

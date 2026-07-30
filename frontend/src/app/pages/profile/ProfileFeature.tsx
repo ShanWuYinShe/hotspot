@@ -193,8 +193,9 @@ function ProfileDesktop() {
           </motion.button>
 
           {/* Stats */}
-          <div className="w-full rounded-[18px] overflow-hidden mb-4"
-            style={{ background: "var(--neu-bg)", boxShadow: "6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
+          <div className="w-full rounded-[18px] mb-4"
+            style={{ background: "var(--neu-bg)", boxShadow: "0 0 0 1px var(--neu-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)" }}>
+            <div style={{ overflow: "hidden", borderRadius: 17 }}>
             {[
               { label: "瞬间", value: stats.moments_count ?? 0, section: "moments" as ProfileSection },
               { label: "关注者", value: stats.followers_count ?? 0, section: "followers" as const },
@@ -214,11 +215,14 @@ function ProfileDesktop() {
                 </motion.button>
               </React.Fragment>
             ))}
+            </div>
           </div>
+        </div>
 
           {/* Section quick links */}
-          <div className="w-full rounded-[18px] overflow-hidden"
-            style={{ background: "var(--neu-bg)", boxShadow: "6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
+          <div className="w-full rounded-[18px]"
+            style={{ background: "var(--neu-bg)", boxShadow: "0 0 0 1px var(--neu-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)" }}>
+            <div style={{ overflow: "hidden", borderRadius: 17 }}>
             {[
               { label: "我的瞬间",  section: "moments" as ProfileSection, icon: Grid3X3, count: myGalleryPosts.length },
               { label: "我的群组",  section: "groups" as ProfileSection,    icon: Users,   count: myGroups.length },
@@ -257,19 +261,21 @@ function ProfileDesktop() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, maxWidth: 3 * 240 + 2 * 10 }}>
             {myGalleryPosts.slice(0, 9).map(post => (
               <motion.div key={post.id} whileTap={{ scale: 0.97 }}
-                className="relative rounded-[16px] overflow-hidden cursor-pointer"
-                style={{ aspectRatio: "1/1", boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
-                <img src={post.img} alt="" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 flex items-end p-2"
-                  style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 55%)" }}>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-0.5">
-                      <Heart style={{ width: 10, height: 10, color: "white" }} fill="white" strokeWidth={0} />
-                      <span style={{ fontSize: 10, color: "white" }}>{post.likes}</span>
-                    </div>
-                    <div className="flex items-center gap-0.5">
-                      <MessageCircle style={{ width: 10, height: 10, color: "white" }} strokeWidth={1.5} />
-                      <span style={{ fontSize: 10, color: "white" }}>{post.comments}</span>
+                className="relative rounded-[16px] cursor-pointer"
+                style={{ aspectRatio: "1/1", boxShadow: "0 0 0 1px var(--neu-border), 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)" }}>
+                <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 15 }}>
+                  <img src={post.img} alt="" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 flex items-end p-2"
+                    style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 55%)" }}>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-0.5">
+                        <Heart style={{ width: 10, height: 10, color: "white" }} fill="white" strokeWidth={0} />
+                        <span style={{ fontSize: 10, color: "white" }}>{post.likes}</span>
+                      </div>
+                      <div className="flex items-center gap-0.5">
+                        <MessageCircle style={{ width: 10, height: 10, color: "white" }} strokeWidth={1.5} />
+                        <span style={{ fontSize: 10, color: "white" }}>{post.comments}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -436,8 +442,9 @@ function ProfileMobile() {
               </div>
 
               {/* Stats — flat, integrated INTO the hero card (not a separate elevated bar) */}
-              <div className="grid grid-cols-3 w-full rounded-[14px] overflow-hidden"
-                style={{ background: "var(--neu-border)", gap: 1, border: "1px solid var(--neu-border)" }}>
+              <div className="grid grid-cols-3 w-full rounded-[14px]"
+                style={{ background: "var(--neu-border)", gap: 1, boxShadow: "0 0 0 1px var(--neu-border)" }}>
+                <div style={{ overflow: "hidden", borderRadius: 13 }}>
                 {[
                   { label: "帖子", value: "48" },
                   { label: "关注者", value: "312" },
@@ -450,6 +457,7 @@ function ProfileMobile() {
                     onClick={stat.label === "关注者" ? () => navigate(`${ROUTES.meSection("relationships")}?tab=followers`) : undefined}
                   />
                 ))}
+                </div>
               </div>
             </div>
           </div>

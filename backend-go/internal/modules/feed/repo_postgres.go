@@ -3,14 +3,13 @@ package feed
 import (
 	"context"
 	"crypto/sha256"
-	"errors"
 	"sort"
 	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/platform/config"
-	"hotspot/backend-go/internal/platform/geo"
 	platformcursor "hotspot/backend-go/internal/platform/cursor"
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
@@ -22,19 +21,31 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 	return &PostgresRepository{factory: factory}
 }
 
-func (r *PostgresRepository) ListMoments(ctx context.Context, query momentsQuery) (PaginatedMoments, error) {
+func (r *PostgresRepository) ListFollowingMoments(ctx context.Context, query momentsQuery) (PaginatedMoments, error) {
 	queryable, err := r.queryable()
 	if err != nil {
 		return PaginatedMoments{}, err
 	}
-	candidates, err := r.loadMomentCandidates(ctx, queryable, query)
+	candidates, err := r.loadFollowingCandidates(ctx, queryable, query)
 	if err != nil {
 		return PaginatedMoments{}, err
 	}
-	return paginateMoments(candidates, query.Limit, query.Cursor, query.Source)
+	return paginateFollowingMoments(candidates, query.Limit, query.Cursor)
 }
 
-func (r *PostgresRepository) ListGroups(ctx context.Context, query groupsQuery) (PaginatedGroups, error) {
+func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query momentsQuery) (PaginatedMoments, error) {
+	queryable, err := r.queryable()
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	candidates, err := r.loadNearbyCandidates(ctx, queryable, query)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	return paginateNearbyMoments(candidates, query.Limit, query.Cursor)
+}
+
+func (r *PostgresRepository) ListNearbyGroups(ctx context.Context, query groupsQuery) (PaginatedGroups, error) {
 	queryable, err := r.queryable()
 	if err != nil {
 		return PaginatedGroups{}, err
@@ -46,7 +57,7 @@ func (r *PostgresRepository) ListGroups(ctx context.Context, query groupsQuery) 
 	return paginateGroups(candidates, query.Limit, query.Cursor)
 }
 
-func (r *PostgresRepository) ListUsers(ctx context.Context, query usersQuery) (PaginatedUsers, error) {
+func (r *PostgresRepository) ListNearbyUsers(ctx context.Context, query usersQuery) (PaginatedUsers, error) {
 	queryable, err := r.queryable()
 	if err != nil {
 		return PaginatedUsers{}, err
@@ -63,26 +74,11 @@ func (r *PostgresRepository) ListTrending(ctx context.Context, viewerUserID stri
 	if err != nil {
 		return TrendingBundle{}, err
 	}
-	tags, err := loadTrendingTags(ctx, queryable, viewerUserID)
-	if err != nil {
-		return TrendingBundle{}, err
-	}
 	hotMoments, err := loadTrendingMoments(ctx, queryable, viewerUserID)
 	if err != nil {
 		return TrendingBundle{}, err
 	}
-	return TrendingBundle{TrendingTags: tags, HotMoments: hotMoments}, nil
-}
-
-func (r *PostgresRepository) Dismiss(ctx context.Context, cmd dismissCommand) error {
-	queryable, err := r.queryable()
-	if err != nil {
-		return err
-	}
-	if err := ensureDismissTargetExists(ctx, queryable, cmd.TargetType, cmd.TargetID); err != nil {
-		return err
-	}
-	return queryable.Exec(ctx, queryFeedDismissInsert, cmd.ViewerUserID, cmd.TargetType, cmd.TargetID)
+	return TrendingBundle{HotMoments: hotMoments}, nil
 }
 
 func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
@@ -96,7 +92,6 @@ func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
 	return queryable, nil
 }
 
-// FetchMomentImageRows loads ordered image rows for the given moment IDs.
 func (r *PostgresRepository) FetchMomentImageRows(ctx context.Context, momentIDs []string) (map[string][]momentImageRow, error) {
 	queryable, err := r.queryable()
 	if err != nil {
@@ -129,21 +124,21 @@ func (r *PostgresRepository) loadUserCandidates(ctx context.Context, queryable p
 		if userID == query.ViewerUserID {
 			continue
 		}
-			distance, bearing, ok := plan.Match(geo.Point{Latitude: latitude, Longitude: longitude})
-			if !ok {
-				continue
-			}
-			d := float64(distance)
-			b := float64(bearing)
-			item := UserItem{
-				User: UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
-				Bio:  strings.TrimSpace(bio),
-				Location: &RelativeLocation{
-					Point:          GeoPoint{Latitude: latitude, Longitude: longitude},
-					LocationName:   locationName,
-					Distance:       &d,
-					BearingDegrees: &b,
-				},
+		distance, bearing, ok := plan.Match(geo.Point{Latitude: latitude, Longitude: longitude})
+		if !ok {
+			continue
+		}
+		d := float64(distance)
+		b := float64(bearing)
+		item := UserItem{
+			User: UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
+			Bio:  strings.TrimSpace(bio),
+			Location: &RelativeLocation{
+				Point:          GeoPoint{Latitude: latitude, Longitude: longitude},
+				LocationName:   locationName,
+				Distance:       &d,
+				BearingDegrees: &b,
+			},
 			Relation:      &UserRelation{IsFollowing: isFollowing, IsFollowedBy: isFollowedBy, IsBlocked: false},
 			SocialContext: &UserSocialContext{MutualFriendsCount: mutualFriendsCount, CommonGroupsCount: commonGroupsCount},
 		}
@@ -177,19 +172,17 @@ func (r *PostgresRepository) loadGroupCandidates(ctx context.Context, queryable 
 		if err := rows.Scan(&groupID, &name, &avatarURL, &description, &hasPassword, &locationName, &latitude, &longitude, &membersCount, &isJoined, &friendsInGroup); err != nil {
 			return nil, err
 		}
-			distance, bearing, ok := plan.Match(geo.Point{Latitude: latitude, Longitude: longitude})
-			if !ok {
-				continue
-			}
-			d := float64(distance)
-			b := float64(bearing)
-			item := GroupItem{
-				Group:       GroupInfo{GroupID: groupID, Name: name, AvatarURL: avatarURL, MembersCount: membersCount},
-				Description: strings.TrimSpace(description),
-				// has_password is @member-only per spec; don't surface it to viewers
-				// who haven't joined (avoid tipping off crawlers/brute-forcers).
-				HasPassword:    hasPassword && isJoined,
-				Location:       RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
+		distance, bearing, ok := plan.Match(geo.Point{Latitude: latitude, Longitude: longitude})
+		if !ok {
+			continue
+		}
+		d := float64(distance)
+		b := float64(bearing)
+		item := GroupItem{
+			Group:          GroupInfo{GroupID: groupID, Name: name, AvatarURL: avatarURL, MembersCount: membersCount},
+			Description:    strings.TrimSpace(description),
+			HasPassword:    hasPassword && isJoined,
+			Location:       RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
 			MyState:        &MyGroupState{IsJoined: isJoined},
 			FriendsInGroup: friendsInGroup,
 		}
@@ -202,26 +195,69 @@ func (r *PostgresRepository) loadGroupCandidates(ctx context.Context, queryable 
 	return items, nil
 }
 
-func (r *PostgresRepository) loadMomentCandidates(ctx context.Context, queryable persistence.QueryableDB, query momentsQuery) ([]momentCandidate, error) {
+func (r *PostgresRepository) loadFollowingCandidates(ctx context.Context, queryable persistence.QueryableDB, query momentsQuery) ([]momentCandidate, error) {
+	rows, err := queryable.Query(ctx, queryFeedMomentsFollowing, query.ViewerUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]momentCandidate, 0)
+	momentIDs := make([]string, 0)
+	for rows.Next() {
+		var momentID, userID, nickname, avatarURL, description, locationName string
+		var latitude, longitude float64
+		var createdAt time.Time
+		var likesCount, commentsCount, sharesCount int
+		var isLiked, isFavorited bool
+		if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &likesCount, &commentsCount, &sharesCount, &locationName, &latitude, &longitude, &isLiked, &isFavorited); err != nil {
+			return nil, err
+		}
+		var distanceM int
+		var bearingD int
+		ref := geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}
+		if isValidGeoPoint(query.ReferencePoint) {
+			distanceM = geo.DistanceMeters(ref, geo.Point{Latitude: latitude, Longitude: longitude})
+			bearingD = geo.BearingDegrees(ref, geo.Point{Latitude: latitude, Longitude: longitude})
+		}
+		d := float64(distanceM)
+		b := float64(bearingD)
+		item := MomentItem{
+			MomentID:      momentID,
+			Description:   description,
+			CreatedAt:     createdAt.UTC().Format(time.RFC3339),
+			LikesCount:    likesCount,
+			CommentsCount: commentsCount,
+			SharesCount:   sharesCount,
+			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
+			Location:      RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
+			MyState:       &MyMomentState{IsFavorited: isFavorited},
+		}
+		reason := RecommendationContext("following")
+		item.Recommendation = &reason
+		items = append(items, momentCandidate{Item: item, CreatedAt: createdAt.UTC()})
+		momentIDs = append(momentIDs, momentID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs)
+	if err != nil {
+		return nil, err
+	}
+	for idx := range items {
+		items[idx].Item.Tags = tagsByMomentID[items[idx].Item.MomentID]
+	}
+	sort.SliceStable(items, func(i, j int) bool { return compareFollowingCandidates(items[i], items[j]) < 0 })
+	return items, nil
+}
+
+func (r *PostgresRepository) loadNearbyCandidates(ctx context.Context, queryable persistence.QueryableDB, query momentsQuery) ([]momentCandidate, error) {
 	bounds := geo.BoundsAround(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius)
 	mins, maxs := geo.CoveringArrays(bounds)
-	if len(mins) == 0 && query.Source != "following" {
+	if len(mins) == 0 {
 		return nil, nil
 	}
-	var querySQL string
-	var args []any
-	switch query.Source {
-	case "following":
-		querySQL = queryFeedMomentsFollowing
-		args = []any{query.ViewerUserID}
-	case "nearby":
-		querySQL = queryFeedMomentsNearby
-		args = []any{mins, maxs, query.ViewerUserID}
-	default:
-		querySQL = queryFeedMomentsAll
-		args = []any{mins, maxs, query.ViewerUserID}
-	}
-	rows, err := queryable.Query(ctx, querySQL, args...)
+	rows, err := queryable.Query(ctx, queryFeedMomentsNearby, mins, maxs, query.ViewerUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -236,33 +272,20 @@ func (r *PostgresRepository) loadMomentCandidates(ctx context.Context, queryable
 		var likesCount, commentsCount, sharesCount int
 		var isLiked, isFavorited bool
 		var isFollowing bool
-		if query.Source == "following" {
-			if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &likesCount, &commentsCount, &sharesCount, &locationName, &latitude, &longitude, &isLiked, &isFavorited); err != nil {
-				return nil, err
-			}
-			isFollowing = true
-		} else {
-			if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &likesCount, &commentsCount, &sharesCount, &locationName, &latitude, &longitude, &isLiked, &isFavorited, &isFollowing); err != nil {
-				return nil, err
-			}
+		if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &likesCount, &commentsCount, &sharesCount, &locationName, &latitude, &longitude, &isLiked, &isFavorited, &isFollowing); err != nil {
+			return nil, err
 		}
 		distance, bearing, ok := plan.Match(geo.Point{Latitude: latitude, Longitude: longitude})
-		if !ok && query.Source != "following" {
+		if !ok {
 			continue
 		}
-		if query.Source == "following" {
-				distance = geo.DistanceMeters(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, geo.Point{Latitude: latitude, Longitude: longitude})
-				bearing = geo.BearingDegrees(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, geo.Point{Latitude: latitude, Longitude: longitude})
-			}
-			d := float64(distance)
-			b := float64(bearing)
-			score := likesCount + commentsCount + sharesCount
+		d := float64(distance)
+		b := float64(bearing)
+		score := likesCount + commentsCount + sharesCount
 		if isFollowing {
 			score += 1000
 		}
-		if query.Source == "nearby" {
-			score += max(0, query.Radius-distance)
-		}
+		score += max(0, query.Radius-distance)
 		item := MomentItem{
 			MomentID:      momentID,
 			Description:   description,
@@ -271,23 +294,11 @@ func (r *PostgresRepository) loadMomentCandidates(ctx context.Context, queryable
 			CommentsCount: commentsCount,
 			SharesCount:   sharesCount,
 			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
-				Location:      RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
+			Location:      RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
 			MyState:       &MyMomentState{IsFavorited: isFavorited},
 		}
-		reasonType := "trending"
-		switch query.Source {
-		case "following":
-			reasonType = "following"
-		case "nearby":
-			reasonType = "nearby"
-		case "all":
-			if isFollowing {
-				reasonType = "following"
-			} else if distance <= query.Radius {
-				reasonType = "nearby"
-			}
-		}
-		item.Recommendation = &RecommendationContext{Type: reasonType}
+		reason := RecommendationContext("nearby")
+		item.Recommendation = &reason
 		items = append(items, momentCandidate{Item: item, Score: score, Distance: distance, CreatedAt: createdAt.UTC()})
 		momentIDs = append(momentIDs, momentID)
 	}
@@ -301,78 +312,7 @@ func (r *PostgresRepository) loadMomentCandidates(ctx context.Context, queryable
 	for idx := range items {
 		items[idx].Item.Tags = tagsByMomentID[items[idx].Item.MomentID]
 	}
-	sort.SliceStable(items, func(i, j int) bool { return compareMomentCandidates(items[i], items[j], query.Source) < 0 })
-	return items, nil
-}
-
-func ensureDismissTargetExists(ctx context.Context, queryable persistence.QueryableDB, targetType, targetID string) error {
-	query := queryFeedDismissMomentExists
-	switch targetType {
-	case "moment":
-		query = queryFeedDismissMomentExists
-	case "user":
-		query = queryFeedDismissUserExists
-	case "group":
-		query = queryFeedDismissGroupExists
-	default:
-		return ErrInvalidFeedRequest
-	}
-	var existingID string
-	if err := queryable.QueryRow(ctx, query, targetID).Scan(&existingID); err != nil {
-		if errors.Is(err, persistence.ErrNotImplemented) {
-			return err
-		}
-		return ErrDismissTargetNotFound
-	}
-	if existingID == "" {
-		return ErrDismissTargetNotFound
-	}
-	return nil
-}
-
-func loadTrendingTags(ctx context.Context, queryable persistence.QueryableDB, viewerUserID string) ([]TrendingTagItem, error) {
-	rows, err := queryable.Query(ctx, queryFeedTrendingTags)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := make([]TrendingTagItem, 0)
-	for rows.Next() {
-		var name string
-		var usageCount int
-		if err := rows.Scan(&name, &usageCount); err != nil {
-			return nil, err
-		}
-		items = append(items, TrendingTagItem{Name: name, UsageCount: usageCount, Trend: "rising"})
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	sort.SliceStable(items, func(i, j int) bool {
-		if items[i].UsageCount != items[j].UsageCount {
-			return items[i].UsageCount > items[j].UsageCount
-		}
-		return items[i].Name < items[j].Name
-	})
-	if len(items) == 0 {
-		return items, nil
-	}
-	moments, err := loadTrendingMoments(ctx, queryable, viewerUserID)
-	if err != nil {
-		return nil, err
-	}
-	previewsByTag := make(map[string]*MomentItem, len(items))
-	for _, moment := range moments {
-		for _, tag := range moment.Tags {
-			if previewsByTag[tag] == nil {
-				copyMoment := moment
-				previewsByTag[tag] = &copyMoment
-			}
-		}
-	}
-	for idx := range items {
-		items[idx].HotMomentPreview = previewsByTag[items[idx].Name]
-	}
+	sort.SliceStable(items, func(i, j int) bool { return compareNearbyCandidates(items[i], items[j]) < 0 })
 	return items, nil
 }
 
@@ -394,17 +334,18 @@ func loadTrendingMoments(ctx context.Context, queryable persistence.QueryableDB,
 			return nil, err
 		}
 		item := MomentItem{
-			MomentID:       momentID,
-			Description:    description,
-			CreatedAt:      createdAt.UTC().Format(time.RFC3339),
-			LikesCount:     likesCount,
-			CommentsCount:  commentsCount,
-			SharesCount:    sharesCount,
-			User:           UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
-			Location:       RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName},
-			MyState:        &MyMomentState{IsFavorited: isFavorited},
-			Recommendation: &RecommendationContext{Type: "trending"},
+			MomentID:      momentID,
+			Description:   description,
+			CreatedAt:     createdAt.UTC().Format(time.RFC3339),
+			LikesCount:    likesCount,
+			CommentsCount: commentsCount,
+			SharesCount:   sharesCount,
+			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
+			Location:      RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName},
+			MyState:       &MyMomentState{IsFavorited: isFavorited},
 		}
+		reason := RecommendationContext("trending")
+		item.Recommendation = &reason
 		items = append(items, momentCandidate{Item: item, Score: likesCount + commentsCount + sharesCount, CreatedAt: createdAt.UTC()})
 		momentIDs = append(momentIDs, momentID)
 	}
@@ -418,7 +359,7 @@ func loadTrendingMoments(ctx context.Context, queryable persistence.QueryableDB,
 	for idx := range items {
 		items[idx].Item.Tags = tagsByMomentID[items[idx].Item.MomentID]
 	}
-	sort.SliceStable(items, func(i, j int) bool { return compareMomentCandidates(items[i], items[j], "all") < 0 })
+	sort.SliceStable(items, func(i, j int) bool { return compareNearbyCandidates(items[i], items[j]) < 0 })
 	out := make([]MomentItem, 0, len(items))
 	for _, item := range items {
 		out = append(out, item.Item)
@@ -483,12 +424,30 @@ func paginateGroups(items []groupCandidate, limit int, cursor string) (Paginated
 	return resp, nil
 }
 
-func paginateMoments(items []momentCandidate, limit int, cursor string, source string) (PaginatedMoments, error) {
+func paginateFollowingMoments(items []momentCandidate, limit int, cursor string) (PaginatedMoments, error) {
 	decoded, err := decodeFeedCursor(cursor)
 	if err != nil {
 		return PaginatedMoments{}, err
 	}
-	start := findMomentCursorStart(items, decoded, source)
+	start := findFollowingCursorStart(items, decoded)
+	end := min(len(items), start+limit)
+	resp := PaginatedMoments{Items: make([]MomentItem, 0, max(0, end-start))}
+	for _, item := range items[start:end] {
+		resp.Items = append(resp.Items, item.Item)
+	}
+	if end < len(items) && end > start {
+		last := items[end-1]
+		resp.NextCursor = encodeFeedCursor(itemCursor{CreatedAt: last.CreatedAt.UTC().Format(time.RFC3339), ID: last.Item.MomentID})
+	}
+	return resp, nil
+}
+
+func paginateNearbyMoments(items []momentCandidate, limit int, cursor string) (PaginatedMoments, error) {
+	decoded, err := decodeFeedCursor(cursor)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	start := findNearbyCursorStart(items, decoded)
 	end := min(len(items), start+limit)
 	resp := PaginatedMoments{Items: make([]MomentItem, 0, max(0, end-start))}
 	for _, item := range items[start:end] {
@@ -533,22 +492,23 @@ func compareGroupCandidates(left, right groupCandidate) int {
 	return 0
 }
 
-func compareMomentCandidates(left, right momentCandidate, source string) int {
-	if source == "following" {
-		if !left.CreatedAt.Equal(right.CreatedAt) {
-			if left.CreatedAt.After(right.CreatedAt) {
-				return -1
-			}
-			return 1
-		}
-		if left.Item.MomentID > right.Item.MomentID {
+func compareFollowingCandidates(left, right momentCandidate) int {
+	if !left.CreatedAt.Equal(right.CreatedAt) {
+		if left.CreatedAt.After(right.CreatedAt) {
 			return -1
 		}
-		if left.Item.MomentID < right.Item.MomentID {
-			return 1
-		}
-		return 0
+		return 1
 	}
+	if left.Item.MomentID > right.Item.MomentID {
+		return -1
+	}
+	if left.Item.MomentID < right.Item.MomentID {
+		return 1
+	}
+	return 0
+}
+
+func compareNearbyCandidates(left, right momentCandidate) int {
 	if left.Score != right.Score {
 		return right.Score - left.Score
 	}
@@ -602,13 +562,13 @@ func findGroupCursorStart(items []groupCandidate, cursor *itemCursor) int {
 	return len(items)
 }
 
-func findMomentCursorStart(items []momentCandidate, cursor *itemCursor, source string) int {
+func findFollowingCursorStart(items []momentCandidate, cursor *itemCursor) int {
 	if cursor == nil {
 		return 0
 	}
 	parsedAt, _ := time.Parse(time.RFC3339, cursor.CreatedAt)
 	for idx, item := range items {
-		cmp := compareMomentCandidates(item, momentCandidate{Item: MomentItem{MomentID: cursor.ID}, Score: cursor.Score, Distance: cursor.Distance, CreatedAt: parsedAt.UTC()}, source)
+		cmp := compareFollowingCandidates(item, momentCandidate{Item: MomentItem{MomentID: cursor.ID}, CreatedAt: parsedAt.UTC()})
 		if cmp > 0 {
 			return idx
 		}
@@ -619,10 +579,23 @@ func findMomentCursorStart(items []momentCandidate, cursor *itemCursor, source s
 	return len(items)
 }
 
-// feedCursorCodec caches the AES-GCM cipher for feed cursors at the package
-// level so encode/decode no longer rebuild it per call. Key derivation is
-// sha256 of the raw AuthTokenSecret (no namespace salt) to preserve
-// compatibility with cursors issued by previous deployments.
+func findNearbyCursorStart(items []momentCandidate, cursor *itemCursor) int {
+	if cursor == nil {
+		return 0
+	}
+	parsedAt, _ := time.Parse(time.RFC3339, cursor.CreatedAt)
+	for idx, item := range items {
+		cmp := compareNearbyCandidates(item, momentCandidate{Item: MomentItem{MomentID: cursor.ID}, Score: cursor.Score, Distance: cursor.Distance, CreatedAt: parsedAt.UTC()})
+		if cmp > 0 {
+			return idx
+		}
+		if cmp == 0 {
+			return idx + 1
+		}
+	}
+	return len(items)
+}
+
 var feedCursorCodec = platformcursor.NewCodecWithKey(func() ([]byte, error) {
 	secret := config.Load().AuthTokenSecret
 	if secret == "" {

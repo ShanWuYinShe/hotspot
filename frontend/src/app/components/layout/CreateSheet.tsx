@@ -167,9 +167,10 @@ export function CreateSheet({ onClose }: Props) {
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
-              className="relative overflow-hidden rounded-[18px] border border-[var(--neu-border)] bg-[var(--page-bg)]"
+              className="relative rounded-[18px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)]"
             >
-              <img
+              <div style={{ overflow: "hidden", borderRadius: 17 }}>
+                <img
                 src="https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=600"
                 alt="待发布的动态配图：云龙湖边的傍晚"
                 className="h-36 w-full object-cover"
@@ -183,6 +184,7 @@ export function CreateSheet({ onClose }: Props) {
               >
                 <X size={14} strokeWidth={2} />
               </button>
+              </div>
             </motion.div>
           )}
 
@@ -213,7 +215,7 @@ export function CreateSheet({ onClose }: Props) {
             </div>
           </section>
 
-          <section aria-labelledby="audience-label" className="rounded-[18px] border border-[var(--neu-border)] bg-[color-mix(in_srgb,var(--neu-bg)_94%,var(--page-bg)_6%)] p-2">
+          <section aria-labelledby="audience-label" className="rounded-[18px] ring-1 ring-[var(--neu-border)] bg-[color-mix(in_srgb,var(--neu-bg)_94%,var(--page-bg)_6%)] p-2">
             <div className="flex items-center justify-between px-2 pb-2 pt-1">
               <p id="audience-label" className="neu-eyebrow">谁可以看到</p>
               <span className="text-[10px] text-[var(--neu-text-muted)]">{activeAudience.hint}</span>

@@ -21,7 +21,7 @@
 | `POST /api/v1/auth/guest` | 创建访客用户 | 无 | MUST |
 | `POST /api/v1/auth/refresh_token` | 刷新 Token | 可选 | 幂等语义 |
 | `POST /api/v1/auth/check_status` | 检查认证状态 | 可选 | 无 |
-| `POST /api/v1/auth/request_password_reset` | 请求密码重置 | 无 | MUST |
+| `POST /api/v1/auth/request_password_reset` | 请求密码重置 | 无 | 幂等语义 |
 | `POST /api/v1/auth/reset_password` | 重置密码 | 无 | MUST |
 | `POST /api/v1/auth/change_password` | 修改密码 | 必须 | MUST |
 | `POST /api/v1/auth/list_sessions` | 获取会话列表 | 必须 | 无 |
@@ -218,7 +218,7 @@ interface GuestRequest {
 刷新 Token。
 
 - **认证**: 可选
-- **幂等**: 无
+- **幂等**: 幂等语义（宽限期内并发刷新获得相同 token 对，无需 Idempotency-Key）
 
 **刷新规则**：
 - 刷新成功后：access_token 和 refresh_token 都会更新
@@ -280,7 +280,7 @@ interface AuthStatus {
 请求密码重置（发送验证码）。
 
 - **认证**: 无
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 幂等语义（IP 限流 [10次/10分钟] 已阻止短时重复发送，超出窗口的重试不受影响）
 
 **安全说明**：
 - 无论 `login_id` 是否存在，均返回成功响应，不暴露账号是否注册

@@ -23,6 +23,7 @@ const sessionRevokedRetention = 24 * time.Hour
 type SessionRecord struct {
 	SessionID    string
 	UserID       string
+	DeviceID     string
 	CreatedAt    time.Time
 	LastActiveAt time.Time
 	RevokedAt    *time.Time

@@ -32,13 +32,13 @@ func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCr
 	if ownerUserID != "" && ownerUserID == principal.UserID {
 		return ReportCreated{}, errors.New("reports: self report")
 	}
-	openExists, err := s.repo.ExistsOpenReport(ctx, req.TargetType, req.TargetID)
+	existingID, duplicate, err := s.repo.FindExistingReport(ctx, principal.UserID, req.TargetType, req.TargetID)
 	if err != nil {
 		observability.L().Error("reports.create duplicate check failed", "error", err)
 		return ReportCreated{}, err
 	}
-	if openExists {
-		return ReportCreated{}, errors.New("reports: duplicate report")
+	if duplicate {
+		return ReportCreated{ReportID: existingID, IsDuplicate: true}, nil
 	}
 	result, err := s.repo.Create(ctx, principal.UserID, req)
 	if err != nil {

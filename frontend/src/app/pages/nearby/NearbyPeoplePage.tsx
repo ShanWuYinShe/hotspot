@@ -8,7 +8,7 @@ import { useHoverConfig } from "../../hooks/useHoverConfig";
 import { useDefaultLocation } from "../../hooks/useDefaultLocation";
 import { ActionIconButton } from "../../components/shared/ActionIconButton";
 import { BspCardCanvas } from "../../components/shared/BspCardCanvas";
-import { getFeedUsers } from "../../../api";
+import { getNearbyUsers } from "../../../api";
 
 interface NearbyUser {
   id: number; name: string; distance: string; avatar: string;
@@ -80,13 +80,13 @@ export function NearbyPeoplePage() {
   const isTablet = platform === "tablet";
 
   useEffect(() => {
-    // spec: feed/list_users returns nearby UserItem[]. reference_point from ClientConfig default_location.
+    // spec: feed/nearby_users returns nearby UserItem[]. reference_point from ClientConfig default_location.
     if (!reference_point) return;
     let cancelled = false;
     async function fetchUsers() {
       try {
         setLoading(true);
-        const res = await getFeedUsers({ reference_point }).catch(() => ({ code: -1, data: { items: [] } }));
+        const res = await getNearbyUsers({ reference_point }).catch(() => ({ code: -1, data: { items: [] } }));
         if (cancelled) return;
         const data = (res.code === 0 ? res.data : null) as any;
         if (data) {

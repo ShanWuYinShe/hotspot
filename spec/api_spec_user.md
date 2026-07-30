@@ -28,18 +28,14 @@
 | `POST /api/v1/users/get_account` | 我的账户数据 | 必须 | 无 |
 | `POST /api/v1/users/update_account` | 更新我的账户 | 必须 | 幂等语义 |
 | `POST /api/v1/users/update_location` | 更新我的位置 | 必须 | 幂等语义 |
-| `POST /api/v1/users/upgrade` | 访客升级 | 必须 | 无 |
+| `POST /api/v1/users/upgrade` | 访客升级 | 必须 | 幂等语义 |
 | `POST /api/v1/users/get_settings` | 我的设置 | 必须 | 无 |
 | `POST /api/v1/users/update_settings` | 更新我的设置 | 必须 | 幂等语义 |
-| `POST /api/v1/users/delete_account` | 删除账户 | 必须 | SHOULD |
+| `POST /api/v1/users/delete_account` | 删除账户 | 必须 | 幂等语义 |
 | `POST /api/v1/users/follow` | 设置关注状态（两态统一） | 必须 | 幂等语义 |
 | `POST /api/v1/users/block` | 设置拉黑状态（两态统一） | 必须 | 幂等语义 |
 | `POST /api/v1/users/list_blocked` | 我的拉黑列表 | 必须 | 无 |
 | `POST /api/v1/users/set_remark` | 设置备注 | 必须 | 幂等语义 |
-| `POST /api/v1/users/email/request_change` | 请求变更邮箱 (⏳ 延期) | 必须 | MUST |
-| `POST /api/v1/users/email/confirm_change` | 确认变更邮箱 (⏳ 延期) | 必须 | MUST |
-| `POST /api/v1/users/phone/request_change` | 请求变更手机 (⏳ 延期) | 必须 | MUST |
-| `POST /api/v1/users/phone/confirm_change` | 确认变更手机 (⏳ 延期) | 必须 | MUST |
 
 > 表情反应（reaction）是跨 message/moment/comment 三类资源的统一动作，独立命名空间 `reactions/`（见 `api_spec_reaction.md`）。
 
@@ -58,9 +54,16 @@
 - `GroupItem`
 - `MomentItem`
 - `FollowSource`
-- `Gender`
 - `ChatPerm`
 - `UserSettings`
+
+### 本模块类型
+
+```typescript
+// Gender 为本模块类型
+// 'other' 为包容性取值，覆盖非二元/不愿透露等场景
+type Gender = 'male' | 'female' | 'other';
+```
 
 ## 端点详情
 
@@ -364,10 +367,6 @@ interface BatchGetUsersRequest {
 
 **Response**: `ApiResponse<AccountData>`
 ```typescript
-// Gender 为本模块类型
-// 'other' 为包容性取值，覆盖非二元/不愿透露等场景
-type Gender = 'male' | 'female' | 'other';
-
 interface AccountData {
   user_id: string;
   nickname: string;
@@ -375,9 +374,9 @@ interface AccountData {
   user_type: UserType;          // 账号类型（temp/normal），仅表达账号生命周期；管理员身份通过 admin/rbac/get_me 获取
   bio?: string;
   tags?: string[];
-  gender?: Gender;
-  email?: string;               // 通过 users/email/request_change + confirm_change 变更
-  phone?: string;               // 通过 users/phone/request_change + confirm_change 变更
+  gender?: Gender;              // Gender 定义于本模块「类型定义」小节
+  email?: string;               // 邮箱（当前由注册时 login_id 推断，后续通过邮箱变更流程修改；变更接口暂未实现，见 api_spec_index.md 预留）
+  phone?: string;               // 手机号（同上）
   location: Location;           // 存储的原始位置，不含 distance/bearing_degrees（与 RelativeLocation 不同）
   presence_status: UserPresenceStatus;
   last_online_at: string;       // UTC ISO 8601，最后在线时间
@@ -441,7 +440,7 @@ interface UpdateLocationRequest {
 账户升级（访客升级为正式用户）。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 幂等语义（已升级用户重复调用返回成功，login_id 已绑定自身视为 no-op）
 
 **Request**: `UpgradeAccountRequest`
 ```typescript
@@ -501,7 +500,7 @@ interface UpdateSettingsRequest {
 删除账户。
 
 - **认证**: 必须
-- **幂等**: SHOULD（建议客户端携带 `Idempotency-Key`）
+- **幂等**: 幂等语义（重复删除已不存在账户视为 no-op 成功）
 
 **Request**: `DeleteAccountRequest`
 ```typescript
@@ -613,104 +612,3 @@ interface SetRemarkRequest {
 **Response**: `ApiResponse`
 
 **错误码**: `10000` `10300` `10400`（未关注该用户）
-
----
-
-### POST /api/v1/users/email/request_change
-
-> ⏳ **延期实现**：依赖邮件验证码发送服务，待服务接入后实现。
-
-请求变更邮箱。发送验证码到新邮箱地址。
-
-**安全设计**：需要当前密码验证身份，防止账号被盗后变更邮箱。
-
-- **认证**: 必须
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
-
-**Request**: `RequestEmailChangeRequest`
-```typescript
-interface RequestEmailChangeRequest {
-  new_email: string;       // 新邮箱地址
-  password: string;        // 当前密码（身份验证）
-}
-```
-
-**Response**: `ApiResponse<VerificationSent>`
-```typescript
-interface VerificationSent {
-  expires_at: string;      // 验证码过期时间（UTC ISO 8601）
-}
-```
-
-**错误码**: `10000` `10200` `10400`
-
----
-
-### POST /api/v1/users/email/confirm_change
-
-> ⏳ **延期实现**：依赖邮件验证码发送服务，待服务接入后实现。
-
-确认变更邮箱。提交发送到新邮箱的验证码完成变更。
-
-- **认证**: 必须
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
-
-**Request**: `ConfirmEmailChangeRequest`
-```typescript
-interface ConfirmEmailChangeRequest {
-  new_email: string;             // 与 request_change 一致的新邮箱
-  verification_code: string;     // 验证码
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10200` `10400`
-
----
-
-### POST /api/v1/users/phone/request_change
-
-> ⏳ **延期实现**：依赖短信验证码发送服务，待服务接入后实现。
-
-请求变更手机号。发送验证码到新手机号。
-
-**安全设计**：需要当前密码验证身份，防止账号被盗后变更手机号。
-
-- **认证**: 必须
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
-
-**Request**: `RequestPhoneChangeRequest`
-```typescript
-interface RequestPhoneChangeRequest {
-  new_phone: string;       // 新手机号
-  password: string;        // 当前密码（身份验证）
-}
-```
-
-**Response**: `ApiResponse<VerificationSent>`
-
-**错误码**: `10000` `10200` `10400`
-
----
-
-### POST /api/v1/users/phone/confirm_change
-
-> ⏳ **延期实现**：依赖短信验证码发送服务，待服务接入后实现。
-
-确认变更手机号。提交发送到新手机号的验证码完成变更。
-
-- **认证**: 必须
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
-
-**Request**: `ConfirmPhoneChangeRequest`
-```typescript
-interface ConfirmPhoneChangeRequest {
-  new_phone: string;             // 与 request_change 一致的新手机号
-  verification_code: string;     // 验证码
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10200` `10400`

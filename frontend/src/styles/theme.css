@@ -499,12 +499,11 @@
   /* Large content card */
   .neu-card-hover {
     cursor: pointer;
-    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.18s ease;
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .neu-card-hover:hover {
     transform: translateY(-3px);
-    border-color: var(--neu-accent-soft-border) !important;
-    box-shadow: var(--hover-shadow-card) !important;
+    box-shadow: 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-card) !important;
   }
   .neu-card-hover:active { transform: translateY(-1px) scale(0.985); }
   .neu-card-hover:focus-visible { outline: 2px solid var(--neu-accent-primary); outline-offset: 2px; }
@@ -518,14 +517,12 @@
     transition:
       transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
       background-color 0.18s ease,
-      border-color 0.18s ease,
       box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .neu-row-hover:hover {
     transform: translateY(-2px);
     background-color: color-mix(in srgb, var(--neu-accent-soft) 72%, var(--neu-bg)) !important;
-    border-color: var(--neu-accent-soft-border) !important;
-    box-shadow: var(--hover-shadow-row) !important;
+    box-shadow: 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-row) !important;
   }
   .neu-row-hover:active {
     transform: translateY(0) scale(0.985);
@@ -533,13 +530,11 @@
   .neu-row-hover[data-active="true"],
   .neu-row-hover[aria-pressed="true"] {
     background-color: var(--neu-accent-soft) !important;
-    border-color: var(--neu-accent-soft-border) !important;
     box-shadow: inset 2px 0 0 var(--neu-accent-primary), 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-row) !important;
   }
   .neu-row-hover[data-active="true"]:hover,
   .neu-row-hover[aria-pressed="true"]:hover {
     background-color: var(--neu-active-hover) !important;
-    border-color: var(--neu-accent-primary) !important;
     box-shadow: inset 2px 0 0 var(--neu-accent-primary), 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-row) !important;
     transform: none;
   }
@@ -553,10 +548,13 @@
      compact = controls/history, standard = people/settings, rich = places/messages.
      Grid cards remain reserved for visual discovery, not ordinary lists. */
   .app-list {
-    overflow: hidden;
-    border: 1px solid var(--neu-border);
+    box-shadow: 0 0 0 1px var(--neu-border);
     border-radius: 1rem;
     background: var(--neu-bg);
+  }
+  .app-list-inner {
+    overflow: hidden;
+    border-radius: calc(1rem - 1px);
   }
   .app-list-row {
     display: flex;
@@ -667,11 +665,11 @@
   /* Tier 2 — secondary content (rows, list items). Border + subtle tint, NO shadow. */
   .neu-surface-flat {
     background-color: var(--neu-bg);
-    border: 1px solid var(--neu-border);
-    transition: border-color 0.18s ease, background-color 0.18s ease;
+    box-shadow: 0 0 0 1px var(--neu-border);
+    transition: box-shadow 0.18s ease, background-color 0.18s ease;
   }
   .neu-surface-flat:hover {
-    border-color: var(--neu-border-pressed);
+    box-shadow: 0 0 0 1px var(--neu-border-pressed);
   }
 
   /* Tier 3 — tertiary (chips, inline buttons). No border by default, hover-only fill. */
@@ -823,7 +821,6 @@
   .forest .neu-pill-hover {
     box-shadow: none !important;
     background: var(--neu-bg);
-    border-color: var(--neu-border);
   }
   .forest .neu-input-surface:focus-within,
   .forest .neu-input-base:focus,
@@ -843,7 +840,6 @@
   .forest .neu-row-hover[data-active="true"]:hover,
   .forest .neu-row-hover[aria-pressed="true"]:hover {
     background: var(--neu-active-hover) !important;
-    border-color: var(--neu-accent-primary) !important;
     box-shadow: inset 2px 0 0 var(--neu-accent-primary), 0 0 0 1px var(--neu-accent-soft-border) !important;
   }
 

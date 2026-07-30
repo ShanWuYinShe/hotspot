@@ -118,7 +118,8 @@ type NotifyType =
   | 'group_application_rejected'  // 新增：申请被拒绝（@auth-only，通知申请人，对应 #18 返回处理结果）
   | 'report_resolved'             // 新增：举报被处理（@auth-only，通知举报人处理结果）
   | 'report_dismissed'            // 新增：举报被驳回（@auth-only，通知举报人处理结果）
-  | 'system_announcement';
+  | 'system_announcement'
+  | 'nearby_new_moment';          // 新增：附近有人发布了新瞬间（基于位置的发现通知，用户可配置开关，服务端节流推送）
 
 // 通知分类（用于未读计数分组展示，见 api_spec_notify.md get_unread_count 返回的 by_type）
 // 映射为契约级，新增 NotifyType 时必须同步归类：
@@ -126,8 +127,9 @@ type NotifyType =
 // - interaction:   moment_liked, moment_commented, comment_liked, comment_reply, mentioned, reaction_added
 // - group:         group_invite_received, group_invite_revoked, group_invite_accepted, group_application_received, group_application_cancelled, group_application_accepted, group_application_rejected
 // - report:        report_resolved, report_dismissed
+// - nearby:        nearby_new_moment
 // - system:        system_announcement
-type NotifyCategory = 'social' | 'interaction' | 'group' | 'report' | 'system';
+type NotifyCategory = 'social' | 'interaction' | 'group' | 'report' | 'nearby' | 'system';
 ```
 
 ### 位置与地理信息
@@ -561,6 +563,7 @@ interface UserSettings {
   phone_searchable: boolean;
   nickname_searchable: boolean;
   location_searchable: boolean;
+  nearby_moment_notify: boolean;     // 是否接收"附近新瞬间"推送通知；默认 false（避免打扰，用户主动开启）
 }
 ```
 

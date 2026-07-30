@@ -14,7 +14,7 @@ export interface GeoPoint {
  * Module-level cache for the client-config default location.
  *
  * `reference_point` is REQUIRED on every feed/search endpoint
- * (feed/list_moments, feed/list_groups, feed/list_users, moments/search,
+ * (feed/nearby, feed/following, feed/nearby_groups, feed/nearby_users, moments/search,
  * users/search, groups/search, search/suggest) but the frontend has no
  * browser-geolocation source yet. Per the cross-end boundary (root AGENTS.md:
  * distance/location computed by backend), we fall back to the server-provided

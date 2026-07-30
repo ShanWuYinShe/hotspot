@@ -60,22 +60,23 @@ const (
 )
 
 type UserSettings struct {
-	PrivacyLevel        string                `json:"privacy_level"`
-	LocationVisible     bool                  `json:"location_visible"`
-	PresenceVisible     bool                  `json:"presence_visible"`
-	SocialListsVisible  bool                  `json:"social_lists_visible"`
-	GroupsVisible       bool                  `json:"groups_visible"`
+	PrivacyLevel       string `json:"privacy_level"`
+	LocationVisible    bool   `json:"location_visible"`
+	PresenceVisible    bool   `json:"presence_visible"`
+	SocialListsVisible bool   `json:"social_lists_visible"`
+	GroupsVisible      bool   `json:"groups_visible"`
 	// ReactedMomentsVisible gates the list_reacted_moments endpoint. Renamed
 	// from liked_moments_visible as part of the reaction migration
 	// (see migrations/032_rename_liked_to_reacted_moments_visible.sql).
-	ReactedMomentsVisible bool `json:"reacted_moments_visible"`
-	StatsVisible          bool                  `json:"stats_visible"`
-	AllowFollow           bool                  `json:"allow_follow"`
+	ReactedMomentsVisible bool     `json:"reacted_moments_visible"`
+	StatsVisible          bool     `json:"stats_visible"`
+	AllowFollow           bool     `json:"allow_follow"`
 	AllowPrivateChat      ChatPerm `json:"allow_private_chat"`
-	Searchable            bool                  `json:"searchable"`
-	PhoneSearchable       bool                  `json:"phone_searchable"`
-	NicknameSearchable    bool                  `json:"nickname_searchable"`
-	LocationSearchable    bool                  `json:"location_searchable"`
+	Searchable            bool     `json:"searchable"`
+	PhoneSearchable       bool     `json:"phone_searchable"`
+	NicknameSearchable    bool     `json:"nickname_searchable"`
+	LocationSearchable    bool     `json:"location_searchable"`
+	NearbyMomentNotify    bool     `json:"nearby_moment_notify"`
 }
 
 type UpdateAccountRequest struct {
@@ -87,19 +88,20 @@ type UpdateAccountRequest struct {
 }
 
 type PartialUserSettings struct {
-	PrivacyLevel         *string                `json:"privacy_level,omitempty"`
-	LocationVisible      *bool                  `json:"location_visible,omitempty"`
-	PresenceVisible      *bool                  `json:"presence_visible,omitempty"`
-	SocialListsVisible   *bool                  `json:"social_lists_visible,omitempty"`
-	GroupsVisible        *bool                  `json:"groups_visible,omitempty"`
-	ReactedMomentsVisible *bool                 `json:"reacted_moments_visible,omitempty"`
-	StatsVisible         *bool                  `json:"stats_visible,omitempty"`
-	AllowFollow          *bool                  `json:"allow_follow,omitempty"`
-	AllowPrivateChat     *ChatPerm `json:"allow_private_chat,omitempty"`
-	Searchable           *bool                  `json:"searchable,omitempty"`
-	PhoneSearchable      *bool                  `json:"phone_searchable,omitempty"`
-	NicknameSearchable   *bool                  `json:"nickname_searchable,omitempty"`
-	LocationSearchable   *bool                  `json:"location_searchable,omitempty"`
+	PrivacyLevel          *string   `json:"privacy_level,omitempty"`
+	LocationVisible       *bool     `json:"location_visible,omitempty"`
+	PresenceVisible       *bool     `json:"presence_visible,omitempty"`
+	SocialListsVisible    *bool     `json:"social_lists_visible,omitempty"`
+	GroupsVisible         *bool     `json:"groups_visible,omitempty"`
+	ReactedMomentsVisible *bool     `json:"reacted_moments_visible,omitempty"`
+	StatsVisible          *bool     `json:"stats_visible,omitempty"`
+	AllowFollow           *bool     `json:"allow_follow,omitempty"`
+	AllowPrivateChat      *ChatPerm `json:"allow_private_chat,omitempty"`
+	Searchable            *bool     `json:"searchable,omitempty"`
+	PhoneSearchable       *bool     `json:"phone_searchable,omitempty"`
+	NicknameSearchable    *bool     `json:"nickname_searchable,omitempty"`
+	LocationSearchable    *bool     `json:"location_searchable,omitempty"`
+	NearbyMomentNotify    *bool     `json:"nearby_moment_notify,omitempty"`
 }
 
 type UpdateSettingsRequest struct {

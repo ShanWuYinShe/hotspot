@@ -313,7 +313,8 @@ function MessagesDesktop({ chats, loading }: { chats: ChatItem[]; loading: boole
 
       {/* Right: chat view or empty state */}
       <div className="flex min-w-0 flex-1 bg-[color-mix(in_srgb,var(--page-bg)_55%,transparent)] p-4">
-        <div className="min-h-0 flex-1 overflow-hidden rounded-[22px] border border-[var(--neu-border)] bg-[var(--neu-bg)] shadow-[0_10px_28px_color-mix(in_srgb,var(--neu-shadow-dark)_32%,transparent)]">
+        <div className="min-h-0 flex-1 rounded-[22px] ring-1 ring-[var(--neu-border)] bg-[var(--neu-bg)] shadow-[0_10px_28px_color-mix(in_srgb,var(--neu-shadow-dark)_32%,transparent)]">
+        <div className="h-full" style={{ overflow: "hidden", borderRadius: 21 }}>
         <AnimatePresence mode="wait">
           {selectedId !== null ? (
             <motion.div
@@ -353,6 +354,7 @@ function MessagesDesktop({ chats, loading }: { chats: ChatItem[]; loading: boole
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
         </div>
       </div>
 

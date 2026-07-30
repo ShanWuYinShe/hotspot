@@ -153,7 +153,6 @@ import {
   InviteAcceptedResult,
   RejectInviteRequest,
   LeaveGroupRequest,
-  DismissFeedItemRequest,
 
   // 群公告
   CreateGroupAnnouncementRequest,
@@ -177,19 +176,18 @@ import {
   MyReportsRequest,
 
   // 信息流
-  GetFeedMomentsRequest,
-  GetFeedGroupsRequest,
-  GetFeedUsersRequest,
+  GetFeedFollowingRequest,
+  GetFeedNearbyRequest,
+  GetFeedNearbyGroupsRequest,
+  GetFeedNearbyUsersRequest,
   GetFeedTrendingRequest,
   TrendingBundle,
 
   TagItem,
 
-	// 搜索
+  // 搜索
 	SearchSuggestRequest,
 	SearchSuggestResponse,
-	SearchAllRequest,
-	SearchAllResult,
 
 	// 地图
 	MapHeatCanvas,
@@ -874,34 +872,30 @@ export class ApiClient {
 
   // ==================== 信息流 API ====================
 
-  static async getFeedMoments(params: GetFeedMomentsRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<MomentItem>>, GetFeedMomentsRequest>(ApiEndpoints.FEED.LIST_MOMENTS, params);
+  static async getFeedFollowing(params: GetFeedFollowingRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<MomentItem>>, GetFeedFollowingRequest>(ApiEndpoints.FEED.FOLLOWING, params);
   }
 
-  static async getFeedGroups(params: GetFeedGroupsRequest): Promise<ApiResponse<PaginatedData<GroupItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupItem>>, GetFeedGroupsRequest>(ApiEndpoints.FEED.LIST_GROUPS, params);
+  static async getFeedNearby(params: GetFeedNearbyRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<MomentItem>>, GetFeedNearbyRequest>(ApiEndpoints.FEED.NEARBY, params);
   }
 
-  static async getFeedUsers(params: GetFeedUsersRequest): Promise<ApiResponse<PaginatedData<UserItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<UserItem>>, GetFeedUsersRequest>(ApiEndpoints.FEED.LIST_USERS, params);
+  static async getFeedNearbyGroups(params: GetFeedNearbyGroupsRequest): Promise<ApiResponse<PaginatedData<GroupItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupItem>>, GetFeedNearbyGroupsRequest>(ApiEndpoints.FEED.NEARBY_GROUPS, params);
+  }
+
+  static async getFeedNearbyUsers(params: GetFeedNearbyUsersRequest): Promise<ApiResponse<PaginatedData<UserItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<UserItem>>, GetFeedNearbyUsersRequest>(ApiEndpoints.FEED.NEARBY_USERS, params);
   }
 
   static async getFeedTrending(params: GetFeedTrendingRequest): Promise<ApiResponse<TrendingBundle>> {
-    return HttpUtil.post<ApiResponse<TrendingBundle>, GetFeedTrendingRequest>(ApiEndpoints.FEED.LIST_TRENDING, params);
-  }
-
-  static async dismissFeedItem(params: DismissFeedItemRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, DismissFeedItemRequest>(ApiEndpoints.FEED.DISMISS, params);
+    return HttpUtil.post<ApiResponse<TrendingBundle>, GetFeedTrendingRequest>(ApiEndpoints.FEED.TRENDING, params);
   }
 
   // ==================== 搜索 API ====================
 
   static async searchSuggest(params: SearchSuggestRequest): Promise<ApiResponse<SearchSuggestResponse>> {
     return HttpUtil.post<ApiResponse<SearchSuggestResponse>, SearchSuggestRequest>(ApiEndpoints.SEARCH.SUGGEST, params);
-  }
-
-  static async searchAll(params: SearchAllRequest): Promise<ApiResponse<SearchAllResult>> {
-    return HttpUtil.post<ApiResponse<SearchAllResult>, SearchAllRequest>(ApiEndpoints.SEARCH.ALL, params);
   }
 
 	// ==================== 地图 API ====================

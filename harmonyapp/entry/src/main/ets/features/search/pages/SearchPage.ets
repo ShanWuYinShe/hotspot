@@ -9,7 +9,8 @@ import {
   UserItem, GroupItem, MomentItem, GeoPoint,
   JoinGroupRequest, CreateReportRequest, Relationship,
   SearchSuggestItem, SearchSuggestRequest, ClientConfig,
-  SearchSuggestItemTag, SearchSuggestItemUser, SearchSuggestItemGroup, SearchSuggestItemMoment
+  SearchSuggestItemTag, SearchSuggestItemUser, SearchSuggestItemGroup, SearchSuggestItemMoment,
+  SearchUsersRequest, SearchGroupsRequest, SearchMomentsRequest
 } from '../../../core/types/api';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { UserRelationState } from '../../../core/state/InteractionStateStore';
@@ -204,27 +205,48 @@ export struct SearchPage {
 
     try {
       await LoadingUtil.withMinimumTime(async () => {
-        const resp = await ApiClient.searchAll({
+        const refPoint = referencePoint;
+        const usersReq: SearchUsersRequest = {
           keyword: trimmedKeyword,
-          reference_point: referencePoint
-        });
+          reference_point: refPoint,
+          pagination: { limit: 10 }
+        };
+        const groupsReq: SearchGroupsRequest = {
+          keyword: trimmedKeyword,
+          reference_point: refPoint,
+          pagination: { limit: 10 }
+        };
+        const momentsReq: SearchMomentsRequest = {
+          keyword: trimmedKeyword,
+          reference_point: refPoint,
+          pagination: { limit: 10 }
+        };
+
+        const [usersResp, groupsResp, momentsResp] = await Promise.all([
+          ApiClient.searchUsers(usersReq),
+          ApiClient.searchGroups(groupsReq),
+          ApiClient.searchMoments(momentsReq)
+        ]);
+
         if (this.isDestroyed) return;
 
-        if (resp.code === 0 && resp.data) {
-          const myId = await AuthAccountManager.getCurrentUserId();
-          const users = resp.data.users?.items ?? [];
-          const validUsers = users.filter((u: UserItem) => u.user?.user_id);
+        const myId = await AuthAccountManager.getCurrentUserId();
+
+        if (usersResp.code === 0 && usersResp.data) {
+          const validUsers = usersResp.data.items.filter((u: UserItem) => u.user?.user_id);
           this.userResults = (myId !== null && typeof myId === 'string')
             ? validUsers.filter((u: UserItem) => u.user.user_id !== myId)
             : validUsers;
           this.userResultsDataSource.setData(this.userResults);
+        }
 
-          const groups = resp.data.groups?.items ?? [];
-          this.groupResults = groups.filter((g: GroupItem) => g.group?.group_id);
+        if (groupsResp.code === 0 && groupsResp.data) {
+          this.groupResults = groupsResp.data.items.filter((g: GroupItem) => g.group?.group_id);
           this.groupResultsDataSource.setData(this.groupResults);
+        }
 
-          const moments = resp.data.moments?.items ?? [];
-          this.momentResults = moments.filter((m: MomentItem) => m.moment_id && m.user);
+        if (momentsResp.code === 0 && momentsResp.data) {
+          this.momentResults = momentsResp.data.items.filter((m: MomentItem) => m.moment_id && m.user);
           this.momentResultsDataSource.setData(this.momentResults);
         }
       });

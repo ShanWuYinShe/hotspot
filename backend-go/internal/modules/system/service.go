@@ -9,9 +9,9 @@ import (
 )
 
 type Service struct {
-	repo       Repository
-	provider   Provider
-	bootstrap  BootstrapResolver
+	repo      Repository
+	provider  Provider
+	bootstrap BootstrapResolver
 }
 
 func NewService(appConfig appconfig.Source) *Service {
@@ -79,5 +79,5 @@ func (s *Service) Bootstrap(ctx context.Context, bootstrapResolver BootstrapReso
 	return bd
 }
 
-func (s *Service) GetBootstrapResolver() BootstrapResolver { return s.bootstrap }
+func (s *Service) GetBootstrapResolver() BootstrapResolver  { return s.bootstrap }
 func (s *Service) SetBootstrapResolver(r BootstrapResolver) { s.bootstrap = r }

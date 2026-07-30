@@ -9,15 +9,16 @@ import (
 )
 
 type stubRepo struct {
-	created       ReportCreated
-	createErr     error
-	listResult    PaginatedReports
-	listErr       error
-	existsOpen    bool
-	existsOpenErr error
-	ownerID       string
-	ownerFound    bool
-	ownerErr      error
+	created          ReportCreated
+	createErr        error
+	listResult       PaginatedReports
+	listErr          error
+	existingReportID string
+	existingFound    bool
+	findExistingErr  error
+	ownerID          string
+	ownerFound       bool
+	ownerErr         error
 }
 
 func (r *stubRepo) Create(_ context.Context, _ string, _ CreateReportRequest) (ReportCreated, error) {
@@ -26,8 +27,8 @@ func (r *stubRepo) Create(_ context.Context, _ string, _ CreateReportRequest) (R
 func (r *stubRepo) List(_ context.Context, _ string, _ MyReportsRequest) (PaginatedReports, error) {
 	return r.listResult, r.listErr
 }
-func (r *stubRepo) ExistsOpenReport(_ context.Context, _ ReportTargetType, _ string) (bool, error) {
-	return r.existsOpen, r.existsOpenErr
+func (r *stubRepo) FindExistingReport(_ context.Context, _ string, _ ReportTargetType, _ string) (string, bool, error) {
+	return r.existingReportID, r.existingFound, r.findExistingErr
 }
 func (r *stubRepo) TargetOwner(_ context.Context, _ ReportTargetType, _ string) (string, bool, error) {
 	return r.ownerID, r.ownerFound, r.ownerErr
@@ -77,11 +78,17 @@ func TestServiceCreateRejectsTargetNotFound(t *testing.T) {
 	}
 }
 
-func TestServiceCreateRejectsDuplicateReport(t *testing.T) {
-	service := NewServiceWithRepo(&stubRepo{ownerID: "other", ownerFound: true, existsOpen: true})
-	_, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeUser, TargetID: "u2", Reason: ReportReasonSpam})
-	if err == nil {
-		t.Fatal("expected error for duplicate report")
+func TestServiceCreateDuplicateReturnsIsDuplicate(t *testing.T) {
+	service := NewServiceWithRepo(&stubRepo{ownerID: "other", ownerFound: true, existingFound: true, existingReportID: "r_existing"})
+	result, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeUser, TargetID: "u2", Reason: ReportReasonSpam})
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if !result.IsDuplicate {
+		t.Fatal("expected IsDuplicate=true on duplicate report")
+	}
+	if result.ReportID != "r_existing" {
+		t.Fatalf("expected existing report_id r_existing, got %s", result.ReportID)
 	}
 }
 
@@ -121,8 +128,8 @@ func TestServiceCreatePropagatesTargetOwnerError(t *testing.T) {
 	}
 }
 
-func TestServiceCreatePropagatesExistsOpenError(t *testing.T) {
-	service := NewServiceWithRepo(&stubRepo{ownerFound: true, existsOpenErr: errors.New("boom")})
+func TestServiceCreatePropagatesFindExistingError(t *testing.T) {
+	service := NewServiceWithRepo(&stubRepo{ownerFound: true, findExistingErr: errors.New("boom")})
 	_, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeUser, TargetID: "u2", Reason: ReportReasonSpam})
 	if err == nil {
 		t.Fatal("expected error")

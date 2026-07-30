@@ -90,8 +90,7 @@ export type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'follo
 // 标签趋势
 export type TagTrend = 'rising' | 'stable' | 'falling';
 
-// Feed 不感兴趣的目标类型
-export type DismissTargetType = 'moment' | 'user' | 'group';
+
 
 export interface RecommendationContext {
   type: RecommendationType;
@@ -374,18 +373,6 @@ export interface UserProfileBundle {
   recent_moments: PaginatedData<MomentItem>;
 }
 
-export interface SearchAllRequest {
-  keyword: string;
-  reference_point?: GeoPoint;
-  pagination?: PaginationParams;
-}
-
-export interface SearchAllResult {
-  users: PaginatedData<UserItem>;
-  groups: PaginatedData<GroupItem>;
-  moments: PaginatedData<MomentItem>;
-}
-
 // ReactionItem 已在通用类型区域定义; LikeItem 为历史遗留,删除以消除混淆。
 
 // 6. 私聊 (Private Chat)
@@ -589,6 +576,7 @@ export interface UserSettings {
   phone_searchable: boolean;
   nickname_searchable: boolean;
   location_searchable: boolean;
+  nearby_moment_notify: boolean;
 }
 
 export interface UpdateSettingsRequest {
@@ -1257,6 +1245,7 @@ export interface CreateReportRequest {
 
 export interface ReportCreated {
   report_id: string;
+  is_duplicate: boolean;
 }
 
 export interface MyReportsRequest {
@@ -1288,33 +1277,30 @@ export interface ReportItem {
 
 // ==================== 信息流API类型 ====================
 
-export type FeedSource = 'following' | 'nearby' | 'all';
-
-export interface GetFeedMomentsRequest {
-  source: FeedSource;
-  radius?: number;
-  reference_point: GeoPoint;
+export interface GetFeedFollowingRequest {
+  reference_point?: GeoPoint;
   pagination?: PaginationParams;
 }
 
-export interface GetFeedGroupsRequest {
-  radius?: number;
+export interface GetFeedNearbyRequest {
   reference_point: GeoPoint;
+  radius?: number;
   pagination?: PaginationParams;
 }
 
-export interface GetFeedUsersRequest {
-  radius?: number;
+export interface GetFeedNearbyUsersRequest {
   reference_point: GeoPoint;
+  radius?: number;
+  pagination?: PaginationParams;
+}
+
+export interface GetFeedNearbyGroupsRequest {
+  reference_point: GeoPoint;
+  radius?: number;
   pagination?: PaginationParams;
 }
 
 export interface GetFeedTrendingRequest {}
-
-export interface DismissFeedItemRequest {
-  target_type: DismissTargetType;
-  target_id: string;
-}
 
 // 标签项（搜索、Feed 等模块共用）
 export interface TagItem {

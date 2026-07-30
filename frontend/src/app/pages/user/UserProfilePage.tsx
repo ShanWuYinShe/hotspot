@@ -97,10 +97,10 @@ export function UserProfilePage() {
       <AnimatePresence>
         {moreOpen && <>
           <motion.button type="button" aria-label="关闭更多操作" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMoreOpen(false)} className="fixed inset-0 z-40 cursor-default bg-black/40" />
-          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} role="dialog" aria-modal="true" aria-label={`${user.name} 的更多操作`} className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-[24px] border border-[var(--neu-border)] bg-[var(--neu-bg)] p-5 shadow-[0_24px_80px_rgba(0,0,0,.28)]">
+          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} role="dialog" aria-modal="true" aria-label={`${user.name} 的更多操作`} className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-[24px] ring-1 ring-[var(--neu-border)] bg-[var(--neu-bg)] p-5 shadow-[0_24px_80px_rgba(0,0,0,.28)]">
             <div className="flex items-center justify-between"><div><p className="neu-eyebrow">关系与安全</p><p className="mt-1 text-[16px] text-[var(--neu-text)]">{user.name}</p></div><ActionIconButton icon={X} label="关闭" onClick={() => setMoreOpen(false)} size={32} /></div>
-            <label className="mt-5 block text-[12px] text-[var(--neu-text-muted)]">备注名称<input value={remarkDraft} onChange={(event) => setRemarkDraft(event.target.value.slice(0, 24))} placeholder="只对你可见" className="mt-2 w-full rounded-[14px] border border-[var(--neu-border)] bg-transparent px-3 py-2.5 text-[13px] text-[var(--neu-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]" /></label>
-            <button type="button" onClick={() => { setRemark(remarkDraft.trim()); setMoreOpen(false); }} className="mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] border border-[var(--neu-border)] py-2.5 text-[13px] text-[var(--neu-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"><PencilLine size={14} />保存备注</button>
+            <label className="mt-5 block text-[12px] text-[var(--neu-text-muted)]">备注名称<input value={remarkDraft} onChange={(event) => setRemarkDraft(event.target.value.slice(0, 24))} placeholder="只对你可见" className="mt-2 w-full rounded-[14px] ring-1 ring-[var(--neu-border)] bg-transparent px-3 py-2.5 text-[13px] text-[var(--neu-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]" /></label>
+            <button type="button" onClick={() => { setRemark(remarkDraft.trim()); setMoreOpen(false); }} className="mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] ring-1 ring-[var(--neu-border)] py-2.5 text-[13px] text-[var(--neu-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"><PencilLine size={14} />保存备注</button>
                 <button type="button" onClick={() => {
                   const next = !blocked;
                   setBlocked(next);
@@ -179,7 +179,7 @@ export function UserProfilePage() {
 
           <h1 style={{ fontSize: 20, color: "var(--neu-text)" }}>{user.name}</h1>
           <p style={{ fontSize: 13, color: "var(--neu-text-muted)", marginTop: 1 }}>{user.handle}{remark ? ` · ${remark}` : ""}</p>
-          {blocked && <div className="mt-3 flex items-center gap-2 rounded-[12px] border border-[var(--semantic-hot)]/30 bg-[color-mix(in_srgb,var(--semantic-hot)_8%,transparent)] px-3 py-2 text-[12px] text-[var(--semantic-hot)]"><UserX size={14} />你已屏蔽此用户；关注和私信已停用。</div>}
+          {blocked && <div className="mt-3 flex items-center gap-2 rounded-[12px] ring-1 ring-[var(--semantic-hot)]/30 bg-[color-mix(in_srgb,var(--semantic-hot)_8%,transparent)] px-3 py-2 text-[12px] text-[var(--semantic-hot)]"><UserX size={14} />你已屏蔽此用户；关注和私信已停用。</div>}
           <p style={{ fontSize: 13, color: "var(--neu-text-muted)", lineHeight: 1.65, marginTop: 8 }}>{user.bio}</p>
 
           <div className="flex items-center gap-1.5 mt-2">
@@ -198,8 +198,9 @@ export function UserProfilePage() {
           </div>
 
           {/* Stats */}
-          <div className="flex gap-0 mt-5 rounded-[20px] overflow-hidden"
-            style={{ background: "var(--neu-bg)", boxShadow: "6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
+          <div className="flex gap-0 mt-5 rounded-[20px]"
+            style={{ background: "var(--neu-bg)", boxShadow: "0 0 0 1px var(--neu-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)" }}>
+            <div style={{ overflow: "hidden", borderRadius: 19 }}>
             {[
               { label: "帖子",  v: fmtNum(user.posts) },
               { label: "粉丝",  v: fmtNum(user.followers) },
@@ -211,6 +212,7 @@ export function UserProfilePage() {
                 <span className="uppercase mt-1" style={{ fontSize: 9, letterSpacing: "0.1em", color: "var(--neu-text-muted)" }}>{s.label}</span>
               </div>
             ))}
+            </div>
           </div>
         </div>
 

@@ -30,16 +30,16 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	return ReportCreated{ReportID: reportID}, nil
 }
 
-func (r *PostgresRepository) ExistsOpenReport(ctx context.Context, targetType ReportTargetType, targetID string) (bool, error) {
+func (r *PostgresRepository) FindExistingReport(ctx context.Context, userID string, targetType ReportTargetType, targetID string) (string, bool, error) {
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return false, persistence.ErrNotImplemented
+		return "", false, persistence.ErrNotImplemented
 	}
-	var one int
-	if err := queryable.QueryRow(ctx, queryExistsOpenReport, string(targetType), targetID).Scan(&one); err != nil {
-		return false, nil
+	var reportID string
+	if err := queryable.QueryRow(ctx, queryFindExistingReport, string(targetType), targetID).Scan(&reportID); err != nil {
+		return "", false, nil
 	}
-	return true, nil
+	return reportID, true, nil
 }
 
 func (r *PostgresRepository) TargetOwner(ctx context.Context, targetType ReportTargetType, targetID string) (string, bool, error) {

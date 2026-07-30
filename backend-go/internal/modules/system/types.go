@@ -68,12 +68,17 @@ type FeatureSwitches struct {
 }
 
 type AppLimits struct {
-	MaxGroupMembers            int `json:"max_group_members"`
-	MaxMomentTags              int `json:"max_moment_tags"`
-	MaxMomentImages            int `json:"max_moment_images"`
-	MomentDescriptionMaxLength int `json:"moment_description_max_length"`
-	CommentMaxLength           int `json:"comment_max_length"`
-	SearchRadiusMax            int `json:"search_radius_max"`
+	MaxGroupMembers            int      `json:"max_group_members"`
+	MaxMomentTags              int      `json:"max_moment_tags"`
+	MaxMomentImages            int      `json:"max_moment_images"`
+	MomentDescriptionMaxLength int      `json:"moment_description_max_length"`
+	CommentMaxLength           int      `json:"comment_max_length"`
+	SearchRadiusMax            int      `json:"search_radius_max"`
+	MessageRecallWindowSeconds int      `json:"message_recall_window_seconds"`
+	StrangerMessageDailyQuota  int      `json:"stranger_message_daily_quota"`
+	ReactionEmojis             []string `json:"reaction_emojis"`
+	GroupInviteTTLHours        int      `json:"group_invite_ttl_hours"`
+	GroupApplicationTTLHours   int      `json:"group_application_ttl_hours"`
 }
 
 type ContactInfo struct {
@@ -110,8 +115,9 @@ type BootstrapData struct {
 }
 
 type UnreadSummary struct {
-	NotificationUnreadCount int `json:"notification_unread_count"`
-	PrivateChatUnreadCount  int `json:"private_chat_unread_count"`
-	GroupChatUnreadCount    int `json:"group_chat_unread_count"`
-	TotalBadge              int `json:"total_badge"`
+	NotificationTotal      int            `json:"notification_total"`
+	NotificationByType     map[string]int `json:"notification_by_type"`
+	PrivateChatUnreadCount int            `json:"private_chat_unread_count"`
+	GroupChatUnreadCount   int            `json:"group_chat_unread_count"`
+	TotalBadge             int            `json:"total_badge"`
 }

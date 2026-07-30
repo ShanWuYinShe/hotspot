@@ -57,7 +57,7 @@ func (r *PostgresRepository) PutSettings(ctx context.Context, userID string, set
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryUpsertUserSettings, userID, settings.PrivacyLevel, settings.LocationVisible, settings.PresenceVisible, settings.SocialListsVisible, settings.GroupsVisible, settings.ReactedMomentsVisible, settings.StatsVisible, settings.AllowFollow, settings.AllowPrivateChat, settings.Searchable, settings.PhoneSearchable, settings.NicknameSearchable, settings.LocationSearchable)
+	return queryable.Exec(ctx, queryUpsertUserSettings, userID, settings.PrivacyLevel, settings.LocationVisible, settings.PresenceVisible, settings.SocialListsVisible, settings.GroupsVisible, settings.ReactedMomentsVisible, settings.StatsVisible, settings.AllowFollow, settings.AllowPrivateChat, settings.Searchable, settings.PhoneSearchable, settings.NicknameSearchable, settings.LocationSearchable, settings.NearbyMomentNotify)
 }
 func (r *PostgresRepository) Follow(ctx context.Context, userID, targetUserID string, source FollowSource, sourceMomentID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {

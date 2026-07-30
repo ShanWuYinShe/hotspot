@@ -20,11 +20,6 @@ func NewModule(factory *persistence.Factory, source appconfig.Source) *Module {
 	return &Module{handler: NewHandler(NewServiceWithSource(repo, source))}
 }
 
-func NewModuleWithSearchers(factory *persistence.Factory, source appconfig.Source, userSearcher, groupSearcher, momentSearcher Searcher) *Module {
-	repo := NewPersistenceRepository(factory)
-	return &Module{handler: NewHandler(NewServiceWithSearchers(repo, source, userSearcher, groupSearcher, momentSearcher))}
-}
-
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/search", func(searchRouter chi.Router) {
 		searchRouter.Group(func(group chi.Router) {
@@ -33,7 +28,6 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			group.Post("/suggest", m.handler.Suggest)
-			group.Post("/all", m.handler.SearchAll)
 		})
 	})
 }

@@ -115,7 +115,6 @@ func (s *Service) UpdateAppConfig(ctx context.Context, req UpdateAppConfigReques
 	return nil, s.appendConfigAudit(ctx, actor, "app_config", before, updated)
 }
 
-
 // --- Patch helper functions for unified UpdateAppConfig ---
 
 func applyUploadConfigPatch(target *UploadConfig, patch PartialUploadConfig) *httpx.APIError {
@@ -238,14 +237,12 @@ func applyResponseDefaultsPatch(target *ResponseDefaults, patch PartialResponseD
 		patch  *int
 	}{
 		{&target.SearchSuggestCount, patch.SearchSuggestCount},
-		{&target.TrendingTagsCount, patch.TrendingTagsCount},
 		{&target.HotMomentsCount, patch.HotMomentsCount},
 		{&target.ChatRecentMessagesCount, patch.ChatRecentMessagesCount},
 		{&target.GroupAnnouncementsCount, patch.GroupAnnouncementsCount},
 		{&target.SystemAnnouncementsCount, patch.SystemAnnouncementsCount},
 		{&target.CommentTopRepliesCount, patch.CommentTopRepliesCount},
 		{&target.UserProfileMomentsCount, patch.UserProfileMomentsCount},
-		{&target.SearchAllCountPerType, patch.SearchAllCountPerType},
 	}
 	for _, f := range fields {
 		if apiErr := applyPositiveIntPatch(f.target, f.patch); apiErr != nil {
@@ -281,11 +278,18 @@ func applyLimitsPatch(target *AppLimits, patch PartialAppLimits) *httpx.APIError
 		{&target.MomentDescriptionMaxLength, patch.MomentDescriptionMaxLength},
 		{&target.CommentMaxLength, patch.CommentMaxLength},
 		{&target.SearchRadiusMax, patch.SearchRadiusMax},
+		{&target.MessageRecallWindowSeconds, patch.MessageRecallWindowSeconds},
+		{&target.StrangerMessageDailyQuota, patch.StrangerMessageDailyQuota},
+		{&target.GroupInviteTTLHours, patch.GroupInviteTTLHours},
+		{&target.GroupApplicationTTLHours, patch.GroupApplicationTTLHours},
 	}
 	for _, f := range fields {
 		if apiErr := applyPositiveIntPatch(f.target, f.patch); apiErr != nil {
 			return apiErr
 		}
+	}
+	if patch.ReactionEmojis != nil {
+		target.ReactionEmojis = patch.ReactionEmojis
 	}
 	return nil
 }

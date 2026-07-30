@@ -67,15 +67,15 @@ func (t *inMemoryLoginTracker) Check(_ context.Context, loginID string) error {
 		return nil
 	}
 	now := time.Now()
-		if now.Before(entry.lockUntil) {
-			return ErrAccountLocked
-		}
-		// Lock expired (lockUntil was set and is now in the past) — clean up.
-		// Don't delete entries that haven't been locked yet (lockUntil is zero).
-		if !entry.lockUntil.IsZero() && now.After(entry.lockUntil) {
-			delete(t.entries, loginID)
-		}
-		return nil
+	if now.Before(entry.lockUntil) {
+		return ErrAccountLocked
+	}
+	// Lock expired (lockUntil was set and is now in the past) — clean up.
+	// Don't delete entries that haven't been locked yet (lockUntil is zero).
+	if !entry.lockUntil.IsZero() && now.After(entry.lockUntil) {
+		delete(t.entries, loginID)
+	}
+	return nil
 }
 
 func (t *inMemoryLoginTracker) RecordFailed(_ context.Context, loginID string) {
@@ -151,8 +151,8 @@ func NewServiceWithSource(auth *platformauth.Service, repo Repository, cfg confi
 	if source == nil {
 		source = appconfig.NewStaticSource(cfg)
 	}
-		return &Service{auth: auth, repo: repo, cfg: cfg, appConfig: source, emailSender: &noopEmailSender{}, loginTracker: newInMemoryLoginTracker()}
-	}
+	return &Service{auth: auth, repo: repo, cfg: cfg, appConfig: source, emailSender: &noopEmailSender{}, loginTracker: newInMemoryLoginTracker()}
+}
 
 func (s *Service) WithEmailSender(sender emailSender) *Service {
 	s.emailSender = sender
@@ -200,23 +200,23 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platfo
 		RegisterIP:       meta.IPAddress,
 		RegisterLocation: meta.IPLocation,
 	})
-		if err != nil {
-			observability.L().Error("service error",
-				"method", "Register",
-				"error", err,
-				"elapsed_ms", time.Since(startedAt).Milliseconds(),
-			)
-			return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Register: repo: %w", err)
-		}
-		result, err := s.auth.IssueSessionWithMeta(ctx, account.UserID, meta)
-		if err != nil {
-			observability.L().Error("service error",
-				"method", "Register",
-				"error", err,
-				"elapsed_ms", time.Since(startedAt).Milliseconds(),
-			)
-			return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Register: issue session: %w", err)
-		}
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "Register",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
+		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Register: repo: %w", err)
+	}
+	result, err := s.auth.IssueSessionWithMeta(ctx, account.UserID, meta)
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "Register",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
+		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Register: issue session: %w", err)
+	}
 	resourceguard.RecordUser(ctx, account.UserID)
 	return result, nil
 }
@@ -257,6 +257,19 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 		)
 		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Login: update meta: %w", err)
 	}
+	for _, session := range s.auth.ListSessions(ctx, account.UserID, "") {
+		if session.DeviceID == meta.DeviceID && meta.DeviceID != "" {
+			realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent())
+		}
+	}
+	if _, err := s.auth.RevokeByUserDevice(ctx, account.UserID, meta.DeviceID); err != nil {
+		observability.L().Warn("login device eviction failed",
+			"method", "Login",
+			"user_id", account.UserID,
+			"device_id", meta.DeviceID,
+			"error", err,
+		)
+	}
 	result, err := s.auth.IssueSessionWithMeta(ctx, account.UserID, meta)
 	if err != nil {
 		observability.L().Error("service error",
@@ -272,42 +285,67 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 func (s *Service) Guest(ctx context.Context, req GuestRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
 	startedAt := time.Now()
 	account, err := s.repo.CreateGuest(ctx, GuestParams{Nickname: req.Nickname, Defaults: s.profileDefaults(ctx), RegisterIP: meta.IPAddress, RegisterLocation: meta.IPLocation})
-		if err != nil {
-			observability.L().Error("service error",
-				"method", "Guest",
-				"error", err,
-				"elapsed_ms", time.Since(startedAt).Milliseconds(),
-			)
-			return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Guest: repo: %w", err)
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "Guest",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
+		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Guest: repo: %w", err)
+	}
+	for _, session := range s.auth.ListSessions(ctx, account.UserID, "") {
+		if session.DeviceID == meta.DeviceID && meta.DeviceID != "" {
+			realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent())
 		}
-		result, err := s.auth.IssueSessionWithMeta(ctx, account.UserID, meta)
-		if err != nil {
-			observability.L().Error("service error",
-				"method", "Guest",
-				"error", err,
-				"elapsed_ms", time.Since(startedAt).Milliseconds(),
-			)
-			return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Guest: issue session: %w", err)
-		}
+	}
+	if _, err := s.auth.RevokeByUserDevice(ctx, account.UserID, meta.DeviceID); err != nil {
+		observability.L().Warn("guest device eviction failed",
+			"method", "Guest",
+			"user_id", account.UserID,
+			"device_id", meta.DeviceID,
+			"error", err,
+		)
+	}
+	result, err := s.auth.IssueSessionWithMeta(ctx, account.UserID, meta)
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "Guest",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
+		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Guest: issue session: %w", err)
+	}
 	resourceguard.RecordUser(ctx, account.UserID)
 	return result, nil
 }
 
-func (s *Service) Refresh(ctx context.Context, req RefreshTokenRequest, refreshCookie string) (platformauth.AuthResult, error) {
+func (s *Service) Refresh(ctx context.Context, req RefreshTokenRequest, deviceID string, refreshCookie string) (platformauth.AuthResult, error) {
 	startedAt := time.Now()
 	refreshToken := req.RefreshToken
 	if req.ClientType == ClientTypeWeb {
 		refreshToken = refreshCookie
 	}
-		result, err := s.auth.RefreshSession(ctx, refreshToken)
-		if err != nil {
-			observability.L().Error("service error",
+	result, err := s.auth.RefreshSession(ctx, refreshToken)
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "Refresh",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
+		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Refresh: %w", err)
+	}
+	if deviceID != "" {
+		session, ok, getErr := s.auth.GetSession(ctx, result.Principal.SessionID)
+		if getErr != nil || !ok || session.DeviceID != deviceID {
+			observability.L().Warn("refresh device_id mismatch",
 				"method", "Refresh",
-				"error", err,
-				"elapsed_ms", time.Since(startedAt).Milliseconds(),
+				"session_id", result.Principal.SessionID,
+				"claimed_device_id", deviceID,
+				"session_device_id", session.DeviceID,
 			)
-			return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Refresh: %w", err)
+			return platformauth.AuthResult{}, ErrInvalidCredentials
 		}
+	}
 	return result, nil
 }
 
@@ -321,6 +359,7 @@ func (s *Service) ListSessions(ctx context.Context) SessionList {
 	for _, session := range sessions {
 		items = append(items, SessionItem{
 			SessionID:    session.SessionID,
+			DeviceID:     session.DeviceID,
 			DeviceType:   session.DeviceType,
 			DeviceName:   session.DeviceName,
 			IPAddress:    maskIPAddress(session.IPAddress),
@@ -341,29 +380,29 @@ func (s *Service) RevokeSession(ctx context.Context, req RevokeSessionRequest) e
 	if req.SessionID == principal.SessionID {
 		return platformauth.Forbidden("不允许撤销当前会话")
 	}
-		if err := s.auth.RevokeSession(ctx, principal.UserID, principal.SessionID, req.SessionID); err != nil {
-			observability.L().Error("service error",
-				"method", "RevokeSession",
-				"error", err,
-			)
-			return fmt.Errorf("auth.Service.RevokeSession: %w", err)
-		}
+	if err := s.auth.RevokeSession(ctx, principal.UserID, principal.SessionID, req.SessionID); err != nil {
+		observability.L().Error("service error",
+			"method", "RevokeSession",
+			"error", err,
+		)
+		return fmt.Errorf("auth.Service.RevokeSession: %w", err)
+	}
 	realtime.DefaultHub().CloseSession(req.SessionID, sessionRevokedEvent())
 	return nil
 }
 
 func (s *Service) RequestPasswordReset(ctx context.Context, req RequestPasswordResetRequest) error {
-		code, err := s.repo.CreatePasswordReset(ctx, req.LoginID, time.Now().UTC().Add(10*time.Minute))
-		if errors.Is(err, ErrPasswordResetThrottled) {
-			return nil
-		}
-		if err != nil {
-			observability.L().Error("service error",
-				"method", "RequestPasswordReset",
-				"error", err,
-			)
-			return fmt.Errorf("auth.Service.RequestPasswordReset: repo: %w", err)
-		}
+	code, err := s.repo.CreatePasswordReset(ctx, req.LoginID, time.Now().UTC().Add(10*time.Minute))
+	if errors.Is(err, ErrPasswordResetThrottled) {
+		return nil
+	}
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "RequestPasswordReset",
+			"error", err,
+		)
+		return fmt.Errorf("auth.Service.RequestPasswordReset: repo: %w", err)
+	}
 	if code == "" {
 		return nil
 	}
@@ -379,26 +418,26 @@ func (s *Service) RequestPasswordReset(ctx context.Context, req RequestPasswordR
 
 func (s *Service) ResetPassword(ctx context.Context, req ResetPasswordRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
 	startedAt := time.Now()
-		account, err := s.repo.ResetPassword(ctx, req.LoginID, req.VerificationCode, req.NewPassword)
-		if err != nil {
-			observability.L().Error("service error",
-				"method", "ResetPassword",
-				"error", err,
-				"elapsed_ms", time.Since(startedAt).Milliseconds(),
-			)
-			return platformauth.AuthResult{}, fmt.Errorf("auth.Service.ResetPassword: repo: %w", err)
-		}
-		s.closeAllSessions(ctx, account.UserID)
-		s.auth.RevokeOtherSessions(ctx, account.UserID, "")
-		result, err := s.auth.IssueSessionWithMeta(ctx, account.UserID, meta)
-		if err != nil {
-			observability.L().Error("service error",
-				"method", "ResetPassword",
-				"error", err,
-				"elapsed_ms", time.Since(startedAt).Milliseconds(),
-			)
-			return platformauth.AuthResult{}, fmt.Errorf("auth.Service.ResetPassword: issue session: %w", err)
-		}
+	account, err := s.repo.ResetPassword(ctx, req.LoginID, req.VerificationCode, req.NewPassword)
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "ResetPassword",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
+		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.ResetPassword: repo: %w", err)
+	}
+	s.closeAllSessions(ctx, account.UserID)
+	s.auth.RevokeOtherSessions(ctx, account.UserID, "")
+	result, err := s.auth.IssueSessionWithMeta(ctx, account.UserID, meta)
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "ResetPassword",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
+		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.ResetPassword: issue session: %w", err)
+	}
 	return result, nil
 }
 
@@ -407,9 +446,9 @@ func (s *Service) ChangePassword(ctx context.Context, req ChangePasswordRequest)
 	if !ok || principal.UserID == "" {
 		return platformauth.Unauthorized("Access Token 无效或过期")
 	}
-		if err := s.repo.ChangePassword(ctx, principal.UserID, req.OldPassword, req.NewPassword); err != nil {
-			return fmt.Errorf("auth.Service.ChangePassword: repo: %w", err)
-		}
+	if err := s.repo.ChangePassword(ctx, principal.UserID, req.OldPassword, req.NewPassword); err != nil {
+		return fmt.Errorf("auth.Service.ChangePassword: repo: %w", err)
+	}
 	s.closeOtherSessions(ctx, principal.UserID, principal.SessionID)
 	s.auth.RevokeOtherSessions(ctx, principal.UserID, principal.SessionID)
 	return nil

@@ -63,19 +63,21 @@ export function GalleryGrid({ posts, activeTab }: { posts: GalleryPost[]; active
             onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`${ROUTES.moment(post.id)}?from=me`); }}
             role="button"
             tabIndex={0}
-            className="relative rounded-[18px] overflow-hidden cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
-            style={{ aspectRatio: "1/1", boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
-            <img src={post.img} alt="" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 flex items-end p-2"
-              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)" }}>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-0.5">
-                  <Heart style={{ width: 10, height: 10, color: "white" }} fill="white" strokeWidth={0} />
-                  <span style={{ fontSize: 10, color: "white" }}>{post.likes}</span>
-                </div>
-                <div className="flex items-center gap-0.5">
-                  <MessageCircle style={{ width: 10, height: 10, color: "white" }} strokeWidth={1.5} />
-                  <span style={{ fontSize: 10, color: "white" }}>{post.comments}</span>
+            className="relative rounded-[18px] cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
+            style={{ aspectRatio: "1/1", boxShadow: "0 0 0 1px var(--neu-border), 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)" }}>
+            <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 17 }}>
+              <img src={post.img} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 flex items-end p-2"
+                style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)" }}>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-0.5">
+                    <Heart style={{ width: 10, height: 10, color: "white" }} fill="white" strokeWidth={0} />
+                    <span style={{ fontSize: 10, color: "white" }}>{post.likes}</span>
+                  </div>
+                  <div className="flex items-center gap-0.5">
+                    <MessageCircle style={{ width: 10, height: 10, color: "white" }} strokeWidth={1.5} />
+                    <span style={{ fontSize: 10, color: "white" }}>{post.comments}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -160,14 +162,16 @@ export function SectionMoments() {
                 type="button"
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate(`${ROUTES.moment(post.id)}?from=me`)}
-                className="group relative h-full w-full overflow-hidden rounded-[16px] border border-[var(--neu-border)] bg-[var(--page-bg)] text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]"
+                className="group relative h-full w-full rounded-[16px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)] text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]"
                 aria-label="查看瞬间详情"
               >
-                <img src={post.img} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.035]" />
-                <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(to_top,rgba(0,0,0,.62),transparent)] p-2.5">
-                  <div className="flex items-center gap-2 text-[10px] text-white">
-                    <span className="flex items-center gap-0.5"><Heart size={10} fill="currentColor" strokeWidth={0} />{post.likes}</span>
-                    <span className="flex items-center gap-0.5"><MessageCircle size={10} strokeWidth={1.6} />{post.comments}</span>
+                <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 15 }}>
+                  <img src={post.img} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.035]" />
+                  <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(to_top,rgba(0,0,0,.62),transparent)] p-2.5">
+                    <div className="flex items-center gap-2 text-[10px] text-white">
+                      <span className="flex items-center gap-0.5"><Heart size={10} fill="currentColor" strokeWidth={0} />{post.likes}</span>
+                      <span className="flex items-center gap-0.5"><MessageCircle size={10} strokeWidth={1.6} />{post.comments}</span>
+                    </div>
                   </div>
                 </div>
               </motion.button>
@@ -185,20 +189,22 @@ export function SectionMoments() {
               <button
                 type="button"
                 onClick={() => navigate(`${ROUTES.moment(featuredPost.id)}?from=me`)}
-                className="group relative block w-full overflow-hidden rounded-[22px] border border-[var(--neu-border)] bg-[var(--page-bg)] text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]"
+                className="group relative block w-full rounded-[22px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)] text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]"
                 style={{ aspectRatio: "2.1 / 1" }}
                 aria-label="查看置顶瞬间详情"
               >
-                <img src={featuredPost.img} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.025]" />
-                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,.62),rgba(0,0,0,.08)_65%,transparent)]" />
-                <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-4">
-                  <div>
-                    <p className="text-[10px] font-medium tracking-[0.12em] text-white/75">{activeTab === "posts" ? "最近发布" : current.eyebrow}</p>
-                    <p className="mt-1 text-[15px] font-medium text-white">这一刻，值得被好好留下</p>
-                  </div>
-                  <div className="flex items-center gap-3 rounded-full bg-black/25 px-3 py-1.5 text-[11px] text-white backdrop-blur-sm">
-                    <span className="flex items-center gap-1"><Heart size={12} fill="currentColor" strokeWidth={0} />{featuredPost.likes}</span>
-                    <span className="flex items-center gap-1"><MessageCircle size={12} strokeWidth={1.7} />{featuredPost.comments}</span>
+                <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 21 }}>
+                  <img src={featuredPost.img} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.025]" />
+                  <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,.62),rgba(0,0,0,.08)_65%,transparent)]" />
+                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-4">
+                    <div>
+                      <p className="text-[10px] font-medium tracking-[0.12em] text-white/75">{activeTab === "posts" ? "最近发布" : current.eyebrow}</p>
+                      <p className="mt-1 text-[15px] font-medium text-white">这一刻，值得被好好留下</p>
+                    </div>
+                    <div className="flex items-center gap-3 rounded-full bg-black/25 px-3 py-1.5 text-[11px] text-white backdrop-blur-sm">
+                      <span className="flex items-center gap-1"><Heart size={12} fill="currentColor" strokeWidth={0} />{featuredPost.likes}</span>
+                      <span className="flex items-center gap-1"><MessageCircle size={12} strokeWidth={1.7} />{featuredPost.comments}</span>
+                    </div>
                   </div>
                 </div>
               </button>
@@ -214,14 +220,16 @@ export function SectionMoments() {
                     type="button"
                     whileTap={{ scale: 0.98 }}
                     onClick={() => navigate(`${ROUTES.moment(post.id)}?from=me`)}
-                    className="group relative aspect-square overflow-hidden rounded-[16px] border border-[var(--neu-border)] bg-[var(--page-bg)] text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]"
+                    className="group relative aspect-square rounded-[16px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)] text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--neu-bg)]"
                     aria-label="查看瞬间详情"
                   >
-                    <img src={post.img} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.035]" />
-                    <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(to_top,rgba(0,0,0,.62),transparent)] p-2.5">
-                      <div className="flex items-center gap-2 text-[10px] text-white">
-                        <span className="flex items-center gap-0.5"><Heart size={10} fill="currentColor" strokeWidth={0} />{post.likes}</span>
-                        <span className="flex items-center gap-0.5"><MessageCircle size={10} strokeWidth={1.6} />{post.comments}</span>
+                    <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 15 }}>
+                      <img src={post.img} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.035]" />
+                      <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(to_top,rgba(0,0,0,.62),transparent)] p-2.5">
+                        <div className="flex items-center gap-2 text-[10px] text-white">
+                          <span className="flex items-center gap-0.5"><Heart size={10} fill="currentColor" strokeWidth={0} />{post.likes}</span>
+                          <span className="flex items-center gap-0.5"><MessageCircle size={10} strokeWidth={1.6} />{post.comments}</span>
+                        </div>
                       </div>
                     </div>
                   </motion.button>
@@ -614,11 +622,13 @@ export function SectionFollowing({ embedded = false }: { embedded?: boolean }) {
 
       {/* Following list */}
       <div className={embedded ? "px-6 pb-8 lg:px-8" : "px-5 pb-6"}>
-        <div className={embedded ? "grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" : "rounded-[16px] overflow-hidden flex flex-col"}
-          style={embedded ? undefined : { gap: 1, background: "var(--neu-border)", border: "1px solid color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))" }}>
+        <div className={embedded ? "grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" : "rounded-[16px] flex flex-col"}
+          style={embedded ? undefined : { gap: 1, background: "var(--neu-border)", boxShadow: "0 0 0 1px color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))" }}>
+          <div style={embedded ? undefined : { overflow: "hidden", borderRadius: 15 }}>
           {sorted.map(f => (
             <FollowingRow key={f.id} f={f} wide={embedded} isUnfollowed={unfollowedIds.has(f.id)} onToggle={() => toggleUnfollow(f.id)} />
           ))}
+          </div>
         </div>
       </div>
     </div>
@@ -755,14 +765,16 @@ export function SectionFans({ embedded = false }: { embedded?: boolean }) {
 
       {/* Fan list */}
       <div className={embedded ? "px-6 pb-8 lg:px-8" : "px-5 pb-6"}>
-        <div className={embedded ? "grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" : "rounded-[16px] overflow-hidden flex flex-col"}
-          style={embedded ? undefined : { gap: 1, background: "var(--neu-border)", border: "1px solid color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))" }}>
+        <div className={embedded ? "grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" : "rounded-[16px] flex flex-col"}
+          style={embedded ? undefined : { gap: 1, background: "var(--neu-border)", boxShadow: "0 0 0 1px color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))" }}>
+          <div style={embedded ? undefined : { overflow: "hidden", borderRadius: 15 }}>
           {filtered.map(f => {
             const isMutual = followedBack.has(f.id);
             return (
               <FanRow key={f.id} f={f} wide={embedded} isMutual={isMutual} onToggle={() => toggleFollow(f.id)} />
             );
           })}
+          </div>
         </div>
       </div>
     </div>

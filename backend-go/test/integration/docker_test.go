@@ -783,41 +783,42 @@ func TestGroups_MyGroups(t *testing.T) {
 // Feed
 // =============================================================================
 
-func TestFeed_ListMoments(t *testing.T) {
+func TestFeed_Following(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/feed/list_moments", map[string]any{
-			"source": "nearby",
+		apiRespOK(t, "/api/v1/feed/following", map[string]any{}, &resp)
+	})
+}
+
+func TestFeed_Nearby(t *testing.T) {
+	withAuth(t, func(token string) {
+		var resp ApiResponse[map[string]any]
+		apiRespOK(t, "/api/v1/feed/nearby", map[string]any{
+			"reference_point": map[string]any{
+				"latitude":  37.7749,
+				"longitude": -122.4194,
+			},
 		}, &resp)
 	})
 }
 
-func TestFeed_ListGroups(t *testing.T) {
+func TestFeed_NearbyGroups(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/feed/list_groups", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/feed/nearby_groups", map[string]any{}, &resp)
 	})
 }
 
-func TestFeed_ListUsers(t *testing.T) {
+func TestFeed_NearbyUsers(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/feed/list_users", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/feed/nearby_users", map[string]any{}, &resp)
 	})
 }
 
-func TestFeed_ListTrending(t *testing.T) {
+func TestFeed_Trending(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/feed/list_trending", map[string]any{}, &resp)
-}
-
-func TestFeed_MeDismiss(t *testing.T) {
-	withAuth(t, func(token string) {
-		apiRespOK(t, "/api/v1/feed/me/dismiss", map[string]any{
-			"target_type": "moment",
-			"target_id":   "fake_moment_id",
-		}, nil)
-	})
+	apiRespOK(t, "/api/v1/feed/trending", map[string]any{}, &resp)
 }
 
 // =============================================================================

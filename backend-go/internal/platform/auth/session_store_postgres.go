@@ -27,7 +27,7 @@ func (s *PostgresSessionStore) Save(ctx context.Context, session SessionRecord) 
 	if !ok {
 		return s.fallback.Save(ctx, session)
 	}
-	return queryable.Exec(ctx, queryUpsertSession, session.SessionID, session.UserID, session.CreatedAt, session.LastActiveAt, session.RevokedAt, session.DeviceType, session.DeviceName, session.IPAddress, session.IPLocation)
+	return queryable.Exec(ctx, queryUpsertSession, session.SessionID, session.UserID, session.CreatedAt, session.LastActiveAt, session.RevokedAt, session.DeviceType, session.DeviceName, session.IPAddress, session.IPLocation, session.DeviceID)
 }
 
 func (s *PostgresSessionStore) Touch(ctx context.Context, sessionID string) error {
@@ -88,7 +88,7 @@ func (s *PostgresSessionStore) Get(ctx context.Context, sessionID string) (Sessi
 	}
 	var record SessionRecord
 	var revokedAt *time.Time
-	if err := queryable.QueryRow(ctx, queryGetSession, sessionID).Scan(&record.SessionID, &record.UserID, &record.CreatedAt, &record.LastActiveAt, &revokedAt, &record.DeviceType, &record.DeviceName, &record.IPAddress, &record.IPLocation); err != nil {
+	if err := queryable.QueryRow(ctx, queryGetSession, sessionID).Scan(&record.SessionID, &record.UserID, &record.CreatedAt, &record.LastActiveAt, &revokedAt, &record.DeviceType, &record.DeviceName, &record.IPAddress, &record.IPLocation, &record.DeviceID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return SessionRecord{}, false, nil
 		}
@@ -112,7 +112,7 @@ func (s *PostgresSessionStore) ListActiveByUser(ctx context.Context, userID stri
 	for rows.Next() {
 		var record SessionRecord
 		var revokedAt *time.Time
-		if err := rows.Scan(&record.SessionID, &record.UserID, &record.CreatedAt, &record.LastActiveAt, &revokedAt, &record.DeviceType, &record.DeviceName, &record.IPAddress, &record.IPLocation); err != nil {
+		if err := rows.Scan(&record.SessionID, &record.UserID, &record.CreatedAt, &record.LastActiveAt, &revokedAt, &record.DeviceType, &record.DeviceName, &record.IPAddress, &record.IPLocation, &record.DeviceID); err != nil {
 			return nil, err
 		}
 		record.RevokedAt = revokedAt

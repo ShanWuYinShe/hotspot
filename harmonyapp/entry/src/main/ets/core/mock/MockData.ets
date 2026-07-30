@@ -89,8 +89,7 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
   if (url === '/api/v1/private_messages/send') return guard() ?? apiOk({ message_id: 'm1', type: 'text', content: '', sender: MK_USER[0], sent_at: '', is_read: false });
 
   // Feed / Search / Notify / System / Map
-  if (url === '/api/v1/feed/list_trending') return apiOk({ hot_moments: [] });
-  if (url === '/api/v1/search/all') return apiOk({ users: { items: MK_USER }, groups: { items: [] }, moments: { items: [] } });
+  if (url === '/api/v1/feed/trending') return apiOk({ hot_moments: [] });
   if (url === '/api/v1/search/suggest') return apiOk({ items: [] });
   if (url === '/api/v1/notify/list') return guard() ?? paginated([]);
   if (url === '/api/v1/notify/get_unread_count') return guard() ?? apiOk({ total: 0 });

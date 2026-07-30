@@ -2,31 +2,25 @@ package feed
 
 import "context"
 
-type InMemoryRepository struct {
-	dismissed map[string]struct{}
-	targets   map[string]struct{}
-}
+type InMemoryRepository struct{}
 
 func NewInMemoryRepository() *InMemoryRepository {
-	return &InMemoryRepository{
-		dismissed: make(map[string]struct{}),
-		targets:   make(map[string]struct{}),
-	}
+	return &InMemoryRepository{}
 }
 
-func (r *InMemoryRepository) RegisterTestTarget(targetType, targetID string) {
-	r.targets[targetType+":"+targetID] = struct{}{}
-}
-
-func (r *InMemoryRepository) ListMoments(_ context.Context, _ momentsQuery) (PaginatedMoments, error) {
+func (r *InMemoryRepository) ListFollowingMoments(_ context.Context, _ momentsQuery) (PaginatedMoments, error) {
 	return PaginatedMoments{}, nil
 }
 
-func (r *InMemoryRepository) ListGroups(_ context.Context, _ groupsQuery) (PaginatedGroups, error) {
+func (r *InMemoryRepository) ListNearbyMoments(_ context.Context, _ momentsQuery) (PaginatedMoments, error) {
+	return PaginatedMoments{}, nil
+}
+
+func (r *InMemoryRepository) ListNearbyGroups(_ context.Context, _ groupsQuery) (PaginatedGroups, error) {
 	return PaginatedGroups{}, nil
 }
 
-func (r *InMemoryRepository) ListUsers(_ context.Context, _ usersQuery) (PaginatedUsers, error) {
+func (r *InMemoryRepository) ListNearbyUsers(_ context.Context, _ usersQuery) (PaginatedUsers, error) {
 	return PaginatedUsers{}, nil
 }
 
@@ -34,35 +28,6 @@ func (r *InMemoryRepository) ListTrending(_ context.Context, _ string) (Trending
 	return TrendingBundle{}, nil
 }
 
-func (r *InMemoryRepository) Dismiss(_ context.Context, cmd dismissCommand) error {
-	if normalizeDismissTargetType(cmd.TargetType) == "" || cmd.TargetID == "" || cmd.ViewerUserID == "" {
-		return ErrInvalidFeedRequest
-	}
-	if !r.dismissTargetExists(cmd.TargetType, cmd.TargetID) {
-		return ErrDismissTargetNotFound
-	}
-	key := cmd.ViewerUserID + ":" + cmd.TargetType + ":" + cmd.TargetID
-	r.dismissed[key] = struct{}{}
-	return nil
-}
-
-// FetchMomentImageRows returns no rows for the in-memory repo.
 func (r *InMemoryRepository) FetchMomentImageRows(_ context.Context, _ []string) (map[string][]momentImageRow, error) {
 	return map[string][]momentImageRow{}, nil
-}
-
-func (r *InMemoryRepository) dismissTargetExists(targetType, targetID string) bool {
-	if _, ok := r.targets[targetType+":"+targetID]; ok {
-		return true
-	}
-	switch targetType {
-	case "moment":
-		return targetID == "moment_feed_1" || targetID == "moment_hot_1"
-	case "user":
-		return targetID == "user_feed_1"
-	case "group":
-		return targetID == "group_feed_1"
-	default:
-		return false
-	}
 }

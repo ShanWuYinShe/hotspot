@@ -45,25 +45,3 @@ type SearchSuggestItem struct {
 type SearchSuggestResponse struct {
 	Items []SearchSuggestItem `json:"items"`
 }
-
-type PaginationParams = types.PaginationParams
-
-type SearchAllRequest struct {
-	Keyword        string            `json:"keyword,omitempty"`
-	Tag            string            `json:"tag,omitempty"`
-	Radius         int               `json:"radius,omitempty"`
-	SortBy         string            `json:"sort_by,omitempty"`
-	ReferencePoint GeoPoint          `json:"reference_point"`
-	Pagination     *PaginationParams `json:"pagination,omitempty"`
-}
-
-type SearchCategoryResult struct {
-	Items      []SearchItem `json:"items"`
-	NextCursor string       `json:"next_cursor,omitempty"`
-}
-
-type SearchAllResult struct {
-	Users   SearchCategoryResult `json:"users"`
-	Groups  SearchCategoryResult `json:"groups"`
-	Moments SearchCategoryResult `json:"moments"`
-}

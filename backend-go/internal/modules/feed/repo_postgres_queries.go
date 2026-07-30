@@ -99,31 +99,6 @@ WHERE m.privacy_level = 'public'
   AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
               WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`
 
-	queryFeedMomentsAll = `
-SELECT m.moment_id,
-       m.user_id,
-       COALESCE(u.nickname, ''),
-       COALESCE(u.avatar_url, ''),
-       m.description,
-       m.created_at,
-       m.likes_count,
-       m.comments_count,
-       m.shares_count,
-       m.location_name,
-       m.latitude,
-       m.longitude,
-       EXISTS(SELECT 1 FROM reactions r WHERE r.target_type = 'moment' AND r.target_id = m.moment_id AND r.user_id = $3),
-       EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $3),
-       EXISTS(SELECT 1 FROM user_relations ur WHERE ur.target_user_id = m.user_id AND ur.user_id = $3 AND ur.is_following = TRUE)
-FROM moments m
-JOIN users u ON u.user_id = m.user_id
-WHERE m.privacy_level = 'public'
-  AND (
-    EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
-            WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)
-    OR EXISTS(SELECT 1 FROM user_relations ur WHERE ur.target_user_id = m.user_id AND ur.user_id = $3 AND ur.is_following = TRUE)
-  )`
-
 	queryFeedMomentTags = `
 SELECT tag_name
 FROM moment_tags
@@ -135,13 +110,6 @@ SELECT moment_id, tag_name
 FROM moment_tags
 WHERE moment_id = ANY($1)
 ORDER BY moment_id, tag_name ASC`
-
-	queryFeedTrendingTags = `
-SELECT mt.tag_name, COUNT(*) AS usage_count
-FROM moment_tags mt
-JOIN moments m ON m.moment_id = mt.moment_id
-WHERE m.privacy_level = 'public'
-GROUP BY mt.tag_name`
 
 	queryFeedTrendingHotMoments = `
 SELECT m.moment_id,
@@ -161,25 +129,4 @@ SELECT m.moment_id,
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 WHERE m.privacy_level = 'public'`
-
-	queryFeedDismissMomentExists = `
-SELECT moment_id
-FROM moments
-WHERE moment_id = $1`
-
-	queryFeedDismissUserExists = `
-SELECT user_id
-FROM users
-WHERE user_id = $1`
-
-	queryFeedDismissGroupExists = `
-SELECT group_id
-FROM groups
-WHERE group_id = $1
-  AND deleted_at IS NULL`
-
-	queryFeedDismissInsert = `
-INSERT INTO feed_dismissals (user_id, target_type, target_id)
-VALUES ($1, $2, $3)
-ON CONFLICT (user_id, target_type, target_id) DO NOTHING`
 )

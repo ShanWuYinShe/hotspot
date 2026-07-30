@@ -61,12 +61,12 @@
 | `POST /api/v1/admin/rbac/get_me` | 我的管理员权限 | 必须 | 无 |
 | `POST /api/v1/admin/rbac/list_permissions` | 权限字典 | 必须 + `admin.rbac.manage` | 无 |
 | `POST /api/v1/admin/rbac/roles/list` | 角色列表 | 必须 + `admin.rbac.manage` | 无 |
-| `POST /api/v1/admin/rbac/roles/create` | 创建角色 | 必须 + `admin.rbac.manage` | MUST |
+| `POST /api/v1/admin/rbac/roles/create` | 创建角色 | 必须 + `admin.rbac.manage` | 幂等语义 |
 | `POST /api/v1/admin/rbac/roles/update` | 更新角色 | 必须 + `admin.rbac.manage` | 幂等语义 |
 | `POST /api/v1/admin/rbac/roles/delete` | 删除角色 | 必须 + `admin.rbac.manage` | 幂等语义 |
 | `POST /api/v1/admin/rbac/roles/set_permissions` | 设置角色权限 | 必须 + `admin.rbac.manage` | 幂等语义 |
 | `POST /api/v1/admin/rbac/admins/list` | 管理员列表 | 必须 + `admin.rbac.manage` | 无 |
-| `POST /api/v1/admin/rbac/admins/grant` | 授权/更新管理员 | 必须 + `admin.rbac.manage` | MUST |
+| `POST /api/v1/admin/rbac/admins/grant` | 授权/更新管理员 | 必须 + `admin.rbac.manage` | 幂等语义 |
 | `POST /api/v1/admin/rbac/admins/revoke` | 撤销管理员 | 必须 + `admin.rbac.manage` | 幂等语义 |
 | `POST /api/v1/admin/audit/list` | 审计日志列表 | 必须 + `admin.audit.read` | 无 |
 | `POST /api/v1/admin/audit/get_detail` | 审计日志详情 | 必须 + `admin.audit.read` | 无 |
@@ -180,7 +180,7 @@ interface AdminRoleItem {
 创建角色。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 幂等语义（重名角色创建返回 `10400`，管理员可据此判断是否已创建）
 
 **Request**: `AdminRbacRoleCreateRequest`
 ```typescript
@@ -298,7 +298,7 @@ interface AdminOperatorItem {
 授予/更新管理员。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 幂等语义（对已是管理员的用户重复授权同一 role 视为 no-op 成功）
 
 **额外约束**：仅超级管理员可将 `grant_all_permissions=true`
 
@@ -597,13 +597,11 @@ interface RateLimitConfig {
 
 interface ResponseDefaults {
   search_suggest_count: number;       // 搜索建议返回条数，默认 5
-  trending_tags_count: number;        // 热门标签返回条数（feed/list_trending），默认 10
-  hot_moments_count: number;          // feed/list_trending 热门瞬间返回条数，默认 20
+  hot_moments_count: number;          // feed/trending 热门瞬间返回条数，默认 20
   chat_recent_messages_count: number; // get_detail 返回的最近消息条数，默认 20
   group_announcements_count: number;  // 群公告列表返回条数，默认 10
   system_announcements_count: number; // 系统公告列表返回条数（system/list_announcements），默认 10
   comment_top_replies_count: number;  // 顶层评论内嵌的前 N 条回复（comments/list 场景），默认 3；消除展开回复的 N+1
-  user_profile_moments_count: number; // 用户主页聚合（users/profile_get）返回的近期瞬间条数，默认 6
-  search_all_count_per_type: number;  // 综合搜索（search/all）每个分类返回的首屏条数，默认 10
+  user_profile_moments_count: number; // 用户主页聚合（users/get_profile）返回的近期瞬间条数，默认 6
 }
 ```

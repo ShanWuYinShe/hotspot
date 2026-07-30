@@ -161,64 +161,6 @@ func (r *userErrorRepo) UserExists(context.Context, string) (bool, error) {
 	return r.exists, nil
 }
 
-func TestRequestEmailChangeRequiresIdempotencyKey(t *testing.T) {
-	handler := NewHandler(NewService())
-	req := httptest.NewRequest(http.MethodPost, "/email/request_change", strings.NewReader(`{"new_email":"alice@example.com","password":"secret"}`))
-	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
-	rr := httptest.NewRecorder()
-
-	handler.RequestEmailChange(rr, req)
-	assertUserCode(t, rr, 10000)
-}
-
-func TestContactChangeEndpointsReturnUnavailableWhenProviderMissing(t *testing.T) {
-	handler := NewHandler(NewService())
-	tests := []struct {
-		name string
-		call func(http.ResponseWriter, *http.Request)
-		body string
-	}{
-		{name: "request email", call: handler.RequestEmailChange, body: `{"new_email":"alice@example.com","password":"secret"}`},
-		{name: "confirm email", call: handler.ConfirmEmailChange, body: `{"new_email":"alice@example.com","verification_code":"123456"}`},
-		{name: "request phone", call: handler.RequestPhoneChange, body: `{"new_phone":"13800000000","password":"secret"}`},
-		{name: "confirm phone", call: handler.ConfirmPhoneChange, body: `{"new_phone":"13800000000","verification_code":"123456"}`},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.body)).WithContext(ctx)
-			req.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
-			rr := httptest.NewRecorder()
-			tc.call(rr, req)
-			assertUserCode(t, rr, 10400)
-		})
-	}
-}
-
-func TestContactChangeEndpointsValidatePayload(t *testing.T) {
-	handler := NewHandler(NewService())
-	tests := []struct {
-		name string
-		call func(http.ResponseWriter, *http.Request)
-		body string
-	}{
-		{name: "request email missing password", call: handler.RequestEmailChange, body: `{"new_email":"alice@example.com"}`},
-		{name: "confirm email missing code", call: handler.ConfirmEmailChange, body: `{"new_email":"alice@example.com"}`},
-		{name: "request phone missing password", call: handler.RequestPhoneChange, body: `{"new_phone":"13800000000"}`},
-		{name: "confirm phone missing code", call: handler.ConfirmPhoneChange, body: `{"new_phone":"13800000000"}`},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.body)).WithContext(ctx)
-			req.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
-			rr := httptest.NewRecorder()
-			tc.call(rr, req)
-			assertUserCode(t, rr, 10000)
-		})
-	}
-}
-
 func TestGetMyProfileReturnsCurrentUser(t *testing.T) {
 	handler := NewHandler(NewService())
 	req := httptest.NewRequest(http.MethodPost, "/get_account", strings.NewReader(`{}`))

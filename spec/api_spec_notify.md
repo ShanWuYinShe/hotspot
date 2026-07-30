@@ -56,6 +56,7 @@
 | `report_resolved` | `ReportResolved` | 举报被处理（举报人收到） |
 | `report_dismissed` | `ReportDismissed` | 举报被驳回（举报人收到） |
 | `system_announcement` | `SystemAnnouncement` | 系统公告 |
+| `nearby_new_moment` | `NearbyNewMoment` | 附近有人发布新瞬间（用户可配置是否接收；服务端节流，同区域短时间内仅推送一次） |
 
 **客户端处理约定**：
 - **实时路径**：在线时收到 WS 事件 → 直接更新本地通知列表/未读角标（无需立即拉 HTTP）
@@ -82,7 +83,8 @@ type NotifyPayload =
   | { type: 'group_application_accepted'; group_id: string; group_name: string; application_id: string }  // 不暴露审批者身份（隐私考虑：审批者可能是群管理员或群主，不应在通知中暴露其身份给申请者）
   | { type: 'report_resolved'; report_id: string; target_type: ReportTargetType; target_id: string; resolved_at: string; note?: string }      // 举报被处理，note 为管理员脱敏后的处理说明
   | { type: 'report_dismissed'; report_id: string; target_type: ReportTargetType; target_id: string; dismissed_at: string; note?: string }    // 举报被驳回
-  | { type: 'system_announcement'; announcement_id: string; severity: AnnounceLevel };
+  | { type: 'system_announcement'; announcement_id: string; severity: AnnounceLevel }
+  | { type: 'nearby_new_moment'; actor: UserInfo; moment_id: string; moment_summary: MomentSummary; distance: number };  // 附近新瞬间，distance 为距离（米）
 ```
 
 ### 通知项

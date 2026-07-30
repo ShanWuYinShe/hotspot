@@ -15,13 +15,13 @@
 |-----|------|------|------|
 | `POST /api/v1/admin/users/search` | 搜索用户 | 必须 + `admin.users.read` | 无 |
 | `POST /api/v1/admin/users/get_detail` | 用户详情 | 必须 + `admin.users.read` | 无 |
-| `POST /api/v1/admin/users/ban` | 封禁用户 | 必须 + `admin.users.write` | MUST |
+| `POST /api/v1/admin/users/ban` | 封禁用户 | 必须 + `admin.users.write` | 幂等语义 |
 | `POST /api/v1/admin/users/unban` | 解封用户 | 必须 + `admin.users.write` | 幂等语义 |
 | `POST /api/v1/admin/groups/search` | 搜索群组 | 必须 + `admin.groups.read` | 无 |
 | `POST /api/v1/admin/groups/get_detail` | 群组详情 | 必须 + `admin.groups.read` | 无 |
-| `POST /api/v1/admin/groups/dismiss` | 解散群组 | 必须 + `admin.groups.write` | MUST |
+| `POST /api/v1/admin/groups/dismiss` | 解散群组 | 必须 + `admin.groups.write` | 幂等语义 |
 | `POST /api/v1/admin/reports/list` | 举报列表（按状态/类型过滤） | 必须 + `admin.reports.read` | 无 |
-| `POST /api/v1/admin/reports/handle` | 处理举报 | 必须 + `admin.reports.write` | MUST |
+| `POST /api/v1/admin/reports/handle` | 处理举报 | 必须 + `admin.reports.write` | 幂等语义 |
 | `POST /api/v1/admin/tags/search` | 搜索标签 | 必须 + `admin.tags.read` | 无 |
 | `POST /api/v1/admin/tags/delete` | 删除/屏蔽标签 | 必须 + `admin.tags.write` | 幂等语义 |
 | `POST /api/v1/admin/announcements/search` | 搜索系统公告 | 必须 + `admin.announcements.read` | 无 |
@@ -125,7 +125,7 @@ interface AdminUserOpenTheDoorRequest {
 封禁用户（管理员）。
 
 - **认证**: 必须 + `admin.users.write`
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 幂等语义（对已封禁用户重复封禁视为 no-op 成功）
 
 **安全约束**：
 - 禁止封禁自身（返回 `10400`）
@@ -227,7 +227,7 @@ interface AdminGroupOpenTheDoorRequest {
 解散群组（管理员）。
 
 - **认证**: 必须 + `admin.groups.write`
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 幂等语义（对已解散群组重复解散视为 no-op 成功）
 
 **安全约束**：
 - 解散后群内所有成员收到 `GroupDismissed` WebSocket 事件（`reason='policy_violation'`，不暴露管理员身份）
@@ -283,22 +283,23 @@ interface AdminReportItem extends ReportItem {
 处理举报（管理员）。
 
 - **认证**: 必须 + `admin.reports.write`
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 幂等语义（每举报只能处理一次，已终态的举报重复处理返回 `10400`）
 
 **安全约束**：
-- 仅 `pending`、`reviewing` 或 `escalated` 状态的举报可处理，已终态（`resolved`/`dismissed`）的举报返回 `10400`
+- 仅 `pending` 状态的举报可处理，已终态（`resolved`/`dismissed`）的举报返回 `10400`
 - 处理操作会记录审计日志
 
 **动作语义**：
 - `resolve`：确认举报有效，执行处理（如封禁用户、删除内容），状态变更为 `resolved`。处理成功后向举报人推送 `ReportResolved` WebSocket 事件并落库通知（`NotifyType='report_resolved'`）
 - `dismiss`：驳回举报，不执行任何处理，状态变更为 `dismissed`。驳回后向举报人推送 `ReportDismissed` WebSocket 事件并落库通知（`NotifyType='report_dismissed'`）
-- `escalate`：升级举报，转交更高权限管理员，状态变更为 `escalated`（等待更高级管理员认领；与 `reviewing` 区分：`reviewing` = 已认领正在审，`escalated` = 已升级待接手，见 `api_spec_report.md` 防卡死设计）。升级不触发用户通知
+
+> `escalate` 动作保留于 `ReportAction` 枚举定义（`api_spec_types.md`）中供未来多管理员协作扩展，当前不实现。`reviewing` 状态同理保留。
 
 **Request**: `AdminReportHandleRequest`
 ```typescript
 interface AdminReportHandleRequest {
   report_id: string;
-  action: ReportAction;   // resolve | dismiss | escalate
+  action: 'resolve' | 'dismiss';   // 当前仅支持 resolve / dismiss；escalate 保留供未来扩展
   note?: string;                // 处理备注（0-500 字符）
   ban_duration_days?: number;   // action=resolve 时可选：封禁天数（0=永久），不提供则仅标记处理不执行封禁。
                                 // target_type='user': 直接封禁该用户

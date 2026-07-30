@@ -100,7 +100,7 @@ func (r *PersistenceRepository) ListGroupMemberIDs(ctx context.Context, groupID 
 	return r.impl.ListGroupMemberIDs(ctx, groupID)
 }
 
-func (r *PersistenceRepository) SearchReports(ctx context.Context, req AdminReportSearchRequest) (adminReportPage, error) {
+func (r *PersistenceRepository) SearchReports(ctx context.Context, req AdminReportListRequest) (adminReportPage, error) {
 	return r.impl.SearchReports(ctx, req)
 }
 

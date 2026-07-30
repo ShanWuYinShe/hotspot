@@ -17,7 +17,7 @@
 |-----|------|------|------|
 | `POST /api/v1/media/presign_upload` | 申请上传预签名 | 必须 | 无 |
 | `POST /api/v1/media/batch_presign_upload` | 批量申请上传预签名 | 必须 | 无 |
-| `POST /api/v1/media/complete_upload` | 完成上传 | 必须 | MUST |
+| `POST /api/v1/media/complete_upload` | 完成上传 | 必须 | 幂等语义 |
 | `POST /api/v1/media/batch_complete_upload` | 批量完成上传 | 必须 | 无 |
 
 ## 设计理念
@@ -151,7 +151,7 @@ interface BatchPresignedUpload {
 完成上传。
 
 - **认证**: 必须
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 幂等语义（同一 `upload_id` 重复完成上传返回缓存的 `file_id`，见下方幂等行为说明）
 
 **Request**: `CompleteUploadRequest`
 ```typescript

@@ -41,6 +41,7 @@
 | **用户** | `UserProfileUpdated` | 推送给正在与其私聊的对端以及其当前所在群聊的订阅者 |
 | **举报** | `ReportResolved` | 推送给举报人，告知举报已被处理 |
 | | `ReportDismissed` | 推送给举报人，告知举报已被驳回 |
+| | `NearbyNewMoment` | 推送给配置开启"附近新瞬间通知"的用户，告知附近有人发布了新瞬间 |
 | **系统** | `SystemAnnouncement` | 推送给所有在线连接的系统公告 |
 | | `AccountBanned` | 推送给被封禁账号的当前连接，客户端收到后应立即登出 |
 
@@ -284,6 +285,8 @@ type ServerEventType =
   | "GroupUpdated" | "GroupDismissed"
   // 举报
   | "ReportResolved" | "ReportDismissed"      // 管理员处理举报后推送给举报人
+  // 附近发现
+  | "NearbyNewMoment"                  // 附近有人发布新瞬间（推送给配置开启此通知的用户）
   // 用户
   | "UserProfileUpdated"
   // 系统
@@ -767,6 +770,17 @@ interface ReportDismissedPayload {
 }
 type ReportDismissedEvent = { type: "ReportDismissed"; payload: ReportDismissedPayload; };
 
+// 附近新瞬间（推送给配置开启此通知的用户；服务端节流，同区域短时间内仅推送一次）
+interface NearbyNewMomentPayload {
+  notification_id: string;
+  moment_id: string;
+  moment_summary: MomentSummary;
+  actor: UserInfo;
+  distance: number;                 // 瞬间与用户实时位置的距离（米），帮助用户判断"多远"
+  created_at: string;
+}
+type NearbyNewMomentEvent = { type: "NearbyNewMoment"; payload: NearbyNewMomentPayload; };
+
 // 群公告发布：本质是持久化通知，补 notification_id 以支持与 notify/list 去重
 interface GroupAnnouncementCreatedPayload {
   notification_id: string;      // 与 notify/list 的 NotifyItem.notification_id 同主键
@@ -1035,7 +1049,7 @@ WebSocket 推送分为**自动推送**和**订阅推送**两种模式（详见�
 - `type: 'group'` 的订阅**必须校验成员资格**：仅当前已加入该群组的成员可订阅。非成员订阅返回 `reason='denied'`，不推送任何群消息/成员变动/`GroupUpdated`（含 `has_password`/`join_method` 等可见性受控字段）。这是群组事件可见性的前置门槛，确保 `has_password`（@member-only）与 `join_method`/`is_searchable`/`max_members`（@group-admin-only）不被非成员获取。
 
 **类型约束**：
-- 单次订阅请求仅允许一个 `type`，不同类型需分开请求
+- 单次订阅请求可混合 `user` 和 `group` 类型（`items` 数组可包含不同类型的 `SubscriptionItem`），客户端按场景组织订阅即可
 
 **订阅数量限制说明**：
 

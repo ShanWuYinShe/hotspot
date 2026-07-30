@@ -2,8 +2,8 @@ package auth
 
 const (
 	queryUpsertSession = `
-INSERT INTO auth_sessions (session_id, user_id, created_at, last_active_at, revoked_at, device_type, device_name, ip_address, ip_location)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO auth_sessions (session_id, user_id, created_at, last_active_at, revoked_at, device_type, device_name, ip_address, ip_location, device_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (session_id) DO UPDATE
 SET user_id = EXCLUDED.user_id,
     created_at = EXCLUDED.created_at,
@@ -12,7 +12,8 @@ SET user_id = EXCLUDED.user_id,
     device_type = EXCLUDED.device_type,
     device_name = EXCLUDED.device_name,
     ip_address = EXCLUDED.ip_address,
-    ip_location = EXCLUDED.ip_location`
+    ip_location = EXCLUDED.ip_location,
+    device_id = EXCLUDED.device_id`
 
 	queryTouchSession = `
 UPDATE auth_sessions
@@ -30,12 +31,12 @@ SET revoked_at = NOW()
 WHERE user_id = $1 AND session_id <> $2 AND revoked_at IS NULL`
 
 	queryGetSession = `
-SELECT session_id, user_id, created_at, last_active_at, revoked_at, COALESCE(device_type, ''), COALESCE(device_name, ''), COALESCE(ip_address, ''), COALESCE(ip_location, '')
+SELECT session_id, user_id, created_at, last_active_at, revoked_at, COALESCE(device_type, ''), COALESCE(device_name, ''), COALESCE(ip_address, ''), COALESCE(ip_location, ''), COALESCE(device_id, '')
 FROM auth_sessions
 WHERE session_id = $1`
 
 	queryListActiveSessionsByUser = `
-SELECT session_id, user_id, created_at, last_active_at, revoked_at, COALESCE(device_type, ''), COALESCE(device_name, ''), COALESCE(ip_address, ''), COALESCE(ip_location, '')
+SELECT session_id, user_id, created_at, last_active_at, revoked_at, COALESCE(device_type, ''), COALESCE(device_name, ''), COALESCE(ip_address, ''), COALESCE(ip_location, ''), COALESCE(device_id, '')
 FROM auth_sessions
 WHERE user_id = $1 AND revoked_at IS NULL
 ORDER BY last_active_at DESC, session_id ASC`

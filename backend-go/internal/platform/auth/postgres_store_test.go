@@ -98,6 +98,7 @@ func (b *authBackendStub) Exec(_ context.Context, query string, args ...any) err
 			DeviceName:   args[6].(string),
 			IPAddress:    args[7].(string),
 			IPLocation:   args[8].(string),
+			DeviceID:     args[9].(string),
 		}
 		if args[4] != nil {
 			revokedAt := args[4].(*time.Time)
@@ -174,7 +175,7 @@ func (b *authBackendStub) Query(_ context.Context, query string, args ...any) (p
 	rows := [][]any{}
 	for _, record := range b.sessions {
 		if record.UserID == userID && record.RevokedAt == nil {
-			rows = append(rows, []any{record.SessionID, record.UserID, record.CreatedAt, record.LastActiveAt, record.RevokedAt, record.DeviceType, record.DeviceName, record.IPAddress, record.IPLocation})
+			rows = append(rows, []any{record.SessionID, record.UserID, record.CreatedAt, record.LastActiveAt, record.RevokedAt, record.DeviceType, record.DeviceName, record.IPAddress, record.IPLocation, record.DeviceID})
 		}
 	}
 	return &authRows{rows: rows}, nil
@@ -184,7 +185,7 @@ func (b *authBackendStub) QueryRow(_ context.Context, query string, args ...any)
 	switch query {
 	case queryGetSession:
 		if record, ok := b.sessions[args[0].(string)]; ok {
-			return authRow{values: []any{record.SessionID, record.UserID, record.CreatedAt, record.LastActiveAt, record.RevokedAt, record.DeviceType, record.DeviceName, record.IPAddress, record.IPLocation}}
+			return authRow{values: []any{record.SessionID, record.UserID, record.CreatedAt, record.LastActiveAt, record.RevokedAt, record.DeviceType, record.DeviceName, record.IPAddress, record.IPLocation, record.DeviceID}}
 		}
 		return authRow{err: pgx.ErrNoRows}
 	case queryGetRefreshToken:

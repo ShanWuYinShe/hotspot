@@ -15,12 +15,12 @@ import (
 )
 
 type notificationErrorRepo struct {
-	listErr         error
-	unreadErr       error
-	markReadErr     error
-	markAllErr      error
+	listErr          error
+	unreadErr        error
+	markReadErr      error
+	markAllErr       error
 	markAllByTypeErr error
-	appendErr       error
+	appendErr        error
 }
 
 func (r *notificationErrorRepo) Append(context.Context, string, NotifyItem) error {
@@ -71,7 +71,7 @@ func TestUnreadCountAndMarkRead(t *testing.T) {
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
 	var listResp struct {
-		Code int                    `json:"code"`
+		Code int             `json:"code"`
 		Data PaginatedNotify `json:"data"`
 	}
 	if err := json.NewDecoder(listRR.Body).Decode(&listResp); err != nil {

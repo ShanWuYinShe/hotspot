@@ -5,7 +5,7 @@ import { ArrowLeft, Search as SearchIcon, TrendingUp, Hash, Users, FileText, Map
 import { motion } from "motion/react";
 import { usePlatform } from "../../contexts/PlatformContext";
 import { ActionIconButton } from "../../components/shared/ActionIconButton";
-import { searchAll } from "../../../api";
+import { searchUsers, searchMoments } from "../../../api";
 
 type TabType = "all" | "people" | "posts" | "tags";
 
@@ -38,24 +38,21 @@ export function SearchPage() {
     if (!term) { setResults({ users: [], moments: [], tags: [] }); return; }
     setLoading(true);
     try {
-      const res = await searchAll({ keyword: term });
-      if (res.code === 0 && res.data) {
-        const d = res.data as any;
-        const rawUsers = d.users?.items ?? d.users ?? [];
-        const rawMoments = d.moments?.items ?? d.moments ?? [];
-        // searchAll returns nested UserItem:{user:{user_id,nickname,avatar_url}} and MomentItem:{user:{...}}.
-        const users = rawUsers.map((u: any) => {
-          const inner = u.user ?? u;
-          return { user_id: inner.user_id ?? "", nickname: inner.nickname ?? "", avatar_url: inner.avatar_url };
-        });
-        const moments = rawMoments.map((m: any) => ({
-          ...m,
-          user: m.user ?? (m as any).user_info,
-        }));
-        setResults({ users, moments, tags: [] });
-      } else if (res.message) {
-        setResults({ users: [], moments: [], tags: [] });
-      }
+      const [usersRes, momentsRes] = await Promise.all([
+        searchUsers({ keyword: term }).catch(() => ({ code: -1, data: { items: [] } })),
+        searchMoments({ keyword: term }).catch(() => ({ code: -1, data: { items: [] } })),
+      ]);
+      const rawUsers = (usersRes.code === 0 ? (usersRes.data as any)?.items : []) ?? [];
+      const rawMoments = (momentsRes.code === 0 ? (momentsRes.data as any)?.items : []) ?? [];
+      const users = rawUsers.map((u: any) => {
+        const inner = u.user ?? u;
+        return { user_id: inner.user_id ?? "", nickname: inner.nickname ?? "", avatar_url: inner.avatar_url };
+      });
+      const moments = rawMoments.map((m: any) => ({
+        ...m,
+        user: m.user ?? (m as any).user_info,
+      }));
+      setResults({ users, moments, tags: [] });
     } catch (err) {
       setResults({ users: [], moments: [], tags: [] });
     }

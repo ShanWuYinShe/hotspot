@@ -58,18 +58,18 @@ s2_cell_id = EXCLUDED.s2_cell_id`
 	queryDeleteUserProfile = `DELETE FROM users WHERE user_id = $1`
 
 	queryGetUserSettings = `
-SELECT privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, reacted_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable
+SELECT privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, reacted_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable, COALESCE(nearby_moment_notify, FALSE)
 FROM user_settings
 WHERE user_id = $1`
 
 	queryGetUserSettingsBatch = `
-SELECT user_id, privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, reacted_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable
+SELECT user_id, privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, reacted_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable, COALESCE(nearby_moment_notify, FALSE)
 FROM user_settings
 WHERE user_id = ANY($1)`
 
 	queryUpsertUserSettings = `
-INSERT INTO user_settings (user_id, privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, reacted_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+INSERT INTO user_settings (user_id, privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, reacted_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable, nearby_moment_notify)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 ON CONFLICT (user_id) DO UPDATE SET
 privacy_level = EXCLUDED.privacy_level,
 location_visible = EXCLUDED.location_visible,
@@ -83,7 +83,8 @@ allow_private_chat = EXCLUDED.allow_private_chat,
 searchable = EXCLUDED.searchable,
 phone_searchable = EXCLUDED.phone_searchable,
 nickname_searchable = EXCLUDED.nickname_searchable,
-location_searchable = EXCLUDED.location_searchable`
+location_searchable = EXCLUDED.location_searchable,
+nearby_moment_notify = EXCLUDED.nearby_moment_notify`
 
 	queryUpsertUserRelation = `
 INSERT INTO user_relations (user_id, target_user_id, is_following, is_blocked, remark, followed_at, blocked_at, block_reason)

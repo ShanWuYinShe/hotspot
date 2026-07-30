@@ -193,6 +193,11 @@ func defaultConfig(runtime config.Config) AppConfig {
 			MomentDescriptionMaxLength: 2000,
 			CommentMaxLength:           500,
 			SearchRadiusMax:            50000,
+			MessageRecallWindowSeconds: 120,
+			StrangerMessageDailyQuota:  10,
+			ReactionEmojis:             []string{"👍", "❤️", "😂", "😮", "😢", "🙏"},
+			GroupInviteTTLHours:        168,
+			GroupApplicationTTLHours:   72,
 		},
 		Contact: Contact{
 			SupportEmail:      runtime.SupportEmail,
@@ -251,14 +256,12 @@ func defaultConfig(runtime config.Config) AppConfig {
 		},
 		ResponseDefaults: ResponseDefaults{
 			SearchSuggestCount:       5,
-			TrendingTagsCount:        10,
 			HotMomentsCount:          20,
 			ChatRecentMessagesCount:  20,
 			GroupAnnouncementsCount:  10,
 			SystemAnnouncementsCount: 10,
 			CommentTopRepliesCount:   3,
 			UserProfileMomentsCount:  6,
-			SearchAllCountPerType:    10,
 		},
 	}
 }
@@ -266,6 +269,7 @@ func defaultConfig(runtime config.Config) AppConfig {
 func cloneConfig(cfg AppConfig) AppConfig {
 	cfg.Upload.AllowedImageTypes = append([]string(nil), cfg.Upload.AllowedImageTypes...)
 	cfg.Upload.AllowedVideoTypes = append([]string(nil), cfg.Upload.AllowedVideoTypes...)
+	cfg.Limits.ReactionEmojis = append([]string(nil), cfg.Limits.ReactionEmojis...)
 	return cfg
 }
 

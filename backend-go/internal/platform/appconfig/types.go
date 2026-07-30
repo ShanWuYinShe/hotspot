@@ -25,12 +25,17 @@ type Features struct {
 }
 
 type Limits struct {
-	MaxGroupMembers            int `json:"max_group_members"`
-	MaxMomentTags              int `json:"max_moment_tags"`
-	MaxMomentImages            int `json:"max_moment_images"`
-	MomentDescriptionMaxLength int `json:"moment_description_max_length"`
-	CommentMaxLength           int `json:"comment_max_length"`
-	SearchRadiusMax            int `json:"search_radius_max"`
+	MaxGroupMembers            int      `json:"max_group_members"`
+	MaxMomentTags              int      `json:"max_moment_tags"`
+	MaxMomentImages            int      `json:"max_moment_images"`
+	MomentDescriptionMaxLength int      `json:"moment_description_max_length"`
+	CommentMaxLength           int      `json:"comment_max_length"`
+	SearchRadiusMax            int      `json:"search_radius_max"`
+	MessageRecallWindowSeconds int      `json:"message_recall_window_seconds"`
+	StrangerMessageDailyQuota  int      `json:"stranger_message_daily_quota"`
+	ReactionEmojis             []string `json:"reaction_emojis"`
+	GroupInviteTTLHours        int      `json:"group_invite_ttl_hours"`
+	GroupApplicationTTLHours   int      `json:"group_application_ttl_hours"`
 }
 
 type Contact struct {
@@ -77,14 +82,12 @@ type RateLimitConfig struct {
 
 type ResponseDefaults struct {
 	SearchSuggestCount       int `json:"search_suggest_count"`
-	TrendingTagsCount        int `json:"trending_tags_count"`
 	HotMomentsCount          int `json:"hot_moments_count"`
 	ChatRecentMessagesCount  int `json:"chat_recent_messages_count"`
 	GroupAnnouncementsCount  int `json:"group_announcements_count"`
 	SystemAnnouncementsCount int `json:"system_announcements_count"`
 	CommentTopRepliesCount   int `json:"comment_top_replies_count"`
 	UserProfileMomentsCount  int `json:"user_profile_moments_count"`
-	SearchAllCountPerType    int `json:"search_all_count_per_type"`
 }
 
 type AppConfig struct {

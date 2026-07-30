@@ -9,7 +9,7 @@ import { useNavigate } from "react-router";
 import { ROUTES } from "../../lib/routes";
 import { useHoverConfig } from "../../hooks/useHoverConfig";
 import { useDefaultLocation } from "../../hooks/useDefaultLocation";
-import { getFeedTrending, searchMoments, getClientConfig } from "../../../api";
+import { getTrending, searchMoments, getClientConfig } from "../../../api";
 
 /* ── Section heading ────────────────────────────────────────────── */
 function SectionHead({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
@@ -68,18 +68,20 @@ function HeroStats({ onExplore, stats }: { onExplore: () => void; stats: { nearb
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-3 mt-4" style={{ gap: 1, background: "var(--neu-border)", borderRadius: 14, overflow: "hidden" }}>
-          {[
-            { label: "人附近", v: stats.nearby, color: "var(--neu-accent-primary)" },
-            { label: "活动中", v: stats.active,  color: "var(--semantic-warning)" },
-            { label: "在线",   v: stats.online, color: "var(--semantic-online)" },
-          ].map(s => (
-            <div key={s.label} className="flex flex-col items-center justify-center py-2.5"
-              style={{ background: "var(--neu-bg)" }}>
-              <span style={{ fontSize: 19, color: s.color, fontWeight: 600, lineHeight: 1 }}>{s.v}</span>
-              <span style={{ fontSize: 10, color: "var(--neu-text-muted)", marginTop: 4 }}>{s.label}</span>
-            </div>
-          ))}
+        <div className="grid grid-cols-3 mt-4" style={{ gap: 1, background: "var(--neu-border)", borderRadius: 14 }}>
+          <div style={{ overflow: "hidden", borderRadius: 13 }}>
+            {[
+              { label: "人附近", v: stats.nearby, color: "var(--neu-accent-primary)" },
+              { label: "活动中", v: stats.active,  color: "var(--semantic-warning)" },
+              { label: "在线",   v: stats.online, color: "var(--semantic-online)" },
+            ].map(s => (
+              <div key={s.label} className="flex flex-col items-center justify-center py-2.5"
+                style={{ background: "var(--neu-bg)" }}>
+                <span style={{ fontSize: 19, color: s.color, fontWeight: 600, lineHeight: 1 }}>{s.v}</span>
+                <span style={{ fontSize: 10, color: "var(--neu-text-muted)", marginTop: 4 }}>{s.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </motion.div>
     </div>
@@ -153,8 +155,10 @@ function ActivityRow({ item, onClick }: { item: Activity; onClick: () => void })
 
 function ActivityList({ items, onClick }: { items: Activity[]; onClick: (id: number) => void }) {
   return (
-    <div className="flex flex-col" style={{ gap: 1, background: "var(--neu-border)", borderRadius: 16, overflow: "hidden", border: "1px solid var(--neu-border)" }}>
-      {items.map(a => <ActivityRow key={a.id} item={a} onClick={() => onClick(a.id)} />)}
+    <div className="flex flex-col" style={{ gap: 1, background: "var(--neu-border)", borderRadius: 16, boxShadow: "0 0 0 1px var(--neu-border)" }}>
+      <div style={{ overflow: "hidden", borderRadius: 15 }}>
+        {items.map(a => <ActivityRow key={a.id} item={a} onClick={() => onClick(a.id)} />)}
+      </div>
     </div>
   );
 }
@@ -242,10 +246,12 @@ function NearbyUsersFlatList({
   users, followingIds, onToggle,
 }: { users: NearbyUser[]; followingIds: Set<number>; onToggle: (id: number) => void }) {
   return (
-    <div className="flex flex-col" style={{ gap: 1, background: "var(--neu-border)", borderRadius: 16, overflow: "hidden", border: "1px solid var(--neu-border)" }}>
-      {users.map(u => (
-        <NearbyUserRow key={u.id} user={u} followed={followingIds.has(u.id)} onToggle={() => onToggle(u.id)} />
-      ))}
+    <div className="flex flex-col" style={{ gap: 1, background: "var(--neu-border)", borderRadius: 16, boxShadow: "0 0 0 1px var(--neu-border)" }}>
+      <div style={{ overflow: "hidden", borderRadius: 15 }}>
+        {users.map(u => (
+          <NearbyUserRow key={u.id} user={u} followed={followingIds.has(u.id)} onToggle={() => onToggle(u.id)} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -402,7 +408,7 @@ export function NearbyFeedPage() {
         setLoading(true);
         setError(null);
         const [trendingRes, nearbyRes, configRes] = await Promise.all([
-          getFeedTrending().catch(() => ({ code: -1, data: null })),
+          getTrending().catch(() => ({ code: -1, data: null })),
           // moments/search is auth-optional, so anonymous users still see nearby public moments.
           searchMoments({ reference_point, radius: 5000, sort_by: "distance", pagination: { limit: 12 } }).catch(() => ({ code: -1, data: { items: [] } })),
           getClientConfig().catch(() => ({ code: -1, data: null })),

@@ -109,11 +109,11 @@ export async function listFollowing(params?: object)      { return request<Pagin
 export async function listFollowers(params?: object)      { return request<PaginatedData<object>>(Endpoints.Users.ListFollowers, params ?? {}); }
 
 // Feed
-export async function getFeedMoments(params?: object)     { return request<PaginatedData<object>>(Endpoints.Feed.ListMoments, params ?? {}); }
-export async function getFeedTrending(params?: object)    { return request<object>(Endpoints.Feed.ListTrending, params ?? {}); }
-export async function getFeedUsers(params?: object)       { return request<PaginatedData<object>>(Endpoints.Feed.ListUsers, params ?? {}); }
-export async function getFeedGroups(params?: object)      { return request<PaginatedData<object>>(Endpoints.Feed.ListGroups, params ?? {}); }
-export async function dismissFeedItem(params: object)     { return request<void>(Endpoints.Feed.Dismiss, params); }
+export async function getFeedFollowing(params?: object)   { return request<PaginatedData<object>>(Endpoints.Feed.Following, params ?? {}); }
+export async function getFeedNearby(params?: object)      { return request<PaginatedData<object>>(Endpoints.Feed.Nearby, params ?? {}); }
+export async function getNearbyUsers(params?: object)     { return request<PaginatedData<object>>(Endpoints.Feed.NearbyUsers, params ?? {}); }
+export async function getNearbyGroups(params?: object)    { return request<PaginatedData<object>>(Endpoints.Feed.NearbyGroups, params ?? {}); }
+export async function getTrending(params?: object)        { return request<object>(Endpoints.Feed.Trending, params ?? {}); }
 
 // Moments
 export async function searchMoments(params: object)       { return request<PaginatedData<object>>(Endpoints.Moments.Search, params); }
@@ -128,7 +128,7 @@ export async function getGroupDetail(groupId: string)     { return request<objec
 export async function listMyGroups(params?: object)       { return request<PaginatedData<object>>(Endpoints.Groups.ListMy, params ?? {}); }
 
 // Search
-export async function searchAll(params: object)           { return request<object>(Endpoints.Search.All, params); }
+export async function searchUsers(params: object)         { return request<PaginatedData<object>>(Endpoints.Users.Search, params); }
 export async function searchSuggest(params: object)       { return request<object>(Endpoints.Search.Suggest, params); }
 
 // Notifications

@@ -43,9 +43,6 @@ func BuildModulesWithRedisPinger(cfg config.Config, factory *persistence.Factory
 	imageResolver := NewMomentImageResolver(mediaModule.Service)
 	feedImageResolver := NewFeedImageResolver(mediaModule.Service)
 	momentsModule := moments.NewModule(factory, usersModule.Service, sharedAppConfig, imageResolver)
-	userSearcher := users.NewSearchAdapter(usersModule.Service)
-	groupSearcher := groups.NewSearchAdapter(groupsModule.Service)
-	momentSearcher := moments.NewSearchAdapter(momentsModule.Service)
 	systemModule := system.NewModule(factory, sharedAppConfig)
 	systemModule.SetHealthRedisPinger(redisPinger)
 
@@ -84,7 +81,7 @@ func BuildModulesWithRedisPinger(cfg config.Config, factory *persistence.Factory
 		pcModule,
 		reactionsModule,
 		reports.NewModule(factory),
-		search.NewModuleWithSearchers(factory, sharedAppConfig, userSearcher, groupSearcher, momentSearcher),
+		search.NewModule(factory, sharedAppConfig),
 		share.NewModule(factory),
 		systemModule,
 		usersModule,

@@ -95,7 +95,7 @@ const TOKEN_OPTIONAL_ENDPOINTS: string[] = [
   ApiEndpoints.COMMENT.LIST,
   ApiEndpoints.COMMENT.LIST_REPLIES,
   ApiEndpoints.SHARE.GET,
-  ApiEndpoints.FEED.LIST_TRENDING,
+  ApiEndpoints.FEED.TRENDING,
   ApiEndpoints.MAP.CANVAS,
 ];
 

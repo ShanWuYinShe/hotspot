@@ -90,30 +90,6 @@ type UpgradeAccountRequest struct {
 	Password string `json:"password"`
 }
 
-type RequestEmailChangeRequest struct {
-	NewEmail string `json:"new_email"`
-	Password string `json:"password"`
-}
-
-type ConfirmEmailChangeRequest struct {
-	NewEmail         string `json:"new_email"`
-	VerificationCode string `json:"verification_code"`
-}
-
-type RequestPhoneChangeRequest struct {
-	NewPhone string `json:"new_phone"`
-	Password string `json:"password"`
-}
-
-type ConfirmPhoneChangeRequest struct {
-	NewPhone         string `json:"new_phone"`
-	VerificationCode string `json:"verification_code"`
-}
-
-type VerificationSent struct {
-	ExpiresAt string `json:"expires_at"`
-}
-
 type DeleteAccountRequest struct {
 	Confirmation string `json:"confirmation"`
 }

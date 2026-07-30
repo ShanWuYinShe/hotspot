@@ -226,7 +226,7 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 	backend := &userBackendStub{
 		queryRowByQuery: map[string]persistence.Row{
 			queryGetUserProfile:  userRowValues{values: []any{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC)}},
-			queryGetUserSettings: userRowValues{values: []any{"public", true, true, true, true, true, true, true, "everyone", true, false, true, true}},
+			queryGetUserSettings: userRowValues{values: []any{"public", true, true, true, true, true, true, true, "everyone", true, false, true, true, false}},
 			queryGetUserRelation: userRowValues{values: []any{true, false, "buddy", time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC), nil, ""}},
 			queryCountUserStats:  userRowValues{values: []any{2, 1, 3, 4, 5}},
 		},

@@ -9,10 +9,19 @@ import (
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
-type Service struct{ repo Repository }
+type Service struct {
+	repo                 Repository
+	nearbyNotifyProvider NearbyNotifySettingsProvider
+}
 
 func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
 func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} }
+
+func (s *Service) SetNearbyNotifyProvider(p NearbyNotifySettingsProvider) { s.nearbyNotifyProvider = p }
+
+type NearbyNotifySettingsProvider interface {
+	IsNearbyMomentNotifyEnabled(ctx context.Context, userID string) (bool, error)
+}
 
 func (s *Service) List(ctx context.Context, req NotificationListRequest) (PaginatedNotify, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
@@ -230,4 +239,37 @@ func (s *Service) AppendMentioned(ctx context.Context, targetUserID string, acto
 
 func (s *Service) PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem) {
 	realtime.DefaultHub().BroadcastToAll(realtime.Event{Type: realtime.EventTypeSystemAnnouncement, Payload: item})
+}
+
+func (s *Service) PublishNearbyNewMoment(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload map[string]any, momentSummaryPayload map[string]any) error {
+	if s.nearbyNotifyProvider != nil {
+		enabled, err := s.nearbyNotifyProvider.IsNearbyMomentNotifyEnabled(ctx, targetUserID)
+		if err != nil {
+			observability.L().Error("notifications.publish_nearby_new_moment settings check failed", "error", err)
+			return err
+		}
+		if !enabled {
+			return nil
+		}
+	}
+	payload := map[string]any{
+		"type":           "nearby_new_moment",
+		"actor":          actorPayload,
+		"moment_id":      momentID,
+		"moment_summary": momentSummaryPayload,
+		"distance":       distance,
+	}
+	if err := s.repo.Append(ctx, targetUserID, NotifyItem{
+		Type:    "nearby_new_moment",
+		IsRead:  false,
+		Payload: payload,
+	}); err != nil {
+		observability.L().Error("notifications.publish_nearby_new_moment append failed", "error", err)
+		return err
+	}
+	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{
+		Type:    realtime.EventTypeNearbyNewMoment,
+		Payload: payload,
+	})
+	return nil
 }

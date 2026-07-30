@@ -190,7 +190,7 @@ App 端通过 Header 携带认证信息：
 | 查询类（搜索/详情/列表） | **可选** | 若类型定义含 `@auth-only` 字段，登录态返回这些字段 |
 | 写操作（create/update/delete） | **必须** | 缺少 token 返回认证错误 |
 | 互动操作（follow/block 等） | **必须** | 缺少 token 返回认证错误 |
-| `/feed/*` 路径 | **必须**（`list_trending` 可选） | 个性化推荐依赖身份；`list_trending` 为全局热门数据，不依赖身份 |
+| `/feed/*` 路径 | `following`/`nearby` 必须；`nearby_users`/`nearby_groups`/`trending` 可选 | 关注流和附近瞬间依赖身份；附近用户/群组/热门支持匿名浏览 |
 | `/admin/*` 路径 | **必须**+权限 | 管理员功能 |
 
 **认证档位说明**（端点"认证"字段统一取以下值之一）：
@@ -546,20 +546,26 @@ App 端通过 Header 携带认证信息：
 
 #### 必须使用幂等键的接口（MUST）
 
-- 认证与账号：`auth/register`、`auth/guest`、`auth/request_password_reset`、`auth/reset_password`、`auth/change_password`
-- 联系方式变更：`users/email/request_change`、`users/email/confirm_change`、`users/phone/request_change`、`users/phone/confirm_change`
+网络重试会产生用户可见的重复内容或严重混淆用户体验的操作，必须携带 `Idempotency-Key`：
+
+- 认证与账号：`auth/register`、`auth/guest`、`auth/reset_password`、`auth/change_password`
 - 内容创建：`moments/create`、`comments/create`
 - 消息发送：`private_messages/send`、`group_messages/send`
-- 媒体上传：`media/complete_upload`
-- 举报创建：`reports/create`
 - 分享创建：`share/create`
-- 群组创建与公告：`groups/create`、`groups/announcements/create`
-- 群组封禁：`groups/members/ban`
-- 群组加入/审核：`groups/join`、`groups/applications/approve`、`groups/applications/reject`
-- 群组邀请：`groups/members/invite`
-- 群组邀请处理：`groups/accept_invite`、`groups/reject_invite`
-- 管理员操作（所有具有"创建/处理/封禁/解散"语义的 admin 写操作）
+- 群组创建与加入：`groups/create`、`groups/join`、`groups/announcements/create`
+- 管理员公告创建：`admin/announcements/create`
+
+> `reports/create` 不在此列表——`(reporter_id, target_type, target_id, pending_status)` 构成自然去重键，重复举报返回成功 + 已有 `report_id`，无需 `Idempotency-Key`。
 
 #### 建议使用幂等键的接口（SHOULD）
 
-- 重要且不可逆的变更操作（如 `users/delete_account`、`groups/dismiss`、`groups/transfer_ownership`）
+- 不可逆且调用方可能因权限变更无法安全重试：`groups/transfer_ownership`
+
+#### 其余所有写操作均为幂等语义（以下简称）
+
+以下操作重复调用自然产生一致结果，无需 `Idempotency-Key`（各模块端点文档中标记为"幂等语义"）：
+- 状态设值操作（关注/拉黑/封禁/禁言/角色设置/收藏/反应等）
+- 状态转移操作（接受/拒绝邀请或申请、审批等）
+- 删除/解散/撤销操作（已删除资源重复操作 no-op）
+- 更新/Patch 操作（相同字段重复写入结果一致）
+- 已被其他机制保护的操作（如 `auth/request_password_reset` 有 IP 限流保护）

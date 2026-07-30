@@ -158,16 +158,15 @@ class ChatEndpoints {
 // Search
 class SearchEndpoints {
   readonly SUGGEST: string = '/api/v1/search/suggest';
-  readonly ALL: string = '/api/v1/search/all';
 }
 
 // Feed
 class FeedEndpoints {
-  readonly LIST_MOMENTS: string = '/api/v1/feed/list_moments';
-  readonly LIST_GROUPS: string = '/api/v1/feed/list_groups';
-  readonly LIST_USERS: string = '/api/v1/feed/list_users';
-  readonly LIST_TRENDING: string = '/api/v1/feed/list_trending';
-  readonly DISMISS: string = '/api/v1/feed/dismiss';
+  readonly FOLLOWING: string = '/api/v1/feed/following';
+  readonly NEARBY: string = '/api/v1/feed/nearby';
+  readonly NEARBY_USERS: string = '/api/v1/feed/nearby_users';
+  readonly NEARBY_GROUPS: string = '/api/v1/feed/nearby_groups';
+  readonly TRENDING: string = '/api/v1/feed/trending';
 }
 
 // Upload

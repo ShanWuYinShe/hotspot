@@ -51,17 +51,17 @@ func (r *InMemoryRepository) List(_ context.Context, userID string, req MyReport
 	return PaginatedReports{Items: items}, nil
 }
 
-func (r *InMemoryRepository) ExistsOpenReport(_ context.Context, targetType ReportTargetType, targetID string) (bool, error) {
+func (r *InMemoryRepository) FindExistingReport(_ context.Context, _ string, targetType ReportTargetType, targetID string) (string, bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	for _, items := range r.reports {
 		for _, item := range items {
 			if item.TargetType == targetType && item.TargetID == targetID && (item.Status == ReportStatusPending || item.Status == ReportStatusReviewing || item.Status == ReportStatusEscalated) {
-				return true, nil
+				return item.ReportID, true, nil
 			}
 		}
 	}
-	return false, nil
+	return "", false, nil
 }
 
 func (r *InMemoryRepository) TargetOwner(_ context.Context, targetType ReportTargetType, targetID string) (string, bool, error) {

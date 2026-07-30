@@ -20,7 +20,7 @@ function json(data: JsonBodyType) {
  * the session is valid, so handlers can early-return the guard's result.
  *
  * Optional-auth endpoints (moments/search, groups/search, search/*, map,
- * system/*, users/get_profile, feed/list_trending) are NOT guarded — anonymous
+ * system/*, users/get_profile, feed/trending) are NOT guarded — anonymous
  * users see public data per spec.
  */
 function requireMockAuth(): ReturnType<typeof json> | null {
@@ -195,19 +195,14 @@ export const handlers = [
   http.post(`${API}/group_messages/mark_read`, () => requireMockAuth() ?? json(apiOk(null))),
 
   // ── Feed ───────────────────────────────────────
-  // list_moments/groups/users require auth; list_trending is optional (Home uses it anonymously).
-  http.post(`${API}/feed/list_moments`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 12)))),
-  http.post(`${API}/feed/list_groups`, () => requireMockAuth() ?? json(paginated(mockGroups))),
-  http.post(`${API}/feed/list_users`, () => requireMockAuth() ?? json(paginated(mockUsers.slice(0, 5)))),
-  http.post(`${API}/feed/list_trending`, () => json(apiOk(mockTrending))),
-  http.post(`${API}/feed/dismiss`, () => requireMockAuth() ?? json(apiOk(null))),
+  // nearby/following require auth; nearby_users/nearby_groups/trending are optional (anonymous sees public data).
+  http.post(`${API}/feed/following`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 12)))),
+  http.post(`${API}/feed/nearby`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 12)))),
+  http.post(`${API}/feed/nearby_groups`, () => json(paginated(mockGroups))),
+  http.post(`${API}/feed/nearby_users`, () => json(paginated(mockUsers.slice(0, 5)))),
+  http.post(`${API}/feed/trending`, () => json(apiOk(mockTrending))),
 
   // ── Search ─────────────────────────────────────
-  http.post(`${API}/search/all`, () => json(apiOk({
-    users: paginated(mockUsers).data,
-    groups: paginated(mockGroups).data,
-    moments: paginated(mockMoments.slice(0, 8)).data,
-  }))),
   http.post(`${API}/search/suggest`, () => json(apiOk({
     items: [
       { type: "tag" as const, payload: { name: "植物园", usage_count: 42 } },
@@ -234,7 +229,7 @@ export const handlers = [
       defaults: { default_location: { point: { latitude: 34.2604, longitude: 117.1855 }, location_name: "徐州" }, default_user_avatar_url: "", default_group_avatar_url: "" },
     },
     profile: mockAccount,
-    unread_summary: { notification_unread_count: 3, private_chat_unread_count: 2, group_chat_unread_count: 1, total_badge: 6 },
+    unread_summary: { notification_total: 3, notification_by_type: { social: 1, interaction: 1, group: 1, report: 0, system: 0 }, private_chat_unread_count: 2, group_chat_unread_count: 1, total_badge: 6 },
   }))),
 
   // ── Notify ─────────────────────────────────────

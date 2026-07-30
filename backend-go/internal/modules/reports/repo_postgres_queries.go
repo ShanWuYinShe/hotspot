@@ -13,8 +13,8 @@ WHERE creator_user_id = $1
   AND ($3 = '' OR target_type = $3)
 ORDER BY created_at DESC, report_id DESC`
 
-	queryExistsOpenReport = `
-SELECT 1
+	queryFindExistingReport = `
+SELECT report_id
 FROM reports
 WHERE target_type = $1 AND target_id = $2 AND status IN ('pending', 'reviewing', 'escalated')
 LIMIT 1`

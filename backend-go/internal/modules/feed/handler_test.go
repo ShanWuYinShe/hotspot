@@ -11,109 +11,107 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 )
 
-func TestListMomentsRejectsInvalidJSON(t *testing.T) {
+func TestFollowingRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_moments", strings.NewReader(`{"source":`))
+	req := httptest.NewRequest(http.MethodPost, "/following", strings.NewReader(`{"reference_point":`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
-	handler.ListMoments(rr, req)
+	handler.Following(rr, req)
 	assertFeedCode(t, rr, 10000)
 }
 
-func TestListMomentsUsesDefaultLocationWhenMissingReferencePoint(t *testing.T) {
-	// Per api_spec_types.md, reference_point is optional; when omitted the
-	// server falls back to ClientConfig.defaults.default_location.point.
+func TestFollowingUsesDefaultLocationWhenMissingReferencePoint(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_moments", strings.NewReader(`{"source":"following"}`))
+	req := httptest.NewRequest(http.MethodPost, "/following", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
-	handler.ListMoments(rr, req)
+	handler.Following(rr, req)
 	assertFeedCode(t, rr, 0)
 }
 
-func TestListMomentsRejectsInvalidSource(t *testing.T) {
+func TestNearbyRejectsMissingReferencePoint(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_moments", strings.NewReader(`{"source":"bad","reference_point":{"latitude":1,"longitude":2}}`))
+	req := httptest.NewRequest(http.MethodPost, "/nearby", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
-	handler.ListMoments(rr, req)
+	handler.Nearby(rr, req)
 	assertFeedCode(t, rr, 10000)
 }
 
-func TestListUsersRejectsInvalidRadiusViaService(t *testing.T) {
+func TestNearbyUsersRejectsInvalidRadiusViaService(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_users", strings.NewReader(`{"radius":1,"reference_point":{"latitude":999,"longitude":2}}`))
+	req := httptest.NewRequest(http.MethodPost, "/nearby_users", strings.NewReader(`{"radius":1,"reference_point":{"latitude":999,"longitude":2}}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
-	handler.ListUsers(rr, req)
+	handler.NearbyUsers(rr, req)
 	assertFeedCode(t, rr, 10000)
 }
 
-func TestListGroupsRejectsInvalidCursor(t *testing.T) {
+func TestNearbyGroupsRejectsInvalidCursor(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{err: ErrInvalidCursor}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_groups", strings.NewReader(`{"reference_point":{"latitude":1,"longitude":2},"pagination":{"cursor":"bad"}}`))
+	req := httptest.NewRequest(http.MethodPost, "/nearby_groups", strings.NewReader(`{"reference_point":{"latitude":1,"longitude":2},"pagination":{"cursor":"bad"}}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
-	handler.ListGroups(rr, req)
+	handler.NearbyGroups(rr, req)
 	assertFeedCode(t, rr, 10000)
 }
 
-func TestListUsersReturns10600OnServiceError(t *testing.T) {
+func TestNearbyUsersReturns10600OnServiceError(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{err: errors.New("boom")}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_users", strings.NewReader(`{"reference_point":{"latitude":1,"longitude":2}}`))
+	req := httptest.NewRequest(http.MethodPost, "/nearby_users", strings.NewReader(`{"reference_point":{"latitude":1,"longitude":2}}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
-	handler.ListUsers(rr, req)
+	handler.NearbyUsers(rr, req)
 	assertFeedCode(t, rr, 10600)
 }
 
-func TestListTrendingRejectsInvalidJSON(t *testing.T) {
+func TestTrendingRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_trending", strings.NewReader(`[`))
+	req := httptest.NewRequest(http.MethodPost, "/trending", strings.NewReader(`[`))
 
-	handler.ListTrending(rr, req)
+	handler.Trending(rr, req)
 	assertFeedCode(t, rr, 10000)
 }
 
-func TestListTrendingReturnsBundle(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&stubRepository{trendingResult: TrendingBundle{TrendingTags: []TrendingTagItem{{Name: "hot", UsageCount: 1, Trend: "rising"}}}}))
+func TestTrendingReturnsBundle(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{trendingResult: TrendingBundle{HotMoments: []MomentItem{{MomentID: "m1"}}}}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_trending", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/trending", strings.NewReader(`{}`))
 
-	handler.ListTrending(rr, req)
+	handler.Trending(rr, req)
 	resp := decodeFeedResponse[TrendingBundle](t, rr)
-	if resp.Code != 0 || len(resp.Data.TrendingTags) != 1 {
+	if resp.Code != 0 || len(resp.Data.HotMoments) != 1 {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
 
-func TestListMomentsReturnsPaginatedMoments(t *testing.T) {
+func TestFollowingReturnsPaginatedMoments(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{momentsResult: PaginatedMoments{Items: []MomentItem{{MomentID: "m1"}}}}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_moments", strings.NewReader(`{"source":"following","reference_point":{"latitude":1,"longitude":2}}`))
+	req := httptest.NewRequest(http.MethodPost, "/following", strings.NewReader(`{"reference_point":{"latitude":1,"longitude":2}}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
-	handler.ListMoments(rr, req)
+	handler.Following(rr, req)
 	resp := decodeFeedResponse[PaginatedMoments](t, rr)
 	if resp.Code != 0 || len(resp.Data.Items) != 1 || resp.Data.Items[0].MomentID != "m1" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
 
-func TestListMomentsReturnsPaginatedShape(t *testing.T) {
+func TestFollowingReturnsPaginatedShape(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{momentsResult: PaginatedMoments{Items: []MomentItem{{MomentID: "m1"}}, NextCursor: "cursor1"}}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_moments", strings.NewReader(`{"source":"following","reference_point":{"latitude":1,"longitude":2}}`))
+	req := httptest.NewRequest(http.MethodPost, "/following", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
-	handler.ListMoments(rr, req)
+	handler.Following(rr, req)
 	resp := decodeFeedResponse[map[string]any](t, rr)
 	if resp.Code != 0 {
 		t.Fatalf("expected code 0, got %d", resp.Code)
@@ -129,13 +127,13 @@ func TestListMomentsReturnsPaginatedShape(t *testing.T) {
 	}
 }
 
-func TestListUsersReturnsPaginatedShape(t *testing.T) {
+func TestNearbyUsersReturnsPaginatedShape(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{usersResult: PaginatedUsers{Items: []UserItem{{User: UserInfo{UserID: "u2"}}}, NextCursor: "cursor2"}}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_users", strings.NewReader(`{"reference_point":{"latitude":1,"longitude":2}}`))
+	req := httptest.NewRequest(http.MethodPost, "/nearby_users", strings.NewReader(`{"reference_point":{"latitude":1,"longitude":2}}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
-	handler.ListUsers(rr, req)
+	handler.NearbyUsers(rr, req)
 	resp := decodeFeedResponse[map[string]any](t, rr)
 	if resp.Code != 0 {
 		t.Fatalf("expected code 0, got %d", resp.Code)
@@ -151,13 +149,13 @@ func TestListUsersReturnsPaginatedShape(t *testing.T) {
 	}
 }
 
-func TestListGroupsReturnsPaginatedShape(t *testing.T) {
+func TestNearbyGroupsReturnsPaginatedShape(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{groupsResult: PaginatedGroups{Items: []GroupItem{{Group: GroupInfo{GroupID: "g1"}}}, NextCursor: "cursor3"}}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_groups", strings.NewReader(`{"reference_point":{"latitude":1,"longitude":2}}`))
+	req := httptest.NewRequest(http.MethodPost, "/nearby_groups", strings.NewReader(`{"reference_point":{"latitude":1,"longitude":2}}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
-	handler.ListGroups(rr, req)
+	handler.NearbyGroups(rr, req)
 	resp := decodeFeedResponse[map[string]any](t, rr)
 	if resp.Code != 0 {
 		t.Fatalf("expected code 0, got %d", resp.Code)
@@ -173,97 +171,32 @@ func TestListGroupsReturnsPaginatedShape(t *testing.T) {
 	}
 }
 
-func TestListTrendingReturnsBundleShape(t *testing.T) {
+func TestTrendingReturnsBundleShape(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{trendingResult: TrendingBundle{
-		TrendingTags: []TrendingTagItem{{Name: "tag1", UsageCount: 10, Trend: "rising"}},
-		HotMoments:   []MomentItem{{MomentID: "m1"}},
+		HotMoments: []MomentItem{{MomentID: "m1"}},
 	}}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_trending", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/trending", strings.NewReader(`{}`))
 
-	handler.ListTrending(rr, req)
+	handler.Trending(rr, req)
 	resp := decodeFeedResponse[map[string]any](t, rr)
 	if resp.Code != 0 {
 		t.Fatalf("expected code 0, got %d", resp.Code)
 	}
 	data := resp.Data
-	_, ok := data["trending_tags"].([]any)
-	if !ok {
-		t.Fatalf("expected trending_tags array, got %#v", data["trending_tags"])
-	}
-	_, ok = data["hot_moments"].([]any)
+	_, ok := data["hot_moments"].([]any)
 	if !ok {
 		t.Fatalf("expected hot_moments array, got %#v", data["hot_moments"])
 	}
 }
 
-func TestListTrendingReturns10600OnRepoError(t *testing.T) {
+func TestTrendingReturns10600OnRepoError(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{err: errors.New("repo error")}))
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/list_trending", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/trending", strings.NewReader(`{}`))
 
-	handler.ListTrending(rr, req)
+	handler.Trending(rr, req)
 	assertFeedCode(t, rr, 10600)
-}
-
-func TestDismissIsIdempotent(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
-	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
-
-	handler.Dismiss(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", rr.Code)
-	}
-	assertFeedCode(t, rr, 0)
-
-	// second dismiss should also return success
-	rr = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
-	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
-	handler.Dismiss(rr, req)
-	assertFeedCode(t, rr, 0)
-}
-
-func TestDismissDoesNotRequireIdempotencyKey(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
-	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
-
-	handler.Dismiss(rr, req)
-	assertFeedCode(t, rr, 0)
-}
-
-func TestDismissRejectsInvalidRequest(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"target_type":"bad","target_id":"m1"}`))
-	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
-
-	handler.Dismiss(rr, req)
-	assertFeedCode(t, rr, 10000)
-}
-
-func TestDismissReturnsNotFound(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&stubRepository{err: ErrDismissTargetNotFound}))
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
-	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
-
-	handler.Dismiss(rr, req)
-	assertFeedCode(t, rr, 10300)
-}
-
-func TestDismissReturnsSuccess(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
-	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
-
-	handler.Dismiss(rr, req)
-	assertFeedCode(t, rr, 0)
 }
 
 type feedAPIResponse[T any] struct {

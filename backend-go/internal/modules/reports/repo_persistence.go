@@ -20,8 +20,8 @@ func (r *PersistenceRepository) List(ctx context.Context, userID string, req MyR
 	return r.impl.List(ctx, userID, req)
 }
 
-func (r *PersistenceRepository) ExistsOpenReport(ctx context.Context, targetType ReportTargetType, targetID string) (bool, error) {
-	return r.impl.ExistsOpenReport(ctx, targetType, targetID)
+func (r *PersistenceRepository) FindExistingReport(ctx context.Context, userID string, targetType ReportTargetType, targetID string) (string, bool, error) {
+	return r.impl.FindExistingReport(ctx, userID, targetType, targetID)
 }
 
 func (r *PersistenceRepository) TargetOwner(ctx context.Context, targetType ReportTargetType, targetID string) (string, bool, error) {

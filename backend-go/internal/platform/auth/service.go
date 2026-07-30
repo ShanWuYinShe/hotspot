@@ -26,6 +26,7 @@ type AuthResult struct {
 
 // SessionMeta carries request-derived session metadata for auditing and UX.
 type SessionMeta struct {
+	DeviceID   string
 	DeviceType string
 	DeviceName string
 	IPAddress  string
@@ -99,6 +100,7 @@ func (s *Service) IssueSessionWithMeta(ctx context.Context, userID string, meta 
 	if err := s.sessions.Save(ctx, SessionRecord{
 		SessionID:    sessionID,
 		UserID:       userID,
+		DeviceID:     meta.DeviceID,
 		CreatedAt:    createdAt,
 		LastActiveAt: createdAt,
 		DeviceType:   meta.DeviceType,

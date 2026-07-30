@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
-	"hotspot/backend-go/internal/platform/idempotency"
 )
 
 type reportErrorRepo struct {
@@ -24,27 +23,24 @@ func (r *reportErrorRepo) Create(context.Context, string, CreateReportRequest) (
 func (r *reportErrorRepo) List(context.Context, string, MyReportsRequest) (PaginatedReports, error) {
 	return PaginatedReports{}, r.listErr
 }
-func (r *reportErrorRepo) ExistsOpenReport(context.Context, ReportTargetType, string) (bool, error) {
-	return false, r.createErr
+func (r *reportErrorRepo) FindExistingReport(context.Context, string, ReportTargetType, string) (string, bool, error) {
+	return "", false, r.createErr
 }
 func (r *reportErrorRepo) TargetOwner(context.Context, ReportTargetType, string) (string, bool, error) {
 	return "", false, r.createErr
 }
 
 func TestCreateAndListReports(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	repo.SeedTargetOwner(ReportTargetTypeMoment, "moment_1", "user_bob")
 	handler := NewHandler(NewServiceWithRepo(repo))
 	createReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"target_type":"moment","target_id":"moment_1","reason":"spam"}`))
-	createReq.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
 	ctx := platformauth.WithPrincipal(createReq.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	createReq = createReq.WithContext(ctx)
 	createRR := httptest.NewRecorder()
 	handler.Create(createRR, createReq)
 	createRR2 := httptest.NewRecorder()
 	createReq2 := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"target_type":"moment","target_id":"moment_1","reason":"spam"}`))
-	createReq2.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
 	createReq2 = createReq2.WithContext(ctx)
 	handler.Create(createRR2, createReq2)
 
@@ -67,8 +63,11 @@ func TestCreateAndListReports(t *testing.T) {
 		Data PaginatedReports `json:"data"`
 	}
 	_ = json.NewDecoder(listRR.Body).Decode(&listResp)
-	if listResp.Code != 0 || len(listResp.Data.Items) == 0 || replayResp.Data.ReportID != replayResp2.Data.ReportID {
+	if listResp.Code != 0 || len(listResp.Data.Items) == 0 || replayResp.Data.IsDuplicate {
 		t.Fatalf("unexpected list response: %#v %#v %#v", listResp, replayResp, replayResp2)
+	}
+	if !replayResp2.Data.IsDuplicate || replayResp2.Data.ReportID != replayResp.Data.ReportID {
+		t.Fatalf("expected IsDuplicate on second identical report: %#v %#v", replayResp, replayResp2)
 	}
 }
 
@@ -77,7 +76,6 @@ func TestReportsHandlerReturns10600OnServiceError(t *testing.T) {
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
 	createReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"target_type":"moment","target_id":"moment_1","reason":"spam"}`))
-	createReq.Header.Set("Idempotency-Key", "ijkl1234ijkl1234ijkl1234ijkl1234")
 	createReq = createReq.WithContext(ctx)
 	createRR := httptest.NewRecorder()
 	handler.Create(createRR, createReq)
@@ -91,7 +89,6 @@ func TestReportsHandlerReturns10600OnServiceError(t *testing.T) {
 }
 
 func TestCreateReportRejectsSelfAndDuplicateReport(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	repo.SeedTargetOwner(ReportTargetTypeUser, "user_alice", "user_alice")
 	repo.SeedTargetOwner(ReportTargetTypeMoment, "moment_1", "user_bob")
@@ -99,44 +96,41 @@ func TestCreateReportRejectsSelfAndDuplicateReport(t *testing.T) {
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
 	selfReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"target_type":"user","target_id":"user_alice","reason":"spam"}`))
-	selfReq.Header.Set("Idempotency-Key", "selfselfselfselfselfselfselfself")
 	selfReq = selfReq.WithContext(ctx)
 	selfRR := httptest.NewRecorder()
 	handler.Create(selfRR, selfReq)
 	assertReportCode(t, selfRR, 10400)
 
 	dupReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"target_type":"moment","target_id":"moment_1","reason":"spam"}`))
-	dupReq.Header.Set("Idempotency-Key", "dupdupdupdupdupdupdupdupdupdup12")
 	dupReq = dupReq.WithContext(ctx)
 	dupRR := httptest.NewRecorder()
 	handler.Create(dupRR, dupReq)
 	assertReportCode(t, dupRR, 0)
 
 	dupReq2 := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"target_type":"moment","target_id":"moment_1","reason":"spam"}`))
-	dupReq2.Header.Set("Idempotency-Key", "dupdupdupdupdupdupdupdupdupdup34")
 	dupReq2 = dupReq2.WithContext(ctx)
 	dupRR2 := httptest.NewRecorder()
 	handler.Create(dupRR2, dupReq2)
-	assertReportCode(t, dupRR2, 10400)
-}
-
-func TestCreateReportRequiresIdempotencyKey(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
-	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	req := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"target_type":"moment","target_id":"moment_1","reason":"spam"}`))
-	req = req.WithContext(ctx)
-	rr := httptest.NewRecorder()
-	handler.Create(rr, req)
-	assertReportCode(t, rr, 10000)
+	var dupResp struct {
+		Code int           `json:"code"`
+		Data ReportCreated `json:"data"`
+	}
+	if err := json.NewDecoder(dupRR2.Body).Decode(&dupResp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if dupResp.Code != 0 {
+		t.Fatalf("expected code 0 on duplicate, got %d", dupResp.Code)
+	}
+	if !dupResp.Data.IsDuplicate {
+		t.Fatalf("expected IsDuplicate on duplicate report, got %#v", dupResp)
+	}
 }
 
 func TestCreateReportReturns10300OnTargetNotFound(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	req := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"target_type":"moment","target_id":"moment_nonexistent","reason":"spam"}`))
-	req.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Create(rr, req)
@@ -144,7 +138,6 @@ func TestCreateReportReturns10300OnTargetNotFound(t *testing.T) {
 }
 
 func TestReportsMeListFiltersByStatus(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})

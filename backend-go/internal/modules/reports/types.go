@@ -48,7 +48,8 @@ type MyReportsRequest struct {
 }
 
 type ReportCreated struct {
-	ReportID string `json:"report_id"`
+	ReportID    string `json:"report_id"`
+	IsDuplicate bool   `json:"is_duplicate"`
 }
 
 type ReportItem struct {

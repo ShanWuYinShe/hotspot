@@ -105,36 +105,6 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 	return nil
 }
 
-func (s *Service) RequestEmailChange(ctx context.Context, req RequestEmailChangeRequest) (VerificationSent, error) {
-	if err := s.contactChangeUnavailable(ctx, "users.request_email_change unavailable"); err != nil {
-		return VerificationSent{}, err
-	}
-	return VerificationSent{}, nil
-}
-
-func (s *Service) ConfirmEmailChange(ctx context.Context, req ConfirmEmailChangeRequest) error {
-	return s.contactChangeUnavailable(ctx, "users.confirm_email_change unavailable")
-}
-
-func (s *Service) RequestPhoneChange(ctx context.Context, req RequestPhoneChangeRequest) (VerificationSent, error) {
-	if err := s.contactChangeUnavailable(ctx, "users.request_phone_change unavailable"); err != nil {
-		return VerificationSent{}, err
-	}
-	return VerificationSent{}, nil
-}
-
-func (s *Service) ConfirmPhoneChange(ctx context.Context, req ConfirmPhoneChangeRequest) error {
-	return s.contactChangeUnavailable(ctx, "users.confirm_phone_change unavailable")
-}
-
-func (s *Service) contactChangeUnavailable(ctx context.Context, message string) error {
-	if _, err := requirePrincipal(ctx); err != nil {
-		return err
-	}
-	observability.L().Warn(message)
-	return ErrContactChangeUnavailable
-}
-
 func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (PaginatedUsers, error) {
 	startedAt := time.Now()
 	observability.L().Info("users.search started")
@@ -183,12 +153,12 @@ func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (Paginated
 		isSelf := hasPrincipal && principal.UserID == profile.UserID
 		item := userItemFromProfile(profile, nil, isSelf || settings.PresenceVisible, isSelf || settings.LocationVisible, false)
 		if item.Location != nil {
-				d, b := computeRelativeDistance(req.ReferencePoint, profile.Location.Point)
-				d64 := float64(d)
-				b64 := float64(b)
-				item.Location.Distance = &d64
-				item.Location.BearingDegrees = &b64
-			}
+			d, b := computeRelativeDistance(req.ReferencePoint, profile.Location.Point)
+			d64 := float64(d)
+			b64 := float64(b)
+			item.Location.Distance = &d64
+			item.Location.BearingDegrees = &b64
+		}
 		if relationsByUserID != nil && !isSelf {
 			if relation, ok := relationsByUserID[profile.UserID]; ok {
 				item.Relation = &relation
@@ -422,7 +392,7 @@ func (s *Service) resolveReferencePoint(ctx context.Context, ref GeoPoint) GeoPo
 }
 
 func defaultSettings() UserSettings {
-	return UserSettings{PrivacyLevel: "public", LocationVisible: true, PresenceVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, AllowPrivateChat: ChatPermEveryone, Searchable: true, PhoneSearchable: false, NicknameSearchable: true, LocationSearchable: true}
+	return UserSettings{PrivacyLevel: "public", LocationVisible: true, PresenceVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, AllowPrivateChat: ChatPermEveryone, Searchable: true, PhoneSearchable: false, NicknameSearchable: true, LocationSearchable: true, NearbyMomentNotify: false}
 }
 
 func userItemFromProfile(profile MyProfile, relation *Relationship, includePresence bool, includeLocation bool, includeStats bool) UserItem {

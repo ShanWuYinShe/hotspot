@@ -640,7 +640,7 @@ func (r *PostgresRepository) ListGroupMemberIDs(ctx context.Context, groupID str
 	return items, nil
 }
 
-func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportSearchRequest) (adminReportPage, error) {
+func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportListRequest) (adminReportPage, error) {
 	queryable, ok := r.queryable()
 	if !ok {
 		return adminReportPage{}, persistence.ErrNotImplemented

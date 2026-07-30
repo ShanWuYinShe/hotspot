@@ -51,9 +51,14 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
+	deviceID := resolveDeviceID(r, req.DeviceID)
+	if deviceID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
 	if req.ClientType == ClientTypeWeb {
 		idempotency.ReplayOrStore(w, r, "auth/register", func() httpx.ApiResponse[AuthTokenPairWeb] {
-			result, err := h.service.Register(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
+			result, err := h.service.Register(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, deviceID))
 			if err != nil {
 				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
 			}
@@ -63,7 +68,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "auth/register", func() httpx.ApiResponse[AuthTokenPairApp] {
-		result, err := h.service.Register(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
+		result, err := h.service.Register(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, deviceID))
 		if err != nil {
 			return errorResponse[AuthTokenPairApp](apiErrorFrom(err))
 		}
@@ -81,17 +86,22 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-		result, err := h.service.Login(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
-		if err != nil {
-			apiErr := apiErrorFrom(err)
-			if apiErr.Code == 10600 {
-				logServerError(r, "Login", err)
-			} else {
-				logBusinessError(r, "Login", apiErr.Code, apiErr.Message)
-			}
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
-			return
+	deviceID := resolveDeviceID(r, req.DeviceID)
+	if deviceID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	result, err := h.service.Login(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, deviceID))
+	if err != nil {
+		apiErr := apiErrorFrom(err)
+		if apiErr.Code == 10600 {
+			logServerError(r, "Login", err)
+		} else {
+			logBusinessError(r, "Login", apiErr.Code, apiErr.Message)
 		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
+		return
+	}
 	h.writeAuthSuccess(w, req.ClientType, result)
 }
 
@@ -109,9 +119,14 @@ func (h *Handler) Guest(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
+	deviceID := resolveDeviceID(r, req.DeviceID)
+	if deviceID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
 	if req.ClientType == ClientTypeWeb {
 		idempotency.ReplayOrStore(w, r, "auth/guest", func() httpx.ApiResponse[AuthTokenPairWeb] {
-			result, err := h.service.Guest(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
+			result, err := h.service.Guest(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, deviceID))
 			if err != nil {
 				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
 			}
@@ -121,7 +136,7 @@ func (h *Handler) Guest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "auth/guest", func() httpx.ApiResponse[AuthTokenPairApp] {
-		result, err := h.service.Guest(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
+		result, err := h.service.Guest(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, deviceID))
 		if err != nil {
 			return errorResponse[AuthTokenPairApp](apiErrorFrom(err))
 		}
@@ -147,16 +162,21 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
+	deviceID := resolveDeviceID(r, req.DeviceID)
+	if req.ClientType == ClientTypeApp && deviceID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
 	refreshCookie := ""
 	if cookie, err := r.Cookie(platformauth.RefreshTokenCookieName); err == nil {
 		refreshCookie = cookie.Value
 	}
-		result, err := h.service.Refresh(r.Context(), req, refreshCookie)
-		if err != nil {
-			logBusinessError(r, "RefreshToken", 10100, "Refresh Token 无效或过期")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10100, "Refresh Token 无效或过期"))
-			return
-		}
+	result, err := h.service.Refresh(r.Context(), req, deviceID, refreshCookie)
+	if err != nil {
+		logBusinessError(r, "RefreshToken", 10100, "Refresh Token 无效或过期")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10100, "Refresh Token 无效或过期"))
+		return
+	}
 	if req.ClientType == ClientTypeWeb {
 		platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour)
 		payload := AuthTokenPairWeb{}
@@ -174,10 +194,6 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-		return
-	}
 	var req RequestPasswordResetRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
@@ -211,7 +227,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.ClientType == ClientTypeWeb {
 		idempotency.ReplayOrStore(w, r, "auth/reset_password", func() httpx.ApiResponse[AuthTokenPairWeb] {
-			result, err := h.service.ResetPassword(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
+			result, err := h.service.ResetPassword(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, resolveDeviceID(r, "")))
 			if err != nil {
 				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
 			}
@@ -221,7 +237,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "auth/reset_password", func() httpx.ApiResponse[AuthTokenPairApp] {
-		result, err := h.service.ResetPassword(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
+		result, err := h.service.ResetPassword(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, resolveDeviceID(r, "")))
 		if err != nil {
 			return errorResponse[AuthTokenPairApp](apiErrorFrom(err))
 		}
@@ -256,7 +272,8 @@ func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.ListSessions(r.Context())))
+	list := h.service.ListSessions(r.Context())
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
 }
 
 func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
@@ -328,8 +345,9 @@ func errorResponse[T any](apiErr *httpx.APIError) httpx.ApiResponse[T] {
 	return httpx.ApiResponse[T]{Code: apiErr.Code, Message: apiErr.Message}
 }
 
-func sessionMetaFromRequest(r *http.Request, clientType ClientType) platformauth.SessionMeta {
+func sessionMetaFromRequest(r *http.Request, clientType ClientType, deviceID string) platformauth.SessionMeta {
 	meta := platformauth.SessionMeta{
+		DeviceID:   deviceID,
 		DeviceType: string(clientType),
 		IPAddress:  requestmeta.ClientIP(r),
 		IPLocation: requestmeta.ClientCountry(r),
@@ -343,4 +361,14 @@ func sessionMetaFromRequest(r *http.Request, clientType ClientType) platformauth
 	}
 	meta.DeviceName = ua
 	return meta
+}
+
+func resolveDeviceID(r *http.Request, bodyDeviceID string) string {
+	if bodyDeviceID != "" {
+		return bodyDeviceID
+	}
+	if c, err := r.Cookie("device_id"); err == nil && c.Value != "" {
+		return c.Value
+	}
+	return ""
 }

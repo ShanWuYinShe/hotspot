@@ -409,24 +409,6 @@ func TestServiceSetRemarkHappyPath(t *testing.T) {
 	}
 }
 
-// --- Contact change ---
-
-func TestServiceRequestEmailChangeUnavailable(t *testing.T) {
-	svc := NewServiceWithRepo(&stubUserRepo{})
-	_, err := svc.RequestEmailChange(userCtx("u1"), RequestEmailChangeRequest{})
-	if !errors.Is(err, ErrContactChangeUnavailable) {
-		t.Fatalf("expected unavailable, got %v", err)
-	}
-}
-
-func TestServiceRequestPhoneChangeUnavailable(t *testing.T) {
-	svc := NewServiceWithRepo(&stubUserRepo{})
-	_, err := svc.RequestPhoneChange(userCtx("u1"), RequestPhoneChangeRequest{})
-	if !errors.Is(err, ErrContactChangeUnavailable) {
-		t.Fatalf("expected unavailable, got %v", err)
-	}
-}
-
 // --- ListBlocked ---
 
 func TestServiceListBlockedHappyPath(t *testing.T) {

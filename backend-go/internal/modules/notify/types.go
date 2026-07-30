@@ -16,6 +16,16 @@ const (
 
 var ErrInvalidNotificationRequest = errors.New("notifications: invalid request")
 
+type NotifyCategory = string
+
+const (
+	NotifyCategorySocial      NotifyCategory = "social"
+	NotifyCategoryInteraction NotifyCategory = "interaction"
+	NotifyCategoryGroup       NotifyCategory = "group"
+	NotifyCategorySystem      NotifyCategory = "system"
+	NotifyCategoryNearby      NotifyCategory = "nearby"
+)
+
 type NotifyItem struct {
 	NotificationID string         `json:"notification_id"`
 	Type           string         `json:"type"`
@@ -26,7 +36,7 @@ type NotifyItem struct {
 
 type PaginatedNotify struct {
 	Items      []NotifyItem `json:"items"`
-	NextCursor string             `json:"next_cursor,omitempty"`
+	NextCursor string       `json:"next_cursor,omitempty"`
 }
 
 type UnreadCountByType struct {
@@ -39,6 +49,23 @@ type UnreadCountByType struct {
 type UnreadCountResult struct {
 	Total  int               `json:"total"`
 	ByType UnreadCountByType `json:"by_type"`
+}
+
+type NearbyNewMomentPayload struct {
+	Actor         NearbyUserInfo `json:"actor"`
+	MomentID      string         `json:"moment_id"`
+	MomentSummary MomentSummary  `json:"moment_summary"`
+	Distance      int            `json:"distance"`
+}
+
+type NearbyUserInfo struct {
+	UserID   string `json:"user_id"`
+	Nickname string `json:"nickname"`
+}
+
+type MomentSummary struct {
+	Description string `json:"description,omitempty"`
+	ImageURL    string `json:"image_url,omitempty"`
 }
 
 type PaginationParams = types.PaginationParams
@@ -79,7 +106,7 @@ type notificationCursor struct {
 func normalizeNotificationType(value string) string {
 	value = strings.TrimSpace(value)
 	switch value {
-	case "", "new_follower", "mutual_follow", "moment_liked", "moment_commented", "comment_liked", "comment_reply", "mentioned", "reaction_added", "group_invite_received", "group_invite_accepted", "group_application_received", "group_application_accepted", "system_announcement":
+	case "", "new_follower", "mutual_follow", "moment_liked", "moment_commented", "comment_liked", "comment_reply", "mentioned", "reaction_added", "group_invite_received", "group_invite_accepted", "group_application_received", "group_application_accepted", "system_announcement", "nearby_new_moment":
 		return value
 	default:
 		return ""

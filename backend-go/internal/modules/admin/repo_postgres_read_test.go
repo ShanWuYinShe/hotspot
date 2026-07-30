@@ -147,7 +147,7 @@ func (r *adminFallbackRepo) ListGroupMemberIDs(context.Context, string) ([]strin
 	r.used = true
 	return nil, nil
 }
-func (r *adminFallbackRepo) SearchReports(context.Context, AdminReportSearchRequest) (adminReportPage, error) {
+func (r *adminFallbackRepo) SearchReports(context.Context, AdminReportListRequest) (adminReportPage, error) {
 	r.used = true
 	return adminReportPage{}, nil
 }

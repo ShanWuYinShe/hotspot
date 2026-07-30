@@ -30,16 +30,16 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
-		list, err := h.service.List(r.Context(), req)
-		if err != nil {
-			if errors.Is(err, ErrInvalidNotificationRequest) {
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-				return
-			}
-			logServerError(r, "List", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+	list, err := h.service.List(r.Context(), req)
+	if err != nil {
+		if errors.Is(err, ErrInvalidNotificationRequest) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 			return
 		}
+		logServerError(r, "List", err)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
 }
 
@@ -48,12 +48,12 @@ func (h *Handler) UnreadCount(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-		count, err := h.service.UnreadCount(r.Context())
-		if err != nil {
-			logServerError(r, "UnreadCount", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-			return
-		}
+	count, err := h.service.UnreadCount(r.Context())
+	if err != nil {
+		logServerError(r, "UnreadCount", err)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(count))
 }
 

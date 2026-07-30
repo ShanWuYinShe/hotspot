@@ -27,23 +27,23 @@ type reactedMomentRecord struct {
 }
 
 type InMemoryRepository struct {
-	mu              sync.RWMutex
-	profiles        map[string]MyProfile
-	settings        map[string]UserSettings
-	relations       map[string]map[string]memoryRelation
-	reactedMoments  map[string][]reactedMomentRecord
-	groupsByUser    map[string][]grouptypes.GroupItem
-	momentsByUser   map[string][]momenttypes.MomentItem
+	mu             sync.RWMutex
+	profiles       map[string]MyProfile
+	settings       map[string]UserSettings
+	relations      map[string]map[string]memoryRelation
+	reactedMoments map[string][]reactedMomentRecord
+	groupsByUser   map[string][]grouptypes.GroupItem
+	momentsByUser  map[string][]momenttypes.MomentItem
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
-		profiles:        make(map[string]MyProfile),
-		settings:        make(map[string]UserSettings),
-		relations:       make(map[string]map[string]memoryRelation),
-		reactedMoments:  make(map[string][]reactedMomentRecord),
-		groupsByUser:    make(map[string][]grouptypes.GroupItem),
-		momentsByUser:   make(map[string][]momenttypes.MomentItem),
+		profiles:       make(map[string]MyProfile),
+		settings:       make(map[string]UserSettings),
+		relations:      make(map[string]map[string]memoryRelation),
+		reactedMoments: make(map[string][]reactedMomentRecord),
+		groupsByUser:   make(map[string][]grouptypes.GroupItem),
+		momentsByUser:  make(map[string][]momenttypes.MomentItem),
 	}
 }
 

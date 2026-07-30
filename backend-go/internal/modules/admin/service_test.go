@@ -306,7 +306,6 @@ func TestServiceGetAppConfigHappyPath(t *testing.T) {
 	_ = cfg
 }
 
-
 // --- SearchUsers ---
 
 func TestServiceSearchUsersHappyPath(t *testing.T) {
@@ -398,7 +397,7 @@ func TestServiceOpenAdminGroupRejectsNotFound(t *testing.T) {
 func TestServiceSearchReportsHappyPath(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	result, apiErr, err := svc.SearchReports(adminCtx("admin1"), AdminReportSearchRequest{Pagination: &PaginationParams{Limit: 10}})
+	result, apiErr, err := svc.SearchReports(adminCtx("admin1"), AdminReportListRequest{Pagination: &PaginationParams{Limit: 10}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -590,7 +589,7 @@ func TestServiceDismissGroupHappyPath(t *testing.T) {
 func TestServiceSearchReportsRejectsNoPermission(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", RoleIDs: []string{"role_with_users_read"}})
-	_, apiErr, err := svc.SearchReports(adminCtx("admin1"), AdminReportSearchRequest{Pagination: &PaginationParams{Limit: 10}})
+	_, apiErr, err := svc.SearchReports(adminCtx("admin1"), AdminReportListRequest{Pagination: &PaginationParams{Limit: 10}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -616,5 +615,3 @@ func TestServiceHandleReportHappyPath(t *testing.T) {
 		t.Fatalf("unexpected api error: %v", apiErr)
 	}
 }
-
-

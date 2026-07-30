@@ -101,6 +101,13 @@ export enum ServerEventType {
   SUBSCRIBE_ACK = 'SubscribeAck',
   SUBSCRIPTIONS_SNAPSHOT = 'SubscriptionsSnapshot',
 
+  // 举报
+  REPORT_RESOLVED = 'ReportResolved',
+  REPORT_DISMISSED = 'ReportDismissed',
+
+  // 附近发现
+  NEARBY_NEW_MOMENT = 'NearbyNewMoment',
+
   // 多端同步（⏳ 延期实现）
   SELF_READ_SYNC = 'SelfReadSync',
   SELF_CHAT_SETTINGS_SYNC = 'SelfChatSettingsSync',
@@ -601,6 +608,22 @@ export interface GroupDismissedEvent {
   payload: GroupDismissedPayload
 }
 
+// ----- 附近发现事件 -----
+
+export interface NearbyNewMomentPayload {
+  notification_id: string
+  moment_id: string
+  moment_summary: MomentSummary
+  actor: UserInfo
+  distance: number
+  created_at: string
+}
+
+export interface NearbyNewMomentEvent {
+  type: 'NearbyNewMoment'
+  payload: NearbyNewMomentPayload
+}
+
 export interface GroupInviteReceivedPayload {
   invite_id: string
   group: GroupInfo
@@ -792,6 +815,7 @@ export type ServerEvent =
   | GroupAnnouncementCreatedEvent
   | GroupUpdatedEvent
   | GroupDismissedEvent
+  | NearbyNewMomentEvent
   | SubscribeAckEvent
   | SubscriptionsSnapshotEvent
   | ErrorEvent

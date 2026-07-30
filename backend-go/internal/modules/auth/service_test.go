@@ -93,7 +93,7 @@ func authCtxWithExpiry(userID string, expiresAt time.Time) context.Context {
 }
 
 func defaultMeta() platformauth.SessionMeta {
-	return platformauth.SessionMeta{DeviceType: "test", DeviceName: "test", IPAddress: "1.2.3.4", IPLocation: "US"}
+	return platformauth.SessionMeta{DeviceID: "test-device", DeviceType: "test", DeviceName: "test", IPAddress: "1.2.3.4", IPLocation: "US"}
 }
 
 // --- CheckStatus ---
@@ -301,7 +301,7 @@ func TestServiceRefreshUsesCookieForWeb(t *testing.T) {
 		t.Fatalf("setup: %v", err)
 	}
 	// Now refresh using the token via web client
-	refreshed, err := svc.Refresh(context.Background(), RefreshTokenRequest{RefreshToken: result.RefreshToken, ClientType: ClientTypeApp}, "")
+	refreshed, err := svc.Refresh(context.Background(), RefreshTokenRequest{RefreshToken: result.RefreshToken, ClientType: ClientTypeApp, DeviceID: "test-device"}, "test-device", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -312,7 +312,7 @@ func TestServiceRefreshUsesCookieForWeb(t *testing.T) {
 
 func TestServiceRefreshRejectsInvalidToken(t *testing.T) {
 	svc, _ := newTestService(&stubAuthRepo{})
-	_, err := svc.Refresh(context.Background(), RefreshTokenRequest{RefreshToken: "bad-token", ClientType: ClientTypeApp}, "")
+	_, err := svc.Refresh(context.Background(), RefreshTokenRequest{RefreshToken: "bad-token", ClientType: ClientTypeApp, DeviceID: "test-device"}, "test-device", "")
 	if err == nil {
 		t.Fatal("expected error for invalid token")
 	}

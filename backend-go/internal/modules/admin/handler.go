@@ -379,7 +379,7 @@ func (h *Handler) DismissGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) SearchReports(w http.ResponseWriter, r *http.Request) {
-	var req AdminReportSearchRequest
+	var req AdminReportListRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
@@ -454,7 +454,6 @@ func (h *Handler) UpdateAppConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
-
 
 func (h *Handler) SearchTags(w http.ResponseWriter, r *http.Request) {
 	var req AdminTagSearchRequest

@@ -30,7 +30,7 @@ func newTestHandler() *Handler {
 func registerAppUser(t *testing.T, handler *Handler, loginID, nickname, password string) AuthTokenPairApp {
 	t.Helper()
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"`+loginID+`","nickname":"`+nickname+`","password":"`+password+`","client_type":"app"}`))
+	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"`+loginID+`","nickname":"`+nickname+`","password":"`+password+`","client_type":"app","device_id":"test-device"}`))
 	req.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
 	rr := httptest.NewRecorder()
 	handler.Register(rr, req)
@@ -49,7 +49,7 @@ func registerAppUser(t *testing.T, handler *Handler, loginID, nickname, password
 
 func TestRegisterRequiresIdempotencyKey(t *testing.T) {
 	handler := newTestHandler()
-	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice","nickname":"Alice","password":"secret","client_type":"app"}`))
+	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice","nickname":"Alice","password":"secret","client_type":"app","device_id":"test-device"}`))
 	rr := httptest.NewRecorder()
 
 	handler.Register(rr, req)
@@ -68,7 +68,7 @@ func TestRegisterDuplicateLoginIDReturnsConflict(t *testing.T) {
 	registerAppUser(t, handler, "alice", "Alice", "secret")
 
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice","nickname":"Alice 2","password":"secret-2","client_type":"app"}`))
+	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice","nickname":"Alice 2","password":"secret-2","client_type":"app","device_id":"test-device"}`))
 	req.Header.Set("Idempotency-Key", "bbbb1234abcd1234abcd1234abcd1234")
 	rr := httptest.NewRecorder()
 	handler.Register(rr, req)
@@ -86,7 +86,7 @@ func TestLoginAppReturnsTokenPair(t *testing.T) {
 	handler := newTestHandler()
 	registerAppUser(t, handler, "alice", "Alice", "secret")
 
-	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app"}`))
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","device_id":"test-device"}`))
 	req.RemoteAddr = "173.245.48.5:443"
 	req.Header.Set("CF-Connecting-IP", "8.8.4.4")
 	req.Header.Set("CF-IPCountry", "SG")
@@ -116,7 +116,7 @@ func TestLoginWebReturnsEmptyDataAndCookiesOnly(t *testing.T) {
 	handler := newTestHandler()
 	registerAppUser(t, handler, "alice-web", "Alice", "secret123")
 
-	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice-web","password":"secret123","client_type":"web"}`))
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice-web","password":"secret123","client_type":"web","device_id":"test-device-web"}`))
 	rr := httptest.NewRecorder()
 	handler.Login(rr, req)
 
@@ -141,7 +141,7 @@ func TestLoginWebReturnsEmptyDataAndCookiesOnly(t *testing.T) {
 
 func TestLoginRejectsUnknownFields(t *testing.T) {
 	handler := newTestHandler()
-	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","unexpected":true}`))
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","unexpected":true,"device_id":"test-device"}`))
 	rr := httptest.NewRecorder()
 
 	handler.Login(rr, req)
@@ -163,8 +163,8 @@ func TestLoginCollapsesUnknownUserAndWrongPassword(t *testing.T) {
 	registerAppUser(t, handler, "alice", "Alice", "secret")
 
 	cases := []string{
-		`{"login_id":"alice","password":"wrong","client_type":"app"}`,
-		`{"login_id":"missing","password":"secret","client_type":"app"}`,
+		`{"login_id":"alice","password":"wrong","client_type":"app","device_id":"test-device"}`,
+		`{"login_id":"missing","password":"secret","client_type":"app","device_id":"test-device"}`,
 	}
 	for _, body := range cases {
 		req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(body))
@@ -224,12 +224,12 @@ func TestCheckStatusReturnsTrueWithPrincipal(t *testing.T) {
 func TestGuestWithIdempotencyKeyReturnsTokenPair(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := newTestHandler()
-	req := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{"nickname":"Guest","client_type":"app"}`))
+	req := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{"nickname":"Guest","client_type":"app","device_id":"test-device"}`))
 	req.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
 	rr := httptest.NewRecorder()
 	handler.Guest(rr, req)
 	rr2 := httptest.NewRecorder()
-	dupe := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{"nickname":"Guest","client_type":"app"}`))
+	dupe := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{"nickname":"Guest","client_type":"app","device_id":"test-device"}`))
 	dupe.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
 	handler.Guest(rr2, dupe)
 
@@ -254,7 +254,7 @@ func TestRefreshTokenAppReturnsNewTokenPair(t *testing.T) {
 	handler := newTestHandler()
 	registerAppUser(t, handler, "alice", "Alice", "secret")
 
-	loginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app"}`))
+	loginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","device_id":"test-device"}`))
 	loginRR := httptest.NewRecorder()
 	handler.Login(loginRR, loginReq)
 	var loginResp struct {
@@ -265,7 +265,7 @@ func TestRefreshTokenAppReturnsNewTokenPair(t *testing.T) {
 		t.Fatalf("decode login response: %v", err)
 	}
 
-	refreshReq := httptest.NewRequest(http.MethodPost, "/refresh_token", strings.NewReader(`{"client_type":"app","refresh_token":"`+loginResp.Data.RefreshToken+`"}`))
+	refreshReq := httptest.NewRequest(http.MethodPost, "/refresh_token", strings.NewReader(`{"client_type":"app","device_id":"test-device","refresh_token":"`+loginResp.Data.RefreshToken+`"}`))
 	refreshRR := httptest.NewRecorder()
 	handler.RefreshToken(refreshRR, refreshReq)
 
@@ -310,7 +310,7 @@ func TestListSessionsReturnsCurrentSession(t *testing.T) {
 func TestListSessionsIncludesSessionMetadata(t *testing.T) {
 	handler := newTestHandler()
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	registerReq := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice-meta","nickname":"Alice","password":"secret","client_type":"app"}`))
+	registerReq := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice-meta","nickname":"Alice","password":"secret","client_type":"app","device_id":"test-device"}`))
 	registerReq.Header.Set("Idempotency-Key", "meta1234abcd1234abcd1234abcd1234")
 	registerReq.RemoteAddr = "173.245.48.5:443"
 	registerReq.Header.Set("CF-Connecting-IP", "203.0.113.9")
@@ -363,7 +363,7 @@ func TestSessionMetaFromRequestUsesTrustedProxyHeaders(t *testing.T) {
 	req.Header.Set("CF-Connecting-IP", "198.51.100.2")
 	req.Header.Set("CF-IPCountry", "jp")
 	req.Header.Set("User-Agent", "HotSpot Web/9.9")
-	meta := sessionMetaFromRequest(req, ClientTypeWeb)
+	meta := sessionMetaFromRequest(req, ClientTypeWeb, "test-device-web")
 	if meta.DeviceType != "web" || meta.DeviceName != "HotSpot Web/9.9" || meta.IPAddress != "198.51.100.2" || meta.IPLocation != "JP" {
 		t.Fatalf("unexpected session meta: %#v", meta)
 	}
@@ -413,7 +413,7 @@ func TestResetPasswordRevokesExistingSessionsAndAllowsLoginWithNewPassword(t *te
 		t.Fatal("expected first session id")
 	}
 
-	loginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app"}`))
+	loginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","device_id":"test-device"}`))
 	loginRR := httptest.NewRecorder()
 	handler.Login(loginRR, loginReq)
 
@@ -448,7 +448,7 @@ func TestResetPasswordRevokesExistingSessionsAndAllowsLoginWithNewPassword(t *te
 		t.Fatal("expected old session token to be revoked after reset")
 	}
 
-	newLoginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"new-secret","client_type":"app"}`))
+	newLoginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"new-secret","client_type":"app","device_id":"test-device"}`))
 	newLoginRR := httptest.NewRecorder()
 	handler.Login(newLoginRR, newLoginReq)
 	var newLoginResp map[string]any
@@ -520,7 +520,7 @@ func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T)
 	if currentSessionID == "" {
 		t.Fatal("expected current session id")
 	}
-	loginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app"}`))
+	loginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","device_id":"test-device-2"}`))
 	loginRR := httptest.NewRecorder()
 	handler.Login(loginRR, loginReq)
 	otherSessionID := ""
@@ -562,7 +562,7 @@ func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T)
 		t.Fatalf("unexpected response: %#v", goodResp)
 	}
 
-	oldLoginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app"}`))
+	oldLoginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","device_id":"test-device"}`))
 	oldLoginRR := httptest.NewRecorder()
 	handler.Login(oldLoginRR, oldLoginReq)
 	var oldLoginResp map[string]any
@@ -696,7 +696,7 @@ func TestRegisterWebResponseHasNoTokenInBody(t *testing.T) {
 	handler := newTestHandler()
 	rr := httptest.NewRecorder()
 	key := fmt.Sprintf("%032x", time.Now().UnixNano())
-	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"webuser","nickname":"WebUser","password":"pass123","client_type":"web"}`))
+	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"webuser","nickname":"WebUser","password":"pass123","client_type":"web","device_id":"test-device-web"}`))
 	req.Header.Set("Idempotency-Key", key)
 	handler.Register(rr, req)
 	if rr.Code != http.StatusOK {
@@ -731,7 +731,7 @@ func TestLoginReturns10100OnWrongPassword(t *testing.T) {
 	handler := newTestHandler()
 	_ = registerAppUser(t, handler, "loginerr", "RightPass", "pass123")
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"loginerr","password":"wrongpass","client_type":"app"}`))
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"loginerr","password":"wrongpass","client_type":"app","device_id":"test-device"}`))
 	handler.Login(rr, req)
 	var resp map[string]any
 	json.Unmarshal([]byte(rr.Body.String()), &resp)
@@ -744,7 +744,7 @@ func TestLoginReturns10100OnWrongPassword(t *testing.T) {
 func TestLoginReturns10100OnNonexistentUser(t *testing.T) {
 	handler := newTestHandler()
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"ghost","password":"whatever","client_type":"app"}`))
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"ghost","password":"whatever","client_type":"app","device_id":"test-device"}`))
 	handler.Login(rr, req)
 	var resp map[string]any
 	json.Unmarshal([]byte(rr.Body.String()), &resp)
@@ -796,7 +796,7 @@ func TestLogoutClearsCookiesWithMaxAgeZero(t *testing.T) {
 func TestRefreshTokenWebRejectsBodyToken(t *testing.T) {
 	handler := newTestHandler()
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/refresh_token", strings.NewReader(`{"client_type":"web","refresh_token":"should_not_be_here"}`))
+	req := httptest.NewRequest(http.MethodPost, "/refresh_token", strings.NewReader(`{"client_type":"web","device_id":"test-device-web","refresh_token":"should_not_be_here"}`))
 	handler.RefreshToken(rr, req)
 	var resp map[string]any
 	json.Unmarshal([]byte(rr.Body.String()), &resp)
@@ -809,7 +809,7 @@ func TestRefreshTokenWebRejectsBodyToken(t *testing.T) {
 func TestRefreshTokenAppRejectsEmptyToken(t *testing.T) {
 	handler := newTestHandler()
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/refresh_token", strings.NewReader(`{"client_type":"app"}`))
+	req := httptest.NewRequest(http.MethodPost, "/refresh_token", strings.NewReader(`{"client_type":"app","device_id":"test-device"}`))
 	handler.RefreshToken(rr, req)
 	var resp map[string]any
 	json.Unmarshal([]byte(rr.Body.String()), &resp)
@@ -900,7 +900,7 @@ func TestHandlerRevokeAllSessionsReturns10600OnError(t *testing.T) {
 func TestHandlerGuestReturnsSuccess(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := newTestHandler()
-	req := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{"nickname":"GuestUser","client_type":"app"}`))
+	req := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{"nickname":"GuestUser","client_type":"app","device_id":"test-device"}`))
 	req.Header.Set("Idempotency-Key", "guest1234abcd1234abcd1234abcd1234")
 	rr := httptest.NewRecorder()
 	handler.Guest(rr, req)
@@ -944,7 +944,7 @@ func TestHandlerGuestReturns10600OnError(t *testing.T) {
 	// The Guest handler has no direct 10600 code path at handler level;
 	// 10600 only surfaces if the underlying service fails with an unmapped error.
 	// Test the parameter validation path instead.
-	req := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{"nickname":"","client_type":"app"}`))
+	req := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{"nickname":"","client_type":"app","device_id":"test-device"}`))
 	req.Header.Set("Idempotency-Key", "noNick1234abcd1234abcd1234abcd1234")
 	rr := httptest.NewRecorder()
 	handler.Guest(rr, req)

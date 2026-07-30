@@ -134,8 +134,9 @@ function LocationDesktop() {
                 initial={{ opacity: 0, y: -6, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                className="absolute top-full left-4 right-4 z-30 mt-1 rounded-[16px] overflow-hidden"
-                style={{ background: "var(--neu-bg)", boxShadow: "0 10px 36px var(--neu-shadow-dark)", border: "1px solid var(--neu-border)" }}>
+                className="absolute top-full left-4 right-4 z-30 mt-1 rounded-[16px]"
+                style={{ background: "var(--neu-bg)", boxShadow: "0 0 0 1px var(--neu-border), 0 10px 36px var(--neu-shadow-dark)" }}>
+                <div style={{ overflow: "hidden", borderRadius: 15 }}>
                 {searchResults.map((r, i) => (
                   <motion.button key={i} whileTap={{ scale: 0.98 }} whileHover={selectedLoc?.displayName === r.displayName ? undefined : { x: 2 }}
                     onHoverStart={() => setHoveredListId(`search-${i}`)}
@@ -152,6 +153,7 @@ function LocationDesktop() {
                     )}
                   </motion.button>
                 ))}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -206,11 +208,10 @@ function LocationDesktop() {
                     style={{
                       background: selectedPin?.id === pin.id ? pinTone(pin.type, 10) : hoveredListId === `pin-${pin.id}` ? pinTone(pin.type, 6) : "var(--neu-bg)",
                       boxShadow: selectedPin?.id === pin.id
-                        ? `0 6px 18px ${pinTone(pin.type, 32)}, 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)`
+                        ? `0 0 0 1px ${pinTone(pin.type, 52)}, 0 6px 18px ${pinTone(pin.type, 32)}, 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)`
                         : hoveredListId === `pin-${pin.id}`
-                          ? "6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)"
-                          : "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)",
-                      border: `1px solid ${selectedPin?.id === pin.id ? pinTone(pin.type, 52) : hoveredListId === `pin-${pin.id}` ? pinTone(pin.type, 25) : "var(--neu-border)"}`,
+                          ? `0 0 0 1px ${pinTone(pin.type, 25)}, 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)`
+                          : "0 0 0 1px var(--neu-border), 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)",
                     }}>
                     {pin.type === "user" && pin.avatar ? (
                       <div className="relative flex-shrink-0">
@@ -271,8 +272,9 @@ function LocationDesktop() {
                       background: selectedLoc?.displayName === loc.displayName ? "var(--neu-accent-soft)" : hoveredListId === `hot-${i}` ? "color-mix(in srgb, var(--neu-accent-soft) 62%, var(--neu-bg))" : "var(--neu-bg)",
                       boxShadow: selectedLoc?.displayName === loc.displayName
                         ? "0 0 0 1px var(--neu-accent-soft-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)"
-                        : hoveredListId === `hot-${i}` ? "6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)" : "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)",
-                      border: `1px solid ${selectedLoc?.displayName === loc.displayName || hoveredListId === `hot-${i}` ? "var(--neu-accent-soft-border)" : "var(--neu-border)"}`,
+                        : hoveredListId === `hot-${i}`
+                          ? "0 0 0 1px var(--neu-accent-soft-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)"
+                          : "0 0 0 1px var(--neu-border), 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)",
                     }}>
                     <div className="flex items-center justify-center rounded-[14px] flex-shrink-0"
                       style={{ width: 46, height: 46, fontSize: 22, background: "var(--neu-accent-primary)", opacity: 0.88 }}>
@@ -306,8 +308,9 @@ function LocationDesktop() {
                     className="app-list-row app-list-row--rich neu-row-hover rounded-[16px] outline-none"
                     style={{
                       background: selectedLoc?.displayName === loc.displayName ? "var(--neu-accent-soft)" : hoveredListId === `recent-${i}` ? "color-mix(in srgb, var(--neu-accent-soft) 62%, var(--neu-bg))" : "var(--neu-bg)",
-                      boxShadow: selectedLoc?.displayName === loc.displayName || hoveredListId === `recent-${i}` ? "6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)" : "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)",
-                      border: `1px solid ${selectedLoc?.displayName === loc.displayName || hoveredListId === `recent-${i}` ? "var(--neu-accent-soft-border)" : "var(--neu-border)"}`,
+                      boxShadow: selectedLoc?.displayName === loc.displayName || hoveredListId === `recent-${i}`
+                        ? "0 0 0 1px var(--neu-accent-soft-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)"
+                        : "0 0 0 1px var(--neu-border), 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)",
                     }}>
                     <div className="flex items-center justify-center rounded-full flex-shrink-0"
                       style={{ width: 44, height: 44, background: "var(--neu-bg)", boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)", fontSize: 20 }}>
@@ -336,7 +339,7 @@ function LocationDesktop() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 4 }}
                 className="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-[13px]"
-                style={{ background: "var(--neu-bg)", border: "1px solid var(--neu-border)", boxShadow: "inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light)" }}>
+                style={{ background: "var(--neu-bg)", boxShadow: "0 0 0 1px var(--neu-border), inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light)" }}>
                 <Check style={{ width: 13, height: 13, color: "var(--neu-accent-primary)", flexShrink: 0 }} strokeWidth={2.5} />
                 <p style={{ fontSize: 12, color: "var(--neu-accent-primary)" }} className="flex-1 truncate">{selectedLoc.displayName}</p>
                 <motion.button whileTap={{ scale: 0.85 }} onClick={() => { setSelectedLoc(null); setSearchQuery(""); }} className="outline-none">
@@ -407,8 +410,9 @@ function LocationDesktop() {
                 initial={{ opacity: 0, y: -8, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.9 }}
-                className="mt-2 rounded-[16px] overflow-hidden"
-                style={{ background: "var(--neu-bg)", boxShadow: "0 8px 28px var(--neu-shadow-dark)", border: "1px solid var(--neu-border)", width: 200 }}>
+                className="mt-2 rounded-[16px]"
+                style={{ background: "var(--neu-bg)", boxShadow: "0 0 0 1px var(--neu-border), 0 8px 28px var(--neu-shadow-dark)", width: 200 }}>
+                <div style={{ overflow: "hidden", borderRadius: 15 }}>
                 {([
                   ["user",  "用户",  markerUserUrl,   markerUserClusterUrl,   PIN_COLORS.user, userCount],
                   ["group", "群组",  markerGroupUrl,  markerGroupClusterUrl,  PIN_COLORS.group, groupCount],
@@ -444,6 +448,7 @@ function LocationDesktop() {
                   <div style={{ width: 13, height: 13, borderRadius: "50%", background: PIN_COLORS.user, border: "2px solid var(--neu-bg)", boxShadow: `0 0 5px ${pinTone("user", 50)}` }} />
                   <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>我的位置</span>
                 </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -460,11 +465,11 @@ function LocationDesktop() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 14, scale: 0.94 }}
               transition={{ type: "spring", stiffness: 420, damping: 32 }}
-              style={{
-                position: "absolute", bottom: 20, left: 20, right: 20, zIndex: 25,
-                background: "var(--neu-bg)", borderRadius: 20, padding: 16,
-                boxShadow: "0 16px 48px var(--neu-shadow-dark)", border: "1px solid var(--neu-border)",
-              }}
+                style={{
+                  position: "absolute", bottom: 20, left: 20, right: 20, zIndex: 25,
+                  background: "var(--neu-bg)", borderRadius: 20, padding: 16,
+                  boxShadow: "0 0 0 1px var(--neu-border), 0 16px 48px var(--neu-shadow-dark)",
+                }}
               onClick={e => e.stopPropagation()}>
               <div className="flex items-center gap-3">
                 {selectedPin.type === "user" && selectedPin.avatar ? (

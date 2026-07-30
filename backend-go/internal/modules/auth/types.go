@@ -12,21 +12,25 @@ type RegisterRequest struct {
 	Nickname   string     `json:"nickname"`
 	Password   string     `json:"password"`
 	ClientType ClientType `json:"client_type"`
+	DeviceID   string     `json:"device_id"`
 }
 
 type LoginRequest struct {
 	LoginID    string     `json:"login_id"`
 	Password   string     `json:"password"`
 	ClientType ClientType `json:"client_type"`
+	DeviceID   string     `json:"device_id"`
 }
 
 type GuestRequest struct {
 	Nickname   string     `json:"nickname"`
 	ClientType ClientType `json:"client_type"`
+	DeviceID   string     `json:"device_id"`
 }
 
 type RefreshTokenRequest struct {
 	ClientType   ClientType `json:"client_type"`
+	DeviceID     string     `json:"device_id"`
 	RefreshToken string     `json:"refresh_token,omitempty"`
 }
 
@@ -47,6 +51,7 @@ type AuthTokenPairApp struct {
 
 type SessionItem struct {
 	SessionID    string `json:"session_id"`
+	DeviceID     string `json:"device_id"`
 	DeviceType   string `json:"device_type,omitempty"`
 	DeviceName   string `json:"device_name,omitempty"`
 	IPAddress    string `json:"ip_address,omitempty"`

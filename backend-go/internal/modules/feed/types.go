@@ -2,7 +2,6 @@ package feed
 
 import (
 	"errors"
-	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/platform/types"
@@ -14,20 +13,24 @@ type RelativeLocation = types.RelativeLocation
 
 type PaginationParams = types.PaginationParams
 
-type ListFeedMomentsRequest struct {
-	Source         string            `json:"source"`
+type GetFeedFollowingRequest struct {
+	ReferencePoint *GeoPoint         `json:"reference_point,omitempty"`
+	Pagination     *PaginationParams `json:"pagination,omitempty"`
+}
+
+type GetFeedNearbyRequest struct {
 	Radius         *int              `json:"radius,omitempty"`
 	ReferencePoint *GeoPoint         `json:"reference_point"`
 	Pagination     *PaginationParams `json:"pagination,omitempty"`
 }
 
-type ListFeedGroupsRequest struct {
+type GetFeedNearbyGroupsRequest struct {
 	Radius         *int              `json:"radius,omitempty"`
 	ReferencePoint *GeoPoint         `json:"reference_point"`
 	Pagination     *PaginationParams `json:"pagination,omitempty"`
 }
 
-type ListFeedUsersRequest struct {
+type GetFeedNearbyUsersRequest struct {
 	Radius         *int              `json:"radius,omitempty"`
 	ReferencePoint *GeoPoint         `json:"reference_point"`
 	Pagination     *PaginationParams `json:"pagination,omitempty"`
@@ -85,8 +88,6 @@ type PaginatedGroups struct {
 	NextCursor string      `json:"next_cursor,omitempty"`
 }
 
-// Reaction mirrors spec api_spec_types.md Reaction (filled by an aggregator
-// at read time, identical shape to moments.Reaction / reactions.Reaction).
 type Reaction struct {
 	Emoji       string `json:"emoji"`
 	Count       int    `json:"count"`
@@ -97,9 +98,7 @@ type MyMomentState struct {
 	IsFavorited bool `json:"is_favorited"`
 }
 
-type RecommendationContext struct {
-	Type string `json:"type"`
-}
+type RecommendationContext = string
 
 type MomentImage struct {
 	URL          string `json:"url"`
@@ -131,32 +130,12 @@ type PaginatedMoments struct {
 	NextCursor string       `json:"next_cursor,omitempty"`
 }
 
-type TrendingTagItem struct {
-	Name             string      `json:"name"`
-	UsageCount       int         `json:"usage_count"`
-	Trend            string      `json:"trend"`
-	HotMomentPreview *MomentItem `json:"hot_moment_preview,omitempty"`
-}
-
 type TrendingBundle struct {
-	TrendingTags []TrendingTagItem `json:"trending_tags"`
-	HotMoments   []MomentItem      `json:"hot_moments"`
-}
-
-type DismissFeedItemRequest struct {
-	TargetType string `json:"target_type"`
-	TargetID   string `json:"target_id"`
-}
-
-type dismissCommand struct {
-	ViewerUserID string
-	TargetType   string
-	TargetID     string
+	HotMoments []MomentItem `json:"hot_moments"`
 }
 
 type momentsQuery struct {
 	ViewerUserID   string
-	Source         string
 	ReferencePoint GeoPoint
 	Radius         int
 	Limit          int
@@ -203,15 +182,5 @@ type groupCandidate struct {
 	Distance int
 }
 
-func normalizeDismissTargetType(value string) string {
-	switch strings.TrimSpace(value) {
-	case "moment", "user", "group":
-		return strings.TrimSpace(value)
-	default:
-		return ""
-	}
-}
-
 var ErrInvalidFeedRequest = errors.New("feed: invalid request")
 var ErrInvalidCursor = errors.New("feed: invalid cursor")
-var ErrDismissTargetNotFound = errors.New("feed: dismiss target not found")

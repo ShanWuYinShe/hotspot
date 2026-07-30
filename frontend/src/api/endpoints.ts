@@ -141,17 +141,16 @@ export const Endpoints = {
 
   // Feed
   Feed: {
-    ListMoments: `${PREFIX}/feed/list_moments`,
-    ListGroups: `${PREFIX}/feed/list_groups`,
-    ListUsers: `${PREFIX}/feed/list_users`,
-    ListTrending: `${PREFIX}/feed/list_trending`,
-    Dismiss: `${PREFIX}/feed/dismiss`,
+    Following: `${PREFIX}/feed/following`,
+    Nearby: `${PREFIX}/feed/nearby`,
+    NearbyUsers: `${PREFIX}/feed/nearby_users`,
+    NearbyGroups: `${PREFIX}/feed/nearby_groups`,
+    Trending: `${PREFIX}/feed/trending`,
   },
 
   // Search
   Search: {
     Suggest: `${PREFIX}/search/suggest`,
-    All: `${PREFIX}/search/all`,
   },
 
   // Media

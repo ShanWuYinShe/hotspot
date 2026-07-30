@@ -329,4 +329,7 @@ func applySettingsPatch(settings *UserSettings, patch PartialUserSettings) {
 	if patch.LocationSearchable != nil {
 		settings.LocationSearchable = *patch.LocationSearchable
 	}
+	if patch.NearbyMomentNotify != nil {
+		settings.NearbyMomentNotify = *patch.NearbyMomentNotify
+	}
 }

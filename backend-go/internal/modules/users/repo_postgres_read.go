@@ -51,7 +51,7 @@ func (r *PostgresRepository) GetSettings(ctx context.Context, userID string) (Us
 	}
 	var settings UserSettings
 	var allowPrivateChat string
-	if err := queryable.QueryRow(ctx, queryGetUserSettings, userID).Scan(&settings.PrivacyLevel, &settings.LocationVisible, &settings.PresenceVisible, &settings.SocialListsVisible, &settings.GroupsVisible, &settings.ReactedMomentsVisible, &settings.StatsVisible, &settings.AllowFollow, &allowPrivateChat, &settings.Searchable, &settings.PhoneSearchable, &settings.NicknameSearchable, &settings.LocationSearchable); err != nil {
+	if err := queryable.QueryRow(ctx, queryGetUserSettings, userID).Scan(&settings.PrivacyLevel, &settings.LocationVisible, &settings.PresenceVisible, &settings.SocialListsVisible, &settings.GroupsVisible, &settings.ReactedMomentsVisible, &settings.StatsVisible, &settings.AllowFollow, &allowPrivateChat, &settings.Searchable, &settings.PhoneSearchable, &settings.NicknameSearchable, &settings.LocationSearchable, &settings.NearbyMomentNotify); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return UserSettings{}, false, nil
 		}
@@ -82,7 +82,7 @@ func (r *PostgresRepository) GetSettingsBatch(ctx context.Context, userIDs []str
 		var userID string
 		var settings UserSettings
 		var allowPrivateChat string
-		if err := rows.Scan(&userID, &settings.PrivacyLevel, &settings.LocationVisible, &settings.PresenceVisible, &settings.SocialListsVisible, &settings.GroupsVisible, &settings.ReactedMomentsVisible, &settings.StatsVisible, &settings.AllowFollow, &allowPrivateChat, &settings.Searchable, &settings.PhoneSearchable, &settings.NicknameSearchable, &settings.LocationSearchable); err != nil {
+		if err := rows.Scan(&userID, &settings.PrivacyLevel, &settings.LocationVisible, &settings.PresenceVisible, &settings.SocialListsVisible, &settings.GroupsVisible, &settings.ReactedMomentsVisible, &settings.StatsVisible, &settings.AllowFollow, &allowPrivateChat, &settings.Searchable, &settings.PhoneSearchable, &settings.NicknameSearchable, &settings.LocationSearchable, &settings.NearbyMomentNotify); err != nil {
 			return nil, err
 		}
 		settings.AllowPrivateChat = ChatPerm(allowPrivateChat)

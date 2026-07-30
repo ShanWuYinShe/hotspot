@@ -6,6 +6,28 @@ import (
 	"hotspot/backend-go/internal/platform/httpx"
 )
 
+func (s *Service) GetSession(ctx context.Context, sessionID string) (SessionRecord, bool, error) {
+	return s.sessions.Get(ctx, sessionID)
+}
+
+func (s *Service) RevokeByUserDevice(ctx context.Context, userID, deviceID string) (int, error) {
+	sessions, err := s.sessions.ListActiveByUser(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	for _, session := range sessions {
+		if session.DeviceID == deviceID && deviceID != "" && session.RevokedAt == nil {
+			if revoked, err := s.sessions.Revoke(ctx, session.SessionID); err != nil {
+				return count, err
+			} else if revoked {
+				count++
+			}
+		}
+	}
+	return count, nil
+}
+
 func (s *Service) ListSessions(ctx context.Context, userID, currentSessionID string) []SessionRecord {
 	sessions, err := s.sessions.ListActiveByUser(ctx, userID)
 	if err != nil {

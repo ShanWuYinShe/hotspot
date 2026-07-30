@@ -25,7 +25,7 @@ type Repository interface {
 	GetGroup(context.Context, string) (AdminGroupItem, bool, error)
 	DismissGroup(context.Context, string) (AdminGroupItem, bool, error)
 	ListGroupMemberIDs(context.Context, string) ([]string, error)
-	SearchReports(context.Context, AdminReportSearchRequest) (adminReportPage, error)
+	SearchReports(context.Context, AdminReportListRequest) (adminReportPage, error)
 	GetReportHandleRecord(context.Context, string) (reportHandleRecord, bool, error)
 	HandleReport(context.Context, string, ReportAction, string, *UserInfo) (AdminReportItem, bool, error)
 	RecallGroupMessage(context.Context, string) error

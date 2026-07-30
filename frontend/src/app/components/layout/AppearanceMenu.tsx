@@ -33,7 +33,7 @@ function DevApiSection() {
       type="button"
       whileTap={{ scale: 0.985 }}
       onClick={handleToggle}
-      className="mt-2 flex w-full items-center justify-between rounded-[12px] border border-[var(--neu-border)] px-3 py-2.5 text-left outline-none transition-colors hover:bg-[var(--neu-accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
+      className="mt-2 flex w-full items-center justify-between rounded-[12px] ring-1 ring-[var(--neu-border)] px-3 py-2.5 text-left outline-none transition-colors hover:bg-[var(--neu-accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
       style={{ color: "var(--neu-text)" }}
     >
       <span className="flex items-center gap-2">
@@ -94,7 +94,7 @@ function DevAuthSection() {
   };
 
   return (
-    <div className="mt-2 rounded-[12px] border border-[var(--neu-border)] px-3 py-2.5" style={{ color: "var(--neu-text)" }}>
+    <div className="mt-2 rounded-[12px] ring-1 ring-[var(--neu-border)] px-3 py-2.5" style={{ color: "var(--neu-text)" }}>
       <span className="block text-[12px] font-medium">模拟登录态</span>
       <span className="mb-2 block text-[10px] text-[var(--neu-text-muted)]">影响 login/register/guest/reset 的返回</span>
       <div className="flex flex-col" style={{ gap: 4 }}>
@@ -117,7 +117,7 @@ function DevAuthSection() {
       <button
         type="button"
         onClick={resetLoggedOut}
-        className="mt-2 w-full rounded-[8px] border border-[var(--neu-border)] px-2 py-1.5 text-[11px] outline-none transition-colors hover:bg-[var(--neu-accent-soft)]"
+        className="mt-2 w-full rounded-[8px] ring-1 ring-[var(--neu-border)] px-2 py-1.5 text-[11px] outline-none transition-colors hover:bg-[var(--neu-accent-soft)]"
         style={{ color: "var(--neu-text-muted)" }}
       >
         重置为未登录（匿名浏览）
@@ -156,7 +156,7 @@ export function AppearanceMenu({ className = "" }: AppearanceMenuProps) {
             transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
             role="dialog"
             aria-label="外观设置"
-            className="absolute right-0 top-[42px] z-50 w-[244px] rounded-[18px] border border-[var(--neu-border)] bg-[var(--neu-bg)] p-2.5"
+            className="absolute right-0 top-[42px] z-50 w-[244px] rounded-[18px] ring-1 ring-[var(--neu-border)] bg-[var(--neu-bg)] p-2.5"
             style={{ boxShadow: "0 16px 40px var(--neu-shadow-dark)" }}
           >
             <div className="px-2 pb-2">
@@ -166,7 +166,7 @@ export function AppearanceMenu({ className = "" }: AppearanceMenuProps) {
               </p>
             </div>
 
-            <section aria-labelledby="theme-choice-label" className="rounded-[18px] border border-[var(--neu-border)] bg-[color-mix(in_srgb,var(--neu-bg)_94%,var(--page-bg)_6%)] p-2">
+            <section aria-labelledby="theme-choice-label" className="rounded-[18px] ring-1 ring-[var(--neu-border)] bg-[color-mix(in_srgb,var(--neu-bg)_94%,var(--page-bg)_6%)] p-2">
               <div className="flex items-center justify-between px-2 pb-2 pt-1">
                 <p id="theme-choice-label" className="neu-eyebrow">主题</p>
                 <span className="text-[10px] text-[var(--neu-text-muted)]">选择一种基调</span>
@@ -207,7 +207,7 @@ export function AppearanceMenu({ className = "" }: AppearanceMenuProps) {
               whileTap={{ scale: 0.985 }}
               onClick={toggleDark}
               aria-pressed={isDark}
-              className="mt-2 flex w-full items-center justify-between rounded-[12px] border border-[var(--neu-border)] px-3 py-2.5 text-left outline-none transition-colors hover:bg-[var(--neu-accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
+              className="mt-2 flex w-full items-center justify-between rounded-[12px] ring-1 ring-[var(--neu-border)] px-3 py-2.5 text-left outline-none transition-colors hover:bg-[var(--neu-accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
               style={{ color: "var(--neu-text)" }}
             >
               <span className="flex items-center gap-2">

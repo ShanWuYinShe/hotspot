@@ -17,8 +17,9 @@ const (
 
 // 社交
 const (
-	EventTypeNewFollower  = "NewFollower"
-	EventTypeMutualFollow = "MutualFollow"
+	EventTypeNewFollower     = "NewFollower"
+	EventTypeMutualFollow    = "MutualFollow"
+	EventTypeNearbyNewMoment = "NearbyNewMoment"
 )
 
 // 瞬间互动

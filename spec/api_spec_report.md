@@ -16,27 +16,29 @@
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
-| `POST /api/v1/reports/create` | 创建举报 | 必须 | MUST |
+| `POST /api/v1/reports/create` | 创建举报 | 必须 | 幂等语义 |
 | `POST /api/v1/reports/list_my` | 我的举报记录 | 必须 | 无 |
 
 ## 举报审核流程说明
 
-举报处理的状态流转为：`pending` 进入 `reviewing`，可 `escalate` 升级为 `escalated` 等待更高级管理员接手，最终为 `resolved` 或 `dismissed`。
+**当前状态流转**：
 
-**状态流转**：
+| 状态 | 说明 |
+|-----|------|
+| `pending` | 待审核 |
+| `resolved` | 已处理（确认违规，已采取措施：封禁/删除内容） |
+| `dismissed` | 已驳回（无违规，审核结束） |
 
-| 状态 | 说明 | 可执行操作 |
-|-----|------|-----------|
-| `pending` | 待审核 | 管理员可开始审核（→ `reviewing`），或直接处理/升级 |
-| `reviewing` | 审核中（某管理员已认领） | 管理员可处理（→ `resolved`/`dismissed`）或升级（→ `escalated`） |
-| `escalated` | 已升级，等待更高级管理员接手 | 更高级权限管理员可认领（→ `reviewing`）后处理；避免举报卡死，应配置升级超时回退机制（见下方说明） |
-| `resolved` | 已处理（确认违规） | 已采取措施（封禁/删除内容） |
-| `dismissed` | 已驳回（无违规） | 审核结束，无需处理 |
+管理员审核时将举报从 `pending` 直接流转至 `resolved` 或 `dismissed`。
 
-**`escalated` 防卡死设计**：
-- `escalated` 与 `reviewing` 语义区分：`reviewing` = 某管理员正在审核；`escalated` = 已升级但尚未被更高级管理员认领
-- 升级后由更高级权限管理员通过 `handle`（action=`escalate` 之外的动作，或新增认领动作）接手，状态回到 `reviewing`
-- **超时回退**（契约级要求）：升级后若超过服务端配置时长（建议 72 小时，可由 `AppConfig` 调整）无人认领，服务端自动回退为 `pending` 重新进入待审队列，避免升级后无更高级管理员时举报永久卡死
+**预留状态**（枚举已定义但不参与当前流转，供未来多管理员协作场景扩展）：
+
+| 状态 | 说明 | 预留场景 |
+|-----|------|---------|
+| `reviewing` | 审核中（某管理员已认领） | 多管理员分工时防止重复处理 |
+| `escalated` | 已升级，等待更高级管理员接手 | 需要更高权限管理员决策的复杂案例 |
+
+当前不使用 `reviewing` 和 `escalated`，`ReportStatus` 枚举保留这些值以保证向前兼容。当需要引入多人审核时，再激活对应的流转逻辑。
 
 管理员审核流程（处理动作、内容快照机制等）详见 `api_spec_admin_moderation.md`。
 
@@ -67,7 +69,7 @@
 创建举报。
 
 - **认证**: 必须
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 幂等语义（同一 `target_type + target_id` 已有非终态举报时，返回成功并附带已有 `report_id`，不报错）
 
 **字段说明**：
 - `reason`：举报原因，从 `ReportReason` 枚举中选取
@@ -77,7 +79,7 @@
 **业务规则**：
 - 禁止自举报：当 `target_type='user'` 且 `target_id` 为当前用户时，返回 `10400`
 - 当 `target_type='moment'`/`'comment'`/`'message'` 且目标资源属于当前用户时，返回 `10400`
-- 重复举报：同一 `target_type + target_id` 已存在 `pending`、`reviewing` 或 `escalated` 记录时，返回 `10400`
+- 重复举报：同一 `target_type + target_id` 已存在 `pending`、`reviewing` 或 `escalated` 记录时，**返回成功**（`code=0`），`data` 中包含已有举报的 `report_id` 及 `is_duplicate: true`，不创建新举报单。这本质是天然幂等——`(reporter_id, target_type, target_id, pending_status)` 构成自然去重键
 - 若该目标历史举报均已进入终态（`resolved` / `dismissed`），允许再次举报（视为新举报单）
 - **消息举报快照**（隐私边界）：当 `target_type='message'` 时，`message_snapshot` 为**必填**——举报人必须提交举报时的消息内容快照。服务端原样存储，管理员审核**基于快照**判断，不直接查询私聊消息库。这既保证管理员有足够信息审核，又避免管理员随意翻阅用户私聊内容的隐私风险。缺少 `message_snapshot` 或快照不完整时返回 `10000`。
 
@@ -96,10 +98,11 @@ interface CreateReportRequest {
 ```typescript
 interface ReportCreated {
   report_id: string;
+  is_duplicate: boolean;  // true 表示该举报为已有举报的幂等回放（未创建新举报单），report_id 为已有举报的 ID
 }
 ```
 
-**错误码**: `10000` `10300` `10400`（自举报、重复举报等）
+**错误码**: `10000` `10300` `10400`（自举报等）
 
 ### POST /api/v1/reports/list_my
 

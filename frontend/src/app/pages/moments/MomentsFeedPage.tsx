@@ -9,7 +9,7 @@ import { useDefaultLocation } from "../../hooks/useDefaultLocation";
 import { BspCardCanvas } from "../../components/shared/BspCardCanvas";
 import { ActionIconButton } from "../../components/shared/ActionIconButton";
 import { Avatar } from "../../components/shared/Avatar";
-import { getFeedMoments, setReaction, favoriteMoment } from "../../../api";
+import { getFeedNearby, setReaction, favoriteMoment } from "../../../api";
 
 /* ── Feed data ──────────────────────────────────────────────────── */
 // FeedItem is the card shape; liked/saved are per-item interaction state held
@@ -532,14 +532,14 @@ export function MomentsFeedPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // spec: feed/list_moments requires source + reference_point.
+    // spec: feed/nearby requires reference_point.
     // reference_point comes from ClientConfig.default_location (location denied fallback).
     if (!reference_point) return;
     let cancelled = false;
     async function fetchData() {
       try {
         setLoading(true);
-        const feedRes = await getFeedMoments({ source: "nearby", reference_point }).catch(() => ({ code: -1, data: { items: [] } }));
+        const feedRes = await getFeedNearby({ reference_point }).catch(() => ({ code: -1, data: { items: [] } }));
         if (cancelled) return;
 
         const feedData = (feedRes.code === 0 ? feedRes.data : null) as any;

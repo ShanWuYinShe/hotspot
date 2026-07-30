@@ -890,7 +890,7 @@ func (r *InMemoryRepository) ListGroupMemberIDs(_ context.Context, groupID strin
 	return cloneStrings(r.groupMembers[groupID]), nil
 }
 
-func (r *InMemoryRepository) SearchReports(_ context.Context, req AdminReportSearchRequest) (adminReportPage, error) {
+func (r *InMemoryRepository) SearchReports(_ context.Context, req AdminReportListRequest) (adminReportPage, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	cursor, apiErr := decodeAdminReportCursor(paginationCursor(req.Pagination))

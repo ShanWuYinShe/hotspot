@@ -6,8 +6,8 @@ import (
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
 	reportsmodule "hotspot/backend-go/internal/modules/reports"
 	systemmodule "hotspot/backend-go/internal/modules/system"
-	"hotspot/backend-go/internal/platform/types"
 	usersmodule "hotspot/backend-go/internal/modules/users"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type UserInfo = usersmodule.UserInfo
@@ -121,7 +121,7 @@ const (
 
 	ReportStatusPending   ReportStatus = "pending"
 	ReportStatusReviewing ReportStatus = "reviewing"
-		ReportStatusEscalated ReportStatus = "escalated"
+	ReportStatusEscalated ReportStatus = "escalated"
 	ReportStatusResolved  ReportStatus = "resolved"
 	ReportStatusDismissed ReportStatus = "dismissed"
 
@@ -241,7 +241,7 @@ type PaginatedAdminReports struct {
 	NextCursor string            `json:"next_cursor,omitempty"`
 }
 
-type AdminReportSearchRequest struct {
+type AdminReportListRequest struct {
 	Status     ReportStatus      `json:"status,omitempty"`
 	TargetType ReportTargetType  `json:"target_type,omitempty"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
@@ -359,14 +359,12 @@ type RateLimitConfig struct {
 
 type ResponseDefaults struct {
 	SearchSuggestCount       int `json:"search_suggest_count"`
-	TrendingTagsCount        int `json:"trending_tags_count"`
 	HotMomentsCount          int `json:"hot_moments_count"`
 	ChatRecentMessagesCount  int `json:"chat_recent_messages_count"`
 	GroupAnnouncementsCount  int `json:"group_announcements_count"`
 	SystemAnnouncementsCount int `json:"system_announcements_count"`
 	CommentTopRepliesCount   int `json:"comment_top_replies_count"`
 	UserProfileMomentsCount  int `json:"user_profile_moments_count"`
-	SearchAllCountPerType    int `json:"search_all_count_per_type"`
 }
 
 type AppConfig struct {
@@ -382,13 +380,13 @@ type AppConfig struct {
 }
 
 type UpdateAppConfigRequest struct {
-	Upload           *PartialUploadConfig      `json:"upload,omitempty"`
-	Defaults         *UpdateDefaultsPayload    `json:"defaults,omitempty"`
-	RateLimits       *PartialRateLimitConfig   `json:"rate_limits,omitempty"`
-	ResponseDefaults *PartialResponseDefaults  `json:"response_defaults,omitempty"`
-	Features         *PartialFeatureSwitches   `json:"features,omitempty"`
-	Limits           *PartialAppLimits         `json:"limits,omitempty"`
-	Contact          *PartialContactInfo       `json:"contact,omitempty"`
+	Upload           *PartialUploadConfig     `json:"upload,omitempty"`
+	Defaults         *UpdateDefaultsPayload   `json:"defaults,omitempty"`
+	RateLimits       *PartialRateLimitConfig  `json:"rate_limits,omitempty"`
+	ResponseDefaults *PartialResponseDefaults `json:"response_defaults,omitempty"`
+	Features         *PartialFeatureSwitches  `json:"features,omitempty"`
+	Limits           *PartialAppLimits        `json:"limits,omitempty"`
+	Contact          *PartialContactInfo      `json:"contact,omitempty"`
 }
 
 type UpdateDefaultsPayload struct {
@@ -409,7 +407,7 @@ type PartialContactInfo struct {
 	SupportEmail      *string `json:"support_email,omitempty"`
 	PrivacyPolicyURL  *string `json:"privacy_policy_url,omitempty"`
 	TermsOfServiceURL *string `json:"terms_of_service_url,omitempty"`
-	OfficialWebsite   *string `json:"official_website,omitempty"`
+	OfficialWebsite   *string `json:"official_website_url,omitempty"`
 }
 
 type PartialUploadConfig struct {
@@ -420,7 +418,6 @@ type PartialUploadConfig struct {
 	AllowedImageTypes []string `json:"allowed_image_types,omitempty"`
 	AllowedVideoTypes []string `json:"allowed_video_types,omitempty"`
 }
-
 
 type PartialLocation struct {
 	Point        *GeoPoint `json:"point,omitempty"`
@@ -433,7 +430,6 @@ type PartialGroupSettings struct {
 	MaxMembers   *int                          `json:"max_members,omitempty"`
 	Location     *PartialLocation              `json:"location,omitempty"`
 }
-
 
 type PartialRateLimitConfig struct {
 	GlobalPerHour            *int `json:"global_per_hour,omitempty"`
@@ -454,32 +450,32 @@ type PartialRateLimitConfig struct {
 	AdminWritePerMinute      *int `json:"admin_write_per_minute,omitempty"`
 }
 
-
 type PartialResponseDefaults struct {
 	SearchSuggestCount       *int `json:"search_suggest_count,omitempty"`
-	TrendingTagsCount        *int `json:"trending_tags_count,omitempty"`
 	HotMomentsCount          *int `json:"hot_moments_count,omitempty"`
 	ChatRecentMessagesCount  *int `json:"chat_recent_messages_count,omitempty"`
 	GroupAnnouncementsCount  *int `json:"group_announcements_count,omitempty"`
 	SystemAnnouncementsCount *int `json:"system_announcements_count,omitempty"`
 	CommentTopRepliesCount   *int `json:"comment_top_replies_count,omitempty"`
 	UserProfileMomentsCount  *int `json:"user_profile_moments_count,omitempty"`
-	SearchAllCountPerType    *int `json:"search_all_count_per_type,omitempty"`
 }
-
-
 
 type PartialAppLimits struct {
-	MaxGroupMembers            *int `json:"max_group_members,omitempty"`
-	MaxMomentTags              *int `json:"max_moment_tags,omitempty"`
-	MaxMomentImages            *int `json:"max_moment_images,omitempty"`
-	MomentDescriptionMaxLength *int `json:"moment_description_max_length,omitempty"`
-	CommentMaxLength           *int `json:"comment_max_length,omitempty"`
-	SearchRadiusMax            *int `json:"search_radius_max,omitempty"`
+	MaxGroupMembers            *int     `json:"max_group_members,omitempty"`
+	MaxMomentTags              *int     `json:"max_moment_tags,omitempty"`
+	MaxMomentImages            *int     `json:"max_moment_images,omitempty"`
+	MomentDescriptionMaxLength *int     `json:"moment_description_max_length,omitempty"`
+	CommentMaxLength           *int     `json:"comment_max_length,omitempty"`
+	SearchRadiusMax            *int     `json:"search_radius_max,omitempty"`
+	MessageRecallWindowSeconds *int     `json:"message_recall_window_seconds,omitempty"`
+	StrangerMessageDailyQuota  *int     `json:"stranger_message_daily_quota,omitempty"`
+	ReactionEmojis             []string `json:"reaction_emojis,omitempty"`
+	GroupInviteTTLHours        *int     `json:"group_invite_ttl_hours,omitempty"`
+	GroupApplicationTTLHours   *int     `json:"group_application_ttl_hours,omitempty"`
 }
 
-
 type AdminTagItem struct {
+	TagID      string `json:"tag_id"`
 	Name       string `json:"name"`
 	UsageCount int    `json:"usage_count"`
 	Trend      string `json:"trend,omitempty"`
@@ -497,21 +493,21 @@ type AdminTagSearchRequest struct {
 }
 
 type AdminDeleteTagRequest struct {
-	Name string `json:"name"`
+	Name       string `json:"name"`
 	HardDelete bool   `json:"hard_delete,omitempty"`
 }
 
 type AdminAnnouncementItem struct {
-	AnnouncementID string               `json:"announcement_id"`
-	Title          string               `json:"title"`
-	Content        string               `json:"content"`
+	AnnouncementID string        `json:"announcement_id"`
+	Title          string        `json:"title"`
+	Content        string        `json:"content"`
 	Severity       AnnounceLevel `json:"severity"`
-	ActionURL      string               `json:"action_url,omitempty"`
-	CreatedAt      string               `json:"created_at"`
-	CreatedBy      UserInfo             `json:"created_by"`
-	SendPush       bool                 `json:"send_push"`
-	PushSentAt     string               `json:"push_sent_at,omitempty"`
-	ViewCount      int                  `json:"view_count"`
+	ActionURL      string        `json:"action_url,omitempty"`
+	CreatedAt      string        `json:"created_at"`
+	CreatedBy      UserInfo      `json:"created_by"`
+	SendPush       bool          `json:"send_push"`
+	PushSentAt     string        `json:"push_sent_at,omitempty"`
+	ViewCount      int           `json:"view_count"`
 }
 
 type PaginatedAdminAnnouncements struct {
@@ -520,16 +516,16 @@ type PaginatedAdminAnnouncements struct {
 }
 
 type AdminAnnouncementSearchRequest struct {
-	Severity   AnnounceLevel `json:"severity,omitempty"`
-	Pagination *PaginationParams    `json:"pagination,omitempty"`
+	Severity   AnnounceLevel     `json:"severity,omitempty"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
 type CreateAnnouncementRequest struct {
-	Title     string               `json:"title"`
-	Content   string               `json:"content"`
+	Title     string        `json:"title"`
+	Content   string        `json:"content"`
 	Severity  AnnounceLevel `json:"severity"`
-	ActionURL string               `json:"action_url,omitempty"`
-	SendPush  bool                 `json:"send_push,omitempty"`
+	ActionURL string        `json:"action_url,omitempty"`
+	SendPush  bool          `json:"send_push,omitempty"`
 }
 
 type AnnouncementCreated struct {
@@ -537,11 +533,11 @@ type AnnouncementCreated struct {
 }
 
 type UpdateAnnouncementRequest struct {
-	AnnouncementID string                `json:"announcement_id"`
-	Title          *string               `json:"title,omitempty"`
-	Content        *string               `json:"content,omitempty"`
+	AnnouncementID string         `json:"announcement_id"`
+	Title          *string        `json:"title,omitempty"`
+	Content        *string        `json:"content,omitempty"`
 	Severity       *AnnounceLevel `json:"severity,omitempty"`
-	ActionURL      *string               `json:"action_url,omitempty"`
+	ActionURL      *string        `json:"action_url,omitempty"`
 }
 
 type DeleteAnnouncementRequest struct {

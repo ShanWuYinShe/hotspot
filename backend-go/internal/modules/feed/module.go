@@ -12,9 +12,9 @@ import (
 )
 
 type Module struct {
-		handler *Handler
-		Service *Service
-	}
+	handler *Handler
+	Service *Service
+}
 
 func NewModule(factory *persistence.Factory, source appconfig.Source, imageResolver ImageResolver) *Module {
 	repo := NewPersistenceRepository(factory)
@@ -29,17 +29,17 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
-			group.Post("/list_moments", m.handler.ListMoments)
-			group.Post("/list_groups", m.handler.ListGroups)
-			group.Post("/list_users", m.handler.ListUsers)
-			group.Post("/dismiss", m.handler.Dismiss)
+			group.Post("/following", m.handler.Following)
+			group.Post("/nearby", m.handler.Nearby)
 		})
 		feedRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.OptionalAuth)
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
-			group.Post("/list_trending", m.handler.ListTrending)
+			group.Post("/nearby_groups", m.handler.NearbyGroups)
+			group.Post("/nearby_users", m.handler.NearbyUsers)
+			group.Post("/trending", m.handler.Trending)
 		})
 	})
 }
