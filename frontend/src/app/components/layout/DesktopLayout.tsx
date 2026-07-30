@@ -386,7 +386,7 @@ export function DesktopLayout() {
       {/* ═══════════════════════════════════════════════════════
           BODY — sidebar + main content
       ═══════════════════════════════════════════════════════ */}
-      <div className="desktop-workspace relative z-0 flex flex-1 overflow-hidden" style={{ gap: isSidebarCollapsed ? 8 : undefined }}>
+      <div className="desktop-workspace relative z-0 flex flex-1 overflow-hidden" style={{ gap: 0 }}>
 
         {/* ── Sidebar (192px, fixed width) ─────────────────── */}
         <aside

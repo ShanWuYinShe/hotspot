@@ -134,9 +134,9 @@ function LocationDesktop() {
                 initial={{ opacity: 0, y: -6, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                className="absolute top-full left-4 right-4 z-30 mt-1 rounded-[16px] bg-[var(--neu-bg)]"
+                className="absolute top-full left-4 right-4 z-30 mt-1 rounded-[16px] bg-[var(--neu-bg)] overflow-hidden"
                 style={{ boxShadow: "0 0 0 1px var(--neu-border), 0 10px 36px var(--neu-shadow-dark)" }}>
-                <div style={{ overflow: "hidden", borderRadius: 15 }}>
+                <div style={{ overflow: "hidden", borderRadius: 16 }}>
                 {searchResults.map((r, i) => (
                   <motion.button key={i} whileTap={{ scale: 0.98 }} whileHover={selectedLoc?.displayName === r.displayName ? undefined : { x: 2 }}
                     onHoverStart={() => setHoveredListId(`search-${i}`)}
@@ -407,9 +407,9 @@ function LocationDesktop() {
                 initial={{ opacity: 0, y: -8, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.9 }}
-                className="mt-2 rounded-[16px] bg-[var(--neu-bg)]"
+                className="mt-2 rounded-[16px] bg-[var(--neu-bg)] overflow-hidden"
                 style={{ boxShadow: "0 0 0 1px var(--neu-border), 0 8px 28px var(--neu-shadow-dark)", width: 200 }}>
-                <div style={{ overflow: "hidden", borderRadius: 15 }}>
+                <div style={{ overflow: "hidden", borderRadius: 16 }}>
                 {([
                   ["user",  "用户",  markerUserUrl,   markerUserClusterUrl,   PIN_COLORS.user, userCount],
                   ["group", "群组",  markerGroupUrl,  markerGroupClusterUrl,  PIN_COLORS.group, groupCount],

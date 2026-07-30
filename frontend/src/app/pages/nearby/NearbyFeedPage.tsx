@@ -67,18 +67,16 @@ function HeroStats({ onExplore, stats }: { onExplore: () => void; stats: { nearb
 
         {/* Stats row */}
         <div className="grid grid-cols-3 mt-4 bg-[var(--neu-border)]" style={{ gap: 1, borderRadius: 14, overflow: "hidden" }}>
-          <div style={{ overflow: "hidden", borderRadius: 14 }}>
-            {[
-              { label: "人附近", v: stats.nearby, color: "var(--neu-accent-primary)" },
-              { label: "活动中", v: stats.active,  color: "var(--semantic-warning)" },
-              { label: "在线",   v: stats.online, color: "var(--semantic-online)" },
-            ].map(s => (
-              <div key={s.label} className="flex flex-col items-center justify-center py-2.5 bg-[var(--neu-bg)]">
-                <span style={{ fontSize: 19, color: s.color, fontWeight: 600, lineHeight: 1 }}>{s.v}</span>
-                <span style={{ fontSize: 10, color: "var(--neu-text-muted)", marginTop: 4 }}>{s.label}</span>
-              </div>
-            ))}
-          </div>
+          {[
+            { label: "人附近", v: stats.nearby, color: "var(--neu-accent-primary)" },
+            { label: "活动中", v: stats.active,  color: "var(--semantic-warning)" },
+            { label: "在线",   v: stats.online, color: "var(--semantic-online)" },
+          ].map(s => (
+            <div key={s.label} className="flex flex-col items-center justify-center py-2.5 bg-[var(--neu-bg)]">
+              <span style={{ fontSize: 19, color: s.color, fontWeight: 600, lineHeight: 1 }}>{s.v}</span>
+              <span style={{ fontSize: 10, color: "var(--neu-text-muted)", marginTop: 4 }}>{s.label}</span>
+            </div>
+          ))}
         </div>
       </motion.div>
     </div>
@@ -151,6 +149,7 @@ function ActivityRow({ item, onClick }: { item: Activity; onClick: () => void })
 }
 
 function ActivityList({ items, onClick }: { items: Activity[]; onClick: (id: number) => void }) {
+  if (items.length === 0) return null;
   return (
     <div className="flex flex-col bg-[var(--neu-border)]" style={{ gap: 1, borderRadius: 16, boxShadow: "0 0 0 1px var(--neu-border)", overflow: "hidden" }}>
       <div style={{ overflow: "hidden", borderRadius: 16 }}>
@@ -242,6 +241,7 @@ function NearbyUserRow({ user, followed, onToggle }: { user: NearbyUser; followe
 function NearbyUsersFlatList({
   users, followingIds, onToggle,
 }: { users: NearbyUser[]; followingIds: Set<number>; onToggle: (id: number) => void }) {
+  if (users.length === 0) return null;
   return (
     <div className="flex flex-col bg-[var(--neu-border)]" style={{ gap: 1, borderRadius: 16, boxShadow: "0 0 0 1px var(--neu-border)", overflow: "hidden" }}>
       <div style={{ overflow: "hidden", borderRadius: 16 }}>

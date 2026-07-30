@@ -193,9 +193,9 @@ function ProfileDesktop() {
           </motion.button>
 
           {/* Stats */}
-          <div className="w-full rounded-[18px] mb-4 bg-[var(--neu-bg)]"
+          <div className="w-full rounded-[18px] mb-4 bg-[var(--neu-bg)] overflow-hidden"
             style={{ boxShadow: "0 0 0 1px var(--neu-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)" }}>
-            <div style={{ overflow: "hidden", borderRadius: 17 }}>
+            <div style={{ overflow: "hidden", borderRadius: 18 }}>
             {[
               { label: "瞬间", value: stats.moments_count ?? 0, section: "moments" as ProfileSection },
               { label: "关注者", value: stats.followers_count ?? 0, section: "followers" as const },
@@ -220,9 +220,9 @@ function ProfileDesktop() {
         </div>
 
           {/* Section quick links */}
-          <div className="w-full rounded-[18px] bg-[var(--neu-bg)]"
+          <div className="w-full rounded-[18px] bg-[var(--neu-bg)] overflow-hidden"
             style={{ boxShadow: "0 0 0 1px var(--neu-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)" }}>
-            <div style={{ overflow: "hidden", borderRadius: 17 }}>
+            <div style={{ overflow: "hidden", borderRadius: 18 }}>
             {[
               { label: "我的瞬间",  section: "moments" as ProfileSection, icon: Grid3X3, count: myGalleryPosts.length },
               { label: "我的群组",  section: "groups" as ProfileSection,    icon: Users,   count: myGroups.length },
@@ -261,9 +261,9 @@ function ProfileDesktop() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, maxWidth: 3 * 240 + 2 * 10 }}>
             {myGalleryPosts.slice(0, 9).map(post => (
               <motion.div key={post.id} whileTap={{ scale: 0.97 }}
-                className="relative rounded-[16px] cursor-pointer"
+                className="relative rounded-[16px] cursor-pointer overflow-hidden"
                 style={{ aspectRatio: "1/1", boxShadow: "0 0 0 1px var(--neu-border), 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)" }}>
-                <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 15 }}>
+                <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 16 }}>
                   <img src={post.img} alt="" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 flex items-end p-2"
                     style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 55%)" }}>
@@ -439,9 +439,8 @@ function ProfileMobile() {
               </div>
 
               {/* Stats — flat, integrated INTO the hero card (not a separate elevated bar) */}
-              <div className="grid grid-cols-3 w-full rounded-[14px] bg-[var(--neu-border)]"
+              <div className="grid grid-cols-3 w-full rounded-[14px] bg-[var(--neu-border)] overflow-hidden"
                 style={{ gap: 1, boxShadow: "0 0 0 1px var(--neu-border)" }}>
-                <div style={{ overflow: "hidden", borderRadius: 13 }}>
                 {[
                   { label: "帖子", value: "48" },
                   { label: "关注者", value: "312" },
@@ -454,7 +453,6 @@ function ProfileMobile() {
                     onClick={stat.label === "关注者" ? () => navigate(`${ROUTES.meSection("relationships")}?tab=followers`) : undefined}
                   />
                 ))}
-                </div>
               </div>
             </div>
           </div>

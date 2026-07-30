@@ -18,14 +18,12 @@ const tones = {
 export function MetricStrip({ items, className = "" }: { items: MetricItem[]; className?: string }) {
   return (
     <dl className={`grid overflow-hidden rounded-[14px] neu-ring-border ${className}`} style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 1, background: "var(--neu-border)" }}>
-      <div style={{ overflow: "hidden", borderRadius: 14 }}>
-        {items.map((item) => (
-          <div key={item.label} className="flex min-w-0 flex-col items-center bg-[var(--neu-bg)] px-2 py-2.5 text-center">
-            <dd className={`truncate text-[19px] font-semibold leading-none ${tones[item.tone ?? "default"]}`}>{item.value}</dd>
-            <dt className="mt-1 truncate text-[11px] text-[var(--neu-text-muted)]">{item.label}</dt>
-          </div>
-        ))}
-      </div>
+      {items.map((item) => (
+        <div key={item.label} className="flex min-w-0 flex-col items-center bg-[var(--neu-bg)] px-2 py-2.5 text-center">
+          <dd className={`truncate text-[19px] font-semibold leading-none ${tones[item.tone ?? "default"]}`}>{item.value}</dd>
+          <dt className="mt-1 truncate text-[11px] text-[var(--neu-text-muted)]">{item.label}</dt>
+        </div>
+      ))}
     </dl>
   );
 }

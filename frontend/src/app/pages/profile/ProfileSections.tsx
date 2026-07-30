@@ -64,9 +64,9 @@ export function GalleryGrid({ posts, activeTab }: { posts: GalleryPost[]; active
             onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`${ROUTES.moment(post.id)}?from=me`); }}
             role="button"
             tabIndex={0}
-            className="relative rounded-[18px] cursor-pointer group neu-focus-ring"
+            className="relative rounded-[18px] cursor-pointer group neu-focus-ring overflow-hidden"
             style={{ aspectRatio: "1/1", boxShadow: "0 0 0 1px var(--neu-border), 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)" }}>
-            <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 17 }}>
+            <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 18 }}>
               <img src={post.img} alt="" className="w-full h-full object-cover" />
               <div className="absolute inset-0 flex items-end p-2"
                 style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)" }}>
@@ -163,10 +163,10 @@ export function SectionMoments() {
                 type="button"
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate(`${ROUTES.moment(post.id)}?from=me`)}
-                className="group relative h-full w-full rounded-[16px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)] text-left neu-focus-ring focus-visible:ring-offset-[var(--neu-bg)]"
+                className="group relative h-full w-full rounded-[16px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)] text-left neu-focus-ring focus-visible:ring-offset-[var(--neu-bg)] overflow-hidden"
                 aria-label="查看瞬间详情"
               >
-                <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 15 }}>
+                <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 16 }}>
                   <img src={post.img} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.035]" />
                   <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(to_top,rgba(0,0,0,.62),transparent)] p-2.5">
                     <div className="flex items-center gap-2 text-[10px] text-white">
@@ -190,11 +190,11 @@ export function SectionMoments() {
               <button
                 type="button"
                 onClick={() => navigate(`${ROUTES.moment(featuredPost.id)}?from=me`)}
-                className="group relative block w-full rounded-[22px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)] text-left neu-focus-ring focus-visible:ring-offset-[var(--neu-bg)]"
+                className="group relative block w-full rounded-[22px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)] text-left neu-focus-ring focus-visible:ring-offset-[var(--neu-bg)] overflow-hidden"
                 style={{ aspectRatio: "2.1 / 1" }}
                 aria-label="查看置顶瞬间详情"
               >
-                <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 21 }}>
+                <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 22 }}>
                   <img src={featuredPost.img} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.025]" />
                   <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,.62),rgba(0,0,0,.08)_65%,transparent)]" />
                   <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-4">
@@ -221,10 +221,10 @@ export function SectionMoments() {
                     type="button"
                     whileTap={{ scale: 0.98 }}
                     onClick={() => navigate(`${ROUTES.moment(post.id)}?from=me`)}
-                    className="group relative aspect-square rounded-[16px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)] text-left neu-focus-ring focus-visible:ring-offset-[var(--neu-bg)]"
+                    className="group relative aspect-square rounded-[16px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)] text-left neu-focus-ring focus-visible:ring-offset-[var(--neu-bg)] overflow-hidden"
                     aria-label="查看瞬间详情"
                   >
-                    <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 15 }}>
+                    <div className="relative h-full w-full" style={{ overflow: "hidden", borderRadius: 16 }}>
                       <img src={post.img} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.035]" />
                       <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(to_top,rgba(0,0,0,.62),transparent)] p-2.5">
                         <div className="flex items-center gap-2 text-[10px] text-white">
@@ -527,7 +527,8 @@ export function FollowingRow({ f, isUnfollowed, onToggle, wide = false }: { f: a
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
   const hover = useHoverConfig();
-  return (
+  if (!wide) {
+    return (
     <motion.div
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
@@ -535,8 +536,8 @@ export function FollowingRow({ f, isUnfollowed, onToggle, wide = false }: { f: a
       onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`${ROUTES.user(f.id)}?from=relationships`); }}
       role="button"
       tabIndex={0}
-      className={`neu-row-hover flex cursor-pointer items-center gap-3 p-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--neu-accent-primary)] ${wide ? "min-h-[84px] rounded-[18px] border shadow-[5px_5px_12px_var(--neu-shadow-dark),-5px_-5px_12px_var(--neu-shadow-light)]" : ""}`}
-      style={{ background: hovered ? hover.bgHover : "var(--neu-bg)", borderColor: wide ? "color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))" : undefined, opacity: isUnfollowed ? 0.55 : 1, transition: "background 0.18s ease" }}>
+      className="neu-row-hover flex cursor-pointer items-center gap-3 p-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--neu-accent-primary)]"
+      style={{ background: hovered ? hover.bgHover : "var(--neu-bg)", opacity: isUnfollowed ? 0.55 : 1, transition: "background 0.18s ease" }}>
       <Avatar ring src={f.avatar} name={f.name} size={42} />
       <div className="flex-1 min-w-0">
         <p className="text-[var(--neu-text)]" style={{ fontSize: 13 }}>{f.name}</p>
@@ -545,6 +546,40 @@ export function FollowingRow({ f, isUnfollowed, onToggle, wide = false }: { f: a
       </div>
       <img src={f.latestImg} alt="" className="rounded-[8px] object-cover flex-shrink-0"
         style={{ width: 36, height: 36, opacity: 0.85 }} />
+      <motion.button whileTap={{ scale: 0.93 }} onClick={(event) => { event.stopPropagation(); onToggle(); }}
+        className={`flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 ${isUnfollowed ? "bg-[var(--neu-accent-primary)] text-white" : "bg-transparent text-[var(--neu-text-muted)]"}`}
+        style={isUnfollowed
+          ? { fontSize: 11, border: "1px solid transparent" }
+          : { fontSize: 11, border: "1px solid var(--neu-border-pressed)" }
+        }>
+        {isUnfollowed ? (
+          <><UserPlus style={{ width: 10, height: 10 }} strokeWidth={2} />关注</>
+        ) : (
+          <><Check style={{ width: 10, height: 10 }} strokeWidth={2.5} />已关注</>
+        )}
+      </motion.button>
+    </motion.div>
+    );
+  }
+  return (
+    <motion.div
+      key={f.id}
+      whileHover={hover.card as any}
+      whileTap={hover.tap as any}
+      onClick={() => navigate(`${ROUTES.user(f.id)}?from=relationships`)}
+      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`${ROUTES.user(f.id)}?from=relationships`); }}
+      role="button"
+      tabIndex={0}
+      className="neu-row-hover flex items-center gap-3 rounded-[18px] p-3.5 cursor-pointer neu-focus-ring bg-[var(--neu-bg)]"
+      style={{ boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))", opacity: isUnfollowed ? 0.55 : 1 }}>
+      <Avatar ring src={f.avatar} name={f.name} size={48} />
+      <div className="flex-1 min-w-0">
+        <p className="text-[var(--neu-text)]" style={{ fontSize: 14 }}>{f.name}</p>
+        <p className="truncate text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 1 }}>{f.desc}</p>
+        <p className="text-[var(--neu-accent-primary)]" style={{ fontSize: 10, marginTop: 1 }}>{f.posts} 帖子</p>
+      </div>
+      <img src={f.latestImg} alt="" className="rounded-[8px] object-cover flex-shrink-0"
+        style={{ width: 44, height: 44, opacity: 0.85 }} />
       <motion.button whileTap={{ scale: 0.93 }} onClick={(event) => { event.stopPropagation(); onToggle(); }}
         className={`flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 ${isUnfollowed ? "bg-[var(--neu-accent-primary)] text-white" : "bg-transparent text-[var(--neu-text-muted)]"}`}
         style={isUnfollowed
@@ -620,16 +655,31 @@ export function SectionFollowing({ embedded = false }: { embedded?: boolean }) {
       </div>
 
       {/* Following list */}
-      <div className={embedded ? "px-6 pb-8 lg:px-8" : "px-5 pb-6"}>
-        <div className={embedded ? "grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" : "rounded-[16px] flex flex-col"}
-          style={embedded ? undefined : { gap: 1, background: "var(--neu-border)", boxShadow: "0 0 0 1px color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))" }}>
-          <div style={embedded ? undefined : { overflow: "hidden", borderRadius: 15 }}>
-          {sorted.map(f => (
-            <FollowingRow key={f.id} f={f} wide={embedded} isUnfollowed={unfollowedIds.has(f.id)} onToggle={() => toggleUnfollow(f.id)} />
-          ))}
+      {embedded ? (
+        <div className="grid w-full grid-cols-1 gap-4 px-6 pb-8 md:grid-cols-2 lg:px-8 xl:grid-cols-3">
+          {sorted.length === 0 ? (
+            <div className="col-span-full flex flex-col items-center py-16 text-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]"><Heart size={18} /></div>
+              <p className="mt-3 text-[13px] text-[var(--neu-text)]">还没有关注</p>
+              <p className="mt-1 text-[11px] text-[var(--neu-text-muted)]">去发现附近的人，找到有趣的创作者。</p>
+            </div>
+          ) : (
+            sorted.map(f => (
+              <FollowingRow key={f.id} f={f} wide isUnfollowed={unfollowedIds.has(f.id)} onToggle={() => toggleUnfollow(f.id)} />
+            ))
+          )}
+        </div>
+      ) : (
+        <div className="px-5 pb-6">
+          <div className="rounded-[16px] flex flex-col overflow-hidden" style={{ gap: 1, background: "var(--neu-border)", boxShadow: "0 0 0 1px color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))" }}>
+            <div style={{ overflow: "hidden", borderRadius: 15 }}>
+              {sorted.map(f => (
+                <FollowingRow key={f.id} f={f} wide={false} isUnfollowed={unfollowedIds.has(f.id)} onToggle={() => toggleUnfollow(f.id)} />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -641,7 +691,8 @@ export function FanRow({ f, isMutual, onToggle, wide = false }: { f: any; isMutu
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
   const hover = useHoverConfig();
-  return (
+  if (!wide) {
+    return (
     <motion.div
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
@@ -649,12 +700,53 @@ export function FanRow({ f, isMutual, onToggle, wide = false }: { f: any; isMutu
       onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`${ROUTES.user(f.id)}?from=relationships`); }}
       role="button"
       tabIndex={0}
-      className={`neu-row-hover flex cursor-pointer items-center gap-3 p-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--neu-accent-primary)] ${wide ? "min-h-[76px] rounded-[18px] border shadow-[5px_5px_12px_var(--neu-shadow-dark),-5px_-5px_12px_var(--neu-shadow-light)]" : ""}`}
-      style={{ background: hovered ? hover.bgHover : "var(--neu-bg)", borderColor: wide ? "color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))" : undefined, transition: "background 0.18s ease" }}>
+      className="neu-row-hover flex cursor-pointer items-center gap-3 p-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--neu-accent-primary)]"
+      style={{ background: hovered ? hover.bgHover : "var(--neu-bg)", transition: "background 0.18s ease" }}>
       <Avatar ring src={f.avatar} name={f.name} size={42} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-[var(--neu-text)]" style={{ fontSize: 13 }}>{f.name}</span>
+          {isMutual && (
+            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[var(--semantic-online)]"
+              style={{ fontSize: 10, background: "color-mix(in srgb, var(--semantic-online) 12%, transparent)" }}>
+              <Check style={{ width: 9, height: 9 }} strokeWidth={2.5} />互关
+            </span>
+          )}
+        </div>
+        <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 2 }}>
+          {f.handle} · {f.joinedDays <= 1 ? "今天" : f.joinedDays <= 7 ? `${f.joinedDays}天前` : `${Math.floor(f.joinedDays / 7)}周前`}关注了你
+        </p>
+      </div>
+      <motion.button whileTap={{ scale: 0.93 }} onClick={(event) => { event.stopPropagation(); onToggle(); }}
+        className={`flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 ${isMutual ? "bg-transparent text-[var(--neu-text-muted)]" : "bg-[var(--neu-accent-primary)] text-white"}`}
+        style={isMutual
+          ? { fontSize: 11, border: "1px solid var(--neu-border-pressed)" }
+          : { fontSize: 11, border: "1px solid transparent" }
+        }>
+        {isMutual ? (
+          <><Check style={{ width: 10, height: 10 }} strokeWidth={2.5} />互关</>
+        ) : (
+          <><UserPlus style={{ width: 10, height: 10 }} strokeWidth={2} />回关</>
+        )}
+      </motion.button>
+    </motion.div>
+    );
+  }
+  return (
+    <motion.div
+      key={f.id}
+      whileHover={hover.card as any}
+      whileTap={hover.tap as any}
+      onClick={() => navigate(`${ROUTES.user(f.id)}?from=relationships`)}
+      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`${ROUTES.user(f.id)}?from=relationships`); }}
+      role="button"
+      tabIndex={0}
+      className="neu-row-hover flex items-center gap-3 rounded-[18px] p-3.5 cursor-pointer neu-focus-ring bg-[var(--neu-bg)]"
+      style={{ boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))" }}>
+      <Avatar ring src={f.avatar} name={f.name} size={48} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-[var(--neu-text)]" style={{ fontSize: 14 }}>{f.name}</span>
           {isMutual && (
             <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[var(--semantic-online)]"
               style={{ fontSize: 10, background: "color-mix(in srgb, var(--semantic-online) 12%, transparent)" }}>
@@ -761,19 +853,37 @@ export function SectionFans({ embedded = false }: { embedded?: boolean }) {
       </div>
 
       {/* Fan list */}
-      <div className={embedded ? "px-6 pb-8 lg:px-8" : "px-5 pb-6"}>
-        <div className={embedded ? "grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" : "rounded-[16px] flex flex-col"}
-          style={embedded ? undefined : { gap: 1, background: "var(--neu-border)", boxShadow: "0 0 0 1px color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))" }}>
-          <div style={embedded ? undefined : { overflow: "hidden", borderRadius: 15 }}>
-          {filtered.map(f => {
-            const isMutual = followedBack.has(f.id);
-            return (
-              <FanRow key={f.id} f={f} wide={embedded} isMutual={isMutual} onToggle={() => toggleFollow(f.id)} />
-            );
-          })}
+      {embedded ? (
+        <div className="grid w-full grid-cols-1 gap-4 px-6 pb-8 md:grid-cols-2 lg:px-8 xl:grid-cols-3">
+          {followers.length === 0 ? (
+            <div className="col-span-full flex flex-col items-center py-16 text-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]"><UserPlus size={18} /></div>
+              <p className="mt-3 text-[13px] text-[var(--neu-text)]">还没有粉丝</p>
+              <p className="mt-1 text-[11px] text-[var(--neu-text-muted)]">分享你的瞬间，让更多人发现你。</p>
+            </div>
+          ) : (
+            filtered.map(f => {
+              const isMutual = followedBack.has(f.id);
+              return (
+                <FanRow key={f.id} f={f} wide isMutual={isMutual} onToggle={() => toggleFollow(f.id)} />
+              );
+            })
+          )}
+        </div>
+      ) : (
+        <div className="px-5 pb-6">
+          <div className="rounded-[16px] flex flex-col overflow-hidden" style={{ gap: 1, background: "var(--neu-border)", boxShadow: "0 0 0 1px color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))" }}>
+            <div style={{ overflow: "hidden", borderRadius: 15 }}>
+              {filtered.map(f => {
+                const isMutual = followedBack.has(f.id);
+                return (
+                  <FanRow key={f.id} f={f} wide={false} isMutual={isMutual} onToggle={() => toggleFollow(f.id)} />
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
