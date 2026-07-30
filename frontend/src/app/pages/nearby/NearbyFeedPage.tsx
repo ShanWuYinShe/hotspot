@@ -18,8 +18,7 @@ function SectionHead({ title, action, onAction }: { title: string; action?: stri
       <span className="neu-eyebrow">{title}</span>
       {action && onAction && (
         <motion.button whileTap={{ scale: 0.94 }} onClick={onAction}
-          className="flex items-center gap-0.5 outline-none neu-surface-ghost rounded-full px-2 py-0.5"
-          style={{ color: "var(--neu-accent-primary)" }}>
+          className="flex items-center gap-0.5 outline-none neu-surface-ghost rounded-full px-2 py-0.5 text-[var(--neu-accent-primary)]">
           <span style={{ fontSize: 11 }}>{action}</span>
           <ChevronRight style={{ width: 12, height: 12 }} strokeWidth={1.5} />
         </motion.button>
@@ -48,10 +47,9 @@ function HeroStats({ onExplore, stats }: { onExplore: () => void; stats: { nearb
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div
-              className="flex items-center justify-center rounded-full"
+              className="flex items-center justify-center rounded-full bg-[var(--neu-accent-primary)]"
               style={{
                 width: 38, height: 38,
-                background: "var(--neu-accent-primary)",
                 boxShadow: "0 4px 14px var(--neu-glow)",
               }}
             >
@@ -68,15 +66,14 @@ function HeroStats({ onExplore, stats }: { onExplore: () => void; stats: { nearb
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-3 mt-4" style={{ gap: 1, background: "var(--neu-border)", borderRadius: 14 }}>
-          <div style={{ overflow: "hidden", borderRadius: 13 }}>
+        <div className="grid grid-cols-3 mt-4 bg-[var(--neu-border)]" style={{ gap: 1, borderRadius: 14, overflow: "hidden" }}>
+          <div style={{ overflow: "hidden", borderRadius: 14 }}>
             {[
               { label: "人附近", v: stats.nearby, color: "var(--neu-accent-primary)" },
               { label: "活动中", v: stats.active,  color: "var(--semantic-warning)" },
               { label: "在线",   v: stats.online, color: "var(--semantic-online)" },
             ].map(s => (
-              <div key={s.label} className="flex flex-col items-center justify-center py-2.5"
-                style={{ background: "var(--neu-bg)" }}>
+              <div key={s.label} className="flex flex-col items-center justify-center py-2.5 bg-[var(--neu-bg)]">
                 <span style={{ fontSize: 19, color: s.color, fontWeight: 600, lineHeight: 1 }}>{s.v}</span>
                 <span style={{ fontSize: 10, color: "var(--neu-text-muted)", marginTop: 4 }}>{s.label}</span>
               </div>
@@ -98,7 +95,7 @@ function PeopleRadarStrip({ users, onSeeAll, onSelectUser }: { users: NearbyUser
           <motion.button key={u.id} type="button" whileTap={{ scale: 0.94 }}
             onClick={() => onSelectUser(u.id)}
             aria-label={`查看${u.name}的个人主页`}
-            className="flex flex-col items-center gap-2 flex-shrink-0 rounded-[14px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]">
+            className="flex flex-col items-center gap-2 flex-shrink-0 rounded-[14px] neu-focus-ring">
             <div className="relative">
               <div className="rounded-full overflow-hidden"
                 style={{ width: 56, height: 56, border: "1.5px solid var(--neu-border)" }}>
@@ -114,7 +111,7 @@ function PeopleRadarStrip({ users, onSeeAll, onSelectUser }: { users: NearbyUser
           </motion.button>
         ))}
         <motion.button type="button" whileTap={{ scale: 0.94 }} onClick={onSeeAll}
-          className="flex flex-col items-center gap-2 flex-shrink-0 rounded-[14px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]">
+          className="flex flex-col items-center gap-2 flex-shrink-0 rounded-[14px] neu-focus-ring">
           <div className="flex items-center justify-center rounded-full"
             style={{ width: 56, height: 56, border: "1.5px dashed var(--neu-border-pressed)" }}>
             <ChevronRight style={{ width: 16, height: 16, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
@@ -155,8 +152,8 @@ function ActivityRow({ item, onClick }: { item: Activity; onClick: () => void })
 
 function ActivityList({ items, onClick }: { items: Activity[]; onClick: (id: number) => void }) {
   return (
-    <div className="flex flex-col" style={{ gap: 1, background: "var(--neu-border)", borderRadius: 16, boxShadow: "0 0 0 1px var(--neu-border)" }}>
-      <div style={{ overflow: "hidden", borderRadius: 15 }}>
+    <div className="flex flex-col bg-[var(--neu-border)]" style={{ gap: 1, borderRadius: 16, boxShadow: "0 0 0 1px var(--neu-border)", overflow: "hidden" }}>
+      <div style={{ overflow: "hidden", borderRadius: 16 }}>
         {items.map(a => <ActivityRow key={a.id} item={a} onClick={() => onClick(a.id)} />)}
       </div>
     </div>
@@ -246,8 +243,8 @@ function NearbyUsersFlatList({
   users, followingIds, onToggle,
 }: { users: NearbyUser[]; followingIds: Set<number>; onToggle: (id: number) => void }) {
   return (
-    <div className="flex flex-col" style={{ gap: 1, background: "var(--neu-border)", borderRadius: 16, boxShadow: "0 0 0 1px var(--neu-border)" }}>
-      <div style={{ overflow: "hidden", borderRadius: 15 }}>
+    <div className="flex flex-col bg-[var(--neu-border)]" style={{ gap: 1, borderRadius: 16, boxShadow: "0 0 0 1px var(--neu-border)", overflow: "hidden" }}>
+      <div style={{ overflow: "hidden", borderRadius: 16 }}>
         {users.map(u => (
           <NearbyUserRow key={u.id} user={u} followed={followingIds.has(u.id)} onToggle={() => onToggle(u.id)} />
         ))}
@@ -275,8 +272,8 @@ function HomeMobile({ nearbyUsers, activities, nearbyGroups, heroStats, loading 
 
   return (
     <>
-      <div className="sticky top-0 z-10 py-3"
-        style={{ backgroundColor: "var(--neu-bg)", borderBottom: "1px solid var(--neu-border)" }}>
+      <div className="sticky top-0 z-10 py-3 bg-[var(--neu-bg)]"
+        style={{ borderBottom: "1px solid var(--neu-border)" }}>
         <div className={isTablet ? "flex gap-6 px-0" : "flex px-5"} style={shellStyle}>
           <div className={isTablet ? `${mainColClass} px-5 flex items-center justify-between` : "w-full flex items-center justify-between"}
             style={mainColStyle}>
@@ -330,8 +327,8 @@ function HomeDesktop({ nearbyUsers, activities, nearbyGroups, heroStats, loading
 
   return (
     <div className="content-mode-wide flex flex-col h-full">
-      <div className="flex-shrink-0 flex items-center justify-between px-7 py-4"
-        style={{ backgroundColor: "var(--neu-bg)", borderBottom: "1px solid var(--neu-border)" }}>
+      <div className="flex-shrink-0 flex items-center justify-between px-7 py-4 bg-[var(--neu-bg)]"
+        style={{ borderBottom: "1px solid var(--neu-border)" }}>
         <div>
           <h1 style={{ fontSize: 24, color: "var(--neu-text)" }}>首页</h1>
           <p style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 2 }}>发现周边有趣的人和事</p>
@@ -370,8 +367,7 @@ function HomeDesktop({ nearbyUsers, activities, nearbyGroups, heroStats, loading
               </p>
             </div>
             <motion.button whileTap={{ scale: 0.93 }} onClick={() => navigate(ROUTES.nearbyPeople)}
-              className="flex items-center gap-0.5 outline-none neu-surface-ghost rounded-full px-2 py-0.5"
-              style={{ color: "var(--neu-accent-primary)" }}>
+              className="flex items-center gap-0.5 outline-none neu-surface-ghost rounded-full px-2 py-0.5 text-[var(--neu-accent-primary)]">
               <span style={{ fontSize: 12 }}>查看全部</span>
               <ChevronRight style={{ width: 13, height: 13 }} strokeWidth={1.5} />
             </motion.button>

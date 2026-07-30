@@ -10,7 +10,7 @@ import { ROUTES } from "../../lib/routes";
 export function AuthPage() {
   const navigate = useNavigate();
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-5 py-10" style={{ background: "var(--neu-bg)" }}>
+    <div className="flex min-h-screen flex-col items-center justify-center px-5 py-10 bg-[var(--neu-bg)]">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -19,16 +19,16 @@ export function AuthPage() {
         style={{ maxWidth: 380 }}
       >
         <div className="mb-7 text-center">
-          <h1 className="text-[26px] font-semibold tracking-tight" style={{ color: "var(--neu-text)" }}>
+          <h1 className="text-[26px] font-semibold tracking-tight text-[var(--neu-text)]">
             热点
           </h1>
-          <p className="mt-1.5 text-[13px]" style={{ color: "var(--neu-text-muted)" }}>
+          <p className="mt-1.5 text-[13px] text-[var(--neu-text-muted)]">
             发现身边的人与故事
           </p>
         </div>
         <div
-          className="rounded-[22px] px-5 py-6"
-          style={{ background: "var(--neu-surface, var(--neu-bg))", border: "1px solid var(--neu-border)" }}
+          className="rounded-[22px] px-5 py-6 bg-[var(--neu-surface,var(--neu-bg))]"
+          style={{ border: "1px solid var(--neu-border)" }}
         >
           <AuthForm
             onSuccess={() => {

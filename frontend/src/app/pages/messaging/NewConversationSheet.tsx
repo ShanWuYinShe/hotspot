@@ -35,21 +35,21 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
   );
 
   return (
-    <div className="flex flex-col h-full" style={{ background: "var(--neu-bg)" }}>
+    <div className="flex flex-col h-full bg-[var(--neu-bg)]">
       {/* Handle */}
       <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-        <div className="rounded-full" style={{ width: 36, height: 4, background: "var(--neu-border)" }} />
+        <div className="rounded-full bg-[var(--neu-border)]" style={{ width: 36, height: 4 }} />
       </div>
 
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 flex-shrink-0"
         style={{ borderBottom: "1px solid var(--neu-border)" }}>
-        <h2 style={{ fontSize: 17, color: "var(--neu-text)" }}>
+        <h2 className="text-[var(--neu-text)]" style={{ fontSize: 17 }}>
           {tab === "add" ? "添加好友" : "新建会话"}
         </h2>
         <motion.button whileTap={hover.tap as any} onClick={onClose}
-          className="flex items-center justify-center rounded-full outline-none"
-          style={{ width: 32, height: 32, background: "var(--neu-bg)", boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
+          className="flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
+          style={{ width: 32, height: 32, boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
           <X style={{ width: 14, height: 14, color: "var(--neu-text-muted)" }} strokeWidth={2} />
         </motion.button>
       </div>
@@ -62,10 +62,10 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
         ].map(t => (
           <motion.button key={t.id} whileTap={hover.tap as any}
             onClick={() => { setTab(t.id); setSearchQ(""); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-full outline-none"
+            className={`flex items-center gap-2 px-4 py-2 rounded-full outline-none ${tab === t.id ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
             style={tab === t.id
-              ? { background: "var(--neu-accent-primary)", color: "white", fontSize: 13, fontWeight: 500, boxShadow: "0 4px 12px var(--neu-glow)" }
-              : { background: "var(--neu-bg)", color: "var(--neu-text-muted)", fontSize: 13, boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }
+              ? { fontSize: 13, fontWeight: 500, boxShadow: "0 4px 12px var(--neu-glow)" }
+              : { fontSize: 13, boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }
             }
           >
             <t.icon style={{ width: 13, height: 13 }} strokeWidth={1.75} />
@@ -78,8 +78,8 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
       <div className="px-5 pb-3 flex-shrink-0">
         <div className="flex items-center gap-2.5 px-4 rounded-[14px] neu-input-surface" style={{ height: 40 }}>
           <Search style={{ width: 14, height: 14, color: "var(--neu-text-muted)", flexShrink: 0 }} strokeWidth={1.5} />
-          <input className="flex-1 bg-transparent outline-none"
-            style={{ fontSize: 13, color: "var(--neu-text)" }}
+          <input className="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
+            style={{ fontSize: 13 }}
             placeholder={tab === "add" ? "搜索用户名或手机号…" : "搜索联系人…"}
             value={searchQ}
             onChange={e => setSearchQ(e.target.value)}
@@ -93,7 +93,7 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
           {tab === "add" ? (
             <motion.div key="add" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.18 }} className="flex flex-col gap-1">
-              <p className="uppercase mb-2" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--neu-text-muted)" }}>
+              <p className="uppercase mb-2 text-[var(--neu-text-muted)]" style={{ fontSize: 10, letterSpacing: "0.14em" }}>
                 附近推荐
               </p>
               {filteredSuggested.map(u => (
@@ -104,15 +104,15 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
                     className="rounded-full object-cover flex-shrink-0"
                     style={{ width: 44, height: 44, border: "1.5px solid var(--neu-border)" }} />
                   <div className="flex-1 min-w-0">
-                    <p style={{ fontSize: 14, color: "var(--neu-text)" }}>{u.name}</p>
-                    <p style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>{u.subtitle}</p>
+                    <p className="text-[var(--neu-text)]" style={{ fontSize: 14 }}>{u.name}</p>
+                    <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>{u.subtitle}</p>
                   </div>
                   <motion.button whileTap={{ scale: 0.92 }}
                     onClick={() => setAddedIds(p => { const n = new Set(p); n.has(u.id) ? n.delete(u.id) : n.add(u.id); return n; })}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none flex-shrink-0"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none flex-shrink-0 ${addedIds.has(u.id) ? "bg-[var(--neu-bg)] text-[var(--neu-accent-primary)]" : "bg-[var(--neu-accent-primary)] text-white"}`}
                     style={addedIds.has(u.id)
-                      ? { boxShadow: "inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light)", border: "1px solid var(--neu-border-pressed)", color: "var(--neu-accent-primary)", background: "var(--neu-bg)", fontSize: 11 }
-                      : { background: "var(--neu-accent-primary)", color: "white", fontSize: 11, boxShadow: "0 3px 8px var(--neu-glow)" }
+                      ? { boxShadow: "inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light)", border: "1px solid var(--neu-border-pressed)", fontSize: 11 }
+                      : { fontSize: 11, boxShadow: "0 3px 8px var(--neu-glow)" }
                     }>
                     {addedIds.has(u.id)
                       ? <><Check style={{ width: 10, height: 10 }} strokeWidth={2.5} /> 已添加</>
@@ -129,19 +129,19 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
               {/* Create group chat row */}
               <motion.button whileTap={hover.tap as any} whileHover={hover.row as any}
                 onClick={() => { onClose(); onCreateGroup?.(); }}
-                className="flex items-center gap-3.5 px-3 py-3 rounded-[16px] w-full outline-none text-left mb-3 neu-row-hover"
-                style={{ background: "var(--neu-bg)", boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
-                <div className="flex items-center justify-center rounded-full flex-shrink-0"
-                  style={{ width: 44, height: 44, background: "var(--neu-accent-primary)", boxShadow: "0 3px 8px var(--neu-glow)" }}>
+                className="flex items-center gap-3.5 px-3 py-3 rounded-[16px] w-full outline-none text-left mb-3 neu-row-hover bg-[var(--neu-bg)]"
+                style={{ boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
+                <div className="flex items-center justify-center rounded-full flex-shrink-0 bg-[var(--neu-accent-primary)]"
+                  style={{ width: 44, height: 44, boxShadow: "0 3px 8px var(--neu-glow)" }}>
                   <Users style={{ width: 20, height: 20, color: "white" }} strokeWidth={1.75} />
                 </div>
                 <div>
-                  <p style={{ fontSize: 14, color: "var(--neu-text)", fontWeight: 500 }}>创建群聊</p>
-                  <p style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>邀请好友一起聊</p>
+                  <p className="text-[var(--neu-text)]" style={{ fontSize: 14, fontWeight: 500 }}>创建群聊</p>
+                  <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>邀请好友一起聊</p>
                 </div>
               </motion.button>
 
-              <p className="uppercase mb-2" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--neu-text-muted)" }}>
+              <p className="uppercase mb-2 text-[var(--neu-text-muted)]" style={{ fontSize: 10, letterSpacing: "0.14em" }}>
                 联系人
               </p>
               {filteredContacts.map(c => (
@@ -154,13 +154,13 @@ export function NewConversationSheet({ defaultTab = "chat", onClose, onNewChat, 
                       className="rounded-full object-cover"
                       style={{ width: 44, height: 44, border: "1.5px solid var(--neu-border)" }} />
                     {c.online && (
-                      <span className="absolute bottom-0 right-0 rounded-full"
-                        style={{ width: 10, height: 10, background: "var(--semantic-online)", border: "2px solid var(--neu-bg)" }} />
+                      <span className="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]"
+                        style={{ width: 10, height: 10, border: "2px solid var(--neu-bg)" }} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p style={{ fontSize: 14, color: "var(--neu-text)" }}>{c.name}</p>
-                    <p style={{ fontSize: 11, color: c.online ? "var(--semantic-online)" : "var(--neu-text-muted)" }}>
+                    <p className="text-[var(--neu-text)]" style={{ fontSize: 14 }}>{c.name}</p>
+                    <p className={c.online ? "text-[var(--semantic-online)]" : "text-[var(--neu-text-muted)]"} style={{ fontSize: 11 }}>
                       {c.online ? "在线" : "离线"}
                     </p>
                   </div>

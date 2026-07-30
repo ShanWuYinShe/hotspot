@@ -126,13 +126,12 @@ export function ChatView({ peerUserId, contact: contactProp, showBackButton = fa
   const lastSentId = messages.filter((m) => m.sent).map((m) => m.id).pop();
 
   return (
-    <div className="flex min-h-0 flex-col h-full" style={{ backgroundColor: "var(--neu-bg)" }}>
+    <div className="flex min-h-0 flex-col h-full bg-[var(--neu-bg)]">
       {/* Header */}
       <div
-        className="flex-shrink-0 flex items-center gap-3 px-4"
+        className="flex-shrink-0 flex items-center gap-3 px-4 bg-[var(--neu-bg)]"
         style={{
           height: compact ? 52 : 60,
-          backgroundColor: "var(--neu-bg)",
           borderBottom: "1px solid var(--neu-border)",
         }}
       >
@@ -140,10 +139,9 @@ export function ChatView({ peerUserId, contact: contactProp, showBackButton = fa
           <motion.button
             whileTap={{ scale: 0.88 }}
             onClick={onBack}
-            className="flex items-center justify-center rounded-full outline-none flex-shrink-0"
+            className="flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-[var(--neu-bg)]"
             style={{
               width: 36, height: 36,
-              background: "var(--neu-bg)",
               boxShadow: "4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light)",
               border: "1px solid var(--neu-border)",
             }}
@@ -164,8 +162,8 @@ export function ChatView({ peerUserId, contact: contactProp, showBackButton = fa
           badge={
             contact?.online ? (
               <span
-                className="absolute bottom-0 right-0 rounded-full"
-                style={{ width: 9, height: 9, background: "var(--semantic-online)", border: "2px solid var(--neu-bg)" }}
+                className="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]"
+                style={{ width: 9, height: 9, border: "2px solid var(--neu-bg)" }}
               />
             ) : undefined
           }
@@ -173,10 +171,10 @@ export function ChatView({ peerUserId, contact: contactProp, showBackButton = fa
 
         {/* Name + status */}
         <div className="flex-1 min-w-0">
-          <p className="truncate" style={{ fontSize: compact ? 13 : 14, color: "var(--neu-text)" }}>
+          <p className="truncate text-[var(--neu-text)]" style={{ fontSize: compact ? 13 : 14 }}>
             {peerName || "会话"}
           </p>
-          <p style={{ fontSize: 11, color: contact?.online ? "var(--semantic-online)" : "var(--neu-text-muted)" }}>
+          <p className={contact?.online ? "text-[var(--semantic-online)]" : "text-[var(--neu-text-muted)]"} style={{ fontSize: 11 }}>
             {contact ? (contact.online ? "在线" : (contact.lastSeen ? `活跃于${contact.lastSeen}` : "离线")) : ""}
           </p>
         </div>
@@ -187,10 +185,9 @@ export function ChatView({ peerUserId, contact: contactProp, showBackButton = fa
             <motion.button
               key={i}
               whileTap={{ scale: 0.88 }}
-              className="flex items-center justify-center rounded-full outline-none"
+              className="flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
               style={{
                 width: compact ? 32 : 36, height: compact ? 32 : 36,
-                background: "var(--neu-bg)",
                 boxShadow: "4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light)",
                 border: "1px solid var(--neu-border)",
               }}
@@ -200,10 +197,9 @@ export function ChatView({ peerUserId, contact: contactProp, showBackButton = fa
           ))}
           <motion.button
             whileTap={{ scale: 0.88 }}
-            className="flex items-center justify-center rounded-full outline-none"
+            className="flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
             style={{
               width: compact ? 32 : 36, height: compact ? 32 : 36,
-              background: "var(--neu-bg)",
               boxShadow: "4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light)",
               border: "1px solid var(--neu-border)",
             }}
@@ -228,11 +224,9 @@ export function ChatView({ peerUserId, contact: contactProp, showBackButton = fa
           {/* Date pill */}
           <div className="flex justify-center mb-2">
             <span
-              className="px-3 py-1 rounded-full"
+              className="px-3 py-1 rounded-full bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"
               style={{
                 fontSize: 10,
-                background: "var(--neu-bg)",
-                color: "var(--neu-text-muted)",
                 border: "1px solid var(--neu-border)",
                 letterSpacing: "0.05em",
                 opacity: 0.8,
@@ -252,29 +246,28 @@ export function ChatView({ peerUserId, contact: contactProp, showBackButton = fa
                 className={`flex ${msg.sent ? "justify-end" : "justify-start"}`}
               >
                 <div
+                  className={msg.sent ? "bg-[var(--neu-accent-primary)]" : "bg-[var(--neu-bg)]"}
                   style={{
                     maxWidth: "76%",
                     padding: "10px 14px",
                     borderRadius: msg.sent ? "18px 4px 18px 18px" : "4px 18px 18px 18px",
                     ...(msg.sent
                       ? {
-                          background: "var(--neu-accent-primary)",
                           boxShadow: "0 4px 14px var(--neu-glow)",
                         }
                       : {
-                          background: "var(--neu-bg)",
                           boxShadow: "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)",
                           border: "1px solid var(--neu-border)",
                         }),
                   }}
                 >
-                  <p style={{ fontSize: 13, lineHeight: 1.55, color: msg.sent ? "white" : "var(--neu-text)" }}>
+                  <p className={msg.sent ? "text-white" : "text-[var(--neu-text)]"} style={{ fontSize: 13, lineHeight: 1.55 }}>
                     {msg.text}
                   </p>
                   <p
+                    className={msg.sent ? "text-[rgba(255,255,255,0.65)]" : "text-[var(--neu-text-muted)]"}
                     style={{
                       fontSize: 10, marginTop: 4,
-                      color: msg.sent ? "rgba(255,255,255,0.65)" : "var(--neu-text-muted)",
                       display: "flex", alignItems: "center", gap: 3,
                       justifyContent: msg.sent ? "flex-end" : "flex-start",
                     }}
@@ -293,15 +286,14 @@ export function ChatView({ peerUserId, contact: contactProp, showBackButton = fa
 
       {/* Input bar */}
       <div
-        className="flex-shrink-0 flex items-center gap-2.5 px-4 py-3"
-        style={{ backgroundColor: "var(--neu-bg)", borderTop: "1px solid var(--neu-border)" }}
+        className="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 bg-[var(--neu-bg)]"
+        style={{ borderTop: "1px solid var(--neu-border)" }}
       >
         <motion.button
           whileTap={{ scale: 0.88 }}
-          className="flex items-center justify-center rounded-full outline-none flex-shrink-0"
+          className="flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-[var(--neu-bg)]"
           style={{
             width: 36, height: 36,
-            background: "var(--neu-bg)",
             boxShadow: "4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)",
             border: "1px solid var(--neu-border)",
           }}
@@ -319,18 +311,17 @@ export function ChatView({ peerUserId, contact: contactProp, showBackButton = fa
             onChange={(e) => setInputVal(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="发消息…"
-            className="flex-1 bg-transparent outline-none"
-            style={{ fontSize: 13, color: "var(--neu-text)" }}
+            className="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
+            style={{ fontSize: 13 }}
           />
         </div>
 
         <motion.button
           whileTap={{ scale: 0.88 }}
           onClick={handleSend}
-          className="flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-all duration-200"
+          className={`flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-all duration-200 ${inputVal.trim() ? "bg-[var(--neu-accent-primary)]" : "bg-[var(--neu-bg)]"}`}
           style={{
             width: 36, height: 36,
-            background: inputVal.trim() ? "var(--neu-accent-primary)" : "var(--neu-bg)",
             boxShadow: inputVal.trim()
               ? "0 4px 14px var(--neu-glow)"
               : "4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)",

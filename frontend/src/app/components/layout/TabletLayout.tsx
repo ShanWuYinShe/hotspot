@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { MapPin, Compass, Plus, X, MessageCircle, CircleUser } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -8,6 +8,7 @@ import { CreateSheet } from "./CreateSheet";
 import { StatusBar } from "./StatusBar";
 import { useHoverConfig } from "../../hooks/useHoverConfig";
 import { useDismissibleLayer } from "../../hooks/useDismissibleLayer";
+import { useThemeColors } from "../../hooks/useCssVar";
 import { useComposer } from "../../contexts/ComposerContext";
 
 const NAV_ITEMS = [
@@ -36,21 +37,8 @@ function TabletMobileLayout() {
   useDismissibleLayer({ open: showCreate, onDismiss: closeComposer });
   const isSubPage = useIsSubPage();
 
-  const navGlass = isDark
-    ? theme === "forest"  ? "rgba(22,26,22,0.92)"    /* 清野 dark: #161A16 */
-    : theme === "vibrant" ? "rgba(19,15,38,0.92)"    /* 星际 dark: #130F26 */
-    :                         "rgba(19,15,38,0.92)"    /* fallback: 星际 */
-    : theme === "forest"  ? "rgba(249,249,245,0.90)" /* 清野 light: #F9F9F5 */
-    : theme === "vibrant" ? "rgba(250,250,254,0.90)" /* 星际 light: #FAFAFE */
-    :                         "rgba(250,250,254,0.90)";/* fallback: 星际 */
-
-  const navBorder = isDark
-    ? theme === "forest"  ? "rgba(82,184,120,0.16)"
-    : theme === "vibrant" ? "rgba(129,140,248,0.18)"
-    : "rgba(255,255,255,0.08)"
-    : theme === "forest"  ? "rgba(61,122,85,0.15)"
-    : theme === "vibrant" ? "rgba(99,102,241,0.13)"
-    : "rgba(255,255,255,0.65)";
+  const navGlass = `color-mix(in srgb, var(--neu-bg) 92%, transparent)`;
+  const navBorder = "var(--neu-border)";
 
   const navShadow = isDark
     ? "0 -4px 24px rgba(0,0,0,0.40), 0 8px 32px rgba(0,0,0,0.28)"
@@ -148,17 +136,7 @@ function NavPill({
   isActive: boolean;
   onClick: () => void;
 }) {
-  // Read computed CSS variable values so Motion's layoutId engine gets
-  // concrete hex strings — same fix as MainLayout's NavTab.
-  const { theme, isDark } = useTheme();
-
-  const accentColor = useMemo(() =>
-    getComputedStyle(document.documentElement).getPropertyValue("--neu-accent-primary").trim() || "#6366f1"
-  , [theme, isDark]);
-
-  const mutedColor = useMemo(() =>
-    getComputedStyle(document.documentElement).getPropertyValue("--neu-text-muted").trim() || "#8D94A0"
-  , [theme, isDark]);
+  const { accent: accentColor, muted: mutedColor } = useThemeColors();
 
   const iconColor = isActive ? accentColor : mutedColor;
 

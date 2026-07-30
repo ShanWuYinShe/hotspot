@@ -1,0 +1,38 @@
+/* ── Theme entry point ─────────────────────────────────────────────────
+   Import all theme partials in dependency order:
+
+   Layer 0 — Base variables
+     1. shadcn.css          — shadcn/ui standard variables (:root + .dark)
+     2. defaults.css        — custom token defaults (vibrant fallback)
+
+   Layer 1 — Primitives
+     3. primitives.css      — --pr-* raw values per theme-mode
+
+   Layer 2 — Semantics
+     4. semantic.css        — --text-primary, --surface-page etc. → --pr-*
+
+   Layer 2.5 — Compatibility (loaded BEFORE theme overrides so themes win)
+     5. compatibility.css   — --neu-* aliases → semantic names
+
+   Layer 3 — Theme overrides (override compatibility with direct values)
+     6. themes/vibrant.css  — .vibrant / .vibrant.dark
+     7. themes/forest.css   — .forest / .forest.dark
+
+   Layout & Presentation
+     8. layout.css          — context rail + workspace dimensions
+     9. base.css            — @layer base (typography + button feedback)
+    10. theme-registry.css  — @theme inline (Tailwind class registration)
+    11. utilities.css       — @layer utilities (component classes)
+────────────────────────────────────────────────────────────────────── */
+
+@import './shadcn.css';
+@import './defaults.css';
+@import './primitives.css';
+@import './semantic.css';
+@import './compatibility.css';
+@import './themes/vibrant.css';
+@import './themes/forest.css';
+@import './layout.css';
+@import './base.css';
+@import './theme-registry.css';
+@import './utilities.css';

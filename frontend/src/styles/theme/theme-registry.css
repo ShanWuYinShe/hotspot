@@ -1,0 +1,79 @@
+/* ── Tailwind v4 @theme inline registrations ────────────────────────────
+   Maps CSS custom properties to Tailwind color classes so that
+   bg-background, text-foreground, bg-neu-bg, text-neu-text-muted, etc.
+   all resolve through the cascade. Keep both blocks in one file so the
+   full palette is visible at a glance.
+────────────────────────────────────────────────────────────────────── */
+
+@theme inline {
+  /* shadcn/ui palette — only the subset this project actually uses */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Custom application palette */
+  --color-neu-bg: var(--neu-bg);
+  --color-neu-shadow-light: var(--neu-shadow-light);
+  --color-neu-shadow-dark: var(--neu-shadow-dark);
+  --color-neu-text: var(--neu-text);
+  --color-neu-text-muted: var(--neu-text-muted);
+  --color-neu-accent: var(--neu-accent);
+  --color-neu-accent-primary: var(--neu-accent-primary);
+  --color-neu-glow: var(--neu-glow);
+  --color-neu-border: var(--neu-border);
+  --color-neu-border-pressed: var(--neu-border-pressed);
+  --color-neu-accent-soft: var(--neu-accent-soft);
+  --color-neu-accent-soft-border: var(--neu-accent-soft-border);
+  --color-page-bg: var(--page-bg);
+  --color-semantic-online: var(--semantic-online);
+  --color-semantic-hot: var(--semantic-hot);
+  --color-semantic-warning: var(--semantic-warning);
+  --color-map-user: var(--map-user);
+  --color-map-group: var(--map-group);
+  --color-map-post: var(--map-post);
+
+  /* Semantic palette (Phase 2+) — enables bg-surface-primary, text-text-primary etc. */
+  --color-surface-primary: var(--surface-primary);
+  --color-surface-page: var(--surface-page);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent-default: var(--accent-default);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-border: var(--accent-border);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-status-online: var(--status-online);
+  --color-status-danger: var(--status-danger);
+  --color-status-warning: var(--status-warning);
+  --color-marker-user: var(--marker-user);
+  --color-marker-group: var(--marker-group);
+  --color-marker-content: var(--marker-content);
+
+  /* Color-mix presets */
+  --color-accent-bg: var(--color-accent-bg);
+  --color-online-bg: var(--color-online-bg);
+  --color-danger-bg: var(--color-danger-bg);
+
+  /* Font size scale */
+  --font-size-xxs: 10px;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+
+  /* Border radius scale */
+  --radius-item: 14px;
+  --radius-panel: 16px;
+  --radius-card: 18px;
+  --radius-sheet: 22px;
+  --radius-modal: 24px;
+}

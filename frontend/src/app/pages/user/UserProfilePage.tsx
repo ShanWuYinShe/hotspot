@@ -93,14 +93,14 @@ export function UserProfilePage() {
   const fmtNum = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 
   const main = (
-    <div className="flex flex-col" style={{ height: "100%", backgroundColor: "var(--neu-bg)", overflowY: "auto" }}>
+    <div className="flex flex-col bg-[var(--neu-bg)]" style={{ height: "100%", overflowY: "auto" }}>
       <AnimatePresence>
         {moreOpen && <>
           <motion.button type="button" aria-label="关闭更多操作" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMoreOpen(false)} className="fixed inset-0 z-40 cursor-default bg-black/40" />
           <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} role="dialog" aria-modal="true" aria-label={`${user.name} 的更多操作`} className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-[24px] ring-1 ring-[var(--neu-border)] bg-[var(--neu-bg)] p-5 shadow-[0_24px_80px_rgba(0,0,0,.28)]">
             <div className="flex items-center justify-between"><div><p className="neu-eyebrow">关系与安全</p><p className="mt-1 text-[16px] text-[var(--neu-text)]">{user.name}</p></div><ActionIconButton icon={X} label="关闭" onClick={() => setMoreOpen(false)} size={32} /></div>
-            <label className="mt-5 block text-[12px] text-[var(--neu-text-muted)]">备注名称<input value={remarkDraft} onChange={(event) => setRemarkDraft(event.target.value.slice(0, 24))} placeholder="只对你可见" className="mt-2 w-full rounded-[14px] ring-1 ring-[var(--neu-border)] bg-transparent px-3 py-2.5 text-[13px] text-[var(--neu-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]" /></label>
-            <button type="button" onClick={() => { setRemark(remarkDraft.trim()); setMoreOpen(false); }} className="mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] ring-1 ring-[var(--neu-border)] py-2.5 text-[13px] text-[var(--neu-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"><PencilLine size={14} />保存备注</button>
+            <label className="mt-5 block text-[12px] text-[var(--neu-text-muted)]">备注名称<input value={remarkDraft} onChange={(event) => setRemarkDraft(event.target.value.slice(0, 24))} placeholder="只对你可见" className="mt-2 w-full rounded-[14px] ring-1 ring-[var(--neu-border)] bg-transparent px-3 py-2.5 text-[13px] text-[var(--neu-text)] neu-focus-ring" /></label>
+            <button type="button" onClick={() => { setRemark(remarkDraft.trim()); setMoreOpen(false); }} className="mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] ring-1 ring-[var(--neu-border)] py-2.5 text-[13px] text-[var(--neu-text)] neu-focus-ring"><PencilLine size={14} />保存备注</button>
                 <button type="button" onClick={() => {
                   const next = !blocked;
                   setBlocked(next);
@@ -115,7 +115,7 @@ export function UserProfilePage() {
                 <button type="button" onClick={() => {
                   createReport({ target_type: "user", target_id: userId ?? "", reason: "other" }).then(() => setReportSent(true)).catch(() => {});
                   setMoreOpen(false);
-                }} className="mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--neu-text-muted)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]">{reportSent ? <><Check size={14} />举报已记录</> : <><Flag size={14} />举报用户</>}</button>
+                }} className="mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--neu-text-muted)] neu-focus-ring">{reportSent ? <><Check size={14} />举报已记录</> : <><Flag size={14} />举报用户</>}</button>
           </motion.section>
         </>}
       </AnimatePresence>
@@ -143,8 +143,8 @@ export function UserProfilePage() {
                 style={{ width: 76, height: 76, border: "3px solid var(--neu-bg)", boxShadow: "0 6px 20px rgba(0,0,0,0.22)" }}>
                 <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
               </div>
-              <span className="absolute bottom-1 right-1 rounded-full"
-                style={{ width: 12, height: 12, background: "var(--semantic-online)", border: "2px solid var(--neu-bg)" }} />
+              <span className="absolute bottom-1 right-1 rounded-full bg-[var(--semantic-online)]"
+                style={{ width: 12, height: 12, border: "2px solid var(--neu-bg)" }} />
             </div>
 
             {/* Action buttons */}
@@ -152,8 +152,8 @@ export function UserProfilePage() {
               <motion.button whileTap={{ scale: 0.93 }}
                 onClick={() => !blocked && navigate(ROUTES.message(1))}
                 disabled={blocked}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45"
-                style={{ background: "var(--neu-bg)", border: "1px solid var(--neu-border)", boxShadow: "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)", fontSize: 12, color: "var(--neu-text-muted)" }}>
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"
+                style={{ border: "1px solid var(--neu-border)", boxShadow: "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)", fontSize: 12 }}>
                 <MessageCircle style={{ width: 14, height: 14 }} strokeWidth={1.5} />
                 私信
               </motion.button>
@@ -166,10 +166,10 @@ export function UserProfilePage() {
                   follow({ user_id: userId ?? "", active: next }).catch(() => setFollowed(!next));
                 }}
                 disabled={blocked}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45"
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 ${followed ? "bg-[var(--neu-bg)] text-[var(--neu-accent-primary)]" : "bg-[var(--neu-accent-primary)] text-white"}`}
                 style={followed
-                  ? { background: "var(--neu-bg)", border: "1.5px solid var(--neu-accent-primary)", color: "var(--neu-accent-primary)", fontSize: 12, boxShadow: "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)" }
-                  : { background: "var(--neu-accent-primary)", color: "white", fontSize: 12, boxShadow: "0 4px 14px var(--neu-glow)", border: "1px solid transparent" }}>
+                  ? { fontSize: 12, border: "1.5px solid var(--neu-accent-primary)", boxShadow: "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)" }
+                  : { fontSize: 12, boxShadow: "0 4px 14px var(--neu-glow)", border: "1px solid transparent" }}>
                 {followed
                   ? <><UserCheck style={{ width: 14, height: 14 }} strokeWidth={1.5} />已关注</>
                   : <><UserPlus style={{ width: 14, height: 14 }} strokeWidth={1.5} />关注</>}
@@ -177,39 +177,39 @@ export function UserProfilePage() {
             </div>
           </div>
 
-          <h1 style={{ fontSize: 20, color: "var(--neu-text)" }}>{user.name}</h1>
-          <p style={{ fontSize: 13, color: "var(--neu-text-muted)", marginTop: 1 }}>{user.handle}{remark ? ` · ${remark}` : ""}</p>
+          <h1 className="text-[var(--neu-text)]" style={{ fontSize: 20 }}>{user.name}</h1>
+          <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 13, marginTop: 1 }}>{user.handle}{remark ? ` · ${remark}` : ""}</p>
           {blocked && <div className="mt-3 flex items-center gap-2 rounded-[12px] ring-1 ring-[var(--semantic-hot)]/30 bg-[color-mix(in_srgb,var(--semantic-hot)_8%,transparent)] px-3 py-2 text-[12px] text-[var(--semantic-hot)]"><UserX size={14} />你已屏蔽此用户；关注和私信已停用。</div>}
-          <p style={{ fontSize: 13, color: "var(--neu-text-muted)", lineHeight: 1.65, marginTop: 8 }}>{user.bio}</p>
+          <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 13, lineHeight: 1.65, marginTop: 8 }}>{user.bio}</p>
 
           <div className="flex items-center gap-1.5 mt-2">
             <MapPin style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
-            <span style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>{user.location}</span>
+            <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>{user.location}</span>
           </div>
 
           {/* Tags */}
           <div className="flex gap-2 mt-3 flex-wrap">
             {user.tags.map(t => (
-              <span key={t} className="px-2.5 py-0.5 rounded-full"
-                style={{ fontSize: 11, background: "var(--neu-accent-soft)", color: "var(--neu-accent-primary)", border: "1px solid var(--neu-accent-soft-border)" }}>
+              <span key={t} className="px-2.5 py-0.5 rounded-full bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]"
+                style={{ fontSize: 11, border: "1px solid var(--neu-accent-soft-border)" }}>
                 #{t}
               </span>
             ))}
           </div>
 
           {/* Stats */}
-          <div className="flex gap-0 mt-5 rounded-[20px]"
-            style={{ background: "var(--neu-bg)", boxShadow: "0 0 0 1px var(--neu-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)" }}>
-            <div style={{ overflow: "hidden", borderRadius: 19 }}>
+          <div className="flex gap-0 mt-5 overflow-hidden rounded-[20px] bg-[var(--neu-bg)]"
+            style={{ boxShadow: "0 0 0 1px var(--neu-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)" }}>
+            <div style={{ overflow: "hidden", borderRadius: 20 }}>
             {[
               { label: "帖子",  v: fmtNum(user.posts) },
               { label: "粉丝",  v: fmtNum(user.followers) },
               { label: "关注",  v: fmtNum(user.following) },
             ].map((s, i) => (
               <div key={s.label} className="flex-1 flex flex-col items-center py-4 relative">
-                {i > 0 && <div className="absolute left-0 top-1/2 -translate-y-1/2" style={{ width: 1, height: 28, background: "var(--neu-border)" }} />}
-                <span style={{ fontSize: 22, color: "var(--neu-text)" }}>{s.v}</span>
-                <span className="uppercase mt-1" style={{ fontSize: 9, letterSpacing: "0.1em", color: "var(--neu-text-muted)" }}>{s.label}</span>
+                {i > 0 && <div className="absolute left-0 top-1/2 -translate-y-1/2 bg-[var(--neu-border)]" style={{ width: 1, height: 28 }} />}
+                <span className="text-[var(--neu-text)]" style={{ fontSize: 22 }}>{s.v}</span>
+                <span className="uppercase mt-1 text-[var(--neu-text-muted)]" style={{ fontSize: 9, letterSpacing: "0.1em" }}>{s.label}</span>
               </div>
             ))}
             </div>
@@ -222,12 +222,13 @@ export function UserProfilePage() {
             const active = activeTab === id;
             return (
               <motion.button key={id} whileTap={{ scale: 0.94 }} onClick={() => setActiveTab(id)}
-                className="relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none"
-                style={{ flex: 1, color: active ? "var(--neu-accent-primary)" : "var(--neu-text-muted)", fontSize: 13, fontWeight: active ? 500 : 400 }}>
+                className={`relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none ${active ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
+                style={{ flex: 1, fontSize: 13, fontWeight: active ? 500 : 400 }}>
                 <Icon style={{ width: 13, height: 13 }} strokeWidth={active ? 2 : 1.5} />
                 {label}
                 {active && <motion.div layoutId="user-profile-tab"
-                  style={{ position: "absolute", bottom: -1, left: "18%", right: "18%", height: 2, borderRadius: 1, background: "var(--neu-accent-primary)" }}
+                  className="bg-[var(--neu-accent-primary)]"
+                  style={{ position: "absolute", bottom: -1, left: "18%", right: "18%", height: 2, borderRadius: 1 }}
                   transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
               </motion.button>
             );
@@ -241,10 +242,9 @@ export function UserProfilePage() {
               style={{ aspectRatio: "1", overflow: "hidden" }}>
               <img src={src} alt={`photo ${i}`} className="w-full h-full object-cover" />
               {activeTab === "liked" && (
-                <div className="absolute inset-0 flex items-end justify-end p-1.5"
-                  style={{ background: "var(--overlay-soft)" }}>
-                  <div className="flex items-center justify-center rounded-full"
-                    style={{ width: 20, height: 20, background: "var(--neu-accent-primary)" }}>
+                <div className="absolute inset-0 flex items-end justify-end p-1.5 bg-[var(--overlay-soft)]">
+                  <div className="flex items-center justify-center rounded-full bg-[var(--neu-accent-primary)]"
+                    style={{ width: 20, height: 20 }}>
                     <Heart style={{ width: 10, height: 10, color: "white" }} strokeWidth={2} fill="white" />
                   </div>
                 </div>
@@ -267,13 +267,8 @@ export function UserProfilePage() {
           {user.tags.map(t => (
             <span
               key={t}
-              className="px-2.5 py-0.5 rounded-full"
-              style={{
-                fontSize: 11,
-                background: "var(--neu-accent-soft)",
-                color: "var(--neu-accent-primary)",
-                border: "1px solid var(--neu-accent-soft-border)",
-              }}
+              className="px-2.5 py-0.5 rounded-full bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]"
+              style={{ fontSize: 11, border: "1px solid var(--neu-accent-soft-border)" }}
             >
               #{t}
             </span>

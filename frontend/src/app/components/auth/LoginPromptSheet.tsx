@@ -23,7 +23,7 @@ export function LoginPromptSheet({ open, actionLabel, onClose, onSuccess }: Prop
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[90]"
+            className="fixed inset-0 z-[var(--z-modal)]"
             style={{ background: "rgba(0,0,0,.4)", backdropFilter: "blur(2px)" }}
             onClick={onClose}
           />
@@ -32,7 +32,7 @@ export function LoginPromptSheet({ open, actionLabel, onClose, onSuccess }: Prop
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 320 }}
-            className="fixed bottom-0 left-1/2 z-[91] w-full max-w-[460px] -translate-x-1/2 rounded-t-[28px] px-5 pb-8 pt-3"
+            className="fixed bottom-0 left-1/2 z-[var(--z-modal)] w-full max-w-[460px] -translate-x-1/2 rounded-t-[28px] px-5 pb-8 pt-3"
             style={{ background: "var(--neu-bg)", boxShadow: "0 -8px 30px rgba(0,0,0,.12)" }}
             role="dialog"
             aria-modal="true"

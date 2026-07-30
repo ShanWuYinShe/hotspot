@@ -1,0 +1,111 @@
+/* ── Layout system variables ──────────────────────────────────────────
+   Context rail + workspace dimensions shared across desktop and tablet.
+────────────────────────────────────────────────────────────────────── */
+
+@layer utilities {
+  :root {
+    --context-rail-width: 20rem;
+    --context-rail-inset: 1rem;
+    --context-rail-gap: 1.5rem;
+  }
+
+  .context-rail {
+    width: var(--context-rail-width);
+    min-width: var(--context-rail-width);
+    flex-shrink: 0;
+    align-self: stretch;
+    border-left: 1px solid var(--neu-border);
+    background: var(--neu-bg);
+  }
+  .context-rail__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 100%;
+    padding: var(--context-rail-inset);
+  }
+  .context-rail--attached {
+    height: 100%;
+    overflow: hidden;
+  }
+  .context-rail__content--scroll {
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .context-rail__content--scroll::-webkit-scrollbar { display: none; }
+  .context-rail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--context-rail-width);
+    gap: var(--context-rail-gap);
+    align-items: start;
+  }
+}
+
+@layer utilities {
+  @media (min-width: 1024px) {
+    .context-rail-grid { grid-template-columns: minmax(0, 1fr) var(--context-rail-width); }
+  }
+}
+
+@layer utilities {
+  /* Shared content canvas — every routed view occupies the same right-hand
+     working field. Pages may choose their internal composition, but never a
+     different outer alignment or an arbitrary content ceiling. */
+  :root {
+    --workspace-gutter: clamp(0.875rem, 1.75vw, 1.5rem);
+    --workspace-gap: clamp(0.875rem, 1.5vw, 1.25rem);
+    --content-canvas-max: 96rem;
+    --content-reading-max: 48rem;
+    --context-rail-width: clamp(18rem, 20vw, 21rem);
+    --context-rail-gap: clamp(1rem, 1.75vw, 1.5rem);
+  }
+
+  .desktop-workspace {
+    gap: var(--workspace-gap);
+    padding: 0;
+  }
+
+  .desktop-main-panel {
+    position: relative;
+    isolation: isolate;
+    min-height: 0;
+    background:
+      radial-gradient(70rem 28rem at 14% -12%, color-mix(in srgb, var(--neu-accent-primary) 5%, transparent), transparent 68%),
+      linear-gradient(180deg, color-mix(in srgb, var(--neu-bg) 96%, var(--page-bg)) 0%, var(--neu-bg) 46%, color-mix(in srgb, var(--neu-bg) 98%, var(--page-bg)) 100%);
+  }
+
+  .desktop-main-scroll {
+    box-sizing: border-box;
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
+    padding-block: 0;
+  }
+
+  .desktop-page-canvas,
+  .tablet-page-canvas {
+    width: min(100%, var(--content-canvas-max));
+    min-height: 100%;
+    margin-inline: auto;
+  }
+
+  .content-mode-wide {
+    min-width: 0;
+  }
+
+  .content-mode-reading {
+    max-width: var(--content-reading-max);
+  }
+
+  .desktop-page-canvas .context-rail-grid {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) var(--context-rail-width);
+    column-gap: var(--context-rail-gap);
+  }
+
+  @media (min-width: 768px) and (max-width: 1279px) {
+    .tablet-page-canvas {
+      max-width: 74rem;
+    }
+  }
+}

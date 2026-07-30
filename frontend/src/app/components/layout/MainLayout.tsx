@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { MapPin, Compass, Plus, X, MessageCircle, CircleUser } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "../../../lib/utils";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useThemeColors } from "../../hooks/useCssVar";
 import { usePlatform } from "../../contexts/PlatformContext";
 import { CreateSheet } from "./CreateSheet";
 import { StatusBar } from "./StatusBar";
@@ -29,38 +30,9 @@ export function MainLayout() {
   const { composerOpen: showCreate, closeComposer, toggleComposer } = useComposer();
   useDismissibleLayer({ open: showCreate, onDismiss: closeComposer });
 
-  // Resolve actual CSS-variable colour values so Motion's layoutId engine
-  // always receives concrete hex strings — it caches computed values and
-  // won't re-read CSS variables when a class on <html> changes.
-  const accentColor = useMemo(() => {
-    return getComputedStyle(document.documentElement)
-      .getPropertyValue("--neu-accent-primary").trim() || "#6366f1";
-  }, [theme, isDark]);
-
-  const mutedColor = useMemo(() => {
-    return getComputedStyle(document.documentElement)
-      .getPropertyValue("--neu-text-muted").trim() || "#8D94A0";
-  }, [theme, isDark]);
-
-  // Glass nav background — theme-aware semi-transparent tint
-  const glassNavBg = useMemo(() => {
-    if (isDark) {
-      if (theme === "forest")  return "rgba(22,26,22,0.92)";   /* 清野 dark: #161A16 */
-      if (theme === "vibrant") return "rgba(19,15,38,0.92)";   /* 星际 dark: #130F26 */
-      return "rgba(19,15,38,0.92)";                             /* fallback: 星际 */
-    }
-    if (theme === "forest")  return "rgba(249,249,245,0.90)";  /* 清野 light: #F9F9F5 */
-    if (theme === "vibrant") return "rgba(250,250,254,0.90)";  /* 星际 light: #FAFAFE */
-    return "rgba(250,250,254,0.90)";                            /* fallback: 星际 */
-  }, [theme, isDark]);
-
-  const glassNavBorder = isDark
-    ? theme === "forest"  ? "rgba(82,184,120,0.16)"
-    : theme === "vibrant" ? "rgba(129,140,248,0.18)"
-    : "rgba(255,255,255,0.08)"
-    : theme === "forest"  ? "rgba(61,122,85,0.15)"
-    : theme === "vibrant" ? "rgba(99,102,241,0.14)"
-    : "rgba(255,255,255,0.7)";
+  const { accent: accentColor, muted: mutedColor } = useThemeColors();
+  const glassNavBg = `color-mix(in srgb, var(--neu-bg) 92%, transparent)`;
+  const glassNavBorder = "var(--neu-border)";
 
   /* Platform routing */
   if (platform === "desktop") return <DesktopLayout />;
@@ -469,14 +441,7 @@ function RailIcon({
   const { theme, isDark } = useTheme();
   const [hovered, setHovered] = useState(false);
   const showHover = hovered && !isActive;
-
-  const accentColor = useMemo(() =>
-    getComputedStyle(document.documentElement).getPropertyValue("--neu-accent-primary").trim() || "#6366f1"
-  , [theme, isDark]);
-
-  const mutedColor = useMemo(() =>
-    getComputedStyle(document.documentElement).getPropertyValue("--neu-text-muted").trim() || "#8D94A0"
-  , [theme, isDark]);
+  const { accent: accentColor, muted: mutedColor } = useThemeColors();
 
   const iconColor = isActive ? accentColor : showHover ? accentColor : mutedColor;
 

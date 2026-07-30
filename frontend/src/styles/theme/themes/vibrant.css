@@ -1,0 +1,108 @@
+/* ── Vibrant / 星际 Theme ─────────────────────────────────────────────
+   Character: electric, modern, "floating glass" feel. WITH DEPTH.
+   "星际" = cosmic/stardust — cool, energetic, high-contrast.
+   Light: barely-cool off-white #FAFAFE on lavender page bg #EEF2FF
+   Dark:  deep void-purple #130F26 — near-black with purple soul
+   Shadows: indigo-tinted directional elevation (floating cards).
+────────────────────────────────────────────────────────────────────── */
+.vibrant {
+  /* Canvas — very subtle cool tint (clearly NOT warm like Forest) */
+  --neu-bg:             #FAFAFE;
+  --page-bg:            #EEF2FF;
+  --background: var(--neu-bg);
+  --foreground: var(--neu-text);
+  --card: var(--neu-bg);
+  --card-foreground: var(--neu-text);
+  --popover: var(--neu-bg);
+  --popover-foreground: var(--neu-text);
+  --secondary: #F1F3FF;
+  --secondary-foreground: var(--neu-text);
+  --muted: #F0F1FE;
+  --muted-foreground: var(--neu-text-muted);
+  --accent: var(--neu-accent-soft);
+  --accent-foreground: var(--neu-text);
+  --border: var(--neu-border);
+  --ring: var(--neu-accent-primary);
+  --input-background: #F3F4FF;
+  --switch-background: var(--neu-border-pressed);
+  --neu-shadow-light:   rgba(255, 255, 255, 1);
+  --neu-shadow-dark:    rgba(99, 91, 200, 0.12);
+  --neu-text:           #1e1b4b;
+  --neu-text-muted:     #514D86;
+  --neu-accent:         #4F46E5;
+  --neu-accent-primary: #4F46E5;
+  --neu-glow:           rgba(79, 70, 229, 0.30);
+  --neu-border:         rgba(99, 102, 241, 0.15);
+  --neu-border-pressed: rgba(99, 102, 241, 0.26);
+  --neu-accent-soft:        rgba(79, 70, 229, 0.10);
+  --neu-accent-soft-border: rgba(79, 70, 229, 0.32);
+  --neu-hover:              rgba(79, 70, 229, 0.12);
+  --neu-active-hover:       rgba(79, 70, 229, 0.16);
+  --neu-on-accent:          #FFFFFF;
+  --semantic-online: #0F766E;
+  --semantic-hot: #BE123C;
+  --semantic-warning: #A16207;
+  --map-user: #4F46E5;
+  --map-group: #047857;
+  --map-post: #C2410C;
+  --overlay-soft: rgba(30, 27, 75, 0.08);
+  --overlay-strong: rgba(14, 10, 35, 0.50);
+  --surface-image-scrim: linear-gradient(to bottom, rgba(20, 16, 56, 0.04) 0%, rgba(20, 16, 56, 0.52) 100%);
+
+  /* Hover — directional accent-glow elevation */
+  --hover-shadow-card: 0 14px 36px rgba(99, 102, 241, 0.14), 0 4px 14px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.07);
+  --hover-shadow-row:  0 8px  20px rgba(99, 102, 241, 0.11), 0 2px  8px  rgba(99, 102, 241, 0.07);
+  --hover-shadow-btn:  0 6px  18px rgba(99, 102, 241, 0.20), 0 2px  6px  rgba(99, 102, 241, 0.12);
+  --hover-shadow-pill: 0 4px  12px rgba(99, 102, 241, 0.16), 0 1px  4px  rgba(99, 102, 241, 0.10);
+}
+
+.vibrant.dark {
+  /* Canvas — deep void purple, very dark */
+  --neu-bg:             #130F26;
+  --page-bg:            #07040F;
+  --background: var(--neu-bg);
+  --foreground: var(--neu-text);
+  --card: var(--neu-bg);
+  --card-foreground: var(--neu-text);
+  --popover: var(--neu-bg);
+  --popover-foreground: var(--neu-text);
+  --secondary: #1A1530;
+  --secondary-foreground: var(--neu-text);
+  --muted: #1A1530;
+  --muted-foreground: var(--neu-text-muted);
+  --accent: var(--neu-accent-soft);
+  --accent-foreground: var(--neu-text);
+  --border: var(--neu-border);
+  --ring: var(--neu-accent-primary);
+  --input-background: #1B1632;
+  --switch-background: var(--neu-border-pressed);
+  --neu-shadow-light:   rgba(129, 140, 248, 0.07);
+  --neu-shadow-dark:    rgba(0, 0, 0, 0.72);
+  --neu-text:           #EAE6FF;
+  --neu-text-muted:     #AAA6D8;
+  --neu-accent:         #818cf8;
+  --neu-accent-primary: #818cf8;
+  --neu-glow:           rgba(129, 140, 248, 0.30);
+  --neu-border:         rgba(129, 140, 248, 0.14);
+  --neu-border-pressed: rgba(129, 140, 248, 0.26);
+  --neu-accent-soft:        rgba(129, 140, 248, 0.14);
+  --neu-accent-soft-border: rgba(129, 140, 248, 0.34);
+  --neu-hover:              rgba(129, 140, 248, 0.18);
+  --neu-active-hover:       rgba(129, 140, 248, 0.24);
+  --neu-on-accent:          #120F2A;
+  --semantic-online: #2DD4BF;
+  --semantic-hot: #FB7185;
+  --semantic-warning: #FBBF24;
+  --map-user: #818CF8;
+  --map-group: #34D399;
+  --map-post: #FB923C;
+  --overlay-soft: rgba(234, 230, 255, 0.08);
+  --overlay-strong: rgba(0, 0, 0, 0.60);
+  --surface-image-scrim: linear-gradient(to bottom, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.62) 100%);
+
+  /* Hover */
+  --hover-shadow-card: 0 14px 36px rgba(129, 140, 248, 0.20), 0 4px 14px rgba(129, 140, 248, 0.12);
+  --hover-shadow-row:  0 8px  20px rgba(129, 140, 248, 0.15), 0 2px  8px  rgba(129, 140, 248, 0.09);
+  --hover-shadow-btn:  0 6px  18px rgba(129, 140, 248, 0.26), 0 2px  6px  rgba(129, 140, 248, 0.14);
+  --hover-shadow-pill: 0 4px  12px rgba(129, 140, 248, 0.20), 0 1px  4px  rgba(129, 140, 248, 0.12);
+}

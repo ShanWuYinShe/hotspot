@@ -113,10 +113,10 @@ function PostCard({
         )}
         {/* Tag chip */}
         <div
-          className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full"
-          style={{ background: "var(--neu-accent-primary)", boxShadow: "0 2px 8px var(--neu-glow)" }}
+          className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-[var(--neu-accent-primary)]"
+          style={{ boxShadow: "0 2px 8px var(--neu-glow)" }}
         >
-          <span style={{ fontSize: 10, color: "white" }}>{item.tag}</span>
+          <span className="text-white" style={{ fontSize: 10 }}>{item.tag}</span>
         </div>
         {/* Author + location on image */}
         <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 px-3 pb-2.5">
@@ -133,10 +133,9 @@ function PostCard({
       {/* Text content */}
       <div style={{ padding: dense ? "10px 14px 6px" : "12px 16px 8px" }}>
         <p
-          className="line-clamp-2"
+          className="line-clamp-2 text-[var(--neu-text-muted)]"
           style={{
             fontSize: dense ? 12 : 13,
-            color: "var(--neu-text-muted)",
             lineHeight: 1.6,
           }}
         >
@@ -153,8 +152,7 @@ function PostCard({
           <motion.button
             whileTap={hover.tap as any}
             whileHover={hover.action as any}
-            className="flex items-center gap-1.5 outline-none"
-            style={{ color: liked ? "var(--neu-accent-primary)" : "var(--neu-text-muted)" }}
+            className={`flex items-center gap-1.5 outline-none ${liked ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
             onClick={e => { e.stopPropagation(); onLike(); }}
           >
             <Heart style={{ width: 15, height: 15 }} strokeWidth={1.5} fill={liked ? "currentColor" : "none"} />
@@ -163,8 +161,7 @@ function PostCard({
           <motion.button
             whileTap={hover.tap as any}
             whileHover={hover.action as any}
-            className="flex items-center gap-1.5 outline-none"
-            style={{ color: "var(--neu-text-muted)" }}
+            className="flex items-center gap-1.5 outline-none text-[var(--neu-text-muted)]"
             onClick={e => e.stopPropagation()}
           >
             <MessageCircle style={{ width: 15, height: 15 }} strokeWidth={1.5} />
@@ -176,8 +173,7 @@ function PostCard({
             whileTap={hover.tap as any}
             whileHover={hover.action as any}
             onClick={e => { e.stopPropagation(); onSave(); }}
-            className="outline-none"
-            style={{ color: saved ? "var(--neu-accent-primary)" : "var(--neu-text-muted)" }}
+            className={`outline-none ${saved ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
           >
             <Bookmark style={{ width: 15, height: 15 }} strokeWidth={1.5} fill={saved ? "currentColor" : "none"} />
           </motion.button>
@@ -185,7 +181,7 @@ function PostCard({
             whileTap={hover.tap as any}
             whileHover={hover.action as any}
             onClick={e => e.stopPropagation()}
-            className="outline-none" style={{ color: "var(--neu-text-muted)" }}
+            className="outline-none text-[var(--neu-text-muted)]"
           >
             <Share2 style={{ width: 15, height: 15 }} strokeWidth={1.5} />
           </motion.button>
@@ -214,8 +210,8 @@ function DiscoverHeader({
         <input
           value={searchVal} onChange={e => setSearchVal(e.target.value)}
           placeholder="地点、人物、关键词…"
-          className="flex-1 bg-transparent outline-none"
-          style={{ fontSize: 13, color: "var(--neu-text)" }}
+          className="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
+          style={{ fontSize: 13 }}
         />
         {searchVal.length > 0 && (
           <motion.button
@@ -239,10 +235,9 @@ function DiscoverHeader({
           return (
             <motion.button
               key={tab} whileTap={{ scale: 0.94 }} onClick={() => setActiveTab(tab)}
-              className="relative flex-shrink-0 pb-3 pt-1 outline-none"
+              className={`relative flex-shrink-0 pb-3 pt-1 outline-none ${isActive ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
               style={{
                 paddingLeft: 18, paddingRight: 18,
-                color: isActive ? "var(--neu-accent-primary)" : "var(--neu-text-muted)",
                 fontWeight: isActive ? 500 : 400, fontSize: 13,
                 transition: "color 0.2s",
               }}
@@ -251,11 +246,11 @@ function DiscoverHeader({
               {isActive && (
                 <motion.div
                   layoutId="discover-tab-indicator"
+                  className="bg-[var(--neu-accent-primary)]"
                   style={{
                     position: "absolute", bottom: -1,
                     left: "14%", right: "14%",
                     height: 2, borderRadius: 1,
-                    background: "var(--neu-accent-primary)",
                   }}
                   transition={{ type: "spring", stiffness: 420, damping: 34 }}
                 />
@@ -282,16 +277,14 @@ function TagChips({
           <motion.button
             key={tag} whileTap={{ scale: 0.94 }}
             onClick={() => setActiveTag(active ? null : tag)}
-            className="flex-shrink-0 px-3 py-1 rounded-full outline-none transition-all neu-surface-ghost"
+            className={`flex-shrink-0 px-3 py-1 rounded-full outline-none transition-all neu-surface-ghost ${active ? "bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
             style={active
               ? {
-                  background: "var(--neu-accent-soft)",
-                  color: "var(--neu-accent-primary)",
                   fontSize: 12,
                   fontWeight: 500,
                   borderColor: "var(--neu-accent-soft-border)",
                 }
-              : { fontSize: 12, color: "var(--neu-text-muted)" }}>
+              : { fontSize: 12 }}>
             {tag}
           </motion.button>
         );
@@ -319,12 +312,12 @@ function DiscoverMobile({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
     <>
       {/* Sticky header — full width */}
       <div
-        className="sticky top-0 z-10 px-5 pt-3 pb-0"
-        style={{ backgroundColor: "var(--neu-bg)", borderBottom: "1px solid var(--neu-border)" }}
+        className="sticky top-0 z-10 px-5 pt-3 pb-0 bg-[var(--neu-bg)]"
+        style={{ borderBottom: "1px solid var(--neu-border)" }}
       >
         <div className="flex items-center justify-between mb-2">
-          <h1 style={{ fontSize: 22, color: "var(--neu-text)" }}>发现</h1>
-          <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>
+          <h1 className="text-[var(--neu-text)]" style={{ fontSize: 22 }}>发现</h1>
+          <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>
             {filtered.length} 条内容
           </span>
         </div>
@@ -387,17 +380,19 @@ function DiscoverTablet({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
     <>
       {/* Sticky header — wide shell so it aligns with main + rail below */}
       <div
-        className="sticky top-0 z-10 pt-4 pb-0"
-        style={{ backgroundColor: "var(--neu-bg)", borderBottom: "1px solid var(--neu-border)" }}
+        className="sticky top-0 z-10 pt-4 pb-0 bg-[var(--neu-bg)]"
+        style={{ borderBottom: "1px solid var(--neu-border)" }}
       >
         <div className="flex gap-6 mx-auto" style={{ width: "100%" }}>
           <div className="mx-auto w-full lg:mx-0 px-6 min-w-0" style={{ width: "100%" }}>
             <div className="flex items-center justify-between mb-2">
-              <h1 style={{ fontSize: 24, color: "var(--neu-text)" }}>发现</h1>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-                style={{ background: "var(--neu-accent-primary)", boxShadow: "0 3px 10px var(--neu-glow)" }}>
+              <h1 className="text-[var(--neu-text)]" style={{ fontSize: 24 }}>发现</h1>
+              <div
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]"
+                style={{ boxShadow: "0 3px 10px var(--neu-glow)" }}
+              >
                 <Sparkles style={{ width: 11, height: 11, color: "white" }} strokeWidth={2} />
-                <span style={{ fontSize: 11, color: "white" }}>精选</span>
+                <span className="text-white" style={{ fontSize: 11 }}>精选</span>
               </div>
             </div>
             <DiscoverHeader searchVal={searchVal} setSearchVal={setSearchVal} activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -467,16 +462,16 @@ function DiscoverDesktop({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tag
     <div className="content-mode-wide flex flex-col h-full">
       {/* Directory header: fixed to the local feed viewport and opaque over scrolling content. */}
       <header
-        className="sticky top-0 z-20 flex-shrink-0 px-6 pt-3 pb-0"
-        style={{ backgroundColor: "var(--neu-bg)", borderBottom: "1px solid var(--neu-border)" }}
+        className="sticky top-0 z-20 flex-shrink-0 px-6 pt-3 pb-0 bg-[var(--neu-bg)]"
+        style={{ borderBottom: "1px solid var(--neu-border)" }}
       >
         <div className="flex items-center gap-3 mb-2">
           <ActionIconButton icon={ArrowLeft} label="返回" onClick={() => navigate(-1)} size={34} />
           <div className="min-w-0 flex-1">
-            <h1 style={{ fontSize: 18, color: "var(--neu-text)" }}>附近瞬间</h1>
-            <p style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>徐州 · 附近正在发生的事</p>
+            <h1 className="text-[var(--neu-text)]" style={{ fontSize: 18 }}>附近瞬间</h1>
+            <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>徐州 · 附近正在发生的事</p>
           </div>
-          <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{filtered.length} 条内容</span>
+          <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>{filtered.length} 条内容</span>
         </div>
         <DiscoverHeader searchVal={searchVal} setSearchVal={setSearchVal} activeTab={activeTab} setActiveTab={setActiveTab} />
       </header>

@@ -1,0 +1,190 @@
+/* ── Primitives ──────────────────────────────────────────────────────────
+   Raw color values per theme-mode. These are the only values that change
+   between themes. All semantic tokens derive from these via var().
+
+   Naming: --pr-{domain} e.g. --pr-bg, --pr-text, --pr-accent
+────────────────────────────────────────────────────────────────────── */
+
+/* Default / Vibrant light */
+:root,
+.vibrant {
+  --pr-bg: #FAFAFE;
+  --pr-page-bg: #EEF2FF;
+  --pr-text: #1E1B4B;
+  --pr-text-muted: #514D86;
+  --pr-accent: #4F46E5;
+  --pr-accent-primary: #4F46E5;
+  --pr-glow: rgba(79, 70, 229, 0.30);
+  --pr-shadow-light: rgba(255, 255, 255, 1);
+  --pr-shadow-dark: rgba(99, 91, 200, 0.12);
+  --pr-border: rgba(99, 102, 241, 0.15);
+  --pr-border-pressed: rgba(99, 102, 241, 0.26);
+  --pr-accent-soft: rgba(79, 70, 229, 0.10);
+  --pr-accent-soft-border: rgba(79, 70, 229, 0.32);
+  --pr-hover: rgba(79, 70, 229, 0.12);
+  --pr-active-hover: rgba(79, 70, 229, 0.16);
+  --pr-on-accent: #FFFFFF;
+  --pr-online: #0F766E;
+  --pr-hot: #BE123C;
+  --pr-warning: #A16207;
+  --pr-map-user: #4F46E5;
+  --pr-map-group: #047857;
+  --pr-map-post: #C2410C;
+  --pr-overlay-soft: rgba(30, 27, 75, 0.08);
+  --pr-overlay-strong: rgba(14, 10, 35, 0.50);
+  --pr-scrim: linear-gradient(to bottom, rgba(20, 16, 56, 0.04) 0%, rgba(20, 16, 56, 0.52) 100%);
+  --pr-shadow-card: 0 14px 36px rgba(99, 102, 241, 0.14), 0 4px 14px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.07);
+  --pr-shadow-row: 0 8px 20px rgba(99, 102, 241, 0.11), 0 2px 8px rgba(99, 102, 241, 0.07);
+  --pr-shadow-btn: 0 6px 18px rgba(99, 102, 241, 0.20), 0 2px 6px rgba(99, 102, 241, 0.12);
+  --pr-shadow-pill: 0 4px 12px rgba(99, 102, 241, 0.16), 0 1px 4px rgba(99, 102, 241, 0.10);
+}
+
+/* Vibrant dark */
+.vibrant.dark {
+  --pr-bg: #130F26;
+  --pr-page-bg: #07040F;
+  --pr-text: #EAE6FF;
+  --pr-text-muted: #AAA6D8;
+  --pr-accent: #818cf8;
+  --pr-accent-primary: #818cf8;
+  --pr-glow: rgba(129, 140, 248, 0.30);
+  --pr-shadow-light: rgba(129, 140, 248, 0.07);
+  --pr-shadow-dark: rgba(0, 0, 0, 0.72);
+  --pr-border: rgba(129, 140, 248, 0.14);
+  --pr-border-pressed: rgba(129, 140, 248, 0.26);
+  --pr-accent-soft: rgba(129, 140, 248, 0.14);
+  --pr-accent-soft-border: rgba(129, 140, 248, 0.34);
+  --pr-hover: rgba(129, 140, 248, 0.18);
+  --pr-active-hover: rgba(129, 140, 248, 0.24);
+  --pr-on-accent: #120F2A;
+  --pr-online: #2DD4BF;
+  --pr-hot: #FB7185;
+  --pr-warning: #FBBF24;
+  --pr-map-user: #818CF8;
+  --pr-map-group: #34D399;
+  --pr-map-post: #FB923C;
+  --pr-overlay-soft: rgba(234, 230, 255, 0.08);
+  --pr-overlay-strong: rgba(0, 0, 0, 0.60);
+  --pr-scrim: linear-gradient(to bottom, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.62) 100%);
+  --pr-shadow-card: 0 14px 36px rgba(129, 140, 248, 0.20), 0 4px 14px rgba(129, 140, 248, 0.12);
+  --pr-shadow-row: 0 8px 20px rgba(129, 140, 248, 0.15), 0 2px 8px rgba(129, 140, 248, 0.09);
+  --pr-shadow-btn: 0 6px 18px rgba(129, 140, 248, 0.26), 0 2px 6px rgba(129, 140, 248, 0.14);
+  --pr-shadow-pill: 0 4px 12px rgba(129, 140, 248, 0.20), 0 1px 4px rgba(129, 140, 248, 0.12);
+}
+
+/* Forest light */
+.forest {
+  --pr-bg: #F9F9F5;
+  --pr-page-bg: #EDECEA;
+  --pr-text: #1B1F1B;
+  --pr-text-muted: #58685E;
+  --pr-accent: #3D7A55;
+  --pr-accent-primary: #3D7A55;
+  --pr-glow: rgba(61, 122, 85, 0.18);
+  --pr-shadow-light: rgba(255, 255, 255, 0.0);
+  --pr-shadow-dark: rgba(0, 0, 0, 0.0);
+  --pr-border: rgba(61, 122, 85, 0.13);
+  --pr-border-pressed: rgba(61, 122, 85, 0.24);
+  --pr-accent-soft: rgba(61, 122, 85, 0.10);
+  --pr-accent-soft-border: rgba(61, 122, 85, 0.32);
+  --pr-hover: rgba(61, 122, 85, 0.11);
+  --pr-active-hover: rgba(61, 122, 85, 0.16);
+  --pr-on-accent: #FFFFFF;
+  --pr-online: #3D7A55;
+  --pr-hot: #78602E;
+  --pr-warning: #806426;
+  --pr-map-user: #3D7A55;
+  --pr-map-group: #638B46;
+  --pr-map-post: #A57C38;
+  --pr-overlay-soft: rgba(27, 31, 27, 0.08);
+  --pr-overlay-strong: rgba(20, 28, 20, 0.42);
+  --pr-scrim: linear-gradient(to bottom, rgba(20, 28, 20, 0.02) 0%, rgba(20, 28, 20, 0.44) 100%);
+  --pr-shadow-card: 0 0 0 1.5px rgba(61, 122, 85, 0.22);
+  --pr-shadow-row: 0 0 0 1px rgba(61, 122, 85, 0.18);
+  --pr-shadow-btn: 0 0 0 1.5px rgba(61, 122, 85, 0.28);
+  --pr-shadow-pill: 0 0 0 1px rgba(61, 122, 85, 0.20);
+}
+
+/* Forest dark */
+.forest.dark {
+  --pr-bg: #161A16;
+  --pr-page-bg: #0E110E;
+  --pr-text: #DCE8DE;
+  --pr-text-muted: #9AAFA0;
+  --pr-accent: #52B878;
+  --pr-accent-primary: #52B878;
+  --pr-glow: rgba(82, 184, 120, 0.20);
+  --pr-shadow-light: rgba(255, 255, 255, 0.0);
+  --pr-shadow-dark: rgba(0, 0, 0, 0.0);
+  --pr-border: rgba(82, 184, 120, 0.12);
+  --pr-border-pressed: rgba(82, 184, 120, 0.22);
+  --pr-accent-soft: rgba(82, 184, 120, 0.12);
+  --pr-accent-soft-border: rgba(82, 184, 120, 0.34);
+  --pr-hover: rgba(82, 184, 120, 0.14);
+  --pr-active-hover: rgba(82, 184, 120, 0.20);
+  --pr-on-accent: #0B1A10;
+  --pr-online: #52B878;
+  --pr-hot: #C4A75A;
+  --pr-warning: #C4A75A;
+  --pr-map-user: #52B878;
+  --pr-map-group: #88B85A;
+  --pr-map-post: #C4A75A;
+  --pr-overlay-soft: rgba(220, 232, 222, 0.07);
+  --pr-overlay-strong: rgba(0, 0, 0, 0.54);
+  --pr-scrim: linear-gradient(to bottom, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.56) 100%);
+  --pr-shadow-card: 0 0 0 1.5px rgba(82, 184, 120, 0.26);
+  --pr-shadow-row: 0 0 0 1px rgba(82, 184, 120, 0.20);
+  --pr-shadow-btn: 0 0 0 1.5px rgba(82, 184, 120, 0.32);
+  --pr-shadow-pill: 0 0 0 1px rgba(82, 184, 120, 0.24);
+}
+
+/* ── Z-Index Scale ──────────────────────────────────────────────────────
+   Single source of truth for stacking order. Components reference
+   var(--z-modal) instead of ad-hoc z-[60] / z-[90] / z-[100].
+────────────────────────────────────────────────────────────────────── */
+:root {
+  --z-base: 1;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-nav: 30;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+}
+
+/* ── Backdrop Blur Scale ───────────────────────────────────────────────
+   Two-tier system: overlay (subtle, for masks) / surface (strong, for
+   navigation bars and glass panels).
+────────────────────────────────────────────────────────────────────── */
+:root {
+  --blur-overlay: 4px;
+  --blur-surface: 16px;
+}
+
+/* ── Common color-mix() presets ────────────────────────────────────────
+   Avoid repeating the same color-mix() formula across components.
+────────────────────────────────────────────────────────────────────── */
+:root,
+.vibrant {
+  --pr-accent-bg: color-mix(in srgb, var(--pr-accent-primary) 12%, var(--pr-bg));
+  --pr-online-bg: color-mix(in srgb, var(--pr-online) 14%, transparent);
+  --pr-danger-bg: color-mix(in srgb, var(--pr-hot) 10%, transparent);
+}
+
+.vibrant.dark {
+  --pr-accent-bg: color-mix(in srgb, var(--pr-accent-primary) 14%, var(--pr-bg));
+  --pr-online-bg: color-mix(in srgb, var(--pr-online) 14%, transparent);
+  --pr-danger-bg: color-mix(in srgb, var(--pr-hot) 12%, transparent);
+}
+
+.forest {
+  --pr-accent-bg: color-mix(in srgb, var(--pr-accent-primary) 10%, var(--pr-bg));
+  --pr-online-bg: color-mix(in srgb, var(--pr-online) 14%, transparent);
+  --pr-danger-bg: color-mix(in srgb, var(--pr-hot) 10%, transparent);
+}
+
+.forest.dark {
+  --pr-accent-bg: color-mix(in srgb, var(--pr-accent-primary) 12%, var(--pr-bg));
+  --pr-online-bg: color-mix(in srgb, var(--pr-online) 14%, transparent);
+  --pr-danger-bg: color-mix(in srgb, var(--pr-hot) 12%, transparent);
+}

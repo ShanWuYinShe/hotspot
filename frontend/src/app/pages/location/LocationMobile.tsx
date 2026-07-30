@@ -116,7 +116,7 @@ function LocationMobile() {
 
   /* ── Render ──────────────────────────────────────────────────── */
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "var(--neu-bg)" }}>
+    <div className="bg-[var(--neu-bg)]" style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
 
       {/* ══ MAP (full screen, tappable) ════════════════════════ */}
       <div style={{ position: "absolute", inset: 0, zIndex: 0 }} onClick={handleMapTap}>
@@ -160,7 +160,7 @@ function LocationMobile() {
         ))}
 
         {/* Attribution */}
-        <div style={{ position: "absolute", bottom: 4, left: 6, fontSize: 9, color: "var(--neu-text-muted)", opacity: 0.4, pointerEvents: "none", zIndex: 1 }}>
+        <div className="text-[var(--neu-text-muted)]" style={{ position: "absolute", bottom: 4, left: 6, fontSize: 9, opacity: 0.4, pointerEvents: "none", zIndex: 1 }}>
           © OpenStreetMap contributors
         </div>
       </div>
@@ -179,11 +179,9 @@ function LocationMobile() {
           <motion.button
             whileTap={{ scale: 0.93 }}
             onClick={e => { e.stopPropagation(); setShowFilter(v => !v); }}
-            className="flex items-center gap-2 rounded-full outline-none"
+            className={`flex items-center gap-2 rounded-full outline-none ${showFilter ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text)]"}`}
             style={{
               padding: "9px 16px", fontSize: 14,
-              background: showFilter ? "var(--neu-accent-primary)" : "var(--neu-bg)",
-              color: showFilter ? "white" : "var(--neu-text)",
               border: showFilter ? "1px solid transparent" : "1px solid var(--neu-border)",
               boxShadow: showFilter
                 ? "0 4px 16px var(--neu-glow)"
@@ -202,13 +200,13 @@ function LocationMobile() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.9 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="bg-[var(--neu-bg)]"
               style={{
                 position: "absolute",
                 top: 62, right: 14,
                 width: 136,
                 borderRadius: 16,
                 overflow: "hidden",
-                background: "var(--neu-bg)",
                 border: "1px solid var(--neu-border)",
                 boxShadow: "0 8px 28px var(--neu-shadow-dark)",
                 zIndex: 60,
@@ -222,14 +220,14 @@ function LocationMobile() {
                 const active = activeFilters.has(type as PinType);
                 return (
                   <React.Fragment key={type}>
-                    {i > 0 && <div style={{ height: 1, background: "var(--neu-border)" }} />}
+                    {i > 0 && <div className="bg-[var(--neu-border)]" style={{ height: 1 }} />}
                     <motion.button
                       whileTap={{ scale: 0.95 }}
                       onClick={() => toggleFilter(type as PinType)}
                       className="w-full flex items-center gap-2 px-3 py-3 outline-none"
                       style={{ opacity: active ? 1 : 0.38 }}>
                       <img src={icon} alt={label} style={{ width: 18, height: 24, flexShrink: 0 }} />
-                      <span style={{ flex: 1, fontSize: 13, color: "var(--neu-text)", textAlign: "left" }}>{label}</span>
+                      <span className="text-[var(--neu-text)]" style={{ flex: 1, fontSize: 13, textAlign: "left" }}>{label}</span>
                       <div style={{
                         width: 13, height: 13, borderRadius: "50%", flexShrink: 0,
                         background: active ? color : "transparent",
@@ -279,12 +277,12 @@ function LocationMobile() {
 
       {/* ══ BOTTOM SHEET (draggable) ════════════════════════════ */}
       <motion.div
+        className="bg-[var(--neu-bg)]"
         style={{
           position: "absolute", bottom: 0, left: 0, right: 0,
           height: sheetH,
           zIndex: 20,
           borderRadius: "22px 22px 0 0",
-          background: "var(--neu-bg)",
           border: "1px solid var(--neu-border)",
           borderBottom: "none",
           boxShadow: "0 -6px 28px var(--neu-shadow-dark)",
@@ -297,7 +295,7 @@ function LocationMobile() {
         <div
           style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 10, paddingBottom: 6, cursor: "grab", touchAction: "none", userSelect: "none" }}
           onPointerDown={onHandlePointerDown}>
-          <div style={{ width: 38, height: 4, borderRadius: 2, background: "var(--neu-border)" }} />
+          <div className="bg-[var(--neu-border)]" style={{ width: 38, height: 4, borderRadius: 2 }} />
         </div>
 
         {/* ── Search bar ───────────────────────────────────────── */}
@@ -314,8 +312,8 @@ function LocationMobile() {
               }}
               onFocus={() => { if (snap === "min") snapTo("mid"); }}
               placeholder="搜索地点、地标或坐标"
-              className="flex-1 bg-transparent outline-none"
-              style={{ fontSize: 14, color: "var(--neu-text)" }}
+              className="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
+              style={{ fontSize: 14 }}
             />
             {searchQuery ? (
               <motion.button whileTap={{ scale: 0.85 }}
@@ -343,11 +341,11 @@ function LocationMobile() {
                       aria-pressed={selectedLoc?.displayName === r.displayName}
                       className="app-list-row app-list-row--standard neu-row-hover px-5 outline-none"
                       style={{ borderBottom: i < searchResults.length - 1 ? "1px solid var(--neu-border)" : "none" }}>
-                      <div className="flex items-center justify-center rounded-full flex-shrink-0"
-                        style={{ width: 34, height: 34, background: "var(--neu-accent-primary)", opacity: 0.12 }}>
+                      <div className="flex items-center justify-center rounded-full flex-shrink-0 bg-[var(--neu-accent-primary)]"
+                        style={{ width: 34, height: 34, opacity: 0.12 }}>
                         <MapPin style={{ width: 14, height: 14, color: "var(--neu-accent-primary)" }} strokeWidth={1.75} />
                       </div>
-                      <span style={{ fontSize: 14, color: "var(--neu-text)", flex: 1 }}>{r.displayName}</span>
+                      <span className="text-[var(--neu-text)]" style={{ fontSize: 14, flex: 1 }}>{r.displayName}</span>
                       {selectedLoc?.displayName === r.displayName && (
                         <Check style={{ width: 14, height: 14, color: "var(--neu-accent-primary)", flexShrink: 0 }} strokeWidth={2.5} />
                       )}
@@ -361,7 +359,7 @@ function LocationMobile() {
                 <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="flex flex-col items-center py-6">
                   <MapPin style={{ width: 26, height: 26, color: "var(--neu-text-muted)", opacity: 0.28 }} strokeWidth={1} />
-                  <p style={{ fontSize: 13, color: "var(--neu-text-muted)", marginTop: 8 }}>未找到匹配地点</p>
+                  <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 13, marginTop: 8 }}>未找到匹配地点</p>
                 </motion.div>
               )}
 
@@ -384,8 +382,8 @@ function LocationMobile() {
                           <div className="relative flex-shrink-0">
                             <img src={selectedPin.avatar} className="rounded-full object-cover" style={{ width: 42, height: 42 }} />
                             {selectedPin.online && (
-                              <span className="absolute bottom-0 right-0 rounded-full"
-                                style={{ width: 10, height: 10, background: "var(--semantic-online)", border: "2px solid var(--neu-bg)" }} />
+                              <span className="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]"
+                                style={{ width: 10, height: 10, border: "2px solid var(--neu-bg)" }} />
                             )}
                           </div>
                         ) : selectedPin.type === "post" && selectedPin.image ? (
@@ -395,8 +393,8 @@ function LocationMobile() {
                             style={{ width: 22, height: 29, flexShrink: 0 }} />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p style={{ fontSize: 13, color: "var(--neu-text)" }}>{selectedPin.name || selectedPin.title}</p>
-                          <p style={{ fontSize: 11, color: "var(--neu-text-muted)", marginTop: 1 }}>
+                          <p className="text-[var(--neu-text)]" style={{ fontSize: 13 }}>{selectedPin.name || selectedPin.title}</p>
+                          <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 1 }}>
                             {PIN_LABELS[selectedPin.type]}
                             {selectedPin.distance ? ` · ${selectedPin.distance}` : ""}
                             {selectedPin.tag ? ` · #${selectedPin.tag}` : ""}
@@ -418,10 +416,10 @@ function LocationMobile() {
                   <div className="flex items-center gap-2 px-4 pb-2">
                     {([["recent", "最近使用", Clock], ["hot", "热门地点", Star]] as const).map(([id, label, Icon]) => (
                       <motion.button key={id} whileTap={{ scale: 0.92 }} onClick={() => setActiveTab(id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none ${activeTab === id ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
                         style={activeTab === id
-                          ? { background: "var(--neu-accent-primary)", color: "white", fontSize: 12, boxShadow: "0 3px 10px var(--neu-glow)" }
-                          : { background: "var(--neu-bg)", color: "var(--neu-text-muted)", fontSize: 12, border: "1px solid var(--neu-border)" }
+                          ? { fontSize: 12, boxShadow: "0 3px 10px var(--neu-glow)" }
+                          : { fontSize: 12, border: "1px solid var(--neu-border)" }
                         }>
                         <Icon style={{ width: 11, height: 11 }} strokeWidth={activeTab === id ? 2.5 : 1.5} />
                         {label}
@@ -429,7 +427,7 @@ function LocationMobile() {
                     ))}
                     {activeTab === "recent" && recentItems.length > 0 && (
                       <motion.button whileTap={{ scale: 0.9 }} onClick={() => setRecentItems([])}
-                        className="ml-auto outline-none" style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>
+                        className="ml-auto outline-none text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>
                         清空
                       </motion.button>
                     )}
@@ -445,13 +443,13 @@ function LocationMobile() {
                             aria-pressed={selectedLoc?.displayName === loc.displayName}
                             className="app-list-row app-list-row--standard neu-row-hover px-4 outline-none"
                             style={{ borderBottom: i < recentItems.length - 1 ? "1px solid var(--neu-border)" : "none" }}>
-                            <div className="flex items-center justify-center rounded-full flex-shrink-0"
-                              style={{ width: 36, height: 36, background: "var(--neu-bg)", border: "1px solid var(--neu-border)", boxShadow: "3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light)", fontSize: 18 }}>
+                            <div className="flex items-center justify-center rounded-full flex-shrink-0 bg-[var(--neu-bg)]"
+                              style={{ width: 36, height: 36, border: "1px solid var(--neu-border)", boxShadow: "3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light)", fontSize: 18 }}>
                               {loc.emoji}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p style={{ fontSize: 14, color: "var(--neu-text)" }} className="truncate">{loc.displayName}</p>
-                              <p style={{ fontSize: 11, color: "var(--neu-text-muted)", marginTop: 1 }}>{loc.desc}</p>
+                              <p className="truncate text-[var(--neu-text)]" style={{ fontSize: 14 }}>{loc.displayName}</p>
+                              <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 1 }}>{loc.desc}</p>
                             </div>
                             {selectedLoc?.displayName === loc.displayName
                               ? <Check style={{ width: 14, height: 14, color: "var(--neu-accent-primary)", flexShrink: 0 }} strokeWidth={2.5} />
@@ -459,7 +457,7 @@ function LocationMobile() {
                             }
                           </motion.button>
                         )) : (
-                          <p style={{ fontSize: 13, color: "var(--neu-text-muted)", padding: "12px 20px" }}>暂无最近记录</p>
+                          <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 13, padding: "12px 20px" }}>暂无最近记录</p>
                         )}
                       </motion.div>
                     )}
@@ -471,17 +469,17 @@ function LocationMobile() {
                             aria-pressed={selectedLoc?.displayName === loc.displayName}
                             className="app-list-row app-list-row--standard neu-row-hover px-4 outline-none"
                             style={{ borderBottom: i < HOT_LOCATIONS.length - 1 ? "1px solid var(--neu-border)" : "none" }}>
-                            <div className="flex items-center justify-center rounded-[13px] flex-shrink-0"
-                              style={{ width: 36, height: 36, background: "var(--neu-accent-primary)", fontSize: 18, opacity: 0.88 }}>
+                            <div className="flex items-center justify-center rounded-[13px] flex-shrink-0 bg-[var(--neu-accent-primary)]"
+                              style={{ width: 36, height: 36, fontSize: 18, opacity: 0.88 }}>
                               {loc.emoji}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p style={{ fontSize: 14, color: "var(--neu-text)" }} className="truncate">{loc.displayName}</p>
-                              <p style={{ fontSize: 11, color: "var(--neu-text-muted)", marginTop: 1 }}>{loc.desc}</p>
+                              <p className="truncate text-[var(--neu-text)]" style={{ fontSize: 14 }}>{loc.displayName}</p>
+                              <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 1 }}>{loc.desc}</p>
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0">
                               <Users style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
-                              <span style={{ fontSize: 12, color: "var(--neu-accent-primary)" }}>{loc.users}</span>
+                              <span className="text-[var(--neu-accent-primary)]" style={{ fontSize: 12 }}>{loc.users}</span>
                             </div>
                           </motion.button>
                         ))}
@@ -497,10 +495,9 @@ function LocationMobile() {
         {/* ── Confirm button — always at bottom of sheet ───────── */}
         <div style={{ flexShrink: 0, padding: "8px 14px 18px" }}>
           <motion.button whileTap={{ scale: 0.97 }} onClick={handleConfirm}
-            className="w-full flex items-center justify-center gap-2 rounded-full outline-none"
+            className="w-full flex items-center justify-center gap-2 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white"
             style={{
-              height: 50, fontSize: 15, color: "white",
-              background: "var(--neu-accent-primary)",
+              height: 50, fontSize: 15,
               boxShadow: "0 6px 20px var(--neu-glow)",
             }}>
             <MapPin style={{ width: 15, height: 15 }} strokeWidth={2} />

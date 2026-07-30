@@ -55,14 +55,14 @@ function RelationshipsWorkspace() {
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-6">
           <div>
             <div className="flex items-center gap-2">
-              <p style={{ fontSize: 16, color: "var(--neu-text)" }}>关系网络</p>
-              <span className="rounded-full px-2 py-0.5" style={{ fontSize: 10, color: "var(--neu-accent-primary)", background: "var(--neu-accent-soft)", border: "1px solid var(--neu-accent-soft-border)" }}>
+              <p className="text-[var(--neu-text)]" style={{ fontSize: 16 }}>关系网络</p>
+              <span className="rounded-full px-2 py-0.5 bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]" style={{ fontSize: 10, border: "1px solid var(--neu-accent-soft-border)" }}>
                 {friends.length + following.length + followers.length} 条关系
               </span>
             </div>
-            <p className="mt-1" style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{activeMeta.detail}</p>
+            <p className="mt-1 text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>{activeMeta.detail}</p>
           </div>
-          <span className="mt-0.5 whitespace-nowrap" style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{activeMeta.count} 人</span>
+          <span className="mt-0.5 whitespace-nowrap text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>{activeMeta.count} 人</span>
         </div>
 
         <div className="mt-5 flex gap-1" role="tablist" aria-label="关系类型">
@@ -76,8 +76,8 @@ function RelationshipsWorkspace() {
                 aria-selected={selected}
                 whileTap={{ scale: 0.96 }}
                 onClick={() => setTab(id)}
-                className="relative flex items-center gap-1.5 px-3 pb-3 pt-1 outline-none"
-                style={{ fontSize: 13, color: selected ? "var(--neu-accent-primary)" : "var(--neu-text-muted)", fontWeight: selected ? 600 : 400 }}
+                className={`relative flex items-center gap-1.5 px-3 pb-3 pt-1 outline-none ${selected ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
+                style={{ fontSize: 13, fontWeight: selected ? 600 : 400 }}
               >
                 <Icon style={{ width: 13, height: 13 }} strokeWidth={selected ? 2 : 1.5} />
                 {label}
@@ -122,15 +122,15 @@ function ProfileDesktop() {
     return (
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex-shrink-0 flex items-center gap-3 px-6 py-4"
-          style={{ backgroundColor: "var(--neu-bg)", borderBottom: "1px solid var(--neu-border)" }}>
+        <div className="flex-shrink-0 flex items-center gap-3 px-6 py-4 bg-[var(--neu-bg)]"
+          style={{ borderBottom: "1px solid var(--neu-border)" }}>
           <ActionIconButton
             icon={ArrowLeft}
             label="返回个人主页"
             onClick={() => navigate(ROUTES.me)}
             size={36}
           />
-          <p style={{ fontSize: 18, color: "var(--neu-text)", flex: 1 }}>{meta.title}</p>
+          <p className="text-[var(--neu-text)]" style={{ fontSize: 18, flex: 1 }}>{meta.title}</p>
         </div>
         {/* 全宽分区内容 */}
         <div className="flex-1 min-h-0 overflow-hidden flex">
@@ -144,11 +144,11 @@ function ProfileDesktop() {
   return (
     <div className="flex flex-col h-full">
       {/* Sticky header */}
-      <div className="flex-shrink-0 flex items-center justify-between px-6 py-4"
-        style={{ backgroundColor: "var(--neu-bg)", borderBottom: "1px solid var(--neu-border)" }}>
+      <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-[var(--neu-bg)]"
+        style={{ borderBottom: "1px solid var(--neu-border)" }}>
         <div>
-          <p style={{ fontSize: 20, color: "var(--neu-text)" }}>鹿鸣</p>
-          <p style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 1 }}>@elara.v</p>
+          <p className="text-[var(--neu-text)]" style={{ fontSize: 20 }}>鹿鸣</p>
+          <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, marginTop: 1 }}>@elara.v</p>
         </div>
         <div className="flex gap-2">
           <ActionIconButton icon={Share2} label="分享个人主页" size={36} />
@@ -161,40 +161,40 @@ function ProfileDesktop() {
           style={{ width: 260, borderRight: "1px solid var(--neu-border)" }}>
           {/* Avatar */}
           <div className="relative mb-4">
-            <div className="absolute inset-0 rounded-full pointer-events-none"
-              style={{ background: "var(--neu-glow)", filter: "blur(20px)", transform: "scale(1.2)", opacity: 0.5 }} />
-            <div className="relative rounded-full"
-              style={{ width: 96, height: 96, padding: 2, background: "var(--neu-bg)", boxShadow: "8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light)", border: "1.5px solid var(--neu-border)" }}>
+            <div className="absolute inset-0 rounded-full pointer-events-none bg-[var(--neu-glow)]"
+              style={{ filter: "blur(20px)", transform: "scale(1.2)", opacity: 0.5 }} />
+            <div className="relative rounded-full bg-[var(--neu-bg)]"
+              style={{ width: 96, height: 96, padding: 2, boxShadow: "8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light)", border: "1.5px solid var(--neu-border)" }}>
               <img src={avatar} alt={nickname || "用户"} className="w-full h-full object-cover rounded-full" />
             </div>
             <motion.button whileTap={{ scale: 0.9 }}
-              className="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none"
-              style={{ width: 26, height: 26, background: "var(--neu-accent-primary)", border: "2.5px solid var(--neu-bg)", boxShadow: "0 2px 8px var(--neu-glow)" }}>
+              className="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none bg-[var(--neu-accent-primary)]"
+              style={{ width: 26, height: 26, border: "2.5px solid var(--neu-bg)", boxShadow: "0 2px 8px var(--neu-glow)" }}>
               <Camera style={{ width: 12, height: 12, color: "white" }} strokeWidth={2} />
             </motion.button>
           </div>
 
-          <h2 style={{ fontSize: 18, color: "var(--neu-text)", textAlign: "center" }}>鹿鸣</h2>
-          <span style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 2 }}>@elara.v</span>
-          <p style={{ fontSize: 12, color: "var(--neu-text-muted)", textAlign: "center", marginTop: 8, lineHeight: 1.6, paddingLeft: 8, paddingRight: 8 }}>
+          <h2 className="text-[var(--neu-text)]" style={{ fontSize: 18, textAlign: "center" }}>鹿鸣</h2>
+          <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, marginTop: 2 }}>@elara.v</span>
+          <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, textAlign: "center", marginTop: 8, lineHeight: 1.6, paddingLeft: 8, paddingRight: 8 }}>
             触感思考者 · 在流动中寻觅静止
           </p>
           <div className="flex items-center gap-1 mt-2 mb-4">
             <MapPin style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
-            <span style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>江苏·徐州</span>
+            <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>江苏·徐州</span>
           </div>
 
           {/* Edit profile button */}
           <motion.button whileTap={{ scale: 0.96 }} onClick={() => navigate(ROUTES.meEdit)}
-            className="w-full py-2.5 rounded-full outline-none mb-5 flex items-center justify-center gap-2"
-            style={{ background: "var(--neu-bg)", color: "var(--neu-text-muted)", border: "1px solid var(--neu-border)", boxShadow: "4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light)", fontSize: 13 }}>
+            className="w-full py-2.5 rounded-full outline-none mb-5 flex items-center justify-center gap-2 bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"
+            style={{ border: "1px solid var(--neu-border)", boxShadow: "4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light)", fontSize: 13 }}>
             <Pencil style={{ width: 13, height: 13 }} strokeWidth={1.5} />
             编辑资料
           </motion.button>
 
           {/* Stats */}
-          <div className="w-full rounded-[18px] mb-4"
-            style={{ background: "var(--neu-bg)", boxShadow: "0 0 0 1px var(--neu-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)" }}>
+          <div className="w-full rounded-[18px] mb-4 bg-[var(--neu-bg)]"
+            style={{ boxShadow: "0 0 0 1px var(--neu-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)" }}>
             <div style={{ overflow: "hidden", borderRadius: 17 }}>
             {[
               { label: "瞬间", value: stats.moments_count ?? 0, section: "moments" as ProfileSection },
@@ -202,14 +202,14 @@ function ProfileDesktop() {
               { label: "关注", value: stats.following_count ?? 0, section: "following" as ProfileSection },
             ].map((stat, i) => (
               <React.Fragment key={stat.label}>
-                {i > 0 && <div style={{ height: 1, background: "var(--neu-border)" }} />}
+                {i > 0 && <div className="bg-[var(--neu-border)]" style={{ height: 1 }} />}
                 <motion.button whileTap={{ scale: 0.97 }}
                   onClick={() => navigate(stat.section === "followers" ? `${ROUTES.meSection("relationships")}?tab=followers` : ROUTES.meSection(stat.section as ProfileSection))}
                   className="w-full flex items-center justify-between px-4 py-3 outline-none"
                   style={{ cursor: "pointer" }}>
-                  <span style={{ fontSize: 13, color: "var(--neu-text-muted)" }}>{stat.label}</span>
+                  <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 13 }}>{stat.label}</span>
                   <div className="flex items-center gap-1.5">
-                    <span style={{ fontSize: 17, color: "var(--neu-text)" }}>{stat.value}</span>
+                    <span className="text-[var(--neu-text)]" style={{ fontSize: 17 }}>{stat.value}</span>
                     <ChevronRight style={{ width: 12, height: 12, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
                   </div>
                 </motion.button>
@@ -220,8 +220,8 @@ function ProfileDesktop() {
         </div>
 
           {/* Section quick links */}
-          <div className="w-full rounded-[18px]"
-            style={{ background: "var(--neu-bg)", boxShadow: "0 0 0 1px var(--neu-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)" }}>
+          <div className="w-full rounded-[18px] bg-[var(--neu-bg)]"
+            style={{ boxShadow: "0 0 0 1px var(--neu-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)" }}>
             <div style={{ overflow: "hidden", borderRadius: 17 }}>
             {[
               { label: "我的瞬间",  section: "moments" as ProfileSection, icon: Grid3X3, count: myGalleryPosts.length },
@@ -229,16 +229,16 @@ function ProfileDesktop() {
               { label: "关系网络",  section: "relationships" as ProfileSection, icon: Heart, count: friends.length + following.length + followers.length },
             ].map((item, i) => (
               <React.Fragment key={item.label}>
-                {i > 0 && <div style={{ height: 1, background: "var(--neu-border)" }} />}
+                {i > 0 && <div className="bg-[var(--neu-border)]" style={{ height: 1 }} />}
                 <motion.button whileTap={{ scale: 0.97 }}
                   onClick={() => navigate(ROUTES.meSection(item.section))}
                   className="w-full flex items-center justify-between px-4 py-2.5 outline-none">
                   <div className="flex items-center gap-2.5">
                     <item.icon style={{ width: 14, height: 14, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
-                    <span style={{ fontSize: 13, color: "var(--neu-text-muted)" }}>{item.label}</span>
+                    <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 13 }}>{item.label}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{item.count}</span>
+                    <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>{item.count}</span>
                     <ChevronRight style={{ width: 12, height: 12, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
                   </div>
                 </motion.button>
@@ -250,10 +250,10 @@ function ProfileDesktop() {
         {/* ── Right: recent moments preview ──────────────────── */}
         <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-5">
           <div className="flex items-center justify-between mb-4">
-            <p style={{ fontSize: 15, color: "var(--neu-text)" }}>最近瞬间</p>
+            <p className="text-[var(--neu-text)]" style={{ fontSize: 15 }}>最近瞬间</p>
             <motion.button whileTap={{ scale: 0.93 }} onClick={() => navigate(ROUTES.meSection("moments"))}
-              className="flex items-center gap-1 outline-none"
-              style={{ fontSize: 12, color: "var(--neu-accent-primary)" }}>
+              className="flex items-center gap-1 outline-none text-[var(--neu-accent-primary)]"
+              style={{ fontSize: 12 }}>
               查看全部
               <ChevronRight style={{ width: 13, height: 13 }} strokeWidth={2} />
             </motion.button>
@@ -270,11 +270,11 @@ function ProfileDesktop() {
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-0.5">
                         <Heart style={{ width: 10, height: 10, color: "white" }} fill="white" strokeWidth={0} />
-                        <span style={{ fontSize: 10, color: "white" }}>{post.likes}</span>
+                        <span className="text-white" style={{ fontSize: 10 }}>{post.likes}</span>
                       </div>
                       <div className="flex items-center gap-0.5">
                         <MessageCircle style={{ width: 10, height: 10, color: "white" }} strokeWidth={1.5} />
-                        <span style={{ fontSize: 10, color: "white" }}>{post.comments}</span>
+                        <span className="text-white" style={{ fontSize: 10 }}>{post.comments}</span>
                       </div>
                     </div>
                   </div>
@@ -299,10 +299,9 @@ function ShareProfileBtn() {
       onClick={() => {}}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
-      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[14px] outline-none"
+      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[14px] outline-none text-[var(--neu-text)]"
       style={{
         background: hovered ? hover.bgHover : "transparent",
-        color: "var(--neu-text)",
         border: "1px solid var(--neu-border-pressed)",
         fontSize: 13,
         transition: "background 0.18s ease",
@@ -323,8 +322,8 @@ function ProfileStatBtn({ label, value, onClick }: { label: string; value: strin
       onHoverEnd={() => setHovered(false)}
       className="flex flex-col items-center justify-center py-2.5 outline-none"
       style={{ background: hovered ? hover.bgHover : "var(--neu-bg)", transition: "background 0.18s ease" }}>
-      <span style={{ fontSize: 20, color: "var(--neu-text)", fontWeight: 600, lineHeight: 1 }}>{value}</span>
-      <span style={{ fontSize: 10, color: "var(--neu-text-muted)", marginTop: 5 }}>{label}</span>
+      <span className="text-[var(--neu-text)]" style={{ fontSize: 20, fontWeight: 600, lineHeight: 1 }}>{value}</span>
+      <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 10, marginTop: 5 }}>{label}</span>
     </motion.button>
   );
 }
@@ -360,15 +359,15 @@ function ProfileMobile() {
 
   return (
     <>
-      <div className="sticky top-0 z-20 py-3"
-        style={{ backgroundColor: "var(--neu-bg)", borderBottom: "1px solid var(--neu-border)" }}>
+      <div className="sticky top-0 z-20 py-3 bg-[var(--neu-bg)]"
+        style={{ borderBottom: "1px solid var(--neu-border)" }}>
         <div className={isTablet ? `${tabletShellClass} px-0` : "px-5"} style={tabletShellStyle}>
           <div className={isTablet ? `${mainColClass} px-5` : "w-full px-0"}
             style={mainColStyle}>
             <div className="flex items-center justify-between">
               <div>
-                <p style={{ fontSize: 18, color: "var(--neu-text)" }}>鹿鸣</p>
-                <p style={{ fontSize: 11, color: "var(--neu-text-muted)", marginTop: 1 }}>@elara.v</p>
+                <p className="text-[var(--neu-text)]" style={{ fontSize: 18 }}>鹿鸣</p>
+                <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 1 }}>@elara.v</p>
               </div>
               <div className="flex gap-2">
                 <ActionIconButton icon={Share2} label="分享个人主页" size={36} />
@@ -404,33 +403,31 @@ function ProfileMobile() {
                     border: "3px solid var(--neu-bg)",
                     boxShadow: "0 6px 18px var(--neu-glow)",
                   }}>
-                  {avatar ? <img src={avatar} alt={nickname || "用户"} className="w-full h-full object-cover" /> : <span style={{fontSize:32,color:"var(--neu-text-muted)"}}>{(nickname||"?")[0]}</span>}
+                  {avatar ? <img src={avatar} alt={nickname || "用户"} className="w-full h-full object-cover" /> : <span className="text-[var(--neu-text-muted)]" style={{fontSize:32}}>{(nickname||"?")[0]}</span>}
                 </div>
                 <motion.button whileTap={{ scale: 0.9 }}
-                  className="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none"
-                  style={{ width: 26, height: 26, background: "var(--neu-accent-primary)", border: "2.5px solid var(--neu-bg)" }}>
+                  className="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none bg-[var(--neu-accent-primary)]"
+                  style={{ width: 26, height: 26, border: "2.5px solid var(--neu-bg)" }}>
                   <Camera style={{ width: 12, height: 12, color: "white" }} strokeWidth={2} />
                 </motion.button>
               </div>
 
               {/* Identity */}
-              <h2 style={{ fontSize: 22, color: "var(--neu-text)" }}>鹿鸣</h2>
-              <span style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 2 }}>@elara.v</span>
-              <p style={{ fontSize: 12, color: "var(--neu-text-muted)", textAlign: "center", padding: "10px 20px 4px", lineHeight: 1.6 }}>
+              <h2 className="text-[var(--neu-text)]" style={{ fontSize: 22 }}>鹿鸣</h2>
+              <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, marginTop: 2 }}>@elara.v</span>
+              <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, textAlign: "center", padding: "10px 20px 4px", lineHeight: 1.6 }}>
                 触感思考者 · 在流动中寻觅静止
               </p>
               <div className="flex items-center gap-1 mb-4">
                 <MapPin style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
-                <span style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>江苏·徐州</span>
+                <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>江苏·徐州</span>
               </div>
 
               {/* Dual action — equal weight, ghost on neutral surface */}
               <div className="flex w-full gap-2 mb-5">
                 <motion.button whileTap={{ scale: 0.97 }} onClick={() => navigate(ROUTES.meEdit)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[14px] outline-none"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[14px] outline-none bg-[var(--neu-accent-primary)] text-white"
                   style={{
-                    background: "var(--neu-accent-primary)",
-                    color: "white",
                     fontSize: 13,
                     fontWeight: 500,
                     boxShadow: "0 3px 10px var(--neu-glow)",
@@ -442,8 +439,8 @@ function ProfileMobile() {
               </div>
 
               {/* Stats — flat, integrated INTO the hero card (not a separate elevated bar) */}
-              <div className="grid grid-cols-3 w-full rounded-[14px]"
-                style={{ background: "var(--neu-border)", gap: 1, boxShadow: "0 0 0 1px var(--neu-border)" }}>
+              <div className="grid grid-cols-3 w-full rounded-[14px] bg-[var(--neu-border)]"
+                style={{ gap: 1, boxShadow: "0 0 0 1px var(--neu-border)" }}>
                 <div style={{ overflow: "hidden", borderRadius: 13 }}>
                 {[
                   { label: "帖子", value: "48" },

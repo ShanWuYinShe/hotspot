@@ -167,9 +167,9 @@ export function CreateSheet({ onClose }: Props) {
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
-              className="relative rounded-[18px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)]"
+              className="relative overflow-hidden rounded-[18px] neu-ring-border bg-[var(--page-bg)]"
             >
-              <div style={{ overflow: "hidden", borderRadius: 17 }}>
+              <div style={{ overflow: "hidden", borderRadius: 18 }}>
                 <img
                 src="https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=600"
                 alt="待发布的动态配图：云龙湖边的傍晚"

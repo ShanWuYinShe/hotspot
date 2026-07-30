@@ -13,7 +13,7 @@ interface Props {
 export function BannedScreen({ message, onAcknowledge }: Props) {
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-6"
+      className="fixed inset-0 z-[var(--z-toast)] flex items-center justify-center p-6"
       style={{ background: "var(--neu-bg)" }}
     >
       <motion.div

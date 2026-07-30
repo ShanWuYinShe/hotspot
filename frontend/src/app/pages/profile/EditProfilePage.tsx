@@ -18,7 +18,7 @@ function InputRow({
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-1.5">
         <Icon style={{ width: 13, height: 13, color: "var(--neu-accent-primary)" }} strokeWidth={1.75} />
-        <label style={{ fontSize: 11, color: "var(--neu-text-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+        <label className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em" }}>
           {label}
         </label>
       </div>
@@ -30,12 +30,12 @@ function InputRow({
               onChange={e => onChange(e.target.value.slice(0, maxLen))}
               placeholder={placeholder}
               rows={3}
-              className="w-full bg-transparent outline-none resize-none"
-              style={{ fontSize: 14, color: "var(--neu-text)", lineHeight: 1.65 }}
+              className="w-full bg-transparent outline-none resize-none text-[var(--neu-text)]"
+              style={{ fontSize: 14, lineHeight: 1.65 }}
             />
             {maxLen && (
               <div className="flex justify-end mt-1">
-                <span style={{ fontSize: 11, color: value.length > maxLen * 0.85 ? "var(--neu-accent-primary)" : "var(--neu-text-muted)" }}>
+                <span className={value.length > maxLen * 0.85 ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"} style={{ fontSize: 11 }}>
                   {value.length}/{maxLen}
                 </span>
               </div>
@@ -43,8 +43,8 @@ function InputRow({
           </div>
         ) : (
           <input value={value} onChange={e => onChange(e.target.value.slice(0, maxLen))}
-            placeholder={placeholder} className="w-full bg-transparent outline-none"
-            style={{ fontSize: 14, color: "var(--neu-text)" }} />
+            placeholder={placeholder} className="w-full bg-transparent outline-none text-[var(--neu-text)]"
+            style={{ fontSize: 14 }} />
         )}
       </div>
     </div>
@@ -101,15 +101,15 @@ export function EditProfilePage() {
   return (
     <>
       {/* Header */}
-      <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3"
-        style={{ backgroundColor: "var(--neu-bg)", borderBottom: "1px solid var(--neu-border)" }}>
+      <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-[var(--neu-bg)]"
+        style={{ borderBottom: "1px solid var(--neu-border)" }}>
         <div className="flex items-center gap-3">
           <ActionIconButton icon={ArrowLeft} label="返回" onClick={() => navigate(-1)} />
-          <h1 style={{ fontSize: 18, color: "var(--neu-text)" }}>编辑资料</h1>
+          <h1 className="text-[var(--neu-text)]" style={{ fontSize: 18 }}>编辑资料</h1>
         </div>
         <motion.button whileTap={{ scale: 0.93 }} onClick={handleSave}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all"
-          style={{ background: saved ? "var(--semantic-online)" : "var(--neu-accent-primary)", color: "white", fontSize: 13, boxShadow: `0 4px 14px ${saved ? "color-mix(in srgb, var(--semantic-online) 35%, transparent)" : "var(--neu-glow)"}`, border: "none" }}>
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all ${saved ? "bg-[var(--semantic-online)]" : "bg-[var(--neu-accent-primary)]"} text-white`}
+          style={{ fontSize: 13, boxShadow: `0 4px 14px ${saved ? "color-mix(in srgb, var(--semantic-online) 35%, transparent)" : "var(--neu-glow)"}`, border: "none" }}>
           <AnimatePresence mode="wait" initial={false}>
             {saved
               ? <motion.span key="check" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} style={{ display: "flex" }}>
@@ -128,10 +128,10 @@ export function EditProfilePage() {
 
         {/* Avatar section */}
         <div className="relative rounded-[24px] overflow-hidden" style={{ height: "clamp(120px, 18vw, 160px)" }}>
-          <div className="absolute inset-0" style={{ background: "var(--neu-surface-flat)" }} />
+          <div className="absolute inset-0 bg-[var(--neu-surface-flat)]" />
           <motion.button whileTap={{ scale: 0.9 }}
-            className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none"
-            style={{ padding: "6px 12px", background: "var(--overlay-strong)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.25)", fontSize: 12, color: "white" }}>
+            className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none bg-[var(--overlay-strong)] text-white"
+            style={{ padding: "6px 12px", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.25)", fontSize: 12 }}>
             <Camera style={{ width: 13, height: 13 }} strokeWidth={1.75} />
             更换横幅
           </motion.button>
@@ -145,13 +145,13 @@ export function EditProfilePage() {
               <img src={avatar} alt="avatar" className="w-full h-full object-cover" />
             </div>
             <motion.button whileTap={{ scale: 0.9 }}
-              className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none"
-              style={{ width: 26, height: 26, background: "var(--neu-accent-primary)", border: "2px solid var(--neu-bg)", boxShadow: "0 2px 8px var(--neu-glow)" }}>
+              className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-[var(--neu-accent-primary)]"
+              style={{ width: 26, height: 26, border: "2px solid var(--neu-bg)", boxShadow: "0 2px 8px var(--neu-glow)" }}>
               <Camera style={{ width: 12, height: 12, color: "white" }} strokeWidth={2} />
             </motion.button>
           </div>
           <div>
-            <p style={{ fontSize: 16, color: "var(--neu-text)" }}>{nickname || "未设置昵称"}</p>
+            <p className="text-[var(--neu-text)]" style={{ fontSize: 16 }}>{nickname || "未设置昵称"}</p>
           </div>
         </div>
 
@@ -162,8 +162,8 @@ export function EditProfilePage() {
         {/* Interest tags */}
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-1.5">
-            <label style={{ fontSize: 11, color: "var(--neu-text-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>兴趣标签</label>
-            <span style={{ fontSize: 11, color: "var(--neu-text-muted)", opacity: 0.6 }}>({tags.size}/5)</span>
+            <label className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em" }}>兴趣标签</label>
+            <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, opacity: 0.6 }}>({tags.size}/5)</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {TAG_OPTIONS.map(t => {
@@ -172,10 +172,10 @@ export function EditProfilePage() {
               return (
                 <motion.button key={t} whileTap={{ scale: 0.92 }}
                   onClick={() => !disabled && toggleTag(t)}
-                  className="px-3.5 py-1.5 rounded-full outline-none transition-all"
+                  className={`px-3.5 py-1.5 rounded-full outline-none transition-all ${active ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
                   style={active
-                    ? { background: "var(--neu-accent-primary)", color: "white", fontSize: 12, boxShadow: "0 3px 10px var(--neu-glow)", border: "none" }
-                    : { background: "var(--neu-bg)", color: disabled ? "var(--neu-text-muted)" : "var(--neu-text-muted)", fontSize: 12, border: "1px solid var(--neu-border)", opacity: disabled ? 0.4 : 1, boxShadow: "3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light)" }}>
+                    ? { fontSize: 12, boxShadow: "0 3px 10px var(--neu-glow)", border: "none" }
+                    : { fontSize: 12, border: "1px solid var(--neu-border)", opacity: disabled ? 0.4 : 1, boxShadow: "3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light)" }}>
                   #{t}
                 </motion.button>
               );
@@ -185,9 +185,9 @@ export function EditProfilePage() {
 
         {/* Danger zone */}
         <div className="mt-3">
-          <p className="uppercase mb-3" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--neu-text-muted)" }}>账号</p>
-          <motion.button whileTap={{ scale: 0.98 }} className="w-full text-left px-4 py-3.5 rounded-[18px] outline-none"
-            style={{ background: "var(--neu-bg)", boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)", fontSize: 14, color: "var(--semantic-hot)" }}>
+          <p className="uppercase mb-3 text-[var(--neu-text-muted)]" style={{ fontSize: 10, letterSpacing: "0.14em" }}>账号</p>
+          <motion.button whileTap={{ scale: 0.98 }} className="w-full text-left px-4 py-3.5 rounded-[18px] outline-none bg-[var(--neu-bg)] text-[var(--semantic-hot)]"
+            style={{ boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)", fontSize: 14 }}>
             注销账号
           </motion.button>
         </div>

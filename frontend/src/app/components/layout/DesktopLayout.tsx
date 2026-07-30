@@ -285,7 +285,7 @@ export function DesktopLayout() {
         <motion.button
           type="button"
           whileTap={{ scale: 0.97 }}
-          className="flex items-center gap-2 mr-3 select-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--page-bg)]"
+          className="flex items-center gap-2 mr-3 select-none rounded-full neu-focus-ring focus-visible:ring-offset-[var(--page-bg)]"
           onClick={() => {
             setActiveNavId("home");
             navigate(ROUTES.home);
@@ -350,7 +350,7 @@ export function DesktopLayout() {
               whileTap={{ scale: 0.92 }}
               onClick={() => guardNav("打开个人主页", ROUTES.me)}
               aria-label="打开个人主页"
-              className="relative ml-1.5 flex-shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--page-bg)]"
+              className="relative ml-1.5 flex-shrink-0 rounded-full neu-focus-ring focus-visible:ring-offset-[var(--page-bg)]"
               style={{ width: 32, height: 32 }}
             >
               <img
@@ -369,7 +369,7 @@ export function DesktopLayout() {
               whileTap={{ scale: 0.96 }}
               onClick={() => navigate(ROUTES.login)}
               aria-label="登录"
-              className="ml-1.5 flex-shrink-0 rounded-full px-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
+              className="ml-1.5 flex-shrink-0 rounded-full px-3 neu-focus-ring"
               style={{
                 height: 32,
                 background: "var(--neu-accent-primary)",

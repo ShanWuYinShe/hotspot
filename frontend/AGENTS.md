@@ -56,3 +56,28 @@ bun run --cwd frontend build
 - **调试/开发/预览时，默认入口是 `http://localhost:8888`（nginx 网关），不是 Vite dev server 地址**
 - 如果确实需要在宿主机关闭（docker 未运行）时查看纯 UI，使用 `bun run build` 然后用静态服务器预览，不要在 dev 模式下假装有后端
 - 修改 nginx 配置后必须重启对应容器：`docker compose -f docker-compose.yml -f docker-compose.dev.yml restart nginx`
+
+## 主题 & CSS Token 架构
+
+`src/styles/theme/` 目录按三层架构组织：
+
+```
+theme/
+  index.css              # 入口，按依赖顺序导入所有分片
+  shadcn.css             # Layer 0: shadcn/ui 基础变量
+  defaults.css           # Layer 0: 自定义 token 默认值（星际回退）
+  primitives.css         # Layer 1: --pr-* 原始色值（每主题定义）
+  semantic.css           # Layer 2: 语义 token（--text-primary 等 → --pr-*）
+  compatibility.css      # Layer 2.5: 旧名别名（--neu-* → 语义名）
+  theme-registry.css     # @theme inline Tailwind 注册
+  themes/vibrant.css     # 星际主题覆盖
+  themes/forest.css      # 清野主题覆盖
+  layout.css             # 布局变量（context-rail、workspace）
+  base.css               # @layer base（排版 + 按钮基线）
+  utilities.css          # @layer utilities（组件工具类）
+```
+
+- Token 三层链：`--neu-*` → 兼容别名 → `--text-primary` 等语义名 → `--pr-*` 原始值
+- 现有组件 418 个 `var(--neu-*)` 引用全部通过兼容层继续工作
+- 新组件优先使用语义名（`var(--text-primary)`、`var(--surface-page)` 等）
+- 主题切换通过 `<html>` 上的 `.vibrant` / `.forest` + `.dark` 类实现

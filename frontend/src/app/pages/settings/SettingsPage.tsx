@@ -24,12 +24,11 @@ import { useAuth } from "../../contexts/AuthContext";
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p
-      className="px-1 mt-3 mb-1.5"
+      className="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)]"
       style={{
         fontSize: 10,
         letterSpacing: "0.14em",
         textTransform: "uppercase",
-        color: "var(--neu-text-muted)",
       }}
     >
       {children}
@@ -46,7 +45,7 @@ function Card({ children }: { children: React.ReactNode }) {
 }
 
 function Divider() {
-  return <div className="mx-4" style={{ height: 1, background: "var(--neu-border)" }} />;
+  return <div className="mx-4 bg-[var(--neu-border)]" style={{ height: 1 }} />;
 }
 
 function IconBadge({ Icon, color = "var(--neu-text-muted)" }: { Icon: React.ElementType; color?: string }) {
@@ -117,8 +116,8 @@ function ToggleRow({
     <div className="flex items-center gap-3 px-4 py-3.5">
       <IconBadge Icon={Icon} color={iconColor} />
       <div className="flex-1 min-w-0">
-        <p className="text-[14px]" style={{ color: "var(--neu-text)" }}>{label}</p>
-        <p className="text-[11px]" style={{ color: "var(--neu-text-muted)" }}>{sub}</p>
+        <p className="text-[14px] text-[var(--neu-text)]">{label}</p>
+        <p className="text-[11px] text-[var(--neu-text-muted)]">{sub}</p>
       </div>
       <NeuToggle on={on} onToggle={onToggle} />
     </div>
@@ -137,9 +136,9 @@ function NavRow({ Icon, label, value }: { Icon: React.ElementType; label: string
     >
       <IconBadge Icon={Icon} />
       <div className="flex-1 min-w-0">
-        <p className="text-[14px]" style={{ color: "var(--neu-text)" }}>{label}</p>
+        <p className="text-[14px] text-[var(--neu-text)]">{label}</p>
       </div>
-      <span className="text-[12px] flex-shrink-0" style={{ color: "var(--neu-text-muted)" }}>{value}</span>
+      <span className="text-[12px] flex-shrink-0 text-[var(--neu-text-muted)]">{value}</span>
       <ChevronRight style={{ width: 15, height: 15, color: "var(--neu-text-muted)", flexShrink: 0 }} strokeWidth={1.5} />
     </motion.button>
   );
@@ -210,11 +209,11 @@ export function SettingsPage() {
     <>
       {/* Sticky header */}
       <div
-        className="sticky top-0 z-10 flex items-center gap-3 px-5 py-3"
-        style={{ backgroundColor: "var(--neu-bg)", borderBottom: "1px solid var(--neu-border)" }}
+        className="sticky top-0 z-10 flex items-center gap-3 px-5 py-3 bg-[var(--neu-bg)]"
+        style={{ borderBottom: "1px solid var(--neu-border)" }}
       >
         <ActionIconButton icon={ArrowLeft} label="返回" onClick={() => navigate(-1)} />
-        <h1 className="text-[18px] tracking-tight" style={{ color: "var(--neu-text)" }}>
+        <h1 className="text-[18px] tracking-tight text-[var(--neu-text)]">
           设置
         </h1>
       </div>
@@ -236,8 +235,8 @@ export function SettingsPage() {
             <Avatar src={accountAvatar} name={accountName} size={48}
               style={{ border: "2px solid var(--neu-bg)", boxShadow: "0 4px 12px var(--neu-glow)" }} />
             <div className="flex-1 min-w-0">
-              <p className="text-[15px] tracking-tight" style={{ color: "var(--neu-text)" }}>{accountName || "用户"}</p>
-              <p className="text-[11px] mt-0.5" style={{ color: "var(--neu-text-muted)" }}>{accountHandle}{accountEmail ? ` · ${accountEmail}` : ""}</p>
+              <p className="text-[15px] tracking-tight text-[var(--neu-text)]">{accountName || "用户"}</p>
+              <p className="text-[11px] mt-0.5 text-[var(--neu-text-muted)]">{accountHandle}{accountEmail ? ` · ${accountEmail}` : ""}</p>
             </div>
             <ChevronRight style={{ width: 15, height: 15, color: "var(--neu-text-muted)", flexShrink: 0 }} strokeWidth={1.5} />
           </motion.button>
@@ -299,8 +298,7 @@ export function SettingsPage() {
           <motion.button
             whileTap={hover.tap as any}
             onClick={handleLogout}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] w-full outline-none neu-surface-flat"
-            style={{ color: "var(--neu-accent-primary)" }}
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] w-full outline-none neu-surface-flat text-[var(--neu-accent-primary)]"
           >
             <LogOut style={{ width: 14, height: 14 }} strokeWidth={1.75} />
             <span className="text-[14px]">退出登录</span>

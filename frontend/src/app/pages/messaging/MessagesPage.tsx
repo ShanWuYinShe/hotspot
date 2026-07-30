@@ -58,30 +58,30 @@ function ChatListItem({
         </span>
         {chat.online && (
           <span
-            className="absolute bottom-0 right-0 rounded-full"
-            style={{ width: 10, height: 10, background: "var(--semantic-online)", border: "2px solid var(--neu-bg)" }}
+            className="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]"
+            style={{ width: 10, height: 10, border: "2px solid var(--neu-bg)" }}
           />
         )}
       </span>
 
       <span className="min-w-0 flex-1">
         <span className="mb-0.5 flex items-baseline justify-between">
-          <span style={{ fontSize: 14, color: isSelected ? "var(--neu-accent-primary)" : "var(--neu-text)", fontWeight: chat.unread > 0 || isSelected ? 600 : 400 }}>
+          <span className={isSelected ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text)]"} style={{ fontSize: 14, fontWeight: chat.unread > 0 || isSelected ? 600 : 400 }}>
             {chat.name}
           </span>
-          <span style={{ fontSize: 11, flexShrink: 0, color: "var(--neu-text-muted)" }}>
+          <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, flexShrink: 0 }}>
             {chat.time}
           </span>
         </span>
-        <span className="block truncate pr-4" style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>
+        <span className="block truncate pr-4 text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>
           {chat.lastMessage}
         </span>
       </span>
 
       {chat.unread > 0 && !isSelected && (
         <span
-          className="flex flex-shrink-0 items-center justify-center rounded-full"
-          style={{ width: 20, height: 20, background: "var(--neu-accent-primary)", color: "white", fontSize: 11, fontWeight: 600, boxShadow: "0 2px 8px var(--neu-glow)" }}
+          className="flex flex-shrink-0 items-center justify-center rounded-full bg-[var(--neu-accent-primary)] text-white"
+          style={{ width: 20, height: 20, fontSize: 11, fontWeight: 600, boxShadow: "0 2px 8px var(--neu-glow)" }}
         >
           {chat.unread}
         </span>
@@ -108,12 +108,12 @@ function MessagesMobile({ chats, loading }: { chats: ChatItem[]; loading: boolea
 
   return (
     <>
-      <div className="sticky top-0 z-10 px-5 pt-3 pb-3"
-        style={{ backgroundColor: "var(--neu-bg)", borderBottom: "1px solid var(--neu-border)" }}>
+      <div className="sticky top-0 z-10 px-5 pt-3 pb-3 bg-[var(--neu-bg)]"
+        style={{ borderBottom: "1px solid var(--neu-border)" }}>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h1 style={{ fontSize: 22, color: "var(--neu-text)" }}>消息</h1>
-            <p style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 2 }}>
+            <h1 className="text-[var(--neu-text)]" style={{ fontSize: 22 }}>消息</h1>
+            <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, marginTop: 2 }}>
               {totalUnread > 0 ? `${totalUnread} 条未读` : "全部已读"}
             </p>
           </div>
@@ -128,8 +128,8 @@ function MessagesMobile({ chats, loading }: { chats: ChatItem[]; loading: boolea
         <div className="flex items-center gap-3 px-4 py-2.5 rounded-[18px] neu-input-surface">
           <Search style={{ width: 15, height: 15, color: "var(--neu-text-muted)", flexShrink: 0 }} strokeWidth={1.5} />
           <input value={searchVal} onChange={e => setSearchVal(e.target.value)}
-            placeholder="搜索会话…" className="flex-1 bg-transparent outline-none"
-            style={{ fontSize: 13, color: "var(--neu-text)" }} />
+            placeholder="搜索会话…" className="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
+            style={{ fontSize: 13 }} />
         </div>
       </div>
 
@@ -139,34 +139,34 @@ function MessagesMobile({ chats, loading }: { chats: ChatItem[]; loading: boolea
         style={{ maxWidth: 640, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
         {onlineChats.length > 0 && (
           <div className="mb-4">
-            <p className="uppercase mb-2.5" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--neu-text-muted)" }}>在线</p>
+            <p className="uppercase mb-2.5 text-[var(--neu-text-muted)]" style={{ fontSize: 10, letterSpacing: "0.14em" }}>在线</p>
             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
               {onlineChats.map(chat => (
                 <motion.div key={chat.id} whileTap={{ scale: 0.93 }}
                   onClick={() => navigate(ROUTES.message(chat.peerUserId || chat.id))}
                   className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer">
                   <div className="relative">
-                    <div className="rounded-full overflow-hidden"
-                      style={{ width: 52, height: 52, padding: 2, background: "var(--neu-bg)", border: "2px solid var(--neu-accent-primary)" }}>
+                    <div className="rounded-full overflow-hidden bg-[var(--neu-bg)]"
+                      style={{ width: 52, height: 52, padding: 2, border: "2px solid var(--neu-accent-primary)" }}>
                       <img src={chat.avatar} alt={chat.name} className="w-full h-full object-cover rounded-full" />
                     </div>
-                    <span className="absolute bottom-0.5 right-0.5 rounded-full"
-                      style={{ width: 12, height: 12, background: "var(--semantic-online)", border: "2px solid var(--neu-bg)" }} />
+                    <span className="absolute bottom-0.5 right-0.5 rounded-full bg-[var(--semantic-online)]"
+                      style={{ width: 12, height: 12, border: "2px solid var(--neu-bg)" }} />
                   </div>
-                  <span style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>{chat.name}</span>
+                  <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>{chat.name}</span>
                 </motion.div>
               ))}
             </div>
           </div>
         )}
 
-        <p className="uppercase mb-2.5" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--neu-text-muted)" }}>最近</p>
+        <p className="uppercase mb-2.5 text-[var(--neu-text-muted)]" style={{ fontSize: 10, letterSpacing: "0.14em" }}>最近</p>
 
         <div className="rounded-[18px] overflow-hidden neu-surface-flat">
           {filtered.length === 0
             ? (<div className="flex flex-col items-center justify-center py-12 gap-3">
                 <MessageSquareDashed style={{ width: 36, height: 36, color: "var(--neu-text-muted)", opacity: 0.5 }} strokeWidth={1.25} />
-                <p style={{ fontSize: 14, color: "var(--neu-text-muted)" }}>没有找到会话</p>
+                <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 14 }}>没有找到会话</p>
               </div>)
             : filtered.map((chat, i) => (
                 <React.Fragment key={chat.id}>
@@ -174,7 +174,7 @@ function MessagesMobile({ chats, loading }: { chats: ChatItem[]; loading: boolea
                     <ChatListItem chat={chat} onClick={() => navigate(ROUTES.message(chat.peerUserId || chat.id))} />
                   </div>
                   {i < filtered.length - 1 && (
-                    <div className="mx-4" style={{ height: 1, background: "var(--neu-border)" }} />
+                    <div className="mx-4 bg-[var(--neu-border)]" style={{ height: 1 }} />
                   )}
                 </React.Fragment>
               ))}
@@ -187,14 +187,14 @@ function MessagesMobile({ chats, loading }: { chats: ChatItem[]; loading: boolea
           <>
             <motion.div key="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40"
-              style={{ background: "rgba(0,0,0,0.35)", backdropFilter: "blur(3px)" }}
+              className="fixed inset-0 z-40 bg-[rgba(0,0,0,0.35)]"
+              style={{ backdropFilter: "blur(3px)" }}
               onClick={() => setShowNewChat(false)} />
             <motion.div key="sheet"
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 260, mass: 0.9 }}
-              className="fixed bottom-0 left-0 right-0 z-50 overflow-hidden"
-              style={{ height: "85%", borderRadius: "28px 28px 0 0", backgroundColor: "var(--neu-bg)", boxShadow: "0 -8px 40px rgba(0,0,0,0.18)" }}>
+              className="fixed bottom-0 left-0 right-0 z-50 overflow-hidden bg-[var(--neu-bg)]"
+              style={{ height: "85%", borderRadius: "28px 28px 0 0", boxShadow: "0 -8px 40px rgba(0,0,0,0.18)" }}>
               <NewConversationSheet
                 defaultTab={newChatTab}
                 onClose={() => setShowNewChat(false)}
@@ -212,14 +212,14 @@ function MessagesMobile({ chats, loading }: { chats: ChatItem[]; loading: boolea
           <>
             <motion.div key="backdrop2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-50"
-              style={{ background: "rgba(0,0,0,0.35)", backdropFilter: "blur(3px)" }}
+              className="fixed inset-0 z-50 bg-[rgba(0,0,0,0.35)]"
+              style={{ backdropFilter: "blur(3px)" }}
               onClick={() => setShowCreateGroup(false)} />
             <motion.div key="sheet2"
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 260, mass: 0.9 }}
-              className="fixed bottom-0 left-0 right-0 z-[60] overflow-hidden"
-              style={{ height: "92%", borderRadius: "28px 28px 0 0", backgroundColor: "var(--neu-bg)", boxShadow: "0 -8px 40px rgba(0,0,0,0.18)" }}>
+              className="fixed bottom-0 left-0 right-0 z-[60] overflow-hidden bg-[var(--neu-bg)]"
+              style={{ height: "92%", borderRadius: "28px 28px 0 0", boxShadow: "0 -8px 40px rgba(0,0,0,0.18)" }}>
               <CreateGroupSheet onClose={() => setShowCreateGroup(false)} />
             </motion.div>
           </>
@@ -254,7 +254,7 @@ function MessagesDesktop({ chats, loading }: { chats: ChatItem[]; loading: boole
         <div className="flex-shrink-0 px-4 pt-4 pb-3"
           style={{ borderBottom: "1px solid var(--neu-border)" }}>
           <div className="flex items-center justify-between mb-3">
-            <h1 style={{ fontSize: 18, color: "var(--neu-text)" }}>消息</h1>
+            <h1 className="text-[var(--neu-text)]" style={{ fontSize: 18 }}>消息</h1>
             <motion.button whileTap={hover.tap as any} whileHover={hover.btn as any}
               onClick={() => { setNewChatTab("chat"); setShowNewChat(true); }}
               className="flex items-center justify-center rounded-full outline-none neu-surface-flat"
@@ -265,15 +265,15 @@ function MessagesDesktop({ chats, loading }: { chats: ChatItem[]; loading: boole
           <div className="flex items-center gap-2 px-3 py-2 rounded-[14px] neu-input-surface">
             <Search style={{ width: 14, height: 14, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
             <input value={searchVal} onChange={e => setSearchVal(e.target.value)}
-              placeholder="搜索…" className="flex-1 bg-transparent outline-none"
-              style={{ fontSize: 12, color: "var(--neu-text)" }} />
+              placeholder="搜索…" className="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
+              style={{ fontSize: 12 }} />
           </div>
         </div>
 
         {/* 在线 strip */}
         {onlineChats.length > 0 && (
           <div className="flex-shrink-0 px-4 py-2.5" style={{ borderBottom: "1px solid var(--neu-border)" }}>
-            <p className="uppercase mb-2" style={{ fontSize: 9, letterSpacing: "0.12em", color: "var(--neu-text-muted)" }}>在线</p>
+            <p className="uppercase mb-2 text-[var(--neu-text-muted)]" style={{ fontSize: 9, letterSpacing: "0.12em" }}>在线</p>
             <div className="flex gap-3 overflow-x-auto no-scrollbar">
               {onlineChats.map(c => (
                 <motion.div key={c.id} whileTap={{ scale: 0.93 }}
@@ -284,10 +284,10 @@ function MessagesDesktop({ chats, loading }: { chats: ChatItem[]; loading: boole
                       style={{ width: 36, height: 36, border: selectedId === c.id ? "2px solid var(--neu-accent-primary)" : "1.5px solid var(--neu-border)" }}>
                       <img src={c.avatar} alt={c.name} className="w-full h-full object-cover" />
                     </div>
-                    <span className="absolute bottom-0 right-0 rounded-full"
-                      style={{ width: 8, height: 8, background: "var(--semantic-online)", border: "1.5px solid var(--neu-bg)" }} />
+                    <span className="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]"
+                      style={{ width: 8, height: 8, border: "1.5px solid var(--neu-bg)" }} />
                   </div>
-                  <span style={{ fontSize: 10, color: "var(--neu-text-muted)" }}>{c.name}</span>
+                  <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 10 }}>{c.name}</span>
                 </motion.div>
               ))}
             </div>
@@ -297,7 +297,7 @@ function MessagesDesktop({ chats, loading }: { chats: ChatItem[]; loading: boole
         {/* Chat list */}
         <div className="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
           {totalUnread > 0 && (
-            <p className="uppercase px-2 mb-1" style={{ fontSize: 9, letterSpacing: "0.12em", color: "var(--neu-text-muted)" }}>未读</p>
+            <p className="uppercase px-2 mb-1 text-[var(--neu-text-muted)]" style={{ fontSize: 9, letterSpacing: "0.12em" }}>未读</p>
           )}
           {filtered.map(chat => (
             <ChatListItem
@@ -313,8 +313,8 @@ function MessagesDesktop({ chats, loading }: { chats: ChatItem[]; loading: boole
 
       {/* Right: chat view or empty state */}
       <div className="flex min-w-0 flex-1 bg-[color-mix(in_srgb,var(--page-bg)_55%,transparent)] p-4">
-        <div className="min-h-0 flex-1 rounded-[22px] ring-1 ring-[var(--neu-border)] bg-[var(--neu-bg)] shadow-[0_10px_28px_color-mix(in_srgb,var(--neu-shadow-dark)_32%,transparent)]">
-        <div className="h-full" style={{ overflow: "hidden", borderRadius: 21 }}>
+        <div className="min-h-0 flex-1 overflow-hidden rounded-[22px] neu-ring-border bg-[var(--neu-bg)] shadow-[0_10px_28px_color-mix(in_srgb,var(--neu-shadow-dark)_32%,transparent)]">
+        <div className="h-full" style={{ overflow: "hidden", borderRadius: 22 }}>
         <AnimatePresence mode="wait">
           {selectedId !== null ? (
             <motion.div
@@ -348,8 +348,8 @@ function MessagesDesktop({ chats, loading }: { chats: ChatItem[]; loading: boole
                 <MessageSquareDashed style={{ width: 28, height: 28, color: "var(--neu-text-muted)", opacity: 0.5 }} strokeWidth={1.25} />
               </div>
               <div className="text-center">
-                <p style={{ fontSize: 16, color: "var(--neu-text)" }}>选择一个会话</p>
-                <p style={{ fontSize: 13, color: "var(--neu-text-muted)", marginTop: 4 }}>从左侧选择联系人开始聊天</p>
+                <p className="text-[var(--neu-text)]" style={{ fontSize: 16 }}>选择一个会话</p>
+                <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 13, marginTop: 4 }}>从左侧选择联系人开始聊天</p>
               </div>
             </motion.div>
           )}
@@ -364,18 +364,18 @@ function MessagesDesktop({ chats, loading }: { chats: ChatItem[]; loading: boole
           <>
             <motion.div key="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
-              className="fixed inset-0 z-50"
-              style={{ background: "rgba(0,0,0,0.42)", backdropFilter: "blur(5px)" }}
+              className="fixed inset-0 z-50 bg-[rgba(0,0,0,0.42)]"
+              style={{ backdropFilter: "blur(5px)" }}
               onClick={() => setShowNewChat(false)} />
             <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
               <motion.div key="modal"
                 initial={{ opacity: 0, scale: 0.93, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.93, y: 14 }}
                 transition={{ type: "spring", damping: 26, stiffness: 300 }}
-                className="overflow-hidden pointer-events-auto"
+                className="overflow-hidden pointer-events-auto bg-[var(--neu-bg)]"
                 role="dialog"
                 aria-modal="true"
                 aria-label="发起新会话"
-                style={{ width: 440, height: "68vh", maxHeight: 600, borderRadius: 24, background: "var(--neu-bg)", boxShadow: "0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--neu-border)" }}>
+                style={{ width: 440, height: "68vh", maxHeight: 600, borderRadius: 24, boxShadow: "0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--neu-border)" }}>
                 <NewConversationSheet
                   defaultTab={newChatTab}
                   onClose={() => setShowNewChat(false)}
@@ -394,18 +394,18 @@ function MessagesDesktop({ chats, loading }: { chats: ChatItem[]; loading: boole
           <>
             <motion.div key="backdrop2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
-              className="fixed inset-0 z-50"
-              style={{ background: "rgba(0,0,0,0.42)", backdropFilter: "blur(5px)" }}
+              className="fixed inset-0 z-50 bg-[rgba(0,0,0,0.42)]"
+              style={{ backdropFilter: "blur(5px)" }}
               onClick={() => setShowCreateGroup(false)} />
             <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
               <motion.div key="modal2"
                 initial={{ opacity: 0, scale: 0.93, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.93, y: 14 }}
                 transition={{ type: "spring", damping: 26, stiffness: 300 }}
-                className="overflow-hidden pointer-events-auto"
+                className="overflow-hidden pointer-events-auto bg-[var(--neu-bg)]"
                 role="dialog"
                 aria-modal="true"
                 aria-label="创建群组"
-                style={{ width: 480, height: "78vh", maxHeight: 700, borderRadius: 24, background: "var(--neu-bg)", boxShadow: "0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--neu-border)" }}>
+                style={{ width: 480, height: "78vh", maxHeight: 700, borderRadius: 24, boxShadow: "0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--neu-border)" }}>
                 <CreateGroupSheet onClose={() => setShowCreateGroup(false)} />
               </motion.div>
             </div>

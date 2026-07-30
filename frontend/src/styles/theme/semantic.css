@@ -1,0 +1,56 @@
+/* ── Semantic tokens ────────────────────────────────────────────────────
+   Meaning-based names that stay the same across all themes.
+   Each resolves through var(--pr-*) which changes per theme via cascade.
+
+   Naming: --{domain}-{property} e.g. --text-primary, --surface-page
+────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Typography */
+  --text-primary: var(--pr-text);
+  --text-secondary: var(--pr-text-muted);
+  --text-on-accent: var(--pr-on-accent);
+
+  /* Surface */
+  --surface-primary: var(--pr-bg);
+  --surface-page: var(--pr-page-bg);
+  --surface-overlay-soft: var(--pr-overlay-soft);
+  --surface-overlay-strong: var(--pr-overlay-strong);
+  --surface-scrim: var(--pr-scrim);
+
+  /* Accent / Interactive */
+  --accent-default: var(--pr-accent-primary);
+  --accent-fill: var(--pr-accent);
+  --accent-soft: var(--pr-accent-soft);
+  --accent-border: var(--pr-accent-soft-border);
+  --interactive-hover: var(--pr-hover);
+  --interactive-active: var(--pr-active-hover);
+  --glow-accent: var(--pr-glow);
+
+  /* Border */
+  --border-default: var(--pr-border);
+  --border-strong: var(--pr-border-pressed);
+
+  /* Elevation */
+  --elevation-shadow-light: var(--pr-shadow-light);
+  --elevation-shadow-dark: var(--pr-shadow-dark);
+  --elevation-card: var(--pr-shadow-card);
+  --elevation-row: var(--pr-shadow-row);
+  --elevation-button: var(--pr-shadow-btn);
+  --elevation-pill: var(--pr-shadow-pill);
+
+  /* Color-mix presets */
+  --color-accent-bg: var(--pr-accent-bg);
+  --color-online-bg: var(--pr-online-bg);
+  --color-danger-bg: var(--pr-danger-bg);
+
+  /* Status */
+  --status-online: var(--pr-online);
+  --status-danger: var(--pr-hot);
+  --status-warning: var(--pr-warning);
+
+  /* Map markers */
+  --marker-user: var(--pr-map-user);
+  --marker-group: var(--pr-map-group);
+  --marker-content: var(--pr-map-post);
+}

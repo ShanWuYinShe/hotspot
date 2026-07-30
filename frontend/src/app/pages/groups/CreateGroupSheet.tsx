@@ -32,19 +32,19 @@ export function CreateGroupSheet({ onClose, onCreated }: Props) {
   };
 
   return (
-    <div className="flex flex-col h-full" style={{ background: "var(--neu-bg)" }}>
+    <div className="flex flex-col h-full bg-[var(--neu-bg)]">
       {/* Handle */}
       <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-        <div className="rounded-full" style={{ width: 36, height: 4, background: "var(--neu-border)" }} />
+        <div className="rounded-full bg-[var(--neu-border)]" style={{ width: 36, height: 4 }} />
       </div>
 
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 flex-shrink-0"
         style={{ borderBottom: "1px solid var(--neu-border)" }}>
-        <h2 style={{ fontSize: 17, color: "var(--neu-text)" }}>创建群组</h2>
+        <h2 className="text-[var(--neu-text)]" style={{ fontSize: 17 }}>创建群组</h2>
         <motion.button whileTap={hover.tap as any} onClick={onClose}
-          className="flex items-center justify-center rounded-full outline-none"
-          style={{ width: 32, height: 32, background: "var(--neu-bg)", boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
+          className="flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
+          style={{ width: 32, height: 32, boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
           <X style={{ width: 14, height: 14, color: "var(--neu-text-muted)" }} strokeWidth={2} />
         </motion.button>
       </div>
@@ -57,17 +57,17 @@ export function CreateGroupSheet({ onClose, onCreated }: Props) {
             <motion.div
               initial={{ scale: 0 }} animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 320, damping: 18, delay: 0.1 }}
-              className="flex items-center justify-center rounded-full"
-              style={{ width: 72, height: 72, background: "var(--neu-accent-primary)", boxShadow: "0 8px 24px var(--neu-glow)" }}>
+              className="flex items-center justify-center rounded-full bg-[var(--neu-accent-primary)]"
+              style={{ width: 72, height: 72, boxShadow: "0 8px 24px var(--neu-glow)" }}>
               <Check style={{ width: 32, height: 32, color: "white" }} strokeWidth={2.5} />
             </motion.div>
             <div>
-              <p style={{ fontSize: 20, color: "var(--neu-text)", fontWeight: 600 }}>群组已创建！</p>
-              <p style={{ fontSize: 13, color: "var(--neu-text-muted)", marginTop: 6 }}>「{name}」已成功创建，现在可以邀请好友加入了</p>
+              <p className="text-[var(--neu-text)]" style={{ fontSize: 20, fontWeight: 600 }}>群组已创建！</p>
+              <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 13, marginTop: 6 }}>「{name}」已成功创建，现在可以邀请好友加入了</p>
             </div>
             <motion.button whileTap={hover.tap as any} onClick={onClose}
-              className="px-8 py-3 rounded-full outline-none"
-              style={{ background: "var(--neu-accent-primary)", color: "white", fontSize: 15, fontWeight: 500, boxShadow: "0 6px 20px var(--neu-glow)" }}>
+              className="px-8 py-3 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white"
+              style={{ fontSize: 15, fontWeight: 500, boxShadow: "0 6px 20px var(--neu-glow)" }}>
               完成
             </motion.button>
           </motion.div>
@@ -79,56 +79,56 @@ export function CreateGroupSheet({ onClose, onCreated }: Props) {
             {/* Cover photo selector */}
             <div className="flex justify-center">
               <motion.button whileTap={hover.tap as any}
-                className="flex flex-col items-center justify-center gap-2 rounded-[22px] outline-none"
-                style={{ width: "100%", height: 110, background: "var(--neu-bg)", boxShadow: "inset 4px 4px 10px var(--neu-shadow-dark), inset -4px -4px 10px var(--neu-shadow-light)", border: "2px dashed var(--neu-border)" }}>
+                className="flex flex-col items-center justify-center gap-2 rounded-[22px] outline-none bg-[var(--neu-bg)]"
+                style={{ width: "100%", height: 110, boxShadow: "inset 4px 4px 10px var(--neu-shadow-dark), inset -4px -4px 10px var(--neu-shadow-light)", border: "2px dashed var(--neu-border)" }}>
                 <Camera style={{ width: 26, height: 26, color: "var(--neu-text-muted)" }} strokeWidth={1.25} />
-                <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>添加封面图片</span>
+                <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>添加封面图片</span>
               </motion.button>
             </div>
 
             {/* Group name */}
             <div>
-              <label style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--neu-text-muted)" }}>群组名称 *</label>
+              <label className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>群组名称 *</label>
               <div className="flex items-center gap-2.5 mt-1.5 px-4 rounded-[14px] neu-input-surface" style={{ height: 46 }}>
-                <input className="flex-1 bg-transparent outline-none"
-                  style={{ fontSize: 14, color: "var(--neu-text)" }}
+                <input className="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
+                  style={{ fontSize: 14 }}
                   placeholder="给你的群组起个名字…"
                   value={name}
                   maxLength={30}
                   onChange={e => setName(e.target.value)}
                 />
-                <span style={{ fontSize: 11, color: "var(--neu-text-muted)", flexShrink: 0 }}>{name.length}/30</span>
+                <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, flexShrink: 0 }}>{name.length}/30</span>
               </div>
             </div>
 
             {/* Description */}
             <div>
-              <label style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--neu-text-muted)" }}>简介</label>
+              <label className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>简介</label>
               <div className="mt-1.5 px-4 py-3 rounded-[14px] neu-input-surface">
-                <textarea className="w-full bg-transparent outline-none resize-none"
-                  style={{ fontSize: 13, color: "var(--neu-text)", minHeight: 72 }}
+                <textarea className="w-full bg-transparent outline-none resize-none text-[var(--neu-text)]"
+                  style={{ fontSize: 13, minHeight: 72 }}
                   placeholder="描述一下这个群组的主题…"
                   value={desc}
                   maxLength={150}
                   onChange={e => setDesc(e.target.value)}
                 />
                 <div className="flex justify-end">
-                  <span style={{ fontSize: 10, color: "var(--neu-text-muted)" }}>{desc.length}/150</span>
+                  <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 10 }}>{desc.length}/150</span>
                 </div>
               </div>
             </div>
 
             {/* Category chips */}
             <div>
-              <label style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--neu-text-muted)" }}>分类</label>
+              <label className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>分类</label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {CATEGORIES.map(cat => (
                   <motion.button key={cat} whileTap={hover.tap as any}
                     onClick={() => setCategory(cat)}
-                    className="px-3.5 py-1.5 rounded-full outline-none"
+                    className={`px-3.5 py-1.5 rounded-full outline-none ${category === cat ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
                     style={category === cat
-                      ? { background: "var(--neu-accent-primary)", color: "white", fontSize: 12, fontWeight: 500, boxShadow: "0 3px 8px var(--neu-glow)" }
-                      : { boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)", color: "var(--neu-text-muted)", background: "var(--neu-bg)", fontSize: 12 }
+                      ? { fontSize: 12, fontWeight: 500, boxShadow: "0 3px 8px var(--neu-glow)" }
+                      : { boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)", fontSize: 12 }
                     }
                   >
                     {cat}
@@ -138,16 +138,16 @@ export function CreateGroupSheet({ onClose, onCreated }: Props) {
             </div>
 
             {/* Privacy toggle */}
-            <div className="flex items-center justify-between px-4 py-3.5 rounded-[16px]"
-              style={{ background: "var(--neu-bg)", boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
+            <div className="flex items-center justify-between px-4 py-3.5 rounded-[16px] bg-[var(--neu-bg)]"
+              style={{ boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
               <div className="flex items-center gap-3">
                 {isPrivate
                   ? <Lock style={{ width: 18, height: 18, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
                   : <Globe style={{ width: 18, height: 18, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
                 }
                 <div>
-                  <p style={{ fontSize: 14, color: "var(--neu-text)" }}>{isPrivate ? "私密群组" : "公开群组"}</p>
-                  <p style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>
+                  <p className="text-[var(--neu-text)]" style={{ fontSize: 14 }}>{isPrivate ? "私密群组" : "公开群组"}</p>
+                  <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>
                     {isPrivate ? "仅受邀请的人可加入" : "所有人都可以找到并加入"}
                   </p>
                 </div>
@@ -168,12 +168,12 @@ export function CreateGroupSheet({ onClose, onCreated }: Props) {
             </div>
 
             {/* Location */}
-            <div className="flex items-center gap-2.5 px-4 py-3 rounded-[16px]"
-              style={{ background: "var(--neu-bg)", boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
+            <div className="flex items-center gap-2.5 px-4 py-3 rounded-[16px] bg-[var(--neu-bg)]"
+              style={{ boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
               <MapPin style={{ width: 16, height: 16, color: "var(--neu-accent-primary)", flexShrink: 0 }} strokeWidth={1.5} />
               <div className="flex-1 min-w-0">
-                <p style={{ fontSize: 13, color: "var(--neu-text)" }}>徐州市 · 云龙区</p>
-                <p style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>自动定位 — 可修改</p>
+                <p className="text-[var(--neu-text)]" style={{ fontSize: 13 }}>徐州市 · 云龙区</p>
+                <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>自动定位 — 可修改</p>
               </div>
               <ChevronRight style={{ width: 13, height: 13, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
             </div>
@@ -182,10 +182,8 @@ export function CreateGroupSheet({ onClose, onCreated }: Props) {
             <motion.button whileTap={hover.tap as any}
               onClick={handleCreate}
               disabled={!canCreate}
-              className="flex items-center justify-center gap-2 w-full py-4 rounded-[18px] outline-none"
+              className={`flex items-center justify-center gap-2 w-full py-4 rounded-[18px] outline-none ${canCreate ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
               style={{
-                background: canCreate ? "var(--neu-accent-primary)" : "var(--neu-bg)",
-                color: canCreate ? "white" : "var(--neu-text-muted)",
                 fontSize: 15, fontWeight: 500,
                 boxShadow: canCreate
                   ? "0 6px 22px var(--neu-glow)"
