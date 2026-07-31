@@ -114,18 +114,29 @@ func sameOrigin(r *http.Request) bool {
 	return u.Host == r.Host
 }
 
+// decodePayload converts the generic `Event.Payload` (decoded as
+// map[string]any by ReadJSON) into a concrete payload struct. It reports an
+// error instead of silently continuing with a zero-value payload.
+func decodePayload(payload any, out any) error {
+	blob, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(blob, out)
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			return
-		}
-		defer conn.Close()
+	if err != nil {
+		return
+	}
+	defer conn.Close()
 
-		// Prevent memory-exhaustion DoS: the largest legitimate message is a
-		// SetSubscriptions with up to 500 user/group IDs (~64 KB).
-		conn.SetReadLimit(65536)
+	// Prevent memory-exhaustion DoS: the largest legitimate message is a
+	// SetSubscriptions with up to 500 user/group IDs (~64 KB).
+	conn.SetReadLimit(65536)
 
-		_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	var authEvent Event
 	if err := conn.ReadJSON(&authEvent); err != nil || authEvent.Type != "Auth" {
 		observability.L().Warn("ws: auth failed, invalid auth message", "error", err)
@@ -133,8 +144,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var authPayload AuthPayload
-	blob, _ := json.Marshal(authEvent.Payload)
-	_ = json.Unmarshal(blob, &authPayload)
+	if err := decodePayload(authEvent.Payload, &authPayload); err != nil {
+		observability.L().Warn("ws: auth failed, invalid payload", "error", err)
+		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
+		return
+	}
 	ctx := platformauth.WithPlatform(r.Context(), detectPlatform(r, authPayload.ClientType))
 	accessCookie := readCookie(r, platformauth.AccessTokenCookieName)
 	authorization := r.Header.Get("Authorization")
@@ -186,15 +200,19 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = sink.Send(Event{Type: EventTypePong, Payload: PingPayload{}})
 		case "GetSubscriptions":
 			var payload GetSubscriptionsPayload
-			blob, _ := json.Marshal(msg.Payload)
-			_ = json.Unmarshal(blob, &payload)
+			if err := decodePayload(msg.Payload, &payload); err != nil {
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
+				continue
+			}
 			snapshot := subs.snapshot()
 			snapshot.ClientRequestID = payload.ClientRequestID
 			_ = sink.Send(Event{Type: EventTypeSubscriptionsSnapshot, Payload: snapshot})
 		case "SetSubscriptions":
 			var payload SetSubscriptionsPayload
-			blob, _ := json.Marshal(msg.Payload)
-			_ = json.Unmarshal(blob, &payload)
+			if err := decodePayload(msg.Payload, &payload); err != nil {
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
+				continue
+			}
 			if retryAfter, limited := ratelimit.AllowWebsocketSubscribe(r.Context(), principal.UserID, connectionID); limited {
 				observability.L().Warn("ws: subscribe rate limited", "user_id", principal.UserID, "connection_id", connectionID, "retry_after", retryAfter)
 				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20300, Message: "请求过于频繁", Severity: "recoverable", Retryable: true, RetryAfter: retryAfter}})
@@ -224,8 +242,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = sink.Send(Event{Type: EventTypeSubscriptionsSnapshot, Payload: snapshot})
 		case "PrivateTyping":
 			var payload PrivateTypingPayload
-			blob, _ := json.Marshal(msg.Payload)
-			_ = json.Unmarshal(blob, &payload)
+			if err := decodePayload(msg.Payload, &payload); err != nil {
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
+				continue
+			}
 			if !h.canSendPrivateTyping(principalCtx, principal.UserID, payload.TargetUserID) {
 				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20400, Message: "无权限", Severity: "warning", Retryable: false}})
 				continue
@@ -241,8 +261,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypePrivateUserTyping, Payload: map[string]any{"user_id": principal.UserID, "target_user_id": payload.TargetUserID, "is_typing": payload.IsTyping}})
 		case "GroupTyping":
 			var payload GroupTypingPayload
-			blob, _ := json.Marshal(msg.Payload)
-			_ = json.Unmarshal(blob, &payload)
+			if err := decodePayload(msg.Payload, &payload); err != nil {
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
+				continue
+			}
 			if !h.isGroupMember(principalCtx, principal.UserID, payload.GroupID) {
 				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20400, Message: "无权限", Severity: "warning", Retryable: false}})
 				continue
