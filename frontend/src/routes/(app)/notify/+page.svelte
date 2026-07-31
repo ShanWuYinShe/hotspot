@@ -8,7 +8,8 @@
 	import PageHeader from '@/components/shared/PageHeader.svelte';
 	import TagPill from '@/components/shared/TagPill.svelte';
 	import EmptyState from '@/components/shared/EmptyState.svelte';
-	import NotifRow, { TYPE_CONFIG, type Notif } from './NotifRow.svelte';
+	import NotifRow from './NotifRow.svelte';
+	import { TYPE_CONFIG, type Notif } from './notif-data';
 	import { listNotifications, getUnreadCount, markRead } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
