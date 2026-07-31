@@ -1,4 +1,4 @@
-# HotSpot 前端（React / Vite / TypeScript）
+# HotSpot 前端（React / Next.js / TypeScript）
 
 > 本文件是前端专属约束。根 `AGENTS.md` 中的通用原则（Git 规范、Commit 格式、Docker 等）仍然适用。
 
@@ -8,14 +8,21 @@ React Web **主前端**。认证/注册/发现与搜索/信息流/生活瞬间�
 
 API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
 
+## 技术栈
+
+- **框架**：Next.js 15（App Router + `output: 'export'` 静态导出）
+- **样式**：Tailwind CSS v4 + CSS Token 三层架构
+- **包管理**：bun（`bun install` / `bun run`）
+- **Mock**：MSW（仅 dev 模式）
+
 ## 开发模式：必须通过 Docker Compose + Nginx 网关
 
-前端是一个纯 UI 层，所有 API、WebSocket、S3 请求都依赖后端服务。**禁止**直接在宿主机启动 Vite dev server。
+前端是纯 UI 层，所有 API、WebSocket、S3 请求都依赖后端服务。**禁止**直接在宿主机启动 `next dev`。
 
 ### 正确流程
 
 ```bash
-# 1. 启动全部服务（含前端 Vite HMR + 后端 + DB + nginx）
+# 1. 启动全部服务（含前端 Next.js dev server + 后端 + DB + nginx）
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
 # 2. 唯一访问入口
@@ -25,22 +32,13 @@ open http://localhost:8888
 Nginx 网关（`docker/nginx.dev.conf`）统一反代：
 | 路径 | 上游 |
 |------|------|
-| `/` | Vite HMR（容器内 `frontend:5173`，不暴露到宿主机） |
+| `/` | Next.js dev server（容器内 `frontend:5173`，不暴露到宿主机） |
 | `/api/` | Go 后端（容器内 `backend:8081`） |
 | `/ws/` | Go 后端 WebSocket |
 | `/s3/` | SeaweedFS S3 |
 
-### 为什么不能直接 `bun run dev`
-
-- `vite.config.ts` **没有** `server.proxy` — API 请求无法到达后端
-- 环境变量（`VITE_AMAP_*`）由 Docker Compose 注入，宿主机缺失
-- 高德地图安全代理不走 nginx 会被 CSP 拦截
-- 前端 `vite.config.ts` 的 `allowedHosts` 配置假设通过 nginx/orbstack 域名访问
-
 ### 宿主机上允许的调试操作
 
-在 Docker 容器已运行的前提下，以下操作可辅助但不替代通过 nginx 的完整验证：
-- 对本地文件做纯 UI 浏览/样式调试时可用 `bun run dev`，但必须清楚 API 不可用
 - 类型检查：`bun run check`
 - 构建验证：`bun run build`
 
@@ -53,9 +51,58 @@ bun run --cwd frontend build
 
 ## ⚠️ 硬约束
 
-- **调试/开发/预览时，默认入口是 `http://localhost:8888`（nginx 网关），不是 Vite dev server 地址**
-- 如果确实需要在宿主机关闭（docker 未运行）时查看纯 UI，使用 `bun run build` 然后用静态服务器预览，不要在 dev 模式下假装有后端
-- 修改 nginx 配置后必须重启对应容器：`docker compose -f docker-compose.yml -f docker-compose.dev.yml restart nginx`
+- **调试/开发/预览时，默认入口是 `http://localhost:8888`（nginx 网关），不是 Next.js dev server 地址**
+- 修改 nginx 配置后必须重启对应容器
+
+## 路由系统
+
+基于 Next.js App Router 文件路由：
+
+```
+src/app/
+  layout.tsx               # 根布局（Providers + HTML shell）
+  (auth)/login/page.tsx    # 登录页（无 MainLayout 外壳）
+  (app)/
+    layout.tsx             # MainLayout 外壳
+    page.tsx               # 首页（附近动态）
+    nearby/people/         # 附近的人
+    nearby/groups/         # 附近的组
+    nearby/moments/        # 附近时刻
+    moments/[postId]/      # 时刻详情
+    messages/              # 消息列表
+    messages/[chatId]/     # 聊天详情
+    me/                    # 个人主页
+    me/[section]/          # 个人主页分段
+    me/edit/               # 编辑资料
+    users/[userId]/        # 用户详情
+    groups/[groupId]/      # 群组详情
+    settings/              # 设置
+    map/                   # 地图
+    notify/                # 通知
+    search/                # 搜索
+```
+
+路由常量见 `@/lib/routes`。
+
+## 目录结构
+
+```
+src/
+  app/            # Next.js App Router（路由 + 布局）
+    (auth)/       # 认证路由组（无外壳）
+    (app)/        # 主路由组（MainLayout 外壳）
+  components/     # 共享组件
+    layout/       # 布局组件
+    shared/       # 通用组件（Avatar, ActionIconButton 等）
+    auth/         # 认证组件
+  hooks/          # 共享 hooks
+  contexts/       # React Context（Theme, Auth, Platform, Composer）
+  lib/            # 工具函数 + 路由常量
+  api/            # API 客户端层
+  styles/         # CSS（主题、Tailwind）
+  assets/         # 静态资源
+  mocks/          # MSW mock（仅 dev）
+```
 
 ## 主题 & CSS Token 架构
 
@@ -78,6 +125,6 @@ theme/
 ```
 
 - Token 三层链：`--neu-*` → 兼容别名 → `--text-primary` 等语义名 → `--pr-*` 原始值
-- 现有组件 418 个 `var(--neu-*)` 引用全部通过兼容层继续工作
-- 新组件优先使用语义名（`var(--text-primary)`、`var(--surface-page)` 等）
+- 新组件优先使用语义名（`var(--text-primary)`、`var(--surface-page)` 等）+ Tailwind className
 - 主题切换通过 `<html>` 上的 `.vibrant` / `.forest` + `.dark` 类实现
+- 禁止使用内联 `style={{}}`，统一用 Tailwind className + CSS Token 变量

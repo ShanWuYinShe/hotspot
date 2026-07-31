@@ -1,13 +1,16 @@
+'use client'
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { ROUTES } from "../../lib/routes";
-import { ArrowLeft, Heart, UserPlus, MessageCircle, Bell, MapPin, CheckCheck, Filter } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ROUTES } from "@/lib/routes";
+import { Heart, UserPlus, MessageCircle, Bell, MapPin, CheckCheck, Filter } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useHoverConfig } from "../../hooks/useHoverConfig";
-import { usePlatform } from "../../contexts/PlatformContext";
-import { DesktopDetailSplit, RailSection, RailUserRow } from "../../components/layout/DetailRail";
-import { ActionIconButton } from "../../components/shared/ActionIconButton";
-import { listNotifications, getUnreadCount, markRead } from "../../../api";
+import { useHoverConfig } from "@/hooks/useHoverConfig";
+import { usePlatform } from "@/contexts/PlatformContext";
+import { DesktopDetailSplit, RailSection, RailUserRow } from "@/components/layout/DetailRail";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { TagPill } from "@/components/shared/TagPill";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { listNotifications, getUnreadCount, markRead } from "@/api";
 
 /* ── Types & data ───────────────────────────────────────────────── */
 type NotifType = "like" | "follow" | "comment" | "nearby" | "event";
@@ -35,7 +38,7 @@ const FILTER_TABS = [
 ];
 
 export function NotificationsPage() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { platform } = usePlatform();
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [filter, setFilter] = useState("all");
@@ -114,41 +117,29 @@ export function NotificationsPage() {
   const main = (
     /* main scroll container */
     <div className="h-full overflow-y-auto no-scrollbar">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-[var(--neu-bg)]" style={{ borderBottom: "1px solid var(--neu-border)" }}>
-        <div className="px-5 pt-3 pb-0 mx-auto" style={{ maxWidth: isDesktop ? "var(--content-reading-max)" : 640, width: "100%" }}>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <ActionIconButton icon={ArrowLeft} label="返回" onClick={() => navigate(-1)} />
-            <div>
-              <h1 className="text-[var(--neu-text)]" style={{ fontSize: 20 }}>通知</h1>
-              {unread > 0 && <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, marginTop: 1 }}>{unread} 条未读</p>}
-            </div>
-          </div>
-          {unread > 0 && (
-            <motion.button whileTap={{ scale: 0.93 }} onClick={markAllRead}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-accent-primary)]"
-              style={{ border: "1px solid var(--neu-border)", boxShadow: "3px 3px 8px var(--neu-shadow-dark), -3px -3px 8px var(--neu-shadow-light)", fontSize: 12 }}>
-              <CheckCheck style={{ width: 13, height: 13 }} strokeWidth={2} />
-              全部已读
-            </motion.button>
-          )}
-        </div>
+      <PageHeader
+        title="通知"
+        sticky
+        onBack={() => router.back()}
+        subtitle={unread > 0 ? `${unread} 条未读` : undefined}
+        actions={unread > 0 ? (
+          <motion.button whileTap={{ scale: 0.93 }} onClick={markAllRead}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-accent-primary)] text-[12px]"
+            style={{ border: "1px solid var(--neu-border)", boxShadow: "3px 3px 8px var(--neu-shadow-dark), -3px -3px 8px var(--neu-shadow-light)" }}>
+            <CheckCheck style={{ width: 13, height: 13 }} strokeWidth={2} />
+            全部已读
+          </motion.button>
+        ) : undefined}
+      />
 
-        {/* Filter tabs */}
-        <div className="flex overflow-x-auto no-scrollbar pb-3 gap-2">
-          {FILTER_TABS.map(t => (
-            <motion.button key={t.id} whileTap={{ scale: 0.92 }}
-              onClick={() => setFilter(t.id)}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all ${filter === t.id ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
-              style={filter === t.id
-                ? { fontSize: 12, boxShadow: "0 3px 10px var(--neu-glow)", border: "none" }
-                : { fontSize: 12, border: "1px solid var(--neu-border)", boxShadow: "3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light)" }}>
-              {t.label}
-            </motion.button>
-          ))}
-        </div>
-        </div>
+      {/* Filter tabs */}
+      <div className="flex overflow-x-auto no-scrollbar pb-3 gap-2 px-5"
+        style={{ maxWidth: isDesktop ? "var(--content-reading-max)" : 640, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
+        {FILTER_TABS.map(t => (
+          <TagPill key={t.id} active={filter === t.id} onClick={() => setFilter(t.id)} size="sm">
+            {t.label}
+          </TagPill>
+        ))}
       </div>
 
       {/* List */}
@@ -157,25 +148,22 @@ export function NotificationsPage() {
         {/* Unread group */}
         {unreadGroup.length > 0 && (
           <>
-            <p className="uppercase mb-2 text-[var(--neu-text-muted)]" style={{ fontSize: 10, letterSpacing: "0.14em" }}>新消息</p>
-            {unreadGroup.map(n => <NotifRow key={n.id} notif={n} onRead={markSingleRead} onRemove={remove} navigate={navigate} />)}
-            {readGroup.length > 0 && <p className="uppercase mt-4 mb-2 text-[var(--neu-text-muted)]" style={{ fontSize: 10, letterSpacing: "0.14em" }}>较早</p>}
+            <p className="uppercase mb-2 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">新消息</p>
+            {unreadGroup.map(n => <NotifRow key={n.id} notif={n} onRead={markSingleRead} onRemove={remove} navigate={router.push} />)}
+            {readGroup.length > 0 && <p className="uppercase mt-4 mb-2 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">较早</p>}
           </>
         )}
 
         {/* Read group */}
         <AnimatePresence>
-          {readGroup.map(n => <NotifRow key={n.id} notif={n} onRead={markSingleRead} onRemove={remove} navigate={navigate} />)}
+          {readGroup.map(n => <NotifRow key={n.id} notif={n} onRead={markSingleRead} onRemove={remove} navigate={router.push} />)}
         </AnimatePresence>
 
         {filtered.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="flex items-center justify-center rounded-full"
-              style={{ width: 64, height: 64, boxShadow: "6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
-              <Bell style={{ width: 24, height: 24, color: "var(--neu-text-muted)", opacity: 0.5 }} strokeWidth={1.25} />
-            </div>
-            <p className="text-[var(--neu-text)]" style={{ fontSize: 15 }}>暂无通知</p>
-          </div>
+          <EmptyState
+            icon={<Bell style={{ width: 24, height: 24, color: "var(--neu-text-muted)", opacity: 0.5 }} strokeWidth={1.25} />}
+            title="暂无通知"
+          />
         )}
       </motion.div>
     </div>
@@ -185,8 +173,8 @@ export function NotificationsPage() {
     <>
       <RailSection title="今日概览">
         <div className="flex items-baseline gap-1.5 mb-3">
-          <span className="text-[var(--neu-text)]" style={{ fontSize: 30, fontWeight: 600, lineHeight: 1 }}>{unread}</span>
-          <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>条未读 · 共 {notifs.length} 条</span>
+          <span className="text-[var(--neu-text)] text-[30px] font-semibold leading-none">{unread}</span>
+          <span className="text-[var(--neu-text-muted)] text-[11px]">条未读 · 共 {notifs.length} 条</span>
         </div>
         <div className="flex flex-col gap-2">
           {typeStats.map(({ type, count }) => {
@@ -210,15 +198,15 @@ export function NotificationsPage() {
                 >
                   <Icon style={{ width: 11, height: 11, color: cfg.color }} strokeWidth={1.75} />
                 </div>
-                <span className="text-[var(--neu-text)]" style={{ fontSize: 12, flex: 1 }}>{cfg.label}</span>
-                <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>{count}</span>
+                <span className="text-[var(--neu-text)] text-[12px] flex-1">{cfg.label}</span>
+                <span className="text-[var(--neu-text-muted)] text-[11px]">{count}</span>
               </motion.button>
             );
           })}
         </div>
       </RailSection>
 
-      <RailSection title="新关注你的人" action="全部" onAction={() => navigate(`${ROUTES.meSection("relationships")}?tab=followers`)}>
+      <RailSection title="新关注你的人" action="全部" onAction={() => router.push(`${ROUTES.meSection("relationships")}?tab=followers`)}>
         <div className="flex flex-col gap-3">
           {notifs.filter(n => n.type === "follow").slice(0, 3).map(n => (
             <RailUserRow
@@ -229,8 +217,8 @@ export function NotificationsPage() {
               trailing={
                 <motion.button
                   whileTap={{ scale: 0.94 }}
-                  className="px-2.5 py-1 rounded-full outline-none flex-shrink-0 bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]"
-                  style={{ fontSize: 11, border: "1px solid var(--neu-accent-soft-border)" }}
+                  className="px-2.5 py-1 rounded-full outline-none flex-shrink-0 bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] text-[11px]"
+                  style={{ border: "1px solid var(--neu-accent-soft-border)" }}
                 >
                   回关
                 </motion.button>
@@ -240,7 +228,7 @@ export function NotificationsPage() {
         </div>
       </RailSection>
 
-      <RailSection title="此刻附近" action="查看" onAction={() => navigate(ROUTES.nearbyPeople)}>
+      <RailSection title="此刻附近" action="查看" onAction={() => router.push(ROUTES.nearbyPeople)}>
         <div className="flex flex-col gap-3">
           {notifs.filter(n => n.type === "nearby").slice(0, 3).map(n => (
             <RailUserRow
@@ -262,7 +250,7 @@ function NotifRow({ notif, onRead, onRemove, navigate }: {
   notif: Notif;
   onRead: (id: string) => void;
   onRemove: (id: string) => void;
-  navigate: ReturnType<typeof useNavigate>;
+  navigate: (path: string) => void;
 }) {
   const cfg = TYPE_CONFIG[notif.type];
   const Icon = cfg.icon;
@@ -305,11 +293,11 @@ function NotifRow({ notif, onRead, onRemove, navigate }: {
 
       {/* Text */}
       <div className="flex-1 min-w-0">
-        <p className="truncate text-[var(--neu-text)]" style={{ fontSize: 13 }}>
+        <p className="truncate text-[var(--neu-text)] text-[13px]">
           <span style={{ fontWeight: notif.read ? 400 : 500 }}>{notif.user.name}</span>
           {" "}{notif.text}
         </p>
-        <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 2 }}>{notif.time}</p>
+        <p className="text-[var(--neu-text-muted)] text-[11px] mt-0.5">{notif.time}</p>
       </div>
 
       {/* Post thumb or unread dot */}

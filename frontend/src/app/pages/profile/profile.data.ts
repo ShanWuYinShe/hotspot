@@ -4,7 +4,7 @@ import {
   listMyMoments, getFavoritePosts, listMyGroups,
   listFriends, listFollowing, listFollowers,
   type ApiResponse, type PaginatedData,
-} from "../../../api";
+} from "@/api";
 
 export interface GalleryPost {
   id: string; img: string; likes: number; comments: number;

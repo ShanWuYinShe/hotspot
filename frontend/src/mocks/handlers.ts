@@ -5,7 +5,7 @@ import {
   mockMoments, mockGroups, mockNotifications, mockChats, mockTrending, mockReactionItems,
   mockFriends, mockFollowing, mockFollowers,
   getMockAuthScenario, setMockLoggedIn, isMockLoggedIn,
-} from "./data";
+} from "@/mocks/data";
 
 const API = "/api/v1";
 

@@ -1,13 +1,15 @@
+'use client'
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router";
-import { ROUTES } from "../../lib/routes";
-import { ActionIconButton } from "../../components/shared/ActionIconButton";
+import { useParams } from "next/navigation"
+import { useRouter } from "next/navigation";
+import { ROUTES } from "@/lib/routes";
+import { ActionIconButton } from "@/components/shared/ActionIconButton";
 import { ArrowLeft, MapPin, MessageCircle, UserPlus, UserCheck, Share2, Heart, Grid3X3, Bookmark, MoreHorizontal, Flag, PencilLine, UserX, X, Check } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   DesktopDetailSplit, RailSection, RailUserRow, RailPostThumb, RailLocationMini,
-} from "../../components/layout/DetailRail";
-import { getProfile, follow, block, createReport } from "../../../api";
+} from "@/components/layout/DetailRail";
+import { getProfile, follow, block, createReport } from "@/api";
 
 const MUTUAL_FRIENDS: { id: number; name: string; sub: string; avatar: string }[] = [];
 
@@ -29,7 +31,7 @@ type Tab = "posts" | "liked" | "saved";
 
 export function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [user, setUser] = useState<UserData>(DEFAULT_USER);
   const [loading, setLoading] = useState(true);
   const [mutualFriends, setMutualFriends] = useState<typeof MUTUAL_FRIENDS>([]);
@@ -126,7 +128,7 @@ export function UserProfilePage() {
 
         {/* Top buttons */}
         <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-4">
-          <ActionIconButton icon={ArrowLeft} label="返回" onClick={() => navigate(-1)} variant="overlay" tone="inverse" />
+          <ActionIconButton icon={ArrowLeft} label="返回" onClick={() => router.back()} variant="overlay" tone="inverse" />
           <div className="flex gap-2">
             <ActionIconButton icon={Share2} label={shareCopied ? "链接已复制" : "分享资料"} onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}${ROUTES.user(userId ?? "")}`); setShareCopied(true); window.setTimeout(() => setShareCopied(false), 1600); }} variant="overlay" tone="inverse" />
             <ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => { setRemarkDraft(remark); setMoreOpen(true); }} variant="overlay" tone="inverse" />
@@ -150,10 +152,10 @@ export function UserProfilePage() {
             {/* Action buttons */}
             <div className="flex gap-2 pb-1">
               <motion.button whileTap={{ scale: 0.93 }}
-                onClick={() => !blocked && navigate(ROUTES.message(1))}
+                onClick={() => !blocked && router.push(ROUTES.message(1))}
                 disabled={blocked}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"
-                style={{ border: "1px solid var(--neu-border)", boxShadow: "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)", fontSize: 12 }}>
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-[var(--neu-bg)] text-[var(--neu-text-muted)] text-xs"
+                style={{ border: "1px solid var(--neu-border)", boxShadow: "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)" }}>
                 <MessageCircle style={{ width: 14, height: 14 }} strokeWidth={1.5} />
                 私信
               </motion.button>
@@ -166,10 +168,10 @@ export function UserProfilePage() {
                   follow({ user_id: userId ?? "", active: next }).catch(() => setFollowed(!next));
                 }}
                 disabled={blocked}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 ${followed ? "bg-[var(--neu-bg)] text-[var(--neu-accent-primary)]" : "bg-[var(--neu-accent-primary)] text-white"}`}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 text-xs ${followed ? "bg-[var(--neu-bg)] text-[var(--neu-accent-primary)]" : "bg-[var(--neu-accent-primary)] text-white"}`}
                 style={followed
-                  ? { fontSize: 12, border: "1.5px solid var(--neu-accent-primary)", boxShadow: "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)" }
-                  : { fontSize: 12, boxShadow: "0 4px 14px var(--neu-glow)", border: "1px solid transparent" }}>
+                  ? { border: "1.5px solid var(--neu-accent-primary)", boxShadow: "4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)" }
+                  : { boxShadow: "0 4px 14px var(--neu-glow)", border: "1px solid transparent" }}>
                 {followed
                   ? <><UserCheck style={{ width: 14, height: 14 }} strokeWidth={1.5} />已关注</>
                   : <><UserPlus style={{ width: 14, height: 14 }} strokeWidth={1.5} />关注</>}
@@ -177,21 +179,21 @@ export function UserProfilePage() {
             </div>
           </div>
 
-          <h1 className="text-[var(--neu-text)]" style={{ fontSize: 20 }}>{user.name}</h1>
-          <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 13, marginTop: 1 }}>{user.handle}{remark ? ` · ${remark}` : ""}</p>
+          <h1 className="text-[var(--neu-text)] text-xl">{user.name}</h1>
+          <p className="text-[var(--neu-text-muted)] text-[13px]" style={{ marginTop: 1 }}>{user.handle}{remark ? ` · ${remark}` : ""}</p>
           {blocked && <div className="mt-3 flex items-center gap-2 rounded-[12px] ring-1 ring-[var(--semantic-hot)]/30 bg-[color-mix(in_srgb,var(--semantic-hot)_8%,transparent)] px-3 py-2 text-[12px] text-[var(--semantic-hot)]"><UserX size={14} />你已屏蔽此用户；关注和私信已停用。</div>}
-          <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 13, lineHeight: 1.65, marginTop: 8 }}>{user.bio}</p>
+          <p className="text-[var(--neu-text-muted)] text-[13px]" style={{ lineHeight: 1.65, marginTop: 8 }}>{user.bio}</p>
 
           <div className="flex items-center gap-1.5 mt-2">
             <MapPin style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
-            <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>{user.location}</span>
+            <span className="text-[var(--neu-text-muted)] text-[11px]">{user.location}</span>
           </div>
 
           {/* Tags */}
           <div className="flex gap-2 mt-3 flex-wrap">
             {user.tags.map(t => (
-              <span key={t} className="px-2.5 py-0.5 rounded-full bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]"
-                style={{ fontSize: 11, border: "1px solid var(--neu-accent-soft-border)" }}>
+              <span key={t} className="px-2.5 py-0.5 rounded-full bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] text-[11px]"
+                style={{ border: "1px solid var(--neu-accent-soft-border)" }}>
                 #{t}
               </span>
             ))}
@@ -208,8 +210,8 @@ export function UserProfilePage() {
             ].map((s, i) => (
               <div key={s.label} className="flex-1 flex flex-col items-center py-4 relative">
                 {i > 0 && <div className="absolute left-0 top-1/2 -translate-y-1/2 bg-[var(--neu-border)]" style={{ width: 1, height: 28 }} />}
-                <span className="text-[var(--neu-text)]" style={{ fontSize: 22 }}>{s.v}</span>
-                <span className="uppercase mt-1 text-[var(--neu-text-muted)]" style={{ fontSize: 9, letterSpacing: "0.1em" }}>{s.label}</span>
+                <span className="text-[var(--neu-text)] text-[22px]">{s.v}</span>
+                <span className="uppercase mt-1 text-[var(--neu-text-muted)] text-[9px]" style={{ letterSpacing: "0.1em" }}>{s.label}</span>
               </div>
             ))}
             </div>
@@ -222,8 +224,8 @@ export function UserProfilePage() {
             const active = activeTab === id;
             return (
               <motion.button key={id} whileTap={{ scale: 0.94 }} onClick={() => setActiveTab(id)}
-                className={`relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none ${active ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
-                style={{ flex: 1, fontSize: 13, fontWeight: active ? 500 : 400 }}>
+                className={`relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none text-[13px] ${active ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
+                style={{ flex: 1, fontWeight: active ? 500 : 400 }}>
                 <Icon style={{ width: 13, height: 13 }} strokeWidth={active ? 2 : 1.5} />
                 {label}
                 {active && <motion.div layoutId="user-profile-tab"
@@ -267,8 +269,8 @@ export function UserProfilePage() {
           {user.tags.map(t => (
             <span
               key={t}
-              className="px-2.5 py-0.5 rounded-full bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]"
-              style={{ fontSize: 11, border: "1px solid var(--neu-accent-soft-border)" }}
+              className="px-2.5 py-0.5 rounded-full bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] text-[11px]"
+              style={{ border: "1px solid var(--neu-accent-soft-border)" }}
             >
               #{t}
             </span>
@@ -285,7 +287,7 @@ export function UserProfilePage() {
                 avatar={f.avatar}
                 name={f.name}
                 sub={f.sub}
-                onClick={() => navigate(ROUTES.user(f.id))}
+                onClick={() => router.push(ROUTES.user(f.id))}
               />
             ))}
           </div>
@@ -302,7 +304,7 @@ export function UserProfilePage() {
         </div>
       </RailSection>
 
-      <RailSection title="你可能也关注" action="更多" onAction={() => navigate(ROUTES.nearbyPeople)}>
+      <RailSection title="你可能也关注" action="更多" onAction={() => router.push(ROUTES.nearbyPeople)}>
         <div className="flex flex-col gap-3">
             {similarUsers.map(u => (
             <RailUserRow
@@ -310,7 +312,7 @@ export function UserProfilePage() {
               avatar={u.avatar}
               name={u.name}
               sub={u.sub}
-              onClick={() => navigate(ROUTES.user(u.id))}
+              onClick={() => router.push(ROUTES.user(u.id))}
             />
           ))}
         </div>

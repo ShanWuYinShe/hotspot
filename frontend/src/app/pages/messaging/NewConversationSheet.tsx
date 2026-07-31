@@ -1,3 +1,4 @@
+'use client'
 /**
  * NewConversationSheet — bottom sheet for:
  *   1. 添加好友  (tab: "好友")
@@ -7,7 +8,7 @@
 import React, { useState } from "react";
 import { Search, X, UserPlus, MessageCircle, Users, Check } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useHoverConfig } from "../../hooks/useHoverConfig";
+import { useHoverConfig } from "@/hooks/useHoverConfig";
 
 type Tab = "add" | "chat";
 

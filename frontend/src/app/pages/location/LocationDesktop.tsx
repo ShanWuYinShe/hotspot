@@ -1,14 +1,16 @@
+'use client'
 import React, { useState, useRef, useCallback } from "react";
-import { useNavigate } from "react-router";
-import { ArrowLeft, Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, SlidersHorizontal, Crosshair, Heart, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, SlidersHorizontal, Crosshair, Heart, Check } from "lucide-react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "motion/react";
-import type { PinType, Pin, LocationResult } from "./location.data";
-import { XUZHOU_CENTER, MOCK_PINS, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB } from "./location.data";
-import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, type SnapState, PIN_COLORS, PIN_LABELS, pinTone, floatBtnStyle, buildMapData, MapPinMarker, getMarkerUrl, markerUserUrl, markerGroupUrl, markerMomentUrl, markerUserClusterUrl, markerGroupClusterUrl, markerMomentClusterUrl } from "./location.shared";
-import { useDismissibleLayer } from "../../hooks/useDismissibleLayer";
+import { PageHeader } from "@/components/shared/PageHeader";
+import type { PinType, Pin, LocationResult } from "@/app/pages/location/location.data";
+import { XUZHOU_CENTER, MOCK_PINS, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB } from "@/app/pages/location/location.data";
+import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, type SnapState, PIN_COLORS, PIN_LABELS, pinTone, floatBtnStyle, buildMapData, MapPinMarker, getMarkerUrl, markerUserUrl, markerGroupUrl, markerMomentUrl, markerUserClusterUrl, markerGroupClusterUrl, markerMomentClusterUrl } from "@/app/pages/location/location.shared";
+import { useDismissibleLayer } from "@/hooks/useDismissibleLayer";
 
 function LocationDesktop() {
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const [searchQuery, setSearchQuery]   = useState("");
   const [selectedPin, setSelectedPin]   = useState<Pin | null>(null);
@@ -52,7 +54,7 @@ function LocationDesktop() {
     if (selectedLoc) {
       try { localStorage.setItem("hotspot_last_location", JSON.stringify([selectedLoc.lat, selectedLoc.lng])); } catch {}
     }
-    navigate(-1);
+    router.back();
   }
 
   return (
@@ -62,27 +64,18 @@ function LocationDesktop() {
       <div className="flex flex-col flex-shrink-0" style={{ width: 340, borderRight: "1px solid var(--neu-border)" }}>
 
         {/* Header */}
-        <div className="flex-shrink-0 px-5 pt-4 pb-3" style={{ borderBottom: "1px solid var(--neu-border)" }}>
-          <div className="flex items-center gap-3 mb-3">
-            <motion.button whileTap={{ scale: 0.88, transition: { type: "spring", stiffness: 600, damping: 28 } }} whileHover={{ scale: 1.14, transition: { type: "spring", stiffness: 400, damping: 16 } }} onClick={() => navigate(-1)}
-              className="flex items-center justify-center rounded-full outline-none flex-shrink-0 neu-circle-hover bg-[var(--neu-bg)]"
-              style={{ width: 36, height: 36, border: "1px solid var(--neu-border)", boxShadow: "4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light)" }}>
-              <ArrowLeft style={{ width: 15, height: 15, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
-            </motion.button>
-            <div className="flex-1 min-w-0">
-              <p className="text-[var(--neu-text)]" style={{ fontSize: 16 }}>位置选择</p>
-              <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>江苏·徐州</p>
-            </div>
+        <div className="flex-shrink-0">
+          <PageHeader title="地图探索" onBack={() => router.back()} subtitle="江苏·徐州" sticky>
             <motion.button whileTap={{ scale: 0.88, transition: { type: "spring", stiffness: 600, damping: 28 } }} whileHover={{ scale: 1.14, transition: { type: "spring", stiffness: 400, damping: 16 } }}
               onClick={() => { setMapCenter(XUZHOU_CENTER); setSelectedLoc(null); setSearchQuery(""); }}
               className="flex items-center justify-center rounded-full outline-none flex-shrink-0 neu-circle-hover bg-[var(--neu-bg)]"
               style={{ width: 36, height: 36, border: "1px solid var(--neu-border)", boxShadow: "4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light)" }}>
               <Crosshair style={{ width: 15, height: 15, color: "var(--neu-accent-primary)" }} strokeWidth={1.75} />
             </motion.button>
-          </div>
+          </PageHeader>
 
           {/* Type stat chips */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 px-5 pb-3">
             {([
               ["user",  userCount,  PIN_COLORS.user, "用户", markerUserUrl],
               ["group", groupCount, PIN_COLORS.group, "群组", markerGroupUrl],
@@ -120,8 +113,7 @@ function LocationDesktop() {
               value={searchQuery}
               onChange={e => { setSearchQuery(e.target.value); setSelectedLoc(null); }}
               placeholder="搜索地点或地标…"
-              className="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
-              style={{ fontSize: 13 }} />
+              className="flex-1 bg-transparent outline-none text-[var(--neu-text)] text-[13px]" />
             {searchQuery && (
               <motion.button whileTap={{ scale: 0.85 }} onClick={() => setSearchQuery("")} className="outline-none">
                 <X style={{ width: 13, height: 13, color: "var(--neu-text-muted)" }} strokeWidth={2} />
@@ -226,23 +218,23 @@ function LocationDesktop() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-[var(--neu-text)]" style={{ fontSize: 13 }}>{pin.name || pin.title}</p>
+                      <p className="text-[var(--neu-text)] text-[13px]">{pin.name || pin.title}</p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: pinTone(pin.type, 15), color: PIN_COLORS[pin.type] }}>
                           {PIN_LABELS[pin.type]}
                         </span>
-                        {pin.tag && <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>#{pin.tag}</span>}
+                        {pin.tag && <span className="text-[var(--neu-text-muted)] text-[11px]">#{pin.tag}</span>}
                         {pin.distance && (
                           <div className="flex items-center gap-0.5">
                             <MapPin style={{ width: 9, height: 9, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
-                            <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>{pin.distance}</span>
+                            <span className="text-[var(--neu-text-muted)] text-[11px]">{pin.distance}</span>
                           </div>
                         )}
-                        {pin.members && <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>{pin.members}人</span>}
+                        {pin.members && <span className="text-[var(--neu-text-muted)] text-[11px]">{pin.members}人</span>}
                         {pin.likes && (
                           <div className="flex items-center gap-0.5">
                             <Heart style={{ width: 9, height: 9, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
-                            <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>{pin.likes}</span>
+                            <span className="text-[var(--neu-text-muted)] text-[11px]">{pin.likes}</span>
                           </div>
                         )}
                       </div>
@@ -280,15 +272,15 @@ function LocationDesktop() {
                       {loc.emoji}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[var(--neu-text)]" style={{ fontSize: 14 }}>{loc.displayName}</p>
+                      <p className="text-[var(--neu-text)] text-sm">{loc.displayName}</p>
                       <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, marginTop: 2 }}>{loc.desc}</p>
                     </div>
                     <div className="flex flex-col items-end flex-shrink-0 gap-0.5">
                       <div className="flex items-center gap-1">
                         <Users style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
-                        <span className="text-[var(--neu-accent-primary)]" style={{ fontSize: 12 }}>{loc.users}</span>
+                        <span className="text-[var(--neu-accent-primary)] text-xs">{loc.users}</span>
                       </div>
-                      <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 10 }}>在线</span>
+                      <span className="text-[var(--neu-text-muted)] text-[10px]">在线</span>
                     </div>
                   </motion.button>
                 ))}
@@ -316,7 +308,7 @@ function LocationDesktop() {
                       {loc.emoji}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[var(--neu-text)]" style={{ fontSize: 14 }}>{loc.displayName}</p>
+                      <p className="text-[var(--neu-text)] text-sm">{loc.displayName}</p>
                       <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, marginTop: 2 }}>{loc.desc}</p>
                     </div>
                     {selectedLoc?.displayName === loc.displayName && (
@@ -340,7 +332,7 @@ function LocationDesktop() {
                 className="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-[13px] bg-[var(--neu-bg)]"
                 style={{ boxShadow: "0 0 0 1px var(--neu-border), inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light)" }}>
                 <Check style={{ width: 13, height: 13, color: "var(--neu-accent-primary)", flexShrink: 0 }} strokeWidth={2.5} />
-                <p className="flex-1 truncate text-[var(--neu-accent-primary)]" style={{ fontSize: 12 }}>{selectedLoc.displayName}</p>
+                <p className="flex-1 truncate text-[var(--neu-accent-primary)] text-xs">{selectedLoc.displayName}</p>
                 <motion.button whileTap={{ scale: 0.85 }} onClick={() => { setSelectedLoc(null); setSearchQuery(""); }} className="outline-none">
                   <X style={{ width: 12, height: 12, color: "var(--neu-text-muted)" }} strokeWidth={2} />
                 </motion.button>
@@ -443,7 +435,7 @@ function LocationDesktop() {
                 <div className="bg-[var(--neu-border)]" style={{ height: 1 }} />
                 <div className="px-3 py-2 flex items-center gap-2">
                   <div style={{ width: 13, height: 13, borderRadius: "50%", background: PIN_COLORS.user, border: "2px solid var(--neu-bg)", boxShadow: `0 0 5px ${pinTone("user", 50)}` }} />
-                  <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>我的位置</span>
+                  <span className="text-[var(--neu-text-muted)] text-xs">我的位置</span>
                 </div>
                 </div>
               </motion.div>
@@ -485,7 +477,7 @@ function LocationDesktop() {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-[var(--neu-text)]" style={{ fontSize: 15 }}>{selectedPin.name || selectedPin.title}</p>
+                    <p className="text-[var(--neu-text)] text-[15px]">{selectedPin.name || selectedPin.title}</p>
                     {(selectedPin.count ?? 1) > 1 && (
                       <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: PIN_COLORS[selectedPin.type], color: "white" }}>
                         {selectedPin.count}个
@@ -496,18 +488,18 @@ function LocationDesktop() {
                     <span style={{ fontSize: 11, padding: "1px 7px", borderRadius: 4, background: pinTone(selectedPin.type, 15), color: PIN_COLORS[selectedPin.type] }}>
                       {PIN_LABELS[selectedPin.type]}
                     </span>
-                    {selectedPin.tag && <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>#{selectedPin.tag}</span>}
+                    {selectedPin.tag && <span className="text-[var(--neu-text-muted)] text-xs">#{selectedPin.tag}</span>}
                     {selectedPin.distance && (
                       <div className="flex items-center gap-1">
                         <MapPin style={{ width: 10, height: 10, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
-                        <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>{selectedPin.distance}</span>
+                        <span className="text-[var(--neu-text-muted)] text-xs">{selectedPin.distance}</span>
                       </div>
                     )}
-                    {selectedPin.members && <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>{selectedPin.members}名成员</span>}
+                    {selectedPin.members && <span className="text-[var(--neu-text-muted)] text-xs">{selectedPin.members}名成员</span>}
                     {selectedPin.likes && (
                       <div className="flex items-center gap-1">
                         <Heart style={{ width: 10, height: 10, color: "var(--semantic-hot)" }} strokeWidth={1.5} />
-                        <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>{selectedPin.likes}</span>
+                        <span className="text-[var(--neu-text-muted)] text-xs">{selectedPin.likes}</span>
                       </div>
                     )}
                   </div>

@@ -1,15 +1,17 @@
+'use client'
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, Search, MapPin, Heart, MessageCircle, Share2, Bookmark, X, Sparkles } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import { usePlatform } from "../../contexts/PlatformContext";
-import { useNavigate } from "react-router";
-import { ROUTES } from "../../lib/routes";
-import { useHoverConfig } from "../../hooks/useHoverConfig";
-import { useDefaultLocation } from "../../hooks/useDefaultLocation";
-import { BspCardCanvas } from "../../components/shared/BspCardCanvas";
-import { ActionIconButton } from "../../components/shared/ActionIconButton";
-import { Avatar } from "../../components/shared/Avatar";
-import { getFeedNearby, setReaction, favoriteMoment } from "../../../api";
+import { Search, MapPin, Heart, MessageCircle, Share2, Bookmark, X, Sparkles } from "lucide-react";
+import { motion } from "motion/react";
+import { usePlatform } from "@/contexts/PlatformContext";
+import { useRouter } from "next/navigation";
+import { ROUTES } from "@/lib/routes";
+import { useHoverConfig } from "@/hooks/useHoverConfig";
+import { useDefaultLocation } from "@/hooks/useDefaultLocation";
+import { BspCardCanvas } from "@/components/shared/BspCardCanvas";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { TagPill } from "@/components/shared/TagPill";
+import { Avatar } from "@/components/shared/Avatar";
+import { getFeedNearby, setReaction, favoriteMoment } from "@/api";
 
 /* ── Feed data ──────────────────────────────────────────────────── */
 // FeedItem is the card shape; liked/saved are per-item interaction state held
@@ -116,16 +118,16 @@ function PostCard({
           className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-[var(--neu-accent-primary)]"
           style={{ boxShadow: "0 2px 8px var(--neu-glow)" }}
         >
-          <span className="text-white" style={{ fontSize: 10 }}>{item.tag}</span>
+          <span className="text-white text-[10px]">{item.tag}</span>
         </div>
         {/* Author + location on image */}
         <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 px-3 pb-2.5">
           <Avatar src={item.avatar} name={item.user} size={22}
             style={{ border: item.image ? "1.5px solid rgba(255,255,255,0.65)" : "1.5px solid var(--neu-border)" }} />
-          <span style={{ fontSize: 11, color: item.image ? "white" : "var(--neu-text)", fontWeight: 500 }}>{item.user}</span>
+          <span className="text-[11px]" style={{ color: item.image ? "white" : "var(--neu-text)", fontWeight: 500 }}>{item.user}</span>
           <div className="flex items-center gap-0.5 ml-auto">
             <MapPin style={{ width: 9, height: 9, color: item.image ? "rgba(255,255,255,0.8)" : "var(--neu-text-muted)" }} strokeWidth={1.5} />
-            <span style={{ fontSize: 10, color: item.image ? "rgba(255,255,255,0.8)" : "var(--neu-text-muted)" }}>{item.location}</span>
+            <span className="text-[10px]" style={{ color: item.image ? "rgba(255,255,255,0.8)" : "var(--neu-text-muted)" }}>{item.location}</span>
           </div>
         </div>
       </div>
@@ -133,11 +135,7 @@ function PostCard({
       {/* Text content */}
       <div style={{ padding: dense ? "10px 14px 6px" : "12px 16px 8px" }}>
         <p
-          className="line-clamp-2 text-[var(--neu-text-muted)]"
-          style={{
-            fontSize: dense ? 12 : 13,
-            lineHeight: 1.6,
-          }}
+          className={`line-clamp-2 leading-[1.6] text-[var(--neu-text-muted)] ${dense ? "text-xs" : "text-[13px]"}`}
         >
           {item.content}
         </p>
@@ -156,7 +154,7 @@ function PostCard({
             onClick={e => { e.stopPropagation(); onLike(); }}
           >
             <Heart style={{ width: 15, height: 15 }} strokeWidth={1.5} fill={liked ? "currentColor" : "none"} />
-            <span style={{ fontSize: 11 }}>{item.likes + (liked ? 1 : 0)}</span>
+            <span className="text-[11px]">{item.likes + (liked ? 1 : 0)}</span>
           </motion.button>
           <motion.button
             whileTap={hover.tap as any}
@@ -165,7 +163,7 @@ function PostCard({
             onClick={e => e.stopPropagation()}
           >
             <MessageCircle style={{ width: 15, height: 15 }} strokeWidth={1.5} />
-            <span style={{ fontSize: 11 }}>{item.comments}</span>
+            <span className="text-[11px]">{item.comments}</span>
           </motion.button>
         </div>
         <div className="flex gap-3">
@@ -203,15 +201,13 @@ function DiscoverHeader({
     <>
       {/* Search bar */}
       <div
-        className="flex items-center gap-3 px-4 py-2.5 rounded-[18px] neu-input-surface"
-        style={{ marginBottom: 10 }}
+        className="flex items-center gap-3 px-4 py-2.5 rounded-[18px] neu-input-surface mb-2.5"
       >
         <Search style={{ width: 15, height: 15, color: "var(--neu-text-muted)", flexShrink: 0 }} strokeWidth={1.5} />
         <input
           value={searchVal} onChange={e => setSearchVal(e.target.value)}
           placeholder="地点、人物、关键词…"
-          className="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
-          style={{ fontSize: 13 }}
+          className="flex-1 bg-transparent outline-none text-[var(--neu-text)] text-[13px]"
         />
         {searchVal.length > 0 && (
           <motion.button
@@ -235,12 +231,7 @@ function DiscoverHeader({
           return (
             <motion.button
               key={tab} whileTap={{ scale: 0.94 }} onClick={() => setActiveTab(tab)}
-              className={`relative flex-shrink-0 pb-3 pt-1 outline-none ${isActive ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
-              style={{
-                paddingLeft: 18, paddingRight: 18,
-                fontWeight: isActive ? 500 : 400, fontSize: 13,
-                transition: "color 0.2s",
-              }}
+              className={`relative flex-shrink-0 pb-3 pt-1 outline-none text-[13px] px-[18px] transition-colors duration-200 ${isActive ? "text-[var(--neu-accent-primary)] font-medium" : "text-[var(--neu-text-muted)] font-normal"}`}
             >
               {tab}
               {isActive && (
@@ -263,41 +254,11 @@ function DiscoverHeader({
   );
 }
 
-/* ── Tag chips strip ────────────────────────────────────────────── */
-function TagChips({
-  activeTag, setActiveTag, tags, scrollable = false,
-}: {
-  activeTag: string | null; setActiveTag: (t: string | null) => void; tags: string[]; scrollable?: boolean;
-}) {
-  return (
-    <div className={scrollable ? "flex gap-2 overflow-x-auto no-scrollbar pb-1" : "flex gap-2 flex-wrap"}>
-      {tags.map(tag => {
-        const active = activeTag === tag;
-        return (
-          <motion.button
-            key={tag} whileTap={{ scale: 0.94 }}
-            onClick={() => setActiveTag(active ? null : tag)}
-            className={`flex-shrink-0 px-3 py-1 rounded-full outline-none transition-all neu-surface-ghost ${active ? "bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
-            style={active
-              ? {
-                  fontSize: 12,
-                  fontWeight: 500,
-                  borderColor: "var(--neu-accent-soft-border)",
-                }
-              : { fontSize: 12 }}>
-            {tag}
-          </motion.button>
-        );
-      })}
-    </div>
-  );
-}
-
 /* ══════════════════════════════════════════════════════════════════
    Mobile Discover — single-column feed, max-width 560px centred
 ══════════════════════════════════════════════════════════════════ */
 function DiscoverMobile({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags: string[] }) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { items: feedItems, toggleLike, toggleSave } = useFeedInteractions(apiFeedItems);
   const [searchVal, setSearchVal] = useState("");
   const [activeTab, setActiveTab] = useState("热门");
@@ -316,8 +277,8 @@ function DiscoverMobile({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
         style={{ borderBottom: "1px solid var(--neu-border)" }}
       >
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-[var(--neu-text)]" style={{ fontSize: 22 }}>发现</h1>
-          <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>
+          <h1 className="text-[var(--neu-text)] text-[22px]">发现</h1>
+          <span className="text-[var(--neu-text-muted)] text-xs">
             {filtered.length} 条内容
           </span>
         </div>
@@ -330,10 +291,23 @@ function DiscoverMobile({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         style={{ maxWidth: 560, marginLeft: "auto", marginRight: "auto", width: "100%", padding: "12px 16px 24px" }}
       >
-        {/* Tag chips */}
         <div className="mb-4">
-            <TagChips activeTag={activeTag} setActiveTag={setActiveTag} tags={tags} scrollable />
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            {tags.map(tag => {
+              const active = activeTag === tag;
+              return (
+                <TagPill
+                  key={tag}
+                  active={active}
+                  onClick={() => setActiveTag(active ? null : tag)}
+                  size="md"
+                >
+                  {tag}
+                </TagPill>
+              );
+            })}
           </div>
+        </div>
 
         {/* Feed — first is hero with ambient, rest are flat */}
         <div className="flex flex-col gap-4">
@@ -343,7 +317,7 @@ function DiscoverMobile({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
                 item={item} hero
                 liked={item.liked} saved={item.saved}
                 onLike={() => toggleLike(item.id)} onSave={() => toggleSave(item.id)}
-                onClick={() => navigate(ROUTES.moment(item.id))}
+                onClick={() => router.push(ROUTES.moment(item.id))}
               />
             </div>
           ) : (
@@ -351,7 +325,7 @@ function DiscoverMobile({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
               key={item.id} item={item}
               liked={item.liked} saved={item.saved}
               onLike={() => toggleLike(item.id)} onSave={() => toggleSave(item.id)}
-              onClick={() => navigate(ROUTES.moment(item.id))}
+              onClick={() => router.push(ROUTES.moment(item.id))}
             />
           ))}
         </div>
@@ -365,7 +339,7 @@ function DiscoverMobile({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
    Handles 600-1279px — both portrait and landscape tablets
 ══════════════════════════════════════════════════════════════════ */
 function DiscoverTablet({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags: string[] }) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { items: feedItems, toggleLike, toggleSave } = useFeedInteractions(apiFeedItems);
   const [searchVal, setSearchVal] = useState("");
   const [activeTab, setActiveTab] = useState("热门");
@@ -386,13 +360,13 @@ function DiscoverTablet({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
         <div className="flex gap-6 mx-auto" style={{ width: "100%" }}>
           <div className="mx-auto w-full lg:mx-0 px-6 min-w-0" style={{ width: "100%" }}>
             <div className="flex items-center justify-between mb-2">
-              <h1 className="text-[var(--neu-text)]" style={{ fontSize: 24 }}>发现</h1>
+              <h1 className="text-[var(--neu-text)] text-2xl">发现</h1>
               <div
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]"
                 style={{ boxShadow: "0 3px 10px var(--neu-glow)" }}
               >
                 <Sparkles style={{ width: 11, height: 11, color: "white" }} strokeWidth={2} />
-                <span className="text-white" style={{ fontSize: 11 }}>精选</span>
+                <span className="text-white text-[11px]">精选</span>
               </div>
             </div>
             <DiscoverHeader searchVal={searchVal} setSearchVal={setSearchVal} activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -410,7 +384,21 @@ function DiscoverTablet({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
       >
         <div className="mx-auto w-full lg:mx-0 px-5 min-w-0" style={{ width: "100%" }}>
           <div className="mb-5">
-          <TagChips activeTag={activeTag} setActiveTag={setActiveTag} tags={tags} scrollable />
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+              {tags.map(tag => {
+                const active = activeTag === tag;
+                return (
+                  <TagPill
+                    key={tag}
+                    active={active}
+                    onClick={() => setActiveTag(active ? null : tag)}
+                    size="md"
+                  >
+                    {tag}
+                  </TagPill>
+                );
+              })}
+            </div>
           </div>
 
           {filtered[0] && (
@@ -419,7 +407,7 @@ function DiscoverTablet({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
                 item={filtered[0]} hero
                 liked={filtered[0].liked} saved={filtered[0].saved}
                 onLike={() => toggleLike(filtered[0].id)} onSave={() => toggleSave(filtered[0].id)}
-                onClick={() => navigate(ROUTES.moment(filtered[0].id))}
+                onClick={() => router.push(ROUTES.moment(filtered[0].id))}
               />
             </div>
           )}
@@ -430,7 +418,7 @@ function DiscoverTablet({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
                 key={item.id} item={item} dense
                 liked={item.liked} saved={item.saved}
                 onLike={() => toggleLike(item.id)} onSave={() => toggleSave(item.id)}
-                onClick={() => navigate(ROUTES.moment(item.id))}
+                onClick={() => router.push(ROUTES.moment(item.id))}
               />
             ))}
           </div>
@@ -446,7 +434,7 @@ function DiscoverTablet({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags
    each card only ~245px wide — image becomes unreadably shallow.
 ══════════════════════════════════════════════════════════════════ */
 function DiscoverDesktop({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tags: string[] }) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { items: feedItems, toggleLike, toggleSave } = useFeedInteractions(apiFeedItems);
   const [searchVal, setSearchVal] = useState("");
   const [activeTab, setActiveTab] = useState("热门");
@@ -460,21 +448,21 @@ function DiscoverDesktop({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tag
 
   return (
     <div className="content-mode-wide flex flex-col h-full">
-      {/* Directory header: fixed to the local feed viewport and opaque over scrolling content. */}
-      <header
-        className="sticky top-0 z-20 flex-shrink-0 px-6 pt-3 pb-0 bg-[var(--neu-bg)]"
+      <div
+        className="sticky top-0 z-20 flex-shrink-0 bg-[var(--neu-bg)]"
         style={{ borderBottom: "1px solid var(--neu-border)" }}
       >
-        <div className="flex items-center gap-3 mb-2">
-          <ActionIconButton icon={ArrowLeft} label="返回" onClick={() => navigate(-1)} size={34} />
-          <div className="min-w-0 flex-1">
-            <h1 className="text-[var(--neu-text)]" style={{ fontSize: 18 }}>附近瞬间</h1>
-            <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>徐州 · 附近正在发生的事</p>
-          </div>
-          <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>{filtered.length} 条内容</span>
+        <PageHeader
+          title="附近瞬间"
+          subtitle="徐州 · 附近正在发生的事"
+          onBack={() => router.back()}
+          className="px-6 pt-3 pb-2"
+          actions={<span className="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>}
+        />
+        <div className="px-6">
+          <DiscoverHeader searchVal={searchVal} setSearchVal={setSearchVal} activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
-        <DiscoverHeader searchVal={searchVal} setSearchVal={setSearchVal} activeTab={activeTab} setActiveTab={setActiveTab} />
-      </header>
+      </div>
 
       {/* Body: main feed + right sidebar */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -482,9 +470,22 @@ function DiscoverDesktop({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tag
         {/* ── Main feed ─────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto no-scrollbar">
           <div style={{ padding: "20px 24px 28px" }}>
-            {/* Tag chips */}
             <div className="mb-5">
-              <TagChips activeTag={activeTag} setActiveTag={setActiveTag} tags={tags} />
+              <div className="flex gap-2 flex-wrap">
+                {tags.map(tag => {
+                  const active = activeTag === tag;
+                  return (
+                    <TagPill
+                      key={tag}
+                      active={active}
+                      onClick={() => setActiveTag(active ? null : tag)}
+                      size="md"
+                    >
+                      {tag}
+                    </TagPill>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Responsive BSP field — remeasured whenever the desktop workspace changes width. */}
@@ -504,7 +505,7 @@ function DiscoverDesktop({ apiFeedItems, tags }: { apiFeedItems: FeedItem[]; tag
                   item={item} dense edition={String(index + 1).padStart(2, "0")}
                   liked={item.liked} saved={item.saved}
                   onLike={() => toggleLike(item.id)} onSave={() => toggleSave(item.id)}
-                  onClick={() => navigate(ROUTES.moment(item.id))}
+                  onClick={() => router.push(ROUTES.moment(item.id))}
                 />
               )}
             />

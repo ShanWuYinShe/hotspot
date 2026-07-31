@@ -1,9 +1,10 @@
+'use client'
 import React, { useState, useRef, useEffect } from "react";
 import { ArrowLeft, Phone, Video, Send, Smile, CheckCheck, MoreHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { getPrivateMessages, sendPrivateMessage } from "../../../api";
-import { useAuth } from "../../contexts/AuthContext";
-import { Avatar } from "../../components/shared/Avatar";
+import { getPrivateMessages, sendPrivateMessage } from "@/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { Avatar } from "@/components/shared/Avatar";
 
 /* ── ChatView ─────────────────────────────────────────────────────── */
 // spec: private chats are addressed by the peer's user_id (target_user_id).

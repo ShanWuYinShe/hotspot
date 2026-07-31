@@ -1,14 +1,16 @@
+'use client'
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router";
-import { ArrowLeft, Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, SlidersHorizontal, Crosshair, Heart, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, SlidersHorizontal, Crosshair, Heart, Check } from "lucide-react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "motion/react";
-import type { PinType, Pin, LocationResult } from "./location.data";
-import { XUZHOU_CENTER, MOCK_PINS, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB } from "./location.data";
-import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, type SnapState, PIN_COLORS, PIN_LABELS, pinTone, floatBtnStyle, buildMapData, MapPinMarker, getMarkerUrl, markerUserUrl, markerGroupUrl, markerMomentUrl } from "./location.shared";
-import { useDismissibleLayer } from "../../hooks/useDismissibleLayer";
+import { PageHeader } from "@/components/shared/PageHeader";
+import type { PinType, Pin, LocationResult } from "@/app/pages/location/location.data";
+import { XUZHOU_CENTER, MOCK_PINS, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB } from "@/app/pages/location/location.data";
+import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, type SnapState, PIN_COLORS, PIN_LABELS, pinTone, floatBtnStyle, buildMapData, MapPinMarker, getMarkerUrl, markerUserUrl, markerGroupUrl, markerMomentUrl } from "@/app/pages/location/location.shared";
+import { useDismissibleLayer } from "@/hooks/useDismissibleLayer";
 
 function LocationMobile() {
-  const navigate = useNavigate();
+  const router = useRouter();
 
   /* ── Sheet drag ──────────────────────────────────────────────── */
   const sheetH      = useMotionValue(SNAP_MID);
@@ -48,7 +50,7 @@ function LocationMobile() {
   }
 
   function resolveSnap(h: number, vel: number): SnapState {
-    const proj = h + vel * 90;                         // 90ms lookahead
+    const proj = h + vel * 90;
     if (proj < (SNAP_MIN + SNAP_MID) / 2) return "min";
     if (proj < (SNAP_MID + SNAP_MAX) / 2) return "mid";
     return "max";
@@ -64,7 +66,7 @@ function LocationMobile() {
       if (!drag.current.active) return;
       const t = Date.now();
       const dt = t - drag.current.prevT || 1;
-      drag.current.velY  = (drag.current.prevY - ev.clientY) / dt; // +ve = dragging up
+      drag.current.velY  = (drag.current.prevY - ev.clientY) / dt;
       drag.current.prevY = ev.clientY;
       drag.current.prevT = t;
       const delta = drag.current.startY - ev.clientY;
@@ -103,7 +105,7 @@ function LocationMobile() {
   function handleConfirm() {
     const loc = selectedLoc ?? { displayName: "当前位置", lat: XUZHOU_CENTER.lat, lng: XUZHOU_CENTER.lng };
     try { localStorage.setItem("hotspot_last_location", JSON.stringify([loc.lat, loc.lng])); } catch {}
-    navigate(-1);
+    router.back();
   }
 
   function toggleFilter(type: PinType) {
@@ -165,23 +167,16 @@ function LocationMobile() {
         </div>
       </div>
 
-      {/* ══ TOP BAR (fixed, floating over map) ════════════════ */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 50, padding: "12px 14px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {/* Back */}
-          <motion.button whileTap={{ scale: 0.88, transition: { type: "spring", stiffness: 600, damping: 28 } }} whileHover={{ scale: 1.14, transition: { type: "spring", stiffness: 400, damping: 16 } }} onClick={() => navigate(-1)}
-            className="flex items-center justify-center rounded-full outline-none neu-circle-hover"
-            style={{ width: 42, height: 42, ...floatBtnStyle }}>
-            <ArrowLeft style={{ width: 17, height: 17, color: "var(--neu-text)" }} strokeWidth={2} />
-          </motion.button>
-
-          {/* Filter toggle */}
+      {/* ══ TOP BAR ════════════════════════════════ */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 50 }}>
+        <PageHeader title="地图探索" onBack={() => router.back()}>
           <motion.button
             whileTap={{ scale: 0.93 }}
             onClick={e => { e.stopPropagation(); setShowFilter(v => !v); }}
             className={`flex items-center gap-2 rounded-full outline-none ${showFilter ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text)]"}`}
             style={{
-              padding: "9px 16px", fontSize: 14,
+              padding: "9px 16px",
+              fontSize: 14,
               border: showFilter ? "1px solid transparent" : "1px solid var(--neu-border)",
               boxShadow: showFilter
                 ? "0 4px 16px var(--neu-glow)"
@@ -190,7 +185,7 @@ function LocationMobile() {
             <SlidersHorizontal style={{ width: 14, height: 14 }} strokeWidth={showFilter ? 2.5 : 1.75} />
             筛选
           </motion.button>
-        </div>
+        </PageHeader>
 
         {/* ── Filter legend panel — anchored BELOW the filter button ── */}
         <AnimatePresence>
@@ -249,7 +244,7 @@ function LocationMobile() {
         style={{
           position: "absolute",
           right: 12,
-          bottom: rightCtrlBottom,     // ← only follows the sheet
+          bottom: rightCtrlBottom,
           zIndex: 35,
           display: "flex",
           flexDirection: "column",
@@ -312,8 +307,7 @@ function LocationMobile() {
               }}
               onFocus={() => { if (snap === "min") snapTo("mid"); }}
               placeholder="搜索地点、地标或坐标"
-              className="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
-              style={{ fontSize: 14 }}
+              className="flex-1 bg-transparent outline-none text-[var(--neu-text)] text-sm"
             />
             {searchQuery ? (
               <motion.button whileTap={{ scale: 0.85 }}
@@ -393,7 +387,7 @@ function LocationMobile() {
                             style={{ width: 22, height: 29, flexShrink: 0 }} />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="text-[var(--neu-text)]" style={{ fontSize: 13 }}>{selectedPin.name || selectedPin.title}</p>
+                          <p className="text-[var(--neu-text)] text-[13px]">{selectedPin.name || selectedPin.title}</p>
                           <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 1 }}>
                             {PIN_LABELS[selectedPin.type]}
                             {selectedPin.distance ? ` · ${selectedPin.distance}` : ""}
@@ -427,7 +421,7 @@ function LocationMobile() {
                     ))}
                     {activeTab === "recent" && recentItems.length > 0 && (
                       <motion.button whileTap={{ scale: 0.9 }} onClick={() => setRecentItems([])}
-                        className="ml-auto outline-none text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>
+                        className="ml-auto outline-none text-[var(--neu-text-muted)] text-xs">
                         清空
                       </motion.button>
                     )}
@@ -448,7 +442,7 @@ function LocationMobile() {
                               {loc.emoji}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="truncate text-[var(--neu-text)]" style={{ fontSize: 14 }}>{loc.displayName}</p>
+                              <p className="truncate text-[var(--neu-text)] text-sm">{loc.displayName}</p>
                               <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 1 }}>{loc.desc}</p>
                             </div>
                             {selectedLoc?.displayName === loc.displayName
@@ -474,12 +468,12 @@ function LocationMobile() {
                               {loc.emoji}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="truncate text-[var(--neu-text)]" style={{ fontSize: 14 }}>{loc.displayName}</p>
+                              <p className="truncate text-[var(--neu-text)] text-sm">{loc.displayName}</p>
                               <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 1 }}>{loc.desc}</p>
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0">
                               <Users style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
-                              <span className="text-[var(--neu-accent-primary)]" style={{ fontSize: 12 }}>{loc.users}</span>
+                              <span className="text-[var(--neu-accent-primary)] text-xs">{loc.users}</span>
                             </div>
                           </motion.button>
                         ))}

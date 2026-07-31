@@ -1,9 +1,11 @@
+'use client'
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { ArrowLeft, Camera, User, FileText, Check } from "lucide-react";
-import { ActionIconButton } from "../../components/shared/ActionIconButton";
+import { useRouter } from "next/navigation";
+import { Camera, User, FileText, Check } from "lucide-react";
+import { ActionIconButton } from "@/components/shared/ActionIconButton";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { motion, AnimatePresence } from "motion/react";
-import { getAccount, updateAccount } from "../../../api";
+import { getAccount, updateAccount } from "@/api";
 
 const TAG_OPTIONS = ["摄影", "旅行", "音乐", "美食", "运动", "阅读", "艺术", "科技", "游戏", "户外", "时尚", "电影"];
 
@@ -18,7 +20,7 @@ function InputRow({
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-1.5">
         <Icon style={{ width: 13, height: 13, color: "var(--neu-accent-primary)" }} strokeWidth={1.75} />
-        <label className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+        <label className="text-[var(--neu-text-muted)] text-[11px] uppercase tracking-[0.1em]">
           {label}
         </label>
       </div>
@@ -30,12 +32,11 @@ function InputRow({
               onChange={e => onChange(e.target.value.slice(0, maxLen))}
               placeholder={placeholder}
               rows={3}
-              className="w-full bg-transparent outline-none resize-none text-[var(--neu-text)]"
-              style={{ fontSize: 14, lineHeight: 1.65 }}
+              className="w-full bg-transparent outline-none resize-none text-[var(--neu-text)] text-[14px] leading-[1.65]"
             />
             {maxLen && (
               <div className="flex justify-end mt-1">
-                <span className={value.length > maxLen * 0.85 ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"} style={{ fontSize: 11 }}>
+                <span className={`${value.length > maxLen * 0.85 ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"} text-[11px]`}>
                   {value.length}/{maxLen}
                 </span>
               </div>
@@ -43,8 +44,7 @@ function InputRow({
           </div>
         ) : (
           <input value={value} onChange={e => onChange(e.target.value.slice(0, maxLen))}
-            placeholder={placeholder} className="w-full bg-transparent outline-none text-[var(--neu-text)]"
-            style={{ fontSize: 14 }} />
+            placeholder={placeholder} className="w-full bg-transparent outline-none text-[var(--neu-text)] text-[14px]" />
         )}
       </div>
     </div>
@@ -52,7 +52,7 @@ function InputRow({
 }
 
 export function EditProfilePage() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [nickname, setNickname] = useState("");
   const [bio, setBio] = useState("");
   const [tags, setTags] = useState<Set<string>>(new Set());
@@ -95,31 +95,30 @@ export function EditProfilePage() {
       // ignore save error
     }
     setSaved(true);
-    setTimeout(() => { setSaved(false); navigate(-1); }, 800);
+    setTimeout(() => { setSaved(false); router.back(); }, 800);
   };
 
   return (
     <>
-      {/* Header */}
-      <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-[var(--neu-bg)]"
-        style={{ borderBottom: "1px solid var(--neu-border)" }}>
-        <div className="flex items-center gap-3">
-          <ActionIconButton icon={ArrowLeft} label="返回" onClick={() => navigate(-1)} />
-          <h1 className="text-[var(--neu-text)]" style={{ fontSize: 18 }}>编辑资料</h1>
-        </div>
-        <motion.button whileTap={{ scale: 0.93 }} onClick={handleSave}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all ${saved ? "bg-[var(--semantic-online)]" : "bg-[var(--neu-accent-primary)]"} text-white`}
-          style={{ fontSize: 13, boxShadow: `0 4px 14px ${saved ? "color-mix(in srgb, var(--semantic-online) 35%, transparent)" : "var(--neu-glow)"}`, border: "none" }}>
-          <AnimatePresence mode="wait" initial={false}>
-            {saved
-              ? <motion.span key="check" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} style={{ display: "flex" }}>
-                  <Check style={{ width: 14, height: 14, color: "white" }} strokeWidth={2.5} />
-                </motion.span>
-              : <motion.span key="save" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>保存</motion.span>
-            }
-          </AnimatePresence>
-        </motion.button>
-      </div>
+      <PageHeader
+        title="编辑资料"
+        onBack={() => router.back()}
+        sticky
+        actions={
+          <motion.button whileTap={{ scale: 0.93 }} onClick={handleSave}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all text-[13px] ${saved ? "bg-[var(--semantic-online)]" : "bg-[var(--neu-accent-primary)]"} text-white`}
+            style={{ boxShadow: `0 4px 14px ${saved ? "color-mix(in srgb, var(--semantic-online) 35%, transparent)" : "var(--neu-glow)"}`, border: "none" }}>
+            <AnimatePresence mode="wait" initial={false}>
+              {saved
+                ? <motion.span key="check" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} style={{ display: "flex" }}>
+                    <Check style={{ width: 14, height: 14, color: "white" }} strokeWidth={2.5} />
+                  </motion.span>
+                : <motion.span key="save" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>保存</motion.span>
+              }
+            </AnimatePresence>
+          </motion.button>
+        }
+      />
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28 }}
@@ -130,8 +129,8 @@ export function EditProfilePage() {
         <div className="relative rounded-[24px] overflow-hidden" style={{ height: "clamp(120px, 18vw, 160px)" }}>
           <div className="absolute inset-0 bg-[var(--neu-surface-flat)]" />
           <motion.button whileTap={{ scale: 0.9 }}
-            className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none bg-[var(--overlay-strong)] text-white"
-            style={{ padding: "6px 12px", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.25)", fontSize: 12 }}>
+            className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none bg-[var(--overlay-strong)] text-white text-[12px]"
+            style={{ padding: "6px 12px", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.25)" }}>
             <Camera style={{ width: 13, height: 13 }} strokeWidth={1.75} />
             更换横幅
           </motion.button>
@@ -151,7 +150,7 @@ export function EditProfilePage() {
             </motion.button>
           </div>
           <div>
-            <p className="text-[var(--neu-text)]" style={{ fontSize: 16 }}>{nickname || "未设置昵称"}</p>
+            <p className="text-[var(--neu-text)] text-[16px]">{nickname || "未设置昵称"}</p>
           </div>
         </div>
 
@@ -162,8 +161,8 @@ export function EditProfilePage() {
         {/* Interest tags */}
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-1.5">
-            <label className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em" }}>兴趣标签</label>
-            <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, opacity: 0.6 }}>({tags.size}/5)</span>
+            <label className="text-[var(--neu-text-muted)] text-[11px] uppercase tracking-[0.1em]">兴趣标签</label>
+            <span className="text-[var(--neu-text-muted)] text-[11px] opacity-60">({tags.size}/5)</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {TAG_OPTIONS.map(t => {
@@ -172,10 +171,10 @@ export function EditProfilePage() {
               return (
                 <motion.button key={t} whileTap={{ scale: 0.92 }}
                   onClick={() => !disabled && toggleTag(t)}
-                  className={`px-3.5 py-1.5 rounded-full outline-none transition-all ${active ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
+                  className={`px-3.5 py-1.5 rounded-full outline-none transition-all text-[12px] ${active ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
                   style={active
-                    ? { fontSize: 12, boxShadow: "0 3px 10px var(--neu-glow)", border: "none" }
-                    : { fontSize: 12, border: "1px solid var(--neu-border)", opacity: disabled ? 0.4 : 1, boxShadow: "3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light)" }}>
+                    ? { boxShadow: "0 3px 10px var(--neu-glow)", border: "none" }
+                    : { border: "1px solid var(--neu-border)", opacity: disabled ? 0.4 : 1, boxShadow: "3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light)" }}>
                   #{t}
                 </motion.button>
               );
@@ -185,9 +184,9 @@ export function EditProfilePage() {
 
         {/* Danger zone */}
         <div className="mt-3">
-          <p className="uppercase mb-3 text-[var(--neu-text-muted)]" style={{ fontSize: 10, letterSpacing: "0.14em" }}>账号</p>
-          <motion.button whileTap={{ scale: 0.98 }} className="w-full text-left px-4 py-3.5 rounded-[18px] outline-none bg-[var(--neu-bg)] text-[var(--semantic-hot)]"
-            style={{ boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)", fontSize: 14 }}>
+          <p className="uppercase mb-3 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">账号</p>
+          <motion.button whileTap={{ scale: 0.98 }} className="w-full text-left px-4 py-3.5 rounded-[18px] outline-none bg-[var(--neu-bg)] text-[var(--semantic-hot)] text-[14px]"
+            style={{ boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
             注销账号
           </motion.button>
         </div>

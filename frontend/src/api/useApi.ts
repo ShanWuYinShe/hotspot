@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { ApiResponse } from './client';
+import type { ApiResponse } from '@/api/client';
 
 interface UseApiState<T> {
   data: T | null;

@@ -1,4 +1,4 @@
-export { Endpoints } from './endpoints';
+export { Endpoints } from '@/api/endpoints';
 export {
   setApiBaseUrl,
   login, register, guest, logout, checkAuthStatus,
@@ -24,6 +24,6 @@ export {
   listUserMoments, listUserReactedMoments,
   listComments,
   getMapCanvas,
-} from './client';
-export { useApi } from './useApi';
-export type { ApiResponse, PaginatedData } from './client';
+} from '@/api/client';
+export { useApi } from '@/api/useApi';
+export type { ApiResponse, PaginatedData } from '@/api/client';

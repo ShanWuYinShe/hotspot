@@ -1,6 +1,6 @@
+'use client'
 import React, { useEffect, useState } from "react";
 import {
-  ArrowLeft,
   Bell,
   Lock,
   ChevronRight,
@@ -12,25 +12,18 @@ import {
   User,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useNavigate } from "react-router";
-import { useHoverConfig } from "../../hooks/useHoverConfig";
-import { ActionIconButton } from "../../components/shared/ActionIconButton";
-import { Avatar } from "../../components/shared/Avatar";
-import { getAccount, getSettings } from "../../../api";
-import { useAuth } from "../../contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { useHoverConfig } from "@/hooks/useHoverConfig";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { Avatar } from "@/components/shared/Avatar";
+import { getAccount, getSettings } from "@/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 /* ── Small helpers ─────────────────────────────────────────────── */
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p
-      className="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)]"
-      style={{
-        fontSize: 10,
-        letterSpacing: "0.14em",
-        textTransform: "uppercase",
-      }}
-    >
+    <p className="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">
       {children}
     </p>
   );
@@ -148,7 +141,7 @@ function NavRow({ Icon, label, value }: { Icon: React.ElementType; label: string
    Settings Page
 ═════════════════════════════════════════════════════════════════ */
 export function SettingsPage() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const hover = useHoverConfig();
   const { logout: authLogout } = useAuth();
   const [notif, setNotif] = useState(true);
@@ -202,21 +195,12 @@ export function SettingsPage() {
     // AuthContext.logout clears client auth state and keeps the user on the
     // current route (anonymous browsing). No more redirect to a dead /login.
     await authLogout();
-    navigate("/");
+    router.push("/");
   };
 
   return (
     <>
-      {/* Sticky header */}
-      <div
-        className="sticky top-0 z-10 flex items-center gap-3 px-5 py-3 bg-[var(--neu-bg)]"
-        style={{ borderBottom: "1px solid var(--neu-border)" }}
-      >
-        <ActionIconButton icon={ArrowLeft} label="返回" onClick={() => navigate(-1)} />
-        <h1 className="text-[18px] tracking-tight text-[var(--neu-text)]">
-          设置
-        </h1>
-      </div>
+      <PageHeader title="设置" subtitle="管理你的偏好与隐私" sticky onBack={() => router.back()} />
 
       {/* Page content */}
       <motion.div

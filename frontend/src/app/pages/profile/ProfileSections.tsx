@@ -1,19 +1,23 @@
+'use client'
 import React, { useState } from "react";
-import { Heart, MapPin, Grid3X3, Share2, Bookmark, ChevronRight, Users, MessageCircle, Search, Plus, Check, Bell, Clock, UserPlus, TrendingUp, Shield, X } from "lucide-react";
+import { Heart, MapPin, Grid3X3, Share2, Bookmark, ChevronRight, Users, MessageCircle, Plus, Check, Bell, Clock, UserPlus, TrendingUp, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from "react-router";
-import { ROUTES } from "../../lib/routes";
-import { useHoverConfig } from "../../hooks/useHoverConfig";
-import { useDismissibleLayer } from "../../hooks/useDismissibleLayer";
-import { useComposer } from "../../contexts/ComposerContext";
-import { usePlatform } from "../../contexts/PlatformContext";
-import { CreateGroupSheet } from "../groups/CreateGroupSheet";
-import { MetricStrip } from "../../components/shared/DataDisplay";
-import { BspCardCanvas } from "../../components/shared/BspCardCanvas";
-import { Avatar } from "../../components/shared/Avatar";
+import { useRouter } from "next/navigation";
+import { ROUTES } from "@/lib/routes";
+import { useHoverConfig } from "@/hooks/useHoverConfig";
+import { useDismissibleLayer } from "@/hooks/useDismissibleLayer";
+import { useComposer } from "@/contexts/ComposerContext";
+import { usePlatform } from "@/contexts/PlatformContext";
+import { CreateGroupSheet } from "@/app/pages/groups/CreateGroupSheet";
+import { MetricStrip } from "@/components/shared/DataDisplay";
+import { BspCardCanvas } from "@/components/shared/BspCardCanvas";
+import { Avatar } from "@/components/shared/Avatar";
+import { SearchInput } from "@/components/shared/SearchInput";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { TagPill } from "@/components/shared/TagPill";
 import {
   useGalleryPosts, useReactedPosts, useFavoritePosts, useMyGroups, useRelationships, type GalleryPost,
-} from "./profile.data";
+} from "@/app/pages/profile/profile.data";
 
 /* ── Shared: Tab bar ──────────────────────────────────────────────── */
 export type Tab = "posts" | "liked" | "saved";
@@ -29,8 +33,8 @@ export function ProfileTabs({ activeTab, setActiveTab }: { activeTab: Tab; setAc
         const isActive = activeTab === id;
         return (
           <motion.button key={id} whileTap={{ scale: 0.94 }} onClick={() => setActiveTab(id)}
-            className={`relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none ${isActive ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
-            style={{ flex: 1, transition: "color 0.2s", fontSize: 13, fontWeight: isActive ? 500 : 400 }}>
+            className={`relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none text-[13px] ${isActive ? "text-[var(--neu-accent-primary)] font-medium" : "text-[var(--neu-text-muted)] font-normal"}`}
+            style={{ flex: 1, transition: "color 0.2s" }}>
             <Icon style={{ width: 14, height: 14 }} strokeWidth={isActive ? 2 : 1.5} />
             <span>{label}</span>
             {isActive && (
@@ -49,7 +53,7 @@ export function ProfileTabs({ activeTab, setActiveTab }: { activeTab: Tab; setAc
 /* ── Shared: Gallery grid (mobile/harmony) ────────────────────────── */
 export function GalleryGrid({ posts, activeTab }: { posts: GalleryPost[]; activeTab: Tab }) {
   const { platform } = usePlatform();
-  const navigate = useNavigate();
+  const router = useRouter();
   const numCols = platform === "mobile" ? 2 : 3;
   const gap = 10;
   return (
@@ -60,8 +64,8 @@ export function GalleryGrid({ posts, activeTab }: { posts: GalleryPost[]; active
         style={{ display: "grid", gridTemplateColumns: `repeat(${numCols}, 1fr)`, gap, width: "100%" }}>
         {posts.map((post) => (
           <motion.div key={post.id} whileTap={{ scale: 0.97 }}
-            onClick={() => navigate(`${ROUTES.moment(post.id)}?from=me`)}
-            onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`${ROUTES.moment(post.id)}?from=me`); }}
+            onClick={() => router.push(`${ROUTES.moment(post.id)}?from=me`)}
+            onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") router.push(`${ROUTES.moment(post.id)}?from=me`); }}
             role="button"
             tabIndex={0}
             className="relative rounded-[18px] cursor-pointer group neu-focus-ring overflow-hidden"
@@ -73,11 +77,11 @@ export function GalleryGrid({ posts, activeTab }: { posts: GalleryPost[]; active
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-0.5">
                     <Heart style={{ width: 10, height: 10, color: "white" }} fill="white" strokeWidth={0} />
-                    <span className="text-white" style={{ fontSize: 10 }}>{post.likes}</span>
+                    <span className="text-white text-[10px]">{post.likes}</span>
                   </div>
                   <div className="flex items-center gap-0.5">
                     <MessageCircle style={{ width: 10, height: 10, color: "white" }} strokeWidth={1.5} />
-                    <span className="text-white" style={{ fontSize: 10 }}>{post.comments}</span>
+                    <span className="text-white text-[10px]">{post.comments}</span>
                   </div>
                 </div>
               </div>
@@ -93,7 +97,7 @@ export function GalleryGrid({ posts, activeTab }: { posts: GalleryPost[]; active
    Section: 我的瞬间
 ══════════════════════════════════════════════════════════════════ */
 export function SectionMoments() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { openComposer } = useComposer();
   const { platform } = usePlatform();
   const isDesktop = platform === "desktop";
@@ -136,12 +140,12 @@ export function SectionMoments() {
 
       <div className="w-full px-6 pb-8 pt-5">
         {activePosts.length === 0 ? (
-          <div className="flex flex-col items-center py-20 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]"><Grid3X3 size={20} /></div>
-            <p className="mt-4 text-[14px] text-[var(--neu-text)]">这里还没有瞬间</p>
-            <p className="mt-1 text-[12px] text-[var(--neu-text-muted)]">从一次路过、一次相遇开始记录。</p>
-            {activeTab === "posts" && <button type="button" onClick={openComposer} className="mt-4 rounded-full bg-[var(--neu-accent-primary)] px-4 py-2 text-[12px] font-medium text-white neu-focus-ring">发布第一条</button>}
-          </div>
+          <EmptyState
+            icon={<Grid3X3 size={20} />}
+            title="这里还没有瞬间"
+            description="从一次路过、一次相遇开始记录。"
+            action={activeTab === "posts" ? <button type="button" onClick={openComposer} className="rounded-full bg-[var(--neu-accent-primary)] px-4 py-2 text-xs font-medium text-white neu-focus-ring">发布第一条</button> : undefined}
+          />
         ) : isDesktop ? (
           // Desktop: BSP mosaic. Every moment is equal in the field — no featured
           // slot, no uniform grid — so the collection reads as one varied canvas.
@@ -162,7 +166,7 @@ export function SectionMoments() {
                 key={post.id}
                 type="button"
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate(`${ROUTES.moment(post.id)}?from=me`)}
+                onClick={() => router.push(`${ROUTES.moment(post.id)}?from=me`)}
                 className="group relative h-full w-full rounded-[16px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)] text-left neu-focus-ring focus-visible:ring-offset-[var(--neu-bg)] overflow-hidden"
                 aria-label="查看瞬间详情"
               >
@@ -189,7 +193,7 @@ export function SectionMoments() {
             >
               <button
                 type="button"
-                onClick={() => navigate(`${ROUTES.moment(featuredPost.id)}?from=me`)}
+                onClick={() => router.push(`${ROUTES.moment(featuredPost.id)}?from=me`)}
                 className="group relative block w-full rounded-[22px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)] text-left neu-focus-ring focus-visible:ring-offset-[var(--neu-bg)] overflow-hidden"
                 style={{ aspectRatio: "2.1 / 1" }}
                 aria-label="查看置顶瞬间详情"
@@ -220,7 +224,7 @@ export function SectionMoments() {
                     key={post.id}
                     type="button"
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate(`${ROUTES.moment(post.id)}?from=me`)}
+                    onClick={() => router.push(`${ROUTES.moment(post.id)}?from=me`)}
                     className="group relative aspect-square rounded-[16px] ring-1 ring-[var(--neu-border)] bg-[var(--page-bg)] text-left neu-focus-ring focus-visible:ring-offset-[var(--neu-bg)] overflow-hidden"
                     aria-label="查看瞬间详情"
                   >
@@ -248,7 +252,7 @@ export function SectionMoments() {
    Section: 我的群组
 ══════════════════════════════════════════════════════════════════ */
 export function SectionGroups() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { platform } = usePlatform();
   const isDesktop = platform === "desktop";
   const [searchQ, setSearchQ] = useState("");
@@ -266,32 +270,23 @@ export function SectionGroups() {
       {/* Section header */}
       <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: "1px solid var(--neu-border)" }}>
         <div className="flex items-center gap-2.5">
-          <span className="text-[var(--neu-text)]" style={{ fontSize: 15 }}>我的群组</span>
-          <span className="px-2 py-0.5 rounded-full bg-[var(--neu-accent-primary)] text-white" style={{ fontSize: 11 }}>
+          <span className="text-[var(--neu-text)] text-[15px]">我的群组</span>
+          <span className="px-2 py-0.5 rounded-full bg-[var(--neu-accent-primary)] text-white text-[11px]">
             {groups.length} 个
           </span>
         </div>
         <motion.button whileTap={hover.tap as any} whileHover={hover.btn as any}
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white"
-          style={{ fontSize: 12, boxShadow: "0 4px 12px var(--neu-glow)" }}>
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white text-xs"
+          style={{ boxShadow: "0 4px 12px var(--neu-glow)" }}>
           <Plus style={{ width: 13, height: 13 }} strokeWidth={2.5} />
           创建群组
         </motion.button>
       </div>
 
       {/* Search */}
-      <div className="px-5 py-3 flex-shrink-0">
-        <div className="flex items-center gap-2.5 px-4 rounded-[14px] neu-input-surface"
-          style={{ height: 40 }}>
-          <Search style={{ width: 13, height: 13, color: "var(--neu-text-muted)", flexShrink: 0 }} strokeWidth={1.5} />
-          <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
-            placeholder="搜索群组…" className="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
-            style={{ fontSize: 13 }} />
-          {searchQ && <motion.button whileTap={{ scale: 0.85 }} onClick={() => setSearchQ("")} className="outline-none">
-            <X style={{ width: 12, height: 12, color: "var(--neu-text-muted)" }} strokeWidth={2} />
-          </motion.button>}
-        </div>
+      <div className="px-5 pt-3 pb-2 flex-shrink-0">
+        <SearchInput value={searchQ} onChange={setSearchQ} placeholder="搜索群组…" compact />
       </div>
 
       {/* Group cards — desktop uses the shared BSP mosaic so "我的群组" reads as
@@ -311,14 +306,14 @@ export function SectionGroups() {
             hasMore={visibleCount < filtered.length}
             onLoadMore={() => setVisibleCount((c) => Math.min(c + 8, filtered.length))}
             renderItem={(g) => (
-              <MyGroupCard g={g} hover={hover} onOpen={() => navigate(`${ROUTES.group(g.id)}?from=me`)} onEnter={() => navigate(`${ROUTES.group(g.id)}?from=me`)} />
+              <MyGroupCard g={g} hover={hover} onOpen={() => router.push(`${ROUTES.group(g.id)}?from=me`)} onEnter={() => router.push(`${ROUTES.group(g.id)}?from=me`)} />
             )}
           />
         </div>
       ) : (
         <div className="flex flex-col gap-3 px-5 pb-6">
           {filtered.map(g => (
-            <MyGroupCard key={g.id} g={g} hover={hover} onOpen={() => navigate(`${ROUTES.group(g.id)}?from=me`)} onEnter={() => navigate(`${ROUTES.group(g.id)}?from=me`)} />
+            <MyGroupCard key={g.id} g={g} hover={hover} onOpen={() => router.push(`${ROUTES.group(g.id)}?from=me`)} onEnter={() => router.push(`${ROUTES.group(g.id)}?from=me`)} />
           ))}
         </div>
       )}
@@ -372,15 +367,15 @@ function MyGroupCard({ g, hover, onOpen, onEnter }: {
         <img src={g.banner} alt={g.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.6) 100%)" }} />
         <div className="absolute bottom-2 left-3 flex items-center gap-1.5">
-          <span className={`px-2 py-0.5 rounded-full ${g.role === "管理员" ? "bg-[var(--neu-accent-primary)]" : "bg-[rgba(0,0,0,0.5)]"} text-white`}
-            style={{ fontSize: 10, backdropFilter: "blur(8px)" }}>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] ${g.role === "管理员" ? "bg-[var(--neu-accent-primary)]" : "bg-[rgba(0,0,0,0.5)]"} text-white`}
+            style={{ backdropFilter: "blur(8px)" }}>
             {g.role === "管理员" && <Shield style={{ width: 8, height: 8, display: "inline", marginRight: 2 }} strokeWidth={2} />}
             {g.role}
           </span>
         </div>
         <div className="absolute bottom-2 right-3 flex items-center gap-1">
           <div className="bg-[var(--semantic-online)]" style={{ width: 7, height: 7, borderRadius: "50%" }} />
-          <span className="text-white" style={{ fontSize: 10 }}>{g.online} 在线</span>
+          <span className="text-white text-[10px]">{g.online} 在线</span>
         </div>
       </div>
       {/* Info */}
@@ -388,17 +383,17 @@ function MyGroupCard({ g, hover, onOpen, onEnter }: {
         <Avatar shape="rounded" src={g.avatar} name={g.name} size={44}
           style={{ marginTop: -22, border: "2px solid var(--neu-bg)", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }} />
         <div className="flex-1 min-w-0">
-          <p className="text-[var(--neu-text)]" style={{ fontSize: 14 }}>{g.name}</p>
-          <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 2 }}>{g.desc}</p>
+          <p className="text-[var(--neu-text)] text-sm">{g.name}</p>
+          <p className="text-[var(--neu-text-muted)] text-[11px] mt-0.5">{g.desc}</p>
         </div>
         <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
           <div className="flex items-center gap-1">
             <Users style={{ width: 11, height: 11, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
-            <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>{g.members}</span>
+            <span className="text-[var(--neu-text-muted)] text-[11px]">{g.members}</span>
           </div>
           <motion.button whileTap={{ scale: 0.93 }} onClick={(event) => { event.stopPropagation(); onEnter(); }}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white"
-            style={{ fontSize: 11, boxShadow: "0 3px 8px var(--neu-glow)" }}>
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white text-[11px]"
+            style={{ boxShadow: "0 3px 8px var(--neu-glow)" }}>
             进入
             <ChevronRight style={{ width: 10, height: 10 }} strokeWidth={2} />
           </motion.button>
@@ -407,7 +402,7 @@ function MyGroupCard({ g, hover, onOpen, onEnter }: {
       {/* Last active */}
       <div className="px-3.5 pb-3 flex items-center gap-1.5" style={{ borderTop: "1px solid var(--neu-border)", paddingTop: 8, marginTop: -4 }}>
         <Clock style={{ width: 11, height: 11, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
-        <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>最近活跃 {g.lastActive}</span>
+        <span className="text-[var(--neu-text-muted)] text-[11px]">最近活跃 {g.lastActive}</span>
       </div>
     </motion.div>
   );
@@ -417,7 +412,7 @@ function MyGroupCard({ g, hover, onOpen, onEnter }: {
    Section: 好友
 ══════════════════════════════════════════════════════════════════ */
 export function SectionFriends({ embedded = false }: { embedded?: boolean }) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const hover = useHoverConfig();
   const [searchQ, setSearchQ] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "online" | "offline">("all");
@@ -436,41 +431,32 @@ export function SectionFriends({ embedded = false }: { embedded?: boolean }) {
       <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: "1px solid var(--neu-border)" }}>
         <div>
           <div className="flex items-center gap-2.5">
-            <span className="text-[var(--neu-text)]" style={{ fontSize: 15 }}>好友</span>
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full"
-            style={{ fontSize: 11, background: "color-mix(in srgb, var(--semantic-online) 13%, transparent)", border: "1px solid color-mix(in srgb, var(--semantic-online) 24%, transparent)" }}>
+            <span className="text-[var(--neu-text)] text-[15px]">好友</span>
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px]"
+            style={{ background: "color-mix(in srgb, var(--semantic-online) 13%, transparent)", border: "1px solid color-mix(in srgb, var(--semantic-online) 24%, transparent)" }}>
             <div className="bg-[var(--semantic-online)]" style={{ width: 6, height: 6, borderRadius: "50%" }} />
               <span className="text-[var(--semantic-online)]">{onlineCount} 在线</span>
             </div>
           </div>
-          <p className="mt-1 text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>双向关系，可直接开启对话</p>
+          <p className="mt-1 text-[var(--neu-text-muted)] text-[11px]">双向关系，可直接开启对话</p>
         </div>
-        <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>{friends.length} 位好友</span>
+        <span className="text-[var(--neu-text-muted)] text-xs">{friends.length} 位好友</span>
       </div>
       </>}
 
       {/* Search */}
       <div className={`${embedded ? "px-6 lg:px-8" : "px-5"} pt-4 pb-2 flex-shrink-0`}>
-        <div className="flex items-center gap-2.5 px-4 rounded-[14px] neu-input-surface"
-          style={{ height: 40 }}>
-          <Search style={{ width: 13, height: 13, color: "var(--neu-text-muted)", flexShrink: 0 }} strokeWidth={1.5} />
-          <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
-            placeholder="搜索好友…" className="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
-            style={{ fontSize: 13 }} />
-          {searchQ && <motion.button whileTap={{ scale: 0.85 }} onClick={() => setSearchQ("")} className="outline-none">
-            <X style={{ width: 12, height: 12, color: "var(--neu-text-muted)" }} strokeWidth={2} />
-          </motion.button>}
-        </div>
+        <SearchInput value={searchQ} onChange={setSearchQ} placeholder="搜索好友…" compact />
       </div>
 
       {/* Filter pills */}
       <div className={`flex gap-2 ${embedded ? "px-6 lg:px-8" : "px-5"} pb-4 flex-shrink-0`}>
         {([["all", "全部"], ["online", "在线"], ["offline", "离线"]] as const).map(([id, label]) => (
           <motion.button key={id} whileTap={{ scale: 0.93 }} onClick={() => setActiveFilter(id)}
-            className={`px-3 py-1.5 rounded-full outline-none ${activeFilter === id ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
+            className={`px-3 py-1.5 rounded-full outline-none text-xs ${activeFilter === id ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
             style={activeFilter === id
-              ? { fontSize: 12, boxShadow: "0 3px 8px var(--neu-glow)" }
-              : { fontSize: 12, border: "1px solid var(--neu-border)" }
+              ? { boxShadow: "0 3px 8px var(--neu-glow)" }
+              : { border: "1px solid var(--neu-border)" }
             }>{label}</motion.button>
         ))}
       </div>
@@ -480,7 +466,7 @@ export function SectionFriends({ embedded = false }: { embedded?: boolean }) {
         ? "grid w-full grid-cols-1 gap-4 px-6 pb-8 md:grid-cols-2 lg:px-8 xl:grid-cols-3"
         : "flex flex-col gap-3 px-5 pb-6"}>
         {filtered.map(f => (
-          <motion.div key={f.id} whileHover={hover.card as any} whileTap={hover.tap as any} onClick={() => navigate(`${ROUTES.user(f.id)}?from=relationships`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`${ROUTES.user(f.id)}?from=relationships`); }} role="button" tabIndex={0} className="neu-row-hover flex items-center gap-3 rounded-[18px] p-3.5 cursor-pointer neu-focus-ring bg-[var(--neu-bg)]"
+          <motion.div key={f.id} whileHover={hover.card as any} whileTap={hover.tap as any} onClick={() => router.push(`${ROUTES.user(f.id)}?from=relationships`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") router.push(`${ROUTES.user(f.id)}?from=relationships`); }} role="button" tabIndex={0} className="neu-row-hover flex items-center gap-3 rounded-[18px] p-3.5 cursor-pointer neu-focus-ring bg-[var(--neu-bg)]"
             style={{ boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))" }}>
             <Avatar ring src={f.avatar} name={f.name} size={48}
               badge={
@@ -490,26 +476,23 @@ export function SectionFriends({ embedded = false }: { embedded?: boolean }) {
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-[var(--neu-text)]" style={{ fontSize: 14 }}>{f.name}</span>
-                <span className="px-1.5 py-0.5 rounded-[6px] bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]"
-                  style={{ fontSize: 10, border: "1px solid var(--neu-accent-soft-border)" }}>
-                  {f.tag}
-                </span>
+                <span className="text-[var(--neu-text)] text-sm">{f.name}</span>
+                <TagPill size="sm">{f.tag}</TagPill>
               </div>
-              <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, marginTop: 2 }}>
+              <p className="text-[var(--neu-text-muted)] text-xs mt-0.5">
                 {f.handle} · {f.mutual} 共同好友
               </p>
             </div>
             <div className="flex flex-col gap-1.5 flex-shrink-0">
-              <motion.button whileTap={{ scale: 0.93 }} onClick={(event) => { event.stopPropagation(); navigate(ROUTES.message(f.id)); }}
-                className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white"
-                style={{ fontSize: 11, boxShadow: "0 3px 8px var(--neu-glow)" }}>
+              <motion.button whileTap={{ scale: 0.93 }} onClick={(event) => { event.stopPropagation(); router.push(ROUTES.message(f.id)); }}
+                className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white text-[11px]"
+                style={{ boxShadow: "0 3px 8px var(--neu-glow)" }}>
                 <MessageCircle style={{ width: 11, height: 11 }} strokeWidth={2} />
                 发消息
               </motion.button>
-              <motion.button whileTap={{ scale: 0.93 }} onClick={(event) => { event.stopPropagation(); navigate(`${ROUTES.user(f.id)}?from=relationships`); }}
-                className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"
-                style={{ fontSize: 11, border: "1px solid var(--neu-border)", boxShadow: "3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light)" }}>
+              <motion.button whileTap={{ scale: 0.93 }} onClick={(event) => { event.stopPropagation(); router.push(`${ROUTES.user(f.id)}?from=relationships`); }}
+                className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-text-muted)] text-[11px]"
+                style={{ border: "1px solid var(--neu-border)", boxShadow: "3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light)" }}>
                 查看主页
               </motion.button>
             </div>
@@ -524,7 +507,7 @@ export function SectionFriends({ embedded = false }: { embedded?: boolean }) {
    Section: 关注
 ══════════════════════════════════════════════════════════════════ */
 export function FollowingRow({ f, isUnfollowed, onToggle, wide = false }: { f: any; isUnfollowed: boolean; onToggle: () => void; wide?: boolean }) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [hovered, setHovered] = useState(false);
   const hover = useHoverConfig();
   if (!wide) {
@@ -532,25 +515,25 @@ export function FollowingRow({ f, isUnfollowed, onToggle, wide = false }: { f: a
     <motion.div
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
-      onClick={() => navigate(`${ROUTES.user(f.id)}?from=relationships`)}
-      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`${ROUTES.user(f.id)}?from=relationships`); }}
+      onClick={() => router.push(`${ROUTES.user(f.id)}?from=relationships`)}
+      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") router.push(`${ROUTES.user(f.id)}?from=relationships`); }}
       role="button"
       tabIndex={0}
       className="neu-row-hover flex cursor-pointer items-center gap-3 p-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--neu-accent-primary)]"
       style={{ background: hovered ? hover.bgHover : "var(--neu-bg)", opacity: isUnfollowed ? 0.55 : 1, transition: "background 0.18s ease" }}>
       <Avatar ring src={f.avatar} name={f.name} size={42} />
       <div className="flex-1 min-w-0">
-        <p className="text-[var(--neu-text)]" style={{ fontSize: 13 }}>{f.name}</p>
-        <p className="truncate text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 1 }}>{f.desc}</p>
-        <p className="text-[var(--neu-accent-primary)]" style={{ fontSize: 10, marginTop: 1 }}>{f.posts} 帖子</p>
+        <p className="text-[var(--neu-text)] text-[13px]">{f.name}</p>
+        <p className="truncate text-[var(--neu-text-muted)] text-[11px] mt-px">{f.desc}</p>
+        <p className="text-[var(--neu-accent-primary)] text-[10px] mt-px">{f.posts} 帖子</p>
       </div>
       <img src={f.latestImg} alt="" className="rounded-[8px] object-cover flex-shrink-0"
         style={{ width: 36, height: 36, opacity: 0.85 }} />
       <motion.button whileTap={{ scale: 0.93 }} onClick={(event) => { event.stopPropagation(); onToggle(); }}
-        className={`flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 ${isUnfollowed ? "bg-[var(--neu-accent-primary)] text-white" : "bg-transparent text-[var(--neu-text-muted)]"}`}
+        className={`flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] ${isUnfollowed ? "bg-[var(--neu-accent-primary)] text-white" : "bg-transparent text-[var(--neu-text-muted)]"}`}
         style={isUnfollowed
-          ? { fontSize: 11, border: "1px solid transparent" }
-          : { fontSize: 11, border: "1px solid var(--neu-border-pressed)" }
+          ? { border: "1px solid transparent" }
+          : { border: "1px solid var(--neu-border-pressed)" }
         }>
         {isUnfollowed ? (
           <><UserPlus style={{ width: 10, height: 10 }} strokeWidth={2} />关注</>
@@ -566,25 +549,25 @@ export function FollowingRow({ f, isUnfollowed, onToggle, wide = false }: { f: a
       key={f.id}
       whileHover={hover.card as any}
       whileTap={hover.tap as any}
-      onClick={() => navigate(`${ROUTES.user(f.id)}?from=relationships`)}
-      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`${ROUTES.user(f.id)}?from=relationships`); }}
+      onClick={() => router.push(`${ROUTES.user(f.id)}?from=relationships`)}
+      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") router.push(`${ROUTES.user(f.id)}?from=relationships`); }}
       role="button"
       tabIndex={0}
       className="neu-row-hover flex items-center gap-3 rounded-[18px] p-3.5 cursor-pointer neu-focus-ring bg-[var(--neu-bg)]"
       style={{ boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg))", opacity: isUnfollowed ? 0.55 : 1 }}>
       <Avatar ring src={f.avatar} name={f.name} size={48} />
       <div className="flex-1 min-w-0">
-        <p className="text-[var(--neu-text)]" style={{ fontSize: 14 }}>{f.name}</p>
-        <p className="truncate text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 1 }}>{f.desc}</p>
-        <p className="text-[var(--neu-accent-primary)]" style={{ fontSize: 10, marginTop: 1 }}>{f.posts} 帖子</p>
+        <p className="text-[var(--neu-text)] text-sm">{f.name}</p>
+        <p className="truncate text-[var(--neu-text-muted)] text-[11px] mt-px">{f.desc}</p>
+        <p className="text-[var(--neu-accent-primary)] text-[10px] mt-px">{f.posts} 帖子</p>
       </div>
       <img src={f.latestImg} alt="" className="rounded-[8px] object-cover flex-shrink-0"
         style={{ width: 44, height: 44, opacity: 0.85 }} />
       <motion.button whileTap={{ scale: 0.93 }} onClick={(event) => { event.stopPropagation(); onToggle(); }}
-        className={`flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 ${isUnfollowed ? "bg-[var(--neu-accent-primary)] text-white" : "bg-transparent text-[var(--neu-text-muted)]"}`}
+        className={`flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] ${isUnfollowed ? "bg-[var(--neu-accent-primary)] text-white" : "bg-transparent text-[var(--neu-text-muted)]"}`}
         style={isUnfollowed
-          ? { fontSize: 11, border: "1px solid transparent" }
-          : { fontSize: 11, border: "1px solid var(--neu-border-pressed)" }
+          ? { border: "1px solid transparent" }
+          : { border: "1px solid var(--neu-border-pressed)" }
         }>
         {isUnfollowed ? (
           <><UserPlus style={{ width: 10, height: 10 }} strokeWidth={2} />关注</>
@@ -620,14 +603,15 @@ export function SectionFollowing({ embedded = false }: { embedded?: boolean }) {
       <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: "1px solid var(--neu-border)" }}>
         <div>
           <div className="flex items-center gap-2.5">
-            <span className="text-[var(--neu-text)]" style={{ fontSize: 15 }}>关注</span>
-            <span className="px-2 py-0.5 rounded-full bg-[var(--neu-accent-primary)] text-white" style={{ fontSize: 11 }}>
+            <span className="text-[var(--neu-text)] text-[15px]">关注</span>
+            <span className="px-2 py-0.5 rounded-full bg-[var(--neu-accent-primary)] text-white text-[11px]">
               {following.length} 人
             </span>
           </div>
-          <p className="mt-1 text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>你主动订阅的动态与创作者</p>
+          <p className="mt-1 text-[var(--neu-text-muted)] text-[11px]">你主动订阅的动态与创作者</p>
         </div>
-        <span className="rounded-full px-3 py-1 bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]" style={{ fontSize: 11, border: "1px solid var(--neu-accent-soft-border)" }}>
+        <span className="rounded-full px-3 py-1 bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] text-[11px]"
+          style={{ border: "1px solid var(--neu-accent-soft-border)" }}>
           点击卡片查看主页
         </span>
       </div>
@@ -639,14 +623,10 @@ export function SectionFollowing({ embedded = false }: { embedded?: boolean }) {
           const active = sortBy === id;
           return (
             <motion.button key={id} whileTap={{ scale: 0.94 }} onClick={() => setSortBy(id)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full outline-none neu-surface-ghost ${active ? "bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full outline-none neu-surface-ghost text-xs ${active ? "bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] font-medium" : "text-[var(--neu-text-muted)]"}`}
               style={active
-                ? {
-                    fontSize: 12,
-                    fontWeight: 500,
-                    borderColor: "var(--neu-accent-soft-border)",
-                  }
-                : { fontSize: 12 }}>
+                ? { borderColor: "var(--neu-accent-soft-border)" }
+                : undefined}>
               {id === "active" && <TrendingUp style={{ width: 11, height: 11 }} strokeWidth={active ? 2 : 1.5} />}
               {label}
             </motion.button>
@@ -658,10 +638,12 @@ export function SectionFollowing({ embedded = false }: { embedded?: boolean }) {
       {embedded ? (
         <div className="grid w-full grid-cols-1 gap-4 px-6 pb-8 md:grid-cols-2 lg:px-8 xl:grid-cols-3">
           {sorted.length === 0 ? (
-            <div className="col-span-full flex flex-col items-center py-16 text-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]"><Heart size={18} /></div>
-              <p className="mt-3 text-[13px] text-[var(--neu-text)]">还没有关注</p>
-              <p className="mt-1 text-[11px] text-[var(--neu-text-muted)]">去发现附近的人，找到有趣的创作者。</p>
+            <div className="col-span-full">
+              <EmptyState
+                icon={<Heart size={18} />}
+                title="还没有关注"
+                description="去发现附近的人，找到有趣的创作者。"
+              />
             </div>
           ) : (
             sorted.map(f => (
@@ -688,7 +670,7 @@ export function SectionFollowing({ embedded = false }: { embedded?: boolean }) {
    Section: 粉丝
 ══════════════════════════════════════════════════════════════════ */
 export function FanRow({ f, isMutual, onToggle, wide = false }: { f: any; isMutual: boolean; onToggle: () => void; wide?: boolean }) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [hovered, setHovered] = useState(false);
   const hover = useHoverConfig();
   if (!wide) {
@@ -696,8 +678,8 @@ export function FanRow({ f, isMutual, onToggle, wide = false }: { f: any; isMutu
     <motion.div
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
-      onClick={() => navigate(`${ROUTES.user(f.id)}?from=relationships`)}
-      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`${ROUTES.user(f.id)}?from=relationships`); }}
+      onClick={() => router.push(`${ROUTES.user(f.id)}?from=relationships`)}
+      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") router.push(`${ROUTES.user(f.id)}?from=relationships`); }}
       role="button"
       tabIndex={0}
       className="neu-row-hover flex cursor-pointer items-center gap-3 p-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--neu-accent-primary)]"
@@ -705,23 +687,23 @@ export function FanRow({ f, isMutual, onToggle, wide = false }: { f: any; isMutu
       <Avatar ring src={f.avatar} name={f.name} size={42} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-[var(--neu-text)]" style={{ fontSize: 13 }}>{f.name}</span>
+          <span className="text-[var(--neu-text)] text-[13px]">{f.name}</span>
           {isMutual && (
-            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[var(--semantic-online)]"
-              style={{ fontSize: 10, background: "color-mix(in srgb, var(--semantic-online) 12%, transparent)" }}>
+            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[var(--semantic-online)] text-[10px]"
+              style={{ background: "color-mix(in srgb, var(--semantic-online) 12%, transparent)" }}>
               <Check style={{ width: 9, height: 9 }} strokeWidth={2.5} />互关
             </span>
           )}
         </div>
-        <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 2 }}>
+        <p className="text-[var(--neu-text-muted)] text-[11px] mt-0.5">
           {f.handle} · {f.joinedDays <= 1 ? "今天" : f.joinedDays <= 7 ? `${f.joinedDays}天前` : `${Math.floor(f.joinedDays / 7)}周前`}关注了你
         </p>
       </div>
       <motion.button whileTap={{ scale: 0.93 }} onClick={(event) => { event.stopPropagation(); onToggle(); }}
-        className={`flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 ${isMutual ? "bg-transparent text-[var(--neu-text-muted)]" : "bg-[var(--neu-accent-primary)] text-white"}`}
+        className={`flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] ${isMutual ? "bg-transparent text-[var(--neu-text-muted)]" : "bg-[var(--neu-accent-primary)] text-white"}`}
         style={isMutual
-          ? { fontSize: 11, border: "1px solid var(--neu-border-pressed)" }
-          : { fontSize: 11, border: "1px solid transparent" }
+          ? { border: "1px solid var(--neu-border-pressed)" }
+          : { border: "1px solid transparent" }
         }>
         {isMutual ? (
           <><Check style={{ width: 10, height: 10 }} strokeWidth={2.5} />互关</>
@@ -737,8 +719,8 @@ export function FanRow({ f, isMutual, onToggle, wide = false }: { f: any; isMutu
       key={f.id}
       whileHover={hover.card as any}
       whileTap={hover.tap as any}
-      onClick={() => navigate(`${ROUTES.user(f.id)}?from=relationships`)}
-      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`${ROUTES.user(f.id)}?from=relationships`); }}
+      onClick={() => router.push(`${ROUTES.user(f.id)}?from=relationships`)}
+      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") router.push(`${ROUTES.user(f.id)}?from=relationships`); }}
       role="button"
       tabIndex={0}
       className="neu-row-hover flex items-center gap-3 rounded-[18px] p-3.5 cursor-pointer neu-focus-ring bg-[var(--neu-bg)]"
@@ -746,23 +728,23 @@ export function FanRow({ f, isMutual, onToggle, wide = false }: { f: any; isMutu
       <Avatar ring src={f.avatar} name={f.name} size={48} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-[var(--neu-text)]" style={{ fontSize: 14 }}>{f.name}</span>
+          <span className="text-[var(--neu-text)] text-sm">{f.name}</span>
           {isMutual && (
-            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[var(--semantic-online)]"
-              style={{ fontSize: 10, background: "color-mix(in srgb, var(--semantic-online) 12%, transparent)" }}>
+            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[var(--semantic-online)] text-[10px]"
+              style={{ background: "color-mix(in srgb, var(--semantic-online) 12%, transparent)" }}>
               <Check style={{ width: 9, height: 9 }} strokeWidth={2.5} />互关
             </span>
           )}
         </div>
-        <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 2 }}>
+        <p className="text-[var(--neu-text-muted)] text-[11px] mt-0.5">
           {f.handle} · {f.joinedDays <= 1 ? "今天" : f.joinedDays <= 7 ? `${f.joinedDays}天前` : `${Math.floor(f.joinedDays / 7)}周前`}关注了你
         </p>
       </div>
       <motion.button whileTap={{ scale: 0.93 }} onClick={(event) => { event.stopPropagation(); onToggle(); }}
-        className={`flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 ${isMutual ? "bg-transparent text-[var(--neu-text-muted)]" : "bg-[var(--neu-accent-primary)] text-white"}`}
+        className={`flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] ${isMutual ? "bg-transparent text-[var(--neu-text-muted)]" : "bg-[var(--neu-accent-primary)] text-white"}`}
         style={isMutual
-          ? { fontSize: 11, border: "1px solid var(--neu-border-pressed)" }
-          : { fontSize: 11, border: "1px solid transparent" }
+          ? { border: "1px solid var(--neu-border-pressed)" }
+          : { border: "1px solid transparent" }
         }>
         {isMutual ? (
           <><Check style={{ width: 10, height: 10 }} strokeWidth={2.5} />互关</>
@@ -806,16 +788,16 @@ export function SectionFans({ embedded = false }: { embedded?: boolean }) {
       <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: "1px solid var(--neu-border)" }}>
         <div>
           <div className="flex items-center gap-2.5">
-            <span className="text-[var(--neu-text)]" style={{ fontSize: 15 }}>粉丝</span>
-            <span className="px-2 py-0.5 rounded-full bg-[var(--neu-accent-primary)] text-white" style={{ fontSize: 11 }}>
+            <span className="text-[var(--neu-text)] text-[15px]">粉丝</span>
+            <span className="px-2 py-0.5 rounded-full bg-[var(--neu-accent-primary)] text-white text-[11px]">
               {followers.length} 人
             </span>
           </div>
-          <p className="mt-1 text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>关注你的人，优先处理待回关关系</p>
+          <p className="mt-1 text-[var(--neu-text-muted)] text-[11px]">关注你的人，优先处理待回关关系</p>
         </div>
         <div className="flex items-center gap-2">
           {pendingCount > 0 && (
-            <span className="px-2 py-0.5 rounded-full text-[var(--semantic-warning)]" style={{ fontSize: 11, background: "color-mix(in srgb, var(--semantic-warning) 13%, transparent)", border: "1px solid color-mix(in srgb, var(--semantic-warning) 24%, transparent)" }}>
+            <span className="px-2 py-0.5 rounded-full text-[var(--semantic-warning)] text-[11px]" style={{ background: "color-mix(in srgb, var(--semantic-warning) 13%, transparent)", border: "1px solid color-mix(in srgb, var(--semantic-warning) 24%, transparent)" }}>
               {pendingCount} 待回关
             </span>
           )}
@@ -838,14 +820,10 @@ export function SectionFans({ embedded = false }: { embedded?: boolean }) {
           const active = fanFilter === id;
           return (
             <motion.button key={id} whileTap={{ scale: 0.94 }} onClick={() => setFanFilter(id)}
-              className={`px-3 py-1 rounded-full outline-none neu-surface-ghost ${active ? "bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
+              className={`px-3 py-1 rounded-full outline-none neu-surface-ghost text-xs ${active ? "bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] font-medium" : "text-[var(--neu-text-muted)]"}`}
               style={active
-                ? {
-                    fontSize: 12,
-                    fontWeight: 500,
-                    borderColor: "var(--neu-accent-soft-border)",
-                  }
-                : { fontSize: 12 }}>
+                ? { borderColor: "var(--neu-accent-soft-border)" }
+                : undefined}>
               {label}
             </motion.button>
           );
@@ -856,10 +834,12 @@ export function SectionFans({ embedded = false }: { embedded?: boolean }) {
       {embedded ? (
         <div className="grid w-full grid-cols-1 gap-4 px-6 pb-8 md:grid-cols-2 lg:px-8 xl:grid-cols-3">
           {followers.length === 0 ? (
-            <div className="col-span-full flex flex-col items-center py-16 text-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]"><UserPlus size={18} /></div>
-              <p className="mt-3 text-[13px] text-[var(--neu-text)]">还没有粉丝</p>
-              <p className="mt-1 text-[11px] text-[var(--neu-text-muted)]">分享你的瞬间，让更多人发现你。</p>
+            <div className="col-span-full">
+              <EmptyState
+                icon={<UserPlus size={18} />}
+                title="还没有粉丝"
+                description="分享你的瞬间，让更多人发现你。"
+              />
             </div>
           ) : (
             filtered.map(f => {

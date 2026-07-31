@@ -1,15 +1,17 @@
+'use client'
 import React, { useEffect, useState } from "react";
 import {
   MapPin, ChevronRight, Users,
   Coffee, Music, Star, Flame, Lock, Globe, Radar,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { usePlatform } from "../../contexts/PlatformContext";
-import { useNavigate } from "react-router";
-import { ROUTES } from "../../lib/routes";
-import { useHoverConfig } from "../../hooks/useHoverConfig";
-import { useDefaultLocation } from "../../hooks/useDefaultLocation";
-import { getTrending, searchMoments, getClientConfig } from "../../../api";
+import { usePlatform } from "@/contexts/PlatformContext";
+import { useRouter } from "next/navigation";
+import { ROUTES } from "@/lib/routes";
+import { useHoverConfig } from "@/hooks/useHoverConfig";
+import { useDefaultLocation } from "@/hooks/useDefaultLocation";
+import { getTrending, searchMoments, getClientConfig } from "@/api";
+import { OnlineDot } from "@/components/shared/OnlineDot";
 
 /* ── Section heading ────────────────────────────────────────────── */
 function SectionHead({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
@@ -19,7 +21,7 @@ function SectionHead({ title, action, onAction }: { title: string; action?: stri
       {action && onAction && (
         <motion.button whileTap={{ scale: 0.94 }} onClick={onAction}
           className="flex items-center gap-0.5 outline-none neu-surface-ghost rounded-full px-2 py-0.5 text-[var(--neu-accent-primary)]">
-          <span style={{ fontSize: 11 }}>{action}</span>
+          <span className="text-[11px]">{action}</span>
           <ChevronRight style={{ width: 12, height: 12 }} strokeWidth={1.5} />
         </motion.button>
       )}
@@ -56,8 +58,8 @@ function HeroStats({ onExplore, stats }: { onExplore: () => void; stats: { nearb
               <Radar style={{ width: 17, height: 17, color: "white" }} strokeWidth={2} />
             </div>
             <div>
-              <p style={{ fontSize: 13, color: "var(--neu-text)", fontWeight: 500 }}>实时附近</p>
-              <p style={{ fontSize: 11, color: "var(--neu-text-muted)", marginTop: 1 }}>
+              <p className="text-[13px]" style={{ color: "var(--neu-text)", fontWeight: 500 }}>实时附近</p>
+              <p className="text-[11px]" style={{ color: "var(--neu-text-muted)", marginTop: 1 }}>
                 {rangeLabel}
               </p>
             </div>
@@ -73,8 +75,8 @@ function HeroStats({ onExplore, stats }: { onExplore: () => void; stats: { nearb
             { label: "在线",   v: stats.online, color: "var(--semantic-online)" },
           ].map(s => (
             <div key={s.label} className="flex flex-col items-center justify-center py-2.5 bg-[var(--neu-bg)]">
-              <span style={{ fontSize: 19, color: s.color, fontWeight: 600, lineHeight: 1 }}>{s.v}</span>
-              <span style={{ fontSize: 10, color: "var(--neu-text-muted)", marginTop: 4 }}>{s.label}</span>
+              <span className="text-[19px] font-semibold" style={{ color: s.color, lineHeight: 1 }}>{s.v}</span>
+              <span className="text-[10px]" style={{ color: "var(--neu-text-muted)", marginTop: 4 }}>{s.label}</span>
             </div>
           ))}
         </div>
@@ -99,13 +101,10 @@ function PeopleRadarStrip({ users, onSeeAll, onSelectUser }: { users: NearbyUser
                 style={{ width: 56, height: 56, border: "1.5px solid var(--neu-border)" }}>
                 <img src={u.avatar} alt="" className="w-full h-full object-cover" />
               </div>
-              {u.status === "在线" && (
-                <span className="absolute bottom-0 right-0 rounded-full"
-                  style={{ width: 11, height: 11, background: "var(--semantic-online)", border: "2px solid var(--neu-bg)" }} />
-              )}
+              {u.status === "在线" && <OnlineDot size="lg" />}
             </div>
-            <span style={{ fontSize: 11, color: "var(--neu-text)" }}>{u.name}</span>
-            <span style={{ fontSize: 10, color: "var(--neu-accent-primary)", marginTop: -4 }}>{u.distance}</span>
+            <span className="text-[11px]" style={{ color: "var(--neu-text)" }}>{u.name}</span>
+            <span className="text-[10px]" style={{ color: "var(--neu-accent-primary)", marginTop: -4 }}>{u.distance}</span>
           </motion.button>
         ))}
         <motion.button type="button" whileTap={{ scale: 0.94 }} onClick={onSeeAll}
@@ -114,7 +113,7 @@ function PeopleRadarStrip({ users, onSeeAll, onSelectUser }: { users: NearbyUser
             style={{ width: 56, height: 56, border: "1.5px dashed var(--neu-border-pressed)" }}>
             <ChevronRight style={{ width: 16, height: 16, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
           </div>
-          <span style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>更多</span>
+          <span className="text-[11px]" style={{ color: "var(--neu-text-muted)" }}>更多</span>
         </motion.button>
       </div>
     </div>
@@ -140,8 +139,8 @@ function ActivityRow({ item, onClick }: { item: Activity; onClick: () => void })
         <Icon style={{ width: 16, height: 16, color: item.color }} strokeWidth={1.75} />
       </div>
       <div className="flex-1 min-w-0">
-        <p style={{ fontSize: 13, color: "var(--neu-text)" }}>{item.title}</p>
-        <p style={{ fontSize: 11, color: "var(--neu-text-muted)", marginTop: 1 }}>{item.sub}</p>
+        <p className="text-[13px]" style={{ color: "var(--neu-text)" }}>{item.title}</p>
+        <p className="text-[11px]" style={{ color: "var(--neu-text-muted)", marginTop: 1 }}>{item.sub}</p>
       </div>
       <ChevronRight style={{ width: 13, height: 13, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
     </motion.button>
@@ -180,14 +179,14 @@ function GroupCarousel({ groups, onSeeAll }: { groups: NearbyGroup[]; onSeeAll: 
               </div>
               <div className="absolute bottom-1.5 left-2 flex items-center gap-0.5">
                 <MapPin style={{ width: 9, height: 9, color: "rgba(255,255,255,0.9)" }} strokeWidth={2} />
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.95)" }}>{g.distance}</span>
+                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.95)" }}>{g.distance}</span>
               </div>
             </div>
             <div className="px-2.5 pt-2 pb-2.5">
-              <p style={{ fontSize: 12, color: "var(--neu-text)", fontWeight: 500 }} className="truncate">{g.name}</p>
+              <p className="text-xs truncate" style={{ color: "var(--neu-text)", fontWeight: 500 }}>{g.name}</p>
               <div className="flex items-center gap-1 mt-1">
                 <Users style={{ width: 9, height: 9, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
-                <span style={{ fontSize: 10, color: "var(--neu-text-muted)" }}>{g.members} 成员</span>
+                <span className="text-[10px]" style={{ color: "var(--neu-text-muted)" }}>{g.members} 成员</span>
               </div>
             </div>
           </motion.div>
@@ -211,26 +210,23 @@ function NearbyUserRow({ user, followed, onToggle }: { user: NearbyUser; followe
         <div className="rounded-full overflow-hidden" style={{ width: 38, height: 38 }}>
           <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
         </div>
-        {user.status === "在线" && (
-          <span className="absolute bottom-0 right-0 rounded-full"
-            style={{ width: 9, height: 9, background: "var(--semantic-online)", border: "2px solid var(--neu-bg)" }} />
-        )}
+        {user.status === "在线" && <OnlineDot size="md" />}
       </div>
       <div className="flex-1 min-w-0">
-        <p style={{ fontSize: 13, color: "var(--neu-text)" }}>{user.name}</p>
+        <p className="text-[13px]" style={{ color: "var(--neu-text)" }}>{user.name}</p>
         <div className="flex items-center gap-1.5 mt-0.5">
-          <span style={{ fontSize: 10, color: "var(--neu-accent-primary)" }}>#{user.tag}</span>
-          <span style={{ fontSize: 10, color: "var(--neu-text-muted)", opacity: 0.5 }}>·</span>
-          <span style={{ fontSize: 10, color: "var(--neu-text-muted)" }}>{user.distance}</span>
+          <span className="text-[10px]" style={{ color: "var(--neu-accent-primary)" }}>#{user.tag}</span>
+          <span className="text-[10px]" style={{ color: "var(--neu-text-muted)", opacity: 0.5 }}>·</span>
+          <span className="text-[10px]" style={{ color: "var(--neu-text-muted)" }}>{user.distance}</span>
         </div>
       </div>
       <motion.button
         whileTap={{ scale: 0.93 }}
         onClick={e => { e.stopPropagation(); onToggle(); }}
-        className="px-3 py-1 rounded-full outline-none transition-all"
+        className="px-3 py-1 rounded-full outline-none transition-all text-[11px]"
         style={followed
-          ? { background: "transparent", color: "var(--neu-text-muted)", border: "1px solid var(--neu-border-pressed)", fontSize: 11 }
-          : { background: "var(--neu-accent-primary)", color: "white", border: "1px solid transparent", fontSize: 11 }
+          ? { background: "transparent", color: "var(--neu-text-muted)", border: "1px solid var(--neu-border-pressed)" }
+          : { background: "var(--neu-accent-primary)", color: "white", border: "1px solid transparent" }
         }>
         {followed ? "已关注" : "关注"}
       </motion.button>
@@ -257,7 +253,7 @@ function NearbyUsersFlatList({
    Mobile/Tablet Home
 ══════════════════════════════════════════════════════════════════ */
 function HomeMobile({ nearbyUsers, activities, nearbyGroups, heroStats, loading }: { nearbyUsers: NearbyUser[]; activities: Activity[]; nearbyGroups: NearbyGroup[]; heroStats: { nearby: string; active: string; online: string }; loading: boolean }) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { platform } = usePlatform();
   const [followingIds, setFollowingIds] = useState<Set<number>>(new Set());
   const toggle = (id: number) => setFollowingIds(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -278,14 +274,14 @@ function HomeMobile({ nearbyUsers, activities, nearbyGroups, heroStats, loading 
           <div className={isTablet ? `${mainColClass} px-5 flex items-center justify-between` : "w-full flex items-center justify-between"}
             style={mainColStyle}>
             <div>
-              <h1 style={{ fontSize: 22, color: "var(--neu-text)" }}>附近</h1>
-              <p style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 2 }}>发现周边有趣的人和事</p>
+              <h1 className="text-[22px]" style={{ color: "var(--neu-text)" }}>附近</h1>
+<p className="text-xs" style={{ color: "var(--neu-text-muted)", marginTop: 2 }}>发现周边有趣的人和事</p>
             </div>
              {onlineCount > 0 && <motion.div whileTap={{ scale: 0.94 }}
                 className="flex items-center gap-1.5 py-1.5 px-3 rounded-full cursor-pointer neu-surface-flat"
-                onClick={() => navigate(ROUTES.map)}>
-                <span className="rounded-full" style={{ width: 6, height: 6, background: "var(--semantic-online)", flexShrink: 0 }} />
-                <span style={{ fontSize: 11, color: "var(--neu-text-muted)" }}>{onlineCount} 在线</span>
+                onClick={() => router.push(ROUTES.map)}>
+                <span className="rounded-full shrink-0" style={{ width: 6, height: 6, background: "var(--semantic-online)" }} />
+                <span className="text-[11px]" style={{ color: "var(--neu-text-muted)" }}>{onlineCount} 在线</span>
               </motion.div>}
           </div>
           {isTablet && <div className="hidden lg:block flex-shrink-0" style={{ width: "var(--context-rail-width)" }} />}
@@ -299,15 +295,15 @@ function HomeMobile({ nearbyUsers, activities, nearbyGroups, heroStats, loading 
 
         <div className={isTablet ? `${mainColClass} flex flex-col gap-7 px-5` : "flex flex-col gap-7 w-full"}
           style={mainColStyle}>
-          <HeroStats onExplore={() => navigate(ROUTES.nearbyPeople)} stats={heroStats} />
-          <PeopleRadarStrip users={nearbyUsers} onSeeAll={() => navigate(ROUTES.nearbyPeople)} onSelectUser={(userId) => navigate(ROUTES.user(userId))} />
+          <HeroStats onExplore={() => router.push(ROUTES.nearbyPeople)} stats={heroStats} />
+          <PeopleRadarStrip users={nearbyUsers} onSeeAll={() => router.push(ROUTES.nearbyPeople)} onSelectUser={(userId) => router.push(ROUTES.user(userId))} />
           <div>
-            <SectionHead title="附近话题" action="更多" onAction={() => navigate(ROUTES.nearbyMoments)} />
-            <ActivityList items={activities} onClick={() => navigate(ROUTES.nearbyMoments)} />
+            <SectionHead title="附近话题" action="更多" onAction={() => router.push(ROUTES.nearbyMoments)} />
+            <ActivityList items={activities} onClick={() => router.push(ROUTES.nearbyMoments)} />
           </div>
-          <GroupCarousel groups={nearbyGroups} onSeeAll={() => navigate(ROUTES.nearbyGroups)} />
+          <GroupCarousel groups={nearbyGroups} onSeeAll={() => router.push(ROUTES.nearbyGroups)} />
           <div>
-            <SectionHead title="人物推荐" action="查看全部" onAction={() => navigate(ROUTES.nearbyPeople)} />
+            <SectionHead title="人物推荐" action="查看全部" onAction={() => router.push(ROUTES.nearbyPeople)} />
             <NearbyUsersFlatList users={nearbyUsers.slice(0, 4)} followingIds={followingIds} onToggle={toggle} />
           </div>
         </div>
@@ -320,7 +316,7 @@ function HomeMobile({ nearbyUsers, activities, nearbyGroups, heroStats, loading 
    Desktop Home — 2-column with clear hierarchy
 ══════════════════════════════════════════════════════════════════ */
 function HomeDesktop({ nearbyUsers, activities, nearbyGroups, heroStats, loading }: { nearbyUsers: NearbyUser[]; activities: Activity[]; nearbyGroups: NearbyGroup[]; heroStats: { nearby: string; active: string; online: string }; loading: boolean }) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [followingIds, setFollowingIds] = useState<Set<number>>(new Set());
   const toggle = (id: number) => setFollowingIds(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const onlineCount = nearbyUsers.filter(u => u.status === "在线").length;
@@ -330,13 +326,13 @@ function HomeDesktop({ nearbyUsers, activities, nearbyGroups, heroStats, loading
       <div className="flex-shrink-0 flex items-center justify-between px-7 py-4 bg-[var(--neu-bg)]"
         style={{ borderBottom: "1px solid var(--neu-border)" }}>
         <div>
-          <h1 style={{ fontSize: 24, color: "var(--neu-text)" }}>首页</h1>
-          <p style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 2 }}>发现周边有趣的人和事</p>
+          <h1 className="text-2xl" style={{ color: "var(--neu-text)" }}>首页</h1>
+          <p className="text-xs" style={{ color: "var(--neu-text-muted)", marginTop: 2 }}>发现周边有趣的人和事</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full neu-surface-flat">
             <span className="rounded-full" style={{ width: 6, height: 6, background: "var(--semantic-online)" }} />
-            <span style={{ fontSize: 12, color: "var(--neu-text-muted)" }}>{onlineCount} 在线</span>
+            <span className="text-xs" style={{ color: "var(--neu-text-muted)" }}>{onlineCount} 在线</span>
           </div>
         </div>
       </div>
@@ -344,17 +340,17 @@ function HomeDesktop({ nearbyUsers, activities, nearbyGroups, heroStats, loading
       <div className="flex flex-1 min-h-0 gap-0 overflow-hidden">
 
         {/* ── Left: hero + activity + groups (320px) ── */}
-        <div className="flex flex-col overflow-y-auto no-scrollbar p-6 gap-6"
-          style={{ width: 340, flexShrink: 0, borderRight: "1px solid var(--neu-border)" }}>
+        <div className="flex flex-col overflow-y-auto no-scrollbar p-6 gap-6 shrink-0"
+          style={{ width: 340, borderRight: "1px solid var(--neu-border)" }}>
 
-          <HeroStats onExplore={() => navigate(ROUTES.nearbyPeople)} stats={heroStats} />
+          <HeroStats onExplore={() => router.push(ROUTES.nearbyPeople)} stats={heroStats} />
 
           <div>
-            <SectionHead title="附近话题" action="更多" onAction={() => navigate(ROUTES.nearbyMoments)} />
-            <ActivityList items={activities} onClick={() => navigate(ROUTES.nearbyMoments)} />
+            <SectionHead title="附近话题" action="更多" onAction={() => router.push(ROUTES.nearbyMoments)} />
+            <ActivityList items={activities} onClick={() => router.push(ROUTES.nearbyMoments)} />
           </div>
 
-          <GroupCarousel groups={nearbyGroups} onSeeAll={() => navigate(ROUTES.nearbyGroups)} />
+          <GroupCarousel groups={nearbyGroups} onSeeAll={() => router.push(ROUTES.nearbyGroups)} />
         </div>
 
         {/* ── Right: people radar + full list ── */}
@@ -362,18 +358,18 @@ function HomeDesktop({ nearbyUsers, activities, nearbyGroups, heroStats, loading
           <div className="flex items-end justify-between mb-5">
             <div>
               <span className="neu-eyebrow">附近的人</span>
-              <p style={{ fontSize: 12, color: "var(--neu-text-muted)", marginTop: 4 }}>
+              <p className="text-xs" style={{ color: "var(--neu-text-muted)", marginTop: 4 }}>
                 5km 范围内 · 实时更新
               </p>
             </div>
-            <motion.button whileTap={{ scale: 0.93 }} onClick={() => navigate(ROUTES.nearbyPeople)}
+            <motion.button whileTap={{ scale: 0.93 }} onClick={() => router.push(ROUTES.nearbyPeople)}
               className="flex items-center gap-0.5 outline-none neu-surface-ghost rounded-full px-2 py-0.5 text-[var(--neu-accent-primary)]">
-              <span style={{ fontSize: 12 }}>查看全部</span>
+              <span className="text-xs">查看全部</span>
               <ChevronRight style={{ width: 13, height: 13 }} strokeWidth={1.5} />
             </motion.button>
           </div>
 
-          <PeopleRadarStrip users={nearbyUsers} onSeeAll={() => navigate(ROUTES.nearbyPeople)} onSelectUser={(userId) => navigate(ROUTES.user(userId))} />
+          <PeopleRadarStrip users={nearbyUsers} onSeeAll={() => router.push(ROUTES.nearbyPeople)} onSelectUser={(userId) => router.push(ROUTES.user(userId))} />
 
           <div className="mt-6">
             <NearbyUsersFlatList users={nearbyUsers} followingIds={followingIds} onToggle={toggle} />

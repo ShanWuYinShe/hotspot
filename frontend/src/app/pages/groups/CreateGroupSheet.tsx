@@ -1,12 +1,13 @@
+'use client'
 /**
  * CreateGroupSheet — a bottom sheet / modal for creating new groups.
  * Used from: NearbyGroups (FAB), Profile > 我的群组 (header button),
  *            and as "创建群聊" entry from NewConversationSheet.
  */
-import React, { useState } from "react";
+import { useState } from "react";
 import { X, Camera, Globe, Lock, Check, ChevronRight, MapPin } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useHoverConfig } from "../../hooks/useHoverConfig";
+import { useHoverConfig } from "@/hooks/useHoverConfig";
 
 const CATEGORIES = ["摄影", "音乐", "户外", "阅读", "美食", "健身", "游戏", "其他"];
 
@@ -41,7 +42,7 @@ export function CreateGroupSheet({ onClose, onCreated }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 flex-shrink-0"
         style={{ borderBottom: "1px solid var(--neu-border)" }}>
-        <h2 className="text-[var(--neu-text)]" style={{ fontSize: 17 }}>创建群组</h2>
+        <h2 className="text-[17px] text-[var(--neu-text)]">创建群组</h2>
         <motion.button whileTap={hover.tap as any} onClick={onClose}
           className="flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
           style={{ width: 32, height: 32, boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
@@ -62,12 +63,12 @@ export function CreateGroupSheet({ onClose, onCreated }: Props) {
               <Check style={{ width: 32, height: 32, color: "white" }} strokeWidth={2.5} />
             </motion.div>
             <div>
-              <p className="text-[var(--neu-text)]" style={{ fontSize: 20, fontWeight: 600 }}>群组已创建！</p>
-              <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 13, marginTop: 6 }}>「{name}」已成功创建，现在可以邀请好友加入了</p>
+              <p className="text-[20px] font-semibold text-[var(--neu-text)]">群组已创建！</p>
+              <p className="text-[13px] mt-1.5 text-[var(--neu-text-muted)]">「{name}」已成功创建，现在可以邀请好友加入了</p>
             </div>
             <motion.button whileTap={hover.tap as any} onClick={onClose}
-              className="px-8 py-3 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white"
-              style={{ fontSize: 15, fontWeight: 500, boxShadow: "0 6px 20px var(--neu-glow)" }}>
+              className="px-8 py-3 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white text-[15px] font-medium"
+              style={{ boxShadow: "0 6px 20px var(--neu-glow)" }}>
               完成
             </motion.button>
           </motion.div>
@@ -82,53 +83,51 @@ export function CreateGroupSheet({ onClose, onCreated }: Props) {
                 className="flex flex-col items-center justify-center gap-2 rounded-[22px] outline-none bg-[var(--neu-bg)]"
                 style={{ width: "100%", height: 110, boxShadow: "inset 4px 4px 10px var(--neu-shadow-dark), inset -4px -4px 10px var(--neu-shadow-light)", border: "2px dashed var(--neu-border)" }}>
                 <Camera style={{ width: 26, height: 26, color: "var(--neu-text-muted)" }} strokeWidth={1.25} />
-                <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>添加封面图片</span>
+                <span className="text-[12px] text-[var(--neu-text-muted)]">添加封面图片</span>
               </motion.button>
             </div>
 
             {/* Group name */}
             <div>
-              <label className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>群组名称 *</label>
+              <label className="text-[11px] tracking-[0.1em] uppercase text-[var(--neu-text-muted)]">群组名称 *</label>
               <div className="flex items-center gap-2.5 mt-1.5 px-4 rounded-[14px] neu-input-surface" style={{ height: 46 }}>
-                <input className="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
-                  style={{ fontSize: 14 }}
+                <input className="flex-1 bg-transparent outline-none text-[var(--neu-text)] text-[14px]"
                   placeholder="给你的群组起个名字…"
                   value={name}
                   maxLength={30}
                   onChange={e => setName(e.target.value)}
                 />
-                <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, flexShrink: 0 }}>{name.length}/30</span>
+                <span className="text-[11px] shrink-0 text-[var(--neu-text-muted)]">{name.length}/30</span>
               </div>
             </div>
 
             {/* Description */}
             <div>
-              <label className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>简介</label>
+              <label className="text-[11px] tracking-[0.1em] uppercase text-[var(--neu-text-muted)]">简介</label>
               <div className="mt-1.5 px-4 py-3 rounded-[14px] neu-input-surface">
-                <textarea className="w-full bg-transparent outline-none resize-none text-[var(--neu-text)]"
-                  style={{ fontSize: 13, minHeight: 72 }}
+                <textarea className="w-full bg-transparent outline-none resize-none text-[var(--neu-text)] text-[13px] min-h-[72px]"
                   placeholder="描述一下这个群组的主题…"
                   value={desc}
                   maxLength={150}
                   onChange={e => setDesc(e.target.value)}
                 />
                 <div className="flex justify-end">
-                  <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 10 }}>{desc.length}/150</span>
+                  <span className="text-[10px] text-[var(--neu-text-muted)]">{desc.length}/150</span>
                 </div>
               </div>
             </div>
 
             {/* Category chips */}
             <div>
-              <label className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>分类</label>
+              <label className="text-[11px] tracking-[0.1em] uppercase text-[var(--neu-text-muted)]">分类</label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {CATEGORIES.map(cat => (
                   <motion.button key={cat} whileTap={hover.tap as any}
                     onClick={() => setCategory(cat)}
-                    className={`px-3.5 py-1.5 rounded-full outline-none ${category === cat ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
+                    className={`px-3.5 py-1.5 rounded-full outline-none text-[12px] ${category === cat ? "bg-[var(--neu-accent-primary)] text-white font-medium" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
                     style={category === cat
-                      ? { fontSize: 12, fontWeight: 500, boxShadow: "0 3px 8px var(--neu-glow)" }
-                      : { boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)", fontSize: 12 }
+                      ? { boxShadow: "0 3px 8px var(--neu-glow)" }
+                      : { boxShadow: "3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }
                     }
                   >
                     {cat}
@@ -146,8 +145,8 @@ export function CreateGroupSheet({ onClose, onCreated }: Props) {
                   : <Globe style={{ width: 18, height: 18, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
                 }
                 <div>
-                  <p className="text-[var(--neu-text)]" style={{ fontSize: 14 }}>{isPrivate ? "私密群组" : "公开群组"}</p>
-                  <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>
+                  <p className="text-[14px] text-[var(--neu-text)]">{isPrivate ? "私密群组" : "公开群组"}</p>
+                  <p className="text-[11px] text-[var(--neu-text-muted)]">
                     {isPrivate ? "仅受邀请的人可加入" : "所有人都可以找到并加入"}
                   </p>
                 </div>
@@ -172,8 +171,8 @@ export function CreateGroupSheet({ onClose, onCreated }: Props) {
               style={{ boxShadow: "5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)", border: "1px solid var(--neu-border)" }}>
               <MapPin style={{ width: 16, height: 16, color: "var(--neu-accent-primary)", flexShrink: 0 }} strokeWidth={1.5} />
               <div className="flex-1 min-w-0">
-                <p className="text-[var(--neu-text)]" style={{ fontSize: 13 }}>徐州市 · 云龙区</p>
-                <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>自动定位 — 可修改</p>
+                <p className="text-[13px] text-[var(--neu-text)]">徐州市 · 云龙区</p>
+                <p className="text-[11px] text-[var(--neu-text-muted)]">自动定位 — 可修改</p>
               </div>
               <ChevronRight style={{ width: 13, height: 13, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
             </div>
@@ -182,9 +181,8 @@ export function CreateGroupSheet({ onClose, onCreated }: Props) {
             <motion.button whileTap={hover.tap as any}
               onClick={handleCreate}
               disabled={!canCreate}
-              className={`flex items-center justify-center gap-2 w-full py-4 rounded-[18px] outline-none ${canCreate ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
+              className={`flex items-center justify-center gap-2 w-full py-4 rounded-[18px] outline-none text-[15px] font-medium ${canCreate ? "bg-[var(--neu-accent-primary)] text-white" : "bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"}`}
               style={{
-                fontSize: 15, fontWeight: 500,
                 boxShadow: canCreate
                   ? "0 6px 22px var(--neu-glow)"
                   : "inset 4px 4px 10px var(--neu-shadow-dark), inset -4px -4px 10px var(--neu-shadow-light)",

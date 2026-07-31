@@ -1,41 +1,47 @@
+'use client'
 import React, { useState } from "react";
 import {
   Heart, MapPin, Grid3X3, Share2, Bookmark,
   ChevronRight, Camera, Users, MessageCircle, Search,
   Plus, Check, Bell, Clock, Filter, Pencil, UserPlus,
-  MoreHorizontal, TrendingUp, Shield, X, ArrowLeft,
+  MoreHorizontal, TrendingUp, Shield, X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useLocation, useNavigate } from "react-router";
-import { usePlatform } from "../../contexts/PlatformContext";
-import { useHoverConfig } from "../../hooks/useHoverConfig";
-import { AppearanceMenu } from "../../components/layout/AppearanceMenu";
-import { CreateGroupSheet } from "../groups/CreateGroupSheet";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePlatform } from "@/contexts/PlatformContext";
+import { useHoverConfig } from "@/hooks/useHoverConfig";
+import { AppearanceMenu } from "@/components/layout/AppearanceMenu";
+import { CreateGroupSheet } from "@/app/pages/groups/CreateGroupSheet";
 import {
   TabletRail, StreakCard, VisitorsCard, MoodCheckinCard,
   AchievementCard, SuggestedFollowsCard, VibeCard,
-} from "../../components/layout/TabletRail";
-import { ContextRail } from "../../components/layout/ContextRail";
-import { ActionIconButton } from "../../components/shared/ActionIconButton";
-import { ROUTES, type ProfileSection } from "../../lib/routes";
+} from "@/components/layout/TabletRail";
+import { ContextRail } from "@/components/layout/ContextRail";
+import { ActionIconButton } from "@/components/shared/ActionIconButton";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { TagPill } from "@/components/shared/TagPill";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { SearchInput } from "@/components/shared/SearchInput";
+import { OnlineDot } from "@/components/shared/OnlineDot";
+import { ROUTES, type ProfileSection } from "@/lib/routes";
 
 /* ── Data hooks ──────────────────────────── */
 import {
   useAccountData, useGalleryPosts, useReactedPosts, useFavoritePosts, useMyGroups,
   useRelationships,
-} from "./profile.data";
+} from "@/app/pages/profile/profile.data";
 
 import {
   type Tab, ProfileTabs, GalleryGrid, SectionMoments, SectionGroups, SectionFriends, SectionFollowing, SectionFans,
-} from "./ProfileSections";
+} from "@/app/pages/profile/ProfileSections";
 
 type RelationshipTab = "friends" | "following" | "followers";
 
 function RelationshipsWorkspace() {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const pathname = usePathname();
+  const router = useRouter();
   const { friends, following, followers } = useRelationships();
-  const tabParam = new URLSearchParams(location.search).get("tab");
+  const tabParam = useSearchParams().get("tab");
   const activeTab: RelationshipTab = tabParam === "following" || tabParam === "followers" ? tabParam : "friends";
 
   const RELATIONSHIP_TABS: Array<{ id: RelationshipTab; label: string; detail: string; count: number; Icon: React.ElementType }> = [
@@ -46,7 +52,7 @@ function RelationshipsWorkspace() {
   const activeMeta = RELATIONSHIP_TABS.find((tab) => tab.id === activeTab)!;
 
   const setTab = (tab: RelationshipTab) => {
-    navigate(`${ROUTES.meSection("relationships")}?tab=${tab}`);
+    router.push(`${ROUTES.meSection("relationships")}?tab=${tab}`);
   };
 
   return (
@@ -55,14 +61,15 @@ function RelationshipsWorkspace() {
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-6">
           <div>
             <div className="flex items-center gap-2">
-              <p className="text-[var(--neu-text)]" style={{ fontSize: 16 }}>关系网络</p>
-              <span className="rounded-full px-2 py-0.5 bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]" style={{ fontSize: 10, border: "1px solid var(--neu-accent-soft-border)" }}>
+              <p className="text-[var(--neu-text)] text-base">关系网络</p>
+              <span className="rounded-full px-2 py-0.5 bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] text-[10px]"
+                style={{ border: "1px solid var(--neu-accent-soft-border)" }}>
                 {friends.length + following.length + followers.length} 条关系
               </span>
             </div>
-            <p className="mt-1 text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>{activeMeta.detail}</p>
+            <p className="mt-1 text-[var(--neu-text-muted)] text-xs">{activeMeta.detail}</p>
           </div>
-          <span className="mt-0.5 whitespace-nowrap text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>{activeMeta.count} 人</span>
+          <span className="mt-0.5 whitespace-nowrap text-[var(--neu-text-muted)] text-xs">{activeMeta.count} 人</span>
         </div>
 
         <div className="mt-5 flex gap-1" role="tablist" aria-label="关系类型">
@@ -76,12 +83,11 @@ function RelationshipsWorkspace() {
                 aria-selected={selected}
                 whileTap={{ scale: 0.96 }}
                 onClick={() => setTab(id)}
-                className={`relative flex items-center gap-1.5 px-3 pb-3 pt-1 outline-none ${selected ? "text-[var(--neu-accent-primary)]" : "text-[var(--neu-text-muted)]"}`}
-                style={{ fontSize: 13, fontWeight: selected ? 600 : 400 }}
+                className={`relative flex items-center gap-1.5 px-3 pb-3 pt-1 outline-none text-[13px] ${selected ? "text-[var(--neu-accent-primary)] font-semibold" : "text-[var(--neu-text-muted)] font-normal"}`}
               >
                 <Icon style={{ width: 13, height: 13 }} strokeWidth={selected ? 2 : 1.5} />
                 {label}
-                <span style={{ fontSize: 10, opacity: 0.75 }}>{count}</span>
+                <span className="text-[10px]" style={{ opacity: 0.75 }}>{count}</span>
                 {selected && <motion.span layoutId="relationship-active-tab" className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-[var(--neu-accent-primary)]" />}
               </motion.button>
             );
@@ -99,15 +105,15 @@ function RelationshipsWorkspace() {
 }
 
 function ProfileDesktop() {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
   const { avatar, nickname, stats } = useAccountData();
   const { posts: myGalleryPosts } = useGalleryPosts("my");
   const { friends, following, followers } = useRelationships();
   const { groups: myGroups } = useMyGroups();
   // /me is the overview; /me/:section resolves an independently addressable resource page.
-  const section = location.pathname.startsWith(`${ROUTES.me}/`)
-    ? location.pathname.slice(`${ROUTES.me}/`.length)
+  const section = pathname.startsWith(`${ROUTES.me}/`)
+    ? pathname.slice(`${ROUTES.me}/`.length)
     : null;
 
   const SECTION_META: Record<string, { title: string; render: () => React.ReactNode }> = {
@@ -121,17 +127,7 @@ function ProfileDesktop() {
     const meta = SECTION_META[section];
     return (
       <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="flex-shrink-0 flex items-center gap-3 px-6 py-4 bg-[var(--neu-bg)]"
-          style={{ borderBottom: "1px solid var(--neu-border)" }}>
-          <ActionIconButton
-            icon={ArrowLeft}
-            label="返回个人主页"
-            onClick={() => navigate(ROUTES.me)}
-            size={36}
-          />
-          <p className="text-[var(--neu-text)]" style={{ fontSize: 18, flex: 1 }}>{meta.title}</p>
-        </div>
+        <PageHeader title={meta.title} sticky onBack={() => router.push(ROUTES.me)} />
         {/* 全宽分区内容 */}
         <div className="flex-1 min-h-0 overflow-hidden flex">
           {meta.render()}
@@ -147,8 +143,8 @@ function ProfileDesktop() {
       <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-[var(--neu-bg)]"
         style={{ borderBottom: "1px solid var(--neu-border)" }}>
         <div>
-          <p className="text-[var(--neu-text)]" style={{ fontSize: 20 }}>鹿鸣</p>
-          <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, marginTop: 1 }}>@elara.v</p>
+          <p className="text-[var(--neu-text)] text-xl">鹿鸣</p>
+          <p className="text-[var(--neu-text-muted)] text-xs mt-px">@elara.v</p>
         </div>
         <div className="flex gap-2">
           <ActionIconButton icon={Share2} label="分享个人主页" size={36} />
@@ -174,20 +170,20 @@ function ProfileDesktop() {
             </motion.button>
           </div>
 
-          <h2 className="text-[var(--neu-text)]" style={{ fontSize: 18, textAlign: "center" }}>鹿鸣</h2>
-          <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, marginTop: 2 }}>@elara.v</span>
-          <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, textAlign: "center", marginTop: 8, lineHeight: 1.6, paddingLeft: 8, paddingRight: 8 }}>
+          <h2 className="text-[var(--neu-text)] text-lg text-center">鹿鸣</h2>
+          <span className="text-[var(--neu-text-muted)] text-xs mt-0.5">@elara.v</span>
+          <p className="text-[var(--neu-text-muted)] text-xs text-center mt-2 leading-relaxed px-2">
             触感思考者 · 在流动中寻觅静止
           </p>
           <div className="flex items-center gap-1 mt-2 mb-4">
             <MapPin style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
-            <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>江苏·徐州</span>
+            <span className="text-[var(--neu-text-muted)] text-[11px]">江苏·徐州</span>
           </div>
 
           {/* Edit profile button */}
-          <motion.button whileTap={{ scale: 0.96 }} onClick={() => navigate(ROUTES.meEdit)}
-            className="w-full py-2.5 rounded-full outline-none mb-5 flex items-center justify-center gap-2 bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"
-            style={{ border: "1px solid var(--neu-border)", boxShadow: "4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light)", fontSize: 13 }}>
+          <motion.button whileTap={{ scale: 0.96 }} onClick={() => router.push(ROUTES.meEdit)}
+            className="w-full py-2.5 rounded-full outline-none mb-5 flex items-center justify-center gap-2 bg-[var(--neu-bg)] text-[var(--neu-text-muted)] text-[13px]"
+            style={{ border: "1px solid var(--neu-border)", boxShadow: "4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light)" }}>
             <Pencil style={{ width: 13, height: 13 }} strokeWidth={1.5} />
             编辑资料
           </motion.button>
@@ -204,12 +200,12 @@ function ProfileDesktop() {
               <React.Fragment key={stat.label}>
                 {i > 0 && <div className="bg-[var(--neu-border)]" style={{ height: 1 }} />}
                 <motion.button whileTap={{ scale: 0.97 }}
-                  onClick={() => navigate(stat.section === "followers" ? `${ROUTES.meSection("relationships")}?tab=followers` : ROUTES.meSection(stat.section as ProfileSection))}
+                  onClick={() => router.push(stat.section === "followers" ? `${ROUTES.meSection("relationships")}?tab=followers` : ROUTES.meSection(stat.section as ProfileSection))}
                   className="w-full flex items-center justify-between px-4 py-3 outline-none"
                   style={{ cursor: "pointer" }}>
-                  <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 13 }}>{stat.label}</span>
+                  <span className="text-[var(--neu-text-muted)] text-[13px]">{stat.label}</span>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[var(--neu-text)]" style={{ fontSize: 17 }}>{stat.value}</span>
+                    <span className="text-[var(--neu-text)] text-[17px]">{stat.value}</span>
                     <ChevronRight style={{ width: 12, height: 12, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
                   </div>
                 </motion.button>
@@ -231,14 +227,14 @@ function ProfileDesktop() {
               <React.Fragment key={item.label}>
                 {i > 0 && <div className="bg-[var(--neu-border)]" style={{ height: 1 }} />}
                 <motion.button whileTap={{ scale: 0.97 }}
-                  onClick={() => navigate(ROUTES.meSection(item.section))}
+                  onClick={() => router.push(ROUTES.meSection(item.section))}
                   className="w-full flex items-center justify-between px-4 py-2.5 outline-none">
                   <div className="flex items-center gap-2.5">
                     <item.icon style={{ width: 14, height: 14, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
-                    <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 13 }}>{item.label}</span>
+                    <span className="text-[var(--neu-text-muted)] text-[13px]">{item.label}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12 }}>{item.count}</span>
+                    <span className="text-[var(--neu-text-muted)] text-xs">{item.count}</span>
                     <ChevronRight style={{ width: 12, height: 12, color: "var(--neu-text-muted)" }} strokeWidth={1.5} />
                   </div>
                 </motion.button>
@@ -250,10 +246,9 @@ function ProfileDesktop() {
         {/* ── Right: recent moments preview ──────────────────── */}
         <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-5">
           <div className="flex items-center justify-between mb-4">
-            <p className="text-[var(--neu-text)]" style={{ fontSize: 15 }}>最近瞬间</p>
-            <motion.button whileTap={{ scale: 0.93 }} onClick={() => navigate(ROUTES.meSection("moments"))}
-              className="flex items-center gap-1 outline-none text-[var(--neu-accent-primary)]"
-              style={{ fontSize: 12 }}>
+            <p className="text-[var(--neu-text)] text-[15px]">最近瞬间</p>
+            <motion.button whileTap={{ scale: 0.93 }} onClick={() => router.push(ROUTES.meSection("moments"))}
+              className="flex items-center gap-1 outline-none text-[var(--neu-accent-primary)] text-xs">
               查看全部
               <ChevronRight style={{ width: 13, height: 13 }} strokeWidth={2} />
             </motion.button>
@@ -270,11 +265,11 @@ function ProfileDesktop() {
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-0.5">
                         <Heart style={{ width: 10, height: 10, color: "white" }} fill="white" strokeWidth={0} />
-                        <span className="text-white" style={{ fontSize: 10 }}>{post.likes}</span>
+                        <span className="text-white text-[10px]">{post.likes}</span>
                       </div>
                       <div className="flex items-center gap-0.5">
                         <MessageCircle style={{ width: 10, height: 10, color: "white" }} strokeWidth={1.5} />
-                        <span className="text-white" style={{ fontSize: 10 }}>{post.comments}</span>
+                        <span className="text-white text-[10px]">{post.comments}</span>
                       </div>
                     </div>
                   </div>
@@ -299,11 +294,10 @@ function ShareProfileBtn() {
       onClick={() => {}}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
-      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[14px] outline-none text-[var(--neu-text)]"
+      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[14px] outline-none text-[var(--neu-text)] text-[13px]"
       style={{
         background: hovered ? hover.bgHover : "transparent",
         border: "1px solid var(--neu-border-pressed)",
-        fontSize: 13,
         transition: "background 0.18s ease",
       }}>
       <Share2 style={{ width: 13, height: 13 }} strokeWidth={1.75} />
@@ -322,14 +316,14 @@ function ProfileStatBtn({ label, value, onClick }: { label: string; value: strin
       onHoverEnd={() => setHovered(false)}
       className="flex flex-col items-center justify-center py-2.5 outline-none"
       style={{ background: hovered ? hover.bgHover : "var(--neu-bg)", transition: "background 0.18s ease" }}>
-      <span className="text-[var(--neu-text)]" style={{ fontSize: 20, fontWeight: 600, lineHeight: 1 }}>{value}</span>
-      <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 10, marginTop: 5 }}>{label}</span>
+      <span className="text-[var(--neu-text)] text-xl font-semibold leading-none">{value}</span>
+      <span className="text-[var(--neu-text-muted)] text-[10px] mt-1.5">{label}</span>
     </motion.button>
   );
 }
 
 function ProfileMobile() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { platform } = usePlatform();
   const { avatar, nickname, stats } = useAccountData();
   const { posts: myPosts } = useGalleryPosts("my");
@@ -366,8 +360,8 @@ function ProfileMobile() {
             style={mainColStyle}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[var(--neu-text)]" style={{ fontSize: 18 }}>鹿鸣</p>
-                <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 11, marginTop: 1 }}>@elara.v</p>
+                <p className="text-[var(--neu-text)] text-lg">鹿鸣</p>
+                <p className="text-[var(--neu-text-muted)] text-[11px] mt-px">@elara.v</p>
               </div>
               <div className="flex gap-2">
                 <ActionIconButton icon={Share2} label="分享个人主页" size={36} />
@@ -403,7 +397,7 @@ function ProfileMobile() {
                     border: "3px solid var(--neu-bg)",
                     boxShadow: "0 6px 18px var(--neu-glow)",
                   }}>
-                  {avatar ? <img src={avatar} alt={nickname || "用户"} className="w-full h-full object-cover" /> : <span className="text-[var(--neu-text-muted)]" style={{fontSize:32}}>{(nickname||"?")[0]}</span>}
+                  {avatar ? <img src={avatar} alt={nickname || "用户"} className="w-full h-full object-cover" /> : <span className="text-[var(--neu-text-muted)] text-[32px]">{(nickname||"?")[0]}</span>}
                 </div>
                 <motion.button whileTap={{ scale: 0.9 }}
                   className="absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none bg-[var(--neu-accent-primary)]"
@@ -413,23 +407,21 @@ function ProfileMobile() {
               </div>
 
               {/* Identity */}
-              <h2 className="text-[var(--neu-text)]" style={{ fontSize: 22 }}>鹿鸣</h2>
-              <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, marginTop: 2 }}>@elara.v</span>
-              <p className="text-[var(--neu-text-muted)]" style={{ fontSize: 12, textAlign: "center", padding: "10px 20px 4px", lineHeight: 1.6 }}>
+              <h2 className="text-[var(--neu-text)] text-[22px]">鹿鸣</h2>
+              <span className="text-[var(--neu-text-muted)] text-xs mt-0.5">@elara.v</span>
+              <p className="text-[var(--neu-text-muted)] text-xs text-center pt-2.5 px-5 pb-1 leading-relaxed">
                 触感思考者 · 在流动中寻觅静止
               </p>
               <div className="flex items-center gap-1 mb-4">
                 <MapPin style={{ width: 11, height: 11, color: "var(--neu-accent-primary)" }} strokeWidth={1.5} />
-                <span className="text-[var(--neu-text-muted)]" style={{ fontSize: 11 }}>江苏·徐州</span>
+                <span className="text-[var(--neu-text-muted)] text-[11px]">江苏·徐州</span>
               </div>
 
               {/* Dual action — equal weight, ghost on neutral surface */}
               <div className="flex w-full gap-2 mb-5">
-                <motion.button whileTap={{ scale: 0.97 }} onClick={() => navigate(ROUTES.meEdit)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[14px] outline-none bg-[var(--neu-accent-primary)] text-white"
+                <motion.button whileTap={{ scale: 0.97 }} onClick={() => router.push(ROUTES.meEdit)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[14px] outline-none bg-[var(--neu-accent-primary)] text-white text-[13px] font-medium"
                   style={{
-                    fontSize: 13,
-                    fontWeight: 500,
                     boxShadow: "0 3px 10px var(--neu-glow)",
                   }}>
                   <Pencil style={{ width: 13, height: 13 }} strokeWidth={2} />
@@ -450,7 +442,7 @@ function ProfileMobile() {
                     key={stat.label}
                     label={stat.label}
                     value={stat.value}
-                    onClick={stat.label === "关注者" ? () => navigate(`${ROUTES.meSection("relationships")}?tab=followers`) : undefined}
+                    onClick={stat.label === "关注者" ? () => router.push(`${ROUTES.meSection("relationships")}?tab=followers`) : undefined}
                   />
                 ))}
               </div>
@@ -490,10 +482,10 @@ function ProfileMobile() {
 ══════════════════════════════════════════════════════════════════ */
 export function ProfilePage() {
   const { platform } = usePlatform();
-  const location = useLocation();
+  const pathname = usePathname();
   // Resource sections are independently addressable on every device. Reuse the
   // full section view rather than silently falling back to the profile overview.
-  if (location.pathname.startsWith(`${ROUTES.me}/`)) return <ProfileDesktop />;
+  if (pathname.startsWith(`${ROUTES.me}/`)) return <ProfileDesktop />;
   if (platform === "desktop") return <ProfileDesktop />;
   return <ProfileMobile />;
 }

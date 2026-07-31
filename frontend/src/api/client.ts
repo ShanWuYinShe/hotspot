@@ -1,7 +1,7 @@
 // API client — thin fetch wrapper for JSON POST calls.
 // Cookie-based auth (HttpOnly) — no Bearer token needed.
 
-import { Endpoints } from './endpoints';
+import { Endpoints } from '@/api/endpoints';
 
 export interface ApiResponse<T> {
   code: number;
