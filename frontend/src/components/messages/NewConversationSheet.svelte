@@ -2,7 +2,7 @@
 	import { Search, X, UserPlus, MessageCircle, Users, Check } from '@lucide/svelte';
 
 	// 新会话底部 Sheet：添加好友 / 开始私聊 / 创建群聊入口。
-	// 迁移自 React NewConversationSheet.tsx。
+	// 迁移自旧版 NewConversationSheet。
 
 	type Tab = 'add' | 'chat';
 
@@ -21,7 +21,12 @@
 		onCreateGroup?: () => void;
 	} = $props();
 
-	let tab = $state<Tab>(defaultTab);
+	let tab = $state<Tab>(initialTab());
+
+	// defaultTab 仅在打开时生效（此后切换走 tab 按钮），有意只读取一次初始值。
+	function initialTab(): Tab {
+		return defaultTab;
+	}
 	let searchQ = $state('');
 	let addedIds = $state<Set<number>>(new Set());
 
@@ -44,7 +49,7 @@
 		</h2>
 		<button
 			type="button"
-			class="neu-hover-btn flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
+			class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
 			style="width:32px;height:32px;box-shadow:3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light);border:1px solid var(--neu-border);"
 			onclick={onClose}
 		>
@@ -147,8 +152,9 @@
 					联系人
 				</p>
 				{#each filteredContacts as c (c.id)}
-					<div
-						class="neu-hover-row flex items-center gap-3.5 px-3 py-3 rounded-[16px] cursor-pointer neu-row-hover"
+					<button
+						type="button"
+						class="neu-hover-row flex items-center gap-3.5 px-3 py-3 rounded-[16px] cursor-pointer w-full text-left neu-row-hover"
 						style="border:1px solid var(--neu-border);"
 						onclick={() => {
 							onNewChat?.(c.id);
@@ -168,7 +174,7 @@
 							</p>
 						</div>
 						<MessageCircle style="width:16px;height:16px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
-					</div>
+					</button>
 				{/each}
 			</div>
 		{/if}

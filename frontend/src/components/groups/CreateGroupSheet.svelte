@@ -4,7 +4,7 @@
 	// CreateGroupSheet — 创建群组的底部 Sheet / 模态。
 	// 使用处：NearbyGroups(FAB)、Profile > 我的群组（页头按钮）、
 	//        以及 NewConversationSheet 的「创建群聊」入口。
-	// 迁移自 React CreateGroupSheet.tsx（未接 API，本地完成态）。
+	// 迁移自旧版 CreateGroupSheet（未接 API，本地完成态）。
 
 	let { onClose, onCreated }: { onClose: () => void; onCreated?: (name: string) => void } = $props();
 
@@ -40,7 +40,7 @@
 		<button
 			type="button"
 			onclick={onClose}
-			class="neu-hover-btn flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
+			class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
 			style="width:32px;height:32px;box-shadow:3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light);border:1px solid var(--neu-border);"
 		>
 			<X style="width:14px;height:14px;color:var(--neu-text-muted);" strokeWidth={2} />
@@ -84,9 +84,10 @@
 
 			<!-- Group name -->
 			<div>
-				<label class="text-[11px] tracking-[0.1em] uppercase text-[var(--neu-text-muted)]">群组名称 *</label>
+				<label class="text-[11px] tracking-[0.1em] uppercase text-[var(--neu-text-muted)]" for="group-name">群组名称 *</label>
 				<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-[14px] neu-input-surface" style="height:46px;">
 					<input
+						id="group-name"
 						class="flex-1 bg-transparent outline-none text-[var(--neu-text)] text-[14px]"
 						placeholder="给你的群组起个名字…"
 						bind:value={name}
@@ -98,9 +99,10 @@
 
 			<!-- Description -->
 			<div>
-				<label class="text-[11px] tracking-[0.1em] uppercase text-[var(--neu-text-muted)]">简介</label>
+				<label class="text-[11px] tracking-[0.1em] uppercase text-[var(--neu-text-muted)]" for="group-desc">简介</label>
 				<div class="mt-1.5 px-4 py-3 rounded-[14px] neu-input-surface">
 					<textarea
+						id="group-desc"
 						class="w-full bg-transparent outline-none resize-none text-[var(--neu-text)] text-[13px] min-h-[72px]"
 						placeholder="描述一下这个群组的主题…"
 						bind:value={desc}
@@ -113,8 +115,8 @@
 			</div>
 
 			<!-- Category chips -->
-			<div>
-				<label class="text-[11px] tracking-[0.1em] uppercase text-[var(--neu-text-muted)]">分类</label>
+			<fieldset class="flex flex-col border-0 p-0 m-0 min-w-0">
+				<legend class="text-[11px] tracking-[0.1em] uppercase text-[var(--neu-text-muted)]">分类</legend>
 				<div class="flex flex-wrap gap-2 mt-2">
 					{#each CATEGORIES as cat}
 						<button
@@ -129,7 +131,7 @@
 						</button>
 					{/each}
 				</div>
-			</div>
+			</fieldset>
 
 			<!-- Privacy toggle -->
 			<div

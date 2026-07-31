@@ -8,7 +8,7 @@
 	import { createMoment } from '@/api';
 
 	// 三端共用的发布器（手机 Sheet / 平板 Sheet / 桌面对话框）。
-	// 迁移自 React CreateSheet.tsx。
+	// 迁移自旧版 CreateSheet。
 
 	let { onClose }: { onClose: () => void } = $props();
 
@@ -192,7 +192,7 @@
 						<button
 							type="button"
 							onclick={() => (hasImage = false)}
-							class="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white outline-none backdrop-blur-sm transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-white"
+							class="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white outline-none backdrop-blur-sm neu-hover-btn neu-scale-btn focus-visible:ring-2 focus-visible:ring-white"
 							aria-label="移除照片"
 						>
 							<X size={14} strokeWidth={2} />

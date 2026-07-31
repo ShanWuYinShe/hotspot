@@ -7,7 +7,7 @@
 	// ChatView — 私聊窗口（spec: 以对端 user_id 寻址）。
 	// 历史来自 private_messages/get_history；发送走 private_messages/send。
 	// 消息方向由 sender.user_id 与当前用户比较得出。
-	// 迁移自 React ChatView.tsx。
+	// 迁移自旧版 ChatView。
 
 	interface ChatContact {
 		name: string;
@@ -46,7 +46,11 @@
 		return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 	}
 
-	let contact = $state<ChatContact | null>(contactProp ?? null);
+	// contactProp 仅作为初始联系人信息（此后可能由消息记录推导），有意只读取一次。
+	function initialContact(): ChatContact | null {
+		return contactProp ?? null;
+	}
+	let contact = $state<ChatContact | null>(initialContact());
 	let messages = $state<ChatMessage[]>([]);
 	let inputVal = $state('');
 	let loading = $state(true);
@@ -143,7 +147,7 @@
 		{#if showBackButton}
 			<button
 				type="button"
-				class="neu-hover-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-[var(--neu-bg)]"
+				class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-[var(--neu-bg)]"
 				style="width:36px;height:36px;box-shadow:4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light);border:1px solid var(--neu-border);"
 				onclick={onBack}
 			>
@@ -180,7 +184,7 @@
 			{#each [Phone, Video] as Icon, i}
 				<button
 					type="button"
-					class="neu-hover-btn flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
+					class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
 					style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light);border:1px solid var(--neu-border);"
 				>
 					<Icon style="width:14px;height:14px;color:var(--neu-text-muted);" strokeWidth={1.5} />
@@ -188,7 +192,7 @@
 			{/each}
 			<button
 				type="button"
-				class="neu-hover-btn flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
+				class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
 				style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light);border:1px solid var(--neu-border);"
 			>
 				<MoreHorizontal style="width:14px;height:14px;color:var(--neu-text-muted);" strokeWidth={1.5} />
@@ -236,7 +240,7 @@
 	<div class="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 bg-[var(--neu-bg)]" style="border-top:1px solid var(--neu-border);">
 		<button
 			type="button"
-			class="neu-hover-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-[var(--neu-bg)]"
+			class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-[var(--neu-bg)]"
 			style="width:36px;height:36px;box-shadow:4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);border:1px solid var(--neu-border);"
 		>
 			<Smile style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
@@ -257,7 +261,7 @@
 
 		<button
 			type="button"
-			class="neu-hover-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-all duration-200 {inputVal.trim() ? 'bg-[var(--neu-accent-primary)]' : 'bg-[var(--neu-bg)]'}"
+			class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-all duration-200 {inputVal.trim() ? 'bg-[var(--neu-accent-primary)]' : 'bg-[var(--neu-bg)]'}"
 			style="width:36px;height:36px;box-shadow:{inputVal.trim() ? '0 4px 14px var(--neu-glow)' : '4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)'};border:1px solid var(--neu-border);"
 			onclick={() => void handleSend()}
 		>

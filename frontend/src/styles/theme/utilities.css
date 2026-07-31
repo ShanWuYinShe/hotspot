@@ -433,8 +433,10 @@
 }
 
   /*── Hover/active 反馈（迁移自 useHoverConfig 的 JS 状态动画）───────── */
-  /* 原实现按主题区分：neu 弹簧凸起、vibrant ease 位移+光晕、forest 仅缩放。
-     CSS 化后用主题类选择器覆盖，行为一致。 */
+  /* 缩放策略：仅圆形图标按钮允许缩放（.neu-scale-btn），
+     矩形按钮/导航项/列表行/卡片一律不缩放。
+     hover 反馈：brightness 提亮为跨主题统一策略（forest 下同样生效，
+     与背景色/阴影类叠加使用）；forest 另禁位移与缩放。 */
 
   .neu-hover-btn,
   .neu-hover-action,
@@ -443,30 +445,36 @@
     transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
       box-shadow 0.18s ease,
       background-color 0.18s ease,
-      border-color 0.18s ease;
+      border-color 0.18s ease,
+      color 0.18s ease,
+      filter 0.18s ease;
     will-change: transform;
   }
 
-  /* 圆形图标按钮（btn）：1.10 缩放，按下 0.94 */
-  .neu-hover-btn:hover { transform: scale(1.10); }
-  .neu-hover-btn:active { transform: scale(0.94); }
+  /* 通用按钮/行内小图标：hover 轻微提亮、按下轻微变暗（无缩放） */
+  .neu-hover-btn:hover,
+  .neu-hover-action:hover { filter: brightness(1.05); }
+  .neu-hover-btn:active,
+  .neu-hover-action:active { filter: brightness(0.96); }
 
-  /* 行内小图标（action）：1.20 缩放，按下 0.94 */
-  .neu-hover-action:hover { transform: scale(1.20); }
-  .neu-hover-action:active { transform: scale(0.94); }
-
-  /* 列表行（row）：轻微上浮 + 缩放；大卡片（card）：上浮 + 阴影抬升 */
-  .neu-hover-row:hover { transform: translateY(-3px) scale(1.009); }
-  .neu-hover-row:active { transform: scale(0.99); }
-  .neu-hover-card:hover { transform: translateY(-5px) scale(1.014); }
+  /* 列表行（row）：仅上浮，不缩放；大卡片（card）：仅上浮 + 阴影抬升 */
+  .neu-hover-row:hover { transform: translateY(-2px); }
+  .neu-hover-row:active { transform: translateY(0); }
+  .neu-hover-card:hover { transform: translateY(-4px); }
   .neu-hover-card:hover { box-shadow: 0 10px 28px var(--neu-shadow-dark); }
+
+  /* 圆形图标按钮（ActionIconButton 等）：恢复缩放反馈 */
+  .neu-scale-btn:hover { transform: scale(1.10); }
+  .neu-scale-btn:active { transform: scale(0.94); }
 
   /* vibrant：无阴影抬升（玻璃感），仅位移光晕 */
   .vibrant .neu-hover-card:hover { box-shadow: 0 8px 24px var(--neu-accent-soft); }
 
-  /* forest：扁平——无位移无阴影，仅缩放（hover 全靠背景色承载） */
-  .forest .neu-hover-row:hover { transform: scale(1.010); box-shadow: none; }
-  .forest .neu-hover-card:hover { transform: scale(1.016); box-shadow: none; }
+  /* forest：扁平——无位移无阴影，仅背景色承载（无缩放） */
+  .forest .neu-hover-row:hover { transform: none; box-shadow: none; }
+  .forest .neu-hover-card:hover { transform: none; box-shadow: none; }
+  .forest .neu-scale-btn:hover { transform: none; }
+  .forest .neu-scale-btn:active { transform: scale(0.97); }
 
   /* 悬停背景（bgHover）：主题 + 暗色感知的 accent 混色 */
   .neu-hover-bg { transition: background-color 0.18s ease; }

@@ -2,8 +2,9 @@
 	import type { Component } from 'svelte';
 	import { themeStore } from '@/stores/theme.svelte';
 
-	// 桌面侧栏导航项（迁移自 React DesktopLayout.tsx 内 SidebarNavItem）。
-	// hover/active 指示条与背景填充均保留原语义。
+	// 桌面侧栏导航项（迁移自旧版 DesktopLayout 内 SidebarNavItem）。
+	// hover/active 指示条与背景填充均保留原语义；不使用 neu-hover-btn，
+	// 避免矩形导航项的缩放/提亮——hover 反馈完全由下方背景 + 左侧指示条承载。
 
 	let {
 		item,
@@ -17,7 +18,7 @@
 		collapsed?: boolean;
 	} = $props();
 
-	const Icon = item.icon;
+	const Icon = $derived(item.icon);
 	let hovered = $state(false);
 	const showHover = $derived(hovered && !isActive);
 
@@ -29,7 +30,7 @@
 
 <button
 	type="button"
-	class="neu-hover-btn relative flex outline-none text-left {collapsed ? 'h-10 w-10 self-center items-center justify-center rounded-xl' : 'w-full items-center gap-3 rounded-[10px]'}"
+	class="relative flex outline-none text-left {collapsed ? 'h-10 w-10 self-center items-center justify-center rounded-xl' : 'w-full items-center gap-3 rounded-[10px]'}"
 	style="padding:{collapsed ? 0 : '9px 12px'};background:{isActive ? (hovered ? 'var(--neu-active-hover)' : 'var(--neu-accent-soft)') : hoverBg};border:{isActive ? `1px solid ${hovered ? 'var(--neu-accent-primary)' : 'var(--neu-accent-soft-border)'}` : '1px solid transparent'};color:{isActive || showHover ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};box-shadow:none;transition:background 0.16s ease, color 0.16s ease, border-color 0.16s ease;"
 	aria-label={item.label}
 	title={collapsed ? item.label : undefined}
@@ -41,7 +42,7 @@
 	<span
 		aria-hidden="true"
 		style="position:absolute;left:{collapsed ? 2 : 4}px;top:50%;width:3px;height:{isActive ? (collapsed ? 18 : 16) : showHover ? (collapsed ? 14 : 16) : 0}px;margin-top:{isActive ? (collapsed ? -9 : -8) : showHover ? (collapsed ? -7 : -8) : 0}px;border-radius:2px;background:var(--neu-accent-primary);opacity:{isActive ? 1 : showHover ? 0.9 : 0};transition:height 0.18s ease, opacity 0.18s ease, margin-top 0.18s ease;pointer-events:none;"
-	/>
+	></span>
 	<Icon
 		style="width:18px;height:18px;flex-shrink:0;color:{isActive || showHover ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};transition:color 0.16s ease;"
 		strokeWidth={isActive ? 2 : 1.6}

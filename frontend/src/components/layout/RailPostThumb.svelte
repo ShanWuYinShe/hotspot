@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ChevronRight } from '@lucide/svelte';
 
-	// 详情栏小尺寸帖子缩略（迁移自 React DetailRail.tsx 内 RailPostThumb）。
+	// 详情栏小尺寸帖子缩略（迁移自旧版 DetailRail 内 RailPostThumb）。
 
 	let {
 		image,
@@ -16,7 +16,7 @@
 	} = $props();
 </script>
 
-<div class="neu-hover-row flex items-center gap-2.5 {onClick ? 'cursor-pointer' : ''}" onclick={onClick}>
+<button type="button" class="neu-hover-bg flex items-center gap-2.5 w-full text-left rounded-[10px] {onClick ? 'cursor-pointer' : ''}" onclick={onClick}>
 	<div class="rounded-[10px] overflow-hidden flex-shrink-0" style="width:46px;height:46px;">
 		<img src={image} alt={title} class="w-full h-full object-cover" />
 	</div>
@@ -25,4 +25,4 @@
 		<p style="font-size:10px;color:var(--neu-text-muted);margin-top:2px;" class="truncate">{meta}</p>
 	</div>
 	<ChevronRight style="width:12px;height:12px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
-</div>
+</button>
