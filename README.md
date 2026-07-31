@@ -8,7 +8,7 @@
 |--------|--------|
 | `backend/` | Rust / Axum / SQLx / PostGIS（已暂停） |
 | `backend-go/` | Go / Chi / pgx / PostgreSQL / S2 |
-| `frontend/` | React / Vite / TypeScript / Tailwind CSS |
+| `frontend/` | SvelteKit 2 / Svelte 5 / Vite / TypeScript / Tailwind CSS |
 | `harmonyapp/` | HarmonyOS ArkTS |
 | `spec/` | API 规范 |
 
@@ -40,7 +40,7 @@ dev 模式启动后必须通过 **nginx 网关**访问前端（统一反代 `/ap
 
 | 入口 | 用途 |
 |------|------|
-| `http://localhost:8888` | **唯一入口**。前端 SPA（React）+ `/api` + `/ws` 全部经 nginx，与生产一致。 |
+| `http://localhost:8888` | **唯一入口**。前端 SPA（SvelteKit）+ `/api` + `/ws` 全部经 nginx，与生产一致。 |
 | `http://localhost:8081` | Go 后端直连（健康检查、curl 调试用）。 |
 
 端口由 `.env` 中 `NGINX_PORT` 控制（默认 8888）；docker compose 启动后访问 `http://localhost:${NGINX_PORT:-8888}`。
