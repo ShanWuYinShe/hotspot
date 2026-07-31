@@ -3,14 +3,14 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { MapPin, Compass, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
-	import { composer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
-	import { attachDismissibleLayer } from '@/lib/dismissible-layer';
+	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
+	import * as Dialog from '@/components/ui/dialog';
 	import CreateSheet from '@/components/layout/CreateSheet.svelte';
 	import RailIcon from '@/components/layout/RailIcon.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
 	// 移动横屏：紧凑左栏（无状态栏），全高内容 + 右侧滑入发布面板。
-	// 迁移自 React MainLayout.tsx 内 MobileLandscape。
+	// 迁移自旧版 MainLayout 内 MobileLandscape。
 
 	let { children }: { children: Snippet } = $props();
 
@@ -25,12 +25,6 @@
 	const isSubPage = $derived(isSubPagePath(pathname));
 	const showCreate = $derived(composer.composerOpen);
 
-	$effect(() => {
-		return attachDismissibleLayer({
-			open: composer.composerOpen,
-			onDismiss: closeComposer
-		});
-	});
 </script>
 
 <div
@@ -53,8 +47,8 @@
 
 			<button
 				type="button"
-				class="neu-hover-btn flex items-center justify-center rounded-full outline-none my-1"
-				style="width:44px;height:44px;background:{composer.composerOpen ? 'var(--neu-text-muted)' : 'var(--neu-accent-primary)'};box-shadow:{composer.composerOpen ? 'none' : '0 4px 14px var(--neu-glow)'};transition:background 0.22s;"
+				class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none my-1"
+				style="width:44px;height:44px;background:{composer.composerOpen ? 'var(--neu-text-muted)' : 'var(--neu-accent-primary)'};box-shadow:{composer.composerOpen ? 'none' : '0 4px 14px var(--neu-glow)'};transition:background 0.22s, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
 				aria-label={composer.composerOpen ? '关闭' : '发布'}
 				onclick={toggleComposer}
 			>
@@ -80,20 +74,13 @@
 		{@render children()}
 	</main>
 
-	{#if showCreate}
-		<div
-			class="fixed inset-0 z-40"
-			style="background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);"
-			onclick={closeComposer}
-		/>
-		<div
-			class="fixed top-0 bottom-0 right-0 z-50 overflow-hidden"
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="create-composer-title"
-			style="width:min(560px, 90%);border-radius:28px 0 0 28px;background-color:var(--neu-bg);box-shadow:-8px 0 40px rgba(0,0,0,0.22);"
+	<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? openComposer() : closeComposer())}>
+		<Dialog.Content
+			side="right"
+			class="overflow-hidden rounded-l-[28px] border-l-0"
+			style="width:min(560px,90%);box-shadow:-8px 0 40px rgba(0,0,0,0.22);"
 		>
 			<CreateSheet onClose={closeComposer} />
-		</div>
-	{/if}
+		</Dialog.Content>
+	</Dialog.Root>
 </div>

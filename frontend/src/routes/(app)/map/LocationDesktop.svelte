@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, SlidersHorizontal, Crosshair, Heart, Check } from '@lucide/svelte';
 	import PageHeader from '@/components/shared/PageHeader.svelte';
-	import { attachDismissibleLayer } from '@/lib/dismissible-layer';
+	import * as Popover from '@/components/ui/popover';
 	import { XUZHOU_CENTER, MOCK_PINS, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
 	import {
 		SNAP_HEIGHTS, PIN_COLORS, PIN_LABELS, pinTone, buildMapData, getMarkerUrl,
@@ -11,7 +11,7 @@
 	import MapPinMarker from './MapPinMarker.svelte';
 
 	// 桌面地图探索：左侧栏（统计/搜索/Tab 列表/确认）+ 地图面板（OSM iframe + 图钉）。
-	// 迁移自 React LocationDesktop.tsx（MOCK_PINS 暂为空数组，图钉层预留）。
+	// 迁移自旧版 LocationDesktop（MOCK_PINS 暂为空数组，图钉层预留）。
 
 	let searchQuery = $state('');
 	let selectedPin = $state<Pin | null>(null);
@@ -20,15 +20,9 @@
 	let activeTab = $state<'nearby' | 'hot' | 'recent'>('nearby');
 	let hoveredListId = $state<string | null>(null);
 	let showFilter = $state(true);
+	let filterAnchorEl = $state<HTMLElement | null>(null);
 	const zoom = 0.045;
 	let mapCenter = $state(XUZHOU_CENTER);
-
-	$effect(() => {
-		return attachDismissibleLayer({
-			open: showFilter,
-			onDismiss: () => (showFilter = false)
-		});
-	});
 
 	function toggleFilter(type: PinType) {
 		const next = new Set(activeFilters);
@@ -201,13 +195,13 @@
 						>
 							{#if pin.type === 'user' && pin.avatar}
 								<div class="relative flex-shrink-0">
-									<img src={pin.avatar} class="rounded-full object-cover" style="width:42px;height:42px;" />
+									<img src={pin.avatar} alt={pin.name || pin.title || ''} class="rounded-full object-cover" style="width:42px;height:42px;" />
 									{#if pin.online}
 										<span class="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]" style="width:10px;height:10px;border:2px solid var(--neu-bg);"></span>
 									{/if}
 								</div>
 							{:else if pin.type === 'post' && pin.image}
-								<img src={pin.image} class="rounded-[11px] object-cover flex-shrink-0" style="width:42px;height:42px;" />
+								<img src={pin.image} alt={pin.title || pin.name || ''} class="rounded-[11px] object-cover flex-shrink-0" style="width:42px;height:42px;" />
 							{:else}
 								<div class="flex items-center justify-center rounded-[12px] flex-shrink-0" style="width:42px;height:42px;background:{pinTone(pin.type, 12)};">
 									<img src={getMarkerUrl(pin.type, 1)} alt={pin.type} style="width:20px;height:27px;" />
@@ -321,9 +315,22 @@
 	<!-- ══ MAP PANEL ══ -->
 	<div
 		class="flex-1 relative overflow-hidden"
-		onclick={() => {
+		role="button"
+		tabindex="0"
+		aria-label="地图（点击空白处取消选中）"
+		onclick={(e) => {
+			// 详情/筛选浮层内的点击不视为地图空白点击
+			if ((e.target as HTMLElement).closest('[data-map-popup]')) return;
 			selectedPin = null;
 			showFilter = false;
+		}}
+		onkeydown={(e) => {
+			if (e.target !== e.currentTarget) return;
+			if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+				e.preventDefault();
+				selectedPin = null;
+				showFilter = false;
+			}
 		}}
 	>
 		<iframe src={embedUrl} class="w-full h-full border-0" title="地图" style="pointer-events:none;"></iframe>
@@ -350,24 +357,35 @@
 		{/each}
 
 		<!-- Top-left: 筛选 -->
-		<div style="position:absolute;top:14px;left:14px;z-index:20;" onclick={(e) => e.stopPropagation()}>
-			<button
-				type="button"
-				class="neu-hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text)]'}"
-				style="padding:9px 16px;font-size:13px;border:{showFilter ? '1px solid transparent' : '1px solid var(--neu-border)'};box-shadow:{showFilter ? '0 4px 16px var(--neu-glow)' : '0 4px 16px var(--neu-shadow-dark)'};"
-				onclick={() => (showFilter = !showFilter)}
+		<Popover.Root bind:open={showFilter}>
+			<div bind:this={filterAnchorEl} style="position:absolute;top:14px;left:14px;z-index:20;">
+				<button
+					type="button"
+					class="neu-hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text)]'}"
+					style="padding:9px 16px;font-size:13px;border:{showFilter ? '1px solid transparent' : '1px solid var(--neu-border)'};box-shadow:{showFilter ? '0 4px 16px var(--neu-glow)' : '0 4px 16px var(--neu-shadow-dark)'};"
+					onclick={(e) => {
+						e.stopPropagation();
+						showFilter = !showFilter;
+					}}
+				>
+					<SlidersHorizontal style="width:13px;height:13px;" strokeWidth={showFilter ? 2.5 : 1.75} />
+					筛选
+					{#if activeFilters.size < 3}
+						<span style="margin-left:2px;font-size:10px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'rgba(255,255,255,0.25)' : 'var(--neu-accent-soft)'};color:{showFilter ? 'white' : 'var(--neu-accent-primary)'};font-weight:500;">
+							{activeFilters.size}
+						</span>
+					{/if}
+				</button>
+			</div>
+			<Popover.Content
+				customAnchor={filterAnchorEl}
+				side="bottom"
+				align="start"
+				sideOffset={8}
+				data-map-popup
+				class="w-[200px] overflow-hidden rounded-[16px] p-0"
 			>
-				<SlidersHorizontal style="width:13px;height:13px;" strokeWidth={showFilter ? 2.5 : 1.75} />
-				筛选
-				{#if activeFilters.size < 3}
-					<span style="margin-left:2px;font-size:10px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'rgba(255,255,255,0.25)' : 'var(--neu-accent-soft)'};color:{showFilter ? 'white' : 'var(--neu-accent-primary)'};font-weight:500;">
-						{activeFilters.size}
-					</span>
-				{/if}
-			</button>
-			{#if showFilter}
-				<div class="mt-2 rounded-[16px] bg-[var(--neu-bg)] overflow-hidden" style="box-shadow:0 0 0 1px var(--neu-border), 0 8px 28px var(--neu-shadow-dark);width:200px;">
-					<div style="overflow:hidden;border-radius:16px;">
+				<div style="overflow:hidden;border-radius:16px;">
 						{#each [
 							{ type: 'user', label: '用户', icon: markerUserUrl, clusterIcon: markerUserClusterUrl, color: PIN_COLORS.user, count: userCount },
 							{ type: 'group', label: '群组', icon: markerGroupUrl, clusterIcon: markerGroupClusterUrl, color: PIN_COLORS.group, count: groupCount },
@@ -400,27 +418,26 @@
 							<span class="text-[var(--neu-text-muted)] text-xs">我的位置</span>
 						</div>
 					</div>
-				</div>
-			{/if}
-		</div>
+			</Popover.Content>
+		</Popover.Root>
 
 		<!-- Selected pin popup -->
 		{#if selectedPin}
 			<div
+				data-map-popup
 				class="bg-[var(--neu-bg)]"
 				style="position:absolute;bottom:20px;left:20px;right:20px;z-index:25;border-radius:20px;padding:16px;box-shadow:0 0 0 1px var(--neu-border), 0 16px 48px var(--neu-shadow-dark);"
-				onclick={(e) => e.stopPropagation()}
 			>
 				<div class="flex items-center gap-3">
 					{#if selectedPin.type === 'user' && selectedPin.avatar}
 						<div class="relative flex-shrink-0">
-							<img src={selectedPin.avatar} class="rounded-full object-cover" style="width:52px;height:52px;" />
+							<img src={selectedPin.avatar} alt={selectedPin.name || selectedPin.title || ''} class="rounded-full object-cover" style="width:52px;height:52px;" />
 							{#if selectedPin.online}
 								<span class="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]" style="width:12px;height:12px;border:2.5px solid var(--neu-bg);"></span>
 							{/if}
 						</div>
 					{:else if selectedPin.type === 'post' && selectedPin.image}
-						<img src={selectedPin.image} class="rounded-[14px] object-cover flex-shrink-0" style="width:52px;height:52px;" />
+						<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-[14px] object-cover flex-shrink-0" style="width:52px;height:52px;" />
 					{:else}
 						<div class="flex items-center justify-center rounded-[15px] flex-shrink-0" style="width:52px;height:52px;background:{pinTone(selectedPin.type, 14)};">
 							<img src={getMarkerUrl(selectedPin.type, selectedPin.count ?? 1)} alt="" style="width:26px;height:35px;" />

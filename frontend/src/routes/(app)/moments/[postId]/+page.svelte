@@ -4,7 +4,7 @@
 	import ActionIconButton from '@/components/shared/ActionIconButton.svelte';
 	import PageHeader from '@/components/shared/PageHeader.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
-	import { attachDismissibleLayer } from '@/lib/dismissible-layer';
+	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { auth } from '@/stores/auth.svelte';
 	import DesktopDetailSplit from '@/components/layout/DesktopDetailSplit.svelte';
 	import RailSection from '@/components/layout/RailSection.svelte';
@@ -14,7 +14,7 @@
 	import { ROUTES } from '@/lib/routes';
 
 	// 动态详情：点赞/收藏/评论/复制链接/更多菜单 + 桌面右 Rail。
-	// 迁移自 React MomentDetailPage.tsx。
+	// 迁移自旧版 MomentDetailPage。
 
 	let { params }: { params: { postId: string } } = $props();
 
@@ -40,22 +40,26 @@
 		comments: PostComment[];
 	}
 
-	const numericPostId = Number(params.postId);
-	const momentId = String(numericPostId);
+	// params 为路由参数（SPA 内可能变化），此处用 $derived 保持响应。
+	const numericPostId = $derived(Number(params.postId));
+	const momentId = $derived(String(numericPostId));
 
-	let post = $state<PostData>({
-		id: 0,
-		user: '',
-		handle: '',
-		avatar: '',
-		location: '',
-		image: '',
-		content: '',
-		time: '',
-		likes: 0,
-		tag: '',
-		comments: []
-	});
+	function emptyPost(): PostData {
+		return {
+			id: 0,
+			user: '',
+			handle: '',
+			avatar: '',
+			location: '',
+			image: '',
+			content: '',
+			time: '',
+			likes: 0,
+			tag: '',
+			comments: []
+		};
+	}
+	let post = $state<PostData>(emptyPost());
 	let apiComments = $state<PostComment[]>([]);
 	let loading = $state(true);
 	let input = $state('');
@@ -72,6 +76,9 @@
 		async function fetchPost() {
 			try {
 				loading = true;
+				// 路由参数切换（SPA 内 postId 变化）时清空旧数据，避免新数据到达前残留展示
+				post = emptyPost();
+				apiComments = [];
 				const [detailRes, commentsRes] = await Promise.all([
 					getMomentDetail(momentId).catch(() => ({ code: -1, data: null })),
 					listComments(momentId).catch(() => ({ code: -1, data: { items: [] } }))
@@ -186,15 +193,6 @@
 	};
 
 	let moreMenuEl = $state<HTMLElement | null>(null);
-
-	$effect(() => {
-		return attachDismissibleLayer({
-			open: moreOpen,
-			onDismiss: () => (moreOpen = false),
-			root: moreMenuEl,
-			closeOnOutsidePress: true
-		});
-	});
 </script>
 
 {#snippet main()}
@@ -202,35 +200,20 @@
 		<!-- Header -->
 		<PageHeader title={post.user || '详情'} onBack={() => history.back()} className="flex-shrink-0 border-b border-[var(--neu-border)]">
 			{#snippet actions()}
-				<div bind:this={moreMenuEl} class="relative">
-					<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (moreOpen = !moreOpen)} />
-					{#if moreOpen}
-						<div
-							role="menu"
-							aria-label="动态更多操作"
-							class="absolute right-0 top-[calc(100%+8px)] z-30 w-36 overflow-hidden rounded-[14px] neu-surface-flat p-1.5"
-							style="box-shadow:0 12px 30px var(--neu-shadow-dark), 0 0 0 1px var(--neu-border);"
-						>
-							<button
-								type="button"
-								role="menuitem"
-								onclick={() => void copyPostLink()}
-								class="flex w-full items-center gap-2 rounded-[10px] px-2.5 py-2 text-left outline-none transition-colors hover:bg-[var(--neu-accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] text-[var(--neu-text)] text-xs"
-							>
-								<Link2 style="width:14px;height:14px;color:var(--neu-accent-primary);" strokeWidth={1.75} />
-								复制链接
-							</button>
-							<button
-								type="button"
-								role="menuitem"
-								onclick={() => (moreOpen = false)}
-								class="flex w-full items-center gap-2 rounded-[10px] px-2.5 py-2 text-left outline-none transition-colors hover:bg-[var(--neu-accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] text-[var(--neu-text-muted)] text-xs"
-							>
-								取消
-							</button>
-						</div>
-					{/if}
-				</div>
+				<DropdownMenu.Root bind:open={moreOpen}>
+					<div bind:this={moreMenuEl} class="relative">
+						<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (moreOpen = !moreOpen)} />
+					</div>
+					<DropdownMenu.Content customAnchor={moreMenuEl}>
+						<DropdownMenu.Item onSelect={() => void copyPostLink()}>
+							<Link2 style="width:14px;height:14px;color:var(--neu-accent-primary);" strokeWidth={1.75} />
+							复制链接
+						</DropdownMenu.Item>
+						<DropdownMenu.Item class="text-[var(--neu-text-muted)]">
+							取消
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
 			{/snippet}
 		</PageHeader>
 

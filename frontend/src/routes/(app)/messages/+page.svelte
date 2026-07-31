@@ -10,12 +10,12 @@
 	import ChatListItem, { type ChatItem } from '@/components/messages/ChatListItem.svelte';
 	import NewConversationSheet from '@/components/messages/NewConversationSheet.svelte';
 	import CreateGroupSheet from '@/components/groups/CreateGroupSheet.svelte';
-	import { attachDismissibleLayer } from '@/lib/dismissible-layer';
+	import * as Dialog from '@/components/ui/dialog';
 	import { getPrivateChats } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
 	// 消息列表：在线条 + 会话列表 + 新会话 Sheet + 建群 Sheet；
-	// 桌面左右分栏（内嵌 ChatView）。迁移自 React MessagesPage.tsx。
+	// 桌面左右分栏（内嵌 ChatView）。迁移自旧版 MessagesPage。
 
 	let chats = $state<ChatItem[]>([]);
 	let loading = $state(true);
@@ -63,19 +63,6 @@
 	let showCreateGroup = $state(false);
 	let selectedId = $state<number | null>(null);
 
-	$effect(() => {
-		return attachDismissibleLayer({
-			open: showNewChat,
-			onDismiss: () => (showNewChat = false)
-		});
-	});
-	$effect(() => {
-		return attachDismissibleLayer({
-			open: showCreateGroup,
-			onDismiss: () => (showCreateGroup = false)
-		});
-	});
-
 	const filtered = $derived(chats.filter((c) => c.name.toLowerCase().includes(searchVal.toLowerCase())));
 	const onlineChats = $derived(chats.filter((c) => c.online));
 	const totalUnread = $derived(chats.reduce((s, c) => s + c.unread, 0));
@@ -94,7 +81,7 @@
 					{#snippet actions()}
 						<button
 							type="button"
-							class="neu-hover-btn flex items-center justify-center rounded-full outline-none neu-surface-flat"
+							class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none neu-surface-flat"
 							style="width:30px;height:30px;"
 							onclick={() => {
 								newChatTab = 'chat';
@@ -171,34 +158,33 @@
 			</div>
 		</div>
 
-		{#if showNewChat}
-			<div class="fixed inset-0 z-50 bg-[rgba(0,0,0,0.42)]" style="backdrop-filter:blur(5px);" role="presentation" onclick={() => (showNewChat = false)}></div>
-			<div class="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
-				<div class="overflow-hidden pointer-events-auto bg-[var(--neu-bg)]" role="dialog" aria-modal="true" aria-label="发起新会话" style="width:440px;height:68vh;max-height:600px;border-radius:24px;box-shadow:0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--neu-border);">
-					<NewConversationSheet
-						defaultTab={newChatTab}
-						onClose={() => (showNewChat = false)}
-						onNewChat={(id) => {
-							selectedId = id;
-							showNewChat = false;
-						}}
-						onCreateGroup={() => {
-							showNewChat = false;
-							showCreateGroup = true;
-						}}
-					/>
-				</div>
-			</div>
-		{/if}
+		<Dialog.Root open={showNewChat} onOpenChange={(next) => (next ? undefined : (showNewChat = false))}>
+			<Dialog.Content
+				side="center"
+				class="overflow-hidden"
+				aria-label="发起新会话"
+				style="width:440px;height:68vh;max-height:600px;"
+			>
+				<NewConversationSheet
+					defaultTab={newChatTab}
+					onClose={() => (showNewChat = false)}
+					onNewChat={(id) => {
+						selectedId = id;
+						showNewChat = false;
+					}}
+					onCreateGroup={() => {
+						showNewChat = false;
+						showCreateGroup = true;
+					}}
+				/>
+			</Dialog.Content>
+		</Dialog.Root>
 
-		{#if showCreateGroup}
-			<div class="fixed inset-0 z-50 bg-[rgba(0,0,0,0.42)]" style="backdrop-filter:blur(5px);" role="presentation" onclick={() => (showCreateGroup = false)}></div>
-			<div class="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
-				<div class="overflow-hidden pointer-events-auto bg-[var(--neu-bg)]" role="dialog" aria-modal="true" aria-label="创建群组" style="width:480px;height:78vh;max-height:700px;border-radius:24px;box-shadow:0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--neu-border);">
-					<CreateGroupSheet onClose={() => (showCreateGroup = false)} />
-				</div>
-			</div>
-		{/if}
+		<Dialog.Root open={showCreateGroup} onOpenChange={(next) => (next ? undefined : (showCreateGroup = false))}>
+			<Dialog.Content side="center" class="overflow-hidden" aria-label="创建群组" style="width:480px;height:78vh;max-height:700px;">
+				<CreateGroupSheet onClose={() => (showCreateGroup = false)} />
+			</Dialog.Content>
+		</Dialog.Root>
 	</div>
 {:else}
 	<!-- ═══ Mobile Messages ═══ -->
@@ -206,7 +192,7 @@
 		{#snippet actions()}
 			<button
 				type="button"
-				class="neu-hover-btn flex items-center justify-center rounded-full outline-none neu-surface-flat"
+				class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none neu-surface-flat"
 				style="width:36px;height:36px;"
 				onclick={() => {
 					newChatTab = 'chat';
@@ -265,22 +251,20 @@
 		</div>
 	</div>
 
-	{#if showNewChat}
-		<div class="fixed inset-0 z-40 bg-[rgba(0,0,0,0.35)]" style="backdrop-filter:blur(3px);" role="presentation" onclick={() => (showNewChat = false)}></div>
-		<div class="fixed bottom-0 left-0 right-0 z-50 overflow-hidden bg-[var(--neu-bg)]" style="height:85%;border-radius:28px 28px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,0.18);">
+	<Dialog.Root open={showNewChat} onOpenChange={(next) => (next ? undefined : (showNewChat = false))}>
+		<Dialog.Content side="bottom" class="overflow-hidden" style="height:85%;box-shadow:0 -8px 40px rgba(0,0,0,0.18);">
 			<NewConversationSheet
 				defaultTab={newChatTab}
 				onClose={() => (showNewChat = false)}
 				onNewChat={(id) => void goto(ROUTES.message(id))}
 				onCreateGroup={() => (showCreateGroup = true)}
 			/>
-		</div>
-	{/if}
+		</Dialog.Content>
+	</Dialog.Root>
 
-	{#if showCreateGroup}
-		<div class="fixed inset-0 z-50 bg-[rgba(0,0,0,0.35)]" style="backdrop-filter:blur(3px);" role="presentation" onclick={() => (showCreateGroup = false)}></div>
-		<div class="fixed bottom-0 left-0 right-0 z-[60] overflow-hidden bg-[var(--neu-bg)]" style="height:92%;border-radius:28px 28px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,0.18);">
+	<Dialog.Root open={showCreateGroup} onOpenChange={(next) => (next ? undefined : (showCreateGroup = false))}>
+		<Dialog.Content side="bottom" class="overflow-hidden" style="height:92%;box-shadow:0 -8px 40px rgba(0,0,0,0.18);">
 			<CreateGroupSheet onClose={() => (showCreateGroup = false)} />
-		</div>
-	{/if}
+		</Dialog.Content>
+	</Dialog.Root>
 {/if}

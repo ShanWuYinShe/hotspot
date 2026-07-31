@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, SlidersHorizontal, Crosshair, Heart, Check } from '@lucide/svelte';
 	import PageHeader from '@/components/shared/PageHeader.svelte';
-	import { attachDismissibleLayer } from '@/lib/dismissible-layer';
+	import * as Popover from '@/components/ui/popover';
 	import { XUZHOU_CENTER, MOCK_PINS, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
 	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_LABELS, pinTone, floatBtnStyle, buildMapData, getMarkerUrl, markerUserUrl, markerGroupUrl, markerMomentUrl, type SnapState } from './location-shared';
 	import MapPinMarker from './MapPinMarker.svelte';
 
 	// 移动端地图探索：全屏 OSM + 可拖拽吸附底部 Sheet（148/318/540 三档）。
-	// 迁移自 React LocationMobile.tsx（motion spring 吸附改 CSS transition）。
+	// 迁移自旧版 LocationMobile（motion spring 吸附改 CSS transition）。
 
 	/* ── Sheet drag ── */
 	let sheetH = $state(SNAP_MID);
@@ -56,14 +56,23 @@
 		window.addEventListener('pointerup', onUp);
 	}
 
+	/** 键盘调整面板高度（拖拽的键盘等价操作）。 */
+	function onHandleKeydown(e: KeyboardEvent) {
+		if (e.target !== e.currentTarget) return;
+		const steps: SnapState[] = ['min', 'mid', 'max'];
+		const idx = steps.indexOf(snap);
+		if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			snapTo(steps[Math.min(idx + 1, steps.length - 1)]);
+		} else if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			snapTo(steps[Math.max(idx - 1, 0)]);
+		}
+	}
+
 	/* ── Content state ── */
 	let showFilter = $state(false);
-	$effect(() => {
-		return attachDismissibleLayer({
-			open: showFilter,
-			onDismiss: () => (showFilter = false)
-		});
-	});
+	let filterAnchorEl = $state<HTMLElement | null>(null);
 	let activeFilters = $state<Set<PinType>>(new Set(['user', 'group', 'post']));
 	let searchQuery = $state('');
 	let selectedPin = $state<Pin | null>(null);
@@ -113,7 +122,20 @@
 
 <div class="bg-[var(--neu-bg)]" style="position:relative;width:100%;height:100%;overflow:hidden;">
 	<!-- ══ MAP (full screen, tappable) ══ -->
-	<div style="position:absolute;inset:0;z-index:0;" onclick={handleMapTap}>
+	<div
+		style="position:absolute;inset:0;z-index:0;"
+		role="button"
+		tabindex="0"
+		aria-label="地图（点击空白处收起面板）"
+		onclick={handleMapTap}
+		onkeydown={(e) => {
+			if (e.target !== e.currentTarget) return;
+			if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+				e.preventDefault();
+				handleMapTap();
+			}
+		}}
+	>
 		<iframe src={embedUrl} title="地图" style="width:100%;height:100%;border:0;pointer-events:none;"></iframe>
 
 		<!-- Current location pulsing dot -->
@@ -147,50 +169,51 @@
 	<div style="position:absolute;top:0;left:0;right:0;z-index:50;">
 		<PageHeader title="地图探索" onBack={() => history.back()}>
 			{#snippet actions()}
-				<button
-					type="button"
-					class="neu-hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text)]'}"
-					style="padding:9px 16px;font-size:14px;border:{showFilter ? '1px solid transparent' : '1px solid var(--neu-border)'};box-shadow:{showFilter ? '0 4px 16px var(--neu-glow)' : '0 2px 12px var(--neu-shadow-dark), 0 1px 3px var(--neu-shadow-dark)'};"
-					onclick={(e) => {
-						e.stopPropagation();
-						showFilter = !showFilter;
-					}}
-				>
-					<SlidersHorizontal style="width:14px;height:14px;" strokeWidth={showFilter ? 2.5 : 1.75} />
-					筛选
-				</button>
+				<Popover.Root bind:open={showFilter}>
+					<div bind:this={filterAnchorEl}>
+						<button
+							type="button"
+							class="neu-hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text)]'}"
+							style="padding:9px 16px;font-size:14px;border:{showFilter ? '1px solid transparent' : '1px solid var(--neu-border)'};box-shadow:{showFilter ? '0 4px 16px var(--neu-glow)' : '0 2px 12px var(--neu-shadow-dark), 0 1px 3px var(--neu-shadow-dark)'};"
+							onclick={() => (showFilter = !showFilter)}
+						>
+							<SlidersHorizontal style="width:14px;height:14px;" strokeWidth={showFilter ? 2.5 : 1.75} />
+							筛选
+						</button>
+					</div>
+
+					<!-- Filter legend panel -->
+					<Popover.Content
+						customAnchor={filterAnchorEl}
+						side="bottom"
+						align="end"
+						sideOffset={8}
+						class="w-[136px] overflow-hidden rounded-[16px] p-0"
+					>
+						{#each [
+							['user', '用户', markerUserUrl, PIN_COLORS.user],
+							['group', '群组', markerGroupUrl, PIN_COLORS.group],
+							['post', '动态', markerMomentUrl, PIN_COLORS.post]
+						] as [type, label, icon, color], i}
+							{@const active = activeFilters.has(type as PinType)}
+							{#if i > 0}
+								<div class="bg-[var(--neu-border)]" style="height:1px;"></div>
+							{/if}
+							<button
+								type="button"
+								class="neu-hover-btn w-full flex items-center gap-2 px-3 py-3 outline-none"
+								style="opacity:{active ? 1 : 0.38};"
+								onclick={() => toggleFilter(type as PinType)}
+							>
+								<img src={icon} alt={label} style="width:18px;height:24px;flex-shrink:0;" />
+								<span class="text-[var(--neu-text)]" style="flex:1;font-size:13px;text-align:left;">{label}</span>
+								<div style="width:13px;height:13px;border-radius:50%;flex-shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--neu-border)'};box-shadow:{active ? `0 0 6px ${color}55` : 'none'};transition:all 0.18s;"></div>
+							</button>
+						{/each}
+					</Popover.Content>
+				</Popover.Root>
 			{/snippet}
 		</PageHeader>
-
-		<!-- Filter legend panel -->
-		{#if showFilter}
-			<div
-				class="bg-[var(--neu-bg)]"
-				style="position:absolute;top:62px;right:14px;width:136px;border-radius:16px;overflow:hidden;border:1px solid var(--neu-border);box-shadow:0 8px 28px var(--neu-shadow-dark);z-index:60;"
-				onclick={(e) => e.stopPropagation()}
-			>
-				{#each [
-					['user', '用户', markerUserUrl, PIN_COLORS.user],
-					['group', '群组', markerGroupUrl, PIN_COLORS.group],
-					['post', '动态', markerMomentUrl, PIN_COLORS.post]
-				] as [type, label, icon, color], i}
-					{@const active = activeFilters.has(type as PinType)}
-					{#if i > 0}
-						<div class="bg-[var(--neu-border)]" style="height:1px;"></div>
-					{/if}
-					<button
-						type="button"
-						class="neu-hover-btn w-full flex items-center gap-2 px-3 py-3 outline-none"
-						style="opacity:{active ? 1 : 0.38};"
-						onclick={() => toggleFilter(type as PinType)}
-					>
-						<img src={icon} alt={label} style="width:18px;height:24px;flex-shrink:0;" />
-						<span class="text-[var(--neu-text)]" style="flex:1;font-size:13px;text-align:left;">{label}</span>
-						<div style="width:13px;height:13px;border-radius:50%;flex-shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--neu-border)'};box-shadow:{active ? `0 0 6px ${color}55` : 'none'};transition:all 0.18s;"></div>
-					</button>
-				{/each}
-			</div>
-		{/if}
 	</div>
 
 	<!-- ══ RIGHT CONTROLS — bottom tracks sheet ══ -->
@@ -210,7 +233,7 @@
 		</button>
 
 		<!-- My location dot -->
-		<button type="button" class="neu-hover-btn flex items-center justify-center rounded-full outline-none neu-circle-hover" style="width:42px;height:42px;{floatBtnStyle}">
+		<button type="button" aria-label="我的位置" class="neu-hover-btn flex items-center justify-center rounded-full outline-none neu-circle-hover" style="width:42px;height:42px;{floatBtnStyle}">
 			<div style="width:14px;height:14px;border-radius:50%;background:{PIN_COLORS.user};border:2.5px solid var(--neu-bg);box-shadow:0 0 8px {pinTone('user', 65)};"></div>
 		</button>
 	</div>
@@ -219,8 +242,16 @@
 	<div class="bg-[var(--neu-bg)]" style={sheetStyle}>
 		<!-- Drag handle -->
 		<div
+			role="slider"
+			aria-label="面板高度"
+			aria-orientation="vertical"
+			aria-valuemin={SNAP_MIN}
+			aria-valuemax={SNAP_MAX}
+			aria-valuenow={Math.min(SNAP_MAX, Math.max(SNAP_MIN, sheetH))}
+			tabindex="0"
 			style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:10px;padding-bottom:6px;cursor:grab;touch-action:none;user-select:none;"
 			onpointerdown={onHandlePointerDown}
+			onkeydown={onHandleKeydown}
 		>
 			<div class="bg-[var(--neu-border)]" style="width:38px;height:4px;border-radius:2px;"></div>
 		</div>
@@ -294,13 +325,13 @@
 							<div class="flex items-center gap-3 mx-4 mb-2 p-3 rounded-[15px]" style="background:{pinTone(selectedPin.type, 10)};border:1px solid {pinTone(selectedPin.type, 30)};">
 								{#if selectedPin.type === 'user' && selectedPin.avatar}
 									<div class="relative flex-shrink-0">
-										<img src={selectedPin.avatar} class="rounded-full object-cover" style="width:42px;height:42px;" />
+										<img src={selectedPin.avatar} alt={selectedPin.name || selectedPin.title || ''} class="rounded-full object-cover" style="width:42px;height:42px;" />
 										{#if selectedPin.online}
 											<span class="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]" style="width:10px;height:10px;border:2px solid var(--neu-bg);"></span>
 										{/if}
 									</div>
 								{:else if selectedPin.type === 'post' && selectedPin.image}
-									<img src={selectedPin.image} class="rounded-[10px] object-cover flex-shrink-0" style="width:42px;height:42px;" />
+									<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-[10px] object-cover flex-shrink-0" style="width:42px;height:42px;" />
 								{:else}
 									<img src={getMarkerUrl(selectedPin.type, selectedPin.count ?? 1)} alt="" style="width:22px;height:29px;flex-shrink:0;" />
 								{/if}

@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { MessageCircle, Heart, UserPlus } from '@lucide/svelte';
+	import { Tabs } from 'bits-ui';
 	import SectionFriends from '@/components/profile/SectionFriends.svelte';
 	import SectionFollowing from '@/components/profile/SectionFollowing.svelte';
 	import SectionFans from '@/components/profile/SectionFans.svelte';
@@ -9,7 +10,7 @@
 	import { ROUTES } from '@/lib/routes';
 
 	// 关系网络工作区（好友/关注/粉丝三 Tab，?tab= 参数驱动）。
-	// 迁移自 React ProfileFeature.tsx 内 RelationshipsWorkspace。
+	// 迁移自旧版 ProfileFeature 内 RelationshipsWorkspace（Tab 行为由 bits-ui Tabs 提供）。
 
 	type RelationshipTab = 'friends' | 'following' | 'followers';
 
@@ -45,25 +46,24 @@
 			<span class="mt-0.5 whitespace-nowrap text-[var(--neu-text-muted)] text-xs">{activeMeta.count} 人</span>
 		</div>
 
-		<div class="mt-5 flex gap-1" role="tablist" aria-label="关系类型">
-			{#each RELATIONSHIP_TABS as { id, label, count, icon: Icon }}
-				{@const selected = activeTab === id}
-				<button
-					type="button"
-					role="tab"
-					aria-selected={selected}
-					class="neu-hover-btn relative flex items-center gap-1.5 px-3 pb-3 pt-1 outline-none text-[13px] {selected ? 'text-[var(--neu-accent-primary)] font-semibold' : 'text-[var(--neu-text-muted)] font-normal'}"
-					onclick={() => setTab(id)}
-				>
-					<Icon style="width:13px;height:13px;" strokeWidth={selected ? 2 : 1.5} />
-					{label}
-					<span class="text-[10px]" style="opacity:0.75;">{count}</span>
-					{#if selected}
-						<span class="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-[var(--neu-accent-primary)]"></span>
-					{/if}
-				</button>
-			{/each}
-		</div>
+		<Tabs.Root value={activeTab} onValueChange={(v) => setTab(v as RelationshipTab)}>
+			<Tabs.List class="mt-5 flex gap-1" aria-label="关系类型">
+				{#each RELATIONSHIP_TABS as { id, label, count, icon: Icon }}
+					{@const selected = activeTab === id}
+					<Tabs.Trigger
+						value={id}
+						class="neu-hover-btn relative flex items-center gap-1.5 px-3 pb-3 pt-1 outline-none text-[13px] {selected ? 'text-[var(--neu-accent-primary)] font-semibold' : 'text-[var(--neu-text-muted)] font-normal'}"
+					>
+						<Icon style="width:13px;height:13px;" strokeWidth={selected ? 2 : 1.5} />
+						{label}
+						<span class="text-[10px]" style="opacity:0.75;">{count}</span>
+						{#if selected}
+							<span class="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-[var(--neu-accent-primary)]"></span>
+						{/if}
+					</Tabs.Trigger>
+				{/each}
+			</Tabs.List>
+		</Tabs.Root>
 	</div>
 
 	<div class="min-h-0 w-full flex-1 overflow-hidden">

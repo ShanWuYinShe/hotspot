@@ -7,8 +7,8 @@
 	import { themeStore } from '@/stores/theme.svelte';
 	import { platformStore } from '@/stores/platform.svelte';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
-	import { attachDismissibleLayer } from '@/lib/dismissible-layer';
 	import CreateSheet from '@/components/layout/CreateSheet.svelte';
+	import * as Dialog from '@/components/ui/dialog';
 	import StatusBar from '@/components/layout/StatusBar.svelte';
 	import DesktopLayout from '@/components/layout/DesktopLayout.svelte';
 	import TabletLayout from '@/components/layout/TabletLayout.svelte';
@@ -16,7 +16,7 @@
 	import MobileLandscape from '@/components/layout/MobileLandscape.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
-	// 迁移自 React MainLayout.tsx：桌面 → DesktopLayout，平板 → TabletLayout，
+	// 迁移自旧版 MainLayout：桌面 → DesktopLayout，平板 → TabletLayout，
 	// 移动竖屏 → 底部 4 Tab + 中央 FAB + 发布 Sheet；移动横屏 → 左侧 Rail。
 
 	let { children }: { children: Snippet } = $props();
@@ -46,12 +46,6 @@
 			: '0 6px 18px rgba(99,102,241,0.38), 0 2px 4px rgba(0,0,0,0.10)';
 	});
 
-	$effect(() => {
-		return attachDismissibleLayer({
-			open: composer.composerOpen,
-			onDismiss: closeComposer
-		});
-	});
 </script>
 
 {#if platformStore.platform === 'desktop'}
@@ -77,7 +71,6 @@
 
 			{#if !isSubPage}
 				<nav
-					role="navigation"
 					aria-label="Main navigation"
 					class="flex-shrink-0 w-full"
 					style="background:color-mix(in srgb, var(--neu-bg) 92%, transparent);backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);border-top:1px solid var(--neu-border);box-shadow:0 -1px 0 var(--neu-border), 0 -8px 28px var(--neu-shadow-dark);transition:background 0.4s ease, border-color 0.4s ease;"
@@ -99,8 +92,8 @@
 						<div class="flex flex-col items-center" style="width:68px;">
 							<button
 								type="button"
-								class="neu-hover-btn flex items-center justify-center outline-none select-none rounded-full"
-								style="width:50px;height:50px;background:{composer.composerOpen ? 'var(--neu-text-muted)' : 'var(--neu-accent-primary)'};box-shadow:{fabGlow};transition:background 0.22s ease, box-shadow 0.22s ease;"
+								class="neu-hover-btn neu-scale-btn flex items-center justify-center outline-none select-none rounded-full"
+								style="width:50px;height:50px;background:{composer.composerOpen ? 'var(--neu-text-muted)' : 'var(--neu-accent-primary)'};box-shadow:{fabGlow};transition:background 0.22s ease, box-shadow 0.22s ease, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
 								onclick={toggleComposer}
 								aria-label={composer.composerOpen ? '关闭' : '发布'}
 							>
@@ -124,22 +117,11 @@
 				</nav>
 			{/if}
 
-			{#if showCreate}
-				<div
-					class="absolute inset-0 z-40"
-					style="background:rgba(0,0,0,0.35);backdrop-filter:blur(3px);"
-					onclick={closeComposer}
-				/>
-				<div
-					class="absolute bottom-0 left-0 right-0 z-50 overflow-hidden"
-					role="dialog"
-					aria-modal="true"
-					aria-labelledby="create-composer-title"
-					style="height:92%;border-radius:28px 28px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--neu-border);background-color:var(--neu-bg);"
-				>
+			<Dialog.Root open={composer.composerOpen} onOpenChange={(next) => (next ? openComposer() : closeComposer())}>
+				<Dialog.Content side="bottom" class="overflow-hidden" style="height:92%;">
 					<CreateSheet onClose={closeComposer} />
-				</div>
-			{/if}
+				</Dialog.Content>
+			</Dialog.Root>
 		</div>
 	</div>
 {/if}

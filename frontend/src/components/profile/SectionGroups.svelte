@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { Plus, Users, ChevronRight, Clock, Shield } from '@lucide/svelte';
 	import { platformStore } from '@/stores/platform.svelte';
-	import { attachDismissibleLayer } from '@/lib/dismissible-layer';
+	import * as Dialog from '@/components/ui/dialog';
 	import CreateGroupSheet from '@/components/groups/CreateGroupSheet.svelte';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
@@ -10,7 +10,7 @@
 	import { useMyGroups } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 我的群组分区（迁移自 React ProfileSections.tsx 内 SectionGroups/MyGroupCard）。
+	// 我的群组分区（迁移自旧版 ProfileSections 内 SectionGroups/MyGroupCard）。
 
 	let searchQ = $state('');
 	let showCreate = $state(false);
@@ -19,13 +19,6 @@
 	const { groups } = useMyGroups();
 	const filtered = $derived(groups.filter((g) => searchQ === '' || g.name.toLowerCase().includes(searchQ.toLowerCase())));
 	const isDesktop = $derived(platformStore.platform === 'desktop');
-
-	$effect(() => {
-		return attachDismissibleLayer({
-			open: showCreate,
-			onDismiss: () => (showCreate = false)
-		});
-	});
 </script>
 
 <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
@@ -188,16 +181,9 @@
 		</div>
 	{/if}
 
-	{#if showCreate}
-		<div class="fixed inset-0 z-40 bg-[rgba(0,0,0,0.35)]" style="backdrop-filter:blur(3px);" role="presentation" onclick={() => (showCreate = false)}></div>
-		<div
-			class="fixed bottom-0 left-0 right-0 z-50 overflow-hidden bg-[var(--neu-bg)]"
-			role="dialog"
-			aria-modal="true"
-			aria-label="创建群组"
-			style="height:92%;border-radius:28px 28px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,0.18);"
-		>
+	<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? undefined : (showCreate = false))}>
+		<Dialog.Content side="bottom" class="overflow-hidden" style="height:92%;">
 			<CreateGroupSheet onClose={() => (showCreate = false)} />
-		</div>
-	{/if}
+		</Dialog.Content>
+	</Dialog.Root>
 </div>

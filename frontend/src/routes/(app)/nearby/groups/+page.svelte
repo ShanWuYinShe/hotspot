@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { platformStore } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
-	import { attachDismissibleLayer } from '@/lib/dismissible-layer';
+	import * as Dialog from '@/components/ui/dialog';
 	import CreateGroupSheet from '@/components/groups/CreateGroupSheet.svelte';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import PageHeader from '@/components/shared/PageHeader.svelte';
@@ -17,7 +17,7 @@
 	import { ROUTES } from '@/lib/routes';
 
 	// 附近群组：分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙 + 创建群组底部 Sheet。
-	// 迁移自 React NearbyGroupsPage.tsx。
+	// 迁移自旧版 NearbyGroupsPage。
 
 	const CATEGORIES = ['全部', '摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏'];
 
@@ -56,13 +56,6 @@
 		return () => {
 			cancelled = true;
 		};
-	});
-
-	$effect(() => {
-		return attachDismissibleLayer({
-			open: showCreate,
-			onDismiss: () => (showCreate = false)
-		});
 	});
 
 	const isDesktop = $derived(platformStore.platform === 'desktop');
@@ -165,15 +158,8 @@
 	</div>
 </main>
 
-{#if showCreate}
-	<div class="fixed inset-0 z-40" style="background:rgba(0,0,0,.35);backdrop-filter:blur(3px);" role="presentation" onclick={() => (showCreate = false)}></div>
-	<div
-		class="fixed inset-x-0 bottom-0 z-50 h-[92%] overflow-hidden bg-[var(--neu-bg)]"
-		role="dialog"
-		aria-modal="true"
-		aria-label="创建群组"
-		style="border-radius:28px 28px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.18);"
-	>
+<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? undefined : (showCreate = false))}>
+	<Dialog.Content side="bottom" class="h-[92%] overflow-hidden" aria-label="创建群组">
 		<CreateGroupSheet onClose={() => (showCreate = false)} />
-	</div>
-{/if}
+	</Dialog.Content>
+</Dialog.Root>

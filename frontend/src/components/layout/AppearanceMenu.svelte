@@ -2,10 +2,10 @@
 	import { Check, Moon, Palette, Sun, Database } from '@lucide/svelte';
 	import ActionIconButton from '@/components/shared/ActionIconButton.svelte';
 	import { themeStore, toggleDark, setTheme } from '@/stores/theme.svelte';
-	import { attachDismissibleLayer } from '@/lib/dismissible-layer';
+	import * as Popover from '@/components/ui/popover';
 
 	// 唯一的外观/模式控制。选择面板保持打开，仅显式完成、外部点击或 Escape 关闭。
-	// 迁移自 React AppearanceMenu.tsx（P4 可换 shadcn DropdownMenu）。
+	// 迁移自旧版 AppearanceMenu（弹层行为现由 bits-ui Popover 提供）。
 
 	let { className = '' }: { className?: string } = $props();
 
@@ -19,15 +19,6 @@
 
 	const currentTheme = $derived(THEMES.find((item) => item.id === themeStore.theme)?.label ?? '星际');
 	const modeLabel = $derived(themeStore.isDark ? '深色' : '浅色');
-
-	$effect(() => {
-		return attachDismissibleLayer({
-			open,
-			onDismiss: () => (open = false),
-			root: rootEl,
-			closeOnOutsidePress: true
-		});
-	});
 
 	// ── Dev API source toggle（仅 dev）───────────────────────────
 	let mockEnabled = $state(true);
@@ -84,23 +75,19 @@
 	};
 </script>
 
-<div bind:this={rootEl} class="relative {className}">
-	<ActionIconButton
-		icon={Palette}
-		label="外观设置"
-		onClick={() => (open = !open)}
-		variant="ghost"
-		active={open}
-		size={36}
-	/>
+<Popover.Root bind:open>
+	<div bind:this={rootEl} class="relative {className}">
+		<ActionIconButton
+			icon={Palette}
+			label="外观设置"
+			onClick={() => (open = !open)}
+			variant="ghost"
+			active={open}
+			size={36}
+		/>
+	</div>
 
-	{#if open}
-		<div
-			role="dialog"
-			aria-label="外观设置"
-			class="absolute right-0 top-[42px] z-50 w-[244px] rounded-[18px] ring-1 ring-[var(--neu-border)] bg-[var(--neu-bg)] p-2.5"
-			style="box-shadow:0 16px 40px var(--neu-shadow-dark);"
-		>
+	<Popover.Content customAnchor={rootEl} class="w-[244px] rounded-[18px] p-2.5" role="dialog" aria-label="外观设置">
 			<div class="px-2 pb-2">
 				<p class="neu-eyebrow">外观</p>
 				<p class="mt-1 text-[11px] text-[var(--neu-text-muted)]">
@@ -221,6 +208,5 @@
 					</button>
 				</div>
 			{/if}
-		</div>
-	{/if}
-</div>
+	</Popover.Content>
+</Popover.Root>

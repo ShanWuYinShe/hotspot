@@ -4,14 +4,14 @@
 	import { goto } from '$app/navigation';
 	import { MapPin, Compass, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
 	import { themeStore } from '@/stores/theme.svelte';
-	import { composer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
-	import { attachDismissibleLayer } from '@/lib/dismissible-layer';
+	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
+	import * as Dialog from '@/components/ui/dialog';
 	import CreateSheet from '@/components/layout/CreateSheet.svelte';
 	import StatusBar from '@/components/layout/StatusBar.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
 	// 平板布局：移动式 UX——全宽内容 + 悬浮玻璃药丸底部导航 + 发布底部 Sheet。
-	// 横竖屏同布局，无居中/最大宽度约束。迁移自 React TabletLayout.tsx。
+	// 横竖屏同布局，无居中/最大宽度约束。迁移自旧版 TabletLayout。
 
 	let { children }: { children: Snippet } = $props();
 
@@ -32,12 +32,6 @@
 		return '0 -2px 16px rgba(0,0,0,0.04), 0 8px 24px rgba(99,102,241,0.10)';
 	});
 
-	$effect(() => {
-		return attachDismissibleLayer({
-			open: composer.composerOpen,
-			onDismiss: closeComposer
-		});
-	});
 </script>
 
 <div
@@ -73,7 +67,7 @@
 						onclick={() => void goto(item.path)}
 					>
 						{#if isPrimaryRouteActive(pathname, item.path)}
-							<div style="position:absolute;inset:4px 6px;border-radius:20px;background:var(--neu-accent-primary);opacity:0.14;" />
+							<div style="position:absolute;inset:4px 6px;border-radius:20px;background:var(--neu-accent-primary);opacity:0.14;"></div>
 						{/if}
 						<div style="display:flex;align-items:center;justify-content:center;position:relative;z-index:1;">
 							<item.icon
@@ -93,8 +87,8 @@
 				<div class="flex items-center justify-center flex-shrink-0" style="width:64px;">
 					<button
 						type="button"
-						class="neu-hover-btn flex items-center justify-center rounded-full outline-none select-none"
-						style="width:48px;height:48px;background:{composer.composerOpen ? 'var(--neu-text-muted)' : 'var(--neu-accent-primary)'};box-shadow:{composer.composerOpen ? 'none' : '0 6px 20px var(--neu-glow)'};transition:background 0.22s, box-shadow 0.22s;"
+						class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none select-none"
+						style="width:48px;height:48px;background:{composer.composerOpen ? 'var(--neu-text-muted)' : 'var(--neu-accent-primary)'};box-shadow:{composer.composerOpen ? 'none' : '0 6px 20px var(--neu-glow)'};transition:background 0.22s, box-shadow 0.22s, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
 						aria-label={composer.composerOpen ? '关闭' : '发布'}
 						onclick={toggleComposer}
 					>
@@ -116,7 +110,7 @@
 						onclick={() => void goto(item.path)}
 					>
 						{#if isPrimaryRouteActive(pathname, item.path)}
-							<div style="position:absolute;inset:4px 6px;border-radius:20px;background:var(--neu-accent-primary);opacity:0.14;" />
+							<div style="position:absolute;inset:4px 6px;border-radius:20px;background:var(--neu-accent-primary);opacity:0.14;"></div>
 						{/if}
 						<div style="display:flex;align-items:center;justify-content:center;position:relative;z-index:1;">
 							<item.icon
@@ -136,19 +130,10 @@
 	{/if}
 
 	{#if showCreate}
-		<div
-			class="fixed inset-0 z-40"
-			style="background:rgba(0,0,0,0.40);backdrop-filter:blur(6px);"
-			onclick={closeComposer}
-		/>
-		<div
-			class="fixed bottom-0 left-0 right-0 z-50 overflow-hidden"
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="create-composer-title"
-			style="height:90%;border-radius:28px 28px 0 0;background-color:var(--neu-bg);box-shadow:0 -8px 48px rgba(0,0,0,0.22), 0 -2px 0 var(--neu-border);"
-		>
-			<CreateSheet onClose={closeComposer} />
-		</div>
+		<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? openComposer() : closeComposer())}>
+			<Dialog.Content side="bottom" class="overflow-hidden" style="height:90%;">
+				<CreateSheet onClose={closeComposer} />
+			</Dialog.Content>
+		</Dialog.Root>
 	{/if}
 </div>

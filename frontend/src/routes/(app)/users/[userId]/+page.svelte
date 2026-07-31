@@ -8,9 +8,10 @@
 	import RailLocationMini from '@/components/layout/RailLocationMini.svelte';
 	import { getProfile, follow, block, createReport } from '@/api';
 	import { ROUTES } from '@/lib/routes';
+	import * as Dialog from '@/components/ui/dialog';
 
 	// 用户详情：关注/私信/屏蔽/举报/备注 + 帖子画廊 + 桌面 Rail。
-	// 迁移自 React UserProfilePage.tsx。
+	// 迁移自旧版 UserProfilePage。
 
 	let { params }: { params: { userId: string } } = $props();
 
@@ -144,22 +145,20 @@
 
 {#snippet main()}
 	<div class="flex flex-col bg-[var(--neu-bg)]" style="height:100%;overflow-y:auto;">
-		{#if moreOpen}
-			<button type="button" aria-label="关闭更多操作" class="fixed inset-0 z-40 cursor-default bg-black/40" onclick={() => (moreOpen = false)}></button>
-			<section
-				role="dialog"
-				aria-modal="true"
-				aria-label={`${user.name} 的更多操作`}
-				class="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-[24px] ring-1 ring-[var(--neu-border)] bg-[var(--neu-bg)] p-5"
-				style="box-shadow:0 24px 80px rgba(0,0,0,.28);"
-			>
-				<div class="flex items-center justify-between">
-					<div>
-						<p class="neu-eyebrow">关系与安全</p>
-						<p class="mt-1 text-[16px] text-[var(--neu-text)]">{user.name}</p>
-					</div>
-					<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} size={32} />
+	<Dialog.Root open={moreOpen} onOpenChange={(next) => (next ? undefined : (moreOpen = false))}>
+		<Dialog.Content
+			side="bottom"
+			class="inset-x-4 bottom-4 mx-auto max-w-md rounded-[24px] p-5"
+			aria-label={`${user.name} 的更多操作`}
+			style="box-shadow:0 24px 80px rgba(0,0,0,.28);"
+		>
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="neu-eyebrow">关系与安全</p>
+					<p class="mt-1 text-[16px] text-[var(--neu-text)]">{user.name}</p>
 				</div>
+				<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} size={32} />
+			</div>
 				<label class="mt-5 block text-[12px] text-[var(--neu-text-muted)]">
 					备注名称
 					<input
@@ -201,8 +200,8 @@
 						举报用户
 					{/if}
 				</button>
-			</section>
-		{/if}
+		</Dialog.Content>
+	</Dialog.Root>
 
 		<!-- Banner -->
 		<div class="relative overflow-hidden" style="height:clamp(150px, 25vw, 210px);flex-shrink:0;">

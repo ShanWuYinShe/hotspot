@@ -2,11 +2,12 @@
 	import { goto } from '$app/navigation';
 	import { ArrowLeft, Bell, CalendarDays, Check, MapPin, MessageCircle, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/shared/ActionIconButton.svelte';
+	import { Tabs } from 'bits-ui';
 	import { ROUTES } from '@/lib/routes';
 	import { getGroupDetail, getGroupMembers, getGroupAnnouncements } from '@/api';
 
 	// 群组详情：封面 + 简介/成员/公告三 Tab + 加入按钮 + 桌面侧栏。
-	// 迁移自 React GroupDetailPage.tsx。
+	// 迁移自旧版 GroupDetailPage。
 
 	let { params }: { params: { groupId: string } } = $props();
 
@@ -143,20 +144,21 @@
 			</div>
 
 			<!-- Tabs -->
-			<div class="mt-6 flex gap-1 border-b border-[var(--neu-border)]">
-				{#each ['overview', 'members', 'announcements'] as item (item)}
-					<button
-						type="button"
-						onclick={() => (tab = item as GroupTab)}
-						class="neu-hover-btn relative px-3 py-2.5 text-[13px] neu-focus-ring {tab === item ? 'text-[var(--neu-accent-primary)]' : 'text-[var(--neu-text-muted)]'}"
-					>
-						{item === 'overview' ? '简介' : item === 'members' ? '成员' : '公告'}
-						{#if tab === item}
-							<span class="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[var(--neu-accent-primary)]"></span>
-						{/if}
-					</button>
-				{/each}
-			</div>
+			<Tabs.Root value={tab} onValueChange={(v) => (tab = v as GroupTab)}>
+				<Tabs.List class="mt-6 flex gap-1 border-b border-[var(--neu-border)]">
+					{#each ['overview', 'members', 'announcements'] as item (item)}
+						<Tabs.Trigger
+							value={item}
+							class="neu-hover-btn relative px-3 py-2.5 text-[13px] neu-focus-ring {tab === item ? 'text-[var(--neu-accent-primary)]' : 'text-[var(--neu-text-muted)]'}"
+						>
+							{item === 'overview' ? '简介' : item === 'members' ? '成员' : '公告'}
+							{#if tab === item}
+								<span class="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[var(--neu-accent-primary)]"></span>
+							{/if}
+						</Tabs.Trigger>
+					{/each}
+				</Tabs.List>
+			</Tabs.Root>
 
 			{#if tab === 'overview'}
 				<div class="py-6">

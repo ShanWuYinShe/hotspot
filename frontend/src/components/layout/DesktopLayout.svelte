@@ -9,7 +9,7 @@
 	import { cn } from '@/lib/utils';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { composer, openComposer, closeComposer } from '@/stores/composer.svelte';
-	import { attachDismissibleLayer } from '@/lib/dismissible-layer';
+	import * as Dialog from '@/components/ui/dialog';
 	import AppearanceMenu from '@/components/layout/AppearanceMenu.svelte';
 	import ActionIconButton from '@/components/shared/ActionIconButton.svelte';
 	import CreateSheet from '@/components/layout/CreateSheet.svelte';
@@ -19,7 +19,7 @@
 	import imgHotSpot from '@/assets/9254a1e0e11b516a6c1aecb80d92b66f2caa243e.png';
 
 	// 桌面全屏布局（≥1024px）：52px 顶栏 + 可折叠侧栏 + 主内容卡片 + 发布模态。
-	// 迁移自 React DesktopLayout.tsx。
+	// 迁移自旧版 DesktopLayout。
 
 	let { children }: { children: Snippet } = $props();
 
@@ -73,7 +73,7 @@
 	const isSplitWorkspace = $derived(String(pathname) === ROUTES.messages);
 
 	/* Keep the last meaningful rail context while viewing utility/detail routes. */
-	let activeNavId = $state<DesktopNavId>(getDesktopNavId(pathname, searchString) ?? readLastDesktopNav() ?? 'home');
+	let activeNavId = $state<DesktopNavId>(getDesktopNavId(page.url.pathname, page.url.search.slice(1)) ?? readLastDesktopNav() ?? 'home');
 	let isSidebarCollapsed = $state(false);
 
 	// 仅显式 rail 路由替换当前 rail 上下文
@@ -83,13 +83,6 @@
 			activeNavId = resolvedNav;
 			persistLastDesktopNav(resolvedNav);
 		}
-	});
-
-	$effect(() => {
-		return attachDismissibleLayer({
-			open: composer.composerOpen,
-			onDismiss: closeComposer
-		});
 	});
 
 	/** Navigate only when authenticated; otherwise prompt login (anonymous browsing strategy). */
@@ -181,7 +174,7 @@
 			{#if auth.user}
 				<button
 					type="button"
-					class="neu-hover-btn relative ml-1.5 flex-shrink-0 rounded-full neu-focus-ring focus-visible:ring-offset-[var(--page-bg)]"
+					class="neu-hover-btn neu-scale-btn relative ml-1.5 flex-shrink-0 rounded-full neu-focus-ring focus-visible:ring-offset-[var(--page-bg)]"
 					style="width:32px;height:32px;"
 					aria-label="打开个人主页"
 					onclick={() => guardNav('打开个人主页', ROUTES.me)}
@@ -224,7 +217,7 @@
 				</div>
 
 				<!-- Divider -->
-				<div class="my-3 self-center" style="height:1px;width:{isSidebarCollapsed ? 24 : '100%'};background:var(--neu-border);" />
+				<div class="my-3 self-center" style="height:1px;width:{isSidebarCollapsed ? 24 : '100%'};background:var(--neu-border);"></div>
 
 				<!-- Section 2 label -->
 				<p
@@ -260,23 +253,13 @@
 	</div>
 
 	<!-- CREATE MODAL — centered dialog on desktop -->
-	{#if showCreate}
-		<div
-			class="fixed inset-0 z-50"
-			style="background:rgba(0,0,0,0.42);backdrop-filter:blur(5px);"
-			role="presentation"
-			onclick={closeComposer}
-		></div>
-		<div class="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
-			<div
-				class="overflow-hidden pointer-events-auto"
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby="create-composer-title"
-				style="width:480px;height:78vh;max-height:700px;border-radius:24px;background:var(--neu-bg);box-shadow:0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--neu-border), 8px 8px 24px var(--neu-shadow-dark), -8px -8px 24px var(--neu-shadow-light);"
-			>
-				<CreateSheet onClose={closeComposer} />
-			</div>
-		</div>
-	{/if}
+	<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? openComposer() : closeComposer())}>
+		<Dialog.Content
+			side="center"
+			class="overflow-hidden"
+			style="width:480px;height:78vh;max-height:700px;box-shadow:0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--neu-border), 8px 8px 24px var(--neu-shadow-dark), -8px -8px 24px var(--neu-shadow-light);"
+		>
+			<CreateSheet onClose={closeComposer} />
+		</Dialog.Content>
+	</Dialog.Root>
 </div>
