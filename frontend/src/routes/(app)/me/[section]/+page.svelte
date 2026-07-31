@@ -2,7 +2,7 @@
 	import ProfileDesktop from '@/components/profile/ProfileDesktop.svelte';
 
 	// 个人主页分段（moments / groups / relationships）。
-	// SPA 模式无需 generateStaticParams（fallback 服务一切路径）。
+	// SPA 模式：fallback 服务一切路径，无需构建期参数枚举。
 
 	let { params }: { params: { section: string } } = $props();
 </script>
