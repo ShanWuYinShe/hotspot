@@ -313,16 +313,16 @@
 
 			<!-- Tabs -->
 			<div class="flex" style="border-bottom:1px solid var(--neu-border);padding-left:16px;padding-right:16px;flex-shrink:0;">
-				{#each [['posts', Grid3X3, '帖子'], ['liked', Heart, '喜欢'], ['saved', Bookmark, '收藏']] as [id, Icon, label]}
-					{@const active = activeTab === id}
+				{#each [{ id: 'posts', icon: Grid3X3, label: '帖子' }, { id: 'liked', icon: Heart, label: '喜欢' }, { id: 'saved', icon: Bookmark, label: '收藏' }] as t}
+					{@const active = activeTab === t.id}
 					<button
 						type="button"
 						class="neu-hover-btn relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none text-[13px] {active ? 'text-[var(--neu-accent-primary)]' : 'text-[var(--neu-text-muted)]'}"
 						style="flex:1;font-weight:{active ? 500 : 400};"
-						onclick={() => (activeTab = id as 'posts' | 'liked' | 'saved')}
+						onclick={() => (activeTab = t.id as 'posts' | 'liked' | 'saved')}
 					>
-						<Icon style="width:13px;height:13px;" strokeWidth={active ? 2 : 1.5} />
-						{label}
+						<t.icon style="width:13px;height:13px;" strokeWidth={active ? 2 : 1.5} />
+						{t.label}
 						{#if active}
 							<span class="bg-[var(--neu-accent-primary)]" style="position:absolute;bottom:-1px;left:18%;right:18%;height:2px;border-radius:1px;"></span>
 						{/if}
