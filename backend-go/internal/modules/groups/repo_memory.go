@@ -42,10 +42,17 @@ type inMemoryMembership struct {
 	MutedUntil string
 }
 
+type inMemoryBanRecord struct {
+	BannedAt string
+	Reason   *string
+	BannedBy string
+}
+
 type InMemoryRepository struct {
 	mu           sync.RWMutex
 	groups       map[string]GroupItem
 	members      map[string]map[string]inMemoryMembership
+	banned       map[string]map[string]inMemoryBanRecord
 	invites      map[string]inMemoryInviteRecord
 	applications map[string]inMemoryApplicationRecord
 }
@@ -54,6 +61,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
 		groups:       make(map[string]GroupItem),
 		members:      make(map[string]map[string]inMemoryMembership),
+		banned:       make(map[string]map[string]inMemoryBanRecord),
 		invites:      make(map[string]inMemoryInviteRecord),
 		applications: make(map[string]inMemoryApplicationRecord),
 	}
@@ -698,6 +706,16 @@ func (r *InMemoryRepository) SetMemberRole(_ context.Context, userID string, req
 	if _, ok := r.groups[req.GroupID]; !ok {
 		return ErrGroupNotFound
 	}
+	members, ok := r.members[req.GroupID]
+	if !ok {
+		return ErrNotMember
+	}
+	membership, ok := members[req.UserID]
+	if !ok {
+		return ErrNotMember
+	}
+	membership.Role = req.Role
+	members[req.UserID] = membership
 	_ = userID
 	return nil
 }
@@ -751,7 +769,17 @@ func (r *InMemoryRepository) BanMember(_ context.Context, userID string, req Ban
 	if _, ok := r.groups[req.GroupID]; !ok {
 		return ErrGroupNotFound
 	}
-	_ = userID
+	if r.banned[req.GroupID] == nil {
+		r.banned[req.GroupID] = make(map[string]inMemoryBanRecord)
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	r.banned[req.GroupID][req.UserID] = inMemoryBanRecord{BannedAt: now, Reason: req.Reason, BannedBy: userID}
+	if members, ok := r.members[req.GroupID]; ok {
+		delete(members, req.UserID)
+		group := r.groups[req.GroupID]
+		group.Group.MembersCount = len(members)
+		r.groups[req.GroupID] = group
+	}
 	return nil
 }
 
@@ -760,6 +788,9 @@ func (r *InMemoryRepository) UnbanMember(_ context.Context, userID string, req U
 	defer r.mu.Unlock()
 	if _, ok := r.groups[req.GroupID]; !ok {
 		return ErrGroupNotFound
+	}
+	if banned, ok := r.banned[req.GroupID]; ok {
+		delete(banned, req.UserID)
 	}
 	_ = userID
 	return nil
@@ -772,11 +803,28 @@ func (r *InMemoryRepository) ListBannedMembers(_ context.Context, groupID string
 		return nil, "", ErrGroupNotFound
 	}
 	_ = cursor
-	if limit == 0 {
+	items := make([]BannedMemberItem, 0, len(r.banned[groupID]))
+	for userID, record := range r.banned[groupID] {
+		item := BannedMemberItem{
+			User:     UserInfo{UserID: userID, Nickname: userID},
+			BannedAt: record.BannedAt,
+			Reason:   record.Reason,
+		}
+		if record.BannedBy != "" {
+			item.BannedBy = &UserInfo{UserID: record.BannedBy, Nickname: record.BannedBy}
+		}
+		items = append(items, item)
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].BannedAt > items[j].BannedAt
+	})
+	if limit <= 0 {
 		limit = 20
 	}
-	_ = limit
-	return []BannedMemberItem{}, "", nil
+	if len(items) > limit {
+		items = items[:limit]
+	}
+	return items, "", nil
 }
 
 func (r *InMemoryRepository) RemoveMember(_ context.Context, userID string, req RemoveMemberRequest) error {
@@ -785,6 +833,17 @@ func (r *InMemoryRepository) RemoveMember(_ context.Context, userID string, req 
 	if _, ok := r.groups[req.GroupID]; !ok {
 		return ErrGroupNotFound
 	}
+	members, ok := r.members[req.GroupID]
+	if !ok {
+		return nil
+	}
+	if _, ok := members[req.UserID]; !ok {
+		return nil
+	}
+	delete(members, req.UserID)
+	group := r.groups[req.GroupID]
+	group.Group.MembersCount = len(members)
+	r.groups[req.GroupID] = group
 	_ = userID
 	return nil
 }
@@ -792,10 +851,26 @@ func (r *InMemoryRepository) RemoveMember(_ context.Context, userID string, req 
 func (r *InMemoryRepository) TransferOwnership(_ context.Context, userID string, req TransferOwnershipRequest) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, ok := r.groups[req.GroupID]; !ok {
+	group, ok := r.groups[req.GroupID]
+	if !ok {
 		return ErrGroupNotFound
 	}
-	_ = userID
+	members, ok := r.members[req.GroupID]
+	if !ok {
+		return ErrNotMember
+	}
+	membership, ok := members[req.NewOwnerID]
+	if !ok {
+		return ErrNotMember
+	}
+	if oldMembership, ok := members[userID]; ok {
+		oldMembership.Role = GroupRoleAdmin
+		members[userID] = oldMembership
+	}
+	membership.Role = GroupRoleOwner
+	members[req.NewOwnerID] = membership
+	group.OwnerID = req.NewOwnerID
+	r.groups[req.GroupID] = group
 	return nil
 }
 
