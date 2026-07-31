@@ -1,7 +1,8 @@
 import { ProfilePage } from '../ProfileFeature'
 
+// 静态导出需要枚举全部 section 取值（ProfileSection：moments/groups/relationships）
 export function generateStaticParams() {
-  return [{ section: 'moments' }]
+  return [{ section: 'moments' }, { section: 'groups' }, { section: 'relationships' }]
 }
 
 export default function ProfileSectionRoute() {

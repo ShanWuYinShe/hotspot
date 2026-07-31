@@ -42,6 +42,8 @@ Nginx 网关（`docker/nginx.dev.conf`）统一反代：
 - 类型检查：`bun run check`
 - 构建验证：`bun run build`
 
+> ⚠️ **`bun run build` 会清空共享的 `out/` 目录（distDir），打断正在运行的 Next.js dev server**（dev 产物在 `out/dev/`）。需要跑 build 前先停掉 frontend 容器（`docker compose stop frontend`），跑完再 `docker compose start frontend`。
+
 ## 构建
 
 ```bash
@@ -57,6 +59,8 @@ bun run --cwd frontend build
 ## 路由系统
 
 基于 Next.js App Router 文件路由：
+
+> ⚠️ **静态导出约束仅构建期生效**：`next.config.mjs` 中 `output: 'export'` 仅在 `NODE_ENV=production`（即 `next build`）时启用。若 dev 也启用，Next.js dev server 只允许访问 `generateStaticParams()` 枚举的路径，所有动态详情页（`/moments/:id`、`/users/:id` 等）都会 500 "missing param"。动态路由的 `generateStaticParams()`（如返回 `[{ postId: '_' }]` 占位）仅服务于静态导出壳页，详情内容由客户端渲染。
 
 ```
 src/app/
