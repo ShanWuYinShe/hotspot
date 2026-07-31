@@ -431,3 +431,60 @@
     box-shadow: inset 0 0 0 1px var(--neu-border) !important;
   }
 }
+
+  /*── Hover/active 反馈（迁移自 useHoverConfig 的 JS 状态动画）───────── */
+  /* 原实现按主题区分：neu 弹簧凸起、vibrant ease 位移+光晕、forest 仅缩放。
+     CSS 化后用主题类选择器覆盖，行为一致。 */
+
+  .neu-hover-btn,
+  .neu-hover-action,
+  .neu-hover-row,
+  .neu-hover-card {
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease;
+    will-change: transform;
+  }
+
+  /* 圆形图标按钮（btn）：1.10 缩放，按下 0.94 */
+  .neu-hover-btn:hover { transform: scale(1.10); }
+  .neu-hover-btn:active { transform: scale(0.94); }
+
+  /* 行内小图标（action）：1.20 缩放，按下 0.94 */
+  .neu-hover-action:hover { transform: scale(1.20); }
+  .neu-hover-action:active { transform: scale(0.94); }
+
+  /* 列表行（row）：轻微上浮 + 缩放；大卡片（card）：上浮 + 阴影抬升 */
+  .neu-hover-row:hover { transform: translateY(-3px) scale(1.009); }
+  .neu-hover-row:active { transform: scale(0.99); }
+  .neu-hover-card:hover { transform: translateY(-5px) scale(1.014); }
+  .neu-hover-card:hover { box-shadow: 0 10px 28px var(--neu-shadow-dark); }
+
+  /* vibrant：无阴影抬升（玻璃感），仅位移光晕 */
+  .vibrant .neu-hover-card:hover { box-shadow: 0 8px 24px var(--neu-accent-soft); }
+
+  /* forest：扁平——无位移无阴影，仅缩放（hover 全靠背景色承载） */
+  .forest .neu-hover-row:hover { transform: scale(1.010); box-shadow: none; }
+  .forest .neu-hover-card:hover { transform: scale(1.016); box-shadow: none; }
+
+  /* 悬停背景（bgHover）：主题 + 暗色感知的 accent 混色 */
+  .neu-hover-bg { transition: background-color 0.18s ease; }
+  .neu-hover-bg:hover {
+    background-color: color-mix(in srgb, var(--neu-accent-primary) 7%, transparent);
+  }
+  .vibrant .neu-hover-bg:hover {
+    background-color: color-mix(in srgb, var(--neu-accent-primary) 8%, transparent);
+  }
+  .forest .neu-hover-bg:hover {
+    background-color: color-mix(in srgb, var(--neu-accent-primary) 12%, transparent);
+  }
+  .dark .neu-hover-bg:hover {
+    background-color: color-mix(in srgb, var(--neu-accent-primary) 11%, transparent);
+  }
+  .dark.vibrant .neu-hover-bg:hover {
+    background-color: color-mix(in srgb, var(--neu-accent-primary) 12%, transparent);
+  }
+  .dark.forest .neu-hover-bg:hover {
+    background-color: color-mix(in srgb, var(--neu-accent-primary) 16%, transparent);
+  }

@@ -1,0 +1,17 @@
+# 依赖与缓存
+node_modules
+.svelte-kit
+.next
+
+# 构建产物
+build
+out
+out-dev
+dist
+
+# 版本控制与本地文件
+.git
+.env
+.env.*
+!.env.example
+.workwork

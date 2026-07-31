@@ -25,5 +25,5 @@ export {
   listComments,
   getMapCanvas,
 } from '@/api/client';
-export { useApi } from '@/api/useApi';
+// P2: useApi 以 createApiState 形式重建于 src/lib/useApi.svelte.ts
 export type { ApiResponse, PaginatedData } from '@/api/client';
