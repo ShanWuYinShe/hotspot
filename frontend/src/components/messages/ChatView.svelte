@@ -158,11 +158,11 @@
 			size={compact ? 34 : 38}
 			style="border:1.5px solid var(--neu-border);box-shadow:3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light);"
 		>
-			{#if contact?.online}
-				{#snippet badge()}
+			{#snippet badge()}
+				{#if contact?.online}
 					<span class="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]" style="width:9px;height:9px;border:2px solid var(--neu-bg);"></span>
-				{/snippet}
-			{/if}
+				{/if}
+			{/snippet}
 		</Avatar>
 
 		<!-- Name + status -->
