@@ -9,7 +9,7 @@
 ## 仓库地图
 - `backend/`：Rust 后端（**已暂停**），Axum + PostGIS。仅保留代码，不做主动开发。
 - `backend-go/`：Go **主后端**，模块化单体 + S2 地理索引，当前所有后端开发在此进行。
-- `frontend/`：React Web **主前端**，Next.js 15 + TypeScript + Tailwind CSS，当前所有前端开发在此进行。
+- `frontend/`：React Web **主前端**，Next.js 16 + TypeScript + Tailwind CSS，当前所有前端开发在此进行。
 - `harmonyapp/`：HarmonyOS ArkTS 客户端。
 - `spec/`：API 契约的唯一权威来源（只读）。
 

@@ -10,7 +10,7 @@ API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
 
 ## 技术栈
 
-- **框架**：Next.js 15（App Router + `output: 'export'` 静态导出）
+- **框架**：Next.js 16（App Router + Turbopack + `output: 'export'` 静态导出）
 - **样式**：Tailwind CSS v4 + CSS Token 三层架构
 - **包管理**：bun（`bun install` / `bun run`）
 - **Mock**：MSW（仅 dev 模式）
