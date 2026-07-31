@@ -24,17 +24,31 @@ services:
 
   # ── 后端（dev 模式）──────────────────────────────────────────────
   backend:
-    image: hotspot-backend-dev:latest   # dev 镜像（一次性构建，含 Go SDK + air）
+    build:
+      context: ./backend-go
+      dockerfile: Dockerfile.dev
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26.2}
+        AIR_VERSION: ${AIR_VERSION:-1.67.3}
+        GOPROXY: ${GOPROXY:-https://goproxy.cn,direct}
+    image: hotspot-backend-dev:latest   # dev 镜像（含 Go SDK + air，热加载）
     user: root
     ports:
       - "8081:8081"
-    # 源码实时同步，无需 rebuild 镜像
+    # 源码实时同步，air 监听 .go 变化自动重新编译重启，无需 rebuild 镜像
     volumes:
       - ./backend-go:/src               # 完整源码 mount（air 监听 .go 变化）
       - backend_tmp:/src/tmp            # 隔离 air 编译产物（避免污染 host）
     environment:
       APP_ENV: dev
       LOG_LEVEL: debug
+    # 覆盖 base healthcheck：air 首次全量编译较慢，放宽启动窗口
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8081/api/v1/system/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 180s
 
   # ── 前端 dev 模式（Next.js dev server）───────────────────────
   frontend:
