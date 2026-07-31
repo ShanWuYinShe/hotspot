@@ -54,12 +54,12 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, IsSearchable: isSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
 	s2CellToken := geo.CellTokenAtLevel(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}, 14)
 	s2CellID := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
-		if err := queryable.Exec(ctx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, isSearchable, maxMembers, userID, now, now, tags, s2CellToken, s2CellID); err != nil {
-			return GroupItem{}, fmt.Errorf("groups.CreateGroup: insert group: %w", err)
-		}
-		if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleOwner), now); err != nil {
-			return GroupItem{}, fmt.Errorf("groups.CreateGroup: insert owner member: %w", err)
-		}
+	if err := queryable.Exec(ctx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, isSearchable, maxMembers, userID, now, now, tags, s2CellToken, s2CellID); err != nil {
+		return GroupItem{}, fmt.Errorf("groups.CreateGroup: insert group: %w", err)
+	}
+	if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleOwner), now); err != nil {
+		return GroupItem{}, fmt.Errorf("groups.CreateGroup: insert owner member: %w", err)
+	}
 	return item, nil
 }
 
@@ -94,11 +94,11 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 		s2CellID = &id
 	}
 	_ = userID
-		err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), nilOrBool(req.IsSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude, nilOrStrings(req.Tags), s2CellToken, s2CellID)
-		if err != nil {
-			return fmt.Errorf("groups.Update: %w", err)
-		}
-		return nil
+	err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), nilOrBool(req.IsSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude, nilOrStrings(req.Tags), s2CellToken, s2CellID)
+	if err != nil {
+		return fmt.Errorf("groups.Update: %w", err)
+	}
+	return nil
 }
 
 func (r *PostgresRepository) Dismiss(ctx context.Context, groupID string) error {
@@ -109,11 +109,11 @@ func (r *PostgresRepository) Dismiss(ctx context.Context, groupID string) error 
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-		err := queryable.Exec(ctx, queryDeleteGroup, groupID)
-		if err != nil {
-			return fmt.Errorf("groups.Dismiss: %w", err)
-		}
-		return nil
+	err := queryable.Exec(ctx, queryDeleteGroup, groupID)
+	if err != nil {
+		return fmt.Errorf("groups.Dismiss: %w", err)
+	}
+	return nil
 }
 
 func (r *PostgresRepository) ListMembers(ctx context.Context, groupID string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
@@ -333,10 +333,10 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 	if group.HasPassword && (password == nil || *password == "") {
 		return JoinGroupResult{}, ErrInvalidPassword
 	}
-		now := time.Now().UTC()
-		if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleMember), now); err != nil {
-			return JoinGroupResult{}, fmt.Errorf("groups.JoinGroup: insert member: %w", err)
-		}
+	now := time.Now().UTC()
+	if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleMember), now); err != nil {
+		return JoinGroupResult{}, fmt.Errorf("groups.JoinGroup: insert member: %w", err)
+	}
 	return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
 }
 

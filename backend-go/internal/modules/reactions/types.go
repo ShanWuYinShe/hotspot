@@ -28,9 +28,9 @@ func ValidReactTarget(t ReactTarget) bool {
 // CommentItem.reactions (spec api_spec_types.md Reaction). ReactedByMe is
 // @auth-only semantics: false for anonymous viewers.
 type Reaction struct {
-	Emoji        string `json:"emoji"`
-	Count        int    `json:"count"`
-	ReactedByMe  bool   `json:"reacted_by_me"`
+	Emoji       string `json:"emoji"`
+	Count       int    `json:"count"`
+	ReactedByMe bool   `json:"reacted_by_me"`
 }
 
 // ReactionItem is a single row in reactions/list (spec api_spec_types.md

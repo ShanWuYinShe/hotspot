@@ -11,9 +11,9 @@ import (
 
 // reactEntry is one stored reaction row in memory.
 type reactEntry struct {
-	userID   string
-	nickname string
-	emoji    string
+	userID    string
+	nickname  string
+	emoji     string
 	reactedAt string
 }
 

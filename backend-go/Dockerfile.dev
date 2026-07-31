@@ -1,0 +1,33 @@
+# ── 开发镜像（仅用于 docker-compose.dev.yml）────────────────────────
+# 与生产 Dockerfile 的区别：
+#   - 保留 Go toolchain（air 热加载需要 go build）
+#   - 内置 air（文件监听 + 自动重启），CMD 直接跑 air
+#   - 依赖下载用 BuildKit cache mount 缓存，二次构建秒过
+# 生产部署请用 Dockerfile（无 toolchain、无 air、USER app）。
+ARG GO_VERSION=1.26.2
+ARG AIR_VERSION=1.67.3
+
+FROM golang:${GO_VERSION}-alpine
+
+# FROM 之后必须重新声明 ARG 才可在本阶段使用
+ARG AIR_VERSION
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY:-direct}
+
+RUN --mount=type=cache,target=/go/pkg/mod \
+    apk add --no-cache git ca-certificates tzdata curl \
+    && go install github.com/air-verse/air@v${AIR_VERSION}
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+
+COPY . .
+
+EXPOSE 8081
+
+ENV APP_PORT=8081
+ENV APP_HOST=0.0.0.0
+
+CMD ["air"]

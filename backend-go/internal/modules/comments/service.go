@@ -24,7 +24,7 @@ type Service struct {
 	users         actor.Provider
 	appConfig     appconfig.Source
 	runInTx       persistence.TxRunner // optional; nil => no transaction wrapping
-	reactions     ReactionAggregator  // optional; nil => reactions[] not filled
+	reactions     ReactionAggregator   // optional; nil => reactions[] not filled
 }
 
 // ReactionAggregator computes per-emoji reaction aggregates for comments.

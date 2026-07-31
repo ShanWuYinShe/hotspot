@@ -256,7 +256,7 @@ type RemoveMemberRequest struct {
 }
 
 type GroupApplicationsRequest struct {
-	GroupID string             `json:"group_id"`
+	GroupID    string             `json:"group_id"`
 	Status     *ApplicationStatus `json:"status,omitempty"`
 	Pagination *PaginationParams  `json:"pagination,omitempty"`
 }

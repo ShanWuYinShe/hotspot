@@ -196,4 +196,3 @@ func Encode(namespace string, payload any) (string, error) {
 func Decode(namespace string, value string, out any) error {
 	return codecFor(namespace).Decode(value, out)
 }
-

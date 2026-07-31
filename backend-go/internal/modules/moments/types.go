@@ -35,23 +35,23 @@ type MomentImage struct {
 }
 
 type MomentItem struct {
-	MomentID      string         `json:"moment_id"`
-	Description   string         `json:"description"`
-	Images        []MomentImage  `json:"images,omitempty"`
-	Tags          []string       `json:"tags,omitempty"`
-	Mentions      []string       `json:"mentions,omitempty"`
-	CreatedAt     string         `json:"created_at"`
-	LikesCount    int            `json:"likes_count"`
-	CommentsCount int            `json:"comments_count"`
-	SharesCount   int            `json:"shares_count"`
-	User          UserInfo       `json:"user"`
-	Location      Location       `json:"location"`
-	PrivacyLevel  string         `json:"privacy_level,omitempty"`
+	MomentID      string        `json:"moment_id"`
+	Description   string        `json:"description"`
+	Images        []MomentImage `json:"images,omitempty"`
+	Tags          []string      `json:"tags,omitempty"`
+	Mentions      []string      `json:"mentions,omitempty"`
+	CreatedAt     string        `json:"created_at"`
+	LikesCount    int           `json:"likes_count"`
+	CommentsCount int           `json:"comments_count"`
+	SharesCount   int           `json:"shares_count"`
+	User          UserInfo      `json:"user"`
+	Location      Location      `json:"location"`
+	PrivacyLevel  string        `json:"privacy_level,omitempty"`
 	// Reactions is the per-emoji aggregate (@auth-only reacted_by_me). Omitted
 	// when the moment has no reactions. LikesCount above is the total across
 	// all emojis, kept for sort/heat computations and legacy clients.
-	Reactions  []Reaction      `json:"reactions,omitempty"`
-	MyState    *MyMomentState  `json:"my_state,omitempty"`
+	Reactions []Reaction     `json:"reactions,omitempty"`
+	MyState   *MyMomentState `json:"my_state,omitempty"`
 }
 
 type CreateMomentRequest struct {

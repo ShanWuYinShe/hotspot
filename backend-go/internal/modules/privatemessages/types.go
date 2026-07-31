@@ -110,9 +110,9 @@ type MarkPrivateMessagesReadRequest struct {
 // scope defaults to "session"; "session" requires target_user_id (optionally
 // up_to_message_id), "all" clears all unread private messages for the caller.
 type MarkPrivateReadRequest struct {
-	Scope           string `json:"scope,omitempty"`
-	TargetUserID    string `json:"target_user_id,omitempty"`
-	UpToMessageID   string `json:"up_to_message_id,omitempty"`
+	Scope         string `json:"scope,omitempty"`
+	TargetUserID  string `json:"target_user_id,omitempty"`
+	UpToMessageID string `json:"up_to_message_id,omitempty"`
 }
 
 type MessageSent struct {

@@ -11,11 +11,15 @@ import (
 
 type failingSessionStore struct{ err error }
 
-func (s failingSessionStore) Save(context.Context, SessionRecord) error                         { return s.err }
-func (s failingSessionStore) Touch(context.Context, string) error                               { return s.err }
-func (s failingSessionStore) ListActiveByUser(context.Context, string) ([]SessionRecord, error) { return nil, s.err }
-func (s failingSessionStore) Revoke(context.Context, string) (bool, error)                      { return false, s.err }
-func (s failingSessionStore) RevokeOthers(context.Context, string, string) (int, error)         { return 0, s.err }
+func (s failingSessionStore) Save(context.Context, SessionRecord) error { return s.err }
+func (s failingSessionStore) Touch(context.Context, string) error       { return s.err }
+func (s failingSessionStore) ListActiveByUser(context.Context, string) ([]SessionRecord, error) {
+	return nil, s.err
+}
+func (s failingSessionStore) Revoke(context.Context, string) (bool, error) { return false, s.err }
+func (s failingSessionStore) RevokeOthers(context.Context, string, string) (int, error) {
+	return 0, s.err
+}
 func (s failingSessionStore) Get(context.Context, string) (SessionRecord, bool, error) {
 	return SessionRecord{}, false, s.err
 }
@@ -35,7 +39,9 @@ func (s *rotateFailRefreshStore) Get(_ context.Context, token string) (RefreshSe
 	}
 	return RefreshSession{}, false, nil
 }
-func (s *rotateFailRefreshStore) Rotate(context.Context, string, RefreshSession, RefreshSession) error { return s.err }
+func (s *rotateFailRefreshStore) Rotate(context.Context, string, RefreshSession, RefreshSession) error {
+	return s.err
+}
 
 func TestIssueSessionReturnsStoreWriteError(t *testing.T) {
 	service := NewServiceWithStores(config.Config{AuthTokenSecret: "test-secret"}, failingSessionStore{err: errors.New("session save failed")}, NewInMemoryRefreshStore())

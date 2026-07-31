@@ -21,21 +21,21 @@ type Reaction struct {
 }
 
 type CommentItem struct {
-	CommentID    string          `json:"comment_id"`
-	MomentID     string          `json:"-"`
-	User         UserInfo        `json:"user"`
-	Content      string          `json:"content"`
-	ParentID     string          `json:"parent_id,omitempty"`
-	Mentions     []string        `json:"mentions,omitempty"`
-	CreatedAt    string          `json:"created_at"`
-	LikesCount   int             `json:"likes_count"`
-	RepliesCount int             `json:"replies_count"`
-	IsDeleted    bool            `json:"is_deleted"`
+	CommentID    string   `json:"comment_id"`
+	MomentID     string   `json:"-"`
+	User         UserInfo `json:"user"`
+	Content      string   `json:"content"`
+	ParentID     string   `json:"parent_id,omitempty"`
+	Mentions     []string `json:"mentions,omitempty"`
+	CreatedAt    string   `json:"created_at"`
+	LikesCount   int      `json:"likes_count"`
+	RepliesCount int      `json:"replies_count"`
+	IsDeleted    bool     `json:"is_deleted"`
 	// Reactions is the per-emoji aggregate (@auth-only reacted_by_me). Omitted
 	// when the comment has no reactions. LikesCount above is the total across
 	// all emojis, kept for legacy clients.
-	Reactions  []Reaction       `json:"reactions,omitempty"`
-	MyState    *MyCommentState  `json:"my_state,omitempty"`
+	Reactions []Reaction      `json:"reactions,omitempty"`
+	MyState   *MyCommentState `json:"my_state,omitempty"`
 	// TopReplies 仅在 comments/list 返回的顶层评论中填充(前 N 条回复预览)。
 	TopReplies []CommentItem `json:"top_replies,omitempty"`
 }

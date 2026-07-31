@@ -661,10 +661,10 @@ func TestHandleGroupReportDismissesGroup(t *testing.T) {
 	if _, ok := store.groups["group_hotspot"]; ok {
 		t.Fatalf("expected group to be dismissed, groups=%#v", store.groups)
 	}
-		state, ok, err := store.GetUserBanState(handleReq.Context(), "user_alice")
-		if err != nil || state.Status == UserAccountStatusBanned {
-			t.Fatalf("unexpected owner ban state after group handle: status=%v ok=%v err=%v", state.Status, ok, err)
-		}
+	state, ok, err := store.GetUserBanState(handleReq.Context(), "user_alice")
+	if err != nil || state.Status == UserAccountStatusBanned {
+		t.Fatalf("unexpected owner ban state after group handle: status=%v ok=%v err=%v", state.Status, ok, err)
+	}
 }
 
 func TestHandleMomentCommentAndMessageReportsApplyContentActions(t *testing.T) {
@@ -1385,7 +1385,6 @@ func TestUpdateAppConfigReturns10600OnError(t *testing.T) {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
-
 
 // failingProvider is a Provider whose UpdateAppConfig always returns an error,
 // used to test the 10600 (服务暂时不可用) handler path.

@@ -48,11 +48,11 @@ func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem
 	startedAt := time.Now()
 	observability.L().Info("groups.create started")
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-		item, err := s.repo.Create(ctx, principal.UserID, req)
-		if err != nil {
-			observability.L().Error("groups.create failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-			return GroupItem{}, fmt.Errorf("groups.Service.Create: repo: %w", err)
-		}
+	item, err := s.repo.Create(ctx, principal.UserID, req)
+	if err != nil {
+		observability.L().Error("groups.create failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return GroupItem{}, fmt.Errorf("groups.Service.Create: repo: %w", err)
+	}
 	resourceguard.RecordGroup(ctx, item.Group.GroupID)
 	observability.L().Info("groups.create completed", "group_id", item.Group.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return item, nil
@@ -136,10 +136,10 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) error {
 		observability.L().Warn("groups.update permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return ErrAccessRestricted
 	}
-		if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
-			observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-			return fmt.Errorf("groups.Service.Update: repo: %w", err)
-		}
+	if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
+		observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return fmt.Errorf("groups.Service.Update: repo: %w", err)
+	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupUpdated,
 		Payload: map[string]any{
@@ -169,10 +169,10 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 		observability.L().Warn("groups.dismiss permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return ErrAccessRestricted
 	}
-		if err := s.repo.Dismiss(ctx, req.GroupID); err != nil {
-			observability.L().Error("groups.dismiss failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-			return fmt.Errorf("groups.Service.Dismiss: repo: %w", err)
-		}
+	if err := s.repo.Dismiss(ctx, req.GroupID); err != nil {
+		observability.L().Error("groups.dismiss failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return fmt.Errorf("groups.Service.Dismiss: repo: %w", err)
+	}
 	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: map[string]any{"group_id": req.GroupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "owner_dismissed"}}
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
@@ -255,11 +255,11 @@ func (s *Service) JoinGroup(ctx context.Context, req JoinGroupRequest) (JoinGrou
 		observability.L().Info("groups.join_group already joined", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
 	}
-		result, err := s.repo.JoinGroup(ctx, principal.UserID, req.GroupID, req.Password, req.Message)
-		if err != nil {
-			observability.L().Error("groups.join_group failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-			return JoinGroupResult{}, fmt.Errorf("groups.Service.JoinGroup: repo: %w", err)
-		}
+	result, err := s.repo.JoinGroup(ctx, principal.UserID, req.GroupID, req.Password, req.Message)
+	if err != nil {
+		observability.L().Error("groups.join_group failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return JoinGroupResult{}, fmt.Errorf("groups.Service.JoinGroup: repo: %w", err)
+	}
 	if result.Status == JoinGroupStatusPendingApproval {
 		s.notifyGroupApplicationReceived(ctx, group, principal.UserID, result.Application, req.Message)
 	}
@@ -373,9 +373,9 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 	if group.MyState.Role == GroupRoleOwner {
 		return ErrAccessRestricted
 	}
-		if err := s.repo.LeaveGroup(ctx, principal.UserID, req.GroupID); err != nil {
-			return fmt.Errorf("groups.Service.LeaveGroup: repo: %w", err)
-		}
+	if err := s.repo.LeaveGroup(ctx, principal.UserID, req.GroupID); err != nil {
+		return fmt.Errorf("groups.Service.LeaveGroup: repo: %w", err)
+	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberLeft,
 		Payload: map[string]any{

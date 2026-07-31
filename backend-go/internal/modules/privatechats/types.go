@@ -50,16 +50,16 @@ type LastMessage struct {
 }
 
 type PrivateChatItem struct {
-	OtherUser            UserInfo     `json:"other_user"`
-	UnreadCount          int          `json:"unread_count"`
-	IsMuted              bool         `json:"is_muted"`
-	IsPinned             bool         `json:"is_pinned"`
-	LastActivityAt       string       `json:"last_activity_at"`
-	LastMessage          *LastMessage `json:"last_message,omitempty"`
-	PresenceStatus       string       `json:"presence_status,omitempty"`
-	CreatedAt            string       `json:"created_at,omitempty"`
-	CanMessage           bool         `json:"can_message"`
-	BlockReason string       `json:"message_blocked_reason,omitempty"`
+	OtherUser      UserInfo     `json:"other_user"`
+	UnreadCount    int          `json:"unread_count"`
+	IsMuted        bool         `json:"is_muted"`
+	IsPinned       bool         `json:"is_pinned"`
+	LastActivityAt string       `json:"last_activity_at"`
+	LastMessage    *LastMessage `json:"last_message,omitempty"`
+	PresenceStatus string       `json:"presence_status,omitempty"`
+	CreatedAt      string       `json:"created_at,omitempty"`
+	CanMessage     bool         `json:"can_message"`
+	BlockReason    string       `json:"message_blocked_reason,omitempty"`
 }
 
 type PaginatedPrivateChats struct {

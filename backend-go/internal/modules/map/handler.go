@@ -73,15 +73,15 @@ func (h *Handler) Canvas(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-		resp, err := h.service.Canvas(r.Context(), req)
-		if err != nil {
-			if errors.Is(err, ErrInvalidCursor) {
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-				return
-			}
-			logServerError(r, "Canvas", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+	resp, err := h.service.Canvas(r.Context(), req)
+	if err != nil {
+		if errors.Is(err, ErrInvalidCursor) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 			return
 		}
+		logServerError(r, "Canvas", err)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
 }

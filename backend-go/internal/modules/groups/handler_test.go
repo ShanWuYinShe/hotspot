@@ -1423,8 +1423,8 @@ func TestHandlerCancelApplicationRejectsMissingApplicationID(t *testing.T) {
 
 func TestHandlerTransferOwnershipReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
-		getFound:  true,
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:       true,
 		isMemberResult: true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1484,8 +1484,8 @@ func TestHandlerTransferOwnershipReturns10200WhenAccessRestricted(t *testing.T) 
 
 func TestHandlerTransferOwnershipReturns10400WhenTargetNotMember(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
-		getFound:  true,
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:       true,
 		isMemberResult: false,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1498,9 +1498,9 @@ func TestHandlerTransferOwnershipReturns10400WhenTargetNotMember(t *testing.T) {
 
 func TestHandlerTransferOwnershipReturns10600OnUnknownError(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult:       GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
-		getFound:        true,
-		isMemberResult:  true,
+		getResult:            GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:             true,
+		isMemberResult:       true,
 		transferOwnershipErr: errors.New("boom"),
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1667,8 +1667,8 @@ func TestHandlerRemoveMemberReturns10200WhenAccessRestricted(t *testing.T) {
 
 func TestHandlerRemoveMemberReturns10600OnUnknownError(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult:        GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
-		getFound:         true,
+		getResult:       GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:        true,
 		removeMemberErr: errors.New("boom"),
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))

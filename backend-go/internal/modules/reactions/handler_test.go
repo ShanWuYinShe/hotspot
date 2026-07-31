@@ -54,8 +54,8 @@ func TestHandlerSetRejectsMissingFields(t *testing.T) {
 	h := NewHandler(svc)
 
 	cases := []string{
-		`{}`,                                    // missing target_id and emoji
-		`{"target_type":"moment","emoji":"👍"}`, // missing target_id
+		`{}`, // missing target_id and emoji
+		`{"target_type":"moment","emoji":"👍"}`,      // missing target_id
 		`{"target_type":"moment","target_id":"m1"}`, // missing emoji
 	}
 	for i, body := range cases {

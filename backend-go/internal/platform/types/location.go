@@ -8,8 +8,8 @@ package types
 // from geo calculations and to match the API spec which defines both as
 // "number". A nil value means the field was not computed (no reference point).
 type RelativeLocation struct {
-	Point          GeoPoint  `json:"point"`
-	LocationName   string    `json:"location_name"`
-	Distance       *float64  `json:"distance,omitempty"`
-	BearingDegrees *float64  `json:"bearing_degrees,omitempty"`
+	Point          GeoPoint `json:"point"`
+	LocationName   string   `json:"location_name"`
+	Distance       *float64 `json:"distance,omitempty"`
+	BearingDegrees *float64 `json:"bearing_degrees,omitempty"`
 }

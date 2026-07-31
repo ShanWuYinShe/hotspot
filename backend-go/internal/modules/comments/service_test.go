@@ -557,4 +557,3 @@ func TestServiceDeleteAllowsAdmin(t *testing.T) {
 
 // (Like/Unlike/ListLikes tests removed — like endpoints removed in favour of
 // the reactions module.)
-

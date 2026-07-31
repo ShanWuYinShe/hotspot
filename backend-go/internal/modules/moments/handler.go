@@ -139,71 +139,71 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-		if err := idempotency.RequireKey(r); err != nil {
-			logBusinessError(r, "Update", err.Code, err.Message)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-			return
-		}
-		var req EditMomentRequest
-		if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
-			logBusinessError(r, "Update", 10000, "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-			return
-		}
-		idempotency.ReplayOrStore(w, r, "moments/update", func() httpx.ApiResponse[MomentItem] {
-			item, err := h.service.Update(r.Context(), req)
-			if err != nil {
-				if errors.Is(err, ErrMomentNotFound) {
-					logBusinessError(r, "Update", 10300, "瞬间不存在")
-					return httpx.ApiResponse[MomentItem]{Code: 10300, Message: "瞬间不存在"}
-				}
-				if errors.Is(err, ErrPermissionDenied) {
-					logBusinessError(r, "Update", 10200, "权限不足")
-					return httpx.ApiResponse[MomentItem]{Code: 10200, Message: "权限不足"}
-				}
-				if errors.Is(err, ErrTooManyImages) {
-					logBusinessError(r, "Update", 10000, "图片数量超过上限")
-					return httpx.ApiResponse[MomentItem]{Code: 10000, Message: "图片数量超过上限"}
-				}
-				if errors.Is(err, ErrImagesNotOwned) {
-					logBusinessError(r, "Update", 10000, "图片校验失败")
-					return httpx.ApiResponse[MomentItem]{Code: 10000, Message: "图片校验失败"}
-				}
-				logServerError(r, "Update", err)
-				return httpx.ApiResponse[MomentItem]{Code: 10600, Message: "服务暂时不可用"}
-			}
-			return httpx.Success(item)
-		})
+	if err := idempotency.RequireKey(r); err != nil {
+		logBusinessError(r, "Update", err.Code, err.Message)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		return
 	}
+	var req EditMomentRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
+		logBusinessError(r, "Update", 10000, "参数错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "moments/update", func() httpx.ApiResponse[MomentItem] {
+		item, err := h.service.Update(r.Context(), req)
+		if err != nil {
+			if errors.Is(err, ErrMomentNotFound) {
+				logBusinessError(r, "Update", 10300, "瞬间不存在")
+				return httpx.ApiResponse[MomentItem]{Code: 10300, Message: "瞬间不存在"}
+			}
+			if errors.Is(err, ErrPermissionDenied) {
+				logBusinessError(r, "Update", 10200, "权限不足")
+				return httpx.ApiResponse[MomentItem]{Code: 10200, Message: "权限不足"}
+			}
+			if errors.Is(err, ErrTooManyImages) {
+				logBusinessError(r, "Update", 10000, "图片数量超过上限")
+				return httpx.ApiResponse[MomentItem]{Code: 10000, Message: "图片数量超过上限"}
+			}
+			if errors.Is(err, ErrImagesNotOwned) {
+				logBusinessError(r, "Update", 10000, "图片校验失败")
+				return httpx.ApiResponse[MomentItem]{Code: 10000, Message: "图片校验失败"}
+			}
+			logServerError(r, "Update", err)
+			return httpx.ApiResponse[MomentItem]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		return httpx.Success(item)
+	})
+}
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-		if err := idempotency.RequireKey(r); err != nil {
-			logBusinessError(r, "Delete", err.Code, err.Message)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-			return
-		}
-		var req DeleteMomentRequest
-		if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
-			logBusinessError(r, "Delete", 10000, "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-			return
-		}
-		idempotency.ReplayOrStore(w, r, "moments/delete", func() httpx.ApiResponse[struct{}] {
-			if err := h.service.Delete(r.Context(), req.MomentID); err != nil {
-				if errors.Is(err, ErrMomentNotFound) {
-					logBusinessError(r, "Delete", 10300, "瞬间不存在")
-					return httpx.ApiResponse[struct{}]{Code: 10300, Message: "瞬间不存在"}
-				}
-				if errors.Is(err, ErrPermissionDenied) {
-					logBusinessError(r, "Delete", 10200, "权限不足")
-					return httpx.ApiResponse[struct{}]{Code: 10200, Message: "权限不足"}
-				}
-				logServerError(r, "Delete", err)
-				return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
-			}
-			return httpx.Success(struct{}{})
-		})
+	if err := idempotency.RequireKey(r); err != nil {
+		logBusinessError(r, "Delete", err.Code, err.Message)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		return
 	}
+	var req DeleteMomentRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
+		logBusinessError(r, "Delete", 10000, "参数错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "moments/delete", func() httpx.ApiResponse[struct{}] {
+		if err := h.service.Delete(r.Context(), req.MomentID); err != nil {
+			if errors.Is(err, ErrMomentNotFound) {
+				logBusinessError(r, "Delete", 10300, "瞬间不存在")
+				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "瞬间不存在"}
+			}
+			if errors.Is(err, ErrPermissionDenied) {
+				logBusinessError(r, "Delete", 10200, "权限不足")
+				return httpx.ApiResponse[struct{}]{Code: 10200, Message: "权限不足"}
+			}
+			logServerError(r, "Delete", err)
+			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		return httpx.Success(struct{}{})
+	})
+}
 
 // Favorite is the unified two-state favorite endpoint. active=true favorites
 // the moment; active=false unfavorites it. Idempotent.

@@ -127,9 +127,9 @@ func (r *PostgresRepository) AggregateBatch(ctx context.Context, targetType Reac
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			targetID     string
-			rec          Reaction
-			reactedByMe  bool
+			targetID    string
+			rec         Reaction
+			reactedByMe bool
 		)
 		if err := rows.Scan(&targetID, &rec.Emoji, &rec.Count, &reactedByMe); err != nil {
 			return nil, err

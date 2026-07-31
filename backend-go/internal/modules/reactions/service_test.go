@@ -11,9 +11,9 @@ import (
 
 // stubTargetProvider serves a single target kind and reports existence by id.
 type stubTargetProvider struct {
-	kind    ReactTarget
-	exists  map[string]bool         // targetID -> exists
-	owners  map[string]string       // targetID -> ownerUserID
+	kind   ReactTarget
+	exists map[string]bool   // targetID -> exists
+	owners map[string]string // targetID -> ownerUserID
 }
 
 func (s stubTargetProvider) ReactTarget() ReactTarget { return s.kind }
@@ -28,7 +28,7 @@ func (s stubTargetProvider) Resolve(_ context.Context, targetID string) (TargetC
 // recordingNotifier captures Append* calls for assertion.
 type recordingNotifier struct {
 	mu                 sync.Mutex
-	momentLiked        []string  // targetUserIDs
+	momentLiked        []string // targetUserIDs
 	commentLiked       []string
 	reactionAddedCalls []reactionAddedCall
 }

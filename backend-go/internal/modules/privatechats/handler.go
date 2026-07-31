@@ -33,12 +33,12 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-		list, err := h.service.List(r.Context(), req)
-		if err != nil {
-			logServerError(r, "List", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-			return
-		}
+	list, err := h.service.List(r.Context(), req)
+	if err != nil {
+		logServerError(r, "List", err)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
 }
 

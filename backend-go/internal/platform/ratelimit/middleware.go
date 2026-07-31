@@ -34,9 +34,9 @@ const sweepCadence = 5 * time.Minute
 // sweeperCancel is the CancelFunc for the in-flight sweeper, if any. Guarded
 // by sweeperMu so StartSweeper is idempotent and safe to call from bootstrap.
 var (
-	sweeperMu       sync.Mutex
-	sweeperCancel   context.CancelFunc
-	sweeperStarted  bool
+	sweeperMu      sync.Mutex
+	sweeperCancel  context.CancelFunc
+	sweeperStarted bool
 )
 
 // StartSweeper launches the background store sweeper bound to ctx. It drops

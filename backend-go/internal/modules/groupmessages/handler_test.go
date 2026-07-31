@@ -69,7 +69,9 @@ func (r *stubGroupMessageRepo) MarkAllRead(_ context.Context, _ string) error {
 func (r *stubGroupMessageRepo) MemberMuteStatus(_ context.Context, _ string, _ string) (bool, string, bool, error) {
 	return false, "", true, nil
 }
-func (r *stubGroupMessageRepo) MessageExists(_ context.Context, _ string) (bool, string, error) { return false, "", nil }
+func (r *stubGroupMessageRepo) MessageExists(_ context.Context, _ string) (bool, string, error) {
+	return false, "", nil
+}
 
 // --- helpers ---
 

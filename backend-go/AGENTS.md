@@ -15,6 +15,12 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
 - `go vet ./...` — 静态检查
 - `gofmt -w .` — 格式化
 
+## Dev 容器（热加载）
+
+- dev 模式后端跑 `Dockerfile.dev`（基于 `golang:1.26.2-alpine` + air），源码挂载 + air 监听 `.go`/`.toml` 变化自动重编译重启，**改 Go 代码无需重启容器**；`.air.toml` 配置编译/输出路径（`tmp/` 由 compose 卷隔离）。
+- 首次构建/重建镜像：`docker compose -f docker-compose.yml -f docker-compose.dev.yml build backend`（`GOPROXY` 默认 `goproxy.cn,direct`，依赖经 BuildKit cache mount 缓存）。
+- 注意：`Dockerfile.dev` 的 `ARG GO_VERSION`/`AIR_VERSION` 必须带精确 patch 版本（如 `1.26.2`），浮动 tag（`1.26-alpine`）拉取易超时。
+
 ## 技术栈（名称级）
 
 - Go（见 `go.mod`）、chi router、PostgreSQL + pgx/v5、Redis（限流/幂等缓存/WS 跨实例 fanout，可选）、google/s2（地理网格索引）、gorilla/websocket、zap（结构化日志）

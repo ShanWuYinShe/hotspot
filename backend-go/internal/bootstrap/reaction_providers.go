@@ -20,7 +20,9 @@ type messageExistence interface {
 // directly (keeping the dependency one-way: reactions -> moments.Service only).
 type momentReactionProvider struct{ moments *moments.Service }
 
-func (p momentReactionProvider) ReactTarget() reactions.ReactTarget { return reactions.ReactTargetMoment }
+func (p momentReactionProvider) ReactTarget() reactions.ReactTarget {
+	return reactions.ReactTargetMoment
+}
 
 func (p momentReactionProvider) Resolve(ctx context.Context, momentID string) (reactions.TargetContext, bool, error) {
 	if p.moments == nil {
@@ -51,7 +53,9 @@ func (p momentReactionProvider) Resolve(ctx context.Context, momentID string) (r
 // for the 'comment' target kind.
 type commentReactionProvider struct{ comments *comments.Service }
 
-func (p commentReactionProvider) ReactTarget() reactions.ReactTarget { return reactions.ReactTargetComment }
+func (p commentReactionProvider) ReactTarget() reactions.ReactTarget {
+	return reactions.ReactTargetComment
+}
 
 func (p commentReactionProvider) Resolve(ctx context.Context, commentID string) (reactions.TargetContext, bool, error) {
 	if p.comments == nil {
@@ -92,7 +96,9 @@ type messageReactionProvider struct {
 	privateMessages messageExistence
 }
 
-func (p messageReactionProvider) ReactTarget() reactions.ReactTarget { return reactions.ReactTargetMessage }
+func (p messageReactionProvider) ReactTarget() reactions.ReactTarget {
+	return reactions.ReactTargetMessage
+}
 
 func (p messageReactionProvider) Resolve(ctx context.Context, messageID string) (reactions.TargetContext, bool, error) {
 	if p.groupMessages != nil {

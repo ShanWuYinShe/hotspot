@@ -75,7 +75,9 @@ func (r *privateChatMessageReader) UnreadCount(context.Context, string, *time.Ti
 	}
 	return r.unreadCount, nil
 }
-func (r *privateChatMessageReader) LookupMessage(_ context.Context, _ string) (bool, string, error) { return false, "", nil }
+func (r *privateChatMessageReader) LookupMessage(_ context.Context, _ string) (bool, string, error) {
+	return false, "", nil
+}
 
 type privateChatUserReader struct {
 	item     users.UserItem

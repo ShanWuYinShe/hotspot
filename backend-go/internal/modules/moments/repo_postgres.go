@@ -42,26 +42,26 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if privacy == "" {
 		privacy = "public"
 	}
-		if err := queryable.Exec(ctx, queryInsertMoment, momentID, userID, req.Description, createdAt, 0, 0, 0, req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, privacy, geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})); err != nil {
-			return MomentItem{}, fmt.Errorf("moments.Create: insert moment: %w", err)
+	if err := queryable.Exec(ctx, queryInsertMoment, momentID, userID, req.Description, createdAt, 0, 0, 0, req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, privacy, geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})); err != nil {
+		return MomentItem{}, fmt.Errorf("moments.Create: insert moment: %w", err)
+	}
+	tags := normalizeMomentTags(req.Tags)
+	allowedTags, err := filterAllowedMomentTags(ctx, queryable, tags)
+	if err != nil {
+		return MomentItem{}, fmt.Errorf("moments.Create: filter tags: %w", err)
+	}
+	if err := insertMomentTags(ctx, queryable, momentID, tags, now); err != nil {
+		return MomentItem{}, fmt.Errorf("moments.Create: insert tags: %w", err)
+	}
+	normalizedMentions := normalizeMomentMentions(req.Mentions)
+	if err := replaceMomentMentions(ctx, queryable, momentID, normalizedMentions, now); err != nil {
+		return MomentItem{}, fmt.Errorf("moments.Create: insert mentions: %w", err)
+	}
+	if len(req.ImageFileIDs) > 0 {
+		if err := insertMomentImages(ctx, queryable, momentID, req.ImageFileIDs, now); err != nil {
+			return MomentItem{}, fmt.Errorf("moments.Create: insert images: %w", err)
 		}
-		tags := normalizeMomentTags(req.Tags)
-		allowedTags, err := filterAllowedMomentTags(ctx, queryable, tags)
-		if err != nil {
-			return MomentItem{}, fmt.Errorf("moments.Create: filter tags: %w", err)
-		}
-		if err := insertMomentTags(ctx, queryable, momentID, tags, now); err != nil {
-			return MomentItem{}, fmt.Errorf("moments.Create: insert tags: %w", err)
-		}
-		normalizedMentions := normalizeMomentMentions(req.Mentions)
-		if err := replaceMomentMentions(ctx, queryable, momentID, normalizedMentions, now); err != nil {
-			return MomentItem{}, fmt.Errorf("moments.Create: insert mentions: %w", err)
-		}
-		if len(req.ImageFileIDs) > 0 {
-			if err := insertMomentImages(ctx, queryable, momentID, req.ImageFileIDs, now); err != nil {
-				return MomentItem{}, fmt.Errorf("moments.Create: insert images: %w", err)
-			}
-		}
+	}
 	nickname, err := lookupUserNickname(ctx, queryable, userID)
 	if err != nil {
 		return MomentItem{}, err
@@ -251,27 +251,27 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Edit
 		id := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
 		s2CellID = &id
 	}
-		if err := q.Exec(ctx, queryUpdateMoment, req.MomentID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr, s2CellID); err != nil {
-			return fmt.Errorf("moments.Update: update moment: %w", err)
+	if err := q.Exec(ctx, queryUpdateMoment, req.MomentID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr, s2CellID); err != nil {
+		return fmt.Errorf("moments.Update: update moment: %w", err)
+	}
+	if req.Tags != nil {
+		if err := q.Exec(ctx, queryDeleteMomentTagsByMomentID, req.MomentID); err != nil {
+			return fmt.Errorf("moments.Update: delete tags: %w", err)
 		}
-		if req.Tags != nil {
-			if err := q.Exec(ctx, queryDeleteMomentTagsByMomentID, req.MomentID); err != nil {
-				return fmt.Errorf("moments.Update: delete tags: %w", err)
-			}
-			if err := insertMomentTags(ctx, q, req.MomentID, req.Tags, time.Now().UTC()); err != nil {
-				return fmt.Errorf("moments.Update: insert tags: %w", err)
-			}
+		if err := insertMomentTags(ctx, q, req.MomentID, req.Tags, time.Now().UTC()); err != nil {
+			return fmt.Errorf("moments.Update: insert tags: %w", err)
 		}
-		if req.Mentions != nil {
-			if err := replaceMomentMentions(ctx, q, req.MomentID, req.Mentions, time.Now().UTC()); err != nil {
-				return fmt.Errorf("moments.Update: replace mentions: %w", err)
-			}
+	}
+	if req.Mentions != nil {
+		if err := replaceMomentMentions(ctx, q, req.MomentID, req.Mentions, time.Now().UTC()); err != nil {
+			return fmt.Errorf("moments.Update: replace mentions: %w", err)
 		}
-		if req.ImageFileIDs != nil {
-			if err := replaceMomentImages(ctx, q, req.MomentID, req.ImageFileIDs, time.Now().UTC()); err != nil {
-				return fmt.Errorf("moments.Update: replace images: %w", err)
-			}
+	}
+	if req.ImageFileIDs != nil {
+		if err := replaceMomentImages(ctx, q, req.MomentID, req.ImageFileIDs, time.Now().UTC()); err != nil {
+			return fmt.Errorf("moments.Update: replace images: %w", err)
 		}
+	}
 	return nil
 }
 
@@ -283,10 +283,10 @@ func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error 
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-		if err := queryable.Exec(ctx, queryDeleteMoment, momentID); err != nil {
-			return fmt.Errorf("moments.Delete: %w", err)
-		}
-		return nil
+	if err := queryable.Exec(ctx, queryDeleteMoment, momentID); err != nil {
+		return fmt.Errorf("moments.Delete: %w", err)
+	}
+	return nil
 }
 
 func (r *PostgresRepository) Favorite(ctx context.Context, userID string, momentID string) error {

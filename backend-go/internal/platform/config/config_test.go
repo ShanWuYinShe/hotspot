@@ -237,10 +237,10 @@ func TestValidateRejectsEmptyRedisURLInProduction(t *testing.T) {
 
 func TestValidateRejectsAnyCriticalDefaultInProduction(t *testing.T) {
 	cases := map[string]func(Config) Config{
-		"dev auth secret":         func(c Config) Config { c.AuthTokenSecret = devDefaultAuthTokenSecret; return c },
-		"super admin password":    func(c Config) Config { c.SuperAdminPassword = "liyou19890317"; return c },
-		"both s3 default":         func(c Config) Config { c.S3AccessKey = "minioadmin"; c.S3SecretKey = "minioadmin"; return c },
-		"legacy jwt default":      func(c Config) Config { c.AuthTokenSecret = "dev-secret-key-change-in-production"; return c },
+		"dev auth secret":      func(c Config) Config { c.AuthTokenSecret = devDefaultAuthTokenSecret; return c },
+		"super admin password": func(c Config) Config { c.SuperAdminPassword = "liyou19890317"; return c },
+		"both s3 default":      func(c Config) Config { c.S3AccessKey = "minioadmin"; c.S3SecretKey = "minioadmin"; return c },
+		"legacy jwt default":   func(c Config) Config { c.AuthTokenSecret = "dev-secret-key-change-in-production"; return c },
 	}
 	for name, mutate := range cases {
 		t.Run(name, func(t *testing.T) {
