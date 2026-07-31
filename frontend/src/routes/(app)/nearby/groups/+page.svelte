@@ -1,0 +1,179 @@
+<script lang="ts">
+	import { Plus, Users } from '@lucide/svelte';
+	import { goto } from '$app/navigation';
+	import { platformStore } from '@/stores/platform.svelte';
+	import { loadDefaultLocation } from '@/lib/default-location';
+	import { attachDismissibleLayer } from '@/lib/dismissible-layer';
+	import CreateGroupSheet from '@/components/groups/CreateGroupSheet.svelte';
+	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
+	import PageHeader from '@/components/shared/PageHeader.svelte';
+	import SearchInput from '@/components/shared/SearchInput.svelte';
+	import TagPill from '@/components/shared/TagPill.svelte';
+	import EmptyState from '@/components/shared/EmptyState.svelte';
+	import FeaturedGroupCard from './FeaturedGroupCard.svelte';
+	import GroupCard from './GroupCard.svelte';
+	import { mapGroup, type Group } from './group-data';
+	import { getNearbyGroups } from '@/api';
+	import { ROUTES } from '@/lib/routes';
+
+	// 附近群组：分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙 + 创建群组底部 Sheet。
+	// 迁移自 React NearbyGroupsPage.tsx。
+
+	const CATEGORIES = ['全部', '摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏'];
+
+	let activeCategory = $state('全部');
+	let searchQuery = $state('');
+	let showCreate = $state(false);
+	let groups = $state<Group[]>([]);
+	let visibleCount = $state(12);
+	let loading = $state(true);
+	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
+
+	$effect(() => {
+		let cancelled = false;
+		void loadDefaultLocation().then((loc) => {
+			if (!cancelled) referencePoint = loc?.point ?? null;
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
+
+	$effect(() => {
+		// spec: feed/nearby_groups returns nearby groups (reference_point from ClientConfig).
+		const point = referencePoint;
+		if (!point) return;
+		let cancelled = false;
+		async function fetchGroups() {
+			loading = true;
+			const res = await getNearbyGroups({ reference_point: point, pagination: { limit: 24 } }).catch(() => ({ code: -1, data: { items: [] } }));
+			if (cancelled) return;
+			const items = (res.code === 0 && res.data ? (res.data as any).items : []) as any[];
+			groups = items.map(mapGroup);
+			loading = false;
+		}
+		void fetchGroups();
+		return () => {
+			cancelled = true;
+		};
+	});
+
+	$effect(() => {
+		return attachDismissibleLayer({
+			open: showCreate,
+			onDismiss: () => (showCreate = false)
+		});
+	});
+
+	const isDesktop = $derived(platformStore.platform === 'desktop');
+	const isTablet = $derived(platformStore.platform === 'tablet');
+	const contentStyle = $derived(
+		isDesktop ? 'width:100%;' : isTablet ? 'max-width:964px;width:100%;' : 'max-width:680px;width:100%;'
+	);
+
+	const filtered = $derived(
+		groups.filter(
+			(group) =>
+				(activeCategory === '全部' || group.category === activeCategory) &&
+				(!searchQuery || `${group.name}${group.desc}${group.category}`.includes(searchQuery))
+		)
+	);
+	const visibleGroups = $derived(filtered.slice(0, visibleCount));
+	const featured = $derived(filtered[0]);
+	const rest = $derived(filtered.slice(1));
+	const totalOnline = $derived(filtered.reduce((sum, group) => sum + group.online, 0));
+
+	// TODO: connect to groups/join & groups/leave once client wrappers exist;
+	// for now toggle locally so the button reflects intent immediately.
+	const toggleJoin = (id: string) => {
+		groups = groups.map((group) => (group.id === id ? { ...group, joined: !group.joined } : group));
+	};
+</script>
+
+<div class="sticky top-0 z-10 bg-[var(--neu-bg)]" style="backdrop-filter:blur(16px);border-bottom:1px solid var(--neu-border);">
+	<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} onBack={() => history.back()} className={isDesktop ? 'px-7' : ''}>
+		{#snippet actions()}
+			<button
+				type="button"
+				class="neu-hover-btn flex items-center gap-1 px-3 py-1.5 rounded-full neu-focus-ring bg-[var(--neu-accent-primary)] text-white text-xs font-semibold"
+				style="box-shadow:0 3px 10px var(--neu-glow);"
+				onclick={() => (showCreate = true)}
+			>
+				<Plus size={14} />
+				创建
+			</button>
+		{/snippet}
+	</PageHeader>
+	<div class={isDesktop ? 'px-7 pb-3' : 'px-5 pb-3 mx-auto'} style={contentStyle}>
+		<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" compact />
+		<div class="flex gap-1.5 overflow-x-auto no-scrollbar mt-3">
+			{#each CATEGORIES as category}
+				<TagPill active={activeCategory === category} onClick={() => (activeCategory = category)}>{category}</TagPill>
+			{/each}
+		</div>
+	</div>
+</div>
+
+<main class={isDesktop ? 'px-7 py-6' : 'px-5 py-5 mx-auto'} style={contentStyle}>
+	<div class="min-w-0">
+		{#if loading}
+			<div class="flex flex-col items-center gap-3 py-20">
+				<div class="rounded-full border-2 border-[var(--neu-border)] border-t-[var(--neu-accent-primary)] animate-spin" style="width:28px;height:28px;"></div>
+				<p class="text-[var(--neu-text-muted)] text-[13px]">加载附近群组…</p>
+			</div>
+		{:else if filtered.length}
+			<div class="flex items-center justify-between mb-3">
+				<span class="neu-eyebrow">正在附近的群组</span>
+				<span class="text-[var(--semantic-online)] text-[11px]">{totalOnline} 人正在群聊</span>
+			</div>
+			{#if isDesktop}
+				<BspCardCanvas
+					items={visibleGroups}
+					gap={24}
+					minRatio={0.68}
+					maxRatio={1.48}
+					minCardWidth={160}
+					minCardHeight={210}
+					minCanvasHeight={520}
+					ariaLabel="附近群组的不规则满铺布局"
+					hasMore={visibleCount < filtered.length}
+					onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
+				>
+					{#snippet renderItem(group: Group, index: number)}
+						<GroupCard group={group} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
+					{/snippet}
+				</BspCardCanvas>
+			{:else}
+				{#if featured}
+					<div class="mb-5">
+						<FeaturedGroupCard group={featured} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
+					</div>
+				{/if}
+				<div class="grid grid-cols-2 gap-3">
+					{#each rest as group (group.id)}
+						<GroupCard group={group} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
+					{/each}
+				</div>
+			{/if}
+		{:else}
+			<EmptyState title="没有找到相关群组">
+				{#snippet icon()}
+					<Users size={32} color="var(--neu-text-muted)" />
+				{/snippet}
+			</EmptyState>
+		{/if}
+	</div>
+</main>
+
+{#if showCreate}
+	<div class="fixed inset-0 z-40" style="background:rgba(0,0,0,.35);backdrop-filter:blur(3px);" role="presentation" onclick={() => (showCreate = false)}></div>
+	<div
+		class="fixed inset-x-0 bottom-0 z-50 h-[92%] overflow-hidden bg-[var(--neu-bg)]"
+		role="dialog"
+		aria-modal="true"
+		aria-label="创建群组"
+		style="border-radius:28px 28px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.18);"
+	>
+		<CreateGroupSheet onClose={() => (showCreate = false)} />
+	</div>
+{/if}
