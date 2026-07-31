@@ -18,6 +18,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { Avatar } from "@/components/shared/Avatar";
 import { getAccount, getSettings } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { ROUTES } from "@/lib/routes";
 
 /* ── Small helpers ─────────────────────────────────────────────── */
 
@@ -195,7 +196,7 @@ export function SettingsPage() {
     // AuthContext.logout clears client auth state and keeps the user on the
     // current route (anonymous browsing). No more redirect to a dead /login.
     await authLogout();
-    router.push("/");
+    router.push(ROUTES.home);
   };
 
   return (

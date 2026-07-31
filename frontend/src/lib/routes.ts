@@ -84,9 +84,9 @@ export function getDesktopNavId(pathname: string, search = ""): DesktopNavId | n
     return "relationships";
   }
 
-  if (pathname.startsWith("/moments/") && source === "me") return "moments";
-  if (pathname.startsWith("/groups/") && source === "me") return "my-groups";
-  if (pathname.startsWith("/users/") && source === "relationships") return "relationships";
+  if (pathname.startsWith(`${ROUTES.moment("")}`) && source === "me") return "moments";
+  if (pathname.startsWith(`${ROUTES.group("")}`) && source === "me") return "my-groups";
+  if (pathname.startsWith(`${ROUTES.user("")}`) && source === "relationships") return "relationships";
 
   return null;
 }
