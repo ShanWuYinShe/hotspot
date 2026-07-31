@@ -4,8 +4,8 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "next dev -H 0.0.0.0 --port 5173",
-    "build": "next build",
+    "dev": "next dev -H 0.0.0.0 --port 5173 --turbopack",
+    "build": "next build --turbopack",
     "check": "tsc --noEmit",
     "verify": "node scripts/verify-source.mjs"
   },
