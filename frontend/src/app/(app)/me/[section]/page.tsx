@@ -1,4 +1,4 @@
-import { ProfilePage } from '@/app/pages/profile/ProfileFeature'
+import { ProfilePage } from '../ProfileFeature'
 
 export function generateStaticParams() {
   return [{ section: 'moments' }]

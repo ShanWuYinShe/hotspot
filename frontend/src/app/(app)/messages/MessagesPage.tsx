@@ -9,11 +9,11 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { OnlineDot } from "@/components/shared/OnlineDot";
 import { motion, AnimatePresence } from "motion/react";
 import { usePlatform } from "@/contexts/PlatformContext";
-import { ChatView } from "@/app/pages/messaging/ChatView";
+import { ChatView } from "./ChatView";
 import { useHoverConfig } from "@/hooks/useHoverConfig";
 import { useDismissibleLayer } from "@/hooks/useDismissibleLayer";
-import { NewConversationSheet } from "@/app/pages/messaging/NewConversationSheet";
-import { CreateGroupSheet } from "@/app/pages/groups/CreateGroupSheet";
+import { NewConversationSheet } from "./NewConversationSheet";
+import { CreateGroupSheet } from "@/components/groups/CreateGroupSheet";
 import { getPrivateChats } from "@/api";
 
 interface ChatItem {

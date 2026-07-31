@@ -1,4 +1,4 @@
-import { MomentDetailPage } from '@/app/pages/moments/MomentDetailPage'
+import { MomentDetailPage } from './MomentDetailPage'
 
 export function generateStaticParams() {
   return [{ postId: '_' }]

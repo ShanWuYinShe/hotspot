@@ -1,2 +1,2 @@
-import { SettingsPage } from '@/app/pages/settings/SettingsPage'
+import { SettingsPage } from './SettingsPage'
 export default function SettingsRoute() { return <SettingsPage /> }

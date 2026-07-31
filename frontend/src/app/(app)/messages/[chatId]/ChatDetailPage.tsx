@@ -2,7 +2,7 @@
 import React from "react";
 import { useRouter } from "next/navigation"
 import { useParams } from "next/navigation";
-import { ChatView } from "@/app/pages/messaging/ChatView";
+import { ChatView } from "../ChatView";
 
 export function ChatDetailPage() {
   // spec: private chats are addressed by the peer's user_id (target_user_id),

@@ -8,7 +8,7 @@ import { useHoverConfig } from "@/hooks/useHoverConfig";
 import { useDismissibleLayer } from "@/hooks/useDismissibleLayer";
 import { useComposer } from "@/contexts/ComposerContext";
 import { usePlatform } from "@/contexts/PlatformContext";
-import { CreateGroupSheet } from "@/app/pages/groups/CreateGroupSheet";
+import { CreateGroupSheet } from "@/components/groups/CreateGroupSheet";
 import { MetricStrip } from "@/components/shared/DataDisplay";
 import { BspCardCanvas } from "@/components/shared/BspCardCanvas";
 import { Avatar } from "@/components/shared/Avatar";
@@ -17,7 +17,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { TagPill } from "@/components/shared/TagPill";
 import {
   useGalleryPosts, useReactedPosts, useFavoritePosts, useMyGroups, useRelationships, type GalleryPost,
-} from "@/app/pages/profile/profile.data";
+} from "./profile.data";
 
 /* ── Shared: Tab bar ──────────────────────────────────────────────── */
 export type Tab = "posts" | "liked" | "saved";

@@ -1,2 +1,2 @@
-import { ProfilePage } from '@/app/pages/profile/ProfileFeature'
+import { ProfilePage } from './ProfileFeature'
 export default function ProfileRoute() { return <ProfilePage /> }

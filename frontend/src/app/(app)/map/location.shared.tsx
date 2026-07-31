@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "motion/react";
-import type { PinType, Pin } from "@/app/pages/location/location.data";
+import type { PinType, Pin } from "./location.data";
 import markerUserUrl from "@/assets/markers/marker_user.svg";
 import markerGroupUrl from "@/assets/markers/marker_group.svg";
 import markerMomentUrl from "@/assets/markers/marker_moment.svg";

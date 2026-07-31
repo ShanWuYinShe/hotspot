@@ -84,17 +84,20 @@ src/app/
 
 路由常量见 `@/lib/routes`。
 
+页面实现与路由同目录 colocate：每个路由目录下，除 `page.tsx`（路由入口，仅做引用）外，同目录存放页面组件及其私有文件（如 `map/LocationPage.tsx` + `LocationDesktop.tsx` + `location.data.ts`）。跨路由复用的页面组件（如 `moments/MomentsFeedPage` 同时被首页和 `nearby/moments` 使用）放在所属域路由目录，由其他路由用相对路径引用；跨路由复用的共享组件（如 `CreateGroupSheet`）提升到 `components/`。
+
 ## 目录结构
 
 ```
 src/
-  app/            # Next.js App Router（路由 + 布局）
+  app/            # Next.js App Router（路由 + 布局 + 页面实现）
     (auth)/       # 认证路由组（无外壳）
     (app)/        # 主路由组（MainLayout 外壳）
   components/     # 共享组件
     layout/       # 布局组件
     shared/       # 通用组件（Avatar, ActionIconButton 等）
     auth/         # 认证组件
+    groups/       # 群组共享组件（CreateGroupSheet 等）
   hooks/          # 共享 hooks
   contexts/       # React Context（Theme, Auth, Platform, Composer）
   lib/            # 工具函数 + 路由常量

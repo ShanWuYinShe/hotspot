@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, SlidersHorizontal, Crosshair, Heart, Check } from "lucide-react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "motion/react";
 import { PageHeader } from "@/components/shared/PageHeader";
-import type { PinType, Pin, LocationResult } from "@/app/pages/location/location.data";
-import { XUZHOU_CENTER, MOCK_PINS, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB } from "@/app/pages/location/location.data";
-import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, type SnapState, PIN_COLORS, PIN_LABELS, pinTone, floatBtnStyle, buildMapData, MapPinMarker, getMarkerUrl, markerUserUrl, markerGroupUrl, markerMomentUrl, markerUserClusterUrl, markerGroupClusterUrl, markerMomentClusterUrl } from "@/app/pages/location/location.shared";
+import type { PinType, Pin, LocationResult } from "./location.data";
+import { XUZHOU_CENTER, MOCK_PINS, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB } from "./location.data";
+import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, type SnapState, PIN_COLORS, PIN_LABELS, pinTone, floatBtnStyle, buildMapData, MapPinMarker, getMarkerUrl, markerUserUrl, markerGroupUrl, markerMomentUrl, markerUserClusterUrl, markerGroupClusterUrl, markerMomentClusterUrl } from "./location.shared";
 import { useDismissibleLayer } from "@/hooks/useDismissibleLayer";
 
 function LocationDesktop() {

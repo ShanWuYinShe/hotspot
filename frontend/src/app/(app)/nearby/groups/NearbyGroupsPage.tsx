@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Check, Globe, Lock, MapPin, Plus, Sparkles, Users } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useRouter } from "next/navigation";
-import { CreateGroupSheet } from "@/app/pages/groups/CreateGroupSheet";
+import { CreateGroupSheet } from "@/components/groups/CreateGroupSheet";
 import { usePlatform } from "@/contexts/PlatformContext";
 import { useHoverConfig } from "@/hooks/useHoverConfig";
 import { useDismissibleLayer } from "@/hooks/useDismissibleLayer";

@@ -1,4 +1,4 @@
-import { GroupDetailPage } from '@/app/pages/groups/GroupDetailPage'
+import { GroupDetailPage } from './GroupDetailPage'
 
 export function generateStaticParams() {
   return [{ groupId: '_' }]

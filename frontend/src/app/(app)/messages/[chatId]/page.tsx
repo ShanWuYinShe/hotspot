@@ -1,4 +1,4 @@
-import { ChatDetailPage } from '@/app/pages/messaging/ChatDetailPage'
+import { ChatDetailPage } from './ChatDetailPage'
 
 export function generateStaticParams() {
   return [{ chatId: '_' }]

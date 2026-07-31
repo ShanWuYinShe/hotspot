@@ -1,4 +1,4 @@
-import { UserProfilePage } from '@/app/pages/user/UserProfilePage'
+import { UserProfilePage } from './UserProfilePage'
 
 export function generateStaticParams() {
   return [{ userId: '_' }]

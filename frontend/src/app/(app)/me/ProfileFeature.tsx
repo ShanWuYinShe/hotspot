@@ -11,7 +11,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { usePlatform } from "@/contexts/PlatformContext";
 import { useHoverConfig } from "@/hooks/useHoverConfig";
 import { AppearanceMenu } from "@/components/layout/AppearanceMenu";
-import { CreateGroupSheet } from "@/app/pages/groups/CreateGroupSheet";
+import { CreateGroupSheet } from "@/components/groups/CreateGroupSheet";
 import {
   TabletRail, StreakCard, VisitorsCard, MoodCheckinCard,
   AchievementCard, SuggestedFollowsCard, VibeCard,
@@ -29,11 +29,11 @@ import { ROUTES, type ProfileSection } from "@/lib/routes";
 import {
   useAccountData, useGalleryPosts, useReactedPosts, useFavoritePosts, useMyGroups,
   useRelationships,
-} from "@/app/pages/profile/profile.data";
+} from "./profile.data";
 
 import {
   type Tab, ProfileTabs, GalleryGrid, SectionMoments, SectionGroups, SectionFriends, SectionFollowing, SectionFans,
-} from "@/app/pages/profile/ProfileSections";
+} from "./ProfileSections";
 
 type RelationshipTab = "friends" | "following" | "followers";
 

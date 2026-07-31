@@ -1,2 +1,2 @@
-import { EditProfilePage } from '@/app/pages/profile/EditProfilePage'
+import { EditProfilePage } from './EditProfilePage'
 export default function EditProfileRoute() { return <EditProfilePage /> }

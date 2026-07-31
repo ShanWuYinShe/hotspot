@@ -1,2 +1,2 @@
-import { LocationPage } from '@/app/pages/location/LocationPage'
+import { LocationPage } from './LocationPage'
 export default function MapRoute() { return <LocationPage /> }

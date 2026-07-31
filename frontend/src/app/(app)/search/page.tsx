@@ -1,2 +1,2 @@
-import { SearchPage } from '@/app/pages/search/SearchPage'
+import { SearchPage } from './SearchPage'
 export default function SearchRoute() { return <SearchPage /> }

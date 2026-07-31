@@ -1,7 +1,7 @@
 'use client'
 import { usePlatform } from "@/contexts/PlatformContext";
-import { LocationDesktop } from "@/app/pages/location/LocationDesktop";
-import { LocationMobile } from "@/app/pages/location/LocationMobile";
+import { LocationDesktop } from "./LocationDesktop";
+import { LocationMobile } from "./LocationMobile";
 
 /** Platform boundary only — desktop/mobile implementations live alongside in this folder. */
 export function LocationPage() {

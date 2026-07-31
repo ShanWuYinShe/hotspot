@@ -1,2 +1,2 @@
-import { NearbyPeoplePage } from '@/app/pages/nearby/NearbyPeoplePage'
+import { NearbyPeoplePage } from './NearbyPeoplePage'
 export default function NearbyPeopleRoute() { return <NearbyPeoplePage /> }
