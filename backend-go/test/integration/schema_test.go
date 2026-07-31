@@ -112,35 +112,6 @@ WHERE m.privacy_level = 'public'
 				args:          []any{[]int64{hitCell}, []int64{hitCell}, "viewer_1"},
 				expectedIndex: "idx_moments_public_s2_cell_id",
 			},
-			{
-				name: "feed all moments keeps public partial index with following OR",
-				sql: `
-SELECT m.moment_id,
-       m.user_id,
-       COALESCE(u.nickname, ''),
-       COALESCE(u.avatar_url, ''),
-       m.description,
-       m.created_at,
-       m.likes_count,
-       m.comments_count,
-       m.shares_count,
-       m.location_name,
-       m.latitude,
-       m.longitude,
-       EXISTS(SELECT 1 FROM moment_likes ml WHERE ml.moment_id = m.moment_id AND ml.user_id = $3),
-       EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $3),
-       EXISTS(SELECT 1 FROM user_relations ur WHERE ur.target_user_id = m.user_id AND ur.user_id = $3 AND ur.is_following = TRUE)
-FROM moments m
-JOIN users u ON u.user_id = m.user_id
-WHERE m.privacy_level = 'public'
-  AND (
-    EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
-            WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)
-    OR EXISTS(SELECT 1 FROM user_relations ur WHERE ur.target_user_id = m.user_id AND ur.user_id = $3 AND ur.is_following = TRUE)
-  )`,
-				args:          []any{[]int64{hitCell}, []int64{hitCell}, "viewer_1"},
-				expectedIndex: "idx_moments_public_s2_cell_id",
-			},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {

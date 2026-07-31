@@ -269,6 +269,7 @@ func createTestUser(t *testing.T, nickname string) (userID string) {
 		"nickname":    nickname,
 		"password":    "Test1234",
 		"client_type": "app",
+		"device_id":   uniqueDeviceID(t),
 	}, &resp)
 	if resp.Data == nil {
 		t.Fatalf("no data in register response")
@@ -284,6 +285,7 @@ func createGuestUser(t *testing.T) (userID string, token string) {
 	apiNoAuth(t, "/api/v1/auth/guest", map[string]any{
 		"nickname":    "guest_" + t.Name(),
 		"client_type": "app",
+		"device_id":   uniqueDeviceID(t),
 	}, &resp)
 	if resp.Data == nil {
 		t.Fatalf("no data in guest response")
@@ -303,6 +305,7 @@ func loginUser(t *testing.T, loginID, password string) (userID string, token str
 		"login_id":    loginID,
 		"password":    password,
 		"client_type": "app",
+		"device_id":   uniqueDeviceID(t),
 	}, &resp)
 	if resp.Data != nil {
 		if uid, ok := (*resp.Data)["user_id"].(string); ok {
@@ -313,6 +316,12 @@ func loginUser(t *testing.T, loginID, password string) (userID string, token str
 		}
 	}
 	return userID, token
+}
+
+// uniqueDeviceID returns a per-test device id so concurrent/sequential tests
+// never share a session (spec: (user_id, device_id) 唯一会话，同设备新会话会驱逐旧会话)。
+func uniqueDeviceID(t *testing.T) string {
+	return fmt.Sprintf("test-device-%s-%d", t.Name(), time.Now().UnixNano())
 }
 
 func withAuth(t *testing.T, fn func(token string)) {
@@ -369,6 +378,7 @@ func TestAuth_Login_InvalidCredentials(t *testing.T) {
 		"login_id":    "nonexistent_user_xyz",
 		"password":    "wrongpass",
 		"client_type": "app",
+		"device_id":   uniqueDeviceID(t),
 	}, &resp)
 	if resp.Code != 0 {
 		t.Logf("guest response code=%d message=%s", resp.Code, resp.Message)
