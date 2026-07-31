@@ -1,7 +1,7 @@
 <script lang="ts">
 	import OnlineDot from '@/components/shared/OnlineDot.svelte';
 
-	// 会话列表项（迁移自 React MessagesPage.tsx 内 ChatListItem）。
+	// 会话列表项（迁移自旧版 MessagesPage 内 ChatListItem）。
 
 	export interface ChatItem {
 		id: number;

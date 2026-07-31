@@ -2,7 +2,7 @@
 	import { Radar, ChevronRight } from '@lucide/svelte';
 	import { platformStore } from '@/stores/platform.svelte';
 
-	// Hero 统计横幅——单一焦点 + 环境光晕（迁移自 React NearbyFeedPage.tsx）。
+	// Hero 统计横幅——单一焦点 + 环境光晕（迁移自旧版 NearbyFeedPage）。
 
 	let {
 		onExplore,

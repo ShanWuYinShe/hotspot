@@ -1,5 +1,5 @@
 // Composer store — 发布器全局开关（FAB/页内 CTA 共用唯一入口）。
-// 迁移自 React ComposerContext（runes 模块单例）。
+// 迁移自旧版 ComposerContext（runes 模块单例）。
 
 let composerOpen = $state(false);
 

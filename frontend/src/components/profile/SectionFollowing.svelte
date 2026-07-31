@@ -6,7 +6,7 @@
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 关注分区（迁移自 React ProfileSections.tsx 内 SectionFollowing/FollowingRow）。
+	// 关注分区（迁移自旧版 ProfileSections 内 SectionFollowing/FollowingRow）。
 
 	let { embedded = false }: { embedded?: boolean } = $props();
 

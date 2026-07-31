@@ -2,7 +2,7 @@
 	import type { Pin } from './location-data';
 	import { getMarkerUrl, PIN_COLORS, type MapBounds } from './location-shared';
 
-	// 地图图钉（迁移自 React location.shared.tsx 内 MapPinMarker）。
+	// 地图图钉（迁移自旧版 location.shared 内 MapPinMarker）。
 
 	let {
 		pin,

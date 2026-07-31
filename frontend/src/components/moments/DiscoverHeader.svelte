@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Search, X } from '@lucide/svelte';
 
-	// 发现流共享页头（搜索条 + Tab 栏）。迁移自 React MomentsFeedPage.tsx。
+	// 发现流共享页头（搜索条 + Tab 栏）。迁移自旧版 MomentsFeedPage。
 
 	const TABS = ['热门', '附近', '活动', '关注'];
 

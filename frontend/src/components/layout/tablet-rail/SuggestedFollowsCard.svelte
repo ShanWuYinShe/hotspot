@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { UserPlus } from '@lucide/svelte';
 
-	// 你可能认识卡（迁移自 React TabletRail.tsx，静态 mock 内容）。
+	// 你可能认识卡（迁移自旧版 TabletRail，静态 mock 内容）。
 
 	const SUGGESTED = [
 		{ name: '林一', handle: '@linyi.photos', avatar: 'https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80', mutual: 8 },

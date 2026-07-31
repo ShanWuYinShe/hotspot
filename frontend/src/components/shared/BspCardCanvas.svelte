@@ -8,7 +8,7 @@
 	} from '@/lib/bsp-layout';
 
 	// 响应式 BSP 渲染器（三个桌面发现目录共用）。
-	// 迁移自 React BspCardCanvas.tsx：卡片多为 1×1，穿插少量 1×2 / 2×1，
+	// 迁移自旧版 BspCardCanvas：卡片多为 1×1，穿插少量 1×2 / 2×1，
 	// 偶尔 2×2 hero。包含 ResizeObserver 重排、IntersectionObserver 虚拟化
 	// 与滚动加载哨兵。
 
@@ -47,24 +47,25 @@
 		hasMore?: boolean;
 	} = $props();
 
-	// 方向性最小值折叠到对称回退（与 React 版一致）
-	const resolvedMinWidth = minCardWidth ?? minCardSize;
-	const resolvedMinHeight = minCardHeight ?? minCardSize;
+	// 方向性最小值折叠到对称回退（与旧版一致）
+	const resolvedMinWidth = $derived(minCardWidth ?? minCardSize);
+	const resolvedMinHeight = $derived(minCardHeight ?? minCardSize);
 
 	let containerEl = $state<HTMLElement | null>(null);
 	let width = $state(0);
 	const seed = Math.floor(Math.random() * 2 ** 32);
-	let solve = $state<{ canvasHeight: number; layout: BspRect[] }>({
-		canvasHeight: minCanvasHeight,
-		layout: []
-	});
+	// minCanvasHeight 仅作为首帧高度（此后由 recompute 驱动），有意只读取一次初始值。
+	function initialSolve(): { canvasHeight: number; layout: BspRect[] } {
+		return { canvasHeight: minCanvasHeight, layout: [] };
+	}
+	let solve = $state<{ canvasHeight: number; layout: BspRect[] }>(initialSolve());
 
 	// 求解缓存（跨 items 增长事件 APPEND 而非全量重解）；宽度变化时重置
 	let prevSolve: { width: number; count: number; height: number; layout: BspRect[] } | null = null;
 	/** 首次成功求解后固定的列数（网格几何冻结，加载更多只向下扩展）。 */
 	let pinnedCols: number | null = null;
 
-	/** 求解：append 路径（同宽 + items 增长）或全新 solve；语义与 React useMemo 版一致。 */
+	/** 求解：append 路径（同宽 + items 增长）或全新 solve；语义与旧版一致。 */
 	function recompute(w: number, n: number) {
 		if (!w || !n) {
 			prevSolve = null;

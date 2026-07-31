@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Sparkles, Heart } from '@lucide/svelte';
 
-	// 今日精选卡（迁移自 React TabletRail.tsx，静态 mock 内容）。
+	// 今日精选卡（迁移自旧版 TabletRail，静态 mock 内容）。
 </script>
 
 <button

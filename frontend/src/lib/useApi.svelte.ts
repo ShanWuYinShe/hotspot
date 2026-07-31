@@ -1,4 +1,4 @@
-// createApiState — 通用数据请求工厂（迁移自 React useApi hook）。
+// createApiState — 通用数据请求工厂（迁移自旧版 useApi hook）。
 // 每个调用创建独立响应式状态（data/loading/error + refetch），
 // id 自增实现竞态覆盖：旧请求结果不会污染新请求。
 

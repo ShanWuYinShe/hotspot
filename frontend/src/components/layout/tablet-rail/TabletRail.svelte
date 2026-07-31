@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	// 平板端右侧「陪伴栏」容器（迁移自 React TabletRail.tsx）。
+	// 平板端右侧「陪伴栏」容器（迁移自旧版 TabletRail）。
 
 	let { children }: { children: Snippet } = $props();
 </script>

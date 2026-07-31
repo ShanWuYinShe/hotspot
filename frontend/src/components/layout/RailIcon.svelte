@@ -2,7 +2,7 @@
 	import type { Component } from 'svelte';
 	import { themeStore } from '@/stores/theme.svelte';
 
-	// 移动横屏左栏导航图标（迁移自 React MainLayout.tsx 内 RailIcon）。
+	// 移动横屏左栏导航图标（迁移自旧版 MainLayout 内 RailIcon）。
 	// hover/active 反馈：主题感知的背景/阴影/缩放（CSS 类 + 主题类选择器）。
 
 	let {
@@ -61,7 +61,7 @@
 	{#if isActive}
 		<div
 			style="position:absolute;inset:4px;border-radius:12px;background:var(--neu-accent-primary);opacity:0.14;"
-		/>
+		></div>
 	{/if}
 	<Icon
 		style="width:22px;height:22px;color:{iconColor};transition:color 0.18s ease;position:relative;z-index:1;"
@@ -71,6 +71,6 @@
 		{label}
 	</span>
 	{#if isActive}
-		<div style="position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:2px;background:var(--neu-accent-primary);" />
+		<div style="position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:2px;background:var(--neu-accent-primary);"></div>
 	{/if}
 </button>

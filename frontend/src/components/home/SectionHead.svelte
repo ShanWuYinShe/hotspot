@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ChevronRight } from '@lucide/svelte';
 
-	// 首页分区标题（迁移自 React NearbyFeedPage.tsx 内 SectionHead）。
+	// 首页分区标题（迁移自旧版 NearbyFeedPage 内 SectionHead）。
 
 	let { title, action, onAction }: { title: string; action?: string; onAction?: () => void } = $props();
 </script>

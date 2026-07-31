@@ -9,7 +9,7 @@
 	import { useGalleryPosts, useReactedPosts, useFavoritePosts, type GalleryPost } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 我的瞬间分区（迁移自 React ProfileSections.tsx 内 SectionMoments）。
+	// 我的瞬间分区（迁移自旧版 ProfileSections 内 SectionMoments）。
 	// 桌面 BSP 马赛克；移动/平板置顶卡 + 网格。
 
 	let activeTab = $state<Tab>('posts');

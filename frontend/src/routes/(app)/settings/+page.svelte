@@ -10,7 +10,7 @@
 	import { ROUTES } from '@/lib/routes';
 
 	// 设置页：通知/声音/隐私开关（iOS 式）、语言、账号信息、退出登录。
-	// 迁移自 React SettingsPage.tsx。
+	// 迁移自旧版 SettingsPage。
 
 	let notif = $state(true);
 	let sounds = $state(true);

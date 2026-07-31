@@ -1,4 +1,4 @@
-// 通知数据类型与类型配置（迁移自 React NotificationsPage.tsx）。
+// 通知数据类型与类型配置（迁移自旧版 NotificationsPage）。
 
 import type { Component } from 'svelte';
 import { Heart, UserPlus, MessageCircle, Bell, MapPin } from '@lucide/svelte';

@@ -1,4 +1,4 @@
-// 个人中心数据工厂（迁移自 React me/profile.data.ts 的 hooks）。
+// 个人中心数据工厂（迁移自旧版 me/profile.data.ts 的 hooks）。
 // 组件内调用创建独立响应式状态；数据映射函数（mapGroup/mapFriend 等）原样保留。
 
 import {

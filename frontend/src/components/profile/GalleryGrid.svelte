@@ -6,7 +6,7 @@
 	import type { Tab } from '@/components/profile/ProfileTabs.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 画廊网格（移动/平板，迁移自 React ProfileSections.tsx 内 GalleryGrid）。
+	// 画廊网格（移动/平板，迁移自旧版 ProfileSections 内 GalleryGrid）。
 
 	let { posts, activeTab }: { posts: GalleryPost[]; activeTab: Tab } = $props();
 

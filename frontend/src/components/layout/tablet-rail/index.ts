@@ -1,4 +1,4 @@
-// TabletRail 陪伴栏组件集（迁移自 React TabletRail.tsx 单文件）
+// TabletRail 陪伴栏组件集（迁移自旧版 TabletRail 单文件）
 export { default as TabletRail } from './TabletRail.svelte';
 export { default as StreakCard } from './StreakCard.svelte';
 export { default as VisitorsCard } from './VisitorsCard.svelte';

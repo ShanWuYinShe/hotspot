@@ -1,4 +1,4 @@
-// Feed 交互状态工厂（迁移自 React MomentsFeedPage.tsx 内 useFeedInteractions）。
+// Feed 交互状态工厂（迁移自旧版 MomentsFeedPage 内 useFeedInteractions）。
 // 持有每条 FeedItem 的 liked/saved 交互状态，乐观更新 + API 失败回滚。
 
 import { setReaction, favoriteMoment } from '@/api';
@@ -25,12 +25,13 @@ export interface FeedInteractions {
 	toggleSave: (id: FeedItem['id']) => Promise<void>;
 }
 
-export function createFeedInteractions(initial: FeedItem[]): FeedInteractions {
-	let items = $state<FeedItem[]>(initial);
+export function createFeedInteractions(getInitial: () => FeedItem[]): FeedInteractions {
+	let items = $state<FeedItem[]>(getInitial());
 
-	// 外部数据更新时同步（原 useEffect setItems(initial)）
+	// 外部数据更新时同步（原 useEffect setItems(initial)）——通过 getter 保持对数据源的响应。
+	// 注意：同步是整体覆盖，会重置 toggleLike/toggleSave 的乐观状态（与旧版语义一致）。
 	$effect(() => {
-		items = initial;
+		items = getInitial();
 	});
 
 	const toggleLike = async (id: FeedItem['id']) => {

@@ -1,4 +1,4 @@
-// 地图共享逻辑（迁移自 React location.shared.tsx 的纯 TS 部分）。
+// 地图共享逻辑（迁移自旧版 location.shared 的纯 TS 部分）。
 
 import type { PinType } from './location-data';
 import markerUserUrl from '@/assets/markers/marker_user.svg';

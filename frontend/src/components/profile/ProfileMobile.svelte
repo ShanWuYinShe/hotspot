@@ -18,7 +18,7 @@
 	import { ROUTES } from '@/lib/routes';
 
 	// 移动/平板个人主页：Hero 身份卡 + Tab 画廊 + 平板右侧陪伴栏。
-	// 迁移自 React ProfileFeature.tsx 内 ProfileMobile。
+	// 迁移自旧版 ProfileFeature 内 ProfileMobile。
 
 	const { avatar, nickname, stats } = useAccountData();
 	const myPosts = useGalleryPosts('my');

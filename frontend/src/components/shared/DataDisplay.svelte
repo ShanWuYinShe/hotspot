@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	// 可复用的数据展示原语（迁移自 React DataDisplay.tsx）。
+	// 可复用的数据展示原语（迁移自旧版 DataDisplay）。
 	// 在发明一次性统计块之前先使用这些。
 	// value 接受 Snippet 或 数字/字符串（自动渲染为纯文本）。
 

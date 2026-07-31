@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { TYPE_CONFIG, type Notif } from './notif-data';
 
-	// 通知行（迁移自 React NotificationsPage.tsx 内 NotifRow）。
+	// 通知行（迁移自旧版 NotificationsPage 内 NotifRow）。
 
 	let {
 		notif,
@@ -17,8 +17,9 @@
 	const cfgTone = (amount: number) => `color-mix(in srgb, ${cfg.color} ${amount}%, transparent)`;
 </script>
 
-<div
-	class="neu-hover-row app-list-row app-list-row--rich cursor-pointer rounded-[18px] mb-1.5 px-3 neu-row-hover"
+<button
+	type="button"
+	class="neu-hover-row app-list-row app-list-row--rich cursor-pointer rounded-[18px] mb-1.5 px-3 w-full text-left neu-row-hover"
 	style="background:{notif.read ? 'transparent' : cfgTone(7)};border:{notif.read ? '1px solid transparent' : `1px solid ${cfgTone(18)}`};"
 	onclick={() => onRead(notif.id)}
 >
@@ -60,4 +61,4 @@
 			<div class="rounded-full" style="width:8px;height:8px;background:{cfg.color};"></div>
 		{/if}
 	</div>
-</div>
+</button>

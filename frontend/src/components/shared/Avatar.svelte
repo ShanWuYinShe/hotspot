@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	// Avatar — 用户/群组头像统一展示组件（迁移自 React Avatar.tsx）。
+	// Avatar — 用户/群组头像统一展示组件（迁移自旧版 Avatar）。
 	// 包装元素持有 border-radius + outline + overflow:hidden，徽标作为子元素
 	// 与描边同一元素，避免「分离边框的 broken-border」问题。
 
@@ -33,9 +33,9 @@
 
 	let hasError = $state(false);
 
-	const showImage = Boolean(src) && !hasError;
-	const initial = (name || '?').slice(0, 1);
-	const borderRadius = shape === 'circle' ? '9999px' : `${Math.round(size * 0.28)}px`;
+	const showImage = $derived(Boolean(src) && !hasError);
+	const initial = $derived((name || '?').slice(0, 1));
+	const borderRadius = $derived(shape === 'circle' ? '9999px' : `${Math.round(size * 0.28)}px`);
 </script>
 
 <div

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { MapPin } from '@lucide/svelte';
 
-	// 此刻附近卡（迁移自 React TabletRail.tsx，静态 mock 内容）。
+	// 此刻附近卡（迁移自旧版 TabletRail，静态 mock 内容）。
 
 	const SPARKLINE = 'M0,20 L20,16 L40,18 L60,12 L80,14 L100,8 L120,11 L140,6 L160,9 L180,4 L200,7';
 </script>

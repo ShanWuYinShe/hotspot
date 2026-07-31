@@ -2,7 +2,7 @@
 	import { MapPin, Users, Lock, Globe } from '@lucide/svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 
-	// 附近群组横向轮播（迁移自 React NearbyFeedPage.tsx 内 GroupCarousel）。
+	// 附近群组横向轮播（迁移自旧版 NearbyFeedPage 内 GroupCarousel）。
 
 	export interface NearbyGroup {
 		id: number;

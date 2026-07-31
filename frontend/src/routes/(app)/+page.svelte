@@ -14,7 +14,7 @@
 	import { ROUTES } from '@/lib/routes';
 
 	// 首页「附近」：Hero 统计 + 附近用户雷达条 + 话题活动 + 群组轮播 + 推荐列表。
-	// 迁移自 React NearbyFeedPage.tsx（mobile/desktop 双版本）。
+	// 迁移自旧版 NearbyFeedPage（mobile/desktop 双版本）。
 
 	// ── 数据获取（原 useEffect + Promise.all + cancelled 竞态）────────
 	let nearbyUsers = $state<NearbyUser[]>([]);
@@ -128,7 +128,7 @@
 	};
 	const onlineCount = $derived(nearbyUsers.filter((u) => u.status === '在线').length);
 
-	// ── 私有组件（React 版拆文件，此处直接内联函数式 Snippet）───────
+	// ── 私有组件（旧版拆文件，此处直接内联函数式 Snippet）───────
 	const isTablet = $derived(platformStore.platform === 'tablet');
 	const shellStyle = $derived(
 		isTablet ? 'max-width:924px;margin-left:auto;margin-right:auto;width:100%;' : ''

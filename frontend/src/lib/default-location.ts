@@ -1,4 +1,4 @@
-// 客户端配置默认位置（迁移自 React useDefaultLocation 的纯 TS 部分）。
+// 客户端配置默认位置（迁移自旧版 useDefaultLocation 的纯 TS 部分）。
 //
 // reference_point 是每个 feed/search 端点的必填参数，但前端尚无浏览器定位
 // 来源。按跨端边界（根 AGENTS.md：距离/位置由后端计算），回退到服务端

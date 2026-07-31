@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Eye, ChevronRight } from '@lucide/svelte';
 
-	// 最近访客卡（迁移自 React TabletRail.tsx，静态 mock 内容）。
+	// 最近访客卡（迁移自旧版 TabletRail，静态 mock 内容）。
 
 	const VISITORS = [
 		{ name: '鹿鸣', avatar: 'https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80', min: 4 },

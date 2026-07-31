@@ -2,7 +2,7 @@
 	import { Navigation2, ChevronRight } from '@lucide/svelte';
 	import { themeStore } from '@/stores/theme.svelte';
 
-	// 侧栏底部「地图探索」锚点卡片（迁移自 React DesktopLayout.tsx 内 LocationCard）。
+	// 侧栏底部「地图探索」锚点卡片（迁移自旧版 DesktopLayout 内 LocationCard）。
 	// 折叠态镜像侧栏导航项的 hover 语义：默认透明、hover 淡灰填充。
 
 	let {
@@ -37,7 +37,7 @@
 	<div class={collapsed ? 'sr-only' : 'flex-1 min-w-0 text-left'}>
 		<p style="font-size:12px;color:var(--neu-text);font-weight:500;">地图探索</p>
 		<div class="flex items-center gap-1">
-			<span class="inline-block rounded-full" style="width:5px;height:5px;background:var(--semantic-online);" />
+			<span class="inline-block rounded-full" style="width:5px;height:5px;background:var(--semantic-online);"></span>
 			<p style="font-size:10px;line-height:1.4;color:var(--neu-text-muted);">徐州 · 云龙湖畔</p>
 		</div>
 	</div>

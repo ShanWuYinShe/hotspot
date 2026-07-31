@@ -3,7 +3,7 @@
 	import { MapPin, ChevronRight } from '@lucide/svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 详情栏位置 mini 卡（迁移自 React DetailRail.tsx 内 RailLocationMini）。
+	// 详情栏位置 mini 卡（迁移自旧版 DetailRail 内 RailLocationMini）。
 
 	let { name, desc }: { name: string; desc?: string } = $props();
 	let hovered = $state(false);

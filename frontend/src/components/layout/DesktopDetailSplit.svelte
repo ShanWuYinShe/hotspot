@@ -4,7 +4,7 @@
 	import ContextRail from '@/components/layout/ContextRail.svelte';
 
 	// 桌面详情页容器：左主体 + 右 320px 陪伴栏（非桌面仅主体）。
-	// 迁移自 React DetailRail.tsx 内 DesktopDetailSplit。
+	// 迁移自旧版 DetailRail 内 DesktopDetailSplit。
 
 	let { main, rail }: { main: Snippet; rail: Snippet } = $props();
 </script>

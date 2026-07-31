@@ -5,7 +5,7 @@
 	import ProfileMobile from '@/components/profile/ProfileMobile.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 个人主页入口（迁移自 React ProfileFeature.tsx 内 ProfilePage）。
+	// 个人主页入口（迁移自旧版 ProfileFeature 内 ProfilePage）。
 	// 资源分区（/me/:section）在任意设备上独立可寻址——复用全宽分区视图。
 
 	const pathname = $derived(page.url.pathname);

@@ -3,7 +3,7 @@
 	import TagPill from '@/components/shared/TagPill.svelte';
 	import OnlineDot from '@/components/shared/OnlineDot.svelte';
 
-	// 附近用户卡片（迁移自 React NearbyPeoplePage.tsx 内 UserCard）。
+	// 附近用户卡片（迁移自旧版 NearbyPeoplePage 内 UserCard）。
 
 	export interface NearbyUser {
 		id: number;
@@ -29,13 +29,14 @@
 	} = $props();
 </script>
 
-<article
+<div
 	class="neu-hover-card flex h-full flex-col rounded-[20px] overflow-hidden cursor-pointer neu-surface-flat neu-card-hover neu-focus-ring"
 	style="background:var(--neu-bg);"
 	role="button"
 	tabindex="0"
 	onclick={onNavigate}
 	onkeydown={(e) => {
+		if (e.target !== e.currentTarget) return;
 		if (e.key === 'Enter' || e.key === ' ') {
 			e.preventDefault();
 			onNavigate();
@@ -86,4 +87,4 @@
 			</button>
 		</div>
 	</div>
-</article>
+</div>

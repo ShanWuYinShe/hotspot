@@ -2,7 +2,7 @@
 	import type { Component } from 'svelte';
 
 	// 移动/平板底部导航项：滑动胶囊（layoutId 动画简化为条件渲染 + CSS transition）
-	// 迁移自 React MainLayout.tsx 内 NavTab。
+	// 迁移自旧版 MainLayout 内 NavTab。
 
 	let {
 		label,
@@ -29,7 +29,7 @@
 		<div
 			class="transition-[opacity] duration-200"
 			style="position:absolute;top:5px;width:60px;height:48px;border-radius:24px;background:var(--neu-accent-primary);opacity:0.13;"
-		/>
+		></div>
 	{/if}
 
 	<div style="display:flex;align-items:center;justify-content:center;position:relative;z-index:1;">

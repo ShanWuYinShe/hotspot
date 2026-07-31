@@ -3,7 +3,7 @@
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import OnlineDot from '@/components/shared/OnlineDot.svelte';
 
-	// 附近的人雷达条——扁平头像横排（迁移自 React NearbyFeedPage.tsx）。
+	// 附近的人雷达条——扁平头像横排（迁移自旧版 NearbyFeedPage）。
 
 	export interface NearbyUser {
 		id: number;

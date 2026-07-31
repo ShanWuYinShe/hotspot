@@ -5,7 +5,7 @@
 
 	// PostCard — 动态卡片，始终填满容器宽度（无内部 maxWidth）。
 	// dense 属性减小内边距/字号（双列网格用）。
-	// 迁移自 React MomentsFeedPage.tsx 内 PostCard。
+	// 迁移自旧版 MomentsFeedPage 内 PostCard。
 
 	let {
 		item,
@@ -36,7 +36,17 @@
 	class="neu-hover-card {hero
 		? 'flex h-full flex-col rounded-[22px] overflow-hidden cursor-pointer w-full neu-surface-hero neu-card-hover'
 		: 'flex h-full flex-col rounded-[18px] overflow-hidden cursor-pointer w-full neu-surface-flat neu-card-hover'}"
+	role="button"
+	tabindex="0"
+	aria-label={item.user ? `查看 ${item.user} 的动态详情` : '查看动态详情'}
 	onclick={onClick}
+	onkeydown={(e) => {
+		if (e.target !== e.currentTarget) return;
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			onClick?.();
+		}
+	}}
 >
 	<!-- Image — always 16/9 regardless of density -->
 	<div class="relative min-h-[170px] flex-1 overflow-hidden" style="aspect-ratio:{mediaRatio ?? '16/9'};">

@@ -12,8 +12,8 @@
 		return () => clearInterval(timer);
 	});
 
-	const h = now.getHours().toString().padStart(2, '0');
-	const m = now.getMinutes().toString().padStart(2, '0');
+	const h = $derived(now.getHours().toString().padStart(2, '0'));
+	const m = $derived(now.getMinutes().toString().padStart(2, '0'));
 
 	const signalHeights = [4, 7, 10, 13];
 	const batteryLevel = 0.72;
@@ -37,7 +37,7 @@
 			{#each signalHeights as hgt, i}
 				<div
 					style="width:3px;height:{hgt}px;border-radius:1px;background-color:var(--neu-text);opacity:{i < 3 ? 1 : 0.28};"
-				/>
+				></div>
 			{/each}
 		</div>
 		<Wifi style="width:14px;height:14px;color:var(--neu-text);" strokeWidth={2.5} />
@@ -48,11 +48,11 @@
 			>
 				<div
 					style="position:absolute;inset:1px;right:auto;width:calc({batteryLevel * 100}% - 2px);border-radius:1.5px;background-color:{batteryLow ? 'var(--destructive)' : 'var(--neu-text)'};"
-				/>
+				></div>
 			</div>
 			<div
 				style="width:2px;height:5px;border-radius:0 1px 1px 0;background-color:var(--neu-text);opacity:0.45;margin-left:1px;"
-			/>
+			></div>
 		</div>
 	</div>
 </div>

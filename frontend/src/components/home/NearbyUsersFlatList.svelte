@@ -3,7 +3,7 @@
 	import OnlineDot from '@/components/shared/OnlineDot.svelte';
 	import type { NearbyUser } from '@/components/home/PeopleRadarStrip.svelte';
 
-	// 紧凑附近用户行列表（迁移自 React NearbyFeedPage.tsx 内 NearbyUsersFlatList/NearbyUserRow）。
+	// 紧凑附近用户行列表（迁移自旧版 NearbyFeedPage 内 NearbyUsersFlatList/NearbyUserRow）。
 
 	let {
 		users,

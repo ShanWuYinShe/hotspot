@@ -14,7 +14,7 @@
 	import { ROUTES } from '@/lib/routes';
 
 	// 通知列表：类型过滤、单条/全部已读、桌面右侧概览 Rail。
-	// 迁移自 React NotificationsPage.tsx。
+	// 迁移自旧版 NotificationsPage。
 
 	const FILTER_TABS = [
 		{ id: 'all', label: '全部' },

@@ -1,5 +1,5 @@
 // Platform store — 响应式平台检测（mobile/tablet/desktop + 横竖屏）。
-// 迁移自 React PlatformContext（runes 模块单例）。
+// 迁移自旧版 PlatformContext（runes 模块单例）。
 
 export type Platform = 'mobile' | 'tablet' | 'desktop';
 export type Orientation = 'portrait' | 'landscape';

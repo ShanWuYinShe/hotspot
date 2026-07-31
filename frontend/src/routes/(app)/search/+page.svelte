@@ -9,7 +9,7 @@
 	import { ROUTES } from '@/lib/routes';
 
 	// 搜索页：300ms 防抖、最近搜索（localStorage）、全部/用户/动态/标签 Tab。
-	// 迁移自 React SearchPage.tsx。
+	// 迁移自旧版 SearchPage。
 
 	type TabType = 'all' | 'people' | 'posts' | 'tags';
 
@@ -99,12 +99,12 @@
 
 	const hasResults = $derived(results.users.length > 0 || results.moments.length > 0 || results.tags.length > 0);
 
-	const RESULT_TABS: { id: TabType; label: string }[] = [
+	const RESULT_TABS = $derived<{ id: TabType; label: string }[]>([
 		{ id: 'all', label: '全部' },
 		{ id: 'people', label: `用户 ${results.users.length ? `(${results.users.length})` : ''}` },
 		{ id: 'posts', label: `动态 ${results.moments.length ? `(${results.moments.length})` : ''}` },
 		{ id: 'tags', label: `标签 ${results.tags.length ? `(${results.tags.length})` : ''}` }
-	];
+	]);
 </script>
 
 <div class="flex flex-col h-full bg-[var(--neu-bg)]">
@@ -207,8 +207,9 @@
 							{/if}
 							<div class="flex flex-col gap-2.5">
 								{#each results.users as user (user.user_id)}
-									<div
-										class="neu-hover-card app-list-row app-list-row--rich neu-row-hover cursor-pointer rounded-[20px] px-4 neu-surface-flat"
+									<button
+										type="button"
+										class="neu-hover-card app-list-row app-list-row--rich neu-row-hover cursor-pointer rounded-[20px] px-4 w-full text-left neu-surface-flat"
 										onclick={() => void goto(ROUTES.user(user.user_id))}
 									>
 										<div class="rounded-full overflow-hidden flex-shrink-0" style="width:42px;height:42px;">
@@ -221,7 +222,7 @@
 											{/if}
 										</div>
 										<Users style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
-									</div>
+									</button>
 								{/each}
 							</div>
 						</div>
@@ -234,8 +235,9 @@
 							{/if}
 							<div class="flex flex-col gap-2.5">
 								{#each results.moments as moment (moment.moment_id)}
-									<div
-										class="neu-hover-card app-list-row app-list-row--rich neu-row-hover cursor-pointer rounded-[20px] px-4 neu-surface-flat"
+									<button
+										type="button"
+										class="neu-hover-card app-list-row app-list-row--rich neu-row-hover cursor-pointer rounded-[20px] px-4 w-full text-left neu-surface-flat"
 										onclick={() => void goto(ROUTES.moment(moment.moment_id))}
 									>
 										<div class="rounded-[12px] overflow-hidden flex-shrink-0 bg-[var(--neu-accent-soft)]" style="width:42px;height:42px;"></div>
@@ -250,7 +252,7 @@
 											</div>
 										</div>
 										<FileText style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
-									</div>
+									</button>
 								{/each}
 							</div>
 						</div>

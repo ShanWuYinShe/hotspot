@@ -13,7 +13,7 @@
 	import { ROUTES } from '@/lib/routes';
 
 	// 发现流（首页与 /nearby/moments 共用）：移动单列 / 平板双列 / 桌面
-	// BSP 卡片墙。迁移自 React MomentsFeedPage.tsx。
+	// BSP 卡片墙。迁移自旧版 MomentsFeedPage。
 
 	let apiFeedItems = $state<FeedItem[]>([]);
 	let tags = $state<string[]>([]);
@@ -92,13 +92,14 @@
 		};
 	});
 
-	// 三端共用的过滤逻辑（React 版每个布局内重复，此处收敛）
+	// 三端共用的过滤逻辑（旧版每个布局内重复，此处收敛）
 	let searchVal = $state('');
 	let activeTab = $state('热门');
 	let activeTag = $state<string | null>(null);
 	let visibleCount = $state(12);
 
-	const interactions = createFeedInteractions(apiFeedItems);
+	// 传入 getter 而非数组快照：interactions.items 需跟随 apiFeedItems 更新
+	const interactions = createFeedInteractions(() => apiFeedItems);
 
 	const filtered = $derived.by(() => {
 		const q = searchVal.trim().toLowerCase();

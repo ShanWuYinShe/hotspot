@@ -40,7 +40,11 @@
 		return null;
 	}
 
-	let mode = $state<AuthMode>(initialMode);
+	// initialMode 仅在挂载时生效（此后模式切换走 switchMode），此处有意只读取一次初始值。
+	function initialModeValue(): AuthMode {
+		return initialMode;
+	}
+	let mode = $state<AuthMode>(initialModeValue());
 	let loginId = $state('');
 	let password = $state('');
 	let nickname = $state('');

@@ -2,7 +2,7 @@
 	import ChatView from '@/components/messages/ChatView.svelte';
 
 	// 私聊窗口（chatId 实为对端 user_id，spec: target_user_id）。
-	// 迁移自 React ChatDetailPage.tsx。
+	// 迁移自旧版 ChatDetailPage。
 
 	let { params }: { params: { chatId: string } } = $props();
 </script>

@@ -7,7 +7,7 @@
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 粉丝分区（迁移自 React ProfileSections.tsx 内 SectionFans/FanRow）。
+	// 粉丝分区（迁移自旧版 ProfileSections 内 SectionFans/FanRow）。
 
 	let { embedded = false }: { embedded?: boolean } = $props();
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Sun, Cloud, Music } from '@lucide/svelte';
 
-	// 今日氛围卡（天气 + 音乐，迁移自 React TabletRail.tsx，静态 mock 内容）。
+	// 今日氛围卡（天气 + 音乐，迁移自旧版 TabletRail，静态 mock 内容）。
 </script>
 
 <div class="neu-surface-flat rounded-[18px] p-4">

@@ -6,7 +6,7 @@
 	import { getAccount, updateAccount } from '@/api';
 
 	// 编辑资料：昵称/简介/兴趣标签（5 个上限）+ 注销按钮。
-	// 迁移自 React EditProfilePage.tsx。
+	// 迁移自旧版 EditProfilePage。
 
 	const TAG_OPTIONS = ['摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术', '科技', '游戏', '户外', '时尚', '电影'];
 
@@ -119,10 +119,11 @@
 	<div class="flex flex-col gap-1.5">
 		<div class="flex items-center gap-1.5">
 			<User style="width:13px;height:13px;color:var(--neu-accent-primary);" strokeWidth={1.75} />
-			<label class="text-[var(--neu-text-muted)] text-[11px] uppercase tracking-[0.1em]">昵称</label>
+			<label class="text-[var(--neu-text-muted)] text-[11px] uppercase tracking-[0.1em]" for="edit-nickname">昵称</label>
 		</div>
 		<div class="px-4 py-3 rounded-[18px] neu-input-surface">
 			<input
+				id="edit-nickname"
 				bind:value={nickname}
 				oninput={(e) => (nickname = e.currentTarget.value.slice(0, 30))}
 				placeholder="你的名字"
@@ -134,11 +135,12 @@
 	<div class="flex flex-col gap-1.5">
 		<div class="flex items-center gap-1.5">
 			<FileText style="width:13px;height:13px;color:var(--neu-accent-primary);" strokeWidth={1.75} />
-			<label class="text-[var(--neu-text-muted)] text-[11px] uppercase tracking-[0.1em]">个人简介</label>
+			<label class="text-[var(--neu-text-muted)] text-[11px] uppercase tracking-[0.1em]" for="edit-bio">个人简介</label>
 		</div>
 		<div class="px-4 py-3 rounded-[18px] neu-input-surface">
 			<div>
 				<textarea
+					id="edit-bio"
 					bind:value={bio}
 					oninput={(e) => (bio = e.currentTarget.value.slice(0, 150))}
 					placeholder="介绍一下自己…"
@@ -155,11 +157,11 @@
 	</div>
 
 	<!-- Interest tags -->
-	<div class="flex flex-col gap-2.5">
-		<div class="flex items-center gap-1.5">
-			<label class="text-[var(--neu-text-muted)] text-[11px] uppercase tracking-[0.1em]">兴趣标签</label>
-			<span class="text-[var(--neu-text-muted)] text-[11px] opacity-60">({tags.size}/5)</span>
-		</div>
+	<fieldset class="flex flex-col gap-2.5 border-0 p-0 m-0 min-w-0">
+		<legend class="flex items-center gap-1.5 text-[var(--neu-text-muted)] text-[11px] uppercase tracking-[0.1em]">
+			兴趣标签
+			<span class="opacity-60">({tags.size}/5)</span>
+		</legend>
 		<div class="flex flex-wrap gap-2">
 			{#each TAG_OPTIONS as t (t)}
 				{@const active = tags.has(t)}
@@ -176,7 +178,7 @@
 				</button>
 			{/each}
 		</div>
-	</div>
+	</fieldset>
 
 	<!-- Danger zone -->
 	<div class="mt-3">

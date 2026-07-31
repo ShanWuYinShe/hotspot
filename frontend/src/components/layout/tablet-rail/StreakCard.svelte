@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Flame } from '@lucide/svelte';
 
-	// 连续签到卡（迁移自 React TabletRail.tsx，静态 mock 内容）。
+	// 连续签到卡（迁移自旧版 TabletRail，静态 mock 内容）。
 
 	const STREAK_DAYS = [
 		{ label: '一', done: true },

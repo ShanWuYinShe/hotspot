@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { ChevronRight } from '@lucide/svelte';
 
-	// 详情栏通用小节包装（迁移自 React DetailRail.tsx 内 RailSection）。
+	// 详情栏通用小节包装（迁移自旧版 DetailRail 内 RailSection）。
 
 	let {
 		title,

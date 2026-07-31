@@ -1,6 +1,6 @@
   # HotSpot Frontend
 
-  This is the React web frontend for HotSpot. It is a pure UI layer that must be served alongside the backend API.
+  This is the SvelteKit web frontend for HotSpot. It is a pure UI layer that must be served alongside the backend API.
 
   ## Running the code
 

@@ -17,7 +17,7 @@ function writePersisted(v: boolean) {
   try { localStorage.setItem(STORAGE_KEY, String(v)); } catch {}
 }
 
-/** Called once at startup from main.tsx. Reads localStorage, falls back to env. */
+/** Called once at startup from the app entry. Reads localStorage, falls back to env. */
 export function initMock(w: any, envDefault: boolean) {
   worker = w;
   enabled = readPersisted(envDefault);

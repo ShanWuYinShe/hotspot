@@ -13,7 +13,7 @@ API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
 - **框架**：SvelteKit 2 + Svelte 5（runes）+ `adapter-static` **SPA 模式**
   （`ssr=false` + `fallback: 'index.html'`，nginx `try_files` 回退；全部页面客户端渲染）
 - **样式**：Tailwind CSS v4 + CSS Token 三层架构（`neu-hover-*` CSS 类承载交互反馈）
-- **UI 组件**：shadcn-svelte / bits-ui 生态组件 + 项目内自研弹层
+- **UI 组件**：bits-ui 生态组件（`components/ui/` 封装层：dialog/sheet 定位变体、dropdown-menu、popover）+ 页面级自研视觉组件
 - **包管理**：bun（`bun install` / `bun run`）
 - **测试**：vitest + @testing-library/svelte（宿主机 `bun run test`）
 - **Mock**：MSW（仅 dev 模式）

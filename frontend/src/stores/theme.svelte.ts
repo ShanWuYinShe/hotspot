@@ -1,5 +1,5 @@
 // Theme store — dark mode + 语义主题（vibrant 星际 / forest 清野）。
-// 迁移自 React ThemeContext（runes 模块单例）。
+// 迁移自旧版 ThemeContext（runes 模块单例）。
 
 export type AppTheme = 'forest' | 'vibrant';
 

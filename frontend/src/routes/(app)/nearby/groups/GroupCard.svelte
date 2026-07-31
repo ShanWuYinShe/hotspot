@@ -6,13 +6,14 @@
 	let { group, onToggle, onOpen }: { group: Group; onToggle: () => void; onOpen: () => void } = $props();
 </script>
 
-<article
+<div
 	class="neu-hover-card flex h-full flex-col rounded-[18px] overflow-hidden cursor-pointer neu-surface-flat neu-card-hover neu-focus-ring"
 	style="background:var(--neu-bg);"
 	role="button"
 	tabindex="0"
 	onclick={onOpen}
 	onkeydown={(e) => {
+		if (e.target !== e.currentTarget) return;
 		if (e.key === 'Enter' || e.key === ' ') {
 			e.preventDefault();
 			onOpen();
@@ -56,4 +57,4 @@
 			<JoinButton {group} {onToggle} />
 		</div>
 	</div>
-</article>
+</div>

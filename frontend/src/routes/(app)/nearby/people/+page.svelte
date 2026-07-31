@@ -15,7 +15,7 @@
 	import { ROUTES } from '@/lib/routes';
 
 	// 附近的人：在线条 + 排序/标签过滤 + BSP 卡片墙（桌面）/ 网格（移动/平板）。
-	// 迁移自 React NearbyPeoplePage.tsx。
+	// 迁移自旧版 NearbyPeoplePage。
 
 	const SORT_OPTIONS = ['距离', '在线', '共同好友'];
 	const FILTER_TAGS = ['全部', '摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术'];

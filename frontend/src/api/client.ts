@@ -23,7 +23,7 @@ export function setApiBaseUrl(url: string) {
 
 /**
  * Notify the app of an auth-state change observed at the transport layer.
- * AuthContext listens for these instead of the client importing React.
+ * 由 auth store 监听这些事件，API 层自身不依赖 UI 框架。
  *   'auth-failed' → session invalid / refresh failed → drop to anonymous.
  *   'auth-banned' → 10201 account banned → show ban screen.
  */

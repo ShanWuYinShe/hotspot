@@ -1,4 +1,4 @@
-// 附近群组卡片数据类型与映射（迁移自 React NearbyGroupsPage.tsx）。
+// 附近群组卡片数据类型与映射（迁移自旧版 NearbyGroupsPage）。
 
 export interface Group {
 	id: string;

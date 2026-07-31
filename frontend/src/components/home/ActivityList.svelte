@@ -2,7 +2,7 @@
 	import type { Component } from 'svelte';
 	import { ChevronRight } from '@lucide/svelte';
 
-	// 附近话题活动列表（迁移自 React NearbyFeedPage.tsx 内 ActivityList/ActivityRow）。
+	// 附近话题活动列表（迁移自旧版 NearbyFeedPage 内 ActivityList/ActivityRow）。
 
 	export interface Activity {
 		id: number;

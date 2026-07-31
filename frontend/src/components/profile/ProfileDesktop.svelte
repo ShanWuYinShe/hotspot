@@ -10,7 +10,7 @@
 	import { ROUTES, type ProfileSection } from '@/lib/routes';
 
 	// 桌面个人主页：总览（左资料面板 + 右最近瞬间）与分区全宽两种模式。
-	// 迁移自 React ProfileFeature.tsx 内 ProfileDesktop。
+	// 迁移自旧版 ProfileFeature 内 ProfileDesktop。
 
 	let { section }: { section: string | null } = $props();
 
@@ -166,9 +166,11 @@
 				</div>
 				<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;max-width:{3 * 240 + 2 * 10}px;">
 					{#each myGalleryPosts.slice(0, 9) as post (post.id)}
-						<div
+						<button
+							type="button"
 							class="neu-hover-btn relative rounded-[16px] cursor-pointer overflow-hidden"
 							style="aspect-ratio:1/1;box-shadow:0 0 0 1px var(--neu-border), 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);"
+							aria-label="查看动态详情"
 							onclick={() => void goto(`${ROUTES.moment(post.id)}?from=me`)}
 						>
 							<div class="relative h-full w-full" style="overflow:hidden;border-radius:16px;">
@@ -186,7 +188,7 @@
 									</div>
 								</div>
 							</div>
-						</div>
+						</button>
 					{/each}
 				</div>
 			</div>

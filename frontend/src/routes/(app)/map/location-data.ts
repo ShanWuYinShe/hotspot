@@ -1,4 +1,4 @@
-/* Location mock data — extracted from Location.tsx to keep the page file lean. */
+/* Location mock data — extracted from the legacy page file to keep the page lean. */
 
 export type PinType = "user" | "group" | "post";
 
