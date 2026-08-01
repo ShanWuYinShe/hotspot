@@ -59,12 +59,12 @@
 			onerror={() => (avatarFailed = true)}
 		/>
 	{:else}
-		<!-- 无头像 / 加载失败：主题化占位铺满整卡 -->
+		<!-- 无头像 / 加载失败：accent 主题渐变占位铺满整卡 -->
 		<div
 			class="absolute inset-0 flex items-center justify-center"
-			style="background:linear-gradient(135deg, var(--neu-accent-soft), color-mix(in srgb, var(--neu-accent-soft) 55%, var(--neu-bg)));"
+			style="background:linear-gradient(135deg, color-mix(in srgb, var(--neu-accent-primary) 24%, var(--neu-bg)) 0%, color-mix(in srgb, var(--neu-accent-primary) 8%, var(--neu-bg)) 100%);"
 		>
-			<span class="text-[var(--neu-accent-primary)] text-2xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
+			<span class="text-[var(--neu-accent-primary)] text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
 		</div>
 	{/if}
 

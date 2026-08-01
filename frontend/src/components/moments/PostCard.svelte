@@ -55,11 +55,17 @@
 		<div class="absolute inset-0" style="background:var(--surface-image-scrim);"></div>
 		<div class="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
 	{:else}
-		<!-- 无图：主题化占位铺满整卡（底部覆盖层已含作者与位置信息，此处仅做装饰） -->
+		<!-- 无图：accent 主题渐变占位（底部覆盖层已含正文/作者/操作，此处仅做装饰） -->
 		<div
-			class="absolute inset-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--neu-accent-primary)_12%,var(--neu-bg))]"
+			class="absolute inset-0 flex items-center justify-center"
+			style="background:linear-gradient(135deg, color-mix(in srgb, var(--neu-accent-primary) 18%, var(--neu-bg)) 0%, color-mix(in srgb, var(--neu-accent-primary) 5%, var(--neu-bg)) 100%);"
 		>
-			<MapPin size={28} class="text-[var(--neu-accent-primary)] opacity-40" strokeWidth={1.5} />
+			<div
+				class="flex items-center justify-center rounded-[14px]"
+				style="width:46px;height:46px;background:color-mix(in srgb, var(--neu-accent-primary) 14%, var(--neu-bg));border:1px solid color-mix(in srgb, var(--neu-accent-primary) 25%, transparent);box-shadow:0 6px 18px color-mix(in srgb, var(--neu-accent-primary) 18%, transparent);"
+			>
+				<MapPin size={20} class="text-[var(--neu-accent-primary)]" strokeWidth={1.5} />
+			</div>
 		</div>
 	{/if}
 

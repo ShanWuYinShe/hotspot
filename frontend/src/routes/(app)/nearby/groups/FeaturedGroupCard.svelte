@@ -21,7 +21,17 @@
 		}
 	}}
 >
-	<img src={group.banner} alt={group.name} class="absolute inset-0 h-full w-full object-cover" />
+	{#if group.banner}
+		<img src={group.banner} alt={group.name} class="absolute inset-0 h-full w-full object-cover" />
+	{:else}
+		<!-- 无封面：accent 主题渐变占位 -->
+		<div
+			class="absolute inset-0 flex items-center justify-center"
+			style="background:linear-gradient(135deg, color-mix(in srgb, var(--neu-accent-primary) 20%, var(--neu-bg)) 0%, color-mix(in srgb, var(--neu-accent-primary) 6%, var(--neu-bg)) 100%);"
+		>
+			<span class="text-[var(--neu-accent-primary)] text-4xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
+		</div>
+	{/if}
 
 	<!-- 底部渐变遮罩，保证覆盖层文字可读 -->
 	<div class="absolute inset-x-0 bottom-0 h-3/5" style="background:linear-gradient(to top, rgba(0,0,0,.8), rgba(0,0,0,.3) 55%, transparent);"></div>
