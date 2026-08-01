@@ -27,6 +27,13 @@
 		onFollow: () => void;
 		onNavigate: () => void;
 	} = $props();
+
+	// 头像缺失或加载失败时的占位状态；头像地址变化后重置
+	let avatarFailed = $state(false);
+	$effect(() => {
+		void user.avatar;
+		avatarFailed = false;
+	});
 </script>
 
 <div
@@ -44,7 +51,23 @@
 	}}
 >
 	<div class="relative min-h-[160px] flex-1 overflow-hidden">
-		<img src={user.avatar} alt={user.name} class="w-full h-full object-cover" />
+		{#if user.avatar && !avatarFailed}
+			<img
+				src={user.avatar}
+				alt={user.name}
+				class="w-full h-full object-cover"
+				loading="lazy"
+				onerror={() => (avatarFailed = true)}
+			/>
+		{:else}
+			<!-- 无头像 / 加载失败：主题化占位，与有图卡保持一致的卡片结构 -->
+			<div
+				class="w-full h-full flex items-center justify-center"
+				style="background:linear-gradient(135deg, var(--neu-accent-soft), color-mix(in srgb, var(--neu-accent-soft) 55%, var(--neu-bg)));"
+			>
+				<span class="text-[var(--neu-accent-primary)] text-2xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
+			</div>
+		{/if}
 		<div class="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/70 to-transparent"></div>
 		<div class="absolute top-2.5 right-2.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--overlay-strong)]" style="backdrop-filter:blur(8px);">
 			<MapPin class="w-[9px] h-[9px] text-white" strokeWidth={1.5} />
