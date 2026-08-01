@@ -13,6 +13,41 @@ function json(data: JsonBodyType) {
   return HttpResponse.json(data);
 }
 
+/* ── Map hotspots mock 数据（对齐后端 map/canvas 响应结构）────────────── */
+const parseKm = (d: string | undefined) => {
+  if (!d) return undefined;
+  const n = parseFloat(d);
+  return Number.isNaN(n) ? undefined : Math.round(n * 1000);
+};
+const mockUserHotspots = mockUsers.map((u, i) => ({
+  object_type: "user" as const,
+  object_id: u.user_id,
+  title: u.nickname,
+  subtitle: "附近用户",
+  cover_url: u.avatar_url,
+  location: { latitude: 34.2604 + (i - 3) * 0.006, longitude: 117.1855 + (i % 2 === 0 ? 0.008 : -0.006) },
+  distance_meters: 300 + i * 150,
+}));
+const mockGroupHotspots = mockGroups.map((g) => ({
+  object_type: "group" as const,
+  object_id: g.group.group_id,
+  title: g.group.name,
+  subtitle: g.description,
+  cover_url: g.group.avatar_url,
+  location: { latitude: g.location.point.latitude, longitude: g.location.point.longitude },
+  distance_meters: parseKm(g.location.distance),
+}));
+const mockMomentHotspots = mockMoments.slice(0, 6).map((m) => ({
+  object_type: "moment" as const,
+  object_id: m.moment_id,
+  title: m.description.slice(0, 30),
+  subtitle: m.location.location_name,
+  cover_url: m.images?.[0]?.url,
+  location: { latitude: m.location.point.latitude, longitude: m.location.point.longitude },
+  distance_meters: parseKm(m.location.distance),
+  created_at: m.created_at,
+}));
+
 /**
  * Guard for auth-required endpoints: when the mock session is logged out,
  * return 10100 (spec's "not authenticated" signal) so the client exercises its
@@ -240,20 +275,26 @@ export const handlers = [
 
   // ── Map ────────────────────────────────────────
   // map/canvas is auth-optional (anonymous sees public hotspots).
-  http.post(`${API}/map/canvas`, () => json(apiOk({
-    mode: "hotspots" as const,
-    hotspots: {
-      items: mockMoments.slice(0, 6).map(m => ({
-        object_type: "moment" as const,
-        object_id: m.moment_id,
-        title: m.description.slice(0, 30),
-        subtitle: m.location.location_name,
-        cover_url: m.images?.[0]?.url,
-        location: m.location,
-        created_at: m.created_at,
-      })),
-    },
-  }))),
+  // 响应结构对齐当前后端实现（backend-go/internal/modules/map）：
+  // `{ hotspots?: { items } }` 无 mode 字段；location 为 GeoPoint + distance_meters。
+  // data_type 单值筛选：'user' | 'group' | 'moment'；缺省/'all' 返回全部混合。
+  http.post(`${API}/map/canvas`, async ({ request }) => {
+    let dataType: string | undefined;
+    try {
+      dataType = ((await request.json()) as any)?.filter?.data_type;
+    } catch {
+      /* 请求体缺失时按全部返回 */
+    }
+    const pool =
+      dataType === "user"
+        ? mockUserHotspots
+        : dataType === "group"
+          ? mockGroupHotspots
+          : dataType === "moment"
+            ? mockMomentHotspots
+            : [...mockUserHotspots, ...mockGroupHotspots, ...mockMomentHotspots];
+    return json(apiOk({ hotspots: { items: pool } }));
+  }),
 
   // ── Reports ────────────────────────────────────
   http.post(`${API}/reports/create`, () => requireMockAuth() ?? json(apiOk({ report_id: "report_1" }))),
