@@ -56,7 +56,7 @@ func (r *notificationListCaptureRepo) MarkAllReadByType(context.Context, string,
 func TestAppendNewFollowerBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	if err := service.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "", ""); err != nil {
+	if _, err := service.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "", ""); err != nil {
 		t.Fatalf("append new follower: %v", err)
 	}
 	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
@@ -71,7 +71,7 @@ func TestAppendNewFollowerBuildsNotification(t *testing.T) {
 func TestAppendNewFollowerIncludesSourceFields(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	if err := service.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment", "moment_123"); err != nil {
+	if _, err := service.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment", "moment_123"); err != nil {
 		t.Fatalf("append new follower with source: %v", err)
 	}
 	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
@@ -86,7 +86,7 @@ func TestAppendNewFollowerIncludesSourceFields(t *testing.T) {
 func TestAppendMutualFollowBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	if err := service.AppendMutualFollow(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}); err != nil {
+	if _, err := service.AppendMutualFollow(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}); err != nil {
 		t.Fatalf("append mutual follow: %v", err)
 	}
 	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
@@ -101,7 +101,7 @@ func TestAppendMutualFollowBuildsNotification(t *testing.T) {
 func TestAppendMomentCommentedBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	if err := service.AppendMomentCommented(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}, "comment_1", "preview"); err != nil {
+	if _, err := service.AppendMomentCommented(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}, "comment_1", "preview"); err != nil {
 		t.Fatalf("append moment commented: %v", err)
 	}
 	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
@@ -119,7 +119,7 @@ func TestAppendMomentCommentedBuildsNotification(t *testing.T) {
 func TestAppendMentionedBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	if err := service.AppendMentioned(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "comment", "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}, "comment_1", "preview"); err != nil {
+	if _, err := service.AppendMentioned(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "comment", "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}, "comment_1", "preview"); err != nil {
 		t.Fatalf("append mentioned: %v", err)
 	}
 	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
@@ -138,11 +138,18 @@ func TestAppendGroupInviteReceivedBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
 	message := "join us"
-	if err := service.AppendGroupInviteReceived(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "group_1", "Hot Group", "invite_1", &message); err != nil {
+	id, err := service.AppendGroupInviteReceived(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "group_1", "Hot Group", "invite_1", &message)
+	if err != nil {
 		t.Fatalf("append group invite received: %v", err)
 	}
+	if id == "" {
+		t.Fatal("expected non-empty notification_id")
+	}
 	item := repo.appended[0]
-	if item.Type != "group_invite_received" || item.Payload["invite_id"] != "invite_1" || item.Payload["group_id"] != "group_1" {
+	if item.NotificationID != id {
+		t.Fatalf("expected item.NotificationID=%q, got %q", id, item.NotificationID)
+	}
+	if item.Type != "group_invite_received" || item.Payload["invite_id"] != "invite_1" || item.Payload["group_id"] != "group_1" || item.Payload["message"] != "join us" {
 		t.Fatalf("unexpected notification item: %#v", item)
 	}
 }
@@ -174,17 +181,23 @@ func TestPushSystemAnnouncementFansOut(t *testing.T) {
 	hub.RegisterUser("user_alice", "sess_1", aliceSink)
 	hub.RegisterUser("user_bob", "sess_2", bobSink)
 	service := NewService()
-	payload := systemmodule.SystemAnnouncementItem{AnnouncementID: "ann_1", Title: "维护通知", Content: "今晚维护", Severity: systemmodule.AnnounceLevelInfo, CreatedAt: "2026-03-26T00:00:00Z"}
-	service.PushSystemAnnouncement(payload)
+	payload := systemmodule.SystemAnnouncementItem{AnnouncementID: "ann_1", Title: "维护通知", Content: "今晚维护", Severity: systemmodule.AnnounceLevelInfo, ActionURL: "https://example.com/maint", CreatedAt: "2026-03-26T00:00:00Z"}
+	service.PushSystemAnnouncement(payload, "notif_1")
 	if len(aliceSink.events) != 1 || len(bobSink.events) != 1 {
 		t.Fatalf("unexpected events: %#v %#v", aliceSink.events, bobSink.events)
 	}
 	if aliceSink.events[0].Type != "SystemAnnouncement" || bobSink.events[0].Type != "SystemAnnouncement" {
 		t.Fatalf("unexpected event types: %#v %#v", aliceSink.events, bobSink.events)
 	}
-	alicePayload, ok := aliceSink.events[0].Payload.(systemmodule.SystemAnnouncementItem)
-	if !ok || alicePayload.AnnouncementID != "ann_1" || alicePayload.Title != "维护通知" {
-		t.Fatalf("unexpected alice payload: %#v", aliceSink.events[0].Payload)
+	alicePayload, ok := aliceSink.events[0].Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected alice payload type: %#v", aliceSink.events[0].Payload)
+	}
+	if alicePayload["notification_id"] != "notif_1" || alicePayload["announcement_id"] != "ann_1" || alicePayload["title"] != "维护通知" || alicePayload["content"] != "今晚维护" || alicePayload["action_url"] != "https://example.com/maint" || alicePayload["severity"] != systemmodule.AnnounceLevelInfo {
+		t.Fatalf("unexpected alice payload: %#v", alicePayload)
+	}
+	if bobPayload, ok := bobSink.events[0].Payload.(map[string]any); !ok || bobPayload["notification_id"] != "notif_1" {
+		t.Fatalf("unexpected bob payload: %#v", bobSink.events[0].Payload)
 	}
 }
 
@@ -192,13 +205,20 @@ func TestAppendSystemAnnouncementBuildsNotificationsForUsers(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
 	payload := systemmodule.SystemAnnouncementItem{AnnouncementID: "ann_1", Title: "维护通知", Content: "今晚维护", Severity: systemmodule.AnnounceLevelInfo, CreatedAt: "2026-03-26T00:00:00Z"}
-	if err := service.AppendSystemAnnouncement(context.Background(), []string{"user_alice", "user_bob"}, payload); err != nil {
+	notificationID, err := service.AppendSystemAnnouncement(context.Background(), []string{"user_alice", "user_bob"}, payload)
+	if err != nil {
 		t.Fatalf("append system announcement: %v", err)
+	}
+	if notificationID == "" {
+		t.Fatal("expected generated notification_id, got empty")
 	}
 	if len(repo.appendMany) != 2 || len(repo.appended) != 1 {
 		t.Fatalf("unexpected append-many capture: %#v", repo)
 	}
 	item := repo.appended[0]
+	if item.NotificationID != notificationID {
+		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	}
 	if item.Type != "system_announcement" || item.Payload["announcement_id"] != "ann_1" || item.Payload["type"] != "system_announcement" {
 		t.Fatalf("unexpected system notification item: %#v", item)
 	}

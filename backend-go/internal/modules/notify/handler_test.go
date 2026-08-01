@@ -135,11 +135,11 @@ func TestUnreadCountReturnsByTypeBreakdown(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Insert notifications of each type category
-	_ = svc.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "", "")
-	_ = svc.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "charlie", "nickname": "Charlie"}, "", "")
+	_, _ = svc.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "", "")
+	_, _ = svc.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "charlie", "nickname": "Charlie"}, "", "")
 	_, _ = svc.AppendReactionAdded(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "moment", "m1", "👍")
-	_ = svc.AppendGroupInviteReceived(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "grp1", "Group One", "inv1", nil)
-	_ = svc.AppendSystemAnnouncement(context.Background(), []string{"user_alice"}, systemmodule.SystemAnnouncementItem{AnnouncementID: "ann1", Title: "Test", Content: "Test content", Severity: systemmodule.AnnounceLevelInfo})
+	_, _ = svc.AppendGroupInviteReceived(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "grp1", "Group One", "inv1", nil)
+	_, _ = svc.AppendSystemAnnouncement(context.Background(), []string{"user_alice"}, systemmodule.SystemAnnouncementItem{AnnouncementID: "ann1", Title: "Test", Content: "Test content", Severity: systemmodule.AnnounceLevelInfo})
 
 	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/get_unread_count", strings.NewReader(`{}`)))
 	rr := httptest.NewRecorder()

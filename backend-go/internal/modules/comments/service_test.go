@@ -43,17 +43,17 @@ type failingNotificationWriter struct {
 	calls int
 }
 
-func (w *failingNotificationWriter) AppendMomentCommented(context.Context, string, map[string]any, string, map[string]any, string, string) error {
+func (w *failingNotificationWriter) AppendMomentCommented(context.Context, string, map[string]any, string, map[string]any, string, string) (string, error) {
 	w.calls++
-	return errors.New("notification down")
+	return "", errors.New("notification down")
 }
-func (w *failingNotificationWriter) AppendCommentReply(context.Context, string, map[string]any, string, map[string]any, string, string, string, string) error {
+func (w *failingNotificationWriter) AppendCommentReply(context.Context, string, map[string]any, string, map[string]any, string, string, string, string) (string, error) {
 	w.calls++
-	return errors.New("notification down")
+	return "", errors.New("notification down")
 }
-func (w *failingNotificationWriter) AppendMentioned(context.Context, string, map[string]any, string, string, map[string]any, string, string) error {
+func (w *failingNotificationWriter) AppendMentioned(context.Context, string, map[string]any, string, string, map[string]any, string, string) (string, error) {
 	w.calls++
-	return errors.New("notification down")
+	return "", errors.New("notification down")
 }
 
 func testCommentContext(userID string) context.Context {
@@ -100,6 +100,10 @@ func TestCreateTopLevelCommentSendsRealtimeAndNotificationToMomentAuthor(t *test
 	if payload["moment_id"] != "moment_1" || payload["comment_id"] != comment.CommentID || payload["content"] != "top level comment" {
 		t.Fatalf("unexpected event payload: %#v", payload)
 	}
+	notificationID, _ := payload["notification_id"].(string)
+	if notificationID == "" {
+		t.Fatalf("expected non-empty notification_id in event payload: %#v", payload)
+	}
 	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotificationListRequest{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
@@ -110,6 +114,9 @@ func TestCreateTopLevelCommentSendsRealtimeAndNotificationToMomentAuthor(t *test
 	notifPayload := notificationsPage.Items[0].Payload
 	if notifPayload["comment_id"] != comment.CommentID || notifPayload["comment_preview"] != "top level comment" {
 		t.Fatalf("unexpected notification payload: %#v", notifPayload)
+	}
+	if notificationsPage.Items[0].NotificationID != notificationID {
+		t.Fatalf("expected event notification_id to match stored item, got event=%q stored=%q", notificationID, notificationsPage.Items[0].NotificationID)
 	}
 }
 
@@ -192,6 +199,10 @@ func TestCreateReplySendsRealtimeAndNotificationToParentAuthor(t *testing.T) {
 	if payload["comment_id"] != parent.CommentID || payload["reply_id"] != reply.CommentID || payload["replied_comment_preview"] != "parent" || payload["content"] != "reply" {
 		t.Fatalf("unexpected reply payload: %#v", payload)
 	}
+	notificationID, _ := payload["notification_id"].(string)
+	if notificationID == "" {
+		t.Fatalf("expected non-empty notification_id in event payload: %#v", payload)
+	}
 	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotificationListRequest{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
@@ -202,6 +213,9 @@ func TestCreateReplySendsRealtimeAndNotificationToParentAuthor(t *testing.T) {
 	notifPayload := notificationsPage.Items[0].Payload
 	if notifPayload["comment_id"] != parent.CommentID || notifPayload["reply_id"] != reply.CommentID || notifPayload["reply_content_preview"] != "reply" {
 		t.Fatalf("unexpected notification payload: %#v", notifPayload)
+	}
+	if notificationsPage.Items[0].NotificationID != notificationID {
+		t.Fatalf("expected event notification_id to match stored item, got event=%q stored=%q", notificationID, notificationsPage.Items[0].NotificationID)
 	}
 }
 
@@ -279,12 +293,19 @@ func TestCreateCommentMentionSendsRealtimeAndNotification(t *testing.T) {
 	if payload["comment_id"] != comment.CommentID || payload["target_type"] != "comment" || payload["comment_preview"] != "hello @carol" {
 		t.Fatalf("unexpected mention payload: %#v", payload)
 	}
+	notificationID, _ := payload["notification_id"].(string)
+	if notificationID == "" {
+		t.Fatalf("expected non-empty notification_id in event payload: %#v", payload)
+	}
 	notificationsPage, err := notificationRepo.List(context.Background(), "user_carol", notify.NotificationListRequest{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
 	}
 	if len(notificationsPage.Items) != 1 || notificationsPage.Items[0].Type != "mentioned" {
 		t.Fatalf("unexpected mention notifications page: %#v", notificationsPage)
+	}
+	if notificationsPage.Items[0].NotificationID != notificationID {
+		t.Fatalf("expected event notification_id to match stored item, got event=%q stored=%q", notificationID, notificationsPage.Items[0].NotificationID)
 	}
 }
 

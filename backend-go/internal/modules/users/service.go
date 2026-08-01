@@ -20,8 +20,8 @@ type Service struct {
 }
 
 type userNotificationWriter interface {
-	AppendNewFollower(ctx context.Context, targetUserID string, actor map[string]any, source string, sourceMomentID string) error
-	AppendMutualFollow(ctx context.Context, targetUserID string, actor map[string]any) error
+	AppendNewFollower(ctx context.Context, targetUserID string, actor map[string]any, source string, sourceMomentID string) (string, error)
+	AppendMutualFollow(ctx context.Context, targetUserID string, actor map[string]any) (string, error)
 }
 
 func NewService() *Service {

@@ -22,8 +22,8 @@ type Service struct {
 }
 
 type announcementPushService interface {
-	AppendSystemAnnouncement(ctx context.Context, userIDs []string, item systemmodule.SystemAnnouncementItem) error
-	PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem)
+	AppendSystemAnnouncement(ctx context.Context, userIDs []string, item systemmodule.SystemAnnouncementItem) (string, error)
+	PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem, notificationID string)
 	// Report-outcome notifications (resolve/dismiss), returning the generated
 	// notification_id for the realtime payload.
 	AppendReportResolved(ctx context.Context, targetUserID string, reportID string, targetType string, targetID string, note string) (string, error)

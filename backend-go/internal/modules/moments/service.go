@@ -43,7 +43,7 @@ type ReactionAggregator interface {
 }
 
 type momentNotificationWriter interface {
-	AppendMentioned(ctx context.Context, targetUserID string, actor map[string]any, targetType string, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error
+	AppendMentioned(ctx context.Context, targetUserID string, actor map[string]any, targetType string, momentID string, momentSummary map[string]any, commentID string, commentPreview string) (string, error)
 }
 
 func NewService() *Service {
@@ -456,15 +456,20 @@ func (s *Service) notifyMomentMentions(ctx context.Context, actorUserID string, 
 		if mentionedUserID == actorUserID {
 			continue
 		}
-		if err := s.notifications.AppendMentioned(ctx, mentionedUserID, actor, "moment", item.MomentID, momentSummary, "", ""); err != nil {
+		notificationID := ""
+		id, err := s.notifications.AppendMentioned(ctx, mentionedUserID, actor, "moment", item.MomentID, momentSummary, "", "")
+		if err != nil {
 			observability.L().Error("moments.mentions append notification failed", "error", err, "moment_id", item.MomentID, "mentioned_user_id", mentionedUserID)
+		} else {
+			notificationID = id
 		}
 		realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeMessageMentioned, Payload: map[string]any{
-			"target_type":    "moment",
-			"moment_id":      item.MomentID,
-			"moment_summary": cloneMomentSummary(momentSummary, item.MomentID),
-			"actor":          actor,
-			"mentioned_at":   item.CreatedAt,
+			"notification_id": notificationID,
+			"target_type":     "moment",
+			"moment_id":       item.MomentID,
+			"moment_summary":  cloneMomentSummary(momentSummary, item.MomentID),
+			"actor":           actor,
+			"mentioned_at":    item.CreatedAt,
 		}})
 	}
 }

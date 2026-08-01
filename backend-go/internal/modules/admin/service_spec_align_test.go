@@ -23,11 +23,11 @@ type reportNotifyCall struct {
 	note           string
 }
 
-func (s *capturePushStub) AppendSystemAnnouncement(_ context.Context, _ []string, _ systemmodule.SystemAnnouncementItem) error {
-	return nil
+func (s *capturePushStub) AppendSystemAnnouncement(_ context.Context, _ []string, _ systemmodule.SystemAnnouncementItem) (string, error) {
+	return "notif_ann_1", nil
 }
 
-func (s *capturePushStub) PushSystemAnnouncement(_ systemmodule.SystemAnnouncementItem) {}
+func (s *capturePushStub) PushSystemAnnouncement(_ systemmodule.SystemAnnouncementItem, _ string) {}
 
 func (s *capturePushStub) AppendReportResolved(_ context.Context, reporterUserID, reportID, targetType, targetID, note string) (string, error) {
 	s.resolvedCalls = append(s.resolvedCalls, reportNotifyCall{reporterUserID, reportID, targetType, targetID, note})

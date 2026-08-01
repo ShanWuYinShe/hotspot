@@ -433,6 +433,20 @@ func TestFollowMutualFollowAddsNotificationsAndRealtime(t *testing.T) {
 	if len(bobSink.events) != 2 || bobSink.events[0].Type != "NewFollower" || bobSink.events[1].Type != "MutualFollow" {
 		t.Fatalf("unexpected bob events: %#v", bobSink.events)
 	}
+	// Each realtime payload must carry the notification_id of the persisted
+	// record (spec api_spec_websocket.md dedup contract).
+	aliceMutualPayload, ok := aliceSink.events[0].Payload.(map[string]any)
+	if !ok || aliceMutualPayload["notification_id"] != aliceNotifications.Items[0].NotificationID {
+		t.Fatalf("unexpected alice mutual payload: %#v stored=%q", aliceSink.events[0].Payload, aliceNotifications.Items[0].NotificationID)
+	}
+	bobFollowerPayload, ok := bobSink.events[0].Payload.(map[string]any)
+	if !ok || bobFollowerPayload["notification_id"] != bobNotifications.Items[1].NotificationID {
+		t.Fatalf("unexpected bob follower payload: %#v stored=%q", bobSink.events[0].Payload, bobNotifications.Items[1].NotificationID)
+	}
+	bobMutualPayload, ok := bobSink.events[1].Payload.(map[string]any)
+	if !ok || bobMutualPayload["notification_id"] != bobNotifications.Items[0].NotificationID {
+		t.Fatalf("unexpected bob mutual payload: %#v stored=%q", bobSink.events[1].Payload, bobNotifications.Items[0].NotificationID)
+	}
 }
 
 func TestFollowCarriesSourceIntoNotificationAndRealtime(t *testing.T) {
@@ -480,6 +494,9 @@ func TestFollowCarriesSourceIntoNotificationAndRealtime(t *testing.T) {
 	}
 	if eventPayload["source"] != string(FollowSourceMoment) || eventPayload["source_moment_id"] != "moment_123" {
 		t.Fatalf("unexpected realtime payload: %#v", eventPayload)
+	}
+	if eventPayload["notification_id"] != notificationsPage.Items[0].NotificationID {
+		t.Fatalf("expected event notification_id to match stored item, got event=%v stored=%q", eventPayload["notification_id"], notificationsPage.Items[0].NotificationID)
 	}
 }
 

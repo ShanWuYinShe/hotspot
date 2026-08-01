@@ -140,11 +140,12 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 			}
 			userIDs = append(userIDs, user.User.UserID)
 		}
-		if err := s.pushService.AppendSystemAnnouncement(ctx, userIDs, item.PublicItem()); err != nil {
+		notificationID, err := s.pushService.AppendSystemAnnouncement(ctx, userIDs, item.PublicItem())
+		if err != nil {
 			return AnnouncementCreated{}, nil, err
 		}
 		if req.SendPush {
-			s.pushService.PushSystemAnnouncement(item.PublicItem())
+			s.pushService.PushSystemAnnouncement(item.PublicItem(), notificationID)
 		}
 	}
 	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementCreate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeAnnouncement, TargetID: item.AnnouncementID, TargetName: title, Details: AuditDetails{"type": string(AuditActionAnnouncementCreate), "title": title}}); err != nil {

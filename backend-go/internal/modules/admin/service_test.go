@@ -31,17 +31,21 @@ func (p *stubProvider) UpdateAppConfig(_ context.Context, _ string, apply func(A
 // --- stub push service ---
 
 type stubPushService struct {
-	announced bool
-	pushed    bool
+	announced   bool
+	announcedID string
+	pushed      bool
+	pushedID    string
 }
 
-func (s *stubPushService) AppendSystemAnnouncement(_ context.Context, _ []string, _ systemmodule.SystemAnnouncementItem) error {
+func (s *stubPushService) AppendSystemAnnouncement(_ context.Context, _ []string, _ systemmodule.SystemAnnouncementItem) (string, error) {
 	s.announced = true
-	return nil
+	s.announcedID = "notif_ann_1"
+	return s.announcedID, nil
 }
 
-func (s *stubPushService) PushSystemAnnouncement(_ systemmodule.SystemAnnouncementItem) {
+func (s *stubPushService) PushSystemAnnouncement(_ systemmodule.SystemAnnouncementItem, notificationID string) {
 	s.pushed = true
+	s.pushedID = notificationID
 }
 
 func (s *stubPushService) AppendReportResolved(_ context.Context, _ string, _ string, _ string, _ string, _ string) (string, error) {

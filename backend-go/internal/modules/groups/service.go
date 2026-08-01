@@ -35,9 +35,9 @@ type LocationProvider interface {
 }
 
 type groupNotificationWriter interface {
-	AppendGroupInviteReceived(ctx context.Context, targetUserID string, actor map[string]any, groupID string, groupName string, inviteID string, message *string) error
+	AppendGroupInviteReceived(ctx context.Context, targetUserID string, actor map[string]any, groupID string, groupName string, inviteID string, message *string) (string, error)
 	AppendGroupInviteAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, user map[string]any) (string, error)
-	AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant map[string]any, groupID string, groupName string, applicationID string) error
+	AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant map[string]any, groupID string, groupName string, applicationID string) (string, error)
 	AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) (string, error)
 	AppendGroupInviteRevoked(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, revokedBy map[string]any, reason *string) (string, error)
 	AppendGroupApplicationCancelled(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, applicant map[string]any, reason *string) (string, error)
@@ -596,11 +596,18 @@ func (s *Service) resolveUserInfo(ctx context.Context, userID string) map[string
 
 func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem, inviterUserID string, req InviteMemberRequest, invitation Invitation) {
 	actor := s.resolveUserInfo(ctx, inviterUserID)
+	notificationID := ""
 	if s.notifications != nil {
-		_ = s.notifications.AppendGroupInviteReceived(ctx, req.UserID, actor, group.Group.GroupID, group.Group.Name, invitation.InviteID, req.Message)
+		id, err := s.notifications.AppendGroupInviteReceived(ctx, req.UserID, actor, group.Group.GroupID, group.Group.Name, invitation.InviteID, req.Message)
+		if err != nil {
+			observability.L().Error("groups.notify AppendGroupInviteReceived failed", "error", err, "invite_id", invitation.InviteID)
+		} else {
+			notificationID = id
+		}
 	}
 	payload := map[string]any{
-		"invite_id": invitation.InviteID,
+		"notification_id": notificationID,
+		"invite_id":       invitation.InviteID,
 		"group": map[string]any{
 			"group_id":      group.Group.GroupID,
 			"name":          group.Group.Name,
@@ -645,10 +652,16 @@ func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group Grou
 		if member.Role != GroupRoleOwner && member.Role != GroupRoleAdmin {
 			continue
 		}
+		notificationID := ""
 		if s.notifications != nil {
-			_ = s.notifications.AppendGroupApplicationReceived(ctx, member.User.UserID, applicant, group.Group.GroupID, group.Group.Name, application.ApplicationID)
+			id, err := s.notifications.AppendGroupApplicationReceived(ctx, member.User.UserID, applicant, group.Group.GroupID, group.Group.Name, application.ApplicationID)
+			if err != nil {
+				observability.L().Error("groups.notify AppendGroupApplicationReceived failed", "error", err, "application_id", application.ApplicationID)
+			} else {
+				notificationID = id
+			}
 		}
-		payload := map[string]any{"application_id": application.ApplicationID, "group_id": group.Group.GroupID, "applicant": applicant, "created_at": time.Now().UTC().Format(time.RFC3339)}
+		payload := map[string]any{"notification_id": notificationID, "application_id": application.ApplicationID, "group_id": group.Group.GroupID, "applicant": applicant, "created_at": time.Now().UTC().Format(time.RFC3339)}
 		if message != nil && *message != "" {
 			payload["message"] = *message
 		}

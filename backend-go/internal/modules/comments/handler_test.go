@@ -79,14 +79,14 @@ func (p *stubMomentProvider) NotificationContext(_ context.Context, _ string) (M
 
 type stubNotifWriter struct{}
 
-func (s *stubNotifWriter) AppendMomentCommented(_ context.Context, _ string, _ map[string]any, _ string, _ map[string]any, _, _ string) error {
-	return nil
+func (s *stubNotifWriter) AppendMomentCommented(_ context.Context, _ string, _ map[string]any, _ string, _ map[string]any, _, _ string) (string, error) {
+	return "notif_stub", nil
 }
-func (s *stubNotifWriter) AppendCommentReply(_ context.Context, _ string, _ map[string]any, _ string, _ map[string]any, _, _, _, _ string) error {
-	return nil
+func (s *stubNotifWriter) AppendCommentReply(_ context.Context, _ string, _ map[string]any, _ string, _ map[string]any, _, _, _, _ string) (string, error) {
+	return "notif_stub", nil
 }
-func (s *stubNotifWriter) AppendMentioned(_ context.Context, _ string, _ map[string]any, _, _ string, _ map[string]any, _, _ string) error {
-	return nil
+func (s *stubNotifWriter) AppendMentioned(_ context.Context, _ string, _ map[string]any, _, _ string, _ map[string]any, _, _ string) (string, error) {
+	return "notif_stub", nil
 }
 
 // --- helpers ---

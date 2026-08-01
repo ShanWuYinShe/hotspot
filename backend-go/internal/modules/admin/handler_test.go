@@ -13,7 +13,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"hotspot/backend-go/internal/modules/notify"
-	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
@@ -810,19 +809,19 @@ func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 	if adminSink.events[0].Type != "SystemAnnouncement" || aliceSink.events[0].Type != "SystemAnnouncement" {
 		t.Fatalf("unexpected announcement event types: %#v %#v", adminSink.events, aliceSink.events)
 	}
-	adminPayload, ok := adminSink.events[0].Payload.(systemmodule.SystemAnnouncementItem)
+	adminPayload, ok := adminSink.events[0].Payload.(map[string]any)
 	if !ok {
 		t.Fatalf("unexpected admin payload type: %#v", adminSink.events[0].Payload)
 	}
-	alicePayload, ok := aliceSink.events[0].Payload.(systemmodule.SystemAnnouncementItem)
+	alicePayload, ok := aliceSink.events[0].Payload.(map[string]any)
 	if !ok {
 		t.Fatalf("unexpected alice payload type: %#v", aliceSink.events[0].Payload)
 	}
-	if adminPayload.AnnouncementID != createResp.Data.AnnouncementID || adminPayload.Title != "维护通知" || adminPayload.Content != "今晚维护" || adminPayload.Severity != AnnounceLevelWarning || adminPayload.ActionURL != "https://example.com/maint" {
+	if adminPayload["announcement_id"] != createResp.Data.AnnouncementID || adminPayload["title"] != "维护通知" || adminPayload["content"] != "今晚维护" || adminPayload["severity"] != AnnounceLevelWarning || adminPayload["action_url"] != "https://example.com/maint" {
 		t.Fatalf("unexpected admin payload: %#v", adminPayload)
 	}
-	if alicePayload != adminPayload {
-		t.Fatalf("expected broadcast payloads to match: %#v %#v", adminPayload, alicePayload)
+	if adminPayload["notification_id"] == "" || adminPayload["notification_id"] != alicePayload["notification_id"] {
+		t.Fatalf("expected shared non-empty notification_id in broadcast payloads: %#v %#v", adminPayload, alicePayload)
 	}
 	adminNotifications, err := notificationRepo.List(context.Background(), "admin", notify.NotificationListRequest{})
 	if err != nil || len(adminNotifications.Items) != 1 || adminNotifications.Items[0].Type != "system_announcement" {
@@ -831,6 +830,9 @@ func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 	aliceNotifications, err := notificationRepo.List(context.Background(), "user_alice", notify.NotificationListRequest{})
 	if err != nil || len(aliceNotifications.Items) != 1 || aliceNotifications.Items[0].Type != "system_announcement" {
 		t.Fatalf("unexpected alice notifications: %#v err=%v", aliceNotifications, err)
+	}
+	if adminNotifications.Items[0].NotificationID != adminPayload["notification_id"] || aliceNotifications.Items[0].NotificationID != adminPayload["notification_id"] {
+		t.Fatalf("expected stored notification_id to match broadcast payload: broadcast=%v stored admin=%q alice=%q", adminPayload["notification_id"], adminNotifications.Items[0].NotificationID, aliceNotifications.Items[0].NotificationID)
 	}
 
 	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/search", strings.NewReader(`{"severity":"warning","pagination":{"limit":10}}`)), "admin", true)

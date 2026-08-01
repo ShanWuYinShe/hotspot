@@ -83,16 +83,16 @@ type groupApplicationRejectedCall struct {
 	reason        *string
 }
 
-func (w *notifyWriterStub) AppendGroupInviteReceived(context.Context, string, map[string]any, string, string, string, *string) error {
-	return nil
+func (w *notifyWriterStub) AppendGroupInviteReceived(context.Context, string, map[string]any, string, string, string, *string) (string, error) {
+	return "notif_written", nil
 }
 
 func (w *notifyWriterStub) AppendGroupInviteAccepted(context.Context, string, string, string, string, map[string]any) (string, error) {
 	return "notif_written", nil
 }
 
-func (w *notifyWriterStub) AppendGroupApplicationReceived(context.Context, string, map[string]any, string, string, string) error {
-	return nil
+func (w *notifyWriterStub) AppendGroupApplicationReceived(context.Context, string, map[string]any, string, string, string) (string, error) {
+	return "notif_written", nil
 }
 
 func (w *notifyWriterStub) AppendGroupApplicationAccepted(context.Context, string, string, string, string) (string, error) {

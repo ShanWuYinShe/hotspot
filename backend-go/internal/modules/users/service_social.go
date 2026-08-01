@@ -43,12 +43,16 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 	if sourceValue != string(FollowSourceMoment) {
 		sourceMomentID = ""
 	}
+	notificationID := ""
 	if s.notifications != nil {
-		if err := s.notifications.AppendNewFollower(ctx, targetUserID, actor, sourceValue, sourceMomentID); err != nil {
+		id, err := s.notifications.AppendNewFollower(ctx, targetUserID, actor, sourceValue, sourceMomentID)
+		if err != nil {
 			observability.L().Error("users.follow notification append failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		} else {
+			notificationID = id
 		}
 	}
-	newFollowerPayload := map[string]any{"actor": actor, "followed_at": followedAt}
+	newFollowerPayload := map[string]any{"notification_id": notificationID, "actor": actor, "followed_at": followedAt}
 	if sourceValue != "" {
 		newFollowerPayload["source"] = sourceValue
 	}
@@ -63,17 +67,26 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 	}
 	if relation.IsFollowing {
 		mutualAt := time.Now().UTC().Format(time.RFC3339)
+		notificationIDForPrincipal := ""
+		notificationIDForTarget := ""
 		if s.notifications != nil {
-			if err := s.notifications.AppendMutualFollow(ctx, principal.UserID, actor); err != nil {
+			id, err := s.notifications.AppendMutualFollow(ctx, principal.UserID, actor)
+			if err != nil {
 				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", principal.UserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			} else {
+				notificationIDForPrincipal = id
 			}
-			if err := s.notifications.AppendMutualFollow(ctx, targetUserID, actor); err != nil {
+			id, err = s.notifications.AppendMutualFollow(ctx, targetUserID, actor)
+			if err != nil {
 				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			} else {
+				notificationIDForTarget = id
 			}
 		}
-		mutualPayload := map[string]any{"actor": actor, "mutual_at": mutualAt}
-		realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayload})
-		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayload})
+		mutualPayloadForPrincipal := map[string]any{"notification_id": notificationIDForPrincipal, "actor": actor, "mutual_at": mutualAt}
+		mutualPayloadForTarget := map[string]any{"notification_id": notificationIDForTarget, "actor": actor, "mutual_at": mutualAt}
+		realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayloadForPrincipal})
+		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayloadForTarget})
 	}
 	observability.L().Info("users.follow completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
