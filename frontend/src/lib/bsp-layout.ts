@@ -25,6 +25,12 @@ export type BspRect = {
   y: number;
   width: number;
   height: number;
+  /**
+   * True for tiles added by the hole-filling pass (beyond `targetCount`).
+   * These are layout fillers, not real cards — the host should render them as
+   * empty placeholders instead of mapping them back onto items.
+   */
+  placeholder?: boolean;
 };
 
 export type BspLayoutOptions = {
@@ -55,11 +61,20 @@ export type BspLayoutOptions = {
   maxRatio?: number;
   /** Optional column-count override; otherwise derived from count and a near-square target. */
   cols?: number;
+  /**
+   * Optional per-tier card quotas (must sum to `targetCount`). When omitted the
+   * soft quota heuristic is used. Provided by `planBspLayout` so the tile mix
+   * tiles the grid exactly (no placeholders, no interior holes).
+   */
+  quotas?: BspQuotas;
   seed?: number;
 };
 
 type TileShape = { w: number; h: number; tier: Tier };
 type Tier = "1x1" | "1x2" | "2x1" | "2x2";
+
+/** Per-tier card quotas. Sums to the target card count. */
+export type BspQuotas = Record<Tier, number>;
 
 const TILE_SHAPES: TileShape[] = [
   { w: 1, h: 1, tier: "1x1" },
@@ -123,17 +138,18 @@ function deriveGrid(
   // Solve for unitH given unitW so that the 1×1 reads as a balanced square-ish
   // cell — this is what makes same-tier cards visually consistent.
   //
-  // Column count scales with the card count so the grid stays roughly square
-  // instead of becoming a single very tall column: a 1000-card feed at cols=3
-  // would be 333 rows, which both looks bad and makes the scorer O(rows×cols)
-  // per step explode. `sqrt(count)` keeps rows≈cols, but it is clamped by the
-  // minimum card width so a very wide feed never produces columns thinner than
-  // a card can legibly fill. The floor of 3 preserves the small-grid rhythm;
-  // an explicit `requestedCols` always wins.
-  const sqrtCols = Math.round(Math.sqrt(Math.max(targetCount, 9)));
-  const widthLimitedCols = Math.floor(canvasWidth / Math.max(minWidth, 120));
-  const scaledCols = clamp(sqrtCols, 3, Math.max(3, widthLimitedCols));
-  const cols = requestedCols ? clamp(requestedCols, 2, 12) : scaledCols;
+  // Column count is derived dynamically from the canvas width so the 1×1 base
+  // tile stays near-square: `unitW ≈ unitH`, which keeps 1×2 / 2×1 / 2×2 at
+  // their true aspect ratios (a 1×2 tile reads as "twice as tall", not as a
+  // skinny 1×3+ strip). The height drives the column count (card content needs
+  // ~minHeight of vertical space), the width only caps the upper bound so a
+  // column never gets narrower than a base card; when the card count is small
+  // the column count shrinks so the field tiles densely. The floor of 2 keeps
+  // narrow containers usable; an explicit `requestedCols` always wins.
+  const heightLimitedCols = Math.round(canvasWidth / Math.max(minHeight, 120));
+  const widthFloor = Math.floor(canvasWidth / Math.max(minWidth, 120));
+  const countLimitedCols = Math.max(2, Math.min(Math.min(heightLimitedCols, widthFloor), targetCount));
+  const cols = requestedCols ? clamp(requestedCols, 2, 12) : clamp(countLimitedCols, 2, 12);
   const unitW = canvasWidth / cols;
 
   // unitH bounded by: ratio band on the 1×1, and minHeight floor (+ gap budget).
@@ -161,6 +177,8 @@ type Placement = {
   gx: number;
   gy: number;
   index: number;
+  /** True for hole-filling tiles (see `fillToFull`). */
+  placeholder: boolean;
 };
 
 function canPlace(
@@ -459,6 +477,16 @@ function rankCandidates(
     }
   }
   candidates.sort((a, b) => b.score - a.score);
+  // 穿插保护：还有大形状（1×2 / 2×1 / 2×2）配额未完成时，形状按“占列
+  // 风险”排序——1×2 竖卡占整列，必须最先放，否则 2×1 先占满行会让竖卡
+  // 永远放不下；1×1 排到末尾，避免 anti-adjacency 惩罚让相邻矩形输给
+  // 1×1 抢位。
+  if (owed["1x2"] + owed["2x1"] + owed["2x2"] > 0) {
+    const tierPriority: Record<Tier, number> = { "1x2": 0, "2x2": 1, "2x1": 2, "1x1": 3 };
+    candidates.sort(
+      (a, b) => tierPriority[a.shape.tier] - tierPriority[b.shape.tier] || b.score - a.score,
+    );
+  }
   return candidates;
 }
 
@@ -494,7 +522,7 @@ function greedyFill(
     );
     if (!candidates.length) break;
     const choice = candidates[0];
-    const placement: Placement = { shape: choice.shape, gx: choice.gx, gy: choice.gy, index: placements.length };
+    const placement: Placement = { shape: choice.shape, gx: choice.gx, gy: choice.gy, index: placements.length, placeholder: false };
     mark(occupancy, cols, placement.shape, placement.gx, placement.gy, placement.index + 1);
     fillPlacementGrid(placementGrid, cols, placement);
     placements.push(placement);
@@ -529,7 +557,7 @@ function fillToFull(
       const anchors = candidateAnchors(occupancy, cols, rows, shape);
       if (!anchors.length) continue;
       const [gx, gy] = anchors[0];
-      const placement: Placement = { shape, gx, gy, index: placements.length };
+      const placement: Placement = { shape, gx, gy, index: placements.length, placeholder: true };
       mark(occupancy, cols, shape, gx, gy, placement.index + 1);
       fillPlacementGrid(placementGrid, cols, placement);
       placements.push(placement);
@@ -563,19 +591,34 @@ function placeCards(
   rows: number,
   targetCount: number,
   random: Random,
+  quotas?: BspQuotas,
 ): Placement[] {
   const { cols } = geometry;
-  const quotas = computeTierQuotas(targetCount, random);
-  const owed: Record<Tier, number> = { ...quotas };
+  const q = quotas ?? computeTierQuotas(targetCount, random);
+  const owed: Record<Tier, number> = { ...q };
   const placed: Record<Tier, number> = { "1x1": 0, "1x2": 0, "2x1": 0, "2x2": 0 };
 
   const occupancy = new Uint8Array(cols * rows);
   const placementGrid: (Tier | null)[] = new Array(cols * rows).fill(null);
   const placements: Placement[] = [];
 
-  greedyFill(geometry, rows, occupancy, placementGrid, quotas, owed, placed, placements, targetCount, random, false);
+  // 大形状先放（确定性、无视相邻）：1×1 之后才放，评分中的 anti-adjacency
+  // 惩罚就不会让矩形被 1×1 抢位，配额（格数 = 网格格数）恒可完成。
+  forcePlaceBigShapes(geometry, rows, occupancy, placementGrid, owed, placements, targetCount);
   if (placements.length < targetCount) {
-    greedyFill(geometry, rows, occupancy, placementGrid, quotas, owed, placed, placements, targetCount, random, true);
+    greedyFill(geometry, rows, occupancy, placementGrid, q, owed, placed, placements, targetCount, random, false);
+  }
+  // 碎片兜底：配额中的大形状受网格局部几何限制放不下时，用 1×1 完成剩余
+  // 配额，保证恰好 targetCount 张真卡铺满网格（无补位骨架）。
+  const oneByOne = TILE_SHAPES[0];
+  while (placements.length < targetCount) {
+    const anchors = candidateAnchors(occupancy, cols, rows, oneByOne);
+    if (!anchors.length) break;
+    const [gx, gy] = anchors[0];
+    const placement: Placement = { shape: oneByOne, gx, gy, index: placements.length, placeholder: false };
+    mark(occupancy, cols, oneByOne, gx, gy, placement.index + 1);
+    fillPlacementGrid(placementGrid, cols, placement);
+    placements.push(placement);
   }
   // Always top up to a fully tiled canvas — no interior holes, ever. This is
   // what makes the layout visually complete regardless of how targetCount's
@@ -583,6 +626,47 @@ function placeCards(
   fillToFull(geometry, rows, occupancy, placementGrid, placements);
 
   return placements;
+}
+
+/**
+ * Place every remaining big tile (1×2 / 2×2 / 2×1) with a deterministic
+ * leftmost-topmost anchor, ignoring adjacency. Big tiles must go before any
+ * 1×1 so the quota mix always fits: 1×2 (occupies a whole column) first, then
+ * 2×2 (needs a 2×2 block), then 2×1 (needs two columns in one row). Stops
+ * early at `targetCount` placements.
+ */
+function forcePlaceBigShapes(
+  geometry: GridGeometry,
+  rows: number,
+  occupancy: Uint8Array,
+  placementGrid: (Tier | null)[],
+  owed: Record<Tier, number>,
+  placements: Placement[],
+  targetCount: number,
+): void {
+  const { cols } = geometry;
+  const order: TileShape[] = [
+    { w: 1, h: 2, tier: "1x2" },
+    { w: 2, h: 2, tier: "2x2" },
+    { w: 2, h: 1, tier: "2x1" },
+  ];
+  for (;;) {
+    let placed = false;
+    for (const shape of order) {
+      if (owed[shape.tier] <= 0) continue;
+      const anchors = candidateAnchors(occupancy, cols, rows, shape);
+      if (!anchors.length) continue;
+      const [gx, gy] = anchors[0];
+      const placement: Placement = { shape, gx, gy, index: placements.length, placeholder: false };
+      mark(occupancy, cols, shape, gx, gy, placement.index + 1);
+      fillPlacementGrid(placementGrid, cols, placement);
+      placements.push(placement);
+      owed[shape.tier]--;
+      placed = true;
+      break;
+    }
+    if (!placed || placements.length >= targetCount) break;
+  }
 }
 
 /**
@@ -602,6 +686,7 @@ export function generateBspCardLayout({
   minRatio = 0.6,
   maxRatio = 1.7,
   cols,
+  quotas,
   seed = Math.floor(Math.random() * 2 ** 32),
 }: BspLayoutOptions): BspRect[] {
   if (canvasWidth <= 0 || canvasHeight <= 0 || targetCount <= 0) return [];
@@ -629,7 +714,7 @@ export function generateBspCardLayout({
   const rows = Math.max(1, Math.round(canvasHeight / geometry.unitH));
 
   const random = mulberry32(seed);
-  const placements = placeCards(geometry, rows, targetCount, random);
+  const placements = placeCards(geometry, rows, targetCount, random, quotas);
   if (placements.length === 0) return [];
 
   const inset = gap / 2;
@@ -638,7 +723,152 @@ export function generateBspCardLayout({
     y: p.gy * geometry.unitH + inset,
     width: Math.max(0, p.shape.w * geometry.unitW - gap),
     height: Math.max(0, p.shape.h * geometry.unitH - gap),
+    placeholder: p.placeholder,
   }));
+}
+
+/**
+ * Enumerate every tier-quota decomposition of `extra` surplus grid cells such
+ * that the tiles cover exactly `extra` cells beyond their 1×1 footprint: each
+ * 2×2 tile adds 3 surplus cells, each 1×2 / 2×1 adds 1, and 1×1 tiles add
+ * none. When a decomposition exists, `n` cards tile an `rows × cols` grid
+ * with zero holes.
+ *
+ * Heuristics mirror the old soft quotas: at most one 2×2 hero (and none for
+ * small collections), few rectangular "穿插" tiles (≤ 6), and balanced
+ * portrait/landscape. `rows === 1` forbids portrait tiles and heroes (they
+ * need two rows). The list is sorted by preference: more heroes first, then
+ * fewer rectangles, then balanced orientations — the host tries each candidate
+ * and keeps the first one that actually places.
+ */
+function decomposeQuotas(
+  extra: number,
+  cardBudget: number,
+  rows: number,
+  heroCap: number,
+): BspQuotas[] {
+  const out: BspQuotas[] = [];
+  if (extra < 0) return out;
+  const maxExtra = rows >= 2 ? 3 + 6 : 6; // 1 hero + 6 rectangles; single row has no hero
+  if (extra > maxExtra) return out;
+  const hMax = rows >= 2 ? Math.min(heroCap, Math.floor(extra / 3)) : 0;
+  for (let h = hMax; h >= 0; h--) {
+    const ab = extra - 3 * h;
+    if (ab > 6) continue;
+    if (h + ab > cardBudget) continue;
+    const aMax = rows >= 2 ? Math.min(ab, cardBudget - h) : 0;
+    for (let a = 0; a <= aMax; a++) {
+      const b = ab - a;
+      if (a < 0 || b < 0) continue;
+      out.push({ "1x1": cardBudget - h - a - b, "1x2": a, "2x1": b, "2x2": h });
+    }
+  }
+  out.sort(
+    (p, q) =>
+      q["2x2"] - p["2x2"] ||
+      p["1x2"] + p["2x1"] - (q["1x2"] + q["2x1"]) ||
+      Math.abs(p["1x2"] - p["2x1"]) - Math.abs(q["1x2"] - q["2x1"]),
+  );
+  return out;
+}
+
+/** Count real (non-placeholder) cards in a layout. */
+function countReal(rects: BspRect[]): number {
+  return rects.reduce((n, r) => n + (r.placeholder ? 0 : 1), 0);
+}
+
+/**
+ * Plan a hole-free layout for `targetCount` cards: pick the row count and the
+ * per-tier quotas so the tiles cover the `rows × cols` grid exactly, with no
+ * placeholders and no interior holes.
+ *
+ * Rows start from the tightest fit for the card count (and `minCanvasHeight`),
+ * preferring enough surplus for a 2×2 hero on larger collections; the search
+ * widens until the surplus is decomposable. Returns null when no row count
+ * admits an exact tiling (the host falls back to the legacy probe loop).
+ */
+export function planBspLayout(
+  options: Omit<BspLayoutOptions, "canvasHeight"> & { minCanvasHeight?: number },
+): { geometry: GridGeometry; rows: number; quotas: BspQuotas; canvasHeight: number; seed: number } | null {
+  const {
+    canvasWidth,
+    targetCount,
+    minSize = 110,
+    minWidth,
+    minHeight,
+    minRatio = 0.6,
+    maxRatio = 1.7,
+    cols,
+    minCanvasHeight = 0,
+  } = options;
+  if (canvasWidth <= 0 || targetCount <= 0) return null;
+
+  const resolvedMinWidth = minWidth ?? minSize;
+  const resolvedMinHeight = minHeight ?? minSize;
+  const geometry = deriveGrid(
+    canvasWidth,
+    targetCount,
+    resolvedMinWidth,
+    resolvedMinHeight,
+    minRatio,
+    maxRatio,
+    cols,
+  );
+  const { cols: c, unitH } = geometry;
+  const n = targetCount;
+
+  const rowsForCount = Math.max(1, Math.ceil(n / c));
+  const rowsForHeight = minCanvasHeight > 0 ? Math.max(1, Math.ceil(minCanvasHeight / unitH)) : 0;
+  const minRows = Math.max(rowsForCount, rowsForHeight);
+  // Prefer enough surplus cells (≥ 3) to host a 2×2 hero on larger collections.
+  const heroTarget = n >= 8 ? Math.ceil((n + 3) / c) : minRows;
+  const heroRows = Math.max(minRows, heroTarget);
+  // Surplus > 9 (1 hero + 6 rectangles) is never decomposable, so rows beyond
+  // floor((n+9)/c) cannot admit an exact tiling.
+  const maxRows = Math.max(heroRows, Math.floor((n + 9) / c));
+  const heroCap = n >= 8 ? 1 : 0;
+
+  const tryRows = (rows: number): { geometry: GridGeometry; rows: number; quotas: BspQuotas; canvasHeight: number; seed: number } | null => {
+    const extra = rows * c - n;
+    const candidates = decomposeQuotas(extra, n, rows, heroCap);
+    const height = Math.round(rows * unitH);
+    // 逐个候选、逐个 seed 模拟放置：配额必须真实可放（恰好 n 张真卡、
+    // 无补位骨架），且把验证成功的 seed 带回宿主——anti-adjacency 评分对
+    // seed 敏感（同配额不同 seed 放置成败不同），宿主必须用同一 seed 放置。
+    for (const quotas of candidates) {
+      for (let s = 0; s < 8; s++) {
+        const result = generateBspCardLayout({
+          canvasWidth,
+          canvasHeight: height,
+          targetCount: n,
+          minWidth: resolvedMinWidth,
+          minHeight: resolvedMinHeight,
+          minRatio,
+          maxRatio,
+          cols: c,
+          quotas,
+          seed: s,
+        });
+        if (countReal(result) >= n && result.every((r) => !r.placeholder)) {
+          return { geometry, rows, quotas, canvasHeight: height, seed: s };
+        }
+      }
+    }
+    return null;
+  };
+
+  for (let rows = heroRows; rows <= maxRows; rows++) {
+    const plan = tryRows(rows);
+    if (plan) return plan;
+  }
+  // Fall back to fewer rows (accepts an all-1×1 field when heroes don't fit).
+  // Walk downward to `rowsForCount` so a single dense row is a valid solution
+  // even when minCanvasHeight would have preferred two.
+  for (let rows = heroRows - 1; rows >= rowsForCount; rows--) {
+    const plan = tryRows(rows);
+    if (plan) return plan;
+  }
+  return null;
 }
 
 /**
@@ -682,7 +912,12 @@ export type { GridGeometry, TileShape, Tier };
  * matches. Returns the full rect list (frozen cards first, then new ones, then
  * any hole-fillers).
  */
-export function appendPlacements({
+type AppendOptions = Omit<BspLayoutOptions, "targetCount"> & { existing: BspRect[]; newCount: number };
+
+/**
+ * Try one append solve with a specific seed (see `appendPlacements`).
+ */
+function tryAppend({
   existing,
   canvasWidth,
   canvasHeight,
@@ -694,8 +929,9 @@ export function appendPlacements({
   minRatio = 0.6,
   maxRatio = 1.7,
   cols,
+  quotas,
   seed = Math.floor(Math.random() * 2 ** 32),
-}: Omit<BspLayoutOptions, "targetCount"> & { existing: BspRect[]; newCount: number }): BspRect[] {
+}: AppendOptions): BspRect[] {
   if (canvasWidth <= 0 || canvasHeight <= 0 || newCount <= 0) return existing;
   if (minRatio <= 0 || maxRatio < minRatio || gap < 0) {
     throw new Error("Invalid BSP layout constraints.");
@@ -743,35 +979,58 @@ export function appendPlacements({
     // Recover the tier from the snapped dimensions.
     const tier = (TILE_SHAPES.find((s) => s.w === w && s.h === h)?.tier ?? "1x1") as Tier;
     const shape: TileShape = { w, h, tier };
-    const placement: Placement = { shape, gx, gy, index: frozenPlacements.length };
+    const placement: Placement = { shape, gx, gy, index: frozenPlacements.length, placeholder: rect.placeholder === true };
     mark(occupancy, geometry.cols, shape, gx, gy, placement.index + 1);
     fillPlacementGrid(placementGrid, geometry.cols, placement);
     frozenPlacements.push(placement);
   }
 
-  // Place only the NEW cards (those beyond the frozen count). Quotas are
+  // Place only the NEW cards (those beyond the frozen real cards). Quotas are
   // computed for the new batch so the appended region keeps the same tier mix
-  // instead of degrading into all 1×1s.
-  const newCardCount = Math.max(0, newCount - frozenPlacements.length);
-  const quotas = computeTierQuotas(newCardCount + frozenPlacements.length, mulberry32(seed));
-  // Subtract the tiers already represented by frozen cards so we do not
-  // over-produce a tier that is already well-represented.
+  // instead of degrading into all 1×1s. Hole-filling placeholders in `existing`
+  // occupy grid cells but are NOT cards — they must not consume the new-card
+  // budget, otherwise appending always falls short of `newCount` real cards.
+  const frozenRealCount = frozenPlacements.reduce((n, p) => n + (p.placeholder ? 0 : 1), 0);
+  const newCardCount = Math.max(0, newCount - frozenRealCount);
+  // An explicit `quotas` describes the NEW cards exactly (sum = newCardCount,
+  // from planBspLayout) and is used as-is; otherwise derive soft quotas for the
+  // new total and subtract the tiers already represented by frozen REAL cards
+  // so we do not over-produce a tier that is already well-represented.
+  const computedQuotas = quotas ?? computeTierQuotas(newCount, mulberry32(seed));
   const placedFromFrozen: Record<Tier, number> = { "1x1": 0, "1x2": 0, "2x1": 0, "2x2": 0 };
-  for (const p of frozenPlacements) placedFromFrozen[p.shape.tier]++;
-  const owed: Record<Tier, number> = {
-    "1x1": Math.max(0, quotas["1x1"] - placedFromFrozen["1x1"]),
-    "1x2": Math.max(0, quotas["1x2"] - placedFromFrozen["1x2"]),
-    "2x1": Math.max(0, quotas["2x1"] - placedFromFrozen["2x1"]),
-    "2x2": Math.max(0, quotas["2x2"] - placedFromFrozen["2x2"]),
-  };
+  for (const p of frozenPlacements) {
+    if (!p.placeholder) placedFromFrozen[p.shape.tier]++;
+  }
+  const owed: Record<Tier, number> = quotas
+    ? { ...quotas }
+    : {
+        "1x1": Math.max(0, computedQuotas["1x1"] - placedFromFrozen["1x1"]),
+        "1x2": Math.max(0, computedQuotas["1x2"] - placedFromFrozen["1x2"]),
+        "2x1": Math.max(0, computedQuotas["2x1"] - placedFromFrozen["2x1"]),
+        "2x2": Math.max(0, computedQuotas["2x2"] - placedFromFrozen["2x2"]),
+      };
 
   const placements: Placement[] = [...frozenPlacements];
   // Re-index so new placements continue after the frozen ones.
   const reindex = () => placements.forEach((p, i) => { p.index = i; });
 
-  greedyFill(geometry, rows, occupancy, placementGrid, quotas, owed, placedFromFrozen, placements, frozenPlacements.length + newCardCount, mulberry32(seed ^ 0xa5a5), false);
-  if (placements.length < frozenPlacements.length + newCardCount) {
-    greedyFill(geometry, rows, occupancy, placementGrid, quotas, owed, placedFromFrozen, placements, frozenPlacements.length + newCardCount, mulberry32(seed ^ 0x5a5a), true);
+  const appendTarget = frozenPlacements.length + newCardCount;
+  // 大形状先放（确定性、无视相邻），1×1 之后评分放置——与初次 solve 一致
+  forcePlaceBigShapes(geometry, rows, occupancy, placementGrid, owed, placements, appendTarget);
+  if (placements.length < appendTarget) {
+    greedyFill(geometry, rows, occupancy, placementGrid, computedQuotas, owed, placedFromFrozen, placements, appendTarget, mulberry32(seed ^ 0x5a5a), false);
+  }
+  // 碎片兜底：剩余格无法容纳配额中的大形状（如旧布局含补位格、空间被切碎）时，
+  // 用 1×1 完成剩余配额，保证新卡真卡数达到 newCardCount（宿主无需回退全量重排）。
+  const oneByOne = TILE_SHAPES[0];
+  while (placements.length < appendTarget) {
+    const anchors = candidateAnchors(occupancy, geometry.cols, rows, oneByOne);
+    if (!anchors.length) break;
+    const [gx, gy] = anchors[0];
+    const placement: Placement = { shape: oneByOne, gx, gy, index: placements.length, placeholder: false };
+    mark(occupancy, geometry.cols, oneByOne, gx, gy, placement.index + 1);
+    fillPlacementGrid(placementGrid, geometry.cols, placement);
+    placements.push(placement);
   }
   // Keep the appended canvas hole-free as well.
   fillToFull(geometry, rows, occupancy, placementGrid, placements);
@@ -783,5 +1042,33 @@ export function appendPlacements({
     y: p.gy * unitH + inset,
     width: Math.max(0, p.shape.w * unitW - gap),
     height: Math.max(0, p.shape.h * unitH - gap),
+    placeholder: p.placeholder,
   }));
+}
+
+/**
+ * Append `newCount` total real cards to a previously solved layout WITHOUT
+ * moving any already-placed card.
+ *
+ * Placement is seed-sensitive (the scorer carries a random tie-break), so the
+ * append is attempted with several seeds and the first result that places the
+ * full card count with zero placeholder tiles is returned. When none succeed
+ * (rare: the frozen layout fragments the space), the result with the most real
+ * cards is returned and the host falls back to a full re-solve.
+ */
+export function appendPlacements(options: AppendOptions): BspRect[] {
+  const { existing, newCount, seed = Math.floor(Math.random() * 2 ** 32) } = options;
+  if (existing.length === 0) return existing;
+  let best: BspRect[] | null = null;
+  let bestReal = -1;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const result = tryAppend({ ...options, seed: seed + attempt * 0x9e3779b9 });
+    const real = countReal(result);
+    if (real >= newCount && result.every((r) => !r.placeholder)) return result;
+    if (real > bestReal) {
+      bestReal = real;
+      best = result;
+    }
+  }
+  return best ?? tryAppend({ ...options, seed });
 }
