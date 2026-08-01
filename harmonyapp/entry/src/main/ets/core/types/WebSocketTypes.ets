@@ -270,6 +270,7 @@ export interface UserOfflineEvent {
 // ----- 关注关系事件 -----
 
 export interface NewFollowerPayload {
+  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
   actor: UserInfo
   followed_at: string
   source?: FollowSource
@@ -282,6 +283,7 @@ export interface NewFollowerEvent {
 }
 
 export interface MutualFollowPayload {
+  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
   actor: UserInfo
   mutual_at: string
 }
@@ -323,6 +325,7 @@ export interface ReactionRemovedEvent {
 }
 
 export interface MomentCommentedPayload {
+  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
   moment_id: string
   moment_summary: MomentSummary
   comment_id: string
@@ -337,6 +340,7 @@ export interface MomentCommentedEvent {
 }
 
 export interface CommentReplyPayload {
+  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
   moment_id: string
   moment_summary: MomentSummary
   comment_id: string
@@ -353,6 +357,7 @@ export interface CommentReplyEvent {
 }
 
 export interface MessageMentionedPayload {
+  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
   target_type: 'moment' | 'comment'
   moment_id: string
   comment_id?: string
@@ -382,6 +387,7 @@ export interface UserProfileUpdatedEvent {
 // ----- 系统事件 -----
 
 export interface SystemAnnouncementPayload {
+  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
   announcement_id: string
   title: string
   content: string
@@ -655,6 +661,7 @@ export interface NearbyNewMomentEvent {
 }
 
 export interface GroupInviteReceivedPayload {
+  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
   invite_id: string
   group: GroupInfo
   inviter: UserInfo
@@ -710,6 +717,7 @@ export interface GroupInviteExpiredEvent {
 }
 
 export interface GroupApplicationReceivedPayload {
+  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
   application_id: string
   group_id: string
   applicant: UserInfo
