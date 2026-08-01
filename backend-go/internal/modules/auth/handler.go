@@ -312,7 +312,12 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	principal, ok := platformauth.PrincipalFromContext(r.Context())
 	if ok {
-		_ = h.service.auth.RevokeSession(r.Context(), principal.UserID, principal.SessionID, principal.SessionID)
+		// Best-effort revocation: even if it fails the tokens will expire, but a
+		// persistent failure (e.g. DB down) means revoked tokens stay valid until
+		// then — log it so operators can detect a degraded revocation path.
+		if err := h.service.auth.RevokeSession(r.Context(), principal.UserID, principal.SessionID, principal.SessionID); err != nil {
+			observability.L().Warn("logout: session revoke failed", "user_id", principal.UserID, "session_id", principal.SessionID, "error", err)
+		}
 		realtime.DefaultHub().CloseSession(principal.SessionID, sessionRevokedEvent("revoked_by_user"))
 	}
 	platformauth.ClearAuthCookies(w)

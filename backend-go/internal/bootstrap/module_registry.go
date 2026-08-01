@@ -27,14 +27,16 @@ import (
 )
 
 func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.Module {
-	return BuildModulesWithRedisPinger(cfg, factory, nil)
+	return BuildModulesWithRedisPinger(context.Background(), cfg, factory, nil)
 }
 
 // BuildModulesWithRedisPinger is like BuildModules but additionally wires a
 // redis liveness probe into the system module's health check. Pass nil when
 // redis is not configured (single-instance mode) — the health endpoint then
-// skips the redis probe instead of reporting degraded.
-func BuildModulesWithRedisPinger(cfg config.Config, factory *persistence.Factory, redisPinger func(ctx context.Context) error) []modulekit.Module {
+// skips the redis probe instead of reporting degraded. ctx governs the
+// lifetime of module-owned background goroutines (e.g. the auth login-tracker
+// sweeper) and should be the application root context.
+func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory *persistence.Factory, redisPinger func(ctx context.Context) error) []modulekit.Module {
 	sharedAppConfig := appconfig.NewPersistenceSource(cfg, factory)
 	ratelimit.SetSource(sharedAppConfig)
 	usersModule := users.NewModule(factory, sharedAppConfig)
@@ -79,7 +81,7 @@ func BuildModulesWithRedisPinger(cfg config.Config, factory *persistence.Factory
 	searchModule.Service.SetLocationProvider(usersModule.Service)
 	return []modulekit.Module{
 		admin.NewModule(factory, sharedAppConfig),
-		auth.NewModule(cfg, factory, sharedAppConfig),
+		auth.NewModule(ctx, cfg, factory, sharedAppConfig),
 		feedModule,
 		gmModule,
 		groupsModule,

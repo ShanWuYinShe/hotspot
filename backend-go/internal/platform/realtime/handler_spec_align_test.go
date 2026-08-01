@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,14 +30,27 @@ func (s stubTypingActorProvider) GetActorInfo(_ context.Context, userID string) 
 	return actor.Info{UserID: userID, Nickname: userID}, nil
 }
 
-// eventSink records delivered events for hub-based assertions.
+// eventSink records delivered events for hub-based assertions. The hub calls
+// Send from its own goroutine while the test reads events from the test
+// goroutine, so the slice is guarded by a mutex.
 type eventSink struct {
+	mu     sync.Mutex
 	events []Event
 }
 
 func (s *eventSink) Send(e Event) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.events = append(s.events, e)
 	return nil
+}
+
+func (s *eventSink) Events() []Event {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]Event, len(s.events))
+	copy(out, s.events)
+	return out
 }
 
 func (s *eventSink) Close() error { return nil }
@@ -213,15 +227,16 @@ func TestRealtimePrivateTypingPushesPayloadToTarget(t *testing.T) {
 
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
-		if len(bobSink.events) > 0 {
+		if len(bobSink.Events()) > 0 {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if len(bobSink.events) != 1 {
-		t.Fatalf("expected 1 PrivateTyping event to target, got %+v", bobSink.events)
+	got := bobSink.Events()
+	if len(got) != 1 {
+		t.Fatalf("expected 1 PrivateTyping event to target, got %+v", got)
 	}
-	event := bobSink.events[0]
+	event := got[0]
 	if event.Type != EventTypePrivateTyping {
 		t.Fatalf("expected PrivateTyping, got %s", event.Type)
 	}

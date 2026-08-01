@@ -30,6 +30,18 @@ func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool) {
 	return queryable, ok
 }
 
+// txQueryable returns the transaction-bound Queryable when one is in effect
+// (real pgx tx via RunInTransaction), otherwise falls back to the shared pool.
+// The fallback matters for tests, where RunInTransaction detects a stub backend
+// and runs fn without injecting a tx. Returns the narrower Queryable (Exec only)
+// since the transaction body only writes.
+func (r *PostgresRepository) txQueryable(ctx context.Context) (persistence.Queryable, bool) {
+	if q, ok := persistence.QueryableFromContext(ctx); ok {
+		return q, true
+	}
+	return r.queryable()
+}
+
 func (r *PostgresRepository) GetActor(ctx context.Context, userID string) (AdminActor, bool, error) {
 	queryable, ok := r.queryable()
 	if !ok {
@@ -155,14 +167,19 @@ func (r *PostgresRepository) DeleteRole(ctx context.Context, roleID string) erro
 	if item.deleted {
 		return nil
 	}
+	// Wrap the assignment clear and the role soft-delete in a single tx so a
+	// failure cannot leave assignments pointing at a soft-deleted role.
 	now := time.Now().UTC()
-	if err := queryable.Exec(ctx, queryRoleDeleteAssignments, roleID); err != nil {
-		return err
-	}
-	if err := queryable.Exec(ctx, queryRoleDelete, roleID, now); err != nil {
-		return err
-	}
-	return nil
+	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		txQueryable, ok := r.txQueryable(txCtx)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := txQueryable.Exec(txCtx, queryRoleDeleteAssignments, roleID); err != nil {
+			return err
+		}
+		return txQueryable.Exec(txCtx, queryRoleDelete, roleID, now)
+	})
 }
 
 func (r *PostgresRepository) SetRolePermissions(ctx context.Context, roleID string, permissionKeys []string) error {
@@ -177,16 +194,26 @@ func (r *PostgresRepository) SetRolePermissions(ctx context.Context, roleID stri
 	if !found || item.deleted {
 		return &httpx.APIError{Code: 10300, Message: "角色不存在"}
 	}
-	if err := queryable.Exec(ctx, queryRoleReplacePermissions, roleID); err != nil {
-		return err
-	}
+	// Wrap the permission delete + batch insert in a single tx so a failure
+	// cannot wipe a role's permissions with nothing replacing them.
 	now := time.Now().UTC()
-	for _, permissionKey := range permissionKeys {
-		if err := queryable.Exec(ctx, queryRoleInsertPermission, roleID, permissionKey, now); err != nil {
+	keys := permissionKeys
+	if keys == nil {
+		keys = []string{}
+	}
+	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		txQueryable, ok := r.txQueryable(txCtx)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := txQueryable.Exec(txCtx, queryRoleReplacePermissions, roleID); err != nil {
 			return err
 		}
-	}
-	return nil
+		if len(keys) == 0 {
+			return nil
+		}
+		return txQueryable.Exec(txCtx, queryRoleInsertPermissionsBatch, roleID, now, keys)
+	})
 }
 
 func (r *PostgresRepository) ListAdmins(ctx context.Context, pagination PaginationParams) (adminListPage, error) {

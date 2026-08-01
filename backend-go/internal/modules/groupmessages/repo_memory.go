@@ -23,11 +23,12 @@ func NewInMemoryRepository() *InMemoryRepository {
 func (r *InMemoryRepository) Send(_ context.Context, req SendGroupMessageRequest) (MessageSent, error) {
 	now := time.Now().UTC()
 	msg := GroupMessageItem{
-		MessageID: fmt.Sprintf("gm_%d", now.UnixNano()),
-		Type:      req.Type,
-		Content:   req.Content,
-		SentAt:    now.Format(time.RFC3339),
-		Mentions:  req.Mentions,
+		MessageID:    fmt.Sprintf("gm_%d", now.UnixNano()),
+		SenderUserID: req.SenderUserID,
+		Type:         req.Type,
+		Content:      req.Content,
+		SentAt:       now.Format(time.RFC3339),
+		Mentions:     req.Mentions,
 	}
 	r.mu.Lock()
 	r.items[req.GroupID] = append(r.items[req.GroupID], msg)
@@ -109,6 +110,11 @@ func (r *InMemoryRepository) Update(_ context.Context, req UpdateGroupMessageReq
 	if msg.Type != "text" {
 		return MessageEventMeta{}, ErrMessageNotEditable
 	}
+	// Strict ownership: only the sender may edit. Messages with an empty
+	// sender (legacy/anonymous) are not editable by anyone.
+	if msg.SenderUserID == "" || msg.SenderUserID != req.UserID {
+		return MessageEventMeta{}, ErrPermissionDenied
+	}
 
 	msg.Content = req.Content
 	msg.EditedAt = time.Now().UTC().Format(time.RFC3339Nano)
@@ -126,6 +132,11 @@ func (r *InMemoryRepository) Recall(_ context.Context, req RecallGroupMessageReq
 	}
 	if msg.RecalledAt != "" {
 		return MessageEventMeta{}, ErrMessageRecalled
+	}
+	// Strict ownership: only the sender may recall. Messages with an empty
+	// sender (legacy/anonymous) are not recallable by anyone.
+	if msg.SenderUserID == "" || msg.SenderUserID != req.UserID {
+		return MessageEventMeta{}, ErrPermissionDenied
 	}
 
 	// 检查撤回时间窗口（2分钟）
@@ -211,6 +222,16 @@ func (r *InMemoryRepository) GetMessageForReply(_ context.Context, _ string) (ma
 
 func (r *InMemoryRepository) MessageExists(_ context.Context, _ string) (bool, string, error) {
 	return false, "", nil
+}
+
+func (r *InMemoryRepository) LookupMessageMeta(_ context.Context, messageID string) (MessageOwnerMeta, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	groupID, _, msg, found := r.findMessage(messageID)
+	if !found {
+		return MessageOwnerMeta{}, false, nil
+	}
+	return MessageOwnerMeta{GroupID: groupID, SenderUserID: msg.SenderUserID}, true, nil
 }
 
 func (r *InMemoryRepository) GetMediaForMessage(_ context.Context, _ string) (map[string]any, bool, error) {

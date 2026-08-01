@@ -14,6 +14,20 @@ LIMIT $5`
 INSERT INTO notifications (notification_id, user_id, type, is_read, created_at, payload)
 VALUES ($1, $2, $3, $4, $5, $6::jsonb)`
 
+	// queryInsertNotificationsBatch fans out one notification to many users in
+	// a single round trip. Each row gets its own notification_id (the table's
+	// PK is notification_id alone, so a shared id would collide on the 2nd
+	// user); the prefix is concatenated with the row ordinal to keep ids unique
+	// while remaining traceable to the same logical event.
+	queryInsertNotificationsBatch = `
+WITH target AS (
+  SELECT uid, row_number() OVER () AS rn
+  FROM unnest($1::text[]) AS uid
+)
+INSERT INTO notifications (notification_id, user_id, type, is_read, created_at, payload)
+SELECT $2 || '_' || rn, uid, $3, $4, $5, $6::jsonb
+FROM target`
+
 	queryUnreadNotificationCounts = `
 SELECT type, COUNT(*)::text
 FROM notifications

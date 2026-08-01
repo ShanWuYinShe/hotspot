@@ -1,6 +1,8 @@
 package realtime
 
 import (
+	"context"
+	"errors"
 	"sync"
 	"testing"
 )
@@ -102,6 +104,39 @@ func (s *countingSink) Send(e Event) error {
 	return nil
 }
 func (s *countingSink) Close() error { return nil }
+
+// failingPublisher is an EventPublisher whose Publish always returns an error,
+// used to verify the Hub logs (rather than panics/swallows) cross-instance
+// fan-out failures.
+type failingPublisher struct{ calls int }
+
+func (f *failingPublisher) Publish(context.Context, string, Event) error {
+	f.calls++
+	return errors.New("redis down")
+}
+func (f *failingPublisher) Close() error { return nil }
+
+// TestHubPublish_LogsOnFailure verifies that when the configured publisher
+// returns an error, the Hub does not panic and still invokes Publish (so the
+// failure is observable via the warn log it emits).
+func TestHubPublish_LogsOnFailure(t *testing.T) {
+	hub := NewHub()
+	pub := &failingPublisher{}
+	hub.SetPublisher(pub)
+
+	// BroadcastToUser triggers publish() for cross-instance fan-out. The local
+	// subscriber still receives the event; the publish failure must not panic.
+	sink := &sinkStub{}
+	hub.RegisterUser("u1", "s1", sink)
+	hub.BroadcastToUser("u1", Event{Type: "test"})
+
+	if pub.calls == 0 {
+		t.Fatal("expected Publish to be called for cross-instance fan-out")
+	}
+	if len(sink.events) != 1 {
+		t.Fatalf("local delivery should still succeed, got %d events", len(sink.events))
+	}
+}
 
 // TestHubDeliverAllLocalDropsTailBeyondCap verifies the drop-tail broadcast
 // cap: when more than maxConnectionsPerBroadcast sinks are registered, only

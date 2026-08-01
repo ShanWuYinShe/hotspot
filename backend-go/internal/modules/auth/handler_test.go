@@ -23,7 +23,7 @@ func newTestHandler() *Handler {
 	cfg := config.Config{AuthTokenSecret: "test-secret"}
 	repo := NewInMemoryRepository()
 	source := appconfig.NewStaticSource(cfg)
-	service := NewServiceWithSource(platformauth.NewService(cfg), repo, cfg, source)
+	service := NewServiceWithSource(context.Background(), platformauth.NewService(cfg), repo, cfg, source)
 	return NewHandler(service)
 }
 
@@ -603,7 +603,7 @@ func TestProfileDefaultsUseAppConfigSource(t *testing.T) {
 		current.Defaults.DefaultLocation.Point.Longitude = 4.56
 		return current
 	})
-	service := NewServiceWithSource(platformauth.NewService(cfg), repo, cfg, source)
+	service := NewServiceWithSource(context.Background(), platformauth.NewService(cfg), repo, cfg, source)
 	defaults := service.profileDefaults(context.Background())
 	if defaults.AvatarURL != "appconfig-avatar" || defaults.LocationName != "测试位置" || defaults.Latitude != 1.23 || defaults.Longitude != 4.56 {
 		t.Fatalf("unexpected defaults: %#v", defaults)
@@ -616,7 +616,7 @@ func TestRegisterRecordsUserForResourceGuard(t *testing.T) {
 	defer resourceguard.SetDefaultChecker(resourceguard.NoopChecker{})
 
 	repo := &recordingAuthRepo{registerAccount: Account{UserID: "user_new", LoginID: "alice", Nickname: "Alice"}}
-	service := NewServiceWithSource(platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"}), repo, config.Config{AuthTokenSecret: "test-secret"}, appconfig.NewStaticSource(config.Config{AuthTokenSecret: "test-secret"}))
+	service := NewServiceWithSource(context.Background(), platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"}), repo, config.Config{AuthTokenSecret: "test-secret"}, appconfig.NewStaticSource(config.Config{AuthTokenSecret: "test-secret"}))
 	if _, err := service.Register(context.Background(), RegisterRequest{LoginID: "alice", Nickname: "Alice", Password: "secret"}, platformauth.SessionMeta{}); err != nil {
 		t.Fatalf("register: %v", err)
 	}
@@ -631,7 +631,7 @@ func TestGuestRecordsUserForResourceGuard(t *testing.T) {
 	defer resourceguard.SetDefaultChecker(resourceguard.NoopChecker{})
 
 	repo := &recordingAuthRepo{guestAccount: Account{UserID: "guest_new", Nickname: "Guest"}}
-	service := NewServiceWithSource(platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"}), repo, config.Config{AuthTokenSecret: "test-secret"}, appconfig.NewStaticSource(config.Config{AuthTokenSecret: "test-secret"}))
+	service := NewServiceWithSource(context.Background(), platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"}), repo, config.Config{AuthTokenSecret: "test-secret"}, appconfig.NewStaticSource(config.Config{AuthTokenSecret: "test-secret"}))
 	if _, err := service.Guest(context.Background(), GuestRequest{Nickname: "Guest"}, platformauth.SessionMeta{}); err != nil {
 		t.Fatalf("guest: %v", err)
 	}

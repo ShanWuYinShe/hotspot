@@ -73,6 +73,13 @@ func (r *stubGroupMessageRepo) MessageExists(_ context.Context, _ string) (bool,
 	return false, "", nil
 }
 
+// LookupMessageMeta defaults to a message owned by "u1" in "g1" so the
+// handler-level Update/Recall tests that authorize as u1 succeed without
+// extra wiring.
+func (r *stubGroupMessageRepo) LookupMessageMeta(_ context.Context, _ string) (MessageOwnerMeta, bool, error) {
+	return MessageOwnerMeta{GroupID: "g1", SenderUserID: "u1"}, true, nil
+}
+
 // --- helpers ---
 
 func gmCtx(userID string) *http.Request {

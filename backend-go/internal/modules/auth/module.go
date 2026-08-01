@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"context"
+
 	"github.com/go-chi/chi/v5"
 
 	"hotspot/backend-go/internal/platform/appconfig"
@@ -16,14 +18,14 @@ type Module struct {
 	handler *Handler
 }
 
-func NewModule(cfg config.Config, factory *persistence.Factory, source appconfig.Source) *Module {
+func NewModule(ctx context.Context, cfg config.Config, factory *persistence.Factory, source appconfig.Source) *Module {
 	authService := platformauth.NewServiceWithPersistence(cfg, factory)
 	platformauth.SetDefaultService(authService)
 	// Wire the configured bcrypt cost once at startup. config.Validate() has
 	// already enforced the OWASP minimum by this point.
 	ConfigureHashingCost(cfg.BcryptCost)
 	repo := NewPersistenceRepository(factory)
-	service := NewServiceWithSource(authService, repo, cfg, source)
+	service := NewServiceWithSource(ctx, authService, repo, cfg, source)
 	return &Module{handler: NewHandler(service)}
 }
 

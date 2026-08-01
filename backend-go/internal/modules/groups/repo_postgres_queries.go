@@ -31,17 +31,27 @@ FROM group_members
 WHERE group_id = $1`
 
 	queryListGroupMembers = `
-SELECT user_id, role, joined_at
-FROM group_members
-WHERE group_id = $1 AND ($2 = '' OR role = $2)
-ORDER BY joined_at ASC, user_id ASC`
+SELECT gm.user_id, COALESCE(u.nickname, gm.user_id), gm.role, gm.joined_at
+FROM group_members gm
+LEFT JOIN users u ON u.user_id = gm.user_id
+WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)
+ORDER BY gm.joined_at ASC, gm.user_id ASC`
 
-	queryListMyGroups = `
+	// queryListMyGroupsBase is the static prefix of the my-groups query. The
+	// keyset cursor predicate and LIMIT are appended dynamically by
+	// buildListMyGroupsQuery so pagination is done at the DB layer (no OFFSET,
+	// no Go-side full scan). members_count is computed via a single aggregated
+	// LEFT JOIN instead of a per-row COUNT(*) (which was an N+1).
+	queryListMyGroupsBase = `
 		SELECT g.group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}'),
+		       COALESCE(mem.members_count, 0),
 		       gm.role, gm.joined_at, gm.is_muted, gm.muted_until,
 		       lm.message_id, lm.type, lm.content, lm.sender_user_id, lm.sender_nickname, lm.sender_avatar_url, lm.sent_at
 		FROM groups g
 	JOIN group_members gm ON gm.group_id = g.group_id
+	LEFT JOIN (
+		SELECT group_id, COUNT(*)::int AS members_count FROM group_members GROUP BY group_id
+	) mem ON mem.group_id = g.group_id
 	LEFT JOIN LATERAL (
 		SELECT m.message_id, m.type, m.content, u.user_id AS sender_user_id, u.nickname AS sender_nickname, u.avatar_url AS sender_avatar_url, m.sent_at
 		FROM group_messages m
@@ -50,8 +60,7 @@ ORDER BY joined_at ASC, user_id ASC`
 		ORDER BY m.sent_at DESC, m.message_id DESC
 		LIMIT 1
 	) lm ON TRUE
-WHERE gm.user_id = $1 AND g.deleted_at IS NULL
-ORDER BY gm.joined_at DESC, g.group_id DESC`
+WHERE gm.user_id = $1 AND g.deleted_at IS NULL`
 
 	queryInsertGroupMember = `
 INSERT INTO group_members (group_id, user_id, role, joined_at)
@@ -217,7 +226,7 @@ SET owner_id = $2
 WHERE group_id = $1`
 
 	querySearchGroupMembers = `
-SELECT gm.user_id, gm.role, gm.joined_at
+SELECT gm.user_id, COALESCE(u.nickname, gm.user_id), gm.role, gm.joined_at
 FROM group_members gm
 LEFT JOIN users u ON u.user_id = gm.user_id
 WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)

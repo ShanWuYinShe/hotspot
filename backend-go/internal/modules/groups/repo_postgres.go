@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -21,12 +22,15 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 	return &PostgresRepository{factory: factory}
 }
 
+// Create wraps the group insert and its owner-member insert in a single
+// transaction so a failure of the second statement cannot leave an orphan
+// group with no members (which would be unreachable and impossible to
+// dissolve through normal flows). Mirrors ApproveApplication/AcceptInvite.
 func (r *PostgresRepository) Create(ctx context.Context, userID string, req CreateGroupRequest) (GroupItem, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return GroupItem{}, persistence.ErrNotImplemented
 	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
+	if _, ok := r.factory.DB.(persistence.QueryableDB); !ok {
 		return GroupItem{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
@@ -54,11 +58,21 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, IsSearchable: isSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
 	s2CellToken := geo.CellTokenAtLevel(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}, 14)
 	s2CellID := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
-	if err := queryable.Exec(ctx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, isSearchable, maxMembers, userID, now, now, tags, s2CellToken, s2CellID); err != nil {
-		return GroupItem{}, fmt.Errorf("groups.CreateGroup: insert group: %w", err)
-	}
-	if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleOwner), now); err != nil {
-		return GroupItem{}, fmt.Errorf("groups.CreateGroup: insert owner member: %w", err)
+	ownerRole := string(GroupRoleOwner)
+	if err := persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		queryable, ok := queryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := queryable.Exec(txCtx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, isSearchable, maxMembers, userID, now, now, tags, s2CellToken, s2CellID); err != nil {
+			return fmt.Errorf("groups.CreateGroup: insert group: %w", err)
+		}
+		if err := queryable.Exec(txCtx, queryInsertGroupMember, groupID, userID, ownerRole, now); err != nil {
+			return fmt.Errorf("groups.CreateGroup: insert owner member: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return GroupItem{}, err
 	}
 	return item, nil
 }
@@ -138,10 +152,9 @@ func (r *PostgresRepository) ListMembers(ctx context.Context, groupID string, ro
 		var item GroupMemberItem
 		var roleText string
 		var joinedAt time.Time
-		if err := rows.Scan(&item.User.UserID, &roleText, &joinedAt); err != nil {
+		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &roleText, &joinedAt); err != nil {
 			return nil, "", err
 		}
-		item.User.Nickname = item.User.UserID
 		item.Role = GroupRole(roleText)
 		item.JoinedAt = joinedAt.UTC().Format(time.RFC3339)
 		items = append(items, item)
@@ -212,10 +225,9 @@ func (r *PostgresRepository) SearchMembers(ctx context.Context, groupID string, 
 		var item GroupMemberItem
 		var roleText string
 		var joinedAt time.Time
-		if err := rows.Scan(&item.User.UserID, &roleText, &joinedAt); err != nil {
+		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &roleText, &joinedAt); err != nil {
 			return nil, "", err
 		}
-		item.User.Nickname = item.User.UserID
 		item.Role = GroupRole(roleText)
 		item.JoinedAt = joinedAt.UTC().Format(time.RFC3339)
 		items = append(items, item)
@@ -226,7 +238,7 @@ func (r *PostgresRepository) SearchMembers(ctx context.Context, groupID string, 
 	return items, "", nil
 }
 
-func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, limit int, cursor string) ([]GroupItem, string, error) {
+func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, limit int, pageToken string) ([]GroupItem, string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return nil, "", persistence.ErrNotImplemented
 	}
@@ -234,7 +246,31 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 	if !ok {
 		return nil, "", persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, queryListMyGroups, userID)
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	// Decode the opaque cursor (keyset over joined_at DESC, group_id DESC).
+	var pageCursor myGroupsCursor
+	if pageToken != "" {
+		if err := cursor.Decode(myGroupsCursorNamespace, pageToken, &pageCursor); err != nil {
+			return nil, "", ErrInvalidCursor
+		}
+	}
+	// Build the query dynamically: base + optional keyset predicate + LIMIT.
+	// Fetch limit+1 rows to detect whether another page exists.
+	args := []any{userID}
+	query := queryListMyGroupsBase
+	if pageCursor.JoinedAt != "" && pageCursor.GroupID != "" {
+		args = append(args, pageCursor.JoinedAt, pageCursor.GroupID)
+		query += fmt.Sprintf(" AND (gm.joined_at < $%d OR (gm.joined_at = $%d AND g.group_id < $%d))", len(args)-1, len(args)-1, len(args))
+	}
+	args = append(args, limit+1)
+	query += fmt.Sprintf(" ORDER BY gm.joined_at DESC, g.group_id DESC LIMIT $%d", len(args))
+
+	rows, err := queryable.Query(ctx, query, args...)
 	if err != nil {
 		return nil, "", err
 	}
@@ -248,6 +284,7 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 		createdAt      *time.Time
 		lastActivityAt *time.Time
 		tags           []string
+		membersCount   int
 		joinedAt       time.Time
 		isMuted        bool
 		mutedUntil     *time.Time
@@ -263,7 +300,7 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 	scanned := make([]scannedItem, 0)
 	for rows.Next() {
 		var s scannedItem
-		if err := rows.Scan(&s.item.Group.GroupID, &s.item.Group.Name, &s.item.Group.AvatarURL, &s.item.Description, &s.item.HasPassword, &s.locationName, &s.latitude, &s.longitude, &s.joinMethod, &s.item.IsSearchable, &s.item.MaxMembers, &s.item.OwnerID, &s.createdAt, &s.lastActivityAt, &s.tags, &s.roleText, &s.joinedAt, &s.isMuted, &s.mutedUntil, &s.lastMessageID, &s.lastMessageType, &s.lastContent, &s.lastSenderID, &s.lastSenderName, &s.lastSenderAvatar, &s.lastSentAt); err != nil {
+		if err := rows.Scan(&s.item.Group.GroupID, &s.item.Group.Name, &s.item.Group.AvatarURL, &s.item.Description, &s.item.HasPassword, &s.locationName, &s.latitude, &s.longitude, &s.joinMethod, &s.item.IsSearchable, &s.item.MaxMembers, &s.item.OwnerID, &s.createdAt, &s.lastActivityAt, &s.tags, &s.membersCount, &s.roleText, &s.joinedAt, &s.isMuted, &s.mutedUntil, &s.lastMessageID, &s.lastMessageType, &s.lastContent, &s.lastSenderID, &s.lastSenderName, &s.lastSenderAvatar, &s.lastSentAt); err != nil {
 			rows.Close()
 			return nil, "", err
 		}
@@ -272,6 +309,14 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 	rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, "", err
+	}
+	// Detect next page: if we fetched more than `limit` rows, trim and encode
+	// a cursor from the last returned row.
+	nextCursor := ""
+	if len(scanned) > limit {
+		last := scanned[limit-1]
+		nextCursor = encodeMyGroupsCursor(myGroupsCursor{JoinedAt: last.joinedAt.UTC().Format(time.RFC3339Nano), GroupID: last.item.Group.GroupID})
+		scanned = scanned[:limit]
 	}
 	items := make([]GroupItem, 0, len(scanned))
 	for _, s := range scanned {
@@ -283,6 +328,7 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 		s.item.JoinMethod = GroupJoinMethod(s.joinMethod)
 		s.item.CreatedAt = formatOptionalTime(s.createdAt)
 		s.item.LastActivityAt = formatOptionalTime(s.lastActivityAt)
+		s.item.Group.MembersCount = s.membersCount
 		s.item.MyState = &MyGroupState{Role: GroupRole(s.roleText), IsJoined: true, UnreadCount: 0, IsMuted: s.isMuted, MutedUntil: formatMutedUntil(s.mutedUntil), IsPinned: false, JoinedAt: s.joinedAt.UTC().Format(time.RFC3339)}
 		if s.lastMessageID != nil && s.lastMessageType != nil && s.lastSenderID != nil && s.lastSentAt != nil {
 			s.item.LastMessage = &GroupLastMessage{
@@ -297,14 +343,9 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 				SentAt: s.lastSentAt.UTC().Format(time.RFC3339),
 			}
 		}
-		count, err := countGroupMembers(ctx, queryable, s.item.Group.GroupID)
-		if err != nil {
-			return nil, "", err
-		}
-		s.item.Group.MembersCount = count
 		items = append(items, s.item)
 	}
-	return items, "", nil
+	return items, nextCursor, nil
 }
 
 func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, groupID string, password *string, message *string) (JoinGroupResult, error) {

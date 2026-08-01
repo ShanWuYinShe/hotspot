@@ -191,7 +191,7 @@ func TestResetPasswordRevokesAllSessions(t *testing.T) {
 // --- inMemoryLoginTracker 剩余分支(过期清理 / 已锁不再计数) ---
 
 func TestLoginTrackerCheckCleansExpiredLock(t *testing.T) {
-	tracker := newInMemoryLoginTracker()
+	tracker := newInMemoryLoginTracker(context.Background())
 	defer tracker.stop()
 	ctx := context.Background()
 
@@ -218,7 +218,7 @@ func TestLoginTrackerCheckCleansExpiredLock(t *testing.T) {
 }
 
 func TestLoginTrackerRecordFailedWhileLockedDoesNotCount(t *testing.T) {
-	tracker := newInMemoryLoginTracker()
+	tracker := newInMemoryLoginTracker(context.Background())
 	defer tracker.stop()
 	ctx := context.Background()
 

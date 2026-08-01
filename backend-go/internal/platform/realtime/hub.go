@@ -214,6 +214,11 @@ func (h *Hub) publish(channel string, event Event) {
 	p := h.publisher
 	h.mu.RUnlock()
 	if p != nil {
-		_ = p.Publish(context.Background(), channel, event)
+		// Cross-instance fan-out: a publish failure means subscribers on other
+		// instances silently miss the event. Log it so operators can detect a
+		// degraded redis bridge rather than losing events invisibly.
+		if err := p.Publish(context.Background(), channel, event); err != nil {
+			observability.L().Warn("hub cross-instance publish failed", "channel", channel, "error", err)
+		}
 	}
 }

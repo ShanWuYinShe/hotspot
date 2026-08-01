@@ -22,22 +22,33 @@ func (r *PostgresRepository) PutProfile(ctx context.Context, profile MyProfile) 
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented
 	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
+	if _, ok := r.factory.DB.(persistence.QueryableDB); !ok {
 		return persistence.ErrNotImplemented
 	}
-	if err := queryable.Exec(ctx, queryUpsertUserProfile, profile.UserID, profile.Nickname, profile.AvatarURL, profile.UserType, profile.Bio, profile.Gender, profile.Email, profile.Phone, profile.Location.LocationName, profile.Location.Point.Latitude, profile.Location.Point.Longitude, profile.PresenceStatus, profile.LastOnline, profile.CreatedAt, geo.LeafCellID(geo.Point{Latitude: profile.Location.Point.Latitude, Longitude: profile.Location.Point.Longitude})); err != nil {
-		return err
+	// Wrap the profile upsert, the tag delete and the tag (re)insert in a single
+	// transaction. Previously a failure mid-loop left the user with all tags
+	// deleted and only some re-inserted.
+	s2CellID := geo.LeafCellID(geo.Point{Latitude: profile.Location.Point.Latitude, Longitude: profile.Location.Point.Longitude})
+	tags := profile.Tags
+	if tags == nil {
+		tags = []string{}
 	}
-	if err := queryable.Exec(ctx, queryReplaceUserProfileTags, profile.UserID); err != nil {
-		return err
-	}
-	for _, tag := range profile.Tags {
-		if err := queryable.Exec(ctx, queryInsertUserProfileTag, profile.UserID, tag); err != nil {
+	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		queryable, ok := queryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := queryable.Exec(txCtx, queryUpsertUserProfile, profile.UserID, profile.Nickname, profile.AvatarURL, profile.UserType, profile.Bio, profile.Gender, profile.Email, profile.Phone, profile.Location.LocationName, profile.Location.Point.Latitude, profile.Location.Point.Longitude, profile.PresenceStatus, profile.LastOnline, profile.CreatedAt, s2CellID); err != nil {
 			return err
 		}
-	}
-	return nil
+		if err := queryable.Exec(txCtx, queryReplaceUserProfileTags, profile.UserID); err != nil {
+			return err
+		}
+		if len(tags) == 0 {
+			return nil
+		}
+		return queryable.Exec(txCtx, queryInsertUserProfileTagsBatch, profile.UserID, tags)
+	})
 }
 func (r *PostgresRepository) DeleteProfile(ctx context.Context, userID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
@@ -197,4 +208,18 @@ func (r *PostgresRepository) UserExists(ctx context.Context, userID string) (boo
 
 func nowRFC3339() string {
 	return time.Now().UTC().Format(time.RFC3339)
+}
+
+// queryableForTx returns the Queryable bound to ctx by RunInTransaction, or
+// nil when no transaction is in effect. Mirrors the helper used by groups/
+// moments/comments so repo methods transparently join an in-flight tx.
+func queryableForTx(ctx context.Context, factory *persistence.Factory) (persistence.Queryable, bool) {
+	if q, ok := persistence.QueryableFromContext(ctx); ok {
+		return q, true
+	}
+	if factory == nil || factory.DB == nil {
+		return nil, false
+	}
+	q, ok := factory.DB.(persistence.QueryableDB)
+	return q, ok
 }

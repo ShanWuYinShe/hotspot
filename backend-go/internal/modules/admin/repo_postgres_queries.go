@@ -27,6 +27,12 @@ WHERE role_id = $1`
 INSERT INTO admin_role_permissions (role_id, permission_key, created_at)
 VALUES ($1,$2,$3)`
 
+	// queryRoleInsertPermissionsBatch inserts all permissions for a role in one
+	// round trip via unnest, replacing the previous per-permission loop.
+	queryRoleInsertPermissionsBatch = `
+INSERT INTO admin_role_permissions (role_id, permission_key, created_at)
+SELECT $1, perm, $2 FROM unnest($3::text[]) AS perm`
+
 	queryRoleByID = `
 SELECT role_id, name, COALESCE(description, ''), created_at, updated_at, deleted_at IS NOT NULL
 FROM admin_roles

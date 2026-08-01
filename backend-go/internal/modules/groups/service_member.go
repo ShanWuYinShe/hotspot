@@ -290,7 +290,7 @@ func (s *Service) findApplicationForApprover(ctx context.Context, approverUserID
 	if item.Status != ApplicationStatusPending {
 		return GroupApplicationItem{}, GroupItem{}, ErrAlreadyProcessed
 	}
-	if s.applicationExpired(item) {
+	if s.applicationExpired(ctx, item) {
 		// 惰性过期检测:申请已超过 TTL,将 pending 置 revoked,推送
 		// GroupApplicationExpired 事件并落库 group_application_cancelled 通知。
 		if err := s.repo.CancelApplication(ctx, applicationID); err != nil {

@@ -112,7 +112,7 @@ func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
 }
 
 func queryMapUsers(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery, mins, maxs []int64) ([]mapCandidate, error) {
-	rows, err := queryable.Query(ctx, queryMapCanvasUsers, mins, maxs, maxMapScanRows)
+	rows, err := queryable.Query(ctx, queryMapCanvasUsers, mins, maxs, query.Center.Latitude, query.Center.Longitude, maxMapScanRows)
 	if err != nil {
 		return nil, err
 	}
@@ -122,10 +122,11 @@ func queryMapUsers(ctx context.Context, queryable persistence.QueryableDB, query
 		var id, title, coverURL, subtitle string
 		var lat, lng float64
 		var createdAt time.Time
-		if err := rows.Scan(&id, &title, &coverURL, &subtitle, &lat, &lng, &createdAt); err != nil {
+		var distance int
+		if err := rows.Scan(&id, &title, &coverURL, &subtitle, &lat, &lng, &createdAt, &distance); err != nil {
 			return nil, err
 		}
-		items = append(items, newMapCandidate("user", id, title, subtitle, coverURL, lat, lng, createdAt.UTC().Format(time.RFC3339), query.Center))
+		items = append(items, newMapCandidate("user", id, title, subtitle, coverURL, lat, lng, createdAt.UTC().Format(time.RFC3339), distance))
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -134,7 +135,7 @@ func queryMapUsers(ctx context.Context, queryable persistence.QueryableDB, query
 }
 
 func queryMapGroups(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery, mins, maxs []int64) ([]mapCandidate, error) {
-	rows, err := queryable.Query(ctx, queryMapCanvasGroups, mins, maxs, maxMapScanRows)
+	rows, err := queryable.Query(ctx, queryMapCanvasGroups, mins, maxs, query.Center.Latitude, query.Center.Longitude, maxMapScanRows)
 	if err != nil {
 		return nil, err
 	}
@@ -143,10 +144,11 @@ func queryMapGroups(ctx context.Context, queryable persistence.QueryableDB, quer
 	for rows.Next() {
 		var id, title, coverURL, subtitle string
 		var lat, lng float64
-		if err := rows.Scan(&id, &title, &coverURL, &subtitle, &lat, &lng); err != nil {
+		var distance int
+		if err := rows.Scan(&id, &title, &coverURL, &subtitle, &lat, &lng, &distance); err != nil {
 			return nil, err
 		}
-		items = append(items, newMapCandidate("group", id, title, subtitle, coverURL, lat, lng, "", query.Center))
+		items = append(items, newMapCandidate("group", id, title, subtitle, coverURL, lat, lng, "", distance))
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -155,7 +157,7 @@ func queryMapGroups(ctx context.Context, queryable persistence.QueryableDB, quer
 }
 
 func queryMapMoments(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery, mins, maxs []int64) ([]mapCandidate, error) {
-	rows, err := queryable.Query(ctx, queryMapCanvasMoments, mins, maxs, maxMapScanRows)
+	rows, err := queryable.Query(ctx, queryMapCanvasMoments, mins, maxs, query.Center.Latitude, query.Center.Longitude, maxMapScanRows)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +167,8 @@ func queryMapMoments(ctx context.Context, queryable persistence.QueryableDB, que
 		var id, title, subtitle string
 		var lat, lng float64
 		var createdAt time.Time
-		if err := rows.Scan(&id, &title, &subtitle, &lat, &lng, &createdAt); err != nil {
+		var distance int
+		if err := rows.Scan(&id, &title, &subtitle, &lat, &lng, &createdAt, &distance); err != nil {
 			return nil, err
 		}
 		if !query.StartTime.IsZero() && createdAt.UTC().Before(query.StartTime) {
@@ -174,7 +177,7 @@ func queryMapMoments(ctx context.Context, queryable persistence.QueryableDB, que
 		if !query.EndTime.IsZero() && createdAt.UTC().After(query.EndTime) {
 			continue
 		}
-		items = append(items, newMapCandidate("moment", id, truncateMapTitle(title), subtitle, "", lat, lng, createdAt.UTC().Format(time.RFC3339), query.Center))
+		items = append(items, newMapCandidate("moment", id, truncateMapTitle(title), subtitle, "", lat, lng, createdAt.UTC().Format(time.RFC3339), distance))
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -182,7 +185,10 @@ func queryMapMoments(ctx context.Context, queryable persistence.QueryableDB, que
 	return items, nil
 }
 
-func newMapCandidate(objectType, id, title, subtitle, coverURL string, lat, lng float64, createdAt string, center geo.Point) mapCandidate {
+// newMapCandidate builds a mapCandidate. distance is now computed in SQL
+// (distance_meters column) and passed in, rather than recomputed in Go via
+// geo.DistanceMeters — the AGENTS.md rule forbids Go-side distance for sorting.
+func newMapCandidate(objectType, id, title, subtitle, coverURL string, lat, lng float64, createdAt string, distance int) mapCandidate {
 	location := GeoPoint{Latitude: lat, Longitude: lng}
 	return mapCandidate{
 		ObjectType: objectType,
@@ -192,7 +198,7 @@ func newMapCandidate(objectType, id, title, subtitle, coverURL string, lat, lng 
 		CoverURL:   coverURL,
 		Location:   location,
 		CreatedAt:  createdAt,
-		Distance:   geo.DistanceMeters(center, geo.Point{Latitude: lat, Longitude: lng}),
+		Distance:   distance,
 	}
 }
 

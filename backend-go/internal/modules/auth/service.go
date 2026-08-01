@@ -14,6 +14,7 @@ import (
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
+	"hotspot/backend-go/internal/platform/worker"
 )
 
 // FailedLoginTracker tracks per-account failed login attempts for brute-force protection.
@@ -50,12 +51,15 @@ type inMemoryLoginTracker struct {
 	stopCh   chan struct{}
 }
 
-func newInMemoryLoginTracker() *inMemoryLoginTracker {
+func newInMemoryLoginTracker(ctx context.Context) *inMemoryLoginTracker {
 	t := &inMemoryLoginTracker{
 		entries: make(map[string]*loginLockEntry),
 		stopCh:  make(chan struct{}),
 	}
-	go t.sweep()
+	// Bind the sweeper to ctx so it exits when the app root context is
+	// cancelled (graceful shutdown), and wrap it with worker.Go so a panic
+	// inside the sweep loop is recovered instead of crashing the process.
+	worker.Go("auth.login_tracker.sweeper", func() { t.sweep(ctx) })
 	return t
 }
 
@@ -103,11 +107,13 @@ func (t *inMemoryLoginTracker) Clear(_ context.Context, loginID string) {
 	delete(t.entries, loginID)
 }
 
-func (t *inMemoryLoginTracker) sweep() {
+func (t *inMemoryLoginTracker) sweep(ctx context.Context) {
 	ticker := time.NewTicker(defaultTrackerCleanup)
 	defer ticker.Stop()
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case <-t.stopCh:
 			return
 		case <-ticker.C:
@@ -141,17 +147,22 @@ type Service struct {
 }
 
 func NewService(auth *platformauth.Service, repo Repository, cfg config.Config) *Service {
-	return NewServiceWithSource(auth, repo, cfg, appconfig.NewStaticSource(cfg))
+	return NewServiceWithSource(context.Background(), auth, repo, cfg, appconfig.NewStaticSource(cfg))
 }
 
-func NewServiceWithSource(auth *platformauth.Service, repo Repository, cfg config.Config, source appconfig.Source) *Service {
+// NewServiceWithSource builds a Service. ctx governs the lifetime of the
+// in-memory login-tracker sweeper goroutine; pass the application root context
+// from bootstrap so the sweeper exits on graceful shutdown. Tests can pass
+// context.Background() (the goroutine is cleaned up when the test process
+// exits) or a cancellable context via t.Cleanup.
+func NewServiceWithSource(ctx context.Context, auth *platformauth.Service, repo Repository, cfg config.Config, source appconfig.Source) *Service {
 	if repo == nil {
 		repo = NewInMemoryRepository()
 	}
 	if source == nil {
 		source = appconfig.NewStaticSource(cfg)
 	}
-	return &Service{auth: auth, repo: repo, cfg: cfg, appConfig: source, emailSender: &noopEmailSender{}, loginTracker: newInMemoryLoginTracker()}
+	return &Service{auth: auth, repo: repo, cfg: cfg, appConfig: source, emailSender: &noopEmailSender{}, loginTracker: newInMemoryLoginTracker(ctx)}
 }
 
 func (s *Service) WithEmailSender(sender emailSender) *Service {

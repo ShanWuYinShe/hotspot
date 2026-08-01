@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"hotspot/backend-go/internal/platform/worker"
 )
 
 type Status string
@@ -122,7 +124,7 @@ func StartSweeper(ctx context.Context) {
 	sweepCtx, cancel := context.WithCancel(ctx)
 	sweeperCancel = cancel
 	sweeperStarted = true
-	go runSweeper(sweepCtx, store)
+	worker.Go("idempotency.sweeper", func() { runSweeper(sweepCtx, store) })
 }
 
 // StopSweeper cancels the running sweeper if any. Intended for tests.

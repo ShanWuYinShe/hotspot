@@ -46,7 +46,7 @@ func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageR
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
-	groupID, senderUserID, msgType, isRecalled, sentAt, err := r.lookupMessageMetaFull(ctx, req.MessageID)
+	groupID, _, msgType, isRecalled, sentAt, err := r.lookupMessageMetaFull(ctx, req.MessageID)
 	if err != nil {
 		return MessageEventMeta{}, err
 	}
@@ -56,10 +56,10 @@ func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageR
 	if msgType != "text" {
 		return MessageEventMeta{}, ErrMessageNotEditable
 	}
-	if req.UserID != "" && senderUserID != "" && req.UserID != senderUserID {
-		return MessageEventMeta{}, ErrPermissionDenied
-	}
-	if err := queryable.Exec(ctx, queryUpdateGroupMessage, req.MessageID, req.Content); err != nil {
+	// Owner check lives in the service layer via LookupMessageMeta; the SQL
+	// `sender_user_id = $2` guard is defense-in-depth (only the sender row can
+	// be touched even if the service check is bypassed).
+	if err := queryable.Exec(ctx, queryUpdateGroupMessage, req.MessageID, req.UserID, req.Content); err != nil {
 		return MessageEventMeta{}, err
 	}
 	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: sentAt, Content: req.Content}, nil
@@ -73,21 +73,20 @@ func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageR
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
-	groupID, senderUserID, _, isRecalled, sentAt, err := r.lookupMessageMetaFull(ctx, req.MessageID)
+	groupID, _, _, isRecalled, sentAt, err := r.lookupMessageMetaFull(ctx, req.MessageID)
 	if err != nil {
 		return MessageEventMeta{}, err
 	}
 	if isRecalled {
 		return MessageEventMeta{}, ErrMessageRecalled
 	}
-	if req.UserID != "" && senderUserID != "" && req.UserID != senderUserID {
-		return MessageEventMeta{}, ErrPermissionDenied
-	}
 	sentTime, parseErr := time.Parse(time.RFC3339Nano, sentAt)
 	if parseErr == nil && time.Since(sentTime) > 2*time.Minute {
 		return MessageEventMeta{}, ErrMessageRecallWindow
 	}
-	if err := queryable.Exec(ctx, queryRecallGroupMessage, req.MessageID); err != nil {
+	// Owner check lives in the service layer via LookupMessageMeta; the SQL
+	// `sender_user_id = $2` guard is defense-in-depth.
+	if err := queryable.Exec(ctx, queryRecallGroupMessage, req.MessageID, req.UserID); err != nil {
 		return MessageEventMeta{}, err
 	}
 	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: sentAt}, nil
@@ -202,6 +201,28 @@ func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string
 		return false, "", nil
 	}
 	return true, senderUserID, nil
+}
+
+// LookupMessageMeta returns the group + sender metadata used by the service
+// layer to authorize Update/Recall (membership + ownership). A NULL
+// sender_user_id is returned as "" — the service refuses to mutate such
+// messages.
+func (r *PostgresRepository) LookupMessageMeta(ctx context.Context, messageID string) (MessageOwnerMeta, bool, error) {
+	queryable, ok := r.getQueryable()
+	if !ok {
+		return MessageOwnerMeta{}, false, persistence.ErrNotImplemented
+	}
+	var groupID string
+	var rawSenderID *string
+	err := queryable.QueryRow(ctx, queryLookupMessageOwner, messageID).Scan(&groupID, &rawSenderID)
+	if err != nil {
+		return MessageOwnerMeta{}, false, nil
+	}
+	senderUserID := ""
+	if rawSenderID != nil {
+		senderUserID = *rawSenderID
+	}
+	return MessageOwnerMeta{GroupID: groupID, SenderUserID: senderUserID}, true, nil
 }
 
 func (r *PostgresRepository) getQueryable() (persistence.QueryableDB, bool) {

@@ -72,6 +72,7 @@ func newTestService(repo *stubAuthRepo) (*Service, *platformauth.Service) {
 	cfg := testConfig()
 	authSvc := platformauth.NewService(cfg)
 	return NewServiceWithSource(
+		context.Background(),
 		authSvc,
 		repo,
 		cfg,
@@ -187,7 +188,7 @@ func TestServiceLoginPropagatesMetaError(t *testing.T) {
 // --- Lockout (brute-force protection) ---
 
 func TestLoginTrackerLocksAfterFiveFailures(t *testing.T) {
-	tracker := newInMemoryLoginTracker()
+	tracker := newInMemoryLoginTracker(context.Background())
 	defer tracker.stop()
 	ctx := context.Background()
 
@@ -202,7 +203,7 @@ func TestLoginTrackerLocksAfterFiveFailures(t *testing.T) {
 }
 
 func TestLoginTrackerClearResetsCounter(t *testing.T) {
-	tracker := newInMemoryLoginTracker()
+	tracker := newInMemoryLoginTracker(context.Background())
 	defer tracker.stop()
 	ctx := context.Background()
 
@@ -249,7 +250,7 @@ func TestServiceLoginClearOnSuccessResetsLockout(t *testing.T) {
 	// Use the tracker directly — the Login method calls Clear() on success,
 	// and RecordFailed() + Check() flow is already verified via
 	// TestServiceLoginLocksAfterConsecutiveFailures.
-	tracker := newInMemoryLoginTracker()
+	tracker := newInMemoryLoginTracker(context.Background())
 	defer tracker.stop()
 	ctx := context.Background()
 

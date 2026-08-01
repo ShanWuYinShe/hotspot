@@ -29,13 +29,19 @@ const (
 
 	queryUpdateGroupMessage = `
 	UPDATE group_messages
-	SET content = $2, content_prev = content, edited_at = NOW()
-	WHERE message_id = $1 AND is_recalled = FALSE`
+	SET content = $3, content_prev = content, edited_at = NOW()
+	WHERE message_id = $1 AND sender_user_id = $2 AND is_recalled = FALSE`
 
 	queryRecallGroupMessage = `
 	UPDATE group_messages
 	SET is_recalled = TRUE, recalled_at = NOW()
-	WHERE message_id = $1`
+	WHERE message_id = $1 AND sender_user_id = $2`
+
+	// queryLookupMessageOwner fetches only what the authorization layer needs:
+	// the group a message belongs to and who sent it. NULL sender becomes ""
+	// so the service can refuse to mutate legacy/anonymous messages.
+	queryLookupMessageOwner = `
+	SELECT group_id, sender_user_id FROM group_messages WHERE message_id = $1`
 
 	queryGroupMessageReadStateByMessage = `
 	SELECT gm.sent_at, gm.message_id

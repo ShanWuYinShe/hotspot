@@ -16,6 +16,7 @@ import (
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/requestmeta"
+	"hotspot/backend-go/internal/platform/worker"
 )
 
 var (
@@ -60,7 +61,7 @@ func StartSweeper(ctx context.Context) {
 	sweepCtx, cancel := context.WithCancel(ctx)
 	sweeperCancel = cancel
 	sweeperStarted = true
-	go sweepStores(sweepCtx)
+	worker.Go("ratelimit.sweeper", func() { sweepStores(sweepCtx) })
 }
 
 // StopSweeper cancels the background sweeper if one is running and blocks

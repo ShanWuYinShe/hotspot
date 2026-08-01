@@ -11,6 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/worker"
 )
 
 const (
@@ -57,7 +58,7 @@ func NewRedisBridge(rdb *redis.Client, instanceID string, hub *Hub) (*RedisBridg
 	b.subCh = sub.Channel()
 
 	b.done.Add(1)
-	go b.receiveLoop()
+	worker.Go("realtime.redis_bridge", b.receiveLoop)
 	return b, nil
 }
 
