@@ -102,7 +102,7 @@ interface SearchGroupsRequest {
   tag?: string;        // 标签筛选
   radius?: number;     // 位置范围（米），100-50000，配合 reference_point 使用；未提供时默认 5_000 米，并受 AppConfig.limits.search_radius_max 上限约束
   sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';  // 默认: relevance
-  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
+  reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个；不满足时返回 10000（参数错误）。
@@ -349,7 +349,7 @@ interface GroupSentInviteItem {
 
 `ApplicationStatus='revoked'` 表示邀请由发起者主动撤销（含过期自动撤销），客户端需与 `rejected`（受邀者拒绝）区分展示。
 
-**过期语义（契约级）**：超过 `expires_at` 的 pending 邀请由服务端自动置为 `revoked`（与发起者主动撤销同状态，便于客户端统一展示为"已失效"），并向邀请人和受邀人推送 `GroupInviteClosed` 事件（见 `api_spec_websocket.md`）。`members/invites/list` 默认仅返回 `pending`，查历史需显式传 `status`。
+**过期语义（契约级）**：超过 `expires_at` 的 pending 邀请由服务端自动置为 `revoked`（与发起者主动撤销同状态，便于客户端统一展示为"已失效"），并向受邀人推送 `GroupInviteExpired` 事件（见 `api_spec_websocket.md`）。`members/invites/list` 默认仅返回 `pending`，查历史需显式传 `status`。
 
 **错误码**: `10000` `10200` `10300` `10400`
 

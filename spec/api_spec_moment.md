@@ -63,7 +63,7 @@
   - `sort_by='relevance'`（默认）：按相关性优先；同分时按 `created_at` 倒序，再以 `moment_id ASC` 作为稳定 tie-breaker
   - `sort_by='distance'`：按距离由近到远（未提供 `radius` 时按默认 `5_000` 米计算）
   - `sort_by='newest'`：按发布时间倒序
-  - `sort_by='popular'`：按点赞/评论热度排序（含时间衰减因子，避免老内容长期占榜；具体衰减算法为服务端实现细节）
+  - `sort_by='popular'`：按互动热度排序（评论/表情反应等，含时间衰减因子，避免老内容长期占榜；具体衰减算法为服务端实现细节）
   - 一致性级别为弱一致（搜索场景允许短暂延迟）
 
 **Request**: `SearchMomentsRequest`
@@ -73,7 +73,7 @@ interface SearchMomentsRequest {
   tag?: string;        // 标签筛选
   radius?: number;     // 位置范围（米），100-50000，配合 reference_point 使用；未提供时默认 5_000 米，并受 AppConfig.limits.search_radius_max 上限约束
   sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';  // 默认: relevance
-  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
+  reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个；不满足时返回 10000（参数错误）
@@ -240,7 +240,7 @@ interface MyFavoritesRequest {
 
 ---
 
-## 评论与点赞 API
+## 评论 API
 
 ### 评论层级模型
 

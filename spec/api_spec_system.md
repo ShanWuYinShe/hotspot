@@ -200,7 +200,7 @@ interface UnreadSummary {
   notification_by_type: Record<NotifyCategory, number>;  // 按分类的未读数（同 notify/get_unread_count.by_type）
   private_chat_unread_count: number;        // 私聊会话未读消息总数
   group_chat_unread_count: number;          // 群聊未读消息总数
-  total_badge: number;                      // 综合角标数（客户端展示用，服务端按业务规则聚合）
+  total_badge: number;                      // 综合角标数 = notification_total + private_chat_unread_count + group_chat_unread_count（客户端展示用）
 }
 ```
 

@@ -233,6 +233,7 @@ interface AdminGroupOpenTheDoorRequest {
 - 解散后群内所有成员收到 `GroupDismissed` WebSocket 事件（`reason='policy_violation'`，不暴露管理员身份）
 - 解散操作会记录审计日志（含完整 `reason` 自由文本）
 - **reason 可见性**：`reason` 自由文本仅进审计日志（管理员可见），不推送给群成员（成员只收到 `policy_violation` 分类，避免泄露具体处置细节与管理员存在）
+- **级联处理（契约级）**：解散时，该群所有 `pending` 状态的申请与邀请由服务端自动置为 `revoked`（与 `groups/dismiss` 的级联约定一致，见 `api_spec_group.md`）
 
 **Request**: `AdminDismissGroupRequest`
 ```typescript
@@ -357,6 +358,7 @@ interface AdminTagItem extends TagItem {
 - 默认**软屏蔽**：标签不再可被新建/搜索命中，但**已引用该标签的历史瞬间/群组/用户数据保留不变**（不回写改写历史记录），避免大范围不可逆的数据修改
 - 物理删除（从所有历史引用中移除）为**高危操作**，需在 Request 中显式传 `hard_delete: true` 确认；物理删除不可逆，会改写所有引用该标签的资源
 - 屏蔽后同名标签不可再次创建；如需恢复，管理员可通过独立流程取消屏蔽（本文档未定义取消屏蔽端点，待后续补充）
+- **寻址说明**：标签的业务唯一键为 `name`（与普通 API `TagItem` 一致，`TagItem` 定义于 `api_spec_types.md`）；`AdminTagItem.tag_id`（定义于本文件「类型定义」小节）为内部存储标识，仅用于展示/审计关联，不参与删除寻址
 
 - **认证**: 必须 + `admin.tags.write`
 - **幂等**: 幂等语义（重复请求返回一致结果；对已屏蔽标签再次屏蔽视为 no-op 成功）

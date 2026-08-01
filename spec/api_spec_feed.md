@@ -43,7 +43,7 @@
 **Request**: `GetFeedFollowingRequest`
 ```typescript
 interface GetFeedFollowingRequest {
-  reference_point?: GeoPoint;  // 可选：用于 MomentItem.location 的距离/方位计算；不传则 distance/bearing 为 undefined
+  reference_point?: GeoPoint;  // 可选：用于 MomentItem.location 的距离/方位计算；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析
   pagination?: PaginationParams;
 }
 ```
@@ -66,7 +66,7 @@ interface GetFeedFollowingRequest {
 ```typescript
 interface GetFeedNearbyRequest {
   radius?: number;  // 位置范围（米），100-50000，可由 AppConfig.limits.search_radius_max 覆盖
-  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
+  reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
 ```
@@ -94,7 +94,7 @@ interface GetFeedNearbyRequest {
 ```typescript
 interface GetFeedNearbyUsersRequest {
   radius?: number;  // 位置范围（米），100-50000，可由 AppConfig.limits.search_radius_max 覆盖
-  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
+  reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
 ```
@@ -122,7 +122,7 @@ interface GetFeedNearbyUsersRequest {
 ```typescript
 interface GetFeedNearbyGroupsRequest {
   radius?: number;  // 位置范围（米），100-50000，可由 AppConfig.limits.search_radius_max 覆盖
-  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
+  reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
 ```

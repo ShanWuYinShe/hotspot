@@ -87,7 +87,7 @@ interface SearchUsersRequest {
   tag?: string;        // 标签筛选
   radius?: number;     // 位置范围（米），100-50000，配合 reference_point 使用；未提供时默认 5_000 米，并受 AppConfig.limits.search_radius_max 上限约束
   sort_by?: 'relevance' | 'distance' | 'newest';  // 默认: relevance（有意不提供 popular：用户无明确的公开热度指标，与 moments/groups 不同）
-  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
+  reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个；不满足时返回 10000（参数错误）
@@ -215,12 +215,13 @@ interface FollowingItem {
   user: UserInfo;
   followed_at: string;
   is_mutual: boolean;
+  remark?: string;             // @owner-only：仅查询自己时返回
   presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
   last_online_at?: string;
 }
 ```
 
-**可见性说明**：`presence_status`/`last_online_at` 受对方 `presence_visible` 隐私设置控制。
+**可见性说明**：`remark` 为 `@owner-only`（仅查询自己时返回）；`presence_status`/`last_online_at` 受对方 `presence_visible` 隐私设置控制。
 
 **错误码**: `10000` `10200` `10300`
 
@@ -249,7 +250,7 @@ interface ListFollowersRequest {
 interface FollowerItem {
   user: UserInfo;
   followed_at: string;
-  is_following_back: boolean;
+  is_mutual: boolean;          // 是否互相关注（该粉丝是否也关注了我），与 FollowingItem.is_mutual 语义一致
   presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
   last_online_at?: string;
 }

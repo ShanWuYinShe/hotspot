@@ -44,15 +44,17 @@
 |-------------------|--------------------|---------|
 | `new_follower` | `NewFollower` | 被关注 |
 | `mutual_follow` | `MutualFollow` | 形成互相关注 |
-| `moment_liked` | `MomentLiked` | 瞬间被点赞 |
 | `moment_commented` | `MomentCommented` | 瞬间被评论 |
-| `comment_liked` | `CommentLiked` | 评论被点赞 |
 | `comment_reply` | `CommentReply` | 评论被回复 |
 | `mentioned` | `MessageMentioned` | 瞬间/评论中被 @ |
+| `reaction_added` | `ReactionAdded` | 表情反应被添加（资源作者收到；自我反应不通知） |
 | `group_invite_received` | `GroupInviteReceived` | 收到入群邀请 |
+| `group_invite_revoked` | `GroupInviteRevoked` | 邀请被发起方撤销或过期自动失效（受邀人收到） |
 | `group_invite_accepted` | `GroupInviteResponse` | 邀请被接受（邀请方收到） |
 | `group_application_received` | `GroupApplicationReceived` | 群主/管理员收到入群申请 |
+| `group_application_cancelled` | `GroupApplicationCancelled` | 申请被发起方取消或过期自动失效（群管理员收到） |
 | `group_application_accepted` | `GroupApplicationResponse` | 申请被接受（申请方收到） |
+| `group_application_rejected` | `GroupApplicationRejected` | 申请被拒绝（申请人收到，含 reason） |
 | `report_resolved` | `ReportResolved` | 举报被处理（举报人收到） |
 | `report_dismissed` | `ReportDismissed` | 举报被驳回（举报人收到） |
 | `system_announcement` | `SystemAnnouncement` | 系统公告 |
@@ -72,15 +74,17 @@
 type NotifyPayload =
   | { type: 'new_follower'; actor: UserInfo; source?: FollowSource; source_moment_id?: string }
   | { type: 'mutual_follow'; actor: UserInfo }
-  | { type: 'moment_liked'; actor: UserInfo; moment_id: string; moment_summary: MomentSummary }
   | { type: 'moment_commented'; actor: UserInfo; moment_id: string; moment_summary: MomentSummary; comment_id: string; comment_preview: string }
-  | { type: 'comment_liked'; actor: UserInfo; comment_id: string; comment_preview: string; moment_id: string; moment_summary: MomentSummary }
   | { type: 'comment_reply'; actor: UserInfo; comment_id: string; replied_comment_preview: string; reply_id: string; reply_content_preview: string; moment_id: string; moment_summary: MomentSummary }
   | { type: 'mentioned'; actor: UserInfo; target_type: 'moment' | 'comment'; moment_id: string; moment_summary: MomentSummary; comment_id?: string; comment_preview?: string }
+  | { type: 'reaction_added'; actor: UserInfo; target_type: 'message' | 'moment' | 'comment'; target_id: string; emoji: string }  // 表情反应被添加（资源作者收到；actor 为反应者；自我反应不产生通知）
   | { type: 'group_invite_received'; actor: UserInfo; group_id: string; group_name: string; group_avatar_url?: string; invite_id: string; message?: string }
+  | { type: 'group_invite_revoked'; group_id: string; group_name: string; invite_id: string; revoked_by?: UserInfo; reason?: string }  // 邀请被发起方撤销或过期自动失效（受邀人收到；revoked_by 仅主动撤销时返回）
   | { type: 'group_invite_accepted'; group_id: string; group_name: string; invite_id: string; user: UserInfo }  // 推送给邀请发起者，user 为接受邀请的人
   | { type: 'group_application_received'; applicant: UserInfo; group_id: string; group_name: string; application_id: string }  // 推送给群主/管理员
+  | { type: 'group_application_cancelled'; applicant: UserInfo; group_id: string; group_name: string; application_id: string; reason?: string }  // 申请被申请人取消或过期自动失效（群管理员收到）
   | { type: 'group_application_accepted'; group_id: string; group_name: string; application_id: string }  // 不暴露审批者身份（隐私考虑：审批者可能是群管理员或群主，不应在通知中暴露其身份给申请者）
+  | { type: 'group_application_rejected'; group_id: string; group_name: string; application_id: string; rejected_by: UserInfo; reason?: string }  // 申请被拒绝（申请人收到；群申请为双向契约，申请人可见审批者身份，与 WS GroupApplicationRejected 一致）
   | { type: 'report_resolved'; report_id: string; target_type: ReportTargetType; target_id: string; resolved_at: string; note?: string }      // 举报被处理，note 为管理员脱敏后的处理说明
   | { type: 'report_dismissed'; report_id: string; target_type: ReportTargetType; target_id: string; dismissed_at: string; note?: string }    // 举报被驳回
   | { type: 'system_announcement'; announcement_id: string; severity: AnnounceLevel }

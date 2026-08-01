@@ -26,7 +26,7 @@
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
 | `POST /api/v1/private_chats/list` | 私聊列表 | 必须 | 无 |
-| `POST /api/v1/private_chats/get_detail` | 私聊详情 | 必须 | 幂等语义 |
+| `POST /api/v1/private_chats/get_detail` | 私聊详情 | 必须 | 无 |
 | `POST /api/v1/private_chats/update_preferences` | 更新会话偏好 | 必须 | 幂等语义 |
 | `POST /api/v1/private_chats/delete` | 删除私聊会话 | 必须 | 幂等语义 |
 
@@ -225,7 +225,7 @@ interface PrivateChatItem {
 响应始终包含最近消息列表（`PaginatedData<PrivateMessageItem>`，会话不存在时为空），条数由 `AppConfig.response_defaults.chat_recent_messages_count` 控制。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（纯查询：同一 `target_user_id` 的重复调用返回一致结果，永不产生写入）
+- **幂等**: 无（纯查询，无写入副作用）
 
 **Request**: `PrivateChatOpenTheDoorRequest`
 ```typescript
@@ -304,7 +304,13 @@ interface DeletePrivateChatRequest {
 **安全性与权限**：
 - 必须校验接收方的隐私设置（`allow_private_chat`）
 - 必须校验黑名单关系
-- 陌生人消息限制：每日向非互相关注用户（陌生人）发送私聊消息的上限由 `AppConfig.limits.stranger_message_daily_quota` 控制（客户端通过 `ClientConfig.limits` 读取），超限返回 `10200` 且 `message_blocked_reason='stranger_quota_exceeded'`
+- 陌生人消息限制：每日向非互相关注用户（陌生人）发送私聊消息的上限由 `AppConfig.limits.stranger_message_daily_quota` 控制（客户端通过 `ClientConfig.limits` 读取），超限返回 `10200`
+
+**错误响应 data（本端点显式声明，见 `api_spec_base.md` envelope 约定）**：当发送被拒绝（返回 `10200`）时，`data` 携带结构化原因 `{ reason: BlockReason }`（`BlockReason` 定义于本模块「类型定义」）：
+- `'privacy'`：对方隐私设置不允许（含被拉黑场景，统一返回此值，不暴露拉黑状态）
+- `'stranger_quota_exceeded'`：陌生人消息限额已用完
+- `'account_suspended'`：账号被限制
+其余错误（`10000`/`10300`）不返回 `data`。
 
 - **认证**: 必须
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
@@ -408,7 +414,7 @@ interface MarkPrivateReadRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300`（`scope='session'` 但 `target_user_id` 缺失，或 `up_to_message_id` 不属于该会话）
+**错误码**: `10000`（参数错误，如 `scope='session'` 但 `target_user_id` 缺失） `10300`（`up_to_message_id` 不属于该会话）
 
 ---
 

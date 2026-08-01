@@ -39,9 +39,10 @@ type GroupRole = 'owner' | 'admin' | 'member';
 type ClientType = 'web' | 'app';
 
 // === 设备标识（单设备单会话模型的基础原语，详见 api_spec_auth.md「单设备单会话模型」）===
-// 客户端生成的稳定设备标识（UUID v4 字符串）。语义：一台逻辑设备 = 一个 device_id。
-// - App：首次启动生成并存入 Keychain（iOS）/ Keystore（Android），卸载重装后视为新设备
-// - Web：存入 localStorage 或独立于 auth cookie 的 HttpOnly cookie（见 base.md「Web 端 device_id cookie」），登出不清除以保持设备身份连续；不同浏览器档案 = 不同 device_id
+// 设备身份标识（UUID v4 字符串）。语义：一台逻辑设备 = 一个 device_id。
+// - App：客户端首次启动生成并存入 Keychain（iOS）/ Keystore（Android），卸载重装后视为新设备；一经生成即稳定，禁止轮换
+// - Web：由服务端通过独立 `device_id` Cookie 下发（非 HttpOnly，前端可读以便与 App 内嵌 WebView 共享；见 base.md「Web 端 device_id cookie」），登出不清除以保持设备身份连续；不同浏览器档案 = 不同 device_id
+// 客户端不得自造或预测 device_id（Web 端由服务端下发；App 端本地生成一次后即稳定）
 // 服务端用作会话主键的一部分：同一 user 在同一 device_id 上只允许一个活跃 session（新登录驱逐旧 session，详见 auth.md login）
 type DeviceId = string;
 
@@ -103,17 +104,15 @@ type ChatPerm = 'everyone' | 'friends' | 'nobody';
 type NotifyType =
   | 'new_follower'
   | 'mutual_follow'
-  | 'moment_liked'
   | 'moment_commented'
-  | 'comment_liked'
   | 'comment_reply'
   | 'mentioned'
   | 'reaction_added'              // 新增：表情反应通知（@auth-only，仅 message/moment/comment 三类目标的 reaction）
   | 'group_invite_received'
-  | 'group_invite_revoked'        // 新增：邀请被发起方撤销（@auth-only，原仅 accepted 推送，现补负向转移）
+  | 'group_invite_revoked'        // 邀请被发起方撤销或过期自动失效（@auth-only，通知受邀人）
   | 'group_invite_accepted'
   | 'group_application_received'
-  | 'group_application_cancelled' // 新增：申请被发起方取消（@auth-only，通知群管理员）
+  | 'group_application_cancelled' // 申请被发起方取消或过期自动失效（@auth-only，通知群管理员）
   | 'group_application_accepted'
   | 'group_application_rejected'  // 新增：申请被拒绝（@auth-only，通知申请人，对应 #18 返回处理结果）
   | 'report_resolved'             // 新增：举报被处理（@auth-only，通知举报人处理结果）
@@ -124,7 +123,7 @@ type NotifyType =
 // 通知分类（用于未读计数分组展示，见 api_spec_notify.md get_unread_count 返回的 by_type）
 // 映射为契约级，新增 NotifyType 时必须同步归类：
 // - social:        new_follower, mutual_follow
-// - interaction:   moment_liked, moment_commented, comment_liked, comment_reply, mentioned, reaction_added
+// - interaction:   moment_commented, comment_reply, mentioned, reaction_added
 // - group:         group_invite_received, group_invite_revoked, group_invite_accepted, group_application_received, group_application_cancelled, group_application_accepted, group_application_rejected
 // - report:        report_resolved, report_dismissed
 // - nearby:        nearby_new_moment

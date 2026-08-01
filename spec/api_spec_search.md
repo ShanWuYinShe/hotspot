@@ -42,14 +42,14 @@
 **说明**：
 - Token 可选；未登录时仅返回公开内容。
 - 建议用于搜索框输入提示与全局发现入口。
-- **LBS 优化**：必须提供 `reference_point`，用于优先返回附近的匹配结果。
+- **LBS 优化**：`reference_point` 可选，不传时服务端按 `api_spec_types.md`「reference_point 解析规则」回退链解析，用于优先返回附近的匹配结果。
 - **类型过滤**：通过 `types` 参数可限定返回特定类型的结果，替代各模块独立的 suggest 端点。
 
 **Request**: `SearchSuggestRequest`
 ```typescript
 interface SearchSuggestRequest {
   prefix: string;
-  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
+  reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   types?: SearchSuggestType[];  // 可选：限定返回的类型（如 ['user', 'group']）。未提供或空数组均表示返回所有类型。
   radius?: number;  // 搜索半径（米），约束见 api_spec_base.md 通用字段约束
 }
@@ -57,7 +57,7 @@ interface SearchSuggestRequest {
 
 **半径与定位说明**：
 - `radius` 未提供时默认使用 `5_000` 米（5 km），并会被 `AppConfig.limits.search_radius_max` 上限裁剪。
-- 用户拒绝定位或无法获取实时位置时，客户端必须使用 `ClientConfig.defaults.default_location.point` 作为 `reference_point` fallback（参见 `api_spec_types.md` 请求位置要求）。
+- `reference_point` 为可选：不传时服务端按 `api_spec_types.md`「reference_point 解析规则」回退链解析（已登录用户最近位置 → `ClientConfig.defaults.default_location.point`）。
 
 **Response**: `ApiResponse<SearchSuggestResponse>`
 

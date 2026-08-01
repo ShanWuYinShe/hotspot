@@ -29,11 +29,11 @@
 | | `PrivateMessageRead` | 推送给消息另一方 + 已读方的其他在线设备 |
 | **社交通知** | `NewFollower` | 推送给被关注者，告知是谁关注了 Ta |
 | | `MutualFollow` | 推送给刚形成互相关注关系的用户本身 |
-| **瞬间互动** | `MomentLiked` | 推送给瞬间作者，告知谁点赞了 |
-| | `MomentCommented` | 推送给瞬间作者，附评论内容摘要 |
-| | `CommentLiked` | 推送给被点赞的评论作者 |
+| **瞬间互动** | `MomentCommented` | 推送给瞬间作者，附评论内容摘要 |
 | | `CommentReply` | 推送给被回复的评论作者 |
 | | `MessageMentioned` | 推送给被 @ 的用户（瞬间或评论中被提及） |
+| | `ReactionAdded` | 推送给被反应资源的作者，告知谁添加了表情反应 |
+| | `ReactionRemoved` | 推送给被反应资源的作者，告知谁移除了表情反应 |
 | **群组邀请** | `GroupInviteReceived` | 推送给被邀请加入群组的用户 |
 | | `GroupInviteResponse` | 推送给邀请发起者，告知邀请被接受 |
 | | `GroupApplicationReceived` | 推送给群主/管理员，告知有新的入群申请 |
@@ -220,7 +220,7 @@ type PongPayload = Record<string, never>;  // 空对象
 
 - **Token 失效**（被登出或撤销会话）：服务端发送 Error（severity=fatal），然后断开
 - **账号被封禁**：服务端推送 AccountBanned 事件，然后断开
-- **密码被修改**：非当前会话的 WebSocket 连接被断开（Error severity=fatal）
+- **密码被修改**：非当前会话的 WebSocket 连接收到 `SessionRevoked`（`reason='password_changed'`）后断开
 
 ---
 
@@ -266,7 +266,7 @@ type ServerEventType =
   | "NewFollower" | "MutualFollow"
   // 互动（含表情反应）
   | "ReactionAdded" | "ReactionRemoved"   // 表情反应增减（覆盖 message/moment/comment 三类目标）
-  | "MomentLiked" | "MomentCommented" | "CommentLiked" | "CommentReply" | "MessageMentioned"
+  | "MomentCommented" | "CommentReply" | "MessageMentioned"
   // 聊天消息 - 私聊
   | "PrivateMessageNew" | "PrivateMessageEdited" | "PrivateMessageRecalled"
   | "PrivateMessageRead"
@@ -405,7 +405,7 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
     - 私聊：发送 `PrivateTyping { target_user_id, is_typing }`
     - 群聊：发送 `GroupTyping { group_id, is_typing }`
   - 触发（服务端侧）：
-    - `PrivateTyping`：推送给已订阅该用户状态（`type: 'user'`）且为私聊对端的订阅者
+    - `PrivateTyping`：推送给已订阅该用户状态（`type: 'user'`）且与其存在活跃私聊的订阅者；payload 携带 `target_user_id`（输入状态所属会话的对端）供订阅者定位会话
     - `GroupTyping`：推送给订阅该群聊的成员
   - Typing 状态属于"瞬时状态"，不落库、不补发历史
   - **隐私保护**：通过订阅机制和 target_user_id 限定保护隐私，无需额外权限检查
@@ -432,7 +432,7 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
 // FollowSource 定义于 api_spec_types.md
 
 // 命名约定：
-// - actor: 执行操作的人（如关注者、点赞者、评论者），与 NotifyPayload.actor 语义一致
+// - actor: 执行操作的人（如关注者、评论者、反应者），与 NotifyPayload.actor 语义一致
 // - user: 事件主体（如加入群的人、被操作的人），不一定是操作发起者
 //
 // 持久化通知类事件统一携带 notification_id：
@@ -486,15 +486,6 @@ interface ReactionRemovedPayload {
 }
 type ReactionRemovedEvent = { type: "ReactionRemoved"; payload: ReactionRemovedPayload; };
 
-interface MomentLikedPayload {
-  notification_id: string;
-  moment_id: string;
-  moment_summary: MomentSummary;
-  actor: UserInfo;
-  liked_at: string;
-}
-type MomentLikedEvent = { type: "MomentLiked"; payload: MomentLikedPayload; };
-
 interface MomentCommentedPayload {
   notification_id: string;
   moment_id: string;
@@ -505,17 +496,6 @@ interface MomentCommentedPayload {
   commented_at: string;
 }
 type MomentCommentedEvent = { type: "MomentCommented"; payload: MomentCommentedPayload; };
-
-interface CommentLikedPayload {
-  notification_id: string;
-  comment_id: string;
-  moment_id: string;
-  moment_summary: MomentSummary;
-  comment_preview: string;
-  actor: UserInfo;
-  liked_at: string;
-}
-type CommentLikedEvent = { type: "CommentLiked"; payload: CommentLikedPayload; };
 
 interface CommentReplyPayload {
   notification_id: string;
@@ -584,6 +564,7 @@ interface PrivateMessageReadPayload {
 type PrivateMessageReadEvent = { type: "PrivateMessageRead"; payload: PrivateMessageReadPayload; };
 
 interface PrivateTypingPayload {
+  target_user_id: string;   // 输入状态所属私聊会话的对端（订阅者据此定位会话；与客户端发送版同名字段语义一致）
   actor: UserInfo;     // 正在打字的用户（统一用 actor: UserInfo 表达"动作发起者"，与通知类事件一致）
   is_typing: boolean;
 }
@@ -689,6 +670,7 @@ interface GroupInviteRevokedPayload {
 type GroupInviteRevokedEvent = { type: "GroupInviteRevoked"; payload: GroupInviteRevokedPayload; };
 
 // 邀请过期（超 expires_at 自动失效）→ 推送给受邀人
+// 落库通知复用 NotifyType='group_invite_revoked'（revoked_by 省略），见 api_spec_notify.md
 interface GroupInviteExpiredPayload {
   notification_id: string;
   invite_id: string;
@@ -728,6 +710,7 @@ interface GroupApplicationCancelledPayload {
 type GroupApplicationCancelledEvent = { type: "GroupApplicationCancelled"; payload: GroupApplicationCancelledPayload; };
 
 // 申请过期（超 expires_at 自动失效）→ 推送给群管理员
+// 落库通知复用 NotifyType='group_application_cancelled'，见 api_spec_notify.md
 interface GroupApplicationExpiredPayload {
   notification_id: string;
   application_id: string;
@@ -978,17 +961,19 @@ type AuthEvent = { type: "Auth"; payload: AuthPayload; };
 // PingPayload 定义见上文「心跳机制」
 type PingEvent = { type: "Ping"; payload: PingPayload; };
 
-interface PrivateTypingPayload {
+// 客户端发送版 payload（与服务端推送版 PrivateTypingPayload 结构不同，故拆分命名，避免同名冲突）
+interface PrivateTypingSendPayload {
   target_user_id: string;
   is_typing: boolean;
 }
-type PrivateTypingEvent = { type: "PrivateTyping"; payload: PrivateTypingPayload; };
+type PrivateTypingSendEvent = { type: "PrivateTyping"; payload: PrivateTypingSendPayload; };
 
-interface GroupTypingPayload {
+// 客户端发送版 payload（与服务端推送版 GroupTypingPayload 结构不同，故拆分命名，避免同名冲突）
+interface GroupTypingSendPayload {
   group_id: string;
   is_typing: boolean;
 }
-type GroupTypingEvent = { type: "GroupTyping"; payload: GroupTypingPayload; };
+type GroupTypingSendEvent = { type: "GroupTyping"; payload: GroupTypingSendPayload; };
 ```
 
 **订阅管理**：

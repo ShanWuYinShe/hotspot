@@ -320,7 +320,7 @@ App 端通过 Header 携带认证信息：
 - 系统配置：全局配置、公告、热门标签
 
 **响应差异**：
-- 详情页不返回 `relation`、`my_state`、`is_liked`/`is_favorited`
+- 详情页不返回 `relation`、`my_state`、`reactions[].reacted_by_me` 等 `@auth-only` 字段
 - 搜索结果不返回互动状态字段
 - 只能访问 `public` 可见性的资源
 
@@ -474,6 +474,8 @@ App 端通过 Header 携带认证信息：
 | WebSocket 订阅 | 连接 | 固定窗口 | 10次/秒 | `ws_subscribe_per_second` |
 | 管理员查询（`/admin/*` 读） | 用户 | 令牌桶 | 100次/分钟 | `admin_read_per_minute` |
 | 管理员写操作（`/admin/*` 写） | 用户 | 滑动窗口 | 30次/分钟 | `admin_write_per_minute` |
+| 全局限流（所有请求兜底） | IP+用户 | 固定窗口 | 服务端配置 | `global_per_hour` |
+| 用户级全局限流（所有请求兜底） | 用户 | 固定窗口 | 服务端配置 | `user_per_hour` |
 
 > 各字段的完整定义和取值范围见 `api_spec_admin_core.md` 的 `RateLimitConfig`。
 

@@ -284,7 +284,7 @@ interface AuthStatus {
 
 **安全说明**：
 - 无论 `login_id` 是否存在，均返回成功响应，不暴露账号是否注册
-- 验证码有效期和发送频率由 `AppConfig.rate_limits.auth_reset_per_10minutes` 控制
+- 验证码发送频率由 `AppConfig.rate_limits.auth_reset_per_10minutes` 控制；验证码有效期由服务端内部配置决定（不对外暴露）
 
 **Request**: `RequestPasswordResetRequest`
 ```typescript
@@ -350,7 +350,7 @@ interface ChangePasswordRequest {
 **安全说明**：
 - 修改密码成功后，服务端自动吊销当前会话之外的所有其他活跃会话
 - 所有被吊销会话的 token 写入黑名单
-- 被吊销设备的 WebSocket 连接会被服务端主动断开（Error 事件，severity=fatal）
+- 被吊销设备的 WebSocket 连接收到 `SessionRevoked`（`reason='password_changed'`）事件后被服务端主动断开（见 `api_spec_websocket.md`）
 
 **错误码**: `10000` `10100`
 

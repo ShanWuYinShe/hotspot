@@ -382,7 +382,7 @@ type AuditAction =
   | 'user.ban'           // 封禁用户
   | 'user.unban'         // 解封用户
   | 'group.dismiss'      // 解散群组
-  | 'group.member_mute'  // 禁言群成员（由群管理员通过 groups/members/mute 触发）
+  | 'group.member_mute'  // 禁言群成员（由群管理员通过 groups/members/set_mute 触发）
   | 'group.member_ban'   // 封禁群成员（由群管理员通过 groups/members/ban 触发）
   | 'group.member_remove'// 移除群成员（由群管理员通过 groups/members/remove 触发）
   | 'announcement.create'// 创建公告
@@ -523,8 +523,8 @@ interface UpdateAppConfigRequest {
   upload?: Partial<UploadConfig>;              // 上传策略
   defaults?: {                                 // 内容默认值（可单独更新子字段）
     default_location?: Partial<Location>;
-    default_group_avatar?: string;
-    default_user_avatar?: string;
+    default_group_avatar_url?: string;
+    default_user_avatar_url?: string;
     default_group_settings?: Partial<GroupSettings>;
   };
   rate_limits?: Partial<RateLimitConfig>;      // 频率限制（动态生效，无需重启；所有值须为正整数）
@@ -563,8 +563,8 @@ interface UploadConfig {
 
 interface ContentDefaults {
   default_location: Location;              // 默认位置（含坐标和名称），Location 定义于 api_spec_types.md
-  default_group_avatar: string;
-  default_user_avatar: string;
+  default_group_avatar_url: string;       // 加 _url 后缀，与 ClientConfig.defaults（见 api_spec_system.md）字段名对齐
+  default_user_avatar_url: string;
   default_group_settings: GroupSettings;    // GroupSettings 定义于 api_spec_types.md
 }
 
