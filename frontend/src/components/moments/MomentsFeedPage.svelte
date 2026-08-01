@@ -209,19 +209,32 @@
 				</div>
 			{/if}
 
-			<div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:14px;">
-				{#each filtered.slice(1) as item (item.id)}
+			<!-- Tablet：BSP 瓦片墙（卡片严格为 1×1 / 1×2 / 2×1 / 2×2 四种） -->
+			<BspCardCanvas
+				items={filtered.slice(1, visibleCount + 1)}
+				gap={24}
+				minRatio={0.68}
+				maxRatio={1.48}
+				minCardWidth={160}
+				minCardHeight={260}
+				minCanvasHeight={520}
+				ariaLabel="发现内容的不规则满铺布局"
+				hasMore={visibleCount + 1 < filtered.length}
+				onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
+			>
+				{#snippet renderItem(item: FeedItem, index: number)}
 					<PostCard
 						item={item}
 						dense
+						edition={String(index + 1).padStart(2, '0')}
 						liked={item.liked}
 						saved={item.saved}
 						onLike={() => void interactions.toggleLike(item.id)}
 						onSave={() => void interactions.toggleSave(item.id)}
 						onClick={() => void goto(ROUTES.moment(item.id))}
 					/>
-				{/each}
-			</div>
+				{/snippet}
+			</BspCardCanvas>
 		</div>
 	</div>
 {:else}

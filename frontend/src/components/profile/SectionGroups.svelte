@@ -19,6 +19,7 @@
 	const { groups } = useMyGroups();
 	const filtered = $derived(groups.filter((g) => searchQ === '' || g.name.toLowerCase().includes(searchQ.toLowerCase())));
 	const isDesktop = $derived(platformStore.platform === 'desktop');
+	const isTablet = $derived(platformStore.platform === 'tablet');
 </script>
 
 <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
@@ -47,7 +48,7 @@
 	</div>
 
 	<!-- Group cards -->
-	{#if isDesktop}
+	{#if isDesktop || isTablet}
 		<div class="px-5 pb-6">
 			<BspCardCanvas
 				items={filtered.slice(0, visibleCount)}

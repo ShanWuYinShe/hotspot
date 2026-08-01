@@ -31,6 +31,7 @@
 	const featuredPost = $derived(activePosts[0]);
 	const remainingPosts = $derived(activePosts.slice(1));
 	const isDesktop = $derived(platformStore.platform === 'desktop');
+	const isTablet = $derived(platformStore.platform === 'tablet');
 </script>
 
 <div class="flex flex-1 flex-col overflow-y-auto no-scrollbar">
@@ -73,7 +74,7 @@
 					{/snippet}
 				</EmptyState>
 			{/if}
-		{:else if isDesktop}
+		{:else if isDesktop || isTablet}
 			<!-- Desktop: BSP mosaic -->
 			<BspCardCanvas
 				items={activePosts.slice(0, visibleCount)}

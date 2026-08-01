@@ -200,7 +200,7 @@
 			</div>
 
 			{#if list.length}
-				{#if isDesktop}
+				{#if isDesktop || isTablet}
 					<BspCardCanvas
 						items={list.slice(0, visibleCount)}
 						gap={24}

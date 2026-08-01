@@ -120,7 +120,7 @@
 				<span class="neu-eyebrow">正在附近的群组</span>
 				<span class="text-[var(--semantic-online)] text-[11px]">{totalOnline} 人正在群聊</span>
 			</div>
-			{#if isDesktop}
+			{#if isDesktop || isTablet}
 				<BspCardCanvas
 					items={visibleGroups}
 					gap={24}
