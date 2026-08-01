@@ -13,12 +13,14 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import { getPrivateChats } from '@/api';
 	import { ROUTES } from '@/lib/routes';
+	import { presence, watchPresence } from '@/stores/presence.svelte';
 
 	// 消息列表：在线条 + 会话列表 + 新会话 Sheet + 建群 Sheet；
 	// 桌面左右分栏（内嵌 ChatView）。迁移自旧版 MessagesPage。
 
 	let chats = $state<ChatItem[]>([]);
 	let loading = $state(true);
+	let unwatchPresence: (() => void) | null = null;
 
 	$effect(() => {
 		let cancelled = false;
@@ -43,6 +45,12 @@
 						group: c.group ?? c.is_group ?? false
 					}));
 					chats = items;
+					// 在线状态实时化：对非 group 会话订阅全部对端（chats.id 语义即 peer user_id，
+					// 但显式用 peerUserId 更稳）；旧订阅先释放再建立新订阅。
+					unwatchPresence?.();
+					unwatchPresence = watchPresence(
+						items.filter((c) => !c.group).map((c) => c.peerUserId).filter(Boolean)
+					);
 				}
 			} catch {
 				if (!cancelled) chats = [];
@@ -53,6 +61,9 @@
 		void fetchChats();
 		return () => {
 			cancelled = true;
+			// 组件卸载：释放全部在线订阅
+			unwatchPresence?.();
+			unwatchPresence = null;
 		};
 	});
 
@@ -63,11 +74,18 @@
 	let showCreateGroup = $state(false);
 	let selectedId = $state<number | null>(null);
 
-	const filtered = $derived(chats.filter((c) => c.name.toLowerCase().includes(searchVal.toLowerCase())));
-	const onlineChats = $derived(chats.filter((c) => c.online));
+	// 渲染用实时在线判定：WS 推送优先，HTTP 快照（chat.online）仅兜底
+	const liveChats = $derived(
+		chats.map((c) => ({ ...c, online: presence.isOnline(c.peerUserId) }))
+	);
+
+	const filtered = $derived(
+		liveChats.filter((c) => c.name.toLowerCase().includes(searchVal.toLowerCase()))
+	);
+	const onlineChats = $derived(liveChats.filter((c) => c.online));
 	const totalUnread = $derived(chats.reduce((s, c) => s + c.unread, 0));
 	const isDesktop = $derived(platformStore.platform === 'desktop');
-	const selectedChat = $derived(chats.find((c) => c.id === selectedId));
+	const selectedChat = $derived(liveChats.find((c) => c.id === selectedId));
 </script>
 
 {#if isDesktop}

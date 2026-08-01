@@ -43,6 +43,9 @@ export const WS_AUTH_BANNED_EVENT = 'auth-banned';
 export const WS_NOTIFY_EVENT = 'ws:notify';
 export const WS_PRIVATE_MESSAGE_EVENT = 'ws:private-message';
 export const WS_PRIVATE_MESSAGE_UPDATE_EVENT = 'ws:private-message-update';
+export const WS_PRIVATE_TYPING_EVENT = 'ws:private-typing';
+export const WS_GROUP_MESSAGE_EVENT = 'ws:group-message';
+export const WS_GROUP_MESSAGE_UPDATE_EVENT = 'ws:group-message-update';
 
 const WS_PATH = '/ws/v1';
 
@@ -208,6 +211,26 @@ export class WsClient {
     return clientRequestId;
   }
 
+  /** 发送私聊输入状态（契约 PrivateTyping）。未连接时静默丢弃并返回 false。 */
+  sendPrivateTyping(targetUserId: string, isTyping: boolean): boolean {
+    if (!targetUserId || this.ws?.readyState !== WebSocket.OPEN) return false;
+    this.send({
+      type: 'PrivateTyping',
+      payload: { target_user_id: targetUserId, is_typing: isTyping }
+    });
+    return true;
+  }
+
+  /** 发送群聊输入状态（契约 GroupTyping）。未连接时静默丢弃并返回 false。 */
+  sendGroupTyping(groupId: string, isTyping: boolean): boolean {
+    if (!groupId || this.ws?.readyState !== WebSocket.OPEN) return false;
+    this.send({
+      type: 'GroupTyping',
+      payload: { group_id: groupId, is_typing: isTyping }
+    });
+    return true;
+  }
+
   /** 订阅 emitter：按 type 分发 payload（返回解绑函数）。 */
   on<K extends ServerEventType>(type: K, handler: (payload: ServerEventPayloadMap[K]) => void): () => void {
     let set = this.handlers.get(type);
@@ -305,6 +328,22 @@ export class WsClient {
         break;
       case 'PrivateMessageRead':
         this.emitWindowEvent(WS_PRIVATE_MESSAGE_UPDATE_EVENT, { type: 'read', payload });
+        break;
+      case 'PrivateTyping':
+        // 服务端推送版输入状态（payload 含 actor + target_user_id，供会话定位）
+        this.emitWindowEvent(WS_PRIVATE_TYPING_EVENT, payload);
+        break;
+      case 'GroupMessageNew':
+        this.emitWindowEvent(WS_GROUP_MESSAGE_EVENT, payload);
+        break;
+      case 'GroupMessageEdited':
+        this.emitWindowEvent(WS_GROUP_MESSAGE_UPDATE_EVENT, { type: 'edited', payload });
+        break;
+      case 'GroupMessageRecalled':
+        this.emitWindowEvent(WS_GROUP_MESSAGE_UPDATE_EVENT, { type: 'recalled', payload });
+        break;
+      case 'GroupMessageReadCountUpdated':
+        this.emitWindowEvent(WS_GROUP_MESSAGE_UPDATE_EVENT, { type: 'read_count', payload });
         break;
       case 'SubscribeAck':
         this.handleSubscribeAck(payload as SubscribeAckPayload);

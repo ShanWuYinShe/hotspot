@@ -5,9 +5,12 @@
 	import { Tabs } from 'bits-ui';
 	import { ROUTES } from '@/lib/routes';
 	import { getGroupDetail, getGroupMembers, getGroupAnnouncements } from '@/api';
+	import { wsClient } from '@/lib/ws/client';
+	import { presence, watchPresence } from '@/stores/presence.svelte';
 
 	// 群组详情：封面 + 简介/成员/公告三 Tab + 加入按钮 + 桌面侧栏。
 	// 迁移自旧版 GroupDetailPage。
+	// WS 实时：订阅 group 频道，成员/详情/公告变更事件触发对应刷新；解散弹提示并跳转。
 
 	let { params }: { params: { groupId: string } } = $props();
 
@@ -24,6 +27,7 @@
 	}
 	interface Member {
 		id: number;
+		userId: string;
 		name: string;
 		role: string;
 		online: boolean;
@@ -49,68 +53,148 @@
 	let members = $state<Member[]>([]);
 	let announcements = $state<Announcement[]>([]);
 	let loading = $state(true);
+	let unwatchMembers: (() => void) | null = null;
+	/** 竞态防护：仅最后一次发起的加载允许落地（等价原 effect 的 cancelled 标志）。 */
+	let loadToken = 0;
 
-	$effect(() => {
-		let cancelled = false;
-		const gid = params.groupId ?? '';
-		async function fetchGroup() {
-			try {
-				loading = true;
-				const [detailRes, membersRes, announcementsRes] = await Promise.all([
-					getGroupDetail(gid).catch(() => ({ code: -1, data: null })),
-					getGroupMembers(gid).catch(() => ({ code: -1, data: { items: [] } })),
-					getGroupAnnouncements(gid).catch(() => ({ code: -1, data: { items: [] } }))
-				]);
-				if (cancelled) return;
+	// --- 加载函数（初始加载与 WS 事件刷新复用） ---
 
-				const detailData = (detailRes.code === 0 ? detailRes.data : null) as any;
-				const membersData = (membersRes.code === 0 ? membersRes.data : null) as any;
-				const announcementsData = (announcementsRes.code === 0 ? announcementsRes.data : null) as any;
-
-				if (detailData) {
-					const g = detailData.group ?? detailData;
-					group = {
-						name: g.name ?? group.name,
-						category: (detailData.tags?.[0] ?? g.category ?? group.category) || '同城',
-						members: g.members_count ?? group.members,
-						online: g.online_count ?? group.online,
-						distance: detailData.location?.distance ?? group.distance,
-						description: detailData.description ?? group.description,
-						banner: g.avatar_url ?? group.banner
-					};
-					if (detailData.my_state?.is_joined) joined = true;
-				}
-
-				if (membersData) {
-					const items: Member[] = (membersData.items || []).map((m: any, i: number) => ({
-						id: m.user?.user_id ?? i + 1,
-						name: m.user?.nickname ?? m.name ?? '',
-						role: m.role ?? '成员',
-						online: m.user?.presence_status === 'online' || m.online || false,
-						avatar: m.user?.avatar_url ?? m.avatar ?? ''
-					}));
-					members = items;
-				}
-
-				if (announcementsData) {
-					const items: Announcement[] = (announcementsData.items || []).map((a: any) => ({
-						title: a.title ?? a.name ?? '',
-						body: a.body ?? a.content ?? a.text ?? '',
-						time: a.time ?? a.created_at ?? ''
-					}));
-					announcements = items;
-				}
-			} catch {
-				// empty data is normal
-			} finally {
-				if (!cancelled) loading = false;
+	async function loadDetail(gid: string) {
+		try {
+			const detailRes = await getGroupDetail(gid).catch(() => ({ code: -1, data: null }));
+			// 竞态防护：页面已切到别的群组则丢弃本次结果（等价原 effect 的 cancelled 守卫）
+			if (params.groupId !== gid) return;
+			const detailData = (detailRes.code === 0 ? detailRes.data : null) as any;
+			if (detailData) {
+				const g = detailData.group ?? detailData;
+				group = {
+					name: g.name ?? group.name,
+					category: (detailData.tags?.[0] ?? g.category ?? group.category) || '同城',
+					members: g.members_count ?? group.members,
+					online: g.online_count ?? group.online,
+					distance: detailData.location?.distance ?? group.distance,
+					description: detailData.description ?? group.description,
+					banner: g.avatar_url ?? group.banner
+				};
+				if (detailData.my_state?.is_joined) joined = true;
 			}
+		} catch {
+			// empty data is normal
 		}
-		void fetchGroup();
+	}
+
+	async function loadMembers(gid: string) {
+		try {
+			const membersRes = await getGroupMembers(gid).catch(() => ({ code: -1, data: { items: [] } }));
+			// 竞态防护：页面已切到别的群组则丢弃本次结果
+			if (params.groupId !== gid) return;
+			const membersData = (membersRes.code === 0 ? membersRes.data : null) as any;
+			if (membersData) {
+				const items: Member[] = (membersData.items || []).map((m: any, i: number) => ({
+					id: m.user?.user_id ?? i + 1,
+					userId: m.user?.user_id ?? '',
+					name: m.user?.nickname ?? m.name ?? '',
+					role: m.role ?? '成员',
+					online: m.user?.presence_status === 'online' || m.online || false,
+					avatar: m.user?.avatar_url ?? m.avatar ?? ''
+				}));
+				members = items;
+				// 成员在线状态实时化：订阅全部成员（先释放旧订阅再建新订阅）
+				unwatchMembers?.();
+				unwatchMembers = watchPresence(items.map((m) => m.userId).filter(Boolean));
+			}
+		} catch {
+			// empty data is normal
+		}
+	}
+
+	async function loadAnnouncements(gid: string) {
+		try {
+			const announcementsRes = await getGroupAnnouncements(gid).catch(() => ({ code: -1, data: { items: [] } }));
+			// 竞态防护：页面已切到别的群组则丢弃本次结果
+			if (params.groupId !== gid) return;
+			const announcementsData = (announcementsRes.code === 0 ? announcementsRes.data : null) as any;
+			if (announcementsData) {
+				const items: Announcement[] = (announcementsData.items || []).map((a: any) => ({
+					title: a.title ?? a.name ?? '',
+					body: a.body ?? a.content ?? a.text ?? '',
+					time: a.time ?? a.created_at ?? ''
+				}));
+				announcements = items;
+			}
+		} catch {
+			// empty data is normal
+		}
+	}
+
+	async function loadAll(gid: string) {
+		const token = ++loadToken;
+		loading = true;
+		await Promise.all([loadDetail(gid), loadMembers(gid), loadAnnouncements(gid)]);
+		if (token !== loadToken) return; // 已被更新的请求取代
+		loading = false;
+	}
+
+	// 初始加载
+	$effect(() => {
+		const gid = params.groupId ?? '';
+		if (!gid) return;
+		void loadAll(gid);
+	});
+
+	// WS 群组订阅：成员/详情/公告变更实时刷新；解散跳转列表页。
+	$effect(() => {
+		const gid = params.groupId ?? '';
+		if (!gid) return;
+
+		wsClient.setSubscriptions('subscribe', [{ type: 'group', ids: [gid] }]);
+
+		const isForThisGroup = (p: unknown) => (p as { group_id?: string })?.group_id === gid;
+		const offs = [
+			wsClient.on('GroupMemberJoined', (p) => {
+				if (isForThisGroup(p)) void loadMembers(gid);
+			}),
+			wsClient.on('GroupMemberLeft', (p) => {
+				if (isForThisGroup(p)) void loadMembers(gid);
+			}),
+			wsClient.on('GroupMemberRemoved', (p) => {
+				if (isForThisGroup(p)) void loadMembers(gid);
+			}),
+			wsClient.on('GroupMemberMuted', (p) => {
+				if (isForThisGroup(p)) void loadMembers(gid);
+			}),
+			wsClient.on('GroupMemberUnmuted', (p) => {
+				if (isForThisGroup(p)) void loadMembers(gid);
+			}),
+			wsClient.on('GroupMemberRoleChanged', (p) => {
+				if (isForThisGroup(p)) void loadMembers(gid);
+			}),
+			wsClient.on('GroupUpdated', (p) => {
+				if (isForThisGroup(p)) void loadDetail(gid);
+			}),
+			wsClient.on('GroupAnnouncementCreated', (p) => {
+				if (isForThisGroup(p)) void loadAnnouncements(gid);
+			}),
+			wsClient.on('GroupDismissed', (p) => {
+				if (!isForThisGroup(p)) return;
+				window.alert('该群组已被解散');
+				void goto(ROUTES.nearbyGroups);
+			})
+		];
+
 		return () => {
-			cancelled = true;
+			for (const off of offs) off();
+			wsClient.setSubscriptions('unsubscribe', [{ type: 'group', ids: [gid] }]);
+			unwatchMembers?.();
+			unwatchMembers = null;
 		};
 	});
+
+	// 成员在线实时派生：绿点与"X 人在线"计数均以 presence 为准（HTTP 快照仅初始兜底）。
+	const onlineMemberIds = $derived(
+		new Set(members.filter((m) => presence.isOnline(m.userId)).map((m) => m.userId))
+	);
+	const onlineMemberCount = $derived(onlineMemberIds.size);
 </script>
 
 <div class="content-mode-wide min-h-full bg-[var(--neu-bg)]">
@@ -135,7 +219,7 @@
 				</span>
 				<span class="flex items-center gap-1.5 text-[var(--semantic-online)]">
 					<span class="h-2 w-2 rounded-full bg-[var(--semantic-online)]"></span>
-					{group.online} 人在线
+					{onlineMemberCount} 人在线
 				</span>
 				<span class="flex items-center gap-1.5">
 					<MapPin size={14} />
@@ -177,7 +261,7 @@
 						<button type="button" class="neu-hover-row app-list-row app-list-row--standard neu-row-hover rounded-[12px] outline-none" onclick={() => void goto(ROUTES.user(member.id))}>
 							<div class="relative">
 								<img src={member.avatar} alt="" class="h-10 w-10 rounded-full object-cover" />
-								{#if member.online}
+								{#if onlineMemberIds.has(member.userId)}
 									<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[var(--neu-bg)] bg-[var(--semantic-online)]"></span>
 								{/if}
 							</div>

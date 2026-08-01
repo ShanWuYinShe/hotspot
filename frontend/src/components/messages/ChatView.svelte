@@ -5,9 +5,12 @@
 	import { getPrivateMessages, sendPrivateMessage, markPrivateRead } from '@/api';
 	import {
 		WS_PRIVATE_MESSAGE_EVENT,
-		WS_PRIVATE_MESSAGE_UPDATE_EVENT
+		WS_PRIVATE_MESSAGE_UPDATE_EVENT,
+		WS_PRIVATE_TYPING_EVENT,
+		wsClient
 	} from '@/lib/ws/client';
-	import type { PrivateMessageNewPayload } from '@/lib/ws/types';
+	import type { PrivateMessageNewPayload, PrivateTypingPayload } from '@/lib/ws/types';
+	import { presence, watchPresence } from '@/stores/presence.svelte';
 
 	// ChatView — 私聊窗口（spec: 以对端 user_id 寻址）。
 	// 历史来自 private_messages/get_history；发送走 private_messages/send。
@@ -62,6 +65,13 @@
 	let sending = $state(false);
 	let sendError = $state('');
 	let scrollEl = $state<HTMLDivElement | null>(null);
+
+	// --- typing 发送状态（契约：客户端不超过 3 秒发一次；服务端权威节流）---
+	let lastTypingSentAt = 0;
+	let typingStopTimer: ReturnType<typeof setTimeout> | null = null;
+	// --- typing 接收状态 ---
+	let peerTyping = $state(false);
+	let peerTypingTimer: ReturnType<typeof setTimeout> | null = null;
 
 	// spec: private_messages/send 返回 10200 时 data 携带 { reason: BlockReason }。
 	const SEND_BLOCK_REASONS: Record<string, string> = {
@@ -128,6 +138,46 @@
 	});
 
 	const peerName = $derived(contact?.name ?? '');
+	// 在线状态实时化：优先 WS 推送（presence store），HTTP 快照 contact.online 仅作初始兜底。
+	const onlineNow = $derived(presence.isOnline(peerUserId));
+
+	/** 发送输入状态（未连接静默丢弃）。 */
+	function sendTyping(isTyping: boolean) {
+		if (!peerUserId || !wsClient.isConnected) return;
+		wsClient.sendPrivateTyping(peerUserId, isTyping);
+	}
+
+	/** 立即结束输入状态（清空输入框 / 发送成功后调用）。 */
+	function cancelTyping() {
+		if (typingStopTimer) {
+			clearTimeout(typingStopTimer);
+			typingStopTimer = null;
+		}
+		lastTypingSentAt = 0;
+		sendTyping(false);
+	}
+
+	/** 输入内容变化：非空且距上次发送 ≥3 秒发 true；清空立即发 false；停止输入 3 秒后发 false。
+	 * 注意：显式 oninput 先于 bind:value 的赋值执行，必须先从事件目标读取最新值。 */
+	function handleInputChange(e: Event) {
+		inputVal = (e.target as HTMLInputElement).value;
+		sendError = '';
+		if (inputVal.trim()) {
+			const now = Date.now();
+			if (now - lastTypingSentAt >= 3000) {
+				lastTypingSentAt = now;
+				sendTyping(true);
+			}
+			if (typingStopTimer) clearTimeout(typingStopTimer);
+			typingStopTimer = setTimeout(() => {
+				typingStopTimer = null;
+				lastTypingSentAt = 0;
+				sendTyping(false);
+			}, 3000);
+		} else {
+			cancelTyping();
+		}
+	}
 
 	const handleSend = async () => {
 		const text = inputVal.trim();
@@ -154,6 +204,8 @@
 			sendError = '消息发送失败,请稍后重试';
 		} finally {
 			sending = false;
+			// 发送完成（无论成败）立即结束输入状态，避免对端残留"正在输入"
+			cancelTyping();
 		}
 	};
 
@@ -207,6 +259,57 @@
 			window.removeEventListener(WS_PRIVATE_MESSAGE_UPDATE_EVENT, onMessageUpdate as EventListener);
 		};
 	});
+
+	// typing 接收：仅处理对端（payload.actor.user_id === peer）推送；true 时 3 秒超时自动重置。
+	$effect(() => {
+		const peer = peerUserId;
+		if (!peer) return;
+
+		const onTyping = (e: Event) => {
+			const payload = (e as CustomEvent<PrivateTypingPayload>).detail;
+			if (!payload || payload.target_user_id !== peer) return;
+			if (payload.actor?.user_id !== peer) return;
+			if (payload.is_typing) {
+				peerTyping = true;
+				if (peerTypingTimer) clearTimeout(peerTypingTimer);
+				peerTypingTimer = setTimeout(() => {
+					peerTypingTimer = null;
+					peerTyping = false;
+				}, 3000);
+			} else {
+				peerTyping = false;
+				if (peerTypingTimer) {
+					clearTimeout(peerTypingTimer);
+					peerTypingTimer = null;
+				}
+			}
+		};
+
+		window.addEventListener(WS_PRIVATE_TYPING_EVENT, onTyping as EventListener);
+		return () => {
+			window.removeEventListener(WS_PRIVATE_TYPING_EVENT, onTyping as EventListener);
+			if (peerTypingTimer) {
+				clearTimeout(peerTypingTimer);
+				peerTypingTimer = null;
+			}
+			peerTyping = false;
+		};
+	});
+
+	// 在线状态订阅：切换会话时自动重新订阅并清理发送侧 typing 定时器。
+	$effect(() => {
+		const peer = peerUserId;
+		if (!peer) return;
+		const unwatch = watchPresence([peer]);
+		return () => {
+			unwatch();
+			if (typingStopTimer) {
+				clearTimeout(typingStopTimer);
+				typingStopTimer = null;
+			}
+			lastTypingSentAt = 0;
+		};
+	});
 </script>
 
 <div class="flex min-h-0 flex-col h-full bg-[var(--neu-bg)]">
@@ -231,7 +334,7 @@
 			style="border:1.5px solid var(--neu-border);box-shadow:3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light);"
 		>
 			{#snippet badge()}
-				{#if contact?.online}
+				{#if onlineNow}
 					<span class="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]" style="width:9px;height:9px;border:2px solid var(--neu-bg);"></span>
 				{/if}
 			{/snippet}
@@ -242,8 +345,16 @@
 			<p class="truncate text-[var(--neu-text)]" style="font-size:{compact ? 13 : 14}px;">
 				{peerName || '会话'}
 			</p>
-			<p class="{contact?.online ? 'text-[var(--semantic-online)]' : 'text-[var(--neu-text-muted)]'}" style="font-size:11px;">
-				{contact ? (contact.online ? '在线' : contact.lastSeen ? `活跃于${contact.lastSeen}` : '离线') : ''}
+			<p class="{peerTyping ? 'text-[var(--neu-accent-primary)]' : onlineNow ? 'text-[var(--semantic-online)]' : 'text-[var(--neu-text-muted)]'}" style="font-size:11px;">
+				{#if peerTyping}
+					正在输入…
+				{:else if onlineNow}
+					在线
+				{:else if contact?.lastSeen}
+					活跃于{contact.lastSeen}
+				{:else if contact}
+					离线
+				{/if}
 			</p>
 		</div>
 
@@ -321,7 +432,7 @@
 			<input
 				type="text"
 				bind:value={inputVal}
-				oninput={() => (sendError = '')}
+				oninput={(e) => handleInputChange(e)}
 				onkeydown={(e) => {
 					if (e.key === 'Enter') void handleSend();
 				}}

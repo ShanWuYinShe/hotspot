@@ -284,4 +284,87 @@ describe('事件映射', () => {
 
     window.removeEventListener('ws:private-message', onMsg);
   });
+
+  it('PrivateTyping 服务端推送派发 ws:private-typing（detail 为 payload）', () => {
+    const client = new WsClient({ url: 'ws://test.local/ws/v1' });
+    const onTyping = vi.fn();
+    window.addEventListener('ws:private-typing', onTyping);
+
+    client.connect();
+    FakeWebSocket.instances[0].open();
+    FakeWebSocket.instances[0].message({
+      type: 'PrivateTyping',
+      payload: {
+        target_user_id: 'me',
+        actor: { user_id: 'u2', nickname: '小美' },
+        is_typing: true
+      }
+    });
+    expect(onTyping).toHaveBeenCalledTimes(1);
+    const detail = (onTyping.mock.calls[0][0] as CustomEvent).detail;
+    expect(detail.target_user_id).toBe('me');
+    expect(detail.actor.user_id).toBe('u2');
+    expect(detail.is_typing).toBe(true);
+
+    window.removeEventListener('ws:private-typing', onTyping);
+  });
+
+  it('GroupMessageNew 派发 ws:group-message；GroupMessageEdited 派发 ws:group-message-update{type:edited}', () => {
+    const client = new WsClient({ url: 'ws://test.local/ws/v1' });
+    const onNew = vi.fn();
+    const onUpdate = vi.fn();
+    window.addEventListener('ws:group-message', onNew);
+    window.addEventListener('ws:group-message-update', onUpdate);
+
+    client.connect();
+    FakeWebSocket.instances[0].open();
+    FakeWebSocket.instances[0].message({
+      type: 'GroupMessageNew',
+      payload: {
+        message_id: 'gm-1',
+        group_id: 'g1',
+        sender: { user_id: 'u2', nickname: '小美' },
+        type: 'text',
+        content: '大家好',
+        sent_at: '2025-01-01T00:00:00.000Z'
+      }
+    });
+    expect(onNew).toHaveBeenCalledTimes(1);
+    const newDetail = (onNew.mock.calls[0][0] as CustomEvent).detail;
+    expect(newDetail.group_id).toBe('g1');
+    expect(newDetail.content).toBe('大家好');
+
+    FakeWebSocket.instances[0].message({
+      type: 'GroupMessageEdited',
+      payload: { message_id: 'gm-1', group_id: 'g1', content: '大家好呀', edited_at: '2025-01-01T00:00:01.000Z' }
+    });
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+    const updateDetail = (onUpdate.mock.calls[0][0] as CustomEvent).detail;
+    expect(updateDetail.type).toBe('edited');
+    expect(updateDetail.payload.group_id).toBe('g1');
+
+    window.removeEventListener('ws:group-message', onNew);
+    window.removeEventListener('ws:group-message-update', onUpdate);
+  });
+
+  it('sendPrivateTyping/sendGroupTyping 连接时发送契约 payload，未连接时静默返回 false', () => {
+    const client = new WsClient({ url: 'ws://test.local/ws/v1' });
+
+    // 未连接：不发送、返回 false
+    expect(client.sendPrivateTyping('u2', true)).toBe(false);
+    expect(client.sendGroupTyping('g1', true)).toBe(false);
+
+    client.connect();
+    const socket = FakeWebSocket.instances[0];
+    socket.open();
+    expect(client.sendPrivateTyping('u2', true)).toBe(true);
+    expect(client.sendGroupTyping('g1', false)).toBe(true);
+
+    expect(sentOfType(socket, 'PrivateTyping')).toEqual([
+      { type: 'PrivateTyping', payload: { target_user_id: 'u2', is_typing: true } }
+    ]);
+    expect(sentOfType(socket, 'GroupTyping')).toEqual([
+      { type: 'GroupTyping', payload: { group_id: 'g1', is_typing: false } }
+    ]);
+  });
 });

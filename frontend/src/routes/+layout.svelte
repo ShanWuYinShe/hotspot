@@ -4,6 +4,7 @@
 	import { setApiBaseUrl } from '@/api';
 	import { initAuth } from '@/stores/auth.svelte';
 	import { initWs } from '@/stores/ws.svelte';
+	import { initPresence } from '@/stores/presence.svelte';
 	import { initTheme } from '@/stores/theme.svelte';
 	import { initPlatform } from '@/stores/platform.svelte';
 	import AuthGate from '@/components/auth/AuthGate.svelte';
@@ -20,6 +21,8 @@
 	// WS 实时通道：监听 auth store，登录后自动连接、登出后断开。
 	// 与 initAuth 一样在 script 顶层调用（非 onMount），保证内部 $effect 注册在组件初始化上下文。
 	initWs();
+	// 在线状态实时化：UserOnline/UserOffline → onlineUsers（供消息列表/私聊/群成员消费）。
+	initPresence();
 
 	// MSW mock（仅 dev；PUBLIC_API_MOCK !== 'false' 时启用，localStorage 可覆盖）
 	if (import.meta.env.DEV && import.meta.env.PUBLIC_API_MOCK !== 'false') {
