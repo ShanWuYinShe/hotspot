@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"hotspot/backend-go/internal/platform/persistence"
 	"time"
 
@@ -24,16 +25,16 @@ func (r *PostgresRepository) Get(ctx context.Context, momentID string) (MomentIt
 		if errors.Is(err, pgx.ErrNoRows) {
 			return MomentItem{}, false, nil
 		}
-		return MomentItem{}, false, err
+		return MomentItem{}, false, fmt.Errorf("moments.Get scan: %w", err)
 	}
 	tagsByMomentID, err := loadMomentTags(ctx, queryable, []string{momentID})
 	if err != nil {
-		return MomentItem{}, false, err
+		return MomentItem{}, false, fmt.Errorf("moments.Get tags: %w", err)
 	}
 	item.Tags = tagsByMomentID[momentID]
 	mentionsByMomentID, err := loadMomentMentions(ctx, queryable, []string{momentID})
 	if err != nil {
-		return MomentItem{}, false, err
+		return MomentItem{}, false, fmt.Errorf("moments.Get mentions: %w", err)
 	}
 	item.Mentions = mentionsByMomentID[momentID]
 	return item, true, nil
@@ -54,7 +55,7 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string, limit 
 	}
 	rows, err := queryable.Query(ctx, queryListMyMoments, userID, cursorAt, cursorMomentID, limit+1)
 	if err != nil {
-		return PaginatedMoments{}, err
+		return PaginatedMoments{}, fmt.Errorf("moments.ListMine query: %w", err)
 	}
 	defer rows.Close()
 	items := make([]MomentItem, 0, limit+1)
@@ -63,7 +64,7 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string, limit 
 	for rows.Next() {
 		item, err := scanMomentRow(rows)
 		if err != nil {
-			return PaginatedMoments{}, err
+			return PaginatedMoments{}, fmt.Errorf("moments.ListMine scan: %w", err)
 		}
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
@@ -71,11 +72,11 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string, limit 
 		if len(items) == limit+1 {
 			tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs[:limit])
 			if err != nil {
-				return PaginatedMoments{}, err
+				return PaginatedMoments{}, fmt.Errorf("moments.ListMine tags: %w", err)
 			}
 			mentionsByMomentID, err := loadMomentMentions(ctx, queryable, momentIDs[:limit])
 			if err != nil {
-				return PaginatedMoments{}, err
+				return PaginatedMoments{}, fmt.Errorf("moments.ListMine mentions: %w", err)
 			}
 			for i := 0; i < limit; i++ {
 				items[i].Tags = tagsByMomentID[items[i].MomentID]
@@ -85,15 +86,15 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string, limit 
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return PaginatedMoments{}, err
+		return PaginatedMoments{}, fmt.Errorf("moments.ListMine rows: %w", err)
 	}
 	tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs)
 	if err != nil {
-		return PaginatedMoments{}, err
+		return PaginatedMoments{}, fmt.Errorf("moments.ListMine tags: %w", err)
 	}
 	mentionsByMomentID, err := loadMomentMentions(ctx, queryable, momentIDs)
 	if err != nil {
-		return PaginatedMoments{}, err
+		return PaginatedMoments{}, fmt.Errorf("moments.ListMine mentions: %w", err)
 	}
 	for i := range items {
 		items[i].Tags = tagsByMomentID[items[i].MomentID]
@@ -156,7 +157,7 @@ func scanMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) 
 	var createdAt time.Time
 	var latitude, longitude float64
 	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel); err != nil {
-		return MomentItem{}, err
+		return MomentItem{}, fmt.Errorf("moments.scanMomentRow scan: %w", err)
 	}
 	// nickname 已通过 SQL 的 COALESCE(u.nickname, '') 兜底
 	// 若 SQL 未提供 nickname（兼容性回退），降级为 userID
@@ -180,18 +181,18 @@ func loadMomentTags(ctx context.Context, queryable persistence.QueryableDB, mome
 	tagsByMomentID := make(map[string][]string, len(momentIDs))
 	rows, err := queryable.Query(ctx, queryListMomentTagsByMomentIDs, momentIDs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("moments.loadMomentTags query: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var momentID, tag string
 		if err := rows.Scan(&momentID, &tag); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("moments.loadMomentTags scan: %w", err)
 		}
 		tagsByMomentID[momentID] = append(tagsByMomentID[momentID], tag)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("moments.loadMomentTags rows: %w", err)
 	}
 	return tagsByMomentID, nil
 }
@@ -203,18 +204,18 @@ func loadMomentMentions(ctx context.Context, queryable persistence.QueryableDB, 
 	mentionsByMomentID := make(map[string][]string, len(momentIDs))
 	rows, err := queryable.Query(ctx, queryListMomentMentionsByMomentIDs, momentIDs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("moments.loadMomentMentions query: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var momentID, mentionedUserID string
 		if err := rows.Scan(&momentID, &mentionedUserID); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("moments.loadMomentMentions scan: %w", err)
 		}
 		mentionsByMomentID[momentID] = append(mentionsByMomentID[momentID], mentionedUserID)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("moments.loadMomentMentions rows: %w", err)
 	}
 	return mentionsByMomentID, nil
 }
@@ -225,7 +226,7 @@ func scanFavoriteMomentRow(scanner interface{ Scan(...any) error }) (MomentItem,
 	var createdAt, favoritedAt time.Time
 	var latitude, longitude float64
 	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &favoritedAt); err != nil {
-		return MomentItem{}, "", err
+		return MomentItem{}, "", fmt.Errorf("moments.scanFavoriteMomentRow scan: %w", err)
 	}
 	if nickname == "" {
 		nickname = userID
