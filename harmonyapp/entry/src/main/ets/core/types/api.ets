@@ -1953,7 +1953,7 @@ export type NotificationType =
   'new_follower' | 'mutual_follow' | 'moment_commented'
   | 'comment_reply' | 'mentioned'
   | 'reaction_added'
-  | 'group_invite_received' | 'group_invite_accepted' | 'group_invite_revoked'
+  | 'group_invite_received' | 'group_invite_accepted' | 'group_invite_revoked' | 'group_invite_rejected'
   | 'group_application_received' | 'group_application_accepted' | 'group_application_cancelled' | 'group_application_rejected'
   | 'report_resolved' | 'report_dismissed'
   | 'system_announcement'

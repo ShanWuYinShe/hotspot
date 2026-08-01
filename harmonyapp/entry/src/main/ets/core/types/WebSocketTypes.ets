@@ -89,6 +89,7 @@ export enum ServerEventType {
   GROUP_INVITE_RECEIVED = 'GroupInviteReceived',
   GROUP_INVITE_REVOKED = 'GroupInviteRevoked',
   GROUP_INVITE_EXPIRED = 'GroupInviteExpired',
+  GROUP_INVITE_REJECTED = 'GroupInviteRejected',
   GROUP_INVITE_RESPONSE = 'GroupInviteResponse',
   GROUP_APPLICATION_RECEIVED = 'GroupApplicationReceived',
   GROUP_APPLICATION_CANCELLED = 'GroupApplicationCancelled',
@@ -688,6 +689,21 @@ export interface GroupInviteResponseEvent {
   payload: GroupInviteResponsePayload
 }
 
+// 邀请被受邀人拒绝 → 推送给邀请发起方（对应 NotifyType='group_invite_rejected'，含 reason）
+export interface GroupInviteRejectedPayload {
+  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
+  invite_id: string
+  group_id: string
+  rejected_by: UserInfo     // 拒绝邀请的受邀人（邀请发起方可见其身份，群邀请为双向契约）
+  rejected_at: string
+  reason?: string
+}
+
+export interface GroupInviteRejectedEvent {
+  type: 'GroupInviteRejected'
+  payload: GroupInviteRejectedPayload
+}
+
 // 邀请被发起方（管理员）主动撤销 → 推送给受邀人
 export interface GroupInviteRevokedPayload {
   notification_id: string
@@ -955,6 +971,7 @@ export type ServerEvent =
   | GroupInviteReceivedEvent
   | GroupInviteRevokedEvent
   | GroupInviteExpiredEvent
+  | GroupInviteRejectedEvent
   | GroupInviteResponseEvent
   | GroupApplicationReceivedEvent
   | GroupApplicationCancelledEvent

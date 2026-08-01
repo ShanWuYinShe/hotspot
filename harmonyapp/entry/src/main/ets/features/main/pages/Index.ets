@@ -174,6 +174,7 @@ struct Index {
         'ConnectionEstablished', 'NewFollower', 'MutualFollow',
         'MomentCommented', 'CommentReply',
         'MessageMentioned', 'ReactionAdded', 'GroupInviteReceived', 'GroupInviteResponse',
+        'GroupInviteRejected',
         'GroupInviteRevoked', 'GroupInviteExpired',
         'GroupApplicationReceived', 'GroupApplicationResponse',
         'GroupApplicationCancelled', 'GroupApplicationRejected',
@@ -596,6 +597,28 @@ struct Index {
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
+          case 'GroupInviteRejected': {
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const metadata = new NotificationMetadata();
+            metadata.type = 'group_invite_rejected';
+            metadata.targetId = String(payloadRecord.group_id);
+            const notifInput: CreateNotificationInput = {
+              type: 'social',
+              priority: 'medium',
+              title: '邀请被拒绝',
+              message: payloadRecord.reason
+                ? `${(payloadRecord.rejected_by as Record<string, Object>).nickname} 拒绝了你的群组邀请：${String(payloadRecord.reason)}`
+                : `${(payloadRecord.rejected_by as Record<string, Object>).nickname} 拒绝了你的群组邀请`,
+              read: false,
+              actionable: true,
+              metadata: metadata
+            };
+            const options: CreateNotificationOptions = { immediate: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
+            await this.notificationSyncService.syncUnreadCount();
+            break;
+          }
           case 'GroupApplicationReceived': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
@@ -803,6 +826,7 @@ struct Index {
       'ReactionAdded',
       'GroupInviteReceived',
       'GroupInviteResponse',
+      'GroupInviteRejected',
       'GroupInviteRevoked',
       'GroupInviteExpired',
       'GroupApplicationReceived',

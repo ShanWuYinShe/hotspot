@@ -15,7 +15,7 @@ import { LoadingMoreIndicator, RefreshIndicator } from './EmptyState';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
-type NotificationFilterKey = 'all' | 'unread' | 'social' | 'interaction' | 'group' | 'system';
+type NotificationFilterKey = 'all' | 'unread' | 'social' | 'interaction' | 'group' | 'report' | 'nearby' | 'system';
 
 interface GroupedNotification {
   label: string;
@@ -53,6 +53,8 @@ export struct NotificationCenter {
     new NotificationFilterOption('social', '社交'),
     new NotificationFilterOption('interaction', '互动'),
     new NotificationFilterOption('group', '群组'),
+    new NotificationFilterOption('report', '举报'),
+    new NotificationFilterOption('nearby', '附近'),
     new NotificationFilterOption('system', '系统')
   ];
 
@@ -278,6 +280,7 @@ export struct NotificationCenter {
       case 'group_invite_received':
       case 'group_invite_accepted':
       case 'group_invite_revoked':
+      case 'group_invite_rejected':
       case 'group_application_received':
       case 'group_application_accepted':
       case 'group_application_cancelled':
@@ -735,6 +738,10 @@ export struct NotificationCenter {
         return '互动';
       case 'group':
         return '群组';
+      case 'report':
+        return '举报';
+      case 'nearby':
+        return '附近';
       case 'system':
         return '系统';
       default:
@@ -807,6 +814,8 @@ export struct NotificationCenter {
         return '邀请已接受';
       case 'group_invite_revoked':
         return '邀请已撤销';
+      case 'group_invite_rejected':
+        return '邀请被拒绝';
       case 'group_application_received':
         return '新的入群申请';
       case 'group_application_accepted':
@@ -856,6 +865,8 @@ export struct NotificationCenter {
         return `${actor} 接受了群组邀请`;
       case 'group_invite_revoked':
         return `${payload?.group_name ?? '某群组'} 的邀请已被撤销`;
+      case 'group_invite_rejected':
+        return `${actor} 拒绝了 ${payload?.group_name ?? '某群组'} 的邀请`;
       case 'group_application_received':
         return `${actor} 申请加入 ${payload?.group_name ?? '群组'}`;
       case 'group_application_accepted':
@@ -905,6 +916,9 @@ export struct NotificationCenter {
     if (payload.applicant?.nickname) {
       return payload.applicant.nickname;
     }
+    if (payload.rejected_by?.nickname) {
+      return payload.rejected_by.nickname;
+    }
     return '有人';
   }
 
@@ -921,11 +935,17 @@ export struct NotificationCenter {
       case 'group_invite_received':
       case 'group_invite_accepted':
       case 'group_invite_revoked':
+      case 'group_invite_rejected':
       case 'group_application_received':
       case 'group_application_accepted':
       case 'group_application_cancelled':
       case 'group_application_rejected':
         return 'group';
+      case 'report_resolved':
+      case 'report_dismissed':
+        return 'report';
+      case 'nearby_new_moment':
+        return 'nearby';
       case 'system_announcement':
         return 'system';
       default:
