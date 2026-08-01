@@ -134,7 +134,7 @@ func bucket(notificationType string) string {
 		return "social"
 	case "moment_commented", "comment_reply", "mentioned", "reaction_added":
 		return "interaction"
-	case "group_invite_received", "group_invite_revoked", "group_invite_accepted", "group_application_received", "group_application_cancelled", "group_application_accepted", "group_application_rejected":
+	case "group_invite_received", "group_invite_revoked", "group_invite_rejected", "group_invite_accepted", "group_application_received", "group_application_cancelled", "group_application_accepted", "group_application_rejected":
 		return "group"
 	case "report_resolved", "report_dismissed":
 		return "report"

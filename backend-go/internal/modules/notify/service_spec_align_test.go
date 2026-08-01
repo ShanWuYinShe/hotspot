@@ -138,6 +138,50 @@ func TestAppendGroupInviteRevokedOmitsOptionalFields(t *testing.T) {
 	}
 }
 
+// --- AppendGroupInviteRejected ---
+
+func TestAppendGroupInviteRejectedBuildsNotification(t *testing.T) {
+	repo := &notificationListCaptureRepo{}
+	service := NewServiceWithRepo(repo)
+	reason := "not interested"
+	notificationID, err := service.AppendGroupInviteRejected(context.Background(), "user_alice", "group_1", "Hot Group", "invite_1", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, &reason)
+	if err != nil {
+		t.Fatalf("append group invite rejected: %v", err)
+	}
+	if notificationID == "" {
+		t.Fatal("expected generated notification_id, got empty")
+	}
+	item := requireSingleAppend(t, repo, "user_alice")
+	if item.NotificationID != notificationID {
+		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	}
+	if item.Type != "group_invite_rejected" || item.Payload["type"] != "group_invite_rejected" {
+		t.Fatalf("unexpected type: %#v", item)
+	}
+	if item.Payload["group_id"] != "group_1" || item.Payload["group_name"] != "Hot Group" || item.Payload["invite_id"] != "invite_1" {
+		t.Fatalf("unexpected payload: %#v", item.Payload)
+	}
+	rejectedBy, ok := item.Payload["rejected_by"].(map[string]any)
+	if !ok || rejectedBy["user_id"] != "user_bob" {
+		t.Fatalf("unexpected rejected_by payload: %#v", item.Payload["rejected_by"])
+	}
+	if item.Payload["reason"] != reason {
+		t.Fatalf("expected reason=%q, got %#v", reason, item.Payload["reason"])
+	}
+}
+
+func TestAppendGroupInviteRejectedOmitsReasonWhenEmpty(t *testing.T) {
+	repo := &notificationListCaptureRepo{}
+	service := NewServiceWithRepo(repo)
+	if _, err := service.AppendGroupInviteRejected(context.Background(), "user_alice", "group_1", "Hot Group", "invite_1", map[string]any{"user_id": "user_bob"}, nil); err != nil {
+		t.Fatalf("append group invite rejected: %v", err)
+	}
+	item := requireSingleAppend(t, repo, "user_alice")
+	if _, hasReason := item.Payload["reason"]; hasReason {
+		t.Fatalf("expected no reason, got %#v", item.Payload)
+	}
+}
+
 // --- AppendGroupApplicationCancelled ---
 
 func TestAppendGroupApplicationCancelledBuildsNotification(t *testing.T) {
@@ -589,6 +633,7 @@ func TestNormalizeNotificationTypeAcceptsAllSpecTypes(t *testing.T) {
 		"reaction_added",
 		"group_invite_received",
 		"group_invite_revoked",
+		"group_invite_rejected",
 		"group_invite_accepted",
 		"group_application_received",
 		"group_application_cancelled",
@@ -599,8 +644,8 @@ func TestNormalizeNotificationTypeAcceptsAllSpecTypes(t *testing.T) {
 		"system_announcement",
 		"nearby_new_moment",
 	}
-	if len(legal) != 17 {
-		t.Fatalf("expected 17 legal types, got %d", len(legal))
+	if len(legal) != 18 {
+		t.Fatalf("expected 18 legal types, got %d", len(legal))
 	}
 	for _, typ := range legal {
 		if got := normalizeNotificationType(typ); got != typ {

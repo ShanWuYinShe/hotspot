@@ -216,6 +216,25 @@ func (s *Service) AppendGroupInviteRevoked(ctx context.Context, targetUserID str
 	return id, err
 }
 
+// AppendGroupInviteRejected records a group_invite_rejected notification
+// (invite rejected by the invitee). Returns the generated notification_id for
+// the realtime payload.
+func (s *Service) AppendGroupInviteRejected(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, rejectedBy map[string]any, reason *string) (string, error) {
+	payload := map[string]any{
+		"type":        "group_invite_rejected",
+		"group_id":    groupID,
+		"group_name":  groupName,
+		"invite_id":   inviteID,
+		"rejected_by": rejectedBy,
+	}
+	if reason != nil && *reason != "" {
+		payload["reason"] = *reason
+	}
+	id := newNotificationID()
+	err := s.repo.Append(ctx, targetUserID, NotifyItem{NotificationID: id, Type: "group_invite_rejected", IsRead: false, Payload: payload})
+	return id, err
+}
+
 // AppendGroupApplicationCancelled records a group_application_cancelled
 // notification (application cancelled by the applicant, or expired
 // automatically). Returns the generated notification_id for the realtime payload.

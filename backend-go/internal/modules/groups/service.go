@@ -40,6 +40,7 @@ type groupNotificationWriter interface {
 	AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant map[string]any, groupID string, groupName string, applicationID string) (string, error)
 	AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) (string, error)
 	AppendGroupInviteRevoked(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, revokedBy map[string]any, reason *string) (string, error)
+	AppendGroupInviteRejected(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, rejectedBy map[string]any, reason *string) (string, error)
 	AppendGroupApplicationCancelled(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, applicant map[string]any, reason *string) (string, error)
 	AppendGroupApplicationRejected(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, rejectedBy map[string]any, reason *string) (string, error)
 }

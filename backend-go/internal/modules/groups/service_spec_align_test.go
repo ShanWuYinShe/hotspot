@@ -1,7 +1,8 @@
 package groups
 
 // 本文件覆盖 spec 对齐新增/修改的群邀请/申请通知逻辑:
-// RevokeInvite 的 GroupInviteRevoked 事件与通知落库、邀请/申请惰性过期
+// RevokeInvite 的 GroupInviteRevoked 事件与通知落库、RejectInvite 的
+// GroupInviteRejected 事件与通知落库、邀请/申请惰性过期
 // (GroupInviteExpired / GroupApplicationExpired)、CancelApplication 对管理员的
 // GroupApplicationCancelled 广播、RejectApplication 对申请人的
 // GroupApplicationRejected 广播、resolveUserInfo 与 applicationExpired。
@@ -52,6 +53,7 @@ func (r *captureGroupsRepo) CancelApplication(_ context.Context, applicationID s
 // notifyWriterStub 实现 groupNotificationWriter 并捕获本次 spec 对齐的调用。
 type notifyWriterStub struct {
 	inviteRevoked        []groupInviteRevokedCall
+	inviteRejected       []groupInviteRejectedCall
 	applicationCancelled []groupApplicationCancelledCall
 	applicationRejected  []groupApplicationRejectedCall
 }
@@ -62,6 +64,15 @@ type groupInviteRevokedCall struct {
 	groupName    string
 	inviteID     string
 	revokedBy    map[string]any
+	reason       *string
+}
+
+type groupInviteRejectedCall struct {
+	targetUserID string
+	groupID      string
+	groupName    string
+	inviteID     string
+	rejectedBy   map[string]any
 	reason       *string
 }
 
@@ -101,6 +112,11 @@ func (w *notifyWriterStub) AppendGroupApplicationAccepted(context.Context, strin
 
 func (w *notifyWriterStub) AppendGroupInviteRevoked(_ context.Context, targetUserID, groupID, groupName, inviteID string, revokedBy map[string]any, reason *string) (string, error) {
 	w.inviteRevoked = append(w.inviteRevoked, groupInviteRevokedCall{targetUserID, groupID, groupName, inviteID, revokedBy, reason})
+	return "notif_written", nil
+}
+
+func (w *notifyWriterStub) AppendGroupInviteRejected(_ context.Context, targetUserID, groupID, groupName, inviteID string, rejectedBy map[string]any, reason *string) (string, error) {
+	w.inviteRejected = append(w.inviteRejected, groupInviteRejectedCall{targetUserID, groupID, groupName, inviteID, rejectedBy, reason})
 	return "notif_written", nil
 }
 
@@ -222,6 +238,105 @@ func TestServiceRevokeInviteSkipsNotificationWhenInviteeUnknown(t *testing.T) {
 	}
 	if len(writer.inviteRevoked) != 0 {
 		t.Fatalf("expected no notification without invitee, got %#v", writer.inviteRevoked)
+	}
+}
+
+// --- RejectInvite ---
+
+func TestServiceRejectInviteNotifiesInviter(t *testing.T) {
+	pending := ApplicationStatusPending
+	reason := "not interested"
+	repo := &stubGroupsRepo{
+		myInvites: []GroupInviteItem{{
+			InviteID: "inv1",
+			Status:   pending,
+			Group:    GroupInfo{GroupID: "g1", Name: "test"},
+			Inviter:  UserInfo{UserID: "u2"},
+		}},
+	}
+	writer := &notifyWriterStub{}
+	svc := NewServiceWithDeps(repo, writer, nil)
+	hub := withTestHub(t)
+	inviterSink := registerSink(hub, "u2")
+
+	err := svc.RejectInvite(grpCtx("u1"), RejectInviteRequest{InviteID: "inv1", Reason: &reason})
+	if err != nil {
+		t.Fatalf("reject invite: %v", err)
+	}
+	if len(writer.inviteRejected) != 1 {
+		t.Fatalf("expected 1 AppendGroupInviteRejected call, got %d", len(writer.inviteRejected))
+	}
+	call := writer.inviteRejected[0]
+	if call.targetUserID != "u2" || call.groupID != "g1" || call.groupName != "test" || call.inviteID != "inv1" {
+		t.Fatalf("unexpected invite rejected call: %#v", call)
+	}
+	if call.rejectedBy == nil || call.rejectedBy["user_id"] != "u1" {
+		t.Fatalf("expected rejected_by user u1, got %#v", call.rejectedBy)
+	}
+	if call.reason == nil || *call.reason != reason {
+		t.Fatalf("expected reason %q, got %#v", reason, call.reason)
+	}
+	if len(inviterSink.events) != 1 {
+		t.Fatalf("expected 1 event for inviter, got %d", len(inviterSink.events))
+	}
+	event := inviterSink.events[0]
+	if event.Type != realtime.EventTypeGroupInviteRejected {
+		t.Fatalf("expected GroupInviteRejected, got %q", event.Type)
+	}
+	payload, ok := event.Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map payload, got %#v", event.Payload)
+	}
+	for _, key := range []string{"notification_id", "invite_id", "group_id", "rejected_by", "rejected_at"} {
+		if payload[key] == nil {
+			t.Fatalf("expected payload key %q, got %#v", key, payload)
+		}
+	}
+	if payload["notification_id"] != "notif_written" || payload["invite_id"] != "inv1" || payload["group_id"] != "g1" {
+		t.Fatalf("unexpected event payload: %#v", payload)
+	}
+	rejectedBy, ok := payload["rejected_by"].(map[string]any)
+	if !ok || rejectedBy["user_id"] != "u1" {
+		t.Fatalf("unexpected rejected_by in event: %#v", payload["rejected_by"])
+	}
+	if payload["reason"] != reason {
+		t.Fatalf("expected reason %q in event payload, got %#v", reason, payload)
+	}
+}
+
+func TestServiceRejectInviteOmitsReasonWhenEmpty(t *testing.T) {
+	pending := ApplicationStatusPending
+	repo := &stubGroupsRepo{
+		myInvites: []GroupInviteItem{{
+			InviteID: "inv1",
+			Status:   pending,
+			Group:    GroupInfo{GroupID: "g1", Name: "test"},
+			Inviter:  UserInfo{UserID: "u2"},
+		}},
+	}
+	writer := &notifyWriterStub{}
+	svc := NewServiceWithDeps(repo, writer, nil)
+	hub := withTestHub(t)
+	inviterSink := registerSink(hub, "u2")
+
+	if err := svc.RejectInvite(grpCtx("u1"), RejectInviteRequest{InviteID: "inv1"}); err != nil {
+		t.Fatalf("reject invite: %v", err)
+	}
+	if len(writer.inviteRejected) != 1 {
+		t.Fatalf("expected 1 AppendGroupInviteRejected call, got %d", len(writer.inviteRejected))
+	}
+	if writer.inviteRejected[0].reason != nil {
+		t.Fatalf("expected nil reason for notification, got %#v", writer.inviteRejected[0].reason)
+	}
+	if len(inviterSink.events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(inviterSink.events))
+	}
+	payload, ok := inviterSink.events[0].Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map payload, got %#v", inviterSink.events[0].Payload)
+	}
+	if _, hasReason := payload["reason"]; hasReason {
+		t.Fatalf("expected no reason in event payload, got %#v", payload)
 	}
 }
 

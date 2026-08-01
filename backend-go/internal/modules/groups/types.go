@@ -372,7 +372,8 @@ type AcceptInviteRequest struct {
 }
 
 type RejectInviteRequest struct {
-	InviteID string `json:"invite_id"`
+	InviteID string  `json:"invite_id"`
+	Reason   *string `json:"reason,omitempty"`
 }
 
 type LeaveGroupRequest struct {

@@ -58,6 +58,7 @@ const (
 	EventTypeGroupMemberUnmuted        = "GroupMemberUnmuted"
 	EventTypeGroupInviteReceived       = "GroupInviteReceived"
 	EventTypeGroupInviteRevoked        = "GroupInviteRevoked"
+	EventTypeGroupInviteRejected       = "GroupInviteRejected"
 	EventTypeGroupInviteExpired        = "GroupInviteExpired"
 	EventTypeGroupInviteResponse       = "GroupInviteResponse"
 	EventTypeGroupApplicationReceived  = "GroupApplicationReceived"

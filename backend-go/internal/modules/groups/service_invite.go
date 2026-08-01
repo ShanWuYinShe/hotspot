@@ -53,7 +53,11 @@ func (s *Service) RejectInvite(ctx context.Context, req RejectInviteRequest) err
 		s.notifyGroupInviteExpired(ctx, principal.UserID, invite)
 		return ErrInviteExpired
 	}
-	return s.repo.RejectInvite(ctx, req.InviteID)
+	if err := s.repo.RejectInvite(ctx, req.InviteID); err != nil {
+		return err
+	}
+	s.notifyGroupInviteRejected(ctx, invite, principal.UserID, req.Reason)
+	return nil
 }
 
 // inviteExpired reports whether the invite's expires_at has passed.
@@ -160,6 +164,33 @@ func (s *Service) notifyGroupInviteRevoked(ctx context.Context, group GroupItem,
 		payload["reason"] = *reason
 	}
 	realtime.DefaultHub().BroadcastToUser(inviteeUserID, realtime.Event{Type: realtime.EventTypeGroupInviteRevoked, Payload: payload})
+}
+
+// notifyGroupInviteRejected persists a group_invite_rejected notification and
+// pushes the GroupInviteRejected event to the inviter (invite.Inviter).
+func (s *Service) notifyGroupInviteRejected(ctx context.Context, invite GroupInviteItem, rejectedByUserID string, reason *string) {
+	rejectedBy := s.resolveUserInfo(ctx, rejectedByUserID)
+	now := time.Now().UTC().Format(time.RFC3339)
+	notificationID := ""
+	if s.notifications != nil {
+		id, err := s.notifications.AppendGroupInviteRejected(ctx, invite.Inviter.UserID, invite.Group.GroupID, invite.Group.Name, invite.InviteID, rejectedBy, reason)
+		if err != nil {
+			observability.L().Error("groups.notify_group_invite_rejected append failed", "error", err, "invite_id", invite.InviteID)
+		} else {
+			notificationID = id
+		}
+	}
+	payload := map[string]any{
+		"notification_id": notificationID,
+		"invite_id":       invite.InviteID,
+		"group_id":        invite.Group.GroupID,
+		"rejected_by":     rejectedBy,
+		"rejected_at":     now,
+	}
+	if reason != nil && *reason != "" {
+		payload["reason"] = *reason
+	}
+	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteRejected, Payload: payload})
 }
 
 // notifyGroupInviteExpired persists a group_invite_revoked notification
