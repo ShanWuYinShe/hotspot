@@ -28,8 +28,6 @@
 		hero?: boolean;
 		edition?: string;
 	} = $props();
-
-	const onImage = $derived(Boolean(item.image));
 </script>
 
 <div
@@ -77,26 +75,18 @@
 		<span class="text-white text-[10px]">{item.tag}</span>
 	</div>
 
-	<!-- 底部：正文 / 作者与位置 / 操作栏（有图时半透明深色玻璃背景，保证可读） -->
-	<div
-		class="absolute inset-x-0 bottom-0 px-3 pb-2.5 {onImage ? 'bg-[var(--card-scrim)] pt-2' : ''}"
-		style={onImage ? 'backdrop-filter:blur(12px);' : ''}
-	>
-		<p class="{dense ? 'line-clamp-1 text-xs' : 'line-clamp-2 text-[13px]'} leading-[1.55]" style="color:{onImage ? 'rgba(255,255,255,0.92)' : 'var(--neu-text-muted)'};">
+	<!-- 底部：正文 / 作者与位置 / 操作栏（半透明深色玻璃背景，有图无图都保证可读） -->
+	<div class="absolute inset-x-0 bottom-0 bg-[var(--card-scrim)] px-3 pt-2 pb-2.5" style="backdrop-filter:blur(12px);">
+		<p class="{dense ? 'line-clamp-1 text-xs' : 'line-clamp-2 text-[13px]'} leading-[1.55]" style="color:rgba(255,255,255,0.92);">
 			{item.content}
 		</p>
 
 		<div class="mt-1.5 flex items-center gap-2">
-			<Avatar
-				src={item.avatar}
-				name={item.user}
-				size={22}
-				style={onImage ? 'border:1.5px solid rgba(255,255,255,0.65);' : 'border:1.5px solid var(--neu-border);'}
-			/>
-			<span class="text-[11px]" style="color:{onImage ? 'white' : 'var(--neu-text)'};font-weight:500;">{item.user}</span>
+			<Avatar src={item.avatar} name={item.user} size={22} style="border:1.5px solid rgba(255,255,255,0.65);" />
+			<span class="text-[11px] text-white" style="font-weight:500;">{item.user}</span>
 			<div class="flex items-center gap-0.5 ml-auto">
-				<MapPin style="width:9px;height:9px;color:{onImage ? 'rgba(255,255,255,0.8)' : 'var(--neu-text-muted)'};" strokeWidth={1.5} />
-				<span class="text-[10px]" style="color:{onImage ? 'rgba(255,255,255,0.8)' : 'var(--neu-text-muted)'};">{item.location}</span>
+				<MapPin style="width:9px;height:9px;color:rgba(255,255,255,0.8);" strokeWidth={1.5} />
+				<span class="text-[10px]" style="color:rgba(255,255,255,0.8);">{item.location}</span>
 			</div>
 		</div>
 
@@ -105,7 +95,7 @@
 			<div class="flex gap-3.5">
 				<button
 					type="button"
-					class="neu-hover-action flex items-center gap-1.5 outline-none {liked ? 'text-[var(--neu-accent-primary)]' : onImage ? 'text-white/90' : 'text-[var(--neu-text-muted)]'}"
+					class="neu-hover-action flex items-center gap-1.5 outline-none {liked ? 'text-[var(--neu-accent-primary)]' : 'text-white/90'}"
 					onclick={(e) => {
 						e.stopPropagation();
 						onLike();
@@ -114,11 +104,7 @@
 					<Heart style="width:15px;height:15px;" strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
 					<span class="text-[11px]">{item.likes + (liked ? 1 : 0)}</span>
 				</button>
-				<button
-					type="button"
-					class="neu-hover-action flex items-center gap-1.5 outline-none {onImage ? 'text-white/90' : 'text-[var(--neu-text-muted)]'}"
-					onclick={(e) => e.stopPropagation()}
-				>
+				<button type="button" class="neu-hover-action flex items-center gap-1.5 outline-none text-white/90" onclick={(e) => e.stopPropagation()}>
 					<MessageCircle style="width:15px;height:15px;" strokeWidth={1.5} />
 					<span class="text-[11px]">{item.comments}</span>
 				</button>
@@ -126,7 +112,7 @@
 			<div class="flex gap-3">
 				<button
 					type="button"
-					class="neu-hover-action outline-none {saved ? 'text-[var(--neu-accent-primary)]' : onImage ? 'text-white/90' : 'text-[var(--neu-text-muted)]'}"
+					class="neu-hover-action outline-none {saved ? 'text-[var(--neu-accent-primary)]' : 'text-white/90'}"
 					onclick={(e) => {
 						e.stopPropagation();
 						onSave();
@@ -134,7 +120,7 @@
 				>
 					<Bookmark style="width:15px;height:15px;" strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
 				</button>
-				<button type="button" class="neu-hover-action outline-none {onImage ? 'text-white/90' : 'text-[var(--neu-text-muted)]'}" onclick={(e) => e.stopPropagation()}>
+				<button type="button" class="neu-hover-action outline-none text-white/90" onclick={(e) => e.stopPropagation()}>
 					<Share2 style="width:15px;height:15px;" strokeWidth={1.5} />
 				</button>
 			</div>

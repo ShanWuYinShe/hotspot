@@ -84,11 +84,8 @@
 		<span class="text-white text-[10px]">{user.distance}</span>
 	</div>
 
-	<!-- 底部：名字 / 此刻状态 / 共同好友 / 关注按钮（有头像时半透明深色玻璃背景，保证图片上可读） -->
-	<div
-		class="absolute inset-x-0 bottom-0 px-3 pb-2.5 {user.avatar && !avatarFailed ? 'bg-[var(--card-scrim)] pt-2' : ''}"
-		style={user.avatar && !avatarFailed ? 'backdrop-filter:blur(12px);' : ''}
-	>
+	<!-- 底部：名字 / 此刻状态 / 共同好友 / 关注按钮（半透明深色玻璃背景，有图无图都保证可读） -->
+	<div class="absolute inset-x-0 bottom-0 bg-[var(--card-scrim)] px-3 pt-2 pb-2.5" style="backdrop-filter:blur(12px);">
 		<div class="min-w-0">
 			<p class="flex items-center gap-1.5 truncate text-white text-sm font-semibold">
 				<span class="truncate">{user.name}</span>

@@ -39,11 +39,8 @@
 		<span class="text-white text-[10px]">本周精选</span>
 	</div>
 
-	<!-- 底部：群名 / 简介 / 数据与加入（有封面时半透明深色玻璃背景，保证图片上可读） -->
-	<div
-		class="absolute inset-x-0 bottom-0 px-4 pb-3 {group.banner ? 'bg-[var(--card-scrim)] pt-2' : ''}"
-		style={group.banner ? 'backdrop-filter:blur(12px);' : ''}
-	>
+	<!-- 底部：群名 / 简介 / 数据与加入（半透明深色玻璃背景，有图无图都保证可读） -->
+	<div class="absolute inset-x-0 bottom-0 bg-[var(--card-scrim)] px-4 pt-2 pb-3" style="backdrop-filter:blur(12px);">
 		<p class="text-white text-lg font-semibold">{group.name}</p>
 		<p class="truncate text-white/80 text-[11px] mt-[3px]">{group.desc}</p>
 		<div class="mt-2.5 flex items-center justify-between gap-2">
