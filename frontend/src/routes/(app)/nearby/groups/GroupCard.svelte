@@ -34,9 +34,6 @@
 		</div>
 	{/if}
 
-	<!-- 底部渐变遮罩，保证覆盖层文字可读 -->
-	<div class="absolute inset-x-0 bottom-0 h-3/5" style="background:linear-gradient(to top, rgba(0,0,0,.78), rgba(0,0,0,.32) 55%, transparent);"></div>
-
 	<!-- 左上：分类 -->
 	<span class="absolute top-2 left-2 px-1.5 py-0.5 rounded-full text-white bg-[var(--neu-accent-primary)] text-[9px]">{group.category}</span>
 
@@ -49,8 +46,11 @@
 		{/if}
 	</span>
 
-	<!-- 底部：群名 / 活动 / 成员与加入 -->
-	<div class="absolute inset-x-0 bottom-0 px-3 pb-2.5">
+	<!-- 底部：群名 / 活动 / 成员与加入（有封面时半透明深色玻璃背景，保证图片上可读） -->
+	<div
+		class="absolute inset-x-0 bottom-0 px-3 pb-2.5 {group.banner ? 'bg-black/55 pt-2' : ''}"
+		style={group.banner ? 'backdrop-filter:blur(12px);' : ''}
+	>
 		<p class="line-clamp-1 text-white text-[13px] font-semibold">{group.name}</p>
 		<p class="flex items-center gap-1 truncate text-white/80 text-[10px] mt-0.5">
 			<CalendarDays size={10} />

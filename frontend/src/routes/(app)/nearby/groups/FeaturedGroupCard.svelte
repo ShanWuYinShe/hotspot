@@ -33,17 +33,17 @@
 		</div>
 	{/if}
 
-	<!-- 底部渐变遮罩，保证覆盖层文字可读 -->
-	<div class="absolute inset-x-0 bottom-0 h-3/5" style="background:linear-gradient(to top, rgba(0,0,0,.8), rgba(0,0,0,.3) 55%, transparent);"></div>
-
 	<!-- 左上：精选徽章 -->
 	<div class="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full" style="background:var(--overlay-strong);backdrop-filter:blur(8px);">
 		<Sparkles size={11} color="white" />
 		<span class="text-white text-[10px]">本周精选</span>
 	</div>
 
-	<!-- 底部：群名 / 简介 / 数据与加入 -->
-	<div class="absolute inset-x-0 bottom-0 px-4 pb-3">
+	<!-- 底部：群名 / 简介 / 数据与加入（有封面时半透明深色玻璃背景，保证图片上可读） -->
+	<div
+		class="absolute inset-x-0 bottom-0 px-4 pb-3 {group.banner ? 'bg-black/55 pt-2' : ''}"
+		style={group.banner ? 'backdrop-filter:blur(12px);' : ''}
+	>
 		<p class="text-white text-lg font-semibold">{group.name}</p>
 		<p class="truncate text-white/80 text-[11px] mt-[3px]">{group.desc}</p>
 		<div class="mt-2.5 flex items-center justify-between gap-2">

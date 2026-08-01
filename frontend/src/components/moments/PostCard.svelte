@@ -51,9 +51,6 @@
 >
 	{#if item.image}
 		<img src={item.image} alt={item.tag} class="absolute inset-0 h-full w-full object-cover" />
-		<!-- 图片氛围遮罩 + 底部渐变，保证覆盖层文字与操作可读 -->
-		<div class="absolute inset-0" style="background:var(--surface-image-scrim);"></div>
-		<div class="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
 	{:else}
 		<!-- 无图：accent 主题渐变占位（底部覆盖层已含正文/作者/操作，此处仅做装饰） -->
 		<div
@@ -80,8 +77,11 @@
 		<span class="text-white text-[10px]">{item.tag}</span>
 	</div>
 
-	<!-- 底部：正文 / 作者与位置 / 操作栏（覆盖在图片上） -->
-	<div class="absolute inset-x-0 bottom-0 px-3 pb-2.5">
+	<!-- 底部：正文 / 作者与位置 / 操作栏（有图时半透明深色玻璃背景，保证可读） -->
+	<div
+		class="absolute inset-x-0 bottom-0 px-3 pb-2.5 {onImage ? 'bg-black/55 pt-2' : ''}"
+		style={onImage ? 'backdrop-filter:blur(12px);' : ''}
+	>
 		<p class="{dense ? 'line-clamp-1 text-xs' : 'line-clamp-2 text-[13px]'} leading-[1.55]" style="color:{onImage ? 'rgba(255,255,255,0.92)' : 'var(--neu-text-muted)'};">
 			{item.content}
 		</p>

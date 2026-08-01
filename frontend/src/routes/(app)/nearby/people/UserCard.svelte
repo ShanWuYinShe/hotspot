@@ -68,9 +68,6 @@
 		</div>
 	{/if}
 
-	<!-- 底部渐变遮罩，保证覆盖层文字可读 -->
-	<div class="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/75 via-black/35 to-transparent"></div>
-
 	<!-- 左上：兴趣标签 -->
 	{#if user.tag}
 		<span
@@ -87,8 +84,11 @@
 		<span class="text-white text-[10px]">{user.distance}</span>
 	</div>
 
-	<!-- 底部：名字 / 此刻状态 / 共同好友 / 关注按钮 -->
-	<div class="absolute inset-x-0 bottom-0 px-3 pb-2.5">
+	<!-- 底部：名字 / 此刻状态 / 共同好友 / 关注按钮（有头像时半透明深色玻璃背景，保证图片上可读） -->
+	<div
+		class="absolute inset-x-0 bottom-0 px-3 pb-2.5 {user.avatar && !avatarFailed ? 'bg-black/55 pt-2' : ''}"
+		style={user.avatar && !avatarFailed ? 'backdrop-filter:blur(12px);' : ''}
+	>
 		<div class="min-w-0">
 			<p class="flex items-center gap-1.5 truncate text-white text-sm font-semibold">
 				<span class="truncate">{user.name}</span>
