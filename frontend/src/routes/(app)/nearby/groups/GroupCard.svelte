@@ -48,7 +48,7 @@
 
 	<!-- 底部：群名 / 活动 / 成员与加入（有封面时半透明深色玻璃背景，保证图片上可读） -->
 	<div
-		class="absolute inset-x-0 bottom-0 px-3 pb-2.5 {group.banner ? 'bg-black/55 pt-2' : ''}"
+		class="absolute inset-x-0 bottom-0 px-3 pb-2.5 {group.banner ? 'bg-[var(--card-scrim)] pt-2' : ''}"
 		style={group.banner ? 'backdrop-filter:blur(12px);' : ''}
 	>
 		<p class="line-clamp-1 text-white text-[13px] font-semibold">{group.name}</p>

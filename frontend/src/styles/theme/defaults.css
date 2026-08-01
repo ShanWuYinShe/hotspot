@@ -4,6 +4,6 @@
   --neu-text: #1E1B4B; --neu-text-muted: #514D86; --neu-accent: #4F46E5; --neu-accent-primary: #4F46E5; --neu-glow: rgba(79,70,229,.30);
   --neu-border: rgba(99,102,241,.15); --neu-border-pressed: rgba(99,102,241,.26); --neu-accent-soft: rgba(79,70,229,.10); --neu-accent-soft-border: rgba(79,70,229,.32); --neu-on-accent: #FFFFFF; --neu-hover: rgba(79,70,229,.12); --neu-active-hover: rgba(79,70,229,.16);
   --background: var(--neu-bg); --foreground: var(--neu-text); --border: var(--neu-border); --ring: var(--neu-accent-primary); --input-background: #F3F4FF; --switch-background: var(--neu-border-pressed);
-  --semantic-online: #0F766E; --semantic-hot: #BE123C; --semantic-warning: #A16207; --map-user: #4F46E5; --map-group: #047857; --map-post: #C2410C; --overlay-soft: rgba(30,27,75,.08); --overlay-strong: rgba(14,10,35,.50); --surface-image-scrim: linear-gradient(to bottom, rgba(20,16,56,.04), rgba(20,16,56,.52));
+  --semantic-online: #0F766E; --semantic-hot: #BE123C; --semantic-warning: #A16207; --map-user: #4F46E5; --map-group: #047857; --map-post: #C2410C; --overlay-soft: rgba(30,27,75,.08); --overlay-strong: rgba(14,10,35,.50); --surface-image-scrim: linear-gradient(to bottom, rgba(20,16,56,.04), rgba(20,16,56,.52)); --card-scrim: rgba(14,10,35,.55);
   --hover-shadow-card: 0 14px 36px rgba(99,102,241,.14), 0 4px 14px rgba(99,102,241,.08); --hover-shadow-row: 0 8px 20px rgba(99,102,241,.11); --hover-shadow-btn: 0 6px 18px rgba(99,102,241,.20); --hover-shadow-pill: 0 4px 12px rgba(99,102,241,.16);
 }

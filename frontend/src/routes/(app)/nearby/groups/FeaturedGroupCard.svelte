@@ -41,7 +41,7 @@
 
 	<!-- 底部：群名 / 简介 / 数据与加入（有封面时半透明深色玻璃背景，保证图片上可读） -->
 	<div
-		class="absolute inset-x-0 bottom-0 px-4 pb-3 {group.banner ? 'bg-black/55 pt-2' : ''}"
+		class="absolute inset-x-0 bottom-0 px-4 pb-3 {group.banner ? 'bg-[var(--card-scrim)] pt-2' : ''}"
 		style={group.banner ? 'backdrop-filter:blur(12px);' : ''}
 	>
 		<p class="text-white text-lg font-semibold">{group.name}</p>

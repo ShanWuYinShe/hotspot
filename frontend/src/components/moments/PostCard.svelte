@@ -79,7 +79,7 @@
 
 	<!-- 底部：正文 / 作者与位置 / 操作栏（有图时半透明深色玻璃背景，保证可读） -->
 	<div
-		class="absolute inset-x-0 bottom-0 px-3 pb-2.5 {onImage ? 'bg-black/55 pt-2' : ''}"
+		class="absolute inset-x-0 bottom-0 px-3 pb-2.5 {onImage ? 'bg-[var(--card-scrim)] pt-2' : ''}"
 		style={onImage ? 'backdrop-filter:blur(12px);' : ''}
 	>
 		<p class="{dense ? 'line-clamp-1 text-xs' : 'line-clamp-2 text-[13px]'} leading-[1.55]" style="color:{onImage ? 'rgba(255,255,255,0.92)' : 'var(--neu-text-muted)'};">

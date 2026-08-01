@@ -86,7 +86,7 @@
 
 	<!-- 底部：名字 / 此刻状态 / 共同好友 / 关注按钮（有头像时半透明深色玻璃背景，保证图片上可读） -->
 	<div
-		class="absolute inset-x-0 bottom-0 px-3 pb-2.5 {user.avatar && !avatarFailed ? 'bg-black/55 pt-2' : ''}"
+		class="absolute inset-x-0 bottom-0 px-3 pb-2.5 {user.avatar && !avatarFailed ? 'bg-[var(--card-scrim)] pt-2' : ''}"
 		style={user.avatar && !avatarFailed ? 'backdrop-filter:blur(12px);' : ''}
 	>
 		<div class="min-w-0">

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
-	import { themeStore } from '@/stores/theme.svelte';
 
 	// 桌面侧栏导航项（迁移自旧版 DesktopLayout 内 SidebarNavItem）。
 	// hover/active 指示条与背景填充均保留原语义；不使用 neu-hover-btn，
@@ -22,10 +21,9 @@
 	let hovered = $state(false);
 	const showHover = $derived(hovered && !isActive);
 
-	// 极淡的背景填充 — 用 currentColor 触感的中性灰，避免和主题色冲突
-	const hoverBg = $derived(
-		showHover ? (themeStore.isDark ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.035)') : 'transparent'
-	);
+	// 主题化 hover 背景 — --neu-hover（语义层 --interactive-hover）随
+	// 主题（vibrant/forest）与明暗模式自动适配，与 active 的 accent-soft 同族
+	const hoverBg = $derived(showHover ? 'var(--neu-hover)' : 'transparent');
 </script>
 
 <button
