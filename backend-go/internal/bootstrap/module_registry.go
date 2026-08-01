@@ -61,6 +61,8 @@ func BuildModulesWithRedisPinger(cfg config.Config, factory *persistence.Factory
 		messageReactionProvider{groupMessages: gmModule.Service, privateMessages: pcModule.MessageService()},
 	}
 	reactionsModule := reactions.NewModule(factory, reactionProviders, notificationService, usersModule.Service)
+	// reaction emoji 白名单校验依赖 AppConfig.limits.reaction_emojis
+	reactionsModule.Service.SetAppConfig(sharedAppConfig)
 	// Wire the reactions aggregator into moments/comments so MomentItem.reactions[]
 	// and CommentItem.reactions[] get filled at read time. Done after both
 	// modules exist to break the import cycle.

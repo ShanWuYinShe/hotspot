@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/actor"
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -18,6 +19,7 @@ type Service struct {
 	providers     map[ReactTarget]TargetProvider
 	notifications reactionNotificationWriter
 	users         actor.Provider
+	appConfig     appconfig.Source // optional; nil => emoji whitelist check skipped
 }
 
 // NewService returns a Service suitable for tests (in-memory repo, no
@@ -48,6 +50,25 @@ func NewServiceWithDeps(repo Repository, providers []TargetProvider, notificatio
 	return &Service{repo: repo, providers: byKind, notifications: notificationWriter, users: actorProvider}
 }
 
+// SetAppConfig wires the app config source whose Limits.ReactionEmojis is the
+// server-side emoji whitelist (spec api_spec_reaction.md: emoji 不在白名单返回
+// 10000). Optional: nil skips the check (tests / degraded mode).
+func (s *Service) SetAppConfig(source appconfig.Source) { s.appConfig = source }
+
+// emojiAllowed reports whether the emoji is on the AppConfig whitelist.
+// Without a wired source every emoji is accepted (degraded mode).
+func (s *Service) emojiAllowed(ctx context.Context, emoji string) bool {
+	if s.appConfig == nil {
+		return true
+	}
+	for _, allowed := range s.appConfig.Get(ctx).Limits.ReactionEmojis {
+		if allowed == emoji {
+			return true
+		}
+	}
+	return false
+}
+
 // Set applies a reaction (active=true adds/switches the emoji; active=false
 // removes). Returns nil on success; ErrReactionTargetNotFound when the target
 // resource does not exist.
@@ -63,6 +84,10 @@ func (s *Service) Set(ctx context.Context, req SetReactionRequest) error {
 
 func (s *Service) react(ctx context.Context, req SetReactionRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if !s.emojiAllowed(ctx, req.Emoji) {
+		// Spec api_spec_reaction.md: emoji 不在白名单返回 10000。
+		return ErrInvalidEmoji
+	}
 	owner, targetExists, err := s.resolveTarget(ctx, req.TargetType, req.TargetID)
 	if err != nil {
 		observability.L().Error("reactions.react resolve target failed", "error", err, "target_type", req.TargetType, "target_id", req.TargetID)

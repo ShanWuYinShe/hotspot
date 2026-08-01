@@ -35,6 +35,11 @@ func (h *Handler) Set(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "反应目标不存在"))
 			return
 		}
+		if errors.Is(err, ErrInvalidEmoji) {
+			logBusinessError(r, "Set", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			return
+		}
 		logServerError(r, "Set", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
