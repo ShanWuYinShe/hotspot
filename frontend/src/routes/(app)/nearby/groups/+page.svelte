@@ -66,11 +66,13 @@
 	);
 
 	const filtered = $derived(
-		groups.filter(
-			(group) =>
+		groups.filter((group) => {
+			const q = searchQuery.trim().toLowerCase();
+			return (
 				(activeCategory === '全部' || group.category === activeCategory) &&
-				(!searchQuery || `${group.name}${group.desc}${group.category}`.includes(searchQuery))
-		)
+				(!q || `${group.name}${group.desc}${group.category}`.toLowerCase().includes(q))
+			);
+		})
 	);
 	const visibleGroups = $derived(filtered.slice(0, visibleCount));
 	const featured = $derived(filtered[0]);
@@ -84,32 +86,39 @@
 	};
 </script>
 
-<div class="sticky top-0 z-10 bg-[var(--neu-bg)]" style="backdrop-filter:blur(16px);border-bottom:1px solid var(--neu-border);">
-	<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} onBack={() => history.back()} className={isDesktop ? 'px-7' : ''}>
-		{#snippet actions()}
-			<button
-				type="button"
-				class="neu-hover-btn flex items-center gap-1 px-3 py-1.5 rounded-full neu-focus-ring bg-[var(--neu-accent-primary)] text-white text-xs font-semibold"
-				style="box-shadow:0 3px 10px var(--neu-glow);"
-				onclick={() => (showCreate = true)}
-			>
-				<Plus size={14} />
-				创建
-			</button>
-		{/snippet}
-	</PageHeader>
-	<div class={isDesktop ? 'px-7 pb-3' : 'px-5 pb-3 mx-auto'} style={contentStyle}>
+<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky onBack={() => history.back()}>
+	{#snippet actions()}
+		<button
+			type="button"
+			class="neu-hover-btn flex items-center gap-1 px-3 py-1.5 rounded-full neu-focus-ring bg-[var(--neu-accent-primary)] text-white text-xs font-semibold"
+			style="box-shadow:0 3px 10px var(--neu-glow);"
+			onclick={() => (showCreate = true)}
+		>
+			<Plus size={14} />
+			创建
+		</button>
+	{/snippet}
+	{#snippet children()}
+		<div class="hidden sm:flex flex-1 max-w-sm ml-3">
+			<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" compact />
+		</div>
+	{/snippet}
+</PageHeader>
+
+{#if !isDesktop}
+	<div class="sm:hidden px-5 mt-0 -mt-2 pb-2">
 		<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" compact />
-		<div class="flex gap-1.5 overflow-x-auto no-scrollbar mt-3">
+	</div>
+{/if}
+
+<main class={isDesktop ? 'px-7 py-6' : 'px-5 py-5 mx-auto'} style={contentStyle}>
+	<div class="min-w-0">
+		<!-- 分类标签（对齐附近的人：标签行位于卡片区上方） -->
+		<div class="flex gap-1.5 overflow-x-auto no-scrollbar mb-5">
 			{#each CATEGORIES as category}
 				<TagPill active={activeCategory === category} onClick={() => (activeCategory = category)}>{category}</TagPill>
 			{/each}
 		</div>
-	</div>
-</div>
-
-<main class={isDesktop ? 'px-7 py-6' : 'px-5 py-5 mx-auto'} style={contentStyle}>
-	<div class="min-w-0">
 		{#if loading}
 			<div class="flex flex-col items-center gap-3 py-20">
 				<div class="rounded-full border-2 border-[var(--neu-border)] border-t-[var(--neu-accent-primary)] animate-spin" style="width:28px;height:28px;"></div>
