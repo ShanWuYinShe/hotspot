@@ -35,6 +35,10 @@
 | | `ReactionAdded` | 推送给被反应资源的作者，告知谁添加了表情反应 |
 | | `ReactionRemoved` | 推送给被反应资源的作者，告知谁移除了表情反应 |
 | **群组邀请** | `GroupInviteReceived` | 推送给被邀请加入群组的用户 |
+| | `GroupInviteRevoked` | 推送给受邀人：邀请被发起方撤销 |
+| | `GroupInviteExpired` | 推送给受邀人：邀请过期自动失效 |
+| | `GroupInviteRejected` | 推送给邀请发起方：受邀人拒绝了邀请 |
+| | `GroupInviteResponse` | 推送给邀请发起方：邀请被接受 |
 | | `GroupInviteResponse` | 推送给邀请发起者，告知邀请被接受 |
 | | `GroupApplicationReceived` | 推送给群主/管理员，告知有新的入群申请 |
 | | `GroupApplicationResponse` | 推送给申请加入群的用户，告知申请被接受 |
@@ -279,7 +283,7 @@ type ServerEventType =
   | "GroupMemberJoined" | "GroupMemberLeft" | "GroupMemberRemoved"
   | "GroupMemberRoleChanged"      // 成员角色变更（升/降级 admin），补原缺失的实时角色刷新事件
   | "GroupMemberMuted" | "GroupMemberUnmuted"
-  | "GroupInviteReceived" | "GroupInviteRevoked" | "GroupInviteExpired" | "GroupInviteResponse"
+  | "GroupInviteReceived" | "GroupInviteRevoked" | "GroupInviteExpired" | "GroupInviteRejected" | "GroupInviteResponse"
   | "GroupApplicationReceived" | "GroupApplicationCancelled" | "GroupApplicationExpired" | "GroupApplicationRejected" | "GroupApplicationResponse"
   | "GroupAnnouncementCreated"
   | "GroupUpdated" | "GroupDismissed"
@@ -649,7 +653,7 @@ interface GroupInviteReceivedPayload {
 type GroupInviteReceivedEvent = { type: "GroupInviteReceived"; payload: GroupInviteReceivedPayload; };
 
 interface GroupInviteResponsePayload {
-  // 仅邀请被接受时推送（拒绝不推送）。原 status:'accepted' 单值字段已移除——事件名即语义，无需冗余枚举
+  // 仅邀请被接受时推送（拒绝推送 GroupInviteRejected）。原 status:'accepted' 单值字段已移除——事件名即语义，无需冗余枚举
   notification_id: string;
   invite_id: string;
   group_id: string;
@@ -657,6 +661,17 @@ interface GroupInviteResponsePayload {
   responded_at: string;
 }
 type GroupInviteResponseEvent = { type: "GroupInviteResponse"; payload: GroupInviteResponsePayload; };
+
+// 邀请被受邀人拒绝 → 推送给邀请发起方（对应 NotifyType='group_invite_rejected'，含 reason）
+interface GroupInviteRejectedPayload {
+  notification_id: string;
+  invite_id: string;
+  group_id: string;
+  rejected_by: UserInfo;   // 拒绝邀请的受邀人（邀请发起方可见其身份，与申请拒绝同理——群邀请是双向契约）
+  rejected_at: string;
+  reason?: string;
+}
+type GroupInviteRejectedEvent = { type: "GroupInviteRejected"; payload: GroupInviteRejectedPayload; };
 
 // 邀请被发起方（管理员）主动撤销 → 推送给受邀人
 interface GroupInviteRevokedPayload {

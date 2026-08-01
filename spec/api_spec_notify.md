@@ -51,6 +51,7 @@
 | `group_invite_received` | `GroupInviteReceived` | 收到入群邀请 |
 | `group_invite_revoked` | `GroupInviteRevoked` | 邀请被发起方撤销或过期自动失效（受邀人收到） |
 | `group_invite_accepted` | `GroupInviteResponse` | 邀请被接受（邀请方收到） |
+| `group_invite_rejected` | `GroupInviteRejected` | 邀请被拒绝（邀请方收到，含 reason） |
 | `group_application_received` | `GroupApplicationReceived` | 群主/管理员收到入群申请 |
 | `group_application_cancelled` | `GroupApplicationCancelled` | 申请被发起方取消或过期自动失效（群管理员收到） |
 | `group_application_accepted` | `GroupApplicationResponse` | 申请被接受（申请方收到） |
@@ -81,6 +82,7 @@ type NotifyPayload =
   | { type: 'group_invite_received'; actor: UserInfo; group_id: string; group_name: string; group_avatar_url?: string; invite_id: string; message?: string }
   | { type: 'group_invite_revoked'; group_id: string; group_name: string; invite_id: string; revoked_by?: UserInfo; reason?: string }  // 邀请被发起方撤销或过期自动失效（受邀人收到；revoked_by 仅主动撤销时返回）
   | { type: 'group_invite_accepted'; group_id: string; group_name: string; invite_id: string; user: UserInfo }  // 推送给邀请发起者，user 为接受邀请的人
+  | { type: 'group_invite_rejected'; group_id: string; group_name: string; invite_id: string; rejected_by: UserInfo; reason?: string }  // 邀请被拒绝（邀请方收到；rejected_by 为拒绝邀请的受邀人，群邀请为双向契约，邀请方可见其身份）
   | { type: 'group_application_received'; applicant: UserInfo; group_id: string; group_name: string; application_id: string }  // 推送给群主/管理员
   | { type: 'group_application_cancelled'; applicant: UserInfo; group_id: string; group_name: string; application_id: string; reason?: string }  // 申请被申请人取消或过期自动失效（群管理员收到）
   | { type: 'group_application_accepted'; group_id: string; group_name: string; application_id: string }  // 不暴露审批者身份（隐私考虑：审批者可能是群管理员或群主，不应在通知中暴露其身份给申请者）

@@ -924,6 +924,8 @@ interface InviteAcceptedResult {
 
 拒绝群组邀请。
 
+**推送**：拒绝成功后向邀请发起方推送 `GroupInviteRejected` 事件并落库通知（`NotifyType='group_invite_rejected'`，含 `reason`，见 `api_spec_websocket.md` 与 `api_spec_notify.md`）。
+
 
 - **认证**: 必须
 - **幂等**: 幂等语义（同一邀请不可重复拒绝，天然幂等）

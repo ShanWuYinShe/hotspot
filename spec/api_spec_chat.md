@@ -79,7 +79,7 @@ type SendMessageType = Exclude<MessageType, 'system'>;
 type BlockReason =
   | 'privacy'                  // 对方隐私设置不允许（含被拉黑场景）
   | 'stranger_quota_exceeded'  // 陌生人消息限额已用完
-  | 'account_suspended';       // 账号被限制
+  | 'account_suspended';       // 账号被限制（如被管理员临时限制发言；当前版本仅枚举预留，尚无状态来源，服务端不会返回此值）
 
 // 消息发送成功响应（私聊/群聊通用）
 interface MessageSent {

@@ -111,6 +111,7 @@ type NotifyType =
   | 'group_invite_received'
   | 'group_invite_revoked'        // 邀请被发起方撤销或过期自动失效（@auth-only，通知受邀人）
   | 'group_invite_accepted'
+  | 'group_invite_rejected'       // 邀请被受邀人拒绝（@auth-only，通知邀请发起方，含 reason）
   | 'group_application_received'
   | 'group_application_cancelled' // 申请被发起方取消或过期自动失效（@auth-only，通知群管理员）
   | 'group_application_accepted'
@@ -124,7 +125,7 @@ type NotifyType =
 // 映射为契约级，新增 NotifyType 时必须同步归类：
 // - social:        new_follower, mutual_follow
 // - interaction:   moment_commented, comment_reply, mentioned, reaction_added
-// - group:         group_invite_received, group_invite_revoked, group_invite_accepted, group_application_received, group_application_cancelled, group_application_accepted, group_application_rejected
+// - group:         group_invite_received, group_invite_revoked, group_invite_accepted, group_invite_rejected, group_application_received, group_application_cancelled, group_application_accepted, group_application_rejected
 // - report:        report_resolved, report_dismissed
 // - nearby:        nearby_new_moment
 // - system:        system_announcement
