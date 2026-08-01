@@ -41,8 +41,9 @@
 	<StatusBar />
 
 	<!-- Scrollable area: full width, individual elements keep their own proportions -->
-	<main class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar w-full" style="background-color:var(--neu-bg);">
-		<div class="tablet-page-canvas">
+	<!-- 地图探索为全画布页：不滚动，canvas 固定视口高度 -->
+	<main class="flex-1 {pathname === ROUTES.map ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden no-scrollbar'} w-full" style="background-color:var(--neu-bg);">
+		<div class="tablet-page-canvas {pathname === ROUTES.map ? 'h-full' : ''}">
 			{@render children()}
 		</div>
 	</main>

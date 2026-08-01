@@ -70,7 +70,8 @@
 	const pathname = $derived(page.url.pathname);
 	const searchString = $derived(page.url.search.slice(1));
 	const showCreate = $derived(composer.composerOpen);
-	const isSplitWorkspace = $derived(String(pathname) === ROUTES.messages);
+	// 全画布页面（消息分栏 / 地图探索）：主区域不滚动，画布固定为视口高度
+	const isFullCanvas = $derived(([ROUTES.messages, ROUTES.map] as string[]).includes(pathname));
 
 	/* Keep the last meaningful rail context while viewing utility/detail routes. */
 	let activeNavId = $state<DesktopNavId>(getDesktopNavId(page.url.pathname, page.url.search.slice(1)) ?? readLastDesktopNav() ?? 'home');
@@ -244,8 +245,8 @@
 		<!-- Main Content Card -->
 		<main class="desktop-main-panel flex-1 min-w-0 overflow-hidden transition-colors duration-500">
 			<!-- Inner scroll container — sticky headers inside will stick to this -->
-			<div class={cn('desktop-main-scroll h-full no-scrollbar', isSplitWorkspace ? 'overflow-hidden' : 'overflow-y-auto')}>
-				<div class={cn('desktop-page-canvas', isSplitWorkspace && 'h-full')}>
+			<div class={cn('desktop-main-scroll h-full no-scrollbar', isFullCanvas ? 'overflow-hidden' : 'overflow-y-auto')}>
+				<div class={cn('desktop-page-canvas', isFullCanvas && 'h-full')}>
 					{@render children()}
 				</div>
 			</div>

@@ -50,11 +50,11 @@
 					{group.members}
 				</span>
 				<span class="flex items-center gap-1 flex-shrink-0">
-					<span class="rounded-full" style="width:6px;height:6px;background:var(--semantic-online);"></span>
+					<span class="rounded-full" style="width:6px;height:6px;background:var(--online-on-scrim);"></span>
 					{group.online} 在线
 				</span>
 				<span class="flex-shrink-0">{group.distance}</span>
-				<span class="flex items-center gap-1 truncate text-[var(--neu-accent-primary)]">
+				<span class="flex items-center gap-1 truncate text-[var(--accent-on-scrim)]">
 					<CalendarDays size={12} />
 					{group.activity}
 				</span>

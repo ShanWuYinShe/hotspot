@@ -35,6 +35,8 @@
   --overlay-strong: rgba(20, 28, 20, 0.42);
   --surface-image-scrim: linear-gradient(to bottom, rgba(20, 28, 20, 0.02) 0%, rgba(20, 28, 20, 0.44) 100%);
   --card-scrim: rgba(20, 28, 20, 0.55);
+  --accent-on-scrim: #6EE7B7;
+  --online-on-scrim: #6EE7B7;
 
   /* Shadows (flat — zero) */
   --neu-shadow-light: rgba(255, 255, 255, 0.0);
@@ -95,6 +97,8 @@
   --overlay-strong: rgba(0, 0, 0, 0.54);
   --surface-image-scrim: linear-gradient(to bottom, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.56) 100%);
   --card-scrim: rgba(0, 0, 0, 0.60);
+  --accent-on-scrim: #6EE7B7;
+  --online-on-scrim: #6EE7B7;
 
   /* Shadows (flat) */
   --neu-shadow-light: rgba(255, 255, 255, 0.0);

@@ -95,7 +95,7 @@
 			<div class="flex gap-3.5">
 				<button
 					type="button"
-					class="neu-hover-action flex items-center gap-1.5 outline-none {liked ? 'text-[var(--neu-accent-primary)]' : 'text-white/90'}"
+					class="neu-hover-action flex items-center gap-1.5 outline-none {liked ? 'text-[var(--accent-on-scrim)]' : 'text-white/90'}"
 					onclick={(e) => {
 						e.stopPropagation();
 						onLike();
@@ -112,7 +112,7 @@
 			<div class="flex gap-3">
 				<button
 					type="button"
-					class="neu-hover-action outline-none {saved ? 'text-[var(--neu-accent-primary)]' : 'text-white/90'}"
+					class="neu-hover-action outline-none {saved ? 'text-[var(--accent-on-scrim)]' : 'text-white/90'}"
 					onclick={(e) => {
 						e.stopPropagation();
 						onSave();

@@ -90,7 +90,7 @@
 			<p class="flex items-center gap-1.5 truncate text-white text-sm font-semibold">
 				<span class="truncate">{user.name}</span>
 				{#if user.status === '在线'}
-					<OnlineDot size="sm" className="relative static" />
+					<OnlineDot size="sm" className="relative static" color="var(--online-on-scrim)" />
 				{/if}
 			</p>
 			<p class="truncate text-white/78 text-[10px] mt-0.5">{user.note}</p>
