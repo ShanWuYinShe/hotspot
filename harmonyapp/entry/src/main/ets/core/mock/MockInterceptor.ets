@@ -8,6 +8,7 @@
 
 import { PreferencesUtil } from '../storage/PreferencesUtil';
 import { getCannedResponse, setLoggedIn, setScenarioStatic, isLoggedIn, getScenario } from './MockData';
+import { ApiResponse } from '../types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF37;
@@ -50,7 +51,7 @@ export class MockInterceptor {
    * or the endpoint has no canned response, so HttpUtil falls through to real
    * network timing.
    */
-  static match(url: string): Record<string, Object> | null {
+  static match(url: string): ApiResponse<Object> | null {
     if (!MockInterceptor._enabled) return null;
     return getCannedResponse(url, isLoggedIn(), getScenario());
   }

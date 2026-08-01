@@ -72,14 +72,15 @@ export struct PrivacySettingsPage {
       presence_visible: key === 'presence_visible' ? value : current.presence_visible,
       social_lists_visible: key === 'social_lists_visible' ? value : current.social_lists_visible,
       groups_visible: key === 'groups_visible' ? value : current.groups_visible,
-      liked_moments_visible: key === 'reacted_moments_visible' ? value : current.reacted_moments_visible,
+      reacted_moments_visible: key === 'reacted_moments_visible' ? value : current.reacted_moments_visible,
       stats_visible: key === 'stats_visible' ? value : current.stats_visible,
       allow_follow: key === 'allow_follow' ? value : current.allow_follow,
       allow_private_chat: current.allow_private_chat,
       searchable: key === 'searchable' ? value : current.searchable,
       phone_searchable: current.phone_searchable,
       nickname_searchable: key === 'nickname_searchable' ? value : current.nickname_searchable,
-      location_searchable: key === 'location_searchable' ? value : current.location_searchable
+      location_searchable: key === 'location_searchable' ? value : current.location_searchable,
+      nearby_moment_notify: key === 'nearby_moment_notify' ? value : current.nearby_moment_notify
     };
   }
 

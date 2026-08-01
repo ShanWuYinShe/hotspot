@@ -1271,8 +1271,8 @@ export struct LocationPickerPage {
 						const renderItem: MapRenderItem = {
 							render_id: renderId,
 							location: {
-								latitude: item.location.latitude,
-								longitude: item.location.longitude
+								latitude: item.location.point.latitude,
+								longitude: item.location.point.longitude
 							},
 							type: item.object_type,
 							total_count: 1,
@@ -1281,7 +1281,7 @@ export struct LocationPickerPage {
                 title: item.title,
                 subtitle: item.subtitle,
                 type: item.object_type,
-                distance_meters: item.distance_meters
+                distance_meters: item.location.distance
               }
 						};
 						nextItems.push(renderItem);

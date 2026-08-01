@@ -218,11 +218,9 @@ export struct SearchPage {
           pagination: { limit: 10 }
         };
 
-        const [usersResp, groupsResp, momentsResp] = await Promise.all([
-          ApiClient.searchUsers(usersReq),
-          ApiClient.searchGroups(groupsReq),
-          ApiClient.searchMoments(momentsReq)
-        ]);
+        const usersResp = await ApiClient.searchUsers(usersReq);
+        const groupsResp = await ApiClient.searchGroups(groupsReq);
+        const momentsResp = await ApiClient.searchMoments(momentsReq);
 
         if (this.isDestroyed) return;
 
@@ -269,14 +267,14 @@ export struct SearchPage {
       case 'user': {
         const userItem = item as SearchSuggestItemUser;
         const params = new ProfileRouteParam();
-        params.userId = userItem.payload.user_id;
+        params.userId = userItem.payload.user.user_id;
         AppRouter.push(PageNames.PROFILE, params);
         break;
       }
       case 'group': {
         const groupItem = item as SearchSuggestItemGroup;
         const params = new GroupDetailRouteParam();
-        params.groupId = groupItem.payload.group_id;
+        params.groupId = groupItem.payload.group.group_id;
         AppRouter.push(PageNames.GROUP_DETAIL, params);
         break;
       }
@@ -295,9 +293,9 @@ export struct SearchPage {
       case 'tag':
         return `tag-${(item as SearchSuggestItemTag).payload.name}-${index}`;
       case 'user':
-        return `user-${(item as SearchSuggestItemUser).payload.user_id}-${index}`;
+        return `user-${(item as SearchSuggestItemUser).payload.user.user_id}-${index}`;
       case 'group':
-        return `group-${(item as SearchSuggestItemGroup).payload.group_id}-${index}`;
+        return `group-${(item as SearchSuggestItemGroup).payload.group.group_id}-${index}`;
       case 'moment':
         return `moment-${(item as SearchSuggestItemMoment).payload.moment_id}-${index}`;
       default:
@@ -310,9 +308,9 @@ export struct SearchPage {
       case 'tag':
         return `#${(item as SearchSuggestItemTag).payload.name}`;
       case 'user':
-        return (item as SearchSuggestItemUser).payload.nickname;
+        return (item as SearchSuggestItemUser).payload.user.nickname;
       case 'group':
-        return (item as SearchSuggestItemGroup).payload.name;
+        return (item as SearchSuggestItemGroup).payload.group.name;
       case 'moment':
         return (item as SearchSuggestItemMoment).payload.description_preview;
       default:
@@ -327,7 +325,7 @@ export struct SearchPage {
       case 'user':
         return (item as SearchSuggestItemUser).payload.bio ?? '打开用户主页';
       case 'group':
-        return `${(item as SearchSuggestItemGroup).payload.members_count} 人`;
+        return `${(item as SearchSuggestItemGroup).payload.group.members_count} 人`;
       case 'moment':
         return (item as SearchSuggestItemMoment).payload.author.nickname ?? '打开瞬间详情';
       default:

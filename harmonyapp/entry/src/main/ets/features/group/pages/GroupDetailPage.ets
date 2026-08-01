@@ -754,6 +754,7 @@ export struct GroupDetailPage {
       const response = await ApiClient.muteMember({
         group_id: this.groupId,
         user_id: userId,
+        active: true,
         duration_minutes: durationMinutes
       });
       if (response.code === 0) {
@@ -779,7 +780,8 @@ export struct GroupDetailPage {
     try {
       const response = await ApiClient.unmuteMember({
         group_id: this.groupId,
-        user_id: userId
+        user_id: userId,
+        active: false
       });
       if (response.code === 0) {
         this.upsertMember(this.withMemberMutedUntil(member, undefined));

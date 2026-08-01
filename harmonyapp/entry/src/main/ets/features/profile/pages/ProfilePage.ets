@@ -22,6 +22,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { LoginPromptView } from '../../../components/LoginPromptView';
 import { MyProfile, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest, UserItem, UserOpenTheDoorRequest, UserSharePayload, MomentItem, UserMomentsRequest } from '../../../core/types/api';
+import { DeviceIdUtil } from '../../../core/util/DeviceIdUtil';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
@@ -1962,7 +1963,7 @@ export struct ProfilePage {
 
     this.isQuickStarting = true;
     try {
-      const request: GuestRequest = { nickname, client_type: 'app' };
+      const request: GuestRequest = { nickname, client_type: 'app', device_id: DeviceIdUtil.getDeviceId() };
       const response = await ApiClient.createTempUser(request);
 
       if (response.code === 0 && response.data) {

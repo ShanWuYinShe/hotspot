@@ -15,6 +15,7 @@ import { AuthAccountManager } from '../core/state/AuthAccountManager';
 import { HttpUtil } from '../core/network/HttpUtil';
 import { WebSocketService } from '../core/network/WebSocketService';
 import { GlobalStateManager } from '../core/state/GlobalStateManager';
+import { DeviceIdUtil } from '../core/util/DeviceIdUtil';
 import { AuthData, GuestRequest, MyProfile } from '../core/types/api';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -210,7 +211,7 @@ export struct LoginPromptView {
 
     this.isQuickStarting = true;
     try {
-      const request: GuestRequest = { nickname, client_type: 'app' };
+      const request: GuestRequest = { nickname, client_type: 'app', device_id: DeviceIdUtil.getDeviceId() };
       const response = await ApiClient.createTempUser(request);
 
       if (response.code === 0 && response.data) {
