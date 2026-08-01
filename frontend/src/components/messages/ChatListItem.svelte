@@ -4,7 +4,7 @@
 	// 会话列表项（迁移自旧版 MessagesPage 内 ChatListItem）。
 
 	export interface ChatItem {
-		id: number;
+		id: number | string;
 		peerUserId: string;
 		name: string;
 		avatar: string;
@@ -13,6 +13,7 @@
 		unread: number;
 		online: boolean;
 		group: boolean;
+		kind?: 'private' | 'group';
 	}
 
 	let {

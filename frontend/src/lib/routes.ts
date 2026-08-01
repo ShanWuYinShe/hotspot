@@ -18,6 +18,8 @@ export const ROUTES = {
   moment: (momentId: string | number) => `/moments/${momentId}`,
   group: (groupId: string | number) => `/groups/${groupId}`,
   message: (chatId: string | number) => `/messages/${chatId}`,
+  /** 群聊窗口（与私聊 message() 区分;静态段 group 优先于 [chatId] 参数段）。 */
+  groupMessage: (groupId: string | number) => `/messages/group/${groupId}`,
   meSection: (section: ProfileSection) => `/me/${section}`,
 } as const;
 

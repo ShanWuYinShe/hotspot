@@ -7,16 +7,23 @@
 	import EmptyState from '@/components/shared/EmptyState.svelte';
 	import OnlineDot from '@/components/shared/OnlineDot.svelte';
 	import ChatView from '@/components/messages/ChatView.svelte';
+	import GroupChatView from '@/components/messages/GroupChatView.svelte';
 	import ChatListItem, { type ChatItem } from '@/components/messages/ChatListItem.svelte';
 	import NewConversationSheet from '@/components/messages/NewConversationSheet.svelte';
 	import CreateGroupSheet from '@/components/groups/CreateGroupSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
-	import { getPrivateChats } from '@/api';
+	import { getPrivateChats, listMyGroups } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
 
-	// 消息列表：在线条 + 会话列表 + 新会话 Sheet + 建群 Sheet；
-	// 桌面左右分栏（内嵌 ChatView）。迁移自旧版 MessagesPage。
+	// 消息列表：在线条 + 会话列表（私聊 + 群聊混合）+ 新会话 Sheet + 建群 Sheet；
+	// 桌面左右分栏（内嵌 ChatView / GroupChatView）。迁移自旧版 MessagesPage。
+
+	/** 时间戳兜底：无效日期按 0 处理（用于私聊/群聊混合排序）。 */
+	function tsOf(t: string): number {
+		const n = new Date(t).getTime();
+		return isNaN(n) ? 0 : n;
+	}
 
 	let chats = $state<ChatItem[]>([]);
 	let loading = $state(true);
@@ -27,31 +34,53 @@
 		async function fetchChats() {
 			try {
 				loading = true;
-				const res = await getPrivateChats().catch(() => ({ code: -1, data: { items: [] } }));
+				// 并行加载私聊与我的群组，合并为统一会话列表（按时间倒序）。
+				const [privRes, groupRes] = await Promise.all([
+					getPrivateChats().catch(() => ({ code: -1, data: { items: [] } })),
+					listMyGroups().catch(() => ({ code: -1, data: { items: [] } }))
+				]);
 				if (cancelled) return;
-				if (res.code === 0 && res.data) {
-					const data = res.data as any;
-					const items: ChatItem[] = (data.items || []).map((c: any, i: number) => ({
-						id: c.id ?? i + 1,
-						// spec: PrivateChatItem.other_user — the peer; private messages are
-						// addressed by target_user_id (the peer's user_id), not a chat id.
-						peerUserId: c.other_user?.user_id ?? c.peer_user_id ?? c.target_user_id ?? '',
-						name: c.other_user?.nickname ?? c.name ?? c.nickname ?? c.peer_name ?? '',
-						avatar: c.other_user?.avatar_url ?? c.avatar ?? c.peer_avatar ?? '',
-						lastMessage: c.last_message?.content ?? c.last_message ?? c.last_msg ?? '',
-						time: c.last_message?.sent_at ?? c.last_activity_at ?? c.time ?? c.updated_at ?? '',
-						unread: c.unread_count ?? c.unread ?? 0,
-						online: c.other_user?.presence_status === 'online' || c.online || false,
-						group: c.group ?? c.is_group ?? false
-					}));
-					chats = items;
-					// 在线状态实时化：对非 group 会话订阅全部对端（chats.id 语义即 peer user_id，
-					// 但显式用 peerUserId 更稳）；旧订阅先释放再建立新订阅。
-					unwatchPresence?.();
-					unwatchPresence = watchPresence(
-						items.filter((c) => !c.group).map((c) => c.peerUserId).filter(Boolean)
-					);
-				}
+				const privData = (privRes.code === 0 && privRes.data ? (privRes.data as any).items : []) as any[];
+				const groupData = (groupRes.code === 0 && groupRes.data ? (groupRes.data as any).items : []) as any[];
+				const privateChats: ChatItem[] = privData.map((c: any, i: number) => ({
+					id: c.id ?? i + 1,
+					// spec: PrivateChatItem.other_user — the peer; private messages are
+					// addressed by target_user_id (the peer's user_id), not a chat id.
+					peerUserId: c.other_user?.user_id ?? c.peer_user_id ?? c.target_user_id ?? '',
+					name: c.other_user?.nickname ?? c.name ?? c.nickname ?? c.peer_name ?? '',
+					avatar: c.other_user?.avatar_url ?? c.avatar ?? c.peer_avatar ?? '',
+					lastMessage: c.last_message?.content ?? c.last_message ?? c.last_msg ?? '',
+					time: c.last_message?.sent_at ?? c.last_activity_at ?? c.time ?? c.updated_at ?? '',
+					unread: c.unread_count ?? c.unread ?? 0,
+					online: c.other_user?.presence_status === 'online' || c.online || false,
+					group: c.group ?? c.is_group ?? false,
+					kind: 'private'
+				}));
+				// spec: GroupItem { group: GroupInfo, my_state?: MyGroupState, last_activity_at? }
+				const groupChats: ChatItem[] = groupData.map((c: any, i: number) => {
+					const g = c.group ?? {};
+					return {
+						id: g.group_id ?? `group-${i}`,
+						peerUserId: '',
+						name: g.name ?? '',
+						avatar: g.avatar_url ?? '',
+						lastMessage: '',
+						time: c.last_activity_at ?? '',
+						unread: c.my_state?.unread_count ?? 0,
+						online: false,
+						group: true,
+						kind: 'group'
+					};
+				});
+				// 私聊与群聊混合，统一按最近活跃时间倒序。
+				const items = [...privateChats, ...groupChats].sort((a, b) => tsOf(b.time) - tsOf(a.time));
+				chats = items;
+				// 在线状态实时化：仅对非 group 会话订阅全部对端（chats.id 语义即 peer user_id，
+				// 但显式用 peerUserId 更稳）；旧订阅先释放再建立新订阅。
+				unwatchPresence?.();
+				unwatchPresence = watchPresence(
+					items.filter((c) => !c.group).map((c) => c.peerUserId).filter(Boolean)
+				);
 			} catch {
 				if (!cancelled) chats = [];
 			} finally {
@@ -72,7 +101,8 @@
 	let showNewChat = $state(false);
 	let newChatTab = $state<'add' | 'chat'>('chat');
 	let showCreateGroup = $state(false);
-	let selectedId = $state<number | null>(null);
+	// 会话 id：私聊为数字索引/chat id，群聊为字符串 group_id。
+	let selectedId = $state<number | string | null>(null);
 
 	// 渲染用实时在线判定：WS 推送优先，HTTP 快照（chat.online）仅兜底
 	const liveChats = $derived(
@@ -161,7 +191,11 @@
 				<div class="h-full" style="overflow:hidden;border-radius:22px;">
 					{#if selectedId !== null && selectedChat}
 						<div class="h-full">
+							{#if selectedChat.kind === 'group'}
+							<GroupChatView groupId={String(selectedChat.id)} showBackButton={false} compact />
+						{:else}
 							<ChatView peerUserId={selectedChat.peerUserId} contact={{ name: selectedChat.name, avatar: selectedChat.avatar, online: selectedChat.online }} showBackButton={false} compact />
+						{/if}
 						</div>
 					{:else}
 						<div class="h-full">
@@ -200,7 +234,13 @@
 
 		<Dialog.Root open={showCreateGroup} onOpenChange={(next) => (next ? undefined : (showCreateGroup = false))}>
 			<Dialog.Content side="center" class="overflow-hidden" aria-label="创建群组" style="width:480px;height:78vh;max-height:700px;">
-				<CreateGroupSheet onClose={() => (showCreateGroup = false)} />
+				<CreateGroupSheet
+					onClose={() => (showCreateGroup = false)}
+					onCreated={(groupId) => {
+						showCreateGroup = false;
+						void goto(ROUTES.groupMessage(groupId));
+					}}
+				/>
 			</Dialog.Content>
 		</Dialog.Root>
 	</div>
@@ -259,7 +299,10 @@
 			{:else}
 				{#each filtered as chat, i (chat.id)}
 					<div class="px-2 py-1">
-						<ChatListItem chat={chat} onClick={() => void goto(ROUTES.message(chat.peerUserId || chat.id))} />
+						<ChatListItem
+							chat={chat}
+							onClick={() => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
+						/>
 					</div>
 					{#if i < filtered.length - 1}
 						<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
@@ -282,7 +325,13 @@
 
 	<Dialog.Root open={showCreateGroup} onOpenChange={(next) => (next ? undefined : (showCreateGroup = false))}>
 		<Dialog.Content side="bottom" class="overflow-hidden" style="height:92%;box-shadow:0 -8px 40px rgba(0,0,0,0.18);">
-			<CreateGroupSheet onClose={() => (showCreateGroup = false)} />
+			<CreateGroupSheet
+				onClose={() => (showCreateGroup = false)}
+				onCreated={(groupId) => {
+					showCreateGroup = false;
+					void goto(ROUTES.groupMessage(groupId));
+				}}
+			/>
 		</Dialog.Content>
 	</Dialog.Root>
 {/if}

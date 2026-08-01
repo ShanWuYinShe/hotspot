@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { X, Camera, Globe, Lock, Check, ChevronRight, MapPin } from '@lucide/svelte';
+	import { Endpoints } from '@/api/endpoints';
+	import { loadDefaultLocation } from '@/lib/default-location';
 
 	// CreateGroupSheet — 创建群组的底部 Sheet / 模态。
 	// 使用处：NearbyGroups(FAB)、Profile > 我的群组（页头按钮）、
 	//        以及 NewConversationSheet 的「创建群聊」入口。
-	// 迁移自旧版 CreateGroupSheet（未接 API，本地完成态）。
+	// 创建走 groups/create（返回 GroupItem，group_id 经 onCreated 回调交给调用方）。
 
-	let { onClose, onCreated }: { onClose: () => void; onCreated?: (name: string) => void } = $props();
+	let { onClose, onCreated }: { onClose: () => void; onCreated?: (groupId: string) => void } = $props();
 
 	const CATEGORIES = ['摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏', '其他'];
 
@@ -15,13 +17,49 @@
 	let category = $state('摄影');
 	let isPrivate = $state(false);
 	let step = $state<'form' | 'done'>('form');
+	let creating = $state(false);
+	let createError = $state('');
 
 	const canCreate = $derived(name.trim().length >= 2);
 
-	const handleCreate = () => {
-		if (!canCreate) return;
-		step = 'done';
-		onCreated?.(name.trim());
+	/** 群组位置：默认位置不可得时回退徐州（与 ClientConfig.defaults 一致）。 */
+	async function resolveLocation() {
+		const loc = await loadDefaultLocation().catch(() => null);
+		return loc ?? { point: { latitude: 34.2604, longitude: 117.1855 }, location_name: '徐州' };
+	}
+
+	const handleCreate = async () => {
+		if (!canCreate || creating) return;
+		creating = true;
+		createError = '';
+		try {
+			const location = await resolveLocation();
+			const res = await fetch(Endpoints.Groups.Create, {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: name.trim(),
+					description: desc.trim() || undefined,
+					tags: [category],
+					join_method: isPrivate ? 'invite_only' : 'open',
+					location
+				})
+			});
+			const json = (await res.json()) as { code: number; data?: any; message?: string };
+			if (json.code !== 0) {
+				createError = json.message ?? '创建失败，请稍后重试';
+				return;
+			}
+			// spec: groups/create 直接返回 GroupItem { group: GroupInfo }
+			const groupId = json.data?.group?.group_id ?? json.data?.group_id ?? '';
+			step = 'done';
+			onCreated?.(groupId);
+		} catch {
+			createError = '创建失败，请检查网络后重试';
+		} finally {
+			creating = false;
+		}
 	};
 </script>
 
@@ -178,15 +216,19 @@
 				<ChevronRight style="width:13px;height:13px;color:var(--neu-text-muted);" strokeWidth={1.5} />
 			</div>
 
+			{#if createError}
+				<p class="text-[12px] text-[var(--semantic-warning)]">{createError}</p>
+			{/if}
+
 			<!-- Create button -->
 			<button
 				type="button"
-				onclick={handleCreate}
-				disabled={!canCreate}
-				class="neu-hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-[18px] outline-none text-[15px] font-medium {canCreate ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text-muted)]'}"
-				style="box-shadow:{canCreate ? '0 6px 22px var(--neu-glow)' : 'inset 4px 4px 10px var(--neu-shadow-dark), inset -4px -4px 10px var(--neu-shadow-light)'};border:{canCreate ? 'none' : '1px solid var(--neu-border)'};transition:all 0.22s ease;cursor:{canCreate ? 'pointer' : 'not-allowed'};"
+				onclick={() => void handleCreate()}
+				disabled={!canCreate || creating}
+				class="neu-hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-[18px] outline-none text-[15px] font-medium {canCreate && !creating ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text-muted)]'}"
+				style="box-shadow:{canCreate && !creating ? '0 6px 22px var(--neu-glow)' : 'inset 4px 4px 10px var(--neu-shadow-dark), inset -4px -4px 10px var(--neu-shadow-light)'};border:{canCreate && !creating ? 'none' : '1px solid var(--neu-border)'};transition:all 0.22s ease;cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
 			>
-				创建群组
+				{creating ? '创建中…' : '创建群组'}
 			</button>
 		</div>
 	{/if}

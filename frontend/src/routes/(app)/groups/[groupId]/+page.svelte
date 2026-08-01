@@ -302,7 +302,7 @@
 				{/if}
 			</button>
 			{#if joined}
-				<button type="button" onclick={() => void goto(ROUTES.messages)} class="neu-hover-btn flex w-full items-center justify-center gap-2 rounded-full border border-[var(--neu-border)] px-4 py-3 text-[13px] text-[var(--neu-text)] neu-focus-ring">
+				<button type="button" onclick={() => void goto(ROUTES.groupMessage(params.groupId))} class="neu-hover-btn flex w-full items-center justify-center gap-2 rounded-full border border-[var(--neu-border)] px-4 py-3 text-[13px] text-[var(--neu-text)] neu-focus-ring">
 					<MessageCircle size={15} />
 					打开群聊
 				</button>
