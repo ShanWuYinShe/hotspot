@@ -349,6 +349,15 @@ interface GroupItem {
   // 列表/详情页返回
   last_activity_at?: string;     // 最近活跃时间（最后消息/公告/成员变动等）
 
+  // 群列表场景返回（仅 groups/list_my；其他场景省略）
+  last_message?: {
+    message_id: string;
+    type: MessageType;
+    content?: string;
+    sender: UserInfo;
+    sent_at: string;
+  };
+
   // 详情页返回，搜索/列表不返回
   created_at?: string;
   owner_id?: string;

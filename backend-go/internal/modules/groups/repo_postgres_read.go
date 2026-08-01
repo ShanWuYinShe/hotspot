@@ -239,6 +239,14 @@ func formatOptionalTime(value *time.Time) *string {
 	return &formatted
 }
 
+// stringValue 安全解引用可空字符串(*nil → "")。
+func stringValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
 func buildGroupSearchQuery(req SearchGroupsRequest) (string, []any, int, groupSearchCursor, error) {
 	limit := paginationLimit(req.Pagination, defaultSearchLimit, maxSearchLimit)
 	cursor, err := decodeSearchCursor(paginationCursor(req.Pagination))

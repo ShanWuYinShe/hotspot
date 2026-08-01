@@ -85,19 +85,29 @@ type MyGroupState struct {
 }
 
 type GroupItem struct {
-	Group          GroupInfo        `json:"group"`
-	Description    string           `json:"description,omitempty"`
-	Tags           []string         `json:"tags,omitempty"`
-	HasPassword    bool             `json:"has_password,omitempty"`
-	Location       RelativeLocation `json:"location"`
-	MyState        *MyGroupState    `json:"my_state,omitempty"`
-	FriendsInGroup int              `json:"friends_in_group,omitempty"`
-	JoinMethod     GroupJoinMethod  `json:"join_method,omitempty"`
-	IsSearchable   bool             `json:"is_searchable,omitempty"`
-	MaxMembers     int              `json:"max_members,omitempty"`
-	LastActivityAt *string          `json:"last_activity_at,omitempty"`
-	CreatedAt      *string          `json:"created_at,omitempty"`
-	OwnerID        string           `json:"owner_id,omitempty"`
+	Group          GroupInfo         `json:"group"`
+	Description    string            `json:"description,omitempty"`
+	Tags           []string          `json:"tags,omitempty"`
+	HasPassword    bool              `json:"has_password,omitempty"`
+	Location       RelativeLocation  `json:"location"`
+	MyState        *MyGroupState     `json:"my_state,omitempty"`
+	FriendsInGroup int               `json:"friends_in_group,omitempty"`
+	JoinMethod     GroupJoinMethod   `json:"join_method,omitempty"`
+	IsSearchable   bool              `json:"is_searchable,omitempty"`
+	MaxMembers     int               `json:"max_members,omitempty"`
+	LastActivityAt *string           `json:"last_activity_at,omitempty"`
+	CreatedAt      *string           `json:"created_at,omitempty"`
+	OwnerID        string            `json:"owner_id,omitempty"`
+	LastMessage    *GroupLastMessage `json:"last_message,omitempty"`
+}
+
+// GroupLastMessage 群列表最后一条消息预览（仅 groups/list_my 返回，见 api_spec_types.md GroupItem）。
+type GroupLastMessage struct {
+	MessageID string   `json:"message_id"`
+	Type      string   `json:"type"`
+	Content   string   `json:"content,omitempty"`
+	Sender    UserInfo `json:"sender"`
+	SentAt    string   `json:"sent_at"`
 }
 
 type CreateGroupRequest struct {

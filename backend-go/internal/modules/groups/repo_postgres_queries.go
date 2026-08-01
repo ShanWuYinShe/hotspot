@@ -38,9 +38,18 @@ ORDER BY joined_at ASC, user_id ASC`
 
 	queryListMyGroups = `
 		SELECT g.group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}'),
-		       gm.role, gm.joined_at, gm.is_muted, gm.muted_until
+		       gm.role, gm.joined_at, gm.is_muted, gm.muted_until,
+		       lm.message_id, lm.type, lm.content, lm.sender_user_id, lm.sender_nickname, lm.sender_avatar_url, lm.sent_at
 		FROM groups g
 	JOIN group_members gm ON gm.group_id = g.group_id
+	LEFT JOIN LATERAL (
+		SELECT m.message_id, m.type, m.content, u.user_id AS sender_user_id, u.nickname AS sender_nickname, u.avatar_url AS sender_avatar_url, m.sent_at
+		FROM group_messages m
+		LEFT JOIN users u ON u.user_id = m.sender_user_id
+		WHERE m.group_id = g.group_id AND m.is_recalled = FALSE
+		ORDER BY m.sent_at DESC, m.message_id DESC
+		LIMIT 1
+	) lm ON TRUE
 WHERE gm.user_id = $1 AND g.deleted_at IS NULL
 ORDER BY gm.joined_at DESC, g.group_id DESC`
 
