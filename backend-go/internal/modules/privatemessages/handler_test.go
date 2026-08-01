@@ -60,8 +60,8 @@ func (r *privateMessageErrorRepo) GetMessageForReply(context.Context, string, st
 func (r *privateMessageErrorRepo) MessageExists(_ context.Context, _ string) (bool, string, error) {
 	return false, "", nil
 }
-func (r *privateMessageErrorRepo) CountMessagesToUser(_ context.Context, _ string, _ string, _ time.Time) (int, error) {
-	return 0, nil
+func (r *privateMessageErrorRepo) CountMessagesByTarget(_ context.Context, _ string, _ time.Time) (map[string]int, error) {
+	return nil, nil
 }
 func (r *privateMessageErrorRepo) GetMediaForMessage(context.Context, string, string) (map[string]any, bool, error) {
 	return nil, false, nil

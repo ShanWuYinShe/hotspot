@@ -152,8 +152,14 @@ const (
 		FROM private_messages
 		WHERE message_id = $1`
 
-	queryCountPrivateMessagesToUser = `
-		SELECT COUNT(*)
-		FROM private_messages
-		WHERE sender_user_id = $1 AND chat_key = $2 AND sent_at >= $3`
+	queryCountPrivateMessagesByTarget = `
+		SELECT CASE
+		         WHEN pc.user_a_id = $1 THEN pc.user_b_id
+		         ELSE pc.user_a_id
+		       END AS target_user_id,
+		       COUNT(*)
+		FROM private_messages pm
+		JOIN private_chats pc ON pc.chat_key = pm.chat_key
+		WHERE pm.sender_user_id = $1 AND pm.sent_at >= $2
+		GROUP BY target_user_id`
 )

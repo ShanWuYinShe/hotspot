@@ -96,9 +96,23 @@ func (s *Service) unreact(ctx context.Context, req SetReactionRequest) error {
 	if !changed {
 		return nil
 	}
-	// For removal we still broadcast ReactionRemoved but skip owner
-	// notification (removal isn't worth notifying about).
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{
+	// ReactionRemoved goes to the target resource's author (spec
+	// api_spec_websocket.md). Resolve the owner for the broadcast; a deleted
+	// or unresolvable target has no author to push to, and unreact itself is
+	// an idempotent no-op, so we skip the broadcast in that case.
+	owner, targetExists, err := s.resolveTarget(ctx, req.TargetType, req.TargetID)
+	if err != nil || !targetExists {
+		return nil
+	}
+	ownerID := strings.TrimSpace(owner.OwnerUserID)
+	if ownerID == "" || ownerID == principal.UserID {
+		// No owner (message targets / degraded mode) or self-removal: nothing
+		// to broadcast (mirrors notifyOwner's self-reaction skip).
+		return nil
+	}
+	// Per spec ReactionRemovedPayload: no notification_id (removal does not
+	// produce a notification).
+	realtime.DefaultHub().BroadcastToUser(ownerID, realtime.Event{
 		Type: EventTypeReactionRemoved,
 		Payload: map[string]any{
 			"target_type": string(req.TargetType),

@@ -216,17 +216,30 @@ func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string
 	return true, senderUserID, nil
 }
 
-func (r *PostgresRepository) CountMessagesToUser(ctx context.Context, senderID, targetUserID string, since time.Time) (int, error) {
+func (r *PostgresRepository) CountMessagesByTarget(ctx context.Context, senderID string, since time.Time) (map[string]int, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return 0, persistence.ErrNotImplemented
+		return nil, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return 0, persistence.ErrNotImplemented
+		return nil, persistence.ErrNotImplemented
 	}
-	var count int
-	if err := queryable.QueryRow(ctx, queryCountPrivateMessagesToUser, senderID, conversationKey(senderID, targetUserID), since.Format(time.RFC3339Nano)).Scan(&count); err != nil {
-		return 0, err
+	rows, err := queryable.Query(ctx, queryCountPrivateMessagesByTarget, senderID, since.Format(time.RFC3339Nano))
+	if err != nil {
+		return nil, err
 	}
-	return count, nil
+	defer rows.Close()
+	counts := make(map[string]int)
+	for rows.Next() {
+		var targetUserID string
+		var count int
+		if err := rows.Scan(&targetUserID, &count); err != nil {
+			return nil, err
+		}
+		counts[targetUserID] = count
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return counts, nil
 }

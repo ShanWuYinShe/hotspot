@@ -306,23 +306,29 @@ func (r *InMemoryRepository) MessageExists(_ context.Context, messageID string) 
 	return false, "", nil
 }
 
-func (r *InMemoryRepository) CountMessagesToUser(_ context.Context, senderID, targetUserID string, since time.Time) (int, error) {
+func (r *InMemoryRepository) CountMessagesByTarget(_ context.Context, senderID string, since time.Time) (map[string]int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	count := 0
-	for _, item := range r.messages[conversationKey(senderID, targetUserID)] {
-		if item.Sender.UserID != senderID {
+	counts := make(map[string]int)
+	for chatKey, items := range r.messages {
+		targetUserID := otherUserID(chatKey, senderID)
+		if targetUserID == "" {
 			continue
 		}
-		sentAt, err := time.Parse(time.RFC3339Nano, item.SentAt)
-		if err != nil {
-			continue
-		}
-		if !sentAt.Before(since) {
-			count++
+		for _, item := range items {
+			if item.Sender.UserID != senderID {
+				continue
+			}
+			sentAt, err := time.Parse(time.RFC3339Nano, item.SentAt)
+			if err != nil {
+				continue
+			}
+			if !sentAt.Before(since) {
+				counts[targetUserID]++
+			}
 		}
 	}
-	return count, nil
+	return counts, nil
 }
 
 func (r *InMemoryRepository) GetMediaForMessage(ctx context.Context, fileID, ownerUserID string) (map[string]any, bool, error) {

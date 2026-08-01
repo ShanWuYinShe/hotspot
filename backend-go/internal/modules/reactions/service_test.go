@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/realtime"
 )
 
 // stubTargetProvider serves a single target kind and reports existence by id.
@@ -242,5 +243,73 @@ func TestAggregateBatchHandlesEmpty(t *testing.T) {
 	}
 	if len(out) != 0 {
 		t.Fatalf("expected empty map, got %+v", out)
+	}
+}
+
+// realtimeSinkStub captures BroadcastToUser deliveries for hub-based tests.
+type realtimeSinkStub struct{ events []realtime.Event }
+
+func (s *realtimeSinkStub) Send(e realtime.Event) error { s.events = append(s.events, e); return nil }
+func (s *realtimeSinkStub) Close() error                { return nil }
+
+func TestUnreactBroadcastsToTargetOwner(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	defer realtime.ResetHub()
+	ownerSink := &realtimeSinkStub{}
+	actorSink := &realtimeSinkStub{}
+	hub.RegisterUser("owner_alice", "sess_owner", ownerSink)
+	hub.RegisterUser("u_bob", "sess_bob", actorSink)
+
+	provider := stubTargetProvider{
+		kind:   ReactTargetMoment,
+		exists: map[string]bool{"m1": true},
+		owners: map[string]string{"m1": "owner_alice"},
+	}
+	svc := NewServiceWithDeps(NewInMemoryRepository(), []TargetProvider{provider}, nil, nil)
+	if _, err := svc.repo.React(context.Background(), ReactTargetMoment, "m1", "u_bob", "👍"); err != nil {
+		t.Fatalf("seed react: %v", err)
+	}
+	if err := svc.Set(ctxWithUser("u_bob"), SetReactionRequest{TargetType: ReactTargetMoment, TargetID: "m1", Emoji: "👍", Active: false}); err != nil {
+		t.Fatalf("unreact: %v", err)
+	}
+	// 契约:ReactionRemoved 推送给被反应资源作者,而非操作者本人。
+	if len(ownerSink.events) != 1 || ownerSink.events[0].Type != EventTypeReactionRemoved {
+		t.Fatalf("expected ReactionRemoved on owner sink, got %+v", ownerSink.events)
+	}
+	if len(actorSink.events) != 0 {
+		t.Fatalf("ReactionRemoved must not be delivered to the actor, got %+v", actorSink.events)
+	}
+	payload, ok := ownerSink.events[0].Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map payload, got %T", ownerSink.events[0].Payload)
+	}
+	// 契约:反应移除不产生通知,payload 不含 notification_id。
+	if _, has := payload["notification_id"]; has {
+		t.Fatalf("ReactionRemoved payload must not carry notification_id, got %+v", payload)
+	}
+	if payload["target_type"] != "moment" || payload["target_id"] != "m1" || payload["emoji"] != "👍" {
+		t.Fatalf("unexpected payload: %+v", payload)
+	}
+}
+
+func TestUnreactSkipsBroadcastWhenTargetGone(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	defer realtime.ResetHub()
+	ownerSink := &realtimeSinkStub{}
+	hub.RegisterUser("owner_alice", "sess_owner", ownerSink)
+
+	// 目标已删除:unreact 是幂等 no-op,不产生广播(没有作者可推)。
+	provider := stubTargetProvider{kind: ReactTargetMoment, exists: map[string]bool{"m1": false}}
+	svc := NewServiceWithDeps(NewInMemoryRepository(), []TargetProvider{provider}, nil, nil)
+	if _, err := svc.repo.React(context.Background(), ReactTargetMoment, "m1", "u_bob", "👍"); err != nil {
+		t.Fatalf("seed react: %v", err)
+	}
+	if err := svc.Set(ctxWithUser("u_bob"), SetReactionRequest{TargetType: ReactTargetMoment, TargetID: "m1", Emoji: "👍", Active: false}); err != nil {
+		t.Fatalf("unreact on deleted target must succeed: %v", err)
+	}
+	if len(ownerSink.events) != 0 {
+		t.Fatalf("no broadcast expected for deleted target, got %+v", ownerSink.events)
 	}
 }

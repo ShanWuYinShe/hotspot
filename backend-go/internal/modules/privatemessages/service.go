@@ -247,7 +247,7 @@ func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string
 	}
 	// 陌生人消息每日额度:仅对非互相关注用户生效(0 = 禁止任何陌生人消息)
 	if !isMutual {
-		if err := s.enforceStrangerQuota(ctx, userID, targetUserID); err != nil {
+		if err := s.enforceStrangerQuota(ctx, userID); err != nil {
 			return err
 		}
 	}
@@ -255,10 +255,11 @@ func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string
 }
 
 // enforceStrangerQuota checks AppConfig.limits.stranger_message_daily_quota:
-// 0 disables stranger messages entirely; otherwise messages sent today to the
-// stranger target count against the quota (per-target accounting). When no
-// app config is wired (tests/degraded mode) the check is skipped.
-func (s *Service) enforceStrangerQuota(ctx context.Context, userID, targetUserID string) error {
+// 0 disables stranger messages entirely; otherwise the total volume of
+// messages sent today to non-mutual (stranger) targets counts against the
+// quota (total-volume accounting across ALL stranger targets, not per-target).
+// When no app config is wired (tests/degraded mode) the check is skipped.
+func (s *Service) enforceStrangerQuota(ctx context.Context, userID string) error {
 	if s.appConfig == nil {
 		return nil
 	}
@@ -271,11 +272,27 @@ func (s *Service) enforceStrangerQuota(ctx context.Context, userID, targetUserID
 	}
 	now := time.Now().UTC()
 	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-	count, err := s.repo.CountMessagesToUser(ctx, userID, targetUserID, startOfDay)
+	counts, err := s.repo.CountMessagesByTarget(ctx, userID, startOfDay)
 	if err != nil {
 		return err
 	}
-	if count >= quota {
+	strangerTotal := 0
+	for targetID, count := range counts {
+		if targetID == userID {
+			continue
+		}
+		// 用发送者视角的 ctx 查询 relation:互相关注(双向)不算陌生人。
+		item, ok, err := s.users.OpenTheDoor(ctx, targetID)
+		if err != nil || !ok {
+			// 目标查询失败/不存在:无法判定关系,跳过不计入。
+			continue
+		}
+		isMutual := item.Relation != nil && item.Relation.IsFollowing && item.Relation.IsFollowedBy
+		if !isMutual {
+			strangerTotal += count
+		}
+	}
+	if strangerTotal >= quota {
 		return &MessageBlockedError{Reason: BlockReasonStrangerQuotaExceeded}
 	}
 	return nil

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/modules/users"
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 )
 
@@ -28,6 +29,7 @@ type stubMsgRepo struct {
 	readMeta   MessageEventMeta
 	readErr    error
 	markAllErr error
+	counts     map[string]int
 	countErr   error
 }
 
@@ -67,8 +69,8 @@ func (r *stubMsgRepo) GetMediaForMessage(_ context.Context, _ string, _ string) 
 func (r *stubMsgRepo) MessageExists(_ context.Context, _ string) (bool, string, error) {
 	return false, "", nil
 }
-func (r *stubMsgRepo) CountMessagesToUser(_ context.Context, _ string, _ string, _ time.Time) (int, error) {
-	return 0, r.countErr
+func (r *stubMsgRepo) CountMessagesByTarget(_ context.Context, _ string, _ time.Time) (map[string]int, error) {
+	return r.counts, r.countErr
 }
 
 type stubUserReader struct {
@@ -77,13 +79,29 @@ type stubUserReader struct {
 	userErr     error
 	settings    users.UserSettings
 	settingsErr error
+	byTarget    map[string]users.UserItem // per-target item lookup (stranger quota relation checks)
 }
 
-func (u *stubUserReader) OpenTheDoor(_ context.Context, _ string) (users.UserItem, bool, error) {
-	return u.item, u.found, u.userErr
+func (u *stubUserReader) OpenTheDoor(_ context.Context, userID string) (users.UserItem, bool, error) {
+	if u.userErr != nil {
+		return users.UserItem{}, false, u.userErr
+	}
+	if u.byTarget != nil {
+		if item, ok := u.byTarget[userID]; ok {
+			return item, true, nil
+		}
+	}
+	return u.item, u.found, nil
 }
 func (u *stubUserReader) GetMySettings(_ context.Context) (users.UserSettings, error) {
 	return u.settings, u.settingsErr
+}
+
+// quotaSource is a static appconfig.Source for the stranger quota tests.
+type quotaSource struct{ quota int }
+
+func (q quotaSource) Get(context.Context) appconfig.AppConfig {
+	return appconfig.AppConfig{Limits: appconfig.Limits{StrangerMessageDailyQuota: q.quota}}
 }
 
 func msgCtx(userID string) context.Context {
@@ -291,5 +309,89 @@ func TestServiceUnreadCountPropagatesError(t *testing.T) {
 	_, err := svc.UnreadCount(msgCtx("u1"), "u2", nil)
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestServiceSendStrangerQuotaAggregatesAcrossTargets(t *testing.T) {
+	// 两个陌生人(u2/u3)各已发 3 条,quota=5:总量 6 >= 5,拒绝(per-target
+	// 口径下各自 3<5 会放行,总量口径必须拒绝)。
+	repo := &stubMsgRepo{counts: map[string]int{"u2": 3, "u3": 3}}
+	svc := NewServiceWithDeps(repo, &stubUserReader{
+		found: true,
+		item:  users.UserItem{Relation: &users.Relationship{}},
+		byTarget: map[string]users.UserItem{
+			"u2": {Relation: &users.Relationship{}}, // 陌生人(非互关)
+			"u3": {Relation: &users.Relationship{}}, // 陌生人(非互关)
+		},
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
+	})
+	svc.SetAppConfig(quotaSource{quota: 5})
+	_, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u2", Type: "text", Content: "hi"})
+	if err == nil {
+		t.Fatal("expected stranger quota exceeded when combined stranger volume >= quota")
+	}
+	var blocked *MessageBlockedError
+	if !errors.As(err, &blocked) || blocked.Reason != BlockReasonStrangerQuotaExceeded {
+		t.Fatalf("expected MessageBlockedError{stranger_quota_exceeded}, got %v", err)
+	}
+}
+
+func TestServiceSendStrangerQuotaAllowsUnderTotal(t *testing.T) {
+	// 两个陌生人合计 4 < quota=5,允许发送。
+	repo := &stubMsgRepo{
+		sendResult: MessageSent{MessageID: "pm1"},
+		counts:     map[string]int{"u2": 2, "u3": 2},
+	}
+	svc := NewServiceWithDeps(repo, &stubUserReader{
+		found: true,
+		item:  users.UserItem{Relation: &users.Relationship{}},
+		byTarget: map[string]users.UserItem{
+			"u2": {Relation: &users.Relationship{}},
+			"u3": {Relation: &users.Relationship{}},
+		},
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
+	})
+	svc.SetAppConfig(quotaSource{quota: 5})
+	if _, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u2", Type: "text", Content: "hi"}); err != nil {
+		t.Fatalf("expected send allowed under total quota, got %v", err)
+	}
+}
+
+func TestServiceSendStrangerQuotaIgnoresMutualFollows(t *testing.T) {
+	// 互关用户 u3 已发 100 条不计入陌生人总量;陌生人 u2 4 条 < quota=5,允许。
+	repo := &stubMsgRepo{
+		sendResult: MessageSent{MessageID: "pm1"},
+		counts:     map[string]int{"u2": 4, "u3": 100},
+	}
+	svc := NewServiceWithDeps(repo, &stubUserReader{
+		found: true,
+		item:  users.UserItem{Relation: &users.Relationship{}},
+		byTarget: map[string]users.UserItem{
+			"u2": {Relation: &users.Relationship{}},                                      // 陌生人
+			"u3": {Relation: &users.Relationship{IsFollowing: true, IsFollowedBy: true}}, // 互相关注
+		},
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
+	})
+	svc.SetAppConfig(quotaSource{quota: 5})
+	if _, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u2", Type: "text", Content: "hi"}); err != nil {
+		t.Fatalf("mutual-follow volume must not count toward stranger quota, got %v", err)
+	}
+}
+
+func TestServiceSendStrangerQuotaZeroRejects(t *testing.T) {
+	// quota=0:禁止任何陌生人消息,直接拒绝(不查库)。
+	svc := NewServiceWithDeps(&stubMsgRepo{}, &stubUserReader{
+		found:    true,
+		item:     users.UserItem{Relation: &users.Relationship{}},
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
+	})
+	svc.SetAppConfig(quotaSource{quota: 0})
+	_, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u2", Type: "text", Content: "hi"})
+	if err == nil {
+		t.Fatal("expected rejection when quota is 0")
+	}
+	var blocked *MessageBlockedError
+	if !errors.As(err, &blocked) || blocked.Reason != BlockReasonStrangerQuotaExceeded {
+		t.Fatalf("expected MessageBlockedError{stranger_quota_exceeded}, got %v", err)
 	}
 }
