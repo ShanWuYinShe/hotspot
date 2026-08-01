@@ -20,7 +20,7 @@ type Module struct {
 }
 
 func NewModule(factory *persistence.Factory, source appconfig.Source) *Module {
-	messageRuntime := private_messages.NewRuntime(factory)
+	messageRuntime := private_messages.NewRuntime(factory, source)
 	userService := users.NewServiceWithRepo(users.NewPersistenceRepository(factory))
 	chatService := NewServiceWithDeps(NewPostgresRepository(factory), messageRuntime.ReadService(), userService)
 	return &Module{chatHandler: NewHandler(chatService, source), messageHandler: messageRuntime.Handler(), messageRuntime: messageRuntime}

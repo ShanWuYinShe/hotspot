@@ -43,6 +43,8 @@ type UnreadCountByType struct {
 	Social      int `json:"social"`
 	Interaction int `json:"interaction"`
 	Group       int `json:"group"`
+	Report      int `json:"report"`
+	Nearby      int `json:"nearby"`
 	System      int `json:"system"`
 }
 
@@ -106,7 +108,7 @@ type notificationCursor struct {
 func normalizeNotificationType(value string) string {
 	value = strings.TrimSpace(value)
 	switch value {
-	case "", "new_follower", "mutual_follow", "moment_liked", "moment_commented", "comment_liked", "comment_reply", "mentioned", "reaction_added", "group_invite_received", "group_invite_accepted", "group_application_received", "group_application_accepted", "system_announcement", "nearby_new_moment":
+	case "", "new_follower", "mutual_follow", "moment_commented", "comment_reply", "mentioned", "reaction_added", "group_invite_received", "group_invite_revoked", "group_invite_accepted", "group_application_received", "group_application_cancelled", "group_application_accepted", "group_application_rejected", "report_resolved", "report_dismissed", "system_announcement", "nearby_new_moment":
 		return value
 	default:
 		return ""

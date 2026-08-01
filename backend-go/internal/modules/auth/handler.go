@@ -313,7 +313,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	principal, ok := platformauth.PrincipalFromContext(r.Context())
 	if ok {
 		_ = h.service.auth.RevokeSession(r.Context(), principal.UserID, principal.SessionID, principal.SessionID)
-		realtime.DefaultHub().CloseSession(principal.SessionID, sessionRevokedEvent())
+		realtime.DefaultHub().CloseSession(principal.SessionID, sessionRevokedEvent("revoked_by_user"))
 	}
 	platformauth.ClearAuthCookies(w)
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())

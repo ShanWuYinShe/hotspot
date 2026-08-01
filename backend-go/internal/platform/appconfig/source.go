@@ -214,6 +214,9 @@ func defaultConfig(runtime config.Config) AppConfig {
 			AllowedVideoTypes: []string{"video/mp4", "video/quicktime"},
 		},
 		Defaults: Defaults{
+			// 默认位置与 geo.DefaultFallbackLatitude/DefaultFallbackLongitude
+			// (appConfig 缺失时的 reference_point 回退锚点)保持一致;
+			// appconfig 不依赖 geo 包,故此处保留字面量。
 			DefaultLocation: Location{
 				Point: GeoPoint{
 					Latitude:  35.154922,

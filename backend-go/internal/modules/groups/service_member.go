@@ -39,13 +39,14 @@ func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplic
 
 func (s *Service) RejectApplication(ctx context.Context, req RejectGroupApplicationRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	_, _, err := s.findApplicationForApprover(ctx, principal.UserID, req.ApplicationID)
+	application, group, err := s.findApplicationForApprover(ctx, principal.UserID, req.ApplicationID)
 	if err != nil {
 		return err
 	}
 	if err := s.repo.RejectApplication(ctx, req.ApplicationID, req.Reason); err != nil {
 		return err
 	}
+	s.notifyGroupApplicationRejected(ctx, group, application, principal.UserID, req.Reason)
 	return nil
 }
 
@@ -287,6 +288,15 @@ func (s *Service) findApplicationForApprover(ctx context.Context, approverUserID
 		return GroupApplicationItem{}, GroupItem{}, ErrAccessRestricted
 	}
 	if item.Status != ApplicationStatusPending {
+		return GroupApplicationItem{}, GroupItem{}, ErrAlreadyProcessed
+	}
+	if s.applicationExpired(item) {
+		// 惰性过期检测:申请已超过 TTL,将 pending 置 revoked,推送
+		// GroupApplicationExpired 事件并落库 group_application_cancelled 通知。
+		if err := s.repo.CancelApplication(ctx, applicationID); err != nil {
+			return GroupApplicationItem{}, GroupItem{}, err
+		}
+		s.notifyGroupApplicationExpired(ctx, group, item)
 		return GroupApplicationItem{}, GroupItem{}, ErrAlreadyProcessed
 	}
 	return item, group, nil

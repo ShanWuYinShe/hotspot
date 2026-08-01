@@ -7,6 +7,7 @@ import (
 
 	"hotspot/backend-go/internal/modules/notify"
 	"hotspot/backend-go/internal/platform/actor"
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/observability"
@@ -23,13 +24,24 @@ type Service struct {
 	repo          Repository
 	notifications groupNotificationWriter
 	users         actor.Provider
+	locations     LocationProvider // optional; nil => skip user-location fallback
+	appConfig     appconfig.Source // optional; nil => default TTLs for invite/application expiry
+}
+
+// LocationProvider 提供已登录用户最近一次 update_location 的位置(回退链第 2 级,
+// api_spec_types.md「reference_point 解析规则」)。由 users 模块实现。
+type LocationProvider interface {
+	RecentLocation(ctx context.Context, userID string) (geo.Point, bool)
 }
 
 type groupNotificationWriter interface {
 	AppendGroupInviteReceived(ctx context.Context, targetUserID string, actor map[string]any, groupID string, groupName string, inviteID string, message *string) error
-	AppendGroupInviteAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, user map[string]any) error
+	AppendGroupInviteAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, user map[string]any) (string, error)
 	AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant map[string]any, groupID string, groupName string, applicationID string) error
-	AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) error
+	AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) (string, error)
+	AppendGroupInviteRevoked(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, revokedBy map[string]any, reason *string) (string, error)
+	AppendGroupApplicationCancelled(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, applicant map[string]any, reason *string) (string, error)
+	AppendGroupApplicationRejected(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, rejectedBy map[string]any, reason *string) (string, error)
 }
 
 func NewService() *Service {
@@ -43,6 +55,14 @@ func NewServiceWithRepo(repo Repository) *Service {
 func NewServiceWithDeps(repo Repository, notificationWriter groupNotificationWriter, actorProvider actor.Provider) *Service {
 	return &Service{repo: repo, notifications: notificationWriter, users: actorProvider}
 }
+
+// SetLocationProvider wires the users-module location resolver (fallback level 2
+// of the reference_point chain). Optional: nil skips the user-location level.
+func (s *Service) SetLocationProvider(lp LocationProvider) { s.locations = lp }
+
+// SetAppConfig wires the app config source (used for invite/application expiry
+// TTLs). Optional: nil falls back to default TTLs.
+func (s *Service) SetAppConfig(source appconfig.Source) { s.appConfig = source }
 
 func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem, error) {
 	startedAt := time.Now()
@@ -98,6 +118,9 @@ func redactGroupFields(item *GroupItem) {
 func (s *Service) Search(ctx context.Context, req SearchGroupsRequest) (PaginatedGroups, error) {
 	startedAt := time.Now()
 	observability.L().Info("groups.search started", "keyword", req.Keyword, "tag", req.Tag, "sort_by", req.SortBy)
+	if req.ReferencePoint.Latitude == 0 && req.ReferencePoint.Longitude == 0 {
+		req.ReferencePoint = s.resolveReferencePoint(ctx)
+	}
 	result, err := s.repo.Search(ctx, req)
 	if err != nil {
 		observability.L().Error("groups.search failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -117,6 +140,24 @@ func (s *Service) Search(ctx context.Context, req SearchGroupsRequest) (Paginate
 	}
 	observability.L().Info("groups.search completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return result, nil
+}
+
+// resolveReferencePoint 实现 reference_point 回退链(api_spec_types.md):
+// 1. 请求显式传入(非零值) → 直接使用
+// 2. 已登录用户最近一次 update_location 的位置(匿名或未更新时跳过)
+// 3. ClientConfig.defaults.default_location.point(服务端 appConfig 提供)
+func (s *Service) resolveReferencePoint(ctx context.Context) GeoPoint {
+	if principal, ok := platformauth.PrincipalFromContext(ctx); ok && principal.UserID != "" && s.locations != nil {
+		if pt, found := s.locations.RecentLocation(ctx, principal.UserID); found {
+			return GeoPoint{Latitude: pt.Latitude, Longitude: pt.Longitude}
+		}
+	}
+	lat, lng := geo.DefaultFallbackLatitude, geo.DefaultFallbackLongitude
+	if s.appConfig != nil {
+		defaults := s.appConfig.Get(ctx).Defaults
+		lat, lng = defaults.DefaultLocation.Point.Latitude, defaults.DefaultLocation.Point.Longitude
+	}
+	return GeoPoint{Latitude: lat, Longitude: lng}
 }
 
 func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) error {
@@ -402,7 +443,133 @@ func (s *Service) CancelApplication(ctx context.Context, req CancelApplicationRe
 	if !ok || application.Applicant.UserID != principal.UserID {
 		return ErrApplicationNotFound
 	}
-	return s.repo.CancelApplication(ctx, req.ApplicationID)
+	if err := s.repo.CancelApplication(ctx, req.ApplicationID); err != nil {
+		return err
+	}
+	s.notifyGroupApplicationCancelled(ctx, application)
+	return nil
+}
+
+// notifyGroupApplicationCancelled persists group_application_cancelled
+// notifications and pushes GroupApplicationCancelled events to the group admins.
+func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, application GroupApplicationItem) {
+	group, groupFound, err := s.repo.Get(ctx, application.GroupID)
+	if err != nil || !groupFound {
+		return
+	}
+	applicant := s.resolveUserInfo(ctx, application.Applicant.UserID)
+	now := time.Now().UTC().Format(time.RFC3339)
+	admins, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, nil, 1000, "")
+	if err != nil {
+		return
+	}
+	for _, member := range admins {
+		if member.Role != GroupRoleOwner && member.Role != GroupRoleAdmin {
+			continue
+		}
+		notificationID := ""
+		if s.notifications != nil {
+			id, err := s.notifications.AppendGroupApplicationCancelled(ctx, member.User.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID, applicant, nil)
+			if err != nil {
+				observability.L().Error("groups.notify_group_application_cancelled append failed", "error", err, "application_id", application.ApplicationID)
+			} else {
+				notificationID = id
+			}
+		}
+		realtime.DefaultHub().BroadcastToUser(member.User.UserID, realtime.Event{
+			Type: realtime.EventTypeGroupApplicationCancelled,
+			Payload: map[string]any{
+				"notification_id": notificationID,
+				"application_id":  application.ApplicationID,
+				"group_id":        group.Group.GroupID,
+				"applicant":       applicant,
+				"cancelled_at":    now,
+			},
+		})
+	}
+}
+
+// notifyGroupApplicationExpired persists group_application_cancelled
+// notifications (applicant present, no reason) and pushes
+// GroupApplicationExpired events to the group admins.
+func (s *Service) notifyGroupApplicationExpired(ctx context.Context, group GroupItem, application GroupApplicationItem) {
+	applicant := s.resolveUserInfo(ctx, application.Applicant.UserID)
+	now := time.Now().UTC().Format(time.RFC3339)
+	admins, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, nil, 1000, "")
+	if err != nil {
+		return
+	}
+	for _, member := range admins {
+		if member.Role != GroupRoleOwner && member.Role != GroupRoleAdmin {
+			continue
+		}
+		notificationID := ""
+		if s.notifications != nil {
+			id, err := s.notifications.AppendGroupApplicationCancelled(ctx, member.User.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID, applicant, nil)
+			if err != nil {
+				observability.L().Error("groups.notify_group_application_expired append failed", "error", err, "application_id", application.ApplicationID)
+			} else {
+				notificationID = id
+			}
+		}
+		realtime.DefaultHub().BroadcastToUser(member.User.UserID, realtime.Event{
+			Type: realtime.EventTypeGroupApplicationExpired,
+			Payload: map[string]any{
+				"notification_id": notificationID,
+				"application_id":  application.ApplicationID,
+				"group_id":        group.Group.GroupID,
+				"applicant":       applicant,
+				"expired_at":      now,
+			},
+		})
+	}
+}
+
+// notifyGroupApplicationRejected persists a group_application_rejected
+// notification and pushes GroupApplicationRejected to the applicant.
+func (s *Service) notifyGroupApplicationRejected(ctx context.Context, group GroupItem, application GroupApplicationItem, rejectedByUserID string, reason *string) {
+	rejectedBy := s.resolveUserInfo(ctx, rejectedByUserID)
+	notificationID := ""
+	if s.notifications != nil {
+		id, err := s.notifications.AppendGroupApplicationRejected(ctx, application.Applicant.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID, rejectedBy, reason)
+		if err != nil {
+			observability.L().Error("groups.notify_group_application_rejected append failed", "error", err, "application_id", application.ApplicationID)
+		} else {
+			notificationID = id
+		}
+	}
+	payload := map[string]any{
+		"notification_id": notificationID,
+		"application_id":  application.ApplicationID,
+		"group": map[string]any{
+			"group_id":      group.Group.GroupID,
+			"name":          group.Group.Name,
+			"avatar_url":    group.Group.AvatarURL,
+			"members_count": group.Group.MembersCount,
+		},
+		"rejected_by": rejectedBy,
+		"rejected_at": time.Now().UTC().Format(time.RFC3339),
+	}
+	if reason != nil && *reason != "" {
+		payload["reason"] = *reason
+	}
+	realtime.DefaultHub().BroadcastToUser(application.Applicant.UserID, realtime.Event{Type: realtime.EventTypeGroupApplicationRejected, Payload: payload})
+}
+
+// applicationExpired reports whether a pending application is past its TTL
+// (AppConfig.limits.group_application_ttl_hours, default 72h).
+func (s *Service) applicationExpired(item GroupApplicationItem) bool {
+	ttl := 72 * time.Hour
+	if s.appConfig != nil {
+		if ttlHours := s.appConfig.Get(context.Background()).Limits.GroupApplicationTTLHours; ttlHours > 0 {
+			ttl = time.Duration(ttlHours) * time.Hour
+		}
+	}
+	createdAt, err := time.Parse(time.RFC3339, item.CreatedAt)
+	if err != nil {
+		return false
+	}
+	return time.Now().UTC().After(createdAt.Add(ttl))
 }
 
 func groupUserInfo(user UserInfo) map[string]any {
@@ -451,10 +618,16 @@ func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem
 
 func (s *Service) notifyGroupInviteAccepted(ctx context.Context, invite GroupInviteItem, userID string) {
 	user := s.resolveUserInfo(ctx, userID)
+	notificationID := ""
 	if s.notifications != nil {
-		_ = s.notifications.AppendGroupInviteAccepted(ctx, invite.Inviter.UserID, invite.Group.GroupID, invite.Group.Name, invite.InviteID, user)
+		id, err := s.notifications.AppendGroupInviteAccepted(ctx, invite.Inviter.UserID, invite.Group.GroupID, invite.Group.Name, invite.InviteID, user)
+		if err != nil {
+			observability.L().Error("groups.notify_group_invite_accepted append failed", "error", err, "invite_id", invite.InviteID)
+		} else {
+			notificationID = id
+		}
 	}
-	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteResponse, Payload: map[string]any{"invite_id": invite.InviteID, "group_id": invite.Group.GroupID, "user": user, "status": "accepted", "responded_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteResponse, Payload: map[string]any{"notification_id": notificationID, "invite_id": invite.InviteID, "group_id": invite.Group.GroupID, "user": user, "responded_at": time.Now().UTC().Format(time.RFC3339)}})
 }
 
 func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group GroupItem, applicantUserID string, application *struct {
@@ -484,8 +657,14 @@ func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group Grou
 }
 
 func (s *Service) notifyGroupApplicationAccepted(ctx context.Context, group GroupItem, application GroupApplicationItem) {
+	notificationID := ""
 	if s.notifications != nil {
-		_ = s.notifications.AppendGroupApplicationAccepted(ctx, application.Applicant.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID)
+		id, err := s.notifications.AppendGroupApplicationAccepted(ctx, application.Applicant.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID)
+		if err != nil {
+			observability.L().Error("groups.notify_group_application_accepted append failed", "error", err, "application_id", application.ApplicationID)
+		} else {
+			notificationID = id
+		}
 	}
-	realtime.DefaultHub().BroadcastToUser(application.Applicant.UserID, realtime.Event{Type: realtime.EventTypeGroupApplicationResponse, Payload: map[string]any{"application_id": application.ApplicationID, "group": map[string]any{"group_id": group.Group.GroupID, "name": group.Group.Name, "avatar_url": group.Group.AvatarURL, "members_count": group.Group.MembersCount}, "status": "accepted", "responded_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToUser(application.Applicant.UserID, realtime.Event{Type: realtime.EventTypeGroupApplicationResponse, Payload: map[string]any{"notification_id": notificationID, "application_id": application.ApplicationID, "group": map[string]any{"group_id": group.Group.GroupID, "name": group.Group.Name, "avatar_url": group.Group.AvatarURL, "members_count": group.Group.MembersCount}, "responded_at": time.Now().UTC().Format(time.RFC3339)}})
 }

@@ -259,7 +259,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 	}
 	for _, session := range s.auth.ListSessions(ctx, account.UserID, "") {
 		if session.DeviceID == meta.DeviceID && meta.DeviceID != "" {
-			realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent())
+			realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent("device_evicted"))
 		}
 	}
 	if _, err := s.auth.RevokeByUserDevice(ctx, account.UserID, meta.DeviceID); err != nil {
@@ -295,7 +295,7 @@ func (s *Service) Guest(ctx context.Context, req GuestRequest, meta platformauth
 	}
 	for _, session := range s.auth.ListSessions(ctx, account.UserID, "") {
 		if session.DeviceID == meta.DeviceID && meta.DeviceID != "" {
-			realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent())
+			realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent("device_evicted"))
 		}
 	}
 	if _, err := s.auth.RevokeByUserDevice(ctx, account.UserID, meta.DeviceID); err != nil {
@@ -387,7 +387,7 @@ func (s *Service) RevokeSession(ctx context.Context, req RevokeSessionRequest) e
 		)
 		return fmt.Errorf("auth.Service.RevokeSession: %w", err)
 	}
-	realtime.DefaultHub().CloseSession(req.SessionID, sessionRevokedEvent())
+	realtime.DefaultHub().CloseSession(req.SessionID, sessionRevokedEvent("revoked_by_user"))
 	return nil
 }
 
@@ -427,7 +427,7 @@ func (s *Service) ResetPassword(ctx context.Context, req ResetPasswordRequest, m
 		)
 		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.ResetPassword: repo: %w", err)
 	}
-	s.closeAllSessions(ctx, account.UserID)
+	s.closeAllSessions(ctx, account.UserID, "password_changed")
 	s.auth.RevokeOtherSessions(ctx, account.UserID, "")
 	result, err := s.auth.IssueSessionWithMeta(ctx, account.UserID, meta)
 	if err != nil {
@@ -449,7 +449,7 @@ func (s *Service) ChangePassword(ctx context.Context, req ChangePasswordRequest)
 	if err := s.repo.ChangePassword(ctx, principal.UserID, req.OldPassword, req.NewPassword); err != nil {
 		return fmt.Errorf("auth.Service.ChangePassword: repo: %w", err)
 	}
-	s.closeOtherSessions(ctx, principal.UserID, principal.SessionID)
+	s.closeOtherSessions(ctx, principal.UserID, principal.SessionID, "password_changed")
 	s.auth.RevokeOtherSessions(ctx, principal.UserID, principal.SessionID)
 	return nil
 }
@@ -459,7 +459,7 @@ func (s *Service) RevokeAll(ctx context.Context) RevokeAllResult {
 	if !ok {
 		return RevokeAllResult{}
 	}
-	s.closeOtherSessions(ctx, principal.UserID, principal.SessionID)
+	s.closeOtherSessions(ctx, principal.UserID, principal.SessionID, "revoked_by_user")
 	return RevokeAllResult{RevokedCount: s.auth.RevokeOtherSessions(ctx, principal.UserID, principal.SessionID)}
 }
 
@@ -475,25 +475,34 @@ func (s *Service) profileDefaults(ctx context.Context) ProfileDefaults {
 	}
 }
 
-func (s *Service) closeAllSessions(ctx context.Context, userID string) {
+func (s *Service) closeAllSessions(ctx context.Context, userID, reason string) {
 	sessions := s.auth.ListSessions(ctx, userID, "")
 	for _, session := range sessions {
-		realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent())
+		realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent(reason))
 	}
 }
 
-func (s *Service) closeOtherSessions(ctx context.Context, userID, currentSessionID string) {
+func (s *Service) closeOtherSessions(ctx context.Context, userID, currentSessionID, reason string) {
 	sessions := s.auth.ListSessions(ctx, userID, currentSessionID)
 	for _, session := range sessions {
 		if session.SessionID == currentSessionID {
 			continue
 		}
-		realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent())
+		realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent(reason))
 	}
 }
 
-func sessionRevokedEvent() realtime.Event {
-	return realtime.Event{Type: realtime.EventTypeError, Payload: realtime.ErrorPayload{Code: 20000, Message: "会话已失效", Severity: "fatal", Retryable: false}}
+// sessionRevokedEvent builds the SessionRevoked event (spec api_spec_websocket.md)
+// sent before the connection is closed. reason is one of device_evicted /
+// revoked_by_user / password_changed.
+func sessionRevokedEvent(reason string) realtime.Event {
+	return realtime.Event{
+		Type: realtime.EventTypeSessionRevoked,
+		Payload: realtime.SessionRevokedPayload{
+			Reason:    reason,
+			RevokedAt: time.Now().UTC().Format(time.RFC3339),
+		},
+	}
 }
 
 func maskIPAddress(raw string) string {

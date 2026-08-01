@@ -89,6 +89,10 @@ func (r *PostgresRepository) UnreadCount(ctx context.Context, userID string) (Un
 			result.ByType.Interaction += count
 		case "group":
 			result.ByType.Group += count
+		case "report":
+			result.ByType.Report += count
+		case "nearby":
+			result.ByType.Nearby += count
 		case "system":
 			result.ByType.System += count
 		}

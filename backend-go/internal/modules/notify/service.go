@@ -127,29 +127,130 @@ func (s *Service) AppendGroupInviteReceived(ctx context.Context, targetUserID st
 	return s.repo.Append(ctx, targetUserID, NotifyItem{Type: "group_invite_received", IsRead: false, Payload: payload})
 }
 
-func (s *Service) AppendGroupInviteAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, user map[string]any) error {
-	return s.repo.Append(ctx, targetUserID, NotifyItem{Type: "group_invite_accepted", IsRead: false, Payload: map[string]any{"type": "group_invite_accepted", "group_id": groupID, "group_name": groupName, "invite_id": inviteID, "user": user}})
+// AppendGroupInviteAccepted records a group_invite_accepted notification and
+// returns the generated notification_id (embedded as the first field of the
+// pushed GroupInviteResponse payload, spec api_spec_websocket.md).
+func (s *Service) AppendGroupInviteAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, user map[string]any) (string, error) {
+	id := newNotificationID()
+	err := s.repo.Append(ctx, targetUserID, NotifyItem{
+		NotificationID: id,
+		Type:           "group_invite_accepted",
+		IsRead:         false,
+		Payload:        map[string]any{"type": "group_invite_accepted", "group_id": groupID, "group_name": groupName, "invite_id": inviteID, "user": user},
+	})
+	return id, err
 }
 
 func (s *Service) AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant map[string]any, groupID string, groupName string, applicationID string) error {
 	return s.repo.Append(ctx, targetUserID, NotifyItem{Type: "group_application_received", IsRead: false, Payload: map[string]any{"type": "group_application_received", "applicant": applicant, "group_id": groupID, "group_name": groupName, "application_id": applicationID}})
 }
 
-func (s *Service) AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) error {
-	return s.repo.Append(ctx, targetUserID, NotifyItem{Type: "group_application_accepted", IsRead: false, Payload: map[string]any{"type": "group_application_accepted", "group_id": groupID, "group_name": groupName, "application_id": applicationID}})
+// AppendGroupApplicationAccepted records a group_application_accepted
+// notification and returns the generated notification_id (embedded as the
+// first field of the pushed GroupApplicationResponse payload, spec
+// api_spec_websocket.md).
+func (s *Service) AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) (string, error) {
+	id := newNotificationID()
+	err := s.repo.Append(ctx, targetUserID, NotifyItem{
+		NotificationID: id,
+		Type:           "group_application_accepted",
+		IsRead:         false,
+		Payload:        map[string]any{"type": "group_application_accepted", "group_id": groupID, "group_name": groupName, "application_id": applicationID},
+	})
+	return id, err
 }
 
-func (s *Service) AppendMomentLiked(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any) error {
-	return s.repo.Append(ctx, targetUserID, NotifyItem{
-		Type:   "moment_liked",
-		IsRead: false,
-		Payload: map[string]any{
-			"type":           "moment_liked",
-			"actor":          actor,
-			"moment_id":      momentID,
-			"moment_summary": momentSummary,
-		},
-	})
+// AppendGroupInviteRevoked records a group_invite_revoked notification
+// (invite revoked by the inviter, or expired automatically). Returns the
+// generated notification_id for the realtime payload.
+func (s *Service) AppendGroupInviteRevoked(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, revokedBy map[string]any, reason *string) (string, error) {
+	payload := map[string]any{
+		"type":       "group_invite_revoked",
+		"group_id":   groupID,
+		"group_name": groupName,
+		"invite_id":  inviteID,
+	}
+	if revokedBy != nil {
+		payload["revoked_by"] = revokedBy
+	}
+	if reason != nil && *reason != "" {
+		payload["reason"] = *reason
+	}
+	id := newNotificationID()
+	err := s.repo.Append(ctx, targetUserID, NotifyItem{NotificationID: id, Type: "group_invite_revoked", IsRead: false, Payload: payload})
+	return id, err
+}
+
+// AppendGroupApplicationCancelled records a group_application_cancelled
+// notification (application cancelled by the applicant, or expired
+// automatically). Returns the generated notification_id for the realtime payload.
+func (s *Service) AppendGroupApplicationCancelled(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, applicant map[string]any, reason *string) (string, error) {
+	payload := map[string]any{
+		"type":           "group_application_cancelled",
+		"group_id":       groupID,
+		"group_name":     groupName,
+		"application_id": applicationID,
+		"applicant":      applicant,
+	}
+	if reason != nil && *reason != "" {
+		payload["reason"] = *reason
+	}
+	id := newNotificationID()
+	err := s.repo.Append(ctx, targetUserID, NotifyItem{NotificationID: id, Type: "group_application_cancelled", IsRead: false, Payload: payload})
+	return id, err
+}
+
+// AppendGroupApplicationRejected records a group_application_rejected
+// notification. Returns the generated notification_id for the realtime payload.
+func (s *Service) AppendGroupApplicationRejected(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, rejectedBy map[string]any, reason *string) (string, error) {
+	payload := map[string]any{
+		"type":           "group_application_rejected",
+		"group_id":       groupID,
+		"group_name":     groupName,
+		"application_id": applicationID,
+		"rejected_by":    rejectedBy,
+	}
+	if reason != nil && *reason != "" {
+		payload["reason"] = *reason
+	}
+	id := newNotificationID()
+	err := s.repo.Append(ctx, targetUserID, NotifyItem{NotificationID: id, Type: "group_application_rejected", IsRead: false, Payload: payload})
+	return id, err
+}
+
+// AppendReportResolved records a report_resolved notification (admin handled
+// the report). Returns the generated notification_id for the realtime payload.
+func (s *Service) AppendReportResolved(ctx context.Context, targetUserID string, reportID string, targetType string, targetID string, note string) (string, error) {
+	payload := map[string]any{
+		"type":        "report_resolved",
+		"report_id":   reportID,
+		"target_type": targetType,
+		"target_id":   targetID,
+	}
+	if note != "" {
+		payload["note"] = note
+	}
+	id := newNotificationID()
+	err := s.repo.Append(ctx, targetUserID, NotifyItem{NotificationID: id, Type: "report_resolved", IsRead: false, Payload: payload})
+	return id, err
+}
+
+// AppendReportDismissed records a report_dismissed notification (admin
+// dismissed the report). Returns the generated notification_id for the
+// realtime payload.
+func (s *Service) AppendReportDismissed(ctx context.Context, targetUserID string, reportID string, targetType string, targetID string, note string) (string, error) {
+	payload := map[string]any{
+		"type":        "report_dismissed",
+		"report_id":   reportID,
+		"target_type": targetType,
+		"target_id":   targetID,
+	}
+	if note != "" {
+		payload["note"] = note
+	}
+	id := newNotificationID()
+	err := s.repo.Append(ctx, targetUserID, NotifyItem{NotificationID: id, Type: "report_dismissed", IsRead: false, Payload: payload})
+	return id, err
 }
 
 func (s *Service) AppendMomentCommented(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error {
@@ -167,28 +268,17 @@ func (s *Service) AppendMomentCommented(ctx context.Context, targetUserID string
 	})
 }
 
-func (s *Service) AppendCommentLiked(ctx context.Context, targetUserID string, actor map[string]any, commentID string, commentPreview string, momentID string, momentSummary map[string]any) error {
-	return s.repo.Append(ctx, targetUserID, NotifyItem{
-		Type:   "comment_liked",
-		IsRead: false,
-		Payload: map[string]any{
-			"type":            "comment_liked",
-			"actor":           actor,
-			"comment_id":      commentID,
-			"comment_preview": commentPreview,
-			"moment_id":       momentID,
-			"moment_summary":  momentSummary,
-		},
-	})
-}
-
 // AppendReactionAdded records a generic reaction_added notification. Used for
-// message-target reactions (moment/comment reactions take the more specific
-// moment_liked / comment_liked paths). Spec api_spec_types.md NotifyType.
-func (s *Service) AppendReactionAdded(ctx context.Context, targetUserID string, actor map[string]any, targetType string, targetID string, emoji string) error {
-	return s.repo.Append(ctx, targetUserID, NotifyItem{
-		Type:   "reaction_added",
-		IsRead: false,
+// all three target kinds (moment/comment/message) — the legacy moment_liked /
+// comment_liked types were removed from the contract (spec api_spec_types.md
+// NotifyType). Returns the generated notification_id so callers can embed it
+// in the realtime ReactionAdded payload.
+func (s *Service) AppendReactionAdded(ctx context.Context, targetUserID string, actor map[string]any, targetType string, targetID string, emoji string) (string, error) {
+	id := newNotificationID()
+	err := s.repo.Append(ctx, targetUserID, NotifyItem{
+		NotificationID: id,
+		Type:           "reaction_added",
+		IsRead:         false,
 		Payload: map[string]any{
 			"type":        "reaction_added",
 			"actor":       actor,
@@ -197,6 +287,7 @@ func (s *Service) AppendReactionAdded(ctx context.Context, targetUserID string, 
 			"emoji":       emoji,
 		},
 	})
+	return id, err
 }
 
 func (s *Service) AppendCommentReply(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, parentCommentID string, parentPreview string, replyID string, replyPreview string) error {

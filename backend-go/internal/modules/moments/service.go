@@ -10,6 +10,7 @@ import (
 	"hotspot/backend-go/internal/platform/actor"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -24,6 +25,13 @@ type Service struct {
 	appConfig     appconfig.Source
 	runInTx       persistence.TxRunner
 	reactions     ReactionAggregator // optional; nil => reactions[] not filled
+	locations     LocationProvider   // optional; nil => skip user-location fallback
+}
+
+// LocationProvider 提供已登录用户最近一次 update_location 的位置(回退链第 2 级,
+// api_spec_types.md「reference_point 解析规则」)。由 users 模块实现。
+type LocationProvider interface {
+	RecentLocation(ctx context.Context, userID string) (geo.Point, bool)
 }
 
 // ReactionAggregator computes per-emoji reaction aggregates for moments.
@@ -161,7 +169,14 @@ func (s *Service) IncrementSharesCount(ctx context.Context, momentID string) err
 	return s.repo.IncrementSharesCount(ctx, momentID)
 }
 
+// SetLocationProvider wires the users-module location resolver (fallback level 2
+// of the reference_point chain). Optional: nil skips the user-location level.
+func (s *Service) SetLocationProvider(lp LocationProvider) { s.locations = lp }
+
 func (s *Service) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
+	if req.ReferencePoint.Latitude == 0 && req.ReferencePoint.Longitude == 0 {
+		req.ReferencePoint = s.resolveReferencePoint(ctx)
+	}
 	result, err := s.repo.Search(ctx, req)
 	if err != nil {
 		return result, err
@@ -364,6 +379,24 @@ func viewerUserID(ctx context.Context) string {
 		return ""
 	}
 	return principal.UserID
+}
+
+// resolveReferencePoint 实现 reference_point 回退链(api_spec_types.md):
+// 1. 请求显式传入(非零值) → 直接使用
+// 2. 已登录用户最近一次 update_location 的位置(匿名或未更新时跳过)
+// 3. ClientConfig.defaults.default_location.point(服务端 appConfig 提供)
+func (s *Service) resolveReferencePoint(ctx context.Context) GeoPoint {
+	if principal, ok := platformauth.PrincipalFromContext(ctx); ok && principal.UserID != "" && s.locations != nil {
+		if pt, found := s.locations.RecentLocation(ctx, principal.UserID); found {
+			return GeoPoint{Latitude: pt.Latitude, Longitude: pt.Longitude}
+		}
+	}
+	lat, lng := geo.DefaultFallbackLatitude, geo.DefaultFallbackLongitude
+	if s.appConfig != nil {
+		defaults := s.appConfig.Get(ctx).Defaults
+		lat, lng = defaults.DefaultLocation.Point.Latitude, defaults.DefaultLocation.Point.Longitude
+	}
+	return GeoPoint{Latitude: lat, Longitude: lng}
 }
 
 func (s *Service) buildMomentActor(ctx context.Context, userID string) (map[string]any, error) {

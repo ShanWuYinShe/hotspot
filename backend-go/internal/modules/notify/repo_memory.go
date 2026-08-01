@@ -130,12 +130,16 @@ func (r *InMemoryRepository) MarkAllReadByType(_ context.Context, userID string,
 
 func bucket(notificationType string) string {
 	switch notificationType {
-	case "new_follower", "mutual_follow", "nearby_new_moment":
+	case "new_follower", "mutual_follow":
 		return "social"
-	case "moment_liked", "moment_commented", "comment_liked", "comment_reply", "mentioned", "reaction_added":
+	case "moment_commented", "comment_reply", "mentioned", "reaction_added":
 		return "interaction"
-	case "group_invite_received", "group_invite_accepted", "group_application_received", "group_application_accepted":
+	case "group_invite_received", "group_invite_revoked", "group_invite_accepted", "group_application_received", "group_application_cancelled", "group_application_accepted", "group_application_rejected":
 		return "group"
+	case "report_resolved", "report_dismissed":
+		return "report"
+	case "nearby_new_moment":
+		return "nearby"
 	default:
 		return "system"
 	}

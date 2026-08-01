@@ -6,6 +6,7 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/slicex"
 )
@@ -15,6 +16,14 @@ type Service struct {
 	appConfig appconfig.Source
 	images    ImageResolver
 	reactions ReactionAggregator
+	locations LocationProvider
+}
+
+// LocationProvider 提供已登录用户最近一次 update_location 的位置(回退链第 2 级,
+// api_spec_types.md「reference_point 解析规则」)。由 users 模块实现,模块间通过
+// Service 接口解耦,不直接依赖 users repo。
+type LocationProvider interface {
+	RecentLocation(ctx context.Context, userID string) (geo.Point, bool)
 }
 
 type ReactionAggregator interface {
@@ -42,6 +51,10 @@ func NewServiceWithSourceAndImages(repo Repository, source appconfig.Source, ima
 	}
 	return &Service{repo: repo, appConfig: source, images: images}
 }
+
+// SetLocationProvider wires the users-module location resolver (fallback level 2
+// of the reference_point chain). Optional: nil skips the user-location level.
+func (s *Service) SetLocationProvider(lp LocationProvider) { s.locations = lp }
 
 func (s *Service) Following(ctx context.Context, req GetFeedFollowingRequest) (PaginatedMoments, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
@@ -71,12 +84,13 @@ func (s *Service) Nearby(ctx context.Context, req GetFeedNearbyRequest) (Paginat
 	if !ok || principal.UserID == "" {
 		return PaginatedMoments{}, ErrInvalidFeedRequest
 	}
-	if req.ReferencePoint == nil || !isValidGeoPoint(*req.ReferencePoint) {
+	refPt := s.resolveReferencePoint(ctx, req.ReferencePoint)
+	if refPt == nil {
 		return PaginatedMoments{}, ErrInvalidFeedRequest
 	}
 	query := momentsQuery{
 		ViewerUserID:   principal.UserID,
-		ReferencePoint: *req.ReferencePoint,
+		ReferencePoint: *refPt,
 		Radius:         s.normalizeRadius(ctx, req.Radius),
 		Limit:          normalizeFeedLimit(req.Pagination),
 		Cursor:         paginationCursor(req.Pagination),
@@ -249,6 +263,11 @@ func isValidGeoPoint(point GeoPoint) bool {
 	return point.Latitude >= -90 && point.Latitude <= 90 && point.Longitude >= -180 && point.Longitude <= 180
 }
 
+// resolveReferencePoint 实现 reference_point 回退链(api_spec_types.md):
+// 1. 请求显式传入(合法) → 直接使用
+// 2. 已登录用户最近一次 update_location 的位置(匿名或未更新时跳过)
+// 3. ClientConfig.defaults.default_location.point(服务端 appConfig 提供)
+// 仅当显式传入的坐标非法时返回 nil。
 func (s *Service) resolveReferencePoint(ctx context.Context, ref *GeoPoint) *GeoPoint {
 	if ref != nil && !isValidGeoPoint(*ref) {
 		return nil
@@ -256,12 +275,17 @@ func (s *Service) resolveReferencePoint(ctx context.Context, ref *GeoPoint) *Geo
 	if ref != nil {
 		return ref
 	}
-	if s.appConfig == nil {
-		return nil
+	// 回退 2:已登录用户的最近位置
+	if principal, ok := platformauth.PrincipalFromContext(ctx); ok && principal.UserID != "" && s.locations != nil {
+		if pt, found := s.locations.RecentLocation(ctx, principal.UserID); found {
+			return &GeoPoint{Latitude: pt.Latitude, Longitude: pt.Longitude}
+		}
 	}
-	def := s.appConfig.Get(ctx).Defaults.DefaultLocation
-	if def.Point.Latitude != 0 || def.Point.Longitude != 0 {
-		return &GeoPoint{Latitude: def.Point.Latitude, Longitude: def.Point.Longitude}
+	// 回退 3:default_location
+	lat, lng := geo.DefaultFallbackLatitude, geo.DefaultFallbackLongitude
+	if s.appConfig != nil {
+		def := s.appConfig.Get(ctx).Defaults.DefaultLocation
+		lat, lng = def.Point.Latitude, def.Point.Longitude
 	}
-	return nil
+	return &GeoPoint{Latitude: lat, Longitude: lng}
 }

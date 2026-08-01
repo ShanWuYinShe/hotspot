@@ -155,11 +155,11 @@ type ListFollowersRequest struct {
 }
 
 type FollowerItem struct {
-	User            UserInfo            `json:"user"`
-	FollowedAt      string              `json:"followed_at"`
-	IsFollowingBack bool                `json:"is_following_back"`
-	PresenceStatus  *UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline      *string             `json:"last_online,omitempty"`
+	User           UserInfo            `json:"user"`
+	FollowedAt     string              `json:"followed_at"`
+	IsMutual       bool                `json:"is_mutual"`
+	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
+	LastOnline     *string             `json:"last_online,omitempty"`
 }
 
 type PaginatedFollowers struct {

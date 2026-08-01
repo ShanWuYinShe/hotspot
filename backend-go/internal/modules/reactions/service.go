@@ -35,8 +35,8 @@ func NewServiceWithRepo(repo Repository) *Service {
 
 // NewServiceWithDeps is the full dependency-injecting constructor.
 //   - providers maps each supported target kind to its resolver; may be nil.
-//   - notificationWriter receives AppendMomentLiked/AppendCommentLiked/
-//     AppendReactionAdded calls; nil disables notifications.
+//   - notificationWriter receives AppendReactionAdded calls; nil disables
+//     notifications.
 //   - actorProvider resolves nickname/avatar for the reacting user.
 func NewServiceWithDeps(repo Repository, providers []TargetProvider, notificationWriter reactionNotificationWriter, actorProvider actor.Provider) *Service {
 	byKind := make(map[ReactTarget]TargetProvider, len(providers))
@@ -105,6 +105,7 @@ func (s *Service) unreact(ctx context.Context, req SetReactionRequest) error {
 			"target_id":   req.TargetID,
 			"emoji":       req.Emoji,
 			"actor":       s.buildActor(ctx, principal.UserID),
+			"removed_at":  time.Now().UTC().Format(time.RFC3339),
 		},
 	})
 	return nil
@@ -179,61 +180,52 @@ func (s *Service) resolveTarget(ctx context.Context, kind ReactTarget, targetID 
 	return provider.Resolve(ctx, targetID)
 }
 
-// notifyOwner dispatches the per-target-kind notification + realtime event
-// after a reaction is added. Per spec api_spec_types.md NotifyType, the
-// notification kind follows the target: moment→moment_liked,
-// comment→comment_liked, message→reaction_added. We never notify the author
-// about their own reaction (self short-circuit).
+// notifyOwner dispatches the realtime ReactionAdded event + reaction_added
+// notification after a reaction is added. Per spec api_spec_types.md NotifyType
+// and api_spec_websocket.md ReactionAddedPayload, ALL target kinds
+// (moment/comment/message) use the unified reaction_added notification (the
+// legacy moment_liked/comment_liked types were removed from the contract), and
+// the realtime payload carries notification_id when the reactor is not the
+// target author (self-reactions are not notified).
 func (s *Service) notifyOwner(ctx context.Context, req SetReactionRequest, actorUserID string, owner TargetContext, added bool) {
 	actor := s.buildActor(ctx, actorUserID)
 	reactedAt := time.Now().UTC().Format(time.RFC3339)
 	ownerID := strings.TrimSpace(owner.OwnerUserID)
 	// Realtime broadcast goes to the target owner only (their client updates the
 	// reactions badge / list); subscribers to the resource read the aggregate
-	// via their own list calls.
-	if ownerID != "" && ownerID != actorUserID {
-		eventPayload := map[string]any{
-			"target_type": string(req.TargetType),
-			"target_id":   req.TargetID,
-			"emoji":       req.Emoji,
-			"actor":       actor,
-			"reacted_at":  reactedAt,
-		}
-		// Merge target-specific summary fields if present (e.g. moment_summary).
-		for k, v := range owner.Summary {
-			eventPayload[k] = v
-		}
-		realtime.DefaultHub().BroadcastToUser(ownerID, realtime.Event{
-			Type:    EventTypeReactionAdded,
-			Payload: eventPayload,
-		})
-	}
-	if s.notifications == nil || ownerID == "" || ownerID == actorUserID {
+	// via their own list calls. Self-reactions skip both notification and event.
+	if ownerID == "" || ownerID == actorUserID {
 		return
 	}
-	switch req.TargetType {
-	case ReactTargetMoment:
-		momentID := req.TargetID
-		momentSummary := owner.Summary
-		if momentSummary == nil {
-			momentSummary = map[string]any{"moment_id": momentID}
-		}
-		if err := s.notifications.AppendMomentLiked(ctx, ownerID, actor, momentID, momentSummary); err != nil {
-			observability.L().Error("reactions.notify AppendMomentLiked failed", "error", err, "moment_id", momentID)
-		}
-	case ReactTargetComment:
-		commentID := req.TargetID
-		momentID, _ := owner.Summary["moment_id"].(string)
-		preview, _ := owner.Summary["comment_preview"].(string)
-		if err := s.notifications.AppendCommentLiked(ctx, ownerID, actor, commentID, preview, momentID, owner.Summary); err != nil {
-			observability.L().Error("reactions.notify AppendCommentLiked failed", "error", err, "comment_id", commentID)
-		}
-	default:
-		// message (and any future kind): generic reaction_added notification.
-		if err := s.notifications.AppendReactionAdded(ctx, ownerID, actor, string(req.TargetType), req.TargetID, req.Emoji); err != nil {
+	// Persist the notification first so the event payload can carry the
+	// notification_id the client needs to deep-link.
+	notificationID := ""
+	if s.notifications != nil {
+		id, err := s.notifications.AppendReactionAdded(ctx, ownerID, actor, string(req.TargetType), req.TargetID, req.Emoji)
+		if err != nil {
 			observability.L().Error("reactions.notify AppendReactionAdded failed", "error", err, "target_type", req.TargetType, "target_id", req.TargetID)
+		} else {
+			notificationID = id
 		}
 	}
+	eventPayload := map[string]any{
+		"target_type": string(req.TargetType),
+		"target_id":   req.TargetID,
+		"emoji":       req.Emoji,
+		"actor":       actor,
+		"reacted_at":  reactedAt,
+	}
+	if notificationID != "" {
+		eventPayload["notification_id"] = notificationID
+	}
+	// Merge target-specific summary fields if present (e.g. moment_summary).
+	for k, v := range owner.Summary {
+		eventPayload[k] = v
+	}
+	realtime.DefaultHub().BroadcastToUser(ownerID, realtime.Event{
+		Type:    EventTypeReactionAdded,
+		Payload: eventPayload,
+	})
 }
 
 func (s *Service) buildActor(ctx context.Context, userID string) map[string]any {

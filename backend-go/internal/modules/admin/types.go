@@ -333,8 +333,8 @@ type GroupSettings struct {
 
 type ContentDefaults struct {
 	DefaultLocation      Location      `json:"default_location"`
-	DefaultGroupAvatar   string        `json:"default_group_avatar"`
-	DefaultUserAvatar    string        `json:"default_user_avatar"`
+	DefaultGroupAvatar   string        `json:"default_group_avatar_url"`
+	DefaultUserAvatar    string        `json:"default_user_avatar_url"`
 	DefaultGroupSettings GroupSettings `json:"default_group_settings"`
 }
 
@@ -391,8 +391,8 @@ type UpdateAppConfigRequest struct {
 
 type UpdateDefaultsPayload struct {
 	DefaultLocation      *PartialLocation      `json:"default_location,omitempty"`
-	DefaultGroupAvatar   *string               `json:"default_group_avatar,omitempty"`
-	DefaultUserAvatar    *string               `json:"default_user_avatar,omitempty"`
+	DefaultGroupAvatar   *string               `json:"default_group_avatar_url,omitempty"`
+	DefaultUserAvatar    *string               `json:"default_user_avatar_url,omitempty"`
 	DefaultGroupSettings *PartialGroupSettings `json:"default_group_settings,omitempty"`
 }
 

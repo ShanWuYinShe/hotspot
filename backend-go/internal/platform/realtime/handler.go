@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"hotspot/backend-go/internal/platform/actor"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/ratelimit"
@@ -17,6 +18,13 @@ import (
 
 type userPresenceAuthorizer interface {
 	OpenTheDoor(context.Context, string) (string, bool, error)
+}
+
+// typingActorProvider resolves nickname/avatar for the typing actor (UserInfo
+// in the pushed typing payloads). Implemented by the users module Service via
+// bootstrap wiring; nil falls back to {user_id, nickname=user_id}.
+type typingActorProvider interface {
+	GetActorInfo(context.Context, string) (actor.Info, error)
 }
 
 type userRelationAuthorizer interface {
@@ -34,6 +42,7 @@ type Handler struct {
 	users          userPresenceAuthorizer
 	userRepo       userRelationAuthorizer
 	groupRepo      groupMembershipAuthorizer
+	actorProvider  typingActorProvider
 	typingThrottle sync.Map
 	stop           context.CancelFunc
 	wg             sync.WaitGroup
@@ -66,6 +75,25 @@ func (h *Handler) Close() {
 		h.stop()
 	}
 	h.wg.Wait()
+}
+
+// SetActorProvider wires the user-info resolver used to build the actor
+// (UserInfo) field of pushed typing payloads. Optional: nil falls back to
+// {user_id, nickname=user_id}.
+func (h *Handler) SetActorProvider(p typingActorProvider) { h.actorProvider = p }
+
+// resolveTypingActor builds the actor UserInfo map for the typing event.
+func (h *Handler) resolveTypingActor(ctx context.Context, userID string) map[string]any {
+	if h.actorProvider != nil {
+		if info, err := h.actorProvider.GetActorInfo(ctx, userID); err == nil {
+			actorInfo := map[string]any{"user_id": info.UserID, "nickname": info.Nickname}
+			if info.AvatarURL != "" {
+				actorInfo["avatar_url"] = info.AvatarURL
+			}
+			return actorInfo
+		}
+	}
+	return map[string]any{"user_id": userID, "nickname": userID}
 }
 
 // sweepTypingThrottle periodically drops stale typing-throttle entries so the
@@ -241,7 +269,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			snapshot.ClientRequestID = payload.ClientRequestID
 			_ = sink.Send(Event{Type: EventTypeSubscriptionsSnapshot, Payload: snapshot})
 		case "PrivateTyping":
-			var payload PrivateTypingPayload
+			var payload PrivateTypingSendPayload
 			if err := decodePayload(msg.Payload, &payload); err != nil {
 				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
 				continue
@@ -257,10 +285,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			h.typingThrottle.Store(typingKey, time.Now())
-			DefaultHub().BroadcastToUser(payload.TargetUserID, Event{Type: EventTypePrivateUserTyping, Payload: map[string]any{"user_id": principal.UserID, "target_user_id": payload.TargetUserID, "is_typing": payload.IsTyping}})
-			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypePrivateUserTyping, Payload: map[string]any{"user_id": principal.UserID, "target_user_id": payload.TargetUserID, "is_typing": payload.IsTyping}})
+			actorInfo := h.resolveTypingActor(principalCtx, principal.UserID)
+			DefaultHub().BroadcastToUser(payload.TargetUserID, Event{Type: EventTypePrivateTyping, Payload: PrivateTypingPayload{TargetUserID: payload.TargetUserID, Actor: actorInfo, IsTyping: payload.IsTyping}})
+			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypePrivateTyping, Payload: PrivateTypingPayload{TargetUserID: payload.TargetUserID, Actor: actorInfo, IsTyping: payload.IsTyping}})
 		case "GroupTyping":
-			var payload GroupTypingPayload
+			var payload GroupTypingSendPayload
 			if err := decodePayload(msg.Payload, &payload); err != nil {
 				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
 				continue
@@ -276,7 +305,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			h.typingThrottle.Store(typingKey, time.Now())
-			DefaultHub().BroadcastToGroup(payload.GroupID, Event{Type: EventTypeGroupUserTyping, Payload: map[string]any{"user_id": principal.UserID, "group_id": payload.GroupID, "is_typing": payload.IsTyping}})
+			DefaultHub().BroadcastToGroup(payload.GroupID, Event{Type: EventTypeGroupTyping, Payload: GroupTypingPayload{GroupID: payload.GroupID, Actor: h.resolveTypingActor(principalCtx, principal.UserID), IsTyping: payload.IsTyping}})
 		case "Auth":
 			_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "重复鉴权", Severity: "warning", Retryable: false}})
 		default:

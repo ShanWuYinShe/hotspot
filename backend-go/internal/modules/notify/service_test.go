@@ -98,24 +98,6 @@ func TestAppendMutualFollowBuildsNotification(t *testing.T) {
 	}
 }
 
-func TestAppendMomentLikedBuildsNotification(t *testing.T) {
-	repo := &notificationListCaptureRepo{}
-	service := NewServiceWithRepo(repo)
-	if err := service.AppendMomentLiked(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}); err != nil {
-		t.Fatalf("append moment liked: %v", err)
-	}
-	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
-		t.Fatalf("unexpected append capture: %#v", repo)
-	}
-	item := repo.appended[0]
-	if item.Type != "moment_liked" || item.Payload["type"] != "moment_liked" {
-		t.Fatalf("unexpected notification item: %#v", item)
-	}
-	if item.Payload["moment_id"] != "moment_1" {
-		t.Fatalf("unexpected payload: %#v", item.Payload)
-	}
-}
-
 func TestAppendMomentCommentedBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
@@ -130,24 +112,6 @@ func TestAppendMomentCommentedBuildsNotification(t *testing.T) {
 		t.Fatalf("unexpected notification item: %#v", item)
 	}
 	if item.Payload["comment_id"] != "comment_1" || item.Payload["comment_preview"] != "preview" {
-		t.Fatalf("unexpected payload: %#v", item.Payload)
-	}
-}
-
-func TestAppendCommentLikedBuildsNotification(t *testing.T) {
-	repo := &notificationListCaptureRepo{}
-	service := NewServiceWithRepo(repo)
-	if err := service.AppendCommentLiked(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "comment_1", "preview", "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}); err != nil {
-		t.Fatalf("append comment liked: %v", err)
-	}
-	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
-		t.Fatalf("unexpected append capture: %#v", repo)
-	}
-	item := repo.appended[0]
-	if item.Type != "comment_liked" || item.Payload["type"] != "comment_liked" {
-		t.Fatalf("unexpected notification item: %#v", item)
-	}
-	if item.Payload["comment_id"] != "comment_1" || item.Payload["comment_preview"] != "preview" || item.Payload["moment_id"] != "moment_1" {
 		t.Fatalf("unexpected payload: %#v", item.Payload)
 	}
 }
@@ -186,10 +150,17 @@ func TestAppendGroupInviteReceivedBuildsNotification(t *testing.T) {
 func TestAppendGroupApplicationAcceptedBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	if err := service.AppendGroupApplicationAccepted(context.Background(), "user_alice", "group_1", "Hot Group", "app_1"); err != nil {
+	notificationID, err := service.AppendGroupApplicationAccepted(context.Background(), "user_alice", "group_1", "Hot Group", "app_1")
+	if err != nil {
 		t.Fatalf("append group application accepted: %v", err)
 	}
+	if notificationID == "" {
+		t.Fatalf("expected generated notification_id, got empty")
+	}
 	item := repo.appended[0]
+	if item.NotificationID != notificationID {
+		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	}
 	if item.Type != "group_application_accepted" || item.Payload["application_id"] != "app_1" {
 		t.Fatalf("unexpected notification item: %#v", item)
 	}

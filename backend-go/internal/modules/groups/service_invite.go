@@ -5,6 +5,7 @@ import (
 	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -43,7 +44,28 @@ func (s *Service) RejectInvite(ctx context.Context, req RejectInviteRequest) err
 	if invite.Status != ApplicationStatusPending {
 		return ErrInviteExpired
 	}
+	if inviteExpired(invite) {
+		// 惰性过期检测:邀请已超 expires_at,将 pending 置 revoked,推送
+		// GroupInviteExpired 事件并落库 group_invite_revoked 通知(revoked_by 省略)。
+		if err := s.repo.RevokeInvite(ctx, invite.Group.GroupID, req.InviteID); err != nil {
+			return err
+		}
+		s.notifyGroupInviteExpired(ctx, principal.UserID, invite)
+		return ErrInviteExpired
+	}
 	return s.repo.RejectInvite(ctx, req.InviteID)
+}
+
+// inviteExpired reports whether the invite's expires_at has passed.
+func inviteExpired(invite GroupInviteItem) bool {
+	if invite.ExpiresAt == nil || *invite.ExpiresAt == "" {
+		return false
+	}
+	expiresAt, err := time.Parse(time.RFC3339, *invite.ExpiresAt)
+	if err != nil {
+		return false
+	}
+	return time.Now().UTC().After(expiresAt)
 }
 
 func (s *Service) InviteMember(ctx context.Context, req InviteMemberRequest) (Invitation, error) {
@@ -92,7 +114,76 @@ func (s *Service) RevokeInvite(ctx context.Context, req RevokeSentInviteRequest)
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
 		return ErrAccessRestricted
 	}
-	return s.repo.RevokeInvite(ctx, req.GroupID, req.InviteID)
+	// Locate the invite to address the notification/event to the invitee.
+	var inviteeID string
+	sent, _, err := s.repo.ListSentInvites(ctx, req.GroupID, nil, 1000, "")
+	if err == nil {
+		for _, item := range sent {
+			if item.InviteID == req.InviteID && item.Status == ApplicationStatusPending {
+				inviteeID = item.Invitee.UserID
+				break
+			}
+		}
+	}
+	if err := s.repo.RevokeInvite(ctx, req.GroupID, req.InviteID); err != nil {
+		return err
+	}
+	if inviteeID != "" {
+		s.notifyGroupInviteRevoked(ctx, group, req.InviteID, inviteeID, req.Reason)
+	}
+	return nil
+}
+
+// notifyGroupInviteRevoked persists a group_invite_revoked notification and
+// pushes the GroupInviteRevoked event to the invitee.
+func (s *Service) notifyGroupInviteRevoked(ctx context.Context, group GroupItem, inviteID string, inviteeUserID string, reason *string) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	revokedBy := s.resolveUserInfo(ctx, principal.UserID)
+	now := time.Now().UTC().Format(time.RFC3339)
+	notificationID := ""
+	if s.notifications != nil {
+		id, err := s.notifications.AppendGroupInviteRevoked(ctx, inviteeUserID, group.Group.GroupID, group.Group.Name, inviteID, revokedBy, reason)
+		if err != nil {
+			observability.L().Error("groups.notify_group_invite_revoked append failed", "error", err, "invite_id", inviteID)
+		} else {
+			notificationID = id
+		}
+	}
+	payload := map[string]any{
+		"notification_id": notificationID,
+		"invite_id":       inviteID,
+		"group_id":        group.Group.GroupID,
+		"revoked_by":      revokedBy,
+		"revoked_at":      now,
+	}
+	if reason != nil && *reason != "" {
+		payload["reason"] = *reason
+	}
+	realtime.DefaultHub().BroadcastToUser(inviteeUserID, realtime.Event{Type: realtime.EventTypeGroupInviteRevoked, Payload: payload})
+}
+
+// notifyGroupInviteExpired persists a group_invite_revoked notification
+// (revoked_by omitted) and pushes the GroupInviteExpired event to the invitee.
+func (s *Service) notifyGroupInviteExpired(ctx context.Context, inviteeUserID string, invite GroupInviteItem) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	notificationID := ""
+	if s.notifications != nil {
+		id, err := s.notifications.AppendGroupInviteRevoked(ctx, inviteeUserID, invite.Group.GroupID, invite.Group.Name, invite.InviteID, nil, nil)
+		if err != nil {
+			observability.L().Error("groups.notify_group_invite_expired append failed", "error", err, "invite_id", invite.InviteID)
+		} else {
+			notificationID = id
+		}
+	}
+	realtime.DefaultHub().BroadcastToUser(inviteeUserID, realtime.Event{
+		Type: realtime.EventTypeGroupInviteExpired,
+		Payload: map[string]any{
+			"notification_id": notificationID,
+			"invite_id":       invite.InviteID,
+			"group_id":        invite.Group.GroupID,
+			"expired_at":      now,
+		},
+	})
 }
 
 func (s *Service) findInviteForUser(ctx context.Context, userID string, inviteID string) (GroupInviteItem, bool, error) {

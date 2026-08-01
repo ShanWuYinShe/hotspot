@@ -215,3 +215,18 @@ func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string
 	}
 	return true, senderUserID, nil
 }
+
+func (r *PostgresRepository) CountMessagesToUser(ctx context.Context, senderID, targetUserID string, since time.Time) (int, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return 0, persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return 0, persistence.ErrNotImplemented
+	}
+	var count int
+	if err := queryable.QueryRow(ctx, queryCountPrivateMessagesToUser, senderID, conversationKey(senderID, targetUserID), since.Format(time.RFC3339Nano)).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}

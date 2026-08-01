@@ -28,6 +28,7 @@ type stubMsgRepo struct {
 	readMeta   MessageEventMeta
 	readErr    error
 	markAllErr error
+	countErr   error
 }
 
 func (r *stubMsgRepo) Send(_ context.Context, _, _ string, _ SendPrivateMessageRequest) (MessageSent, error) {
@@ -65,6 +66,9 @@ func (r *stubMsgRepo) GetMediaForMessage(_ context.Context, _ string, _ string) 
 }
 func (r *stubMsgRepo) MessageExists(_ context.Context, _ string) (bool, string, error) {
 	return false, "", nil
+}
+func (r *stubMsgRepo) CountMessagesToUser(_ context.Context, _ string, _ string, _ time.Time) (int, error) {
+	return 0, r.countErr
 }
 
 type stubUserReader struct {

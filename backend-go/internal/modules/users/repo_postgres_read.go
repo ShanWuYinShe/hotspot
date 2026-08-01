@@ -627,7 +627,7 @@ func scanFollowerRow(scanner interface{ Scan(...any) error }) (FollowerItem, tim
 	var presenceStatus string
 	var lastOnline time.Time
 	var sortableLastOnline time.Time
-	if err := scanner.Scan(&item.User.UserID, &item.User.Nickname, &avatarURL, &followedAt, &item.IsFollowingBack, &presenceStatus, &lastOnline, &sortableLastOnline); err != nil {
+	if err := scanner.Scan(&item.User.UserID, &item.User.Nickname, &avatarURL, &followedAt, &item.IsMutual, &presenceStatus, &lastOnline, &sortableLastOnline); err != nil {
 		return FollowerItem{}, time.Time{}, err
 	}
 	item.User.AvatarURL = avatarURL

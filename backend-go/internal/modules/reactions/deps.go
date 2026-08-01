@@ -30,7 +30,8 @@ type TargetProvider interface {
 // reactions package depends on an interface, not the notifications package's
 // concrete Service.
 type reactionNotificationWriter interface {
-	AppendMomentLiked(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any) error
-	AppendCommentLiked(ctx context.Context, targetUserID string, actor map[string]any, commentID string, commentPreview string, momentID string, momentSummary map[string]any) error
-	AppendReactionAdded(ctx context.Context, targetUserID string, actor map[string]any, targetType string, targetID string, emoji string) error
+	// AppendReactionAdded persists a reaction_added notification and returns
+	// the generated notification_id (embedded in the realtime payload when the
+	// reactor is not the target author; self-reactions skip notification).
+	AppendReactionAdded(ctx context.Context, targetUserID string, actor map[string]any, targetType string, targetID string, emoji string) (string, error)
 }

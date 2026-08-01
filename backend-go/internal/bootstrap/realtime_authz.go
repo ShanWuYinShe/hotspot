@@ -5,6 +5,7 @@ import (
 
 	"hotspot/backend-go/internal/modules/groups"
 	"hotspot/backend-go/internal/modules/users"
+	"hotspot/backend-go/internal/platform/actor"
 )
 
 type realtimeUserService struct{ svc *users.Service }
@@ -16,6 +17,10 @@ type realtimeGroupRepo struct{ repo *groups.PersistenceRepository }
 func (a realtimeUserService) OpenTheDoor(ctx context.Context, userID string) (string, bool, error) {
 	item, ok, err := a.svc.OpenTheDoor(ctx, userID)
 	return string(item.PresenceStatus), ok, err
+}
+
+func (a realtimeUserService) GetActorInfo(ctx context.Context, userID string) (actor.Info, error) {
+	return a.svc.GetActorInfo(ctx, userID)
 }
 
 func (a realtimeUserRepo) GetSettings(ctx context.Context, userID string) (bool, string, bool, error) {

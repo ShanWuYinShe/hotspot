@@ -42,13 +42,21 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "private_messages/send", func() httpx.ApiResponse[MessageSent] {
+	idempotency.ReplayOrStore(w, r, "private_messages/send", func() httpx.ApiResponse[any] {
 		msg, err := h.service.Send(r.Context(), req)
 		if err != nil {
+			var blocked *MessageBlockedError
+			if errors.As(err, &blocked) {
+				// 契约(api_spec_chat.md):发送被拒绝返回 10200,data 携带 { reason: BlockReason }
+				logBusinessError(r, "Send", 10200, "发送被拒绝")
+				var data any = map[string]string{"reason": string(blocked.Reason)}
+				return httpx.ApiResponse[any]{Code: 10200, Message: "发送被拒绝", Data: &data}
+			}
 			logServerError(r, "Send", err)
-			return httpx.ApiResponse[MessageSent]{Code: 10600, Message: "服务暂时不可用"}
+			return httpx.ApiResponse[any]{Code: 10600, Message: "服务暂时不可用"}
 		}
-		return httpx.Success(msg)
+		var data any = msg
+		return httpx.ApiResponse[any]{Code: 0, Data: &data}
 	})
 }
 

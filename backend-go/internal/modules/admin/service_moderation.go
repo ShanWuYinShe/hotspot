@@ -8,6 +8,7 @@ import (
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -503,7 +504,54 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("report.handle"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: map[string]any{"type": "report.handle", "report_id": req.ReportID, "action": string(req.Action), "note": strings.TrimSpace(req.Note)}}); err != nil {
 		return nil, err
 	}
+	// Notify the reporter about the outcome (resolve/dismiss only; escalate
+	// keeps the report pending and does not notify).
+	if req.Action == ReportActionResolve || req.Action == ReportActionDismiss {
+		s.notifyReportHandled(ctx, record.Item.Reporter.UserID, req.ReportID, string(record.Item.TargetType), record.Item.TargetID, strings.TrimSpace(req.Note), req.Action == ReportActionResolve)
+	}
 	return nil, nil
+}
+
+// notifyReportHandled persists the report_resolved/report_dismissed
+// notification and pushes the corresponding event to the reporter.
+func (s *Service) notifyReportHandled(ctx context.Context, reporterUserID, reportID, targetType, targetID, note string, resolved bool) {
+	if reporterUserID == "" || s.pushService == nil {
+		return
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	notificationID := ""
+	if resolved {
+		id, err := s.pushService.AppendReportResolved(ctx, reporterUserID, reportID, targetType, targetID, note)
+		if err != nil {
+			observability.L().Error("admin.report notify report_resolved failed", "error", err, "report_id", reportID)
+		} else {
+			notificationID = id
+		}
+	} else {
+		id, err := s.pushService.AppendReportDismissed(ctx, reporterUserID, reportID, targetType, targetID, note)
+		if err != nil {
+			observability.L().Error("admin.report notify report_dismissed failed", "error", err, "report_id", reportID)
+		} else {
+			notificationID = id
+		}
+	}
+	payload := map[string]any{
+		"notification_id": notificationID,
+		"report_id":       reportID,
+		"target_type":     targetType,
+		"target_id":       targetID,
+	}
+	if note != "" {
+		payload["note"] = note
+	}
+	eventType := realtime.EventTypeReportResolved
+	atKey := "resolved_at"
+	if !resolved {
+		eventType = realtime.EventTypeReportDismissed
+		atKey = "dismissed_at"
+	}
+	payload[atKey] = now
+	realtime.DefaultHub().BroadcastToUser(reporterUserID, realtime.Event{Type: eventType, Payload: payload})
 }
 
 func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason string, durationDays *int, appendAudit bool) (*httpx.APIError, error) {

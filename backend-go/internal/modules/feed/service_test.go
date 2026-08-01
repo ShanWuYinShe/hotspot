@@ -86,13 +86,27 @@ func TestServiceNearbyClampsRadiusAndLimit(t *testing.T) {
 	}
 }
 
-func TestServiceNearbyRejectsMissingReferencePoint(t *testing.T) {
+func TestServiceNearbyFallsBackWhenMissingReferencePoint(t *testing.T) {
 	service := NewServiceWithRepo(&stubRepository{})
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u1"})
 
+	// reference_point 可选:缺失时按回退链解析(用户位置 → default_location),不再报错
 	_, err := service.Nearby(ctx, GetFeedNearbyRequest{Radius: nil, ReferencePoint: nil, Pagination: nil})
+	if err != nil {
+		t.Fatalf("missing reference_point should fall back to default, got %v", err)
+	}
+	if repo := service.repo.(*stubRepository); repo.lastNearbyMoments.ReferencePoint == (GeoPoint{}) {
+		t.Fatalf("expected a resolved reference_point in query, got zero value")
+	}
+}
+
+func TestServiceNearbyRejectsInvalidReferencePoint(t *testing.T) {
+	service := NewServiceWithRepo(&stubRepository{})
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u1"})
+
+	_, err := service.Nearby(ctx, GetFeedNearbyRequest{ReferencePoint: &GeoPoint{Latitude: 999, Longitude: 2}})
 	if !errors.Is(err, ErrInvalidFeedRequest) {
-		t.Fatalf("expected invalid request for missing reference_point, got %v", err)
+		t.Fatalf("expected invalid request for invalid reference_point, got %v", err)
 	}
 }
 

@@ -261,8 +261,8 @@ func TestPostgresIT_ListFollowingAndFollowers(t *testing.T) {
 		if followers.Items[0].User.UserID != alice {
 			t.Fatalf("expected follower alice, got %q", followers.Items[0].User.UserID)
 		}
-		if followers.Items[0].IsFollowingBack {
-			t.Fatal("expected is_following_back=false")
+		if followers.Items[0].IsMutual {
+			t.Fatal("expected is_mutual=false")
 		}
 	})
 }

@@ -543,7 +543,7 @@ type testSink struct {
 }
 
 func (s *testSink) Send(event realtime.Event) error {
-	if event.Type == "Error" {
+	if event.Type == "SessionRevoked" {
 		s.closed = true
 	}
 	return nil

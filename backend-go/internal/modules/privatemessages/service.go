@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/modules/users"
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -29,8 +30,9 @@ type userReader interface {
 }
 
 type Service struct {
-	repo  Repository
-	users userReader
+	repo      Repository
+	users     userReader
+	appConfig appconfig.Source // optional; nil => stranger quota disabled (0)
 }
 
 func NewService() *Service {
@@ -47,10 +49,15 @@ func NewServiceWithDeps(repo Repository, userService userReader) *Service {
 	return &Service{repo: repo, users: userService}
 }
 
-func NewRuntime(factory *persistence.Factory) *Runtime {
+// SetAppConfig wires the app config source (used for the stranger message
+// daily quota). Optional: nil disables the quota check.
+func (s *Service) SetAppConfig(source appconfig.Source) { s.appConfig = source }
+
+func NewRuntime(factory *persistence.Factory, source appconfig.Source) *Runtime {
 	repo := NewPostgresRepository(factory)
 	userService := users.NewServiceWithRepo(users.NewPersistenceRepository(factory))
 	service := NewServiceWithDeps(repo, userService)
+	service.SetAppConfig(source)
 	return &Runtime{
 		handler:     NewHandler(service),
 		readService: service,
@@ -221,20 +228,55 @@ func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string
 	if userID == targetUserID {
 		return nil
 	}
+	// 被拉黑统一返回 'privacy'(不暴露拉黑状态,见 api_spec_chat.md BlockReason)
 	if item.Relation != nil && item.Relation.IsBlocked {
-		return ErrMessagePermissionDenied
+		return &MessageBlockedError{Reason: BlockReasonPrivacy}
 	}
 	settings, settingsErr := s.users.GetMySettings(platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: targetUserID, SessionID: "private-message-probe"}))
 	if settingsErr != nil {
 		return settingsErr
 	}
+	isMutual := item.Relation != nil && item.Relation.IsFollowing && item.Relation.IsFollowedBy
 	switch settings.AllowPrivateChat {
 	case users.ChatPermNobody:
-		return ErrMessagePermissionDenied
+		return &MessageBlockedError{Reason: BlockReasonPrivacy}
 	case users.ChatPermFriends:
-		if item.Relation == nil || !(item.Relation.IsFollowing && item.Relation.IsFollowedBy) {
-			return ErrMessagePermissionDenied
+		if !isMutual {
+			return &MessageBlockedError{Reason: BlockReasonPrivacy}
 		}
+	}
+	// 陌生人消息每日额度:仅对非互相关注用户生效(0 = 禁止任何陌生人消息)
+	if !isMutual {
+		if err := s.enforceStrangerQuota(ctx, userID, targetUserID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// enforceStrangerQuota checks AppConfig.limits.stranger_message_daily_quota:
+// 0 disables stranger messages entirely; otherwise messages sent today to the
+// stranger target count against the quota (per-target accounting). When no
+// app config is wired (tests/degraded mode) the check is skipped.
+func (s *Service) enforceStrangerQuota(ctx context.Context, userID, targetUserID string) error {
+	if s.appConfig == nil {
+		return nil
+	}
+	quota := s.appConfig.Get(ctx).Limits.StrangerMessageDailyQuota
+	if quota < 0 {
+		quota = 0
+	}
+	if quota == 0 {
+		return &MessageBlockedError{Reason: BlockReasonStrangerQuotaExceeded}
+	}
+	now := time.Now().UTC()
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	count, err := s.repo.CountMessagesToUser(ctx, userID, targetUserID, startOfDay)
+	if err != nil {
+		return err
+	}
+	if count >= quota {
+		return &MessageBlockedError{Reason: BlockReasonStrangerQuotaExceeded}
 	}
 	return nil
 }

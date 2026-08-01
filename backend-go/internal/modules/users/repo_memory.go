@@ -294,7 +294,7 @@ func (r *InMemoryRepository) ListFollowers(_ context.Context, userID string, lim
 		if relation.Following {
 			lastOnline := r.profiles[sourceUserID].LastOnline
 			presence := r.profiles[sourceUserID].PresenceStatus
-			item := FollowerItem{User: UserInfo{UserID: sourceUserID, Nickname: r.nicknameFor(sourceUserID), AvatarURL: r.profiles[sourceUserID].AvatarURL}, FollowedAt: relation.FollowedAt, IsFollowingBack: r.relations[userID][sourceUserID].Following}
+			item := FollowerItem{User: UserInfo{UserID: sourceUserID, Nickname: r.nicknameFor(sourceUserID), AvatarURL: r.profiles[sourceUserID].AvatarURL}, FollowedAt: relation.FollowedAt, IsMutual: r.relations[userID][sourceUserID].Following}
 			if lastOnline != "" {
 				item.LastOnline = &lastOnline
 			}

@@ -151,4 +151,9 @@ const (
 		SELECT sender_user_id
 		FROM private_messages
 		WHERE message_id = $1`
+
+	queryCountPrivateMessagesToUser = `
+		SELECT COUNT(*)
+		FROM private_messages
+		WHERE sender_user_id = $1 AND chat_key = $2 AND sent_at >= $3`
 )

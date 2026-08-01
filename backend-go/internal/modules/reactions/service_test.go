@@ -28,8 +28,6 @@ func (s stubTargetProvider) Resolve(_ context.Context, targetID string) (TargetC
 // recordingNotifier captures Append* calls for assertion.
 type recordingNotifier struct {
 	mu                 sync.Mutex
-	momentLiked        []string // targetUserIDs
-	commentLiked       []string
 	reactionAddedCalls []reactionAddedCall
 }
 
@@ -40,25 +38,11 @@ type reactionAddedCall struct {
 	emoji        string
 }
 
-func (n *recordingNotifier) AppendMomentLiked(_ context.Context, targetUserID string, _ map[string]any, _ string, _ map[string]any) error {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	n.momentLiked = append(n.momentLiked, targetUserID)
-	return nil
-}
-
-func (n *recordingNotifier) AppendCommentLiked(_ context.Context, targetUserID string, _ map[string]any, _ string, _ string, _ string, _ map[string]any) error {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	n.commentLiked = append(n.commentLiked, targetUserID)
-	return nil
-}
-
-func (n *recordingNotifier) AppendReactionAdded(_ context.Context, targetUserID string, _ map[string]any, targetType string, targetID string, emoji string) error {
+func (n *recordingNotifier) AppendReactionAdded(_ context.Context, targetUserID string, _ map[string]any, targetType string, targetID string, emoji string) (string, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.reactionAddedCalls = append(n.reactionAddedCalls, reactionAddedCall{targetUserID, targetType, targetID, emoji})
-	return nil
+	return "notif_1", nil
 }
 
 func ctxWithUser(userID string) context.Context {
@@ -157,7 +141,8 @@ func TestSetUnreactRemovesAndIsIdempotent(t *testing.T) {
 
 func TestSetReactNotifiesOwnerByTargetKind(t *testing.T) {
 	notif := &recordingNotifier{}
-	// moment target -> AppendMomentLiked
+	// All target kinds (moment/comment) dispatch the unified reaction_added
+	// notification (legacy moment_liked/comment_liked removed per contract).
 	momentProv := stubTargetProvider{kind: ReactTargetMoment, exists: map[string]bool{"m1": true}, owners: map[string]string{"m1": "owner_m"}}
 	commentProv := stubTargetProvider{kind: ReactTargetComment, exists: map[string]bool{"c1": true}, owners: map[string]string{"c1": "owner_c"}}
 	svc := NewServiceWithDeps(NewInMemoryRepository(), []TargetProvider{momentProv, commentProv}, notif, nil)
@@ -167,11 +152,14 @@ func TestSetReactNotifiesOwnerByTargetKind(t *testing.T) {
 
 	notif.mu.Lock()
 	defer notif.mu.Unlock()
-	if len(notif.momentLiked) != 1 || notif.momentLiked[0] != "owner_m" {
-		t.Fatalf("expected one moment_liked to owner_m, got %+v", notif.momentLiked)
+	if len(notif.reactionAddedCalls) != 2 {
+		t.Fatalf("expected two reaction_added notifications, got %+v", notif.reactionAddedCalls)
 	}
-	if len(notif.commentLiked) != 1 || notif.commentLiked[0] != "owner_c" {
-		t.Fatalf("expected one comment_liked to owner_c, got %+v", notif.commentLiked)
+	if notif.reactionAddedCalls[0].targetUserID != "owner_m" || notif.reactionAddedCalls[0].targetType != "moment" {
+		t.Fatalf("unexpected first call: %+v", notif.reactionAddedCalls[0])
+	}
+	if notif.reactionAddedCalls[1].targetUserID != "owner_c" || notif.reactionAddedCalls[1].targetType != "comment" {
+		t.Fatalf("unexpected second call: %+v", notif.reactionAddedCalls[1])
 	}
 }
 
@@ -183,8 +171,8 @@ func TestSetReactSkipsSelfNotification(t *testing.T) {
 	_ = svc.Set(ctxWithUser("u_bob"), SetReactionRequest{TargetType: ReactTargetMoment, TargetID: "m1", Emoji: "👍", Active: true})
 	notif.mu.Lock()
 	defer notif.mu.Unlock()
-	if len(notif.momentLiked) != 0 {
-		t.Fatalf("self-reaction must not notify owner, got %+v", notif.momentLiked)
+	if len(notif.reactionAddedCalls) != 0 {
+		t.Fatalf("self-reaction must not notify owner, got %+v", notif.reactionAddedCalls)
 	}
 }
 

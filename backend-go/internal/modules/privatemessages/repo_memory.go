@@ -293,8 +293,36 @@ func (r *InMemoryRepository) GetMessageForReply(ctx context.Context, messageID, 
 	return nil, false, nil
 }
 
-func (r *InMemoryRepository) MessageExists(_ context.Context, _ string) (bool, string, error) {
+func (r *InMemoryRepository) MessageExists(_ context.Context, messageID string) (bool, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, items := range r.messages {
+		for _, item := range items {
+			if item.MessageID == messageID {
+				return true, item.Sender.UserID, nil
+			}
+		}
+	}
 	return false, "", nil
+}
+
+func (r *InMemoryRepository) CountMessagesToUser(_ context.Context, senderID, targetUserID string, since time.Time) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	count := 0
+	for _, item := range r.messages[conversationKey(senderID, targetUserID)] {
+		if item.Sender.UserID != senderID {
+			continue
+		}
+		sentAt, err := time.Parse(time.RFC3339Nano, item.SentAt)
+		if err != nil {
+			continue
+		}
+		if !sentAt.Before(since) {
+			count++
+		}
+	}
+	return count, nil
 }
 
 func (r *InMemoryRepository) GetMediaForMessage(ctx context.Context, fileID, ownerUserID string) (map[string]any, bool, error) {

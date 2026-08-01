@@ -7,6 +7,7 @@ const (
 	EventTypeError                 = "Error"
 	EventTypeSubscribeAck          = "SubscribeAck"
 	EventTypeSubscriptionsSnapshot = "SubscriptionsSnapshot"
+	EventTypeSessionRevoked        = "SessionRevoked"
 )
 
 // 用户状态
@@ -24,9 +25,7 @@ const (
 
 // 瞬间互动
 const (
-	EventTypeMomentLiked      = "MomentLiked"
 	EventTypeMomentCommented  = "MomentCommented"
-	EventTypeCommentLiked     = "CommentLiked"
 	EventTypeCommentReply     = "CommentReply"
 	EventTypeMessageMentioned = "MessageMentioned"
 )
@@ -37,31 +36,50 @@ const (
 	EventTypePrivateMessageEdited   = "PrivateMessageEdited"
 	EventTypePrivateMessageRecalled = "PrivateMessageRecalled"
 	EventTypePrivateMessageRead     = "PrivateMessageRead"
-	EventTypePrivateUserTyping      = "PrivateUserTyping"
+	EventTypePrivateTyping          = "PrivateTyping"
 )
 
 // 群聊
 const (
-	EventTypeGroupMessageNew      = "GroupMessageNew"
-	EventTypeGroupMessageEdited   = "GroupMessageEdited"
-	EventTypeGroupMessageRecalled = "GroupMessageRecalled"
-	EventTypeGroupUserTyping      = "GroupUserTyping"
+	EventTypeGroupMessageNew              = "GroupMessageNew"
+	EventTypeGroupMessageEdited           = "GroupMessageEdited"
+	EventTypeGroupMessageRecalled         = "GroupMessageRecalled"
+	EventTypeGroupMessageReadCountUpdated = "GroupMessageReadCountUpdated"
+	EventTypeGroupTyping                  = "GroupTyping"
 )
 
 // 群组管理
 const (
-	EventTypeGroupMemberJoined        = "GroupMemberJoined"
-	EventTypeGroupMemberLeft          = "GroupMemberLeft"
-	EventTypeGroupMemberRemoved       = "GroupMemberRemoved"
-	EventTypeGroupMemberMuted         = "GroupMemberMuted"
-	EventTypeGroupMemberUnmuted       = "GroupMemberUnmuted"
-	EventTypeGroupInviteReceived      = "GroupInviteReceived"
-	EventTypeGroupInviteResponse      = "GroupInviteResponse"
-	EventTypeGroupApplicationReceived = "GroupApplicationReceived"
-	EventTypeGroupApplicationResponse = "GroupApplicationResponse"
-	EventTypeGroupAnnouncementCreated = "GroupAnnouncementCreated"
-	EventTypeGroupUpdated             = "GroupUpdated"
-	EventTypeGroupDismissed           = "GroupDismissed"
+	EventTypeGroupMemberJoined         = "GroupMemberJoined"
+	EventTypeGroupMemberLeft           = "GroupMemberLeft"
+	EventTypeGroupMemberRemoved        = "GroupMemberRemoved"
+	EventTypeGroupMemberRoleChanged    = "GroupMemberRoleChanged"
+	EventTypeGroupMemberMuted          = "GroupMemberMuted"
+	EventTypeGroupMemberUnmuted        = "GroupMemberUnmuted"
+	EventTypeGroupInviteReceived       = "GroupInviteReceived"
+	EventTypeGroupInviteRevoked        = "GroupInviteRevoked"
+	EventTypeGroupInviteExpired        = "GroupInviteExpired"
+	EventTypeGroupInviteResponse       = "GroupInviteResponse"
+	EventTypeGroupApplicationReceived  = "GroupApplicationReceived"
+	EventTypeGroupApplicationCancelled = "GroupApplicationCancelled"
+	EventTypeGroupApplicationExpired   = "GroupApplicationExpired"
+	EventTypeGroupApplicationRejected  = "GroupApplicationRejected"
+	EventTypeGroupApplicationResponse  = "GroupApplicationResponse"
+	EventTypeGroupAnnouncementCreated  = "GroupAnnouncementCreated"
+	EventTypeGroupUpdated              = "GroupUpdated"
+	EventTypeGroupDismissed            = "GroupDismissed"
+)
+
+// 互动(表情反应)
+const (
+	EventTypeReactionAdded   = "ReactionAdded"
+	EventTypeReactionRemoved = "ReactionRemoved"
+)
+
+// 举报
+const (
+	EventTypeReportResolved  = "ReportResolved"
+	EventTypeReportDismissed = "ReportDismissed"
 )
 
 // 用户
@@ -107,6 +125,14 @@ type ErrorPayload struct {
 	Retryable  bool              `json:"retryable"`
 	RetryAfter int               `json:"retry_after,omitempty"`
 	Context    map[string]string `json:"context,omitempty"`
+}
+
+// SessionRevokedPayload notifies a connection that its session was revoked
+// (api_spec_websocket.md): reason is device_evicted | revoked_by_user |
+// password_changed. Server closes the connection with code 4001 afterwards.
+type SessionRevokedPayload struct {
+	Reason    string `json:"reason"`
+	RevokedAt string `json:"revoked_at"`
 }
 
 type SubscribeAckPayload struct {
@@ -158,12 +184,27 @@ type UserOfflinePayload struct {
 	OfflineAt string `json:"offline_at"`
 }
 
-type PrivateTypingPayload struct {
+// 客户端发送版 typing payload(api_spec_websocket.md:与服务端推送版结构不同,
+// 故拆分命名避免同名冲突)
+type PrivateTypingSendPayload struct {
 	TargetUserID string `json:"target_user_id"`
 	IsTyping     bool   `json:"is_typing"`
 }
 
-type GroupTypingPayload struct {
+type GroupTypingSendPayload struct {
 	GroupID  string `json:"group_id"`
 	IsTyping bool   `json:"is_typing"`
+}
+
+// 服务端推送版 typing payload(含 actor: UserInfo 嵌套)
+type PrivateTypingPayload struct {
+	TargetUserID string         `json:"target_user_id"`
+	Actor        map[string]any `json:"actor"`
+	IsTyping     bool           `json:"is_typing"`
+}
+
+type GroupTypingPayload struct {
+	GroupID  string         `json:"group_id"`
+	Actor    map[string]any `json:"actor"`
+	IsTyping bool           `json:"is_typing"`
 }

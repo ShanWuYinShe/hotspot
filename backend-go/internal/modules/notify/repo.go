@@ -19,7 +19,7 @@ type Repository interface {
 func normalizeNotifyItem(item NotifyItem) NotifyItem {
 	now := time.Now().UTC()
 	if item.NotificationID == "" {
-		item.NotificationID = fmt.Sprintf("notif_%d", now.UnixNano())
+		item.NotificationID = newNotificationID()
 	}
 	if item.CreatedAt == "" {
 		item.CreatedAt = now.Format(time.RFC3339)
@@ -29,4 +29,11 @@ func normalizeNotifyItem(item NotifyItem) NotifyItem {
 	}
 	item.Payload["type"] = item.Type
 	return item
+}
+
+// newNotificationID generates the notification primary key. Callers that need
+// the id for realtime event payloads (e.g. ReactionAdded.notification_id)
+// generate it up front and pass it into the NotifyItem.
+func newNotificationID() string {
+	return fmt.Sprintf("notif_%d", time.Now().UTC().UnixNano())
 }

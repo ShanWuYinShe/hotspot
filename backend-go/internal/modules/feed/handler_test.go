@@ -31,10 +31,20 @@ func TestFollowingUsesDefaultLocationWhenMissingReferencePoint(t *testing.T) {
 	assertFeedCode(t, rr, 0)
 }
 
-func TestNearbyRejectsMissingReferencePoint(t *testing.T) {
+func TestNearbyFallsBackWhenMissingReferencePoint(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/nearby", strings.NewReader(`{}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
+
+	handler.Nearby(rr, req)
+	assertFeedCode(t, rr, 0)
+}
+
+func TestNearbyRejectsInvalidReferencePoint(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/nearby", strings.NewReader(`{"reference_point":{"latitude":999,"longitude":2}}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
 	handler.Nearby(rr, req)

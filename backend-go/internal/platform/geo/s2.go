@@ -21,6 +21,15 @@ type Point struct {
 	Longitude float64
 }
 
+// DefaultFallbackLatitude / DefaultFallbackLongitude 是 appConfig 缺失时的
+// reference_point 回退锚点(回退链第 3 级 default_location 的服务端兜底,
+// 见 api_spec_types.md「reference_point 解析规则」)。与
+// ClientConfig.defaults.default_location 的默认值一致。
+const (
+	DefaultFallbackLatitude  = 35.154922
+	DefaultFallbackLongitude = 112.682524
+)
+
 // IsValidPoint reports whether a geographic coordinate is within the valid
 // WGS-84 range. Out-of-range values flow into s2.CellIDFromLatLng and produce
 // invalid/zero cell IDs, silently corrupting the geo index — so callers must

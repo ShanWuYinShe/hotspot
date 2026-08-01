@@ -73,7 +73,7 @@ func TestHubBroadcastToUserSubscribersAllowsConcurrentSendsOnSameSink(t *testing
 	}()
 	go func() {
 		defer wg.Done()
-		hub.BroadcastToUserSubscribers("user_alice", Event{Type: "PrivateUserTyping"})
+		hub.BroadcastToUserSubscribers("user_alice", Event{Type: "PrivateTyping"})
 	}()
 
 	<-sink.started

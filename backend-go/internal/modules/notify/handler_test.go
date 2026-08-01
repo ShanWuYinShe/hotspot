@@ -137,7 +137,7 @@ func TestUnreadCountReturnsByTypeBreakdown(t *testing.T) {
 	// Insert notifications of each type category
 	_ = svc.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "", "")
 	_ = svc.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "charlie", "nickname": "Charlie"}, "", "")
-	_ = svc.AppendMomentLiked(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "m1", nil)
+	_, _ = svc.AppendReactionAdded(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "moment", "m1", "👍")
 	_ = svc.AppendGroupInviteReceived(context.Background(), "user_alice", map[string]any{"user_id": "bob", "nickname": "Bob"}, "grp1", "Group One", "inv1", nil)
 	_ = svc.AppendSystemAnnouncement(context.Background(), []string{"user_alice"}, systemmodule.SystemAnnouncementItem{AnnouncementID: "ann1", Title: "Test", Content: "Test content", Severity: systemmodule.AnnounceLevelInfo})
 

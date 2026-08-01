@@ -73,6 +73,7 @@ func NewApp(cfg config.Config) (*App, error) {
 	// already apply lazy expiry so this is purely about bounding map growth.
 	idempotency.StartSweeper(rootCtx)
 	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformauth.DefaultService(), realtimeUserService{svc: userService}, realtimeUserRepo{repo: userRepo}, realtimeGroupRepo{repo: groupRepo})
+	realtimeHandler.SetActorProvider(realtimeUserService{svc: userService})
 	rootMux.Handle("/ws/v1", realtimeHandler)
 
 	return &App{

@@ -320,6 +320,24 @@ func (s *Service) DeleteAccount(ctx context.Context, req DeleteAccountRequest) e
 	return nil
 }
 
+// RecentLocation 返回用户最近一次 update_location 存储的位置(回退链第 2 级,
+// 见 api_spec_types.md「reference_point 解析规则」)。用户不存在或从未更新过
+// 位置时返回 found=false,由调用方继续回退到 ClientConfig.defaults.default_location。
+func (s *Service) RecentLocation(ctx context.Context, userID string) (geo.Point, bool) {
+	if userID == "" {
+		return geo.Point{}, false
+	}
+	profile, ok, err := s.repo.GetProfile(ctx, userID)
+	if err != nil || !ok {
+		return geo.Point{}, false
+	}
+	pt := profile.Location.Point
+	if pt.Latitude == 0 && pt.Longitude == 0 {
+		return geo.Point{}, false
+	}
+	return geo.Point{Latitude: pt.Latitude, Longitude: pt.Longitude}, true
+}
+
 func (s *Service) GetActorInfo(ctx context.Context, userID string) (actor.Info, error) {
 	profile, ok, err := s.repo.GetProfile(ctx, userID)
 	if err != nil {
@@ -352,8 +370,8 @@ func ensureUserExists(ctx context.Context, repo Repository, userID string) error
 
 func (s *Service) defaultProfile(ctx context.Context, userID string) MyProfile {
 	now := time.Now().UTC().Format(time.RFC3339)
-	lat := 35.154922
-	lng := 112.682524
+	lat := geo.DefaultFallbackLatitude
+	lng := geo.DefaultFallbackLongitude
 	locName := "默认位置"
 	if s.appConfig != nil {
 		defaults := s.appConfig.Get(ctx).Defaults
@@ -381,8 +399,8 @@ func (s *Service) resolveReferencePoint(ctx context.Context, ref GeoPoint) GeoPo
 		}
 	}
 	// 回退 3:default_location
-	lat := 35.154922
-	lng := 112.682524
+	lat := geo.DefaultFallbackLatitude
+	lng := geo.DefaultFallbackLongitude
 	if s.appConfig != nil {
 		defaults := s.appConfig.Get(ctx).Defaults
 		lat = defaults.DefaultLocation.Point.Latitude

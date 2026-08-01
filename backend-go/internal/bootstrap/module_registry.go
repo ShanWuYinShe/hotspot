@@ -68,6 +68,13 @@ func BuildModulesWithRedisPinger(cfg config.Config, factory *persistence.Factory
 	momentsModule.CommentsService().SetReactionAggregator(commentReactionAggregator{reactions: reactionsModule.Service})
 	feedModule := feed.NewModule(factory, sharedAppConfig, feedImageResolver)
 	feedModule.Service.SetReactionAggregator(feedReactionAggregator{reactions: reactionsModule.Service})
+	// reference_point 回退链第 2 级:已登录用户最近位置(users 模块实现,经 Service 接口注入)
+	feedModule.Service.SetLocationProvider(usersModule.Service)
+	momentsModule.Service.SetLocationProvider(usersModule.Service)
+	groupsModule.Service.SetLocationProvider(usersModule.Service)
+	groupsModule.Service.SetAppConfig(sharedAppConfig)
+	searchModule := search.NewModule(factory, sharedAppConfig)
+	searchModule.Service.SetLocationProvider(usersModule.Service)
 	return []modulekit.Module{
 		admin.NewModule(factory, sharedAppConfig),
 		auth.NewModule(cfg, factory, sharedAppConfig),
@@ -81,7 +88,7 @@ func BuildModulesWithRedisPinger(cfg config.Config, factory *persistence.Factory
 		pcModule,
 		reactionsModule,
 		reports.NewModule(factory),
-		search.NewModule(factory, sharedAppConfig),
+		searchModule,
 		share.NewModule(factory),
 		systemModule,
 		usersModule,

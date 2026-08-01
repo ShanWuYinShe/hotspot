@@ -13,11 +13,13 @@ import (
 
 type Module struct {
 	handler *Handler
+	Service *Service
 }
 
 func NewModule(factory *persistence.Factory, source appconfig.Source) *Module {
 	repo := NewPersistenceRepository(factory)
-	return &Module{handler: NewHandler(NewServiceWithSource(repo, source))}
+	service := NewServiceWithSource(repo, source)
+	return &Module{handler: NewHandler(service), Service: service}
 }
 
 func (m *Module) Mount(r chi.Router) {

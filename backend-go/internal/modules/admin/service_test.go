@@ -44,6 +44,14 @@ func (s *stubPushService) PushSystemAnnouncement(_ systemmodule.SystemAnnounceme
 	s.pushed = true
 }
 
+func (s *stubPushService) AppendReportResolved(_ context.Context, _ string, _ string, _ string, _ string, _ string) (string, error) {
+	return "notif_report_1", nil
+}
+
+func (s *stubPushService) AppendReportDismissed(_ context.Context, _ string, _ string, _ string, _ string, _ string) (string, error) {
+	return "notif_report_2", nil
+}
+
 // --- helpers ---
 
 func adminCtx(userID string) context.Context {

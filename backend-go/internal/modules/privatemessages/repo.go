@@ -14,6 +14,31 @@ var (
 	ErrInvalidCursor           = errors.New("private_messages: invalid cursor")
 )
 
+// BlockReason mirrors spec api_spec_chat.md BlockReason: the structured reason
+// returned in the 10200 error data of private_messages/send.
+type BlockReason string
+
+const (
+	// BlockReasonPrivacy covers the blocked relationship and privacy settings
+	// (allow_private_chat) — the blocked state is never exposed.
+	BlockReasonPrivacy BlockReason = "privacy"
+	// BlockReasonStrangerQuotaExceeded: daily stranger-message quota used up.
+	BlockReasonStrangerQuotaExceeded BlockReason = "stranger_quota_exceeded"
+	// BlockReasonAccountSuspended: reserved (account restriction) — type kept
+	// for contract parity; not enforced yet.
+	BlockReasonAccountSuspended BlockReason = "account_suspended"
+)
+
+// MessageBlockedError is returned by Service.Send when the message is refused
+// with a structured BlockReason (HTTP 200 + code 10200 + data {reason}).
+type MessageBlockedError struct {
+	Reason BlockReason
+}
+
+func (e *MessageBlockedError) Error() string {
+	return "private_messages: send blocked: " + string(e.Reason)
+}
+
 type MessageEventMeta struct {
 	TargetUserID string
 	MessageID    string
@@ -34,4 +59,7 @@ type Repository interface {
 	GetMessageForReply(context.Context, string, string) (map[string]any, bool, error)
 	GetMediaForMessage(context.Context, string, string) (map[string]any, bool, error)
 	MessageExists(ctx context.Context, messageID string) (found bool, senderID string, err error)
+	// CountMessagesToUser counts messages sent by senderID to targetUserID
+	// since the given time (used for the stranger daily quota check).
+	CountMessagesToUser(ctx context.Context, senderID, targetUserID string, since time.Time) (int, error)
 }
