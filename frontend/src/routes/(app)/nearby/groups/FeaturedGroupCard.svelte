@@ -3,11 +3,13 @@
 	import JoinButton from './JoinButton.svelte';
 	import type { Group } from './group-data';
 
+	// 附近群组精选卡（移动端全宽）：封面铺满整卡，精选徽章/群信息/加入按钮覆盖在图片上。
+
 	let { group, onToggle, onOpen }: { group: Group; onToggle: () => void; onOpen: () => void } = $props();
 </script>
 
 <div
-	class="neu-hover-card neu-surface-hero neu-card-hover rounded-[24px] overflow-hidden cursor-pointer h-full neu-focus-ring"
+	class="neu-hover-card relative h-full w-full overflow-hidden rounded-[24px] aspect-[4/3] cursor-pointer neu-surface-hero neu-card-hover neu-focus-ring"
 	role="button"
 	tabindex="0"
 	onclick={onOpen}
@@ -19,36 +21,38 @@
 		}
 	}}
 >
-	<div class="relative h-48">
-		<img src={group.banner} alt={group.name} class="w-full h-full object-cover" />
-		<div class="absolute inset-0" style="background:linear-gradient(to top, rgba(0,0,0,.72), transparent 70%);"></div>
-		<div class="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full" style="background:var(--overlay-strong);backdrop-filter:blur(8px);">
-			<Sparkles size={11} color="white" />
-			<span class="text-white text-[10px]">本周精选</span>
-		</div>
-		<div class="absolute bottom-3 left-4 right-4">
-			<p class="text-white text-lg font-semibold">{group.name}</p>
-			<p class="truncate text-white/80 text-[11px] mt-[3px]">{group.desc}</p>
-		</div>
+	<img src={group.banner} alt={group.name} class="absolute inset-0 h-full w-full object-cover" />
+
+	<!-- 底部渐变遮罩，保证覆盖层文字可读 -->
+	<div class="absolute inset-x-0 bottom-0 h-3/5" style="background:linear-gradient(to top, rgba(0,0,0,.8), rgba(0,0,0,.3) 55%, transparent);"></div>
+
+	<!-- 左上：精选徽章 -->
+	<div class="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full" style="background:var(--overlay-strong);backdrop-filter:blur(8px);">
+		<Sparkles size={11} color="white" />
+		<span class="text-white text-[10px]">本周精选</span>
 	</div>
-	<div class="p-4 flex items-center gap-3">
-		<div class="flex-1 min-w-0">
-			<div class="flex items-center gap-3 text-[var(--neu-text-muted)] text-[11px]">
-				<span class="flex items-center gap-1">
+
+	<!-- 底部：群名 / 简介 / 数据与加入 -->
+	<div class="absolute inset-x-0 bottom-0 px-4 pb-3">
+		<p class="text-white text-lg font-semibold">{group.name}</p>
+		<p class="truncate text-white/80 text-[11px] mt-[3px]">{group.desc}</p>
+		<div class="mt-2.5 flex items-center justify-between gap-2">
+			<div class="flex items-center gap-3 text-white/85 text-[11px] min-w-0">
+				<span class="flex items-center gap-1 flex-shrink-0">
 					<Users size={12} />
 					{group.members}
 				</span>
-				<span class="flex items-center gap-1 text-[var(--semantic-online)]">
+				<span class="flex items-center gap-1 flex-shrink-0">
 					<span class="rounded-full" style="width:6px;height:6px;background:var(--semantic-online);"></span>
 					{group.online} 在线
 				</span>
-				<span>{group.distance}</span>
+				<span class="flex-shrink-0">{group.distance}</span>
+				<span class="flex items-center gap-1 truncate text-[var(--neu-accent-primary)]">
+					<CalendarDays size={12} />
+					{group.activity}
+				</span>
 			</div>
-			<p class="truncate flex items-center gap-1 mt-2 text-[var(--neu-accent-primary)] text-[11px]">
-				<CalendarDays size={12} />
-				{group.activity}
-			</p>
+			<JoinButton {group} {onToggle} />
 		</div>
-		<JoinButton {group} {onToggle} />
 	</div>
 </div>
