@@ -3,15 +3,17 @@
 	import { goto } from '$app/navigation';
 	import PageHeader from '@/components/shared/PageHeader.svelte';
 	import { ROUTES } from '@/lib/routes';
-	import { XUZHOU_CENTER, MOCK_PINS, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
+	import { XUZHOU_CENTER, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
 	import {
-		PIN_COLORS, PIN_LABELS, pinTone, buildMapData, getMarkerUrl,
+		PIN_COLORS, PIN_LABELS, pinTone, buildMapData, getMarkerUrl, fetchMapCanvas,
+		type MapHeatBucket,
 		markerUserUrl, markerGroupUrl, markerMomentUrl
 	} from './location-shared';
 	import MapPinMarker from './MapPinMarker.svelte';
+	import MapHeatDot from './MapHeatDot.svelte';
 
 	// 桌面地图探索：左侧栏（统计/搜索/Tab 列表/确认）+ 地图面板（OSM iframe + 图钉）。
-	// 迁移自旧版 LocationDesktop（MOCK_PINS 暂为空数组，图钉层预留）。
+	// 图钉与统计来自 POST /api/v1/map/canvas（spec: api_spec_map.md）。
 
 	let searchQuery = $state('');
 	let selectedPin = $state<Pin | null>(null);
@@ -21,6 +23,30 @@
 	let hoveredListId = $state<string | null>(null);
 	const zoom = 0.045;
 	let mapCenter = $state(XUZHOU_CENTER);
+
+	// map/canvas 数据
+	let mapPins = $state<Pin[]>([]);
+	let heatBuckets = $state<MapHeatBucket[]>([]);
+	let mapCounts = $state<Record<PinType, number>>({ user: 0, group: 0, post: 0 });
+	let mapLoading = $state(true);
+
+	// 视口中心或筛选变化时重新拉取
+	$effect(() => {
+		const center = mapCenter;
+		const types = [...activeFilters];
+		let cancelled = false;
+		mapLoading = true;
+		void fetchMapCanvas(center, zoom, types).then((r) => {
+			if (cancelled) return;
+			mapPins = r.pins;
+			heatBuckets = r.heatBuckets;
+			mapCounts = r.counts;
+			mapLoading = false;
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	// 图钉详情跳转：user/group/post 分别路由到对应详情页
 	function openPinDetail(pin: Pin) {
@@ -38,14 +64,13 @@
 	const searchResults = $derived(
 		searchQuery.trim() ? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 6) : []
 	);
-	const filteredPins = $derived(MOCK_PINS.filter((p) => activeFilters.has(p.type)));
-	const nearbyPins = $derived(MOCK_PINS.filter((p) => (p.count ?? 1) === 1).filter((p) => activeFilters.has(p.type)));
+	const nearbyPins = $derived(mapPins.filter((p) => (p.count ?? 1) === 1));
 
 	const { url: embedUrl, bounds } = $derived(buildMapData(mapCenter, zoom));
 
-	const userCount = $derived(MOCK_PINS.filter((p) => p.type === 'user').reduce((s, p) => s + (p.count ?? 1), 0));
-	const groupCount = $derived(MOCK_PINS.filter((p) => p.type === 'group').reduce((s, p) => s + (p.count ?? 1), 0));
-	const postCount = $derived(MOCK_PINS.filter((p) => p.type === 'post').reduce((s, p) => s + (p.count ?? 1), 0));
+	const userCount = $derived(mapCounts.user);
+	const groupCount = $derived(mapCounts.group);
+	const postCount = $derived(mapCounts.post);
 
 	function handleSelectLoc(loc: LocationResult) {
 		selectedLoc = loc;
@@ -366,8 +391,13 @@
 			</div>
 		</div>
 
+		<!-- Heatmap buckets（大视口 / 高密度时服务端返回热力统计） -->
+		{#each heatBuckets as bucket (bucket.cell_token)}
+			<MapHeatDot {bucket} {bounds} />
+		{/each}
+
 		<!-- Pin markers -->
-		{#each filteredPins as pin (pin.id)}
+		{#each mapPins as pin (pin.id)}
 			<MapPinMarker
 				pin={pin}
 				{bounds}
@@ -379,6 +409,13 @@
 				}}
 			/>
 		{/each}
+
+		{#if mapLoading}
+			<!-- 加载中的轻量指示 -->
+			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-[var(--neu-bg)] px-3 py-1 text-[11px] text-[var(--neu-text-muted)]" style="box-shadow:0 2px 12px var(--neu-shadow-dark);border:1px solid var(--neu-border);">
+				加载地图数据…
+			</div>
+		{/if}
 
 
 		<!-- Selected pin popup -->

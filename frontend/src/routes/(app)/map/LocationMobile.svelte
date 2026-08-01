@@ -4,9 +4,10 @@
 	import PageHeader from '@/components/shared/PageHeader.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import * as Popover from '@/components/ui/popover';
-	import { XUZHOU_CENTER, MOCK_PINS, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
-	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_LABELS, pinTone, floatBtnStyle, buildMapData, getMarkerUrl, markerUserUrl, markerGroupUrl, markerMomentUrl, type SnapState } from './location-shared';
+	import { XUZHOU_CENTER, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
+	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_LABELS, pinTone, floatBtnStyle, buildMapData, getMarkerUrl, fetchMapCanvas, type MapHeatBucket, markerUserUrl, markerGroupUrl, markerMomentUrl, type SnapState } from './location-shared';
 	import MapPinMarker from './MapPinMarker.svelte';
+	import MapHeatDot from './MapHeatDot.svelte';
 
 	// 移动端地图探索：全屏 OSM + 可拖拽吸附底部 Sheet（148/318/540 三档）。
 	// 迁移自旧版 LocationMobile（motion spring 吸附改 CSS transition）。
@@ -84,8 +85,32 @@
 	let recentItems = $state(RECENT_LOCATIONS);
 	let activeTab = $state<'recent' | 'hot'>('recent');
 
+	// map/canvas 数据
+	let mapPins = $state<Pin[]>([]);
+	let heatBuckets = $state<MapHeatBucket[]>([]);
+	let mapCounts = $state<Record<PinType, number>>({ user: 0, group: 0, post: 0 });
+	let mapLoading = $state(true);
+
+	// 视口中心或筛选变化时重新拉取
+	$effect(() => {
+		const center = mapCenter;
+		const types = [...activeFilters];
+		let cancelled = false;
+		mapLoading = true;
+		void fetchMapCanvas(center, zoom, types).then((r) => {
+			if (cancelled) return;
+			mapPins = r.pins;
+			heatBuckets = r.heatBuckets;
+			mapCounts = r.counts;
+			mapLoading = false;
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
+
 	const { url: embedUrl, bounds } = $derived(buildMapData(mapCenter, zoom));
-	const filteredPins = $derived(MOCK_PINS.filter((p) => activeFilters.has(p.type)));
+	const filteredPins = $derived(mapPins);
 	const searchResults = $derived(searchQuery.trim() ? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 5) : []);
 
 	function handleMapTap() {
@@ -154,6 +179,11 @@
 			</div>
 		</div>
 
+		<!-- Heatmap buckets（大视口 / 高密度时服务端返回热力统计） -->
+		{#each heatBuckets as bucket (bucket.cell_token)}
+			<MapHeatDot {bucket} {bounds} />
+		{/each}
+
 		<!-- Marker pins -->
 		{#each filteredPins as pin (pin.id)}
 			<MapPinMarker
@@ -167,6 +197,12 @@
 				}}
 			/>
 		{/each}
+
+		{#if mapLoading}
+			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-[var(--neu-bg)] px-3 py-1 text-[11px] text-[var(--neu-text-muted)]" style="box-shadow:0 2px 12px var(--neu-shadow-dark);border:1px solid var(--neu-border);">
+				加载地图数据…
+			</div>
+		{/if}
 
 		<!-- Attribution -->
 		<div class="text-[var(--neu-text-muted)]" style="position:absolute;bottom:4px;left:6px;font-size:9px;opacity:0.4;pointer-events:none;z-index:1;">
