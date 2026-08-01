@@ -172,7 +172,7 @@ interface MarkReadRequest {
   notification_ids?: string[];       // scope='selected' 时：精确标记（0-50 个；空数组 no-op 成功；超 50 返回 10000）
   type?: NotifyType;           // scope='selected' 时：按类型批量标记
 }
-// scope='selected' 时，notification_ids 与 type 二选一（同时传或都不传返回 10000，除非 scope='all'）
+// scope='selected' 时，notification_ids 与 type 二选一（同时传返回 10000；都未传时按 'all' 语义清空全部未读，与上方「范围语义」一致）
 ```
 
 **非法 ID 处理**：不存在或不属于当前用户的 `notification_ids` 将被服务端静默忽略，不返回错误（不泄漏存在性）。

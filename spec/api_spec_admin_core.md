@@ -553,6 +553,8 @@ interface UpdateAppConfigRequest {
 
 ```typescript
 interface UploadConfig {
+  // 注：本配置为 image/video/audio/file 四档的全局默认限制；各分类（avatar/moment_image/chat_video 等）的
+  // 具体 MIME 白名单与大小上限以 api_spec_media.md「分类限制」表为硬编码默认，管理员配置仅覆盖四档全局值
   image_max_size: number;
   video_max_size: number;
   audio_max_size: number;

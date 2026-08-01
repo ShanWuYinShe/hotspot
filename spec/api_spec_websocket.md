@@ -141,7 +141,7 @@ WebSocket close code 受 RFC 6455 约束（范围 1000-4999），应用层错误
 #### 1. 重连流程（resume token 优先）
 
 - 重连成功后必须重新发送 `Auth`，可携带上一次连接的 `resume_token`（来自 `ConnectionEstablished`）。
-- **resume_token 有效**（服务端短时状态未过期，TTL ≈ 2 × ping_timeout）：服务端推送断线期间的增量事件（按 `server_seq` 续传），客户端无需全量重放订阅、无需 HTTP 补拉。订阅状态由服务端从 resume 状态恢复。
+- **resume_token 有效**（服务端短时状态未过期，TTL ≈ 2 × ping_interval）：服务端推送断线期间的增量事件（按 `server_seq` 续传），客户端无需全量重放订阅、无需 HTTP 补拉。订阅状态由服务端从 resume 状态恢复。
 - **resume_token 失效/未携带**（超过 TTL，或服务端不可恢复）：回退到全量恢复模式——客户端使用 `SetSubscriptions`（`operation: 'set'`）做全量重放，客户端本地维护订阅状态为权威；并按下方「数据补拉」策略补拉历史。
 
 > **实现约束（生产部署必需）**：resume token 要求服务端为每个连接缓存 TTL 内按 `server_seq` 排序的出站事件队列。WS 服务多实例部署时，用户重连可能落到与断线时不同的实例——**必须使用跨实例共享的事件存储**（Redis Streams / Kafka 等），单实例内存方案会导致 resume 跨实例失效。具体存储选型非契约（实现中立），但"跨实例可恢复"是 resume 语义的硬前提，不满足则等同于未实现 resume（客户端将总是退化为全量重放）。
@@ -309,7 +309,7 @@ interface ConnectionEstablishedPayload {
   connection_id: string;
   user_id: string;
   server_time: string;             // 服务端当前时间（UTC ISO 8601），客户端用于判断断开时长
-  resume_token: string;            // 本次连接的恢复令牌；重连时透传给 Auth 以尝试增量恢复（TTL ≈ 2×ping_timeout）
+  resume_token: string;            // 本次连接的恢复令牌；重连时透传给 Auth 以尝试增量恢复（TTL ≈ 2×ping_interval）
   server_seq: number;              // 当前连接的单调递增序号基线；后续每个推送事件携带 server_seq 供续传/去重
 
   // 服务端配置（动态配置，客户端不得硬编码）
