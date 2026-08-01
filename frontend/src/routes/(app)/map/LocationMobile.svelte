@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, SlidersHorizontal, Crosshair, Heart, Check } from '@lucide/svelte';
+	import { Search, MapPin, X, Users, ChevronRight, Clock, Star, SlidersHorizontal, Crosshair, Check } from '@lucide/svelte';
+	import { goto } from '$app/navigation';
 	import PageHeader from '@/components/shared/PageHeader.svelte';
+	import { ROUTES } from '@/lib/routes';
 	import * as Popover from '@/components/ui/popover';
 	import { XUZHOU_CENTER, MOCK_PINS, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
 	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_LABELS, pinTone, floatBtnStyle, buildMapData, getMarkerUrl, markerUserUrl, markerGroupUrl, markerMomentUrl, type SnapState } from './location-shared';
@@ -112,6 +114,13 @@
 		const next = new Set(activeFilters);
 		next.has(type) ? next.delete(type) : next.add(type);
 		activeFilters = next;
+	}
+
+	// 图钉详情跳转：user/group/post 分别路由到对应详情页
+	function openPinDetail(pin: Pin) {
+		if (pin.type === 'user') void goto(ROUTES.user(pin.id));
+		else if (pin.type === 'group') void goto(ROUTES.group(pin.id));
+		else void goto(ROUTES.moment(pin.id));
 	}
 
 	const sheetStyle = $derived(
@@ -231,11 +240,6 @@
 		>
 			<Crosshair style="width:18px;height:18px;color:var(--neu-accent-primary);" strokeWidth={1.75} />
 		</button>
-
-		<!-- My location dot -->
-		<button type="button" aria-label="我的位置" class="neu-hover-btn flex items-center justify-center rounded-full outline-none neu-circle-hover" style="width:42px;height:42px;{floatBtnStyle}">
-			<div style="width:14px;height:14px;border-radius:50%;background:{PIN_COLORS.user};border:2.5px solid var(--neu-bg);box-shadow:0 0 8px {pinTone('user', 65)};"></div>
-		</button>
 	</div>
 
 	<!-- ══ BOTTOM SHEET (draggable) ══ -->
@@ -343,7 +347,7 @@
 										{selectedPin.tag ? ` · #${selectedPin.tag}` : ''}
 									</p>
 								</div>
-								<button type="button" class="neu-hover-btn px-2.5 py-1.5 rounded-full outline-none flex-shrink-0" style="background:{PIN_COLORS[selectedPin.type]};color:white;font-size:11px;">
+								<button type="button" class="neu-hover-btn px-2.5 py-1.5 rounded-full outline-none flex-shrink-0" style="background:{PIN_COLORS[selectedPin.type]};color:white;font-size:11px;" onclick={() => selectedPin && openPinDetail(selectedPin)}>
 									查看
 								</button>
 								<button type="button" class="neu-hover-btn outline-none flex-shrink-0 ml-0.5" onclick={() => (selectedPin = null)}>
@@ -404,27 +408,34 @@
 								<p class="text-[var(--neu-text-muted)]" style="font-size:13px;padding:12px 20px;">暂无最近记录</p>
 							{/if}
 						{:else}
-							{#each HOT_LOCATIONS as loc, i}
-								<button
-									type="button"
-									class="neu-hover-bg app-list-row app-list-row--standard neu-row-hover px-4 outline-none"
-									style="background:var(--neu-bg);border-bottom:{i < HOT_LOCATIONS.length - 1 ? '1px solid var(--neu-border)' : 'none'};"
-									aria-pressed={selectedLoc?.displayName === loc.displayName}
-									onclick={() => handleSelectLoc(loc)}
-								>
-									<div class="flex items-center justify-center rounded-[13px] flex-shrink-0 bg-[var(--neu-accent-primary)]" style="width:36px;height:36px;font-size:18px;opacity:0.88;">
-										{loc.emoji}
-									</div>
-									<div class="flex-1 min-w-0">
-										<p class="truncate text-[var(--neu-text)] text-sm">{loc.displayName}</p>
-										<p class="text-[var(--neu-text-muted)]" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
-									</div>
-									<div class="flex items-center gap-1 flex-shrink-0">
-										<Users style="width:11px;height:11px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
-										<span class="text-[var(--neu-accent-primary)] text-xs">{loc.users}</span>
-									</div>
-								</button>
-							{/each}
+							{#if HOT_LOCATIONS.length}
+								{#each HOT_LOCATIONS as loc, i}
+									<button
+										type="button"
+										class="neu-hover-bg app-list-row app-list-row--standard neu-row-hover px-4 outline-none"
+										style="background:var(--neu-bg);border-bottom:{i < HOT_LOCATIONS.length - 1 ? '1px solid var(--neu-border)' : 'none'};"
+										aria-pressed={selectedLoc?.displayName === loc.displayName}
+										onclick={() => handleSelectLoc(loc)}
+									>
+										<div class="flex items-center justify-center rounded-[13px] flex-shrink-0 bg-[var(--neu-accent-primary)]" style="width:36px;height:36px;font-size:18px;opacity:0.88;">
+											{loc.emoji}
+										</div>
+										<div class="flex-1 min-w-0">
+											<p class="truncate text-[var(--neu-text)] text-sm">{loc.displayName}</p>
+											<p class="text-[var(--neu-text-muted)]" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
+										</div>
+										<div class="flex items-center gap-1 flex-shrink-0">
+											<Users style="width:11px;height:11px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
+											<span class="text-[var(--neu-accent-primary)] text-xs">{loc.users}</span>
+										</div>
+									</button>
+								{/each}
+							{:else}
+								<div class="flex flex-col items-center gap-2 py-8">
+									<Star style="width:20px;height:20px;color:var(--neu-text-muted);opacity:0.3;" strokeWidth={1} />
+									<p class="text-[var(--neu-text-muted)] text-xs">暂无热门地点</p>
+								</div>
+							{/if}
 						{/if}
 					</div>
 				{/if}

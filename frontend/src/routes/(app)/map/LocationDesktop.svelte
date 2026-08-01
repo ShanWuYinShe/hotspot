@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, SlidersHorizontal, Crosshair, Heart, Check } from '@lucide/svelte';
+	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, Crosshair, Check } from '@lucide/svelte';
+	import { goto } from '$app/navigation';
 	import PageHeader from '@/components/shared/PageHeader.svelte';
-	import * as Popover from '@/components/ui/popover';
+	import { ROUTES } from '@/lib/routes';
 	import { XUZHOU_CENTER, MOCK_PINS, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
 	import {
-		SNAP_HEIGHTS, PIN_COLORS, PIN_LABELS, pinTone, buildMapData, getMarkerUrl,
-		markerUserUrl, markerGroupUrl, markerMomentUrl, markerUserClusterUrl, markerGroupClusterUrl, markerMomentClusterUrl,
-		type SnapState
+		PIN_COLORS, PIN_LABELS, pinTone, buildMapData, getMarkerUrl,
+		markerUserUrl, markerGroupUrl, markerMomentUrl
 	} from './location-shared';
 	import MapPinMarker from './MapPinMarker.svelte';
 
@@ -19,10 +19,15 @@
 	let activeFilters = $state<Set<PinType>>(new Set(['user', 'group', 'post']));
 	let activeTab = $state<'nearby' | 'hot' | 'recent'>('nearby');
 	let hoveredListId = $state<string | null>(null);
-	let showFilter = $state(true);
-	let filterAnchorEl = $state<HTMLElement | null>(null);
 	const zoom = 0.045;
 	let mapCenter = $state(XUZHOU_CENTER);
+
+	// 图钉详情跳转：user/group/post 分别路由到对应详情页
+	function openPinDetail(pin: Pin) {
+		if (pin.type === 'user') void goto(ROUTES.user(pin.id));
+		else if (pin.type === 'group') void goto(ROUTES.group(pin.id));
+		else void goto(ROUTES.moment(pin.id));
+	}
 
 	function toggleFilter(type: PinType) {
 		const next = new Set(activeFilters);
@@ -182,7 +187,8 @@
 						<div class="bg-[var(--semantic-online)]" style="width:8px;height:8px;border-radius:50%;box-shadow:0 0 6px var(--semantic-online);flex-shrink:0;"></div>
 					</div>
 
-					{#each nearbyPins as pin (pin.id)}
+					{#if nearbyPins.length}
+						{#each nearbyPins as pin (pin.id)}
 						<button
 							type="button"
 							class="neu-row-hover app-list-row app-list-row--rich neu-row-hover rounded-[15px] outline-none"
@@ -227,11 +233,18 @@
 								<ChevronRight style="width:14px;height:14px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
 							{/if}
 						</button>
-					{/each}
+						{/each}
+					{:else}
+						<div class="flex flex-col items-center gap-2 py-10">
+							<MapPin style="width:22px;height:22px;color:var(--neu-text-muted);opacity:0.3;" strokeWidth={1} />
+							<p class="text-[var(--neu-text-muted)] text-xs">附近暂无内容，放大或移动地图后刷新</p>
+						</div>
+					{/if}
 				</div>
 			{:else if activeTab === 'hot'}
 				<div class="animate-fade-in flex flex-col gap-2">
-					{#each HOT_LOCATIONS as loc, i}
+					{#if HOT_LOCATIONS.length}
+						{#each HOT_LOCATIONS as loc, i}
 						<button
 							type="button"
 							class="neu-hover-card neu-row-hover app-list-row app-list-row--rich neu-row-hover rounded-[16px] outline-none"
@@ -254,11 +267,18 @@
 								<span class="text-[var(--neu-text-muted)] text-[10px]">在线</span>
 							</div>
 						</button>
-					{/each}
+						{/each}
+					{:else}
+						<div class="flex flex-col items-center gap-2 py-10">
+							<Star style="width:22px;height:22px;color:var(--neu-text-muted);opacity:0.3;" strokeWidth={1} />
+							<p class="text-[var(--neu-text-muted)] text-xs">暂无热门地点</p>
+						</div>
+					{/if}
 				</div>
 			{:else}
 				<div class="animate-fade-in flex flex-col gap-2">
-					{#each RECENT_LOCATIONS as loc, i}
+					{#if RECENT_LOCATIONS.length}
+						{#each RECENT_LOCATIONS as loc, i}
 						<button
 							type="button"
 							class="neu-hover-card neu-row-hover app-list-row app-list-row--rich neu-row-hover rounded-[16px] outline-none"
@@ -277,7 +297,13 @@
 								<Check style="width:14px;height:14px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={2.5} />
 							{/if}
 						</button>
-					{/each}
+						{/each}
+					{:else}
+						<div class="flex flex-col items-center gap-2 py-10">
+							<Clock style="width:22px;height:22px;color:var(--neu-text-muted);opacity:0.3;" strokeWidth={1} />
+							<p class="text-[var(--neu-text-muted)] text-xs">暂无最近记录</p>
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -319,17 +345,15 @@
 		tabindex="0"
 		aria-label="地图（点击空白处取消选中）"
 		onclick={(e) => {
-			// 详情/筛选浮层内的点击不视为地图空白点击
+			// 详情浮层内的点击不视为地图空白点击
 			if ((e.target as HTMLElement).closest('[data-map-popup]')) return;
 			selectedPin = null;
-			showFilter = false;
 		}}
 		onkeydown={(e) => {
 			if (e.target !== e.currentTarget) return;
 			if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
 				e.preventDefault();
 				selectedPin = null;
-				showFilter = false;
 			}
 		}}
 	>
@@ -356,70 +380,6 @@
 			/>
 		{/each}
 
-		<!-- Top-left: 筛选 -->
-		<Popover.Root bind:open={showFilter}>
-			<div bind:this={filterAnchorEl} style="position:absolute;top:14px;left:14px;z-index:20;">
-				<button
-					type="button"
-					class="neu-hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text)]'}"
-					style="padding:9px 16px;font-size:13px;border:{showFilter ? '1px solid transparent' : '1px solid var(--neu-border)'};box-shadow:{showFilter ? '0 4px 16px var(--neu-glow)' : '0 4px 16px var(--neu-shadow-dark)'};"
-					onclick={(e) => {
-						e.stopPropagation();
-						showFilter = !showFilter;
-					}}
-				>
-					<SlidersHorizontal style="width:13px;height:13px;" strokeWidth={showFilter ? 2.5 : 1.75} />
-					筛选
-					{#if activeFilters.size < 3}
-						<span style="margin-left:2px;font-size:10px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'rgba(255,255,255,0.25)' : 'var(--neu-accent-soft)'};color:{showFilter ? 'white' : 'var(--neu-accent-primary)'};font-weight:500;">
-							{activeFilters.size}
-						</span>
-					{/if}
-				</button>
-			</div>
-			<Popover.Content
-				customAnchor={filterAnchorEl}
-				side="bottom"
-				align="start"
-				sideOffset={8}
-				data-map-popup
-				class="w-[200px] overflow-hidden rounded-[16px] p-0"
-			>
-				<div style="overflow:hidden;border-radius:16px;">
-						{#each [
-							{ type: 'user', label: '用户', icon: markerUserUrl, clusterIcon: markerUserClusterUrl, color: PIN_COLORS.user, count: userCount },
-							{ type: 'group', label: '群组', icon: markerGroupUrl, clusterIcon: markerGroupClusterUrl, color: PIN_COLORS.group, count: groupCount },
-							{ type: 'post', label: '动态', icon: markerMomentUrl, clusterIcon: markerMomentClusterUrl, color: PIN_COLORS.post, count: postCount }
-						] as chip, i}
-							{@const active = activeFilters.has(chip.type as PinType)}
-							{#if i > 0}
-								<div class="bg-[var(--neu-border)]" style="height:1px;"></div>
-							{/if}
-							<button
-								type="button"
-								class="neu-hover-btn w-full flex items-center gap-2 px-3 py-2.5 outline-none"
-								style="opacity:{active ? 1 : 0.45};"
-								onclick={() => toggleFilter(chip.type as PinType)}
-							>
-								<img src={chip.icon} alt="" style="width:15px;height:21px;" />
-								<img src={chip.clusterIcon} alt="" style="width:15px;height:21px;opacity:0.65;" />
-								<span class="text-[var(--neu-text)]" style="flex:1;font-size:12px;text-align:left;">{chip.label}</span>
-								<span style="font-size:12px;color:{chip.color};font-weight:600;">{chip.count}</span>
-								<div style="width:14px;height:14px;border-radius:4px;flex-shrink:0;background:{active ? chip.color : 'transparent'};border:1.5px solid {active ? chip.color : 'var(--neu-border-pressed)'};display:flex;align-items:center;justify-content:center;transition:all 0.18s;">
-									{#if active}
-										<Check style="width:10px;height:10px;color:white;" strokeWidth={3} />
-									{/if}
-								</div>
-							</button>
-						{/each}
-						<div class="bg-[var(--neu-border)]" style="height:1px;"></div>
-						<div class="px-3 py-2 flex items-center gap-2">
-							<div style="width:13px;height:13px;border-radius:50%;background:{PIN_COLORS.user};border:2px solid var(--neu-bg);box-shadow:0 0 5px {pinTone('user', 50)};"></div>
-							<span class="text-[var(--neu-text-muted)] text-xs">我的位置</span>
-						</div>
-					</div>
-			</Popover.Content>
-		</Popover.Root>
 
 		<!-- Selected pin popup -->
 		{#if selectedPin}
@@ -469,6 +429,7 @@
 							type="button"
 							class="neu-hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white"
 							style="font-size:13px;box-shadow:0 4px 14px var(--neu-glow);"
+							onclick={() => selectedPin && openPinDetail(selectedPin)}
 						>
 							查看详情
 							<ChevronRight style="width:13px;height:13px;" strokeWidth={2} />
