@@ -7,7 +7,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { interactionActions } from '../../../core/state/InteractionActions';
-import { InteractionStateStore, MomentSocialState } from '../../../core/state/InteractionStateStore';
+import { InteractionStateStore, MomentSocialState, isMomentLikedByReactions } from '../../../core/state/InteractionStateStore';
 import { AppRouter, EditMomentRouteParam, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import {
@@ -214,11 +214,9 @@ export struct MomentDetailPage {
   }
 
   private isMomentLiked(moment: MomentItem): boolean {
+    // 点赞态由 reactions[].reacted_by_me 推导（响应数据驱动，优先本地最新聚合）
     const state = this.momentStateMap[moment.moment_id];
-    if (state) {
-      return state.my_state?.is_liked ?? false;
-    }
-    return moment.my_state?.is_liked ?? false;
+    return isMomentLikedByReactions(state?.reactions ?? moment.reactions);
   }
 
   private isMomentFavorited(moment: MomentItem): boolean {

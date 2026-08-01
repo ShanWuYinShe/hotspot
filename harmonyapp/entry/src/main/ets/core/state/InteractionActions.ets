@@ -1,9 +1,9 @@
 import { ApiClient } from '../api/ApiClient';
 import { GlobalStateManager } from './GlobalStateManager';
-import { InteractionStateStore, MomentSocialState } from './InteractionStateStore';
+import { InteractionStateStore, MomentSocialState, isMomentLikedByReactions } from './InteractionStateStore';
 import { AppRouter, LoginRouteParam } from '../router/AppRouter';
 import { PageNames } from '../../constants/AppConstants';
-import { FollowRequest, UnfollowRequest, FavoriteMomentRequest, UnfavoriteMomentRequest, LikeMomentRequest, UnlikeMomentRequest, JoinGroupRequest, LeaveGroupRequest } from '../types/api';
+import { FollowRequest, UnfollowRequest, FavoriteMomentRequest, UnfavoriteMomentRequest, JoinGroupRequest, LeaveGroupRequest, Reaction } from '../types/api';
 
 const ACTION_LOGIN_REASON = 'action_required';
 
@@ -39,10 +39,26 @@ export class InteractionActions {
       likes_count: 0,
       comments_count: 0,
       shares_count: 0,
-      my_state: { is_liked: false, is_favorited: false }
+      my_state: { is_favorited: false }
     };
     this.store.setMomentState(momentId, emptyState);
     return emptyState;
+  }
+
+  // 乐观更新 reactions 聚合：对指定 emoji 翻转 reacted_by_me 并调整 count
+  private applyReactionToggle(reactions: Reaction[] | undefined, emoji: string, liked: boolean): Reaction[] {
+    const list: Reaction[] = reactions ? [...reactions] : [];
+    const index = list.findIndex((r: Reaction) => r.emoji === emoji);
+    if (index >= 0) {
+      const existing = list[index];
+      const nextCount = Math.max(0, existing.count + (liked ? 1 : -1));
+      list[index] = { emoji: existing.emoji, count: nextCount, reacted_by_me: liked };
+      return list;
+    }
+    if (liked) {
+      list.push({ emoji: emoji, count: 1, reacted_by_me: true });
+    }
+    return list;
   }
 
   async toggleMomentLike(momentId: string): Promise<boolean> {
@@ -51,15 +67,16 @@ export class InteractionActions {
     }
     const snapshot = this.store.cloneMomentState(momentId);
     const current = snapshot ?? this.ensureMomentState(momentId);
-    const isLiked = current?.my_state?.is_liked ?? false;
+    // 点赞态由 reactions[].reacted_by_me 推导（响应数据驱动），不再依赖 is_liked 字段
+    const isLiked = isMomentLikedByReactions(current.reactions);
     const nextLiked = !isLiked;
-    this.store.updateMomentMyState(momentId, { is_liked: nextLiked });
+    const emoji = ApiClient.getDefaultLikeEmoji();
+    this.store.updateMomentReactions(momentId, this.applyReactionToggle(current.reactions, emoji, nextLiked));
     this.store.updateMomentCounts(momentId, nextLiked ? 1 : -1);
 
     try {
-      const request: LikeMomentRequest | UnlikeMomentRequest = { moment_id: momentId };
-      const response = nextLiked ? await ApiClient.likeMoment(request as LikeMomentRequest)
-        : await ApiClient.unlikeMoment(request as UnlikeMomentRequest);
+      // 契约：点赞统一走 reactions/set（App 已有 setMomentReaction 封装）
+      const response = await ApiClient.setMomentReaction(momentId, emoji, nextLiked);
       if (response.code !== 0) {
         throw new Error(response.message || 'like failed');
       }

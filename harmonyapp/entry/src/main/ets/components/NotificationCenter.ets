@@ -245,9 +245,7 @@ export struct NotificationCenter {
         AppRouter.push(PageNames.PROFILE, params);
         return true;
       }
-      case 'moment_liked':
       case 'moment_commented':
-      case 'comment_liked':
       case 'comment_reply':
       case 'mentioned': {
         const momentId = notification.payload?.moment_id ?? '';
@@ -257,10 +255,33 @@ export struct NotificationCenter {
         AppRouter.push(PageNames.MOMENT_DETAIL, params);
         return true;
       }
+      case 'reaction_added': {
+        // 表情反应目标可能是 moment/comment/message；仅 moment 可直达详情
+        if (notification.payload?.target_type !== 'moment') {
+          return false;
+        }
+        const targetMomentId = notification.payload?.target_id ?? '';
+        if (!targetMomentId) return false;
+        const params = new MomentDetailRouteParam();
+        params.momentId = targetMomentId;
+        AppRouter.push(PageNames.MOMENT_DETAIL, params);
+        return true;
+      }
+      case 'nearby_new_moment': {
+        const momentId = notification.payload?.moment_id ?? '';
+        if (!momentId) return false;
+        const params = new MomentDetailRouteParam();
+        params.momentId = momentId;
+        AppRouter.push(PageNames.MOMENT_DETAIL, params);
+        return true;
+      }
       case 'group_invite_received':
       case 'group_invite_accepted':
+      case 'group_invite_revoked':
       case 'group_application_received':
-      case 'group_application_accepted': {
+      case 'group_application_accepted':
+      case 'group_application_cancelled':
+      case 'group_application_rejected': {
         const groupId = notification.payload?.group_id ?? '';
         if (!groupId) return false;
         const params = new GroupDetailRouteParam();
@@ -772,24 +793,34 @@ export struct NotificationCenter {
         return '新的关注者';
       case 'mutual_follow':
         return '互相关注';
-      case 'moment_liked':
-        return '瞬间获赞';
       case 'moment_commented':
         return '新的评论';
-      case 'comment_liked':
-        return '评论获赞';
       case 'comment_reply':
         return '评论被回复';
       case 'mentioned':
         return '被提及';
+      case 'reaction_added':
+        return '收到表情反应';
       case 'group_invite_received':
         return '群组邀请';
       case 'group_invite_accepted':
         return '邀请已接受';
+      case 'group_invite_revoked':
+        return '邀请已撤销';
       case 'group_application_received':
         return '新的入群申请';
       case 'group_application_accepted':
         return '申请已通过';
+      case 'group_application_cancelled':
+        return '申请已取消';
+      case 'group_application_rejected':
+        return '申请被拒绝';
+      case 'report_resolved':
+        return '举报已处理';
+      case 'report_dismissed':
+        return '举报被驳回';
+      case 'nearby_new_moment':
+        return '附近新动态';
       case 'system_announcement':
         return '系统通知';
       default:
@@ -805,12 +836,8 @@ export struct NotificationCenter {
         return `${actor} 关注了你`;
       case 'mutual_follow':
         return `你与 ${actor} 已互相关注`;
-      case 'moment_liked':
-        return `${actor} 赞了你的动态`;
       case 'moment_commented':
         return `${actor}: ${payload?.comment_preview ?? '发表了评论'}`;
-      case 'comment_liked':
-        return payload?.comment_preview ? `${actor} 赞了你的评论：${payload.comment_preview}` : `${actor} 赞了你的评论`;
       case 'comment_reply':
         return payload?.replied_comment_preview
           ? `${actor} 回复了你的评论：${payload.replied_comment_preview}`
@@ -819,14 +846,30 @@ export struct NotificationCenter {
         return payload?.target_type === 'comment'
           ? `${actor} 在评论中提到了你`
           : `${actor} 在动态中提到了你`;
+      case 'reaction_added':
+        return payload?.emoji
+          ? `${actor} 对你的内容送出了 ${payload.emoji}`
+          : `${actor} 对你的内容添加了表情反应`;
       case 'group_invite_received':
         return `${payload?.group_name ?? '某群组'} 邀请你加入`;
       case 'group_invite_accepted':
         return `${actor} 接受了群组邀请`;
+      case 'group_invite_revoked':
+        return `${payload?.group_name ?? '某群组'} 的邀请已被撤销`;
       case 'group_application_received':
         return `${actor} 申请加入 ${payload?.group_name ?? '群组'}`;
       case 'group_application_accepted':
         return `你加入了 ${payload?.group_name ?? '群组'}`;
+      case 'group_application_cancelled':
+        return `${actor} 撤回了对 ${payload?.group_name ?? '群组'} 的申请`;
+      case 'group_application_rejected':
+        return `你加入 ${payload?.group_name ?? '群组'} 的申请被拒绝`;
+      case 'report_resolved':
+        return payload?.note ?? '你的举报已处理完成';
+      case 'report_dismissed':
+        return payload?.note ?? '你的举报未通过审核';
+      case 'nearby_new_moment':
+        return `${actor} 在附近发布了新瞬间`;
       case 'system_announcement':
         return payload?.message ?? '请查看系统公告';
       default:
@@ -870,16 +913,18 @@ export struct NotificationCenter {
       case 'new_follower':
       case 'mutual_follow':
         return 'social';
-      case 'moment_liked':
       case 'moment_commented':
-      case 'comment_liked':
       case 'comment_reply':
       case 'mentioned':
+      case 'reaction_added':
         return 'interaction';
       case 'group_invite_received':
       case 'group_invite_accepted':
+      case 'group_invite_revoked':
       case 'group_application_received':
       case 'group_application_accepted':
+      case 'group_application_cancelled':
+      case 'group_application_rejected':
         return 'group';
       case 'system_announcement':
         return 'system';

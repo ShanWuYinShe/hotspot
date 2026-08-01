@@ -1,6 +1,6 @@
 import { MomentItem, MomentImage, UserInfo } from '../core/types/api';
 import { interactionActions } from '../core/state/InteractionActions';
-import { MomentSocialState } from '../core/state/InteractionStateStore';
+import { MomentSocialState, isMomentLikedByReactions } from '../core/state/InteractionStateStore';
 import { SystemAvatar } from './SystemAvatar';
 import { AppIcon, IconButton, IconSize } from './SystemIcon';
 import { DesignConstants } from '../constants/DesignConstants';
@@ -95,6 +95,12 @@ export struct MomentFeedCard {
 
   private getMomentState(): MomentSocialState | undefined {
     return this.momentStateMap[this.moment.moment_id];
+  }
+
+  // 点赞态由 reactions[].reacted_by_me 推导（响应数据驱动，优先本地最新聚合，回退响应数据）
+  private isLikedByMe(): boolean {
+    const state = this.getMomentState();
+    return isMomentLikedByReactions(state?.reactions ?? this.moment.reactions);
   }
 
   private async shareMoment(moment: MomentItem): Promise<void> {
@@ -233,7 +239,7 @@ export struct MomentFeedCard {
             Text() {
               SymbolSpan($r(AppIcon.HEART))
                 .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
-                .fontColor([this.getMomentState()?.my_state?.is_liked
+                .fontColor([this.isLikedByMe()
                   ? this.getPalette().accentBackground
                   : this.getPalette().textSecondary])
             }
@@ -520,9 +526,9 @@ export struct MomentFeedCard {
       Row({ space: DesignConstants.SPACING.XL }) {
         Row({ space: DesignConstants.SPACING.XS }) {
           IconButton({
-            icon: this.getMomentState()?.my_state?.is_liked ? AppIcon.HEART_FILL : AppIcon.HEART,
+            icon: this.isLikedByMe() ? AppIcon.HEART_FILL : AppIcon.HEART,
             iconSize: IconSize.MEDIUM,
-            iconColor: this.getMomentState()?.my_state?.is_liked
+            iconColor: this.isLikedByMe()
               ? this.getPalette().accentBackground
               : this.getPalette().textSecondary,
             onButtonClick: () => this.onLikeClick(this.moment)

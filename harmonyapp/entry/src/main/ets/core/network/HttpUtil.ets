@@ -555,6 +555,16 @@ export class HttpUtil {
         if (snapshot.status !== undefined) {
           errRecord.status = snapshot.status;
         }
+        // 附带响应 data（如 chat send 被拒时 data = { reason: BlockReason }），供调用方读取
+        const responseData = resultRecord.data;
+        if (responseData !== undefined && responseData !== null) {
+          errRecord.data = responseData;
+          const dataRecord = responseData as Record<string, Object>;
+          const dataReason = dataRecord.reason;
+          if (typeof dataReason === 'string' && dataReason.length > 0) {
+            errRecord.reason = dataReason;
+          }
+        }
         throw err;
       }
 

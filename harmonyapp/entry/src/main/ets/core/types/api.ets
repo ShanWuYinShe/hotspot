@@ -263,7 +263,7 @@ export interface SystemAnnouncementItem {
   announcement_id: string;
   title: string;
   content: string;
-  severity: AnnouncementSeverity;
+  severity: AnnounceLevel;
   action_url?: string;
   created_at: string;
 }
@@ -500,7 +500,7 @@ export interface SearchUsersRequest {
   tag?: string;
   radius?: number;
   sort_by?: 'relevance' | 'distance' | 'newest';
-  reference_point: GeoPoint;
+  reference_point?: GeoPoint;
   pagination?: PaginationParams;
 }
 
@@ -654,7 +654,7 @@ export interface FollowingItem {
 export interface FollowerItem {
   user: UserInfo;
   followed_at: string;
-  is_following_back: boolean;
+  is_mutual: boolean;
   presence_status?: UserPresenceStatus;
   last_online_at?: string;
 }
@@ -672,7 +672,7 @@ export interface SearchMomentsRequest {
   tag?: string;
   radius?: number;
   sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
-  reference_point: GeoPoint;
+  reference_point?: GeoPoint;
   pagination?: PaginationParams;
 }
 
@@ -700,14 +700,6 @@ export interface EditMomentRequest {
 }
 
 export interface DeleteMomentRequest {
-  moment_id: string;
-}
-
-export interface LikeMomentRequest {
-  moment_id: string;
-}
-
-export interface UnlikeMomentRequest {
   moment_id: string;
 }
 
@@ -846,7 +838,7 @@ export interface SearchGroupsRequest {
   tag?: string;
   radius?: number;
   sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
-  reference_point: GeoPoint;
+  reference_point?: GeoPoint;
   pagination?: PaginationParams;
 }
 
@@ -1283,19 +1275,19 @@ export interface GetFeedFollowingRequest {
 }
 
 export interface GetFeedNearbyRequest {
-  reference_point: GeoPoint;
+  reference_point?: GeoPoint;
   radius?: number;
   pagination?: PaginationParams;
 }
 
 export interface GetFeedNearbyUsersRequest {
-  reference_point: GeoPoint;
+  reference_point?: GeoPoint;
   radius?: number;
   pagination?: PaginationParams;
 }
 
 export interface GetFeedNearbyGroupsRequest {
-  reference_point: GeoPoint;
+  reference_point?: GeoPoint;
   radius?: number;
   pagination?: PaginationParams;
 }
@@ -1319,7 +1311,7 @@ export type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
 
 export interface SearchSuggestRequest {
   prefix: string;
-  reference_point: GeoPoint;
+  reference_point?: GeoPoint;
   types?: SearchSuggestType[];
   radius?: number;
 }
@@ -1877,7 +1869,7 @@ export interface AuditLogExportStatusRequest {
 export interface CreateAnnouncementRequest {
   title: string;
   content: string;
-  severity: AnnouncementSeverity;
+  severity: AnnounceLevel;
   action_url?: string;
   send_push?: boolean;
 }
@@ -1958,13 +1950,14 @@ export interface GroupAnnouncementListData {
 // ==================== 通知中心 API 类型 ====================
 
 export type NotificationType =
-  'new_follower' | 'mutual_follow' | 'moment_liked' | 'moment_commented'
-  | 'comment_liked' | 'comment_reply' | 'mentioned'
+  'new_follower' | 'mutual_follow' | 'moment_commented'
+  | 'comment_reply' | 'mentioned'
   | 'reaction_added'
   | 'group_invite_received' | 'group_invite_accepted' | 'group_invite_revoked'
   | 'group_application_received' | 'group_application_accepted' | 'group_application_cancelled' | 'group_application_rejected'
   | 'report_resolved' | 'report_dismissed'
-  | 'system_announcement';
+  | 'system_announcement'
+  | 'nearby_new_moment';
 
 // Spec 定义 NotificationPayload 为 discriminated union（按 type 区分），
 // 但 ArkTS 当前不支持基于字面量类型的类型窄化（type narrowing），
@@ -1985,7 +1978,8 @@ export interface NotificationPayload {
   replied_comment_preview?: string;
   reply_id?: string;
   reply_content_preview?: string;
-  target_type?: 'moment' | 'comment';
+  target_type?: 'message' | 'moment' | 'comment';
+  emoji?: string;
   group_id?: string;
   group_name?: string;
   group_avatar_url?: string;
@@ -1993,7 +1987,16 @@ export interface NotificationPayload {
   message?: string;
   application_id?: string;
   announcement_id?: string;
-  severity?: AnnouncementSeverity;
+  severity?: AnnounceLevel;
+  revoked_by?: UserInfo;
+  rejected_by?: UserInfo;
+  reason?: string;
+  report_id?: string;
+  target_id?: string;
+  resolved_at?: string;
+  dismissed_at?: string;
+  note?: string;
+  distance?: number;
 }
 
 export interface NotificationItem {
@@ -2009,6 +2012,7 @@ export interface UnreadCountByType {
   interaction: number;
   group: number;
   report: number;
+  nearby: number;
   system: number;
 }
 

@@ -15,7 +15,7 @@ import { interactionActions } from '../../../core/state/InteractionActions';
 import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import {
   UserItem, GroupItem, MomentItem,
-  SearchUsersRequest, SearchGroupsRequest, CreateReportRequest, Relationship,
+  SearchUsersRequest, SearchGroupsRequest, CreateReportRequest, Relationship, GeoPoint, PaginationParams,
   GetFeedFollowingRequest, GetFeedNearbyRequest
 } from '../../../core/types/api';
 import { LocationUtil } from '../../../core/location/LocationUtil';
@@ -116,8 +116,9 @@ export struct DiscoverPage {
 
   private async loadFeedMoments(source: string): Promise<void> {
     const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
-    const refPoint = { latitude: refLoc?.latitude ?? 0, longitude: refLoc?.longitude ?? 0 };
-    const pagination = { limit: 20 };
+    // 契约：reference_point 可选，无定位时不传（服务端按回退链解析），不再用 0,0 兜底
+    const refPoint: GeoPoint | undefined = refLoc ? { latitude: refLoc.latitude, longitude: refLoc.longitude } : undefined;
+    const pagination: PaginationParams = { limit: 20 };
 
     if (source === 'following') {
       const request: GetFeedFollowingRequest = {

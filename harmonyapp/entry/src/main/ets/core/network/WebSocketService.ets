@@ -17,6 +17,7 @@ import {
   ConnectionEstablishedPayload,
   ErrorPayload,
   AccountBannedPayload,
+  SessionRevokedPayload,
   FailedSubscriptionId,
   SubscribeAckPayload,
   SubscriptionItem,
@@ -417,10 +418,18 @@ export class WebSocketService {
       }
     });
 
-    this.webSocketUtil.onClose(() => {
-      hilog.info(DOMAIN_NUMBER, TAG, 'WebSocket连接关闭');
+    this.webSocketUtil.onClose((code: number) => {
+      hilog.info(DOMAIN_NUMBER, TAG, `WebSocket连接关闭: code=${code}`);
       this.state = WebSocketState.DISCONNECTED;
       this.stopHeartbeat();
+      // Close code 4001：认证失败/Token 失效/会话被驱逐（SessionRevoked）。
+      // 该场景已由 SessionRevoked/Error 事件处理（清本地态 + 提示），
+      // 重连由用户重新登录触发，此处不自动重连（见 spec「Close Code 规范」）。
+      if (code === 4001) {
+        hilog.info(DOMAIN_NUMBER, TAG, '收到 close code 4001（认证/会话失效），停止自动重连');
+        this.clearReconnectTimer();
+        return;
+      }
       this.scheduleReconnect();
     });
 
@@ -532,6 +541,24 @@ export class WebSocketService {
         const bannedPayload = event.payload as AccountBannedPayload;
         this.forceLogout('banned', `账号已被封禁：${bannedPayload.reason}`);
         break;
+
+      case 'SessionRevoked': {
+        // 会话被驱逐/撤销：按 reason 分支提示，清本地态并主动断开、禁止自动重连。
+        // 服务端推送此事件后以 close code 4001 断开（onClose 中对 4001 不自动重连）。
+        const revokedPayload = event.payload as SessionRevokedPayload;
+        let revokeMessage = '会话已失效';
+        if (revokedPayload.reason === 'device_evicted') {
+          revokeMessage = '账号在其他设备登录';
+        } else if (revokedPayload.reason === 'password_changed') {
+          revokeMessage = '密码已修改';
+        } else {
+          revokeMessage = '会话已失效';
+        }
+        hilog.warn(DOMAIN_NUMBER, TAG, `会话被撤销: reason=${revokedPayload.reason}, revoked_at=${revokedPayload.revoked_at}`);
+        this.disconnect();
+        this.forceLogout('session_revoked', revokeMessage);
+        break;
+      }
 
       // 多端同步事件（⏳ 延期实现，由 eventHandlers 分发处理）
       case 'SelfReadSync':

@@ -75,8 +75,6 @@ import {
   CreateMomentRequest,
   EditMomentRequest,
   DeleteMomentRequest,
-  LikeMomentRequest,
-  UnlikeMomentRequest,
   FavoriteMomentRequest,
   UnfavoriteMomentRequest,
   MomentLikesRequest,
@@ -587,18 +585,9 @@ export class ApiClient {
    * 「点赞」使用的默认 emoji。spec 要求 emoji 必须在 AppConfig.limits.reaction_emojis
    * 白名单内，否则后端返回 10000。优先取白名单首项；配置未加载时退化为 '👍'（规范默认白名单含此项）。
    */
-  private static getDefaultLikeEmoji(): string {
+  static getDefaultLikeEmoji(): string {
     const emojis = GlobalStateManager.getInstance().getLimits()?.reaction_emojis;
     return (emojis && emojis.length > 0) ? emojis[0] : '👍';
-  }
-
-  static async likeMoment(params: LikeMomentRequest): Promise<ApiResponse<void>> {
-    return ApiClient.setMomentReaction(params.moment_id, ApiClient.getDefaultLikeEmoji(), true);
-  }
-
-  static async unlikeMoment(params: UnlikeMomentRequest): Promise<ApiResponse<void>> {
-    // 取消点赞必须用与点赞时相同的 emoji（reactions/set 按 emoji 维度去重）。
-    return ApiClient.setMomentReaction(params.moment_id, ApiClient.getDefaultLikeEmoji(), false);
   }
 
   static async getMomentLikes(params: MomentLikesRequest): Promise<ApiResponse<PaginatedData<ReactionItem>>> {

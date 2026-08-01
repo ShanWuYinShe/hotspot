@@ -49,6 +49,9 @@ export enum ServerEventType {
   CONNECTION_ESTABLISHED = 'ConnectionEstablished',
   PONG = 'Pong',
 
+  // 会话
+  SESSION_REVOKED = 'SessionRevoked',
+
   // 用户状态
   USER_ONLINE = 'UserOnline',
   USER_OFFLINE = 'UserOffline',
@@ -57,10 +60,10 @@ export enum ServerEventType {
   NEW_FOLLOWER = 'NewFollower',
   MUTUAL_FOLLOW = 'MutualFollow',
 
-  // 瞬间互动
-  MOMENT_LIKED = 'MomentLiked',
+  // 瞬间互动（含表情反应）
+  REACTION_ADDED = 'ReactionAdded',
+  REACTION_REMOVED = 'ReactionRemoved',
   MOMENT_COMMENTED = 'MomentCommented',
-  COMMENT_LIKED = 'CommentLiked',
   COMMENT_REPLY = 'CommentReply',
   MESSAGE_MENTIONED = 'MessageMentioned',
 
@@ -69,13 +72,13 @@ export enum ServerEventType {
   PRIVATE_MESSAGE_EDITED = 'PrivateMessageEdited',
   PRIVATE_MESSAGE_RECALLED = 'PrivateMessageRecalled',
   PRIVATE_MESSAGE_READ = 'PrivateMessageRead',
-  PRIVATE_USER_TYPING = 'PrivateUserTyping',
+  PRIVATE_TYPING = 'PrivateTyping',
 
   // 群聊
   GROUP_MESSAGE_NEW = 'GroupMessageNew',
   GROUP_MESSAGE_EDITED = 'GroupMessageEdited',
   GROUP_MESSAGE_RECALLED = 'GroupMessageRecalled',
-  GROUP_USER_TYPING = 'GroupUserTyping',
+  GROUP_TYPING = 'GroupTyping',
 
   // 群组
   GROUP_MEMBER_JOINED = 'GroupMemberJoined',
@@ -84,8 +87,13 @@ export enum ServerEventType {
   GROUP_MEMBER_MUTED = 'GroupMemberMuted',
   GROUP_MEMBER_UNMUTED = 'GroupMemberUnmuted',
   GROUP_INVITE_RECEIVED = 'GroupInviteReceived',
+  GROUP_INVITE_REVOKED = 'GroupInviteRevoked',
+  GROUP_INVITE_EXPIRED = 'GroupInviteExpired',
   GROUP_INVITE_RESPONSE = 'GroupInviteResponse',
   GROUP_APPLICATION_RECEIVED = 'GroupApplicationReceived',
+  GROUP_APPLICATION_CANCELLED = 'GroupApplicationCancelled',
+  GROUP_APPLICATION_EXPIRED = 'GroupApplicationExpired',
+  GROUP_APPLICATION_REJECTED = 'GroupApplicationRejected',
   GROUP_APPLICATION_RESPONSE = 'GroupApplicationResponse',
   GROUP_ANNOUNCEMENT_CREATED = 'GroupAnnouncementCreated',
   GROUP_UPDATED = 'GroupUpdated',
@@ -158,24 +166,26 @@ export interface GetSubscriptionsEvent {
   payload: GetSubscriptionsPayload
 }
 
-export interface PrivateTypingPayload {
+// 客户端发送版 payload（与服务端推送版 PrivateTypingPayload 结构不同，故拆分命名，避免同名冲突）
+export interface PrivateTypingSendPayload {
   target_user_id: string
   is_typing: boolean
 }
 
-export interface PrivateTypingEvent {
+export interface PrivateTypingSendEvent {
   type: 'PrivateTyping'
-  payload: PrivateTypingPayload
+  payload: PrivateTypingSendPayload
 }
 
-export interface GroupTypingPayload {
+// 客户端发送版 payload（与服务端推送版 GroupTypingPayload 结构不同，故拆分命名，避免同名冲突）
+export interface GroupTypingSendPayload {
   group_id: string
   is_typing: boolean
 }
 
-export interface GroupTypingEvent {
+export interface GroupTypingSendEvent {
   type: 'GroupTyping'
-  payload: GroupTypingPayload
+  payload: GroupTypingSendPayload
 }
 
 // ============================================================================
@@ -219,6 +229,21 @@ export interface PongEvent {
   type: 'Pong'
   payload: PongPayload
 }
+
+// ----- 会话事件 -----
+
+// 会话被驱逐/撤销（单设备单会话模型下，同设备新登录或 admin 撤销触发）
+// 客户端收到后必须：清本地用户态 + 断开连接 + 不自动重连（提示"账号在其他设备登录"或"会话已失效"）
+export interface SessionRevokedPayload {
+  reason: 'device_evicted' | 'revoked_by_user' | 'password_changed'
+  revoked_at: string   // UTC ISO 8601
+}
+
+export interface SessionRevokedEvent {
+  type: 'SessionRevoked'
+  payload: SessionRevokedPayload
+}
+// 注：服务端推送此事件后以 close code 4001 断开连接（见 spec「Close Code 规范」）
 
 // ----- 在线状态事件 -----
 
@@ -268,16 +293,33 @@ export interface MutualFollowEvent {
 
 // ----- 生活瞬间互动事件 -----
 
-export interface MomentLikedPayload {
-  moment_id: string
-  moment_summary: MomentSummary
+// 表情反应（统一 message/moment/comment 三类目标）
+export interface ReactionAddedPayload {
+  notification_id?: string   // 仅当 actor ≠ 资源作者时携带（自我反应不通知）；自反应时省略
+  target_type: 'message' | 'moment' | 'comment'
+  target_id: string
+  emoji: string
   actor: UserInfo
-  liked_at: string
+  reacted_at: string
 }
 
-export interface MomentLikedEvent {
-  type: 'MomentLiked'
-  payload: MomentLikedPayload
+export interface ReactionAddedEvent {
+  type: 'ReactionAdded'
+  payload: ReactionAddedPayload
+}
+
+// 反应移除不产生通知（非持久化通知），无 notification_id
+export interface ReactionRemovedPayload {
+  target_type: 'message' | 'moment' | 'comment'
+  target_id: string
+  emoji: string
+  actor: UserInfo
+  removed_at: string
+}
+
+export interface ReactionRemovedEvent {
+  type: 'ReactionRemoved'
+  payload: ReactionRemovedPayload
 }
 
 export interface MomentCommentedPayload {
@@ -292,20 +334,6 @@ export interface MomentCommentedPayload {
 export interface MomentCommentedEvent {
   type: 'MomentCommented'
   payload: MomentCommentedPayload
-}
-
-export interface CommentLikedPayload {
-  comment_id: string
-  moment_id: string
-  moment_summary: MomentSummary
-  comment_preview: string
-  actor: UserInfo
-  liked_at: string
-}
-
-export interface CommentLikedEvent {
-  type: 'CommentLiked'
-  payload: CommentLikedPayload
 }
 
 export interface CommentReplyPayload {
@@ -433,15 +461,16 @@ export interface PrivateMessageReadEvent {
   payload: PrivateMessageReadPayload
 }
 
-export interface PrivateUserTypingPayload {
-  target_user_id: string
-  user_id: string
+// 服务端推送版 payload（与客户端发送版 PrivateTypingSendPayload 结构不同）
+export interface PrivateTypingPayload {
+  target_user_id: string   // 输入状态所属私聊会话的对端（订阅者据此定位会话）
+  actor: UserInfo          // 正在打字的用户（统一用 actor: UserInfo 表达"动作发起者"）
   is_typing: boolean
 }
 
-export interface PrivateUserTypingEvent {
-  type: 'PrivateUserTyping'
-  payload: PrivateUserTypingPayload
+export interface PrivateTypingEvent {
+  type: 'PrivateTyping'
+  payload: PrivateTypingPayload
 }
 
 // 群聊消息事件
@@ -488,15 +517,16 @@ export interface GroupMessageRecalledEvent {
   payload: GroupMessageRecalledPayload
 }
 
-export interface GroupUserTypingPayload {
+// 服务端推送版 payload（与客户端发送版 GroupTypingSendPayload 结构不同）
+export interface GroupTypingPayload {
   group_id: string
-  user_id: string
+  actor: UserInfo   // 正在打字的成员（统一 actor: UserInfo）
   is_typing: boolean
 }
 
-export interface GroupUserTypingEvent {
-  type: 'GroupUserTyping'
-  payload: GroupUserTypingPayload
+export interface GroupTypingEvent {
+  type: 'GroupTyping'
+  payload: GroupTypingPayload
 }
 
 // ----- 群组事件 -----
@@ -638,16 +668,45 @@ export interface GroupInviteReceivedEvent {
 }
 
 export interface GroupInviteResponsePayload {
+  // 仅邀请被接受时推送（拒绝不推送）。原 status:'accepted' 单值字段已移除——事件名即语义
+  notification_id: string
   invite_id: string
   group_id: string
-  user: UserInfo
-  status: 'accepted'
+  user: UserInfo       // 接受邀请的用户
   responded_at: string
 }
 
 export interface GroupInviteResponseEvent {
   type: 'GroupInviteResponse'
   payload: GroupInviteResponsePayload
+}
+
+// 邀请被发起方（管理员）主动撤销 → 推送给受邀人
+export interface GroupInviteRevokedPayload {
+  notification_id: string
+  invite_id: string
+  group_id: string
+  revoked_by: UserInfo   // 撤销邀请的管理员
+  revoked_at: string
+  reason?: string
+}
+
+export interface GroupInviteRevokedEvent {
+  type: 'GroupInviteRevoked'
+  payload: GroupInviteRevokedPayload
+}
+
+// 邀请过期（超 expires_at 自动失效）→ 推送给受邀人
+export interface GroupInviteExpiredPayload {
+  notification_id: string
+  invite_id: string
+  group_id: string
+  expired_at: string
+}
+
+export interface GroupInviteExpiredEvent {
+  type: 'GroupInviteExpired'
+  payload: GroupInviteExpiredPayload
 }
 
 export interface GroupApplicationReceivedPayload {
@@ -663,16 +722,92 @@ export interface GroupApplicationReceivedEvent {
   payload: GroupApplicationReceivedPayload
 }
 
-export interface GroupApplicationResponsePayload {
+// 申请被发起方（申请人）主动取消 → 推送给群管理员
+export interface GroupApplicationCancelledPayload {
+  notification_id: string
+  application_id: string
+  group_id: string
+  applicant: UserInfo
+  cancelled_at: string
+  reason?: string
+}
+
+export interface GroupApplicationCancelledEvent {
+  type: 'GroupApplicationCancelled'
+  payload: GroupApplicationCancelledPayload
+}
+
+// 申请过期（超 expires_at 自动失效）→ 推送给群管理员
+export interface GroupApplicationExpiredPayload {
+  notification_id: string
+  application_id: string
+  group_id: string
+  applicant: UserInfo
+  expired_at: string
+}
+
+export interface GroupApplicationExpiredEvent {
+  type: 'GroupApplicationExpired'
+  payload: GroupApplicationExpiredPayload
+}
+
+// 申请被群管理员拒绝 → 推送给申请人
+export interface GroupApplicationRejectedPayload {
+  notification_id: string
   application_id: string
   group: GroupInfo
-  status: 'accepted'
+  rejected_by: UserInfo   // 处理管理员（申请人可见管理员身份）
+  rejected_at: string
+  reason?: string
+}
+
+export interface GroupApplicationRejectedEvent {
+  type: 'GroupApplicationRejected'
+  payload: GroupApplicationRejectedPayload
+}
+
+export interface GroupApplicationResponsePayload {
+  // 仅申请被接受时推送。原 status:'accepted' 单值字段已移除——事件名即语义
+  notification_id: string
+  application_id: string
+  group: GroupInfo
   responded_at: string
 }
 
 export interface GroupApplicationResponseEvent {
   type: 'GroupApplicationResponse'
   payload: GroupApplicationResponsePayload
+}
+
+// ----- 举报事件 -----
+
+// 举报处理结果（推送给举报人）
+export interface ReportResolvedPayload {
+  notification_id: string
+  report_id: string
+  target_type: 'user' | 'moment' | 'comment' | 'message' | 'group'
+  target_id: string
+  resolved_at: string
+  note?: string               // 管理员处理说明（脱敏后）
+}
+
+export interface ReportResolvedEvent {
+  type: 'ReportResolved'
+  payload: ReportResolvedPayload
+}
+
+export interface ReportDismissedPayload {
+  notification_id: string
+  report_id: string
+  target_type: 'user' | 'moment' | 'comment' | 'message' | 'group'
+  target_id: string
+  dismissed_at: string
+  note?: string               // 管理员处理说明（脱敏后）
+}
+
+export interface ReportDismissedEvent {
+  type: 'ReportDismissed'
+  payload: ReportDismissedPayload
 }
 
 // ----- 多端同步事件（⏳ 延期实现）-----
@@ -776,19 +911,20 @@ export type ClientEvent =
   | PingEvent
   | SetSubscriptionsEvent
   | GetSubscriptionsEvent
-  | PrivateTypingEvent
-  | GroupTypingEvent
+  | PrivateTypingSendEvent
+  | GroupTypingSendEvent
 
 export type ServerEvent =
   | ConnectionEstablishedEvent
   | PongEvent
+  | SessionRevokedEvent
   | UserOnlineEvent
   | UserOfflineEvent
   | NewFollowerEvent
   | MutualFollowEvent
-  | MomentLikedEvent
+  | ReactionAddedEvent
+  | ReactionRemovedEvent
   | MomentCommentedEvent
-  | CommentLikedEvent
   | CommentReplyEvent
   | MessageMentionedEvent
   | UserProfileUpdatedEvent
@@ -798,23 +934,30 @@ export type ServerEvent =
   | PrivateMessageEditedEvent
   | PrivateMessageRecalledEvent
   | PrivateMessageReadEvent
-  | PrivateUserTypingEvent
+  | PrivateTypingEvent
   | GroupMessageNewEvent
   | GroupMessageEditedEvent
   | GroupMessageRecalledEvent
-  | GroupUserTypingEvent
+  | GroupTypingEvent
   | GroupMemberJoinedEvent
   | GroupMemberLeftEvent
   | GroupMemberRemovedEvent
   | GroupMemberMutedEvent
   | GroupMemberUnmutedEvent
   | GroupInviteReceivedEvent
+  | GroupInviteRevokedEvent
+  | GroupInviteExpiredEvent
   | GroupInviteResponseEvent
   | GroupApplicationReceivedEvent
+  | GroupApplicationCancelledEvent
+  | GroupApplicationExpiredEvent
+  | GroupApplicationRejectedEvent
   | GroupApplicationResponseEvent
   | GroupAnnouncementCreatedEvent
   | GroupUpdatedEvent
   | GroupDismissedEvent
+  | ReportResolvedEvent
+  | ReportDismissedEvent
   | NearbyNewMomentEvent
   | SubscribeAckEvent
   | SubscriptionsSnapshotEvent
@@ -895,7 +1038,7 @@ function generateClientMsgId(): string {
 export function createPrivateTypingEvent(
   target_user_id: string,
   is_typing: boolean
-): PrivateTypingEvent {
+): PrivateTypingSendEvent {
   return {
     type: 'PrivateTyping',
     payload: { target_user_id, is_typing }
@@ -905,7 +1048,7 @@ export function createPrivateTypingEvent(
 export function createGroupTypingEvent(
   group_id: string,
   is_typing: boolean
-): GroupTypingEvent {
+): GroupTypingSendEvent {
   return {
     type: 'GroupTyping',
     payload: { group_id, is_typing }

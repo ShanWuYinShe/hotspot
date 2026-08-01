@@ -13,8 +13,8 @@ import type {
   ServerEvent,
   PrivateMessageNewEvent,
   GroupMessageNewEvent,
-  PrivateUserTypingEvent,
-  GroupUserTypingEvent
+  PrivateTypingEvent,
+  GroupTypingEvent
 } from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -341,15 +341,17 @@ export struct ChatPage {
     this.handleNewMessage(newMessage);
   }
 
-  private onPrivateUserTyping = (event: ServerEvent): void => {
-    if (event.type !== 'PrivateUserTyping') return;
+  private onPrivateTyping = (event: ServerEvent): void => {
+    if (event.type !== 'PrivateTyping') return;
     if (this.chatType !== 'private_chat') return;
 
-    const payload = (event as PrivateUserTypingEvent).payload;
+    const payload = (event as PrivateTypingEvent).payload;
     const targetId = this.targetId;
     if (!targetId) return;
 
-    if (payload.user_id !== targetId) return;
+    // 契约：payload 统一 actor: UserInfo，按 actor.user_id 匹配会话对端
+    const actorUserId = payload.actor?.user_id ?? '';
+    if (actorUserId !== targetId) return;
 
     if (payload.is_typing) {
       this.isOtherUserTyping = true;
@@ -359,23 +361,24 @@ export struct ChatPage {
     this.resetPrivateTypingState();
   }
 
-  private onGroupUserTyping = (event: ServerEvent): void => {
-    if (event.type !== 'GroupUserTyping') return;
+  private onGroupTyping = (event: ServerEvent): void => {
+    if (event.type !== 'GroupTyping') return;
     if (this.chatType !== 'group_chat') return;
 
-    const payload = (event as GroupUserTypingEvent).payload;
+    const payload = (event as GroupTypingEvent).payload;
     if (payload.group_id !== this.chatId) return;
-    if (payload.user_id === (this.currentUser?.user_id ?? '')) return;
+    const actorUserId = payload.actor?.user_id ?? '';
+    if (actorUserId === (this.currentUser?.user_id ?? '')) return;
 
     if (payload.is_typing) {
-      if (this.groupTypingUserIds.indexOf(payload.user_id) === -1) {
-        this.groupTypingUserIds = this.groupTypingUserIds.concat([payload.user_id]);
+      if (this.groupTypingUserIds.indexOf(actorUserId) === -1) {
+        this.groupTypingUserIds = this.groupTypingUserIds.concat([actorUserId]);
       }
-      this.scheduleGroupTypingAutoClear(payload.user_id);
+      this.scheduleGroupTypingAutoClear(actorUserId);
       return;
     }
-    this.clearGroupTypingTimer(payload.user_id);
-    this.groupTypingUserIds = this.groupTypingUserIds.filter((id: string) => id !== payload.user_id);
+    this.clearGroupTypingTimer(actorUserId);
+    this.groupTypingUserIds = this.groupTypingUserIds.filter((id: string) => id !== actorUserId);
   }
 
   private onConnectionEstablished = (_event: ServerEvent): void => {
@@ -679,16 +682,16 @@ export struct ChatPage {
   private subscribeToEvents() {
     this.webSocketService.on('PrivateMessageNew', this.onPrivateMessageNew);
     this.webSocketService.on('GroupMessageNew', this.onGroupMessageNew);
-    this.webSocketService.on('PrivateUserTyping', this.onPrivateUserTyping);
-    this.webSocketService.on('GroupUserTyping', this.onGroupUserTyping);
+    this.webSocketService.on('PrivateTyping', this.onPrivateTyping);
+    this.webSocketService.on('GroupTyping', this.onGroupTyping);
     this.webSocketService.on('ConnectionEstablished', this.onConnectionEstablished);
   }
 
   private unsubscribeFromEvents() {
     this.webSocketService.off('PrivateMessageNew', this.onPrivateMessageNew);
     this.webSocketService.off('GroupMessageNew', this.onGroupMessageNew);
-    this.webSocketService.off('PrivateUserTyping', this.onPrivateUserTyping);
-    this.webSocketService.off('GroupUserTyping', this.onGroupUserTyping);
+    this.webSocketService.off('PrivateTyping', this.onPrivateTyping);
+    this.webSocketService.off('GroupTyping', this.onGroupTyping);
     this.webSocketService.off('ConnectionEstablished', this.onConnectionEstablished);
   }
 
@@ -818,7 +821,18 @@ export struct ChatPage {
     } catch (error) {
       this.lastSendSignature = '';
       this.lastSendAtMs = 0;
-      SystemToast.showError('发送失败', this.getUIContext());
+      // 契约 chat.md：send 返回 10200 时 data = { reason: BlockReason }
+      const errRecord = error as Object as Record<string, Object>;
+      const reason = typeof errRecord.reason === 'string' ? errRecord.reason : '';
+      let failMessage = '发送失败';
+      if (reason === 'privacy') {
+        failMessage = '对方隐私设置不允许发送消息';
+      } else if (reason === 'stranger_quota_exceeded') {
+        failMessage = '今日陌生人消息额度已用完';
+      } else if (reason === 'account_suspended') {
+        failMessage = '账号被限制';
+      }
+      SystemToast.showError(failMessage, this.getUIContext());
     } finally {
       this.stopTyping();
       this.isSending = false;
@@ -987,7 +1001,7 @@ export struct ChatPage {
     this.subscribeToEvents();
     this.wsHasConnectedOnce = this.webSocketService.isConnected();
 
-    // spec: PrivateUserTyping 依赖 user 订阅
+    // spec: PrivateTyping 依赖 user 订阅
     if (this.chatType === 'private_chat' && this.targetId) {
       this.webSocketService.subscribeUsers([this.targetId]);
     }

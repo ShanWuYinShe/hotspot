@@ -14,7 +14,7 @@ export class WebSocketUtil {
   private ws: webSocket.WebSocket | null = null;
   private url: string = '';
   private rawMessageHandler: ((data: string) => void) | null = null;
-  private closeHandler: (() => void) | null = null;
+  private closeHandler: ((code: number) => void) | null = null;
   private errorHandler: ((error: Error) => void) | null = null;
 
   private constructor() {}
@@ -60,7 +60,7 @@ export class WebSocketUtil {
       this.ws.on('close', (err, value) => {
         hilog.info(DOMAIN_NUMBER, TAG, `WebSocket连接关闭: ${value.code}, 原因: ${value.reason}`);
         if (this.closeHandler) {
-          this.closeHandler();
+          this.closeHandler(value.code);
         }
       });
 
@@ -103,9 +103,9 @@ export class WebSocketUtil {
   }
 
   /**
-   * 注册连接关闭处理器
+   * 注册连接关闭处理器（透传 close code，供上层判断是否自动重连）
    */
-  onClose(handler: () => void): void {
+  onClose(handler: (code: number) => void): void {
     this.closeHandler = handler;
   }
 

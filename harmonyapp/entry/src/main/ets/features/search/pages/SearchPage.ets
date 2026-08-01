@@ -149,15 +149,15 @@ export struct SearchPage {
   }
 
   private async fetchSuggest(prefix: string): Promise<void> {
-    const referencePoint = this.getReferencePoint();
-    if (!referencePoint || !prefix) {
+    if (!prefix) {
       this.suggestItems = [];
       return;
     }
     try {
+      // 契约：reference_point 可选，无定位时服务端按回退链解析，照常请求
       const request: SearchSuggestRequest = {
         prefix,
-        reference_point: referencePoint,
+        reference_point: this.getReferencePoint() ?? undefined,
         radius: this.clientConfig?.limits?.search_radius_max
       };
       const response = await ApiClient.searchSuggest(request);
@@ -186,11 +186,6 @@ export struct SearchPage {
     if (!trimmedKeyword) {
       return;
     }
-    const referencePoint = this.getReferencePoint();
-    if (!referencePoint) {
-      SystemToast.showWarning('当前缺少可用定位，暂时无法搜索', this.getUIContext());
-      return;
-    }
 
     this.isLoading = true;
     this.hasSearched = true;
@@ -205,7 +200,8 @@ export struct SearchPage {
 
     try {
       await LoadingUtil.withMinimumTime(async () => {
-        const refPoint = referencePoint;
+        // 契约：reference_point 可选，无定位时服务端按回退链解析
+        const refPoint = this.getReferencePoint() ?? undefined;
         const usersReq: SearchUsersRequest = {
           keyword: trimmedKeyword,
           reference_point: refPoint,

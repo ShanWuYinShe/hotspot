@@ -1,5 +1,5 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { MomentItem, UserItem, GroupItem, MomentMyState, Relationship } from '../types/api';
+import { MomentItem, UserItem, GroupItem, MomentMyState, Relationship, Reaction } from '../types/api';
 
 const DOMAIN_NUMBER: number = 0xFF32;
 const TAG: string = 'InteractionStateStore';
@@ -14,11 +14,25 @@ export interface MomentSocialState {
   comments_count: number;
   shares_count: number;
   my_state?: MomentMyState;
+  // 表情反应聚合（契约：点赞态由 reactions[].reacted_by_me 表达，不再依赖 is_liked 本地字段）
+  reactions?: Reaction[];
 }
 
 export interface MomentMyStatePartial {
-  is_liked?: boolean;
   is_favorited?: boolean;
+}
+
+// 从 reactions 聚合推导“当前用户是否已点赞”（响应数据驱动）
+export function isMomentLikedByReactions(reactions?: Reaction[]): boolean {
+  if (!reactions) {
+    return false;
+  }
+  for (const reaction of reactions) {
+    if (reaction.reacted_by_me) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export interface UserRelationState {
@@ -120,7 +134,8 @@ export class InteractionStateStore {
       likes_count: moment.likes_count,
       comments_count: moment.comments_count,
       shares_count: moment.shares_count ?? 0,
-      my_state: moment.my_state
+      my_state: moment.my_state,
+      reactions: moment.reactions
     };
     this.setMomentState(moment.moment_id, state);
   }
@@ -172,7 +187,27 @@ export class InteractionStateStore {
       likes_count: nextLikes,
       comments_count: current.comments_count,
       shares_count: current.shares_count,
-      my_state: current.my_state
+      my_state: current.my_state,
+      reactions: current.reactions
+    };
+    this.setMomentState(momentId, nextState);
+  }
+
+  /**
+   * 更新表情反应聚合（乐观更新入口，点赞态由 reactions[].reacted_by_me 表达）
+   */
+  updateMomentReactions(momentId: string, reactions: Reaction[]): void {
+    const current = this.getMomentState(momentId);
+    if (!current) {
+      return;
+    }
+    const nextState: MomentSocialState = {
+      moment_id: current.moment_id,
+      likes_count: current.likes_count,
+      comments_count: current.comments_count,
+      shares_count: current.shares_count,
+      my_state: current.my_state,
+      reactions: reactions
     };
     this.setMomentState(momentId, nextState);
   }
@@ -183,7 +218,6 @@ export class InteractionStateStore {
       return;
     }
     const merged: MomentMyState = {
-      is_liked: myState?.is_liked ?? current.my_state?.is_liked ?? false,
       is_favorited: myState?.is_favorited ?? current.my_state?.is_favorited ?? false
     };
     const nextState: MomentSocialState = {
@@ -191,7 +225,8 @@ export class InteractionStateStore {
       likes_count: current.likes_count,
       comments_count: current.comments_count,
       shares_count: current.shares_count,
-      my_state: merged
+      my_state: merged,
+      reactions: current.reactions
     };
     this.setMomentState(momentId, nextState);
   }
@@ -207,8 +242,9 @@ export class InteractionStateStore {
       comments_count: state.comments_count,
       shares_count: state.shares_count,
       my_state: state.my_state
-        ? { is_liked: state.my_state.is_liked, is_favorited: state.my_state.is_favorited }
-        : undefined
+        ? { is_favorited: state.my_state.is_favorited }
+        : undefined,
+      reactions: state.reactions ? [...state.reactions] : undefined
     };
     return cloned;
   }
