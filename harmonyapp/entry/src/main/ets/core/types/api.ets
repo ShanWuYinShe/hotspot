@@ -229,6 +229,16 @@ export interface GroupItem {
   has_password?: boolean;  // @member-only (spec: optional)
   location: RelativeLocation;
   last_activity_at?: string;
+
+  // 群列表场景返回（仅 groups/list_my；其他场景省略，见 spec api_spec_types.md）
+  last_message?: {
+    message_id: string;
+    type: MessageType;
+    content?: string;
+    sender: UserInfo;
+    sent_at: string;
+  };
+
   created_at?: string;
   owner_id?: string;
 
