@@ -57,6 +57,7 @@
 						else if (n.type === 'group_invite_received') text = `${actor.nickname ?? ''} 邀请你加入 ${groupName}`;
 						else if (n.type === 'group_invite_revoked') text = `${n.payload?.revoked_by?.nickname ?? '对方'} 撤销了「${groupName}」的入群邀请`;
 						else if (n.type === 'group_invite_accepted') text = `${n.payload?.user?.nickname ?? ''} 接受了你的「${groupName}」入群邀请`;
+						else if (n.type === 'group_invite_rejected') text = `${n.payload?.rejected_by?.nickname ?? '对方'} 拒绝了你的「${groupName}」入群邀请${n.payload?.reason ? `:${n.payload.reason}` : ''}`;
 						else if (n.type === 'group_application_cancelled') text = `${n.payload?.applicant?.nickname ?? '申请人'} 取消了「${groupName}」的入群申请`;
 						else if (n.type === 'group_application_accepted') text = `你加入「${groupName}」的申请已通过`;
 						else if (n.type === 'group_application_rejected') text = `${n.payload?.rejected_by?.nickname ?? '管理员'} 拒绝了你的「${groupName}」入群申请`;

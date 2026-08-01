@@ -185,6 +185,7 @@ export const mockNotifications = [
   { notification_id: "notif_6", type: "reaction_added", is_read: false, created_at: "2026-07-26T09:00:00Z", payload: { type: "reaction_added", actor: mockUsers[5], target_type: "moment", target_id: mockMoments[2].moment_id, emoji: "🔥" } },
   { notification_id: "notif_7", type: "nearby_new_moment", is_read: false, created_at: "2026-07-26T08:30:00Z", payload: { type: "nearby_new_moment", actor: mockUsers[6], moment_id: mockMoments[3].moment_id, moment_summary: { moment_id: mockMoments[3].moment_id, description_preview: mockMoments[3].description.slice(0, 100), cover_url: mockMoments[3].images?.[0]?.url }, distance: 850 } },
   { notification_id: "notif_8", type: "group_application_rejected", is_read: true, created_at: "2026-07-25T20:00:00Z", payload: { type: "group_application_rejected", group_id: mockGroups[1].group.group_id, group_name: mockGroups[1].group.name, application_id: "appl_1", rejected_by: mockUsers[3], reason: "名额已满" } },
+  { notification_id: "notif_9", type: "group_invite_rejected", is_read: false, created_at: "2026-07-26T07:00:00Z", payload: { type: "group_invite_rejected", group_id: mockGroups[0].group.group_id, group_name: mockGroups[0].group.name, invite_id: "inv_2", rejected_by: mockUsers[4], reason: "已有其他安排" } },
 ];
 
 // ── Chats (spec PrivateChatItem: nested other_user: UserInfo) ──
