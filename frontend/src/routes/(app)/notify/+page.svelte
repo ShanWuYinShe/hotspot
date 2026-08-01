@@ -11,6 +11,7 @@
 	import NotifRow from './NotifRow.svelte';
 	import { TYPE_CONFIG, type Notif } from './notif-data';
 	import { listNotifications, getUnreadCount, markRead } from '@/api';
+	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
 	import { ROUTES } from '@/lib/routes';
 
 	// 通知列表：类型过滤、单条/全部已读、桌面右侧概览 Rail。
@@ -28,11 +29,23 @@
 	let notifs = $state<Notif[]>([]);
 	let filter = $state('all');
 	let loading = $state(true);
+	// WS 推送（ws:notify）到来时 +1，触发下方加载 effect 重新拉取通知与未读。
+	let reloadKey = $state(0);
 
 	const isDesktop = $derived(platformStore.platform === 'desktop');
 	const shellStyle = $derived(`max-width:${isDesktop ? 'var(--content-reading-max)' : 640}px;margin-left:auto;margin-right:auto;width:100%;`);
 
+	// WS 实时通知：收到推送后重新拉取列表（复用下方同一加载逻辑）。
 	$effect(() => {
+		const onNotify = () => {
+			reloadKey++;
+		};
+		window.addEventListener(WS_NOTIFY_EVENT, onNotify);
+		return () => window.removeEventListener(WS_NOTIFY_EVENT, onNotify);
+	});
+
+	$effect(() => {
+		void reloadKey; // 依赖：WS 推送触发重新加载
 		let cancelled = false;
 		async function fetchNotifs() {
 			try {

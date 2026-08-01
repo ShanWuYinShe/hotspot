@@ -3,6 +3,11 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { getPrivateMessages, sendPrivateMessage, markPrivateRead } from '@/api';
+	import {
+		WS_PRIVATE_MESSAGE_EVENT,
+		WS_PRIVATE_MESSAGE_UPDATE_EVENT
+	} from '@/lib/ws/client';
+	import type { PrivateMessageNewPayload } from '@/lib/ws/types';
 
 	// ChatView — 私聊窗口（spec: 以对端 user_id 寻址）。
 	// 历史来自 private_messages/get_history；发送走 private_messages/send。
@@ -158,6 +163,50 @@
 			.map((m) => m.id)
 			.pop()
 	);
+
+	// WS 实时接收：ws:private-message 追加对端新消息；ws:private-message-update 处理撤回/编辑。
+	// 依赖 peerUserId：桌面分栏切换会话时自动重新绑定监听。
+	$effect(() => {
+		const peer = peerUserId;
+		if (!peer) return;
+
+		const onNewMessage = (e: Event) => {
+			const payload = (e as CustomEvent<PrivateMessageNewPayload>).detail;
+			if (!payload || payload.target_user_id !== peer) return;
+			// 自己发送的消息跳过（乐观追加 + HTTP 回执已处理）；按 message_id 去重
+			if (payload.sender?.user_id === (auth.user?.user_id ?? '__me__')) return;
+			const id = String(payload.message_id ?? '');
+			if (!id || messages.some((m) => m.id === id)) return;
+			messages = [
+				...messages,
+				{ id, text: payload.content ?? '', sent: false, time: formatTime(payload.sent_at) }
+			];
+			// 会话有新消息即视为已读（与 load() 行为一致）
+			void markPrivateRead({ scope: 'session', target_user_id: peer }).catch(() => {});
+		};
+
+		const onMessageUpdate = (e: Event) => {
+			const detail = (e as CustomEvent<{ type: 'edited' | 'recalled' | 'read'; payload: PrivateMessageNewPayload }>).detail;
+			if (!detail?.payload || detail.payload.target_user_id !== peer) return;
+			const id = String(detail.payload.message_id ?? '');
+			// 消息不在本地列表则忽略（保持空操作）
+			if (detail.type === 'edited') {
+				messages = messages.map((m) =>
+					m.id === id ? { ...m, text: detail.payload.content ?? m.text } : m
+				);
+			} else if (detail.type === 'recalled') {
+				messages = messages.map((m) => (m.id === id ? { ...m, text: '[消息已撤回]' } : m));
+			}
+			// 'read'：本地列表无已读状态字段，忽略
+		};
+
+		window.addEventListener(WS_PRIVATE_MESSAGE_EVENT, onNewMessage as EventListener);
+		window.addEventListener(WS_PRIVATE_MESSAGE_UPDATE_EVENT, onMessageUpdate as EventListener);
+		return () => {
+			window.removeEventListener(WS_PRIVATE_MESSAGE_EVENT, onNewMessage as EventListener);
+			window.removeEventListener(WS_PRIVATE_MESSAGE_UPDATE_EVENT, onMessageUpdate as EventListener);
+		};
+	});
 </script>
 
 <div class="flex min-h-0 flex-col h-full bg-[var(--neu-bg)]">
