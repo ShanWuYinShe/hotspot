@@ -56,7 +56,7 @@
 					group: c.group ?? c.is_group ?? false,
 					kind: 'private'
 				}));
-				// spec: GroupItem { group: GroupInfo, my_state?: MyGroupState, last_activity_at? }
+				// spec: GroupItem { group: GroupInfo, my_state?: MyGroupState, last_activity_at?, last_message? }
 				const groupChats: ChatItem[] = groupData.map((c: any, i: number) => {
 					const g = c.group ?? {};
 					return {
@@ -64,7 +64,8 @@
 						peerUserId: '',
 						name: g.name ?? '',
 						avatar: g.avatar_url ?? '',
-						lastMessage: '',
+						// spec: last_message 仅 groups/list_my 返回,非文本消息预览为空。
+						lastMessage: c.last_message?.content ?? '',
 						time: c.last_activity_at ?? '',
 						unread: c.my_state?.unread_count ?? 0,
 						online: false,

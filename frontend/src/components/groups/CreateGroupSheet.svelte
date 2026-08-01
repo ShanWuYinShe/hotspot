@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { X, Camera, Globe, Lock, Check, ChevronRight, MapPin } from '@lucide/svelte';
-	import { Endpoints } from '@/api/endpoints';
+	import { createGroup } from '@/api';
 	import { loadDefaultLocation } from '@/lib/default-location';
 
 	// CreateGroupSheet — 创建群组的底部 Sheet / 模态。
@@ -34,24 +34,19 @@
 		createError = '';
 		try {
 			const location = await resolveLocation();
-			const res = await fetch(Endpoints.Groups.Create, {
-				method: 'POST',
-				credentials: 'include',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					name: name.trim(),
-					description: desc.trim() || undefined,
-					tags: [category],
-					join_method: isPrivate ? 'invite_only' : 'open',
-					location
-				})
+			const res = await createGroup({
+				name: name.trim(),
+				description: desc.trim() || undefined,
+				tags: [category],
+				join_method: isPrivate ? 'invite_only' : 'open',
+				location
 			});
-			const json = (await res.json()) as { code: number; data?: any; message?: string };
-			if (json.code !== 0) {
-				createError = json.message ?? '创建失败，请稍后重试';
+			if (res.code !== 0) {
+				createError = res.message ?? '创建失败，请稍后重试';
 				return;
 			}
 			// spec: groups/create 直接返回 GroupItem { group: GroupInfo }
+			const json = res as unknown as { data?: any };
 			const groupId = json.data?.group?.group_id ?? json.data?.group_id ?? '';
 			step = 'done';
 			onCreated?.(groupId);

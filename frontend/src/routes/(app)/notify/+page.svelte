@@ -26,6 +26,15 @@
 		{ id: 'nearby', label: '附近' }
 	];
 
+	// tab id → 命中的 NotifyType 集合(契约 NotifyCategory 映射,api_spec_types.md)。
+	// 注:group/report 类通知未设独立 tab,全部归入"全部"。
+	const FILTER_TYPE_MAP: Record<string, string[]> = {
+		reaction: ['reaction_added'],
+		follow: ['new_follower', 'mutual_follow'],
+		comment: ['moment_commented', 'comment_reply', 'mentioned'],
+		nearby: ['nearby_new_moment']
+	};
+
 	let notifs = $state<Notif[]>([]);
 	let filter = $state('all');
 	let loading = $state(true);
@@ -120,7 +129,9 @@
 		notifs = notifs.filter((n) => n.id !== id);
 	};
 
-	const filtered = $derived(notifs.filter((n) => filter === 'all' || n.type === filter));
+	const filtered = $derived(
+		notifs.filter((n) => filter === 'all' || (FILTER_TYPE_MAP[filter] ?? []).includes(n.type))
+	);
 	const unreadGroup = $derived(filtered.filter((n) => !n.read));
 	const readGroup = $derived(filtered.filter((n) => n.read));
 	const typeStats = $derived(

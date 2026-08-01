@@ -57,6 +57,9 @@
 	let sending = $state(false);
 	let sendError = $state('');
 	let scrollEl = $state<HTMLDivElement | null>(null);
+	// --- 历史分页(契约:游标分页,next_cursor 缺失即无更多) ---
+	let nextCursor: string | null = null;
+	let loadingMore = false;
 
 	// --- typing 发送状态（契约：客户端不超过 3 秒发一次；服务端权威节流）---
 	let lastTypingSentAt = 0;
@@ -101,6 +104,8 @@
 				time: formatTime(m.sent_at ?? m.created_at)
 			}));
 			loading = false;
+			nextCursor = (res.data as any)?.next_cursor ?? null;
+			loadingMore = false;
 			// spec: group_messages/mark_read (scope='group') 标记该群全部已读;幂等语义,失败静默。
 			void markGroupRead({ scope: 'group', group_id: gid }).catch(() => {});
 		}
@@ -134,6 +139,45 @@
 		}
 		lastTypingSentAt = 0;
 		sendTyping(false);
+	}
+
+	/** 滚动到顶加载更早的历史(游标分页;契约:服务端按 sent_at 倒序,next_cursor 指向更早批次)。 */
+	async function loadMore() {
+		if (loadingMore || !nextCursor) return;
+		loadingMore = true;
+		const gid = groupId;
+		const el = scrollEl;
+		const prevHeight = el?.scrollHeight ?? 0;
+		const prevTop = el?.scrollTop ?? 0;
+		const res = await getGroupMessages({ group_id: gid, pagination: { limit: 50, cursor: nextCursor } }).catch(
+			() => ({ code: -1, data: null })
+		);
+		// 群已切换则丢弃结果(竞态保护)
+		if (groupId !== gid) return;
+		loadingMore = false;
+		if (!res || res.code !== 0 || !res.data) return;
+		const items = (res.data as any).items ?? [];
+		const meId = auth.user?.user_id ?? '__me__';
+		const mapped: GroupMessage[] = items.map((m: any) => ({
+			id: String(m.message_id ?? ''),
+			text: m.recalled_at ? '[消息已撤回]' : (m.content ?? m.text ?? ''),
+			recalled: Boolean(m.recalled_at),
+			sent: m.sender?.user_id ? m.sender.user_id === meId : Boolean(m.sent),
+			time: formatTime(m.sent_at ?? m.created_at)
+		}));
+		messages = [...mapped, ...messages];
+		nextCursor = (res.data as any)?.next_cursor ?? null;
+		// 新内容插在顶部:把可视位置下移新内容高度
+		requestAnimationFrame(() => {
+			const el2 = scrollEl;
+			if (el2) el2.scrollTop = el2.scrollHeight - prevHeight + prevTop;
+		});
+	}
+
+	function handleScroll() {
+		const el = scrollEl;
+		if (!el || loadingMore || !nextCursor) return;
+		if (el.scrollTop < 40) void loadMore();
 	}
 
 	/** 输入内容变化：非空且距上次发送 ≥3 秒发 true；清空立即发 false；停止输入 3 秒后发 false。 */
@@ -335,7 +379,7 @@
 	</div>
 
 	<!-- Messages -->
-	<div bind:this={scrollEl} class="flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
+	<div bind:this={scrollEl} onscroll={handleScroll} class="flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
 		{#if loading}
 			<div class="flex h-full items-center justify-center">
 				<p class="text-[var(--neu-text-muted)]" style="font-size:12px;">加载中…</p>

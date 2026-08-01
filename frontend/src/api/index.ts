@@ -8,7 +8,7 @@ export {
   listFriends, listFollowing, listFollowers,
   getFeedFollowing, getFeedNearby, getTrending, getNearbyUsers, getNearbyGroups,
   searchMoments, getMomentDetail, createMoment, listMyMoments, getFavoritePosts,
-  searchGroups, getGroupDetail, listMyGroups,
+  searchGroups, getGroupDetail, createGroup, listMyGroups,
   searchUsers, searchSuggest,
   getUnreadCount, listNotifications, markRead,
   getClientConfig, bootstrap,

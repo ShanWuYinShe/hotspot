@@ -125,6 +125,7 @@ export async function getFavoritePosts(params?: object)   { return request<Pagin
 // Groups
 export async function searchGroups(params: object)        { return request<PaginatedData<object>>(Endpoints.Groups.Search, params); }
 export async function getGroupDetail(groupId: string)     { return request<object>(Endpoints.Groups.GetDetail, { group_id: groupId }); }
+export async function createGroup(params: object)         { return request<object>(Endpoints.Groups.Create, params); }
 export async function listMyGroups(params?: object)       { return request<PaginatedData<object>>(Endpoints.Groups.ListMy, params ?? {}); }
 
 // Search
