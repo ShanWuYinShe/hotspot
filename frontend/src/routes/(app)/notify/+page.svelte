@@ -18,7 +18,8 @@
 
 	const FILTER_TABS = [
 		{ id: 'all', label: '全部' },
-		{ id: 'like', label: '点赞' },
+		// 点赞由 reaction_added 表达(契约已删 moment_liked),tab 语义对齐 reaction。
+		{ id: 'reaction', label: '点赞' },
 		{ id: 'follow', label: '关注' },
 		{ id: 'comment', label: '评论' },
 		{ id: 'nearby', label: '附近' }
@@ -47,17 +48,27 @@
 				if (notifData) {
 					const items: Notif[] = (notifData.items || []).map((n: any, i: number) => {
 						const actor = n.payload?.actor ?? n.actor ?? {};
+						const groupName = n.payload?.group_name ?? '群组';
 						let text = '';
-						if (n.type === 'moment_liked') text = `${actor.nickname ?? ''} 赞了你的动态`;
-						else if (n.type === 'moment_commented') text = n.payload?.comment_preview ?? `${actor.nickname ?? ''} 评论了你的动态`;
+						if (n.type === 'moment_commented') text = n.payload?.comment_preview ?? `${actor.nickname ?? ''} 评论了你的动态`;
+						else if (n.type === 'comment_reply') text = `${actor.nickname ?? ''} 回复了你的评论:${n.payload?.reply_content_preview ?? ''}`;
 						else if (n.type === 'new_follower') text = `${actor.nickname ?? ''} 关注了你`;
-						else if (n.type === 'group_invite_received') text = `${actor.nickname ?? ''} 邀请你加入 ${n.payload?.group_name ?? '群组'}`;
+						else if (n.type === 'mutual_follow') text = `${actor.nickname ?? ''} 和你互相关注了`;
+						else if (n.type === 'group_invite_received') text = `${actor.nickname ?? ''} 邀请你加入 ${groupName}`;
+						else if (n.type === 'group_invite_revoked') text = `${n.payload?.revoked_by?.nickname ?? '对方'} 撤销了「${groupName}」的入群邀请`;
+						else if (n.type === 'group_invite_accepted') text = `${n.payload?.user?.nickname ?? ''} 接受了你的「${groupName}」入群邀请`;
+						else if (n.type === 'group_application_cancelled') text = `${n.payload?.applicant?.nickname ?? '申请人'} 取消了「${groupName}」的入群申请`;
+						else if (n.type === 'group_application_accepted') text = `你加入「${groupName}」的申请已通过`;
+						else if (n.type === 'group_application_rejected') text = `${n.payload?.rejected_by?.nickname ?? '管理员'} 拒绝了你的「${groupName}」入群申请`;
 						else if (n.type === 'reaction_added') text = `${actor.nickname ?? ''} 做出了反应 ${n.payload?.emoji ?? ''}`;
+						else if (n.type === 'report_resolved') text = `你举报的内容已处理${n.payload?.note ? `:${n.payload.note}` : ''}`;
+						else if (n.type === 'report_dismissed') text = `你的举报未通过审核${n.payload?.note ? `:${n.payload.note}` : ''}`;
+						else if (n.type === 'nearby_new_moment') text = `${actor.nickname ?? ''} 在附近发布了新瞬间`;
 						else if (n.type === 'system_announcement') text = '系统公告';
 						else text = n.payload?.title ?? n.message ?? '';
 						return {
 							id: n.notification_id ?? String(i + 1),
-							type: n.type ?? 'like',
+							type: n.type ?? 'reaction',
 							read: n.is_read ?? false,
 							time: n.created_at ?? '',
 							user: { name: actor.nickname ?? '', avatar: actor.avatar_url ?? '' },
@@ -166,7 +177,7 @@
 				</div>
 				<div class="flex flex-col gap-2">
 					{#each typeStats as { type, count }}
-						{@const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.like}
+						{@const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.reaction}
 						<button
 							type="button"
 							class="neu-hover-btn flex items-center gap-2.5 rounded-[10px] px-2 py-1.5 outline-none text-left"

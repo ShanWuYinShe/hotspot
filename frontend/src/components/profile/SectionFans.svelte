@@ -14,7 +14,7 @@
 	let fanFilter = $state<'all' | 'mutual' | 'pending'>('all');
 
 	const { followers } = useRelationships();
-	let followedBack = $state<Set<number>>(new Set(followers.filter((f: any) => f.followBack).map((f: any) => f.id)));
+	let followedBack = $state<Set<number>>(new Set(followers.filter((f: any) => f.isMutual).map((f: any) => f.id)));
 
 	const toggleFollow = (id: number) => {
 		const next = new Set(followedBack);

@@ -40,13 +40,12 @@
 	});
 
 	$effect(() => {
-		const point = referencePoint;
-		if (!point) return;
+		// reference_point 可选:有显式锚点就传,否则由服务端回退链解析。
 		let cancelled = false;
 		async function fetchUsers() {
 			try {
 				loading = true;
-				const res = await getNearbyUsers({ reference_point: point }).catch(() => ({ code: -1, data: { items: [] } }));
+				const res = await getNearbyUsers(referencePoint ? { reference_point: referencePoint } : {}).catch(() => ({ code: -1, data: { items: [] } }));
 				if (cancelled) return;
 				const data = (res.code === 0 ? res.data : null) as any;
 				if (data) {

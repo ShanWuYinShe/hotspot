@@ -2,7 +2,7 @@
 	import { ArrowLeft, Phone, Video, Send, Smile, CheckCheck, MoreHorizontal } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import { auth } from '@/stores/auth.svelte';
-	import { getPrivateMessages, sendPrivateMessage } from '@/api';
+	import { getPrivateMessages, sendPrivateMessage, markPrivateRead } from '@/api';
 
 	// ChatView — 私聊窗口（spec: 以对端 user_id 寻址）。
 	// 历史来自 private_messages/get_history；发送走 private_messages/send。
@@ -55,7 +55,15 @@
 	let inputVal = $state('');
 	let loading = $state(true);
 	let sending = $state(false);
+	let sendError = $state('');
 	let scrollEl = $state<HTMLDivElement | null>(null);
+
+	// spec: private_messages/send 返回 10200 时 data 携带 { reason: BlockReason }。
+	const SEND_BLOCK_REASONS: Record<string, string> = {
+		privacy: '对方隐私设置不允许发送消息',
+		stranger_quota_exceeded: '今日陌生人消息额度已用完',
+		account_suspended: '账号被限制'
+	};
 
 	$effect(() => {
 		let cancelled = false;
@@ -76,6 +84,10 @@
 			}));
 			messages = mapped;
 			loading = false;
+
+			// spec: private_messages/mark_read (scope='session') 标记该会话全部已读;
+			// 幂等语义,失败静默不打扰会话浏览。
+			void markPrivateRead({ scope: 'session', target_user_id: peerUserId }).catch(() => {});
 
 			// If no peer display info was passed, try to read it from the latest
 			// incoming message's sender (or any message sender that isn't me).
@@ -116,6 +128,7 @@
 		const text = inputVal.trim();
 		if (!text || sending || !peerUserId) return;
 		inputVal = '';
+		sendError = '';
 		sending = true;
 		// Optimistic append so the user sees their message instantly.
 		const tempId = `temp-${Date.now()}`;
@@ -125,9 +138,15 @@
 			if (res.code !== 0) {
 				// Roll back the optimistic message on failure.
 				messages = messages.filter((m) => m.id !== tempId);
+				// spec: 发送被拒绝返回 10200 时 data = { reason: BlockReason }。
+				if (res.code === 10200) {
+					const reason = (res.data as any)?.reason;
+					sendError = (reason && SEND_BLOCK_REASONS[reason]) || '消息发送失败';
+				}
 			}
 		} catch {
 			messages = messages.filter((m) => m.id !== tempId);
+			sendError = '消息发送失败,请稍后重试';
 		} finally {
 			sending = false;
 		}
@@ -237,6 +256,9 @@
 	</div>
 
 	<!-- Input bar -->
+	{#if sendError}
+		<p class="px-4 pb-1.5 text-[var(--semantic-warning)]" style="font-size:11px;">{sendError}</p>
+	{/if}
 	<div class="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 bg-[var(--neu-bg)]" style="border-top:1px solid var(--neu-border);">
 		<button
 			type="button"
@@ -250,6 +272,7 @@
 			<input
 				type="text"
 				bind:value={inputVal}
+				oninput={() => (sendError = '')}
 				onkeydown={(e) => {
 					if (e.key === 'Enter') void handleSend();
 				}}

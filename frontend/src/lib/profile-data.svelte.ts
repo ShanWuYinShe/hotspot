@@ -194,8 +194,7 @@ function daysSince(iso?: string): number {
 
 /**
  * Map the three spec relationship items to the flat shapes the Section components
- * expect. The spec nests UserInfo under `user:` and uses presence_status /
- * is_mutual / is_following_back.
+ * expect. The spec nests UserInfo under `user:` and uses presence_status / is_mutual.
  */
 function mapFriend(item: any) {
 	const u = item?.user ?? {};
@@ -231,8 +230,8 @@ function mapFollower(item: any) {
 		avatar: u.avatar_url ?? '',
 		handle: item?.remark ? `@${item.remark}` : `@${u.user_id ?? ''}`,
 		joinedDays: daysSince(item?.followed_at),
-		followBack: Boolean(item?.is_following_back),
-		isMutual: Boolean(item?.is_following_back)
+		followBack: Boolean(item?.is_mutual),
+		isMutual: Boolean(item?.is_mutual)
 	};
 }
 

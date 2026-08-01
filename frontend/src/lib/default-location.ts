@@ -1,8 +1,9 @@
 // 客户端配置默认位置（迁移自旧版 useDefaultLocation 的纯 TS 部分）。
 //
-// reference_point 是每个 feed/search 端点的必填参数，但前端尚无浏览器定位
-// 来源。按跨端边界（根 AGENTS.md：距离/位置由后端计算），回退到服务端
-// ClientConfig.defaults.default_location.point。全应用缓存一次（配置近静态）。
+// reference_point 是每个 feed/search 端点的可选参数:不传时服务端按回退链解析
+// (请求显式传参 → 最近一次 users/update_location → ClientConfig.defaults.default_location.point)。
+// 前端尚无浏览器定位来源,故仅在拿得到 default_location 时显式传参;拿不到就不传,
+// 交给服务端回退链。全应用缓存一次(配置近静态)。
 
 import { getClientConfig } from '@/api';
 

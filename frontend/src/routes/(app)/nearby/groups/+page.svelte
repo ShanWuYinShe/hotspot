@@ -40,13 +40,14 @@
 	});
 
 	$effect(() => {
-		// spec: feed/nearby_groups returns nearby groups (reference_point from ClientConfig).
-		const point = referencePoint;
-		if (!point) return;
+		// spec: feed/nearby_groups — reference_point 可选,服务端按回退链解析
+		// (显式传参 → 最近 update_location → ClientConfig.defaults.default_location)。
 		let cancelled = false;
 		async function fetchGroups() {
 			loading = true;
-			const res = await getNearbyGroups({ reference_point: point, pagination: { limit: 24 } }).catch(() => ({ code: -1, data: { items: [] } }));
+			const res = await getNearbyGroups(
+				referencePoint ? { reference_point: referencePoint, pagination: { limit: 24 } } : { pagination: { limit: 24 } }
+			).catch(() => ({ code: -1, data: { items: [] } }));
 			if (cancelled) return;
 			const items = (res.code === 0 && res.data ? (res.data as any).items : []) as any[];
 			groups = items.map(mapGroup);

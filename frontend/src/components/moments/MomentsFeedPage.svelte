@@ -31,15 +31,14 @@
 	});
 
 	$effect(() => {
-		// spec: feed/nearby requires reference_point.
-		// reference_point comes from ClientConfig.default_location (location denied fallback).
-		const point = referencePoint;
-		if (!point) return;
+		// spec: feed/nearby reference_point is optional — server resolves via fallback
+		// chain (explicit point → last known location → ClientConfig default).
+		// 有 point 就传、没有就不传照常请求。
 		let cancelled = false;
 		async function fetchData() {
 			try {
 				loading = true;
-				const feedRes = await getFeedNearby({ reference_point: point }).catch(() => ({ code: -1, data: { items: [] } }));
+				const feedRes = await getFeedNearby(referencePoint ? { reference_point: referencePoint } : {}).catch(() => ({ code: -1, data: { items: [] } }));
 				if (cancelled) return;
 
 				const feedData = (feedRes.code === 0 ? feedRes.data : null) as any;

@@ -13,7 +13,7 @@
 		onRemove: (id: string) => void;
 	} = $props();
 
-	const cfg = $derived(TYPE_CONFIG[notif.type] ?? TYPE_CONFIG.like);
+	const cfg = $derived(TYPE_CONFIG[notif.type] ?? TYPE_CONFIG.reaction);
 	const cfgTone = (amount: number) => `color-mix(in srgb, ${cfg.color} ${amount}%, transparent)`;
 </script>
 

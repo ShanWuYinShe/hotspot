@@ -36,19 +36,20 @@
 	});
 
 	$effect(() => {
-		// spec: moments/search requires reference_point + ≥1 of keyword/tag/radius.
-		// reference_point comes from ClientConfig.default_location (location denied fallback).
-		const point = referencePoint;
-		if (!point) return;
+		// spec: moments/search requires ≥1 of keyword/tag/radius; reference_point is
+		// optional — server resolves it via fallback chain (explicit → last known
+		// location → ClientConfig.default_location). 有 point 就传、没有就不传照常请求。
 		let cancelled = false;
 		async function fetchData() {
 			try {
 				loading = true;
 				error = null;
+				const searchParams: Record<string, unknown> = { radius: 5000, sort_by: 'distance', pagination: { limit: 12 } };
+				if (referencePoint) searchParams.reference_point = referencePoint;
 				const [trendingRes, nearbyRes, configRes] = await Promise.all([
 					getTrending().catch(() => ({ code: -1, data: null })),
 					// moments/search is auth-optional, so anonymous users still see nearby public moments.
-					searchMoments({ reference_point: point, radius: 5000, sort_by: 'distance', pagination: { limit: 12 } }).catch(() => ({ code: -1, data: { items: [] } })),
+					searchMoments(searchParams).catch(() => ({ code: -1, data: { items: [] } })),
 					getClientConfig().catch(() => ({ code: -1, data: null }))
 				]);
 				if (cancelled) return;

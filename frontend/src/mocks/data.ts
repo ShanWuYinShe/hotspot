@@ -96,7 +96,7 @@ export const mockFollowing = mockUsers.slice(1, 6).map((u, i) => ({
 export const mockFollowers = mockUsers.slice(2, 7).map((u, i) => ({
   user: u,
   followed_at: isoDaysAgo(i + 2),
-  is_following_back: i % 2 === 1,
+  is_mutual: i % 2 === 1,
   presence_status: PRESENCES[i + 2],
   last_online_at: isoDaysAgo(i + 1),
 }));
@@ -178,11 +178,13 @@ export const mockGroups = [
 // ── Notifications (spec NotifyItem) ────────────────────────────
 export const mockNotifications = [
   { notification_id: "notif_1", type: "new_follower", is_read: false, created_at: "2026-07-26T14:00:00Z", payload: { type: "new_follower", actor: mockUsers[1] } },
-  { notification_id: "notif_2", type: "moment_liked", is_read: false, created_at: "2026-07-26T13:30:00Z", payload: { type: "moment_liked", actor: mockUsers[2], moment_id: mockMoments[0].moment_id, moment_summary: { moment_id: mockMoments[0].moment_id, description_preview: mockMoments[0].description.slice(0, 100), cover_url: mockMoments[0].images?.[0]?.url } } },
+  { notification_id: "notif_2", type: "reaction_added", is_read: false, created_at: "2026-07-26T13:30:00Z", payload: { type: "reaction_added", actor: mockUsers[2], target_type: "moment", target_id: mockMoments[0].moment_id, emoji: "❤️" } },
   { notification_id: "notif_3", type: "moment_commented", is_read: true, created_at: "2026-07-26T12:00:00Z", payload: { type: "moment_commented", actor: mockUsers[3], moment_id: mockMoments[1].moment_id, moment_summary: { moment_id: mockMoments[1].moment_id, description_preview: mockMoments[1].description.slice(0, 100) }, comment_id: "c1", comment_preview: "好美！" } },
   { notification_id: "notif_4", type: "group_invite_received", is_read: false, created_at: "2026-07-26T10:00:00Z", payload: { type: "group_invite_received", actor: mockUsers[4], group_id: mockGroups[0].group.group_id, group_name: mockGroups[0].group.name, group_avatar_url: mockGroups[0].group.avatar_url, invite_id: "inv_1" } },
   { notification_id: "notif_5", type: "system_announcement", is_read: true, created_at: "2026-07-25T08:00:00Z", payload: { type: "system_announcement", announcement_id: "ann_1", severity: "info" } },
   { notification_id: "notif_6", type: "reaction_added", is_read: false, created_at: "2026-07-26T09:00:00Z", payload: { type: "reaction_added", actor: mockUsers[5], target_type: "moment", target_id: mockMoments[2].moment_id, emoji: "🔥" } },
+  { notification_id: "notif_7", type: "nearby_new_moment", is_read: false, created_at: "2026-07-26T08:30:00Z", payload: { type: "nearby_new_moment", actor: mockUsers[6], moment_id: mockMoments[3].moment_id, moment_summary: { moment_id: mockMoments[3].moment_id, description_preview: mockMoments[3].description.slice(0, 100), cover_url: mockMoments[3].images?.[0]?.url }, distance: 850 } },
+  { notification_id: "notif_8", type: "group_application_rejected", is_read: true, created_at: "2026-07-25T20:00:00Z", payload: { type: "group_application_rejected", group_id: mockGroups[1].group.group_id, group_name: mockGroups[1].group.name, application_id: "appl_1", rejected_by: mockUsers[3], reason: "名额已满" } },
 ];
 
 // ── Chats (spec PrivateChatItem: nested other_user: UserInfo) ──

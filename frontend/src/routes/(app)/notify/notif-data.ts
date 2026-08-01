@@ -14,7 +14,8 @@ export interface Notif {
 }
 
 export const TYPE_CONFIG: Record<string, { icon: Component; color: string; label: string }> = {
-	like: { icon: Heart, color: 'var(--semantic-hot)', label: '点赞' },
+	// 点赞语义 = reaction_added(契约已删 moment_liked)。
+	reaction: { icon: Heart, color: 'var(--semantic-hot)', label: '点赞' },
 	follow: { icon: UserPlus, color: 'var(--neu-accent-primary)', label: '关注' },
 	comment: { icon: MessageCircle, color: 'var(--map-user)', label: '评论' },
 	nearby: { icon: MapPin, color: 'var(--semantic-online)', label: '附近' },
