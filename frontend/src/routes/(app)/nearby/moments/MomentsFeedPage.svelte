@@ -6,6 +6,7 @@
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import PostCard from '@/components/moments/PostCard.svelte';
@@ -213,7 +214,7 @@
 {:else if platform === 'tablet'}
 	<!-- ═══ Tablet Discover — 2-column grid, max-width 800px centred ═══ -->
 	<div class="sticky top-0 z-10 bg-[var(--neu-bg)]" style="backdrop-filter:blur(16px);border-bottom:1px solid var(--neu-border);">
-		<div class="flex gap-6 mx-auto" style="width:100%;">
+		<ContentColumn maxWidth="1124px">
 			<div class="mx-auto w-full lg:mx-0 min-w-0" style="width:100%;">
 				<PageHeader title="附近瞬间" subtitle="徐州 · 附近正在发生的事" onBack={() => history.back()} sticky={false}>
 					{#snippet trailing()}
@@ -230,11 +231,11 @@
 				</PageHeader>
 			</div>
 			<div class="hidden lg:block flex-shrink-0" style="width:var(--context-rail-width);"></div>
-		</div>
+		</ContentColumn>
 	</div>
 
-	<div class="animate-fade-in flex gap-6 mx-auto" style="max-width:1124px;width:100%;padding:16px 0 28px;">
-		<div class="mx-auto w-full lg:mx-0 px-5 min-w-0" style="width:100%;">
+	<ContentColumn maxWidth="1124px" class="animate-fade-in flex gap-6 pt-4 pb-7">
+		<div class="mx-auto w-full lg:mx-0 min-w-0" style="width:100%;">
 			<div class="mb-5">
 				{@render tabRow('xl:flex-row xl:items-center justify-between gap-3')}
 			</div>
@@ -284,7 +285,8 @@
 				</BspCardCanvas>
 			{/if}
 		</div>
-	</div>
+		<div class="hidden lg:block flex-shrink-0" style="width:var(--context-rail-width);"></div>
+	</ContentColumn>
 {:else}
 	<!-- ═══ Mobile Discover — single-column feed, max-width 560px centred ═══ -->
 	<PageHeader title="附近瞬间" subtitle="徐州 · 附近正在发生的事" sticky onBack={() => history.back()}>
@@ -293,11 +295,11 @@
 		{/snippet}
 	</PageHeader>
 
-	<div class="px-5 mt-0 -mt-2 pb-2">
+	<div class="px-5 -mt-2 pb-2">
 		<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" compact />
 	</div>
 
-	<div class="animate-fade-in" style="max-width:560px;margin-left:auto;margin-right:auto;width:100%;padding:12px 16px 24px;">
+	<ContentColumn maxWidth="560px" class="animate-fade-in pt-3 pb-6">
 		<div class="mb-4">
 			{@render tabRow('gap-3')}
 		</div>
@@ -333,5 +335,5 @@
 				{/each}
 			</div>
 		{/if}
-	</div>
+	</ContentColumn>
 {/if}

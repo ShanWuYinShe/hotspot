@@ -12,7 +12,7 @@
 	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
 	import NearbyUsersFlatList from '@/routes/(app)/_home/NearbyUsersFlatList.svelte';
 	import { ROUTES } from '@/lib/routes';
-    import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
+	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 
 	// 首页「附近」：Hero 统计 + 附近用户雷达条 + 话题活动 + 群组轮播 + 推荐列表。
 	// 迁移自旧版 NearbyFeedPage（mobile/desktop 双版本）。
@@ -136,7 +136,7 @@
 {#if platformStore.platform === 'desktop'}
 	<!-- ═══ Desktop Home — 2-column with clear hierarchy ═══ -->
 	<div class="content-mode-wide flex flex-col h-full">
-		<div class="flex-shrink-0 flex items-center justify-between px-7 py-4 bg-[var(--neu-bg)]" style="border-bottom:1px solid var(--neu-border);">
+		<ContentColumn class="flex items-center justify-between py-4">
 			<div>
 				<h1 class="text-2xl" style="color:var(--neu-text);">首页</h1>
 				<p class="text-xs" style="color:var(--neu-text-muted);margin-top:2px;">发现周边有趣的人和事</p>
@@ -147,7 +147,7 @@
 					<span class="text-xs" style="color:var(--neu-text-muted);">{onlineCount} 在线</span>
 				</div>
 			</div>
-		</div>
+		</ContentColumn>
 
 		<div class="flex flex-1 min-h-0 gap-0 overflow-hidden">
 			<!-- Left: hero + activity + groups (340px) -->

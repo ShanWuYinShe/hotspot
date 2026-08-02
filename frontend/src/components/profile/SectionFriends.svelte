@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { MessageCircle } from '@lucide/svelte';
+	import { MessageCircle, Users } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import BorderedList from '@/components/data-display/BorderedList.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -77,16 +78,24 @@
 		</div>
 	{:else}
 		<div class="flex flex-col gap-3 px-5 pb-6">
-			<BorderedList>
-				{#each filtered as f (f.id)}
-					<InteractiveListRow class="flex items-center gap-3 p-3 cursor-pointer"
-						onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
-						ariaLabel={`查看 ${f.name} 的主页`}
-					>
-						<FriendRowBody {f} />
-					</InteractiveListRow>
-				{/each}
-			</BorderedList>
+			{#if filtered.length === 0}
+				<EmptyState title="还没有好友" description="去附近的人里认识新朋友。">
+					{#snippet icon()}
+						<Users size={18} />
+					{/snippet}
+				</EmptyState>
+			{:else}
+				<BorderedList>
+					{#each filtered as f (f.id)}
+						<InteractiveListRow class="flex items-center gap-3 p-3 cursor-pointer"
+							onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
+							ariaLabel={`查看 ${f.name} 的主页`}
+						>
+							<FriendRowBody {f} />
+						</InteractiveListRow>
+					{/each}
+				</BorderedList>
+			{/if}
 		</div>
 	{/if}
 </div>

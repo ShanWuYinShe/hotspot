@@ -34,7 +34,7 @@
 	data-active={isSelected}
 	aria-current={isSelected ? 'page' : undefined}
 	class="neu-hover-row app-list-row app-list-row--rich w-full cursor-pointer text-left outline-none neu-row-hover"
-	style="padding:{compact ? '10px 16px' : '12px 16px'};border-radius:18px;"
+	style="padding:{compact ? '10px 16px' : '12px 16px'};"
 	onclick={onClick}
 >
 	<span class="relative flex-shrink-0">

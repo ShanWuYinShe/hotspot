@@ -91,7 +91,7 @@
 		<!-- Fan list -->
 	{#if embedded}
 		<div class="grid w-full grid-cols-1 gap-4 px-6 pb-8 md:grid-cols-2 lg:px-8 xl:grid-cols-3">
-			{#if followers.length === 0}
+			{#if filtered.length === 0}
 				<div class="col-span-full">
 					<EmptyState title="还没有粉丝" description="分享你的瞬间，让更多人发现你。">
 						{#snippet icon()}
@@ -113,6 +113,13 @@
 		</div>
 	{:else}
 		<div class="px-5 pb-6">
+			{#if filtered.length === 0}
+				<EmptyState title="还没有粉丝" description="分享你的瞬间，让更多人发现你。">
+					{#snippet icon()}
+						<UserPlus size={18} />
+					{/snippet}
+				</EmptyState>
+			{:else}
 			<BorderedList>
 				{#each filtered as f (f.id)}
 					{@const isMutual = followedBack.has(f.id)}
@@ -124,6 +131,7 @@
 					</InteractiveListRow>
 				{/each}
 			</BorderedList>
+			{/if}
 		</div>
 	{/if}
 </div>

@@ -88,6 +88,13 @@
 		</div>
 	{:else}
 		<div class="px-5 pb-6">
+			{#if sorted.length === 0}
+				<EmptyState title="还没有关注" description="去发现附近的人，找到有趣的创作者。">
+					{#snippet icon()}
+						<Heart size={18} />
+					{/snippet}
+				</EmptyState>
+			{:else}
 			<BorderedList>
 				{#each sorted as f (f.id)}
 					<InteractiveListRow class="flex items-center gap-3 p-3 cursor-pointer"
@@ -99,6 +106,7 @@
 					</InteractiveListRow>
 				{/each}
 			</BorderedList>
+			{/if}
 		</div>
 	{/if}
 </div>
