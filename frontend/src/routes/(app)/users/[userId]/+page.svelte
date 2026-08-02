@@ -229,7 +229,7 @@
 		</div>
 
 		<!-- Avatar + info — constrained width, centered -->
-		<ContentColumn maxWidth="var(--content-reading-max)">
+		<ContentColumn maxWidth="560px">
 			<div class="-mt-10 pb-4 flex flex-col">
 				<div class="flex items-end justify-between mb-3">
 					<div class="relative">

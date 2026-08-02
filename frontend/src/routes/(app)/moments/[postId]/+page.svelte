@@ -253,7 +253,7 @@
 				</div>
 			</div>
 
-			<ContentColumn maxWidth="var(--content-reading-max)" class="pt-4 pb-3">
+			<ContentColumn maxWidth="680px" class="pt-4 pb-3">
 				<!-- Author -->
 				<div class="flex items-center gap-3 mb-3">
 					<button

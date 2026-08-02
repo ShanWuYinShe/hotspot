@@ -30,7 +30,8 @@
 		sticky = true,
 		showBackOnDesktop = false,
 		maxWidth,
-		className = ''
+		className = '',
+		contentClassName = ''
 	}: {
 		title: string;
 		subtitle?: string;
@@ -42,6 +43,8 @@
 		showBackOnDesktop?: boolean;
 		maxWidth?: number | string;
 		className?: string;
+		/** 内部 ContentColumn 的 className（默认 py-4；传 py-3 等可对齐 Figma 手写 header） */
+		contentClassName?: string;
 	} = $props();
 
 	const showBack = $derived(Boolean(onBack) && (platformStore.platform !== 'desktop' || showBackOnDesktop));
@@ -51,7 +54,7 @@
 	class={cn('shrink-0', sticky && 'sticky top-0 z-20', className)}
 	style="background-color:var(--page-bg);border-bottom:1px solid var(--neu-border);"
 >
-	<ContentColumn {maxWidth} class="py-4">
+	<ContentColumn {maxWidth} class={cn('py-4', contentClassName)}>
 		<div class="flex items-center gap-3">
 			{#if showBack}
 				<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} />

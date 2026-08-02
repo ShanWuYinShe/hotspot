@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MapPin, Heart, MessageCircle, Share2, Bookmark } from '@lucide/svelte';
+	import { MapPin, Heart, MessageCircle, Bookmark } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
 	import type { FeedItem } from './feed-interactions.svelte';
@@ -65,7 +65,7 @@
 
 	<!-- 底部信息托盘（surface-card-menu，由 NearbyImageCard footer 槽渲染） -->
 	{#snippet footer()}
-		<div class="px-3 pt-2 pb-2.5">
+		<div class="px-3 pt-2.5 pb-2.5">
 			<p class="{dense ? 'line-clamp-1 text-xs' : 'line-clamp-2 text-[13px]'} leading-[1.55]" style="color:var(--neu-text);">
 				{item.content}
 			</p>
@@ -108,9 +108,6 @@
 						}}
 					>
 						<Bookmark style="width:15px;height:15px;" strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
-					</button>
-					<button type="button" class="neu-hover-action outline-none text-[var(--neu-text-muted)]" onclick={(e) => e.stopPropagation()}>
-						<Share2 style="width:15px;height:15px;" strokeWidth={1.5} />
 					</button>
 				</div>
 			</div>

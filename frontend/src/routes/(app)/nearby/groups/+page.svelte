@@ -85,11 +85,11 @@
 
 
 <StandardPageLayout
-	contentClassName="py-6"
-	contentMaxWidth={isTablet ? '964px' : isDesktop ? undefined : '680px'}
+	contentClassName="py-5 sm:py-6"
+	contentMaxWidth={isTablet ? '964px' : isDesktop ? '1152px' : '680px'}
 >
 	{#snippet header()}
-		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky onBack={() => history.back()}>
+		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky onBack={() => history.back()} contentClassName="!py-3">
 			{#snippet trailing()}
 				<div class="flex items-center gap-2">
 					<div class="hidden sm:flex flex-1 max-w-sm">
@@ -143,7 +143,7 @@
 				{/if}
 				<BspCardCanvas
 					items={rest.slice(0, visibleCount - 1)}
-					gap={24}
+					gap={14}
 					minRatio={0.68}
 					maxRatio={1.48}
 					minCardWidth={160}

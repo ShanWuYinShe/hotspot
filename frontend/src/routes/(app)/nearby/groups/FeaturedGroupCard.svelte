@@ -32,7 +32,7 @@
 	</div>
 
 	{#snippet footer()}
-		<div class="px-4 pt-2 pb-3">
+		<div class="p-4">
 			<p class="text-[var(--neu-text)] text-lg font-semibold">{group.name}</p>
 			<p class="truncate text-[var(--neu-text-muted)] text-[11px] mt-[3px]">{group.desc}</p>
 			<div class="mt-2.5 flex items-center justify-between gap-2">

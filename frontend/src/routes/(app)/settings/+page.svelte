@@ -71,9 +71,9 @@
 	};
 </script>
 
-<StandardPageLayout contentClassName="pt-4 pb-10" contentMaxWidth="var(--content-reading-max)">
+<StandardPageLayout contentClassName="py-5 pb-10">
 	{#snippet header()}
-		<PageHeader title="设置" subtitle="管理你的偏好与隐私" sticky onBack={() => history.back()} />
+		<PageHeader title="设置" sticky={false} onBack={() => history.back()} showBackOnDesktop />
 	{/snippet}
 
 	<!-- User card — hero with ambient glow -->
@@ -90,7 +90,7 @@
 
 	<!-- Appearance（对齐 Figma Make SettingsPage：应用主题二选一 + 深色模式） -->
 	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">外观</p>
-	<div class="rounded-feature overflow-hidden neu-surface-flat">
+	<div class="rounded-panel overflow-hidden neu-surface-flat">
 		<div class="px-4 py-3.5">
 			<div class="flex items-center gap-3">
 				<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
@@ -139,7 +139,7 @@
 
 	<!-- Notifications -->
 	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">通知</p>
-	<div class="rounded-feature overflow-hidden neu-surface-flat">
+	<div class="rounded-panel overflow-hidden neu-surface-flat">
 		<div class="flex items-center gap-3 px-4 py-3.5">
 			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
 				<Bell style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
@@ -165,7 +165,7 @@
 
 	<!-- Privacy -->
 	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">隐私与安全</p>
-	<div class="rounded-feature overflow-hidden neu-surface-flat">
+	<div class="rounded-panel overflow-hidden neu-surface-flat">
 		<div class="flex items-center gap-3 px-4 py-3.5">
 			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
 				<Lock style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
@@ -191,7 +191,7 @@
 
 	<!-- General -->
 	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">通用</p>
-	<div class="rounded-feature overflow-hidden neu-surface-flat">
+	<div class="rounded-panel overflow-hidden neu-surface-flat">
 		<button type="button" class="neu-hover-bg flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease;">
 			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
 				<Globe style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />

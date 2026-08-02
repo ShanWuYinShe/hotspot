@@ -192,7 +192,7 @@
 					{:else}
 						<BspCardCanvas
 							items={filtered.slice(0, visibleCount)}
-							gap={24}
+							gap={14}
 							minRatio={0.68}
 							maxRatio={1.48}
 							minCardWidth={160}
@@ -255,7 +255,7 @@
 				<!-- Tablet：BSP 瓦片墙（所有项进统一网格，无首项 hero；对齐 Figma DiscoverPage） -->
 				<BspCardCanvas
 					items={filtered.slice(0, visibleCount)}
-					gap={24}
+					gap={14}
 					minRatio={0.68}
 					maxRatio={1.48}
 					minCardWidth={160}
@@ -305,7 +305,7 @@
 			<!-- 2 列 BSP 瓦片墙（所有项进统一网格，无首项 hero；对齐 Figma DiscoverPage columns=2） -->
 			<BspCardCanvas
 				items={filtered.slice(0, visibleCount)}
-				gap={10}
+				gap={14}
 				minRatio={0.68}
 				maxRatio={1.48}
 				minCardWidth={150}

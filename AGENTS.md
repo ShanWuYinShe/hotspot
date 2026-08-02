@@ -58,3 +58,4 @@ git branch -d <分支名>
 - 契约权威：`spec/` 是 API 契约的唯一权威来源；修改接口、字段、错误码前先对齐 `spec/`。
 - 跨端边界：距离与位置计算统一由后端完成，前端和客户端只展示结果。
 - Docker Compose 统一管理：所有服务（postgres、redis、seaweedfs、backend、frontend、nginx）统一通过 `docker compose` 编排启动/停止；不得混用宿主机进程与容器，也不允许单独启动某个服务绕过 compose。
+- 更新代码的过程中发现的问题、错误，都应该修复掉，不能因为不是本次修改引起的就搁置

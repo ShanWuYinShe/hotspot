@@ -38,9 +38,9 @@
 	</span>
 
 	{#snippet footer()}
-		<div class="px-3 pt-2 pb-2.5">
+		<div class="p-3">
 			<p class="line-clamp-1 text-[var(--neu-text)] text-[13px] font-semibold">{group.name}</p>
-			<p class="flex items-center gap-1 truncate text-[var(--neu-text-muted)] text-[10px] mt-0.5">
+			<p class="flex items-center gap-1 truncate text-[var(--neu-text-muted)] text-[10px] mt-1">
 				<CalendarDays size={10} />
 				{group.activity}
 			</p>
