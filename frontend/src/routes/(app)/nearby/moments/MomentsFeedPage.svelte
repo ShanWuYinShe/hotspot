@@ -307,32 +307,46 @@
 		{#if loading || !filtered.length}
 			{@render feedState()}
 		{:else}
-			<!-- Feed — first is hero with ambient, rest are flat -->
+			<!-- Feed：hero 大卡 + 2 列 BSP 瓦片墙（对齐 Figma Make NearbyGrid columns=2） -->
 			<div class="flex flex-col gap-4">
-				{#each filtered as item, i (item.id)}
-					{#if i === 0}
-						<div class="neu-ambient-glow">
-							<PostCard
-								item={item}
-								hero
-								liked={item.liked}
-								saved={item.saved}
-								onLike={() => void interactions.toggleLike(item.id)}
-								onSave={() => void interactions.toggleSave(item.id)}
-								onClick={() => void goto(ROUTES.moment(item.id))}
-							/>
-						</div>
-					{:else}
+				{#if filtered[0]}
+					<div class="neu-ambient-glow">
+						<PostCard
+							item={filtered[0]}
+							hero
+							liked={filtered[0].liked}
+							saved={filtered[0].saved}
+							onLike={() => void interactions.toggleLike(filtered[0].id)}
+							onSave={() => void interactions.toggleSave(filtered[0].id)}
+							onClick={() => void goto(ROUTES.moment(filtered[0].id))}
+						/>
+					</div>
+				{/if}
+				<BspCardCanvas
+					items={filtered.slice(1, visibleCount + 1)}
+					gap={10}
+					minRatio={0.68}
+					maxRatio={1.48}
+					minCardWidth={150}
+					minCardHeight={220}
+					minCanvasHeight={440}
+					ariaLabel="发现内容的不规则满铺布局"
+					hasMore={visibleCount + 1 < filtered.length}
+					onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
+				>
+					{#snippet renderItem(item: FeedItem, index: number)}
 						<PostCard
 							item={item}
+							dense
+							edition={String(index + 2).padStart(2, '0')}
 							liked={item.liked}
 							saved={item.saved}
 							onLike={() => void interactions.toggleLike(item.id)}
 							onSave={() => void interactions.toggleSave(item.id)}
 							onClick={() => void goto(ROUTES.moment(item.id))}
 						/>
-					{/if}
-				{/each}
+					{/snippet}
+				</BspCardCanvas>
 			</div>
 		{/if}
 	</ContentColumn>

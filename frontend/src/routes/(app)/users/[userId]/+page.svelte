@@ -374,15 +374,6 @@
 		</RailSection>
 	{/if}
 
-	<RailSection title="精选作品" action="全部" onAction={() => (activeTab = 'posts')}>
-		<div class="grid grid-cols-3" style="gap:3px;">
-			{#each user.gallery.slice(0, 6) as src, i}
-				<div class="overflow-hidden rounded-[6px]" style="aspect-ratio:1;">
-					<img src={src} alt={`thumb ${i}`} class="w-full h-full object-cover" />
-				</div>
-			{/each}
-		</div>
-	</RailSection>
 
 	<RailSection title="你可能也关注" action="更多" onAction={() => void goto(ROUTES.nearbyPeople)}>
 		<div class="flex flex-col gap-3">

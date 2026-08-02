@@ -71,17 +71,11 @@
 	<!-- 图片渐变：与信息托盘自然过渡（对齐 NearbyImageCard media-scrim） -->
 	<div class="pointer-events-none absolute inset-0" style="background:var(--surface-media-scrim-card);"></div>
 
-	<!-- 左上：兴趣标签 -->
-	{#if user.tag}
-		<span
-			class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full text-white text-[10px]"
-			style="background:var(--overlay-strong);backdrop-filter:blur(8px);"
-		>
-			#{user.tag}
-		</span>
-	{/if}
-
 	<!-- 右上：距离 -->
+	<div class="absolute top-2.5 right-2.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--overlay-strong)]" style="backdrop-filter:blur(8px);">
+		<MapPin class="w-[9px] h-[9px] text-white" strokeWidth={1.5} />
+		<span class="text-white text-[10px]">{user.distance}</span>
+	</div>
 	<div class="absolute top-2.5 right-2.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--overlay-strong)]" style="backdrop-filter:blur(8px);">
 		<MapPin class="w-[9px] h-[9px] text-white" strokeWidth={1.5} />
 		<span class="text-white text-[10px]">{user.distance}</span>
@@ -99,7 +93,12 @@
 			<p class="truncate text-[var(--neu-text-muted)] text-[10px] mt-0.5">{user.note}</p>
 		</div>
 		<div class="mt-2 flex items-center justify-between gap-2">
-			<span class="truncate text-[var(--neu-text-muted)] text-[10px]">{user.mutual ? `${user.mutual} 位共同好友` : '等待认识'}</span>
+			<span class="flex min-w-0 items-center gap-1.5">
+				{#if user.tag}
+					<span class="rounded-full px-1.5 py-0.5 text-[10px]" style="background:var(--neu-accent-soft);color:var(--neu-accent-primary);border:1px solid var(--neu-accent-soft-border);">#{user.tag}</span>
+				{/if}
+				<span class="truncate text-[var(--neu-text-muted)] text-[10px]">{user.mutual ? `${user.mutual} 位共同好友` : '等待认识'}</span>
+			</span>
 			<button
 				type="button"
 				class="neu-hover-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 w-[30px] h-[30px]"
