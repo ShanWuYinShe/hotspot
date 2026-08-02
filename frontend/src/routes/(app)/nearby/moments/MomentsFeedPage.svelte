@@ -117,22 +117,31 @@
 	const platform = $derived(platformStore.platform);
 </script>
 
-<!-- ═══ 分类 Tab + 热门 tag 列表（与附近的人排序/标签行对齐）═══ -->
+<!-- ═══ 分类 Tab（下划线样式，对齐 Figma Make DiscoverHeader）+ 热门 tag 列表 ═══ -->
 {#snippet tabRow(className: string)}
 	<div class="flex flex-col {className}">
-		<div class="flex items-center gap-1 p-1 rounded-full neu-input-surface w-fit">
+		<!-- 下划线 Tab 栏（对齐 Figma DiscoverPage：border-b + active 下划线 indicator） -->
+		<div class="no-scrollbar flex overflow-x-auto" style="border-bottom:1px solid var(--neu-border);">
 			{#each TABS as tab}
+				{@const isActive = activeTab === tab}
 				<button
 					type="button"
 					onclick={() => (activeTab = tab)}
-					aria-pressed={activeTab === tab}
-					class="px-3.5 py-1 rounded-full outline-none transition-colors text-xs focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] {activeTab === tab ? 'bg-[var(--neu-accent-primary)] text-white font-semibold' : 'neu-surface-ghost text-[var(--neu-text-muted)]'}"
+					aria-pressed={isActive}
+					class="relative shrink-0 rounded-t-[12px] pb-3 pt-1 outline-none"
+					style="padding-left:18px;padding-right:18px;color:{isActive ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};font-weight:{isActive ? 500 : 400};font-size:13px;transition:color 0.2s;"
 				>
 					{tab}
+					{#if isActive}
+						<span
+							class="absolute"
+							style="bottom:-1px;left:14%;right:14%;height:2px;border-radius:1px;background:var(--neu-accent-primary);"
+						></span>
+					{/if}
 				</button>
 			{/each}
 		</div>
-		<div class="flex gap-1.5 overflow-x-auto no-scrollbar">
+		<div class="flex gap-1.5 overflow-x-auto no-scrollbar pt-3">
 			{#each tags as tag}
 				<TagPill active={activeTag === tag} onClick={() => (activeTag = activeTag === tag ? null : tag)} size="md">{tag}</TagPill>
 			{/each}
@@ -145,7 +154,7 @@
 	{#if loading}
 		<div class="flex flex-col items-center gap-3 py-20">
 			<div class="rounded-full border-2 border-[var(--neu-border)] border-t-[var(--neu-accent-primary)] animate-spin" style="width:28px;height:28px;"></div>
-			<p class="text-[var(--neu-text-muted)] text-[13px]">加载附近瞬间…</p>
+			<p class="text-[var(--neu-text-muted)] text-[13px]">加载附近动态…</p>
 		</div>
 	{:else}
 		<EmptyState title="附近暂时没有瞬间">
@@ -159,7 +168,7 @@
 {#if platform === 'desktop'}
 	<!-- ═══ Desktop Discover — 2-col BSP field ═══ -->
 	<div class="content-mode-wide flex flex-col h-full">
-		<PageHeader title="附近瞬间" subtitle="徐州 · 附近正在发生的事" sticky onBack={() => history.back()}>
+		<PageHeader title="附近动态" sticky onBack={() => history.back()}>
 			{#snippet trailing()}
 				<div class="flex items-center gap-2">
 					<div class="hidden sm:flex flex-1 max-w-sm">
@@ -216,7 +225,7 @@
 	<div class="sticky top-0 z-10 bg-[var(--neu-bg)]" style="backdrop-filter:blur(16px);border-bottom:1px solid var(--neu-border);">
 		<ContentColumn maxWidth="1124px">
 			<div class="mx-auto w-full lg:mx-0 min-w-0" style="width:100%;">
-				<PageHeader title="附近瞬间" subtitle="徐州 · 附近正在发生的事" onBack={() => history.back()} sticky={false}>
+				<PageHeader title="附近动态" onBack={() => history.back()} sticky={false}>
 					{#snippet trailing()}
 						<div class="flex items-center gap-2">
 							<div class="hidden sm:flex flex-1 max-w-sm">
@@ -243,23 +252,9 @@
 			{#if loading || !filtered.length}
 				{@render feedState()}
 			{:else}
-				{#if filtered[0]}
-					<div class="neu-ambient-glow mb-4">
-						<PostCard
-							item={filtered[0]}
-							hero
-							liked={filtered[0].liked}
-							saved={filtered[0].saved}
-							onLike={() => void interactions.toggleLike(filtered[0].id)}
-							onSave={() => void interactions.toggleSave(filtered[0].id)}
-							onClick={() => void goto(ROUTES.moment(filtered[0].id))}
-						/>
-					</div>
-				{/if}
-
-				<!-- Tablet：BSP 瓦片墙（卡片严格为 1×1 / 1×2 / 2×1 / 2×2 四种） -->
+				<!-- Tablet：BSP 瓦片墙（所有项进统一网格，无首项 hero；对齐 Figma DiscoverPage） -->
 				<BspCardCanvas
-					items={filtered.slice(1, visibleCount + 1)}
+					items={filtered.slice(0, visibleCount)}
 					gap={24}
 					minRatio={0.68}
 					maxRatio={1.48}
@@ -267,14 +262,14 @@
 					minCardHeight={260}
 					minCanvasHeight={520}
 					ariaLabel="发现内容的不规则满铺布局"
-					hasMore={visibleCount + 1 < filtered.length}
+					hasMore={visibleCount < filtered.length}
 					onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
 				>
 					{#snippet renderItem(item: FeedItem, index: number)}
 						<PostCard
 							item={item}
 							dense
-							edition={String(index + 2).padStart(2, '0')}
+							edition={String(index + 1).padStart(2, '0')}
 							liked={item.liked}
 							saved={item.saved}
 							onLike={() => void interactions.toggleLike(item.id)}
@@ -289,7 +284,7 @@
 	</ContentColumn>
 {:else}
 	<!-- ═══ Mobile Discover — single-column feed, max-width 560px centred ═══ -->
-	<PageHeader title="附近瞬间" subtitle="徐州 · 附近正在发生的事" sticky onBack={() => history.back()}>
+	<PageHeader title="附近动态" sticky onBack={() => history.back()}>
 		{#snippet trailing()}
 			<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>
 		{/snippet}
@@ -307,47 +302,32 @@
 		{#if loading || !filtered.length}
 			{@render feedState()}
 		{:else}
-			<!-- Feed：hero 大卡 + 2 列 BSP 瓦片墙（对齐 Figma Make NearbyGrid columns=2） -->
-			<div class="flex flex-col gap-4">
-				{#if filtered[0]}
-					<div class="neu-ambient-glow">
-						<PostCard
-							item={filtered[0]}
-							hero
-							liked={filtered[0].liked}
-							saved={filtered[0].saved}
-							onLike={() => void interactions.toggleLike(filtered[0].id)}
-							onSave={() => void interactions.toggleSave(filtered[0].id)}
-							onClick={() => void goto(ROUTES.moment(filtered[0].id))}
-						/>
-					</div>
-				{/if}
-				<BspCardCanvas
-					items={filtered.slice(1, visibleCount + 1)}
-					gap={10}
-					minRatio={0.68}
-					maxRatio={1.48}
-					minCardWidth={150}
-					minCardHeight={220}
-					minCanvasHeight={440}
-					ariaLabel="发现内容的不规则满铺布局"
-					hasMore={visibleCount + 1 < filtered.length}
-					onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
-				>
-					{#snippet renderItem(item: FeedItem, index: number)}
-						<PostCard
-							item={item}
-							dense
-							edition={String(index + 2).padStart(2, '0')}
-							liked={item.liked}
-							saved={item.saved}
-							onLike={() => void interactions.toggleLike(item.id)}
-							onSave={() => void interactions.toggleSave(item.id)}
-							onClick={() => void goto(ROUTES.moment(item.id))}
-						/>
-					{/snippet}
-				</BspCardCanvas>
-			</div>
+			<!-- 2 列 BSP 瓦片墙（所有项进统一网格，无首项 hero；对齐 Figma DiscoverPage columns=2） -->
+			<BspCardCanvas
+				items={filtered.slice(0, visibleCount)}
+				gap={10}
+				minRatio={0.68}
+				maxRatio={1.48}
+				minCardWidth={150}
+				minCardHeight={220}
+				minCanvasHeight={440}
+				ariaLabel="发现内容的不规则满铺布局"
+				hasMore={visibleCount < filtered.length}
+				onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
+			>
+				{#snippet renderItem(item: FeedItem, index: number)}
+					<PostCard
+						item={item}
+						dense
+						edition={String(index + 1).padStart(2, '0')}
+						liked={item.liked}
+						saved={item.saved}
+						onLike={() => void interactions.toggleLike(item.id)}
+						onSave={() => void interactions.toggleSave(item.id)}
+						onClick={() => void goto(ROUTES.moment(item.id))}
+					/>
+				{/snippet}
+			</BspCardCanvas>
 		{/if}
 	</ContentColumn>
 {/if}
