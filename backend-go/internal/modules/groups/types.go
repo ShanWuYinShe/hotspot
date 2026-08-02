@@ -41,9 +41,9 @@ func paginationCursor(p *PaginationParams) string {
 }
 
 const (
-	GroupJoinMethodOpen       GroupJoinMethod = "open"
-	GroupJoinMethodApproval   GroupJoinMethod = "approval"
-	GroupJoinMethodInviteOnly GroupJoinMethod = "invite_only"
+	GroupJoinMethodDirect      GroupJoinMethod = "direct"
+	GroupJoinMethodPassword    GroupJoinMethod = "password"
+	GroupJoinMethodInviteOnly  GroupJoinMethod = "invite_only"
 
 	GroupRoleOwner  GroupRole = "owner"
 	GroupRoleAdmin  GroupRole = "admin"
@@ -88,20 +88,23 @@ type MyGroupState struct {
 }
 
 type GroupItem struct {
-	Group          GroupInfo         `json:"group"`
-	Description    string            `json:"description,omitempty"`
-	Tags           []string          `json:"tags,omitempty"`
-	HasPassword    bool              `json:"has_password,omitempty"`
-	Location       RelativeLocation  `json:"location"`
-	MyState        *MyGroupState     `json:"my_state,omitempty"`
-	FriendsInGroup int               `json:"friends_in_group,omitempty"`
-	JoinMethod     GroupJoinMethod   `json:"join_method,omitempty"`
-	IsSearchable   bool              `json:"is_searchable,omitempty"`
-	MaxMembers     int               `json:"max_members,omitempty"`
-	LastActivityAt *string           `json:"last_activity_at,omitempty"`
-	CreatedAt      *string           `json:"created_at,omitempty"`
-	OwnerID        string            `json:"owner_id,omitempty"`
-	LastMessage    *GroupLastMessage `json:"last_message,omitempty"`
+	Group              GroupInfo         `json:"group"`
+	Description        string            `json:"description,omitempty"`
+	Tags               []string          `json:"tags,omitempty"`
+	JoinMethod         GroupJoinMethod   `json:"join_method,omitempty"`
+	RequiresApproval   bool              `json:"requires_approval"`
+	HasPassword        bool              `json:"has_password,omitempty"`
+	Location           RelativeLocation  `json:"location"`
+	MyState            *MyGroupState     `json:"my_state,omitempty"`
+	FriendsInGroup     int               `json:"friends_in_group,omitempty"`
+	OnlineMembersCount *int              `json:"online_members_count,omitempty"`
+	NextActivity       *string           `json:"next_activity,omitempty"`
+	IsSearchable       bool              `json:"is_searchable,omitempty"`
+	MaxMembers         int               `json:"max_members,omitempty"`
+	LastActivityAt     *string           `json:"last_activity_at,omitempty"`
+	CreatedAt          *string           `json:"created_at,omitempty"`
+	OwnerID            string            `json:"owner_id,omitempty"`
+	LastMessage        *GroupLastMessage `json:"last_message,omitempty"`
 }
 
 // GroupLastMessage 群列表最后一条消息预览（仅 groups/list_my 返回，见 api_spec_types.md GroupItem）。
@@ -114,15 +117,16 @@ type GroupLastMessage struct {
 }
 
 type CreateGroupRequest struct {
-	Name         string          `json:"name"`
-	Description  string          `json:"description,omitempty"`
-	AvatarFileID string          `json:"avatar_file_id,omitempty"`
-	Tags         []string        `json:"tags,omitempty"`
-	Password     string          `json:"password,omitempty"`
-	JoinMethod   GroupJoinMethod `json:"join_method,omitempty"`
-	IsSearchable *bool           `json:"is_searchable,omitempty"`
-	MaxMembers   int             `json:"max_members,omitempty"`
-	Location     Location        `json:"location"`
+	Name             string          `json:"name"`
+	Description      string          `json:"description,omitempty"`
+	AvatarFileID     string          `json:"avatar_file_id,omitempty"`
+	Tags             []string        `json:"tags,omitempty"`
+	Password         string          `json:"password,omitempty"`
+	JoinMethod       GroupJoinMethod `json:"join_method,omitempty"`
+	RequiresApproval *bool           `json:"requires_approval,omitempty"`
+	IsSearchable     *bool           `json:"is_searchable,omitempty"`
+	MaxMembers       int             `json:"max_members,omitempty"`
+	Location         Location        `json:"location"`
 }
 
 type GroupOpenTheDoorRequest struct {
@@ -141,17 +145,19 @@ type SearchGroupsRequest struct {
 type GeoPoint = types.GeoPoint
 
 type UpdateGroupRequest struct {
-	GroupID       string           `json:"group_id"`
-	Name          string           `json:"name,omitempty"`
-	Description   string           `json:"description,omitempty"`
-	AvatarFileID  string           `json:"avatar_file_id,omitempty"`
-	Tags          []string         `json:"tags,omitempty"`
-	Password      *string          `json:"password,omitempty"`
-	ClearPassword *bool            `json:"clear_password,omitempty"`
-	JoinMethod    *GroupJoinMethod `json:"join_method,omitempty"`
-	IsSearchable  *bool            `json:"is_searchable,omitempty"`
-	MaxMembers    *int             `json:"max_members,omitempty"`
-	Location      *Location        `json:"location,omitempty"`
+	GroupID          string           `json:"group_id"`
+	Name             string           `json:"name,omitempty"`
+	Description      string           `json:"description,omitempty"`
+	AvatarFileID     string           `json:"avatar_file_id,omitempty"`
+	Tags             []string         `json:"tags,omitempty"`
+	Password         *string          `json:"password,omitempty"`
+	ClearPassword    *bool            `json:"clear_password,omitempty"`
+	JoinMethod       *GroupJoinMethod `json:"join_method,omitempty"`
+	RequiresApproval *bool            `json:"requires_approval,omitempty"`
+	NextActivity     *string          `json:"next_activity,omitempty"`
+	IsSearchable     *bool            `json:"is_searchable,omitempty"`
+	MaxMembers       *int             `json:"max_members,omitempty"`
+	Location         *Location        `json:"location,omitempty"`
 }
 
 type DismissGroupRequest struct {

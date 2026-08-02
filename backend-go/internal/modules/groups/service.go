@@ -96,7 +96,9 @@ func (s *Service) OpenTheDoor(ctx context.Context, groupID string) (GroupItem, b
 // GroupItem) based on the viewer's membership/role carried in MyState:
 //   - has_password is @member-only — hidden from non-members (don't tip off
 //     crawlers/brute-forcers about which groups have passwords)
-//   - join_method / is_searchable / max_members are @group-admin-only
+//   - join_method / requires_approval are @all — visible to everyone (users must
+//     know how to join before attempting to)
+//   - is_searchable / max_members are @group-admin-only
 //   - owner_id is detail-page-only (kept here; search/list redact it separately)
 //
 // Call this at every serialization boundary.
@@ -105,12 +107,11 @@ func redactGroupFields(item *GroupItem) {
 		return
 	}
 	isMember := item.MyState != nil && item.MyState.IsJoined
-	isAdmin := item.MyState != nil && (item.MyState.Role == GroupRoleOwner || item.MyState.Role == GroupRoleAdmin)
 	if !isMember {
 		item.HasPassword = false
 	}
+	isAdmin := item.MyState != nil && (item.MyState.Role == GroupRoleOwner || item.MyState.Role == GroupRoleAdmin)
 	if !isAdmin {
-		item.JoinMethod = ""
 		item.IsSearchable = false
 		item.MaxMembers = 0
 	}

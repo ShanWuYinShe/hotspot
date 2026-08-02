@@ -151,7 +151,8 @@ interface CreateGroupRequest {
   avatar_file_id?: string;
   tags?: string[];
   password?: string;
-  join_method?: GroupJoinMethod;  // 默认: 'open'
+  join_method?: GroupJoinMethod;  // 默认: 'direct'
+  requires_approval?: boolean;    // 默认: false
   is_searchable?: boolean;         // 默认: true
   max_members?: number;            // 默认: 200
   location: Location;
@@ -186,6 +187,8 @@ interface UpdateGroupRequest {
   password?: string;
   clear_password?: boolean;  // true 时移除群密码（与 password 互斥，同时传入视为参数冲突返回 10000）
   join_method?: GroupJoinMethod;
+  requires_approval?: boolean;
+  next_activity?: string;          // 设置/更新下次活动预告；传空字符串清除
   is_searchable?: boolean;
   max_members?: number;
   location?: Location;
@@ -729,11 +732,11 @@ interface UpdateGroupMySettingsRequest {
 
 ### POST /api/v1/groups/join
 
-加入群组（智能路由）。根据群组 `join_method` 自动处理：
-- `open`：直接加入，返回 `status: 'joined'`
-- `open` + 有密码：需提供 `password`，验证通过后直接加入
-- `approval`：创建加入申请，返回 `status: 'pending_approval'`
-- `invite_only`：返回错误 `10400`（该群组仅限邀请加入）
+加入群组（智能路由）。根据群组 `join_method`（准入方式）与 `requires_approval`（是否需审核）自动处理：
+- `direct` + 无需审核：直接加入，返回 `status: 'joined'`
+- `direct` + 需审核：创建加入申请，返回 `status: 'pending_approval'`
+- `password`：需提供 `password`，验证通过后按 `requires_approval` 直接加入或创建申请
+- `invite_only`：仅受邀用户可加入（未受邀返回错误 `10400`（该群组仅限邀请加入）；受邀后按 `requires_approval` 直接加入或创建申请）
 
 
 - **认证**: 必须

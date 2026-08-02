@@ -24,13 +24,13 @@ export function mapGroup(item: any): Group {
 		banner: g.avatar_url ?? '',
 		category: (item?.tags?.[0] ?? '') || '同城',
 		members: g.members_count ?? 0,
-		// spec GroupItem 无在线/隐私/活动/成员头像字段，卡片展示用默认值
-		online: 0,
+		online: item?.online_members_count ?? 0,
 		distance: item?.location?.distance ?? '',
-		privacy: 'public',
+		// join_method 在 GroupItem 顶层；invite_only/password 视为私密
+		privacy: item?.join_method === 'invite_only' || item?.join_method === 'password' ? 'private' : 'public',
 		joined: item?.my_state?.is_joined ?? false,
 		desc: item?.description ?? '',
-		activity: '',
+		activity: item?.next_activity ?? '',
 		avatars: []
 	};
 }

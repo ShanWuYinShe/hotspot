@@ -177,8 +177,7 @@ function mapGroup(item: any) {
 		// broken-image icon. A dedicated banner field can be added when the spec does.
 		banner: g.avatar_url ?? '',
 		members: g.members_count ?? 0,
-		// spec GroupItem 无在线人数字段
-		online: 0,
+		online: item?.online_members_count ?? 0,
 		desc: item?.description ?? '',
 		role: role ? (ROLE_LABEL[role] ?? role) : '成员',
 		lastActive: item?.last_activity_at ?? '',

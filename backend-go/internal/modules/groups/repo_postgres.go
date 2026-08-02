@@ -48,14 +48,18 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	}
 	joinMethod := req.JoinMethod
 	if joinMethod == "" {
-		joinMethod = "open"
+		joinMethod = "direct"
+	}
+	requiresApproval := false
+	if req.RequiresApproval != nil {
+		requiresApproval = *req.RequiresApproval
 	}
 	nowRFC3339 := now.Format(time.RFC3339)
 	tags := req.Tags
 	if tags == nil {
 		tags = []string{}
 	}
-	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, IsSearchable: isSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
+	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
 	s2CellToken := geo.CellTokenAtLevel(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}, 14)
 	s2CellID := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
 	ownerRole := string(GroupRoleOwner)
@@ -64,7 +68,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		if err := queryable.Exec(txCtx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, isSearchable, maxMembers, userID, now, now, tags, s2CellToken, s2CellID); err != nil {
+		if err := queryable.Exec(txCtx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, requiresApproval, nil, isSearchable, maxMembers, userID, now, now, tags, s2CellToken, s2CellID); err != nil {
 			return fmt.Errorf("groups.CreateGroup: insert group: %w", err)
 		}
 		if err := queryable.Exec(txCtx, queryInsertGroupMember, groupID, userID, ownerRole, now); err != nil {
@@ -108,7 +112,7 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 		s2CellID = &id
 	}
 	_ = userID
-	err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), nilOrBool(req.IsSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude, nilOrStrings(req.Tags), s2CellToken, s2CellID)
+	err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), req.RequiresApproval, req.NextActivity, nilOrBool(req.IsSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude, nilOrStrings(req.Tags), s2CellToken, s2CellID)
 	if err != nil {
 		return fmt.Errorf("groups.Update: %w", err)
 	}
@@ -280,11 +284,14 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 		latitude       float64
 		longitude      float64
 		joinMethod     string
+		requiresApproval bool
+		nextActivity   *string
 		roleText       string
 		createdAt      *time.Time
 		lastActivityAt *time.Time
 		tags           []string
 		membersCount   int
+		onlineCount    int
 		joinedAt       time.Time
 		isMuted        bool
 		mutedUntil     *time.Time
@@ -300,7 +307,7 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 	scanned := make([]scannedItem, 0)
 	for rows.Next() {
 		var s scannedItem
-		if err := rows.Scan(&s.item.Group.GroupID, &s.item.Group.Name, &s.item.Group.AvatarURL, &s.item.Description, &s.item.HasPassword, &s.locationName, &s.latitude, &s.longitude, &s.joinMethod, &s.item.IsSearchable, &s.item.MaxMembers, &s.item.OwnerID, &s.createdAt, &s.lastActivityAt, &s.tags, &s.membersCount, &s.roleText, &s.joinedAt, &s.isMuted, &s.mutedUntil, &s.lastMessageID, &s.lastMessageType, &s.lastContent, &s.lastSenderID, &s.lastSenderName, &s.lastSenderAvatar, &s.lastSentAt); err != nil {
+		if err := rows.Scan(&s.item.Group.GroupID, &s.item.Group.Name, &s.item.Group.AvatarURL, &s.item.Description, &s.item.HasPassword, &s.locationName, &s.latitude, &s.longitude, &s.joinMethod, &s.requiresApproval, &s.nextActivity, &s.item.IsSearchable, &s.item.MaxMembers, &s.item.OwnerID, &s.createdAt, &s.lastActivityAt, &s.tags, &s.membersCount, &s.onlineCount, &s.roleText, &s.joinedAt, &s.isMuted, &s.mutedUntil, &s.lastMessageID, &s.lastMessageType, &s.lastContent, &s.lastSenderID, &s.lastSenderName, &s.lastSenderAvatar, &s.lastSentAt); err != nil {
 			rows.Close()
 			return nil, "", err
 		}
@@ -326,6 +333,9 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 		}{Latitude: s.latitude, Longitude: s.longitude}, LocationName: s.locationName}
 		s.item.Tags = s.tags
 		s.item.JoinMethod = GroupJoinMethod(s.joinMethod)
+		s.item.RequiresApproval = s.requiresApproval
+		s.item.NextActivity = s.nextActivity
+		s.item.OnlineMembersCount = &s.onlineCount
 		s.item.CreatedAt = formatOptionalTime(s.createdAt)
 		s.item.LastActivityAt = formatOptionalTime(s.lastActivityAt)
 		s.item.Group.MembersCount = s.membersCount
@@ -370,10 +380,22 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 	if membership != nil {
 		return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
 	}
+	// invite_only：仅受邀用户可加入（存在 pending 邀请视为受邀）
 	if group.JoinMethod == GroupJoinMethodInviteOnly {
-		return JoinGroupResult{}, ErrPermissionDenied
+		var inviteID string
+		var expiresAt time.Time
+		if err := queryable.QueryRow(ctx, queryFindPendingGroupInvite, groupID, userID).Scan(&inviteID, &expiresAt); err != nil {
+			return JoinGroupResult{}, ErrPermissionDenied
+		}
 	}
-	if group.JoinMethod == GroupJoinMethodApproval {
+	// password：需提供密码（has_password 为布尔标记，密码内容校验不在本实现范围）
+	if group.JoinMethod == GroupJoinMethodPassword {
+		if password == nil || *password == "" {
+			return JoinGroupResult{}, ErrInvalidPassword
+		}
+	}
+	// requires_approval：创建加入申请，审核通过后才算真正加入
+	if group.RequiresApproval {
 		var existingID string
 		if err := queryable.QueryRow(ctx, queryFindPendingGroupApplication, groupID, userID).Scan(&existingID); err == nil && existingID != "" {
 			return JoinGroupResult{Status: JoinGroupStatusPendingApproval, Application: &struct {
@@ -392,9 +414,7 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 			ApplicationID string `json:"application_id"`
 		}{ApplicationID: applicationID}}, nil
 	}
-	if group.HasPassword && (password == nil || *password == "") {
-		return JoinGroupResult{}, ErrInvalidPassword
-	}
+	// direct：直接加入
 	now := time.Now().UTC()
 	if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleMember), now); err != nil {
 		return JoinGroupResult{}, fmt.Errorf("groups.JoinGroup: insert member: %w", err)

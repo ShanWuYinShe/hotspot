@@ -88,9 +88,13 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	}
 	joinMethod := req.JoinMethod
 	if joinMethod == "" {
-		joinMethod = "open"
+		joinMethod = "direct"
 	}
-	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: req.Tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, IsSearchable: isSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
+	requiresApproval := false
+	if req.RequiresApproval != nil {
+		requiresApproval = *req.RequiresApproval
+	}
+	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: req.Tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
 	r.groups[groupID] = item
 	r.members[groupID] = map[string]inMemoryMembership{userID: {Role: GroupRoleOwner, JoinedAt: nowRFC3339}}
 	return item, nil
@@ -216,6 +220,12 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 	}
 	if req.JoinMethod != nil {
 		item.JoinMethod = *req.JoinMethod
+	}
+	if req.RequiresApproval != nil {
+		item.RequiresApproval = *req.RequiresApproval
+	}
+	if req.NextActivity != nil {
+		item.NextActivity = req.NextActivity
 	}
 	if req.IsSearchable != nil {
 		item.IsSearchable = *req.IsSearchable
@@ -406,10 +416,27 @@ func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string
 	if _, joined := r.members[groupID][userID]; joined {
 		return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
 	}
+	// invite_only：仅受邀用户可加入（内存实现：存在 pending 邀请视为受邀）
 	if group.JoinMethod == GroupJoinMethodInviteOnly {
-		return JoinGroupResult{}, ErrAccessRestricted
+		invited := false
+		for _, inv := range r.invites {
+			if inv.GroupID == groupID && inv.InviteeID == userID && inv.Status == ApplicationStatusPending {
+				invited = true
+				break
+			}
+		}
+		if !invited {
+			return JoinGroupResult{}, ErrAccessRestricted
+		}
 	}
-	if group.JoinMethod == GroupJoinMethodApproval {
+	// password：需提供密码
+	if group.JoinMethod == GroupJoinMethodPassword {
+		if password == nil || *password == "" {
+			return JoinGroupResult{}, ErrInvalidPassword
+		}
+	}
+	// requires_approval：创建加入申请，审核通过后才算真正加入
+	if group.RequiresApproval {
 		for _, record := range r.applications {
 			if record.GroupID == groupID && record.ApplicantID == userID && record.Status == ApplicationStatusPending {
 				return JoinGroupResult{}, ErrAlreadyApplied
@@ -422,11 +449,6 @@ func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string
 		return JoinGroupResult{Status: JoinGroupStatusPendingApproval, Application: &struct {
 			ApplicationID string `json:"application_id"`
 		}{ApplicationID: applicationID}}, nil
-	}
-	if group.HasPassword {
-		if password == nil || *password == "" {
-			return JoinGroupResult{}, ErrInvalidPassword
-		}
 	}
 	if group.MaxMembers > 0 && len(r.members[groupID]) >= group.MaxMembers {
 		return JoinGroupResult{}, ErrGroupFull

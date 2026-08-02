@@ -124,7 +124,7 @@ func scanGroupBase(scanner interface{ Scan(...any) error }) (GroupItem, error) {
 	var latitude, longitude float64
 	var createdAt, lastActivityAt *time.Time
 	var tags []string
-	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags); err != nil {
+	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.RequiresApproval, &item.NextActivity, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &item.OnlineMembersCount); err != nil {
 		return GroupItem{}, err
 	}
 	item.Location = RelativeLocation{Point: struct {
@@ -144,7 +144,7 @@ func scanSearchGroupRow(scanner interface{ Scan(...any) error }) (GroupItem, err
 	var latitude, longitude float64
 	var createdAt, lastActivityAt *time.Time
 	var tags []string
-	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &item.Group.MembersCount); err != nil {
+	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.RequiresApproval, &item.NextActivity, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &item.Group.MembersCount, &item.OnlineMembersCount); err != nil {
 		return GroupItem{}, err
 	}
 	item.Location = RelativeLocation{Point: struct {
@@ -261,8 +261,9 @@ func buildGroupSearchQuery(req SearchGroupsRequest) (string, []any) {
 		args = append(args, value)
 		return fmt.Sprintf("$%d", len(args))
 	}
-	builder.WriteString("SELECT g.group_id, g.name, g.avatar_url, g.description, g.has_password, g.location_name, g.latitude, g.longitude, g.join_method, g.is_searchable, g.max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}')")
+	builder.WriteString("SELECT g.group_id, g.name, g.avatar_url, g.description, g.has_password, g.location_name, g.latitude, g.longitude, g.join_method, g.requires_approval, g.next_activity, g.is_searchable, g.max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}')")
 	builder.WriteString(", (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = g.group_id) AS members_count")
+	builder.WriteString(", (SELECT COUNT(*)::int FROM group_members gm JOIN users u ON u.user_id = gm.user_id WHERE gm.group_id = g.group_id AND u.presence_status = 'online') AS online_members_count")
 	builder.WriteString(" FROM groups g WHERE g.deleted_at IS NULL AND g.is_searchable = true")
 	if req.Radius != nil {
 		bounds := geo.BoundsAround(searchGeoPoint(req.ReferencePoint), *req.Radius)

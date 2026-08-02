@@ -16,6 +16,7 @@
 	let desc = $state('');
 	let category = $state('摄影');
 	let isPrivate = $state(false);
+	let requiresApproval = $state(false);
 	let step = $state<'form' | 'done'>('form');
 	let creating = $state(false);
 	let createError = $state('');
@@ -38,7 +39,8 @@
 				name: name.trim(),
 				description: desc.trim() || undefined,
 				tags: [category],
-				join_method: isPrivate ? 'invite_only' : 'open',
+				join_method: isPrivate ? 'invite_only' : 'direct',
+				requires_approval: requiresApproval,
 				location
 			});
 			if (res.code !== 0) {
@@ -194,6 +196,34 @@
 					<span
 						class="absolute bg-white rounded-full"
 						style="top:3px;width:22px;height:22px;border-radius:11px;box-shadow:0 1px 4px rgba(0,0,0,0.26);left:{isPrivate ? 22 : 2}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
+					></span>
+				</button>
+			</div>
+
+			<!-- Approval toggle（requires_approval：审核通过后才算真正加入） -->
+			<div
+				class="flex items-center justify-between px-4 py-3.5 rounded-[16px] bg-[var(--neu-bg)]"
+				style="box-shadow:5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);border:1px solid var(--neu-border);"
+			>
+				<div class="flex items-center gap-3">
+					<Check style="width:18px;height:18px;color:{requiresApproval ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};" strokeWidth={1.5} />
+					<div>
+						<p class="text-[14px] text-[var(--neu-text)]">新人需审核</p>
+						<p class="text-[11px] text-[var(--neu-text-muted)]">
+							{requiresApproval ? '申请需群主/管理员审核通过后加入' : '申请后直接加入'}
+						</p>
+					</div>
+				</div>
+				<button
+					type="button"
+					onclick={() => (requiresApproval = !requiresApproval)}
+					class="neu-hover-btn flex-shrink-0 rounded-full outline-none"
+					style="width:48px;height:28px;background:{requiresApproval ? 'var(--neu-accent-primary)' : 'rgba(120,120,128,0.25)'};position:relative;transition:background 0.22s ease;box-shadow:{requiresApproval ? 'inset 0 1px 2px rgba(0,0,0,0.12)' : 'inset 0 1px 2px rgba(0,0,0,0.08)'};"
+					aria-label={requiresApproval ? '关闭新人审核' : '开启新人审核'}
+				>
+					<span
+						class="absolute bg-white rounded-full"
+						style="top:3px;width:22px;height:22px;border-radius:11px;box-shadow:0 1px 4px rgba(0,0,0,0.26);left:{requiresApproval ? 22 : 2}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
 					></span>
 				</button>
 			</div>

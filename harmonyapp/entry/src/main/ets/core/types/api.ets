@@ -61,8 +61,8 @@ export type ReportReason =
   | 'self_harm'
   | 'other';
 
-// 群组加入方式
-export type GroupJoinMethod = 'open' | 'approval' | 'invite_only';
+// 群组准入方式（叠加 requires_approval 决定是否需审核）
+export type GroupJoinMethod = 'direct' | 'password' | 'invite_only';
 
 // 公告严重程度 (spec: AnnounceLevel)
 export type AnnounceLevel = 'info' | 'warning' | 'error';
@@ -246,14 +246,20 @@ export interface GroupItem {
   my_state?: MyGroupState;
   friends_in_group?: number;
 
-  // @group-admin-only
+  // 加入门槛（@all 可见）
   join_method?: GroupJoinMethod;
+  requires_approval?: boolean;
+  online_members_count?: number;
+  next_activity?: string;
+
+  // @group-admin-only
   is_searchable?: boolean;
   max_members?: number;
 }
 
 export interface GroupSettings {
-  join_method: GroupJoinMethod;
+  join_method: GroupJoinMethod;   // 默认 'direct'
+  requires_approval: boolean;     // 默认 false
   is_searchable: boolean;
   max_members: number;
   location: Location;
@@ -863,6 +869,7 @@ export interface CreateGroupRequest {
   tags?: string[];
   password?: string;
   join_method?: GroupJoinMethod;
+  requires_approval?: boolean;
   is_searchable?: boolean;
   max_members?: number;
   location: Location;
@@ -877,6 +884,8 @@ export interface UpdateGroupRequest {
   password?: string;
   clear_password?: boolean;
   join_method?: GroupJoinMethod;
+  requires_approval?: boolean;
+  next_activity?: string;
   is_searchable?: boolean;
   max_members?: number;
   location?: Location;

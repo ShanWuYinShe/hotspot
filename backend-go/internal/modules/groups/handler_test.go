@@ -304,8 +304,8 @@ func TestJoinApprovalSendsApplicationNotification(t *testing.T) {
 	repo := NewInMemoryRepository()
 	service := NewServiceWithDeps(repo, notify.NewServiceWithRepo(notificationRepo), nil)
 	ownerCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_owner"})
-	joinMethod := GroupJoinMethodApproval
-	created, err := service.Create(ownerCtx, CreateGroupRequest{Name: "Approval Group", JoinMethod: joinMethod, Location: Location{LocationName: "Somewhere"}})
+	approval := true
+	created, err := service.Create(ownerCtx, CreateGroupRequest{Name: "Approval Group", JoinMethod: GroupJoinMethodDirect, RequiresApproval: &approval, Location: Location{LocationName: "Somewhere"}})
 	if err != nil {
 		t.Fatalf("create group: %v", err)
 	}
@@ -388,8 +388,8 @@ func TestApproveApplicationSendsAcceptedNotification(t *testing.T) {
 	repo := NewInMemoryRepository()
 	service := NewServiceWithDeps(repo, notify.NewServiceWithRepo(notificationRepo), nil)
 	ownerCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_owner"})
-	joinMethod := GroupJoinMethodApproval
-	created, err := service.Create(ownerCtx, CreateGroupRequest{Name: "Approval Group", JoinMethod: joinMethod, Location: Location{LocationName: "Somewhere"}})
+	approval := true
+	created, err := service.Create(ownerCtx, CreateGroupRequest{Name: "Approval Group", JoinMethod: GroupJoinMethodDirect, RequiresApproval: &approval, Location: Location{LocationName: "Somewhere"}})
 	if err != nil {
 		t.Fatalf("create group: %v", err)
 	}
@@ -1117,7 +1117,7 @@ func TestListMyGroupsHandlerMapsServiceError(t *testing.T) {
 func TestJoinGroupHandlerReturnsSuccess(t *testing.T) {
 	repo := NewInMemoryRepository()
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	created, err := NewServiceWithRepo(repo).Create(ctx, CreateGroupRequest{Name: "Open Group", JoinMethod: GroupJoinMethodOpen, Location: Location{LocationName: "Here"}})
+	created, err := NewServiceWithRepo(repo).Create(ctx, CreateGroupRequest{Name: "Open Group", JoinMethod: GroupJoinMethodDirect, Location: Location{LocationName: "Here"}})
 	if err != nil {
 		t.Fatalf("create group: %v", err)
 	}

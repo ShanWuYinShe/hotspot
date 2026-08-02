@@ -34,7 +34,7 @@ func TestPostgresIT_CreateAndGetGroup(t *testing.T) {
 
 		group, err := repo.Create(ctx, ownerID, CreateGroupRequest{
 			Name:       "Test Group",
-			JoinMethod: GroupJoinMethodOpen,
+			JoinMethod: GroupJoinMethodDirect,
 			Location: Location{LocationName: "Beijing", Point: struct {
 				Latitude  float64 `json:"latitude"`
 				Longitude float64 `json:"longitude"`
@@ -76,7 +76,7 @@ func TestPostgresIT_JoinGroupAndListMembers(t *testing.T) {
 
 		group, err := repo.Create(ctx, ownerID, CreateGroupRequest{
 			Name:       "Join Test Group",
-			JoinMethod: GroupJoinMethodOpen,
+			JoinMethod: GroupJoinMethodDirect,
 			Location: Location{LocationName: "Beijing", Point: struct {
 				Latitude  float64 `json:"latitude"`
 				Longitude float64 `json:"longitude"`
@@ -114,7 +114,7 @@ func TestPostgresIT_LeaveGroup(t *testing.T) {
 
 		group, err := repo.Create(ctx, ownerID, CreateGroupRequest{
 			Name:       "Leave Test Group",
-			JoinMethod: GroupJoinMethodOpen,
+			JoinMethod: GroupJoinMethodDirect,
 			Location: Location{LocationName: "Beijing", Point: struct {
 				Latitude  float64 `json:"latitude"`
 				Longitude float64 `json:"longitude"`
@@ -150,7 +150,7 @@ func TestPostgresIT_DismissGroup(t *testing.T) {
 
 		group, err := repo.Create(ctx, ownerID, CreateGroupRequest{
 			Name:       "Dismiss Test Group",
-			JoinMethod: GroupJoinMethodOpen,
+			JoinMethod: GroupJoinMethodDirect,
 			Location: Location{LocationName: "Beijing", Point: struct {
 				Latitude  float64 `json:"latitude"`
 				Longitude float64 `json:"longitude"`
@@ -184,7 +184,7 @@ func TestPostgresIT_SetMemberRole(t *testing.T) {
 
 		group, err := repo.Create(ctx, ownerID, CreateGroupRequest{
 			Name:       "Role Test Group",
-			JoinMethod: GroupJoinMethodOpen,
+			JoinMethod: GroupJoinMethodDirect,
 			Location: Location{LocationName: "Beijing", Point: struct {
 				Latitude  float64 `json:"latitude"`
 				Longitude float64 `json:"longitude"`
@@ -224,7 +224,7 @@ func TestPostgresIT_Update(t *testing.T) {
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
 		repo := NewPostgresRepository(txFactory)
 		ownerID := testdb.InsertUser(t, txFactory, "g_update_owner", "Owner")
-		groupID := createTestGroup(t, ctx, repo, ownerID, "Update Test", GroupJoinMethodOpen)
+		groupID := createTestGroup(t, ctx, repo, ownerID, "Update Test", GroupJoinMethodDirect)
 
 		newName := "Renamed"
 		if err := repo.Update(ctx, ownerID, UpdateGroupRequest{
@@ -254,7 +254,7 @@ func TestPostgresIT_SearchMembers(t *testing.T) {
 		repo := NewPostgresRepository(txFactory)
 		ownerID := testdb.InsertUser(t, txFactory, "g_smem_owner", "Owner")
 		memberID := testdb.InsertUser(t, txFactory, "g_smem_member", "Member")
-		groupID := createTestGroup(t, ctx, repo, ownerID, "Search Member Test", GroupJoinMethodOpen)
+		groupID := createTestGroup(t, ctx, repo, ownerID, "Search Member Test", GroupJoinMethodDirect)
 
 		if _, err := repo.JoinGroup(ctx, memberID, groupID, nil, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
@@ -281,8 +281,8 @@ func TestPostgresIT_ListMyGroups(t *testing.T) {
 		ownerID := testdb.InsertUser(t, txFactory, "g_lmg_owner", "Owner")
 		memberID := testdb.InsertUser(t, txFactory, "g_lmg_member", "Member")
 
-		g1 := createTestGroup(t, ctx, repo, ownerID, "Group A", GroupJoinMethodOpen)
-		g2 := createTestGroup(t, ctx, repo, memberID, "Group B", GroupJoinMethodOpen)
+		g1 := createTestGroup(t, ctx, repo, ownerID, "Group A", GroupJoinMethodDirect)
+		g2 := createTestGroup(t, ctx, repo, memberID, "Group B", GroupJoinMethodDirect)
 
 		if _, err := repo.JoinGroup(ctx, memberID, g1, nil, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
@@ -316,7 +316,7 @@ func TestPostgresIT_CreateListUpdateDeleteAnnouncement(t *testing.T) {
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
 		repo := NewPostgresRepository(txFactory)
 		ownerID := testdb.InsertUser(t, txFactory, "g_ann_owner", "Owner")
-		groupID := createTestGroup(t, ctx, repo, ownerID, "Announcement Test", GroupJoinMethodOpen)
+		groupID := createTestGroup(t, ctx, repo, ownerID, "Announcement Test", GroupJoinMethodDirect)
 
 		created, err := repo.CreateAnnouncement(ctx, ownerID, CreateGroupAnnouncementRequest{
 			GroupID: groupID,
@@ -382,7 +382,11 @@ func TestPostgresIT_ApplicationApproveReject(t *testing.T) {
 		repo := NewPostgresRepository(txFactory)
 		ownerID := testdb.InsertUser(t, txFactory, "g_app_owner", "Owner")
 		applicantID := testdb.InsertUser(t, txFactory, "g_app_applicant", "Applicant")
-		groupID := createTestGroup(t, ctx, repo, ownerID, "Application Test", GroupJoinMethodApproval)
+		groupID := createTestGroup(t, ctx, repo, ownerID, "Application Test", GroupJoinMethodDirect)
+		approval := true
+		if err := repo.Update(ctx, ownerID, UpdateGroupRequest{GroupID: groupID, RequiresApproval: &approval}); err != nil {
+			t.Fatalf("set requires_approval: %v", err)
+		}
 
 		msg := "please"
 		result, err := repo.JoinGroup(ctx, applicantID, groupID, nil, &msg)
@@ -461,7 +465,7 @@ func TestPostgresIT_UpdateMySettings(t *testing.T) {
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
 		repo := NewPostgresRepository(txFactory)
 		ownerID := testdb.InsertUser(t, txFactory, "g_set_owner", "Owner")
-		groupID := createTestGroup(t, ctx, repo, ownerID, "Settings Test", GroupJoinMethodOpen)
+		groupID := createTestGroup(t, ctx, repo, ownerID, "Settings Test", GroupJoinMethodDirect)
 
 		muted := true
 		pinned := true
@@ -490,7 +494,11 @@ func TestPostgresIT_ListMyApplicationsAndCancel(t *testing.T) {
 		repo := NewPostgresRepository(txFactory)
 		ownerID := testdb.InsertUser(t, txFactory, "g_lma_owner", "Owner")
 		applicantID := testdb.InsertUser(t, txFactory, "g_lma_applicant", "Applicant")
-		groupID := createTestGroup(t, ctx, repo, ownerID, "MyApps Test", GroupJoinMethodApproval)
+		groupID := createTestGroup(t, ctx, repo, ownerID, "MyApps Test", GroupJoinMethodDirect)
+		approval := true
+		if err := repo.Update(ctx, ownerID, UpdateGroupRequest{GroupID: groupID, RequiresApproval: &approval}); err != nil {
+			t.Fatalf("set requires_approval: %v", err)
+		}
 
 		result, err := repo.JoinGroup(ctx, applicantID, groupID, nil, nil)
 		if err != nil {
@@ -533,7 +541,7 @@ func TestPostgresIT_InviteFlow(t *testing.T) {
 		ownerID := testdb.InsertUser(t, txFactory, "g_inv_owner", "Owner")
 		inviteeID := testdb.InsertUser(t, txFactory, "g_inv_invitee", "Invitee")
 		invitee2ID := testdb.InsertUser(t, txFactory, "g_inv_invitee2", "Invitee2")
-		groupID := createTestGroup(t, ctx, repo, ownerID, "Invite Test", GroupJoinMethodOpen)
+		groupID := createTestGroup(t, ctx, repo, ownerID, "Invite Test", GroupJoinMethodDirect)
 
 		msg := "welcome"
 		inv, err := repo.InviteMember(ctx, ownerID, InviteMemberRequest{
@@ -635,7 +643,7 @@ func TestPostgresIT_RevokeInvite(t *testing.T) {
 		repo := NewPostgresRepository(txFactory)
 		ownerID := testdb.InsertUser(t, txFactory, "g_revoke_owner", "Owner")
 		inviteeID := testdb.InsertUser(t, txFactory, "g_revoke_invitee", "Invitee")
-		groupID := createTestGroup(t, ctx, repo, ownerID, "Revoke Test", GroupJoinMethodOpen)
+		groupID := createTestGroup(t, ctx, repo, ownerID, "Revoke Test", GroupJoinMethodDirect)
 
 		inv, err := repo.InviteMember(ctx, ownerID, InviteMemberRequest{
 			GroupID: groupID,
@@ -666,7 +674,7 @@ func TestPostgresIT_MuteUnmuteMember(t *testing.T) {
 		repo := NewPostgresRepository(txFactory)
 		ownerID := testdb.InsertUser(t, txFactory, "g_mute_owner", "Owner")
 		memberID := testdb.InsertUser(t, txFactory, "g_mute_member", "Member")
-		groupID := createTestGroup(t, ctx, repo, ownerID, "Mute Test", GroupJoinMethodOpen)
+		groupID := createTestGroup(t, ctx, repo, ownerID, "Mute Test", GroupJoinMethodDirect)
 
 		if _, err := repo.JoinGroup(ctx, memberID, groupID, nil, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
@@ -696,7 +704,7 @@ func TestPostgresIT_BanUnbanAndListBanned(t *testing.T) {
 		repo := NewPostgresRepository(txFactory)
 		ownerID := testdb.InsertUser(t, txFactory, "g_ban_owner", "Owner")
 		badMemberID := testdb.InsertUser(t, txFactory, "g_ban_member", "Bad")
-		groupID := createTestGroup(t, ctx, repo, ownerID, "Ban Test", GroupJoinMethodOpen)
+		groupID := createTestGroup(t, ctx, repo, ownerID, "Ban Test", GroupJoinMethodDirect)
 
 		if _, err := repo.JoinGroup(ctx, badMemberID, groupID, nil, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
@@ -755,7 +763,7 @@ func TestPostgresIT_RemoveMember(t *testing.T) {
 		repo := NewPostgresRepository(txFactory)
 		ownerID := testdb.InsertUser(t, txFactory, "g_rm_owner", "Owner")
 		memberID := testdb.InsertUser(t, txFactory, "g_rm_member", "Member")
-		groupID := createTestGroup(t, ctx, repo, ownerID, "Remove Test", GroupJoinMethodOpen)
+		groupID := createTestGroup(t, ctx, repo, ownerID, "Remove Test", GroupJoinMethodDirect)
 
 		if _, err := repo.JoinGroup(ctx, memberID, groupID, nil, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
@@ -785,7 +793,7 @@ func TestPostgresIT_TransferOwnership(t *testing.T) {
 		repo := NewPostgresRepository(txFactory)
 		ownerID := testdb.InsertUser(t, txFactory, "g_to_owner", "Owner")
 		memberID := testdb.InsertUser(t, txFactory, "g_to_member", "Member")
-		groupID := createTestGroup(t, ctx, repo, ownerID, "Transfer Test", GroupJoinMethodOpen)
+		groupID := createTestGroup(t, ctx, repo, ownerID, "Transfer Test", GroupJoinMethodDirect)
 
 		if _, err := repo.JoinGroup(ctx, memberID, groupID, nil, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)

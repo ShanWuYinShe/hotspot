@@ -78,7 +78,8 @@ type ReportReason =
   | 'self_harm'         // 自伤/自杀相关
   | 'other';            // 其他（需填写 description）
 
-type GroupJoinMethod = 'open' | 'approval' | 'invite_only';
+// 群组准入方式（对加入者可见；叠加 requires_approval 决定是否需要审核）
+type GroupJoinMethod = 'direct' | 'password' | 'invite_only';
 
 // === 公告 ===
 type AnnounceLevel = 'info' | 'warning' | 'error';
@@ -336,6 +337,10 @@ interface GroupItem {
   description?: string;
   tags?: string[];
 
+  // 加入门槛（@all 可见——用户加入前必须知晓加入方式与是否需审核）
+  join_method: GroupJoinMethod;      // 'direct' 直接加入 / 'password' 需密码 / 'invite_only' 仅受邀
+  requires_approval: boolean;        // 是否需管理员审核，审核通过后才算真正加入
+
   // === @member-only 以下字段仅群成员视角返回 ===
   // 设计说明：密码状态不对未加入的匿名/非成员暴露（避免向爬虫/爆破者提供精准线索）。
   // 成员可见以便了解群组门槛；未加入用户通过 join 流程时才感知密码要求。
@@ -348,6 +353,10 @@ interface GroupItem {
 
   // 列表/详情页返回
   last_activity_at?: string;     // 最近活跃时间（最后消息/公告/成员变动等）
+
+  // 列表/搜索/Feed 场景返回（服务端按接口语义决定是否返回，客户端不应依赖其存在性）
+  online_members_count?: number; // 在线成员数（聚合计数；不暴露具体成员的在线状态，不受 presence_visible 影响）
+  next_activity?: string;        // 下次活动预告（群主通过 update 设置）
 
   // 群列表场景返回（仅 groups/list_my；其他场景省略）
   last_message?: {
@@ -369,7 +378,6 @@ interface GroupItem {
   friends_in_group?: number;
 
   // === @group-admin-only 以下字段仅群组管理员返回 ===
-  join_method?: GroupJoinMethod;
   is_searchable?: boolean;
   max_members?: number;
 }
@@ -378,7 +386,8 @@ interface GroupItem {
 **GroupSettings**: 群组设置（可修改的配置项）
 ```typescript
 interface GroupSettings {
-  join_method: GroupJoinMethod;
+  join_method: GroupJoinMethod;   // 默认 'direct'
+  requires_approval: boolean;     // 默认 false
   is_searchable: boolean;
   max_members: number;
   location: Location;  // 直接映射自请求，不经过距离/角度计算

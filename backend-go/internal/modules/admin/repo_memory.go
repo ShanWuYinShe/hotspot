@@ -144,7 +144,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 			}{Latitude: 31.2304, Longitude: 121.4737}, LocationName: "Shanghai"},
 			CreatedAt:      now.Add(-36 * time.Hour).Format(time.RFC3339),
 			Owner:          UserInfo{UserID: "user_alice", Nickname: "Alice"},
-			JoinMethod:     groupsmodule.GroupJoinMethod("open"),
+			JoinMethod:     groupsmodule.GroupJoinMethod("direct"),
 			IsSearchable:   true,
 			MaxMembers:     200,
 			LastActivityAt: now.Add(-30 * time.Minute).Format(time.RFC3339),

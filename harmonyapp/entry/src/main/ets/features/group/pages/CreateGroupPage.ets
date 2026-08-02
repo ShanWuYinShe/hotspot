@@ -237,7 +237,8 @@ export struct CreateGroupPage {
           },
           password: this.isPasswordRequired ? trimmedPassword : undefined,
           max_members: this.maxMembers,
-          join_method: 'open'
+          // 有密码 → password 准入；否则 direct 直接加入（requires_approval 默认 false）
+          join_method: this.isPasswordRequired ? 'password' : 'direct'
         };
 
         const response = await ApiClient.createGroup(request);

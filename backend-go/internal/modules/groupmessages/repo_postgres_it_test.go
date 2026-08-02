@@ -15,7 +15,7 @@ func createTestGroup(t *testing.T, ctx context.Context, txFactory *persistence.F
 	groupRepo := groups.NewPostgresRepository(txFactory)
 	group, err := groupRepo.Create(ctx, ownerID, groups.CreateGroupRequest{
 		Name:       name,
-		JoinMethod: groups.GroupJoinMethodOpen,
+		JoinMethod: groups.GroupJoinMethodDirect,
 		Location: groups.Location{LocationName: "Beijing", Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`

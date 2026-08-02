@@ -227,7 +227,7 @@ func defaultConfig(runtime config.Config) AppConfig {
 			DefaultUserAvatar:  runtime.DefaultUserAvatar,
 			DefaultGroupAvatar: runtime.DefaultGroupAvatar,
 			DefaultGroupSettings: GroupSettings{
-				JoinMethod:   "open",
+				JoinMethod:   "direct",
 				IsSearchable: true,
 				MaxMembers:   500,
 				Location: Location{

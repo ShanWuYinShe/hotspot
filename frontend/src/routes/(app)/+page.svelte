@@ -96,8 +96,8 @@
 						members: g.group?.members_count ?? 0,
 						banner: g.group?.avatar_url ?? '',
 						distance: g.location?.distance ?? '',
-						// spec GroupItem 无隐私字段，展示位保留默认值（与 GroupCard 一致）
-						privacy: 'public'
+						// join_method 在 GroupItem 顶层；invite_only/password 视为私密
+						privacy: g.join_method === 'invite_only' || g.join_method === 'password' ? 'private' : 'public'
 					}));
 					nearbyGroups = groups;
 				}
