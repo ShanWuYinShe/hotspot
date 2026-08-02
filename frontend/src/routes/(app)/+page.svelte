@@ -12,6 +12,7 @@
 	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
 	import NearbyUsersFlatList from '@/routes/(app)/_home/NearbyUsersFlatList.svelte';
 	import { ROUTES } from '@/lib/routes';
+    import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 
 	// 首页「附近」：Hero 统计 + 附近用户雷达条 + 话题活动 + 群组轮播 + 推荐列表。
 	// 迁移自旧版 NearbyFeedPage（mobile/desktop 双版本）。
@@ -130,9 +131,6 @@
 
 	// ── 私有组件（旧版拆文件，此处直接内联函数式 Snippet）───────
 	const isTablet = $derived(platformStore.platform === 'tablet');
-	const shellStyle = $derived(
-		isTablet ? 'max-width:924px;margin-left:auto;margin-right:auto;width:100%;' : ''
-	);
 </script>
 
 {#if platformStore.platform === 'desktop'}
@@ -192,7 +190,7 @@
 {:else}
 	<!-- ═══ Mobile/Tablet Home ═══ -->
 	<div class="sticky top-0 z-10 py-3 bg-[var(--neu-bg)]" style="border-bottom:1px solid var(--neu-border);">
-		<div class="{isTablet ? 'flex gap-6 px-0' : 'flex px-5'}" style={shellStyle}>
+		<ContentColumn maxWidth={isTablet ? '924px' : undefined} class={isTablet ? 'flex gap-6' : 'flex'}>
 			<div
 				class="{isTablet ? 'px-5 flex items-center justify-between min-w-0' : 'w-full flex items-center justify-between'}"
 				style={isTablet ? 'max-width:600px;margin-left:auto;margin-right:auto;width:100%;' : ''}
@@ -215,12 +213,11 @@
 			{#if isTablet}
 				<div class="hidden lg:block flex-shrink-0" style="width:var(--context-rail-width);"></div>
 			{/if}
-		</div>
-	</div>
+		</ContentColumn>
 
-	<div
-		class="animate-fade-in {isTablet ? 'flex gap-6 pt-5 pb-8 px-0 mx-auto' : 'flex flex-col px-5 pt-5 pb-8 gap-7'}"
-		style={shellStyle}
+	<ContentColumn
+		maxWidth={isTablet ? '924px' : undefined}
+		class="animate-fade-in {isTablet ? 'flex gap-6 pt-5 pb-8' : 'flex flex-col pt-5 pb-8 gap-7'}"
 	>
 		<div
 			class="{isTablet ? 'flex flex-col gap-7 px-5 min-w-0' : 'flex flex-col gap-7 w-full'}"
@@ -242,5 +239,6 @@
 				<NearbyUsersFlatList users={nearbyUsers.slice(0, 4)} followingIds={followingIds} onToggle={toggleFollow} />
 			</div>
 		</div>
+	</ContentColumn>
 	</div>
 {/if}

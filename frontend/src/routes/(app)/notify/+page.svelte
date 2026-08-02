@@ -7,6 +7,7 @@
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
+	import BorderedList from '@/components/data-display/BorderedList.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import NotifRow from './NotifRow.svelte';
@@ -181,26 +182,22 @@
 				<div class="flex flex-col">
 				{#if unreadGroup.length > 0}
 					<p class="uppercase mb-2 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">新消息</p>
-					<div class="app-list">
-						<div class="app-list-inner">
-							{#each unreadGroup as n (n.id)}
-								<NotifRow notif={n} onRead={markSingleRead} onRemove={remove} />
-							{/each}
-						</div>
-					</div>
+					<BorderedList>
+						{#each unreadGroup as n (n.id)}
+							<NotifRow notif={n} onRead={markSingleRead} onRemove={remove} />
+						{/each}
+					</BorderedList>
 					{#if readGroup.length > 0}
 						<p class="uppercase mt-4 mb-2 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">较早</p>
 					{/if}
 				{/if}
 
 				{#if readGroup.length > 0}
-					<div class="app-list">
-						<div class="app-list-inner">
-							{#each readGroup as n (n.id)}
-								<NotifRow notif={n} onRead={markSingleRead} onRemove={remove} />
-							{/each}
-						</div>
-					</div>
+					<BorderedList>
+						{#each readGroup as n (n.id)}
+							<NotifRow notif={n} onRead={markSingleRead} onRemove={remove} />
+						{/each}
+					</BorderedList>
 				{/if}
 
 				{#if filtered.length === 0}

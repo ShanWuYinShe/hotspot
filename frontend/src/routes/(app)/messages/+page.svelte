@@ -10,6 +10,7 @@
 	import GroupChatView from '@/components/messages/GroupChatView.svelte';
 	import ChatListItem, { type ChatItem } from '@/components/messages/ChatListItem.svelte';
 	import NewConversationSheet from '@/components/overlays/NewConversationSheet.svelte';
+	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { getPrivateChats, listMyGroups } from '@/api';
@@ -170,8 +171,8 @@
 				</div>
 			{/if}
 
-			<!-- Chat list -->
-			<div class="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
+			<!-- Chat list（EmbeddedList 契约：分栏内连接列表，行无独立边框） -->
+			<EmbeddedList class="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
 				{#if totalUnread > 0}
 					<p class="uppercase px-2 mb-1 text-[var(--neu-text-muted)] text-[9px] tracking-[0.12em]">未读</p>
 				{/if}
@@ -183,7 +184,7 @@
 						compact
 					/>
 				{/each}
-			</div>
+			</EmbeddedList>
 		</div>
 
 		<!-- Right: chat view or empty state -->
@@ -298,17 +299,14 @@
 					{/snippet}
 				</EmptyState>
 			{:else}
-				{#each filtered as chat, i (chat.id)}
-					<div class="px-2 py-1">
+				<EmbeddedList class="px-2 py-1">
+					{#each filtered as chat (chat.id)}
 						<ChatListItem
 							chat={chat}
 							onClick={() => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
 						/>
-					</div>
-					{#if i < filtered.length - 1}
-						<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
-					{/if}
-				{/each}
+					{/each}
+				</EmbeddedList>
 			{/if}
 		</div>
 	</div>

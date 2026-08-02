@@ -3,6 +3,8 @@
 	import { UserPlus, Check, TrendingUp, Heart } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import BorderedList from '@/components/data-display/BorderedList.svelte';
+	import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
@@ -74,93 +76,56 @@
 				</div>
 			{:else}
 				{#each sorted as f (f.id)}
-					<div
-						class="neu-hover-card neu-row-hover flex items-center gap-3 rounded-[18px] p-3.5 cursor-pointer neu-focus-ring bg-[var(--neu-bg)]"
-						style="box-shadow:5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);border:1px solid color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg));opacity:{unfollowedIds.has(f.id) ? 0.55 : 1};"
-						role="button"
-						tabindex="0"
-						onclick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
-						onkeydown={(e) => {
-							if (e.key === 'Enter' || e.key === ' ') {
-								e.preventDefault();
-								void goto(`${ROUTES.user(f.id)}?from=relationships`);
-							}
-						}}
+					<InteractiveListRow tone="card" class="flex items-center gap-3 p-3.5 cursor-pointer"
+						onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
+						ariaLabel={`查看 ${f.name} 的主页`}
+						style={`opacity:${unfollowedIds.has(f.id) ? 0.55 : 1};`}
 					>
-						<Avatar ring src={f.avatar} name={f.name} size={48} />
-						<div class="flex-1 min-w-0">
-							<p class="text-[var(--neu-text)] text-sm">{f.name}</p>
-							<p class="truncate text-[var(--neu-text-muted)] text-[11px] mt-px">{f.desc}</p>
-							<p class="text-[var(--neu-accent-primary)] text-[10px] mt-px">{f.posts} 帖子</p>
-						</div>
-						<img src={f.latestImg} alt="" class="rounded-[8px] object-cover flex-shrink-0" style="width:44px;height:44px;opacity:0.85;" />
-						<button
-							type="button"
-							class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] {unfollowedIds.has(f.id) ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-transparent text-[var(--neu-text-muted)]'}"
-							style={unfollowedIds.has(f.id) ? 'border:1px solid transparent;' : 'border:1px solid var(--neu-border-pressed);'}
-							onclick={(e) => {
-								e.stopPropagation();
-								toggleUnfollow(f.id);
-							}}
-						>
-							{#if unfollowedIds.has(f.id)}
-								<UserPlus style="width:10px;height:10px;" strokeWidth={2} />
-								关注
-							{:else}
-								<Check style="width:10px;height:10px;" strokeWidth={2.5} />
-								已关注
-							{/if}
-						</button>
-					</div>
+						<FollowingRowBody {f} />
+					</InteractiveListRow>
 				{/each}
 			{/if}
 		</div>
 	{:else}
 		<div class="px-5 pb-6">
-			<div class="rounded-[16px] flex flex-col overflow-hidden" style="gap:1px;background:var(--neu-border);box-shadow:0 0 0 1px color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg));">
-				<div style="overflow:hidden;border-radius:15px;">
-					{#each sorted as f (f.id)}
-						<div
-							class="neu-hover-bg neu-row-hover flex cursor-pointer items-center gap-3 p-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--neu-accent-primary)]"
-							style="background:var(--neu-bg);opacity:{unfollowedIds.has(f.id) ? 0.55 : 1};transition:background 0.18s ease;"
-							role="button"
-							tabindex="0"
-							onclick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
-							onkeydown={(e) => {
-								if (e.key === 'Enter' || e.key === ' ') {
-									e.preventDefault();
-									void goto(`${ROUTES.user(f.id)}?from=relationships`);
-								}
-							}}
-						>
-							<Avatar ring src={f.avatar} name={f.name} size={42} />
-							<div class="flex-1 min-w-0">
-								<p class="text-[var(--neu-text)] text-[13px]">{f.name}</p>
-								<p class="truncate text-[var(--neu-text-muted)] text-[11px] mt-px">{f.desc}</p>
-								<p class="text-[var(--neu-accent-primary)] text-[10px] mt-px">{f.posts} 帖子</p>
-							</div>
-							<img src={f.latestImg} alt="" class="rounded-[8px] object-cover flex-shrink-0" style="width:36px;height:36px;opacity:0.85;" />
-							<button
-								type="button"
-								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] {unfollowedIds.has(f.id) ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-transparent text-[var(--neu-text-muted)]'}"
-								style={unfollowedIds.has(f.id) ? 'border:1px solid transparent;' : 'border:1px solid var(--neu-border-pressed);'}
-								onclick={(e) => {
-									e.stopPropagation();
-									toggleUnfollow(f.id);
-								}}
-							>
-								{#if unfollowedIds.has(f.id)}
-									<UserPlus style="width:10px;height:10px;" strokeWidth={2} />
-									关注
-								{:else}
-									<Check style="width:10px;height:10px;" strokeWidth={2.5} />
-									已关注
-								{/if}
-							</button>
-						</div>
-					{/each}
-				</div>
-			</div>
+			<BorderedList>
+				{#each sorted as f (f.id)}
+					<InteractiveListRow class="flex items-center gap-3 p-3 cursor-pointer"
+						onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
+						ariaLabel={`查看 ${f.name} 的主页`}
+						style={`opacity:${unfollowedIds.has(f.id) ? 0.55 : 1};`}
+					>
+						<FollowingRowBody {f} compact />
+					</InteractiveListRow>
+				{/each}
+			</BorderedList>
 		</div>
 	{/if}
 </div>
+
+{#snippet FollowingRowBody(f: (typeof sorted)[number], compact = false)}
+	<Avatar ring src={f.avatar} name={f.name} size={compact ? 42 : 48} />
+	<div class="flex-1 min-w-0">
+		<p class="text-[var(--neu-text)] text-[13px]">{f.name}</p>
+		<p class="truncate text-[var(--neu-text-muted)] text-[11px] mt-px">{f.desc}</p>
+		<p class="text-[var(--neu-accent-primary)] text-[10px] mt-px">{f.posts} 帖子</p>
+	</div>
+	<img src={f.latestImg} alt="" class="rounded-[8px] object-cover flex-shrink-0" style="width:{compact ? 36 : 44}px;height:{compact ? 36 : 44}px;opacity:0.85;" />
+	<button
+		type="button"
+		class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] {unfollowedIds.has(f.id) ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-transparent text-[var(--neu-text-muted)]'}"
+		style={unfollowedIds.has(f.id) ? 'border:1px solid transparent;' : 'border:1px solid var(--neu-border-pressed);'}
+		onclick={(e) => {
+			e.stopPropagation();
+			toggleUnfollow(f.id);
+		}}
+	>
+		{#if unfollowedIds.has(f.id)}
+			<UserPlus style="width:10px;height:10px;" strokeWidth={2} />
+			关注
+		{:else}
+			<Check style="width:10px;height:10px;" strokeWidth={2.5} />
+			已关注
+		{/if}
+	</button>
+{/snippet}

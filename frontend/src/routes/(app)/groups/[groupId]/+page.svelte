@@ -3,6 +3,7 @@
 	import { ArrowLeft, Bell, CalendarDays, Check, MapPin, MessageCircle, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
+	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
 	import { Tabs } from 'bits-ui';
 	import { ROUTES } from '@/lib/routes';
 	import { getGroupDetail, getGroupMembers, getGroupAnnouncements } from '@/api';
@@ -258,9 +259,9 @@
 					</div>
 				</div>
 			{:else if tab === 'members'}
-				<div class="divide-y divide-[var(--neu-border)]">
+				<EmbeddedList>
 					{#each members as member (member.id)}
-						<button type="button" class="neu-hover-row app-list-row app-list-row--standard neu-row-hover rounded-[12px] outline-none" onclick={() => void goto(ROUTES.user(member.id))}>
+						<button type="button" class="neu-hover-row app-list-row app-list-row--standard neu-row-hover outline-none" onclick={() => void goto(ROUTES.user(member.id))}>
 							<div class="relative">
 								<img src={member.avatar} alt="" class="h-10 w-10 rounded-full object-cover" />
 								{#if onlineMemberIds.has(member.userId)}
@@ -274,7 +275,7 @@
 							<span class="text-[11px] text-[var(--neu-text-muted)]">查看资料</span>
 						</button>
 					{/each}
-				</div>
+				</EmbeddedList>
 			{:else}
 				<div class="divide-y divide-[var(--neu-border)]">
 					{#each announcements as item (item.title)}

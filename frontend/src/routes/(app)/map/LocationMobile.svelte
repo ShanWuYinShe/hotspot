@@ -334,25 +334,24 @@
 		{#if snap !== 'min'}
 			<div style="flex:1;min-height:0;overflow-y:auto;" class="no-scrollbar">
 				{#if searchQuery && searchResults.length > 0}
-					<div class="animate-fade-in">
-						{#each searchResults as r, i}
-							<button
+					<EmbeddedList class="animate-fade-in">
+					{#each searchResults as r}<button
 								type="button"
 								class="neu-hover-bg app-list-row app-list-row--standard neu-row-hover px-5 outline-none"
-								style="background:var(--neu-bg);border-bottom:{i < searchResults.length - 1 ? '1px solid var(--neu-border)' : 'none'};"
+								style="background:var(--neu-bg)"
 								aria-pressed={selectedLoc?.displayName === r.displayName}
 								onclick={() => handleSelectLoc(r)}
 							>
-								<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-[var(--neu-accent-primary)]" style="width:34px;height:34px;opacity:0.12;">
-									<MapPin style="width:14px;height:14px;color:var(--neu-accent-primary);" strokeWidth={1.75} />
+								<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-[var(--neu-accent-primary)]" style="width:34px;height:34px;opacity:0.12">
+									<MapPin style="width:14px;height:14px;color:var(--neu-accent-primary)" strokeWidth={1.75} />
 								</div>
-								<span class="text-[var(--neu-text)]" style="font-size:14px;flex:1;">{r.displayName}</span>
+								<span class="text-[var(--neu-text)]" style="font-size:14px;flex:1">{r.displayName}</span>
 								{#if selectedLoc?.displayName === r.displayName}
-									<Check style="width:14px;height:14px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={2.5} />
+									<Check style="width:14px;height:14px;color:var(--neu-accent-primary);flex-shrink:0" strokeWidth={2.5} />
 								{/if}
 							</button>
 						{/each}
-					</div>
+				</EmbeddedList>
 				{:else if searchQuery && searchResults.length === 0}
 					<div class="flex flex-col items-center py-6">
 						<MapPin style="width:26px;height:26px;color:var(--neu-text-muted);opacity:0.28;" strokeWidth={1} />
@@ -418,11 +417,12 @@
 						<!-- List items -->
 						{#if activeTab === 'recent'}
 							{#if recentItems.length > 0}
-								{#each recentItems as loc, i}
+								<EmbeddedList>
+								{#each recentItems as loc}
 									<button
 										type="button"
 										class="neu-hover-bg app-list-row app-list-row--standard neu-row-hover px-4 outline-none"
-										style="background:var(--neu-bg);border-bottom:{i < recentItems.length - 1 ? '1px solid var(--neu-border)' : 'none'};"
+										style="background:var(--neu-bg);"
 										aria-pressed={selectedLoc?.displayName === loc.displayName}
 										onclick={() => handleSelectLoc(loc)}
 									>
@@ -440,16 +440,18 @@
 										{/if}
 									</button>
 								{/each}
+								</EmbeddedList>
 							{:else}
 								<p class="text-[var(--neu-text-muted)]" style="font-size:13px;padding:12px 20px;">暂无最近记录</p>
 							{/if}
 						{:else}
 							{#if HOT_LOCATIONS.length}
-								{#each HOT_LOCATIONS as loc, i}
+								<EmbeddedList>
+								{#each HOT_LOCATIONS as loc}
 									<button
 										type="button"
 										class="neu-hover-bg app-list-row app-list-row--standard neu-row-hover px-4 outline-none"
-										style="background:var(--neu-bg);border-bottom:{i < HOT_LOCATIONS.length - 1 ? '1px solid var(--neu-border)' : 'none'};"
+										style="background:var(--neu-bg);"
 										aria-pressed={selectedLoc?.displayName === loc.displayName}
 										onclick={() => handleSelectLoc(loc)}
 									>
@@ -466,6 +468,7 @@
 										</div>
 									</button>
 								{/each}
+								</EmbeddedList>
 							{:else}
 								<div class="flex flex-col items-center gap-2 py-8">
 									<Star style="width:20px;height:20px;color:var(--neu-text-muted);opacity:0.3;" strokeWidth={1} />

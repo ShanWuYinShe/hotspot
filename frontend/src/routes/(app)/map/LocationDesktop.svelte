@@ -155,13 +155,12 @@
 				{/if}
 			</div>
 			{#if searchResults.length > 0}
-				<div class="absolute top-full left-4 right-4 z-30 mt-1 rounded-[16px] bg-[var(--neu-bg)] overflow-hidden" style="box-shadow:0 0 0 1px var(--neu-border), 0 10px 36px var(--neu-shadow-dark);">
-					<div style="overflow:hidden;border-radius:16px;">
-						{#each searchResults as r, i}
+				<BorderedList class="absolute top-full left-4 right-4 z-30 mt-1" style="box-shadow:0 0 0 1px var(--neu-border), 0 10px 36px var(--neu-shadow-dark);">
+						{#each searchResults as r}
 							<button
 								type="button"
 								class="neu-hover-bg neu-row-hover flex w-full items-center gap-3 px-4 py-3 text-left outline-none"
-								style="background:var(--neu-bg);border-bottom:{i < searchResults.length - 1 ? '1px solid var(--neu-border)' : 'none'};"
+								style="background:var(--neu-bg);"
 								aria-pressed={selectedLoc?.displayName === r.displayName}
 								onclick={() => handleSelectLoc(r)}
 							>
@@ -172,8 +171,7 @@
 								{/if}
 							</button>
 						{/each}
-					</div>
-				</div>
+				</BorderedList>
 			{/if}
 		</div>
 

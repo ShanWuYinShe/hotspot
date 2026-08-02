@@ -4,6 +4,8 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import BorderedList from '@/components/data-display/BorderedList.svelte';
+	import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
@@ -61,64 +63,72 @@
 		{/each}
 	</div>
 
-	<!-- Friend list -->
-	<div class={embedded
-		? 'grid w-full grid-cols-1 gap-4 px-6 pb-8 md:grid-cols-2 lg:px-8 xl:grid-cols-3'
-		: 'flex flex-col gap-3 px-5 pb-6'}>
-		{#each filtered as f (f.id)}
-			<div
-				class="neu-hover-card neu-row-hover flex items-center gap-3 rounded-[18px] p-3.5 cursor-pointer neu-focus-ring bg-[var(--neu-bg)]"
-				style="box-shadow:5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);border:1px solid color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg));"
-				role="button"
-				tabindex="0"
-				onclick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
-				onkeydown={(e) => {
-					if (e.key === 'Enter' || e.key === ' ') {
-						e.preventDefault();
-						void goto(`${ROUTES.user(f.id)}?from=relationships`);
-					}
-				}}
-			>
-				<Avatar ring src={f.avatar} name={f.name} size={48}>
-					{#snippet badge()}
-						<span class="absolute bottom-0 right-0 rounded-full {f.online ? 'bg-[var(--semantic-online)]' : 'bg-[var(--neu-text-muted)]'}" style="width:12px;height:12px;border:2.5px solid var(--neu-bg);opacity:{f.online ? 1 : 0.5};"></span>
-					{/snippet}
-				</Avatar>
-				<div class="flex-1 min-w-0">
-					<div class="flex items-center gap-2">
-						<span class="text-[var(--neu-text)] text-sm">{f.name}</span>
-						<TagPill size="sm">{f.tag}</TagPill>
-					</div>
-					<p class="text-[var(--neu-text-muted)] text-xs mt-0.5">
-						{f.handle} · {f.mutual} 共同好友
-					</p>
-				</div>
-				<div class="flex flex-col gap-1.5 flex-shrink-0">
-					<button
-						type="button"
-						class="neu-hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white text-[11px]"
-						style="box-shadow:0 3px 8px var(--neu-glow);"
-						onclick={(e) => {
-							e.stopPropagation();
-							void goto(ROUTES.message(f.id));
-						}}
+	<!-- Friend list（连接列表契约：BorderedList + InteractiveListRow，行不设独立边框） -->
+	{#if embedded}
+		<div class="grid w-full grid-cols-1 gap-4 px-6 pb-8 md:grid-cols-2 lg:px-8 xl:grid-cols-3">
+			{#each filtered as f (f.id)}
+				<InteractiveListRow tone="card" class="flex items-center gap-3 p-3.5 cursor-pointer"
+					onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
+					ariaLabel={`查看 ${f.name} 的主页`}
+				>
+					<FriendRowBody {f} />
+				</InteractiveListRow>
+			{/each}
+		</div>
+	{:else}
+		<div class="flex flex-col gap-3 px-5 pb-6">
+			<BorderedList>
+				{#each filtered as f (f.id)}
+					<InteractiveListRow class="flex items-center gap-3 p-3 cursor-pointer"
+						onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
+						ariaLabel={`查看 ${f.name} 的主页`}
 					>
-						<MessageCircle style="width:11px;height:11px;" strokeWidth={2} />
-						发消息
-					</button>
-					<button
-						type="button"
-						class="neu-hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-text-muted)] text-[11px]"
-						style="border:1px solid var(--neu-border);box-shadow:3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);"
-						onclick={(e) => {
-							e.stopPropagation();
-							void goto(`${ROUTES.user(f.id)}?from=relationships`);
-						}}
-					>
-						查看主页
-					</button>
-				</div>
-			</div>
-		{/each}
-	</div>
+						<FriendRowBody {f} />
+					</InteractiveListRow>
+				{/each}
+			</BorderedList>
+		</div>
+	{/if}
 </div>
+
+{#snippet FriendRowBody(f: (typeof friends)[number])}
+	<Avatar ring src={f.avatar} name={f.name} size={42}>
+		{#snippet badge()}
+			<span class="absolute bottom-0 right-0 rounded-full {f.online ? 'bg-[var(--semantic-online)]' : 'bg-[var(--neu-text-muted)]'}" style="width:10px;height:10px;border:2px solid var(--neu-bg);opacity:{f.online ? 1 : 0.5};"></span>
+		{/snippet}
+	</Avatar>
+	<div class="flex-1 min-w-0">
+		<div class="flex items-center gap-2">
+			<span class="text-[var(--neu-text)] text-sm">{f.name}</span>
+			<TagPill size="sm">{f.tag}</TagPill>
+		</div>
+		<p class="text-[var(--neu-text-muted)] text-xs mt-0.5">
+			{f.handle} · {f.mutual} 共同好友
+		</p>
+	</div>
+	<div class="flex flex-col gap-1.5 flex-shrink-0">
+		<button
+			type="button"
+			class="neu-hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white text-[11px]"
+			style="box-shadow:0 3px 8px var(--neu-glow);"
+			onclick={(e) => {
+				e.stopPropagation();
+				void goto(ROUTES.message(f.id));
+			}}
+		>
+			<MessageCircle style="width:11px;height:11px;" strokeWidth={2} />
+			发消息
+		</button>
+		<button
+			type="button"
+			class="neu-hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-text-muted)] text-[11px]"
+			style="border:1px solid var(--neu-border);box-shadow:3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);"
+			onclick={(e) => {
+				e.stopPropagation();
+				void goto(`${ROUTES.user(f.id)}?from=relationships`);
+			}}
+		>
+			查看主页
+		</button>
+	</div>
+{/snippet}
