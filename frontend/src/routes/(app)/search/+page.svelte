@@ -331,10 +331,10 @@
 									style="border-color:var(--neu-border);"
 								>
 									{#if post.media?.[0]?.url}
-										<img src={post.media[0].url} alt="" class="size-10 rounded-[10px] object-cover" />
+										<img src={post.media[0].url} alt="" class="size-10 rounded-tight object-cover" />
 									{:else}
 										<div
-											class="flex size-10 items-center justify-center rounded-[10px]"
+											class="flex size-10 items-center justify-center rounded-tight"
 											style="background:var(--neu-accent-soft);"
 										>
 											<FileText class="size-4 text-[var(--neu-accent-primary)]" strokeWidth={1.5} />

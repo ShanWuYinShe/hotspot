@@ -351,7 +351,7 @@
 		<!-- Input bar -->
 		<div class="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 bg-[var(--neu-bg)]" style="border-top:1px solid var(--neu-border);">
 			<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size={30} style="border:1px solid var(--neu-border);" />
-			<div class="flex-1 flex items-center px-4 rounded-[18px] neu-input-surface" style="height:38px;">
+			<div class="flex-1 flex items-center px-4 rounded-relaxed neu-input-surface" style="height:38px;">
 				<input
 					bind:value={input}
 					onkeydown={(e) => {

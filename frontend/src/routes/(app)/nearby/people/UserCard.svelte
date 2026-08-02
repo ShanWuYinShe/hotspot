@@ -42,7 +42,7 @@
 	imageAlt={user.name}
 	onClick={onNavigate}
 	onImageError={() => (avatarFailed = true)}
-	class="rounded-[20px] aspect-[3/4] neu-surface-flat"
+	class="rounded-panel aspect-[3/4] neu-surface-flat"
 >
 	<!-- 无头像 / 加载失败：accent 主题渐变占位覆盖在图片层之上 -->
 	{#if avatarFailed}
