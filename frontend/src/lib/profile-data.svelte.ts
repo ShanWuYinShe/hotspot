@@ -167,7 +167,7 @@ const ROLE_LABEL: Record<string, string> = { owner: '群主', admin: '管理员'
  * flat shape SectionGroups/MyGroupCard consumes.
  */
 function mapGroup(item: any) {
-	const g = item?.group ?? item ?? {};
+	const g = item?.group ?? {};
 	const role = item?.my_state?.role;
 	return {
 		id: g.group_id ?? '',
@@ -175,13 +175,14 @@ function mapGroup(item: any) {
 		avatar: g.avatar_url ?? '',
 		// spec GroupItem has no banner; reuse the avatar so the banner area isn't a
 		// broken-image icon. A dedicated banner field can be added when the spec does.
-		banner: g.banner_url ?? g.avatar_url ?? '',
+		banner: g.avatar_url ?? '',
 		members: g.members_count ?? 0,
-		online: g.online_count ?? 0,
-		desc: item?.description ?? g.description ?? '',
+		// spec GroupItem 无在线人数字段
+		online: 0,
+		desc: item?.description ?? '',
 		role: role ? (ROLE_LABEL[role] ?? role) : '成员',
 		lastActive: item?.last_activity_at ?? '',
-		tags: item?.tags ?? g.tags ?? []
+		tags: item?.tags ?? []
 	};
 }
 

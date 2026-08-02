@@ -25,9 +25,9 @@
 				const data = (res.code === 0 ? res.data : null) as any;
 				if (data) {
 					// spec: AccountData.nickname, .bio, .tags, .avatar_url
-					nickname = data.nickname ?? data.name ?? ''; // "name" is legacy, not in spec
+					nickname = data.nickname ?? '';
 					bio = data.bio ?? '';
-					avatar = data.avatar_url ?? data.avatar ?? '';
+					avatar = data.avatar_url ?? '';
 					if (data.tags) tags = new Set(data.tags);
 				}
 			} finally {

@@ -3,7 +3,7 @@ import {
   apiOk, apiError, paginated,
   mockUsers, mockAccount, mockSettings,
   mockMoments, mockGroups, mockNotifications, mockChats, mockTrending, mockReactionItems,
-  mockFriends, mockFollowing, mockFollowers,
+  mockFriends, mockFollowing, mockFollowers, mockNearbyUsers,
   getMockAuthScenario, setMockLoggedIn, isMockLoggedIn,
 } from "@/mocks/data";
 
@@ -234,7 +234,7 @@ export const handlers = [
   http.post(`${API}/feed/following`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 12)))),
   http.post(`${API}/feed/nearby`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 12)))),
   http.post(`${API}/feed/nearby_groups`, () => json(paginated(mockGroups))),
-  http.post(`${API}/feed/nearby_users`, () => json(paginated(mockUsers.slice(0, 5)))),
+  http.post(`${API}/feed/nearby_users`, () => json(paginated(mockNearbyUsers))),
   http.post(`${API}/feed/trending`, () => json(apiOk(mockTrending))),
 
   // ── Search ─────────────────────────────────────

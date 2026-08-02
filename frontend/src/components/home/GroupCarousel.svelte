@@ -5,7 +5,7 @@
 	// 附近群组横向轮播（迁移自旧版 NearbyFeedPage 内 GroupCarousel）。
 
 	export interface NearbyGroup {
-		id: number;
+		id: string;
 		name: string;
 		members: number;
 		banner: string;

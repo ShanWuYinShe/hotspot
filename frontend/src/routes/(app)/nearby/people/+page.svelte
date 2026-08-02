@@ -21,7 +21,7 @@
 	let search = $state('');
 	let sort = $state('距离');
 	let tagFilter = $state('全部');
-	let followedIds = $state<Set<number>>(new Set());
+	let followedIds = $state<Set<string>>(new Set());
 	let visibleCount = $state(12);
 	let allUsers = $state<NearbyUser[]>([]);
 	let loading = $state(true);
@@ -47,11 +47,12 @@
 				if (cancelled) return;
 				const data = (res.code === 0 ? res.data : null) as any;
 				if (data) {
-					const items: NearbyUser[] = (data.items || []).map((u: any, i: number) => ({
-						id: u.user_id ?? i + 1,
-						name: u.nickname ?? '',
-						distance: u.distance ?? '',
-						avatar: u.avatar_url ?? '',
+					const items: NearbyUser[] = (data.items || []).map((u: any) => ({
+						// spec: feed/nearby_users → UserItem（user 嵌套 + presence_status + location）
+						id: u.user?.user_id ?? '',
+						name: u.user?.nickname ?? '',
+						distance: u.location?.distance ?? '',
+						avatar: u.user?.avatar_url ?? '',
 						status: u.presence_status === 'online' ? '在线' : '离线',
 						tag: u.tags?.[0] ?? '',
 						mutual: u.social_context?.mutual_friends_count ?? 0,
@@ -90,7 +91,7 @@
 	);
 	const gridColumns = $derived(platformStore.platform === 'mobile' ? 2 : isDesktop ? 3 : 2);
 
-	const toggleFollow = (id: number) => {
+	const toggleFollow = (id: string) => {
 		const next = new Set(followedIds);
 		next.has(id) ? next.delete(id) : next.add(id);
 		followedIds = next;

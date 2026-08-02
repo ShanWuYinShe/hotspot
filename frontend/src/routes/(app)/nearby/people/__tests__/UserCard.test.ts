@@ -4,7 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import UserCard, { type NearbyUser } from '../UserCard.svelte';
 
 const base = (over: Partial<NearbyUser> = {}): NearbyUser => ({
-	id: 1,
+	id: 'user_1',
 	name: '鹿鸣',
 	distance: '0.3km',
 	avatar: '',

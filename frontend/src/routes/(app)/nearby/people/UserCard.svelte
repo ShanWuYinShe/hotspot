@@ -6,7 +6,7 @@
 	// 桌面/平板 BSP 布局中高度由布局单元决定；移动网格中由 aspect-[3/4] 撑起。
 
 	export interface NearbyUser {
-		id: number;
+		id: string;
 		name: string;
 		distance: string;
 		avatar: string;

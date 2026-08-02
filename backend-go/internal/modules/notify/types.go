@@ -77,13 +77,6 @@ type NotificationListRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
-// MarkAsReadRequest is retained for service/repo layer compatibility (the
-// handler now uses MarkReadRequest with a scope field). It is unused at the
-// HTTP boundary after the mark_read endpoint merge.
-type MarkAsReadRequest struct {
-	NotificationIDs []string `json:"notification_ids"`
-}
-
 // MarkReadRequest is the unified mark_read request (api_spec_notify.md).
 // scope defaults to "selected" when empty. When scope="all", notification_ids
 // and type are ignored and all unread notifications are cleared. When

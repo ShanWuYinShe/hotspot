@@ -85,6 +85,16 @@ export const mockFriends = mockUsers.slice(0, 6).map((u, i) => ({
   followed_back_at: isoDaysAgo(20 + i),
 }));
 
+// feed/nearby_users 返回 spec UserItem（user 嵌套 + presence_status + location）。
+const NEARBY_TAGS = ["摄影", "户外", "音乐", "阅读", "徒步"] as const;
+export const mockNearbyUsers = mockUsers.slice(0, 5).map((u, i) => ({
+  user: u,
+  presence_status: PRESENCES[i],
+  last_online_at: isoDaysAgo(i + 1),
+  location: { point: { latitude: 34.25, longitude: 117.19 }, location_name: "云龙湖", distance: `${0.4 + i * 0.4}km` },
+  tags: [NEARBY_TAGS[i]],
+}));
+
 export const mockFollowing = mockUsers.slice(1, 6).map((u, i) => ({
   user: u,
   followed_at: isoDaysAgo(15 + i),

@@ -6,7 +6,7 @@
 	// 附近的人雷达条——扁平头像横排（迁移自旧版 NearbyFeedPage）。
 
 	export interface NearbyUser {
-		id: number;
+		id: string;
 		name: string;
 		distance: string;
 		avatar: string;
@@ -21,7 +21,7 @@
 	}: {
 		users: NearbyUser[];
 		onSeeAll: () => void;
-		onSelectUser: (userId: number) => void;
+		onSelectUser: (userId: string) => void;
 	} = $props();
 </script>
 

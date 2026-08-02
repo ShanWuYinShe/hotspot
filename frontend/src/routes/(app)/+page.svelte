@@ -4,7 +4,7 @@
 	import { Coffee, Music, Users, Star, ChevronRight } from '@lucide/svelte';
 	import { platformStore } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
-	import { getTrending, searchMoments, getClientConfig } from '@/api';
+	import { getTrending, getNearbyUsers, getNearbyGroups } from '@/api';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import HeroStats from '@/components/home/HeroStats.svelte';
 	import PeopleRadarStrip, { type NearbyUser } from '@/components/home/PeopleRadarStrip.svelte';
@@ -20,7 +20,6 @@
 	let nearbyUsers = $state<NearbyUser[]>([]);
 	let activities = $state<Activity[]>([]);
 	let nearbyGroups = $state<NearbyGroup[]>([]);
-	let heroStats = $state({ nearby: '0', active: '0', online: '0' });
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
@@ -36,7 +35,7 @@
 	});
 
 	$effect(() => {
-		// spec: moments/search requires ≥1 of keyword/tag/radius; reference_point is
+		// spec: feed/nearby_users + feed/nearby_groups — reference_point is
 		// optional — server resolves it via fallback chain (explicit → last known
 		// location → ClientConfig.default_location). 有 point 就传、没有就不传照常请求。
 		let cancelled = false;
@@ -44,27 +43,27 @@
 			try {
 				loading = true;
 				error = null;
-				const searchParams: Record<string, unknown> = { radius: 5000, sort_by: 'distance', pagination: { limit: 12 } };
+				const searchParams: Record<string, unknown> = { radius: 5000, pagination: { limit: 12 } };
 				if (referencePoint) searchParams.reference_point = referencePoint;
-				const [trendingRes, nearbyRes, configRes] = await Promise.all([
+				const [trendingRes, nearbyUsersRes, nearbyGroupsRes] = await Promise.all([
 					getTrending().catch(() => ({ code: -1, data: null })),
-					// moments/search is auth-optional, so anonymous users still see nearby public moments.
-					searchMoments(searchParams).catch(() => ({ code: -1, data: { items: [] } })),
-					getClientConfig().catch(() => ({ code: -1, data: null }))
+					// feed/nearby_users is auth-optional, so anonymous users still see nearby users.
+					getNearbyUsers(searchParams).catch(() => ({ code: -1, data: { items: [] } })),
+					getNearbyGroups(searchParams).catch(() => ({ code: -1, data: { items: [] } }))
 				]);
 				if (cancelled) return;
 
 				const trendingData = (trendingRes.code === 0 ? trendingRes.data : null) as any;
-				const nearbyData = (nearbyRes.code === 0 ? nearbyRes.data : null) as any;
-				const configData = (configRes.code === 0 ? configRes.data : null) as any;
+				const nearbyUsersData = (nearbyUsersRes.code === 0 ? nearbyUsersRes.data : null) as any;
+				const nearbyGroupsData = (nearbyGroupsRes.code === 0 ? nearbyGroupsRes.data : null) as any;
 
 				if (trendingData) {
-					const moments = trendingData.hot_moments || trendingData.activities || trendingData.items || [];
-					const acts: Activity[] = moments.map((a: any, i: number) => ({
-						id: a.id ?? a.moment_id ?? i + 1,
+					// spec: TrendingBundle.hot_moments: MomentItem[]
+					const acts: Activity[] = (trendingData.hot_moments || []).map((a: any, i: number) => ({
+						id: i + 1,
 						icon: [Coffee, Music, Users, Star][i % 4],
-						title: a.title ?? a.description ?? a.name ?? '',
-						sub: a.sub ?? a.location?.location_name ?? a.subtitle ?? '',
+						title: a.description ?? '',
+						sub: a.location?.location_name ?? '',
 						color: ['var(--semantic-warning)', 'var(--neu-accent-primary)', 'var(--map-group)', 'var(--semantic-hot)'][i % 4],
 						bg: [
 							'color-mix(in srgb, var(--semantic-warning) 10%, transparent)',
@@ -74,39 +73,33 @@
 						][i % 4]
 					}));
 					activities = acts;
-
-					// Groups from trending (legacy fallback: groups come from separate group search now)
-					if (trendingData.groups) {
-						const groups: NearbyGroup[] = trendingData.groups.map((g: any, i: number) => ({
-							id: g.id ?? i + 1,
-							name: g.name ?? '',
-							members: g.members ?? g.member_count ?? 0,
-							banner: g.banner ?? g.avatar ?? '',
-							distance: g.distance ?? '',
-							privacy: g.privacy ?? 'public'
-						}));
-						nearbyGroups = groups;
-					}
 				}
 
-				if (nearbyData) {
-					const users: NearbyUser[] = (nearbyData.items || []).map((u: any, i: number) => ({
-						id: u.id ?? u.user_id ?? u.moment_id ?? i + 1,
-						name: u.name ?? u.nickname ?? u.user?.nickname ?? '',
-						distance: u.distance ?? u.location?.distance ?? '',
-						avatar: u.avatar ?? u.user?.avatar_url ?? '',
-						status: u.online ? '在线' : '离线',
-						tag: u.tag ?? u.tags?.[0] ?? ''
+				if (nearbyUsersData) {
+					// spec: feed/nearby_users → UserItem
+					const users: NearbyUser[] = nearbyUsersData.items.map((u: any) => ({
+						id: u.user?.user_id ?? '',
+						name: u.user?.nickname ?? '',
+						distance: u.location?.distance ?? '',
+						avatar: u.user?.avatar_url ?? '',
+						status: u.presence_status === 'online' ? '在线' : '离线',
+						tag: u.tags?.[0] ?? ''
 					}));
 					nearbyUsers = users;
 				}
 
-				if (configData) {
-					heroStats = {
-						nearby: String(configData.nearby_count ?? configData.nearby ?? 0),
-						active: String(configData.active_count ?? configData.active ?? 0),
-						online: String(configData.online_count ?? configData.online ?? 0)
-					};
+				if (nearbyGroupsData) {
+					// spec: feed/nearby_groups → GroupItem
+					const groups: NearbyGroup[] = nearbyGroupsData.items.map((g: any) => ({
+						id: g.group?.group_id ?? '',
+						name: g.group?.name ?? '',
+						members: g.group?.members_count ?? 0,
+						banner: g.group?.avatar_url ?? '',
+						distance: g.location?.distance ?? '',
+						// spec GroupItem 无隐私字段，展示位保留默认值（与 GroupCard 一致）
+						privacy: 'public'
+					}));
+					nearbyGroups = groups;
 				}
 			} catch (e: any) {
 				if (!cancelled) error = e.message ?? '加载失败';
@@ -121,13 +114,19 @@
 	});
 
 	// ── 共享状态：关注开关 ──────────────────────────────────────────
-	let followingIds = $state<Set<number>>(new Set());
-	const toggleFollow = (id: number) => {
+	let followingIds = $state<Set<string>>(new Set());
+	const toggleFollow = (id: string) => {
 		const n = new Set(followingIds);
 		n.has(id) ? n.delete(id) : n.add(id);
 		followingIds = n;
 	};
 	const onlineCount = $derived(nearbyUsers.filter((u) => u.status === '在线').length);
+	// hero 统计由已请求的 feed 数据推导（spec 无专用统计端点）
+	const heroStats = $derived({
+		nearby: String(nearbyUsers.length),
+		active: String(activities.length),
+		online: String(onlineCount)
+	});
 
 	// ── 私有组件（旧版拆文件，此处直接内联函数式 Snippet）───────
 	const isTablet = $derived(platformStore.platform === 'tablet');

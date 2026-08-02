@@ -15,21 +15,22 @@ export interface Group {
 	avatars: string[];
 }
 
-/** Map a searchGroups result item to the card shape. */
+/** Map a spec GroupItem (feed/nearby_groups) result to the card shape. */
 export function mapGroup(item: any): Group {
-	const g = item?.group ?? item ?? {};
+	const g = item?.group ?? {};
 	return {
-		id: String(g.group_id ?? g.id ?? ''),
+		id: String(g.group_id ?? ''),
 		name: g.name ?? '',
-		banner: g.avatar_url ?? g.banner ?? g.cover_url ?? '',
-		category: (item?.tags?.[0] ?? g.category ?? '') || '同城',
-		members: g.members_count ?? g.members ?? 0,
-		online: g.online_count ?? g.online ?? 0,
-		distance: item?.distance ?? g.distance ?? '',
-		privacy: g.privacy_level === 'private' ? 'private' : 'public',
-		joined: item?.my_state?.is_joined ?? g.is_joined ?? false,
-		desc: item?.description ?? g.description ?? g.bio ?? '',
-		activity: item?.next_activity ?? g.activity ?? '',
+		banner: g.avatar_url ?? '',
+		category: (item?.tags?.[0] ?? '') || '同城',
+		members: g.members_count ?? 0,
+		// spec GroupItem 无在线/隐私/活动/成员头像字段，卡片展示用默认值
+		online: 0,
+		distance: item?.location?.distance ?? '',
+		privacy: 'public',
+		joined: item?.my_state?.is_joined ?? false,
+		desc: item?.description ?? '',
+		activity: '',
 		avatars: []
 	};
 }

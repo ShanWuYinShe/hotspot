@@ -11,8 +11,8 @@
 		onToggle
 	}: {
 		users: NearbyUser[];
-		followingIds: Set<number>;
-		onToggle: (id: number) => void;
+		followingIds: Set<string>;
+		onToggle: (id: string) => void;
 	} = $props();
 </script>
 
