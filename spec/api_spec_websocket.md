@@ -819,24 +819,24 @@ interface GroupMemberRoleChangedPayload {
 type GroupMemberRoleChangedEvent = { type: "GroupMemberRoleChanged"; payload: GroupMemberRoleChangedPayload; };
 
 // 群组信息更新
-// 字段可见性：服务端按订阅者的群角色决定实际推送哪些字段，与 HTTP GroupItem 可见性规则一致（见 api_spec_types.md）：
-//   - 所有群成员可见：name/avatar_url/description/tags/location/has_password/join_method/requires_approval/online_members_count/next_activity
-//   - 仅群管理员（owner/admin）可见：is_searchable/max_members
-//   非管理员成员不会收到 is_searchable/max_members 的变更（服务端过滤）
+// 字段可见性：GroupUpdated 事件推送给所有群订阅者（订阅者恒为已加入成员，见下方「隐私约束」）。
+// 推送范围与 HTTP GroupItem 可见性规则一致（见 api_spec_types.md）：
+//   - 推送：name/avatar_url/description/tags/location/has_password（@member-only，订阅者恒为成员）
+//     /join_method/requires_approval/next_activity
+//   - 不推送：is_searchable/max_members（@group-admin-only）——群广播通道无法按订阅者角色过滤，
+//     服务端有意省略；管理员可通过 HTTP groups/get_detail 获取
+//   - online_members_count 为聚合计数，随列表/详情 HTTP 响应返回，不随更新事件推送
 interface GroupUpdatedPayload {
   group_id: string;
-  updated_fields: {            // 只包含变更的字段；按上方可见性规则过滤后推送
+  updated_fields: {            // 只包含变更的字段；按上方推送范围过滤
     name?: string;
     avatar_url?: string;
     description?: string;
     tags?: string[];
     join_method?: GroupJoinMethod;
     requires_approval?: boolean;
-    online_members_count?: number;
     next_activity?: string;
-    is_searchable?: boolean;         // @group-admin-only：仅推送给群管理员订阅者
-    max_members?: number;            // @group-admin-only：仅推送给群管理员订阅者
-    has_password?: boolean;          // @member-only：推送给群成员订阅者
+    has_password?: boolean;          // @member-only：订阅者恒为群成员，可推送
     location?: Location;
   };
   updated_by: UserInfo;        // 操作者（统一用嵌套 UserInfo，与 types.md「对用户引用」约定一致，原裸 user_id 已修正）

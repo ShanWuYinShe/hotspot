@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/realtime"
 )
 
 // stubGroupsRepo implements Repository with only the fields needed for each test.
@@ -1265,5 +1266,46 @@ func TestServiceRevokeInviteHappyPath(t *testing.T) {
 	err := svc.RevokeInvite(grpCtx("u1"), RevokeSentInviteRequest{GroupID: "g1", InviteID: "inv1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceUpdateBroadcastsGroupUpdatedWithChangedFields(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	service := NewServiceWithRepo(repo)
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	created, err := service.Create(ctx, CreateGroupRequest{Name: "Old Name", Location: Location{LocationName: "Somewhere"}})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	sink := &groupRealtimeSink{}
+	hub.SetGroupSubscriptions([]string{created.Group.GroupID}, sink)
+
+	if err := service.Update(ctx, UpdateGroupRequest{GroupID: created.Group.GroupID, Name: "New Name", Description: "new desc"}); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if len(sink.events) != 1 || sink.events[0].Type != realtime.EventTypeGroupUpdated {
+		t.Fatalf("unexpected realtime events: %#v", sink.events)
+	}
+	payload, ok := sink.events[0].Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("payload not a map: %#v", sink.events[0].Payload)
+	}
+	fields, ok := payload["updated_fields"].(map[string]any)
+	if !ok {
+		t.Fatalf("updated_fields missing from payload: %#v", payload)
+	}
+	if fields["name"] != "New Name" || fields["description"] != "new desc" {
+		t.Fatalf("unexpected updated_fields: %#v", fields)
+	}
+	if _, leaked := fields["is_searchable"]; leaked {
+		t.Fatalf("is_searchable must not be pushed (admin-only): %#v", fields)
+	}
+	if _, leaked := fields["max_members"]; leaked {
+		t.Fatalf("max_members must not be pushed (admin-only): %#v", fields)
+	}
+	if fields["join_method"] != nil || fields["requires_approval"] != nil || fields["has_password"] != nil {
+		t.Fatalf("unchanged fields must not be pushed: %#v", fields)
 	}
 }

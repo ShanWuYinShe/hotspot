@@ -3,6 +3,7 @@ package groups
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"hotspot/backend-go/internal/modules/notify"
@@ -183,16 +184,71 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) error {
 		observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return fmt.Errorf("groups.Service.Update: repo: %w", err)
 	}
+	// 重新读取以构造 updated_fields（对比变更前后）；受控字段见 buildGroupUpdatedFields。
+	updated, ok, err := s.repo.Get(ctx, req.GroupID)
+	if err != nil {
+		observability.L().Error("groups.update refresh failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return fmt.Errorf("groups.Service.Update: refresh: %w", err)
+	}
+	if !ok {
+		return ErrGroupNotFound
+	}
+	payload := map[string]any{
+		"group_id":   req.GroupID,
+		"updated_by": s.resolveUserInfo(ctx, principal.UserID),
+		"updated_at": time.Now().UTC().Format(time.RFC3339),
+	}
+	if updatedFields := buildGroupUpdatedFields(group, updated, req); len(updatedFields) > 0 {
+		payload["updated_fields"] = updatedFields
+	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
-		Type: realtime.EventTypeGroupUpdated,
-		Payload: map[string]any{
-			"group_id":   req.GroupID,
-			"updated_by": s.resolveUserInfo(ctx, principal.UserID),
-			"updated_at": time.Now().UTC().Format(time.RFC3339),
-		},
+		Type:    realtime.EventTypeGroupUpdated,
+		Payload: payload,
 	})
 	observability.L().Info("groups.update completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
+}
+
+// buildGroupUpdatedFields 计算更新前后 GroupItem 的可见变更字段（spec websocket.md GroupUpdatedPayload）。
+// @group-admin-only 字段（is_searchable/max_members）有意不推送：群广播通道无法按订阅者角色过滤，
+// 少推送是安全的（管理员经 HTTP get_detail 获取）。has_password 为 @member-only，而群订阅者恒为成员，可推。
+func buildGroupUpdatedFields(before, after GroupItem, req UpdateGroupRequest) map[string]any {
+	fields := make(map[string]any)
+	if after.Group.Name != before.Group.Name {
+		fields["name"] = after.Group.Name
+	}
+	if after.Group.AvatarURL != before.Group.AvatarURL {
+		fields["avatar_url"] = after.Group.AvatarURL
+	}
+	if after.Description != before.Description {
+		fields["description"] = after.Description
+	}
+	if !slices.Equal(after.Tags, before.Tags) {
+		fields["tags"] = after.Tags
+	}
+	if after.JoinMethod != before.JoinMethod {
+		fields["join_method"] = after.JoinMethod
+	}
+	if after.RequiresApproval != before.RequiresApproval {
+		fields["requires_approval"] = after.RequiresApproval
+	}
+	if !equalStringPtr(after.NextActivity, before.NextActivity) {
+		fields["next_activity"] = derefStringPtr(after.NextActivity)
+	}
+	if after.HasPassword != before.HasPassword {
+		fields["has_password"] = after.HasPassword
+	}
+	if req.Location != nil {
+		fields["location"] = after.Location
+	}
+	return fields
+}
+
+func equalStringPtr(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
 
 func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
