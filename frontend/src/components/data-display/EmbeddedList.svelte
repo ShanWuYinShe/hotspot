@@ -9,7 +9,7 @@
 
 	let {
 		children,
-		className = ''
+		class: className = ''
 	}: {
 		children: Snippet;
 		className?: string;

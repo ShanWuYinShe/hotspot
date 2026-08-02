@@ -7,7 +7,7 @@
 		title,
 		description,
 		action,
-		className = ''
+		class: className = ''
 	}: {
 		icon?: Snippet;
 		title: string;

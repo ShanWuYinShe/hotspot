@@ -16,7 +16,7 @@
 	let {
 		items,
 		renderItem,
-		className = '',
+		class: className = '',
 		gap = 24,
 		minCardSize = 160,
 		minCardWidth,

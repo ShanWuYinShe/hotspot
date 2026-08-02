@@ -16,7 +16,7 @@
 		disabled = false,
 		active = false,
 		type = 'button',
-		className = ''
+		class: className = ''
 	}: {
 		icon: Component;
 		label: string;

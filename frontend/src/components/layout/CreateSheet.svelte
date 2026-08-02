@@ -128,7 +128,7 @@
 		<div class="mx-auto flex w-full max-w-[560px] flex-col gap-4">
 			<div class="flex items-center justify-between gap-3">
 				<div class="flex min-w-0 items-center gap-2.5">
-					<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size={36} className="border border-[var(--neu-border)]" />
+					<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size={36} class="border border-[var(--neu-border)]" />
 					<div class="min-w-0">
 						<p class="text-[13px] font-medium text-[var(--neu-text)]">{auth.user?.nickname || '用户'}</p>
 						<button

@@ -10,7 +10,7 @@
 		value,
 		onChange,
 		placeholder = '搜索...',
-		className = '',
+		class: className = '',
 		compact = false,
 		trailing
 	}: {

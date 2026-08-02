@@ -30,7 +30,7 @@
 		sticky = true,
 		showBackOnDesktop = false,
 		maxWidth,
-		className = '',
+		class: className = '',
 		contentClassName = ''
 	}: {
 		title: string;

@@ -19,7 +19,7 @@
 	let {
 		children,
 		maxWidth,
-		className = ''
+		class: className = ''
 	}: {
 		children: Snippet;
 		maxWidth?: number | string;

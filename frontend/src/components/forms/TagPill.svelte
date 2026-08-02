@@ -7,7 +7,7 @@
 		active = false,
 		onClick,
 		size = 'md',
-		className = ''
+		class: className = ''
 	}: {
 		children: Snippet;
 		active?: boolean;

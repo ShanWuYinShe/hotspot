@@ -18,7 +18,7 @@
 
 	let {
 		children,
-		className = '',
+		class: className = '',
 		tone = 'joined',
 		onClick,
 		ariaLabel,

@@ -128,7 +128,7 @@
 		<div class="flex flex-col flex-shrink-0 overflow-hidden" style="width:300px;border-right:1px solid var(--neu-border);">
 			<!-- List header -->
 			<div class="flex-shrink-0" style="border-bottom:1px solid var(--neu-border);">
-				<PageHeader title="消息" className="!py-2">
+				<PageHeader title="消息" class="!py-2">
 					{#snippet trailing()}
 						<button
 							type="button"
@@ -202,7 +202,7 @@
 						</div>
 					{:else}
 						<div class="h-full">
-							<EmptyState title="选择一个会话" description="从左侧选择联系人开始聊天" className="h-full justify-center !py-0">
+							<EmptyState title="选择一个会话" description="从左侧选择联系人开始聊天" class="h-full justify-center !py-0">
 								{#snippet icon()}
 									<MessageSquareDashed style="width:28px;height:28px;color:var(--neu-text-muted);opacity:0.5;" strokeWidth={1.25} />
 								{/snippet}
@@ -264,7 +264,7 @@
 			</button>
 		{/snippet}
 	</PageHeader>
-	<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="搜索会话…" className="mx-5 mb-3" />
+	<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="搜索会话…" class="mx-5 mb-3" />
 
 	<div class="animate-fade-in flex flex-col px-5 pt-4 pb-4" style="max-width:640px;margin-left:auto;margin-right:auto;width:100%;">
 		{#if onlineChats.length > 0}

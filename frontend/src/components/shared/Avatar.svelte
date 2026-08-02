@@ -12,7 +12,7 @@
 		shape = 'circle',
 		ring = false,
 		badge,
-		className = '',
+		class: className = '',
 		style = ''
 	}: {
 		/** Image URL. When empty/undefined or the image fails to load, the name initial is shown instead. */

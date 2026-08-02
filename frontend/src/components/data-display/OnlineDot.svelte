@@ -3,7 +3,7 @@
 
 	let {
 		size = 'md',
-		className = '',
+		class: className = '',
 		color
 	}: {
 		size?: 'sm' | 'md' | 'lg';

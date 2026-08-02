@@ -7,7 +7,7 @@
 	let {
 		children,
 		attached = false,
-		className = ''
+		class: className = ''
 	}: {
 		children: Snippet;
 		/** Attached rails fill the available page height and own their scroll region. */
