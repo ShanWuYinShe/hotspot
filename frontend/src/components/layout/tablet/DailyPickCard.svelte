@@ -7,7 +7,7 @@
 
 <button
 	type="button"
-	class="image-hover-frame neu-hover-card neu-card-hover relative aspect-square w-full overflow-hidden rounded-relaxed text-left outline-none"
+	class="image-hover-frame neu-hover-card neu-tap-94 neu-card-hover relative aspect-square w-full overflow-hidden rounded-relaxed text-left outline-none"
 >
 	<img
 		src="https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=600&q=80"

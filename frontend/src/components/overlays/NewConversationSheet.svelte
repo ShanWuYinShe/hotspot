@@ -103,7 +103,7 @@
 						</div>
 						<button
 							type="button"
-							class="neu-hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none flex-shrink-0 {addedIds.has(u.id) ? 'bg-[var(--neu-bg)] text-[var(--neu-accent-primary)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
+							class="neu-hover-btn neu-tap-92 flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none flex-shrink-0 {addedIds.has(u.id) ? 'bg-[var(--neu-bg)] text-[var(--neu-accent-primary)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
 							style={addedIds.has(u.id)
 								? 'box-shadow:inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);border:1px solid var(--neu-border-pressed);font-size:11px;'
 								: 'font-size:11px;box-shadow:0 3px 8px var(--neu-glow);'}

@@ -4,7 +4,7 @@
 	// 今日氛围卡（天气 + 音乐，迁移自旧版 TabletRail，静态 mock 内容）。
 </script>
 
-<div class="neu-surface-flat rounded-[18px] p-4">
+<div class="neu-tap-94 neu-surface-flat rounded-[18px] p-4">
 	<div class="flex items-center justify-between mb-3">
 		<span class="neu-eyebrow">今日氛围</span>
 		<Sun style="width:14px;height:14px;color:var(--neu-accent-primary);" strokeWidth={1.75} />

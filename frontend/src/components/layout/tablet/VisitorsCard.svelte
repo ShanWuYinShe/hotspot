@@ -12,7 +12,7 @@
 	];
 </script>
 
-<button type="button" class="neu-hover-card neu-surface-flat rounded-[18px] p-4 text-left outline-none w-full">
+<button type="button" class="neu-hover-card neu-tap-94 neu-tap-94 neu-surface-flat rounded-[18px] p-4 text-left outline-none w-full">
 	<div class="flex items-center justify-between mb-3">
 		<span class="neu-eyebrow">今天看过你</span>
 		<Eye style="width:14px;height:14px;color:var(--neu-text-muted);" strokeWidth={1.75} />

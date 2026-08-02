@@ -19,7 +19,7 @@
 
 <button
 	type="button"
-	class="neu-hover-btn flex items-center outline-none text-left {collapsed ? 'h-10 w-10 self-center justify-center rounded-xl' : 'w-full gap-3 rounded-[16px]'}"
+	class="neu-hover-btn neu-tap-97 flex items-center outline-none text-left {collapsed ? 'h-10 w-10 self-center justify-center rounded-xl' : 'w-full gap-3 rounded-[16px]'}"
 	style="padding:{collapsed ? 0 : '10px 12px'};background:{hovered ? collapsedHover : collapsed ? 'transparent' : 'var(--neu-bg)'};border:1px solid transparent;box-shadow:none;transition:background 0.16s ease, color 0.16s ease;"
 	title={collapsed ? '位置选择' : undefined}
 	aria-label="位置选择"

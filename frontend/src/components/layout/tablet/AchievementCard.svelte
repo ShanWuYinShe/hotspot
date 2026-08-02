@@ -6,7 +6,7 @@
 	const progress = 0.72;
 </script>
 
-<div class="neu-surface-flat rounded-[18px] p-4">
+<div class="neu-tap-94 neu-surface-flat rounded-[18px] p-4">
 	<div class="flex items-center justify-between mb-2.5">
 		<span class="neu-eyebrow">下一枚徽章</span>
 		<Trophy style="width:14px;height:14px;color:var(--neu-accent-primary);" strokeWidth={1.75} />

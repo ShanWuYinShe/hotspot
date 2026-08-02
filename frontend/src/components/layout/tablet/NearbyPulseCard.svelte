@@ -8,7 +8,7 @@
 
 <button
 	type="button"
-	class="neu-hover-card neu-surface-flat rounded-[18px] p-4 text-left outline-none w-full overflow-hidden relative"
+	class="neu-hover-card neu-tap-94 neu-tap-94 neu-surface-flat rounded-[18px] p-4 text-left outline-none w-full overflow-hidden relative"
 >
 	<div class="flex items-center justify-between mb-2.5">
 		<span class="neu-eyebrow">此刻附近</span>
