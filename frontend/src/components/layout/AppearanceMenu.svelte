@@ -7,7 +7,7 @@
 	// 唯一的外观/模式控制。选择面板保持打开，仅显式完成、外部点击或 Escape 关闭。
 	// 迁移自旧版 AppearanceMenu（弹层行为现由 bits-ui Popover 提供）。
 
-	let { class: className = '' }: { className?: string } = $props();
+	let { class: className = '' }: { class?: string } = $props();
 
 	const THEMES = [
 		{ id: 'vibrant', label: '星际', note: '冷色玻璃', swatch: '#6366F1' },

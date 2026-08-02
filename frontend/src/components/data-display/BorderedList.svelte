@@ -25,7 +25,7 @@
 		class: className = ''
 	}: {
 		children: Snippet;
-		className?: string;
+		class?: string;
 	} = $props();
 </script>
 

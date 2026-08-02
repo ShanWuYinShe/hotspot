@@ -12,6 +12,7 @@
 	} from './location-shared';
 	import MapPinMarker from './MapPinMarker.svelte';
 	import MapHeatDot from './MapHeatDot.svelte';
+	import BorderedList from '@/components/data-display/BorderedList.svelte';
 
 	// 桌面地图探索：左侧栏（统计/搜索/Tab 列表/确认）+ 地图面板（OSM iframe + 图钉）。
 	// 图钉与统计来自 POST /api/v1/map/canvas（spec: api_spec_map.md）。

@@ -17,7 +17,7 @@
 		value: string;
 		onChange: (value: string) => void;
 		placeholder?: string;
-		className?: string;
+		class?: string;
 		compact?: boolean;
 		trailing?: Snippet;
 	} = $props();

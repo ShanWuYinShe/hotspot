@@ -7,7 +7,7 @@
 		color
 	}: {
 		size?: 'sm' | 'md' | 'lg';
-		className?: string;
+		class?: string;
 		/** 覆盖默认在线色（如深色玻璃背景上用 --online-on-scrim 亮色）。 */
 		color?: string;
 	} = $props();

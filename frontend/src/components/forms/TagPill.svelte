@@ -13,7 +13,7 @@
 		active?: boolean;
 		onClick?: () => void;
 		size?: 'sm' | 'md';
-		className?: string;
+		class?: string;
 	} = $props();
 
 	const sizeClasses = {

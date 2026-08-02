@@ -42,7 +42,7 @@
 		sticky?: boolean;
 		showBackOnDesktop?: boolean;
 		maxWidth?: number | string;
-		className?: string;
+		class?: string;
 		/** 内部 ContentColumn 的 className（默认 py-4；传 py-3 等可对齐 Figma 手写 header） */
 		contentClassName?: string;
 	} = $props();

@@ -12,7 +12,7 @@
 		children: Snippet;
 		/** Attached rails fill the available page height and own their scroll region. */
 		attached?: boolean;
-		className?: string;
+		class?: string;
 	} = $props();
 </script>
 

@@ -30,7 +30,7 @@
 	}: {
 		items: T[];
 		renderItem: Snippet<[T, number]>;
-		className?: string;
+		class?: string;
 		/** Clear space between cards. 24px protects the shared card hover lift and scale. */
 		gap?: number;
 		/** Minimum visible edge length after the inter-card gutter has been removed. */

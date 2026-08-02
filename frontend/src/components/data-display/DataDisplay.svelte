@@ -20,7 +20,7 @@
 		warning: 'text-[var(--semantic-warning)]'
 	};
 
-	let { items, class: className = '' }: { items: MetricItem[]; className?: string } = $props();
+	let { items, class: className = '' }: { items: MetricItem[]; class?: string } = $props();
 </script>
 
 <!-- Dense, horizontally comparable metrics: counts, ratios, and relationship states. -->

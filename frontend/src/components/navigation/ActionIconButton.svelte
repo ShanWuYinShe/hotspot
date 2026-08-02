@@ -27,7 +27,7 @@
 		disabled?: boolean;
 		active?: boolean;
 		type?: 'button' | 'submit' | 'reset';
-		className?: string;
+		class?: string;
 	} = $props();
 
 	let hovered = $state(false);

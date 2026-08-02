@@ -13,7 +13,7 @@
 		title: string;
 		description?: string;
 		action?: Snippet;
-		className?: string;
+		class?: string;
 	} = $props();
 </script>
 

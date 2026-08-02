@@ -8,6 +8,7 @@
 	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_LABELS, pinTone, floatBtnStyle, buildMapData, getMarkerUrl, fetchMapCanvas, type MapHeatBucket, markerUserUrl, markerGroupUrl, markerMomentUrl, type SnapState } from './location-shared';
 	import MapPinMarker from './MapPinMarker.svelte';
 	import MapHeatDot from './MapHeatDot.svelte';
+	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
 
 	// 移动端地图探索：全屏 OSM + 可拖拽吸附底部 Sheet（148/318/540 三档）。
 	// 迁移自旧版 LocationMobile（motion spring 吸附改 CSS transition）。

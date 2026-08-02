@@ -26,7 +26,7 @@
 		style
 	}: {
 		children: Snippet;
-		className?: string;
+		class?: string;
 		tone?: 'joined' | 'card';
 		onClick?: () => void;
 		ariaLabel?: string;

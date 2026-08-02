@@ -27,7 +27,7 @@
 		ring?: boolean;
 		/** Optional badge (e.g. online dot) rendered absolutely positioned inside the wrapper. */
 		badge?: Snippet;
-		className?: string;
+		class?: string;
 		style?: string;
 	} = $props();
 

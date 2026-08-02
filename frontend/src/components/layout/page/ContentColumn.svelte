@@ -23,7 +23,7 @@
 	}: {
 		children: Snippet;
 		maxWidth?: number | string;
-		className?: string;
+		class?: string;
 	} = $props();
 </script>
 
