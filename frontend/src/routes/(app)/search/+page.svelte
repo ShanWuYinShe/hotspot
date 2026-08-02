@@ -105,6 +105,12 @@
 		return () => clearTimeout(timer);
 	});
 
+	// 对齐 Figma Make：进入搜索页自动聚焦输入框
+	let inputEl: HTMLInputElement | undefined = $state();
+	$effect(() => {
+		inputEl?.focus();
+	});
+
 	const remember = (value: string) => {
 		recent = [value, ...recent.filter((r) => r !== value)].slice(0, 5);
 	};
@@ -137,6 +143,7 @@
 		<div class="flex items-center gap-3">
 			<SearchIcon class="size-5 shrink-0 text-[var(--neu-accent-primary)]" strokeWidth={1.8} />
 			<input
+				bind:this={inputEl}
 				value={query}
 				oninput={(e) => (query = e.currentTarget.value)}
 				onkeydown={(e) => {
