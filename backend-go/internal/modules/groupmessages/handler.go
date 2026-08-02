@@ -93,11 +93,6 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		logBusinessError(r, "Update", err.Code, err.Message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-		return
-	}
 	var req UpdateGroupMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		logBusinessError(r, "Update", 10000, "请求体格式错误")
@@ -111,36 +106,30 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	principal, _ := platformauth.PrincipalFromContext(r.Context())
 	req.UserID = principal.UserID
-	idempotency.ReplayOrStore(w, r, "group_messages/update", func() httpx.ApiResponse[struct{}] {
-		if err := h.service.Update(r.Context(), req); err != nil {
-			switch {
-			case errors.Is(err, ErrMessageNotFound):
-				logBusinessError(r, "Update", 10300, "消息不存在")
-				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "消息不存在"}
-			case errors.Is(err, ErrPermissionDenied):
-				logBusinessError(r, "Update", 10200, "权限不足")
-				return httpx.ApiResponse[struct{}]{Code: 10200, Message: "权限不足"}
-			case errors.Is(err, ErrMessageRecalled):
-				logBusinessError(r, "Update", 10400, "消息已被撤回")
-				return httpx.ApiResponse[struct{}]{Code: 10400, Message: "消息已被撤回"}
-			case errors.Is(err, ErrMessageNotEditable):
-				logBusinessError(r, "Update", 10400, "消息不可编辑")
-				return httpx.ApiResponse[struct{}]{Code: 10400, Message: "消息不可编辑"}
-			default:
-				logServerError(r, "Update", err)
-				return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
-			}
+	if err := h.service.Update(r.Context(), req); err != nil {
+		switch {
+		case errors.Is(err, ErrMessageNotFound):
+			logBusinessError(r, "Update", 10300, "消息不存在")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "消息不存在"))
+		case errors.Is(err, ErrPermissionDenied):
+			logBusinessError(r, "Update", 10200, "权限不足")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
+		case errors.Is(err, ErrMessageRecalled):
+			logBusinessError(r, "Update", 10400, "消息已被撤回")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "消息已被撤回"))
+		case errors.Is(err, ErrMessageNotEditable):
+			logBusinessError(r, "Update", 10400, "消息不可编辑")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "消息不可编辑"))
+		default:
+			logServerError(r, "Update", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		}
-		return httpx.SuccessEmpty()
-	})
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
 func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		logBusinessError(r, "Recall", err.Code, err.Message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-		return
-	}
 	var req RecallGroupMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		logBusinessError(r, "Recall", 10000, "请求体格式错误")
@@ -154,28 +143,27 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 	}
 	principal, _ := platformauth.PrincipalFromContext(r.Context())
 	req.UserID = principal.UserID
-	idempotency.ReplayOrStore(w, r, "group_messages/recall", func() httpx.ApiResponse[struct{}] {
-		if err := h.service.Recall(r.Context(), req); err != nil {
-			switch {
-			case errors.Is(err, ErrMessageNotFound):
-				logBusinessError(r, "Recall", 10300, "消息不存在")
-				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "消息不存在"}
-			case errors.Is(err, ErrPermissionDenied):
-				logBusinessError(r, "Recall", 10200, "权限不足")
-				return httpx.ApiResponse[struct{}]{Code: 10200, Message: "权限不足"}
-			case errors.Is(err, ErrMessageRecalled):
-				logBusinessError(r, "Recall", 10400, "消息已被撤回")
-				return httpx.ApiResponse[struct{}]{Code: 10400, Message: "消息已被撤回"}
-			case errors.Is(err, ErrMessageRecallWindow):
-				logBusinessError(r, "Recall", 10400, "撤回时间窗口已过")
-				return httpx.ApiResponse[struct{}]{Code: 10400, Message: "撤回时间窗口已过"}
-			default:
-				logServerError(r, "Recall", err)
-				return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
-			}
+	if err := h.service.Recall(r.Context(), req); err != nil {
+		switch {
+		case errors.Is(err, ErrMessageNotFound):
+			logBusinessError(r, "Recall", 10300, "消息不存在")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "消息不存在"))
+		case errors.Is(err, ErrPermissionDenied):
+			logBusinessError(r, "Recall", 10200, "权限不足")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
+		case errors.Is(err, ErrMessageRecalled):
+			logBusinessError(r, "Recall", 10400, "消息已被撤回")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "消息已被撤回"))
+		case errors.Is(err, ErrMessageRecallWindow):
+			logBusinessError(r, "Recall", 10400, "撤回时间窗口已过")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "撤回时间窗口已过"))
+		default:
+			logServerError(r, "Recall", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		}
-		return httpx.SuccessEmpty()
-	})
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
 // MarkRead is the unified mark_read endpoint for group messages. It replaces

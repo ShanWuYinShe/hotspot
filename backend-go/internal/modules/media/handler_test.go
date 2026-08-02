@@ -123,11 +123,6 @@ func TestMediaHandlerCompleteMapsSpecCodes(t *testing.T) {
 	_ = repo.Save(context.Background(), pendingUpload{UploadID: "upload_ready", UserID: "u1", StorageKey: "uploads/u1/upload_ready.png", FileName: "a.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar})
 	handler := NewHandler(NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/png"}}))
 
-	missingKeyReq := mediaAuthedCompleteRequest("upload_ready", "")
-	missingKeyRR := httptest.NewRecorder()
-	handler.CompleteUpload(missingKeyRR, missingKeyReq)
-	assertMediaCode(t, missingKeyRR, 10000)
-
 	notFoundReq := mediaAuthedCompleteRequest("upload_missing", "abcd1234abcd1234abcd1234abcd1234")
 	notFoundRR := httptest.NewRecorder()
 	handler.CompleteUpload(notFoundRR, notFoundReq)
@@ -156,6 +151,21 @@ func TestMediaHandlerCompleteMapsSpecCodes(t *testing.T) {
 	conflictRR := httptest.NewRecorder()
 	handler.CompleteUpload(conflictRR, conflictReq)
 	assertMediaCode(t, conflictRR, 10400)
+}
+
+// TestMediaHandlerCompleteSucceedsWithoutIdempotencyKey verifies that
+// complete_upload no longer requires an Idempotency-Key header (the endpoint
+// is naturally idempotent at the handler level; per-upload conflict detection
+// remains in the service layer).
+func TestMediaHandlerCompleteSucceedsWithoutIdempotencyKey(t *testing.T) {
+	repo := NewInMemoryRepository()
+	_ = repo.Save(context.Background(), pendingUpload{UploadID: "upload_naked", UserID: "u1", StorageKey: "uploads/u1/upload_naked.png", FileName: "a.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar})
+	handler := NewHandler(NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/png"}}))
+
+	req := mediaAuthedCompleteRequest("upload_naked", "")
+	rr := httptest.NewRecorder()
+	handler.CompleteUpload(rr, req)
+	assertMediaCode(t, rr, 0)
 }
 
 func TestMediaHandlerReturns10600OnServerErrors(t *testing.T) {

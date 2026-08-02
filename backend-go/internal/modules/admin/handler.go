@@ -67,27 +67,21 @@ func (h *Handler) ListRoles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateRole(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		h.writeAPIError(w, r, err)
-		return
-	}
 	var req AdminRbacRoleCreateRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "admin/rbac/roles/create", func() httpx.ApiResponse[AdminRoleItem] {
-		payload, apiErr, err := h.service.CreateRole(withRequest(r.Context(), r), req)
-		if err != nil {
-			observability.L().Error("handler error", "method", "CreateRole", "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-			return httpx.ApiResponse[AdminRoleItem]{Code: 10600, Message: "服务暂时不可用"}
-		}
-		if apiErr != nil {
-			observability.L().Warn("handler business error", "method", "CreateRole", "code", apiErr.Code, "message", apiErr.Message, "request_id", observability.RequestIDFromContext(r.Context()))
-			return httpx.ApiResponse[AdminRoleItem]{Code: apiErr.Code, Message: apiErr.Message}
-		}
-		return httpx.Success(payload)
-	})
+	payload, apiErr, err := h.service.CreateRole(withRequest(r.Context(), r), req)
+	if err != nil {
+		h.writeUnavailable(w, r)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, r, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
 }
 
 func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
@@ -163,27 +157,21 @@ func (h *Handler) ListAdmins(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GrantAdmin(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		h.writeAPIError(w, r, err)
-		return
-	}
 	var req AdminRbacGrantAdminRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "admin/rbac/admins/grant", func() httpx.ApiResponse[struct{}] {
-		apiErr, err := h.service.GrantAdmin(withRequest(r.Context(), r), req)
-		if err != nil {
-			observability.L().Error("handler error", "method", "GrantAdmin", "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
-		}
-		if apiErr != nil {
-			observability.L().Warn("handler business error", "method", "GrantAdmin", "code", apiErr.Code, "message", apiErr.Message, "request_id", observability.RequestIDFromContext(r.Context()))
-			return httpx.ApiResponse[struct{}]{Code: apiErr.Code, Message: apiErr.Message}
-		}
-		return httpx.SuccessEmpty()
-	})
+	apiErr, err := h.service.GrantAdmin(withRequest(r.Context(), r), req)
+	if err != nil {
+		h.writeUnavailable(w, r)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, r, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
 func (h *Handler) RevokeAdmin(w http.ResponseWriter, r *http.Request) {
@@ -277,27 +265,21 @@ func (h *Handler) OpenAdminUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) BanUser(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		h.writeAPIError(w, r, err)
-		return
-	}
 	var req AdminBanUserRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "admin/users/ban", func() httpx.ApiResponse[struct{}] {
-		apiErr, err := h.service.BanUser(withRequest(r.Context(), r), req)
-		if err != nil {
-			observability.L().Error("handler error", "method", "BanUser", "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
-		}
-		if apiErr != nil {
-			observability.L().Warn("handler business error", "method", "BanUser", "code", apiErr.Code, "message", apiErr.Message, "request_id", observability.RequestIDFromContext(r.Context()))
-			return httpx.ApiResponse[struct{}]{Code: apiErr.Code, Message: apiErr.Message}
-		}
-		return httpx.SuccessEmpty()
-	})
+	apiErr, err := h.service.BanUser(withRequest(r.Context(), r), req)
+	if err != nil {
+		h.writeUnavailable(w, r)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, r, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
 func (h *Handler) UnbanUser(w http.ResponseWriter, r *http.Request) {
@@ -355,27 +337,21 @@ func (h *Handler) OpenAdminGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DismissGroup(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		h.writeAPIError(w, r, err)
-		return
-	}
 	var req AdminDismissGroupRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "admin/groups/dismiss", func() httpx.ApiResponse[struct{}] {
-		apiErr, err := h.service.DismissGroup(r.Context(), req)
-		if err != nil {
-			observability.L().Error("handler error", "method", "DismissGroup", "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
-		}
-		if apiErr != nil {
-			observability.L().Warn("handler business error", "method", "DismissGroup", "code", apiErr.Code, "message", apiErr.Message, "request_id", observability.RequestIDFromContext(r.Context()))
-			return httpx.ApiResponse[struct{}]{Code: apiErr.Code, Message: apiErr.Message}
-		}
-		return httpx.SuccessEmpty()
-	})
+	apiErr, err := h.service.DismissGroup(r.Context(), req)
+	if err != nil {
+		h.writeUnavailable(w, r)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, r, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
 func (h *Handler) SearchReports(w http.ResponseWriter, r *http.Request) {
@@ -397,27 +373,21 @@ func (h *Handler) SearchReports(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleReport(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		h.writeAPIError(w, r, err)
-		return
-	}
 	var req AdminReportHandleRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "admin/reports/handle", func() httpx.ApiResponse[struct{}] {
-		apiErr, err := h.service.HandleReport(r.Context(), req)
-		if err != nil {
-			observability.L().Error("handler error", "method", "HandleReport", "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
-		}
-		if apiErr != nil {
-			observability.L().Warn("handler business error", "method", "HandleReport", "code", apiErr.Code, "message", apiErr.Message, "request_id", observability.RequestIDFromContext(r.Context()))
-			return httpx.ApiResponse[struct{}]{Code: apiErr.Code, Message: apiErr.Message}
-		}
-		return httpx.SuccessEmpty()
-	})
+	apiErr, err := h.service.HandleReport(r.Context(), req)
+	if err != nil {
+		h.writeUnavailable(w, r)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, r, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
 func (h *Handler) GetAppConfig(w http.ResponseWriter, r *http.Request) {

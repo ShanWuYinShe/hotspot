@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/observability"
 )
 
@@ -68,37 +67,31 @@ func (h *Handler) BatchPresignUpload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		logBusinessError(r, "CompleteUpload", err.Code, err.Message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-		return
-	}
 	var req CompleteUploadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UploadID == "" {
 		logBusinessError(r, "CompleteUpload", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "media/complete_upload", func() httpx.ApiResponse[UploadedMedia] {
-		file, err := h.service.Complete(r.Context(), req.UploadID)
-		if err != nil {
-			switch {
-			case errors.Is(err, ErrUploadNotFound):
-				logBusinessError(r, "CompleteUpload", 10300, "upload_id 不存在")
-				return httpx.ApiResponse[UploadedMedia]{Code: 10300, Message: "upload_id 不存在"}
-			case errors.Is(err, ErrUploadNotReady), errors.Is(err, ErrUploadConflict):
-				logBusinessError(r, "CompleteUpload", 10400, "上传状态冲突")
-				return httpx.ApiResponse[UploadedMedia]{Code: 10400, Message: "上传状态冲突"}
-			case errors.Is(err, ErrInvalidMediaRequest):
-				logBusinessError(r, "CompleteUpload", 10000, "参数错误")
-				return httpx.ApiResponse[UploadedMedia]{Code: 10000, Message: "参数错误"}
-			default:
-				logServerError(r, "CompleteUpload", err)
-				return httpx.ApiResponse[UploadedMedia]{Code: 10600, Message: "服务暂时不可用"}
-			}
+	file, err := h.service.Complete(r.Context(), req.UploadID)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrUploadNotFound):
+			logBusinessError(r, "CompleteUpload", 10300, "upload_id 不存在")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "upload_id 不存在"))
+		case errors.Is(err, ErrUploadNotReady), errors.Is(err, ErrUploadConflict):
+			logBusinessError(r, "CompleteUpload", 10400, "上传状态冲突")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "上传状态冲突"))
+		case errors.Is(err, ErrInvalidMediaRequest):
+			logBusinessError(r, "CompleteUpload", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		default:
+			logServerError(r, "CompleteUpload", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		}
-		return httpx.Success(file)
-	})
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(file))
 }
 
 func (h *Handler) CompleteUploadBatch(w http.ResponseWriter, r *http.Request) {

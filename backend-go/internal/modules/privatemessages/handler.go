@@ -82,69 +82,57 @@ func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		logBusinessError(r, "Update", err.Code, err.Message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-		return
-	}
 	var req UpdatePrivateMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MessageID == "" || req.Content == "" {
 		logBusinessError(r, "Update", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "private_messages/update", func() httpx.ApiResponse[struct{}] {
-		if err := h.service.Update(r.Context(), req); err != nil {
-			switch {
-			case errors.Is(err, ErrMessageNotFound):
-				logBusinessError(r, "Update", 10300, "消息不存在")
-				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "消息不存在"}
-			case errors.Is(err, ErrMessagePermissionDenied):
-				logBusinessError(r, "Update", 10200, "无权限编辑消息")
-				return httpx.ApiResponse[struct{}]{Code: 10200, Message: "无权限编辑消息"}
-			case errors.Is(err, ErrMessageNotEditable):
-				logBusinessError(r, "Update", 10400, "消息不可编辑")
-				return httpx.ApiResponse[struct{}]{Code: 10400, Message: "消息不可编辑"}
-			default:
-				logServerError(r, "Update", err)
-				return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
-			}
+	if err := h.service.Update(r.Context(), req); err != nil {
+		switch {
+		case errors.Is(err, ErrMessageNotFound):
+			logBusinessError(r, "Update", 10300, "消息不存在")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "消息不存在"))
+		case errors.Is(err, ErrMessagePermissionDenied):
+			logBusinessError(r, "Update", 10200, "无权限编辑消息")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "无权限编辑消息"))
+		case errors.Is(err, ErrMessageNotEditable):
+			logBusinessError(r, "Update", 10400, "消息不可编辑")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "消息不可编辑"))
+		default:
+			logServerError(r, "Update", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		}
-		return httpx.SuccessEmpty()
-	})
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
 func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		logBusinessError(r, "Recall", err.Code, err.Message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-		return
-	}
 	var req RecallPrivateMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MessageID == "" {
 		logBusinessError(r, "Recall", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "private_messages/recall", func() httpx.ApiResponse[struct{}] {
-		if err := h.service.Recall(r.Context(), req); err != nil {
-			switch {
-			case errors.Is(err, ErrMessageNotFound):
-				logBusinessError(r, "Recall", 10300, "消息不存在")
-				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "消息不存在"}
-			case errors.Is(err, ErrMessagePermissionDenied):
-				logBusinessError(r, "Recall", 10200, "无权限撤回消息")
-				return httpx.ApiResponse[struct{}]{Code: 10200, Message: "无权限撤回消息"}
-			case errors.Is(err, ErrMessageNotRecallable):
-				logBusinessError(r, "Recall", 10400, "消息不可撤回")
-				return httpx.ApiResponse[struct{}]{Code: 10400, Message: "消息不可撤回"}
-			default:
-				logServerError(r, "Recall", err)
-				return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
-			}
+	if err := h.service.Recall(r.Context(), req); err != nil {
+		switch {
+		case errors.Is(err, ErrMessageNotFound):
+			logBusinessError(r, "Recall", 10300, "消息不存在")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "消息不存在"))
+		case errors.Is(err, ErrMessagePermissionDenied):
+			logBusinessError(r, "Recall", 10200, "无权限撤回消息")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "无权限撤回消息"))
+		case errors.Is(err, ErrMessageNotRecallable):
+			logBusinessError(r, "Recall", 10400, "消息不可撤回")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "消息不可撤回"))
+		default:
+			logServerError(r, "Recall", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		}
-		return httpx.SuccessEmpty()
-	})
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
 // MarkRead is the unified mark_read endpoint for private messages. It replaces

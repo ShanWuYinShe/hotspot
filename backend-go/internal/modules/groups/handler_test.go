@@ -1254,12 +1254,14 @@ func TestHandlerDismissReturnsSuccess(t *testing.T) {
 	}
 }
 
-func TestHandlerDismissRejectsMissingIdempotencyKey(t *testing.T) {
+func TestHandlerDismissReachesServiceWithoutIdempotencyKey(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
 	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"group_id":"g1"}`))
 	rr := httptest.NewRecorder()
 	handler.Dismiss(rr, req)
-	assertGroupCode(t, rr, 10000)
+	// Without an Idempotency-Key the request still reaches the service and
+	// returns the business error (group "g1" does not exist here).
+	assertGroupCode(t, rr, 10300)
 }
 
 func TestHandlerDismissRejectsInvalidJSON(t *testing.T) {

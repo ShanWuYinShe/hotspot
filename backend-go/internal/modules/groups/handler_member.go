@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/idempotency"
 )
 
 func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
@@ -35,57 +34,53 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-		return
-	}
 	var req ApproveGroupApplicationRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.ApplicationID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "groups/applications/approve", func() httpx.ApiResponse[struct{}] {
-		if err := h.service.ApproveApplication(r.Context(), req); err != nil {
-			if errors.Is(err, ErrGroupNotFound) {
-				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "群组不存在"}
-			}
-			if errors.Is(err, ErrAccessRestricted) {
-				return httpx.ApiResponse[struct{}]{Code: 10200, Message: "权限不足"}
-			}
-			if errors.Is(err, ErrAlreadyProcessed) {
-				return httpx.ApiResponse[struct{}]{Code: 10400, Message: "申请已处理"}
-			}
-			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
+	if err := h.service.ApproveApplication(r.Context(), req); err != nil {
+		if errors.Is(err, ErrGroupNotFound) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
 		}
-		return httpx.Success(struct{}{})
-	})
+		if errors.Is(err, ErrAccessRestricted) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
+			return
+		}
+		if errors.Is(err, ErrAlreadyProcessed) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "申请已处理"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
 }
 
 func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-		return
-	}
 	var req RejectGroupApplicationRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.ApplicationID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "groups/applications/reject", func() httpx.ApiResponse[struct{}] {
-		if err := h.service.RejectApplication(r.Context(), req); err != nil {
-			if errors.Is(err, ErrGroupNotFound) {
-				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "群组不存在"}
-			}
-			if errors.Is(err, ErrAccessRestricted) {
-				return httpx.ApiResponse[struct{}]{Code: 10200, Message: "权限不足"}
-			}
-			if errors.Is(err, ErrAlreadyProcessed) {
-				return httpx.ApiResponse[struct{}]{Code: 10400, Message: "申请已处理"}
-			}
-			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
+	if err := h.service.RejectApplication(r.Context(), req); err != nil {
+		if errors.Is(err, ErrGroupNotFound) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
 		}
-		return httpx.Success(struct{}{})
-	})
+		if errors.Is(err, ErrAccessRestricted) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
+			return
+		}
+		if errors.Is(err, ErrAlreadyProcessed) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "申请已处理"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
 }
 
 func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
@@ -141,27 +136,24 @@ func (h *Handler) SetMute(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) BanMember(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-		return
-	}
 	var req BanMemberRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "groups/members/ban", func() httpx.ApiResponse[struct{}] {
-		if err := h.service.BanMember(r.Context(), req); err != nil {
-			if errors.Is(err, ErrGroupNotFound) {
-				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "群组不存在"}
-			}
-			if errors.Is(err, ErrAccessRestricted) {
-				return httpx.ApiResponse[struct{}]{Code: 10200, Message: "权限不足"}
-			}
-			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
+	if err := h.service.BanMember(r.Context(), req); err != nil {
+		if errors.Is(err, ErrGroupNotFound) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
 		}
-		return httpx.Success(struct{}{})
-	})
+		if errors.Is(err, ErrAccessRestricted) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
 }
 
 func (h *Handler) UnbanMember(w http.ResponseWriter, r *http.Request) {

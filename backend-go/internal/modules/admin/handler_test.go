@@ -258,7 +258,7 @@ func TestListPermissionsRequiresRbacPermission(t *testing.T) {
 	}
 }
 
-func TestCreateRoleRequiresIdempotencyKey(t *testing.T) {
+func TestCreateRoleSucceedsWithoutIdempotencyKey(t *testing.T) {
 	handler := newTestHandler()
 	req := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"Ops"}`)), "admin", true)
 	rr := httptest.NewRecorder()
@@ -266,18 +266,17 @@ func TestCreateRoleRequiresIdempotencyKey(t *testing.T) {
 	handler.CreateRole(rr, req)
 
 	resp := decodeResponse[AdminRoleItem](t, rr)
-	if resp.Code != 10000 {
+	if resp.Code != 0 || resp.Data == nil {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
 
-func TestCreateRoleReplaysSameIdempotencyKey(t *testing.T) {
+func TestCreateRoleNaturalIdempotency(t *testing.T) {
 	handler := newTestHandler()
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	makeReq := func() *http.Request {
 		req := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"Ops","description":"Operators"}`)), "admin", true)
-		req.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
 		return req
 	}
 
@@ -291,7 +290,9 @@ func TestCreateRoleReplaysSameIdempotencyKey(t *testing.T) {
 	second := httptest.NewRecorder()
 	handler.CreateRole(second, makeReq())
 	secondResp := decodeResponse[AdminRoleItem](t, second)
-	if secondResp.Code != 0 || secondResp.Data == nil || secondResp.Data.RoleID != firstResp.Data.RoleID {
+	// create_role is naturally idempotent: a duplicate request returns the
+	// business error 10400 "角色已存在" without any Idempotency-Key mechanism.
+	if secondResp.Code != 10400 || secondResp.Message != "角色已存在" {
 		t.Fatalf("unexpected second response: %#v", secondResp)
 	}
 }
@@ -379,7 +380,7 @@ func TestGetAppConfigRequiresPermission(t *testing.T) {
 	}
 }
 
-func TestBanUserRequiresIdempotencyKey(t *testing.T) {
+func TestBanUserSucceedsWithoutIdempotencyKey(t *testing.T) {
 	handler := newTestHandler()
 	req := adminContext(httptest.NewRequest(http.MethodPost, "/users/ban", strings.NewReader(`{"user_id":"user_bob"}`)), "admin", true)
 	rr := httptest.NewRecorder()
@@ -387,7 +388,7 @@ func TestBanUserRequiresIdempotencyKey(t *testing.T) {
 	handler.BanUser(rr, req)
 
 	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 10000 {
+	if resp.Code != 0 {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
