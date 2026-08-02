@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Search as SearchIcon, TrendingUp, Users, FileText, Clock } from '@lucide/svelte';
+	import { Search as SearchIcon, TrendingUp, Users, FileText, Clock, ArrowUpRight, Hash } from '@lucide/svelte';
 	import { platformStore } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
@@ -28,7 +28,8 @@
 		likes_count?: number;
 	}
 
-	const HOT_SEARCHES: string[] = [];
+	const HOT_SEARCHES = ['植物园', '云龙湖', '周末市集', '咖啡馆', '摄影'];
+	const TOPICS = ['摄影', '城市探索', '周末去哪', '隐藏咖啡馆', '徐州美食', '本地生活', '户外运动', '街头摄影'];
 
 	const isDesktop = $derived(platformStore.platform === 'desktop');
 
@@ -120,51 +121,72 @@
 		{#if !q}
 			<!-- No query: show discovery -->
 			<ContentColumn maxWidth={isDesktop ? '1040px' : '640px'} class="pt-4 pb-6">
-				{#if recent.length > 0}
-					<div class="mb-5">
-						<div class="flex items-center justify-between mb-2.5">
-							<div class="flex items-center gap-1.5">
-								<Clock style="width:13px;height:13px;color:var(--neu-text-muted);" strokeWidth={1.5} />
-								<p class="uppercase text-[var(--neu-text-muted)] text-[10px] tracking-[0.12em]">最近搜索</p>
+				<!-- 无查询发现态（对齐 Figma Make：双栏 grid + 推荐话题跨列） -->
+				<div class="mt-2 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]">
+					<!-- 最近搜索 -->
+					<section class="rounded-panel border neu-surface-flat" aria-label="最近搜索">
+						<div class="flex items-center justify-between border-b border-[var(--neu-border)] px-5 py-4">
+							<div>
+								<h2 class="text-[var(--neu-text)] text-sm font-medium">最近搜索</h2>
+								<p class="mt-1 text-[var(--neu-text-muted)] text-xs">继续上一次的探索</p>
 							</div>
-							<button type="button" class="neu-hover-btn outline-none text-[var(--neu-accent-primary)] text-xs" onclick={() => (recent = [])}>
-								清空
-							</button>
+							<button type="button" class="neu-hover-btn text-[var(--neu-accent-primary)] text-xs outline-none" onclick={() => (recent = [])}>清除</button>
 						</div>
-						<div class="flex flex-wrap gap-2">
+						{#if recent.length > 0}
 							{#each recent as r (r)}
 								<button
 									type="button"
-									class="neu-hover-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full outline-none neu-surface-ghost text-[var(--neu-text-muted)] text-xs"
+									class="neu-hover-bg flex w-full items-center gap-3 border-b border-[var(--neu-border)] px-5 py-4 text-left last:border-b-0 outline-none"
 									onclick={() => handleSearch(r)}
 								>
-									<Clock style="width:10px;height:10px;" strokeWidth={1.5} />
-									{r}
+									<Clock style="width:16px;height:16px;color:var(--neu-text-muted);" strokeWidth={1.7} />
+									<span class="flex-1 text-[var(--neu-text)] text-sm">{r}</span>
+									<ArrowUpRight style="width:16px;height:16px;color:var(--neu-text-muted);" strokeWidth={1.7} />
+								</button>
+							{/each}
+						{:else}
+							<p class="px-5 py-8 text-[var(--neu-text-muted)] text-sm">还没有搜索记录。</p>
+						{/if}
+					</section>
+
+					<!-- 正在关注（热门搜索） -->
+					<section class="rounded-panel border neu-surface-flat p-5" aria-label="热门搜索">
+						<div class="flex items-center gap-2">
+							<TrendingUp style="width:16px;height:16px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
+							<h2 class="text-[var(--neu-text)] text-sm font-medium">正在关注</h2>
+						</div>
+						<div class="mt-4 space-y-1">
+							{#each HOT_SEARCHES as h, i (h)}
+								<button
+									type="button"
+									class="neu-hover-bg flex w-full items-center gap-3 py-2 text-left outline-none hover:text-[var(--neu-accent-primary)]"
+									onclick={() => handleSearch(h)}
+								>
+									<span class="w-4 text-[var(--neu-accent-primary)] text-xs">{i + 1}</span>
+									<span class="flex-1 text-[var(--neu-text)] text-sm">{h}</span>
 								</button>
 							{/each}
 						</div>
-					</div>
-				{/if}
+					</section>
 
-				<div class="mb-5">
-					<div class="flex items-center gap-1.5 mb-2.5">
-						<TrendingUp style="width:13px;height:13px;color:var(--neu-accent-primary);" strokeWidth={2} />
-						<p class="uppercase text-[var(--neu-text-muted)] text-[10px] tracking-[0.12em]">热门搜索</p>
-					</div>
-					{#each HOT_SEARCHES as h, i (h)}
-						<button
-							type="button"
-							class="neu-hover-bg flex items-center gap-3 w-full py-2.5 outline-none"
-							style="border-bottom:{i < HOT_SEARCHES.length - 1 ? '1px solid var(--neu-border)' : 'none'};"
-							onclick={() => handleSearch(h)}
-						>
-							<span class="text-[var(--neu-accent-primary)] text-sm font-bold w-5 text-center">{i + 1}</span>
-							<span class="text-[var(--neu-text)] text-sm">{h}</span>
-							{#if i < 3}
-								<span class="ml-auto px-2 py-0.5 rounded-full text-[10px] text-[var(--semantic-hot)]" style="background:color-mix(in srgb, var(--semantic-hot) 12%, transparent);">热</span>
-							{/if}
-						</button>
-					{/each}
+					<!-- 推荐话题（跨两列） -->
+					<section class="rounded-panel border neu-surface-flat p-5 lg:col-span-2" aria-label="推荐话题">
+						<div class="flex items-center gap-2">
+							<Hash style="width:16px;height:16px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
+							<h2 class="text-[var(--neu-text)] text-sm font-medium">推荐话题</h2>
+						</div>
+						<div class="mt-4 flex flex-wrap gap-2">
+							{#each TOPICS as topic (topic)}
+								<button
+									type="button"
+									class="neu-hover-btn border border-[var(--neu-border)] bg-[var(--neu-bg)] px-3 py-2 text-[var(--neu-text)] text-xs outline-none transition-colors hover:bg-[var(--neu-accent-soft)]"
+									onclick={() => handleSearch(topic)}
+								>
+									#{topic}
+								</button>
+							{/each}
+						</div>
+					</section>
 				</div>
 			</ContentColumn>
 		{:else}

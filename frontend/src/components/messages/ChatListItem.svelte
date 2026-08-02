@@ -34,13 +34,13 @@
 	data-active={isSelected}
 	aria-current={isSelected ? 'page' : undefined}
 	class="neu-hover-row app-list-row app-list-row--rich w-full cursor-pointer text-left outline-none neu-row-hover"
-	style="padding:{compact ? '10px 16px' : '12px 16px'};"
+	style="padding:{compact ? '10px 16px' : '12px 16px'};background:{isSelected ? 'var(--neu-accent-primary)' : 'var(--neu-bg)'};box-shadow:{isSelected ? '0 2px 10px var(--neu-glow)' : 'none'};"
 	onclick={onClick}
 >
 	<span class="relative flex-shrink-0">
 		<span
 			class="block overflow-hidden rounded-full"
-			style="width:{compact ? 40 : 44}px;height:{compact ? 40 : 44}px;border:{isSelected ? '1.5px solid var(--neu-accent-primary)' : '1.5px solid var(--neu-border)'};"
+			style="width:{compact ? 40 : 44}px;height:{compact ? 40 : 44}px;border:{isSelected ? '2px solid white' : '1.5px solid var(--neu-border)'};"
 		>
 			<img src={chat.avatar} alt="" class="h-full w-full object-cover" />
 		</span>
@@ -51,14 +51,14 @@
 
 	<span class="min-w-0 flex-1">
 		<span class="mb-0.5 flex items-baseline justify-between">
-			<span class="{isSelected ? 'text-[var(--neu-accent-primary)]' : 'text-[var(--neu-text)]'} text-sm" style="font-weight:{chat.unread > 0 || isSelected ? 600 : 400};">
+			<span class="{isSelected ? 'text-white' : 'text-[var(--neu-text)]'} text-sm" style="font-weight:{chat.unread > 0 || isSelected ? 600 : 400};">
 				{chat.name}
 			</span>
-			<span class="text-[var(--neu-text-muted)] text-[11px] shrink-0">
+			<span class="{isSelected ? 'text-white/80' : 'text-[var(--neu-text-muted)]'} text-[11px] shrink-0">
 				{chat.time}
 			</span>
 		</span>
-		<span class="block truncate pr-4 text-[var(--neu-text-muted)] text-xs">
+		<span class="block truncate pr-4 {isSelected ? 'text-white/75' : 'text-[var(--neu-text-muted)]'} text-xs">
 			{chat.lastMessage}
 		</span>
 	</span>

@@ -45,6 +45,8 @@
 		return initialMode;
 	}
 	let mode = $state<AuthMode>(initialModeValue());
+	// 登录方式（对齐 Figma Make LoginPage 双 tab：验证码登录/密码登录）
+	let method = $state<'code' | 'password'>('password');
 	let loginId = $state('');
 	let password = $state('');
 	let nickname = $state('');
@@ -69,7 +71,12 @@
 
 		// Client-side validation aligned with harmonyapp LoginPage.
 		let fieldErr: string | null = null;
-		if (mode === 'login') fieldErr = validateLoginId(loginId) ?? validatePassword(password);
+		if (mode === 'login') {
+			fieldErr =
+				method === 'code'
+					? validateLoginId(loginId) ?? (code.trim() ? null : '请输入验证码')
+					: validateLoginId(loginId) ?? validatePassword(password);
+		}
 		else if (mode === 'register') fieldErr = validateLoginId(loginId) ?? validateNickname(nickname) ?? validatePassword(password);
 		else if (mode === 'guest') fieldErr = validateNickname(nickname);
 		else if (mode === 'forgot') fieldErr = validateLoginId(resetLoginId);
@@ -82,7 +89,14 @@
 		submitting = true;
 		try {
 			let res;
-			if (mode === 'login') res = await login({ login_id: loginId, password });
+			if (mode === 'login') {
+				if (method === 'code') {
+					// 验证码登录接口待后端提供（spec 暂无），UI 对齐 Figma Make 先行
+					error = '验证码登录暂未开放，请使用密码登录';
+					return;
+				}
+				res = await login({ login_id: loginId, password });
+			}
 			else if (mode === 'register') res = await register({ login_id: loginId, nickname, password });
 			else if (mode === 'guest') res = await guest({ nickname });
 			else if (mode === 'forgot') {
@@ -149,6 +163,22 @@
 	{/if}
 
 	{#if mode === 'login' || mode === 'register'}
+		{#if mode === 'login'}
+			<!-- 登录方式双 tab（对齐 Figma Make LoginPage） -->
+			<div class="grid grid-cols-2 border border-[var(--neu-border)] bg-[var(--neu-bg)] p-1" style="border-radius:12px;">
+				{#each [['code', '验证码登录'], ['password', '密码登录']] as [id, label]}
+					<button
+						type="button"
+						aria-pressed={method === id}
+						onclick={() => (method = id)}
+						class="px-3 py-2 text-xs outline-none transition-colors"
+						style="border-radius:8px;background:{method === id ? 'var(--neu-bg)' : 'transparent'};color:{method === id ? 'var(--neu-text)' : 'var(--neu-text-muted)'};box-shadow:{method === id ? '0 1px 6px var(--neu-shadow-dark)' : 'none'};"
+					>
+						{label}
+					</button>
+				{/each}
+			</div>
+		{/if}
 		<label class="flex flex-col" style="gap:6px;">
 			<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">账号</span>
 			<input
@@ -161,18 +191,41 @@
 				style="background:var(--neu-bg);color:var(--neu-text);border:1px solid var(--neu-border);"
 			/>
 		</label>
-		<label class="flex flex-col" style="gap:6px;">
-			<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">密码</span>
-			<input
-				type="password"
-				bind:value={password}
-				placeholder="8–128 位，含字母和数字"
-				disabled={submitting}
-				autocomplete="current-password"
-				class="rounded-[12px] px-3.5 py-2.5 text-[15px] outline-none transition-shadow"
-				style="background:var(--neu-bg);color:var(--neu-text);border:1px solid var(--neu-border);"
-			/>
-		</label>
+		{#if mode === 'login' && method === 'code'}
+			<!-- 验证码登录：验证码输入 + 获取验证码 -->
+			<label class="flex flex-col" style="gap:6px;">
+				<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">验证码</span>
+				<input
+					type="text"
+					bind:value={code}
+					placeholder="输入收到的验证码"
+					disabled={submitting}
+					autocomplete="off"
+					class="rounded-[12px] px-3.5 py-2.5 text-[15px] outline-none transition-shadow"
+					style="background:var(--neu-bg);color:var(--neu-text);border:1px solid var(--neu-border);"
+				/>
+			</label>
+			<button
+				type="button"
+				class="neu-hover-btn w-full rounded-[12px] border border-[var(--neu-border)] bg-[var(--neu-bg)] px-3 py-3 text-sm text-[var(--neu-text)] outline-none transition-colors hover:bg-[var(--neu-accent-soft)]"
+				onclick={() => (error = '验证码发送功能即将开放，请使用密码登录')}
+			>
+				获取验证码
+			</button>
+		{:else if mode === 'login' || mode === 'register'}
+			<label class="flex flex-col" style="gap:6px;">
+				<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">密码</span>
+				<input
+					type="password"
+					bind:value={password}
+					placeholder="8–128 位，含字母和数字"
+					disabled={submitting}
+					autocomplete="current-password"
+					class="rounded-[12px] px-3.5 py-2.5 text-[15px] outline-none transition-shadow"
+					style="background:var(--neu-bg);color:var(--neu-text);border:1px solid var(--neu-border);"
+				/>
+			</label>
+		{/if}
 	{/if}
 
 	{#if mode === 'forgot' || mode === 'reset'}

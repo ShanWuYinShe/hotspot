@@ -106,6 +106,14 @@
 					</button>
 				</div>
 			{/snippet}
+			{#snippet below()}
+				<!-- 分类标签（sticky header 内常驻，对齐 Figma Make NearbyGroupsPage） -->
+				<div class="flex gap-1.5 overflow-x-auto no-scrollbar pt-3">
+					{#each CATEGORIES as category}
+						<TagPill active={activeCategory === category} onClick={() => (activeCategory = category)}>{category}</TagPill>
+					{/each}
+				</div>
+			{/snippet}
 		</PageHeader>
 	{/snippet}
 
@@ -116,12 +124,6 @@
 	{/if}
 
 	<div class="min-w-0">
-		<!-- 分类标签（对齐附近的人：标签行位于卡片区上方） -->
-		<div class="flex gap-1.5 overflow-x-auto no-scrollbar mb-5">
-			{#each CATEGORIES as category}
-				<TagPill active={activeCategory === category} onClick={() => (activeCategory = category)}>{category}</TagPill>
-			{/each}
-		</div>
 		{#if loading}
 			<div class="flex flex-col items-center gap-3 py-20">
 				<div class="rounded-full border-2 border-[var(--neu-border)] border-t-[var(--neu-accent-primary)] animate-spin" style="width:28px;height:28px;"></div>

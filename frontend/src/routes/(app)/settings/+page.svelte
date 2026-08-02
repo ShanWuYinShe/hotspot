@@ -1,12 +1,13 @@
 <script lang="ts">
 	import type { Component, Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Bell, Lock, ChevronRight, LogOut, Globe, Info, Volume2, MapPin, User } from '@lucide/svelte';
+	import { Bell, Lock, ChevronRight, LogOut, Globe, Info, Volume2, MapPin, User, Palette, Trees, Moon, Sun } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import NeuToggle from '@/components/forms/NeuToggle.svelte';
 	import { logout } from '@/stores/auth.svelte';
+	import { themeStore, setTheme, toggleDark } from '@/stores/theme.svelte';
 	import { getAccount, getSettings } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
@@ -85,6 +86,55 @@
 			</div>
 			<ChevronRight style="width:15px;height:15px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
 		</button>
+	</div>
+
+	<!-- Appearance（对齐 Figma Make SettingsPage：应用主题二选一 + 深色模式） -->
+	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">外观</p>
+	<div class="rounded-[22px] overflow-hidden neu-surface-flat">
+		<div class="px-4 py-3.5">
+			<div class="flex items-center gap-3">
+				<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
+					<Palette style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+				</div>
+				<div class="flex-1 min-w-0">
+					<p class="text-[14px] text-[var(--neu-text)]">应用主题</p>
+					<p class="text-[11px] text-[var(--neu-text-muted)]">选择一套全局视觉风格</p>
+				</div>
+			</div>
+			<div class="mt-3 grid grid-cols-2 gap-2">
+				{#each [{ id: 'forest', label: '清野' }, { id: 'vibrant', label: '星际' }] as t}
+					<button
+						type="button"
+						aria-pressed={themeStore.theme === t.id}
+						onclick={() => setTheme(t.id)}
+						class="flex items-center gap-2 border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
+						style="border-color:{themeStore.theme === t.id ? 'var(--neu-accent-primary)' : 'var(--neu-border)'};background:{themeStore.theme === t.id ? 'var(--neu-accent-soft)' : 'transparent'};color:var(--neu-text);"
+					>
+						{#if t.id === 'forest'}
+							<Trees style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.7} />
+						{:else}
+							<Palette style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.7} />
+						{/if}
+						<span class="text-xs">{t.label}</span>
+					</button>
+				{/each}
+			</div>
+		</div>
+		<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
+		<div class="flex items-center gap-3 px-4 py-3.5">
+			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
+				{#if themeStore.isDark}
+					<Moon style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+				{:else}
+					<Sun style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+				{/if}
+			</div>
+			<div class="flex-1 min-w-0">
+				<p class="text-[14px] text-[var(--neu-text)]">深色模式</p>
+				<p class="text-[11px] text-[var(--neu-text-muted)]">{themeStore.isDark ? '当前使用深色外观' : '当前使用浅色外观'}</p>
+			</div>
+			<NeuToggle on={themeStore.isDark} onToggle={toggleDark} label="深色模式" />
+		</div>
 	</div>
 
 	<!-- Notifications -->

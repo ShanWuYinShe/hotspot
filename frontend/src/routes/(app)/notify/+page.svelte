@@ -181,14 +181,24 @@
 				<!-- List：每个分组一个连接列表表面（BorderedList 契约；heading 在列表外） -->
 				<div class="flex flex-col">
 				{#if unreadGroup.length > 0}
-					<p class="uppercase mb-2 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">新消息</p>
+					<!-- 新消息分组标题（emphasis：accent 点 + 计数 pill，对齐 Figma Make） -->
+					<div class="mb-2 flex h-5 items-center gap-2">
+						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var(--neu-accent-primary);"></span>
+						<p class="uppercase" style="font-size:10px;font-weight:600;letter-spacing:0.14em;color:var(--neu-text);">新消息</p>
+						<span class="rounded-full px-1.5 py-0.5" style="font-size:10px;line-height:1;color:var(--neu-accent-primary);background:var(--neu-accent-soft);">{unreadGroup.length}</span>
+					</div>
 					<BorderedList>
 						{#each unreadGroup as n (n.id)}
 							<NotifRow notif={n} onRead={markSingleRead} onRemove={remove} />
 						{/each}
 					</BorderedList>
 					{#if readGroup.length > 0}
-						<p class="uppercase mt-4 mb-2 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">较早</p>
+						<!-- 较早分组标题（非 emphasis：计数 pill + flex 分隔线） -->
+						<div class="mb-2 mt-4 flex h-5 items-center gap-2">
+							<p class="uppercase" style="font-size:10px;font-weight:500;letter-spacing:0.14em;color:var(--neu-text-muted);">较早</p>
+							<span class="rounded-full px-1.5 py-0.5" style="font-size:10px;line-height:1;color:var(--neu-accent-primary);background:var(--neu-accent-soft);">{readGroup.length}</span>
+							<span aria-hidden="true" class="h-px flex-1" style="background:var(--neu-border);"></span>
+						</div>
 					{/if}
 				{/if}
 

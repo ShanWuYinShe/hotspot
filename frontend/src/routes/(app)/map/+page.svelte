@@ -6,7 +6,7 @@
 	// 地图探索入口：平台分派（桌面/移动）。
 </script>
 
-{#if platformStore.platform === 'desktop'}
+{#if platformStore.platform !== 'mobile'}
 	<LocationDesktop />
 {:else}
 	<LocationMobile />

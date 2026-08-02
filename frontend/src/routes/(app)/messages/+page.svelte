@@ -116,7 +116,8 @@
 	);
 	const onlineChats = $derived(liveChats.filter((c) => c.online));
 	const totalUnread = $derived(chats.reduce((s, c) => s + c.unread, 0));
-	const isDesktop = $derived(platformStore.platform === 'desktop');
+	// 平板与桌面共用分栏（对齐 Figma Make：platform !== 'mobile' 即桌面分栏）
+	const isDesktop = $derived(platformStore.platform !== 'mobile');
 	const selectedChat = $derived(liveChats.find((c) => c.id === selectedId));
 </script>
 

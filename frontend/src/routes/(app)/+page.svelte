@@ -133,7 +133,7 @@
 	const isTablet = $derived(platformStore.platform === 'tablet');
 </script>
 
-{#if platformStore.platform === 'desktop'}
+{#if platformStore.platform !== 'mobile'}
 	<!-- ═══ Desktop Home — 2-column with clear hierarchy ═══ -->
 	<div class="content-mode-wide flex flex-col h-full">
 		<ContentColumn class="flex items-center justify-between py-4">

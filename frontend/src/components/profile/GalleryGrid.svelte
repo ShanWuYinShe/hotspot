@@ -10,7 +10,8 @@
 
 	let { posts, activeTab }: { posts: GalleryPost[]; activeTab: Tab } = $props();
 
-	const numCols = $derived(platformStore.platform === 'mobile' ? 2 : 3);
+	// 密度契约：移动/紧凑平板 2 列，宽平板/桌面 3 列（对齐 Figma Make）
+	const numCols = $derived(platformStore.platform === 'desktop' || platformStore.isWideTablet ? 3 : 2);
 	const gap = 10;
 </script>
 

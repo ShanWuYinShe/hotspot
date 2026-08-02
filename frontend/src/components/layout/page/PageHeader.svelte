@@ -26,6 +26,7 @@
 		onBack,
 		backLabel = '返回',
 		trailing,
+		below,
 		sticky = true,
 		showBackOnDesktop = false,
 		maxWidth,
@@ -36,6 +37,7 @@
 		onBack?: () => void;
 		backLabel?: string;
 		trailing?: Snippet;
+		below?: Snippet;
 		sticky?: boolean;
 		showBackOnDesktop?: boolean;
 		maxWidth?: number | string;
@@ -49,18 +51,23 @@
 	class={cn('shrink-0', sticky && 'sticky top-0 z-20', className)}
 	style="background-color:var(--page-bg);border-bottom:1px solid var(--neu-border);"
 >
-	<ContentColumn {maxWidth} class="flex items-center gap-3 py-4">
-		{#if showBack}
-			<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} />
-		{/if}
-		<div class={cn('min-w-0', trailing ? '' : 'flex-1')}>
-			<h1 class="text-[var(--neu-text)] text-[18px] font-medium leading-none">{title}</h1>
-			{#if subtitle}
-				<p class="mt-1 text-[var(--neu-text-muted)] text-[11px]">{subtitle}</p>
+	<ContentColumn {maxWidth} class="py-4">
+		<div class="flex items-center gap-3">
+			{#if showBack}
+				<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} />
+			{/if}
+			<div class={cn('min-w-0', trailing ? '' : 'flex-1')}>
+				<h1 class="text-[var(--neu-text)] text-[18px] font-medium leading-none">{title}</h1>
+				{#if subtitle}
+					<p class="mt-1 text-[var(--neu-text-muted)] text-[11px]">{subtitle}</p>
+				{/if}
+			</div>
+			{#if trailing}
+				{@render trailing()}
 			{/if}
 		</div>
-		{#if trailing}
-			{@render trailing()}
+		{#if below}
+			{@render below()}
 		{/if}
 	</ContentColumn>
 </header>
