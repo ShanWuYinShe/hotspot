@@ -63,7 +63,7 @@
 	{/if}
 
 	<!-- Stats row — flat joined cells -->
-	<div class="{embedded ? 'px-6 lg:px-8' : 'px-5'} py-4 flex-shrink-0">
+	<div class="{embedded ? 'px-6 lg:px-8' : 'px-5'} py-3 flex-shrink-0">
 		<DataDisplay
 			items={[
 				{ label: '总粉丝', value: followers.length },
@@ -74,7 +74,7 @@
 	</div>
 
 	<!-- Filter pills — ghost -->
-	<div class="flex gap-1.5 {embedded ? 'px-6 lg:px-8' : 'px-5'} pb-4 flex-shrink-0">
+	<div class="flex gap-1.5 {embedded ? 'px-6 lg:px-8' : 'px-5'} pb-3 flex-shrink-0">
 		{#each [{ id: 'all', label: '全部' }, { id: 'mutual', label: '互相关注' }, { id: 'pending', label: '待回关' }] as pill}
 			{@const active = fanFilter === pill.id}
 			<button

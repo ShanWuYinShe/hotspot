@@ -46,7 +46,7 @@
 	{/if}
 
 	<!-- Sort tabs — ghost chips -->
-	<div class="flex gap-1.5 {embedded ? 'px-6 lg:px-8' : 'px-5'} py-4 flex-shrink-0">
+	<div class="flex gap-1.5 {embedded ? 'px-6 lg:px-8' : 'px-5'} py-3 flex-shrink-0">
 		{#each [{ id: 'recent', label: '最近关注' }, { id: 'active', label: '最活跃' }] as pill}
 			{@const active = sortBy === pill.id}
 			<button
