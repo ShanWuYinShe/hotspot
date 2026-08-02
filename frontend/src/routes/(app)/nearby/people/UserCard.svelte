@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { MapPin, UserCheck, UserPlus } from '@lucide/svelte';
+	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 
-	// 附近用户卡片：图片铺满整卡，标签/距离/关注等菜单以覆盖层显示在图片上。
+	// 附近用户卡片：基于 NearbyImageCard 统一图片优先原语。
+	// 标签/距离/关注等菜单以覆盖层显示在图片上。
 	// 桌面/平板 BSP 布局中高度由布局单元决定；移动网格中由 aspect-[3/4] 撑起。
 
 	export interface NearbyUser {
@@ -36,87 +38,66 @@
 	});
 </script>
 
-<div
-	class="image-hover-frame neu-hover-card relative h-full w-full overflow-hidden rounded-[20px] aspect-[3/4] cursor-pointer neu-surface-flat neu-card-hover neu-focus-ring"
-	style="background:var(--neu-bg);"
-	role="button"
-	tabindex="0"
-	onclick={onNavigate}
-	onkeydown={(e) => {
-		if (e.target !== e.currentTarget) return;
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			onNavigate();
-		}
-	}}
+<NearbyImageCard
+	imageSrc={user.avatar}
+	imageAlt={user.name}
+	onClick={onNavigate}
+	onImageError={() => (avatarFailed = true)}
+	class="rounded-[20px] aspect-[3/4] neu-surface-flat"
 >
-	{#if user.avatar && !avatarFailed}
-		<img
-			src={user.avatar}
-			alt={user.name}
-			class="image-hover-frame__image absolute inset-0 h-full w-full object-cover"
-			loading="lazy"
-			onerror={() => (avatarFailed = true)}
-		/>
-	{:else}}
-		<!-- 无头像 / 加载失败：accent 主题渐变占位铺满整卡 -->
+	<!-- 无头像 / 加载失败：accent 主题渐变占位覆盖在图片层之上 -->
+	{#if avatarFailed}
 		<div
-			class="absolute inset-0 flex items-center justify-center"
+			class="absolute inset-0 z-[1] flex items-center justify-center"
 			style="background:linear-gradient(135deg, color-mix(in srgb, var(--neu-accent-primary) 24%, var(--neu-bg)) 0%, color-mix(in srgb, var(--neu-accent-primary) 8%, var(--neu-bg)) 100%);"
 		>
 			<span class="text-[var(--neu-accent-primary)] text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
 		</div>
 	{/if}
 
-	<!-- 图片渐变：与信息托盘自然过渡（对齐 NearbyImageCard media-scrim） -->
-	<div class="pointer-events-none absolute inset-0" style="background:var(--surface-media-scrim-card);"></div>
-
-	<!-- 右上：距离 -->
-	<div class="absolute top-2.5 right-2.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--overlay-strong)]" style="backdrop-filter:blur(8px);">
-		<MapPin class="w-[9px] h-[9px] text-white" strokeWidth={1.5} />
-		<span class="text-white text-[10px]">{user.distance}</span>
-	</div>
-	<div class="absolute top-2.5 right-2.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--overlay-strong)]" style="backdrop-filter:blur(8px);">
+	<!-- 右上：距离（单份，消除历史重复徽章 bug） -->
+	<div class="absolute top-2.5 right-2.5 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--overlay-strong)]" style="backdrop-filter:blur(8px);">
 		<MapPin class="w-[9px] h-[9px] text-white" strokeWidth={1.5} />
 		<span class="text-white text-[10px]">{user.distance}</span>
 	</div>
 
-	<!-- 底部：名字 / 此刻状态 / 共同好友 / 关注按钮（混色信息托盘（surface-card-menu），对齐 Figma Make） -->
-	<div class="absolute inset-x-0 bottom-0 border-t px-3 pt-2 pb-2.5" style="background:var(--surface-card-menu);border-color:var(--border-card-menu);">
-		<div class="min-w-0">
-			<p class="flex items-center gap-1.5 truncate text-[var(--neu-text)] text-sm font-semibold">
-				<span class="truncate">{user.name}</span>
-				{#if user.status === '在线'}
-					<OnlineDot size="sm" className="relative static" color="var(--status-online)" />
-				{/if}
-			</p>
-			<p class="truncate text-[var(--neu-text-muted)] text-[10px] mt-0.5">{user.note}</p>
+	{#snippet footer()}
+		<div class="px-3 pt-2 pb-2.5">
+			<div class="min-w-0">
+				<p class="flex items-center gap-1.5 truncate text-[var(--neu-text)] text-sm font-semibold">
+					<span class="truncate">{user.name}</span>
+					{#if user.status === '在线'}
+						<OnlineDot size="sm" className="relative static" color="var(--status-online)" />
+					{/if}
+				</p>
+				<p class="truncate text-[var(--neu-text-muted)] text-[10px] mt-0.5">{user.note}</p>
+			</div>
+			<div class="mt-2 flex items-center justify-between gap-2">
+				<span class="flex min-w-0 items-center gap-1.5">
+					{#if user.tag}
+						<span class="rounded-full px-1.5 py-0.5 text-[10px]" style="background:var(--neu-accent-soft);color:var(--neu-accent-primary);border:1px solid var(--neu-accent-soft-border);">#{user.tag}</span>
+					{/if}
+					<span class="truncate text-[var(--neu-text-muted)] text-[10px]">{user.mutual ? `${user.mutual} 位共同好友` : '等待认识'}</span>
+				</span>
+				<button
+					type="button"
+					class="neu-hover-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 w-[30px] h-[30px]"
+					aria-label={followed ? `取消关注 ${user.name}` : `关注 ${user.name}`}
+					style={followed
+						? 'background:var(--neu-accent-soft);border:1px solid var(--neu-border-pressed);color:var(--neu-text-muted);'
+						: 'background:var(--neu-accent-primary);color:var(--neu-on-accent);box-shadow:0 2px 8px var(--neu-glow);'}
+					onclick={(e) => {
+						e.stopPropagation();
+						onFollow();
+					}}
+				>
+					{#if followed}
+						<UserCheck size={15} />
+					{:else}
+						<UserPlus size={15} />
+					{/if}
+				</button>
+			</div>
 		</div>
-		<div class="mt-2 flex items-center justify-between gap-2">
-			<span class="flex min-w-0 items-center gap-1.5">
-				{#if user.tag}
-					<span class="rounded-full px-1.5 py-0.5 text-[10px]" style="background:var(--neu-accent-soft);color:var(--neu-accent-primary);border:1px solid var(--neu-accent-soft-border);">#{user.tag}</span>
-				{/if}
-				<span class="truncate text-[var(--neu-text-muted)] text-[10px]">{user.mutual ? `${user.mutual} 位共同好友` : '等待认识'}</span>
-			</span>
-			<button
-				type="button"
-				class="neu-hover-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 w-[30px] h-[30px]"
-				aria-label={followed ? `取消关注 ${user.name}` : `关注 ${user.name}`}
-				style={followed
-					? 'background:var(--neu-accent-soft);border:1px solid var(--neu-border-pressed);color:var(--neu-text-muted);'
-					: 'background:var(--neu-accent-primary);color:var(--neu-on-accent);box-shadow:0 2px 8px var(--neu-glow);'}
-				onclick={(e) => {
-					e.stopPropagation();
-					onFollow();
-				}}
-			>
-				{#if followed}
-					<UserCheck size={15} />
-				{:else}
-					<UserPlus size={15} />
-				{/if}
-			</button>
-		</div>
-	</div>
-</div>
+	{/snippet}
+</NearbyImageCard>

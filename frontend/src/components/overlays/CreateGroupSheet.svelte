@@ -2,6 +2,7 @@
 	import { X, Camera, Globe, Lock, Check, ChevronRight, MapPin } from '@lucide/svelte';
 	import { createGroup } from '@/api';
 	import { loadDefaultLocation } from '@/lib/default-location';
+	import NeuToggle from '@/components/forms/NeuToggle.svelte';
 
 	// CreateGroupSheet — 创建群组的底部 Sheet / 模态。
 	// 使用处：NearbyGroups(FAB)、Profile > 我的群组（页头按钮）、
@@ -109,7 +110,7 @@
 			<div class="flex justify-center">
 				<button
 					type="button"
-					class="neu-hover-btn flex flex-col items-center justify-center gap-2 rounded-[22px] outline-none bg-[var(--neu-bg)]"
+					class="neu-hover-btn flex flex-col items-center justify-center gap-2 rounded-feature outline-none bg-[var(--neu-bg)]"
 					style="width:100%;height:110px;box-shadow:inset 4px 4px 10px var(--neu-shadow-dark), inset -4px -4px 10px var(--neu-shadow-light);border:2px dashed var(--neu-border);"
 				>
 					<Camera style="width:26px;height:26px;color:var(--neu-text-muted);" strokeWidth={1.25} />
@@ -120,7 +121,7 @@
 			<!-- Group name -->
 			<div>
 				<label class="text-[11px] tracking-[0.1em] uppercase text-[var(--neu-text-muted)]" for="group-name">群组名称 *</label>
-				<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-[14px] neu-input-surface" style="height:46px;">
+				<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-control neu-input-surface" style="height:46px;">
 					<input
 						id="group-name"
 						class="flex-1 bg-transparent outline-none text-[var(--neu-text)] text-[14px]"
@@ -135,7 +136,7 @@
 			<!-- Description -->
 			<div>
 				<label class="text-[11px] tracking-[0.1em] uppercase text-[var(--neu-text-muted)]" for="group-desc">简介</label>
-				<div class="mt-1.5 px-4 py-3 rounded-[14px] neu-input-surface">
+				<div class="mt-1.5 px-4 py-3 rounded-control neu-input-surface">
 					<textarea
 						id="group-desc"
 						class="w-full bg-transparent outline-none resize-none text-[var(--neu-text)] text-[13px] min-h-[72px]"
@@ -170,7 +171,7 @@
 
 			<!-- Privacy toggle -->
 			<div
-				class="flex items-center justify-between px-4 py-3.5 rounded-[16px] bg-[var(--neu-bg)]"
+				class="flex items-center justify-between px-4 py-3.5 rounded-relaxed bg-[var(--neu-bg)]"
 				style="box-shadow:5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);border:1px solid var(--neu-border);"
 			>
 				<div class="flex items-center gap-3">
@@ -186,23 +187,17 @@
 						</p>
 					</div>
 				</div>
-				<button
-					type="button"
-					onclick={() => (isPrivate = !isPrivate)}
-					class="neu-hover-btn flex-shrink-0 rounded-full outline-none"
-					style="width:48px;height:28px;background:{isPrivate ? 'var(--neu-accent-primary)' : 'rgba(120,120,128,0.25)'};position:relative;transition:background 0.22s ease;box-shadow:{isPrivate ? 'inset 0 1px 2px rgba(0,0,0,0.12)' : 'inset 0 1px 2px rgba(0,0,0,0.08)'};"
-					aria-label={isPrivate ? '切换为公开' : '切换为私密'}
-				>
-					<span
-						class="absolute bg-white rounded-full"
-						style="top:3px;width:22px;height:22px;border-radius:11px;box-shadow:0 1px 4px rgba(0,0,0,0.26);left:{isPrivate ? 22 : 2}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
-					></span>
-				</button>
+				<NeuToggle
+					compact
+					on={isPrivate}
+					onToggle={() => (isPrivate = !isPrivate)}
+					label={isPrivate ? '切换为公开' : '切换为私密'}
+				/>
 			</div>
 
 			<!-- Approval toggle（requires_approval：审核通过后才算真正加入） -->
 			<div
-				class="flex items-center justify-between px-4 py-3.5 rounded-[16px] bg-[var(--neu-bg)]"
+				class="flex items-center justify-between px-4 py-3.5 rounded-relaxed bg-[var(--neu-bg)]"
 				style="box-shadow:5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);border:1px solid var(--neu-border);"
 			>
 				<div class="flex items-center gap-3">
@@ -214,23 +209,17 @@
 						</p>
 					</div>
 				</div>
-				<button
-					type="button"
-					onclick={() => (requiresApproval = !requiresApproval)}
-					class="neu-hover-btn flex-shrink-0 rounded-full outline-none"
-					style="width:48px;height:28px;background:{requiresApproval ? 'var(--neu-accent-primary)' : 'rgba(120,120,128,0.25)'};position:relative;transition:background 0.22s ease;box-shadow:{requiresApproval ? 'inset 0 1px 2px rgba(0,0,0,0.12)' : 'inset 0 1px 2px rgba(0,0,0,0.08)'};"
-					aria-label={requiresApproval ? '关闭新人审核' : '开启新人审核'}
-				>
-					<span
-						class="absolute bg-white rounded-full"
-						style="top:3px;width:22px;height:22px;border-radius:11px;box-shadow:0 1px 4px rgba(0,0,0,0.26);left:{requiresApproval ? 22 : 2}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
-					></span>
-				</button>
+				<NeuToggle
+					compact
+					on={requiresApproval}
+					onToggle={() => (requiresApproval = !requiresApproval)}
+					label={requiresApproval ? '关闭新人审核' : '开启新人审核'}
+				/>
 			</div>
 
 			<!-- Location -->
 			<div
-				class="flex items-center gap-2.5 px-4 py-3 rounded-[16px] bg-[var(--neu-bg)]"
+				class="flex items-center gap-2.5 px-4 py-3 rounded-relaxed bg-[var(--neu-bg)]"
 				style="box-shadow:5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);border:1px solid var(--neu-border);"
 			>
 				<MapPin style="width:16px;height:16px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={1.5} />
@@ -250,7 +239,7 @@
 				type="button"
 				onclick={() => void handleCreate()}
 				disabled={!canCreate || creating}
-				class="neu-hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-[18px] outline-none text-[15px] font-medium {canCreate && !creating ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text-muted)]'}"
+				class="neu-hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-panel outline-none text-[15px] font-medium {canCreate && !creating ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text-muted)]'}"
 				style="box-shadow:{canCreate && !creating ? '0 6px 22px var(--neu-glow)' : 'inset 4px 4px 10px var(--neu-shadow-dark), inset -4px -4px 10px var(--neu-shadow-light)'};border:{canCreate && !creating ? 'none' : '1px solid var(--neu-border)'};transition:all 0.22s ease;cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
 			>
 				{creating ? '创建中…' : '创建群组'}

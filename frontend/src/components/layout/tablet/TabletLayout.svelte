@@ -8,6 +8,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import CreateSheet from '@/components/layout/CreateSheet.svelte';
 	import StatusBar from '@/components/layout/StatusBar.svelte';
+	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
 	// 平板布局（对齐 Figma Make TabletLayout 契约）：
@@ -37,13 +38,14 @@
 >
 	<StatusBar />
 
-	<!-- Scrollable area: full width, individual elements keep their own proportions -->
-	<!-- 地图探索为全画布页：不滚动，canvas 固定视口高度 -->
-	<main class="flex-1 {[ROUTES.map, ROUTES.messages].includes(pathname) ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden no-scrollbar'} w-full" style="background-color:var(--neu-bg);">
-		<div class="tablet-page-canvas {pathname === ROUTES.map ? 'h-full' : ''}">
-			{@render children()}
-		</div>
-	</main>
+	<!-- RoutedContentViewport 是三端唯一的路由内容与滚动承载区。
+	     地图/消息为全画布页：禁用滚动，canvas 固定视口高度。 -->
+	<RoutedContentViewport
+		contentClassName="tablet-page-canvas {pathname === ROUTES.map ? 'h-full' : ''}"
+		style={[ROUTES.map, ROUTES.messages].includes(pathname) ? 'overflow:hidden;' : undefined}
+	>
+		{@render children()}
+	</RoutedContentViewport>
 
 	<!-- Compact tablet: edge-attached bar; wide tablet: centred floating Dock -->
 	{#if !isSubPage}

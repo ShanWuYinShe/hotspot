@@ -14,6 +14,7 @@
 	import TabletLayout from '@/components/layout/tablet/TabletLayout.svelte';
 	import NavTab from '@/components/layout/NavTab.svelte';
 	import MobileLandscape from '@/components/layout/MobileLandscape.svelte';
+	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
 	// 迁移自旧版 MainLayout：桌面 → DesktopLayout，平板 → TabletLayout，
@@ -65,9 +66,9 @@
 		>
 			<StatusBar />
 
-			<main class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar scroll-smooth">
-				{@render children()}
-			</main>
+			<div class="flex-1 min-h-0 overflow-hidden">
+				<RoutedContentViewport>{@render children()}</RoutedContentViewport>
+			</div>
 
 			{#if !isSubPage}
 				<nav

@@ -15,6 +15,7 @@
 	import CreateSheet from '@/components/layout/CreateSheet.svelte';
 	import SidebarNavItem from '@/components/layout/desktop/SidebarNavItem.svelte';
 	import LocationCard from '@/components/layout/desktop/LocationCard.svelte';
+	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import { ROUTES, getDesktopNavId, type DesktopNavId } from '@/lib/routes';
 	import imgHotSpot from '@/assets/9254a1e0e11b516a6c1aecb80d92b66f2caa243e.png';
 
@@ -257,15 +258,18 @@
 			</div>
 		</aside>
 
-		<!-- Main Content Card -->
-		<main class="desktop-main-panel flex-1 min-w-0 overflow-hidden border-l transition-colors duration-500" style="border-color:var(--neu-border);">
-			<!-- Inner scroll container — sticky headers inside will stick to this -->
-			<div class={cn('desktop-main-scroll h-full no-scrollbar', isFullCanvas ? 'overflow-hidden' : 'overflow-y-auto')}>
-				<div class={cn('desktop-page-canvas', isFullCanvas && 'h-full')}>
-					{@render children()}
-				</div>
-			</div>
-		</main>
+		<!-- Main Content Card — RoutedContentViewport 是唯一滚动 owner（desktopPane 激活 sticky-header page-bg 强制规则）。
+		     全画布页（消息分栏 / 地图探索）禁用滚动，画布固定视口高度。 -->
+		<div class="desktop-main-panel flex-1 min-w-0 overflow-hidden border-l transition-colors duration-500" style="border-color:var(--neu-border);">
+			<RoutedContentViewport
+				desktopPane
+				class="desktop-main-scroll"
+				contentClassName={cn('desktop-page-canvas', isFullCanvas && 'h-full')}
+				style={isFullCanvas ? 'overflow:hidden;' : undefined}
+			>
+				{@render children()}
+			</RoutedContentViewport>
+		</div>
 	</div>
 
 	<!-- CREATE MODAL — centered dialog on desktop -->

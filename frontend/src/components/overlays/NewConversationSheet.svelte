@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Search, X, UserPlus, MessageCircle, Users, Check } from '@lucide/svelte';
+	import { X, UserPlus, MessageCircle, Users, Check } from '@lucide/svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 
 	// 新会话底部 Sheet：添加好友 / 开始私聊 / 创建群聊入口。
 	// 迁移自旧版 NewConversationSheet。
@@ -77,17 +78,13 @@
 		{/each}
 	</div>
 
-	<!-- Search bar -->
+	<!-- Search bar — 复用 SearchInput 统一原语 -->
 	<div class="px-5 pb-3 flex-shrink-0">
-		<div class="flex items-center gap-2.5 px-4 rounded-[14px] neu-input-surface" style="height:40px;">
-			<Search style="width:14px;height:14px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
-			<input
-				class="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
-				style="font-size:13px;"
-				placeholder={tab === 'add' ? '搜索用户名或手机号…' : '搜索联系人…'}
-				bind:value={searchQ}
-			/>
-		</div>
+		<SearchInput
+			value={searchQ}
+			onChange={(v) => (searchQ = v)}
+			placeholder={tab === 'add' ? '搜索用户名或手机号…' : '搜索联系人…'}
+		/>
 	</div>
 
 	<!-- Content -->
@@ -98,7 +95,7 @@
 					附近推荐
 				</p>
 				{#each filteredSuggested as u (u.id)}
-					<div class="neu-hover-row flex items-center gap-3.5 px-3 py-3 rounded-[16px] neu-row-hover" style="border:1px solid var(--neu-border);">
+					<div class="neu-hover-row flex items-center gap-3.5 px-3 py-3 rounded-relaxed neu-row-hover" style="border:1px solid var(--neu-border);">
 						<img src={u.avatar} alt={u.name} class="rounded-full object-cover flex-shrink-0" style="width:44px;height:44px;border:1.5px solid var(--neu-border);" />
 						<div class="flex-1 min-w-0">
 							<p class="text-[var(--neu-text)]" style="font-size:14px;">{u.name}</p>
@@ -132,7 +129,7 @@
 				<!-- Create group chat row -->
 				<button
 					type="button"
-					class="neu-hover-card flex items-center gap-3.5 px-3 py-3 rounded-[16px] w-full outline-none text-left mb-3 neu-row-hover bg-[var(--neu-bg)]"
+					class="neu-hover-card flex items-center gap-3.5 px-3 py-3 rounded-relaxed w-full outline-none text-left mb-3 neu-row-hover bg-[var(--neu-bg)]"
 					style="box-shadow:5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);border:1px solid var(--neu-border);"
 					onclick={() => {
 						onClose();
@@ -154,7 +151,7 @@
 				{#each filteredContacts as c (c.id)}
 					<button
 						type="button"
-						class="neu-hover-row flex items-center gap-3.5 px-3 py-3 rounded-[16px] cursor-pointer w-full text-left neu-row-hover"
+						class="neu-hover-row flex items-center gap-3.5 px-3 py-3 rounded-relaxed cursor-pointer w-full text-left neu-row-hover"
 						style="border:1px solid var(--neu-border);"
 						onclick={() => {
 							onNewChat?.(c.id);
