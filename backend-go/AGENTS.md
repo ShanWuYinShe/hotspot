@@ -37,6 +37,7 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
 backend-go/
 ├── cmd/                    # 入口（server / migrate）
 ├── migrations/             # SQL 迁移（embed 进二进制）
+├── test/                   # 集成测试（E2E，需要 Docker）
 └── internal/
     ├── bootstrap/          # 装配：路由聚合、模块注册、worker、WS 鉴权
     ├── modules/            # 业务模块（每模块一个 package）
@@ -126,10 +127,8 @@ Handler -> Service -> Repository
 
 ## 地理位置计算
 
-- 所有地理查询与计算统一由后端完成，前端和客户端只展示结果
 - S2 cell 预过滤必须在 PostgreSQL 完成（`s2_cell_id` B-tree 范围扫描 + `EXISTS unnest`），将候选集从全表压缩到小范围
-- 精确距离（Haversine）计算与排序可在 Go 层完成——S2 已将候选集压小，Go 层计算代价可忽略；保持 SQL 简单，避免在 SQL 里内联冗长的三角函数表达式
-- 引入 PostGIS + GIST 索引后，可重新考虑将精确距离下推 SQL 以利用 `<->` KNN 索引加速（当前未引入，无收益）
+- 精确距离（Haversine）计算与排序在 Go 层完成——S2 已将候选集压小，Go 层计算代价可忽略；保持 SQL 简单，避免在 SQL 里内联冗长的三角函数表达式
 
 ## SQL 构造
 

@@ -26,12 +26,13 @@ API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
 
 ```bash
 # 1. 启动全部服务（含前端 Vite dev server + 后端 + DB + nginx）
-#    注意：worktree 内开发时须显式 -p hotspot（目录名会成为默认 compose 项目名）
-docker compose -p hotspot -f docker-compose.yml -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
 # 2. 唯一访问入口
 open http://localhost:8888
 ```
+
+worktree 内启动与收尾清理见根 `AGENTS.md`「worktree 调试与清理」。
 
 Nginx 网关（`docker/nginx.dev.conf`）统一反代：
 | 路径 | 上游 |
@@ -47,7 +48,7 @@ Nginx 网关（`docker/nginx.dev.conf`）统一反代：
 - 测试：`bun run test`（vitest，不依赖 Docker）
 - 构建验证：`bun run build`
 
- `bun run build` 会重建 `.svelte-kit/`，可能打断正在运行的 dev server。需要跑 build 前先停掉 frontend 容器（`docker compose stop frontend`），跑完再 `docker compose start frontend`。
+`bun run build` 会重建 `.svelte-kit/`，可能打断正在运行的 dev server。需要跑 build 前先停掉 frontend 容器（`docker compose stop frontend`），跑完再 `docker compose start frontend`。
 
 ## 构建
 
@@ -56,7 +57,7 @@ bun install --cwd frontend
 bun run --cwd frontend build   # adapter-static 产物输出到 build/
 ```
 
-##  硬约束
+## 硬约束
 
 - 调试/开发/预览时，默认入口是 `http://localhost:8888`（nginx 网关），不是 dev server 地址
 - 修改 nginx 配置后必须重启对应容器
@@ -82,6 +83,7 @@ src/routes/
     moments/[postId]/      # 时刻详情
     messages/              # 消息列表
     messages/[chatId]/     # 聊天详情（chatId 实为对端 user_id）
+    messages/group/[groupId]/  # 群聊详情
     me/                    # 个人主页
     me/[section]/          # 个人主页分段
     me/edit/               # 编辑资料

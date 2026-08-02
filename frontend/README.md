@@ -1,17 +1,27 @@
-  # HotSpot Frontend
+# HotSpot Frontend
 
-  This is the SvelteKit web frontend for HotSpot. It is a pure UI layer that must be served alongside the backend API.
+HotSpot 的 Web 前端，基于 SvelteKit 的纯 UI 层，所有数据来自后端 API。
 
-  ## Running the code
+## 功能
 
-  This project runs inside Docker Compose together with the Go backend, PostgreSQL, Redis, SeaweedFS, and an nginx gateway.
+- 认证与注册
+- 附近的人、群组、生活瞬间
+- 信息流
+- 私聊与群聊
+- 地图浏览
+- 发现与搜索
+- 个人中心
+- 管理后台（部分）
 
-  ```bash
-  # From the repository root:
-  docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+## 运行
 
-  # Then open: http://localhost:8888
-  ```
+前端必须与后端服务一起通过 Docker Compose 运行（API、WebSocket、S3 均经 nginx 网关，与生产一致）：
 
-  **Do not** run `bun run dev` directly on the host and attempt to access the Vite dev server via its port — API calls will fail because they must go through the nginx gateway. See `AGENTS.md` in this directory for details.
-  
+```bash
+# From the repository root:
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+# Then open: http://localhost:8888
+```
+
+**Do not** run `bun run dev` directly on the host and attempt to access the Vite dev server via its port — API calls will fail because they must go through the nginx gateway. See `AGENTS.md` in this directory for details.

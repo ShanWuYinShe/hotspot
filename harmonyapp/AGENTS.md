@@ -40,15 +40,14 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 - `entry/src/main/ets/entryability/`：应用入口 Ability
 - `entry/src/main/ets/components/`：公共 ArkUI 组件
 - `entry/src/main/ets/constants/`：常量定义（AppConstants、DesignConstants、SystemConstants）
-- `entry/src/main/ets/core/`：核心逻辑层
+- `entry/src/main/ets/core/`：核心逻辑层（按用途分子目录，不逐一举出）
   - `api/ApiClient.ets`：按业务域封装的 API 调用静态方法
   - `config/ApiEndpoints.ets`：API 路径常量（唯一路径定义处）
   - `network/HttpUtil.ets`：统一 HTTP 客户端（POST、Token 刷新、幂等键）
   - `network/WebSocketService.ets`：WebSocket 单例
   - `state/`：全局状态管理（GlobalStateManager、AuthAccountManager、PersistentStateManager）
   - `types/`：API 类型定义（对齐 spec）、WebSocket 事件类型
-  - `utils/`：工具函数
-- `entry/src/main/ets/features/`：按业务域划分的页面（auth/、chat/、group/、moment/ 等）
+- `entry/src/main/ets/features/`：按业务域划分的页面（每域一个目录，新增页面按域归类，禁止在 core/ 里放页面）
 
 ## API 调用规范
 
@@ -86,7 +85,6 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 ## 位置与距离
 
 - 位置请求使用 `Location`（point + location_name），响应使用 `RelativeLocation`
-- 禁止在客户端计算距离或角度，由后端 PostGIS 完成
 - 坐标转换仅在 `CoordinateConverter.ets` 单一边界层执行一次
 
 ## 数据格式（契约级）
