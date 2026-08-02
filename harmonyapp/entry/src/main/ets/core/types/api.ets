@@ -222,6 +222,14 @@ export interface MyGroupState {
   joined_at?: string;
 }
 
+export interface GroupLastMessage {
+  message_id: string;
+  type: MessageType;
+  content?: string;
+  sender: UserInfo;
+  sent_at: string;
+}
+
 export interface GroupItem {
   group: GroupInfo;
   description?: string;
@@ -231,13 +239,7 @@ export interface GroupItem {
   last_activity_at?: string;
 
   // 群列表场景返回（仅 groups/list_my；其他场景省略，见 spec api_spec_types.md）
-  last_message?: {
-    message_id: string;
-    type: MessageType;
-    content?: string;
-    sender: UserInfo;
-    sent_at: string;
-  };
+  last_message?: GroupLastMessage;
 
   created_at?: string;
   owner_id?: string;

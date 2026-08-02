@@ -24,7 +24,7 @@
     {
       "name": "ohosTest",
       "source": {
-        "root": "./src/ohosTest/ets"
+        "sourceRoots": ["./src/ohosTest/ets"]
       }
     }
   ]
