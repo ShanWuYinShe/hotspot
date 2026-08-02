@@ -7,6 +7,7 @@
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -61,10 +62,6 @@
 
 	const isDesktop = $derived(platformStore.platform === 'desktop');
 	const isTablet = $derived(platformStore.platform === 'tablet');
-	const contentStyle = $derived(
-		isDesktop ? 'width:100%;' : isTablet ? 'max-width:964px;width:100%;' : 'max-width:680px;width:100%;'
-	);
-
 	const filtered = $derived(
 		groups.filter((group) => {
 			const q = searchQuery.trim().toLowerCase();
@@ -86,32 +83,38 @@
 	};
 </script>
 
-<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky onBack={() => history.back()}>
-	{#snippet trailing()}
-		<div class="flex items-center gap-2">
-			<div class="hidden sm:flex flex-1 max-w-sm">
-				<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" compact />
-			</div>
-			<button
-				type="button"
-				class="neu-hover-btn flex items-center gap-1 px-3 py-1.5 rounded-full neu-focus-ring bg-[var(--neu-accent-primary)] text-white text-xs font-semibold"
-				style="box-shadow:0 3px 10px var(--neu-glow);"
-				onclick={() => (showCreate = true)}
-			>
-				<Plus size={14} />
-				创建
-			</button>
-		</div>
+
+<StandardPageLayout
+	contentClassName="py-6"
+	contentMaxWidth={isTablet ? '964px' : isDesktop ? undefined : '680px'}
+>
+	{#snippet header()}
+		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky onBack={() => history.back()}>
+			{#snippet trailing()}
+				<div class="flex items-center gap-2">
+					<div class="hidden sm:flex flex-1 max-w-sm">
+						<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" compact />
+					</div>
+					<button
+						type="button"
+						class="neu-hover-btn flex items-center gap-1 px-3 py-1.5 rounded-full neu-focus-ring bg-[var(--neu-accent-primary)] text-white text-xs font-semibold"
+						style="box-shadow:0 3px 10px var(--neu-glow);"
+						onclick={() => (showCreate = true)}
+					>
+						<Plus size={14} />
+						创建
+					</button>
+				</div>
+			{/snippet}
+		</PageHeader>
 	{/snippet}
-</PageHeader>
 
-{#if !isDesktop}
-	<div class="sm:hidden px-5 mt-0 -mt-2 pb-2">
-		<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" compact />
-	</div>
-{/if}
+	{#if !isDesktop}
+		<div class="sm:hidden -mt-2 pb-2">
+			<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" compact />
+		</div>
+	{/if}
 
-<main class={isDesktop ? 'px-7 py-6' : 'px-5 py-5 mx-auto'} style={contentStyle}>
 	<div class="min-w-0">
 		<!-- 分类标签（对齐附近的人：标签行位于卡片区上方） -->
 		<div class="flex gap-1.5 overflow-x-auto no-scrollbar mb-5">
@@ -166,7 +169,7 @@
 			</EmptyState>
 		{/if}
 	</div>
-</main>
+</StandardPageLayout>
 
 <Dialog.Root open={showCreate} onOpenChange={(next) => (next ? undefined : (showCreate = false))}>
 	<Dialog.Content side="bottom" class="h-[92%] overflow-hidden" aria-label="创建群组">

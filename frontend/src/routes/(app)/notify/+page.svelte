@@ -6,6 +6,7 @@
 	import RailSection from '@/components/layout/desktop/RailSection.svelte';
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import NotifRow from './NotifRow.svelte';
@@ -42,7 +43,6 @@
 	let reloadKey = $state(0);
 
 	const isDesktop = $derived(platformStore.platform === 'desktop');
-	const shellStyle = $derived(`max-width:${isDesktop ? 'var(--content-reading-max)' : 640}px;margin-left:auto;margin-right:auto;width:100%;`);
 
 	// WS 实时通知：收到推送后重新拉取列表（复用下方同一加载逻辑）。
 	$effect(() => {
@@ -158,8 +158,9 @@
 				{/snippet}
 			</PageHeader>
 
-			<!-- Filter tabs（对齐 Figma Make 通知页：选中实心 accent + glow） -->
-			<div class="flex overflow-x-auto no-scrollbar pb-3 gap-2 px-5" style={shellStyle}>
+			<ContentColumn maxWidth={isDesktop ? 'var(--content-reading-max)' : '640px'} class="pt-3 pb-6">
+				<!-- Filter tabs（对齐 Figma Make 通知页：选中实心 accent + glow） -->
+				<div class="flex overflow-x-auto no-scrollbar pb-3 gap-2">
 				{#each FILTER_TABS as t}
 					<button
 						type="button"
@@ -176,8 +177,8 @@
 				{/each}
 			</div>
 
-			<!-- List：每个分组一个连接列表表面（BorderedList 契约；heading 在列表外） -->
-			<div class="flex flex-col px-5 pt-3 pb-6" style={shellStyle}>
+				<!-- List：每个分组一个连接列表表面（BorderedList 契约；heading 在列表外） -->
+				<div class="flex flex-col">
 				{#if unreadGroup.length > 0}
 					<p class="uppercase mb-2 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">新消息</p>
 					<div class="app-list">
@@ -209,7 +210,8 @@
 						{/snippet}
 					</EmptyState>
 				{/if}
-			</div>
+				</div>
+			</ContentColumn>
 		</div>
 {/snippet}
 

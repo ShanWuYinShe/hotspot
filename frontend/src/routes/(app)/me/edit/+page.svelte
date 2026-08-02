@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import { getAccount, updateAccount } from '@/api';
 
 	// 编辑资料：昵称/简介/兴趣标签（5 个上限）+ 注销按钮。
@@ -65,7 +66,9 @@
 	};
 </script>
 
-<PageHeader title="编辑资料" onBack={() => history.back()} sticky>
+<StandardPageLayout contentClassName="pt-4 pb-10" contentMaxWidth="var(--content-reading-max)">
+	{#snippet header()}
+		<PageHeader title="编辑资料" onBack={() => history.back()} sticky>
 	{#snippet trailing()}
 		<button
 			type="button"
@@ -80,9 +83,10 @@
 			{/if}
 		</button>
 	{/snippet}
-</PageHeader>
+	</PageHeader>
+{/snippet}
 
-<div class="animate-fade-in content-mode-reading flex flex-col px-5 pt-4 pb-10 gap-5" style="max-width:var(--content-reading-max);margin-left:auto;margin-right:auto;width:100%;">
+	<div class="animate-fade-in flex flex-col gap-5">
 	<!-- Avatar section -->
 	<div class="relative rounded-[24px] overflow-hidden" style="height:clamp(120px, 18vw, 160px);">
 		<div class="absolute inset-0 bg-[var(--neu-surface-flat)]"></div>
@@ -191,4 +195,5 @@
 			注销账号
 		</button>
 	</div>
-</div>
+	</div>
+</StandardPageLayout>

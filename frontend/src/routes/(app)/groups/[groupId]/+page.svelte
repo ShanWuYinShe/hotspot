@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { ArrowLeft, Bell, CalendarDays, Check, MapPin, MessageCircle, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import { Tabs } from 'bits-ui';
 	import { ROUTES } from '@/lib/routes';
 	import { getGroupDetail, getGroupMembers, getGroupAnnouncements } from '@/api';
@@ -210,8 +211,9 @@
 		</div>
 	</div>
 
-	<div class="grid gap-8 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:px-8">
-		<main class="min-w-0">
+	<ContentColumn class="py-6">
+		<div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
+			<main class="min-w-0">
 			<div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-[var(--neu-text-muted)]">
 				<span class="flex items-center gap-1.5">
 					<Users size={14} />
@@ -312,6 +314,7 @@
 					加入后可管理群组通知并进入群聊
 				</p>
 			{/if}
-		</aside>
-	</div>
+			</aside>
+		</div>
+	</ContentColumn>
 </div>

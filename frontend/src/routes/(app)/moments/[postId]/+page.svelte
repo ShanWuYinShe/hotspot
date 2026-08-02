@@ -3,6 +3,7 @@
 	import { MapPin, Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Send, Link2, Check } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { auth } from '@/stores/auth.svelte';
@@ -238,7 +239,7 @@
 				</div>
 			</div>
 
-			<div class="px-5 pt-4 pb-3" style="max-width:var(--content-reading-max);margin-left:auto;margin-right:auto;width:100%;">
+			<ContentColumn maxWidth="var(--content-reading-max)" class="pt-4 pb-3">
 				<!-- Author -->
 				<div class="flex items-center gap-3 mb-3">
 					<button
@@ -330,7 +331,7 @@
 					{/each}
 				</div>
 				<div style="height:80px;"></div>
-			</div>
+			</ContentColumn>
 		</div>
 
 		<!-- Input bar -->

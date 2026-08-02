@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { Bell, Lock, ChevronRight, LogOut, Globe, Info, Volume2, MapPin, User } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import NeuToggle from '@/components/forms/NeuToggle.svelte';
 	import { logout } from '@/stores/auth.svelte';
@@ -69,10 +70,11 @@
 	};
 </script>
 
-<PageHeader title="设置" subtitle="管理你的偏好与隐私" sticky onBack={() => history.back()} />
+<StandardPageLayout contentClassName="pt-4 pb-10" contentMaxWidth="var(--content-reading-max)">
+	{#snippet header()}
+		<PageHeader title="设置" subtitle="管理你的偏好与隐私" sticky onBack={() => history.back()} />
+	{/snippet}
 
-<!-- Page content -->
-<div class="content-mode-reading flex flex-col px-5 pt-4 pb-10" style="max-width:var(--content-reading-max);margin-left:auto;margin-right:auto;width:100%;">
 	<!-- User card — hero with ambient glow -->
 	<div class="neu-ambient-glow mb-3">
 		<button type="button" class="neu-hover-btn flex items-center gap-4 px-4 py-3.5 rounded-[20px] w-full outline-none text-left neu-surface-hero">
@@ -185,4 +187,4 @@
 			<span class="text-[14px]">退出登录</span>
 		</button>
 	</div>
-</div>
+</StandardPageLayout>

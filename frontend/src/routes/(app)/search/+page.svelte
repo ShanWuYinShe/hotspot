@@ -3,6 +3,7 @@
 	import { Search as SearchIcon, TrendingUp, Users, FileText, Clock } from '@lucide/svelte';
 	import { platformStore } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import { searchUsers, searchMoments } from '@/api';
@@ -30,7 +31,6 @@
 	const HOT_SEARCHES: string[] = [];
 
 	const isDesktop = $derived(platformStore.platform === 'desktop');
-	const shellStyle = $derived(`max-width:${isDesktop ? 1040 : 640}px;margin-left:auto;margin-right:auto;width:100%;`);
 
 	function readRecent(): string[] {
 		try {
@@ -110,16 +110,16 @@
 <div class="flex flex-col h-full bg-[var(--neu-bg)]">
 	<div class="flex-shrink-0">
 		<PageHeader title="搜索" sticky onBack={() => history.back()} />
-		<div class="px-5 py-2">
+		<ContentColumn maxWidth={isDesktop ? '1040px' : '640px'} class="py-2">
 			<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索用户、地点、话题…" />
-		</div>
+		</ContentColumn>
 	</div>
 
 	<!-- Scrollable body -->
 	<div class="flex-1 overflow-y-auto no-scrollbar">
 		{#if !q}
 			<!-- No query: show discovery -->
-			<div class="px-5 pt-4 pb-6" style={shellStyle}>
+			<ContentColumn maxWidth={isDesktop ? '1040px' : '640px'} class="pt-4 pb-6">
 				{#if recent.length > 0}
 					<div class="mb-5">
 						<div class="flex items-center justify-between mb-2.5">
@@ -166,11 +166,11 @@
 						</button>
 					{/each}
 				</div>
-			</div>
+			</ContentColumn>
 		{:else}
 			<!-- Has query: show results -->
-			<div style={shellStyle}>
-				<div class="flex overflow-x-auto no-scrollbar px-5 pt-3 pb-0 gap-2">
+			<ContentColumn maxWidth={isDesktop ? '1040px' : '640px'} class="pt-3 pb-6">
+				<div class="flex overflow-x-auto no-scrollbar gap-2">
 					{#each RESULT_TABS as t}
 						<button
 							type="button"
@@ -185,7 +185,7 @@
 					{/each}
 				</div>
 
-				<div class="px-5 pt-4 pb-6 flex flex-col gap-4">
+				<div class="flex flex-col gap-4 pt-4">
 					{#if loading}
 						<div class="flex items-center justify-center py-12">
 							<p class="text-[var(--neu-text-muted)] text-[13px]">搜索中...</p>
@@ -273,7 +273,7 @@
 						</div>
 					{/if}
 				</div>
-			</div>
+			</ContentColumn>
 		{/if}
 	</div>
 </div>

@@ -3,6 +3,7 @@
 	import { MapPin, MessageCircle, UserPlus, UserCheck, Share2, Heart, Grid3X3, Bookmark, MoreHorizontal, Flag, PencilLine, UserX, X, Check, ArrowLeft } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import DesktopDetailSplit from '@/components/layout/desktop/DesktopDetailSplit.svelte';
+	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import RailSection from '@/components/layout/desktop/RailSection.svelte';
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
@@ -228,8 +229,8 @@
 		</div>
 
 		<!-- Avatar + info — constrained width, centered -->
-		<div style="max-width:var(--content-reading-max);margin-left:auto;margin-right:auto;width:100%;">
-			<div class="px-5 -mt-10 pb-4 flex flex-col">
+		<ContentColumn maxWidth="var(--content-reading-max)">
+			<div class="-mt-10 pb-4 flex flex-col">
 				<div class="flex items-end justify-between mb-3">
 					<div class="relative">
 						<div class="rounded-[22px] overflow-hidden" style="width:76px;height:76px;border:3px solid var(--neu-bg);box-shadow:0 6px 20px rgba(0,0,0,0.22);">
@@ -344,7 +345,7 @@
 					</div>
 				{/each}
 			</div>
-		</div>
+	</ContentColumn>
 	</div>
 {/snippet}
 
