@@ -1,26 +1,26 @@
 # HotSpot 前端（SvelteKit / Svelte 5 / TypeScript）
 
-> 本文件是前端专属约束。根 `AGENTS.md` 中的通用原则（Git 规范、Commit 格式、Docker 等）仍然适用。
+本文件是前端专属约束。根 `AGENTS.md` 中的通用原则（Git 规范、Commit 格式、Docker 等）仍然适用。
 
 ## 功能边界
 
-Svelte Web **主前端**。认证/注册/发现与搜索/信息流/生活瞬间与评论/群组/聊天/附近/用户页面/个人中心/地图/管理后台。用户管理、支付与交易不在范围。
+Svelte Web 主前端。认证/注册/发现与搜索/信息流/生活瞬间与评论/群组/聊天/附近/用户页面/个人中心/地图/管理后台。用户管理、支付与交易不在范围。
 
 API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
 
 ## 技术栈
 
-- **框架**：SvelteKit 2 + Svelte 5（runes）+ `adapter-static` **SPA 模式**
+- 框架：SvelteKit 2 + Svelte 5（runes）+ `adapter-static` SPA 模式
   （`ssr=false` + `fallback: 'index.html'`，nginx `try_files` 回退；全部页面客户端渲染）
-- **样式**：Tailwind CSS v4 + CSS Token 三层架构（`neu-hover-*` CSS 类承载交互反馈）
-- **UI 组件**：bits-ui 生态组件（`components/ui/` 封装层：dialog/sheet 定位变体、dropdown-menu、popover）+ 页面级自研视觉组件
-- **包管理**：bun（`bun install` / `bun run`）
-- **测试**：vitest + @testing-library/svelte（宿主机 `bun run test`）
-- **Mock**：MSW（仅 dev 模式）
+- 样式：Tailwind CSS v4 + CSS Token 三层架构（`neu-hover-*` CSS 类承载交互反馈）
+- UI 组件：bits-ui 生态组件（`components/ui/` 封装层：dialog/sheet 定位变体、dropdown-menu、popover）+ 页面级自研视觉组件
+- 包管理：bun（`bun install` / `bun run`）
+- 测试：vitest + @testing-library/svelte（宿主机 `bun run test`）
+- Mock：MSW（仅 dev 模式）
 
 ## 开发模式：必须通过 Docker Compose + Nginx 网关
 
-前端是纯 UI 层，所有 API、WebSocket、S3 请求都依赖后端服务。**禁止**直接在宿主机启动 dev server。
+前端是纯 UI 层，所有 API、WebSocket、S3 请求都依赖后端服务。禁止直接在宿主机启动 dev server。
 
 ### 正确流程
 
@@ -47,7 +47,7 @@ Nginx 网关（`docker/nginx.dev.conf`）统一反代：
 - 测试：`bun run test`（vitest，不依赖 Docker）
 - 构建验证：`bun run build`
 
-> ⚠️ **`bun run build` 会重建 `.svelte-kit/`，可能打断正在运行的 dev server**。需要跑 build 前先停掉 frontend 容器（`docker compose stop frontend`），跑完再 `docker compose start frontend`。
+ `bun run build` 会重建 `.svelte-kit/`，可能打断正在运行的 dev server。需要跑 build 前先停掉 frontend 容器（`docker compose stop frontend`），跑完再 `docker compose start frontend`。
 
 ## 构建
 
@@ -56,9 +56,9 @@ bun install --cwd frontend
 bun run --cwd frontend build   # adapter-static 产物输出到 build/
 ```
 
-## ⚠️ 硬约束
+##  硬约束
 
-- **调试/开发/预览时，默认入口是 `http://localhost:8888`（nginx 网关），不是 dev server 地址**
+- 调试/开发/预览时，默认入口是 `http://localhost:8888`（nginx 网关），不是 dev server 地址
 - 修改 nginx 配置后必须重启对应容器
 - Svelte 组件互引必须写显式 `.svelte` 扩展名（默认导出）；Svelte 5 单文件单组件
 - 新增依赖后容器内需重装（entrypoint 有自动检测，或 `docker compose up -d --force-recreate frontend`）
