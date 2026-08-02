@@ -11,6 +11,7 @@
 	import RailSection from '@/components/layout/desktop/RailSection.svelte';
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
+	import RailPostThumb from '@/components/layout/desktop/RailPostThumb.svelte';
 	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
@@ -40,6 +41,19 @@
 		tag: string;
 		comments: PostComment[];
 	}
+
+	// 桌面 rail 占位数据（对齐 Figma PostDetailPage NEARBY_NOW/RELATED_POSTS；
+	// 后端无专用端点，先用占位引导，后续接入 feed/nearby 与相关推荐）。
+	const NEARBY_NOW = [
+		{ id: 1, name: '鹿鸣', sub: '246m · 摄影', avatar: 'https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80' },
+		{ id: 2, name: '阿禾', sub: '388m · 旅行', avatar: 'https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80' },
+		{ id: 3, name: '野原', sub: '520m · 音乐', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80' }
+	];
+	const RELATED_POSTS = [
+		{ id: 40, title: '植物园晨光', meta: '南枝 · 124 赞', image: 'https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?w=120' },
+		{ id: 41, title: '城市夜光', meta: '本地向导 · 89 赞', image: 'https://images.unsplash.com/photo-1748737349771-e2b6605e5961?w=120' },
+		{ id: 42, title: '老街手冲馆', meta: '野原 · 56 赞', image: 'https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=120' }
+	];
 
 	// params 为路由参数（SPA 内可能变化），此处用 $derived 保持响应。
 	const numericPostId = $derived(Number(params.postId));
@@ -379,7 +393,25 @@
 	</RailSection>
 
 	<RailSection title="相关位置">
-		<RailLocationMini name={post.location} />
+		<RailLocationMini name={post.location} desc="共 12 条动态 · 6 人在此" />
+	</RailSection>
+
+	<!-- 此刻附近（对齐 Figma PostDetailPage rail；后端无专用端点，先用占位引导） -->
+	<RailSection title="此刻附近" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)}>
+		<div class="flex flex-col gap-3">
+			{#each NEARBY_NOW as u (u.id)}
+				<RailUserRow avatar={u.avatar} name={u.name} sub={u.sub} onClick={() => void goto(ROUTES.user(String(u.id)))} />
+			{/each}
+		</div>
+	</RailSection>
+
+	<!-- 更多动态（对齐 Figma PostDetailPage rail） -->
+	<RailSection title="更多动态" action="发现" onAction={() => void goto(ROUTES.nearbyMoments)}>
+		<div class="flex flex-col gap-3">
+			{#each RELATED_POSTS as p (p.id)}
+				<RailPostThumb image={p.image} title={p.title} meta={p.meta} onClick={() => void goto(ROUTES.moment(String(p.id)))} />
+			{/each}
+		</div>
 	</RailSection>
 {/snippet}
 
