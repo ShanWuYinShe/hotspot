@@ -48,7 +48,8 @@ func OptionalAuth(next http.Handler) http.Handler {
 func RequiredAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := WithPlatform(r.Context(), detectPlatform(r))
-		principal, expiresAt, ok := defaultService.Load().AuthenticateRequest(ctx, r.Header.Get("Authorization"), readCookie(r, AccessTokenCookieName))
+		svc := defaultService.Load()
+		principal, expiresAt, ok := svc.AuthenticateRequest(ctx, r.Header.Get("Authorization"), readCookie(r, AccessTokenCookieName))
 		if !ok {
 			hasHeader := r.Header.Get("Authorization") != ""
 			hasCookie := readCookie(r, AccessTokenCookieName) != ""
@@ -59,6 +60,14 @@ func RequiredAuth(next http.Handler) http.Handler {
 				"has_cookie", hasCookie,
 			)
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10100, "Access Token 无效或过期"))
+			return
+		}
+		// Banned accounts are force-logged-out and get 10201 so the client can
+		// show the dedicated ban page (spec/api_spec_errors.md). Web clients
+		// also get their auth cookies cleared.
+		if svc.IsUserBanned(ctx, principal.UserID) {
+			ClearAuthCookies(w)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10201, "账号已被封禁"))
 			return
 		}
 		ctx = WithPrincipal(ctx, principal)

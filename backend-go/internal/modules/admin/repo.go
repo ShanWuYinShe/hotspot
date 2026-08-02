@@ -19,6 +19,7 @@ type Repository interface {
 	GetUser(context.Context, string) (AdminUserItem, bool, error)
 	GetUserBanState(context.Context, string) (UserBanState, bool, error)
 	SetUserBanState(context.Context, string, UserBanState) error
+	IsBanned(context.Context, string) (bool, error)
 	ListUserSessions(context.Context, string) ([]string, error)
 	RevokeSession(context.Context, string) error
 	SearchGroups(context.Context, AdminGroupSearchRequest) (adminGroupPage, error)

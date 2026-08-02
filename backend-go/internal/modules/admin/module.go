@@ -13,7 +13,12 @@ import (
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
-type Module struct{ handler *Handler }
+type Module struct {
+	handler *Handler
+	// Repo is exposed so bootstrap can wire its IsBanned into the platform auth
+	// Service (BanChecker), enforcing 10201 for banned accounts.
+	Repo Repository
+}
 
 func NewModule(factory *persistence.Factory, source appconfig.MutableSource) *Module {
 	repo := NewPersistenceRepository(factory)
@@ -26,7 +31,7 @@ func NewModule(factory *persistence.Factory, source appconfig.MutableSource) *Mo
 
 func NewModuleWithDeps(repo Repository, provider Provider, moderationStore ModerationStore, pushService announcementPushService) *Module {
 	service := NewService(repo, provider, moderationStore, pushService)
-	return &Module{handler: NewHandler(service)}
+	return &Module{handler: NewHandler(service), Repo: repo}
 }
 
 func (m *Module) Mount(r chi.Router) {

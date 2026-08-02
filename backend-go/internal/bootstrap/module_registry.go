@@ -20,6 +20,7 @@ import (
 	"hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/appconfig"
+	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -79,9 +80,17 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	groupsModule.Service.SetAppConfig(sharedAppConfig)
 	searchModule := search.NewModule(factory, sharedAppConfig)
 	searchModule.Service.SetLocationProvider(usersModule.Service)
+	// Construct auth + admin before the module slice so the admin repo's
+	// IsBanned can be wired into the platform auth Service (BanChecker),
+	// enforcing 10201 for banned accounts on RequiredAuth endpoints.
+	authModule := auth.NewModule(ctx, cfg, factory, sharedAppConfig)
+	adminModule := admin.NewModule(factory, sharedAppConfig)
+	if svc := platformauth.DefaultService(); svc != nil {
+		svc.SetBanChecker(adminModule.Repo)
+	}
 	return []modulekit.Module{
-		admin.NewModule(factory, sharedAppConfig),
-		auth.NewModule(ctx, cfg, factory, sharedAppConfig),
+		adminModule,
+		authModule,
 		feedModule,
 		gmModule,
 		groupsModule,

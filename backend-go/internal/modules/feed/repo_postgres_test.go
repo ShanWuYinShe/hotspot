@@ -109,11 +109,13 @@ func TestPostgresRepositoryReturnsNotImplementedWithoutDatabaseOrFallback(t *tes
 }
 
 func TestPostgresRepositoryFiltersUsersByRadiusAndExcludesSelf(t *testing.T) {
+	// Radius filtering and distance computation are now pushed down to SQL, so
+	// the stub (which stands in for the DB) returns only the rows that survive
+	// the radius predicate, with the computed distance_meters column appended.
 	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
 		"FROM users u": {
-			{"u1", "self", "", "", "loc", 35.0, 112.0, false, false, 0, 0},
-			{"u2", "near", "", "", "loc", 35.0001, 112.0, true, false, 2, 1},
-			{"u3", "far", "", "", "loc", 36.0, 112.0, false, false, 0, 0},
+			{"u1", "self", "", "", "loc", 35.0, 112.0, false, false, 0, 0, 0},
+			{"u2", "near", "", "", "loc", 35.0001, 112.0, true, false, 2, 1, 11},
 		},
 	}}
 	repo := NewPostgresRepository(newFeedFactory(backend))
@@ -130,9 +132,9 @@ func TestPostgresRepositoryFiltersUsersByRadiusAndExcludesSelf(t *testing.T) {
 func TestPostgresRepositoryPaginatesUsersWithOpaqueCursor(t *testing.T) {
 	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
 		"FROM users u": {
-			{"u3", "c", "", "", "loc", 35.0001, 112.0, false, false, 0, 0},
-			{"u2", "b", "", "", "loc", 35.0002, 112.0, false, false, 0, 0},
-			{"u1", "a", "", "", "loc", 35.0003, 112.0, false, false, 0, 0},
+			{"u3", "c", "", "", "loc", 35.0001, 112.0, false, false, 0, 0, 11},
+			{"u2", "b", "", "", "loc", 35.0002, 112.0, false, false, 0, 0, 22},
+			{"u1", "a", "", "", "loc", 35.0003, 112.0, false, false, 0, 0, 33},
 		},
 	}}
 	repo := NewPostgresRepository(newFeedFactory(backend))
@@ -155,11 +157,13 @@ func TestPostgresRepositoryPaginatesUsersWithOpaqueCursor(t *testing.T) {
 }
 
 func TestPostgresRepositoryFiltersGroupsByRadiusAndSorts(t *testing.T) {
+	// Radius filtering is pushed to SQL: the stub now omits the out-of-radius
+	// "far" row (previously dropped by plan.Match in Go) and appends the
+	// SQL-computed distance_meters column.
 	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
 		"FROM groups g": {
-			{"g0", "far", "", "", false, "loc", 35.03, 112.0, 10, false, 0},
-			{"g1", "near-a", "", "", false, "loc", 35.0001, 112.0, 10, true, 3},
-			{"g2", "near-b", "", "", false, "loc", 35.0001, 112.0, 10, true, 3},
+			{"g1", "near-a", "", "", false, "loc", 35.0001, 112.0, 10, true, 3, 11},
+			{"g2", "near-b", "", "", false, "loc", 35.0001, 112.0, 10, true, 3, 11},
 		},
 	}}
 	repo := NewPostgresRepository(newFeedFactory(backend))
@@ -201,10 +205,12 @@ func TestPostgresRepositoryLoadsFollowingMomentsOnly(t *testing.T) {
 }
 
 func TestPostgresRepositoryLoadsNearbyMomentsOnlyWithinRadius(t *testing.T) {
+	// Radius filtering is now pushed to SQL: the stub returns only the in-radius
+	// moment (the "far" row was previously dropped by plan.Match in Go). The
+	// SQL-computed distance_meters column is appended.
 	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
-		queryFeedMomentsNearby: {
-			{"m1", "u1", "nick", "", "near", time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC), 1, 0, 0, "loc", 35.0001, 112.0, false, false, false},
-			{"m2", "u2", "nick", "", "far", time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC), 99, 0, 0, "loc", 36.0, 112.0, false, false, false},
+		"m.s2_cell_id BETWEEN": {
+			{"m1", "u1", "nick", "", "near", time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC), 1, 0, 0, "loc", 35.0001, 112.0, false, false, false, 11},
 		},
 		queryFeedMomentTags: {},
 	}}
@@ -221,10 +227,10 @@ func TestPostgresRepositoryLoadsNearbyMomentsOnlyWithinRadius(t *testing.T) {
 
 func TestPostgresRepositoryNearbyMomentsUsesStableCursorPagination(t *testing.T) {
 	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
-		queryFeedMomentsNearby: {
-			{"m1", "u1", "nick", "", "one", time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC), 10, 0, 0, "loc", 35.0001, 112.0, false, false, false},
-			{"m2", "u2", "nick", "", "two", time.Date(2026, 3, 3, 1, 0, 0, 0, time.UTC), 9, 0, 0, "loc", 35.0002, 112.0, false, false, true},
-			{"m3", "u3", "nick", "", "three", time.Date(2026, 3, 3, 2, 0, 0, 0, time.UTC), 8, 0, 0, "loc", 35.0003, 112.0, false, false, false},
+		"m.s2_cell_id BETWEEN": {
+			{"m1", "u1", "nick", "", "one", time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC), 10, 0, 0, "loc", 35.0001, 112.0, false, false, false, 11},
+			{"m2", "u2", "nick", "", "two", time.Date(2026, 3, 3, 1, 0, 0, 0, time.UTC), 9, 0, 0, "loc", 35.0002, 112.0, false, false, true, 22},
+			{"m3", "u3", "nick", "", "three", time.Date(2026, 3, 3, 2, 0, 0, 0, time.UTC), 8, 0, 0, "loc", 35.0003, 112.0, false, false, false, 33},
 		},
 		queryFeedMomentTags: {},
 	}}

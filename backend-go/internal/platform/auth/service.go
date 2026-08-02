@@ -14,6 +14,23 @@ type Service struct {
 	refreshTTL time.Duration
 	refreshes  RefreshTokenStore
 	sessions   SessionStore
+	banChecker BanChecker
+}
+
+// SetBanChecker injects a ban checker (typically the admin module's
+// repository). Once wired, RequiredAuth rejects banned users with 10201.
+// nil disables ban checking (dev/test default).
+func (s *Service) SetBanChecker(bc BanChecker) { s.banChecker = bc }
+
+// IsUserBanned reports whether the user is currently banned. Returns false
+// when no ban checker is configured. A checker error is treated as not banned
+// (fail-open) so a transient DB issue does not lock out every request.
+func (s *Service) IsUserBanned(ctx context.Context, userID string) bool {
+	if s.banChecker == nil {
+		return false
+	}
+	banned, err := s.banChecker.IsBanned(ctx, userID)
+	return err == nil && banned
 }
 
 type AuthResult struct {

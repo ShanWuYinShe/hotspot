@@ -2,9 +2,9 @@
 
 ## 功能边界
 
-Go **主后端**,模块化单体 + S2 地理索引。提供认证/用户/群组/聊天/瞬间/Feed/搜索/地图/分享/媒体/举报/通知/系统/管理后台等全部 HTTP API 与 WebSocket 实时能力。支付/交易、端侧离线同步、消息全文搜索不在范围内。
+Go 主后端,模块化单体 + S2 地理索引。提供认证/用户/群组/聊天/瞬间/Feed/搜索/地图/分享/媒体/举报/通知/系统/管理后台等全部 HTTP API 与 WebSocket 实时能力。支付/交易、端侧离线同步、消息全文搜索不在范围内。
 
-> 历史 `backend/`（Rust/Axum）已暂停，不在本规范约束范围内。
+历史 `backend/`（Rust/Axum）已暂停，不在本规范约束范围内。
 
 API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）。
 
@@ -23,7 +23,7 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
 
 ## Dev 容器（热加载）
 
-- dev 模式后端跑 `Dockerfile.dev`（基于 `golang:1.26.2-alpine` + air），源码挂载 + air 监听 `.go`/`.toml` 变化自动重编译重启，**改 Go 代码无需重启容器**；`.air.toml` 配置编译/输出路径（`tmp/` 由 compose 卷隔离）。
+- dev 模式后端跑 `Dockerfile.dev`（基于 `golang:1.26.2-alpine` + air），源码挂载 + air 监听 `.go`/`.toml` 变化自动重编译重启，改 Go 代码无需重启容器；`.air.toml` 配置编译/输出路径（`tmp/` 由 compose 卷隔离）。
 - 首次构建/重建镜像：`docker compose -f docker-compose.yml -f docker-compose.dev.yml build backend`（`GOPROXY` 默认 `goproxy.cn,direct`，依赖经 BuildKit cache mount 缓存）。
 - 注意：`Dockerfile.dev` 的 `ARG GO_VERSION`/`AIR_VERSION` 必须带精确 patch 版本（如 `1.26.2`），浮动 tag（`1.26-alpine`）拉取易超时。
 
@@ -43,10 +43,10 @@ backend-go/
     └── platform/           # 横切基础设施（auth/realtime/httpx/...）
 ```
 
-**规则**：
+规则：
 - `internal/modules/*` 只能依赖 `internal/platform/*` 和同层其它模块的 Service，禁止反向依赖 `bootstrap`
 - `internal/platform/*` 不含业务判断，只提供可复用基础设施
-- 业务模块之间通过 **Service 接口**解耦（如 `groups` 注入 `users.Service`），不直接 import 对方 repo
+- 业务模块之间通过 Service 接口解耦（如 `groups` 注入 `users.Service`），不直接 import 对方 repo
 
 ## 架构分层（强制）
 
@@ -54,11 +54,11 @@ backend-go/
 Handler -> Service -> Repository
 ```
 
-- **Handler**（`handler*.go`）：仅做参数提取/校验、调用 Service、返回 `httpx.ApiResponse`。不写业务逻辑、不直接查库
-- **Service**（`service*.go`）：业务规则/权限/事务/事件发布，不写 SQL
-- **Repository**（`repo*.go`）：只封装 SQL 与行映射，不含业务判断
+- Handler（`handler*.go`）：仅做参数提取/校验、调用 Service、返回 `httpx.ApiResponse`。不写业务逻辑、不直接查库
+- Service（`service*.go`）：业务规则/权限/事务/事件发布，不写 SQL
+- Repository（`repo*.go`）：只封装 SQL 与行映射，不含业务判断
 
-**每模块的文件组织约定**：
+每模块的文件组织约定：
 - `module.go`：`Mount(r chi.Router)` 挂载路由；在 `internal/bootstrap/module_registry.go` 的 `BuildModules()` 中注册（实现 `modulekit.Module`）
 - `handler.go`（必要时 `handler_xxx.go` 按子域拆分）
 - `service.go`（必要时 `service_xxx.go`）
@@ -75,8 +75,8 @@ Handler -> Service -> Repository
 - 仅 POST，RPC + JSON
 - 所有 API 必须是明确动作子路径，禁止裸资源路径（如禁止 `/api/v1/users`，须使用 `/api/v1/users/search` 等动作路径）
 - 路由通过 chi 的 `r.Route("/api/v1/<ns>", ...)` + `group.Post("/<action>", handler)` 注册
-- **认证分组**：每模块用两个 `chi.Router.Group` 区分——公开/可选组挂 `platformauth.OptionalAuth`，鉴权组挂 `platformauth.RequiredAuth`；`/admin/*` 额外挂 `platformauth.AdminAuth`
-- **统一中间件链**（顺序）：`OptionalAuth|RequiredAuth` → `ratelimit.Middleware` → `resourceguard.Middleware` → `idempotency.Middleware`
+- 认证分组：每模块用两个 `chi.Router.Group` 区分——公开/可选组挂 `platformauth.OptionalAuth`，鉴权组挂 `platformauth.RequiredAuth`；`/admin/*` 额外挂 `platformauth.AdminAuth`
+- 统一中间件链（顺序）：`OptionalAuth|RequiredAuth` → `ratelimit.Middleware` → `resourceguard.Middleware` → `idempotency.Middleware`
 
 ## 统一响应与错误处理
 
@@ -86,7 +86,7 @@ Handler -> Service -> Repository
 - 错误码只能取自 `spec/api_spec_errors.md`，禁止自创
 - 禁止向客户端暴露内部错误细节
 
-**错误传播模式**：
+错误传播模式：
 - Service 返回模块级 sentinel error（如 `ErrGroupNotFound`、`ErrAccessRestricted`）
 - Handler 负责把 sentinel error 映射为 `httpx.Error(code, message)`
 - 仅 `10600`（服务不可用）才使用 `observability.L().Error` 记录；其它业务错误用 `Warn`
@@ -99,12 +99,12 @@ Handler -> Service -> Repository
 
 ## 认证与会话
 
-- **JWT 包含 user_id（sub）与不可变的 session_id（sid）**，禁止写入可变字段；sid 是 session 记录的主键，用于撤销校验
+- JWT 包含 user_id（sub）与不可变的 session_id（sid），禁止写入可变字段；sid 是 session 记录的主键，用于撤销校验
 - Web 端通过 HttpOnly Cookie（`access_token` / `refresh_token`）；App 端通过 `Authorization: Bearer`
 - 鉴权中间件：`platformauth.OptionalAuth` / `RequiredAuth` / `AdminAuth`
 - Principal 通过 `platformauth.PrincipalFromContext(ctx)` 获取
-- **CSRF 防护**：完全依赖 auth Cookie 的 `SameSite=Strict` 属性，不使用 CSRF Token（Double Submit Cookie 已移除，因 SameSite=Strict 已覆盖经典 CSRF 威胁）
-- **失效机制（session 撤销，非独立 token 黑名单）**：登出/撤销时将 `auth_sessions.revoked_at` 置为当前时间；每次请求校验 access token 时必须查 session 的 revoked 状态——session 撤销后该 session 下的所有 access/refresh token 立即失效。相比逐 token 的 jti 黑名单，session 级撤销粒度更粗但更简洁，且 Postgres 存储保证多实例全局强一致
+- CSRF 防护：完全依赖 auth Cookie 的 `SameSite=Strict` 属性，不使用 CSRF Token（Double Submit Cookie 已移除，因 SameSite=Strict 已覆盖经典 CSRF 威胁）
+- 失效机制（session 撤销，非独立 token 黑名单）：登出/撤销时将 `auth_sessions.revoked_at` 置为当前时间；每次请求校验 access token 时必须查 session 的 revoked 状态——session 撤销后该 session 下的所有 access/refresh token 立即失效。相比逐 token 的 jti 黑名单，session 级撤销粒度更粗但更简洁，且 Postgres 存储保证多实例全局强一致
 - 刷新 Token 必须轮转；旧 refresh_token 进入宽限期（30 秒内仍可使用，返回与首次刷新相同的新 token 对），宽限期后通过 refresh store 的 `RotatedTo`/`GraceUntil` 标记拒绝（详见 `spec/api_spec_auth.md` 并发刷新策略）
 
 ## 幂等性
@@ -114,7 +114,7 @@ Handler -> Service -> Repository
 - 服务端按 `(user_id + endpoint + key)` 去重
 - 仅缓存 `code == 0` 的成功响应
 
-**Handler 幂等模板**：
+Handler 幂等模板：
 ```go
 if err := idempotency.RequireKey(r); err != nil { /* 10000 */ }
 // ... 解码 + 校验 ...
@@ -133,7 +133,7 @@ idempotency.ReplayOrStore(w, r, "groups/create", func() httpx.ApiResponse[XxxRes
 
 ## 数据格式（契约级）
 
-- 所有时间字段使用 UTC，序列化为 RFC3339（`time.Time.UTC().Format(time.RFC3339)`）
+- 所有时间字段使用 UTC，格式为 ISO 8601（`2024-01-15T08:30:00.000Z`）。毫秒部分可选：服务端可返回带或不带毫秒/纳秒的格式，客户端必须兼容两种（对齐 `spec/api_spec_base.md`）
 - 所有 `xxx_id` 字段在 API 层统一为 `string`，禁止使用裸 `id`
 - DB 主键可为数值，但对外必须字符串化（如 `fmt.Sprintf("group_%d", id)`）
 
