@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Coffee, Music, Users, Star, ChevronRight } from '@lucide/svelte';
+	import { Coffee, Music, Users, Star, ChevronRight, MapPin, Search } from '@lucide/svelte';
 	import { platformStore } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import { getTrending, getNearbyUsers, getNearbyGroups } from '@/api';
@@ -160,7 +160,7 @@
 
 		<div class="flex flex-1 min-h-0 gap-0 overflow-hidden">
 			<!-- Left: hero + activity + groups (340px) -->
-			<div class="flex flex-col overflow-y-auto no-scrollbar p-6 gap-6 shrink-0" style="width:340px;border-right:1px solid var(--neu-border);">
+			<div class="flex flex-col overflow-y-auto no-scrollbar gap-6 shrink-0 p-5 sm:p-6" style="width:340px;border-right:1px solid var(--neu-border);">
 				<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} />
 				<div>
 					<SectionHead title="附近活动" />
@@ -170,7 +170,7 @@
 			</div>
 
 			<!-- Right: full nearby-users list（对齐 Figma：仅 NearbyUsersFlatList，无 PeopleRadarStrip） -->
-			<div class="flex-1 overflow-y-auto no-scrollbar p-6">
+			<div class="flex-1 overflow-y-auto no-scrollbar p-5 sm:p-6">
 				<div class="flex items-end justify-between mb-5">
 					<div>
 						<span class="neu-eyebrow">附近的人</span>
@@ -188,7 +188,9 @@
 					</button>
 				</div>
 
-				<NearbyUsersFlatList users={nearbyUsers} followingIds={followingIds} onToggle={toggleFollow} />
+				<div class="mt-6">
+					<NearbyUsersFlatList users={nearbyUsers} followingIds={followingIds} onToggle={toggleFollow} />
+				</div>
 			</div>
 		</div>
 	</div>
@@ -204,16 +206,27 @@
 					<h1 class="text-[22px]" style="color:var(--neu-text);">附近</h1>
 					<p class="text-xs" style="color:var(--neu-text-muted);margin-top:2px;">发现周边有趣的人和事</p>
 				</div>
-				{#if onlineCount > 0}
+				<div class="flex items-center gap-2">
+					<!-- 城市 pill（对齐 Figma HomeMobile 城市徽标） -->
 					<button
 						type="button"
 						class="neu-hover-btn flex items-center gap-1.5 py-1.5 px-3 rounded-full cursor-pointer neu-surface-flat"
 						onclick={() => void goto(ROUTES.map)}
 					>
-						<span class="rounded-full shrink-0" style="width:6px;height:6px;background:var(--semantic-online);"></span>
-						<span class="text-[11px]" style="color:var(--neu-text-muted);">{onlineCount} 在线</span>
+						<MapPin style="width:12px;height:12px;color:var(--neu-accent-primary);" strokeWidth={1.75} />
+						<span class="text-[11px]" style="color:var(--neu-text-muted);">徐州</span>
 					</button>
-				{/if}
+					<!-- 搜索按钮（对齐 Figma HomeMobile size-8 圆形搜索） -->
+					<button
+						type="button"
+						class="neu-hover-btn flex items-center justify-center rounded-full cursor-pointer outline-none neu-surface-flat"
+						style="width:32px;height:32px;"
+						onclick={() => void goto(ROUTES.search)}
+						aria-label="搜索"
+					>
+						<Search style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.75} />
+					</button>
+				</div>
 			</div>
 			{#if isWideTablet}
 				<!-- 宽平板右栏占位（与正文区 TabletRail 对齐 gutter） -->
