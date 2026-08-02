@@ -36,7 +36,10 @@
 
 	let hovered = $state(false);
 	let focused = $state(false);
+	let isPressed = $state(false);
 	const activeSurface = $derived(hovered || focused);
+	// 对齐 Figma Make：可点击时 tap → opacity 0.84（0.1s），无 scale
+	const rowOpacity = $derived(onClick && isPressed ? 0.84 : 1);
 
 	const isCard = tone === 'card';
 	const baseCardShadow = '5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)';
@@ -68,11 +71,19 @@
 		isCard ? 'rounded-relaxed border' : 'bg-[var(--neu-bg)]',
 		className
 	)}
-	style={rowStyle}
+	style={`${rowStyle}opacity:${rowOpacity};transition-duration:0.1s;`}
 	onmouseenter={() => (hovered = true)}
-	onmouseleave={() => (hovered = false)}
+	onmouseleave={() => {
+		hovered = false;
+		isPressed = false;
+	}}
 	onfocus={() => (focused = true)}
-	onblur={() => (focused = false)}
+	onblur={() => {
+		focused = false;
+		isPressed = false;
+	}}
+	onpointerdown={() => onClick && (isPressed = true)}
+	onpointerup={() => (isPressed = false)}
 	onclick={onClick}
 	onkeydown={
 		onClick

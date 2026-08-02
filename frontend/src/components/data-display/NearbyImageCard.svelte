@@ -40,6 +40,13 @@
 		children?: Snippet;
 		class?: string;
 	} = $props();
+
+	// 对齐 Figma Make NearbyImageCard：hover 时图片缩放 1.055 / 0.32s [0.22,1,0.36,1]
+	// （组件内联覆盖共享 CSS 的 1.045/240ms）；整卡按压 scale 0.94。
+	let pressed = $state(false);
+	let hovered = $state(false);
+	const imageTransform = $derived(hovered ? 'scale(1.055)' : 'scale(1)');
+	const cardTransform = $derived(pressed ? 'scale(0.94)' : 'scale(1)');
 </script>
 
 <article
@@ -47,8 +54,17 @@
 		'image-hover-frame neu-card-hover relative h-full w-full cursor-pointer overflow-hidden',
 		className
 	)}
+	style="transform:{cardTransform};transition:transform 0.10s cubic-bezier(0.22,1,0.36,1);"
 	role={onClick ? 'button' : undefined}
 	tabindex={onClick ? 0 : undefined}
+	onpointerdown={() => (pressed = true)}
+	onpointerup={() => (pressed = false)}
+	onpointerleave={() => {
+		pressed = false;
+		hovered = false;
+	}}
+	onmouseenter={() => (hovered = true)}
+	onmouseleave={() => (hovered = false)}
 	onclick={onClick}
 	onkeydown={(e) => {
 		if (onClick && (e.key === 'Enter' || e.key === ' ')) {
@@ -61,6 +77,7 @@
 		src={imageSrc}
 		alt={imageAlt}
 		class="image-hover-frame__image absolute inset-0 h-full w-full object-cover will-change-transform"
+		style="transform:{imageTransform};transition:transform 0.32s cubic-bezier(0.22,1,0.36,1);"
 		onerror={onImageError}
 	/>
 	<div class="absolute inset-0" style="background:var(--surface-media-scrim-card);"></div>

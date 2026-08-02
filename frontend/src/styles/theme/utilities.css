@@ -414,8 +414,9 @@
   }
   .neu-input-surface:focus-within,
   .neu-input-base:focus {
-    box-shadow: inset 0 0 0 1.5px var(--neu-accent-primary), 0 0 0 3px var(--neu-accent-soft) !important;
-    border-color: color-mix(in srgb, var(--neu-accent-primary) 48%, var(--neu-border)) !important;
+    /* 对齐 Figma Make：focus 为中性内凹凹陷 + border-pressed，不用 accent 高亮环 */
+    box-shadow: inset 5px 5px 10px var(--neu-shadow-dark), inset -5px -5px 10px var(--neu-shadow-light) !important;
+    border-color: var(--neu-border-pressed) !important;
   }
   .vibrant .neu-input-surface,
   .vibrant .neu-input-base {
@@ -429,49 +430,53 @@
   }
 }
 
-  /*── Hover/active 反馈（迁移自 useHoverConfig 的 JS 状态动画）───────── */
-  /* 缩放策略：仅圆形图标按钮允许缩放（.neu-scale-btn），
-     矩形按钮/导航项/列表行/卡片一律不缩放。
-     hover 反馈：brightness 提亮为跨主题统一策略（forest 下同样生效，
-     与背景色/阴影类叠加使用）；forest 另禁位移与缩放。 */
+  /*── Hover/active 反馈（对齐 Figma Make useHoverConfig 契约）───────── */
+  /* Figma 契约（vibrant 默认）：btn hover scale 1.10/0.17s、tap 0.94/0.10s；
+     action（行内小图标）hover 1.20/0.14s；tap 统一 0.94/0.10s。
+     仅 fine pointer 设备启用 hover 缩放（withoutHover 契约）。 */
 
   .neu-hover-btn,
   .neu-hover-action,
   .neu-hover-row,
   .neu-hover-card {
-    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    transition: transform 0.17s cubic-bezier(0.22, 1, 0.36, 1),
       box-shadow 0.18s ease,
       background-color 0.18s ease,
       border-color 0.18s ease,
-      color 0.18s ease,
-      filter 0.18s ease;
+      color 0.18s ease;
     will-change: transform;
   }
 
-  /* 通用按钮/行内小图标：hover 轻微提亮、按下轻微变暗（无缩放） */
-  .neu-hover-btn:hover,
-  .neu-hover-action:hover { filter: brightness(1.05); }
-  .neu-hover-btn:active,
-  .neu-hover-action:active { filter: brightness(0.96); }
+  /* 通用按钮：hover 轻微提亮、按下 0.94 缩放（对齐 Figma tap 0.94/0.10s） */
+  .neu-hover-btn { transition-duration: 0.17s, 0.18s, 0.18s, 0.18s, 0.18s; }
+  .neu-hover-btn:hover { filter: brightness(1.05); }
+  .neu-hover-btn:active { transform: scale(0.94); filter: brightness(0.96); transition-duration: 0.10s, 0.18s, 0.18s, 0.18s, 0.18s; }
 
-  /* 列表行（row）：仅背景/阴影反馈，不位移不缩放；
+  /* 行内小图标动作：hover 缩放 1.20（Figma action）、按下 0.94 */
+  .neu-hover-action:hover { transform: scale(1.20); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; }
+  .neu-hover-action:active { transform: scale(0.94); transition-duration: 0.10s, 0.18s, 0.18s, 0.18s, 0.18s; }
+
+  /* 列表行（row）：仅背景填充，不位移不缩放；
      大卡片（card）：仅阴影抬升，布局框体永不移动（对齐 Figma Make 契约） */
   .neu-hover-row:hover { background-color: var(--surface-hover); }
   .neu-hover-row:active { }
   .neu-hover-card:hover { box-shadow: 0 10px 28px var(--neu-shadow-dark); }
 
   /* 圆形图标按钮（ActionIconButton 等）：圆形允许缩放（Figma Make btn 契约 1.10/0.94） */
-  .neu-scale-btn:hover { transform: scale(1.10); }
-  .neu-scale-btn:active { transform: scale(0.94); }
+  .neu-scale-btn:hover { transform: scale(1.10); transition-duration: 0.17s; }
+  .neu-scale-btn:active { transform: scale(0.94); transition-duration: 0.10s; }
 
   /* vibrant：无阴影抬升（玻璃感），仅位移光晕 */
   .vibrant .neu-hover-card:hover { box-shadow: 0 8px 24px var(--neu-accent-soft); }
 
-  /* forest：扁平——无位移无阴影，仅背景色承载（无缩放） */
+  /* forest：扁平——无位移无阴影，仅背景色承载；缩放保留但略保守（Figma forest 1.08/0.97） */
   .forest .neu-hover-row:hover { transform: none; box-shadow: none; }
   .forest .neu-hover-card:hover { transform: none; box-shadow: none; }
-  .forest .neu-scale-btn:hover { transform: none; }
+  .forest .neu-hover-btn:active,
+  .forest .neu-hover-action:active,
   .forest .neu-scale-btn:active { transform: scale(0.97); }
+  .forest .neu-scale-btn:hover { transform: scale(1.08); }
+  .forest .neu-hover-action:hover { transform: scale(1.18); }
 
   /* 悬停背景（bgHover）：主题 + 暗色感知的 accent 混色 */
   .neu-hover-bg { transition: background-color 0.18s ease; }
