@@ -34,7 +34,6 @@ export const SUB_PAGE_PATHS = [
   ROUTES.settings,
   ROUTES.map,
   ROUTES.notify,
-  ROUTES.meEdit,
   ROUTES.search,
   ROUTES.nearbyPeople,
   ROUTES.nearbyGroups,

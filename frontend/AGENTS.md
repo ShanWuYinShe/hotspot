@@ -95,6 +95,8 @@ src/routes/
     search/                # 搜索
 ```
 
+> 注：管理后台（spec `api_spec_admin_core.md` / `api_spec_admin_moderation.md`）仅有后端契约，**前端路由尚未实现**——功能边界中的「管理后台」为待建项，勿误判为遗漏。
+
 路由常量见 `@/lib/routes`。
 
 页面实现与路由同目录 colocate：每个路由目录下，除 `+page.svelte` 外，同目录存放页面私有组件（如 `map/LocationDesktop.svelte` + `location-data.ts`）。跨路由复用的页面组件（如 `components/moments/MomentsFeedPage` 同时被首页和 `nearby/moments` 使用）放在 `components/` 对应域目录；共享组件统一在 `components/`。
