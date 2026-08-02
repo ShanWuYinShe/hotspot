@@ -28,7 +28,7 @@
 
 ## 幂等性（管理员写操作）
 
-管理员写操作的幂等性以 `api_spec_base.md` 的「必须使用幂等键的接口（MUST）」列表为唯一权威。管理员侧仅 `admin/announcements/create` 属于 MUST（发布系统公告会产生用户可见的新内容）；其余管理员写操作（创建角色、授权、封禁、解散、处理举报、更新/删除等）均为**幂等语义**——重复请求自然返回一致结果（重名返回 `10400`、已达目标状态视为 no-op 成功等），无需 `Idempotency-Key`。
+管理员写操作是否需要实现幂等，以 `api_spec_base.md` 的「需要实现幂等的接口」列表为唯一权威。管理员侧仅 `admin/announcements/create` 需要实现幂等（发布系统公告会产生用户可见的新内容）；其余管理员写操作（创建角色、授权、封禁、解散、处理举报、更新/删除等）均**不需要实现幂等**——重复请求自然返回一致结果（重名返回 `10400`、已达目标状态视为 no-op 成功等），无需 `Idempotency-Key`。
 
 ## 权限 key 约定
 
@@ -56,20 +56,20 @@
 
 | 端点 | 说明 | 认证 | 幂等 |
 |------|------|------|------|
-| `POST /api/v1/admin/rbac/get_me` | 我的管理员权限 | 必须 | 无 |
-| `POST /api/v1/admin/rbac/list_permissions` | 权限字典 | 必须 + `admin.rbac.manage` | 无 |
-| `POST /api/v1/admin/rbac/roles/list` | 角色列表 | 必须 + `admin.rbac.manage` | 无 |
-| `POST /api/v1/admin/rbac/roles/create` | 创建角色 | 必须 + `admin.rbac.manage` | 幂等语义 |
-| `POST /api/v1/admin/rbac/roles/update` | 更新角色 | 必须 + `admin.rbac.manage` | 幂等语义 |
-| `POST /api/v1/admin/rbac/roles/delete` | 删除角色 | 必须 + `admin.rbac.manage` | 幂等语义 |
-| `POST /api/v1/admin/rbac/roles/set_permissions` | 设置角色权限 | 必须 + `admin.rbac.manage` | 幂等语义 |
-| `POST /api/v1/admin/rbac/admins/list` | 管理员列表 | 必须 + `admin.rbac.manage` | 无 |
-| `POST /api/v1/admin/rbac/admins/grant` | 授权/更新管理员 | 必须 + `admin.rbac.manage` | 幂等语义 |
-| `POST /api/v1/admin/rbac/admins/revoke` | 撤销管理员 | 必须 + `admin.rbac.manage` | 幂等语义 |
-| `POST /api/v1/admin/audit/list` | 审计日志列表 | 必须 + `admin.audit.read` | 无 |
-| `POST /api/v1/admin/audit/get_detail` | 审计日志详情 | 必须 + `admin.audit.read` | 无 |
-| `POST /api/v1/admin/app_config/get` | 获取完整应用配置 | 必须 + `admin.app_config.read` | 无 |
-| `POST /api/v1/admin/app_config/update` | 更新应用配置（按 section 部分更新） | 必须 + `admin.app_config.write` | 幂等语义 |
+| `POST /api/v1/admin/rbac/get_me` | 我的管理员权限 | 必须 | 否 |
+| `POST /api/v1/admin/rbac/list_permissions` | 权限字典 | 必须 + `admin.rbac.manage` | 否 |
+| `POST /api/v1/admin/rbac/roles/list` | 角色列表 | 必须 + `admin.rbac.manage` | 否 |
+| `POST /api/v1/admin/rbac/roles/create` | 创建角色 | 必须 + `admin.rbac.manage` | 否 |
+| `POST /api/v1/admin/rbac/roles/update` | 更新角色 | 必须 + `admin.rbac.manage` | 否 |
+| `POST /api/v1/admin/rbac/roles/delete` | 删除角色 | 必须 + `admin.rbac.manage` | 否 |
+| `POST /api/v1/admin/rbac/roles/set_permissions` | 设置角色权限 | 必须 + `admin.rbac.manage` | 否 |
+| `POST /api/v1/admin/rbac/admins/list` | 管理员列表 | 必须 + `admin.rbac.manage` | 否 |
+| `POST /api/v1/admin/rbac/admins/grant` | 授权/更新管理员 | 必须 + `admin.rbac.manage` | 否 |
+| `POST /api/v1/admin/rbac/admins/revoke` | 撤销管理员 | 必须 + `admin.rbac.manage` | 否 |
+| `POST /api/v1/admin/audit/list` | 审计日志列表 | 必须 + `admin.audit.read` | 否 |
+| `POST /api/v1/admin/audit/get_detail` | 审计日志详情 | 必须 + `admin.audit.read` | 否 |
+| `POST /api/v1/admin/app_config/get` | 获取完整应用配置 | 必须 + `admin.app_config.read` | 否 |
+| `POST /api/v1/admin/app_config/update` | 更新应用配置（按 section 部分更新） | 必须 + `admin.app_config.write` | 否 |
 
 ## 类型定义
 
@@ -98,7 +98,7 @@
 获取我的管理员权限信息。
 
 - **认证**: 必须（仅要求"是管理员"，不要求 `admin.rbac.manage`）
-- **幂等**: 无
+- **幂等**: 否
 
 **Request**: `{}`
 
@@ -125,7 +125,7 @@ interface AdminPermissions {
 获取权限字典。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 无
+- **幂等**: 否
 
 **Request**: `{}`
 
@@ -147,7 +147,7 @@ interface AdminPermissionItem {
 获取角色列表。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 无
+- **幂等**: 否
 
 **Request**: `AdminRbacRolesListRequest`
 ```typescript
@@ -178,7 +178,7 @@ interface AdminRoleItem {
 创建角色。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 幂等语义（重名角色创建返回 `10400`，管理员可据此判断是否已创建）
+- **幂等**: 否
 
 **Request**: `AdminRbacRoleCreateRequest`
 ```typescript
@@ -199,7 +199,7 @@ interface AdminRbacRoleCreateRequest {
 更新角色。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `AdminRbacRoleUpdateRequest`
 ```typescript
@@ -222,7 +222,7 @@ interface AdminRbacRoleUpdateRequest {
 删除角色。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `AdminRbacRoleDeleteRequest`
 ```typescript
@@ -242,7 +242,7 @@ interface AdminRbacRoleDeleteRequest {
 设置角色权限。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `AdminRbacRoleSetPermissionsRequest`
 ```typescript
@@ -267,7 +267,7 @@ interface AdminRbacRoleSetPermissionsRequest {
 获取管理员列表。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 按 `granted_at DESC` 排序（最近授权在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `AdminRbacAdminsListRequest`
@@ -296,7 +296,7 @@ interface AdminOperatorItem {
 授予/更新管理员。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 幂等语义（对已是管理员的用户重复授权同一 role 视为 no-op 成功）
+- **幂等**: 否
 
 **额外约束**：仅超级管理员可将 `grant_all_permissions=true`
 
@@ -325,7 +325,7 @@ interface AdminRbacGrantAdminRequest {
 撤销管理员。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **额外约束**：撤销超级管理员仅超级管理员可执行
 
@@ -357,7 +357,7 @@ interface AdminRbacRevokeAdminRequest {
 查询审计日志列表。
 
 - **认证**: 必须 + `admin.audit.read`
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 按 `created_at DESC` 排序（最新在前），`log_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `AuditLogListRequest`
@@ -448,7 +448,7 @@ interface AuditLogItem {
 获取审计日志详情。
 
 - **认证**: 必须 + `admin.audit.read`
-- **幂等**: 无
+- **幂等**: 否
 
 **Request**: `AuditLogOpenTheDoorRequest`
 ```typescript
@@ -472,7 +472,7 @@ interface AuditLogOpenTheDoorRequest {
 获取完整应用配置（AppConfig）。
 
 - **认证**: 必须 + `admin.app_config.read`
-- **幂等**: 无
+- **幂等**: 否
 
 **Request**: `{}`
 
@@ -509,7 +509,7 @@ interface AppConfig {
 **设计说明**：原 `update_upload`/`update_defaults`/`update_rate_limits`/`update_response_defaults`/`update_features`/`update_limits`/`update_contact` 七个端点已合并为单一 `update`。各 section 权限均为 `admin.app_config.write`（无差异化），合并消除了冗余的契约表面积；一次请求可更新单个或多个 section，未传的 section 保持不变。
 
 - **认证**: 必须 + `admin.app_config.write`
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `UpdateAppConfigRequest`
 ```typescript

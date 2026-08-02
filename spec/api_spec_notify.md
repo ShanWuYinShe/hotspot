@@ -16,9 +16,9 @@
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
-| `POST /api/v1/notify/list` | 通知列表 | 必须 | 无 |
-| `POST /api/v1/notify/get_unread_count` | 未读通知数 | 必须 | 无 |
-| `POST /api/v1/notify/mark_read` | 标记已读（scope 控制范围） | 必须 | 幂等语义 |
+| `POST /api/v1/notify/list` | 通知列表 | 必须 | 否 |
+| `POST /api/v1/notify/get_unread_count` | 未读通知数 | 必须 | 否 |
+| `POST /api/v1/notify/mark_read` | 标记已读（scope 控制范围） | 必须 | 否 |
 
 ## 类型定义
 
@@ -114,7 +114,7 @@ interface NotifyItem {
 获取当前用户的通知列表。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 按 `created_at DESC` 排序（最新在前），`notification_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `NotificationListRequest`
@@ -137,7 +137,7 @@ interface NotificationListRequest {
 获取当前用户的未读通知数。冷启动/重连时调用，用于显示 badge 角标。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 
 **Request**: `{}`
 
@@ -165,7 +165,7 @@ interface UnreadCountResult {
 - 都不传（`scope: 'all'`）：清空全部未读（"全部已读"按钮）
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复标记已读通知不产生错误）
+- **幂等**: 否
 
 **Request**: `MarkReadRequest`
 ```typescript

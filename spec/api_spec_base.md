@@ -34,7 +34,7 @@
 - 所有 ID 字段必须使用显式 `xxx_id` 命名（禁止裸 `id`）
 - 所有 `xxx_id` 字段在 API 层统一为 `string` 类型（前端视为不透明字符串，不关心内部是数字还是 UUID）
 - 所有 `*_url` 字段（如 `avatar_url`、`thumbnail_url`、`upload_url` 等）的值必须为**完整的绝对 URL**（含协议和域名，如 `https://cdn.example.com/path/to/image.jpg`），客户端无需拼接 base URL
-- 幂等性：**非幂等**写操作必须使用 `Idempotency-Key`；**幂等语义**写操作无需该键，但必须保证重复请求结果一致（详见「幂等性（契约级）」）。
+- 幂等性：会产生重复内容或副作用的写操作必须使用 `Idempotency-Key`；其余写操作无需该键（详见「幂等性（契约级）」）。
 
 禁止：
 - 禁止在客户端生成或拼装 `cursor`
@@ -512,10 +512,26 @@ App 端通过 Header 携带认证信息：
 
 幂等性用于防止网络重试导致的重复创建或重复副作用。
 
-#### 幂等性分级
+各端点是否需要实现幂等，见各模块端点表的「幂等」列与本节的接口清单：
+- **需要**：网络重试会产生用户可见的重复内容或严重副作用的写操作，客户端必须携带 `Idempotency-Key`，服务端据此去重并回放首次成功响应。
+- **不需要**：重复请求天然产生一致结果（状态设值、状态转移、删除/解散、更新等），无需 `Idempotency-Key`。
 
-- **幂等语义操作**：重复请求应返回一致结果，不依赖 `Idempotency-Key`（如 `like/unlike`、`follow/unfollow`、`delete`、`mark_read`、`update_settings` 等）
-- **非幂等写操作**：重复请求可能产生重复资源或多次副作用，必须使用 `Idempotency-Key`
+#### 需要实现幂等的接口
+
+以下接口客户端必须携带 `Idempotency-Key`：
+
+- 认证与账号：`auth/register`、`auth/guest`、`auth/reset_password`、`auth/change_password`
+- 内容创建：`moments/create`、`comments/create`
+- 消息发送：`private_messages/send`、`group_messages/send`
+- 分享创建：`share/create`
+- 群组创建与加入：`groups/create`、`groups/join`、`groups/announcements/create`
+- 管理员公告创建：`admin/announcements/create`
+
+> `reports/create` 不在此列表——`(reporter_id, target_type, target_id, pending_status)` 构成自然去重键，重复举报返回成功 + 已有 `report_id`，不需要幂等。
+
+#### 建议实现幂等的接口
+
+- 不可逆且调用方可能因权限变更无法安全重试：`groups/transfer_ownership`
 
 #### Idempotency-Key 格式
 
@@ -549,30 +565,4 @@ App 端通过 Header 携带认证信息：
 - **收到 `22001`（缓存失效）或 `22000`（不可恢复冲突）**：生成新 key 后重试
 - **收到缓存回放响应（命中已处理完成）**：视为成功，直接使用返回数据
 - 具体幂等错误码（`22000`/`22001`/`22002`）的定义与客户端行为详见 `api_spec_errors.md`
-- **错误码约定**：凡文档中标记为“幂等: MUST”的端点，除特别说明外均可能返回 `22000`/`22001`/`22002`；各端点的“错误码”小节**不应重复列出**这三种幂等错误码，只需补充额外的业务错误码。
-
-#### 必须使用幂等键的接口（MUST）
-
-网络重试会产生用户可见的重复内容或严重混淆用户体验的操作，必须携带 `Idempotency-Key`：
-
-- 认证与账号：`auth/register`、`auth/guest`、`auth/reset_password`、`auth/change_password`
-- 内容创建：`moments/create`、`comments/create`
-- 消息发送：`private_messages/send`、`group_messages/send`
-- 分享创建：`share/create`
-- 群组创建与加入：`groups/create`、`groups/join`、`groups/announcements/create`
-- 管理员公告创建：`admin/announcements/create`
-
-> `reports/create` 不在此列表——`(reporter_id, target_type, target_id, pending_status)` 构成自然去重键，重复举报返回成功 + 已有 `report_id`，无需 `Idempotency-Key`。
-
-#### 建议使用幂等键的接口（SHOULD）
-
-- 不可逆且调用方可能因权限变更无法安全重试：`groups/transfer_ownership`
-
-#### 其余所有写操作均为幂等语义（以下简称）
-
-以下操作重复调用自然产生一致结果，无需 `Idempotency-Key`（各模块端点文档中标记为"幂等语义"）：
-- 状态设值操作（关注/拉黑/封禁/禁言/角色设置/收藏/反应等）
-- 状态转移操作（接受/拒绝邀请或申请、审批等）
-- 删除/解散/撤销操作（已删除资源重复操作 no-op）
-- 更新/Patch 操作（相同字段重复写入结果一致）
-- 已被其他机制保护的操作（如 `auth/request_password_reset` 有 IP 限流保护）
+- **错误码约定**：需要实现幂等的端点除特别说明外均可能返回 `22000`/`22001`/`22002`；各端点的「错误码」小节**不应重复列出**这三种幂等错误码，只需补充额外的业务错误码。

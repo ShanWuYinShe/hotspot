@@ -15,10 +15,10 @@
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
-| `POST /api/v1/media/presign_upload` | 申请上传预签名 | 必须 | 无 |
-| `POST /api/v1/media/batch_presign_upload` | 批量申请上传预签名 | 必须 | 无 |
-| `POST /api/v1/media/complete_upload` | 完成上传 | 必须 | 幂等语义 |
-| `POST /api/v1/media/batch_complete_upload` | 批量完成上传 | 必须 | 无 |
+| `POST /api/v1/media/presign_upload` | 申请上传预签名 | 必须 | 否 |
+| `POST /api/v1/media/batch_presign_upload` | 批量申请上传预签名 | 必须 | 否 |
+| `POST /api/v1/media/complete_upload` | 完成上传 | 必须 | 否 |
+| `POST /api/v1/media/batch_complete_upload` | 批量完成上传 | 必须 | 否 |
 
 ## 设计理念
 
@@ -74,7 +74,7 @@
 申请上传预签名。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 
 **Request**: `PresignUploadRequest`
 ```typescript
@@ -120,7 +120,7 @@ interface PresignedUpload {
 批量申请上传预签名。适用于瞬间发布（多图）、聊天批量发文件等场景。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 
 **说明**：
 - 批量预签名是原子操作：任一文件校验失败则整批失败
@@ -151,7 +151,7 @@ interface BatchPresignedUpload {
 完成上传。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（同一 `upload_id` 重复完成上传返回缓存的 `file_id`，见下方幂等行为说明）
+- **幂等**: 否
 
 **Request**: `CompleteUploadRequest`
 ```typescript
@@ -189,12 +189,12 @@ interface UploadedMedia {
 批量完成上传。适用于瞬间发布（多图）、聊天批量发文件等场景——与 `batch_presign_upload` 配对，消除发图场景下逐个调用 `complete_upload` 的 N 次请求。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 
 **说明**：
 - 与 `batch_presign_upload` 对称的原子操作：任一 `upload_id` 校验失败则整批失败，不部分完成
 - 响应的 `uploads` 与请求 `upload_ids` **一一对应且顺序一致**
-- 幂等不强制 MUST（避免批量场景下单个 key 语义混乱）；客户端对失败的整批可直接重试（服务端对已完成的 `upload_id` 返回既有结果），或拆分为单文件 `complete_upload` 精细处理
+- 不需要幂等（避免批量场景下单个 key 语义混乱）；客户端对失败的整批可直接重试（服务端对已完成的 `upload_id` 返回既有结果），或拆分为单文件 `complete_upload` 精细处理
 
 **Request**: `BatchCompleteUploadRequest`
 ```typescript

@@ -17,39 +17,39 @@
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
-| `POST /api/v1/groups/search` | 搜索群组（支持关键字/标签/位置组合） | 可选 | 无 |
-| `POST /api/v1/groups/get_detail` | 群组详情 | 可选 | 无 |
-| `POST /api/v1/groups/create` | 创建群组 | 必须 | MUST |
-| `POST /api/v1/groups/update` | 更新群组 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/dismiss` | 解散群组 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/members/list` | 成员列表 | 可选 | 无 |
-| `POST /api/v1/groups/members/search` | 搜索成员 | 可选 | 无 |
-| `POST /api/v1/groups/members/invite` | 邀请成员 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/members/invites/list` | 我发出的邀请列表 | 必须 | 无 |
-| `POST /api/v1/groups/members/invites/revoke` | 撤销已发邀请 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/members/set_role` | 设置角色 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/members/set_mute` | 设置禁言状态（两态统一） | 必须 | 幂等语义 |
-| `POST /api/v1/groups/members/ban` | 封禁成员 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/members/unban` | 解除封禁 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/members/list_banned` | 封禁列表 | 必须 | 无 |
-| `POST /api/v1/groups/members/remove` | 移除成员 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/applications/list` | 申请列表 | 必须 | 无 |
-| `POST /api/v1/groups/applications/approve` | 同意申请 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/applications/reject` | 拒绝申请 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/update_preferences` | 更新我的群组偏好 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/join` | 加入群组（根据 join_method 自动处理） | 必须 | MUST |
-| `POST /api/v1/groups/transfer_ownership` | 转让群主 | 必须 | SHOULD |
-| `POST /api/v1/groups/announcements/create` | 发布公告 | 必须 | MUST |
-| `POST /api/v1/groups/announcements/list` | 公告列表 | 可选 | 无 |
-| `POST /api/v1/groups/announcements/update` | 更新公告 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/announcements/delete` | 删除公告 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/list_my` | 我的群组列表 | 必须 | 无 |
-| `POST /api/v1/groups/list_applications` | 我的申请列表 | 必须 | 无 |
-| `POST /api/v1/groups/cancel_application` | 取消申请 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/list_invites` | 我的邀请列表 | 必须 | 无 |
-| `POST /api/v1/groups/accept_invite` | 接受邀请 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/reject_invite` | 拒绝邀请 | 必须 | 幂等语义 |
-| `POST /api/v1/groups/leave` | 退出群组 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/search` | 搜索群组（支持关键字/标签/位置组合） | 可选 | 否 |
+| `POST /api/v1/groups/get_detail` | 群组详情 | 可选 | 否 |
+| `POST /api/v1/groups/create` | 创建群组 | 必须 | 是 |
+| `POST /api/v1/groups/update` | 更新群组 | 必须 | 否 |
+| `POST /api/v1/groups/dismiss` | 解散群组 | 必须 | 否 |
+| `POST /api/v1/groups/members/list` | 成员列表 | 可选 | 否 |
+| `POST /api/v1/groups/members/search` | 搜索成员 | 可选 | 否 |
+| `POST /api/v1/groups/members/invite` | 邀请成员 | 必须 | 否 |
+| `POST /api/v1/groups/members/invites/list` | 我发出的邀请列表 | 必须 | 否 |
+| `POST /api/v1/groups/members/invites/revoke` | 撤销已发邀请 | 必须 | 否 |
+| `POST /api/v1/groups/members/set_role` | 设置角色 | 必须 | 否 |
+| `POST /api/v1/groups/members/set_mute` | 设置禁言状态（两态统一） | 必须 | 否 |
+| `POST /api/v1/groups/members/ban` | 封禁成员 | 必须 | 否 |
+| `POST /api/v1/groups/members/unban` | 解除封禁 | 必须 | 否 |
+| `POST /api/v1/groups/members/list_banned` | 封禁列表 | 必须 | 否 |
+| `POST /api/v1/groups/members/remove` | 移除成员 | 必须 | 否 |
+| `POST /api/v1/groups/applications/list` | 申请列表 | 必须 | 否 |
+| `POST /api/v1/groups/applications/approve` | 同意申请 | 必须 | 否 |
+| `POST /api/v1/groups/applications/reject` | 拒绝申请 | 必须 | 否 |
+| `POST /api/v1/groups/update_preferences` | 更新我的群组偏好 | 必须 | 否 |
+| `POST /api/v1/groups/join` | 加入群组（根据 join_method 自动处理） | 必须 | 是 |
+| `POST /api/v1/groups/transfer_ownership` | 转让群主 | 必须 | 建议 |
+| `POST /api/v1/groups/announcements/create` | 发布公告 | 必须 | 是 |
+| `POST /api/v1/groups/announcements/list` | 公告列表 | 可选 | 否 |
+| `POST /api/v1/groups/announcements/update` | 更新公告 | 必须 | 否 |
+| `POST /api/v1/groups/announcements/delete` | 删除公告 | 必须 | 否 |
+| `POST /api/v1/groups/list_my` | 我的群组列表 | 必须 | 否 |
+| `POST /api/v1/groups/list_applications` | 我的申请列表 | 必须 | 否 |
+| `POST /api/v1/groups/cancel_application` | 取消申请 | 必须 | 否 |
+| `POST /api/v1/groups/list_invites` | 我的邀请列表 | 必须 | 否 |
+| `POST /api/v1/groups/accept_invite` | 接受邀请 | 必须 | 否 |
+| `POST /api/v1/groups/reject_invite` | 拒绝邀请 | 必须 | 否 |
+| `POST /api/v1/groups/leave` | 退出群组 | 必须 | 否 |
 
 ## 类型定义
 
@@ -86,7 +86,7 @@ type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
 统一搜索群组。支持关键字、标签、位置范围三种条件的自由组合。
 
 - **认证**: 可选
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 
   - 默认 `sort_by='relevance'`：按相关性优先排序
   - `sort_by='distance'`：按距离由近到远排序（未提供 `radius` 时按默认 `5_000` 米计算）
@@ -121,7 +121,7 @@ interface SearchGroupsRequest {
 获取群组详情。认证可选，字段可见性规则见 `api_spec_base.md`。
 
 - **认证**: 可选
-- **幂等**: 无
+- **幂等**: 否
 
 **Request**: `GroupOpenTheDoorRequest`
 ```typescript
@@ -141,7 +141,7 @@ interface GroupOpenTheDoorRequest {
 创建群组。
 
 - **认证**: 必须
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `CreateGroupRequest`
 ```typescript
@@ -173,7 +173,7 @@ interface CreateGroupRequest {
 更新群组信息。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `UpdateGroupRequest`
 ```typescript
@@ -207,7 +207,7 @@ interface UpdateGroupRequest {
 **级联处理（契约级）**：解散时，该群所有 `pending` 状态的申请与邀请由服务端自动置为 `revoked`（群已不存在，无需推送单独事件；客户端下次拉取列表时自然不可见）。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复解散已不存在的群视为 no-op 成功）
+- **幂等**: 否
 
 **Request**: `DismissGroupRequest`
 ```typescript
@@ -228,7 +228,7 @@ interface DismissGroupRequest {
 获取成员列表。
 
 - **认证**: 可选（未登录或未加入群组的用户仅能看到公开字段，`@group-admin-only` 字段仍按可见性控制）
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 按 `joined_at` 时间正序（最早加入在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `GroupMembersRequest`
@@ -262,7 +262,7 @@ interface GroupMemberItem {
 搜索群组成员。用于大群场景中快速定位特定成员。
 
 - **认证**: 可选（未登录或非成员与未加入用户看到相同字段；`@group-admin-only` 字段仅群管理员可见）
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 按匹配度优先，同匹配度按 `joined_at` 正序，`user_id ASC` 作为稳定 tie-breaker；一致性级别为弱一致（搜索场景允许短暂延迟）
 
 **Request**: `SearchGroupMembersRequest`
@@ -287,12 +287,12 @@ interface SearchGroupMembersRequest {
 
 邀请成员。
 
-**重复/已达目标状态处理**（幂等语义，与业界共识一致）：
+**重复/已达目标状态处理**（与业界共识一致）：
 - 若对同一用户存在 pending 状态的邀请，返回已有邀请信息（不重复创建），避免重复通知骚扰。
 - 被邀请用户**已是群成员**时，视为目标已达，返回成功（no-op，不创建邀请、不报错）。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（对同一用户重复邀请返回已有邀请信息，已是群成员视为 no-op 成功）
+- **幂等**: 否
 
 **Request**: `InviteMemberRequest`
 ```typescript
@@ -321,7 +321,7 @@ interface Invitation {
 我发出的邀请列表。权限：群主、群管理员或系统管理员。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `invite_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **Request**: `GroupSentInvitesRequest`
@@ -360,7 +360,7 @@ interface GroupSentInviteItem {
 撤销已发出的待处理邀请。权限：群主、群管理员或系统管理员。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复撤销返回成功）
+- **幂等**: 否
 
 **Request**: `RevokeSentInviteRequest`
 ```typescript
@@ -383,12 +383,12 @@ interface RevokeSentInviteRequest {
 
 ### POST /api/v1/groups/members/set_role
 
-设置成员角色。幂等语义：设置为目标角色与当前一致时视为 no-op，返回成功。
+设置成员角色。设置为目标角色与当前一致时视为 no-op，返回成功。
 
 **降级与 pending 邀请**：邀请是群行为（非个人），inviter 降级为普通成员后，其历史发出的 pending 邀请由其他管理员/owner 继续可见与管理（不自动失效）。**owner 降级**（转交所有权）前若有 pending 邀请，需先 `members/invites/revoke` 或在 `transfer_ownership` 中一并转交管理权，否则返回 `10400`。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果；目标角色与当前一致时返回成功）
+- **幂等**: 否
 
 **Request**: `SetMemberRoleRequest`
 ```typescript
@@ -410,7 +410,7 @@ interface SetMemberRoleRequest {
 设置成员禁言状态（两态统一端点，替代原 mute/unmute 成对动词）。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（`active=false` 对未禁言成员视为 no-op 成功；`active=true` 重复禁言刷新 duration）
+- **幂等**: 否
 
 **Request**: `SetMuteRequest`
 ```typescript
@@ -435,7 +435,7 @@ interface SetMuteRequest {
 **级联处理（契约级）**：封禁时，被 ban 用户**发出的**该群 pending 申请置 `revoked`；**发给**被 ban 用户的该群 pending 邀请置 `revoked`（避免被封用户仍收到邀请再加入）。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（对已封禁成员重复封禁视为 no-op 成功）
+- **幂等**: 否
 
 **Request**: `BanMemberRequest`
 ```typescript
@@ -454,10 +454,10 @@ interface BanMemberRequest {
 
 ### POST /api/v1/groups/members/unban
 
-解除封禁成员。幂等语义：对未处于封禁状态的成员调用视为 no-op，返回成功（不报错），与 Discord/Slack 等"幂等设状态操作重复达同状态应成功"的业界共识一致。
+解除封禁成员。对未处于封禁状态的成员调用视为 no-op，返回成功（不报错），与 Discord/Slack 等"设状态操作重复达同状态应成功"的业界共识一致。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果；未封禁成员视为已达目标状态，返回成功）
+- **幂等**: 否
 
 **Request**: `UnbanMemberRequest`
 ```typescript
@@ -478,7 +478,7 @@ interface UnbanMemberRequest {
 获取封禁列表。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 按 `banned_at` 时间倒序（最近封禁在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `BannedMembersRequest`
@@ -510,7 +510,7 @@ interface BannedMemberItem {
 移除成员。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `RemoveMemberRequest`
 ```typescript
@@ -531,7 +531,7 @@ interface RemoveMemberRequest {
 获取群组申请列表。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 按 `created_at` 时间倒序（最新申请在前），`application_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `GroupApplicationsRequest`
@@ -570,10 +570,10 @@ interface GroupApplicationItem {
 
 审批群组申请。
 
-**边界情况**：对已处于 `accepted` 状态的申请重复调用，按幂等语义返回成功。
+**边界情况**：对已处于 `accepted` 状态的申请重复调用，视为 no-op 返回成功。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（对已处于 accepted 状态的申请重复调用返回成功）
+- **幂等**: 否
 
 **Request**: `ApproveGroupApplicationRequest`
 ```typescript
@@ -594,7 +594,7 @@ interface ApproveGroupApplicationRequest {
 拒绝群组申请。拒绝后向申请人推送 `GroupApplicationRejected` 通知（含 `reason`，对应 `NotifyType='group_application_rejected'`）。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（对已处于 rejected 状态的申请重复调用返回成功）
+- **幂等**: 否
 
 **Request**: `RejectGroupApplicationRequest`
 ```typescript
@@ -616,7 +616,7 @@ interface RejectGroupApplicationRequest {
 发布群公告。
 
 - **认证**: 必须
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `CreateGroupAnnouncementRequest`
 ```typescript
@@ -639,7 +639,7 @@ interface CreateGroupAnnouncementRequest {
 获取群公告列表。
 
 - **认证**: 可选
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 按 `is_pinned DESC, created_at DESC` 排序，`announcement_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `GroupAnnouncementsRequest`
@@ -664,7 +664,7 @@ interface GroupAnnouncementsRequest {
 更新群公告。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `UpdateGroupAnnouncementRequest`
 ```typescript
@@ -688,7 +688,7 @@ interface UpdateGroupAnnouncementRequest {
 删除群公告。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `DeleteGroupAnnouncementRequest`
 ```typescript
@@ -710,7 +710,7 @@ interface DeleteGroupAnnouncementRequest {
 
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `UpdateGroupMySettingsRequest`
 ```typescript
@@ -737,7 +737,7 @@ interface UpdateGroupMySettingsRequest {
 
 
 - **认证**: 必须
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `JoinGroupRequest`
 ```typescript
@@ -773,7 +773,7 @@ interface JoinGroupResult {
 **边界情况**：`new_owner_id` 不是该群成员时，返回 `10400`（"目标用户不是群成员"）。
 
 - **认证**: 必须
-- **幂等**: SHOULD（建议客户端携带 `Idempotency-Key`）
+- **幂等**: 建议（建议客户端携带 `Idempotency-Key`）
 
 **Request**: `TransferOwnershipRequest`
 ```typescript
@@ -797,7 +797,7 @@ interface TransferOwnershipRequest {
 **说明**：登录态必定返回 `my_state` 字段，包含 `role`、`is_joined`、`unread_count`、`is_muted`、`is_pinned`、`joined_at` 等群组内状态。本端点无 `reference_point` 参数，返回的 `GroupItem.location` 中 `distance` 和 `bearing_degrees` 为 `undefined`。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 默认按 `is_pinned DESC, last_activity_at DESC` 排序（置顶优先，最近活跃在前），`group_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `MyGroupsRequest`
@@ -818,7 +818,7 @@ interface MyGroupsRequest {
 获取我的群组申请列表。查看当前用户提交的所有群组申请及其审核状态。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 按 `created_at` 时间倒序（最新申请在前），`application_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `MyApplicationsRequest`
@@ -841,7 +841,7 @@ interface MyApplicationsRequest {
 
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `CancelApplicationRequest`
 ```typescript
@@ -864,7 +864,7 @@ interface CancelApplicationRequest {
 
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 按 `created_at` 时间倒序（最新邀请在前），`invite_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `MyInvitesRequest`
@@ -900,7 +900,7 @@ interface GroupInviteItem {
 
 
 - **认证**: 必须
-- **幂等**: 幂等语义（同一邀请不可重复接受，天然幂等）
+- **幂等**: 否
 
 **Request**: `AcceptInviteRequest`
 ```typescript
@@ -928,7 +928,7 @@ interface InviteAcceptedResult {
 
 
 - **认证**: 必须
-- **幂等**: 幂等语义（同一邀请不可重复拒绝，天然幂等）
+- **幂等**: 否
 
 **Request**: `RejectInviteRequest`
 ```typescript
@@ -953,7 +953,7 @@ interface RejectInviteRequest {
 **级联处理（契约级）**：退群用户作为**申请人**的该群 pending 申请自动置 `revoked`；作为 inviter 发出的 pending 邀请**保留**（邀请是群行为，由其他管理员管理），但如果退群的是该群最后一个管理员/owner，则已由 `transfer_ownership` 限制提前拦截（不会发生"无人管理 pending 邀请"的状态）。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复退出已不在的群视为 no-op 成功）
+- **幂等**: 否
 
 **Request**: `LeaveGroupRequest`
 ```typescript

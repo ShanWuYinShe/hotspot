@@ -13,21 +13,21 @@
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
-| `POST /api/v1/admin/users/search` | 搜索用户 | 必须 + `admin.users.read` | 无 |
-| `POST /api/v1/admin/users/get_detail` | 用户详情 | 必须 + `admin.users.read` | 无 |
-| `POST /api/v1/admin/users/ban` | 封禁用户 | 必须 + `admin.users.write` | 幂等语义 |
-| `POST /api/v1/admin/users/unban` | 解封用户 | 必须 + `admin.users.write` | 幂等语义 |
-| `POST /api/v1/admin/groups/search` | 搜索群组 | 必须 + `admin.groups.read` | 无 |
-| `POST /api/v1/admin/groups/get_detail` | 群组详情 | 必须 + `admin.groups.read` | 无 |
-| `POST /api/v1/admin/groups/dismiss` | 解散群组 | 必须 + `admin.groups.write` | 幂等语义 |
-| `POST /api/v1/admin/reports/list` | 举报列表（按状态/类型过滤） | 必须 + `admin.reports.read` | 无 |
-| `POST /api/v1/admin/reports/handle` | 处理举报 | 必须 + `admin.reports.write` | 幂等语义 |
-| `POST /api/v1/admin/tags/search` | 搜索标签 | 必须 + `admin.tags.read` | 无 |
-| `POST /api/v1/admin/tags/delete` | 删除/屏蔽标签 | 必须 + `admin.tags.write` | 幂等语义 |
-| `POST /api/v1/admin/announcements/search` | 搜索系统公告 | 必须 + `admin.announcements.read` | 无 |
-| `POST /api/v1/admin/announcements/create` | 发布系统公告 | 必须 + `admin.announcements.write` | MUST |
-| `POST /api/v1/admin/announcements/update` | 更新系统公告 | 必须 + `admin.announcements.write` | 幂等语义 |
-| `POST /api/v1/admin/announcements/delete` | 删除系统公告 | 必须 + `admin.announcements.write` | 幂等语义 |
+| `POST /api/v1/admin/users/search` | 搜索用户 | 必须 + `admin.users.read` | 否 |
+| `POST /api/v1/admin/users/get_detail` | 用户详情 | 必须 + `admin.users.read` | 否 |
+| `POST /api/v1/admin/users/ban` | 封禁用户 | 必须 + `admin.users.write` | 否 |
+| `POST /api/v1/admin/users/unban` | 解封用户 | 必须 + `admin.users.write` | 否 |
+| `POST /api/v1/admin/groups/search` | 搜索群组 | 必须 + `admin.groups.read` | 否 |
+| `POST /api/v1/admin/groups/get_detail` | 群组详情 | 必须 + `admin.groups.read` | 否 |
+| `POST /api/v1/admin/groups/dismiss` | 解散群组 | 必须 + `admin.groups.write` | 否 |
+| `POST /api/v1/admin/reports/list` | 举报列表（按状态/类型过滤） | 必须 + `admin.reports.read` | 否 |
+| `POST /api/v1/admin/reports/handle` | 处理举报 | 必须 + `admin.reports.write` | 否 |
+| `POST /api/v1/admin/tags/search` | 搜索标签 | 必须 + `admin.tags.read` | 否 |
+| `POST /api/v1/admin/tags/delete` | 删除/屏蔽标签 | 必须 + `admin.tags.write` | 否 |
+| `POST /api/v1/admin/announcements/search` | 搜索系统公告 | 必须 + `admin.announcements.read` | 否 |
+| `POST /api/v1/admin/announcements/create` | 发布系统公告 | 必须 + `admin.announcements.write` | 是 |
+| `POST /api/v1/admin/announcements/update` | 更新系统公告 | 必须 + `admin.announcements.write` | 否 |
+| `POST /api/v1/admin/announcements/delete` | 删除系统公告 | 必须 + `admin.announcements.write` | 否 |
 
 ## 类型定义
 
@@ -63,7 +63,7 @@ type UserAccountStatus = 'normal' | 'banned';
 搜索用户（管理员）。
 
 - **认证**: 必须 + `admin.users.read`
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `user.user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **Request**: `AdminUserSearchRequest`
@@ -105,7 +105,7 @@ interface AdminUserItem extends UserItem {
 获取用户详情（管理员）。
 
 - **认证**: 必须 + `admin.users.read`
-- **幂等**: 无
+- **幂等**: 否
 
 **Request**: `AdminUserOpenTheDoorRequest`
 ```typescript
@@ -125,7 +125,7 @@ interface AdminUserOpenTheDoorRequest {
 封禁用户（管理员）。
 
 - **认证**: 必须 + `admin.users.write`
-- **幂等**: 幂等语义（对已封禁用户重复封禁视为 no-op 成功）
+- **幂等**: 否
 
 **安全约束**：
 - 禁止封禁自身（返回 `10400`）
@@ -150,10 +150,10 @@ interface AdminBanUserRequest {
 
 ### POST /api/v1/admin/users/unban
 
-解封用户（管理员）。幂等语义：对未处于封禁状态的用户调用视为 no-op，返回成功（与 group `members/unban` 一致，遵循幂等设状态操作重复达同状态应成功的业界共识）。
+解封用户（管理员）。对未处于封禁状态的用户调用视为 no-op，返回成功（与 group `members/unban` 一致，遵循设状态操作重复达同状态应成功的业界共识）。
 
 - **认证**: 必须 + `admin.users.write`
-- **幂等**: 幂等语义（重复请求返回一致结果；未封禁用户视为已达目标状态，返回成功）
+- **幂等**: 否
 
 **安全约束**：
 - 解封操作会记录审计日志（含 no-op 解封尝试，便于审计追溯）
@@ -177,7 +177,7 @@ interface AdminUnbanUserRequest {
 搜索群组（管理员）。
 
 - **认证**: 必须 + `admin.groups.read`
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `group.group_id ASC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **Request**: `AdminGroupSearchRequest`
@@ -207,7 +207,7 @@ interface AdminGroupItem extends GroupItem {
 获取群组详情（管理员）。
 
 - **认证**: 必须 + `admin.groups.read`
-- **幂等**: 无
+- **幂等**: 否
 
 **Request**: `AdminGroupOpenTheDoorRequest`
 ```typescript
@@ -227,7 +227,7 @@ interface AdminGroupOpenTheDoorRequest {
 解散群组（管理员）。
 
 - **认证**: 必须 + `admin.groups.write`
-- **幂等**: 幂等语义（对已解散群组重复解散视为 no-op 成功）
+- **幂等**: 否
 
 **安全约束**：
 - 解散后群内所有成员收到 `GroupDismissed` WebSocket 事件（`reason='policy_violation'`，不暴露管理员身份）
@@ -254,7 +254,7 @@ interface AdminDismissGroupRequest {
 举报列表（管理员）。按状态/目标类型过滤（无关键字搜索语义，故命名为 list 而非 search）。
 
 - **认证**: 必须 + `admin.reports.read`
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `report_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **Request**: `AdminReportListRequest`
@@ -284,7 +284,7 @@ interface AdminReportItem extends ReportItem {
 处理举报（管理员）。
 
 - **认证**: 必须 + `admin.reports.write`
-- **幂等**: 幂等语义（每举报只能处理一次，已终态的举报重复处理返回 `10400`）
+- **幂等**: 否
 
 **安全约束**：
 - 仅 `pending` 状态的举报可处理，已终态（`resolved`/`dismissed`）的举报返回 `10400`
@@ -325,7 +325,7 @@ interface AdminReportHandleRequest {
 搜索标签（管理员）。
 
 - **认证**: 必须 + `admin.tags.read`
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 默认按照 `usage_count DESC` 排序，数值相同以 `name ASC` 作为稳定 tie-breaker；一致性级别为弱一致。
 
 **Request**: `AdminTagSearchRequest`
@@ -361,7 +361,7 @@ interface AdminTagItem extends TagItem {
 - **寻址说明**：标签的业务唯一键为 `name`（与普通 API `TagItem` 一致，`TagItem` 定义于 `api_spec_types.md`）；`AdminTagItem.tag_id`（定义于本文件「类型定义」小节）为内部存储标识，仅用于展示/审计关联，不参与删除寻址
 
 - **认证**: 必须 + `admin.tags.write`
-- **幂等**: 幂等语义（重复请求返回一致结果；对已屏蔽标签再次屏蔽视为 no-op 成功）
+- **幂等**: 否
 
 **Request**: `AdminDeleteTagRequest`
 ```typescript
@@ -382,7 +382,7 @@ interface AdminDeleteTagRequest {
 搜索系统公告（管理员视角），返回包含管理员字段的公告列表。
 
 - **认证**: 必须 + `admin.announcements.read`
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `announcement_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致。
 
 **说明**：
@@ -416,7 +416,7 @@ interface AdminAnnouncementItem extends SystemAnnouncementItem {
 发布系统公告（管理员）。
 
 - **认证**: 必须 + `admin.announcements.write`
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `CreateAnnouncementRequest`
 ```typescript
@@ -445,7 +445,7 @@ interface AnnouncementCreated {
 更新系统公告（管理员）。
 
 - **认证**: 必须 + `admin.announcements.write`
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `UpdateAnnouncementRequest`
 ```typescript
@@ -469,7 +469,7 @@ interface UpdateAnnouncementRequest {
 删除公告（管理员）。
 
 - **认证**: 必须 + `admin.announcements.write`
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `DeleteAnnouncementRequest`
 ```typescript

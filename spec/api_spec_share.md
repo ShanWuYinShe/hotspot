@@ -21,10 +21,10 @@
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
-| `POST /api/v1/share/create` | 创建分享 | 必须 | MUST |
-| `POST /api/v1/share/get` | 获取分享详情 | 可选 | 无 |
-| `POST /api/v1/share/list_my` | 我的分享列表 | 必须 | 无 |
-| `POST /api/v1/share/revoke` | 撤销分享 | 必须 | 幂等语义 |
+| `POST /api/v1/share/create` | 创建分享 | 必须 | 是 |
+| `POST /api/v1/share/get` | 获取分享详情 | 可选 | 否 |
+| `POST /api/v1/share/list_my` | 我的分享列表 | 必须 | 否 |
+| `POST /api/v1/share/revoke` | 撤销分享 | 必须 | 否 |
 
 ## 类型定义
 
@@ -69,7 +69,7 @@ type ShareType = 'user' | 'group' | 'moment' | 'location';
 创建分享。
 
 - **认证**: 必须
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `CreateShareRequest`
 ```typescript
@@ -129,7 +129,7 @@ interface ShareCreated {
 获取分享详情。
 
 - **认证**: 可选（公开访问）
-- **幂等**: 无
+- **幂等**: 否
 
 **Request**: `GetShareRequest`
 ```typescript
@@ -171,7 +171,7 @@ interface ShareDetail {
 获取当前用户创建的分享列表。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `share_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **Request**: `ShareListRequest`
@@ -204,7 +204,7 @@ interface ShareListItem {
 撤销分享。撤销后分享码不可再用于 `get`。
 
 - **认证**: 必须（仅分享创建者可撤销）
-- **幂等**: 幂等语义（重复撤销返回一致结果）
+- **幂等**: 否
 
 **Request**: `RevokeShareRequest`
 ```typescript

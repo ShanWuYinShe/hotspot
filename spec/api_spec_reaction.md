@@ -16,8 +16,8 @@
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
-| `POST /api/v1/reactions/set` | 设置表情反应（两态统一） | 必须 | 幂等语义 |
-| `POST /api/v1/reactions/list` | 反应列表（统一三类目标） | 可选 | 无 |
+| `POST /api/v1/reactions/set` | 设置表情反应（两态统一） | 必须 | 否 |
+| `POST /api/v1/reactions/list` | 反应列表（统一三类目标） | 可选 | 否 |
 
 ## 类型定义
 
@@ -35,7 +35,7 @@
 设置表情反应（两态统一端点）。覆盖消息、瞬间、评论三类目标。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（`active` 与当前状态一致时视为 no-op，返回成功；同一目标切换 emoji 视为更新而非新增）
+- **幂等**: 否
 
 **Request**: `SetReactionRequest`
 ```typescript
@@ -67,7 +67,7 @@ interface SetReactionRequest {
 获取表情反应列表（统一 moment / comment / message 三类目标）。按反应时间倒序，支持按 emoji 过滤。
 
 - **认证**: 可选
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 默认按 `reacted_at` **时间倒序**（最近反应在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `ListReactionsRequest`

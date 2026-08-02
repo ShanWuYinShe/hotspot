@@ -15,18 +15,18 @@
 
 | 端点 | 说明 | 认证 | 幂等 |
 |------|------|------|------|
-| `POST /api/v1/auth/register` | 用户注册 | 无 | MUST |
-| `POST /api/v1/auth/login` | 用户登录 | 无 | 幂等语义 |
-| `POST /api/v1/auth/logout` | 用户登出 | 必须 | 幂等语义 |
-| `POST /api/v1/auth/guest` | 创建访客用户 | 无 | MUST |
-| `POST /api/v1/auth/refresh_token` | 刷新 Token | 可选 | 幂等语义 |
-| `POST /api/v1/auth/check_status` | 检查认证状态 | 可选 | 无 |
-| `POST /api/v1/auth/request_password_reset` | 请求密码重置 | 无 | 幂等语义 |
-| `POST /api/v1/auth/reset_password` | 重置密码 | 无 | MUST |
-| `POST /api/v1/auth/change_password` | 修改密码 | 必须 | MUST |
-| `POST /api/v1/auth/list_sessions` | 获取会话列表 | 必须 | 无 |
-| `POST /api/v1/auth/revoke_session` | 撤销会话 | 必须 | 幂等语义 |
-| `POST /api/v1/auth/revoke_all_sessions` | 撤销所有其他会话 | 必须 | 幂等语义 |
+| `POST /api/v1/auth/register` | 用户注册 | 否 | 是 |
+| `POST /api/v1/auth/login` | 用户登录 | 否 | 否 |
+| `POST /api/v1/auth/logout` | 用户登出 | 必须 | 否 |
+| `POST /api/v1/auth/guest` | 创建访客用户 | 否 | 是 |
+| `POST /api/v1/auth/refresh_token` | 刷新 Token | 可选 | 否 |
+| `POST /api/v1/auth/check_status` | 检查认证状态 | 可选 | 否 |
+| `POST /api/v1/auth/request_password_reset` | 请求密码重置 | 否 | 否 |
+| `POST /api/v1/auth/reset_password` | 重置密码 | 否 | 是 |
+| `POST /api/v1/auth/change_password` | 修改密码 | 必须 | 是 |
+| `POST /api/v1/auth/list_sessions` | 获取会话列表 | 必须 | 否 |
+| `POST /api/v1/auth/revoke_session` | 撤销会话 | 必须 | 否 |
+| `POST /api/v1/auth/revoke_all_sessions` | 撤销所有其他会话 | 必须 | 否 |
 
 ## 类型定义
 
@@ -114,7 +114,7 @@ Token 通过响应体投递：
 用户注册。
 
 - **认证**: 无
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `RegisterRequest`
 ```typescript
@@ -136,7 +136,7 @@ interface RegisterRequest {
 用户登录（密码方式）。
 
 - **认证**: 无
-- **幂等**: 幂等语义（同一 `device_id` 重复登录：驱逐旧 session 后重建，结果一致）
+- **幂等**: 否
 
 **Request**: `LoginRequest`
 ```typescript
@@ -163,7 +163,7 @@ interface LoginRequest {
 用户登出。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复登出当前会话：旧 token 已在黑名单，二次请求视为无操作成功）
+- **幂等**: 否
 
 **失效规则**：登出会将当前 access_token 与 refresh_token 写入黑名单，直至过期。
 
@@ -196,7 +196,7 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 创建访客用户。
 
 - **认证**: 无
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `GuestRequest`
 ```typescript
@@ -218,7 +218,7 @@ interface GuestRequest {
 刷新 Token。
 
 - **认证**: 可选
-- **幂等**: 幂等语义（宽限期内并发刷新获得相同 token 对，无需 Idempotency-Key）
+- **幂等**: 否
 
 **刷新规则**：
 - 刷新成功后：access_token 和 refresh_token 都会更新
@@ -257,7 +257,7 @@ interface RefreshTokenRequest {
 检查认证状态。
 
 - **认证**: 可选
-- **幂等**: 无
+- **幂等**: 否
 
 **说明**：Token 可选；未登录或携带无效/过期 Token 时返回 `is_valid: false`（不会触发 `10100`），仅当 Token 验证通过时返回 `is_valid: true` 并附 `expires_at`。
 
@@ -280,7 +280,7 @@ interface AuthStatus {
 请求密码重置（发送验证码）。
 
 - **认证**: 无
-- **幂等**: 幂等语义（IP 限流 [10次/10分钟] 已阻止短时重复发送，超出窗口的重试不受影响）
+- **幂等**: 否
 
 **安全说明**：
 - 无论 `login_id` 是否存在，均返回成功响应，不暴露账号是否注册
@@ -305,7 +305,7 @@ interface RequestPasswordResetRequest {
 验证验证码并重置密码。重置成功后自动登录并返回 Token。
 
 - **认证**: 无
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **安全说明**：
 - 重置密码成功后，服务端自动吊销该账号所有现有会话（与 `change_password` 一致）
@@ -335,7 +335,7 @@ interface ResetPasswordRequest {
 修改密码（需要验证旧密码）。
 
 - **认证**: 必须
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `ChangePasswordRequest`
 ```typescript
@@ -361,7 +361,7 @@ interface ChangePasswordRequest {
 获取活跃会话列表。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 
 **黑名单语义**：登出/撤销会话会将对应 token 写入黑名单，直至 token 过期。
 
@@ -399,7 +399,7 @@ interface SessionItem {
 撤销会话（设备下线）。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（目标 session 已不活跃/已撤销：视为无操作成功）
+- **幂等**: 否
 
 **安全说明**：
 - 撤销操作会将对应会话的 token 写入黑名单，直至过期
@@ -424,7 +424,7 @@ interface RevokeSessionRequest {
 撤销当前会话之外的所有其他活跃会话。适用于账号被盗、密码泄露等紧急安全场景。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（无其他活跃会话时：revoked_count=0 成功返回）
+- **幂等**: 否
 
 **安全说明**：
 - 当前会话（发起请求的会话）不会被撤销

@@ -16,8 +16,8 @@
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
-| `POST /api/v1/reports/create` | 创建举报 | 必须 | 幂等语义 |
-| `POST /api/v1/reports/list_my` | 我的举报记录 | 必须 | 无 |
+| `POST /api/v1/reports/create` | 创建举报 | 必须 | 否 |
+| `POST /api/v1/reports/list_my` | 我的举报记录 | 必须 | 否 |
 
 ## 举报审核流程说明
 
@@ -69,7 +69,7 @@
 创建举报。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（同一 `target_type + target_id` 已有非终态举报时，返回成功并附带已有 `report_id`，不报错）
+- **幂等**: 否
 
 **字段说明**：
 - `reason`：举报原因，从 `ReportReason` 枚举中选取
@@ -109,7 +109,7 @@ interface ReportCreated {
 我的举报记录。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `report_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **Request**: `MyReportsRequest`

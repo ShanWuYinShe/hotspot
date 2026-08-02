@@ -25,30 +25,30 @@
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
-| `POST /api/v1/private_chats/list` | 私聊列表 | 必须 | 无 |
-| `POST /api/v1/private_chats/get_detail` | 私聊详情 | 必须 | 无 |
-| `POST /api/v1/private_chats/update_preferences` | 更新会话偏好 | 必须 | 幂等语义 |
-| `POST /api/v1/private_chats/delete` | 删除私聊会话 | 必须 | 幂等语义 |
+| `POST /api/v1/private_chats/list` | 私聊列表 | 必须 | 否 |
+| `POST /api/v1/private_chats/get_detail` | 私聊详情 | 必须 | 否 |
+| `POST /api/v1/private_chats/update_preferences` | 更新会话偏好 | 必须 | 否 |
+| `POST /api/v1/private_chats/delete` | 删除私聊会话 | 必须 | 否 |
 
 ### 私聊消息（`private_messages`）
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
-| `POST /api/v1/private_messages/send` | 发送私聊消息 | 必须 | MUST |
-| `POST /api/v1/private_messages/get_history` | 私聊消息历史 | 必须 | 无 |
-| `POST /api/v1/private_messages/update` | 编辑私聊消息 | 必须 | 幂等语义 |
-| `POST /api/v1/private_messages/recall` | 撤回私聊消息 | 必须 | 幂等语义 |
-| `POST /api/v1/private_messages/mark_read` | 标记私聊消息已读（scope 控制范围） | 必须 | 幂等语义 |
+| `POST /api/v1/private_messages/send` | 发送私聊消息 | 必须 | 是 |
+| `POST /api/v1/private_messages/get_history` | 私聊消息历史 | 必须 | 否 |
+| `POST /api/v1/private_messages/update` | 编辑私聊消息 | 必须 | 否 |
+| `POST /api/v1/private_messages/recall` | 撤回私聊消息 | 必须 | 否 |
+| `POST /api/v1/private_messages/mark_read` | 标记私聊消息已读（scope 控制范围） | 必须 | 否 |
 
 ### 群聊消息（`group_messages`）
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
-| `POST /api/v1/group_messages/send` | 发送群聊消息 | 必须 | MUST |
-| `POST /api/v1/group_messages/get_history` | 群聊消息历史 | 必须 | 无 |
-| `POST /api/v1/group_messages/update` | 编辑群聊消息 | 必须 | 幂等语义 |
-| `POST /api/v1/group_messages/recall` | 撤回群聊消息 | 必须 | 幂等语义 |
-| `POST /api/v1/group_messages/mark_read` | 标记群聊消息已读（scope 控制范围） | 必须 | 幂等语义 |
+| `POST /api/v1/group_messages/send` | 发送群聊消息 | 必须 | 是 |
+| `POST /api/v1/group_messages/get_history` | 群聊消息历史 | 必须 | 否 |
+| `POST /api/v1/group_messages/update` | 编辑群聊消息 | 必须 | 否 |
+| `POST /api/v1/group_messages/recall` | 撤回群聊消息 | 必须 | 否 |
+| `POST /api/v1/group_messages/mark_read` | 标记群聊消息已读（scope 控制范围） | 必须 | 否 |
 
 ## 已读状态设计
 
@@ -161,7 +161,7 @@ interface GroupMessageItem {
 获取私聊列表。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 按 `is_pinned DESC, last_activity_at DESC` 排序（置顶优先，最新会话在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `MyPrivateChatsRequest`
@@ -225,7 +225,7 @@ interface PrivateChatItem {
 响应始终包含最近消息列表（`PaginatedData<PrivateMessageItem>`，会话不存在时为空），条数由 `AppConfig.response_defaults.chat_recent_messages_count` 控制。
 
 - **认证**: 必须
-- **幂等**: 无（纯查询，无写入副作用）
+- **幂等**: 否
 
 **Request**: `PrivateChatOpenTheDoorRequest`
 ```typescript
@@ -250,7 +250,7 @@ interface PrivateChatOpenResult {
 更新私聊偏好（静音/置顶）。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `UpdatePrivateChatPreferencesRequest`
 ```typescript
@@ -276,7 +276,7 @@ interface UpdatePrivateChatPreferencesRequest {
 - 若再次发起私聊，将创建一个新的空白会话
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `DeletePrivateChatRequest`
 ```typescript
@@ -313,7 +313,7 @@ interface DeletePrivateChatRequest {
 其余错误（`10000`/`10300`）不返回 `data`。
 
 - **认证**: 必须
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `SendPrivateMessageRequest`
 ```typescript
@@ -336,7 +336,7 @@ interface SendPrivateMessageRequest {
 获取私聊消息历史。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 按 `sent_at` 时间倒序（最新在前），`message_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `GetPrivateMessagesHistoryRequest`
@@ -362,7 +362,7 @@ interface GetPrivateMessagesHistoryRequest {
 - 已撤回的消息不可编辑，返回 `10400`
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `UpdatePrivateMessageRequest`
 ```typescript
@@ -381,7 +381,7 @@ interface UpdatePrivateMessageRequest {
 撤回私聊消息。发送者只能撤回撤回时间窗内的消息，窗口由 `AppConfig.limits.message_recall_window_seconds` 控制（客户端通过 `ClientConfig.limits` 读取），超时返回 `10400`。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `RecallPrivateMessageRequest`
 ```typescript
@@ -401,7 +401,7 @@ interface RecallPrivateMessageRequest {
 **up_to 语义**：标记截至某条消息（含）及之前的所有消息为已读。`up_to_message_id` 不属于目标会话时返回 `10300`。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `MarkPrivateReadRequest`
 ```typescript
@@ -427,7 +427,7 @@ interface MarkPrivateReadRequest {
 发送群聊消息。
 
 - **认证**: 必须
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **禁言处理**：被禁言成员发消息返回 `10400`，`message` 含禁言截止时间（如"您已被禁言至 2024-01-15T08:30:00.000Z"）。客户端可据 `MyGroupState.is_muted` + `muted_until`（见 `api_spec_types.md`）预判，禁用群聊输入框并展示剩余时间，避免必失败的请求。
 
@@ -453,7 +453,7 @@ interface SendGroupMessageRequest {
 获取群聊消息历史。
 
 - **认证**: 必须
-- **幂等**: 无
+- **幂等**: 否
 - **排序**: 按 `sent_at` 时间倒序（最新在前），`message_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `GetGroupMessagesHistoryRequest`
@@ -478,7 +478,7 @@ interface GetGroupMessagesHistoryRequest {
 - 已撤回的消息不可编辑，返回 `10400`
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `UpdateGroupMessageRequest`
 ```typescript
@@ -497,7 +497,7 @@ interface UpdateGroupMessageRequest {
 撤回群聊消息。发送者可撤回撤回时间窗内的消息（窗口由 `AppConfig.limits.message_recall_window_seconds` 控制），群组管理员/群主可撤回任何消息，超时返回 `10400`。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `RecallGroupMessageRequest`
 ```typescript
@@ -517,7 +517,7 @@ interface RecallGroupMessageRequest {
 **up_to 语义**：标记截至某条消息（含）及之前的所有消息为已读。`up_to_message_id` 不属于目标群组时返回 `10300`。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（重复请求返回一致结果）
+- **幂等**: 否
 
 **Request**: `MarkGroupReadRequest`
 ```typescript
