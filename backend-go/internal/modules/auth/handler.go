@@ -203,12 +203,13 @@ func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "auth/request_password_reset", func() httpx.ApiResponse[struct{}] {
-		if err := h.service.RequestPasswordReset(r.Context(), req); err != nil {
-			return errorResponse[struct{}](apiErrorFrom(err))
-		}
-		return httpx.SuccessEmpty()
-	})
+	// 幂等语义（spec api_spec_auth.md）：本接口靠 IP 限流保护，无需
+	// Idempotency-Key。重复请求重新触发 service（防账号枚举 + 限流），不缓存。
+	if err := h.service.RequestPasswordReset(r.Context(), req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, errorResponse[struct{}](apiErrorFrom(err)))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
 func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
