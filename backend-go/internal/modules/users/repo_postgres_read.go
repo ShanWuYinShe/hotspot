@@ -2,7 +2,6 @@ package users
 
 import (
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"strings"
@@ -10,7 +9,6 @@ import (
 
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
-	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -715,17 +713,9 @@ func normalizeUserMomentLimit(limit int) int {
 }
 
 // usersCursorCodec caches the AES-GCM cipher used for user moment and
-// search cursors. Previously encode/decode rebuilt the cipher on every call
-// (aes.NewCipher + cipher.NewGCM). The key derivation matches the legacy
-// sha256(secret) format (no namespace salt) so existing cursors remain valid.
-var usersCursorCodec = cursor.NewCodecWithKey(func() ([]byte, error) {
-	secret := config.Load().AuthTokenSecret
-	if secret == "" {
-		secret = "dev-secret-change-me"
-	}
-	key := sha256.Sum256([]byte(secret))
-	return key[:], nil
-})
+// search cursors, keyed with a namespace salt to isolate cursors across
+// modules.
+var usersCursorCodec = cursor.NewCodec("users")
 
 func encodeUserMomentCursor(at, id string) string {
 	token, err := usersCursorCodec.Encode(userMomentCursor{At: at, ID: id})

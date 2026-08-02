@@ -14,7 +14,6 @@ Thumbs.db:encryptable
 # ============================================
 # Temporary Files
 # ============================================
-.local/
 *.tmp
 *.log
 *.bak
@@ -57,13 +56,9 @@ __pycache__/
 .workwork/
 .opencode/
 .sisyphus
-.worktrees
 .claude/worktrees/
 .claude/settings.local.json
 browser-data/
 docs/superpowers/
 .zcode/
 .superpowers
-/frontend/.next/
-/frontend/out/
-/frontend/out-dev/

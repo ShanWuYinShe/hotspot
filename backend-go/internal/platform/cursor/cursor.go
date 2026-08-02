@@ -27,9 +27,7 @@ type Codec struct {
 	nonceSize  int
 	renderOnce sync.Once
 	renderErr  error
-	// deriveKey returns the 32-byte AES key. Callers can swap this to keep
-	// a legacy key derivation (e.g. one that omitted a namespace salt).
-	deriveKey func() ([]byte, error)
+	namespace  string
 }
 
 // NewCodec returns a Codec bound to a specific namespace. The cipher is
@@ -37,41 +35,17 @@ type Codec struct {
 // does not pay the setup cost (and so any config-load error surfaces at the
 // first real call rather than at constructor time).
 func NewCodec(namespace string) *Codec {
-	return &Codec{deriveKey: func() ([]byte, error) {
-		secret := config.Load().AuthTokenSecret
-		if secret == "" {
-			secret = "dev-secret-change-me"
-		}
-		key := sha256.Sum256([]byte(namespace + ":" + secret))
-		return key[:], nil
-	}}
-}
-
-// NewCodecWithKey returns a Codec that derives its AES key from the supplied
-// function, allowing modules with an existing key derivation (e.g. one that
-// predates the namespace convention) to reuse the cached cipher without
-// changing the on-the-wire cursor format.
-func NewCodecWithKey(deriveKey func() ([]byte, error)) *Codec {
-	return &Codec{deriveKey: deriveKey}
-}
-
-// NewCodecWithSecret returns a Codec pinned to an explicit secret, useful
-// for tests that want deterministic cursors without depending on env state.
-func NewCodecWithSecret(namespace, secret string) *Codec {
-	return &Codec{deriveKey: func() ([]byte, error) {
-		key := sha256.Sum256([]byte(namespace + ":" + secret))
-		return key[:], nil
-	}}
+	return &Codec{namespace: namespace}
 }
 
 func (c *Codec) ensure() error {
 	c.renderOnce.Do(func() {
-		key, err := c.deriveKey()
-		if err != nil {
-			c.renderErr = err
-			return
+		secret := config.Load().AuthTokenSecret
+		if secret == "" {
+			secret = "dev-secret-change-me"
 		}
-		block, err := aes.NewCipher(key)
+		key := sha256.Sum256([]byte(c.namespace + ":" + secret))
+		block, err := aes.NewCipher(key[:])
 		if err != nil {
 			c.renderErr = err
 			return

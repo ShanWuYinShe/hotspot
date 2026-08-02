@@ -2,13 +2,11 @@ package mapmodule
 
 import (
 	"context"
-	"crypto/sha256"
 	"errors"
 	"sort"
 	"strings"
 	"time"
 
-	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -320,19 +318,9 @@ func truncateMapTitle(title string) string {
 	return string(runes[:60])
 }
 
-// mapCursorCodec is a process-wide cached AES-GCM codec for map cursors.
-// Previously encode/decode rebuilt the cipher (aes.NewCipher + GCM) on
-// every call; now the cipher is built once and reused. The key derivation
-// intentionally matches the legacy format (sha256 of the raw secret, with
-// no namespace salt) so existing cursors keep validating across deploys.
-var mapCursorCodec = cursor.NewCodecWithKey(func() ([]byte, error) {
-	secret := config.Load().AuthTokenSecret
-	if secret == "" {
-		secret = "dev-secret-change-me"
-	}
-	key := sha256.Sum256([]byte(secret))
-	return key[:], nil
-})
+// mapCursorCodec is a process-wide cached AES-GCM codec for map cursors,
+// keyed with a namespace salt to isolate cursors across modules.
+var mapCursorCodec = cursor.NewCodec("map")
 
 func encodeMapCursor(item mapCandidate) string {
 	payload := mapCursor{Distance: item.Distance, Type: item.ObjectType, ID: item.ObjectID, CreatedAt: item.CreatedAt}

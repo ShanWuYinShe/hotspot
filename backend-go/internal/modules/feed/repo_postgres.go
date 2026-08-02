@@ -2,12 +2,10 @@ package feed
 
 import (
 	"context"
-	"crypto/sha256"
 	"sort"
 	"strings"
 	"time"
 
-	"hotspot/backend-go/internal/platform/config"
 	platformcursor "hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -596,14 +594,7 @@ func findNearbyCursorStart(items []momentCandidate, cursor *itemCursor) int {
 	return len(items)
 }
 
-var feedCursorCodec = platformcursor.NewCodecWithKey(func() ([]byte, error) {
-	secret := config.Load().AuthTokenSecret
-	if secret == "" {
-		secret = "dev-secret-change-me"
-	}
-	key := sha256.Sum256([]byte(secret))
-	return key[:], nil
-})
+var feedCursorCodec = platformcursor.NewCodec("feed")
 
 func encodeFeedCursor(cursor itemCursor) string {
 	token, err := feedCursorCodec.Encode(cursor)

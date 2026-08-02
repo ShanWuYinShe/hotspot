@@ -518,7 +518,7 @@ WHERE m.privacy_level = 'public'
 }
 
 func buildGroupSearchExplainSQL() string {
-	distanceExpr := platformgeo.HaversineDistanceSQL("$1", "$2")
+	distanceExpr := "CAST(6371000 * 2 * ASIN(SQRT(POWER(SIN(RADIANS(latitude - $1) / 2), 2) + COS(RADIANS($1)) * COS(RADIANS(latitude)) * POWER(SIN(RADIANS(longitude - $2) / 2), 2))) AS INTEGER)"
 	return "SELECT * FROM (" +
 		"SELECT g.group_id, g.name, g.avatar_url, g.description, g.has_password, g.location_name, g.latitude, g.longitude, g.join_method, g.is_searchable, g.max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}')" +
 		", (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = g.group_id) AS members_count" +

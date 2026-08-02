@@ -267,13 +267,3 @@ func BearingDegrees(a, b Point) int {
 	}
 	return int(math.Round(bearing))
 }
-
-// HaversineDistanceSQL returns a SQL expression fragment computing the Haversine
-// distance in meters between the row's (latitude, longitude) and reference params.
-// refLatParam/refLngParam are $N placeholders for the reference coordinates.
-func HaversineDistanceSQL(refLatParam, refLngParam string) string {
-	return fmt.Sprintf(
-		`CAST(6371000 * 2 * ASIN(SQRT(POWER(SIN(RADIANS(latitude - %s) / 2), 2) + COS(RADIANS(%s)) * COS(RADIANS(latitude)) * POWER(SIN(RADIANS(longitude - %s) / 2), 2))) AS INTEGER)`,
-		refLatParam, refLatParam, refLngParam,
-	)
-}
