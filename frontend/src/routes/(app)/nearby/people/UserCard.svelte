@@ -85,7 +85,7 @@
 				{/if}
 				<button
 					type="button"
-					class="neu-hover-btn flex items-center justify-center rounded-full outline-none flex-shrink-0"
+					class="neu-hover-btn neu-tap-90 flex items-center justify-center rounded-full outline-none flex-shrink-0"
 					style="width:28px;height:28px;{followed
 						? 'background:var(--neu-accent-soft);border:1px solid var(--neu-accent-soft-border);color:var(--neu-accent-primary);'
 						: 'background:var(--neu-accent-primary);color:var(--text-on-accent);box-shadow:0 2px 8px var(--neu-glow);'}"

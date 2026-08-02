@@ -158,7 +158,7 @@
 							<span class="text-[11px] text-[var(--neu-text-muted)]">活动发起人</span>
 						</div>
 					</div>
-					<button type="button" class="neu-hover-btn rounded-full px-3 py-1.5 text-white text-[12px] outline-none" style="background:{ev.color};box-shadow:0 3px 10px {evTone(40)};">关注</button>
+					<button type="button" class="neu-hover-btn neu-tap-93 rounded-full px-3 py-1.5 text-white text-[12px] outline-none" style="background:{ev.color};box-shadow:0 3px 10px {evTone(40)};">关注</button>
 				</div>
 
 				<!-- 描述 -->
@@ -220,7 +220,7 @@
 			<button
 				type="button"
 				onclick={() => (joined = !joined)}
-				class="neu-hover-btn flex w-full items-center justify-center gap-2 rounded-feature py-4 text-[15px] outline-none transition-all duration-300"
+				class="neu-hover-btn neu-tap-97 flex w-full items-center justify-center gap-2 rounded-feature py-4 text-[15px] outline-none transition-all duration-300"
 				style={joined
 					? `background:var(--neu-bg);border:2px solid ${ev.color};color:${ev.color};box-shadow:0 0 0 4px ${evTone(18)};`
 					: `background:${ev.color};color:white;box-shadow:0 8px 24px ${evTone(45)};border:none;`}

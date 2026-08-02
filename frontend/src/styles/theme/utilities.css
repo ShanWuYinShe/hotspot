@@ -466,6 +466,14 @@
   .neu-scale-btn:hover { transform: scale(1.10); transition-duration: 0.17s; }
   .neu-scale-btn:active { transform: scale(0.94); transition-duration: 0.10s; }
 
+  /* 页面级按钮的精确 tap 强度（对齐 Figma 各页 whileTap 硬编码值） */
+  .neu-tap-99:active { transform: scale(0.99); }
+  .neu-tap-97:active { transform: scale(0.97); }
+  .neu-tap-93:active { transform: scale(0.93); }
+  .neu-tap-90:active { transform: scale(0.90); }
+  .neu-tap-88:active { transform: scale(0.88); }
+  .neu-tap-84:active { transform: scale(0.84); }
+
   /* vibrant：无阴影抬升（玻璃感），仅位移光晕 */
   .vibrant .neu-hover-card:hover { box-shadow: 0 8px 24px var(--neu-accent-soft); }
 

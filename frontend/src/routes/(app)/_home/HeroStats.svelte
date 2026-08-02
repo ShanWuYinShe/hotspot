@@ -20,7 +20,7 @@
 <div class="neu-ambient-glow">
 	<button
 		type="button"
-		class="neu-hover-btn neu-surface-hero rounded-feature cursor-pointer overflow-hidden text-left w-full"
+		class="neu-hover-btn neu-tap-99 neu-surface-hero rounded-feature cursor-pointer overflow-hidden text-left w-full"
 		style="padding:18px 20px;"
 		aria-label="查看附近的人"
 		onclick={onExplore}

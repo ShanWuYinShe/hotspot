@@ -27,7 +27,7 @@
 
 <button
 	type="button"
-	class="relative flex h-10 outline-none {collapsed ? 'w-10 self-center items-center justify-center rounded-tight' : 'w-full items-center gap-3 rounded-tight px-3 text-left'}"
+	class="neu-tap-97 relative flex h-10 outline-none {collapsed ? 'w-10 self-center items-center justify-center rounded-tight' : 'w-full items-center gap-3 rounded-tight px-3 text-left'}"
 	style="background:{isActive ? 'var(--neu-accent-primary)' : hoverBg};color:{isActive ? 'var(--content-on-accent)' : showHover ? 'var(--neu-text)' : 'var(--neu-text-muted)'};box-shadow:{isActive ? 'var(--elevation-navigation-active)' : 'none'};transition:background 0.16s ease, color 0.16s ease, box-shadow 0.2s ease;"
 	aria-current={isActive ? 'page' : undefined}
 	data-active={isActive ? 'true' : undefined}
