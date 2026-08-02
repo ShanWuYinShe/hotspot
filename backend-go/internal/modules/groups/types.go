@@ -1,6 +1,9 @@
 package groups
 
-import "hotspot/backend-go/internal/platform/types"
+import (
+	"hotspot/backend-go/internal/platform/cursor"
+	"hotspot/backend-go/internal/platform/types"
+)
 
 type GroupJoinMethod string
 
@@ -418,4 +421,22 @@ type PaginatedApplications struct {
 type PaginatedInvites struct {
 	Items      []GroupInviteItem `json:"items"`
 	NextCursor string            `json:"next_cursor,omitempty"`
+}
+
+// myGroupsCursor is the keyset cursor for ListMyGroups, ordered by
+// (joined_at DESC, group_id DESC). It is opaque to clients — encoded with the
+// shared AES-GCM cursor codec under the "groups.my_groups" namespace.
+type myGroupsCursor struct {
+	JoinedAt string `json:"joined_at"`
+	GroupID  string `json:"group_id"`
+}
+
+const myGroupsCursorNamespace = "groups.my_groups"
+
+func encodeMyGroupsCursor(c myGroupsCursor) string {
+	value, err := cursor.Encode(myGroupsCursorNamespace, c)
+	if err != nil {
+		return ""
+	}
+	return value
 }

@@ -130,7 +130,7 @@ func queryTagSuggestions(ctx context.Context, queryable persistence.QueryableDB,
 }
 
 func queryUserSuggestions(ctx context.Context, queryable persistence.QueryableDB, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
-	rows, err := queryable.Query(ctx, querySearchSuggestUsers, prefix, maxSuggestRows)
+	rows, err := queryable.Query(ctx, querySearchSuggestUsers, prefix, reference.Latitude, reference.Longitude, radius, maxSuggestRows)
 	if err != nil {
 		return nil, err
 	}
@@ -139,13 +139,13 @@ func queryUserSuggestions(ctx context.Context, queryable persistence.QueryableDB
 	for rows.Next() {
 		var userID, nickname, avatarURL, bio, locationName string
 		var latitude, longitude float64
-		if err := rows.Scan(&userID, &nickname, &avatarURL, &bio, &locationName, &latitude, &longitude); err != nil {
+		var distance int
+		if err := rows.Scan(&userID, &nickname, &avatarURL, &bio, &locationName, &latitude, &longitude, &distance); err != nil {
 			return nil, err
 		}
-		distance := distanceFrom(reference, latitude, longitude)
-		if radius > 0 && distance > radius {
-			continue
-		}
+		// Radius filtering now happens in SQL (the ($4 = 0 OR distance <= $4)
+		// predicate); distance is read from the computed distance_meters column
+		// rather than recomputed in Go.
 		payload := map[string]any{"user_id": userID, "nickname": nickname}
 		if avatarURL != "" {
 			payload["avatar_url"] = avatarURL
@@ -153,7 +153,7 @@ func queryUserSuggestions(ctx context.Context, queryable persistence.QueryableDB
 		if bio != "" {
 			payload["bio"] = bio
 		}
-		payload["location"] = relativeLocationPayload(reference, locationName, latitude, longitude)
+		payload["location"] = relativeLocationPayloadWithDistance(reference, locationName, latitude, longitude, distance)
 		items = append(items, scoredSuggestItem{
 			Item:       SearchSuggestItem{Type: "user", Payload: payload},
 			TypeOrder:  1,
@@ -169,7 +169,7 @@ func queryUserSuggestions(ctx context.Context, queryable persistence.QueryableDB
 }
 
 func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableDB, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
-	rows, err := queryable.Query(ctx, querySearchSuggestGroups, prefix, maxSuggestRows)
+	rows, err := queryable.Query(ctx, querySearchSuggestGroups, prefix, reference.Latitude, reference.Longitude, radius, maxSuggestRows)
 	if err != nil {
 		return nil, err
 	}
@@ -179,12 +179,9 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableD
 		var groupID, name, avatarURL, description, locationName string
 		var latitude, longitude float64
 		var membersCount int
-		if err := rows.Scan(&groupID, &name, &avatarURL, &description, &locationName, &latitude, &longitude, &membersCount); err != nil {
+		var distance int
+		if err := rows.Scan(&groupID, &name, &avatarURL, &description, &locationName, &latitude, &longitude, &membersCount, &distance); err != nil {
 			return nil, err
-		}
-		distance := distanceFrom(reference, latitude, longitude)
-		if radius > 0 && distance > radius {
-			continue
 		}
 		payload := map[string]any{"group_id": groupID, "name": name, "members_count": membersCount}
 		if avatarURL != "" {
@@ -193,7 +190,7 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableD
 		if description != "" {
 			payload["description"] = description
 		}
-		payload["location"] = relativeLocationPayload(reference, locationName, latitude, longitude)
+		payload["location"] = relativeLocationPayloadWithDistance(reference, locationName, latitude, longitude, distance)
 		items = append(items, scoredSuggestItem{
 			Item:       SearchSuggestItem{Type: "group", Payload: payload},
 			TypeOrder:  2,
@@ -210,7 +207,7 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableD
 }
 
 func queryMomentSuggestions(ctx context.Context, queryable persistence.QueryableDB, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
-	rows, err := queryable.Query(ctx, querySearchSuggestMoments, prefix, maxSuggestRows)
+	rows, err := queryable.Query(ctx, querySearchSuggestMoments, prefix, reference.Latitude, reference.Longitude, radius, maxSuggestRows)
 	if err != nil {
 		return nil, err
 	}
@@ -219,13 +216,9 @@ func queryMomentSuggestions(ctx context.Context, queryable persistence.Queryable
 	for rows.Next() {
 		var momentID, userID, nickname, description, locationName string
 		var latitude, longitude float64
-		var popularity int
-		if err := rows.Scan(&momentID, &userID, &nickname, &description, &locationName, &latitude, &longitude, &popularity); err != nil {
+		var popularity, distance int
+		if err := rows.Scan(&momentID, &userID, &nickname, &description, &locationName, &latitude, &longitude, &popularity, &distance); err != nil {
 			return nil, err
-		}
-		distance := distanceFrom(reference, latitude, longitude)
-		if radius > 0 && distance > radius {
-			continue
 		}
 		payload := map[string]any{
 			"moment_id":           momentID,
@@ -234,7 +227,7 @@ func queryMomentSuggestions(ctx context.Context, queryable persistence.Queryable
 				"user_id":  userID,
 				"nickname": nickname,
 			},
-			"location": relativeLocationPayload(reference, locationName, latitude, longitude),
+			"location": relativeLocationPayloadWithDistance(reference, locationName, latitude, longitude, distance),
 		}
 		items = append(items, scoredSuggestItem{
 			Item:       SearchSuggestItem{Type: "moment", Payload: payload},
@@ -304,15 +297,24 @@ func relativeLocationPayload(reference GeoPoint, locationName string, latitude, 
 	}
 }
 
+// relativeLocationPayloadWithDistance is like relativeLocationPayload but
+// reuses the distance already computed by PostgreSQL (distance_meters column)
+// instead of recomputing it in Go. bearing is still Go-side because it is a
+// display-only value that never drives ordering.
+func relativeLocationPayloadWithDistance(reference GeoPoint, locationName string, latitude, longitude float64, distance int) map[string]any {
+	_, bearing := computeRelativeDistance(reference, GeoPoint{Latitude: latitude, Longitude: longitude})
+	return map[string]any{
+		"point":           map[string]any{"latitude": latitude, "longitude": longitude},
+		"location_name":   locationName,
+		"distance":        distance,
+		"bearing_degrees": bearing,
+	}
+}
+
 func computeRelativeDistance(reference GeoPoint, candidate GeoPoint) (int, int) {
 	point := geo.Point{Latitude: reference.Latitude, Longitude: reference.Longitude}
 	other := geo.Point{Latitude: candidate.Latitude, Longitude: candidate.Longitude}
 	return geo.DistanceMeters(point, other), geo.BearingDegrees(point, other)
-}
-
-func distanceFrom(reference GeoPoint, latitude, longitude float64) int {
-	distance, _ := computeRelativeDistance(reference, GeoPoint{Latitude: latitude, Longitude: longitude})
-	return distance
 }
 
 func truncatePreview(description string) string {

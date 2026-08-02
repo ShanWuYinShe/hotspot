@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"hotspot/backend-go/internal/platform/idgen"
@@ -37,11 +38,11 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		parentID = req.ParentID
 	}
 	if err := queryable.Exec(ctx, queryInsertComment, commentID, req.MomentID, userID, parentID, req.Content, createdAt, 0, 0); err != nil {
-		return CommentItem{}, err
+		return CommentItem{}, fmt.Errorf("comments.Create insert comment: %w", err)
 	}
 	if req.ParentID != "" {
 		if err := queryable.Exec(ctx, queryIncrementCommentRepliesCount, req.ParentID); err != nil {
-			return CommentItem{}, err
+			return CommentItem{}, fmt.Errorf("comments.Create increment replies: %w", err)
 		}
 	}
 	var nickname string
@@ -66,7 +67,10 @@ func (r *PostgresRepository) SoftDelete(ctx context.Context, commentID string) e
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, querySoftDeleteReplyAndDecrementParent, commentID)
+	if err := queryable.Exec(ctx, querySoftDeleteReplyAndDecrementParent, commentID); err != nil {
+		return fmt.Errorf("comments.SoftDelete exec: %w", err)
+	}
+	return nil
 }
 
 func (r *PostgresRepository) List(ctx context.Context, momentID string, limit int, cursor string) (PaginatedComments, error) {
@@ -81,7 +85,7 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 	}
 	rows, err := queryable.Query(ctx, queryListComments, momentID, cursorCreatedAt, cursorCommentID, limit+1)
 	if err != nil {
-		return PaginatedComments{}, err
+		return PaginatedComments{}, fmt.Errorf("comments.List query: %w", err)
 	}
 	defer rows.Close()
 	items := make([]CommentItem, 0, limit+1)
@@ -90,7 +94,7 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 		var userID, nickname, parentID string
 		var createdAt time.Time
 		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
-			return PaginatedComments{}, err
+			return PaginatedComments{}, fmt.Errorf("comments.List scan: %w", err)
 		}
 		item.User = UserInfo{UserID: userID, Nickname: nickname}
 		item.ParentID = parentID
@@ -99,7 +103,7 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
-		return PaginatedComments{}, err
+		return PaginatedComments{}, fmt.Errorf("comments.List rows: %w", err)
 	}
 	if len(items) > limit {
 		return PaginatedComments{Items: items[:limit], NextCursor: encodeCommentCursor(items[limit-1].CreatedAt, items[limit-1].CommentID)}, nil
@@ -120,7 +124,7 @@ func (r *PostgresRepository) Get(ctx context.Context, commentID string) (Comment
 		if errors.Is(err, pgx.ErrNoRows) {
 			return CommentItem{}, false, nil
 		}
-		return CommentItem{}, false, err
+		return CommentItem{}, false, fmt.Errorf("comments.Get scan: %w", err)
 	}
 	item.User = UserInfo{UserID: userID, Nickname: nickname}
 	item.ParentID = parentID
@@ -141,7 +145,7 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 	}
 	rows, err := queryable.Query(ctx, queryListCommentReplies, commentID, cursorCreatedAt, cursorCommentID, limit+1)
 	if err != nil {
-		return PaginatedComments{}, err
+		return PaginatedComments{}, fmt.Errorf("comments.ListReplies query: %w", err)
 	}
 	defer rows.Close()
 	items := make([]CommentItem, 0, limit+1)
@@ -150,7 +154,7 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 		var userID, nickname, parentID string
 		var createdAt time.Time
 		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
-			return PaginatedComments{}, err
+			return PaginatedComments{}, fmt.Errorf("comments.ListReplies scan: %w", err)
 		}
 		item.User = UserInfo{UserID: userID, Nickname: nickname}
 		item.ParentID = parentID
@@ -159,7 +163,7 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
-		return PaginatedComments{}, err
+		return PaginatedComments{}, fmt.Errorf("comments.ListReplies rows: %w", err)
 	}
 	if len(items) > limit {
 		return PaginatedComments{Items: items[:limit], NextCursor: encodeCommentCursor(items[limit-1].CreatedAt, items[limit-1].CommentID)}, nil
@@ -181,7 +185,7 @@ func (r *PostgresRepository) ListTopRepliesByParentIDs(ctx context.Context, pare
 	}
 	rows, err := queryable.Query(ctx, queryListTopRepliesByParentIDs, parentIDs, limit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("comments.ListTopRepliesByParentIDs query: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -189,7 +193,7 @@ func (r *PostgresRepository) ListTopRepliesByParentIDs(ctx context.Context, pare
 		var userID, nickname, parentID string
 		var createdAt time.Time
 		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount, &item.IsDeleted); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("comments.ListTopRepliesByParentIDs scan: %w", err)
 		}
 		item.User = UserInfo{UserID: userID, Nickname: nickname}
 		item.ParentID = parentID
@@ -198,7 +202,7 @@ func (r *PostgresRepository) ListTopRepliesByParentIDs(ctx context.Context, pare
 		result[parentID] = append(result[parentID], item)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("comments.ListTopRepliesByParentIDs rows: %w", err)
 	}
 	return result, nil
 }

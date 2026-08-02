@@ -9,6 +9,7 @@ import (
 	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/geo"
 )
 
@@ -55,6 +56,9 @@ type InMemoryRepository struct {
 	banned       map[string]map[string]inMemoryBanRecord
 	invites      map[string]inMemoryInviteRecord
 	applications map[string]inMemoryApplicationRecord
+	// seq disambiguates group ids generated within the same nanosecond so the
+	// in-memory map never overwrites an entry on rapid successive Create calls.
+	seq uint64
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -72,7 +76,8 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	defer r.mu.Unlock()
 	now := time.Now().UTC()
 	nowRFC3339 := now.Format(time.RFC3339)
-	groupID := fmt.Sprintf("group_%d", now.UnixNano())
+	r.seq++
+	groupID := fmt.Sprintf("group_%d_%d", now.UnixNano(), r.seq)
 	isSearchable := true
 	if req.IsSearchable != nil {
 		isSearchable = *req.IsSearchable
@@ -311,8 +316,8 @@ func (r *InMemoryRepository) GetApplication(_ context.Context, applicationID str
 	}, true, nil
 }
 
-func (r *InMemoryRepository) SearchMembers(_ context.Context, groupID string, keyword string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
-	items, _, err := r.ListMembers(context.Background(), groupID, role, limit, cursor)
+func (r *InMemoryRepository) SearchMembers(ctx context.Context, groupID string, keyword string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
+	items, _, err := r.ListMembers(ctx, groupID, role, limit, cursor)
 	if err != nil {
 		return nil, "", err
 	}
@@ -328,19 +333,67 @@ func (r *InMemoryRepository) SearchMembers(_ context.Context, groupID string, ke
 	return filtered, "", nil
 }
 
-func (r *InMemoryRepository) ListMyGroups(_ context.Context, userID string, limit int, cursor string) ([]GroupItem, string, error) {
+func (r *InMemoryRepository) ListMyGroups(_ context.Context, userID string, limit int, pageToken string) ([]GroupItem, string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	items := []GroupItem{}
-	for _, group := range r.groups {
-		if _, joined := r.members[group.Group.GroupID][userID]; joined {
-			items = append(items, r.cloneGroupForUser(group, userID))
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	// Decode the opaque keyset cursor (joined_at DESC, group_id DESC) so the
+	// in-memory path mirrors the postgres pagination contract.
+	var pageCursor myGroupsCursor
+	if pageToken != "" {
+		if err := cursor.Decode(myGroupsCursorNamespace, pageToken, &pageCursor); err != nil {
+			return nil, "", ErrInvalidCursor
 		}
 	}
-	if len(items) > limit {
-		return items[:limit], items[limit-1].Group.GroupID, nil
+	items := []GroupItem{}
+	for _, group := range r.groups {
+		member, joined := r.members[group.Group.GroupID][userID]
+		if !joined {
+			continue
+		}
+		clone := r.cloneGroupForUser(group, userID)
+		if clone.MyState != nil {
+			clone.MyState.JoinedAt = member.JoinedAt
+		}
+		items = append(items, clone)
 	}
-	return items, "", nil
+	// Sort by joined_at DESC, then group_id DESC (matches the SQL ORDER BY).
+	sort.Slice(items, func(i, j int) bool {
+		ji, jj := items[i].MyState.JoinedAt, items[j].MyState.JoinedAt
+		if ji != jj {
+			return ji > jj
+		}
+		return items[i].Group.GroupID > items[j].Group.GroupID
+	})
+	// Apply the keyset predicate: skip rows until we're past the cursor.
+	if pageCursor.GroupID != "" && pageCursor.JoinedAt != "" {
+		filtered := items[:0]
+		for _, it := range items {
+			if it.MyState == nil {
+				continue
+			}
+			if it.MyState.JoinedAt < pageCursor.JoinedAt ||
+				(it.MyState.JoinedAt == pageCursor.JoinedAt && it.Group.GroupID < pageCursor.GroupID) {
+				filtered = append(filtered, it)
+			}
+		}
+		items = filtered
+	}
+	// Fetch limit+1 to detect a following page.
+	nextCursor := ""
+	if len(items) > limit {
+		last := items[limit-1]
+		if last.MyState != nil {
+			nextCursor = encodeMyGroupsCursor(myGroupsCursor{JoinedAt: last.MyState.JoinedAt, GroupID: last.Group.GroupID})
+		}
+		items = items[:limit]
+	}
+	return items, nextCursor, nil
 }
 
 func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string, password *string, message *string) (JoinGroupResult, error) {

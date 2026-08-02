@@ -21,6 +21,12 @@ type stubRepo struct {
 	markReadErr    error
 	markAllReadErr error
 
+	// ownerMeta / ownerFound drive LookupMessageMeta, used by the service to
+	// authorize Update/Recall (membership + ownership). Defaults to a message
+	// owned by "u1" in "g1" so existing positive tests keep working.
+	ownerMeta  MessageOwnerMeta
+	ownerFound bool
+
 	replyToResult map[string]any
 	replyToOk     bool
 	replyToErr    error
@@ -53,6 +59,13 @@ func (r *stubRepo) GetMessageForReply(_ context.Context, _ string) (map[string]a
 }
 func (r *stubRepo) MessageExists(_ context.Context, _ string) (bool, string, error) {
 	return false, "", nil
+}
+
+func (r *stubRepo) LookupMessageMeta(_ context.Context, _ string) (MessageOwnerMeta, bool, error) {
+	if !r.ownerFound {
+		return MessageOwnerMeta{}, false, nil
+	}
+	return r.ownerMeta, true, nil
 }
 
 func (r *stubRepo) GetMediaForMessage(_ context.Context, _ string) (map[string]any, bool, error) {
@@ -112,34 +125,52 @@ func TestServiceHistoryPropagatesError(t *testing.T) {
 }
 
 func TestServiceUpdateDelegatesToRepo(t *testing.T) {
-	repo := &stubRepo{updateMeta: MessageEventMeta{GroupID: "g1", MessageID: "gm1"}}
+	repo := &stubRepo{
+		ownerMeta:  MessageOwnerMeta{GroupID: "g1", SenderUserID: "u1"},
+		ownerFound: true,
+		updateMeta: MessageEventMeta{GroupID: "g1", MessageID: "gm1"},
+	}
 	service := NewServiceWithRepo(repo)
-	err := service.Update(context.Background(), UpdateGroupMessageRequest{MessageID: "gm1", Content: "edited"})
+	err := service.Update(gmAuthCtx("u1"), UpdateGroupMessageRequest{MessageID: "gm1", UserID: "u1", Content: "edited"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
 func TestServiceUpdatePropagatesError(t *testing.T) {
-	service := NewServiceWithRepo(&stubRepo{updateErr: errors.New("boom")})
-	err := service.Update(context.Background(), UpdateGroupMessageRequest{MessageID: "gm1"})
+	repo := &stubRepo{
+		ownerMeta:  MessageOwnerMeta{GroupID: "g1", SenderUserID: "u1"},
+		ownerFound: true,
+		updateErr:  errors.New("boom"),
+	}
+	service := NewServiceWithRepo(repo)
+	err := service.Update(gmAuthCtx("u1"), UpdateGroupMessageRequest{MessageID: "gm1", UserID: "u1"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
 }
 
 func TestServiceRecallDelegatesToRepo(t *testing.T) {
-	repo := &stubRepo{recallMeta: MessageEventMeta{GroupID: "g1", MessageID: "gm1"}}
+	repo := &stubRepo{
+		ownerMeta:  MessageOwnerMeta{GroupID: "g1", SenderUserID: "u1"},
+		ownerFound: true,
+		recallMeta: MessageEventMeta{GroupID: "g1", MessageID: "gm1"},
+	}
 	service := NewServiceWithRepo(repo)
-	err := service.Recall(context.Background(), RecallGroupMessageRequest{MessageID: "gm1"})
+	err := service.Recall(gmAuthCtx("u1"), RecallGroupMessageRequest{MessageID: "gm1", UserID: "u1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
 func TestServiceRecallPropagatesError(t *testing.T) {
-	service := NewServiceWithRepo(&stubRepo{recallErr: errors.New("boom")})
-	err := service.Recall(context.Background(), RecallGroupMessageRequest{MessageID: "gm1"})
+	repo := &stubRepo{
+		ownerMeta:  MessageOwnerMeta{GroupID: "g1", SenderUserID: "u1"},
+		ownerFound: true,
+		recallErr:  errors.New("boom"),
+	}
+	service := NewServiceWithRepo(repo)
+	err := service.Recall(gmAuthCtx("u1"), RecallGroupMessageRequest{MessageID: "gm1", UserID: "u1"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -323,6 +354,120 @@ func TestServiceNewServiceConstructors(t *testing.T) {
 	}
 	if svc3.users == nil {
 		t.Fatal("expected users to be set")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Update / Recall 越权防护（成员校验 + 所有者校验 + NULL sender 拒绝）
+// ---------------------------------------------------------------------------
+
+// membershipStub 是一个 IsMember 可控的 repo，其余方法走零值默认。
+// LookupMessageMeta 默认返回 group=g1 owner=u1，便于测试所有者分支。
+type membershipStub struct {
+	stubRepo
+	members    map[string]bool // "groupID|userID" -> true
+	ownerKey   string          // 当前 LookupMessageMeta 返回的 owner（用于 NULL sender 测试）
+	ownerEmpty bool            // true => sender 为空（NULL）
+}
+
+func (m *membershipStub) IsMember(_ context.Context, groupID, userID string) (bool, error) {
+	return m.members[groupID+"|"+userID], nil
+}
+
+func (m *membershipStub) LookupMessageMeta(_ context.Context, _ string) (MessageOwnerMeta, bool, error) {
+	sender := m.ownerKey
+	if m.ownerEmpty {
+		sender = ""
+	}
+	return MessageOwnerMeta{GroupID: "g1", SenderUserID: sender}, true, nil
+}
+
+func TestServiceUpdate_RejectsNonMember(t *testing.T) {
+	repo := &membershipStub{members: map[string]bool{"g1|u1": true}, ownerKey: "u1"} // u1 成员，u2 不是
+	svc := NewServiceWithRepo(repo)
+	err := svc.Update(gmAuthCtx("u2"), UpdateGroupMessageRequest{MessageID: "gm1", UserID: "u2", Content: "x"})
+	if !errors.Is(err, ErrNotGroupMember) {
+		t.Fatalf("expected ErrNotGroupMember, got %v", err)
+	}
+}
+
+func TestServiceUpdate_RejectsNonOwner(t *testing.T) {
+	repo := &membershipStub{members: map[string]bool{"g1|u2": true}, ownerKey: "u1"} // u2 是成员但非作者
+	svc := NewServiceWithRepo(repo)
+	err := svc.Update(gmAuthCtx("u2"), UpdateGroupMessageRequest{MessageID: "gm1", UserID: "u2", Content: "x"})
+	if !errors.Is(err, ErrPermissionDenied) {
+		t.Fatalf("expected ErrPermissionDenied, got %v", err)
+	}
+}
+
+func TestServiceUpdate_RejectsNullSender(t *testing.T) {
+	repo := &membershipStub{members: map[string]bool{"g1|u1": true}, ownerEmpty: true} // NULL sender
+	svc := NewServiceWithRepo(repo)
+	err := svc.Update(gmAuthCtx("u1"), UpdateGroupMessageRequest{MessageID: "gm1", UserID: "u1", Content: "x"})
+	if !errors.Is(err, ErrPermissionDenied) {
+		t.Fatalf("expected ErrPermissionDenied for NULL sender, got %v", err)
+	}
+}
+
+func TestServiceUpdate_AllowsOwner(t *testing.T) {
+	repo := &membershipStub{
+		members:  map[string]bool{"g1|u1": true},
+		ownerKey: "u1",
+		stubRepo: stubRepo{updateMeta: MessageEventMeta{GroupID: "g1", MessageID: "gm1"}},
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.Update(gmAuthCtx("u1"), UpdateGroupMessageRequest{MessageID: "gm1", UserID: "u1", Content: "ok"})
+	if err != nil {
+		t.Fatalf("expected success for owner, got %v", err)
+	}
+}
+
+func TestServiceUpdate_NotFound(t *testing.T) {
+	repo := &stubRepo{ownerFound: false} // 消息不存在
+	svc := NewServiceWithRepo(repo)
+	err := svc.Update(gmAuthCtx("u1"), UpdateGroupMessageRequest{MessageID: "missing", UserID: "u1"})
+	if !errors.Is(err, ErrMessageNotFound) {
+		t.Fatalf("expected ErrMessageNotFound, got %v", err)
+	}
+}
+
+func TestServiceRecall_RejectsNonMember(t *testing.T) {
+	repo := &membershipStub{members: map[string]bool{"g1|u1": true}, ownerKey: "u1"}
+	svc := NewServiceWithRepo(repo)
+	err := svc.Recall(gmAuthCtx("u2"), RecallGroupMessageRequest{MessageID: "gm1", UserID: "u2"})
+	if !errors.Is(err, ErrNotGroupMember) {
+		t.Fatalf("expected ErrNotGroupMember, got %v", err)
+	}
+}
+
+func TestServiceRecall_RejectsNonOwner(t *testing.T) {
+	repo := &membershipStub{members: map[string]bool{"g1|u2": true}, ownerKey: "u1"}
+	svc := NewServiceWithRepo(repo)
+	err := svc.Recall(gmAuthCtx("u2"), RecallGroupMessageRequest{MessageID: "gm1", UserID: "u2"})
+	if !errors.Is(err, ErrPermissionDenied) {
+		t.Fatalf("expected ErrPermissionDenied, got %v", err)
+	}
+}
+
+func TestServiceRecall_RejectsNullSender(t *testing.T) {
+	repo := &membershipStub{members: map[string]bool{"g1|u1": true}, ownerEmpty: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.Recall(gmAuthCtx("u1"), RecallGroupMessageRequest{MessageID: "gm1", UserID: "u1"})
+	if !errors.Is(err, ErrPermissionDenied) {
+		t.Fatalf("expected ErrPermissionDenied for NULL sender, got %v", err)
+	}
+}
+
+func TestServiceRecall_AllowsOwner(t *testing.T) {
+	repo := &membershipStub{
+		members:  map[string]bool{"g1|u1": true},
+		ownerKey: "u1",
+		stubRepo: stubRepo{recallMeta: MessageEventMeta{GroupID: "g1", MessageID: "gm1"}},
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.Recall(gmAuthCtx("u1"), RecallGroupMessageRequest{MessageID: "gm1", UserID: "u1"})
+	if err != nil {
+		t.Fatalf("expected success for owner, got %v", err)
 	}
 }
 

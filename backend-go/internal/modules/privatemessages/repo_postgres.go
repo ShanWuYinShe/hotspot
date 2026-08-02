@@ -15,31 +15,52 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 	return &PostgresRepository{factory: factory}
 }
 
+// txQueryable returns the transaction-bound Queryable when one is in effect
+// (real pgx tx via RunInTransaction), otherwise falls back to the shared pool.
+// The fallback matters for tests, where RunInTransaction detects a stub backend
+// and runs fn without injecting a tx.
+func (r *PostgresRepository) txQueryable(ctx context.Context) (persistence.Queryable, bool) {
+	if q, ok := persistence.QueryableFromContext(ctx); ok {
+		return q, true
+	}
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return nil, false
+	}
+	q, ok := r.factory.DB.(persistence.QueryableDB)
+	return q, ok
+}
+
 func (r *PostgresRepository) Send(ctx context.Context, senderID, targetUserID string, req SendPrivateMessageRequest) (MessageSent, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return MessageSent{}, persistence.ErrNotImplemented
 	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
+	if _, ok := r.factory.DB.(persistence.QueryableDB); !ok {
 		return MessageSent{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
 	messageID := "pm_" + now.Format("20060102150405.000000000")
 	chatKey := conversationKey(senderID, targetUserID)
 	userAID, userBID := orderedUsers(senderID, targetUserID)
-	if err := queryable.Exec(ctx, queryInsertPrivateChat, chatKey, userAID, userBID, now.Format(time.RFC3339Nano)); err != nil {
-		return MessageSent{}, err
-	}
-	if req.ReplyToMessageID != "" {
-		meta, err := r.getMessageMetaImpl(ctx, req.ReplyToMessageID)
-		if err != nil || meta.ChatKey != chatKey {
-			return MessageSent{}, ErrMessageNotFound
+	// Wrap the chat upsert and the message insert in a single transaction so a
+	// failure of the second statement cannot leave an empty conversation row
+	// behind. The reply-to validation read runs inside the tx too (it sees the
+	// freshly upserted chat and is consistent with it).
+	return MessageSent{MessageID: messageID, SentAt: now.Format(time.RFC3339Nano)}, persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		queryable, ok := r.txQueryable(txCtx)
+		if !ok {
+			return persistence.ErrNotImplemented
 		}
-	}
-	if err := queryable.Exec(ctx, queryInsertPrivateMessage, messageID, chatKey, senderID, req.Type, req.Content, stringOrNil(req.FileID), req.ShareCode, stringOrNil(req.ReplyToMessageID), now.Format(time.RFC3339Nano)); err != nil {
-		return MessageSent{}, err
-	}
-	return MessageSent{MessageID: messageID, SentAt: now.Format(time.RFC3339Nano)}, nil
+		if err := queryable.Exec(txCtx, queryInsertPrivateChat, chatKey, userAID, userBID, now.Format(time.RFC3339Nano)); err != nil {
+			return err
+		}
+		if req.ReplyToMessageID != "" {
+			meta, err := r.getMessageMetaImpl(txCtx, req.ReplyToMessageID)
+			if err != nil || meta.ChatKey != chatKey {
+				return ErrMessageNotFound
+			}
+		}
+		return queryable.Exec(txCtx, queryInsertPrivateMessage, messageID, chatKey, senderID, req.Type, req.Content, stringOrNil(req.FileID), req.ShareCode, stringOrNil(req.ReplyToMessageID), now.Format(time.RFC3339Nano))
+	})
 }
 func (r *PostgresRepository) Update(ctx context.Context, userID string, req UpdatePrivateMessageRequest) (MessageEventMeta, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
@@ -136,7 +157,12 @@ type privateMessageMeta struct {
 }
 
 func (r *PostgresRepository) getMessageMetaImpl(ctx context.Context, messageID string) (privateMessageMeta, error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	// Prefer the tx-bound queryable so the reply-to read is consistent with
+	// the surrounding transaction; fall back to the pool otherwise.
+	queryable, ok := persistence.QueryableFromContext(ctx)
+	if !ok {
+		queryable, ok = r.factory.DB.(persistence.QueryableDB)
+	}
 	if !ok {
 		return privateMessageMeta{}, persistence.ErrNotImplemented
 	}

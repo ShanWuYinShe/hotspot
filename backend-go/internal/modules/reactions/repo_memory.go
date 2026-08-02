@@ -184,10 +184,10 @@ func (r *InMemoryRepository) Aggregate(_ context.Context, targetType ReactTarget
 	return out, nil
 }
 
-func (r *InMemoryRepository) AggregateBatch(_ context.Context, targetType ReactTarget, targetIDs []string, viewerID string) (map[string][]Reaction, error) {
+func (r *InMemoryRepository) AggregateBatch(ctx context.Context, targetType ReactTarget, targetIDs []string, viewerID string) (map[string][]Reaction, error) {
 	result := make(map[string][]Reaction, len(targetIDs))
 	for _, id := range targetIDs {
-		recs, err := r.Aggregate(context.Background(), targetType, id, viewerID)
+		recs, err := r.Aggregate(ctx, targetType, id, viewerID)
 		if err != nil {
 			return nil, err
 		}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"hotspot/backend-go/internal/platform/worker"
 )
 
 // authSweepCadence is how often the in-memory session/refresh stores get
@@ -35,7 +37,7 @@ func StartSweeper(ctx context.Context) {
 	sweepCtx, cancel := context.WithCancel(ctx)
 	authSweeperCancel = cancel
 	authSweeperStarted = true
-	go runAuthSweeper(sweepCtx)
+	worker.Go("platformauth.sweeper", func() { runAuthSweeper(sweepCtx) })
 }
 
 // StopSweeper cancels any running sweeper and is intended for tests.

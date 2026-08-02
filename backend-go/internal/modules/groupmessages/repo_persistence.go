@@ -55,3 +55,7 @@ func (r *PersistenceRepository) GetMediaForMessage(ctx context.Context, fileID s
 func (r *PersistenceRepository) MessageExists(ctx context.Context, messageID string) (bool, string, error) {
 	return r.impl.MessageExists(ctx, messageID)
 }
+
+func (r *PersistenceRepository) LookupMessageMeta(ctx context.Context, messageID string) (MessageOwnerMeta, bool, error) {
+	return r.impl.LookupMessageMeta(ctx, messageID)
+}

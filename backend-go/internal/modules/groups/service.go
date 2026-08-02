@@ -559,10 +559,10 @@ func (s *Service) notifyGroupApplicationRejected(ctx context.Context, group Grou
 
 // applicationExpired reports whether a pending application is past its TTL
 // (AppConfig.limits.group_application_ttl_hours, default 72h).
-func (s *Service) applicationExpired(item GroupApplicationItem) bool {
+func (s *Service) applicationExpired(ctx context.Context, item GroupApplicationItem) bool {
 	ttl := 72 * time.Hour
 	if s.appConfig != nil {
-		if ttlHours := s.appConfig.Get(context.Background()).Limits.GroupApplicationTTLHours; ttlHours > 0 {
+		if ttlHours := s.appConfig.Get(ctx).Limits.GroupApplicationTTLHours; ttlHours > 0 {
 			ttl = time.Duration(ttlHours) * time.Hour
 		}
 	}

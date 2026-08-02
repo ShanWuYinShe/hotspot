@@ -245,6 +245,14 @@ func (b *adminBackendStub) Exec(_ context.Context, query string, args ...any) er
 		role.Permissions = append(role.Permissions, args[1].(string))
 		sort.Strings(role.Permissions)
 		b.roles[role.RoleID] = role
+	case queryRoleInsertPermissionsBatch:
+		// args: roleID, now, []string keys — mirror the per-permission insert.
+		role := b.roles[args[0].(string)]
+		for _, key := range args[2].([]string) {
+			role.Permissions = append(role.Permissions, key)
+		}
+		sort.Strings(role.Permissions)
+		b.roles[role.RoleID] = role
 	case queryAdminUpsert:
 		grant := b.admins[args[0].(string)]
 		grant.UserID = args[0].(string)

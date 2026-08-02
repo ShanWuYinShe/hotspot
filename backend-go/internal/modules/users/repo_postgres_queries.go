@@ -37,6 +37,14 @@ INSERT INTO user_profile_tags (user_id, tag_name)
 VALUES ($1, $2)
 ON CONFLICT (user_id, tag_name) DO NOTHING`
 
+	// queryInsertUserProfileTagsBatch inserts all tags for a user in one round
+	// trip via unnest, replacing the previous per-tag loop. Used inside the
+	// PutProfile transaction.
+	queryInsertUserProfileTagsBatch = `
+INSERT INTO user_profile_tags (user_id, tag_name)
+SELECT $1, tag FROM unnest($2::text[]) AS tag
+ON CONFLICT (user_id, tag_name) DO NOTHING`
+
 	queryUpsertUserProfile = `
 INSERT INTO users (user_id, nickname, avatar_url, user_type, bio, gender, email, phone, location_name, latitude, longitude, presence_status, last_online, created_at, s2_cell_id)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::timestamptz,$14::timestamptz,$15)

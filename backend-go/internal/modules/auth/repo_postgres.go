@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
@@ -106,7 +107,13 @@ func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams
 		return Account{}, fmt.Errorf("auth.CreateGuest: profile insert: %w", err)
 	}
 	if err := queryable.Exec(ctx, queryUpsertUserSettings, userID); err != nil {
-		_ = queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID)
+		// Best-effort compensation: settings upsert failed right after the profile
+		// was inserted, so remove the profile to avoid leaving a half-created user.
+		// Log a compensation failure (e.g. DB down) — otherwise it is silently
+		// lost and operators cannot see the orphaned row.
+		if cerr := queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID); cerr != nil {
+			observability.L().Error("auth.CreateGuest: compensation profile delete failed", "user_id", userID, "error", cerr)
+		}
 		return Account{}, fmt.Errorf("auth.CreateGuest: settings upsert: %w", err)
 	}
 	return Account{UserID: userID, Nickname: params.Nickname, UserType: "temp"}, nil
@@ -229,7 +236,7 @@ func (r *PostgresRepository) accountByLoginID(ctx context.Context, queryable per
 		if errors.Is(err, pgx.ErrNoRows) {
 			return accountRecord{}, false, nil
 		}
-		return accountRecord{}, false, err
+		return accountRecord{}, false, fmt.Errorf("auth.accountByLoginID scan: %w", err)
 	}
 	return record.withDerivedFields(), true, nil
 }
@@ -240,7 +247,7 @@ func (r *PostgresRepository) accountByUserID(ctx context.Context, queryable pers
 		if errors.Is(err, pgx.ErrNoRows) {
 			return accountRecord{}, false, nil
 		}
-		return accountRecord{}, false, err
+		return accountRecord{}, false, fmt.Errorf("auth.accountByUserID scan: %w", err)
 	}
 	return record.withDerivedFields(), true, nil
 }
@@ -251,7 +258,7 @@ func (r *PostgresRepository) passwordResetByCode(ctx context.Context, queryable 
 		if errors.Is(err, pgx.ErrNoRows) {
 			return passwordResetRecord{}, false, nil
 		}
-		return passwordResetRecord{}, false, err
+		return passwordResetRecord{}, false, fmt.Errorf("auth.passwordResetByCode scan: %w", err)
 	}
 	return record, true, nil
 }
@@ -262,7 +269,7 @@ func (r *PostgresRepository) latestPasswordResetByLoginID(ctx context.Context, q
 		if errors.Is(err, pgx.ErrNoRows) {
 			return passwordResetRecord{}, false, nil
 		}
-		return passwordResetRecord{}, false, err
+		return passwordResetRecord{}, false, fmt.Errorf("auth.latestPasswordResetByLoginID scan: %w", err)
 	}
 	return record, true, nil
 }

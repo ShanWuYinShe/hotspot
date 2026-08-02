@@ -658,13 +658,13 @@ func TestApplicationExpired(t *testing.T) {
 	past := time.Now().UTC().Add(-72 * time.Hour).Add(-time.Minute).Format(time.RFC3339)
 	future := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
 
-	if !svc.applicationExpired(GroupApplicationItem{CreatedAt: past}) {
+	if !svc.applicationExpired(context.Background(), GroupApplicationItem{CreatedAt: past}) {
 		t.Error("expected expired for application older than default 72h TTL")
 	}
-	if svc.applicationExpired(GroupApplicationItem{CreatedAt: future}) {
+	if svc.applicationExpired(context.Background(), GroupApplicationItem{CreatedAt: future}) {
 		t.Error("expected not expired for recent application")
 	}
-	if svc.applicationExpired(GroupApplicationItem{CreatedAt: "not-a-time"}) {
+	if svc.applicationExpired(context.Background(), GroupApplicationItem{CreatedAt: "not-a-time"}) {
 		t.Error("expected not expired for malformed created_at")
 	}
 }
@@ -675,17 +675,17 @@ func TestApplicationExpiredHonorsConfiguredTTL(t *testing.T) {
 	overTTL := time.Now().UTC().Add(-2 * time.Hour).Format(time.RFC3339)
 	withinTTL := time.Now().UTC().Add(-30 * time.Minute).Format(time.RFC3339)
 
-	if !svc.applicationExpired(GroupApplicationItem{CreatedAt: overTTL}) {
+	if !svc.applicationExpired(context.Background(), GroupApplicationItem{CreatedAt: overTTL}) {
 		t.Error("expected expired with 1h TTL for 2h-old application")
 	}
-	if svc.applicationExpired(GroupApplicationItem{CreatedAt: withinTTL}) {
+	if svc.applicationExpired(context.Background(), GroupApplicationItem{CreatedAt: withinTTL}) {
 		t.Error("expected not expired with 1h TTL for 30m-old application")
 	}
 
 	// ttl <= 0 时回退默认 72h。
 	svc.SetAppConfig(appConfigStub{ttlHours: 0})
 	oneDayAgo := time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
-	if svc.applicationExpired(GroupApplicationItem{CreatedAt: oneDayAgo}) {
+	if svc.applicationExpired(context.Background(), GroupApplicationItem{CreatedAt: oneDayAgo}) {
 		t.Error("expected not expired with default 72h TTL for 24h-old application")
 	}
 }

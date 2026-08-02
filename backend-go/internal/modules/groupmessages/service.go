@@ -102,6 +102,9 @@ func (s *Service) History(ctx context.Context, groupID string, pagination *Pagin
 }
 
 func (s *Service) Update(ctx context.Context, req UpdateGroupMessageRequest) error {
+	if err := s.authorizeMessageMutation(ctx, req.MessageID, req.UserID); err != nil {
+		return err
+	}
 	meta, err := s.repo.Update(ctx, req)
 	if err != nil {
 		observability.L().Error("groupmessages.update failed", "error", err, "message_id", req.MessageID)
@@ -117,6 +120,9 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupMessageRequest) err
 }
 
 func (s *Service) Recall(ctx context.Context, req RecallGroupMessageRequest) error {
+	if err := s.authorizeMessageMutation(ctx, req.MessageID, req.UserID); err != nil {
+		return err
+	}
 	meta, err := s.repo.Recall(ctx, req)
 	if err != nil {
 		observability.L().Error("groupmessages.recall failed", "error", err, "message_id", req.MessageID)
@@ -128,6 +134,29 @@ func (s *Service) Recall(ctx context.Context, req RecallGroupMessageRequest) err
 		"recalled_by": map[string]any{"user_id": req.UserID},
 		"recalled_at": time.Now().UTC().Format(time.RFC3339),
 	}})
+	return nil
+}
+
+// authorizeMessageMutation enforces the two invariants that Update/Recall
+// require before touching a message:
+//  1. the caller must still be a member of the group the message lives in
+//     (kicked/left users cannot edit history);
+//  2. the caller must be the message's sender — NULL/anonymous senders are
+//     refused for everyone, so legacy rows can never be mutated.
+func (s *Service) authorizeMessageMutation(ctx context.Context, messageID, userID string) error {
+	meta, found, err := s.repo.LookupMessageMeta(ctx, messageID)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrMessageNotFound
+	}
+	if err := s.ensureMember(ctx, meta.GroupID, userID); err != nil {
+		return err
+	}
+	if meta.SenderUserID == "" || meta.SenderUserID != userID {
+		return ErrPermissionDenied
+	}
 	return nil
 }
 

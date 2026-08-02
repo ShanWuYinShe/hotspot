@@ -54,7 +54,19 @@ func NewApp(cfg config.Config) (*App, error) {
 	// system health endpoint can probe it. The same client is handed to the
 	// realtime bridge below.
 	redisClient := newRedisClient(cfg, logger)
-	modules := BuildModulesWithRedisPinger(cfg, persistenceFactory, redisPinger(redisClient))
+	// Root context governs long-lived goroutines started by platform packages
+	// and modules (the realtime typing-throttle sweeper, the ratelimit store
+	// sweeper, the in-memory auth session/refresh store sweeper, the idempotency
+	// store sweeper, the auth login-tracker sweeper). It is created before
+	// building modules so module-owned workers can bind to it, and is cancelled
+	// in Shutdown so they exit cleanly.
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	ratelimit.StartSweeper(rootCtx)
+	platformauth.StartSweeper(rootCtx)
+	// Prune expired idempotency records from the in-memory store. Get/Reserve
+	// already apply lazy expiry so this is purely about bounding map growth.
+	idempotency.StartSweeper(rootCtx)
+	modules := BuildModulesWithRedisPinger(rootCtx, cfg, persistenceFactory, redisPinger(redisClient))
 	bridge := initRedisBridgeFromClient(cfg, logger, redisClient)
 	router := NewHTTPRouterWithLogger(modules, logger)
 	rootMux := http.NewServeMux()
@@ -62,16 +74,6 @@ func NewApp(cfg config.Config) (*App, error) {
 	userRepo := users.NewPersistenceRepository(persistenceFactory)
 	groupRepo := groups.NewPersistenceRepository(persistenceFactory)
 	userService := users.NewServiceWithRepo(userRepo)
-	// Root context governs long-lived goroutines started by platform packages
-	// (the realtime typing-throttle sweeper, the ratelimit store sweeper, the
-	// in-memory auth session/refresh store sweeper, the idempotency store
-	// sweeper). It is cancelled in Shutdown so they exit cleanly.
-	rootCtx, rootCancel := context.WithCancel(context.Background())
-	ratelimit.StartSweeper(rootCtx)
-	platformauth.StartSweeper(rootCtx)
-	// Prune expired idempotency records from the in-memory store. Get/Reserve
-	// already apply lazy expiry so this is purely about bounding map growth.
-	idempotency.StartSweeper(rootCtx)
 	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformauth.DefaultService(), realtimeUserService{svc: userService}, realtimeUserRepo{repo: userRepo}, realtimeGroupRepo{repo: groupRepo})
 	realtimeHandler.SetActorProvider(realtimeUserService{svc: userService})
 	rootMux.Handle("/ws/v1", realtimeHandler)

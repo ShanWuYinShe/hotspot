@@ -14,6 +14,7 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/ratelimit"
+	"hotspot/backend-go/internal/platform/worker"
 )
 
 type userPresenceAuthorizer interface {
@@ -64,7 +65,7 @@ func NewHandlerWithContext(ctx context.Context, auth *platformauth.Service, user
 	sweepCtx, cancel := context.WithCancel(ctx)
 	h := &Handler{auth: auth, users: userService, userRepo: userRepo, groupRepo: groupRepo, stop: cancel}
 	h.wg.Add(1)
-	go h.sweepTypingThrottle(sweepCtx)
+	worker.Go("realtime.typing_sweeper", func() { h.sweepTypingThrottle(sweepCtx) })
 	return h
 }
 

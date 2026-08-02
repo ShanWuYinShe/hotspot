@@ -72,13 +72,13 @@ func (r *PostgresRepository) ListReactions(ctx context.Context, targetType React
 		var item ReactionItem
 		var reactedAt time.Time
 		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &item.Emoji, &reactedAt); err != nil {
-			return nil, "", err
+			return nil, "", fmt.Errorf("reactions.ListReactions scan: %w", err)
 		}
 		item.ReactedAt = reactedAt.UTC().Format(time.RFC3339)
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("reactions.ListReactions rows: %w", err)
 	}
 	if len(items) > limit {
 		last := items[limit-1]
@@ -101,12 +101,12 @@ func (r *PostgresRepository) Aggregate(ctx context.Context, targetType ReactTarg
 	for rows.Next() {
 		var rec Reaction
 		if err := rows.Scan(&rec.Emoji, &rec.Count, &rec.ReactedByMe); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("reactions.Aggregate scan: %w", err)
 		}
 		out = append(out, rec)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reactions.Aggregate rows: %w", err)
 	}
 	return out, nil
 }
@@ -132,13 +132,13 @@ func (r *PostgresRepository) AggregateBatch(ctx context.Context, targetType Reac
 			reactedByMe bool
 		)
 		if err := rows.Scan(&targetID, &rec.Emoji, &rec.Count, &reactedByMe); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("reactions.AggregateBatch scan: %w", err)
 		}
 		rec.ReactedByMe = reactedByMe
 		result[targetID] = append(result[targetID], rec)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reactions.AggregateBatch rows: %w", err)
 	}
 	return result, nil
 }
@@ -165,13 +165,13 @@ func (r *PostgresRepository) ListReactedTargets(ctx context.Context, targetType 
 		var id string
 		var at time.Time
 		if err := rows.Scan(&id, &at); err != nil {
-			return nil, "", err
+			return nil, "", fmt.Errorf("reactions.ListReactedTargets scan: %w", err)
 		}
 		ids = append(ids, id)
 		lastAt, lastID = at, id
 	}
 	if err := rows.Err(); err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("reactions.ListReactedTargets rows: %w", err)
 	}
 	if len(ids) > limit {
 		return ids[:limit], encodeTargetCursor(lastAt, lastID), nil
