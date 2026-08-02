@@ -13,7 +13,7 @@
 	imageSrc={group.banner ?? group.name}
 	imageAlt={group.name}
 	onClick={onOpen}
-	class="rounded-[24px] aspect-[4/3] neu-surface-hero"
+	class="rounded-feature min-h-[340px] neu-surface-hero"
 >
 	<!-- 无封面时占位：覆盖在图片层之上 -->
 	{#if !group.banner}

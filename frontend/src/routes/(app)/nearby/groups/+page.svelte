@@ -131,18 +131,24 @@
 			</div>
 		{:else if filtered.length}
 			<div class="flex items-center justify-between mb-3">
-				<span class="neu-eyebrow">正在附近的群组</span>
+				<span class="neu-eyebrow">此刻附近群组</span>
 				<span class="text-[var(--semantic-online)] text-[11px]">{totalOnline} 人正在群聊</span>
 			</div>
 			{#if isDesktop || isTablet}
+				<!-- index 0 用 FeaturedGroupCard（对齐 Figma），其余用 GroupCard；保留 BSP 布局（决策） -->
+				{#if featured}
+					<div class="mb-5">
+						<FeaturedGroupCard group={featured} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
+					</div>
+				{/if}
 				<BspCardCanvas
-					items={visibleGroups}
+					items={rest.slice(0, visibleCount - 1)}
 					gap={24}
 					minRatio={0.68}
 					maxRatio={1.48}
 					minCardWidth={160}
 					minCardHeight={210}
-					minCanvasHeight={520}
+					minCanvasHeight={420}
 					ariaLabel="附近群组的不规则满铺布局"
 					hasMore={visibleCount < filtered.length}
 					onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
