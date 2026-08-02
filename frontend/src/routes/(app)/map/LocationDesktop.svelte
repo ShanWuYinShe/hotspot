@@ -214,8 +214,8 @@
 						{#each nearbyPins as pin (pin.id)}
 						<button
 							type="button"
-							class="neu-row-hover app-list-row app-list-row--rich neu-row-hover rounded-[15px] outline-none"
-							style="background:{selectedPin?.id === pin.id ? pinTone(pin.type, 10) : 'var(--neu-bg)'};box-shadow:{selectedPin?.id === pin.id ? `0 0 0 1px ${pinTone(pin.type, 52)}, 0 6px 18px ${pinTone(pin.type, 32)}, 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)` : '0 0 0 1px var(--neu-border), 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)'};"
+							class="neu-row-hover app-list-row app-list-row--standard neu-row-hover outline-none"
+							style="background:{selectedPin?.id === pin.id ? pinTone(pin.type, 10) : 'var(--neu-bg)'};"
 							aria-pressed={selectedPin?.id === pin.id}
 							onclick={() => {
 								selectedPin = pin;

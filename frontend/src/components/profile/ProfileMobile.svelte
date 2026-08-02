@@ -3,15 +3,7 @@
 	import { Share2, MapPin, Camera, Pencil } from '@lucide/svelte';
 	import { platformStore } from '@/stores/platform.svelte';
 	import AppearanceMenu from '@/components/layout/AppearanceMenu.svelte';
-	import ContextRail from '@/components/layout/ContextRail.svelte';
-	import TabletRail from '@/components/layout/tablet/TabletRail.svelte';
-	import StreakCard from '@/components/layout/tablet/StreakCard.svelte';
-	import VisitorsCard from '@/components/layout/tablet/VisitorsCard.svelte';
-	import MoodCheckinCard from '@/components/layout/tablet/MoodCheckinCard.svelte';
-	import AchievementCard from '@/components/layout/tablet/AchievementCard.svelte';
-	import SuggestedFollowsCard from '@/components/layout/tablet/SuggestedFollowsCard.svelte';
-	import VibeCard from '@/components/layout/tablet/VibeCard.svelte';
-	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+									import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import ProfileTabs, { type Tab } from '@/components/profile/ProfileTabs.svelte';
 	import GalleryGrid from '@/components/profile/GalleryGrid.svelte';
 	import { useAccountData, useGalleryPosts, useReactedPosts, useFavoritePosts, type GalleryPost } from '@/lib/profile-data.svelte';
@@ -157,17 +149,4 @@
 		</div>
 	</div>
 
-	<!-- Right rail — tablet landscape only -->
-	{#if isTablet}
-		<ContextRail className="hidden lg:block">
-			<TabletRail>
-				<StreakCard />
-				<VisitorsCard />
-				<MoodCheckinCard />
-				<AchievementCard />
-				<SuggestedFollowsCard />
-				<VibeCard />
-			</TabletRail>
-		</ContextRail>
-	{/if}
 </div>

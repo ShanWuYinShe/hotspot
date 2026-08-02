@@ -276,6 +276,23 @@
 		>
 			<Crosshair style="width:18px;height:18px;color:var(--neu-accent-primary);" strokeWidth={1.75} />
 		</button>
+
+		<!-- My location dot（对齐 Figma Make：用户位置圆点 + 白描边 + 主题色 glow） -->
+		<button
+			type="button"
+			aria-label="我的位置"
+			class="neu-hover-btn flex items-center justify-center rounded-full outline-none neu-circle-hover"
+			style="width:42px;height:42px;{floatBtnStyle}"
+			onclick={() => {
+				mapCenter = XUZHOU_CENTER;
+				selectedLoc = null;
+				searchQuery = '';
+			}}
+		>
+			<div
+				style="width:14px;height:14px;border-radius:50%;background:var(--marker-user);border:2.5px solid var(--neu-bg);box-shadow:0 0 8px color-mix(in srgb, var(--marker-user) 65%, transparent);"
+			></div>
+		</button>
 	</div>
 
 	<!-- ══ BOTTOM SHEET (draggable) ══ -->
