@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { SlidersHorizontal, Users } from '@lucide/svelte';
+	import { Users } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platformStore } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
@@ -137,14 +137,6 @@
 						<TagPill active={tagFilter === tag} onClick={() => (tagFilter = tag)} size="md">{tag}</TagPill>
 					{/each}
 				</div>
-			</div>
-
-			<div class="flex items-center justify-between mb-3">
-				<span class="neu-eyebrow">为你排序</span>
-				<span class="flex items-center gap-1 text-[var(--neu-text-muted)] text-[11px]">
-					<SlidersHorizontal size={12} />
-					{list.length} 位可认识
-				</span>
 			</div>
 
 			{#if list.length}
