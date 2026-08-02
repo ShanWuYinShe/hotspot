@@ -7,10 +7,18 @@
 	import { getTrending, getNearbyUsers, getNearbyGroups } from '@/api';
 	import SectionHead from '@/routes/(app)/_home/SectionHead.svelte';
 	import HeroStats from '@/routes/(app)/_home/HeroStats.svelte';
-	import PeopleRadarStrip, { type NearbyUser } from '@/routes/(app)/_home/PeopleRadarStrip.svelte';
+	import { type NearbyUser } from '@/routes/(app)/_home/PeopleRadarStrip.svelte';
 	import ActivityList, { type Activity } from '@/routes/(app)/_home/ActivityList.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
 	import NearbyUsersFlatList from '@/routes/(app)/_home/NearbyUsersFlatList.svelte';
+	import {
+		TabletRail,
+		NearbyPulseCard,
+		StreakCard,
+		DailyPickCard,
+		SuggestedFollowsCard,
+		VibeCard
+	} from '@/components/layout/tablet';
 	import { ROUTES } from '@/lib/routes';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 
@@ -131,6 +139,7 @@
 
 	// ── 私有组件（旧版拆文件，此处直接内联函数式 Snippet）───────
 	const isTablet = $derived(platformStore.platform === 'tablet');
+	const isWideTablet = $derived(isTablet && platformStore.isWideTablet);
 </script>
 
 {#if platformStore.platform !== 'mobile'}
@@ -154,13 +163,13 @@
 			<div class="flex flex-col overflow-y-auto no-scrollbar p-6 gap-6 shrink-0" style="width:340px;border-right:1px solid var(--neu-border);">
 				<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} />
 				<div>
-					<SectionHead title="附近话题" action="更多" onAction={() => void goto(ROUTES.nearbyMoments)} />
+					<SectionHead title="附近活动" />
 					<ActivityList items={activities} onClick={() => void goto(ROUTES.nearbyMoments)} />
 				</div>
 				<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
 			</div>
 
-			<!-- Right: people radar + full list -->
+			<!-- Right: full nearby-users list（对齐 Figma：仅 NearbyUsersFlatList，无 PeopleRadarStrip） -->
 			<div class="flex-1 overflow-y-auto no-scrollbar p-6">
 				<div class="flex items-end justify-between mb-5">
 					<div>
@@ -179,11 +188,7 @@
 					</button>
 				</div>
 
-				<PeopleRadarStrip users={nearbyUsers} onSeeAll={() => void goto(ROUTES.nearbyPeople)} onSelectUser={(userId) => void goto(ROUTES.user(userId))} />
-
-				<div class="mt-6">
-					<NearbyUsersFlatList users={nearbyUsers} followingIds={followingIds} onToggle={toggleFollow} />
-				</div>
+				<NearbyUsersFlatList users={nearbyUsers} followingIds={followingIds} onToggle={toggleFollow} />
 			</div>
 		</div>
 	</div>
@@ -210,7 +215,8 @@
 					</button>
 				{/if}
 			</div>
-			{#if isTablet}
+			{#if isWideTablet}
+				<!-- 宽平板右栏占位（与正文区 TabletRail 对齐 gutter） -->
 				<div class="hidden lg:block flex-shrink-0" style="width:var(--context-rail-width);"></div>
 			{/if}
 		</ContentColumn>
@@ -224,21 +230,28 @@
 			style={isTablet ? 'max-width:600px;margin-left:auto;margin-right:auto;width:100%;' : ''}
 		>
 			<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} />
-			<PeopleRadarStrip
-				users={nearbyUsers}
-				onSeeAll={() => void goto(ROUTES.nearbyPeople)}
-				onSelectUser={(userId) => void goto(ROUTES.user(userId))}
-			/>
 			<div>
-				<SectionHead title="附近话题" action="更多" onAction={() => void goto(ROUTES.nearbyMoments)} />
+				<SectionHead title="附近活动" />
 				<ActivityList items={activities} onClick={() => void goto(ROUTES.nearbyMoments)} />
 			</div>
 			<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
 			<div>
-				<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
-				<NearbyUsersFlatList users={nearbyUsers.slice(0, 4)} followingIds={followingIds} onToggle={toggleFollow} />
+					<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
+					<NearbyUsersFlatList users={nearbyUsers.slice(0, 4)} followingIds={followingIds} onToggle={toggleFollow} />
+				</div>
 			</div>
-		</div>
-	</ContentColumn>
+			{#if isWideTablet}
+				<!-- 宽平板右栏陪伴卡（对齐 Figma Make HomeMobile showTabletRail） -->
+				<div class="hidden lg:block flex-shrink-0" style="width:var(--context-rail-width);">
+					<TabletRail>
+						<NearbyPulseCard />
+						<StreakCard />
+						<DailyPickCard />
+						<SuggestedFollowsCard />
+						<VibeCard />
+					</TabletRail>
+				</div>
+			{/if}
+		</ContentColumn>
 	</div>
 {/if}
