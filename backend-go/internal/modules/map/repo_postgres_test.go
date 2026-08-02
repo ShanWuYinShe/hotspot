@@ -104,7 +104,7 @@ func TestPostgresRepositoryReturnsNotImplementedWithoutDatabaseOrFallback(t *tes
 
 func TestPostgresRepositoryAppliesDataTypeFilter(t *testing.T) {
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
-		queryMapCanvasGroups: {{"group_1", "g1", "", "loc", 35.0, 112.0, 100}},
+		queryMapCanvasGroups: {{"group_1", "g1", "", "loc", 35.0, 112.0}},
 	}}
 	repo := NewPostgresRepository(newMapFactory(backend))
 
@@ -121,8 +121,8 @@ func TestPostgresRepositoryTimeRangeOnlyAffectsMoments(t *testing.T) {
 	old := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 	newer := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
-		queryMapCanvasUsers:   {{"user_1", "u1", "", "loc", 35.0, 112.0, old, 100}},
-		queryMapCanvasMoments: {{"moment_old", "old moment", "loc", 35.0, 112.0, old, 100}, {"moment_new", "new moment", "loc", 35.0, 112.0, newer, 100}},
+		queryMapCanvasUsers:   {{"user_1", "u1", "", "loc", 35.0, 112.0, old}},
+		queryMapCanvasMoments: {{"moment_old", "old moment", "loc", 35.0, 112.0, old}, {"moment_new", "new moment", "loc", 35.0, 112.0, newer}},
 	}}
 	repo := NewPostgresRepository(newMapFactory(backend))
 
@@ -147,8 +147,8 @@ func TestPostgresRepositoryEndTimeFiltersMomentsOnly(t *testing.T) {
 	old := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 	newer := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
-		queryMapCanvasUsers:   {{"user_1", "u1", "", "loc", 35.0, 112.0, newer, 100}},
-		queryMapCanvasMoments: {{"moment_old", "old moment", "loc", 35.0, 112.0, old, 100}, {"moment_new", "new moment", "loc", 35.0, 112.0, newer, 100}},
+		queryMapCanvasUsers:   {{"user_1", "u1", "", "loc", 35.0, 112.0, newer}},
+		queryMapCanvasMoments: {{"moment_old", "old moment", "loc", 35.0, 112.0, old}, {"moment_new", "new moment", "loc", 35.0, 112.0, newer}},
 	}}
 	repo := NewPostgresRepository(newMapFactory(backend))
 
@@ -170,11 +170,11 @@ func TestPostgresRepositoryHeatmapAppliesDataTypeFilter(t *testing.T) {
 	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
 		queryMapCanvasUsers: {
-			{"user_1", "u1", "", "same", 35.0, 112.0, base, 0},
-			{"user_2", "u2", "", "same", 35.0, 112.0, base, 0},
+			{"user_1", "u1", "", "same", 35.0, 112.0, base},
+			{"user_2", "u2", "", "same", 35.0, 112.0, base},
 		},
 		queryMapCanvasGroups: {
-			{"group_1", "g1", "", "same", 35.0, 112.0, 0},
+			{"group_1", "g1", "", "same", 35.0, 112.0},
 		},
 	}}
 	repo := NewPostgresRepository(newMapFactory(backend))
@@ -208,15 +208,15 @@ func TestPostgresRepositoryAggregatesHeatmapBreakdownAndSortsByTotalCount(t *tes
 	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
 		queryMapCanvasUsers: {
-			{"user_1", "u1", "", "same", 35.0, 112.0, base, 0},
-			{"user_2", "u2", "", "same", 35.0, 112.0, base, 0},
+			{"user_1", "u1", "", "same", 35.0, 112.0, base},
+			{"user_2", "u2", "", "same", 35.0, 112.0, base},
 		},
 		queryMapCanvasGroups: {
-			{"group_1", "g1", "", "same", 35.0, 112.0, 0},
+			{"group_1", "g1", "", "same", 35.0, 112.0},
 		},
 		queryMapCanvasMoments: {
-			{"moment_1", "m1", "same", 35.0, 112.0, base, 0},
-			{"moment_2", "m2", "far", 36.0, 113.0, base, 110000},
+			{"moment_1", "m1", "same", 35.0, 112.0, base},
+			{"moment_2", "m2", "far", 36.0, 113.0, base},
 		},
 	}}
 	repo := NewPostgresRepository(newMapFactory(backend))
@@ -240,12 +240,12 @@ func TestPostgresRepositorySortsHotspotsByDistanceThenTieBreakers(t *testing.T) 
 	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
 		queryMapCanvasUsers: {
-			{"user_far", "far", "", "", 35.01, 112.0, base, 1100},
-			{"user_near", "near", "", "", 35.0001, 112.0, base, 11},
+			{"user_far", "far", "", "", 35.01, 112.0, base},
+			{"user_near", "near", "", "", 35.0001, 112.0, base},
 		},
 		queryMapCanvasMoments: {
-			{"moment_new", "moment", "", 35.0001, 112.0, base.Add(time.Hour), 11},
-			{"moment_old", "moment", "", 35.0001, 112.0, base, 11},
+			{"moment_new", "moment", "", 35.0001, 112.0, base.Add(time.Hour)},
+			{"moment_old", "moment", "", 35.0001, 112.0, base},
 		},
 	}}
 	repo := NewPostgresRepository(newMapFactory(backend))
@@ -269,9 +269,9 @@ func TestPostgresRepositoryPaginatesHotspotsWithOpaqueCursor(t *testing.T) {
 	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
 		queryMapCanvasUsers: {
-			{"user_1", "u1", "", "", 35.0001, 112.0, base, 11},
-			{"user_2", "u2", "", "", 35.0002, 112.0, base, 22},
-			{"user_3", "u3", "", "", 35.0003, 112.0, base, 33},
+			{"user_1", "u1", "", "", 35.0001, 112.0, base},
+			{"user_2", "u2", "", "", 35.0002, 112.0, base},
+			{"user_3", "u3", "", "", 35.0003, 112.0, base},
 		},
 	}}
 	repo := NewPostgresRepository(newMapFactory(backend))

@@ -101,36 +101,35 @@ func (r *PostgresRepository) FetchMomentImageRows(ctx context.Context, momentIDs
 }
 
 func (r *PostgresRepository) loadUserCandidates(ctx context.Context, queryable persistence.QueryableDB, query usersQuery) ([]userCandidate, error) {
-	ref := geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}
-	bounds := geo.BoundsAround(ref, query.Radius)
+	bounds := geo.BoundsAround(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius)
 	mins, maxs := geo.CoveringArrays(bounds)
 	if len(mins) == 0 {
 		return nil, nil
 	}
-	// Distance, radius filtering and ORDER BY are pushed down to SQL (see
-	// buildFeedUsersQuery). Bearing is still computed in Go for display only —
-	// it never participates in sorting, per AGENTS.md.
-	sqlStr, args := buildFeedUsersQuery(ref.Latitude, ref.Longitude, mins, maxs, query.ViewerUserID, query.Radius)
-	rows, err := queryable.Query(ctx, sqlStr, args...)
+	rows, err := queryable.Query(ctx, queryFeedUsers, mins, maxs, query.ViewerUserID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+	plan := geo.NewSearchPlan(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius, "distance")
 	items := make([]userCandidate, 0)
 	for rows.Next() {
 		var userID, nickname, avatarURL, bio, locationName string
 		var latitude, longitude float64
 		var isFollowing, isFollowedBy bool
-		var mutualFriendsCount, commonGroupsCount, distance int
-		if err := rows.Scan(&userID, &nickname, &avatarURL, &bio, &locationName, &latitude, &longitude, &isFollowing, &isFollowedBy, &mutualFriendsCount, &commonGroupsCount, &distance); err != nil {
+		var mutualFriendsCount, commonGroupsCount int
+		if err := rows.Scan(&userID, &nickname, &avatarURL, &bio, &locationName, &latitude, &longitude, &isFollowing, &isFollowedBy, &mutualFriendsCount, &commonGroupsCount); err != nil {
 			return nil, err
 		}
 		if userID == query.ViewerUserID {
 			continue
 		}
+		distance, bearing, ok := plan.Match(geo.Point{Latitude: latitude, Longitude: longitude})
+		if !ok {
+			continue
+		}
 		d := float64(distance)
-		bearingD := geo.BearingDegrees(ref, geo.Point{Latitude: latitude, Longitude: longitude})
-		b := float64(bearingD)
+		b := float64(bearing)
 		item := UserItem{
 			User: UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
 			Bio:  strings.TrimSpace(bio),
@@ -148,40 +147,37 @@ func (r *PostgresRepository) loadUserCandidates(ctx context.Context, queryable p
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	// The DB already orders by distance; this Go-side stable sort is a harmless
-	// re-affirmation on the SQL-provided distance values (not a Go-computed
-	// distance), so it stays compliant with AGENTS.md.
 	sort.SliceStable(items, func(i, j int) bool { return compareUserCandidates(items[i], items[j]) < 0 })
 	return items, nil
 }
 
 func (r *PostgresRepository) loadGroupCandidates(ctx context.Context, queryable persistence.QueryableDB, query groupsQuery) ([]groupCandidate, error) {
-	ref := geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}
-	bounds := geo.BoundsAround(ref, query.Radius)
+	bounds := geo.BoundsAround(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius)
 	mins, maxs := geo.CoveringArrays(bounds)
 	if len(mins) == 0 {
 		return nil, nil
 	}
-	// Distance, radius filtering and ORDER BY are pushed down to SQL (see
-	// buildFeedGroupsQuery). Bearing is still computed in Go for display only.
-	sqlStr, args := buildFeedGroupsQuery(ref.Latitude, ref.Longitude, mins, maxs, query.ViewerUserID, query.Radius)
-	rows, err := queryable.Query(ctx, sqlStr, args...)
+	rows, err := queryable.Query(ctx, queryFeedGroups, mins, maxs, query.ViewerUserID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+	plan := geo.NewSearchPlan(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius, "distance")
 	items := make([]groupCandidate, 0)
 	for rows.Next() {
 		var groupID, name, avatarURL, description, locationName string
 		var latitude, longitude float64
 		var hasPassword, isJoined bool
-		var membersCount, friendsInGroup, distance int
-		if err := rows.Scan(&groupID, &name, &avatarURL, &description, &hasPassword, &locationName, &latitude, &longitude, &membersCount, &isJoined, &friendsInGroup, &distance); err != nil {
+		var membersCount, friendsInGroup int
+		if err := rows.Scan(&groupID, &name, &avatarURL, &description, &hasPassword, &locationName, &latitude, &longitude, &membersCount, &isJoined, &friendsInGroup); err != nil {
 			return nil, err
 		}
+		distance, bearing, ok := plan.Match(geo.Point{Latitude: latitude, Longitude: longitude})
+		if !ok {
+			continue
+		}
 		d := float64(distance)
-		bearingD := geo.BearingDegrees(ref, geo.Point{Latitude: latitude, Longitude: longitude})
-		b := float64(bearingD)
+		b := float64(bearing)
 		item := GroupItem{
 			Group:          GroupInfo{GroupID: groupID, Name: name, AvatarURL: avatarURL, MembersCount: membersCount},
 			Description:    strings.TrimSpace(description),
@@ -195,9 +191,6 @@ func (r *PostgresRepository) loadGroupCandidates(ctx context.Context, queryable 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	// The DB already orders by distance; this Go-side stable sort is a harmless
-	// re-affirmation on the SQL-provided distance values (not a Go-computed
-	// distance), so it stays compliant with AGENTS.md.
 	sort.SliceStable(items, func(i, j int) bool { return compareGroupCandidates(items[i], items[j]) < 0 })
 	return items, nil
 }
@@ -259,24 +252,17 @@ func (r *PostgresRepository) loadFollowingCandidates(ctx context.Context, querya
 }
 
 func (r *PostgresRepository) loadNearbyCandidates(ctx context.Context, queryable persistence.QueryableDB, query momentsQuery) ([]momentCandidate, error) {
-	ref := geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}
-	bounds := geo.BoundsAround(ref, query.Radius)
+	bounds := geo.BoundsAround(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius)
 	mins, maxs := geo.CoveringArrays(bounds)
 	if len(mins) == 0 {
 		return nil, nil
 	}
-	// Distance and radius filtering are pushed down to SQL (see
-	// buildFeedMomentsNearbyQuery). The relevance score is kept in Go (popularity
-	// weighting + following bonus + radius-distance bonus) but now uses the
-	// SQL-computed distance_meters value instead of geo.NewSearchPlan / plan.Match.
-	// The Go-side sort is therefore on a DB-provided distance, not a Go-computed
-	// one — compliant with AGENTS.md. Bearing is Go-computed for display only.
-	sqlStr, args := buildFeedMomentsNearbyQuery(ref.Latitude, ref.Longitude, mins, maxs, query.ViewerUserID, query.Radius)
-	rows, err := queryable.Query(ctx, sqlStr, args...)
+	rows, err := queryable.Query(ctx, queryFeedMomentsNearby, mins, maxs, query.ViewerUserID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+	plan := geo.NewSearchPlan(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius, "relevance")
 	items := make([]momentCandidate, 0)
 	momentIDs := make([]string, 0)
 	for rows.Next() {
@@ -284,14 +270,17 @@ func (r *PostgresRepository) loadNearbyCandidates(ctx context.Context, queryable
 		var latitude, longitude float64
 		var createdAt time.Time
 		var likesCount, commentsCount, sharesCount int
-		var isLiked, isFavorited, isFollowing bool
-		var distance int
-		if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &likesCount, &commentsCount, &sharesCount, &locationName, &latitude, &longitude, &isLiked, &isFavorited, &isFollowing, &distance); err != nil {
+		var isLiked, isFavorited bool
+		var isFollowing bool
+		if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &likesCount, &commentsCount, &sharesCount, &locationName, &latitude, &longitude, &isLiked, &isFavorited, &isFollowing); err != nil {
 			return nil, err
 		}
+		distance, bearing, ok := plan.Match(geo.Point{Latitude: latitude, Longitude: longitude})
+		if !ok {
+			continue
+		}
 		d := float64(distance)
-		bearingD := geo.BearingDegrees(ref, geo.Point{Latitude: latitude, Longitude: longitude})
-		b := float64(bearingD)
+		b := float64(bearing)
 		score := likesCount + commentsCount + sharesCount
 		if isFollowing {
 			score += 1000

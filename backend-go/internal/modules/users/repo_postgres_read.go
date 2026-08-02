@@ -102,195 +102,77 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	if !ok {
 		return PaginatedProfiles{}, persistence.ErrNotImplemented
 	}
-	limit, pageToken := normalizePagination(req.Pagination)
-	pageCursor, err := decodeSearchUsersCursor(pageToken)
-	if err != nil {
-		return PaginatedProfiles{InvalidCursor: true}, nil
-	}
-	sortBy := normalizeSearchSort(req.SortBy)
-	if pageCursor.SortBy == "" {
-		pageCursor.SortBy = sortBy
-	}
 	radius := normalizeSearchRadius(req.Radius)
 	refPt := geo.Point{Latitude: req.ReferencePoint.Latitude, Longitude: req.ReferencePoint.Longitude}
-	sql, args, err := buildSearchUsersQuery(req, refPt, radius, pageCursor, limit)
+	bounds := geo.BoundsAround(refPt, radius)
+	sql, args := buildSearchUsersQuery(bounds, req.Keyword)
 	if sql == "" {
 		return PaginatedProfiles{}, nil
-	}
-	if err != nil {
-		return PaginatedProfiles{}, err
 	}
 	rows, err := queryable.Query(ctx, sql, args...)
 	if err != nil {
 		return PaginatedProfiles{}, err
 	}
 	defer rows.Close()
-	candidates := make([]searchProfileCandidate, 0, limit+1)
+	candidates := make([]searchProfileCandidate, 0)
+	sortBy := normalizeSearchSort(req.SortBy)
+	plan := geo.NewSearchPlan(refPt, radius, sortBy)
+	keyword := strings.ToLower(strings.TrimSpace(req.Keyword))
+	tag := strings.ToLower(strings.TrimSpace(req.Tag))
+	// Scan every candidate row first, then load profile tags for the whole
+	// page in a single query (avoids an N+1 of loadUserProfileTags calls
+	// inside the loop).
+	scanned := make([]MyProfile, 0)
 	for rows.Next() {
-		profile, dist, relevance, err := scanUserProfileRowWithMeta(rows)
+		profile, err := scanUserProfileRow(rows)
 		if err != nil {
 			return PaginatedProfiles{}, err
 		}
-		candidates = append(candidates, searchProfileCandidate{
-			Profile:        profile,
-			Distance:       dist,
-			BearingDegrees: geo.BearingDegrees(refPt, geo.Point{Latitude: profile.Location.Point.Latitude, Longitude: profile.Location.Point.Longitude}),
-			SortBy:         sortBy,
-			// relevance already includes the tag bonus via the SQL CASE; keep the
-			// value for cursor encoding only (sorting is done by the DB).
-			RelevanceScore: relevance,
-		})
+		scanned = append(scanned, profile)
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedProfiles{}, err
 	}
-	// Fetch limit+1 to detect another page (DB already ordered + filtered by
-	// radius, so Go-side sort/filter/paginate is no longer needed for the
-	// distance/newest paths). Trim and encode the next cursor.
-	result := PaginatedProfiles{Items: make([]MyProfile, 0, len(candidates))}
-	next := ""
-	if len(candidates) > limit {
-		last := candidates[limit-1]
-		next = encodeSearchUsersCursor(searchUsersCursor{
-			SortBy:     sortBy,
-			UserID:     last.Profile.UserID,
-			Distance:   last.Distance,
-			CreatedAt:  last.Profile.CreatedAt,
-			LastOnline: last.Profile.LastOnline,
-		})
-		candidates = candidates[:limit]
+	if len(scanned) == 0 {
+		return PaginatedProfiles{}, nil
 	}
-	for _, c := range candidates {
-		result.Items = append(result.Items, c.Profile)
+	userIDs := make([]string, 0, len(scanned))
+	for _, profile := range scanned {
+		userIDs = append(userIDs, profile.UserID)
 	}
-	result.NextCursor = next
-	return result, nil
+	tagsByUserID, err := loadUserProfileTagsBatch(ctx, queryable, userIDs)
+	if err != nil {
+		return PaginatedProfiles{}, err
+	}
+	for _, profile := range scanned {
+		profile.Tags = tagsByUserID[profile.UserID]
+		if tag != "" && !containsFold(profile.Tags, tag) {
+			continue
+		}
+		distance, bearing, within := plan.Match(geo.Point{Latitude: profile.Location.Point.Latitude, Longitude: profile.Location.Point.Longitude})
+		if !within {
+			continue
+		}
+		candidates = append(candidates, searchProfileCandidate{Profile: profile, Distance: distance, BearingDegrees: bearing, SortBy: sortBy, RelevanceScore: searchRelevanceScore(profile, keyword, tag)})
+	}
+	sortSearchCandidates(candidates, normalizeSearchSort(req.SortBy))
+	return paginateSearchCandidates(candidates, req.Pagination), nil
 }
 
-// buildSearchUsersQuery constructs the keyset-paginated search query with the
-// distance (Haversine) and relevance computed in SQL, radius filtering and
-// ordering pushed down to PostgreSQL — mirroring buildGroupSearchQuery. The
-// previous version pulled candidates back into Go and ran plan.Match /
-// sortSearchCandidates / paginateSearchCandidates there, which violated the
-// "distance/range/sort must happen in PostgreSQL" rule (AGENTS.md).
-func buildSearchUsersQuery(req SearchUsersRequest, ref geo.Point, radius int, cursor searchUsersCursor, limit int) (string, []any, error) {
-	bounds := geo.BoundsAround(ref, radius)
+func buildSearchUsersQuery(bounds geo.Bounds, keyword string) (string, []any) {
 	mins, maxs := geo.CoveringArrays(bounds)
 	if len(mins) == 0 {
-		return "", nil, nil
+		return "", nil
 	}
-	args := make([]any, 0, 16)
-	addArg := func(value any) string {
-		args = append(args, value)
-		return fmt.Sprintf("$%d", len(args))
-	}
-	refLat := addArg(ref.Latitude)
-	refLng := addArg(ref.Longitude)
-	distanceExpr := geo.HaversineDistanceSQL(refLat, refLng)
-	keyword := strings.TrimSpace(req.Keyword)
-	tag := strings.TrimSpace(req.Tag)
-	// Relevance expression mirrors searchRelevanceScore's weighting entirely
-	// in SQL: nickname exact 6 / prefix 4 / contains 3, bio contains 2, plus a
-	// tag-match bonus of 3 (resolved via an EXISTS against user_profile_tags).
-	relevanceExpr := "0"
-	if keyword != "" {
-		kw := addArg(keyword)
-		lower := fmt.Sprintf("LOWER(%s)", kw)
-		nick := "LOWER(u.nickname)"
-		nickScore := fmt.Sprintf(
-			`(CASE WHEN %s = %s THEN 6 WHEN %s LIKE %s THEN 4 WHEN %s LIKE %s THEN 3 ELSE 0 END)`,
-			nick, lower,
-			nick, fmt.Sprintf("concat(%s, '%%')", lower),
-			nick, fmt.Sprintf("concat('%%', %s, '%%')", lower),
-		)
-		bioScore := fmt.Sprintf(`(CASE WHEN LOWER(u.bio) LIKE '%%' || %s || '%%' THEN 2 ELSE 0 END)`, lower)
-		relevanceExpr = fmt.Sprintf("(%s + %s)", nickScore, bioScore)
-	}
-	if tag != "" {
-		tagArg := addArg(tag)
-		relevanceExpr = fmt.Sprintf("(%s + (CASE WHEN EXISTS (SELECT 1 FROM user_profile_tags upt WHERE upt.user_id = u.user_id AND LOWER(upt.tag_name) = LOWER(%s)) THEN 3 ELSE 0 END))", relevanceExpr, tagArg)
-	}
+	args := make([]any, 0, 4)
 	var builder strings.Builder
-	// Inner query: compute distance + relevance columns. The outer wrapper lets
-	// the radius/cursor predicates and ORDER BY reference the computed columns
-	// by alias (PostgreSQL forbids referencing SELECT aliases in the same
-	// WHERE level), mirroring buildGroupSearchQuery.
-	builder.WriteString("SELECT * FROM (")
-	builder.WriteString("SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.user_type, COALESCE(u.bio, ''), COALESCE(u.gender, ''), COALESCE(u.email, ''), COALESCE(u.phone, ''), u.location_name, u.latitude, u.longitude, u.presence_status, u.last_online, u.created_at")
-	builder.WriteString(", ")
-	builder.WriteString(distanceExpr)
-	builder.WriteString(" AS distance_meters, ")
-	builder.WriteString(relevanceExpr)
-	builder.WriteString(" AS relevance_score")
-	builder.WriteString(" FROM users u JOIN user_settings us ON us.user_id = u.user_id")
-	builder.WriteString(" WHERE us.searchable = TRUE AND us.location_visible = TRUE AND us.privacy_level = 'public'")
-	minArg := addArg(mins)
-	maxArg := addArg(maxs)
-	builder.WriteString(fmt.Sprintf(" AND EXISTS (SELECT 1 FROM unnest(%s::bigint[], %s::bigint[]) AS t(lo, hi) WHERE u.s2_cell_id BETWEEN t.lo AND t.hi)", minArg, maxArg))
+	builder.WriteString(`SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.user_type, COALESCE(u.bio, ''), COALESCE(u.gender, ''), COALESCE(u.email, ''), COALESCE(u.phone, ''), u.location_name, u.latitude, u.longitude, u.presence_status, u.last_online, u.created_at FROM users u JOIN user_settings us ON us.user_id = u.user_id WHERE us.searchable = TRUE AND us.location_visible = TRUE AND us.privacy_level = 'public' AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE u.s2_cell_id BETWEEN t.lo AND t.hi)`)
+	args = append(args, mins, maxs)
 	if keyword != "" {
-		kwArg := addArg(keyword)
-		builder.WriteString(fmt.Sprintf(" AND ($%s = '' OR (us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%s || '%%') OR u.bio ILIKE '%%' || $%s || '%%')", kwArg, kwArg, kwArg))
+		args = append(args, keyword)
+		builder.WriteString(fmt.Sprintf(" AND ($%d = '' OR (us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%d || '%%') OR u.bio ILIKE '%%' || $%d || '%%')", len(args), len(args), len(args)))
 	}
-	if tag != "" {
-		tagFilterArg := addArg(tag)
-		builder.WriteString(fmt.Sprintf(" AND EXISTS (SELECT 1 FROM user_profile_tags upt WHERE upt.user_id = u.user_id AND LOWER(upt.tag_name) = LOWER(%s))", tagFilterArg))
-	}
-	builder.WriteString(") search WHERE 1=1")
-	builder.WriteString(fmt.Sprintf(" AND distance_meters <= %s", addArg(radius)))
-	// Keyset predicate (deterministic secondary key: user_id).
-	if cursor.UserID != "" {
-		switch cursor.SortBy {
-		case "distance":
-			dArg := addArg(cursor.Distance)
-			uArg := addArg(cursor.UserID)
-			builder.WriteString(fmt.Sprintf(" AND (distance_meters > %s OR (distance_meters = %s AND user_id > %s))", dArg, dArg, uArg))
-		case "newest":
-			cArg := addArg(cursor.CreatedAt)
-			uArg := addArg(cursor.UserID)
-			builder.WriteString(fmt.Sprintf(" AND (created_at < %s::timestamptz OR (created_at = %s::timestamptz AND user_id > %s))", cArg, cArg, uArg))
-		default: // relevance
-			rArg := addArg(cursor.Relevance)
-			loArg := addArg(cursor.LastOnline)
-			uArg := addArg(cursor.UserID)
-			builder.WriteString(fmt.Sprintf(" AND (relevance_score < %s OR (relevance_score = %s AND (last_online < %s::timestamptz OR (last_online = %s::timestamptz AND user_id > %s))))", rArg, rArg, loArg, loArg, uArg))
-		}
-	}
-	switch cursor.SortBy {
-	case "distance":
-		builder.WriteString(" ORDER BY distance_meters ASC, user_id ASC")
-	case "newest":
-		builder.WriteString(" ORDER BY created_at DESC, user_id ASC")
-	default:
-		builder.WriteString(" ORDER BY relevance_score DESC, last_online DESC, user_id ASC")
-	}
-	builder.WriteString(fmt.Sprintf(" LIMIT %s", addArg(limit+1)))
-	return builder.String(), args, nil
-}
-
-// scanUserProfileRowWithMeta scans a search row that carries the computed
-// distance_meters and relevance_score columns appended by buildSearchUsersQuery.
-func scanUserProfileRowWithMeta(scanner interface{ Scan(...any) error }) (MyProfile, int, int, error) {
-	var profile MyProfile
-	var avatarURL, bio, gender, email, phone string
-	var locationName string
-	var latitude, longitude float64
-	var presenceStatus, userType string
-	var lastOnline, createdAt time.Time
-	var distance, relevance int
-	if err := scanner.Scan(&profile.UserID, &profile.Nickname, &avatarURL, &userType, &bio, &gender, &email, &phone, &locationName, &latitude, &longitude, &presenceStatus, &lastOnline, &createdAt, &distance, &relevance); err != nil {
-		return MyProfile{}, 0, 0, err
-	}
-	profile.AvatarURL = avatarURL
-	profile.UserType = UserType(userType)
-	profile.Bio = bio
-	profile.Gender = Gender(gender)
-	profile.Email = email
-	profile.Phone = phone
-	profile.Location = Location{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
-	profile.PresenceStatus = UserPresenceStatus(presenceStatus)
-	profile.LastOnline = lastOnline.UTC().Format(time.RFC3339)
-	profile.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-	return profile, distance, relevance, nil
+	return builder.String(), args
 }
 
 func (r *PostgresRepository) Relationship(ctx context.Context, userID, targetUserID string) (Relationship, error) {
@@ -953,40 +835,4 @@ func loadUserProfileTagsBatch(ctx context.Context, queryable persistence.Queryab
 		return nil, err
 	}
 	return result, nil
-}
-
-// searchUsersCursor is the keyset cursor for SearchProfiles. Each sort mode
-// needs the columns its ORDER BY uses so the next-page predicate can resume
-// deterministically (secondary key: user_id).
-type searchUsersCursor struct {
-	SortBy     string `json:"sort_by"`
-	UserID     string `json:"user_id"`
-	Distance   int    `json:"distance,omitempty"`
-	CreatedAt  string `json:"created_at,omitempty"`
-	LastOnline string `json:"last_online,omitempty"`
-	Relevance  int    `json:"relevance,omitempty"`
-}
-
-const searchUsersCursorNamespace = "users.search_profiles"
-
-func decodeSearchUsersCursor(raw string) (searchUsersCursor, error) {
-	if raw == "" {
-		return searchUsersCursor{}, nil
-	}
-	var decoded searchUsersCursor
-	if err := cursor.Decode(searchUsersCursorNamespace, raw, &decoded); err != nil {
-		return searchUsersCursor{}, ErrInvalidCursor
-	}
-	if decoded.UserID == "" {
-		return searchUsersCursor{}, ErrInvalidCursor
-	}
-	return decoded, nil
-}
-
-func encodeSearchUsersCursor(c searchUsersCursor) string {
-	value, err := cursor.Encode(searchUsersCursorNamespace, c)
-	if err != nil {
-		return ""
-	}
-	return value
 }

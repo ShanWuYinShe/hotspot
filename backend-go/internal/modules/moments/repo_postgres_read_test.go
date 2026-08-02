@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/config"
-	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
@@ -182,34 +181,26 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 	if b.queryErr != nil {
 		return nil, b.queryErr
 	}
-	if strings.Contains(query, "FROM moments") && strings.Contains(query, "privacy_level =") && strings.Contains(query, "distance_meters") {
-		// New search SQL parameter order: $1=refLat, $2=refLng, $3=mins,
-		// $4=maxs, $5=radius, then optional keyword/tag strings, last=limit.
-		// Keyword/tag appear twice each (once in relevance CASE, once in WHERE)
-		// so dedupe by collecting string args between index 4 and the last.
-		refLat := args[0].(float64)
-		refLng := args[1].(float64)
-		radius := args[4].(int)
-		// Collect trailing strings (keyword/tag) and the final int limit.
-		limit := -1
-		var keywordStr, tagFilter string
-		for i := 5; i < len(args); i++ {
-			switch v := args[i].(type) {
-			case string:
-				if keywordStr == "" {
-					keywordStr = v
-				} else if tagFilter == "" {
-					tagFilter = v
-				}
-			case int:
-				limit = v
-			case []string:
-				// mins/maxs arrays are []int64; strings here are keyword/tag
+	if strings.Contains(query, "FROM moments") && strings.Contains(query, "privacy_level =") && strings.Contains(query, "unnest($1::bigint[], $2::bigint[])") {
+		argIndex := 2
+		var keywordStr string
+		if len(args) > argIndex {
+			if s, ok := args[argIndex].(string); ok {
+				keywordStr = s
+				argIndex++
 			}
 		}
-		_ = refLat
-		_ = refLng
-		_ = radius
+		var tagFilter string
+		if len(args) > argIndex {
+			if s, ok := args[argIndex].(string); ok {
+				tagFilter = s
+				argIndex++
+			}
+		}
+		limit := -1
+		if strings.Contains(query, " LIMIT $") && len(args) > argIndex {
+			limit = args[argIndex].(int)
+		}
 		items := make([]MomentItem, 0)
 		for _, item := range b.moments {
 			if item.PrivacyLevel != "public" {
@@ -223,22 +214,20 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 			}
 			items = append(items, item)
 		}
-		// Sort by created_at desc to mirror a stable order; the real ordering
-		// (distance/popular/relevance) is computed in SQL and the stub does not
-		// reproduce it — these tests assert membership/limit, not exact order.
-		sort.Slice(items, func(i, j int) bool {
-			if items[i].CreatedAt == items[j].CreatedAt {
-				return items[i].MomentID > items[j].MomentID
+		if limit >= 0 {
+			sort.Slice(items, func(i, j int) bool {
+				if items[i].CreatedAt == items[j].CreatedAt {
+					return items[i].MomentID > items[j].MomentID
+				}
+				return items[i].CreatedAt > items[j].CreatedAt
+			})
+			if len(items) > limit {
+				items = items[:limit]
 			}
-			return items[i].CreatedAt > items[j].CreatedAt
-		})
-		if limit >= 0 && len(items) > limit {
-			items = items[:limit]
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			// Append computed columns: distance_meters, popularity, relevance_score.
-			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, 0, item.LikesCount + item.CommentsCount + item.SharesCount, 0})
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel})
 		}
 		return &rowsValues{rows: rows}, nil
 	}
@@ -546,36 +535,95 @@ func containsTagInDescription(description, keyword string) bool {
 }
 
 func TestPostgresRepositorySearchSortByPopularReturnsOlderPopularMoments(t *testing.T) {
-	// The popularity ordering is now pushed down to SQL (ORDER BY popularity
-	// DESC), so the stub backend — which does not execute SQL semantics — can no
-	// longer reproduce it. This white-box test asserts the generated SQL ranks by
-	// popularity, which is what makes older-but-viral moments surface ahead of
-	// newer quiet ones. Full end-to-end ordering is covered by the integration
-	// test suite.
-	ref := geo.Point{Latitude: 35.0, Longitude: 112.0}
-	req := SearchMomentsRequest{SortBy: "popular", ReferencePoint: GeoPoint{Latitude: ref.Latitude, Longitude: ref.Longitude}}
-	sqlStr, _ := buildSearchMomentsQuery(req, ref, 5000, momentSearchCursor{SortBy: "popular"}, 5)
-	if !strings.Contains(sqlStr, "ORDER BY popularity DESC") {
-		t.Fatalf("expected popular ordering pushed down to SQL, got: %s", sqlStr)
+	// Regression test: before the fix, the Postgres search path always fetched
+	// LIMIT (limit+1) rows ordered by created_at DESC, then re-sorted in Go for
+	// non-newest modes. This meant older but more popular moments were excluded
+	// from the candidate window. This test verifies that sort_by=popular returns
+	// older moments when they have higher engagement.
+	backend := newBackendStub()
+	// newest moment, low engagement
+	backend.moments["moment_new"] = MomentItem{
+		MomentID: "moment_new", Description: "new quiet post", CreatedAt: "2026-04-15T00:00:00Z",
+		LikesCount: 0, CommentsCount: 0, SharesCount: 0,
+		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 35.0, Longitude: 112.0}},
+	}
+	// older moment, high engagement
+	backend.moments["moment_old_popular"] = MomentItem{
+		MomentID: "moment_old_popular", Description: "old viral post", CreatedAt: "2026-04-01T00:00:00Z",
+		LikesCount: 100, CommentsCount: 50, SharesCount: 0,
+		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 35.0, Longitude: 112.0}},
+	}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory)
+
+	keyword := "post"
+	result, err := repo.Search(context.Background(), SearchMomentsRequest{
+		Keyword:        &keyword,
+		SortBy:         "popular",
+		Pagination:     &PaginationParams{Limit: 1},
+		ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(result.Items))
+	}
+	if result.Items[0].MomentID != "moment_old_popular" {
+		t.Fatalf("expected most popular moment (moment_old_popular), got %s — older popular moment was excluded by newest-first limit", result.Items[0].MomentID)
 	}
 }
 
 func TestPostgresRepositorySearchSortByDistanceReturnsCloserOlderMoments(t *testing.T) {
-	// Distance ordering is now pushed down to SQL (ORDER BY distance_meters
-	// ASC), so the stub backend cannot reproduce it. This white-box test
-	// asserts the generated SQL ranks by distance, which is what surfaces
-	// closer-but-older moments ahead of farther-but-newer ones. End-to-end
-	// ordering is covered by the integration test suite.
-	ref := geo.Point{Latitude: 35.0, Longitude: 112.0}
-	req := SearchMomentsRequest{SortBy: "distance", ReferencePoint: GeoPoint{Latitude: ref.Latitude, Longitude: ref.Longitude}}
-	sqlStr, _ := buildSearchMomentsQuery(req, ref, 5000, momentSearchCursor{SortBy: "distance"}, 5)
-	if !strings.Contains(sqlStr, "ORDER BY distance_meters ASC") {
-		t.Fatalf("expected distance ordering pushed down to SQL, got: %s", sqlStr)
+	// Regression test: sort_by=distance must return the closest moment even if it's
+	// older than the LIMIT window of newest-first ordering.
+	backend := newBackendStub()
+	// newest but far
+	backend.moments["moment_new_far"] = MomentItem{
+		MomentID: "moment_new_far", Description: "far away", CreatedAt: "2026-04-15T00:00:00Z",
+		LikesCount: 0, CommentsCount: 0, SharesCount: 0,
+		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 40.0, Longitude: 116.0}},
 	}
-	// Radius predicate repeats the Haversine expression inline (WHERE cannot
-	// reference the SELECT alias), so assert on the <= $N guard instead.
-	if !strings.Contains(sqlStr, "<= $5") {
-		t.Fatalf("expected radius filter pushed down to SQL, got: %s", sqlStr)
+	// older but very close
+	backend.moments["moment_old_close"] = MomentItem{
+		MomentID: "moment_old_close", Description: "nearby", CreatedAt: "2026-04-01T00:00:00Z",
+		LikesCount: 0, CommentsCount: 0, SharesCount: 0,
+		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 35.001, Longitude: 112.001}},
+	}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory)
+
+	result, err := repo.Search(context.Background(), SearchMomentsRequest{
+		SortBy:         "distance",
+		Pagination:     &PaginationParams{Limit: 1},
+		ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(result.Items))
+	}
+	if result.Items[0].MomentID != "moment_old_close" {
+		t.Fatalf("expected closest moment (moment_old_close), got %s — closer older moment was excluded by newest-first limit", result.Items[0].MomentID)
 	}
 }
 

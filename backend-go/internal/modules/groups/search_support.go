@@ -196,3 +196,64 @@ func sortGroupsForSearch(items []GroupItem, metas map[string]groupSearchMeta, so
 		return left.Group.GroupID < right.Group.GroupID
 	})
 }
+
+// searchCursorForGroupItem encodes the sort position of a group search result:
+// the fields that pin its place under the requested ordering. Cursors are
+// opaque to clients; they only re-locate the item inside the freshly
+// recomputed, Go-sorted result list.
+func searchCursorForGroupItem(item GroupItem, meta groupSearchMeta, sortBy string) groupSearchCursor {
+	return groupSearchCursor{
+		SortBy:       sortBy,
+		GroupID:      item.Group.GroupID,
+		Distance:     meta.Distance,
+		MembersCount: item.Group.MembersCount,
+		NameMatch:    meta.NameMatch,
+		CreatedAt:    groupCreatedAt(item).Format(time.RFC3339),
+	}
+}
+
+// paginateSearchGroups slices a fully sorted result list into pages. It
+// locates the cursor's item in the list and resumes right after it; if that
+// item no longer exists (e.g. the group was dismissed or its membership count
+// changed between pages), it falls back to skipping the rows that sort after
+// the cursor.
+func paginateSearchGroups(items []GroupItem, metas map[string]groupSearchMeta, sortBy string, pagination *PaginationParams) (PaginatedGroups, error) {
+	limit := paginationLimit(pagination, defaultSearchLimit, maxSearchLimit)
+	cursor, err := decodeSearchCursor(paginationCursor(pagination))
+	if err != nil {
+		return PaginatedGroups{}, err
+	}
+	if cursor.GroupID != "" {
+		start := -1
+		for i, item := range items {
+			if searchCursorForGroupItem(item, metas[item.Group.GroupID], sortBy) == cursor {
+				start = i + 1
+				break
+			}
+		}
+		if start < 0 {
+			filtered := make([]GroupItem, 0, len(items))
+			for _, item := range items {
+				if matchesSearchCursor(metas[item.Group.GroupID], item, cursor) {
+					filtered = append(filtered, item)
+				}
+			}
+			items = filtered
+		} else {
+			items = items[start:]
+		}
+	}
+	response := PaginatedGroups{}
+	if len(items) <= limit {
+		response.Items = items
+		return response, nil
+	}
+	response.Items = items[:limit]
+	last := response.Items[len(response.Items)-1]
+	next, err := encodeSearchCursor(searchCursorForGroupItem(last, metas[last.Group.GroupID], sortBy))
+	if err != nil {
+		return PaginatedGroups{}, err
+	}
+	response.NextCursor = next
+	return response, nil
+}

@@ -49,8 +49,8 @@ func (r *searchRowsValues) Err() error   { return r.err }
 type searchBackendStub struct {
 	queryRowsByQuery map[string][][]any
 	queryErrs        map[string]error
-	// lastQuery / lastArgs capture the most recent Query call so tests can
-	// assert that parameters (e.g. radius) are threaded through to SQL.
+	// lastQuery / lastArgs capture the most recent Query call for tests that
+	// need to inspect what was sent to the backend.
 	lastQuery string
 	lastArgs  []any
 }
@@ -108,9 +108,9 @@ func TestPostgresRepositoryReturnsEmptyForBlankPrefix(t *testing.T) {
 func TestPostgresRepositoryFiltersUnknownTypesAsAll(t *testing.T) {
 	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
 		querySearchSuggestTags:    {{"hot", 8}},
-		querySearchSuggestUsers:   {{"user_1", "hot-user", "", "", "南天门", 35.0, 112.0, 0}},
-		querySearchSuggestGroups:  {{"group_1", "hot-group", "", "", "南天门", 35.0, 112.0, 5, 0}},
-		querySearchSuggestMoments: {{"moment_1", "user_1", "Alice", "hot moment", "南天门", 35.0, 112.0, 9, 0}},
+		querySearchSuggestUsers:   {{"user_1", "hot-user", "", "", "南天门", 35.0, 112.0}},
+		querySearchSuggestGroups:  {{"group_1", "hot-group", "", "", "南天门", 35.0, 112.0, 5}},
+		querySearchSuggestMoments: {{"moment_1", "user_1", "Alice", "hot moment", "南天门", 35.0, 112.0, 9}},
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
 
@@ -125,7 +125,7 @@ func TestPostgresRepositoryFiltersUnknownTypesAsAll(t *testing.T) {
 
 func TestPostgresRepositoryAppliesTypeFilter(t *testing.T) {
 	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
-		querySearchSuggestUsers: {{"user_1", "hot-user", "", "", "南天门", 35.0, 112.0, 0}},
+		querySearchSuggestUsers: {{"user_1", "hot-user", "", "", "南天门", 35.0, 112.0}},
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
 
@@ -141,7 +141,7 @@ func TestPostgresRepositoryAppliesTypeFilter(t *testing.T) {
 func TestPostgresRepositoryHonorsNicknameSearchableOnlyForNickname(t *testing.T) {
 	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
 		querySearchSuggestUsers: {
-			{"user_bio", "plain-user", "", "hot bio", "南天门", 35.0, 112.0, 0},
+			{"user_bio", "plain-user", "", "hot bio", "南天门", 35.0, 112.0},
 		},
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
@@ -180,8 +180,8 @@ func TestPostgresRepositoryRanksExactBeforePrefixBeforeContains(t *testing.T) {
 func TestPostgresRepositoryUsesDistanceBeforePopularityWhenMatchRankTies(t *testing.T) {
 	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
 		querySearchSuggestGroups: {
-			{"group_far", "hot-group", "", "", "远处", 35.1, 112.0, 100, 11000},
-			{"group_near", "hot-group", "", "", "近处", 35.0001, 112.0, 1, 11},
+			{"group_far", "hot-group", "", "", "远处", 35.1, 112.0, 100},
+			{"group_near", "hot-group", "", "", "近处", 35.0001, 112.0, 1},
 		},
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
@@ -196,15 +196,13 @@ func TestPostgresRepositoryUsesDistanceBeforePopularityWhenMatchRankTies(t *test
 }
 
 func TestPostgresRepositoryAppliesRadiusFilter(t *testing.T) {
-	// Radius filtering is now pushed down to SQL (the ($4 = 0 OR distance <=
-	// $4) predicate), so this test verifies the radius is threaded into the
-	// query rather than re-filtered in Go. The mock backend does not execute
-	// the WHERE clause, so both rows come back; the assertion is on the SQL
-	// and its parameters.
+	// Radius filtering happens in Go: distance is recomputed from the row's
+	// latitude/longitude and rows farther than the radius are dropped. The mock
+	// backend returns both rows; the far one must be filtered out by the repo.
 	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
 		querySearchSuggestUsers: {
-			{"user_near", "hot-near", "", "", "近处", 35.0001, 112.0, 11},
-			{"user_far", "hot-far", "", "", "远处", 35.1, 112.0, 11000},
+			{"user_near", "hot-near", "", "", "近处", 35.0001, 112.0},
+			{"user_far", "hot-far", "", "", "远处", 35.1, 112.0},
 		},
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
@@ -213,21 +211,11 @@ func TestPostgresRepositoryAppliesRadiusFilter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
-	// The radius (2000) must be the 4th positional arg ($4) of the user query.
-	if len(backend.lastArgs) < 4 {
-		t.Fatalf("expected at least 4 query args, got %d", len(backend.lastArgs))
+	if len(resp.Items) != 1 {
+		t.Fatalf("expected only the near user after Go-side radius filter, got %#v", resp.Items)
 	}
-	if r, ok := backend.lastArgs[3].(int); !ok || r != 2000 {
-		t.Fatalf("expected radius 2000 as $4, got %#v", backend.lastArgs[3])
-	}
-	// The radius predicate lives in the WHERE clause, where PostgreSQL cannot
-	// reference the distance_meters SELECT alias, so it repeats the Haversine
-	// expression inline (<= $4).
-	if !strings.Contains(backend.lastQuery, "<= $4") {
-		t.Errorf("expected SQL to filter distance by radius ($4), got: %s", backend.lastQuery)
-	}
-	if len(resp.Items) != 2 {
-		t.Fatalf("expected both rows from mock (SQL filtering not executed), got %d", len(resp.Items))
+	if resp.Items[0].Payload["user_id"] != "user_near" {
+		t.Fatalf("expected user_near to survive the filter, got %#v", resp.Items[0].Payload["user_id"])
 	}
 }
 

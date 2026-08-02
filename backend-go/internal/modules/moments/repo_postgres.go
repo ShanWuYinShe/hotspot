@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -134,15 +133,8 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 		return PaginatedMoments{}, persistence.ErrNotImplemented
 	}
 	limit := 20
-	pageToken := ""
-	if req.Pagination != nil {
-		if req.Pagination.Limit > 0 {
-			limit = req.Pagination.Limit
-		}
-		if limit > 100 {
-			limit = 100
-		}
-		pageToken = req.Pagination.Cursor
+	if req.Pagination != nil && req.Pagination.Limit > 0 {
+		limit = req.Pagination.Limit
 	}
 	if limit > 100 {
 		limit = 100
@@ -159,36 +151,33 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	if radius > 50000 {
 		radius = 50000
 	}
-	pageCursor, err := decodeMomentsCursor(pageToken)
-	if err != nil {
-		return PaginatedMoments{}, ErrInvalidCursor
-	}
-	if pageCursor.SortBy == "" {
-		pageCursor.SortBy = sortBy
-	}
-	sql, args := buildSearchMomentsQuery(req, refPt, radius, pageCursor, limit+1)
+	bounds := geo.BoundsAround(refPt, radius)
+	sql, args := buildSearchMomentsQuery(bounds, req.Keyword, req.Tag, sortBy, limit+1)
 	if sql == "" {
 		return PaginatedMoments{}, nil
 	}
 	rows, err := queryable.Query(ctx, sql, args...)
 	if err != nil {
-		return PaginatedMoments{}, fmt.Errorf("moments.Search query: %w", err)
+		return PaginatedMoments{}, err
 	}
 	defer rows.Close()
-	items := make([]MomentItem, 0, limit+1)
-	momentIDs := make([]string, 0, limit+1)
-	var lastMeta momentSearchMeta
+	plan := geo.NewSearchPlan(refPt, radius, sortBy)
+	items := make([]MomentItem, 0)
+	momentIDs := make([]string, 0)
 	for rows.Next() {
-		item, meta, err := scanMomentRowWithMeta(rows)
+		item, err := scanMomentRow(rows)
 		if err != nil {
 			return PaginatedMoments{}, err
 		}
+		_, _, within := plan.Match(geo.Point{Latitude: item.Location.Point.Latitude, Longitude: item.Location.Point.Longitude})
+		if !within {
+			continue
+		}
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
-		lastMeta = meta
 	}
 	if err := rows.Err(); err != nil {
-		return PaginatedMoments{}, fmt.Errorf("moments.Search rows: %w", err)
+		return PaginatedMoments{}, err
 	}
 	tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs)
 	if err != nil {
@@ -198,117 +187,51 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 		items[i].Tags = tagsByMomentID[items[i].MomentID]
 		items[i].MyState = &MyMomentState{}
 	}
-	// Distance/radius filtering and ordering now happen in SQL; detect the
-	// next page by fetching limit+1 and encoding a keyset cursor from the last
-	// returned row.
-	nextCursor := ""
-	if len(items) > limit {
-		last := items[limit-1]
-		nextCursor = encodeMomentsCursor(momentSearchCursor{
-			SortBy:    pageCursor.SortBy,
-			MomentID:  last.MomentID,
-			Distance:  lastMeta.distance,
-			CreatedAt: last.CreatedAt,
-			Popular:   last.LikesCount + last.CommentsCount,
-		})
-		items = items[:limit]
+	sortKeyword := ""
+	if req.Keyword != nil {
+		sortKeyword = *req.Keyword
 	}
-	return PaginatedMoments{Items: items, NextCursor: nextCursor}, nil
+	sortTag := ""
+	if req.Tag != nil {
+		sortTag = *req.Tag
+	}
+	sortMoments(items, sortBy, refPt, sortKeyword, sortTag)
+	if len(items) > limit {
+		return PaginatedMoments{Items: items[:limit], NextCursor: items[limit].MomentID}, nil
+	}
+	return PaginatedMoments{Items: items}, nil
 }
 
-// buildSearchMomentsQuery constructs the keyset-paginated moments search with
-// distance (Haversine), radius filtering, popularity and relevance computed in
-// SQL — mirroring buildSearchUsersQuery. The previous version pulled candidates
-// into Go and ran plan.Match / sortMoments there, violating the
-// "distance/range/sort must happen in PostgreSQL" rule (AGENTS.md).
-func buildSearchMomentsQuery(req SearchMomentsRequest, ref geo.Point, radius int, cursor momentSearchCursor, limit int) (string, []any) {
-	bounds := geo.BoundsAround(ref, radius)
+func buildSearchMomentsQuery(bounds geo.Bounds, keyword *string, tag *string, sortBy string, limit int) (string, []any) {
 	mins, maxs := geo.CoveringArrays(bounds)
 	if len(mins) == 0 {
 		return "", nil
 	}
-	args := make([]any, 0, 12)
-	addArg := func(value any) string {
-		args = append(args, value)
-		return fmt.Sprintf("$%d", len(args))
-	}
-	refLat := addArg(ref.Latitude)
-	refLng := addArg(ref.Longitude)
-	distanceExpr := geo.HaversineDistanceSQL(refLat, refLng)
-	// Relevance mirrors relevanceScore: description containing the keyword (+1)
-	// and a matching tag (+1), computed entirely in SQL.
-	relevanceExpr := "0"
-	keyword := ""
-	if req.Keyword != nil {
-		keyword = strings.TrimSpace(*req.Keyword)
-	}
-	tag := ""
-	if req.Tag != nil {
-		tag = strings.TrimSpace(*req.Tag)
-	}
-	if keyword != "" || tag != "" {
-		var parts []string
-		if keyword != "" {
-			parts = append(parts, fmt.Sprintf("(CASE WHEN m.description ILIKE '%%' || %s || '%%' THEN 1 ELSE 0 END)", addArg(keyword)))
-		}
-		if tag != "" {
-			parts = append(parts, fmt.Sprintf("(CASE WHEN EXISTS (SELECT 1 FROM moment_tags mt WHERE mt.moment_id = m.moment_id AND mt.tag_name = %s) THEN 1 ELSE 0 END)", addArg(tag)))
-		}
-		relevanceExpr = strings.Join(parts, " + ")
-	}
+	args := make([]any, 0, 6)
 	var builder strings.Builder
-	builder.WriteString("SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level")
-	builder.WriteString(", ")
-	builder.WriteString(distanceExpr)
-	builder.WriteString(" AS distance_meters, (m.likes_count + m.comments_count + m.shares_count) AS popularity, ")
-	builder.WriteString(relevanceExpr)
-	builder.WriteString(" AS relevance_score")
-	builder.WriteString(" FROM moments m LEFT JOIN users u ON u.user_id = m.user_id")
-	builder.WriteString(" WHERE m.privacy_level = 'public'")
-	minArg := addArg(mins)
-	maxArg := addArg(maxs)
-	builder.WriteString(fmt.Sprintf(" AND EXISTS (SELECT 1 FROM unnest(%s::bigint[], %s::bigint[]) AS t(lo, hi) WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)", minArg, maxArg))
-	builder.WriteString(fmt.Sprintf(" AND %s <= %s", distanceExpr, addArg(radius)))
-	if keyword != "" {
-		builder.WriteString(fmt.Sprintf(" AND m.description ILIKE '%%' || %s || '%%'", addArg(keyword)))
+	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level = 'public' AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`)
+	args = append(args, mins, maxs)
+	if keyword != nil && *keyword != "" {
+		args = append(args, *keyword)
+		builder.WriteString(fmt.Sprintf(" AND description ILIKE '%%' || $%d || '%%'", len(args)))
 	}
-	if tag != "" {
-		builder.WriteString(fmt.Sprintf(" AND EXISTS (SELECT 1 FROM moment_tags mt WHERE mt.moment_id = m.moment_id AND mt.tag_name = %s)", addArg(tag)))
+	if tag != nil && *tag != "" {
+		args = append(args, *tag)
+		builder.WriteString(fmt.Sprintf(" AND moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $%d)", len(args)))
 	}
-	// Keyset predicate (secondary key: moment_id ASC for a stable tiebreak).
-	if cursor.MomentID != "" {
-		switch cursor.SortBy {
-		case "distance":
-			d := addArg(cursor.Distance)
-			m := addArg(cursor.MomentID)
-			builder.WriteString(fmt.Sprintf(" AND (distance_meters > %s OR (distance_meters = %s AND m.moment_id > %s))", d, d, m))
-		case "newest":
-			c := addArg(cursor.CreatedAt)
-			m := addArg(cursor.MomentID)
-			builder.WriteString(fmt.Sprintf(" AND (m.created_at < %s::timestamptz OR (m.created_at = %s::timestamptz AND m.moment_id > %s))", c, c, m))
-		case "popular":
-			p := addArg(cursor.Popular)
-			c := addArg(cursor.CreatedAt)
-			m := addArg(cursor.MomentID)
-			builder.WriteString(fmt.Sprintf(" AND (popularity < %s OR (popularity = %s AND (m.created_at < %s::timestamptz OR (m.created_at = %s::timestamptz AND m.moment_id > %s))))", p, p, c, c, m))
-		default: // relevance
-			r := addArg(cursor.Relevance)
-			c := addArg(cursor.CreatedAt)
-			m := addArg(cursor.MomentID)
-			builder.WriteString(fmt.Sprintf(" AND (relevance_score < %s OR (relevance_score = %s AND (m.created_at < %s::timestamptz OR (m.created_at = %s::timestamptz AND m.moment_id > %s))))", r, r, c, c, m))
-		}
+	if sortBy == "newest" {
+		builder.WriteString(" ORDER BY created_at DESC, moment_id DESC")
+		args = append(args, limit)
+		builder.WriteString(fmt.Sprintf(" LIMIT $%d", len(args)))
+	} else {
+		// Non-newest sorts rank in Go after the geo radius prefilter, so we
+		// cannot push the page LIMIT to the DB. Cap the scan with a hard
+		// ceiling so a dense viewport can never pull the whole table into
+		// memory. The ceiling comfortably covers a page plus headroom for the
+		// radius filter to discard candidates.
+		args = append(args, maxSearchScanRows)
+		builder.WriteString(fmt.Sprintf(" LIMIT $%d", len(args)))
 	}
-	switch cursor.SortBy {
-	case "distance":
-		builder.WriteString(" ORDER BY distance_meters ASC, m.moment_id ASC")
-	case "newest":
-		builder.WriteString(" ORDER BY m.created_at DESC, m.moment_id ASC")
-	case "popular":
-		builder.WriteString(" ORDER BY popularity DESC, m.created_at DESC, m.moment_id ASC")
-	default:
-		builder.WriteString(" ORDER BY relevance_score DESC, m.created_at DESC, m.moment_id ASC")
-	}
-	builder.WriteString(fmt.Sprintf(" LIMIT %s", addArg(limit)))
 	return builder.String(), args
 }
 
@@ -508,74 +431,4 @@ func queryable(ctx context.Context, factory *persistence.Factory) (persistence.Q
 	}
 	q, ok := factory.DB.(persistence.QueryableDB)
 	return q, ok
-}
-
-// momentSearchCursor is the keyset cursor for moment Search. Each sort mode
-// carries the columns its ORDER BY uses so the next-page predicate resumes
-// deterministically (secondary key: moment_id ASC).
-type momentSearchCursor struct {
-	SortBy    string `json:"sort_by"`
-	MomentID  string `json:"moment_id"`
-	Distance  int    `json:"distance,omitempty"`
-	CreatedAt string `json:"created_at,omitempty"`
-	Popular   int    `json:"popular,omitempty"`
-	Relevance int    `json:"relevance,omitempty"`
-}
-
-// momentSearchMeta holds the computed columns read back from a search row, used
-// only to encode the next-page cursor.
-type momentSearchMeta struct {
-	distance  int
-	popular   int
-	relevance int
-}
-
-const momentsSearchCursorNamespace = "moments.search"
-
-func decodeMomentsCursor(raw string) (momentSearchCursor, error) {
-	if raw == "" {
-		return momentSearchCursor{}, nil
-	}
-	var decoded momentSearchCursor
-	if err := cursor.Decode(momentsSearchCursorNamespace, raw, &decoded); err != nil {
-		return momentSearchCursor{}, ErrInvalidCursor
-	}
-	if decoded.MomentID == "" {
-		return momentSearchCursor{}, ErrInvalidCursor
-	}
-	return decoded, nil
-}
-
-func encodeMomentsCursor(c momentSearchCursor) string {
-	value, err := cursor.Encode(momentsSearchCursorNamespace, c)
-	if err != nil {
-		return ""
-	}
-	return value
-}
-
-// scanMomentRowWithMeta scans a search row that carries the computed
-// distance_meters / popularity / relevance_score columns appended by
-// buildSearchMomentsQuery. Returns the item plus the meta needed to encode a
-// follow-on cursor.
-func scanMomentRowWithMeta(scanner interface{ Scan(...any) error }) (MomentItem, momentSearchMeta, error) {
-	var item MomentItem
-	var meta momentSearchMeta
-	var userID, nickname, locationName, privacyLevel string
-	var createdAt time.Time
-	var latitude, longitude float64
-	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &meta.distance, &meta.popular, &meta.relevance); err != nil {
-		return MomentItem{}, momentSearchMeta{}, fmt.Errorf("moments.scanMomentRowWithMeta scan: %w", err)
-	}
-	if nickname == "" {
-		nickname = userID
-	}
-	item.User = UserInfo{UserID: userID, Nickname: nickname}
-	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-	item.Location = Location{Point: struct {
-		Latitude  float64 `json:"latitude"`
-		Longitude float64 `json:"longitude"`
-	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
-	item.PrivacyLevel = privacyLevel
-	return item, meta, nil
 }
