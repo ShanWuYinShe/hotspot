@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { Plus, Users } from '@lucide/svelte';
+	import { Users } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platformStore } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
-	import * as Dialog from '@/components/ui/dialog';
-	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
-	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
+			import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
@@ -17,14 +15,13 @@
 	import { getNearbyGroups } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
-	// 附近群组：分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙 + 创建群组底部 Sheet。
+	// 附近群组：分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙（对齐 Figma Make NearbyGroupsPage）。
 	// 迁移自旧版 NearbyGroupsPage。
 
 	const CATEGORIES = ['全部', '摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏'];
 
 	let activeCategory = $state('全部');
 	let searchQuery = $state('');
-	let showCreate = $state(false);
 	let groups = $state<Group[]>([]);
 	let visibleCount = $state(12);
 	let loading = $state(true);
@@ -91,19 +88,8 @@
 	{#snippet header()}
 		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky onBack={() => history.back()} contentClassName="!py-3">
 			{#snippet trailing()}
-				<div class="flex items-center gap-2">
-					<div class="hidden sm:flex flex-1 max-w-sm">
-						<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" compact />
-					</div>
-					<button
-						type="button"
-						class="neu-hover-btn flex items-center gap-1 px-3 py-1.5 rounded-full neu-focus-ring bg-[var(--neu-accent-primary)] text-white text-xs font-semibold"
-						style="box-shadow:0 3px 10px var(--neu-glow);"
-						onclick={() => (showCreate = true)}
-					>
-						<Plus size={14} />
-						创建
-					</button>
+				<div class="hidden sm:flex flex-1 max-w-sm">
+					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" compact />
 				</div>
 			{/snippet}
 			{#snippet below()}
@@ -178,9 +164,3 @@
 		{/if}
 	</div>
 </StandardPageLayout>
-
-<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? undefined : (showCreate = false))}>
-	<Dialog.Content side="bottom" class="h-[92%] overflow-hidden" aria-label="创建群组">
-		<CreateGroupSheet onClose={() => (showCreate = false)} />
-	</Dialog.Content>
-</Dialog.Root>
