@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import {
 		Search as SearchIcon,
 		TrendingUp,
@@ -106,8 +107,8 @@
 	});
 
 	// 对齐 Figma Make：进入搜索页自动聚焦输入框
-	let inputEl: HTMLInputElement | undefined = $state();
-	$effect(() => {
+	let inputEl: HTMLInputElement | undefined;
+	onMount(() => {
 		inputEl?.focus();
 	});
 
@@ -144,6 +145,7 @@
 			<SearchIcon class="size-5 shrink-0 text-[var(--neu-accent-primary)]" strokeWidth={1.8} />
 			<input
 				bind:this={inputEl}
+				autofocus
 				value={query}
 				oninput={(e) => (query = e.currentTarget.value)}
 				onkeydown={(e) => {
