@@ -16,6 +16,7 @@
 	let tags = $state<Set<string>>(new Set());
 	let saved = $state(false);
 	let avatar = $state('');
+	let userId = $state('');
 
 	$effect(() => {
 		let cancelled = false;
@@ -25,10 +26,11 @@
 				if (cancelled) return;
 				const data = (res.code === 0 ? res.data : null) as any;
 				if (data) {
-					// spec: AccountData.nickname, .bio, .tags, .avatar_url
+					// spec: AccountData.nickname, .bio, .tags, .avatar_url, .user_id
 					nickname = data.nickname ?? '';
 					bio = data.bio ?? '';
 					avatar = data.avatar_url ?? '';
+					userId = data.user_id ?? '';
 					if (data.tags) tags = new Set(data.tags);
 				}
 			} finally {
@@ -116,6 +118,9 @@
 		</div>
 		<div>
 			<p class="text-[var(--neu-text)] text-[16px]">{nickname || '未设置昵称'}</p>
+			{#if userId}
+				<p class="text-[var(--neu-text-muted)] text-[12px] mt-0.5">@{userId}</p>
+			{/if}
 		</div>
 	</div>
 

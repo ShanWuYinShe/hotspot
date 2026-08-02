@@ -207,7 +207,7 @@
 		<!-- Banner -->
 		<div class="relative overflow-hidden" style="height:clamp(150px, 25vw, 210px);flex-shrink:0;">
 			<img src={user.banner} alt="banner" class="absolute inset-0 w-full h-full object-cover" />
-			<div class="absolute inset-0" style="background:linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%);"></div>
+			<div class="absolute inset-0" style="background:var(--surface-profile-cover-scrim);"></div>
 
 			<!-- Top buttons -->
 			<div class="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-4">

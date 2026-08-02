@@ -78,7 +78,7 @@
 
 	<!-- User card — hero with ambient glow -->
 	<div class="neu-ambient-glow mb-3">
-		<button type="button" class="neu-hover-btn flex items-center gap-4 px-4 py-3.5 rounded-[20px] w-full outline-none text-left neu-surface-hero">
+		<button type="button" class="neu-hover-btn flex items-center gap-4 px-4 py-3.5 rounded-panel w-full outline-none text-left neu-surface-hero">
 			<Avatar src={accountAvatar} name={accountName} size={48} style="border:2px solid var(--neu-bg);box-shadow:0 4px 12px var(--neu-glow);" />
 			<div class="flex-1 min-w-0">
 				<p class="text-[15px] tracking-tight text-[var(--neu-text)]">{accountName || '用户'}</p>
@@ -90,7 +90,7 @@
 
 	<!-- Appearance（对齐 Figma Make SettingsPage：应用主题二选一 + 深色模式） -->
 	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">外观</p>
-	<div class="rounded-[22px] overflow-hidden neu-surface-flat">
+	<div class="rounded-feature overflow-hidden neu-surface-flat">
 		<div class="px-4 py-3.5">
 			<div class="flex items-center gap-3">
 				<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
@@ -139,7 +139,7 @@
 
 	<!-- Notifications -->
 	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">通知</p>
-	<div class="rounded-[22px] overflow-hidden neu-surface-flat">
+	<div class="rounded-feature overflow-hidden neu-surface-flat">
 		<div class="flex items-center gap-3 px-4 py-3.5">
 			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
 				<Bell style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
@@ -165,7 +165,7 @@
 
 	<!-- Privacy -->
 	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">隐私与安全</p>
-	<div class="rounded-[22px] overflow-hidden neu-surface-flat">
+	<div class="rounded-feature overflow-hidden neu-surface-flat">
 		<div class="flex items-center gap-3 px-4 py-3.5">
 			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
 				<Lock style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
@@ -191,7 +191,7 @@
 
 	<!-- General -->
 	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">通用</p>
-	<div class="rounded-[22px] overflow-hidden neu-surface-flat">
+	<div class="rounded-feature overflow-hidden neu-surface-flat">
 		<button type="button" class="neu-hover-bg flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease;">
 			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
 				<Globe style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
@@ -230,7 +230,7 @@
 	<div class="mt-5">
 		<button
 			type="button"
-			class="neu-hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] w-full outline-none neu-surface-flat text-[var(--neu-accent-primary)]"
+			class="neu-hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-control w-full outline-none neu-surface-flat text-[var(--neu-accent-primary)]"
 			onclick={() => void handleLogout()}
 		>
 			<LogOut style="width:14px;height:14px;" strokeWidth={1.75} />

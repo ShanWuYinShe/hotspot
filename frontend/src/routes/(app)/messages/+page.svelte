@@ -190,7 +190,7 @@
 
 		<!-- Right: chat view or empty state -->
 		<div class="flex min-w-0 flex-1 bg-[color-mix(in_srgb,var(--page-bg)_55%,transparent)] p-4">
-			<div class="min-h-0 flex-1 overflow-hidden rounded-[22px] neu-ring-border bg-[var(--neu-bg)] shadow-[0_10px_28px_color-mix(in_srgb,var(--neu-shadow-dark)_32%,transparent)]">
+			<div class="min-h-0 flex-1 overflow-hidden rounded-feature neu-ring-border bg-[var(--neu-bg)] shadow-[0_10px_28px_color-mix(in_srgb,var(--neu-shadow-dark)_32%,transparent)]">
 				<div class="h-full" style="overflow:hidden;border-radius:22px;">
 					{#if selectedId !== null && selectedChat}
 						<div class="h-full">
@@ -292,7 +292,7 @@
 
 		<p class="uppercase mb-2.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">最近</p>
 
-		<div class="rounded-[18px] overflow-hidden neu-surface-flat">
+		<div class="rounded-relaxed overflow-hidden neu-surface-flat">
 			{#if filtered.length === 0}
 				<EmptyState title="没有找到会话">
 					{#snippet icon()}

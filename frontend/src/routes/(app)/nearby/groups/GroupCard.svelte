@@ -46,11 +46,13 @@
 			</p>
 			<div class="mt-2 flex items-center justify-between gap-2">
 				<div class="flex items-center gap-1.5 min-w-0">
-					<div class="flex -space-x-2 flex-shrink-0">
-						{#each group.avatars as avatar, index (index)}
-							<img src={avatar} alt="群成员" class="w-5 h-5 rounded-full object-cover" style="border:1px solid var(--border-card-menu);z-index:{3 - index};" />
-						{/each}
-					</div>
+					{#if group.avatars.length > 0}
+						<div class="flex -space-x-2 flex-shrink-0">
+							{#each group.avatars as avatar, index (index)}
+								<img src={avatar} alt="群成员" class="w-5 h-5 rounded-full object-cover" style="border:1px solid var(--border-card-menu);z-index:{3 - index};" />
+							{/each}
+						</div>
+					{/if}
 					<span class="flex items-center gap-1 truncate text-[var(--neu-text-muted)] text-[10px]">
 						<Users size={10} />
 						{group.members} 人
